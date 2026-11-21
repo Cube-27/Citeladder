@@ -1,4 +1,3 @@
-/** Commercial execution policy and persisted vocabulary. */
 import { subscriptionStatusSchema } from '@citeladder/contracts/billing';
 import { providers } from './providers.ts';
 import runtime from './billing.json' with { type: 'json' };
@@ -6,9 +5,7 @@ import aiCredits from './ai-credits.json' with { type: 'json' };
 import { compareText } from '../text-order.ts';
 
 const c = runtime.contracts;
-/** The subscription status vocabulary, declared once in the shared contracts. */
 const s = subscriptionStatusSchema.enum;
-// Stored statuses are read as text, so these lists compare against any string.
 const liveSubscriptionStatuses: readonly string[] = [
   s.pending,
   s.trialing,
@@ -43,7 +40,6 @@ export const billing = {
       authenticated: s.pending,
       active: s.active,
       pending: s.past_due,
-      // Retries exhausted: the subscription sweep cancels it at the provider.
       halted: s.unpaid,
       cancelled: s.cancelled,
       completed: s.expired,

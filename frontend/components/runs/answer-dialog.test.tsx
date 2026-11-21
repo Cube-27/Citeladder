@@ -12,7 +12,6 @@ import { renderWithProviders } from '@/test/render';
 
 import { AnswerDialog } from './answer-dialog';
 
-/** The dialog opens on a run page, under the gate's project. */
 const runRoute = { projectSelection: { activeProject: makeProject() } };
 
 const ID = '11111111-1111-4111-8111-111111111111';
@@ -76,7 +75,6 @@ describe('Answer dialog', () => {
       runRoute,
     );
 
-    // With no prompt text the title is the prompt's number, said once.
     const dialog = await screen.findByRole('dialog', { name: 'Prompt #3' });
     expect(within(dialog).getAllByText(/Prompt #3/)).toHaveLength(1);
     // The first import transforms the markdown renderer, so it gets a cold budget.
@@ -115,7 +113,6 @@ describe('Answer dialog', () => {
         HttpResponse.json([
           { ...row, id: ID, prompt_index: 0, logical_engine: 'chatgpt', status: 'succeeded' },
           { ...row, id: OTHER, prompt_index: 0, logical_engine: 'gemini', status: 'succeeded' },
-          // Another prompt's answer and a failed one are not choices.
           {
             ...row,
             id: ID.replace('1', '3'),
@@ -143,11 +140,8 @@ describe('Answer dialog', () => {
       runRoute,
     );
 
-    // The prompt's text is the title, and its number is not printed beside it.
     const dialog = await screen.findByRole('dialog', { name: 'best plumber' });
     await within(dialog).findByText('From the first engine.', {}, { timeout: 15_000 });
-    // The header says how the shown answer ended. Your message is the prompt as the run asked
-    // it, not as the library words it now (the title).
     expect(await within(dialog).findByText('Succeeded')).toBeVisible();
     const conversation = within(dialog).getByRole('list', { name: 'Conversation' });
     expect(within(conversation).getByText('best plumber near me')).toBeVisible();
@@ -237,7 +231,6 @@ describe('Answer dialog', () => {
     }
 
     it("reads the answer's searches narrowed to its prompt", async () => {
-      // The server narrows to the prompt; a run-wide read is capped before this row.
       const dialog = await openFromPastAnswers(({ request }) => {
         const narrowed = new URL(request.url).searchParams.get('prompt_id') === PROMPT;
         return HttpResponse.json({ items: narrowed ? [fanoutRow] : [], truncated: !narrowed });

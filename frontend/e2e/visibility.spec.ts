@@ -1,20 +1,6 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
-/**
- * Visibility workspace e2e (Task 4).
- *
- * All backend calls are stubbed at the network layer so the spec runs without a
- * live backend (mirrors `runs.spec.ts`). It asserts the tab IA — Sources,
- * Ads, Query fanouts (no Overview / Topics) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
- * a time, `?tab=` URL sync), shared-filter persistence across tabs, the evidence
- * populated / empty / error states, the three query-fanout states, and a
- * narrow-viewport (mobile) layout check.
- *
- * The app calls only relative `/api/v1` paths (Next rewrites proxy them), so the
- * spec asserts every `/api/` request the browser issues is same-origin with the
- * page's baseURL — no cross-origin backend URL.
- */
 const WORKSPACE_ID = FIXTURE_PROJECT.workspace_id;
 const PROJECT_ID = FIXTURE_PROJECT.id;
 const AUDIT_LATEST = '22222222-2222-4222-8222-222222222222';
@@ -221,7 +207,6 @@ function evidenceItem(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/** Fixture with all three query-fanout states present. */
 function fanoutStatesResponse() {
   return {
     items: [
@@ -258,7 +243,6 @@ function fanoutStatesResponse() {
   };
 }
 
-/** A run whose answers name the brand but are not classified yet. */
 function pendingPerception() {
   const score = {
     positive: 0,
@@ -310,7 +294,6 @@ function pendingPerception() {
   };
 }
 
-/** An Ads read whose selection holds no ChatGPT Search answers. */
 function noChatGptAds() {
   const presence = { answers: 0, answers_with_ads: 0, rate: null };
   return {
@@ -340,26 +323,18 @@ type RouteBodies = {
   perception?: unknown;
 };
 
-/**
- * Register the shared network stubs. Every backend call is a relative
- * `/api/v1` path so the same-origin assertion holds. Returns the collected
- * request log and a helper to read the evidence request query params.
- */
 async function setup(page: Page, bodies: RouteBodies = {}) {
   const requests: Request[] = [];
   const evidenceUrls: URL[] = [];
   page.on('request', (request) => requests.push(request));
 
   await stubAuthedShell(page);
-  // The visibility dashboard lists audits via the flat `/audits?project_id=` route.
   await page.route('**/api/v1/audits**', (route) =>
     route.fulfill({
       json: [audit, { ...audit, id: AUDIT_EARLIER, completed_at: '2026-07-08T00:00:00Z' }],
     }),
   );
 
-  // Precise regexes so `/visibility`, `/visibility/trends`, and
-  // `/visibility/evidence` (all carrying `?...` query strings) route distinctly.
   await page.route(/\/api\/v1\/projects\/[^/]+\/visibility(\?.*)?$/, (route) =>
     route.fulfill(
       bodies.visibilityStatus
@@ -437,7 +412,6 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
   return { requests, evidenceUrls };
 }
 
-/** Assert every observed `/api/` request is same-origin with the baseURL. */
 function assertSameOriginApi(requests: Request[], baseURL: string) {
   const origin = new URL(baseURL).origin;
   const apiRequests = requests.filter((r) => new URL(r.url()).pathname.includes('/api/'));
@@ -453,7 +427,6 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   });
   await page.goto(fixtureProjectPath('/visibility'));
 
-  // Domains leads; the cited pages are the next tab.
   await expect(page.getByRole('tab', { name: 'Domains', exact: true })).toHaveAttribute(
     'aria-selected',
     'true',
@@ -463,14 +436,12 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   await expect(page.getByRole('searchbox', { name: 'Search URLs' })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
-  // Ads — paid placements in ChatGPT Search answers; other engines are not applicable.
   await page.getByRole('tab', { name: 'Ads', exact: true }).click();
   await expect(page).toHaveURL(/[?&]tab=ads/);
   await expect(page.getByRole('heading', { name: 'No ChatGPT Search answers' })).toBeVisible();
   await expect(page.getByText('Gemini API: Not applicable')).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
-  // Query fanouts — reuses the shared evidence cache.
   await page.getByRole('tab', { name: 'Query fanouts' }).click();
   await expect(page).toHaveURL(/[?&]tab=query-fanout/);
   await expect(page.getByText('affordable family clothing Australia 2026')).toBeVisible();
@@ -492,11 +463,6 @@ test('Perception reads the selected measurement and names a read still classifyi
   await expect(page.getByRole('heading', { name: 'Classifying answers…' })).toBeVisible();
 });
 
-// The roving-tablist keyboard contract (Arrow/Home/End selection AND focus
-// transfer) is asserted deterministically in
-// app/(authed)/(app)/visibility/page.test.tsx. Nothing in it was
-// browser-specific -- no real navigation, history, or cross-origin request --
-// so it does not earn a second run here.
 test('mobile viewport keeps the visibility tabs and one active panel usable', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 720 });
   await setup(page);
@@ -507,15 +473,11 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   const selectedTab = tablist.getByRole('tab', { selected: true });
   await expect(selectedTab).toBeVisible();
 
-  // Every retained tab is still present in the one row.
   await expect(tablist.getByRole('tab')).toHaveCount(5);
 
-  // Inactive panels are NOT stacked — still exactly one panel in the DOM.
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
-  // Shared filters remain usable: the row's engines chip opens its options and selects.
   await page.getByRole('button', { name: 'Engines: All engines' }).click();
-  // On a phone the options stay on the screen.
   const gemini = page.getByRole('menuitemradio', { name: 'Gemini API', exact: true });
   await expect(gemini).toBeInViewport({ ratio: 1 });
   await gemini.click();
@@ -526,18 +488,8 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
 });
 
 for (const width of [1280, 375]) {
-  // Drills in through the engine comparison. This journey used to enter on the
-  // rankings table's "N answers naming X but not you" button, which is gone
-  // with the "Answers without you" column — the measure was undefined for the
-  // tracked brand and asymmetric with every other column in that table. What
-  // the test is really for survives the change: a selected run and engine must
-  // still be the run and engine the evidence request asks for.
   test(`older run and engine preserve context through evidence at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
-    // The evidence answers for the run this journey SELECTED. Left at the
-    // fixture's default the answer link would point at the latest run either
-    // way, so the assertion below would hold even if the selection were
-    // dropped — the exact context loss this test is named for.
     const { evidenceUrls } = await setup(page, {
       evidence: {
         items: [evidenceItem({ audit_id: AUDIT_EARLIER })],
@@ -546,9 +498,6 @@ for (const width of [1280, 375]) {
     });
     await page.goto(fixtureProjectPath(`/insights?run=${AUDIT_EARLIER}&engine=gemini`));
     await page.getByRole('button', { name: 'Gemini API', exact: true }).click();
-    // The drill-down leaves Insights for Sources' Query fanouts, where
-    // execution evidence is rendered: the selected run and engine must be the
-    // run and engine the evidence request asks for.
     await expect(page).toHaveURL(/\/visibility\?.*tab=query-fanout/);
     await expect(page.getByRole('tabpanel')).toHaveCount(1);
     await expect.poll(() => evidenceUrls.at(-1)?.searchParams.get('audit_id')).toBe(AUDIT_EARLIER);

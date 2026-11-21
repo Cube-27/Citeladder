@@ -20,17 +20,6 @@ import { Notice } from '@/components/ui/notice';
 import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 
-/**
- * Always-mounted status row of the canonical Site Health screen.
- *
- * ONE compact row (badge + narration + inline counters) that narrates the
- * whole lifecycle in place above the score cards (whose figures already hold
- * the page counts) — the hidden total while discovering, failures while analyzing, and the run-outcome notice
- * (`dashboardRunNotice`) for a run that did not complete cleanly. The row
- * changes CONTENT, never the screen: no phase mounts or unmounts the region,
- * and progress is never a separate panel that pushes the results around.
- * Free redaction rules apply — sample crawls never imply a hidden total.
- */
 export function StatusStrip({
   crawl,
   phase,
@@ -43,13 +32,9 @@ export function StatusStrip({
   phase: SiteHealthPhase;
   entitlement: SiteHealthEntitlement;
   cancelPending: boolean;
-  /** Starts a new crawl from a failed one's notice; omitted when not allowed. */
   onRerun?: () => void;
-  /** A fresh crawl create is in flight — freeze current content behind a notice. */
   startPending: boolean;
 }>) {
-  // The wrapper (and its test id) stays mounted in every phase — only the
-  // CONTENT below changes. The screen regression tests assert this stability.
   return (
     <div className="grid empty:hidden" data-testid="status-strip">
       <StripContent
@@ -83,14 +68,9 @@ function StripContent({
     return <Notice tone="info">{crawl ? 'Starting a fresh crawl.' : 'Starting crawl.'}</Notice>;
   }
 
-  // The phase inputs have not all settled: say nothing rather than narrate a
-  // state that is about to be corrected. (The screen holds its skeleton for
-  // this beat, so it is not normally reached from there.)
   if (phase === 'resolving') return null;
 
   if (!crawl || phase === 'empty') {
-    // Direct component callers retain an empty-state fallback. The canonical
-    // layout owns the actionable first-crawl placeholder.
     return <StateBlock kind="empty" icon={ICONS.siteHealth} heading="No crawl yet" />;
   }
 
@@ -106,7 +86,6 @@ function StripContent({
   return <DashboardNotice crawl={crawl} />;
 }
 
-/** Why a terminal crawl has no score: its own reason wherever there is one. */
 function terminalMessage(
   status: SiteCrawl['status'],
   failure: ReturnType<typeof crawlFailureCopy> | null,
@@ -119,7 +98,6 @@ function terminalMessage(
 function TerminalNotice({ crawl, onRerun }: Readonly<{ crawl: SiteCrawl; onRerun?: () => void }>) {
   const failure = crawl.status === 'failed' ? crawlFailureCopy(crawl) : null;
   const message = terminalMessage(crawl.status, failure);
-  // A failed crawl is recovered by running it again, offered on the notice.
   if (failure)
     return (
       <Notice
@@ -141,7 +119,6 @@ function TerminalNotice({ crawl, onRerun }: Readonly<{ crawl: SiteCrawl; onRerun
   );
 }
 
-/** A settled crawl: its outcome and when it ran; its page counts lead the figure strip below. */
 function DashboardNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   const timeZone = useDisplayTimeZone();
   const notice = dashboardRunNotice(crawl);
@@ -164,12 +141,6 @@ function RunNotice({ crawl, message }: Readonly<{ crawl: SiteCrawl; message: str
   );
 }
 
-/**
- * The crawl's one status line: its status mark, the live rung while work
- * goes on, the narration, then the counts in tabular figures, wrapping on
- * narrow screens. Extra content (the sample note, a count-fetch warning)
- * stacks under it.
- */
 function ProgressRow({
   crawl,
   narration,
@@ -180,11 +151,9 @@ function ProgressRow({
   crawl: SiteCrawl;
   narration: string;
   counts: readonly ProgressCount[];
-  /** Show the live pulse — work is ongoing but not reflected in the counters. */
   active?: boolean;
   children?: ReactNode;
 }>) {
-  // The crawl's status is a group of content, so it is a card like the rest.
   return (
     <Section aria-label="Crawl status">
       <Stack>
@@ -196,8 +165,6 @@ function ProgressRow({
                 <Spinner />
               </span>
             ) : null}
-            {/* The live region is the TEXT, not the row: announcing the whole
-                row would re-read every counter on each poll. */}
             <span className="type-body min-w-0" aria-live="polite">
               {narration}
             </span>
@@ -233,8 +200,6 @@ function DiscoveryStrip({
   cancelPending: boolean;
 }>) {
   const showTotal = canShowDiscoveredTotal(entitlement, crawl);
-  // Neutral capability, not a plan name: `sample` means the server picks a
-  // bounded sample; full mode uses the crawl's automatic admission allowance.
   const sampleMode = crawl.sample_mode;
   let narration: string;
   if (cancelPending) {
@@ -243,7 +208,6 @@ function DiscoveryStrip({
     narration = discoveryProgressLabel(crawl);
   }
 
-  // Pages discovered and analyzed lead the figure strip above; the row adds only what it lacks.
   const counts: ProgressCount[] = [];
   if (showTotal && crawl.total_url_count !== null) {
     counts.push({ label: 'Total discovered', value: crawl.total_url_count });
@@ -269,8 +233,6 @@ function AnalysisStrip({
     <ProgressRow
       crawl={crawl}
       narration={analysisNarration(crawl, cancelPending)}
-      // Background re-discovery can leave the counters still; the pulse is
-      // what distinguishes "working" from "stuck".
       active={!cancelPending && crawl.counters.activity.state !== 'stalled'}
       counts={analysisCounts(crawl)}
     />

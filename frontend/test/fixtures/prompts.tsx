@@ -48,7 +48,6 @@ export function makeSet(prompts: Prompt[]): PromptSet {
   };
 }
 
-/** Form bounds as the API lists them; tests override the one they exercise. */
 export function makeFormLimits(overrides: Partial<PromptFormLimits> = {}): PromptFormLimits {
   return {
     generation_count_max: 50,
@@ -65,7 +64,6 @@ export function makeFormLimits(overrides: Partial<PromptFormLimits> = {}): Promp
   };
 }
 
-/** The prompt-set list read: the sets plus the form bounds. */
 export function makeSetList(
   sets: PromptSet[],
   limits: PromptFormLimits = makeFormLimits(),

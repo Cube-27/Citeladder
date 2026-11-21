@@ -9,17 +9,6 @@ import { PageSection } from '../sections/page-section';
 import { CtaBand, FaqList } from '../sections/steps-faq-cta';
 import '../sections/pricing.css';
 
-/**
- * Server-safe pricing composition.
- *
- * Plan cards, the comparison table and purchases live in the
- * `pricing-catalog.tsx` client island: every enforceable value comes from
- * `GET /billing/catalog`, which a sync server component cannot read. What
- * remains here carries no catalog value and stays server-rendered. The
- * answers restate published facts (the trial answer in
- * `lib/marketing-content/faq.ts`, the BYOK disclosure and the catalog's
- * currency note); they quote no price.
- */
 const trialProjects = projectCount(PUBLIC_TRIAL.projects);
 
 export const PRICING_FAQS = [
@@ -45,12 +34,6 @@ export const PRICING_FAQS = [
   },
 ] as const;
 
-/**
- * The pricing opening leads with the trial: what it includes, that a
- * paid plan is by contact, and both ways in. The limits restate the trial
- * answer above. Should self-serve checkout open, the lead stops saying it is
- * closed and points at the plans below.
- */
 export function PricingHero({ checkoutOpen = false }: Readonly<{ checkoutOpen?: boolean }>) {
   const trial = `${countWordCapitalized(PUBLIC_TRIAL.days)} days of AI visibility tracking on ChatGPT for ${trialProjects}, with ${PUBLIC_TRIAL.prompts} prompts and ${PUBLIC_TRIAL.monitoredUrls} monitored URLs.`;
   return (
@@ -67,7 +50,6 @@ export function PricingHero({ checkoutOpen = false }: Readonly<{ checkoutOpen?: 
   );
 }
 
-/** Provider keys: the no-markup point and its explanation, below the plans. */
 export function PricingKeys() {
   return (
     <PageSection
@@ -78,10 +60,6 @@ export function PricingKeys() {
   );
 }
 
-/**
- * Without a catalog no price is shown, and the page says so where the plans
- * sit, in the site's one note style (the neutral Callout).
- */
 export function PricingUnavailable() {
   return (
     <PageSection spacing="compact" label="Plans" labelHeading>
@@ -113,7 +91,6 @@ export function PricingFaq() {
   );
 }
 
-/** Closing band: see the product on your own category before choosing. */
 export function PricingCta() {
   return (
     <PageSection label="Get started">

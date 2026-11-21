@@ -11,17 +11,8 @@ type Bounds = { min: number; max: number };
 
 const KEY_STEP = 16;
 const KEY_STEP_LARGE = 48;
-/** A press that moves less than this is a click, not a drag. */
 const CLICK_SLOP = 3;
 
-/**
- * Pointer and keyboard mechanics for the sidebar's resize separator.
- *
- * Keys: ← / → move 16px (Shift: 48px), Home → minimum, End → maximum.
- * A click that does not drag steps to the next preset width, wrapping to the
- * minimum (WCAG 2.5.7); a double-click restores the default. A cancelled
- * pointer restores the width the drag started from.
- */
 export function usePaneResizeInteraction({
   width,
   bounds,
@@ -36,7 +27,6 @@ export function usePaneResizeInteraction({
   onResize: (width: number) => void;
   onCommit: (width: number) => void;
   defaultWidth: number;
-  /** The widths a click steps through, in ascending order. */
   presets: readonly number[];
   onBoundsChange?: (bounds: Bounds) => void;
 }) {
@@ -67,7 +57,6 @@ export function usePaneResizeInteraction({
   const beginDrag = (clientX: number, pointerId?: number) => {
     dragRef.current = { pointerId, startX: clientX, startWidth: widthRef.current };
     movedRef.current = false;
-    // The drag starts from the width on screen, whoever owned it until now.
     onResize(widthRef.current);
     setDragging(true);
     document.body.style.cursor = 'col-resize';
@@ -136,7 +125,6 @@ export function usePaneResizeInteraction({
 
   return {
     dragging,
-    /** Re-clamp the current width to fresh bounds (the container resized). */
     refreshBounds: () => apply(widthRef.current),
     onPointerDown,
     onPointerMove,

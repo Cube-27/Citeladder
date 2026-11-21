@@ -11,11 +11,6 @@ import { cn } from '@/lib/utils';
 
 import { FLOW_CARD } from './notice-page';
 
-/**
- * The CiteLadder logo linking home. The public home lives on the website
- * origin; "/" on the app origin is the product root, which a signed-out
- * visitor cannot use.
- */
 export function FlowLogo() {
   return (
     <a
@@ -28,17 +23,6 @@ export function FlowLogo() {
   );
 }
 
-/**
- * Flow: a one-screen page with no shell. Sign-in, sign-up, the mailbox
- * screens, the workspace chooser, an invitation and setup's blocked notices.
- * A bar as tall as the page header holds the logo and a way out (`barEnd`, the
- * account menu) with the theme switch. Under it, on the ground, one 480px
- * panel (`rule` edge, radius 8, 24 padding) starting a fifth of the way down
- * the window, its controls at the website's height (`control-lg`). `footer`
- * is one caption line at the foot. With `aside` (account access's showcase,
- * the right half from `desktop:`) the column sits unboxed on the surface
- * instead of the ground. Multi-step setup uses SetupPage instead.
- */
 export function FlowPage({
   label,
   kicker = label,
@@ -47,13 +31,10 @@ export function FlowPage({
   aside,
   children,
 }: Readonly<{
-  /** The main landmark's name and the card's kicker ("Account access"). */
   label: string;
-  /** The kicker in place of `label`; `null` for none, when the heading says the same. */
   kicker?: string | null;
   barEnd?: ReactNode;
   footer?: ReactNode;
-  /** The right half from `desktop:` (account access's showcase); the column takes the left. */
   aside?: ReactNode;
   children: ReactNode;
 }>) {
@@ -95,12 +76,6 @@ export function FlowPage({
   );
 }
 
-/**
- * A flow's heading (the `title` role, as the new-chat greeting) and the line
- * under it; the page's one `h1`, which takes focus by script (tabIndex -1)
- * when a flow moves to a new step. A heading in words also names the document
- * ("Sign in · CiteLadder").
- */
 function FlowHead({
   id,
   title,
@@ -126,11 +101,6 @@ function FlowHead({
   );
 }
 
-/**
- * One flow screen's content: the heading and its line, then the body 24
- * below, then the closing lines 24 under it (`after`: the sign-in/sign-up
- * switch and the agreement line), inside the flow's card.
- */
 export function FlowBlock({
   title,
   titleId,
@@ -141,11 +111,9 @@ export function FlowBlock({
   children,
 }: Readonly<{
   title: ReactNode;
-  /** The heading's id; generated otherwise. */
   titleId?: string;
   sub?: ReactNode;
   icon?: IconGlyph;
-  /** Account access: the heading and its line centred over the form. */
   centered?: boolean;
   after?: ReactNode;
   children?: ReactNode;

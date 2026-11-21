@@ -33,7 +33,6 @@ describe('toIssueParams', () => {
     expect(wire('')).toEqual([undefined, undefined]);
     expect(wire('high')).toEqual(['high', 'defect']);
     expect(wire('advisory')).toEqual([undefined, 'advisory']);
-    // An unrecognized inbound value reads as "all", so it narrows nothing.
     expect(wire('critical')).toEqual([undefined, undefined]);
   });
 
@@ -95,7 +94,6 @@ describe('the severity choice', () => {
     expect(issueSeverityChoice({ ...emptyIssueFilters, severity: 'medium' })).toBe('medium');
     expect(issueSeverityChoice({ ...emptyIssueFilters, severity: 'advisory' })).toBe('advisory');
     expect(issueSeverityChoice(emptyIssueFilters)).toBe('all');
-    // An unrecognized inbound value is not a choice.
     expect(issueSeverityChoice({ ...emptyIssueFilters, severity: 'critical' })).toBe('all');
   });
 

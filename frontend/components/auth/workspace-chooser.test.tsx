@@ -58,7 +58,6 @@ describe('WorkspaceChooser', () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  // Sole-destination shortcuts are the route loader's alone (bootstrap-loader.test.ts).
   it('offers setup, not an endless wait, to someone who belongs to no workspace', async () => {
     choose([], 'no_workspace');
     await userEvent.setup().click(screen.getByRole('link', { name: 'Set up your own workspace' }));

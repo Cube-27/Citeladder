@@ -44,11 +44,6 @@ function topicsState(query: UseQueryResult<VisibilityTopics>): DataTableState | 
   return undefined;
 }
 
-/**
- * The selection by project topic (AV-5): answers group by the topic their
- * prompt had when the run froze it. A renamed topic shows its current name
- * and the name the runs froze; a topic the runs never asked reads "Not run".
- */
 export function VisibilityByTopic({
   query,
   topic,
@@ -95,7 +90,6 @@ export function VisibilityByTopic({
                 </TableCell>
               </>
             ) : (
-              // A dash in every value position, the reason in each one's name.
               VALUE_KEYS.map((key) => (
                 <TableCell key={key} numeric>
                   <Absence state="not_run" label={READING_LABELS.not_run} />

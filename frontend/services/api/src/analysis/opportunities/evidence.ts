@@ -1,4 +1,3 @@
-/** Frozen persisted evidence shared by the PR7 detector foundation. */
 import type { OpportunityEvidence } from '@citeladder/contracts/opportunity-evidence';
 import type { TargetRef } from './targets.ts';
 
@@ -38,12 +37,6 @@ export type VisibilityEvidence = {
 };
 export type SiteEvidence = {
   crawl_id: string;
-  /**
-   * The crawl's Issues groups of every defect and advisory rule
-   * (`SITE_ISSUE_FAMILY`): each rule's exact affected page count and its
-   * first `COHORT_PAGES_MAX` owned pages in URL order. A site-level rule's
-   * pages are the ones its evidence names; `whole_site` when it names none.
-   */
   families: {
     rule_id: string;
     finding_class: string;
@@ -60,17 +53,12 @@ export type SiteEvidence = {
 export type DetectorHit = {
   rule_id: string;
   target: TargetRef;
-  /** The rule's evidence, shaped by `opportunityEvidenceSchemas`. */
   evidence: OpportunityEvidence;
   source_analysis_ids: string[];
   source_issue_ids: string[];
   source_metric_ids: string[];
   value_factor: number;
   gap_factor: number;
-  /**
-   * The severity, title and fix this finding carries instead of its rule's:
-   * an issue family's are its own Site Health rule's. Absent for every other hit.
-   */
   finding?: Readonly<{ severity: string; title: string; remediation: string }>;
 };
 type PageEntityEvidence = {
@@ -88,7 +76,6 @@ export type SourcePageEvidence = {
   page_format: string;
   page_format_method: string | null;
   source_class: string | null;
-  /** The latest successful reading; a later failed read does not discard it. */
   snapshot_id: string | null;
   read_at: string | null;
   extracted_chars: number;
@@ -96,7 +83,6 @@ export type SourcePageEvidence = {
   entities: PageEntityEvidence[];
   recurrence_count: number;
   answer_count: number;
-  /** Tracked prompts whose answers in this audit cited the page. */
   prompts: { prompt_id: string; text: string }[];
   themes: string[];
   analysis_ids: string[];

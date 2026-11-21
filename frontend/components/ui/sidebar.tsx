@@ -21,16 +21,6 @@ import {
 import { setSidebarCollapsed, useSidebarCollapsed } from '@/lib/sidebar-width';
 import { cn } from '@/lib/utils';
 
-/**
- * The Sidebar organism's parts, labelled and as the collapsed rail, 8 inside
- * the column's edges. Top to bottom: the header (the project switcher and the
- * Settings link in one row as tall as the page header), the mode switch, the
- * mode's list, then the foot (Integrations with the collapse toggle at its
- * end, then the account). Only the list scrolls. In the 56px rail every 40px button shares
- * one centre axis, 4 between the parts, the toggle straight above the
- * account, so it keeps its place at the foot whichever way the sidebar shows
- * (AR-8); its twelve buttons fit a window 520 high (16 + 12 × 40 + 16).
- */
 export function SidebarFrame({
   ident,
   mode,
@@ -46,8 +36,6 @@ export function SidebarFrame({
 }>) {
   return (
     <div className="h-full overflow-hidden">
-      {/* In the shell's column the content keeps the width the column eases
-          to, so a collapse never rewraps a label. */}
       <div
         data-sidebar-frame=""
         className="rail:in-data-[sidebar-state=expanded]:w-[var(--sidebar-width-compact)] shell:in-data-[sidebar-state=expanded]:w-[var(--sidebar-width)] rail:in-data-[sidebar-state=collapsed]:w-[var(--sidebar-rail-width)] labelled:gap-2 flex h-full flex-col gap-1 p-2"
@@ -74,10 +62,6 @@ export function SidebarFrame({
 
 type ScrollEnds = Readonly<{ top: boolean; bottom: boolean }>;
 
-/**
- * Which ends of a list hide more rows, kept current on scroll, on a resize of
- * the list or of any group in it (a fold, rows arriving) and once the fonts load.
- */
 function useScrollEnds(ref: RefObject<HTMLElement | null>): ScrollEnds {
   const [ends, setEnds] = useState<ScrollEnds>({ top: false, bottom: false });
   useEffect(() => {
@@ -110,19 +94,13 @@ function useScrollEnds(ref: RefObject<HTMLElement | null>): ScrollEnds {
   return ends;
 }
 
-/** The list's fade at either end (globals.css `[data-sidebar-scroll]`). */
 const LIST_FADE = 32;
 
-/**
- * Scrolls the list just enough to show its current row clear of the fades
- * (never the page); at either end of the list the fade is gone anyway.
- */
 function revealCurrent(list: HTMLElement) {
   const current = list.querySelector<HTMLElement>('[aria-current="page"]');
   if (!current) return;
   const listBox = list.getBoundingClientRect();
   const rowBox = current.getBoundingClientRect();
-  // A list too short for both fades centres the row instead.
   const inset = Math.max(0, Math.min(LIST_FADE, (listBox.height - rowBox.height) / 2));
   const above = listBox.top + inset - rowBox.top;
   const below = rowBox.bottom - (listBox.bottom - inset);
@@ -130,13 +108,6 @@ function revealCurrent(list: HTMLElement) {
   else if (below > 0) list.scrollTop += below;
 }
 
-/**
- * The labelled list between the pinned parts: the one region that scrolls.
- * It fades at the end it can scroll towards (a mask on the list, globals.css)
- * and shows the current row on load and whenever `revealKey` (the location)
- * changes. Sections sit 16 apart; groups closer (`[data-sidebar-group]`,
- * globals.css).
- */
 export function SidebarScrollList({
   label,
   revealKey,
@@ -148,7 +119,6 @@ export function SidebarScrollList({
     const list = ref.current;
     if (!list) return;
     revealCurrent(list);
-    // The faces loading can move the row; show it again once they have.
     let live = true;
     void document.fonts?.ready.then(() => {
       if (live) revealCurrent(list);
@@ -172,12 +142,6 @@ export function SidebarScrollList({
   );
 }
 
-/**
- * A group of rows. A titled group's label is a row-high button in 12px
- * `caption-strong` with a chevron that folds and unfolds the rows; the
- * caller passes only the rows to show (a folded group still shows the
- * current page's row).
- */
 export function SidebarNavGroup({
   title,
   expanded = true,
@@ -218,20 +182,11 @@ export function SidebarNavGroup({
   );
 }
 
-/** The current row's fill. */
 const CURRENT_FILL = 'bg-[var(--nav-current-fill)]';
-/** The current row's tile, the accent mark at its start and `ink` at 500. */
 const CURRENT_TILE = cn(CURRENT_FILL, 'text-ink before:bg-accent');
 const AT_REST = 'text-ink-2 hover:overlay-hover hover:text-ink';
-/** A nav row at rest stays `ink`; only group labels and the mode switch are `ink-2` (owner, 2026-11-19). */
 const NAV_AT_REST = 'text-ink hover:overlay-hover';
 
-/**
- * A row's face: 28 tall (44 in the drawer below 900px), `label` type at the
- * regular weight (owner, 2026-11-18), the icon and the label 8 apart, radius
- * 6. Labels never wrap: one that cannot fit (WCAG text spacing) ends in an
- * ellipsis and the row's tooltip shows it.
- */
 export function sidebarNavRowClasses(active: boolean, className?: string) {
   return cn(
     'focus-ring type-label rounded-control relative flex font-normal h-[var(--nav-row-height)] w-full min-w-0 shrink-0 items-center gap-2 px-2 text-left transition-colors',
@@ -243,11 +198,6 @@ export function sidebarNavRowClasses(active: boolean, className?: string) {
 
 const ROW_ICON = 'size-3.5 shrink-0 in-data-[nav-drawer]:size-5';
 
-/**
- * A row's content: the icon, the label and, on a row that counts something
- * (Actions), a count slot of a fixed 4ch, so a count arriving never moves the
- * label.
- */
 export function SidebarNavRowContent({
   icon: Icon,
   label,
@@ -272,21 +222,10 @@ const RAIL_BUTTON = cn(
   'data-[state=open]:overlay-pressed',
 );
 
-/**
- * A collapsed-rail button's face: 40 square, a 20px icon, radius 6. The
- * button of the group that holds the current page carries the tile and the
- * accent mark.
- */
 export function sidebarRailButtonClasses(current: boolean) {
   return cn(RAIL_BUTTON, current ? CURRENT_TILE : NAV_AT_REST);
 }
 
-/**
- * The Dashboard | Agent switch, the segmented control: a `rule` frame one
- * control tall, segments 2 inside it, the current one on the current row's
- * fill. In the rail it is two stacked rail buttons, the current one on the
- * tile without the mark.
- */
 export function sidebarModeTrackClasses(rail: boolean) {
   return rail
     ? 'flex flex-col items-center'
@@ -294,26 +233,17 @@ export function sidebarModeTrackClasses(rail: boolean) {
 }
 
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
-  // The rail's one accent mark is the current destination's; the mode takes the tile only.
   if (rail) return cn(RAIL_BUTTON, current ? cn('text-ink', CURRENT_FILL) : AT_REST);
-  // Labelled, a segment is its word (no icon), the two sharing the width;
-  // wider text spacing ends in an ellipsis.
   return cn(
     'focus-ring type-label rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors',
     current ? cn('text-ink', CURRENT_FILL) : AT_REST,
   );
 }
 
-/** A rail flyout's non-item content (the chats' search, a sentence), inset like its rows. */
 export function RailFlyoutSlot({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="px-2 py-1">{children}</div>;
 }
 
-/**
- * The rail's buttons, top to bottom in one column on the centre axis. In a
- * window too short for all of them (under 520) the column scrolls, its
- * scrollbar hidden, rather than cutting off the last groups.
- */
 export function SidebarRailList({
   label,
   children,
@@ -328,12 +258,6 @@ export function SidebarRailList({
   );
 }
 
-/**
- * The project switcher's and the account's trigger: two lines (the name in
- * `ink`, the domain or workspace in `ink-2`), quiet until hovered or open.
- * In the rail it is a 40px button holding only its mark. `pending` holds the
- * lines' place with blocks until the read answers.
- */
 export function SidebarIdentButton({
   lead,
   title,
@@ -348,7 +272,6 @@ export function SidebarIdentButton({
     lead: ReactNode;
     title: string;
     meta?: string;
-    /** The current page lives behind this button (the account's Settings): it carries the mark. */
     current?: boolean;
     pending?: boolean;
     ref?: Ref<HTMLButtonElement>;
@@ -392,12 +315,6 @@ export function SidebarIdentButton({
   );
 }
 
-/**
- * Collapse the sidebar to its rail, or open it again: at the end of the
- * Integrations row when labelled, its own row above the account in the rail
- * (AR-8). Below 900px and in the drawer, where the menu button opens the
- * sidebar instead, it is hidden.
- */
 function SidebarCollapseToggle() {
   const collapsed = useSidebarCollapsed();
   return (
@@ -415,13 +332,11 @@ function SidebarCollapseToggle() {
 
 const COLLAPSE_SHORTCUT = 'Ctrl \\';
 
-/** True while the trigger sits in the collapsed rail, where only its tooltip names it. */
 function isRail(trigger: HTMLElement) {
   if (trigger.closest('[data-nav-drawer]')) return false;
   return Boolean(trigger.closest('[data-sidebar-state="collapsed"]'));
 }
 
-/** Names a rail button, or a row whose label is cut; where its whole label shows, it never opens. */
 export function SidebarRowTooltip({
   label,
   children,
@@ -438,18 +353,8 @@ export function SidebarRowTooltip({
   );
 }
 
-/** A row's line (`data-sidebar-text="title"` or `"meta"`) and its full text. */
 type SidebarTextLine = { line: string; text: string };
 
-/**
- * The full text of a sidebar row whose lines the sidebar cut (a project's
- * domain, an email), on hover and keyboard focus: the row's
- * `data-sidebar-text` lines are measured only as the tooltip is about to
- * open, and it opens only when one is cut. `inRail` also opens it in the
- * rail, where the row shows no text at all; `inRail="only"` opens it there
- * alone. The row's accessible name already holds the text, so it is not
- * repeated as a description.
- */
 export function SidebarTextTooltip({
   inRail = false,
   children,

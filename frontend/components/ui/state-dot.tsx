@@ -1,9 +1,5 @@
 import { cn } from '@/lib/utils';
 
-/**
- * A work item's state as a 12px ring: open, half-filled active, filled done,
- * washed declined, or due (open work waiting).
- */
 export type StateDotTone = 'open' | 'active' | 'done' | 'declined' | 'due';
 
 const COLOR: Record<StateDotTone, string> = {
@@ -16,7 +12,6 @@ const COLOR: Record<StateDotTone, string> = {
 
 const FILL_OPACITY: Partial<Record<StateDotTone, number>> = { done: 1, declined: 0.15 };
 
-/** Drawn from currentColor, so a tone costs one text colour and no stylesheet rule. */
 export function StateDot({ tone }: Readonly<{ tone: StateDotTone }>) {
   return (
     <svg aria-hidden viewBox="0 0 12 12" className={cn('size-3 shrink-0', COLOR[tone])}>

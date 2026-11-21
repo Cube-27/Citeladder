@@ -16,12 +16,10 @@ import { type EntityPolicy, namesEntity } from './aliases.ts';
 import { frozenComparisonKey } from './comparison.ts';
 import type { ScoringConfig } from './scoring.ts';
 
-// Engine states that searched without saying what for: their queries are not applicable.
 const UNREPORTED_STATES = new Set(['unavailable', 'count_only']);
 
 const namedBrandSchema = z.object({ kind: z.enum(['brand', 'competitor']), name: z.string() });
 
-/** `audit_fanout_terms.terms`: one entry per distinct query the run's engines returned. */
 export const storedQueriesSchema = z.array(
   z.object({
     query: z.string(),
@@ -35,7 +33,6 @@ type TrackedBrand = z.infer<typeof namedBrandSchema> & {
   matching?: EntityPolicy;
 };
 
-/** The brand and every competitor, with the names, aliases and matching policy that name it. */
 function trackedBrands(config: ScoringConfig): TrackedBrand[] {
   return [
     {
@@ -53,7 +50,6 @@ function trackedBrands(config: ScoringConfig): TrackedBrand[] {
   ].filter((brand) => brand.name && brand.aliases.length);
 }
 
-/** Queries by searches, then query; every returned query is one search. */
 export function countQueries(
   queries: readonly string[],
   config: ScoringConfig,
@@ -73,7 +69,6 @@ export function countQueries(
   return { totalSearches: rows.reduce((sum, row) => sum + row.searches, 0), queries: rows };
 }
 
-/** Engines that searched in this run without ever reporting what they searched for. */
 function unreportedEngines(analyses: readonly Selectable<ResponseAnalyses>[]): string[] {
   const reported = new Set(
     analyses.filter((a) => a.fanout_state === 'queries_available').map((a) => a.logical_engine),
@@ -87,11 +82,6 @@ function unreportedEngines(analyses: readonly Selectable<ResponseAnalyses>[]): s
   ].sort(compareText);
 }
 
-/**
- * The newest earlier finalized run that counted searches and is comparable the
- * way the trend is (same frozen comparison key); a run of selected prompts is
- * never compared, on either side.
- */
 async function previousRunId(db: Database, audit: Selectable<Audits>) {
   const key = frozenComparisonKey(audit.configuration);
   if (key === null || !askedWholeSet(audit.configuration)) return null;
@@ -118,7 +108,6 @@ async function previousRunId(db: Database, audit: Selectable<Audits>) {
   return previous?.audit_id ?? null;
 }
 
-/** Caller holds the run's finalization transaction; one row per run. */
 export async function persistFanoutTerms(
   db: Database,
   audit: Selectable<Audits>,
@@ -130,7 +119,6 @@ export async function persistFanoutTerms(
     analyses.flatMap((a) => a.fanout_queries),
     config,
   );
-  // No reported search on either side leaves nothing to compare, never a fall to zero.
   const previous = totalSearches ? await previousRunId(db, audit) : null;
   await db
     .insertInto('audit_fanout_terms')

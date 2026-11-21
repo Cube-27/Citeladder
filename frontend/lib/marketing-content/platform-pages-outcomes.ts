@@ -1,6 +1,5 @@
 import { type PlatformPage } from './platform-page-types';
 
-/** Measurement beyond the answer: AI traffic and the commerce shelf. */
 export const OUTCOME_PAGES: readonly PlatformPage[] = [
   {
     path: '/platform/ai-referral-analytics',

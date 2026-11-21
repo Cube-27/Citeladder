@@ -1,12 +1,3 @@
-/**
- * Every successful answer one tracked prompt got, newest run first, a page at
- * a time.
- *
- * An answer is a persisted analysis whose frozen prompt snapshot names the
- * prompt, in the market's dashboard-ready brand runs; nothing is rescored.
- * Pages are keyset on (run completion, execution id), so a page never shifts
- * when a newer run lands while the reader pages back.
- */
 import type { promptAnswerSearchSchema } from '@citeladder/contracts/audits';
 import type { promptAnswerPageSchema } from '@citeladder/contracts/visibility-prompt-answers';
 import { sql } from 'kysely';
@@ -42,9 +33,7 @@ export type PromptAnswersQuery = {
   logicalEngine: string | null;
   fromAt: ParsedDatetime | null;
   toAt: ParsedDatetime | null;
-  /** A tracked brand or competitor name the answer must have named. */
   brand: string | null;
-  /** Whether your domain was cited. */
   cited: boolean | null;
   search: Search | null;
   cursor: string | null;
@@ -56,11 +45,6 @@ const cursorSchema = z.tuple([
   z.uuid(),
 ]);
 
-/**
- * Search use from persisted columns. A surface that exposes no search signal
- * (an AI Overview: fanout `unavailable` and never searched) is not reported,
- * which is not "no".
- */
 const SEARCH_FILTER = {
   used: sql<boolean>`ra.search_used`,
   not_used: sql<boolean>`not ra.search_used and ra.fanout_state <> 'unavailable'`,
@@ -147,18 +131,15 @@ export async function getPromptAnswers(
   };
 }
 
-/** The decoded position; a malformed cursor is refused, never read as the start. */
 function cursorPosition(cursor: string, fingerprint: Record<string, unknown>) {
   const parsed = cursorSchema.safeParse(decodeKeysetCursor(cursor, CURSOR_SCOPE, fingerprint));
   if (!parsed.success) throw new InvalidCursorError('invalid cursor');
   return parsed.data;
 }
 
-/** Names compare by `identityKey`, as the marks resolve them. */
 const keyOf = (column: string) =>
   sql`lower(regexp_replace(btrim(${sql.ref(column)}), '\\s+', ' ', 'g'))`;
 
-/** The prompt's answers in the scope's market that pass every filter but the cursor. */
 function matchingAnswers(db: Database, scope: RunScope, query: PromptAnswersQuery) {
   const { workspaceId } = scope;
   let answers = db
@@ -194,7 +175,6 @@ function matchingAnswers(db: Database, scope: RunScope, query: PromptAnswersQuer
   return answers;
 }
 
-/** Each answer's named brands, first-named first, with the project's marks. */
 async function namedInOrder(
   db: Database,
   scope: RunScope,
@@ -218,7 +198,6 @@ async function namedInOrder(
     `.execute(db),
     brandIdentities(db, scope),
   ]);
-  // An unrecorded offset sorts after every recorded one, never guessed into place.
   const at = (offset: number | null) => offset ?? Number.MAX_SAFE_INTEGER;
   const byAnswer = groupBy(mentions.rows, (row) => row.analysis_id);
   return new Map(

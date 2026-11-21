@@ -7,7 +7,6 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { proseMarkdownBlocks, rehypeProseBlocks } from './prose-blocks';
 
-/** Render Markdown through the docs' processor, as the Astro build does. */
 async function render(markdown: string) {
   const renderer = await satteri({ hastPlugins: [proseMarkdownBlocks] }).createRenderer({
     syntaxHighlight: false,
@@ -41,7 +40,6 @@ describe('docs Markdown blocks', () => {
   });
 });
 
-/** Render Markdown as the website does, through react-markdown. */
 function renderWebsite(markdown: string) {
   return renderToStaticMarkup(
     <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeProseBlocks]}>

@@ -2,7 +2,6 @@ import { FREE_TOOL_LIMIT_LABELS } from '@/lib/config/free-tools';
 
 import type { FaqItem } from './faq';
 
-/** `updated` is the page's sitemap <lastmod>: revise it when the tool or its guide changes. */
 export const FREE_TOOLS = [
   {
     slug: 'ai-crawler-checker',
@@ -72,7 +71,6 @@ export const FREE_TOOLS = [
 
 type FreeToolSlug = (typeof FREE_TOOLS)[number]['slug'];
 
-/** What a tool inspects, how to read its output and the questions people ask about it. */
 export type ToolGuide = {
   checks: readonly string[];
   reading: readonly string[];

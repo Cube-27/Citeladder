@@ -41,7 +41,6 @@ it('refuses unsafe enabled origins and enforces production and demo admission', 
   expect(() =>
     loadMcpConfig(loadConfig({ ...production, ENCRYPTION_KEY: production.JWT_SECRET_KEY })),
   ).toThrow('independent');
-  // No fallback to the app origin: enabled MCP without the API host fails at startup.
   expect(() => loadMcpConfig(loadConfig({ ...production, PUBLIC_API_URL: '' }))).toThrow(
     'PUBLIC_API_URL must be configured for MCP',
   );

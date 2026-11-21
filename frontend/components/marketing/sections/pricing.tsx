@@ -7,11 +7,6 @@ import { cn } from '@/lib/utils';
 import { CheckList, columnsFor } from './site-parts';
 import './pricing.css';
 
-/**
- * PricingCard: one plan. The description, price note and name row reserve
- * their height, so plans in a row line up whatever their copy; the featured
- * plan takes an ink edge and an ink badge.
- */
 export function PricingCard({
   name,
   badge,
@@ -62,7 +57,6 @@ export function PricingCard({
   );
 }
 
-/** PagePlans: the pricing row, equal columns with a toolbar (billing period) above. */
 export function PagePlans({
   toolbar,
   children,
@@ -76,10 +70,6 @@ export function PagePlans({
   );
 }
 
-/**
- * A plan's cell: included, not included, or a value such as a limit (text,
- * or a link where the value is a source).
- */
 export type PlanCell = boolean | string | ReactElement;
 
 function PlanValue({ value }: Readonly<{ value: PlanCell }>) {
@@ -102,10 +92,6 @@ function PlanValue({ value }: Readonly<{ value: PlanCell }>) {
   return value;
 }
 
-/**
- * PricingTable: every plan's features in grouped rows. The table scrolls in
- * its frame on phones with the feature column pinned, never squeezing cells.
- */
 export function PricingTable({
   caption = 'Plan comparison',
   plans,

@@ -8,7 +8,6 @@ import { makeSiteCrawl, makeSiteHealthEntitlement } from '@/test/fixtures/site-h
 
 const entitlement = makeSiteHealthEntitlement();
 
-/** Mid-analysis: one of three selected pages scored, two still queued. */
 function crawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
   return makeSiteCrawl({
     project_id: '44444444-4444-4444-8444-444444444444',
@@ -159,7 +158,6 @@ describe('StatusStrip — lifecycle content', () => {
 
     const { unmount } = renderStrip(discovering(false));
     expect(screen.queryByText(/-page sample/)).not.toBeInTheDocument();
-    // The figure strip owns the page counts; the row never repeats them.
     expect(screen.queryByText('Pages discovered')).not.toBeInTheDocument();
     unmount();
 
@@ -184,8 +182,6 @@ describe('StatusStrip — lifecycle content', () => {
   });
 
   it('freezes behind a starting notice while a fresh crawl create is in flight', () => {
-    // The old crawl's phase must not stay in view while a new crawl is being
-    // created — a single notice covers the in-flight window.
     renderStrip({
       startPending: true,
       phase: 'terminal',

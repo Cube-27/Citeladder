@@ -1,10 +1,3 @@
-/**
- * The Copy behaviour of `CodeBlock.astro`: one delegated listener copies a
- * block's code and reports the outcome in the status region beside the
- * button, whose own name stays "Copy". "Copied" shows for 1.6s, only after the
- * clipboard accepted the write; a refused write or a missing clipboard API
- * (permissions policy, insecure origin) reads "Couldn't copy" until the next press.
- */
 const RESET_MS = 1600;
 const timers = new WeakMap<HTMLElement, number>();
 
@@ -28,7 +21,6 @@ function report(button: HTMLButtonElement, copied: boolean) {
   );
 }
 
-/** Copy the code of the block holding `button`, then report whether it worked. */
 export async function copyCodeBlock(
   button: HTMLButtonElement,
   clipboard: ClipboardWriter | undefined = navigator.clipboard,
@@ -47,7 +39,6 @@ export async function copyCodeBlock(
   }
 }
 
-/** Install the delegated listener once per page. */
 export function installCodeCopy(root: Document = document) {
   root.addEventListener('click', (event) => {
     if (!(event.target instanceof Element)) return;

@@ -48,7 +48,6 @@ const schoolMaps = [
     exclusions: [],
   },
 ];
-/** A cell's facets as `[key, value]` pairs, or null for a bare cell. */
 const facetOf = (slot: Slot) => {
   const keys = Object.keys(slot.buyer_need).filter((key) => !['offering', 'market'].includes(key));
   return keys.length ? keys.map((key) => [key, slot.buyer_need[key]]) : null;
@@ -107,7 +106,6 @@ describe('universe planner', () => {
       [['situation_or_constraint', 'first-time boarder']],
     ]);
     expect(slots.every((slot) => facetOf(slot)?.length === 1)).toBe(true);
-    // Core cells suggest the intents coherent with their stage.
     for (const slot of slots)
       expect(slot.target_prompt_intents).toEqual(G.stage_intents[slot.target_buyer_stage]);
   });
@@ -136,7 +134,6 @@ describe('universe planner', () => {
     } as GenerationContext;
     const bare = planSlots(roleless, generationInput.parse({ count: 3 }), []);
     expect(bare.map(facetOf)).toEqual([null, null, null, null, null, null]);
-    // A cell without a facet claims no review at all.
     expect(new Set(bare.map((slot) => slot.evidence_ref.review_state))).toEqual(
       new Set(['not_applicable']),
     );
@@ -254,7 +251,6 @@ describe('distribution-aware planning', () => {
       [['audience', 'grandparents']],
       [['audience', 'military families']],
     ]);
-    // A requested persona is this run's choice, not evidence a person confirmed in the map.
     const states = (offering: string) =>
       new Set(
         slots
@@ -353,7 +349,6 @@ describe('topic weights and branded claims (the thenetreturn.com run)', () => {
     description: '',
     parent_id: null,
   }));
-  // The offerings each topic was proposed from: the core category covers four.
   const covered: Record<string, string[]> = {
     [topics[0]!.id]: ['Pro net', 'Home net', 'Mini net', 'Junior net'],
     [topics[1]!.id]: ['Extra Point net', 'Custom Extra Point net'],
@@ -436,7 +431,6 @@ describe('topic weights and branded claims (the thenetreturn.com run)', () => {
       'Simulator bays',
       'Impact screen',
     ]);
-    // The drafter never receives them; core cells carry none.
     expect(modelSlot(branded)).not.toHaveProperty('grounded_attributes');
     expect(simulators('core')[0]).not.toHaveProperty('grounded_attributes');
   });
@@ -455,7 +449,6 @@ describe('draft batches', () => {
     const context = { ...base, selected: topics, topics } as GenerationContext;
     const input = generationInput.parse({ count: 20, distribution: { branded_share: 0.25 } });
     const batches = planBatches(planSlots(context, input, []), 20);
-    // 30 core cells (five or four per topic) in two batches of whole topics, 10 branded in one.
     expect(batches.map((batch) => batch.length)).toEqual([17, 13, 10]);
     for (const batch of batches) expect(new Set(batch.map((slot) => slot.cohort)).size).toBe(1);
     const topicBatches = Map.groupBy(

@@ -21,12 +21,6 @@ const env = {
 };
 const options = { cwd, env, stdio: 'inherit' };
 
-// A second dev server would rebuild the output the first one is serving from,
-// failing on locked files and leaving the running one with deleted assets.
-// The lock is a listener on a private loopback port, held for the process's
-// whole life (including the build before Wrangler binds 3000): the OS grants
-// it atomically and releases it on any exit, so there is no stale lock to
-// recover. The port-3000 probe also catches anything else already there.
 const lockPort = 39_317;
 const port = 3000;
 function listen(server, listenPort) {

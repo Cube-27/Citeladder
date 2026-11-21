@@ -9,7 +9,6 @@ import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
-/** The chat screen at the fixture chat, in the fixture project. */
 export function renderChat() {
   return renderWithProviders(
     <Routes>
@@ -26,7 +25,6 @@ export function renderChat() {
   );
 }
 
-/** The mock API a chat-screen test file runs against; `reset` runs after each test. */
 export function serveChatScreen(reset?: () => void) {
   beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
   beforeEach(() =>

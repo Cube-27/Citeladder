@@ -30,10 +30,6 @@ const TREATMENT_LABEL: Record<BillingInvoice['tax_treatment'], string> = {
   EXPORT_ZERO_RATED: 'Zero-rated export',
 };
 
-/**
- * The invoice's GST, once: the components it carries, each the server's own
- * figure (nothing is added here). A zero-rated export carries none.
- */
 function taxBreakdown(invoice: BillingInvoice): string {
   const parts = (
     [
@@ -100,7 +96,6 @@ export function InvoiceHistory({
   };
 
   return (
-    // The table is the named region; the group only heads it.
     <SettingsGroup title="Invoices" region={false}>
       {downloadError ? (
         <Notice tone="negative">Receipt download failed. Please retry.</Notice>

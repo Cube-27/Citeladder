@@ -1,4 +1,3 @@
-/** Append terminal revisions while retaining evaluations on their original analyses. */
 import { sql, type Selectable } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -10,7 +9,6 @@ import type { RuleEvaluation } from './analysis/rules.ts';
 import { crawlSiteChecks, finalPageChecks, scoreAnalysis } from './analysis/scoring.ts';
 import type { Crawl } from './site-task.ts';
 
-/** A stored evaluation, of which scoring reads only the rule columns. */
 type StoredEvaluation = Omit<
   RuleEvaluation,
   'evidence' | 'score_roles' | 'description' | 'remediation'
@@ -28,12 +26,6 @@ export function persistedEvaluation(row: StoredEvaluation): RuleEvaluation {
 
 export type SiteSources = Selectable<SiteRuleEvaluations>[];
 
-/**
- * The crawl's applied site checks every final revision scores and names: the
- * site-scope evaluations of the analyses this finalization covers, each current
- * analysis or the initial a final revision superseded. Read after the root's
- * batch committed (or inside it), so its crawl-finalize site checks are among them.
- */
 export function crawlSiteSources(db: Database, crawl: Crawl): Promise<SiteSources> {
   return db
     .selectFrom('site_rule_evaluations')
@@ -55,12 +47,6 @@ export function crawlSiteSources(db: Database, crawl: Crawl): Promise<SiteSource
     .execute();
 }
 
-/**
- * Append the final revision of each named analysis that is still current and
- * unfinalized, and retire the initial. A page that already has its revision
- * drops out, so a replayed batch appends nothing. The caller holds the crawl
- * lock; issue currency follows in the publication.
- */
 export async function appendFinalRevisions(
   db: Database,
   crawl: Crawl,
@@ -105,8 +91,6 @@ export async function appendFinalRevisions(
     .where('crawl_id', '=', crawl.id)
     .where('id', '=', sql<string>`any(${ids}::uuid[])`)
     .execute();
-  // A crawl-finalize check finalization never wrote is judged from the page's
-  // own facts; those judgements read only its canonical declarations.
   const artifacts = await db
     .selectFrom('site_fetch_artifacts')
     .select([
@@ -120,13 +104,11 @@ export async function appendFinalRevisions(
     .where('id', '=', sql<string>`any(${initials.map((row) => row.artifact_id)}::uuid[])`)
     .execute();
   const factsOf = new Map(artifacts.map((row) => [row.id, record(row.facts)]));
-  // Scored site checks the crawl never evaluated score as unknown, with no source to name.
   const site = crawlSiteChecks(siteSources.map(persistedEvaluation));
   const auditTime = crawl.started_at ?? crawl.created_at;
   const finalizedAt = new Date();
   const revisions = initials.map((initial) => {
     const own = byAnalysis.get(initial.id) ?? [];
-    // Site checks score on every page, so each page's manifest names the site evaluations it used.
     const sources = [...own, ...siteSources];
     const scores = scoreAnalysis(
       finalPageChecks(own.map(persistedEvaluation), factsOf.get(initial.artifact_id) ?? {}),

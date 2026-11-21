@@ -6,13 +6,6 @@ import type { AioRate, SurfaceRates } from '@citeladder/contracts';
 
 import { SurfaceRatesPanel } from './surface-rates';
 
-/**
- * A rate published without its denominator gets read as whichever rate the
- * reader already had in mind, and a rate with nothing to divide is UNKNOWN,
- * not zero. Both failures are silent — the number looks fine either way — so
- * they are what this file locks down.
- */
-
 function rate(overrides: Partial<AioRate> = {}): AioRate {
   return {
     numerator: 0,
@@ -61,8 +54,6 @@ describe('AI Overview rates', () => {
   it('publishes the three confusable rates as three different numbers', () => {
     panel(rates());
 
-    // The worked example: 100 observations, 40 overviews, 10 naming the brand.
-    // All three are true and none of them alone is "how visible are we".
     expect(screen.getByText('40.0%')).toBeVisible();
     expect(screen.getByText('25.0%')).toBeVisible();
     expect(screen.getByText('10.0%')).toBeVisible();
@@ -71,7 +62,6 @@ describe('AI Overview rates', () => {
   it('states what each number divided by', () => {
     panel(rates());
 
-    // Each denominator is its figure's basis hint.
     for (const basis of [
       /40 of 100 searches we successfully observed/,
       /10 of 40 searches that showed an overview/,
@@ -116,10 +106,6 @@ describe('AI Overview rates', () => {
       }),
     );
 
-    // The shared denominator is stated once above the list, but the
-    // numerators are what separate these two. Percentages alone made a
-    // competitor named in one overview look like the same kind of claim as
-    // one named in thirty.
     expect(screen.getByText('1 of 40')).toBeVisible();
     expect(screen.getByText('30 of 40')).toBeVisible();
   });

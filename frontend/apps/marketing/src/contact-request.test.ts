@@ -15,7 +15,6 @@ const valid = {
   turnstile_token: 'solved-token',
 };
 
-/** Siteverify answers for each token the tests send. */
 const siteverify: Record<string, object> = {
   'solved-token': { success: true, action: 'contact', hostname: 'citeladder.com' },
   'replayed-token': { success: false, 'error-codes': ['timeout-or-duplicate'] },

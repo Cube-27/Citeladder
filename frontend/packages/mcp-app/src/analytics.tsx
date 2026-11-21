@@ -167,8 +167,6 @@ function Trends({
     ? toNamedChartPoints(points, metric, competitor)
     : toChartPoints(points, metric);
   const axis = trendAxis(metric, [chart.map((point) => point.value)]);
-  // A win rate over no answer naming a tracked brand is not applicable, and a sentiment gap
-  // gives the app's reason; any other gap is unavailable.
   const cell = (index: number) => {
     const measured = chart[index]?.value ?? null;
     if (measured !== null) return axis.format(measured);
@@ -275,7 +273,6 @@ function Trends({
   );
 }
 
-/** Human scope label. Selections carry IDs for reads; the UI never shows them. */
 function evidenceLabel(
   selection: AnalyticsSelection,
   evidence: Record<string, unknown> | undefined,

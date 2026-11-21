@@ -46,7 +46,6 @@ import { TextLink } from '@/components/ui/text-link';
 
 const API_BASE_URL = `${API_HOST_ORIGIN}/v1`;
 
-/** What each scope lets a key do; `read` is always granted. */
 const SCOPES: readonly { value: ApiKeyScope; label: string }[] = [
   { value: 'read', label: 'Read reports and settings' },
   { value: 'prompts:write', label: 'Edit prompts and topics, run prompt generation' },
@@ -56,7 +55,6 @@ const SCOPES: readonly { value: ApiKeyScope; label: string }[] = [
   { value: 'actions:write', label: 'Update actions and record implementations' },
 ];
 
-/** A key's state as its one status mark: Active positive, Expired warning, Revoked neutral. */
 function KeyStateMark({ state }: Readonly<{ state: ApiKey['state'] }>) {
   switch (state) {
     case 'active':
@@ -136,7 +134,6 @@ function KeyRow({
 
 const KEY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'key', label: 'Key', kind: 'identity' },
-  // The last use sits under the state: a narrow page has no room for its own column.
   { key: 'status', label: 'Status', sublabel: 'Last used', kind: 'status', width: 'category' },
   { key: 'scopes', label: 'Access', kind: 'text', width: 'name', priority: 'low' },
   { key: 'projects', label: 'Projects', kind: 'text', width: 'status', priority: 'low' },
@@ -156,7 +153,6 @@ function CreateKeyDialog({
   const [expiresOn, setExpiresOn] = useState('');
   const [created, setCreated] = useState<ApiKeyCreated | null>(null);
   const create = useMutation(apiKeyMutations.create(workspaceId));
-  // The list shows the expiry in the display time zone, so the chosen day is that zone's day.
   const timeZone = useDisplayTimeZone();
   const createKey = () =>
     create.mutate(
@@ -184,7 +180,6 @@ function CreateKeyDialog({
     create.reset();
     onClose();
   };
-  // A typed expiry must be a real calendar day before it becomes an instant.
   const expiryValid = expiresOn === '' || z.iso.date().safeParse(expiresOn).success;
   const ready = name.trim() !== '' && (projectMode === 'all' || chosen.size > 0) && expiryValid;
 
@@ -215,7 +210,6 @@ function CreateKeyDialog({
       {created ? (
         <Stack gap="compact">
           <Notice tone="warning">Shown once.</Notice>
-          {/* The secret is shown once, whole, so it may wrap anywhere to stay readable. */}
           <code className="type-code break-all">{created.secret}</code>
           <div>
             <CopyButton value={created.secret}>Copy key</CopyButton>
@@ -298,7 +292,6 @@ function CreateKeyDialog({
 
 const liveKeys = (keys: readonly ApiKey[]) => keys.filter((key) => key.state === 'active').length;
 
-/** Keys in use against the plan's limit, and the create action while under it. */
 function KeysHeadActions({
   list,
   onCreate,
@@ -318,7 +311,6 @@ function KeysHeadActions({
   );
 }
 
-/** The plan note and the key table, or the read's loading or failure in their place. */
 function ApiKeysBody({
   query,
   workspaceId,
@@ -384,7 +376,6 @@ export function ApiKeys() {
 
   return (
     <>
-      {/* The key table is the named region; the group only heads it. */}
       <SettingsGroup
         title="API keys"
         region={false}

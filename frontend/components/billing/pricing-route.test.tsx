@@ -101,7 +101,6 @@ describe('app pricing continuation', () => {
   it.each([
     [null, 'Choose a plan', 'No plan yet'],
     [scaleSubscription, 'Change plan', 'Current plan: Scale'],
-    // An ended plan is neither the current plan nor "no plan yet".
     [{ ...scaleSubscription, status: 'expired' }, 'Choose a plan', null],
   ])(
     'names the current plan and offers public pricing once when nothing is chosen (%#)',

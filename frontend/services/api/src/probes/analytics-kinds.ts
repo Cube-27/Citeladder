@@ -1,4 +1,3 @@
-/** The probe labelling analytics kind. */
 import type { AnalyticsKinds } from '../queue/executor.ts';
 import { compensateProbeLabelling, probeLabelling } from './labelling.ts';
 

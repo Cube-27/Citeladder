@@ -4,11 +4,6 @@ import type { CommerceProductRow } from '@citeladder/contracts/commerce-suite';
 
 import { formatAmount, formatCount, formatMean, formatPercent } from '@/lib/format';
 
-/**
- * The Products table's metric columns, in order (the plan's "Metric
- * definitions", formula version 1). The product column is always shown; the
- * reader hides any of these from the column settings.
- */
 export const PRODUCT_COLUMNS = [
   {
     key: 'visibility',
@@ -37,18 +32,10 @@ export const PRODUCT_COLUMNS = [
 
 export type ProductColumnKey = (typeof PRODUCT_COLUMNS)[number]['key'];
 
-/**
- * A cell's text, or the state that stands in for a missing value: no answer
- * in scope is `unavailable`, a price the catalog lacks is `unknown`, a
- * competitor has no catalog price to lack (`not_applicable`). A real
- * zero is text ("0", "0%"), never a state. A note (quotes in other
- * currencies) can accompany either.
- */
 export type ProductCell =
   | Readonly<{ kind: 'value'; text: string; note?: string }>
   | Readonly<{ kind: 'missing'; state: MissingState; note?: string }>;
 
-/** No answer in scope; no catalog price; nothing listed (no merchant); no price quoted; does not apply. */
 type MissingState = 'unavailable' | 'unknown' | 'none' | 'not_mentioned' | 'not_applicable';
 
 const missing = (state: MissingState, note?: string): ProductCell => ({
@@ -57,17 +44,11 @@ const missing = (state: MissingState, note?: string): ProductCell => ({
   ...(note ? { note } : {}),
 });
 
-/** A rate (visibility, win rate, share) as a percentage to one decimal. */
 export const formatRate = (value: number) => formatPercent(value);
 
-/** A rate or mean, unavailable when nothing in scope measured it. */
 const figureCell = (value: number | null, format: (value: number) => string): ProductCell =>
   value === null ? missing('unavailable') : { kind: 'value', text: format(value) };
 
-/**
- * The median quote in the row's currency; quotes in other currencies are
- * counted beside it, even when none was in its own currency.
- */
 function mentionedPrice(row: CommerceProductRow): ProductCell {
   const { median, currency, quoted, other_currency } = row.mentioned_price;
   const note = other_currency ? `+${formatCount(other_currency)} in other currencies` : undefined;
@@ -78,7 +59,6 @@ function mentionedPrice(row: CommerceProductRow): ProductCell {
   return { kind: 'value', text: formatAmount(median, currency), ...(note ? { note } : {}) };
 }
 
-/** The catalog price or range; a competitor has none, a catalog product's is unknown. */
 function catalogPrice(row: CommerceProductRow): ProductCell {
   const price = row.catalog_price;
   if (price === null) return missing(row.kind === 'owned' ? 'unknown' : 'not_applicable');
@@ -126,21 +106,15 @@ const HOLDER_LABELS = {
 
 const holderLabel = (kind: CommerceProductRow['kind']) => HOLDER_LABELS[kind];
 
-/** A holder's brand, when it has one, and what it is: "Acme · Competitor". */
 export const holderCaption = (holder: Pick<CommerceProductRow, 'brand' | 'kind'>) =>
   [holder.brand, holderLabel(holder.kind)].filter(Boolean).join(' · ');
 
-/**
- * A cell as CSV text: a missing value is empty rather than a word, and a note
- * (quotes in other currencies) follows the value in brackets.
- */
 function csvText(cell: ProductCell): string {
   const text = cell.kind === 'value' ? cell.text : '';
   if (!cell.note) return text;
   return text ? `${text} (${cell.note})` : `(${cell.note})`;
 }
 
-/** The shown columns' headers and rows, for the export of the rows on screen. */
 export function productCsv(
   rows: readonly CommerceProductRow[],
   columns: readonly ProductColumnKey[],
@@ -167,16 +141,10 @@ function storedColumns(): ProductColumnKey[] {
   try {
     const parsed: unknown = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? 'null');
     if (Array.isArray(parsed)) return ALL_KEYS.filter((key) => parsed.includes(key));
-  } catch {
-    // Unreadable storage keeps every column.
-  }
+  } catch {}
   return [...ALL_KEYS];
 }
 
-/**
- * The shown metric columns, a reader preference kept per browser. Hiding a
- * column changes what is drawn and exported, never what is read.
- */
 export function useProductColumns() {
   const [shown, setShown] = useState<ProductColumnKey[]>(storedColumns);
   const toggle = (key: ProductColumnKey) => {
@@ -186,9 +154,7 @@ export function useProductColumns() {
     setShown(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next.filter(isColumnKey)));
-    } catch {
-      // A browser without storage keeps the choice for this visit.
-    }
+    } catch {}
   };
   return { shown, toggle };
 }

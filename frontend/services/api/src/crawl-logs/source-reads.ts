@@ -12,7 +12,6 @@ import { crawlLogReaderEmail } from './gcp-client.ts';
 import { gcpLogFilter } from './gcp-filter.ts';
 
 type Source = Selectable<CrawlLogSources>;
-/** The crawler catalog is static per process, so its sink filter is built once. */
 const LOG_FILTER = gcpLogFilter();
 function connection(status: string, accepted: Date | null | undefined, completed: number) {
   if (status === 'revoked') return 'not_connected';
@@ -24,7 +23,6 @@ function sourceState(s: Source) {
   return s.kind === 'pull' && !s.verified_at ? 'awaiting_verification' : 'active';
 }
 const iso = (at: Date | null) => at?.toISOString() ?? null;
-/** What a pull source's row shows: verification, filter currency and drains. */
 function pullView(s: Source) {
   if (
     s.kind !== 'pull' ||
@@ -49,7 +47,6 @@ function pullView(s: Source) {
     last_drained_at: iso(s.last_drained_at),
   };
 }
-/** Three scoped reads, independent of source count; never refreshes or verifies. */
 export async function sourceList(
   db: Database,
   scope: CrawlScope,

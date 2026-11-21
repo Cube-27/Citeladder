@@ -1,11 +1,3 @@
-/**
- * The observed Google AI Overview surface: one execution, or one selection.
- *
- * `executionSurfaceEvidence` reads mentioned, linked and cited from three
- * independent tables and never derives them from one another. `surfaceRates`
- * excludes failed and pending observations from every denominator and counts
- * them separately; an LLM engine gets no rates at all.
- */
 import { sql } from 'kysely';
 
 import {
@@ -60,7 +52,6 @@ export type SearchSurfaceEvidence = {
   entities: SurfaceEntityEvidence[];
 };
 
-/** The scored answer an observation's entities are composed from. */
 export type ScoredAnalysis = {
   id: string;
   brand_mentioned: boolean;
@@ -68,7 +59,6 @@ export type ScoredAnalysis = {
   score: unknown;
 };
 
-/** A stored score object; absent keeps its own meaning and corrupt data fails loudly. */
 function asObject(value: unknown): JsonObject {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value as JsonObject;
   throw new TypeError('stored score is not an object');
@@ -87,12 +77,9 @@ async function composedEntities(
     .where('id', '=', auditId)
     .where('workspace_id', '=', workspaceId)
     .executeTakeFirst();
-  // No analysis means no answer was ever scored: nothing to compose.
   if (analysis === null || audit === undefined) return [];
   const config = scoringConfig(audit.configuration);
   const identities = await brandIdentities(db, { workspaceId, projectId: audit.project_id });
-  // Mentions, links and citations stand on their own rows; the score only
-  // orders competitors, so an absent score or offset map means no order.
   const score: JsonObject = analysis.score === null ? {} : asObject(analysis.score);
   const firstOffsets = score.competitor_first_offsets;
   const offsets = firstOffsets === undefined || firstOffsets === null ? {} : asObject(firstOffsets);
@@ -115,8 +102,6 @@ async function composedEntities(
         .execute()
     ).map((row) => row.competitor_name),
   );
-  // Links are classified by the scorer's own rule, so a link and a reference
-  // to the same host cannot disagree about who owns it.
   let brandLinked = false;
   const linked = new Set<string>();
   for (const link of links) {
@@ -149,11 +134,6 @@ async function composedEntities(
   ];
 }
 
-/**
- * The observed-surface evidence for one execution, or null when it has no
- * observation row (an LLM execution, or a search that never finished):
- * neither is a measured absence.
- */
 export async function executionSurfaceEvidence(
   db: Database,
   input: { workspaceId: string; taskId: string; analysis: ScoredAnalysis | null },
@@ -217,7 +197,6 @@ export async function executionSurfaceEvidence(
 type RateScope = {
   workspaceId: string;
   projectId: string;
-  /** Without named runs, the market whose observations count; `null` is the default. */
   marketId: string | null;
   auditId: string | null;
   auditIds: string[] | null;
@@ -268,7 +247,6 @@ export type SurfaceRatesResponse = {
 
 const NO_RATE: AioRate = { numerator: 0, denominator: 0, denominator_kind: '', value: null };
 
-/** The five labelled rates over one selection, each with its denominator. */
 export async function surfaceRates(
   db: Database,
   scope: RateScope & { logicalEngine: string },
@@ -287,8 +265,6 @@ export async function surfaceRates(
       competitor_mention_rates: [],
     };
   }
-  // A single run is authorized exactly as a run set is: an unknown one is
-  // not found, never zero-denominator rates.
   let runSet: string[] | null = null;
   if (scope.auditIds?.length) runSet = scope.auditIds;
   else if (scope.auditId !== null) runSet = [scope.auditId];
@@ -309,8 +285,6 @@ export async function surfaceRates(
       Boolean(row.owned_domain_cited),
     ]),
   );
-  // Over DISTINCT observations, so a competitor named twice in one overview
-  // cannot lift its own rate above the denominator.
   const identities = await brandIdentities(db, scope);
   const competitors = await scopedObservations(db, scope)
     .innerJoin('competitor_mentions as mention', 'mention.analysis_id', 'ra.id')

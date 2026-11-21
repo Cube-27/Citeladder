@@ -1,12 +1,9 @@
-/* ---------- CardRail: one sideways-scrolling row of fixed-width cards ---------- */
 .cl-rail {
   container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: 48px;
 }
-
-/* The heading on the left, the buttons on the right of its last line. */
 
 .cl-rail-top {
   display: flex;
@@ -26,14 +23,9 @@
   gap: 8px;
 }
 
-/* The buttons keep their space before the script mounts them, so nothing moves. */
-
 .cl-rail-nav:not([data-ready]) {
   visibility: hidden;
 }
-
-/* Outlined 40px squares at the control radius, edged like a secondary button
-   (the control line, 3:1 on the page) whether or not they can move. */
 
 .cl-rail-btn {
   display: inline-flex;
@@ -61,10 +53,6 @@
   cursor: default;
 }
 
-/* A RailCard: tint panel, copy on top, its image inset below, ending 24px
-   under the image. The row's cards share the tallest card's height (the
-   track's items stretch). `--cl-card-h` only sizes the open card's page. */
-
 .cl-railcard {
   --cl-tint: var(--tint-neutral);
   --cl-card-h: 460px;
@@ -80,8 +68,6 @@
   text-decoration: none;
   transition: background-color var(--motion-fast) var(--ease-standard);
 }
-
-/* Once mounted, a closed card opens on a press anywhere on it. */
 
 .cl-rail[data-ready] .cl-railcard:not([data-expanded]) {
   cursor: pointer;
@@ -110,9 +96,6 @@
   padding: 24px 24px 0;
 }
 
-/* The headline keeps the closed card's measure, so opening never moves or
-   rewraps it; only the close slides out with the card's right edge. */
-
 .cl-railcard-copy {
   display: flex;
   flex-direction: column;
@@ -129,9 +112,6 @@
   line-height: var(--text-heading-lg--line-height);
   letter-spacing: var(--text-heading-lg--letter-spacing);
 }
-
-/* The plus turns a quarter to a close when the card is open. Before the
-   script mounts it, it holds its space hidden. */
 
 .cl-railcard-toggle {
   display: inline-flex;
@@ -151,8 +131,6 @@
 .cl-rail:not([data-ready]) .cl-railcard-toggle {
   visibility: hidden;
 }
-
-/* Under a coarse pointer the plus keeps its size and takes a 44px target. */
 
 @media (pointer: coarse) {
   .cl-railcard-toggle {
@@ -174,12 +152,6 @@
   transform: rotate(45deg);
 }
 
-/* Under the header, three layers cross-fade in place while the card widens,
-   all together and over the same time as the widening (as the reference
-   does): the closed card's miniature out, the open card's page in the app
-   and its paragraph with the button in, and back on close. Each holds a
-   fixed size and place, so nothing reflows as it fades. */
-
 .cl-railcard-shot,
 .cl-railcard-page,
 .cl-railcard-more {
@@ -200,20 +172,11 @@
     visibility 0s;
 }
 
-/* The miniature: in flow 24px under the header, inset by the card's own
-   24px padding on the sides, the card's foot 24px under it. It keeps its
-   place while hidden, so an open card keeps the closed card's height. */
-
 .cl-railcard-shot {
   position: relative;
   width: calc(var(--cl-card-w) - 48px);
   margin: 24px;
 }
-
-/* The open card's image (the reference's open panel): the feature's page in
-   the app, sidebar first, at 70% of its real size, in the right half under
-   the close, running off the card's right edge and ending on the card's
-   24px padding. */
 
 .cl-railcard-page {
   top: 100px;
@@ -237,8 +200,6 @@
   zoom: 0.7;
 }
 
-/* The open card's paragraph and button, at the foot of its left half. */
-
 .cl-railcard-more {
   bottom: 24px;
   left: 24px;
@@ -248,9 +209,6 @@
   gap: 24px;
   width: min(420px, calc(var(--cl-open-w) / 2 - 56px));
 }
-
-/* The button stays under the paragraph's left edge, where the phone rule
-   for marketing buttons would centre it. */
 
 .cl-railcard .cl-railcard-more > a {
   align-self: flex-start;
@@ -264,17 +222,11 @@
   line-height: var(--text-body--line-height);
 }
 
-/* Both images: the bare screen with its shadow. */
-
 :is(.cl-railcard-shot, .cl-railcard-page) :is(.cl-frame, .cl-frame-card) {
   padding: 0;
   border-radius: 0;
   background: none;
 }
-
-/* A miniature, as in the reference: the screen lays out at 1/0.7 of the
-   slot's width with its real type, then draws at 70%, so the card shows the
-   whole panel small rather than a close-up of its top. */
 
 .cl-railcard-shot .cl-frame {
   zoom: 0.7;
@@ -285,12 +237,6 @@
     transition: none;
   }
 }
-
-/* A flex row, so one item can widen when its card opens. It is the content
-   row's width and the items' size container (the custom properties resolve
-   on each item, against the track): whole closed cards fill it 24px apart
-   (three, 418px in the 1302px row at 1440; two in a row under 1100px), and
-   an open card is 720px (the whole row when narrower). */
 
 .cl-rail-track {
   --cl-rail-gap: 24px;
@@ -320,9 +266,6 @@
   }
 }
 
-/* A card opens over --motion-open, easing out, and closes over
-   --motion-close, easing in; its layers and plus move on the same clock. */
-
 .cl-rail-item {
   --cl-card-motion: var(--motion-close);
   --cl-card-ease: var(--ease-exit);
@@ -344,11 +287,6 @@
     transition: none;
   }
 }
-
-/* On a phone the rail is a list, as the reference's phone page lists its
-   tools: one hairline row per module, its name after an accent plus. A
-   press opens the row in place to its miniature, paragraph and button; the
-   app page is left out. */
 
 @media (max-width: 767px) {
   .cl-rail {
@@ -398,7 +336,6 @@
     width: auto;
   }
 
-  /* The row's name is a title here, not a label chip. */
   .cl-rail .cl-railcard-copy > .cl-eyebrow.type-eyebrow {
     width: auto;
     margin: 0;
@@ -417,8 +354,6 @@
     content: none;
   }
 
-  /* The row reads the same before and after the script mounts, so nothing
-     below it moves; the section's own link still leads to every module. */
   .cl-railcard-title,
   .cl-railcard-page {
     display: none;
@@ -451,8 +386,6 @@
     transition: none;
   }
 
-  /* The whole miniature on the card's tint, inset equally on every side; the
-     tint grows with the screen, so a tall one never spills past it. */
   .cl-rail .cl-railcard[data-expanded] .cl-railcard-shot {
     display: block;
     padding: 16px;

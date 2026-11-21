@@ -1,9 +1,4 @@
 ---
-/**
- * The top-level pages served from records: each published policy (Contact
- * has its own page) and each research guide at the site root. Guides filed
- * under /blog and /compare render through those sections' routes.
- */
 import type { GetStaticPaths } from 'astro';
 import { CONTACT_PAGE } from '@/lib/marketing-content/legal-billing';
 import { LEGAL_DOCUMENTS } from '@/lib/marketing-content/legal-documents';
@@ -11,7 +6,6 @@ import LegalLayout from '../layouts/LegalLayout.astro';
 import ResearchLayout from '../layouts/ResearchLayout.astro';
 import { RESEARCH_ARTICLES } from '../research-articles';
 
-// getStaticPaths runs on its own, so its helper lives inside it.
 export const getStaticPaths = (() => {
   const rootSlug = (path: string) => /^\/([^/]+)$/.exec(path)?.[1];
   return [

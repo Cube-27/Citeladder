@@ -1,11 +1,3 @@
-/**
- * The Products table read against real PostgreSQL: per-holder metrics over
- * the latest match pass of each answer in scope, the catalog/all switch, the
- * window, engine, prompt-set, category and search filters, keyset paging and
- * workspace isolation. Answers go through the real audit, matching and
- * persistence path; only quoted prices and merchants are set on the stored
- * observations afterwards, since text answers rarely carry both.
- */
 import { randomUUID } from 'node:crypto';
 import type {
   CommerceProductDetail,
@@ -25,7 +17,6 @@ import { VisibilityFixtures } from './visibility-fixtures.ts';
 
 const db = testDatabase(),
   fixtures = new VisibilityFixtures(db),
-  // Four answers stay in four active audits; the per-workspace cap is not under test.
   runtime = { ...auditRuntime({}), activeLimit: 10 },
   config = testConfig(),
   app = createApp(config, db);
@@ -38,7 +29,6 @@ const CATALOG = [
   'https://shop.example/products/trail,Acme Trail Climber,Acme,,,Trail',
 ].join('\n');
 
-/** One brand-run answer of `text` with its evidence; its task id. */
 async function answer(t: Tenant, text: string, evidence?: AnswerEvidence): Promise<string> {
   const { taskId } = await recordAnswer(db, t, text, {
     runtime,
@@ -49,7 +39,6 @@ async function answer(t: Tenant, text: string, evidence?: AnswerEvidence): Promi
   return taskId;
 }
 
-/** The quote and merchant on one task's observation of a product. */
 async function quote(task: string, product: string, price: string, currency: string, host: string) {
   await asOwner((owner) =>
     owner
@@ -99,8 +88,6 @@ beforeAll(async () => {
       { workspaceId: tenant.workspaceId, projectId: tenant.projectId },
       CATALOG,
     );
-  // Approved competitors enter the next audit's catalog revision; the others
-  // are listed by state alone (AI-observed pending) or not at all.
   await addCompetitor(db, t, 'Rival Pacer');
   await addCompetitor(db, t, 'Zoom Glide', { state: 'pending', source: 'ai_observed' });
   await addCompetitor(db, t, 'Dropped Dash', { state: 'rejected', source: 'ai_observed' });
@@ -114,9 +101,7 @@ beforeAll(async () => {
       queries: ['best road running shoes'],
     },
   );
-  // Asked of another engine, so the engine filter has something to drop.
   second = await answer(t, '1. Rival Pacer is the best value\n2. Acme Road Runner close behind');
-  // Older than 30 days, so only the 90-day window holds it.
   third = await answer(t, '1. Acme Road Runner for long road runs');
   await answer(t, 'Most runners should get a gait analysis before buying anything new.');
   await answer(foreign, '1. Acme Road Runner for daily miles');
@@ -165,7 +150,6 @@ describe('Products table read', () => {
       ['Acme Trail Climber', 'owned', 1, 0.25, 0, 3],
     ]);
     const [road, trail] = body.items;
-    // Median of the USD quotes; the EUR quote is counted, not converted.
     expect(road!.mentioned_price).toEqual({
       median: 120,
       currency: 'USD',
@@ -204,7 +188,6 @@ describe('Products table read', () => {
     expect(chatgpt.body.executions).toBe(3);
     expect(summary(chatgpt.body)[0]).toEqual(['Acme Road Runner', 'owned', 2, 2 / 3, 1, 1]);
 
-    // No execution in scope: visibility is unavailable, appearances a real zero.
     const none = await read(t, `window=90&prompt_set=${randomUUID()}`);
     expect(none.body.executions).toBe(0);
     expect(summary(none.body)).toEqual([
@@ -238,7 +221,6 @@ describe('Products table read', () => {
 
   it('pages by keyset cursor and refuses a cursor from other filters', async () => {
     const names: string[] = [];
-    // Each page joins its rows' prices, merchants and categories after the cut.
     const joined: unknown[] = [];
     let cursor: string | null = null;
     do {
@@ -274,7 +256,6 @@ describe('Products table read', () => {
       `window=90&source=catalog&sort=win_rate&limit=1&cursor=${first.body.next_cursor}`,
     );
     expect(replayed.status).toBe(422);
-    // The same filters in another project refuse the cursor too.
     const elsewhere = await read(
       foreign,
       `window=90&source=all&sort=win_rate&limit=1&cursor=${first.body.next_cursor}`,
@@ -288,7 +269,6 @@ describe('Products table read', () => {
     const scope = { workspaceId: later.workspaceId, projectId: later.projectId };
     const [header, road, trail] = CATALOG.split('\n');
     await importCatalog(db, scope, [header, road].join('\n'));
-    // Revision 1 knows only the road shoe, so the live pass misses the trail shoe.
     await answer(later, '1. Acme Road Runner for daily miles\n2. Acme Trail Climber for trails');
     await importCatalog(db, scope, [header, road, trail].join('\n'));
     const matching = await db
@@ -327,7 +307,6 @@ describe('Products table read', () => {
       (await ids('commerce_products', 'Acme Road Runner')).id,
       (await ids('commerce_categories', 'Trail')).id,
     ];
-    // The same page approved again for the Trail category: one product, two records.
     const trailRecord = randomUUID();
     await db
       .insertInto('commerce_competitor_candidates')
@@ -348,7 +327,6 @@ describe('Products table read', () => {
       .execute();
     const won = await answer(merged, '1. Rival Pacer for tempo days');
     const lost = await answer(merged, '1. Acme Road Runner for daily miles\n2. Rival Pacer');
-    // Each sighting under its own target's record, as targeted answers record them.
     const sighting = (task: string, target: { kind: string; id: string }, holder?: string) =>
       asOwner((owner) =>
         owner
@@ -372,13 +350,11 @@ describe('Products table read', () => {
       ['Acme Trail Climber', 'owned', 0, 0, null, null],
     ]);
     const rival = body.items[0]!.holder_id;
-    // Seen under Trail, so the Trail category lists it too.
     const inTrail = await read(merged, `window=90&source=all&category=${trail}`);
     expect(inTrail.body.items.map((row) => [row.name, row.holder_id])).toEqual([
       ['Rival Pacer', rival],
       ['Acme Trail Climber', expect.any(String)],
     ]);
-    // Either record opens the one page, which lists where it was seen.
     const page = await detail(merged, trailRecord);
     expect(page.body.product).toMatchObject({ holder_id: rival, appearances: 2 });
     expect(page.body.seen_in).toEqual([
@@ -396,7 +372,6 @@ describe('Products table read', () => {
       ['Acme Road Runner', 'owned', 1, 1, 1, 1],
       ['Acme Trail Climber', 'owned', 0, 0, null, null],
     ]);
-    // Another workspace's header never reaches this project.
     expect((await read(t, '', foreign.workspaceId)).status).toBe(404);
   });
 });
@@ -425,7 +400,6 @@ describe('Product detail read', () => {
     const { status, body } = await detail(t, await holderId(t, 'Acme Road Runner'));
     expect(status).toBe(200);
     expect(body.executions).toBe(4);
-    // The same row the Products table reads.
     expect(body.product).toMatchObject({
       name: 'Acme Road Runner',
       kind: 'owned',
@@ -437,7 +411,6 @@ describe('Product detail read', () => {
       description: '',
       image_url: null,
     });
-    // Rival Pacer beat it once (rank 1 over its 2); the trail shoe never did.
     expect(
       body.competing.map((row) => [row.name, row.kind, row.shared, row.ahead, row.position]),
     ).toEqual([
@@ -500,7 +473,6 @@ describe('Product detail read', () => {
   it('finds no page for a holder outside the authorized project or the listed holders', async () => {
     const road = await holderId(t, 'Acme Road Runner');
     expect((await detail(foreign, road)).status).toBe(404);
-    // A rejected candidate is listed nowhere, so it has no page either.
     const rejected = await db
       .selectFrom('commerce_competitor_candidates')
       .select('id')
@@ -508,7 +480,6 @@ describe('Product detail read', () => {
       .where('product_name', '=', 'Dropped Dash')
       .executeTakeFirstOrThrow();
     expect((await detail(t, rejected.id)).status).toBe(404);
-    // The other project's own product reads its own answers only.
     const theirs = await detail(foreign, await holderId(foreign, 'Acme Road Runner'));
     expect(theirs.body.answer_total).toBe(1);
     expect(theirs.body.sources).toEqual([]);

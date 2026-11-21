@@ -1,7 +1,3 @@
-/**
- * Workspace-authorized Action reads, workflow decisions, declarations, and
- * Analyze a page (its content-page picker and the Action plus chat it starts).
- */
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { agentBindings } from '../agent/bindings.ts';
@@ -50,7 +46,6 @@ const o = policy.opportunity.opportunities;
 const actionPath = { action_id: { scalar: { kind: 'uuid' }, required: true } } as const;
 const publicAction = `${policy.api.machine_prefix}/projects/{project_id}/actions/{action_id}`;
 const publicWrite = { exposure: 'both', permission: ACTIONS_WRITE } as const;
-/** The Actions list's filters, which the tree reads under too. */
 const listFilters = {
   status_filter: { scalar: { kind: 'str' }, alias: 'status' },
   q: { scalar: { kind: 'str', maxLength: a.ACTION_SEARCH_MAX_CHARS } },
@@ -188,7 +183,6 @@ export const actionRoutes = [
     family,
     authorize: 'active-project',
     path: '/api/v1/projects/{project_id}/actions/analyze',
-    // It starts an Agent chat, so it needs what starting one needs.
     capability: 'run',
     params: { path: projectPath, query: {} },
     headers: z.object({

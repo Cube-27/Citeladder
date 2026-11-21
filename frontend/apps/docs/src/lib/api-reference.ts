@@ -1,10 +1,4 @@
-/**
- * The public API reference, read from the generated OpenAPI document. Each
- * operation and each shared schema is a page of its own; operations reference
- * schemas by `$ref`, which pages render as links to the schema's page.
- */
 import { z } from 'zod';
-// Raw text, not a JSON module: typing the whole generated document is needless work.
 import publicApiDocument from '../data/public-api.json?raw';
 import { fieldRows, jsonSchema, referenceRow, schemaHref, typeOf } from './json-schema';
 
@@ -43,10 +37,6 @@ export const apiDocument = z.object({
 
 type ApiDocument = z.infer<typeof apiDocument>;
 
-/**
- * The docs' resources, in sidebar order. The spec's tags are finer than a
- * reader's mental model, so a small tag folds into its parent here.
- */
 const RESOURCES: readonly Readonly<{ id: string; label: string; tags: readonly string[] }>[] = [
   { id: 'projects', label: 'Projects', tags: ['projects', 'markets'] },
   { id: 'prompts', label: 'Prompts', tags: ['prompts', 'prompt-sets'] },
@@ -74,7 +64,6 @@ const slugify = (text: string) =>
     .replaceAll(/[^a-z0-9]+/g, '-')
     .replaceAll(/^-|-$/g, '');
 
-/** The resource an operation's tag belongs to; an unmapped tag is a resource of its own. */
 function resourceOf(tag: string) {
   const rank = RESOURCES.findIndex((resource) => resource.tags.includes(tag));
   const found = RESOURCES[rank];
@@ -93,7 +82,6 @@ function bodyOf(body: z.infer<typeof media> | undefined) {
     : null;
 }
 
-/** Every public operation, by resource then document order, with its page address. */
 export function buildOperations(document: ApiDocument) {
   const operations = Object.entries(document.paths).flatMap(([path, item], pathIndex) =>
     Object.entries(item).map(([method, operation], methodIndex) => {
@@ -133,7 +121,6 @@ export function buildOperations(document: ApiDocument) {
     }
     return 0;
   });
-  // A page address is the summary's slug, made unique within its resource.
   const taken = new Set<string>();
   return operations.map(({ order: _order, ...operation }) => {
     let slug = slugify(operation.summary);
@@ -147,7 +134,6 @@ export function buildOperations(document: ApiDocument) {
 
 export type ApiOperation = ReturnType<typeof buildOperations>[number];
 
-/** Operations by resource, in sidebar order. */
 export function groupOperations(operations: readonly ApiOperation[]) {
   return [...new Set(operations.map((operation) => operation.resource.id))].map((id) => {
     const members = operations.filter((operation) => operation.resource.id === id);
@@ -155,7 +141,6 @@ export function groupOperations(operations: readonly ApiOperation[]) {
   });
 }
 
-/** The named schemas operations reference, each with its page address. */
 function buildSchemas(document: ApiDocument) {
   return Object.entries(document.components.schemas).map(([name, schema]) => ({
     name,

@@ -1,9 +1,3 @@
-/**
- * People's fact-check edits against real PostgreSQL (AV-12): verdict
- * overrides appended beside the model's verdict and counted in accuracy, and
- * facts imported from a CSV as drafts. Both are pilot-gated and workspace
- * isolated.
- */
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { admittedFactCheck } from '../src/perception/admission.ts';
@@ -26,7 +20,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** A pilot audit whose pricing claim the checker gave `verdict` at `confidence`. */
 async function checkedAudit(verdict: string, confidence: number) {
   await enroll(tenant);
   await confirmedFact(tenant, 'pricing', 'Pro costs $59 per month.');
@@ -64,7 +57,6 @@ describe('verdict overrides', () => {
   it('counts the newest verdict override, keeps the model verdict and refuses other workspaces', async () => {
     const auditId = await checkedAudit('contradicted', 0.9);
     const before = await claimsOf(auditId);
-    // Only a verified claim can be overridden; a claim no fact covers has no verdict row.
     expect(before.map((item) => [item.topic, item.verdict_id === null, item.edited])).toEqual([
       ['pricing', false, null],
       ['integrations', true, null],
@@ -106,7 +98,6 @@ describe('verdict overrides', () => {
       edited: { model_verdict: 'contradicted', note: null },
     });
 
-    // The model's verdict stays as it was, and every change is kept in order.
     const model = await db
       .selectFrom('claim_verdicts')
       .select('verdict')
@@ -128,7 +119,6 @@ describe('verdict overrides', () => {
       { from_verdict: 'contradicted', to_verdict: 'supported', created_by_user_id: tenant.userId },
     ]);
 
-    // Changing back to the model's verdict clears the edit mark.
     expect((await override(tenant, 'contradicted')).status).toBe(200);
     const reverted = await call(tenant, 'GET', `/visibility/accuracy?audit_id=${auditId}`);
     expect(reverted.body).toMatchObject({
@@ -137,7 +127,6 @@ describe('verdict overrides', () => {
   });
 
   it('counts any verdict a person gives a low-confidence claim as edited', async () => {
-    // An unsure "supported" is stored as inconclusive and reads as low confidence.
     const auditId = await checkedAudit('supported', 0.3);
     const [before] = await claimsOf(auditId);
     expect([before!.status, before!.verdict]).toEqual(['low_confidence', null]);
@@ -203,7 +192,6 @@ describe('facts CSV import', () => {
       .where('fact_id', '=', rows[1]!.fact_id!)
       .execute();
     expect(revisions).toEqual([{ status: 'draft', created_by_user_id: tenant.userId }]);
-    // A draft is never frozen into a run.
     const frozen = await admittedFactCheck(db, {
       workspaceId: tenant.workspaceId,
       projectId: tenant.projectId,

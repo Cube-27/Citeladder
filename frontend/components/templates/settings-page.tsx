@@ -4,14 +4,6 @@ import { cn } from '@/lib/utils';
 
 import { PageFrame, type PageFrameSlots } from './page-frame';
 
-/**
- * The Settings layout (docs/design.md): the page header, then the route's
- * column holding a stack of `SettingsGroup`s 32 apart, each section stacking
- * its own the same way (globals.css, `data-settings-sections`). With `rail`
- * (a `TabRail`) the sections run down a sticky 192 column on the left and the
- * current one's content sits beside it, at most 720 wide unless `wide`; the
- * header and rail never move between sections.
- */
 export function SettingsPage({
   children,
   rail,
@@ -20,7 +12,6 @@ export function SettingsPage({
 }: Omit<PageFrameSlots, 'filters' | 'trail' | 'crumb' | 'tabs'> &
   Readonly<{
     rail?: ReactNode;
-    /** This section's content takes the column's full width beside the rail. */
     wide?: boolean;
     children: ReactNode;
   }>) {
@@ -42,7 +33,6 @@ export function SettingsPage({
   );
 }
 
-/** The rail and the content beside it; a page's loading frame draws the same. */
 export function RailColumns({
   rail,
   wide = false,

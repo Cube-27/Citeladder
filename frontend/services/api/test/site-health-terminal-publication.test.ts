@@ -37,7 +37,6 @@ describe('terminal analysis publication', () => {
       reconcileCrawl(db, seed.workspaceId, seed.crawlId),
       reconcileCrawl(db, seed.workspaceId, seed.crawlId),
     ]);
-    // Concurrent reconciles of the drained crawl enqueue one finalize, which runs once.
     expect(await tasksOf(seed.crawlId, 'finalize')).toHaveLength(1);
     expect(await Promise.all([finalize(seed), finalize(seed)])).toContain(true);
     const crawl = await db
@@ -112,7 +111,6 @@ describe('terminal analysis publication', () => {
             .executeTakeFirstOrThrow()
         ).change_summary,
       );
-    // Each earlier snapshot reads a distinct AEO Readiness score, so the compared one shows.
     const scored = async (values: Partial<Insertable<SiteCrawls>>, score: number) => {
       const crawlId = await publish(values);
       await db
@@ -126,7 +124,6 @@ describe('terminal analysis publication', () => {
     await scored({ status: 'failed' }, 11);
     await scored({ analyzed_url_count: 0 }, 12);
     await scored({ configuration: JSON.stringify({ root_registrable_domain: 'blog.test' }) }, 13);
-    // A rerun snapshot written before reruns stopped writing them.
     const rerun = await scored({}, 14);
     await db
       .updateTable('site_crawls')
@@ -140,7 +137,6 @@ describe('terminal analysis publication', () => {
       expect.objectContaining({ key: 'aeo_readiness_score', previous: 70 }),
     );
 
-    // The first crawl of a scope has nothing to compare with.
     expect(await changeOf(comparable)).toMatchObject({
       state: 'unavailable',
       reason: 'no_comparable_snapshot',
@@ -152,7 +148,6 @@ describe('terminal analysis publication', () => {
       state: 'unavailable',
       reason: 'no_comparable_snapshot',
     });
-    // A crawl older than all of them, published late, has no earlier crawl to compare with.
     const late = await publish({ created_at: LONG_AGO });
     expect(await changeOf(late)).toMatchObject({
       state: 'unavailable',
@@ -207,7 +202,6 @@ describe('terminal analysis publication', () => {
       .execute();
     const settings = { ...siteWorkerSettings({}), concurrency: 1 };
     const worker = fixtures.worker(seed, { settings });
-    // Link metrics, then architecture, which folds its issues into the snapshot.
     expect(await worker.runOnce()).toBe(1);
     expect(await worker.runOnce()).toBe(1);
     const crawl = await db
@@ -215,7 +209,6 @@ describe('terminal analysis publication', () => {
       .selectAll()
       .where('id', '=', seed.crawlId)
       .executeTakeFirstOrThrow();
-    // A replay adds nothing and leaves one count per persisted issue.
     expect(await addArchitectureIssues(db, crawl)).toBe(false);
     const snapshot = await db
       .selectFrom('site_health_snapshots')
@@ -232,7 +225,6 @@ describe('terminal analysis publication', () => {
       .where('id', '=', seed.crawlId)
       .executeTakeFirstOrThrow();
     expect(summary.score_summary).toEqual({ issue_count: 2 });
-    // The issue list a top issue opens holds the same site-level findings.
     const listed = await issues(
       db,
       seed.workspaceId,
@@ -284,15 +276,12 @@ describe('terminal analysis publication', () => {
       return [row.outcome, evidence.total_count, row.reason_code];
     };
     expect(await brokenLinks(excludedOnly.analysisId)).toEqual(['satisfied', 0, '']);
-    // A client-rendered shell shows no links at all: nothing was checked, so nothing passes.
     expect(await brokenLinks(shell.analysisId)).toEqual([
       'unknown',
       0,
       'client_rendering_required',
     ]);
-    // A fetchable target that was never checked still leaves the check open.
     expect(await brokenLinks(withPage.analysisId)).toEqual(['unknown', 1, 'insufficient_evidence']);
-    // A link in a hidden menu is a link crawlers follow, so it is checked too.
     expect(await brokenLinks(hiddenMenu.analysisId)).toEqual([
       'unknown',
       1,
@@ -339,7 +328,6 @@ describe('terminal analysis publication', () => {
       'missing',
       [{ url: url('/old'), final_url: url('/new'), hops: 1 }],
     ]);
-    // The crawl root carries the crawl-wide chain check: one hop passes, a loop fails.
     expect(await evaluation(root.analysisId, 'technical.redirect_chain')).toEqual([
       'missing',
       [{ url: url('/loop'), reason: 'redirect_limit' }],
@@ -372,7 +360,6 @@ describe('terminal analysis publication', () => {
       ])
       .orderBy('rule_id')
       .execute();
-    // The page-specific redirect stays on its page; the shared one is one root issue.
     expect(crawlIssues).toEqual([
       { rule_id: 'technical.internal_link_redirect', site_url_id: others[0]!.id },
       { rule_id: 'technical.sitewide_link_redirect', site_url_id: root.id },
@@ -400,7 +387,6 @@ describe('terminal analysis publication', () => {
       ['technical.sitewide_link_redirect', 6],
       ['technical.internal_link_redirect', 1],
     ]);
-    // Two rows, but the summary's pages are at least the six the shared link is on.
     expect([catalog.summary.occurrence_count, catalog.summary.affected_url_count]).toEqual([2, 6]);
   });
 
@@ -417,8 +403,6 @@ describe('terminal analysis publication', () => {
     await fixtures.page(seed, '/', { has_html: true, links: { anchors: [] } });
     const first = await fixtures.page(seed, '/a', copy);
     const second = await fixtures.page(seed, '/b', copy);
-    // The flag's definition (CO-7): every evaluation a current analysis names,
-    // provisional or final, plus architecture findings.
     const derived = async () => {
       const { rows } = await sql<{ id: string }>`
         select i.id from site_issues i
@@ -457,7 +441,6 @@ describe('terminal analysis publication', () => {
           .execute()
       ).map((row) => row.site_url_id);
 
-    // The persisted catalog's duplicate group, as the unfiltered Issues read serves it.
     const catalogDuplicates = async () => {
       const rows = await db
         .selectFrom('site_issue_catalogs')
@@ -476,8 +459,6 @@ describe('terminal analysis publication', () => {
     expect(await currentDuplicates()).toEqual([first.id, second.id].toSorted());
     expect(await catalogDuplicates()).toBe(2);
 
-    // `/a` is analyzed again over its finalized analysis: its findings stop
-    // being current, and the new provisional analysis's own are current at once.
     const crawl = await db
       .selectFrom('site_crawls')
       .selectAll()
@@ -500,7 +481,6 @@ describe('terminal analysis publication', () => {
     });
     expect(await flagged()).toEqual(await derived());
     expect(await currentDuplicates()).toEqual([second.id]);
-    // The re-analysis rewrote the catalog in its own transaction.
     expect(await catalogDuplicates()).toBe(1);
 
     await finalize(seed);
@@ -528,7 +508,6 @@ describe('terminal analysis publication', () => {
         .where('id', '=', page.analysisId)
         .executeTakeFirstOrThrow();
     expect(await saved()).toEqual({ is_current: true, finalized_at: null });
-    // The crawl's own scope reads and revises the same page.
     expect((await prepareFinalization(db, crawl, options)).pendingIds).toEqual([page.analysisId]);
     expect(await appendFinalRevisions(db, crawl, [page.analysisId], [])).toBe(1);
     expect((await saved()).is_current).toBe(false);
@@ -563,7 +542,6 @@ async function running(changes: Partial<Insertable<SiteCrawls>> = {}) {
     .execute();
   return seed;
 }
-/** A completed analysis of an active monitored page, settled by its own analyze task. */
 async function monitoredPage(seed: SiteSeed, path: string, facts: Record<string, unknown> = {}) {
   const member = await fixtures.analyzable(seed, path);
   await db.deleteFrom('site_crawl_tasks').where('id', '=', member.taskId).execute();
@@ -577,7 +555,6 @@ const settled = (seed: SiteSeed, taskId: string) => ({
   workspace_id: seed.workspaceId,
 });
 const cadence = () => crawlCadences(siteWorkerSettings({}).scoreRefresh);
-/** A fresh page whose `kind` task failed; a status code is recorded as its fetch answered. */
 async function failedTask(
   seed: SiteSeed,
   failure: { path: string; error_code: string; kind?: string; status_code?: number },
@@ -621,7 +598,6 @@ describe('crawl lifecycle', () => {
     const failed = await failedTask(seed, { path: '/failed', error_code: 'task_failed' });
     const pending = await fixtures.analyzable(seed, '/pending');
     await reconcileAfterTask(db, settled(seed, done.taskId), cadence());
-    // A failed page while a sibling is outstanding is progress: no recount under the crawl lock.
     await reconcileAfterTask(db, settled(seed, failed.taskId), cadence());
     const live = await crawlRow(seed.crawlId);
     expect([live.status, live.failed_url_count]).toEqual(['running', 0]);
@@ -636,7 +612,6 @@ describe('crawl lifecycle', () => {
       .where('id', '=', pending.taskId)
       .execute();
     await reconcileAfterTask(db, settled(seed, pending.taskId), cadence());
-    // The drain leaves the crawl running until its finalize task publishes it.
     expect((await crawlRow(seed.crawlId)).status).toBe('running');
     expect(await finalize(seed)).toBe(true);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
@@ -647,7 +622,6 @@ describe('crawl lifecycle', () => {
       failed_url_count: 2,
     });
     expect(await snapshots(seed.crawlId)).toHaveLength(1);
-    // The terminalization transaction persisted what the dashboard counts from now on.
     expect((await crawlRow(seed.crawlId)).terminal_counters).toMatchObject({
       analyzed: 1,
       errors: 2,
@@ -675,7 +649,6 @@ describe('crawl lifecycle', () => {
       succeed(id).then(() => reconcileAfterTask(db, settled(seed, id), gates));
     await settle(first!);
     await succeed(analyzed.taskId);
-    // A discover while siblings still discover waits for the cadence: no crawl lock, no recount.
     await settle(middle!);
     const progress = await crawlRow(seed.crawlId);
     expect(progress).toMatchObject({
@@ -683,7 +656,6 @@ describe('crawl lifecycle', () => {
       analyzed_url_count: 1,
       live_counters: { analyzed: 1 },
     });
-    // The boundary recounts the live counters inside the counters cadence too.
     await settle(last!);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
       status: 'running',
@@ -700,7 +672,6 @@ describe('crawl lifecycle', () => {
     const seed = await running();
     await monitoredPage(seed, '/');
     await failedTask(seed, { path: '/account', error_code: 'url_admission_rejected' });
-    // A tracked page that now answers 404 is reported as an issue, not an unanalyzed page.
     await failedTask(seed, { path: '/products/retired', error_code: 'http_4xx', status_code: 404 });
     await finalize(seed);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
@@ -736,7 +707,6 @@ describe('crawl lifecycle', () => {
         .failed_discovery_task_count,
     ).toBe(0);
 
-    // A server error is a real discovery failure.
     const other = await running();
     await monitoredPage(other, '/');
     await failedTask(other, { path: '/broken', kind: 'discover', error_code: 'http_5xx' });
@@ -747,7 +717,6 @@ describe('crawl lifecycle', () => {
   it('counts a page whose fetch failed as an error or exclusion, never as pending', async () => {
     const seed = await running();
     await monitoredPage(seed, '/');
-    // The fetch fails at discovery, so no analyze task is ever planned for these pages.
     const kind = 'discover';
     await failedTask(seed, { path: '/rate-limited', kind, error_code: 'http_4xx' });
     await failedTask(seed, { path: '/policies/privacy-policy', kind, error_code: 'robots_denied' });
@@ -816,7 +785,6 @@ describe('crawl lifecycle', () => {
       score_summary: null,
     });
     expect(await snapshots(rerun.crawlId)).toHaveLength(0);
-    // The rerun still hands its page on.
     expect(await tasksOf(rerun.crawlId, 'change_intel')).toHaveLength(1);
 
     const site = await running();
@@ -888,7 +856,6 @@ describe('crawl lifecycle', () => {
       return crawlRow(seed.crawlId);
     };
     expect(await discovered({})).toMatchObject({ status: 'completed', inventory_complete: true });
-    // A site with exactly the requested page count exhausted its frontier.
     expect(await discovered({ discovery_requested_count: 1 })).toMatchObject({
       status: 'completed',
       inventory_complete: true,
@@ -995,8 +962,6 @@ describe('crawl lifecycle', () => {
     const current = await final(seed.crawlId);
     expect(current.supersedes_analysis_id).toBe(page.analysisId);
     expect(current.finalized_at).not.toBeNull();
-    // The skipped crawl-finalize canonical check is unknown, not silently absent,
-    // unless the page declared no canonical for it to judge.
     expect(canonicalCheck(current)).toMatchObject({
       outcome: 'unknown',
       reason: 'crawl_not_finalized',

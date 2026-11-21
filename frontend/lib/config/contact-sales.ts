@@ -1,7 +1,5 @@
-// Apart from the contact form's schemas, so the eager app shell never loads them.
 const CONTACT_PATH = '/contact';
 
-/** Retained published catalogs can still carry the former CiteLadder intake URL. */
 export function contactSalesHref(href: string | null | undefined, fallback = CONTACT_PATH): string {
   if (!href) return fallback;
   try {
@@ -11,8 +9,6 @@ export function contactSalesHref(href: string | null | undefined, fallback = CON
       /^\/contact\/?$/.test(url.pathname)
     )
       return fallback;
-  } catch {
-    // Other catalog destinations retain their existing meaning.
-  }
+  } catch {}
   return href;
 }

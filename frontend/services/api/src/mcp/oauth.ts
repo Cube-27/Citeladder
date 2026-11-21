@@ -67,7 +67,6 @@ export async function authenticateMcp(
     return null;
   const workspaceIds = strings(row.workspace_ids);
   if (!workspaceIds.length) return null;
-  // Last use at minutes resolution: a write only when the recorded use is stale.
   const stale = Date.now() - mcpPolicy.last_used_resolution_seconds * 1000;
   if (!row.last_used_at || row.last_used_at.getTime() < stale)
     await db
@@ -83,7 +82,6 @@ export async function authenticateMcp(
     canWrite: holdsWrite(strings(row.scopes)),
   };
 }
-/** A refresh window slides, but never past the grant's absolute lifetime. */
 function refreshDeadline(mcp: McpConfig, grantedAt: Date) {
   return new Date(
     Math.min(
@@ -105,13 +103,6 @@ async function revokeGrant(
     .execute();
   await recordSecurityEvent(trx, event, grant.user_id, null, grant.id);
 }
-/**
- * Revoke every live grant of `userId` inside the caller's password-reset or
- * password-change transaction, so a client connected with the old
- * credentials loses access along with the old sessions. Unexchanged
- * authorization codes end too: a code minted with the old credentials would
- * otherwise mint a fresh grant after the reset.
- */
 export async function revokeGrantsAfterCredentialReset(
   trx: Database,
   userId: string,
@@ -134,29 +125,15 @@ export async function revokeGrantsAfterCredentialReset(
     revoked.map((grant) => recordSecurityEvent(trx, 'mcp.revoke', actorId, null, grant.id)),
   );
 }
-/**
- * Why a workspace can or cannot be approved right now. `terms` is resolvable on
- * the consent page itself; `inactive` is an expired trial or subscription that
- * billing can fix; `unresolved` means access could not be determined, which is
- * not the same as inactive and offers no billing fix.
- */
 export type ConsentWorkspace = Readonly<{
   id: string;
   name: string;
   hasProject: boolean;
-  /** The live role allows changes; a write grant acts only where it still does. */
   canChange: boolean;
   state: 'ready' | 'terms' | 'inactive' | 'unresolved';
 }>;
-/** The signed-in session approving a consent: its user and session version. */
 export type ConsentSession = Readonly<{ userId: string; sessionVersion: number }>;
 
-/**
- * The consenting session must still be current. The user row is held
- * `FOR SHARE` until the code commits, so a credential reset or sign-out
- * everywhere either commits first (and this refuses) or waits and then
- * consumes the new code.
- */
 async function assertUserMayConsent(
   trx: Database,
   session: ConsentSession,
@@ -178,7 +155,6 @@ async function assertUserMayConsent(
   )
     throw new OAuthError('access_denied', 'This account is not enabled for MCP access');
 }
-/** Refuses an unusable selection; returns the selected workspaces that still need the Terms. */
 function validateConsentSelection(
   unique: string[],
   shareable: { id: string; state: string }[],
@@ -200,7 +176,6 @@ function validateConsentSelection(
     throw new ConsentSelectionError('Accept the Terms of Service to share these workspaces.');
   return needTerms;
 }
-/** Every workspace the account could share, each with what approving it needs. */
 export async function consentWorkspaces(db: Database, userId: string): Promise<ConsentWorkspace[]> {
   const rows = await db
     .selectFrom('workspaces as w')
@@ -253,9 +228,7 @@ function consentState(access: WorkspaceAccess, accepted: boolean): ConsentWorksp
   }
 }
 
-/** A refused approval the person can correct on the same consent page. */
 export class ConsentSelectionError extends Error {}
-/** The transaction was used, expired or never existed; only the client can restart it. */
 export class ConsentExpiredError extends OAuthError {
   constructor() {
     super('access_denied', 'Authorization request is invalid or expired');
@@ -270,9 +243,7 @@ export function completeConsent(
   session: ConsentSession,
   decision: {
     selected: string[];
-    /** The Terms revision the page showed when its box was ticked; null when unticked. */
     acceptedTermsRevision: string | null;
-    /** Allow changes was ticked; it grants write only where the request offered it. */
     allowChanges: boolean;
   } | null,
 ): Promise<string> {
@@ -344,7 +315,6 @@ export function completeConsent(
     return destination.href;
   });
 }
-/** A replayed credential: its grant is revoked in a committed transaction first. */
 class Replayed extends Error {}
 type TokenGrant = {
   config: ServiceConfig;
@@ -355,7 +325,6 @@ type TokenGrant = {
   refresh: string;
   now: Date;
 };
-/** Redeems an authorization code; a replayed code revokes what it minted and yields `Replayed`. */
 async function authorizationCodeGrant(
   trx: Database,
   { config, mcp, clientId, form, access, refresh, now }: TokenGrant,
@@ -437,7 +406,6 @@ async function authorizationCodeGrant(
     .execute();
   return scopes;
 }
-/** Rotates a refresh token; a replayed superseded token revokes the grant and yields `Replayed`. */
 async function refreshTokenGrant(
   trx: Database,
   { config, mcp, clientId, form, access, refresh, now }: TokenGrant,
@@ -488,7 +456,6 @@ async function refreshTokenGrant(
     throw new OAuthError('invalid_grant', 'Refresh token is invalid');
   const granted = strings(row.scopes);
   const requested = form.get('scope')?.split(/\s+/u).filter(Boolean) ?? [];
-  // An absent or blank scope keeps the grant; narrowing is allowed, expansion is not.
   const scopes = requested.length ? requested : granted;
   if (scopes.some((scope) => !granted.includes(scope)))
     throw new OAuthError('invalid_scope', 'Refresh cannot expand the original grant');

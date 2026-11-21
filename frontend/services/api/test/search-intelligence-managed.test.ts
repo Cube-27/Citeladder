@@ -34,7 +34,6 @@ const db = testDatabase(),
   connections: string[] = [],
   accounts: string[] = [];
 afterAll(async () => {
-  // Capacity pools outlive their connections and accounts; drop them before those go.
   await db
     .deleteFrom('provider_capacity_buckets')
     .where((eb) =>
@@ -48,7 +47,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** The platform's DataForSEO account, held by the system workspace. */
 async function platformAccount() {
   const workspaceId = await fixtures.systemWorkspace(),
     at = new Date();
@@ -73,7 +71,6 @@ async function platformAccount() {
 }
 const platform = platformAccount();
 
-/** A project ready for research; managed workspaces have no DataForSEO key of their own. */
 async function workspace(mode: 'managed' | 'byok') {
   await platform;
   const t = await fixtures.tenant({ websiteUrl: 'https://www.example.com' });
@@ -107,7 +104,6 @@ async function workspace(mode: 'managed' | 'byok') {
       .execute();
   }
   const scope = { workspace: new WorkspaceScope(t.workspaceId), projectId: t.projectId };
-  // Two ranked keywords: one $0.012 task plus two $0.00012 items, $0.01224 (B40: 16 credits).
   const review = await createReview(
     db,
     scope,
@@ -131,10 +127,6 @@ const runRow = (id: string) =>
     .selectAll()
     .where('id', '=', id)
     .executeTakeFirstOrThrow();
-/**
- * Works only this analysis's task until it ends: the local database is shared,
- * and the platform account paces its requests.
- */
 async function runToEnd(id: string, send: typeof fetch) {
   const run = await runRow(id);
   const research = new AnalyticsWorker(db, loadWorkerSettings(), {
@@ -153,7 +145,6 @@ const platformCall = (id: string | null) =>
     .select(['status', 'reserved_credits', 'credits', 'cost_microusd'])
     .where('id', '=', id ?? randomUUID())
     .executeTakeFirst();
-/** A confirmed managed analysis held by this test, with its first request prepared for dispatch. */
 async function preparedDispatch() {
   const t = await workspace('managed');
   const confirmed = await confirmRun(db, t.scope, t.review.id);
@@ -201,7 +192,6 @@ describe('managed Search Intelligence', () => {
 
     const platformAuthorization = `Basic ${Buffer.from(`${platformLogin}:platform-secret`).toString('base64')}`;
     expect(authorizations).toEqual([platformAuthorization]);
-    // $0.0061 × 1.3 = 7.93 credits, rounded up.
     const settled = await runRow(confirmed.id);
     expect(settled).toMatchObject({ status: 'succeeded', charged_credits: 8 });
     expect(await platformCall(settled.platform_call_id)).toEqual({
@@ -291,7 +281,6 @@ describe('managed Search Intelligence', () => {
   });
 
   it('bills a late receipt of a call marked uncertain while its reporting window is open', async () => {
-    /** A dispatched call that a recovering pass then marks uncertain, as after a lost lease. */
     async function uncertainCall() {
       const { t, runId, state, plan, prepared } = await preparedDispatch();
       expect(await state.dispatch(prepared)).toBe(true);
@@ -309,7 +298,6 @@ describe('managed Search Intelligence', () => {
       taskId: 'late-receipt',
       cost: '0.0061',
     });
-    // $0.0061 × 1.3 = 7.93 credits, rounded up.
     expect(await settleResearchCharge(db, key)).toMatchObject({ charged_credits: 8 });
     expect(await platformCall((await runRow(late.runId)).platform_call_id)).toMatchObject({
       status: 'settled',
@@ -360,8 +348,6 @@ describe('managed Search Intelligence', () => {
       value: 1,
     });
     const project = { workspaceId: t.workspaceId, projectId: t.projectId };
-    // Pause the confirmation once it holds the project row, as its own first
-    // statement does, before it takes the credit hold.
     const locked = Promise.withResolvers<number>();
     const proceed = Promise.withResolvers<void>();
     const transaction = db.transaction.bind(db);
@@ -404,7 +390,6 @@ describe('managed Search Intelligence', () => {
       spy.mockRestore();
     }
 
-    // The project and its run survive, so the hold still settles.
     expect(await cancelRun(db, t.scope, t.review.id)).toMatchObject({
       status: 'cancelled',
       charged_credits: 0,

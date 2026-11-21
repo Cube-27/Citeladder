@@ -45,7 +45,6 @@ const STATUS_LABEL: Record<CatalogImport['row_outcomes'][number]['status'], stri
   rejected: 'Rejected',
 };
 
-/** A file picker for one feed or CSV file, naming the file chosen, with its sample download. */
 function FilePick({
   label,
   accept,
@@ -75,7 +74,6 @@ function FilePick({
   );
 }
 
-/** The proposed category tree with a box per category; a cleared box leaves out its branch. */
 function CategoryReview({
   stage,
   unticked,
@@ -119,7 +117,6 @@ function CategoryReview({
   );
 }
 
-/** Added, updated, unchanged and rejected rows; rejected rows first, each with its reason. */
 function ImportResults({
   result,
   repeated,
@@ -159,7 +156,6 @@ function ImportResults({
   );
 }
 
-/** The first step: pick a source and name the store or file, with why the last try failed. */
 function SourceStep({
   source,
   onSource,
@@ -176,7 +172,6 @@ function SourceStep({
   onStore: (store: string) => void;
   file: File | null;
   onFile: (file: File | null) => void;
-  /** Why the chosen file could not be read, such as a file that is not UTF-8. */
   readError: string | null;
   stageError: Error | null;
 }>) {
@@ -236,11 +231,6 @@ function SourceStep({
   );
 }
 
-/**
- * Add products from a Shopify store, a Merchant Center feed or the CSV
- * template (CM3): stage the source, confirm its category tree, then read what
- * was added, updated, unchanged and rejected.
- */
 export function AddProductsDialog({
   workspaceId,
   projectId,
@@ -261,9 +251,7 @@ export function AddProductsDialog({
   const [unticked, setUnticked] = useState<ReadonlySet<string>>(new Set());
   const [readError, setReadError] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
-  // Set before the file read starts, so a second click cannot stage it twice.
   const submitting = useRef(false);
-  // Bumped by every new choice or reset; a read that finishes after one is dropped.
   const selection = useRef(0);
   const release = () => {
     selection.current += 1;
@@ -293,7 +281,6 @@ export function AddProductsDialog({
     setReadError(null);
     release();
   };
-  // Held from the click until the stage request settles.
   const settled = {
     onSettled: () => {
       submitting.current = false;
@@ -362,8 +349,6 @@ export function AddProductsDialog({
           onClick={() =>
             apply.mutate({
               importId: staged.import_id,
-              // Every category shown cleared, so one also reached by a path
-              // without its cleared parent is left out as the review showed.
               excluded_categories: [...leftOutCategories(staged.categories, unticked)],
             })
           }

@@ -1,11 +1,3 @@
-/**
- * A project's measured runs: each dashboard-ready brand run with its
- * persisted `MetricSnapshot` and frozen routes.
- *
- * Every trend, range and baseline read walks
- * this one list. A source's folding identity comes only from frozen audit
- * fields, never from live configuration.
- */
 import { sql } from 'kysely';
 
 import { frozenComparisonKey } from '../analysis/comparison.ts';
@@ -40,41 +32,26 @@ export type MeasuredRun = {
   scoringRuleVersion: string;
   visibilityScore: number;
   metrics: unknown;
-  /** UTC text with microseconds (`utcText`): it orders as it compares. */
   snapshotCreatedAt: string;
   configuration: unknown;
   completedAt: string;
   provenance: ModelProvenance[];
 };
 
-/**
- * A project's runs in one measurement market. Markets never mix in a
- * projection: an omitted or `null` market is the project default.
- */
 export type RunScope = {
   workspaceId: string;
   projectId: string;
   marketId?: string | null;
-  /** Read each run's block for this frozen topic; a run that never asked it is not measured. */
   topicId?: string | null;
 };
 export const marketOf = (scope: { marketId?: string | null }) => scope.marketId ?? null;
 
-/** A request timestamp, or a stored one read back as `utcText`. */
 export type Instant = ParsedDatetime | string;
 
 function instantOperand(value: Instant) {
   return typeof value === 'string' ? storedInstant(value) : timestamptz(value);
 }
 
-/**
- * The project's measured runs completed inside the inclusive window, oldest
- * first. `newest` bounds the read to that many most recent runs: a caller
- * walking back to the nearest match needs the recent end, not a project's
- * whole history on every dashboard load. `olderThan` continues such a walk
- * below the oldest run (an audit ID) of the previous page. `newerThan` reads
- * the runs after one run instead, oldest first, and `oldest` bounds that read.
- */
 export async function loadMeasuredRuns(
   db: Database,
   scope: RunScope,
@@ -85,12 +62,9 @@ export async function loadMeasuredRuns(
     olderThan?: string;
     newerThan?: string;
     oldest?: number;
-    /** Only this run, still under every scope condition. */
     auditId?: string;
   },
 ): Promise<MeasuredRun[]> {
-  // A topic reads the block finalization froze for it, and a run that asked
-  // no prompt filed under it is left out, as a run that skipped an engine is.
   const topicId = scope.topicId ?? null;
   const measured = (column: string) => sql.ref(`${topicId ? 'topic' : 'snapshot'}.${column}`);
   let query = db
@@ -164,12 +138,6 @@ export async function loadMeasuredRuns(
   }));
 }
 
-/**
- * A pooled period's trend selection: the newest measured runs of its window
- * in the pool's market, whatever their configuration, so a trend breaks where
- * runs aren't comparable instead of showing the pool alone. Null unless the
- * already authorized `selection` names a pool over a window.
- */
 export async function periodTrendSelection(
   db: Database,
   selection: RunSelection,
@@ -192,7 +160,6 @@ export async function periodTrendSelection(
   return { ...selection, auditId: null, auditIds, fromAt: null, toAt: null };
 }
 
-/** Each of the workspace's runs' frozen engine routes. */
 export async function engineSnapshots(
   db: Database,
   workspaceId: string,
@@ -219,11 +186,6 @@ export async function engineSnapshots(
   return routes;
 }
 
-/**
- * The persisted composite for this selection, or nothing. Only the core
- * cohort across every engine stores one; a slice has no composite, and the
- * prompt composite is a different measure that must not stand in for it.
- */
 export function selectedScore(
   storedScore: number,
   metrics: Metrics,
@@ -234,7 +196,6 @@ export function selectedScore(
   return cohort === visibility.core_cohort && engine === null ? storedScore : null;
 }
 
-/** One measured run projected for folding: a trend point, a range or a baseline. */
 export type TrendSource = {
   snapshotId: string;
   auditId: string;
@@ -244,7 +205,6 @@ export type TrendSource = {
   retrievalEnabled: boolean;
   modelProvenance: ModelProvenance[];
   panelHash: string | null;
-  /** False for a run of selected prompts: its panel is a subset, not a change. */
   wholeSet: boolean;
   analyzerVersion: string;
   scoringRuleVersion: string;
@@ -255,7 +215,6 @@ export type TrendSource = {
   promptPerformanceScore: number | null;
 };
 
-/** The singular frozen model, or null when the source spans several. */
 function sourceModel(provenance: readonly ModelProvenance[], engine: string | null): string | null {
   if (engine !== null) {
     return provenance.find((item) => item.logical_engine === engine)?.transport_model ?? null;
@@ -264,10 +223,6 @@ function sourceModel(provenance: readonly ModelProvenance[], engine: string | nu
   return onlyOf(models) ?? null;
 }
 
-/**
- * One run as a folding source, or null when an engine-filtered request asks
- * for an engine the run did not measure: a missing engine emits no point.
- */
 export function trendSource(
   run: MeasuredRun,
   engine: string | null,
@@ -292,7 +247,6 @@ export function trendSource(
     visibilityScore: selectedScore(run.visibilityScore, metrics, cohort, engine),
     metrics,
     comparisonKey: frozenComparisonKey(run.configuration, engine),
-    // The preserved prompt composite: a different measure from the score.
     promptPerformanceScore: promptPerformance(metrics),
   };
 }

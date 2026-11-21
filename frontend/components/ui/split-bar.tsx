@@ -5,19 +5,12 @@ import { cn } from '@/lib/utils';
 
 export type SplitSegment = Readonly<{ key: string; label: string }>;
 
-// Cool series hues in order; never the accent, which means "you". The bar
-// takes light tints; the legend's dots keep the full hue.
 const FILLS = ['bg-data-rival-2/20', 'bg-data-rival-3/20', 'bg-data-rival-4/20'] as const;
 const DOTS = ['bg-data-rival-2', 'bg-data-rival-3', 'bg-data-rival-4'] as const;
 
 const sum = (values: readonly number[]) => values.reduce((total, value) => total + value, 0);
 const percent = (value: number | undefined) => `${value ?? 0}%`;
 
-/**
- * `values` with the divider after segment `index` moved to `position` (a
- * share of the whole, 0 to 100), snapped to `step` and kept within the two
- * segments it separates, so each stays at least `min` and the total holds.
- */
 function moved(
   values: readonly number[],
   index: number,
@@ -35,14 +28,6 @@ function moved(
   });
 }
 
-/**
- * SplitBar — a whole split into segments by dragging the dividers between
- * them (a share mix such as unbranded and branded, or an intent mix). The
- * parts always total 100 and move in `step`s. Each divider is a slider:
- * Arrow keys move it a step, Home and End to its limits; a press or drag on
- * the bar moves the nearest divider there. A legend under the bar prints each
- * part.
- */
 export function SplitBar({
   label,
   segments,
@@ -52,10 +37,8 @@ export function SplitBar({
   min = 0,
   disabled = false,
 }: Readonly<{
-  /** Names the bar; each divider is "<left> and <right>". */
   label: string;
   segments: readonly SplitSegment[];
-  /** One whole number per segment, totalling 100. */
   values: readonly number[];
   onChange: (values: number[]) => void;
   step?: number;
@@ -71,7 +54,6 @@ export function SplitBar({
     const box = track.current?.getBoundingClientRect();
     return box && box.width > 0 ? ((clientX - box.left) / box.width) * 100 : null;
   };
-  // Stacked dividers part toward the press: the later one moves right, the earlier left.
   const nearest = (position: number) =>
     dividers.reduce((best, at, index) => {
       const distance = Math.abs(at - position);

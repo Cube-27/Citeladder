@@ -14,7 +14,6 @@ import {
 } from './demo-data';
 import { Vignette, VignetteRows, fourRows } from './screen-vignette';
 
-/** A failed check's severity as the app's notice icons draw it: danger, warning, or muted info. */
 const SEVERITY_ICON: Readonly<Record<Severity, Readonly<{ icon: IconGlyph; tone: string }>>> = {
   High: { icon: ICONS.danger, tone: 'text-negative' },
   Medium: { icon: ICONS.warning, tone: 'text-warning' },
@@ -26,7 +25,6 @@ function SeverityIcon({ severity }: Readonly<{ severity: Severity }>) {
   return <Icon className={cn('size-5', tone)} aria-hidden />;
 }
 
-/** Site Health: the score, then the four worst failed checks with the pages each affects. */
 export function ScreenSiteHealth() {
   return (
     <Vignette
@@ -48,12 +46,10 @@ export function ScreenSiteHealth() {
   );
 }
 
-/** The crawlers the vignette lists: both restricted ones among two allowed. */
 const LISTED_BOTS = BOTS.filter((row) =>
   ['GPTBot', 'OAI-SearchBot', 'ClaudeBot', 'Google-Extended'].includes(row.bot),
 );
 
-/** Crawler access: AI crawlers against robots.txt, the two restricted ones flagged. */
 export function ScreenCrawlerAccess() {
   return (
     <Vignette
@@ -85,7 +81,6 @@ export function ScreenCrawlerAccess() {
   );
 }
 
-/** Integrations: the data sources CiteLadder reads for one site. */
 export function ScreenIntegrations() {
   return (
     <Vignette
@@ -113,7 +108,6 @@ export function ScreenIntegrations() {
   );
 }
 
-/** MCP: the read-only tool calls an assistant made, each with what it returned. */
 export function ScreenMcp() {
   return (
     <Vignette

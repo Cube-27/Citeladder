@@ -37,11 +37,6 @@ const PREVIEW_COLUMNS: readonly DataTableColumn[] = [
   { key: 'status', label: 'Status', width: 'category' },
 ];
 
-/**
- * Import brand facts from a CSV as drafts: nothing imported is checked
- * against until a person confirms it in Context. Rows are previewed with
- * their problems first; after the import each row shows what the API did.
- */
 export function FactsImportDialog({
   open,
   onOpenChange,
@@ -67,7 +62,6 @@ export function FactsImportDialog({
       { rows: ready.map((row) => row.input) },
       {
         onSuccess: (result) => {
-          // The API answers by position in the request: the ready rows, in order.
           setOutcomes(new Map(result.rows.map((row) => [ready[row.index]!.line, row])));
           const created = result.rows.filter((row) => row.kind === 'created').length;
           notify('Facts imported', `${pluralCount(created, 'draft fact')} added.`);

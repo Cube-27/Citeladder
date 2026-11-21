@@ -1,4 +1,3 @@
-/** One-shot identity/access bootstrap before catalog publication and rollout. */
 import { sql } from 'kysely';
 import { z } from 'zod';
 import { assertDeployable, loadConfig, policy } from '../config.ts';
@@ -27,8 +26,6 @@ export async function bootstrapDeployment(
     resolveSettingSpec(policy.settings[key], env);
   const email = z.email().parse(String(setting('dev_login_email')).trim().toLowerCase());
   if (!config.demo.enabled) {
-    // Production has no development login (BL9): the operator's identity already
-    // exists, so only the idempotent catalog runs, and only once that operator does.
     if (!policy.development_env_names.includes(config.appEnv.trim().toLowerCase()))
       return { skipped: true, catalog: await operatorCatalog(db, env, email, catalog) };
     if (!String(setting('dev_login_password'))) return { skipped: true, catalog: false };
@@ -143,7 +140,6 @@ async function initialize(
   await catalog(db, email, mode);
 }
 
-/** A fresh production database waits for the operator before its catalog. */
 async function operatorCatalog(
   db: Database,
   env: Record<string, string | undefined>,

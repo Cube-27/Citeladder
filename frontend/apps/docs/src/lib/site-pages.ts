@@ -1,8 +1,3 @@
-/**
- * Every indexable docs page: the guides and API overview articles plus the
- * generated API pages. The search index, `llms.txt` and the sitemap read this
- * one list, so a new page is covered by all three.
- */
 import { API_GROUP, articleSearchBody, articles } from './content';
 import { API_OPERATIONS, API_SCHEMAS } from './api-reference';
 

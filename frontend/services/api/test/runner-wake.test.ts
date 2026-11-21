@@ -76,7 +76,6 @@ describe('Cloud Run wake-up', () => {
     );
     const first = start();
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
-    // The interval has passed, but the first attempt's token request is still open.
     clock = 60_000;
     const second = start();
     releaseToken(Response.json({ access_token: 'recorded-access-token' }));
@@ -129,7 +128,6 @@ describe('Cloud Run wake-up', () => {
         db,
         send,
       );
-      // A refused handover is reported, so the runner still starts its exit-time successor.
       expect(await start('handover')).toBe(false);
     } finally {
       setLogSink(restore);
@@ -163,7 +161,6 @@ describe('Cloud Run wake-up', () => {
       expect(await start('handover')).toBe(true);
       return 0;
     });
-    // The handover flags its successor to wait out the in-flight tail for the lock.
     const body = JSON.parse(String(send.mock.calls[1]![1]!.body));
     const env = Object.fromEntries(
       body.overrides.containerOverrides[0].env.map((v: { name: string; value: string }) => [

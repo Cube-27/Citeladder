@@ -63,10 +63,6 @@ function readinessStage(
   return imported ? 'importing' : 'import_failed';
 }
 
-/**
- * Project grain: one connection's unrelated project imports are not coverage.
- * Shared persisted projection for readiness HTTP and MCP reads.
- */
 export async function readProjectReadiness(db: Database, scope: Scope) {
   const workspace = new WorkspaceScope(scope.workspaceId);
   const mappings = await workspace

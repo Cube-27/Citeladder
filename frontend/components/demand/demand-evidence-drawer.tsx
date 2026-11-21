@@ -64,7 +64,6 @@ export function DemandEvidenceDrawer({
         </Inline>
       }
     >
-      {/* The row already shows the kind, signal, page and figures: the drawer adds what it lacks. */}
       <Stack gap="workspace">
         <SignalInsight signal={signal} policy={policy} />
 
@@ -118,7 +117,6 @@ export function DemandEvidenceDrawer({
           </Stack>
         )}
 
-        {/* Where the figures came from, as counts and a date; internal IDs stay out of view. */}
         <Stack as="section" aria-labelledby="demand-provenance">
           <Inline as="h3" id="demand-provenance" className={textRole('body', 'text-ink-2')}>
             <Icon icon={ShieldCheck} className="text-ink-2" />
@@ -164,7 +162,6 @@ function demandEvidenceDetails(signal: DemandSignal) {
   };
 }
 
-/** How many sources a provenance list names, or null when it was not recorded. */
 function sourceCount(value: unknown): number | null {
   return Array.isArray(value) ? value.length : null;
 }

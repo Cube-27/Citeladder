@@ -32,11 +32,9 @@ export function AiReferralsScreen({
   notice,
 }: Readonly<{
   tabs?: TabRowProps;
-  /** Shown above the referrals, e.g. why crawl logs are unavailable. */
   notice?: React.ReactNode;
 }> = {}) {
   const { workspaceId, projectId } = useProjectScope();
-  // The range is the screen's shared `range` parameter, so a preset follows the reader across tabs.
   const [range, setRange] = useUrlState('range', rangeCodec);
   const [granularity, setGranularity] = useUrlState('granularity', granularityCodec);
   const rangeParams = useMemo(() => rangeToParams(range), [range]);
@@ -55,8 +53,6 @@ export function AiReferralsScreen({
         onChangeRange: setRange,
         granularity,
         onChangeGranularity: setGranularity,
-        // Only a read that has an answer on screen is "previous data shown";
-        // the first load has none, and the content already says it is loading.
         refreshing: dashboardQuery.isFetching && dashboardQuery.data !== undefined,
       })}
     />
@@ -83,8 +79,6 @@ function referralsControls({
         Updating data… Previous data shown.
       </>
     ) : null,
-    // The same control row as the other AI Traffic tabs: the window and the
-    // chart interval as filters, the live note at the row's end.
     filters: [
       rangeFilter({
         value: range,

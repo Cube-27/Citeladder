@@ -16,33 +16,18 @@ import { EXECUTION_STATES, executionFailureReason, executionStatusLabel } from '
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'prompt', label: 'Prompt', kind: 'identity' },
-  // Wide enough for the longest engine on one line ("Google AI Overview").
   { key: 'engine', label: 'Engine', width: 'category' },
-  // A long waiting state ("Waiting for Google AI Overview") cuts with a title.
   { key: 'status', label: 'Status', width: 'category' },
   { key: 'latency', label: 'Latency', width: 'figure', kind: 'number' },
   { key: 'evidence', label: 'Evidence', kind: 'actions', hideLabel: true },
 ];
 
-/**
- * Executions table for a run (F10), on the shared `DataTable`.
- *
- * One row per execution/queue task: the prompt, the
- * engine, status badge, and latency. The engine's name already says its
- * route ("ChatGPT API"); the vendor behind an observed surface is a
- * procurement detail, so no row names a transport.
- * Succeeded rows open the evidence drawer without leaving the run. The read's
- * loading, error and empty states render inside the table under its header.
- * The list arrives whole, so the Engine and Status filters and the pages are
- * cut here.
- */
 export function ExecutionsTable({
   executions,
   state,
   onSelectEvidence,
 }: Readonly<{
   executions: readonly Execution[];
-  /** What the table shows instead of rows while the read is not ready. */
   state?: DataTableState;
   onSelectEvidence: (execution: Execution) => void;
 }>) {
@@ -66,7 +51,6 @@ export function ExecutionsTable({
     <TitledSection title="Executions">
       <DataTable
         label="Executions"
-        // Held while the list loads, so its arrival moves nothing; an error or empty read has none.
         toolbar={!state || state.kind === 'loading' ? { filters: filters.definitions } : undefined}
         columns={COLUMNS}
         state={state ?? unmatched}
@@ -106,7 +90,6 @@ export function ExecutionsTable({
                 )}
               </TableCell>
               <TableActionsCell>
-                {/* An icon button, so the column never cuts its label (its name is the tooltip). */}
                 {execution.status === 'succeeded' ? (
                   <IconButton
                     icon={FileSearch}
@@ -126,7 +109,6 @@ export function ExecutionsTable({
   );
 }
 
-/** The execution's state; a label longer than the column is cut, whole in its title. */
 function StatusBadge({ execution }: Readonly<{ execution: Execution }>) {
   const engines = useEngineCatalog();
   const label = executionStatusLabel(execution.status, engines.label(execution.logical_engine));

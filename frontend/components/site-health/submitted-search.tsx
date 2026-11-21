@@ -2,7 +2,6 @@ import { useState } from 'react';
 
 import { SearchField } from '@/components/ui/search-field';
 
-/** A search box that applies on Enter, so each keystroke is not a request. */
 export function SubmittedSearch({
   query,
   onApply,
@@ -26,7 +25,6 @@ export function SubmittedSearch({
         value={draft}
         onValueChange={(value) => {
           setDraft(value);
-          // An emptied box lists everything again: there is nothing to submit.
           if (value === '' && query !== '') onApply('');
         }}
         placeholder={placeholder}

@@ -20,17 +20,6 @@ import {
   type SearchConsoleDimension,
 } from '@/lib/performance/performance';
 
-/**
- * Everything the reader has CHOSEN on the Performance surface: the range and
- * its comparison, the chart's bucket size, the open breakdown, and which
- * metrics are drawn. All of it lives in the URL like every other view, so a
- * view can be linked and Back returns to the previous one.
- *
- * One owner for the whole selection, because these move together: Reset
- * returns all of them to the landing state at once.
- */
-
-/** The two metrics the surface lands on. */
 const DEFAULT_METRICS: readonly PerformanceMetricKey[] = ['clicks', 'impressions'];
 const METRIC_KEYS = METRIC_CARDS.map((card) => card.key);
 
@@ -53,7 +42,6 @@ const dimensionCodec = stringUrlCodec<SearchConsoleDimension>(
 
 const calendarDate = z.iso.date();
 
-/** A calendar date the reader picked (`2026-11-14`); anything else is no date. */
 const dateCodec: UrlCodec<string> = {
   parse: (raw) => {
     const parsed = calendarDate.safeParse(raw);
@@ -79,7 +67,6 @@ export type PerformanceSelection = {
   setSelection: (selection: RangeSelection) => void;
   granularity: PerformanceGranularity;
   setGranularity: (granularity: PerformanceGranularity) => void;
-  /** The open Search Console tab. Bing's panel owns its own tab state. */
   dimension: SearchConsoleDimension;
   setDimension: (dimension: SearchConsoleDimension) => void;
   activeMetrics: ReadonlySet<PerformanceMetricKey>;
@@ -87,7 +74,6 @@ export type PerformanceSelection = {
   reset: () => void;
 };
 
-/** The selection's query keys, each written as one history entry. */
 function selectionParams(selection: RangeSelection): Record<string, string | null> {
   return {
     range: rangeCodec.serialize(selection.range),
@@ -111,15 +97,10 @@ export function usePerformanceSelection(): PerformanceSelection {
   const [metrics, setMetrics] = useUrlState('metrics', metricsCodec);
 
   const toggleMetric = (key: PerformanceMetricKey) => {
-    // The chart must always draw something, so the last selected metric
-    // cannot be turned off.
     if (!metrics.includes(key)) setMetrics([...metrics, key]);
     else if (metrics.length > 1) setMetrics(metrics.filter((metric) => metric !== key));
   };
 
-  // Reset returns the surface to its landing state: the newest synced
-  // window, daily buckets, no comparison, the first tab, and the two default
-  // metrics. It is offered only while a comparison is active.
   const reset = () =>
     setUrlParams({
       ...selectionParams(INITIAL_SELECTION),

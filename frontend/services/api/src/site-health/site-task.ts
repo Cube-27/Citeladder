@@ -1,11 +1,3 @@
-/**
- * The one Site Health task runner. Every task kind runs under it: the lease
- * heartbeat, a mandatory workspace access check, one lock (crawl, then the
- * queue-fenced task), one settle with one retry backoff, and one handling of a
- * thrown failure. Network-bound kinds (discover, site setup, analyze) acquire
- * outside any transaction and commit through `commitTask`; the rest run inside
- * one transaction the runner opens.
- */
 import { randomInt } from 'node:crypto';
 import { isActiveCrawl } from '@citeladder/contracts/site-health';
 import type { Selectable } from 'kysely';
@@ -71,40 +63,31 @@ export const CRAWL_COLUMNS = [
   'workspace_id',
 ] as const satisfies readonly Exclude<keyof SiteCrawls, 'score_summary'>[];
 export type Crawl = Pick<Selectable<SiteCrawls>, (typeof CRAWL_COLUMNS)[number]>;
-/** A crawl as its projection reads it, score summary included. */
 export type ProjectedCrawl = Selectable<SiteCrawls>;
 export type HeldTask = { crawl: Crawl; task: SiteTask };
 
 export const statuses = policy.task_queue.statuses;
-/** Thrown inside a commit to roll back work staged before the lease was re-checked. */
 export class Abandoned extends Error {}
-/** Thrown by a commit's lock when the crawl stopped; the task is cancelled after the rollback. */
 class CrawlStopped extends Abandoned {}
 const COUNT_BEARING = new Set<string>(policy.site_health.reads.event_count_bearing_keys);
 const logger = getLogger('app.workers.site_health_worker');
 
-/** What every task kind runs with; the runner adds the lease signal. */
 export type SiteTaskRunner = {
   db: Database;
   owner: string;
   queue: TaskQueue<'site_crawl_tasks'>;
   fetcher: SitePageFetcher;
   settings: SiteWorkerSettings;
-  /** Throws when the workspace may no longer run Site Health work. */
   checkAccess: () => Promise<unknown>;
-  /** The worker's display cadences; per-page progress events follow them. */
   cadence: CrawlCadences;
   signal?: AbortSignal;
 };
-/** The runner adds the lease signal and when the attempt began (`performance.now()`). */
 export type SiteTaskContext = SiteTaskRunner & { signal: AbortSignal; startedAt: number };
 
-/** How a kind runs: it acquires and commits itself, or it runs inside the runner's transaction. */
 export type SiteTaskWork =
   | { kind: 'acquire'; run: (ctx: SiteTaskContext, task: SiteTask) => Promise<void> }
   | { kind: 'transaction'; run: (trx: Database, crawl: Crawl, task: SiteTask) => Promise<unknown> };
 
-/** How a held task settles. */
 export type SiteTaskOutcome =
   | { kind: 'succeeded'; artifactId: string | null }
   | {
@@ -113,23 +96,17 @@ export type SiteTaskOutcome =
       errorCode: string;
       errorDetail: string;
       retryAfterSeconds?: number;
-      /** The thrown failure, when there was one; logged by class and code only. */
       cause?: unknown;
     }
-  /** Lock contention: retried on the conflict budget without spending an attempt. */
   | { kind: 'conflict'; errorDetail: string; cause?: unknown }
-  /** Waiting on a prerequisite: requeued without spending an attempt. */
   | { kind: 'deferred'; delaySeconds: number };
 
-/** Uniform jitter in [0, seconds), millisecond resolution. */
 const jitter = (seconds: number) => randomInt(Math.max(1, Math.round(seconds * 1000))) / 1000;
 
-/** The delay after failed attempt `attempt` (1-based): exponential from the base, capped, jittered. */
 const retryDelay = (settings: SiteWorkerSettings, attempt: number) =>
   Math.min(settings.retryMax, settings.retryBase * 2 ** Math.max(0, attempt - 1)) +
   jitter(settings.retryJitter);
 
-/** An update of the task that applies only while this worker still holds this attempt's lease. */
 export const owned = (db: Database, task: SiteTask, owner: string) =>
   db
     .updateTable('site_crawl_tasks')
@@ -146,7 +123,6 @@ export const owned = (db: Database, task: SiteTask, owner: string) =>
 export const heldBySlot = (loaded: SiteTask, claimed: SiteTask, owner: string) =>
   loaded.lease_owner === owner && loaded.attempt_count === claimed.attempt_count;
 
-/** Cancel the task while this worker still holds it; a reclaimed lease belongs to someone else. */
 export async function cancelTask(db: Database, task: SiteTask, owner: string) {
   const now = new Date();
   await db
@@ -185,11 +161,6 @@ export async function loadScope(db: Database, claimed: SiteTask) {
 
 export type TaskScope = NonNullable<Awaited<ReturnType<typeof loadScope>>>;
 
-/**
- * The first task to run moves a queued crawl to running. Returns the scope with
- * the crawl as it now stands, so a scope reused at commit carries the started
- * audit time; null, after cancelling the task, when Stop got there first.
- */
 export async function startCrawl(
   ctx: Pick<SiteTaskContext, 'db' | 'owner'>,
   { crawl, task }: TaskScope,
@@ -210,7 +181,6 @@ export async function startCrawl(
         .where('status', '=', 'queued')
         .returning(CRAWL_COLUMNS)
         .executeTakeFirst()) ??
-      // A sibling started it, or Stop cancelled it, first.
       (await ctx.db
         .selectFrom('site_crawls')
         .select(CRAWL_COLUMNS)
@@ -223,11 +193,6 @@ export async function startCrawl(
   return null;
 }
 
-/**
- * Load the claimed task and start its crawl; null (after cancelling the task
- * when its crawl is no longer active) when it must not run. The scope is the
- * one its commit reuses: the commit's fence re-checks the lease and the crawl.
- */
 export async function prepareTask(ctx: SiteTaskContext, claimed: SiteTask) {
   ctx.signal.throwIfAborted();
   const scope = await loadScope(ctx.db, claimed);
@@ -239,31 +204,17 @@ export async function prepareTask(ctx: SiteTaskContext, claimed: SiteTask) {
   return startCrawl(ctx, scope);
 }
 
-/** Classify a returned HTTP status: a 4xx is terminal except 429; every 5xx is retryable. */
 export function httpError(status: number): [string, boolean] | null {
   const codes = policy.site_health.page_analysis.acquisition.error_codes;
   if (status >= 400 && status < 500) return [codes.http_4xx, status === 429];
   return status >= 500 ? [codes.http_5xx, true] : null;
 }
 
-/** Whether this failed attempt settles the task as failed rather than retrying it. */
 export const finalFailure = (task: SiteTask, retryable: boolean) =>
   !retryable || task.attempt_count + 1 >= task.max_attempts;
 
-/**
- * How a commit holds the crawl: `update` for one that writes the crawl row;
- * `share` for one that writes none of it (an analysis), so page commits run
- * together and still wait for, and are waited on by, every crawl writer.
- */
 export type CrawlLock = 'update' | 'share';
 
-/**
- * Site Health's one write lock, in its canonical order: the crawl (of a live
- * project), then the claimed task through the queue's fence (still this
- * owner's, unexpired, at the claimed attempt, not terminal). Null when either
- * no longer holds. A `keyShare` task lets the heartbeat extend the lease while
- * a long transaction holds the task.
- */
 export async function lockSiteTask(
   trx: Database,
   runner: Pick<SiteTaskRunner, 'queue' | 'owner'>,
@@ -287,12 +238,6 @@ export async function lockSiteTask(
   return crawl && task?.crawl_id === claimed.crawl_id ? { crawl, task } : null;
 }
 
-/**
- * One transaction that ends holding the task's lock. `body` takes any locks
- * that precede the crawl in Site Health order, then calls `lock()`, which
- * throws `Abandoned` when the lease was lost. A stopped crawl rolls the body
- * back and cancels the task. Resolves false when nothing committed.
- */
 export async function commitTask(
   ctx: Pick<SiteTaskContext, 'db' | 'owner' | 'queue' | 'signal'>,
   claimed: SiteTask,
@@ -316,7 +261,6 @@ export async function commitTask(
   return committed === true;
 }
 
-/** Settle a task this worker holds: success, a retry (backed off or on the conflict budget), a deferral, or a terminal failure. */
 export async function settleTask(
   db: Database,
   ctx: Pick<SiteTaskContext, 'owner' | 'settings' | 'startedAt'>,
@@ -411,7 +355,6 @@ export async function settleTask(
   }
 }
 
-/** Append a crawl event, dropping count-bearing keys unless the crawl discloses counts. */
 export async function recordCrawlEvent(
   trx: Database,
   crawl: Crawl,
@@ -441,7 +384,6 @@ export async function recordCrawlEvent(
 const failureDetail = (error: unknown) =>
   error instanceof Error ? error.message.slice(0, 2000) : 'Site Health task failed';
 
-/** A transaction kind: the task held for the body, then settled under the settling lock. */
 async function runInTransaction(
   ctx: SiteTaskContext,
   claimed: SiteTask,
@@ -459,12 +401,6 @@ async function runInTransaction(
   });
 }
 
-/**
- * Settle a thrown failure exactly as a returned one: a retryable attempt on the
- * same backoff, or contention on the conflict budget. When a sibling still
- * holds the crawl lock, only the task row is released, so the settle cannot
- * contend again; past the conflict bound recovery settles it at lease expiry.
- */
 async function settleThrown(ctx: SiteTaskContext, claimed: SiteTask, error: unknown) {
   const detail = failureDetail(error);
   const outcome: SiteTaskOutcome = isRetryableContention(error)
@@ -497,11 +433,6 @@ async function settleThrown(ctx: SiteTaskContext, claimed: SiteTask, error: unkn
   }
 }
 
-/**
- * Run one claimed task to settlement under its heartbeat. A throw that is not
- * a lost lease or a cancellation settles through the same settle as a
- * returned failure.
- */
 export async function runSiteTask(runner: SiteTaskRunner, claimed: SiteTask, work: SiteTaskWork) {
   const heartbeat = maintainLease(
     // At the claimed attempt: recovery charges one, so a re-claim never renews this slot.

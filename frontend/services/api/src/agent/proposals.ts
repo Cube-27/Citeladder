@@ -1,9 +1,3 @@
-/**
- * The `propose_declaration` built-in: the Agent proposes marking an Action
- * implemented, and the reply carries a card for the person to confirm. It
- * declares nothing; only the person's click in the card's dialog does, through
- * the declaration API. A proposal is checked here and committed with the reply.
- */
 import { agentProposalSchema, type AgentProposal } from '@citeladder/contracts/agent';
 import { z } from 'zod';
 import { policy } from '../config.ts';
@@ -49,15 +43,12 @@ export const proposeDeclarationArguments = z.strictObject({
 export const PROPOSE_DESCRIPTION =
   'When the person says a change is live or asks whether to mark an Action implemented, propose the declaration instead of describing the steps: the app shows a card under your reply, and only the person’s click declares it. Never propose one otherwise. The Action must be the chat’s Action, one they mentioned or one a read returned this turn.';
 
-/** What the check reads from the turn: the Actions it saw and the chat's saved documents. */
 export type ProposalTurn = {
   scope: Scope;
-  /** Ids of the chat's Action, this turn's mentions and Actions this turn's reads returned. */
   known: ReadonlySet<string>;
   documents: readonly ChatDocument[];
 };
 
-/** The Action ids a turn has seen: attached, mentioned or returned by a read. */
 export function knownActions(
   manifest: { action: { id: string } | null; mentions: readonly { id: string }[] },
   read: readonly string[],
@@ -77,7 +68,6 @@ type Eligibility =
   | { kind: 'refused'; reason: string }
   | { kind: 'declarable'; label: string };
 
-/** Whether this project's Action can be declared now, as the declaration API would decide. */
 async function eligibility(db: Database, scope: Scope, actionId: string): Promise<Eligibility> {
   const action = await db
     .selectFrom('actions')
@@ -107,7 +97,6 @@ async function eligibility(db: Database, scope: Scope, actionId: string): Promis
   return { kind: 'declarable', label: action.target_label };
 }
 
-/** The bounds a go-live day must fall in, with a day of slack for the person's time zone. */
 function dayProblem(day: string | null | undefined, now: Date) {
   if (!day) return null;
   const min = new Date(
@@ -119,10 +108,6 @@ function dayProblem(day: string | null | undefined, now: Date) {
   return day < min || day > max ? `Give a go_live_day from ${min} to today, or omit it.` : null;
 }
 
-/**
- * The revision a proposal names: a saved document of this Action that the turn
- * has not changed, or none for work done outside CiteLadder.
- */
 function shippedRevision(
   turn: ProposalTurn,
   state: Pick<TurnState, 'staged'>,
@@ -152,10 +137,6 @@ function shippedRevision(
   };
 }
 
-/**
- * Stages a declaration proposal after checking that the turn saw the Action
- * and that it can be declared now; every refusal says what to do instead.
- */
 export async function proposeDeclaration(
   db: Database,
   turn: ProposalTurn,

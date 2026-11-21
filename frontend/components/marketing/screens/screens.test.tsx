@@ -58,7 +58,6 @@ describe('screens', () => {
   it('lists the four most-cited domains with their share of all citations, leaving out Other', () => {
     render(<ScreenSources />);
 
-    // Each row: the domain's letter mark, the domain, its share of every citation, its count.
     expect(rowsOf('Citations by domain this week')).toEqual([
       'Aacme.comYour site · 20.3% of citations212',
       'Gg2.com16.1% of citations168',

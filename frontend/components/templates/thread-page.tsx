@@ -9,11 +9,6 @@ import {
 
 import { PageFrame, type PageFrameSlots } from './page-frame';
 
-/**
- * A chat as it loads, in the loaded chat's frame: the thread column with the
- * person's turn and the reply's paragraphs, then the docked composer's card
- * (ComposerDock's 8 above and 16 below).
- */
 export function ThreadPageLoading({ label = 'Loading the chat…' }: Readonly<{ label?: string }>) {
   return (
     <ThreadPage
@@ -30,10 +25,6 @@ export function ThreadPageLoading({ label = 'Loading the chat…' }: Readonly<{ 
   );
 }
 
-/**
- * The new chat as it loads: the greeting's centred block (20×240) over the
- * composer's card, centred in the thread column as NewChat is.
- */
 export function NewChatLoading() {
   return (
     <ThreadPage>
@@ -51,14 +42,6 @@ export function NewChatLoading() {
   );
 }
 
-/**
- * Thread: the masthead, then the thread across the page (the Agent's routes
- * are narrow, `max-w-thread`), scrolling in its own region with the composer docked
- * under it, so the panel, the page header and the composer never move as the
- * thread grows. Every turn, its prose included, spans the thread's width, so
- * its edges meet the composer's. The chat list is the Agent-mode sidebar. `scrollRef` reaches the scrolling region;
- * `scrollLabel` names it when it holds a conversation.
- */
 export function ThreadPage({
   composer,
   scrollRef,
@@ -75,11 +58,6 @@ export function ThreadPage({
   return (
     <PageFrame {...slots}>
       <div className="flex h-[calc(100dvh-var(--route-chrome-height))] min-h-0 flex-col gap-[var(--workspace-gap)]">
-        {/* The scrollbar's track is reserved at the end only, so the thread
-            starts on the composer's start edge and its scrollbar ends on the
-            composer's end edge, and nothing moves when the thread overflows.
-            Its 4px of padding, cancelled by a negative margin, is room for a
-            focused control's ring and glow, which the scroller would clip. */}
         <section
           ref={scrollRef}
           aria-label={scrollLabel}

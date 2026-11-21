@@ -78,7 +78,6 @@ updates:
       patch-and-minor:
         update-types: [patch, minor]
 
-  # Provider versions locked in infra/gcp/.terraform.lock.hcl.
   - package-ecosystem: terraform
     directory: /infra/gcp
     schedule:
@@ -89,7 +88,6 @@ updates:
       patch-and-minor:
         update-types: [patch, minor]
 
-  # The local stack's postgres image; the same major-version rule as the VM image.
   - package-ecosystem: docker-compose
     directory: /
     schedule:

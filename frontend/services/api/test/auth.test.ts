@@ -69,7 +69,6 @@ describe('session verification', () => {
     ],
     ['a non-UUID subject', () => sessionToken({ sub: 'someone', ver: 2 }), 'Invalid token'],
     ['a missing version', () => sessionToken({ sub: userId }), 'Invalid token'],
-    // Sessions are only issued with integer versions, so a coercible one is forged.
     ['a string version', () => sessionToken({ sub: userId, ver: '2' }), 'Invalid token'],
     ['a fractional version', () => sessionToken({ sub: userId, ver: 2.9 }), 'Invalid token'],
     [
@@ -132,7 +131,6 @@ describe('workspace membership', () => {
   });
 
   it('never authorizes through a system workspace membership', async () => {
-    // A stray membership row: system workspaces never have legitimate ones.
     const system = await fixtures.systemWorkspace();
     await fixtures.member(system, userId, 'owner');
     expect((await call(`/w/${system}`, viewerToken)).status).toBe(404);

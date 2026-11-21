@@ -65,7 +65,6 @@ async function seed(funded = false) {
   let accountId = '';
   if (funded) {
     accountId = await billingAccount(db, t.workspaceId);
-    // Admission already holds the task's prompt run; fund the dispatch from it.
     const { reservation_id: reservationId } = await db
       .selectFrom('consumable_ledger')
       .select('reservation_id')
@@ -110,7 +109,6 @@ const result: ExecutionResult = {
     provider_cost_microusd: null,
   },
 };
-/** One task's prompt run: spent, and still held. */
 async function runs(taskId: string) {
   const rows = await db
     .selectFrom('consumable_ledger')
@@ -151,7 +149,6 @@ describe('atomic audit execution persistence', () => {
       reasoning_tokens: null,
       total_output_tokens: 5,
     });
-    // What the answer read is its own evidence, apart from what it cited.
     const read = await db
       .selectFrom('retrieved_sources as source')
       .innerJoin('response_analyses as analysis', 'analysis.id', 'source.analysis_id')
@@ -274,7 +271,6 @@ describe('atomic audit execution persistence', () => {
       .set({ available_at: new Date(0) })
       .where('id', '=', t.context.task.id)
       .execute();
-    // Other repetitions are left queued; direct claim of this retry gives the next owner its lease.
     await db
       .updateTable('audit_tasks')
       .set({
@@ -342,7 +338,6 @@ describe('atomic audit execution persistence', () => {
       deriveExecution,
     );
     expect(await finalizeAudit(db, t.workspaceId, t.auditId, async () => {})).toBeNull();
-    // Other frozen repetitions failed; they remain in the requested denominator.
     await db
       .updateTable('audit_tasks')
       .set({ status: 'failed', error_code: 'timeout', completed_at: new Date() })
@@ -359,7 +354,6 @@ describe('atomic audit execution persistence', () => {
       unavailable: 0,
       rate: 1 / 3,
     });
-    // The core prompt also counts toward "All prompts", stored as its own block.
     expect(record(record(metric!.metrics).all)).toMatchObject({
       cohort: 'all',
       total_completed: 1,
@@ -372,7 +366,6 @@ describe('atomic audit execution persistence', () => {
       .executeTakeFirstOrThrow();
     expect(metric!.source_analysis_ids).toEqual([analysis.id]);
     expect(metric!.source_artifact_ids).toEqual([analysis.artifact_id]);
-    // Win rate (AV-7): the answer's first-named business, beside its offsets and versions.
     expect(analysis).toMatchObject({
       first_named_kind: 'brand',
       first_named_name: 'Acme Running',
@@ -405,7 +398,6 @@ describe('atomic audit execution persistence', () => {
     expect(await finalizeAudit(db, t.workspaceId, t.auditId, async () => {})).toBeNull();
     const foreign = await auditTenant(db, fixtures);
     expect(await finalizeAudit(db, foreign.workspaceId, t.auditId, async () => {})).toBeNull();
-    // Every analysis records first-named: no kind, a name without one, or an unknown kind is refused.
     const firstNamed = (kind: string | null, name: string | null) =>
       db
         .updateTable('response_analyses')

@@ -1,9 +1,3 @@
-/**
- * Request bodies of a project and its brand context: the project, its brand
- * profile, brand facts and business map. These own the wire shape; the API
- * `.extend`s each with its configured length and count bounds and defaults,
- * and the browser types its arguments as `z.input` of them.
- */
 import { z } from 'zod';
 
 import { factStatusSchema, factTopicSchema, overrideVerdictSchema } from './fact-checking.ts';
@@ -23,24 +17,16 @@ export const competitorRequestSchema = z.object({
   aliases: list().default([]),
   domains: list().default([]),
 });
-/**
- * One row of the project editor's competitor list: a tracked competitor's
- * `id` keeps that competitor, its ID and logo, through a rename; a row
- * without one is matched by name or added.
- */
 export const competitorListItemRequestSchema = competitorRequestSchema.extend({
   id: z.uuid().optional(),
 });
-/** One competitor added on its own; unknown fields are rejected. */
 export const competitorCreateRequestSchema = competitorRequestSchema.strict();
-/** A partial edit of one tracked competitor; absent fields are kept. */
 export const competitorUpdateRequestSchema = z.strictObject({
   name: text().min(1).optional(),
   aliases: list().optional(),
   domains: list().optional(),
 });
 
-/** A mention rule to save, by brand or competitor name. */
 export const entityMatchingRequestSchema = z.object({
   name: text().min(1),
   mode: entityMatchingModeSchema,
@@ -48,7 +34,6 @@ export const entityMatchingRequestSchema = z.object({
   exclusion_phrases: z.array(text().min(1)).default([]),
 });
 
-/** A new project. Omitted fields take the server's configured defaults. */
 export const projectCreateRequestSchema = z.object({
   name: text().min(1),
   brand_name: text().optional(),
@@ -72,7 +57,6 @@ export const projectCreateRequestSchema = z.object({
 });
 export type ProjectCreateRequest = z.input<typeof projectCreateRequestSchema>;
 
-/** A partial project edit; absent fields are kept. */
 export const projectUpdateRequestSchema = z.object({
   name: text().min(1).optional(),
   brand_name: text().optional(),
@@ -88,15 +72,12 @@ export const projectUpdateRequestSchema = z.object({
   owned_domains: list().optional(),
   unintended_domains: list().optional(),
   competitors: z.array(competitorListItemRequestSchema).optional(),
-  // Names the project no longer tracks are dropped on save.
   entity_matching: z.array(entityMatchingRequestSchema).optional(),
 });
 export type ProjectUpdateRequest = z.input<typeof projectUpdateRequestSchema>;
 
-/** One business-context list: short phrases; an empty list clears it. */
 const contextList = () => z.array(text().min(1)).nullish();
 
-/** A partial brand-profile edit: an absent or null field is left untouched. */
 export const brandProfileUpdateRequestSchema = z.object({
   description: z.string().nullish(),
   positioning: z.string().nullish(),
@@ -113,7 +94,6 @@ export const brandProfileUpdateRequestSchema = z.object({
 });
 export type BrandProfileUpdateRequest = z.input<typeof brandProfileUpdateRequestSchema>;
 
-/** A theme to add, or a theme's new name. */
 export const projectThemeRequestSchema = z.object({ name: text().min(1) });
 export type ProjectThemeRequest = z.input<typeof projectThemeRequestSchema>;
 
@@ -126,22 +106,15 @@ export const brandFactCreateRequestSchema = z.object({
 });
 export type BrandFactCreateRequest = z.input<typeof brandFactCreateRequestSchema>;
 
-/** A partial edit of the revision the editor read; a stale revision is a 409. */
 export const brandFactUpdateRequestSchema = z.object({
   expected_revision: z.int().positive(),
   topic: factTopicSchema.optional(),
   statement: text().min(1).optional(),
-  // Null clears the source; absent keeps it.
   source_url: factSourceUrl(),
   status: factStatusSchema.optional(),
 });
 export type BrandFactUpdateRequest = z.input<typeof brandFactUpdateRequestSchema>;
 
-/**
- * Facts read from a CSV in the browser. Each row is checked on its own and
- * answered by position, so the wire shape stays loose: a bad row is a row
- * outcome, never a refused import.
- */
 export const brandFactImportRequestSchema = z.object({
   rows: z.array(
     z.object({ topic: z.string(), statement: z.string(), source_url: z.string().nullable() }),
@@ -149,7 +122,6 @@ export const brandFactImportRequestSchema = z.object({
 });
 export type BrandFactImportRequest = z.input<typeof brandFactImportRequestSchema>;
 
-/** A person's verdict on one claim; the model's verdict is kept beside it. */
 export const verdictOverrideRequestSchema = z.object({
   verdict: overrideVerdictSchema,
   note: text().nullish(),
@@ -157,10 +129,6 @@ export const verdictOverrideRequestSchema = z.object({
 export type VerdictOverrideRequest = z.input<typeof verdictOverrideRequestSchema>;
 
 const mapValue = () => text().min(1);
-/**
- * One business-map entry. Keeping a suggestion unconfirmed is allowed; a new
- * entry is always a confirmed manual fact, whatever the request says.
- */
 export const businessMapEntryRequestSchema = z.object({
   value: mapValue(),
   review_state: z.enum(['suggested', 'confirmed']).default('confirmed'),
@@ -176,9 +144,7 @@ export const businessMapOfferingRequestSchema = z.object({
   audiences: z.array(businessMapEntryRequestSchema).default([]),
   exclusions: z.array(businessMapExclusionRequestSchema).default([]),
 });
-/** One offering's complete edit, every list present: what the Prompt Builder drafts. */
 export type BusinessMapOfferingEdit = z.infer<typeof businessMapOfferingRequestSchema>;
-/** A full business-map edit: every offering's entries and exclusions; surviving entries keep their provenance. */
 export const businessMapUpdateRequestSchema = z.object({
   offerings: z.array(businessMapOfferingRequestSchema).default([]),
 });

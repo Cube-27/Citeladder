@@ -26,7 +26,6 @@ import { moment, rate } from './format';
 
 type Props = Readonly<{ state: AppState; controller: Controller }>;
 
-/** Visibility with nothing to show yet says why; neither reason is a failed read. */
 const notYetMeasured = mcpUnavailableSchema.extend({
   reason: z.enum(['no_completed_run', 'metrics_pending']),
 });
@@ -36,7 +35,6 @@ const notYetMeasuredText = {
     'The latest measurement has finished and its results are still being prepared. Check back shortly.',
 } as const satisfies Record<z.infer<typeof notYetMeasured>['reason'], string>;
 
-/** The message for visibility evidence that is not measured yet, or null for any other evidence. */
 export function notYetMeasuredMessage(evidence: unknown): string | null {
   const parsed = notYetMeasured.safeParse(evidence);
   return parsed.success ? notYetMeasuredText[parsed.data.reason] : null;

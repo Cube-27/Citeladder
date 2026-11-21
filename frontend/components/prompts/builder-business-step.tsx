@@ -12,18 +12,11 @@ import { StateBlock } from '@/components/ui/state-block';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { PromptFormLimits } from '@citeladder/contracts';
 
-/** The bounds the API enforces on this step's saves and the run note, from the prompt-set list. */
 export type BusinessStepLimits = Pick<
   PromptFormLimits,
   'context_list_max_entries' | 'run_context_max_chars'
 >;
 
-/**
- * Step 1: the offerings grid and the business-wide facts, prefilled from
- * saved brand knowledge (the same editor as Agent › Context › Business map),
- * then a note for this run only. Edits save to the brand profile and
- * business map when the step moves on.
- */
 export function BuilderBusinessStep({
   business,
   runContext,

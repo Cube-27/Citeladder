@@ -1,7 +1,4 @@
 // @vitest-environment node
-//
-// Pure logic: no DOM, no window, no React render. The suite-wide jsdom
-// default costs a full environment per file and buys nothing here.
 import { describe, expect, it } from 'vite-plus/test';
 
 import type { ProviderConnection } from '@citeladder/contracts';
@@ -18,14 +15,6 @@ import {
 import { engineCatalog } from './engines';
 import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
 
-/**
- * `lib/providers` had no tests. The load-bearing distinction here is
- * `isConfigured` vs `isVerified`: "we stored a key" is a weaker fact than "the
- * key works", and only the stronger one may offer an engine for a launch. The
- * backend's admission filter skips any BYOK route whose last probe is not `ok`,
- * so a frontend that conflated the two would offer a launch the backend then
- * refuses — the failure this file exists to prevent.
- */
 function connection(overrides: Partial<ProviderConnection> = {}): ProviderConnection {
   return {
     id: '11111111-1111-4111-8111-111111111111',
@@ -56,7 +45,6 @@ describe('engine catalogue', () => {
   });
 
   it('falls back to the raw key for an engine the catalogue does not list', () => {
-    // A new backend engine must render as its key rather than "undefined".
     expect(engines.label('perplexity')).toBe('perplexity');
     expect(engineCatalog(undefined).label('chatgpt')).toBe('chatgpt');
   });
@@ -108,8 +96,6 @@ describe('configured vs verified', () => {
   it.each(['', 'failed', 'error', 'pending'])(
     'does not verify a stored key whose probe status is %j',
     (status) => {
-      // Configured but NOT executable: offering this engine produces a launch
-      // the backend's admission filter rejects.
       const stored = connection({ api_key_set: true, last_test_status: status });
       expect(isConfigured(stored)).toBe(true);
       expect(isVerified(stored)).toBe(false);
@@ -148,7 +134,6 @@ describe('mergeRoutePayload', () => {
       routes: [{ logical_engine: 'chatgpt', is_default: true }],
     } as Partial<ProviderConnection>);
 
-    // Re-adding must not flip the existing route's default flag either.
     expect(mergeRoutePayload(existing, ['chatgpt'])).toEqual([
       { logical_engine: 'chatgpt', is_default: true },
     ]);
@@ -192,7 +177,6 @@ describe('buildProviderGroups', () => {
     };
     const groups = buildProviderGroups(buildEngineCards(withoutScrapers as never));
 
-    // Without consumer-app routes, DataForSEO measures only AIO.
     expect(groups.find((group) => group.transport === 'dataforseo')?.engines).toHaveLength(1);
     expect(transportForEngine(groups, 'chatgpt_search')).toBeNull();
   });

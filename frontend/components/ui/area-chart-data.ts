@@ -1,28 +1,19 @@
 import type { TrendEvent, TrendPoint } from '@/components/ui/series-data';
 
-/** One x on the chart: a point's values by line key, or a break that ends every line. */
 export type ChartRow =
   | Readonly<{ x: number; index: number; break: false } & Record<`l${number}`, number | null>>
   | Readonly<{ x: number; index: -1; break: true }>;
 
-/** A missing period of the first line, as an x range for a `well` band. */
 export type GapRange = Readonly<{ from: number; to: number }>;
 
-/** The x of each point: its timestamp when every point has one, else its index. */
 export function pointXs(data: readonly TrendPoint[]): number[] {
   const timed = data.length > 0 && data.every((point) => point.timestamp !== undefined);
   return data.map((point, index) => (timed ? (point.timestamp ?? index) : index));
 }
 
-/** Whether the x axis is real time (every point stamped). */
 const isTimed = (data: readonly TrendPoint[]) =>
   data.length > 0 && data.every((point) => point.timestamp !== undefined);
 
-/**
- * Recharts rows: one per point with each line's value under `l<n>`, and a
- * valueless break row between a point marked `breakBefore` and the one before
- * it, so no line bridges a change it cannot compare across.
- */
 export function chartRows(
   data: readonly TrendPoint[],
   lines: readonly Readonly<{ values: readonly (number | null)[] }>[],
@@ -40,10 +31,6 @@ export function chartRows(
   });
 }
 
-/**
- * The first line's missing periods as x ranges: each run of nulls widened to
- * halfway to its measured neighbours, or by half a step at either end.
- */
 export function gapRanges(values: readonly (number | null)[], xs: readonly number[]): GapRange[] {
   const step = xs.length > 1 ? ((xs.at(-1) ?? 0) - (xs[0] ?? 0)) / (xs.length - 1) : 1;
   const edge = (index: number, side: -1 | 1) => {
@@ -64,7 +51,6 @@ export function gapRanges(values: readonly (number | null)[], xs: readonly numbe
   return ranges;
 }
 
-/** Events inside the plotted time span; none on a chart without a time axis. */
 export function eventsInSpan(data: readonly TrendPoint[], events: readonly TrendEvent[]) {
   if (!isTimed(data) || data.length < 2) return [];
   const xs = pointXs(data);
@@ -73,10 +59,6 @@ export function eventsInSpan(data: readonly TrendPoint[], events: readonly Trend
   return events.filter((event) => event.timestamp >= first && event.timestamp <= last);
 }
 
-/**
- * Y ticks on round steps (1, 2, 2.5 or 5 × 10ⁿ), about four intervals from
- * zero (or below it) to just past the highest value; a given bound stays put.
- */
 export function niceTicks({
   values,
   yMin,
@@ -95,10 +77,6 @@ export function niceTicks({
   return [...ticks, last];
 }
 
-/**
- * Whether the value at `index` stands alone (no measured neighbour it is
- * joined to, across no `breakBefore`), so only a dot can show it.
- */
 export function isolated(
   values: readonly (number | null)[],
   index: number,

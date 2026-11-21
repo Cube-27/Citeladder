@@ -1,9 +1,3 @@
-/**
- * An issue-family Action's Overview, Why this matters and What to do, read
- * from the same Issues group the Site Health Issues page shows: its title, its
- * fix and the evidence on its loaded pages. A shared cause is claimed only
- * when the loaded pages show the same evidence, and only for those pages.
- */
 import type { SiteIssueDetail } from '@citeladder/contracts';
 
 import type { ActionDetail } from '@/lib/api/actions';
@@ -13,21 +7,18 @@ import { groupOccurrences, sharedEvidenceLead } from '@/lib/site-health/occurren
 
 type Cohort = NonNullable<ActionDetail['cohort']>;
 
-/** Why a Site Health fix matters, by the Actions grouping its Issues tab files it under. */
 const WHY_BY_GROUPING: Partial<Record<ActionDetail['grouping'], string>> = {
   aeo: 'AI answer engines and agents read this to understand, trust and cite your pages.',
   seo: 'Search engines and AI crawlers check this before they index, rank or cite a page.',
   content: 'AI answers quote what crawlers can read on your pages; this stands in the way.',
 };
 
-/** The most evidence lines What to do names, biggest first. */
 const SHARED_STEPS_MAX = 3;
 
 export type IssueFamilyBrief = Readonly<{ overview: string; why: string; steps: string[] }>;
 
 type Shared = Readonly<{ ruleId: string; facts: readonly string[]; pageCount: number }>;
 
-/** The evidence the loaded pages share, most pages first. */
 function sharedEvidence(issue: SiteIssueDetail | undefined): Shared[] {
   if (!issue) return [];
   const shared: Shared[] = groupOccurrences(issue.occurrences).flatMap((entry) =>
@@ -45,7 +36,6 @@ function loadedPages(issue: SiteIssueDetail | undefined): number {
   return issue ? new Set(issue.occurrences.map((occurrence) => occurrence.site_url_id)).size : 0;
 }
 
-/** What is wrong and where; one shared fix only for the pages whose evidence shows it. */
 function overviewOf(cohort: Cohort, title: string, shared: Shared[], loaded: number): string {
   const count = cohort.page_count;
   const scope = cohort.whole_site
@@ -60,7 +50,6 @@ function overviewOf(cohort: Cohort, title: string, shared: Shared[], loaded: num
   return `${scope} ${which} the same ${evidenceText(top)}, so one fix where it is defined clears them together.`;
 }
 
-/** The grouping's reason and the issue's reach across the crawl, when the crawl recorded it. */
 function whyOf(cohort: Cohort, grouping: ActionDetail['grouping']): string {
   const count = cohort.page_count;
   const crawled = cohort.crawl_analyzed_url_count;
@@ -71,7 +60,6 @@ function whyOf(cohort: Cohort, grouping: ActionDetail['grouping']): string {
   return [WHY_BY_GROUPING[grouping], reach].filter(Boolean).join(' ');
 }
 
-/** The rule's fix, the shared evidence to start with, then the re-check. */
 function stepsOf(cohort: Cohort, fix: string, shared: Shared[]): string[] {
   const count = cohort.page_count;
   return [
@@ -96,7 +84,6 @@ export function issueFamilyBrief({
 }: Readonly<{
   cohort: Cohort;
   grouping: ActionDetail['grouping'];
-  /** The rule's fix as the Actions read carries it, until the Issues group loads. */
   fix: string | null;
   issue: SiteIssueDetail | undefined;
 }>): IssueFamilyBrief {

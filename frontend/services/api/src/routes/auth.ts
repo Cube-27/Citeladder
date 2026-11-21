@@ -66,8 +66,6 @@ import {
   requireCurrentRevision,
 } from '../workspaces/policies.ts';
 
-// Signing up and signing in share one request: a Terms decision and the
-// Turnstile token solved on the form (sign-in carries one only once challenged).
 const accountEntrySchema = accountEntryRequestSchema.extend({
   password: passwordSchema,
   turnstile_token: turnstileTokenSchema,
@@ -113,13 +111,6 @@ async function meter(db: Database, c: Context, config: ServiceConfig, register =
   );
 }
 
-/**
- * Sign-in is challenged once the address or the visitor's network has failed
- * `login_challenge_failures` times in the window, or every address together
- * has failed `login_failure_global_limit` times: past those, a sign-in without
- * a solved Turnstile token is refused before any password is hashed. Reaching
- * a threshold never refuses a solved sign-in by itself.
- */
 async function challengeAfterFailures(
   db: Database,
   c: Context,
@@ -143,7 +134,6 @@ async function challengeAfterFailures(
     await requireHumanVerification(c, config, { token, action: 'login' });
 }
 
-/** A refused password counts against the visitor's network and the global ceiling. */
 async function countLoginFailure(db: Database, c: Context, config: ServiceConfig) {
   await Promise.all([
     countUse(
@@ -155,10 +145,6 @@ async function countLoginFailure(db: Database, c: Context, config: ServiceConfig
   ]);
 }
 
-/**
- * Google found no account for the address on a sign-in: send the person to
- * sign up, where they make the Terms decision, with the address prefilled.
- */
 function signUpRedirect(
   c: Context,
   config: ServiceConfig,
@@ -222,7 +208,6 @@ export const authRoutes = [
   }),
   defineGetRoute({
     ...base,
-    // The published revision the signup form asks a visitor to accept.
     path: '/api/v1/auth/policies',
     response: policyRevisionSchema,
     handle() {
@@ -232,7 +217,6 @@ export const authRoutes = [
   defineGetRoute({
     ...base,
     authorize: 'session',
-    // The person's own Terms decision on the published revision.
     path: '/api/v1/auth/terms',
     response: policyStatusSchema,
     handle: ({ c, db }) => accountTermsStatus(db, c.get('user').id),
@@ -331,8 +315,6 @@ export const authRoutes = [
   definePostRoute({
     ...base,
     authorize: 'session',
-    // The signed-in person's own password link (setting one up after Google
-    // sign-up, say). The session already proves a person, so no Turnstile.
     path: '/api/v1/auth/password-link',
     response: registrationResponseSchema,
     status: 202,
@@ -357,7 +339,6 @@ export const authRoutes = [
       if (config.demo.enabled || !config.auth.publicSignup)
         throw new ApiError(403, 'Registration is disabled');
       const payload = await readBody(c, accountEntrySchema);
-      // Refusals that need no verification come first, so they spend no token.
       assertSignupDomainAllowed(config, payload.email);
       requireCurrentRevision(payload.terms_revision);
       await meter(db, c, config, true);
@@ -378,7 +359,6 @@ export const authRoutes = [
     async handle({ c, db, config }) {
       if (demoAccessExpired(config)) throw new ApiError(401, 'Demo access has expired');
       const payload = await readBody(c, accountEntrySchema);
-      // A form opened before the Terms changed must be reloaded, not accepted.
       requireCurrentRevision(payload.terms_revision);
       await meter(db, c, config);
       await challengeAfterFailures(db, c, config, {
@@ -395,11 +375,8 @@ export const authRoutes = [
         await countLoginFailure(db, c, config);
         throw new ApiError(401, 'Invalid credentials');
       }
-      // Two independent writes, both done before the session is issued: sent
-      // together they cost one database round trip instead of two.
       await Promise.all([
         releaseBudget(db, 'login_email_failure', payload.email),
-        // The box ticked on the sign-in form, recorded once per revision with the account.
         recordAccountTermsDecision(db, {
           actorId: user.id,
           revision: payload.terms_revision,
@@ -416,7 +393,6 @@ export const authRoutes = [
     authorize: 'session',
     path: '/api/v1/auth/me',
     response: authResponseSchema,
-    // The session read already holds the account; this never reads it again.
     handle: ({ c }) => Promise.resolve({ user: sessionView(c.get('user').profile) }),
   }),
   definePostRoute({
@@ -432,8 +408,6 @@ export const authRoutes = [
       return c.body(null, 204);
     },
   }),
-  // Sign-out everywhere that also disconnects MCP clients and revokes the
-  // API keys this person created; an explicit, separate choice.
   definePostRoute({
     ...base,
     authorize: 'session',
@@ -467,13 +441,9 @@ export const authRoutes = [
       path: oauthPath,
       query: {
         return_to: { scalar: { kind: 'str' }, default: '' },
-        // Every start carries the visitor's Terms decision; only a sign-up
-        // start may create an account.
         accept_terms: { scalar: { kind: 'str' }, default: '' },
         terms_revision: { scalar: { kind: 'str' }, default: '' },
         signup: { scalar: { kind: 'str' }, default: '' },
-        // A sign-up start is where an automated sign-up would begin, so it
-        // carries the Turnstile token solved on the sign-up form.
         turnstile_token: { scalar: { kind: 'str' }, default: '' },
       },
     },

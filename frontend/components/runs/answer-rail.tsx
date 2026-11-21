@@ -26,7 +26,6 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import type { AnswerBrand, AnswerLink, AnswerSource } from '@/lib/runs/answer-transcript';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 
-/** Each tracked business the answer named, by first mention: 1 is named first. */
 export function BrandsRail({ brands }: Readonly<{ brands: readonly AnswerBrand[] }>) {
   return (
     <RailSection
@@ -67,7 +66,6 @@ export function BrandsRail({ brands }: Readonly<{ brands: readonly AnswerBrand[]
   );
 }
 
-/** Each cited address once, with how often the answer cites it and how it is classified. */
 export function SourcesRail({ sources }: Readonly<{ sources: readonly AnswerSource[] }>) {
   return (
     <RailSection
@@ -99,7 +97,6 @@ export function SourcesRail({ sources }: Readonly<{ sources: readonly AnswerSour
                 href={source.href}
                 className="[overflow-wrap:anywhere]"
               >
-                {/* An element, not a string: the full address wraps anywhere, glyph included. */}
                 <span>{source.url}</span>
               </TextLink>
               <span>
@@ -125,11 +122,6 @@ export function SourcesRail({ sources }: Readonly<{ sources: readonly AnswerSour
   );
 }
 
-/**
- * Each address the answer text links to, once with how often. Only a page whose
- * formats were observed tells its links apart; without one the state is shown,
- * and an observed answer with no links has no section.
- */
 export function LinksRail({
   links,
   formats,
@@ -176,7 +168,6 @@ type FanoutRead =
   | { kind: 'found'; item: VisibilityExecutionEvidence }
   | { kind: 'missing' };
 
-/** The searches behind one answer, from the shared evidence read narrowed to its run and engine. */
 function useAnswerFanout(evidence: ExecutionEvidence, promptId: string | undefined): FanoutRead {
   const { workspaceId, projectId } = useProjectScope();
   const read = useQuery(
@@ -220,7 +211,6 @@ function FanoutBody({
         fallback="The request failed or timed out."
       />
     );
-  // Without the fanout row only the count is known, not whether the engine withheld the words.
   if (read.kind === 'missing')
     return evidence.search_query_count > 0 ? (
       <p className="type-caption text-ink-2">{unread(evidence.search_query_count)}</p>
@@ -255,7 +245,6 @@ function FanoutBody({
   }
 }
 
-/** The searches the engine ran for this answer: their words, none, or not available. */
 export function FanoutRail({
   evidence,
   promptId,

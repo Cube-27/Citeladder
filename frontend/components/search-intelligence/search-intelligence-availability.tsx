@@ -11,10 +11,8 @@ import { StateBlock } from '@/components/ui/state-block';
 
 const PROVIDER_SETTINGS = '/settings?tab=providers';
 
-/** Keyword Research's tabs, by the value the URL carries. */
 export type ResearchTab = 'overview' | 'keywords' | 'competitors' | 'backlinks';
 
-/** What each tab shows, said by its empty state before anything is saved. */
 const TAB_EMPTY: Readonly<Record<ResearchTab, string>> = {
   overview: 'See where you rank and where competitors outrank you',
   keywords: 'See the keywords your website ranks for',
@@ -22,16 +20,10 @@ const TAB_EMPTY: Readonly<Record<ResearchTab, string>> = {
   backlinks: 'See who links to your website',
 };
 
-/** No saved analysis yet: what this tab shows, and the analysis that fills it. */
 export function NoAnalysisYet({ tab, action }: Readonly<{ tab: ResearchTab; action: ReactNode }>) {
   return <StateBlock kind="empty" icon={Database} heading={TAB_EMPTY[tab]} action={action} />;
 }
 
-/**
- * Keyword Research without a DataForSEO login and no saved results:
- * unavailable on a funded plan, else a login to add. The login is a
- * credential, so only a role that manages credentials is sent to add it.
- */
 export function NotConnected({ funded }: Readonly<{ funded: boolean }>) {
   const canManage = useWorkspaceCapability('manage_credentials');
   let state = (
@@ -67,7 +59,6 @@ export function NotConnected({ funded }: Readonly<{ funded: boolean }>) {
   return state;
 }
 
-/** Why saved results cannot be refreshed: a missing connection, or managed research being down. */
 export function UnavailableNotice({
   data,
 }: Readonly<{ data: { connected: boolean; credential_mode: CredentialMode } }>) {

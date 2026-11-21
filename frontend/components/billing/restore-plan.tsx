@@ -12,10 +12,6 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
-/**
- * Buying a plan from the ended-access screen: only the plans, the quote and the
- * checkout, which the server keeps open to a workspace whose trial or plan ended.
- */
 export function RestorePlan({ workspaceId }: Readonly<{ workspaceId: string }>) {
   const canManage = useWorkspaceCapability('manage_billing');
   const [country, setCountry] = useState('');

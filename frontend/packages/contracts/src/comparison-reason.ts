@@ -1,16 +1,8 @@
-/**
- * Whether a run's change against its persisted baseline is shown, and why:
- * the one answer every screen prints. A `comparable` run changes against the
- * whole earlier run; a `matched_subset` run changes over the answers both runs
- * share, with a note saying how many; any other status shows no change, for
- * its reason (docs/decisions.md, one comparable-baseline rule).
- */
 export type ComparisonBasis =
   | Readonly<{ kind: 'comparable' }>
   | Readonly<{ kind: 'matched_subset'; note: string }>
   | Readonly<{ kind: 'declined'; reason: string }>;
 
-/** Answers both runs share, of the answers the current run scored. */
 export type ComparedAnswers = Readonly<{ matched: number; total: number }>;
 
 const DECLINED: Readonly<Record<string, string>> = {
@@ -26,7 +18,6 @@ const DECLINED: Readonly<Record<string, string>> = {
   baseline_pending: 'The comparison with an earlier run is still being prepared.',
 };
 
-/** Why no change is shown for a status, or null for a comparable run. */
 export function comparisonDeclinedReason(status: string, skippedRuns = 0): string | null {
   if (status === 'comparable') return null;
   if (status === 'no_baseline') {

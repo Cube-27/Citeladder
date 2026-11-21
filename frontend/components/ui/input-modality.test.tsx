@@ -26,7 +26,6 @@ describe('Focus that did not come from the keyboard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Before' }));
     expect(modality()).toBe('pointer');
-    // Ctrl+Tab switches browser tabs: not keyboard navigation of the page.
     await user.keyboard('{Control>}{Tab}{/Control}');
     expect(modality()).toBe('pointer');
     await user.click(screen.getByRole('button', { name: 'Before' }));
@@ -44,7 +43,6 @@ describe('Focus that did not come from the keyboard', () => {
     expect(modality()).toBe('pointer');
     act(() => theme.focus());
     expect(modality()).toBe('pointer');
-    // A dialog closed with Escape hands focus back to its trigger.
     act(() => {
       fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
       screen.getByRole('button', { name: 'Before' }).focus();
@@ -89,7 +87,6 @@ describe('Focus that did not come from the keyboard', () => {
     const page = screen.getByRole('textbox', { name: 'Page field' });
     const quiet = (field: HTMLElement) => field.hasAttribute('data-quiet-focus');
 
-    // Ctrl+K opens the palette, which focuses its field: a shortcut, not a Tab.
     await user.keyboard('{Control>}k{/Control}');
     act(() => email.focus());
     expect(quiet(email)).toBe(true);
@@ -100,11 +97,9 @@ describe('Focus that did not come from the keyboard', () => {
     await user.click(email);
     expect(quiet(email)).toBe(true);
 
-    // A press into a page field keeps its ring; only an overlay's field is quiet.
     await user.click(page);
     expect([quiet(page), quiet(email)]).toEqual([false, false]);
 
-    // A menu's search box shows the caret only, as a dialog's field does.
     const search = screen.getByRole('textbox', { name: 'Search page kinds' });
     await user.click(search);
     expect(quiet(search)).toBe(true);
@@ -118,8 +113,6 @@ describe('Focus that did not come from the keyboard', () => {
     await user.tab();
     expect(await screen.findByRole('tooltip')).toBeInTheDocument();
 
-    // Leaving the tab blurs the window and the button; returning focuses the
-    // button again with no key or press in between.
     act(() => {
       theme.blur();
       fireEvent.blur(window);
@@ -131,7 +124,6 @@ describe('Focus that did not come from the keyboard', () => {
     });
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
 
-    // The reader's next Tab is keyboard focus again.
     await user.tab();
     await user.tab({ shift: true });
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Switch to light theme');

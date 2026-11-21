@@ -1,16 +1,4 @@
 ---
-/**
- * DocsShell — every docs page: DocsTopBar over DocLayout inside the
- * `container-app` body, DocsSidebar as the rail, the page (its ArticleHeader
- * and Prose) in the reading column, a Toc on the right and an ArticlePager
- * and the docs footer at the end. `wide` is for reference pages: no Toc, and
- * the generated blocks take the full column. An `aside` slot (an endpoint's
- * examples) is a column level with the title from 1280px, held under the bar
- * while the page scrolls, and follows the page body below. Only the page
- * scrolls the reading column: the rail and the side columns fill the viewport
- * under the bar and scroll inside themselves. No hero, illustrations or CTAs;
- * Open app is the one filled control.
- */
 import { websiteHref } from '@/lib/config/app-link';
 import { docsHref } from '@/lib/config/docs';
 import { brandFontHead } from '@/lib/fonts/brand-fonts';
@@ -27,13 +15,11 @@ type Link = { title: string; href: string };
 interface Props {
   title: string;
   description: string;
-  /** The article's h2 and h3 headings, for its Toc. */
   toc?: readonly { id: string; label: string; level: number }[];
   wide?: boolean;
   previous?: Link;
   next?: Link;
   noindex?: boolean;
-  /** The article's last content change, declared as `article:modified_time`. */
   updated?: string;
   jsonLd?: Record<string, unknown>;
 }
@@ -59,7 +45,6 @@ const contact = websiteHref('/contact');
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <!-- The shared light/dark/system choice (lib/theme/theme.ts), before first paint. -->
     <script is:inline src="/theme-preference.js"></script>
     <title>{title} · CiteLadder Docs</title>
     <meta name="description" content={description} />
@@ -115,8 +100,6 @@ const contact = websiteHref('/contact');
     background: var(--color-site-page);
     color: var(--color-ink);
   }
-  /* No bottom padding here: the reading column carries it, so the grid ends
-     at the page's end and the sticky columns are never pushed up there. */
   .cl-docs-body {
     max-width: var(--container-app);
     margin: 0 auto;
@@ -129,7 +112,6 @@ const contact = websiteHref('/contact');
     padding-bottom: 24px;
     overscroll-behavior: contain;
   }
-  /* Prose anchors clear both bar rows, not only the logo row (prose.css). */
   .cl-docs-shell :global(.cl-prose :is(h2, h3, h4)) {
     scroll-margin-top: calc(var(--docs-bar-height) + 32px);
   }
@@ -149,7 +131,6 @@ const contact = websiteHref('/contact');
     flex-direction: column;
     min-width: 0;
   }
-  /* The aside spans both rows, so it is held from the title to the page end. */
   @media (min-width: 1280px) {
     .cl-docs-page--aside {
       display: grid;

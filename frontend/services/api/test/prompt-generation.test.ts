@@ -109,7 +109,6 @@ const oneSlotBatches = () => {
   vi.stubEnv('GENERATION_MODEL_BATCH_SIZE', '1');
   vi.stubEnv('GENERATION_DRAFT_CONCURRENCY', '1');
 };
-/** A tenant whose project has a brand profile but no topics, and its prompt set. */
 async function topiclessProject(business: Record<string, unknown>, offerings: string[] = []) {
   const other = await fixtures.tenant();
   await fixtures.brand(other.projectId, 'Strider');
@@ -160,8 +159,6 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     const deps = dependencies();
     const result = await generate(deps);
     expect(result.candidates).toHaveLength(2);
-    // Every model call spends AI credits; this provider reports no usage, so each
-    // call settles at the fixed fallback (B15, B31).
     const charged = await db
       .selectFrom('platform_calls')
       .select(['feature', 'charge', 'credits'])
@@ -210,7 +207,6 @@ describe('prompt generation at the PostgreSQL boundary', () => {
       .where('feature', '=', 'prompt_quality_judge')
       .where('created_at', '>=', since)
       .execute();
-    // One judge call per draft.
     expect(judged).toEqual([
       { charge: 'not_charged', credits: 0 },
       { charge: 'not_charged', credits: 0 },
@@ -245,8 +241,6 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     await generate(deps);
     const judged = deps.judgeFetch.mock.calls.length;
     expect(judged).toBeGreaterThan(0);
-    // The day's window is now exactly spent, so the next run's judging is
-    // refused; clearing the staged drafts lets the same drafts be admitted again.
     vi.stubEnv('ABUSE_PROMPT_JUDGE_CALLS_PER_WORKSPACE_DAILY', String(judged));
     await db
       .deleteFrom('prompt_candidates')
@@ -435,7 +429,6 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     const deps = echoDependencies({
       topics: [{ name: 'Trail running shoes', offerings: ['Trail running shoes'] }],
     });
-    // Another project's topic and an unknown id both fail before any model call or write.
     for (const id of [await selectedTopic(), randomUUID()])
       await expect(
         generatePrompts(
@@ -548,10 +541,8 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     });
     const run = () =>
       generatePrompts(db, other.workspaceId, otherSet, generationInput.parse({ count: 2 }), deps);
-    // With no saved offerings there is nothing to ground topics in, and nothing reaches the model.
     await expect(run()).rejects.toMatchObject({ status: 422 });
     expect(deps.io.fetch).not.toHaveBeenCalled();
-    // Onboarding saves the offerings its reader reviewed as unreviewed; they ground topics.
     await db
       .updateTable('brand_profiles')
       .set({ products_services: JSON.stringify(offerings) })
@@ -586,8 +577,6 @@ describe('prompt generation at the PostgreSQL boundary', () => {
         dropped: [],
       },
     });
-    // Each category keeps the business-map facets of the offering it was
-    // proposed from, under its own buyer-facing name.
     const needs = requests
       .flatMap((sent) => sent.slots)
       .map((slot) => slot.buyer_need)

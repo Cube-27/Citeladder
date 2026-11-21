@@ -17,7 +17,6 @@ type MeasuredCoverage = Readonly<{ crawled_pages: number }>;
 
 const isMeasured = (data: Coverage): data is MeasuredCoverage => data.crawled_pages !== null;
 
-/** A screen that reads crawl coverage the way an owner screen does. */
 function CoverageScreen({ load }: Readonly<{ load: () => Promise<Coverage> }>) {
   const read = screenState(useQuery({ queryKey: ['coverage'], queryFn: load }), {
     subject: 'crawl coverage',
@@ -29,7 +28,6 @@ function CoverageScreen({ load }: Readonly<{ load: () => Promise<Coverage> }>) {
   return <p>{`${read.data.crawled_pages} pages crawled`}</p>;
 }
 
-/** Answers each fetch with the next outcome, in order. */
 function inTurn(...outcomes: Array<() => Promise<Coverage>>) {
   let next = 0;
   return () => outcomes[next++]?.() ?? Promise.reject(new Error('No answer left'));
@@ -61,7 +59,6 @@ describe('screenState with StateBlock', () => {
     renderScreen(load);
 
     const alert = await screen.findByRole('alert');
-    // The screen's own sentence, never the server's status text.
     expect(alert).toHaveTextContent(
       "Couldn't load crawl coverageThe request failed or timed out.Retry",
     );
@@ -140,7 +137,6 @@ describe('StateBlock empty states', () => {
     const { rerender } = render(view(empty));
     expect([offered(), demoted()]).toEqual([true, true]);
 
-    // Inside a card the block is compact: its action stays secondary beside the masthead's primary.
     rerender(view(<Card>{empty}</Card>));
     expect([offered(), demoted()]).toEqual([false, false]);
 

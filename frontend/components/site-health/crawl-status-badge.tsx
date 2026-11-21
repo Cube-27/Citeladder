@@ -2,7 +2,6 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { CRAWL_STATES, crawlDisplayStatus } from '@/lib/site-health/status';
 import type { SiteCrawl } from '@citeladder/contracts';
 
-/** A crawl's status as a reader sees it: one badge, one display rule. */
 export function CrawlStatusBadge({
   crawl,
 }: Readonly<{ crawl: Pick<SiteCrawl, 'status' | 'partial_reason'> }>) {

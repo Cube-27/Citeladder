@@ -1,8 +1,3 @@
-/**
- * The per-request access path: one read proves the session and its membership,
- * one batch reads the workspace's entitlement state, and every helper in the
- * same request reuses it. Nothing is kept between requests.
- */
 import { randomUUID } from 'node:crypto';
 
 import type { KyselyPlugin, RootOperationNode } from 'kysely';
@@ -16,7 +11,6 @@ const config = testConfig();
 const db = testDatabase(config);
 const fixtures = new Fixtures(db);
 
-/** Every statement the request executed, in order; subqueries are part of their statement. */
 const executed: string[] = [];
 const pending = new Map<string, RootOperationNode>();
 const recorder: KyselyPlugin = {
@@ -42,7 +36,6 @@ const AUTH_TABLES = [
   'billing_subscriptions',
 ];
 
-/** Statements per authorization table, by the table each statement reads from first. */
 function authReads(statements: readonly string[]): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const statement of statements) {
@@ -78,7 +71,6 @@ async function call(
   return { status: response.status, body: (await response.json()) as Record<string, unknown> };
 }
 
-/** Statements whose first table is `table`. */
 function readsOf(statements: readonly string[], table: string): number {
   return statements.filter((statement) => /\bfrom "(\w+)"/u.exec(statement)?.[1] === table).length;
 }
@@ -241,16 +233,13 @@ describe('per-request access', () => {
 });
 
 describe('routes that authorize the path project or chat', () => {
-  /** Every browser route below a project path, from the route registry. */
   const PROJECT_ROUTES = PRODUCT_ROUTES.flatMap(({ contract }) =>
     contract.path.startsWith('/api/v1/projects/{project_id}')
       ? [[contract.method.toUpperCase(), contract.path] as const]
       : [],
   );
-  /** The template with the project filled in and every other ID made up. */
   const concrete = (template: string, project: string) =>
     template.replace('{project_id}', project).replaceAll(/\{[a-z_]+\}/gu, () => randomUUID());
-  /** Writes that need more than a viewer's `read` capability. */
   const VIEWER_REFUSED_WRITES: [string, string][] = [
     ['POST', '/api/v1/projects/{project}/agent/chats'],
     ['PUT', '/api/v1/projects/{project}/agent/instructions'],
@@ -266,7 +255,6 @@ describe('routes that authorize the path project or chat', () => {
     '/api/v1/agent/chats/{chat}',
     `/api/v1/agent/chats/{chat}/outputs/${randomUUID()}/revisions`,
   ];
-  // Its own tenant: the per-request suite revokes the shared one's access.
   let workspaceId: string;
   let projectId: string;
   let chatId: string;
@@ -296,7 +284,6 @@ describe('routes that authorize the path project or chat', () => {
       answers.push([method, template, foreign.status, foreign.body.error, absent.status]);
     }
     const notFound = expect.objectContaining({ message: 'Project not found' });
-    // The registry, not a hand list: a route added below a project path is covered.
     expect(PROJECT_ROUTES).toContainEqual(['GET', '/api/v1/projects/{project_id}/topics']);
     expect(answers).toEqual(
       PROJECT_ROUTES.map(([method, template]) => [method, template, 404, notFound, 404]),
@@ -360,11 +347,9 @@ describe('active workspace selection', () => {
   });
 
   it('breaks a tie between equally old memberships by membership ID', async () => {
-    /** Whether the default workspace reads the lower-ID membership's project and refuses the other's. */
     async function defaultIsLowerId(ownedIdPrefix: '0' | 'f') {
       const member = await fixtures.user();
       const owned = await fixtures.ownedWorkspace(member);
-      // A person owns one workspace; the other membership is an invitation.
       const invited = await fixtures.ownedWorkspace(await fixtures.user());
       await fixtures.member(invited, member, 'admin');
       const at = new Date('2026-01-01T00:00:00Z');
@@ -386,7 +371,6 @@ describe('active workspace selection', () => {
         (await call(`/api/v1/projects/${higher}/readiness`, { cookie: session })).status,
       ];
     }
-    // Both orders, so neither insertion order nor workspace IDs can decide it.
     expect([await defaultIsLowerId('0'), await defaultIsLowerId('f')]).toEqual([
       [200, 404],
       [200, 404],

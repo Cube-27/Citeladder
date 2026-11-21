@@ -28,16 +28,11 @@ export function RegisterScreen({
   searchParams,
 }: Readonly<{
   demoMode: boolean;
-  /** Self-serve sign-up; when closed, accounts are created by an operator. */
   signupOpen: boolean;
   replace: (href: string) => void;
   searchParams: SearchParams;
 }>) {
-  // An MCP handoff can land here when the visitor has no account yet. The
-  // resume path has to survive registration AND the sign-in that follows it,
-  // so it is carried back onto /login rather than consumed here.
   const returnTo = safeAuthReturnPath(searchParams.get('return_to'));
-  // Google sign-in found no account: the address arrives here to sign up.
   const oauthNotice = oauthSignInErrorMessage(searchParams.get('error'));
   const terms = usePublishedTerms(!demoMode && signupOpen);
   const termsRevision = terms.revision;
@@ -65,7 +60,6 @@ export function RegisterScreen({
     // The token is single-use, spent or not: a retry solves a fresh one.
     onSettled: () => verification.reset(),
   });
-  // A refused domain belongs under the email field, not in the form's alert.
   const emailRefusal = mutation.isError ? signupEmailFieldError(mutation.error) : undefined;
   const submit = (values: RegisterFormValues) =>
     termsRevision
@@ -142,7 +136,6 @@ export function RegisterScreen({
   );
 }
 
-/** The form's one alert: a refused sign-up, then an unreadable Terms revision, then Google's notice. */
 function registerError(
   submitError: unknown,
   termsError: unknown,

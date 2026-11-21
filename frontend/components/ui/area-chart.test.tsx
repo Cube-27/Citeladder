@@ -51,7 +51,6 @@ describe('AreaChart data', () => {
       { key: 'out', timestamp: 250, label: 'Later' },
     ];
     expect(eventsInSpan(data, events).map((event) => event.key)).toEqual(['in']);
-    // Without timestamps the axis is not time, so no event can be placed.
     expect(
       eventsInSpan(
         [
@@ -91,7 +90,6 @@ describe('AreaChart', () => {
         .getAllByRole('row')
         .map((row) => row.textContent),
     ).toEqual(['SeriesJunJul', 'You40%Not measured', 'Globex30%35%']);
-    // Your latest value is older than the last point, so the key dates it.
     expect(
       [...document.querySelectorAll('ul[aria-hidden] li')].map((item) => item.textContent),
     ).toEqual(['You40% · as of Jun', 'Globex35%']);

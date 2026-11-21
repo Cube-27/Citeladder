@@ -1,15 +1,3 @@
-/**
- * Site Health run-outcome copy — PURE.
- *
- * Why a crawl did not finish cleanly, in the reader's language: the failure
- * reason plus what to do about it, and the notice the dashboard shows above
- * results that did land.
- *
- * The rule that shapes the partial copy: a crawl that could not FETCH some URLs
- * and one whose ANALYSES fell short are different outcomes, and only the second
- * is a problem with the audit, so only the second gets a notice. The backend
- * names the reason; this module never infers it.
- */
 import type { RunStatusValue } from '@/components/ui/status-mark';
 import type { SiteCrawl } from '@citeladder/contracts';
 
@@ -17,16 +5,8 @@ import { endSentence } from '@/lib/format';
 
 import { crawlDisplayStatus } from './status';
 
-/**
- * Reason + what-to-do copy for a failed crawl (SH-2/SH-5 — B1), shared by the
- * terminal card and the dashboard run notice. The reason prefers the
- * API-projected `failure_summary.message` (humanized by the worker from the
- * terminal fetch evidence), falls back to the crawl row's `error_message`,
- * then to a neutral sentence — never a bare machine code.
- */
 export type CrawlFailureCopy = { reason: string; guidance: string };
 
-/** What-to-do next per stable failure code (default: plain re-crawl). */
 function failureGuidanceFor(code: string | undefined): string {
   switch (code) {
     case 'dns_resolution_failed':
@@ -53,7 +33,6 @@ function failureGuidanceFor(code: string | undefined): string {
   }
 }
 
-/** Every named certificate failure (`tls_cert_*`) shares one next step. */
 const guidanceFor = (code: string | undefined) =>
   code?.startsWith('tls_cert_')
     ? 'Browsers and AI crawlers refuse this certificate too. Fix or renew it, then re-crawl.'
@@ -69,29 +48,12 @@ export function crawlFailureCopy(
   return { reason, guidance: guidanceFor(crawl.failure_summary?.code) };
 }
 
-/**
- * Dashboard run-outcome notice for a crawl whose results are shown but whose run
- * did NOT complete cleanly. Returns `null` for a completed crawl (no notice),
- * otherwise a text-labelled badge value + tone + message so the dashboard can
- * explicitly say "Cancelled" / "Partial" (never color-only) while still showing
- * the scores/inventory that already landed. The header offers the next crawl.
- */
 export type DashboardRunNotice = {
   badge: RunStatusValue;
   tone: 'info' | 'warning';
   message: string;
 } | null;
 
-/**
- * What a `partially_completed` crawl actually means, from the backend's own
- * reason code.
- *
- * On any real site a handful of discovered links are dead, blocked, or not web
- * pages at all — that is a normal crawl with nothing to retry, so a
- * discovery-only shortfall reads as completed (`crawlDisplayStatus`) and gets
- * no notice. Only an analysis shortfall is a
- * problem with the audit, and re-crawling can fix it.
- */
 const ANALYSIS_INCOMPLETE =
   'Some pages could not be analyzed. Partial results are shown. Re-crawl to retry the remaining pages.';
 
@@ -126,8 +88,6 @@ export function dashboardRunNotice(
       return partialCrawlNotice(crawl.partial_reason);
     case 'failed': {
       const { reason, guidance } = crawlFailureCopy(crawl);
-      // SH-2: with zero pages analyzed there is no "so far" to show — lead
-      // with the failure reason instead of promising partial results.
       const headline =
         crawl.analyzed_count === 0
           ? 'The run failed before any page was analyzed.'

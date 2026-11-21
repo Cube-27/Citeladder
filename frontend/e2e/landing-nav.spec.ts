@@ -2,25 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { NAV_DROPS } from '@/lib/marketing-content/nav';
 
-/**
- * Marketing navigation in a real engine.
- *
- * The desktop menus are a Radix navigation menu island with one shared
- * popup (components/marketing/chrome/desktop-nav.tsx); the mobile sheet
- * is server-rendered markup with a plain script (site-nav.ts). Their
- * interaction contract (hover intent, the popup staying open between menus,
- * focus return, the inert page behind the sheet) is pinned here against the
- * built site rather than in jsdom.
- */
 const DROP_KEYS = NAV_DROPS.map((drop) => drop.key);
 
-/**
- * Open a page once its islands are interactive. The desktop menus hydrate
- * with `client:media` only where their query matches (960px and wider),
- * after the load event `goto` waits for; a key pressed before then reaches
- * server-rendered markup with no handler. Astro removes an island's `ssr`
- * attribute when it hydrates; a media island whose query fails never does.
- */
 async function open(page: Page, path: string): Promise<void> {
   await page.goto(path);
   await page.waitForFunction(() =>
@@ -38,7 +21,6 @@ async function open(page: Page, path: string): Promise<void> {
 const mainNav = (page: Page) => page.getByRole('navigation', { name: 'Main navigation' });
 const trigger = (page: Page, name: string) =>
   mainNav(page).getByRole('button', { name, exact: true });
-/** A row of whichever desktop menu is open; menus render only while open. */
 const menuLink = (page: Page, name: RegExp) => mainNav(page).getByRole('link', { name });
 
 test.describe('marketing navigation (real-engine CSS contract)', () => {
@@ -95,8 +77,6 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     const openMenu = page.getByRole('button', { name: 'Open menu' });
     await expect(openMenu).toBeVisible();
 
-    // The accordions exist only inside the mobile menu, so opening it is the
-    // only way to prove the small-viewport nav is reachable at all.
     const menu = page.locator('#mobile-menu');
     await expect(menu).toBeHidden();
     await openMenu.click();
@@ -132,14 +112,12 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
 
     await platform.hover();
     await expect(menuLink(page, /Platform overview/)).toBeVisible();
-    // Sliding to the neighbour swaps the menu inside the same open popup.
     await solutions.hover();
     await expect(solutions).toHaveAttribute('aria-expanded', 'true');
     await expect(platform).toHaveAttribute('aria-expanded', 'false');
     await expect(menuLink(page, /Agencies/)).toBeVisible();
     await expect(menuLink(page, /Platform overview/)).toBeHidden();
 
-    // Travelling down from the trigger through the gap keeps it open.
     const box = await solutions.boundingBox();
     const row = await menuLink(page, /Agencies/).boundingBox();
     if (!box || !row) throw new Error('the trigger and the open menu are laid out');
@@ -147,7 +125,6 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await page.mouse.move(row.x + row.width / 2, row.y + row.height / 2, { steps: 12 });
     await expect(solutions).toHaveAttribute('aria-expanded', 'true');
 
-    // Leaving the navbar closes it.
     await page.mouse.move(row.x + row.width / 2, 800, { steps: 4 });
     await expect(solutions).toHaveAttribute('aria-expanded', 'false');
     await expect(menuLink(page, /Agencies/)).toBeHidden();
@@ -208,7 +185,6 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await menu.getByRole('button', { name: 'Platform', exact: true }).click();
     await expect(menu.getByRole('link', { name: /Platform overview/ })).toBeVisible();
     const logIn = menu.getByRole('link', { name: 'Log in' });
-    // The product origin playwright.config.ts gives the marketing build.
     await expect(logIn).toHaveAttribute('href', 'http://127.0.0.1:3100/login');
     await page.keyboard.press('Escape');
     await expect.poll(pageInert).toBe(false);

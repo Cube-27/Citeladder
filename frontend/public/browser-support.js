@@ -1,12 +1,3 @@
-// Blocking, same-origin check that runs before the app shell: a browser below
-// the support matrix (the `browserslist` in frontend/package.json) gets an
-// "Update your browser" notice in #root instead of an app that breaks part way.
-// `apps/app/src/main.tsx` does not mount over it.
-//
-// The probes are the newest features the matrix admits: AbortSignal.any and
-// URL.canParse, and CSS light-dark() (Chrome and Edge 123, Safari 17.5,
-// Samsung 27; Firefox has had it since 120, so Firefox 128-131 pass unwarned).
-// Written in old syntax so the browsers it warns can run it.
 (function () {
   var supported;
   try {
@@ -21,7 +12,6 @@
   document.documentElement.dataset.browserSupport = 'unsupported';
   var root = document.getElementById('root');
   if (!root) return;
-  // The notice replaces index.html's first-paint shell.
   root.textContent = '';
   var notice = document.createElement('main');
   notice.style.maxWidth = '32rem';

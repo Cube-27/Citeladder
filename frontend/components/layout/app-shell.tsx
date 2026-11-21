@@ -28,14 +28,6 @@ import { DashboardNav, DashboardRail, SidebarFootNav } from './sidebar-nav';
 import { UserMenuTrigger } from './user-menu';
 import { useRouteAnnouncement } from './use-route-announcement';
 
-/**
- * AppShell — the signed-in application chrome: the sidebar (its header, the
- * Dashboard | Agent switch, the mode's list, Integrations and the account at
- * its foot) beside the page's panel. Below 900px the header's menu button
- * opens the same sidebar in a left drawer that closes when the route
- * changes. The header's search, "Ask agent" and menu button come from here
- * through `ShellContext`.
- */
 export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const [titleOverride, setTitleOverride] = useState<string>();
   const location = useLocation();
@@ -46,8 +38,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
     projectName: activeProject?.name ?? null,
   });
   useCollapseShortcut();
-  // The drawer is open for the location it was opened on, so any navigation
-  // (a destination, the project switcher) closes it.
   const [drawerLocation, setDrawerLocation] = useState<string | null>(null);
   const drawerOpen = drawerLocation === location.key;
   const shell = useMemo(
@@ -80,12 +70,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-/**
- * The sidebar: the header (project switcher, Settings, collapse toggle), the
- * Dashboard | Agent switch, the mode's list (the route decides the mode),
- * then Integrations and the account. Collapsed (never in the drawer) it is
- * the 56px rail: one button per group and flyouts for the groups.
- */
 function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
   const collapsed = useSidebarCollapsed();
   const rail = collapsed && !inDrawer;
@@ -119,10 +103,6 @@ function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
   );
 }
 
-/**
- * Settings, beside the project (owner, 2026-11-19, restoring the gear PR 482
- * added). Not in the rail, where the account menu still opens Settings.
- */
 function SettingsLink() {
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
   const to = scopedNavigationDestination(
@@ -142,7 +122,6 @@ function SettingsLink() {
   );
 }
 
-/** ⌘ or Ctrl with backslash collapses the sidebar to its rail, or opens it again. */
 function useCollapseShortcut() {
   const collapsed = useSidebarCollapsed();
   useEffect(() => {

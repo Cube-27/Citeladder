@@ -1,8 +1,3 @@
-/**
- * Equal-page aggregation; a page with more checks never gets more influence.
- * A fold: pages are added one at a time, so a crawl of tens of thousands of
- * pages is aggregated in bounded batches without holding their evaluations.
- */
 import { policy } from '../../config.ts';
 import { compareText } from '../../text-order.ts';
 import { crawlSiteChecks, readinessReason, scoreAnalysis } from './scoring.ts';
@@ -10,13 +5,11 @@ import type { RuleEvaluation } from './rules.ts';
 
 type Measurement = ReturnType<typeof scoreAnalysis>;
 export type MeasuredPage = { id: string; page_kind: string; evaluations: RuleEvaluation[] };
-/** Scored-page coverage does not imply that every scored page's checks resolved. */
 function state(scored: number, expected: number, unresolved: boolean) {
   if (!scored || !expected) return 'not_measured';
   return scored < expected || unresolved ? 'limited_evidence' : 'measured';
 }
 
-/** A role's running sums, in page order, so the mean matches a sum over the whole list. */
 class RoleSum {
   pages = 0;
   sum = 0;
@@ -76,7 +69,6 @@ class DimensionSum {
   }
 }
 
-/** One page set's aggregate, fed one scored page at a time. */
 class PageSetFold {
   private readonly web = new RoleSum();
   private readonly aeo = new RoleSum();
@@ -106,11 +98,6 @@ class PageSetFold {
   }
 }
 
-/**
- * The whole crawl's aggregate and each page kind's, fed page by page. `site`
- * comes from the whole crawl: a page-kind subset rarely includes the root that
- * holds it.
- */
 export class MeasurementFold {
   private readonly all = new PageSetFold();
   private readonly kinds = new Map<string, PageSetFold>();

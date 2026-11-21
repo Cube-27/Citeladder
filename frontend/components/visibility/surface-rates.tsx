@@ -13,22 +13,6 @@ import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
-/**
- * The five AI Overview rates, each shown with what it divided by.
- *
- * These answer different questions and are easy to confuse. With 100
- * successful observations, 40 overviews and 10 naming the brand: the trigger
- * rate is 40%, the conditional mention rate is 25%, and overall visibility is
- * 10%. All three are true and none of them alone is "how visible are we", so
- * every tile here states its denominator in words underneath the number.
- *
- * A rate with nothing to divide is UNAVAILABLE, never 0%. A zero would be a
- * measurement claim nobody made.
- */
-
-// The template already supplies the "of" between the two numbers, so each
-// value here starts at the noun. Carrying a second "of" rendered every tile
-// as "40 of 100 of searches we successfully observed".
 const DENOMINATOR_COPY: Record<string, string> = {
   successful_observations: 'searches we successfully observed',
   observations_with_ai_overview: 'searches that showed an overview',
@@ -39,10 +23,6 @@ function denominatorCopy(rate: AioRate): string {
   return `${rate.numerator} of ${rate.denominator} ${scope}`;
 }
 
-/**
- * One rate as a stat: the figure, what it divided by, and what it means. A rate
- * with nothing to divide is the missing mark named "Unavailable", never 0%.
- */
 function rateStat({
   key,
   label,
@@ -82,9 +62,6 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
               ) : (
                 <>
                   <span className="type-body tabular-nums">{formatPercent(entry.rate.value)}</span>
-                  {/* The denominator is stated once for the list above; the
-                      numerator is not, and it is what separates one competitor
-                      named in a single overview from one named in fifty. */}
                   <span className="type-caption tabular-nums">
                     {`${entry.rate.numerator} of ${entry.rate.denominator}`}
                   </span>
@@ -119,12 +96,6 @@ export function SurfaceRatesPanel({
         shape={{ kind: 'figures', count: 4 }}
       />
     );
-  // These rates are RETAINED across a surface or run change, the same way
-  // the sources and evidence panels retain theirs, so the reader is not
-  // handed a skeleton for every round trip. Retained numbers carry no
-  // shape of their own to recognise, though -- five percentages look
-  // equally plausible under any selection -- so the busy bar every other
-  // retaining panel shows is what keeps them from reading as settled.
   return (
     <Section className="relative" aria-busy={query.isFetching}>
       <BusyRung active={query.isFetching} label="Updating AI Overview rates" />

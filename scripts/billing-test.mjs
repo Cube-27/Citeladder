@@ -1,5 +1,3 @@
-// Launches the isolated Razorpay sandbox stack (docs/operations/razorpay-local-testing.md).
-// Usage, from frontend/: pnpm billing:test <action> [--env-file=<path>] [command args...]
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -9,7 +7,6 @@ import { parseEnv } from 'node:util';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const ACTIONS = ['up', 'down', 'tunnel', 'status', 'admin', 'plans', 'reconcile'];
 const CLI = { admin: 'billing-admin.ts', plans: 'provision-razorpay-plans.ts' };
-// Cleared from the inherited environment so only the selected file configures the stack.
 const ISOLATED = [
   'POSTGRES_PASSWORD',
   'POSTGRES_USER',
@@ -20,7 +17,6 @@ const ISOLATED = [
   'CITELADDER_DISABLE_DOTENV',
 ];
 
-/** Refuses any environment that could reach live billing, platform keys or a shared database. */
 export function checkSandboxEnvironment(values) {
   if (
     values.BILLING_RAZORPAY_MODE !== 'test' ||
@@ -83,13 +79,11 @@ function main(argv) {
   const password = encodeURIComponent(values.POSTGRES_PASSWORD ?? '');
   env.DATABASE_URL = `postgresql://${user}:${password}@127.0.0.1:55433/citeladder_billing_test`;
   env.CITELADDER_DISABLE_DOTENV = '1';
-  // One recovery pass of the API package's `runner` script, in that package.
   if (action === 'reconcile')
     return run(process.execPath, ['src/runner.ts', ...rest], {
       ...options,
       cwd: join(root, 'frontend/services/api'),
     });
-  // The repository stays the authorized file root for .runtime inputs.
   return run(
     process.execPath,
     [join(root, 'frontend/services/api/src/cli', CLI[action]), ...rest],

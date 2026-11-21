@@ -1,11 +1,3 @@
-/**
- * Live answer-perception calibration: each hand-labelled answer through the
- * passage builder, the configured gateway model and the deterministic
- * validator, scored for label agreement, macro F1, quote validity and tokens
- * per answer against the configured thresholds. Operator-run only (it calls
- * the provider and spends platform budget); never part of CI. Records append
- * to one log in the worktree's Git directory.
- */
 import { appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -55,14 +47,12 @@ async function evaluate(fixture: Fixture) {
     template_version: settings.template_version,
     language: fixture.language,
     prompt: fixture.prompt,
-    // Labels and quotes are scored, not themes: every aspect reads as the fallback.
     themes: [],
     entities: entityPassages({
       answer: fixture.answer,
       languageCode: fixture.language,
       config,
       policy: settings,
-      // The calibration fixtures carry no cohort: they read as unbranded prompts.
       promptNamesBrand: false,
     }),
   };
@@ -97,7 +87,6 @@ await appendFile(log, records.map((record) => `${JSON.stringify(record)}\n`).joi
 const pairs = records.flatMap((record) => record.pairs);
 if (!pairs.length) throw new Error('No labelled business was found in the evaluated answers');
 const agreement = pairs.filter((pair) => pair.expected === pair.actual).length / pairs.length;
-// Macro F1 over the labels that occur, so an absent label cannot score zero.
 const occurring = LABELS.filter((label) =>
   pairs.some((pair) => pair.expected === label || pair.actual === label),
 );

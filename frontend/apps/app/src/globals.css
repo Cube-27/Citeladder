@@ -1,46 +1,11 @@
-/*
- * The design system's tokens, base, and every hand-written shared rule.
- *
- * The system itself is the CiteLadder Design System artifact (docs/design.md):
- * monochrome with one flare of orange. Every colour token lives here, in both
- * themes; nothing else declares a colour.
- *
- * It does NOT import Tailwind. Each app's entry does that, with its own
- * `@source` list, and then imports this. That indirection is the only way the
- * two can generate different utility sets: they share this file, and a single
- * entry point would mean the app shipping the marketing site's utilities and
- * the marketing site shipping the app's.
- */
 @import "./ui-motion.css";
 
-/* The product's two layout variants. `shell:` is the system's wide
-   breakpoint (1280px): from it the labelled sidebar is 224 wide (200 below
-   it), AppGrid and KPI rows take their full columns and the FilterBar is one
-   row. `desktop:` (981px) is the
-   width at which a component's own internals (a form's two columns, a
-   table's secondary columns, a list beside its detail) stop stacking.
-   `sm:`/`md:`/`lg:`/`xl:` (640, 768, 1024, 1280) are the website's.
-
-   The shell's navigation: from `rail:` (900px) the
-   sidebar column shows, labelled, unless the reader collapsed it to the 56px
-   rail (`data-sidebar-state="collapsed"`); below it the masthead's menu
-   button opens the same sidebar in a left drawer. `labelled:` is where the
-   sidebar shows its labels: an expanded sidebar, and always inside that
-   drawer (`data-nav-drawer`). `rail:` is declared first so a `shell:` rule
-   for the same property follows it in the stylesheet and wins. */
 @custom-variant rail (@media (min-width: 900px));
 @custom-variant shell (@media (min-width: 1280px));
 @custom-variant desktop (@media (min-width: 981px));
-/* A phone (below 768): only what a 390 screen cannot fit changes; desktop never does. */
 @custom-variant phone (@media (max-width: 767px));
 @custom-variant labelled (&:where([data-sidebar-state="expanded"] *), &:where([data-nav-drawer] *));
 
-/* Grids in the app's main column switch on the column, not the viewport,
-   so a wider sidebar stacks them. `column-split:` is `desktop:`
-   (981 less the 200px labelled sidebar, two 32px gutters and a scrollbar),
-   `column-wide:` is `shell:` (1280 less a dragged-wider sidebar, two 32px
-   gutters and a thin scrollbar). Outside that column (drawers, dialogs, setup) they
-   keep the viewport breakpoints. */
 @custom-variant outside-main-column (&:where(:not([data-main-column] *)));
 @custom-variant column-split {
   @container main (min-width: 688px) {
@@ -64,33 +29,18 @@
 }
 
 @theme {
-  /* Faces. The display face sets the website's and docs' headings at
-     weight 400 only, never anything in the app; the sans face everything
-     people read and click; the mono face eyebrows, deltas, dates, citation
-     numbers and code. The hosted faces are named only in
-     lib/config/brand-fonts.json, which writes `--font-face-*`. */
   --font-*: initial;
   --font-sans: var(--font-face-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: var(--font-face-display), var(--font-face-sans), system-ui, sans-serif;
   --font-mono: var(--font-face-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
-  /* Colour. Black, white and grey do the work; `accent` (Flare) is a mark
-     only — the logo, active rungs, your own brand's citations and series, the
-     highlighter and the selected-nav marker — never a button, a background or
-     a heading. Status hues appear only in badges, deltas, callouts and errors,
-     always beside an arrow, icon or word. Dark values are below. */
   --color-*: initial;
   --color-paper: oklch(96.7% 0 0);
   --color-surface: oklch(100% 0 0);
   --color-surface-sunken: oklch(94.3% 0 0);
-  /* States: an ink overlay over whatever fill is beneath, so hover,
-     pressed and selected read the same on paper, surface and sunken and
-     never share one fill. Applied with the `overlay-*` utilities below. */
   --color-state-hover: oklch(from var(--color-ink) l c h / 6%);
   --color-state-pressed: oklch(from var(--color-ink) l c h / 8%);
   --color-state-selected: oklch(from var(--color-ink) l c h / 10%);
-  /* Soft tints the website's editorial illustrations draw with; never text,
-     a button, a card or a page fill. */
   --color-stage-sky: oklch(90.8% 0.035 256);
   --color-stage-mint: oklch(92.1% 0.04 166);
   --color-stage-lilac: oklch(89.3% 0.046 298);
@@ -101,7 +51,6 @@
   --color-ink: oklch(17.8% 0 0);
   --color-ink-hover: oklch(28.5% 0 0);
   --color-ink-secondary: oklch(43.9% 0 0);
-  /* One grey on every surface: muted is the secondary ink. */
   --color-ink-muted: var(--color-ink-secondary);
   --color-on-ink: oklch(100% 0 0);
   --color-accent: oklch(63.4% 0.1973 37.5);
@@ -119,10 +68,6 @@
   --color-data-other: oklch(81.4% 0 0);
   --color-scrim: oklch(from var(--color-ink) l c h / 32%);
   --color-chart-grid: oklch(94.3% 0 0);
-  /* The app's roles (paper and ink with one mark). On
-     the website and docs each aliases the website role it stands for, so a
-     shared atom drawn with them looks as it always did there; the app binds
-     its own values in `:root:not([data-public-surface])` below. */
   --color-ground: var(--color-paper);
   --color-panel: var(--color-surface);
   --color-well: var(--color-surface-sunken);
@@ -131,29 +76,18 @@
   --color-rule: var(--color-line);
   --color-control-line: var(--color-line-control);
   --color-control-edge: var(--color-line);
-  /* The layered button (owner, 2026-11-20): a vertical gradient per face.
-     The primary is the accent deepened so white text holds 4.5:1 at its
-     lightest point, hover lift included. */
   --color-button-from: oklch(100% 0 0);
   --color-button-to: oklch(94.9% 0.008 91.5);
-  /* Secondary buttons and filters are the page's own colour (owner,
-     2026-11-20), keeping a faint top-to-foot shade, their edge and shadow. */
   --color-face-page: var(--color-ground);
   --color-face-from: var(--color-face-page);
   --color-face-to: color-mix(in oklch, var(--color-face-page), oklch(0% 0 0) 3%);
-  /* The website secondary button's soft hairline (owner, 2026-11-20). */
   --color-button-edge: oklch(87.3% 0.01 87.5);
   --color-primary-from: oklch(54.5% 0.175 37.5);
   --color-primary-to: oklch(48.5% 0.158 37.5);
-  /* The website primary's edge, a step darker than its fill (owner, 2026-11-20). */
   --color-primary-edge: oklch(40.5% 0.135 37.5);
   --color-on-primary: oklch(100% 0 0);
-  /* The app's flat primary fill (owner, 2026-11-21): the accent replaces ink
-     on every action fill (primary button, checkbox, radio, switch, a picked
-     day, the setup stepper) in both themes. */
   --color-primary: var(--color-primary-from);
   --color-primary-hover: var(--color-primary-to);
-  /* An off switch's thumb: the surface, except in the app's dark, where it is ink-2. */
   --color-thumb: var(--color-surface);
   --color-ink-2: var(--color-ink-secondary);
   --color-accent-text: var(--color-accent-ink);
@@ -162,8 +96,6 @@
   --color-negative-wash: var(--color-negative-soft);
   --color-warning-wash: var(--color-warning-soft);
   --color-info-wash: var(--color-info-soft);
-  /* The app's chrome (sidebar, masthead). The website has none, so it aliases
-     the paper; the app binds its value below. */
   --color-chrome: var(--color-paper);
   /* Data: you are the accent, rivals one to four in rank order (ink, then
      cool hues only), a fifth and later are `data-other`. Charts read these
@@ -173,21 +105,11 @@
   --color-data-rival-2: oklch(52.3% 0.1 244);
   --color-data-rival-3: oklch(41% 0.128 289.3);
   --color-data-rival-4: oklch(53.4% 0.0855 184.4);
-  /* Real third-party marks drawn in code (the Google sign-in button, the
-     engine logos). They are identity, never state or decoration, and appear
-     only inside those marks. */
   --color-brand-google-blue: oklch(63% 0.18 260);
   --color-brand-google-green: oklch(64.8% 0.1603 148.5);
   --color-brand-google-yellow: oklch(83.04% 0.1698 84);
   --color-brand-google-red: oklch(62.6% 0.206 29);
 
-  /* Type. Each role owns size, leading, weight and tracking; on the website
-     and docs the display roles (display-*, title, title-sm, stat) pair with
-     `font-display`, in the app as well: the display face names places (see
-     the Type block below). The mono roles
-     (eyebrow, data, code) pair with `font-mono`, the rest are the sans face, never above 500.
-     Sizes and leading are rem, the system's px ÷ 16, so they follow the
-     reader's text size; spacing stays px. */
   --text-*: initial;
   --text-display-lg: 2rem;
   --text-display-lg--line-height: 2.375rem;
@@ -201,7 +123,6 @@
   --text-display-sm--line-height: 2rem;
   --text-display-sm--font-weight: 500;
   --text-display-sm--letter-spacing: -0.01em;
-  /* The app's PageHeader title: 4px under display-sm. */
   --text-page-title: 1.25rem;
   --text-page-title--line-height: 1.75rem;
   --text-page-title--font-weight: 500;
@@ -214,7 +135,6 @@
   --text-title-sm--font-weight: 400;
   --text-stat: 1.75rem;
   --text-stat--line-height: 2.25rem;
-  /* The sans face at 500: an app number is never the display face. */
   --text-stat--font-weight: 500;
   --text-stat--letter-spacing: -0.02em;
   --text-lead: 1.25rem;
@@ -237,9 +157,7 @@
   --text-label-lg--font-weight: 500;
   --text-heading: 1rem;
   --text-heading--line-height: 1.5rem;
-  /* The sans face never sets above 500. */
   --text-heading--font-weight: 500;
-  /* Dialog and drawer titles and the plan name: the sans face at 500, 22/28. */
   --text-heading-lg: 1.375rem;
   --text-heading-lg--line-height: 1.75rem;
   --text-heading-lg--font-weight: 500;
@@ -247,8 +165,6 @@
   --text-caption: 0.75rem;
   --text-caption--line-height: 1rem;
   --text-caption--font-weight: 400;
-  /* 12px: the 0.75rem floor for any text (owner audit, 2026-11-06); the mono
-     face, caps and tracking set it apart from the caption. */
   --text-eyebrow: 0.75rem;
   --text-eyebrow--line-height: 1rem;
   --text-eyebrow--font-weight: 500;
@@ -259,9 +175,6 @@
   --text-code: 0.8125rem;
   --text-code--line-height: 1.375rem;
   --text-code--font-weight: 400;
-  /* The app's roles beyond the shared names. The app rebinds `title`,
-     `heading`, `display`, `data` and `code` to its six sizes below; its
-     `body` role reads `body-sm`, which is 14/20 everywhere. */
   --text-display: 1.75rem;
   --text-display--line-height: 2.25rem;
   --text-display--font-weight: 500;
@@ -288,15 +201,8 @@
   --text-data-sm--line-height: 1rem;
   --text-data-sm--font-weight: 400;
 
-  /* Spacing is Tailwind's 4px step, so `p-N` is the system's `space-N`. The
-     system's steps are 1 2 3 4 5 6 8 10 12 16 24 32 (4 to 128px). */
   --spacing: 4px;
 
-  /* The website's radius scale, only slightly rounded and never over 8. 2xs
-     chart bars and swatches; xs badges, favicons and checkboxes; sm tabs in
-     a track, menu items and chips; md buttons, inputs and code; lg cards,
-     menus and dialogs; full only avatars, status dots, switch tracks and
-     count pills. */
   --radius-*: initial;
   --radius-2xs: 2px;
   --radius-xs: 2px;
@@ -304,80 +210,46 @@
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-full: 9999px;
-  /* The app's four radii by role (app code uses only these and `full`, which
-     is for avatars and switch thumbs): `mark` 4 (tags, kbd chips, menu items,
-     checkboxes, rung marks), `control` 6 (controls, fields, slips, wells),
-     `card` 8 (cards and menus) and `overlay` 12 (dialogs and drawers). The
-     website keeps `mark` at 2; the app binds 4 in its own block. */
   --radius-mark: 2px;
   --radius-control: var(--radius-md);
   --radius-card: 8px;
   --radius-overlay: 12px;
 
-  /* Shadows are declared in :root below (they change with the theme) and
-     applied by the `shadow-*` utilities after this block. */
   --shadow-*: initial;
 
-  /* Containers: `max-w-site` (website sections, navbar, footer), `max-w-app`
-     (an app page's content), `max-w-thread` (the Agent thread and its
-     composer, and a reading page whole), `max-w-prose` (articles, legal,
-     docs) and `max-w-narrow` (section headers, auth cards, onboarding, empty
-     states). */
   --container-site: 1320px;
   --container-app: 1440px;
-  /* The answer dialog (`Dialog width="answer"`): three quarters of the app width. */
   --container-answer: 1080px;
   --container-thread: 1040px;
   --container-prose: 720px;
   --container-narrow: 560px;
-  /* The app's measures: reading at 720 (`prose`), forms at 640; the page
-     fills the main column, a reading page sits in `thread`. */
   --container-form: 640px;
-  /* The Flow template's one column (sign-in, setup, the workspace chooser). */
   --container-flow: 480px;
 
-  /* Motion: hover and colour over --motion-fast. Whatever opens (a popup,
-     tooltip, dialog, drawer, toast, the palette, a disclosure's chevron) eases
-     out over --motion-open and closes over --motion-close (owner: 200 in, 160
-     out), starting fast too; a literal so script can read it. */
   --motion-fast: 120ms;
   --motion-open: 200ms;
   --motion-close: 160ms;
   --ease-standard: ease-out;
   --ease-exit: ease-out;
-  /* Resizing what is already on screen (the sidebar) is no open or close:
-     --motion-open both ways, on one symmetric curve. */
   --ease-resize: ease-in-out;
-  /* HeroUI v3's control timings: the switch thumb and a meter's fill slide
-     over --motion-slide; the switch, drawers and toasts move on the fluid
-     ease. A loading shape's sweep crosses it every --motion-sweep. */
   --motion-slide: 300ms;
   --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
   --motion-sweep: 2s;
   --ease-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --ease-sweep: linear;
-  /* The website's steps (and the app's draft edge); app open/close never uses them. */
   --motion-normal: 150ms;
   --motion-slow: 200ms;
   --motion-menu: 200ms;
-  /* The website's shared nav popup: it opens over --motion-menu and
-     closes over 100ms on a decelerating curve; menus inside it fade over
-     --motion-fast, unblur over 180ms and settle in 160ms steps of 20ms. */
   --motion-menu-exit: 100ms;
   --motion-menu-blur: 180ms;
   --motion-menu-settle: 160ms;
   --motion-menu-step: 20ms;
   --ease-menu: cubic-bezier(0.22, 1, 0.36, 1);
-  /* The website's one entrance: a landing hero's copy loads in over
-     700ms, its parts in 80ms steps. */
   --motion-reveal: 700ms;
   --motion-reveal-step: 80ms;
   --ease-reveal: cubic-bezier(0.22, 1, 0.36, 1);
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
-  /* The app's one "working" mark: a single accent
-     rung pulsing its opacity every 1.2s. Rung meters fill one rung at a
-     time (`steps()`), never on a curve. */
   --motion-pulse: 1200ms;
   --animate-live-rung: live-rung var(--motion-pulse) ease-in-out infinite;
   --z-index-sticky: 20;
@@ -389,16 +261,10 @@
 :root {
   color-scheme: light;
 
-  /* The app's two type weights; its dark lowers them (see its block). */
   --weight-regular: 400;
   --weight-medium: 500;
 
-  /* Depth. The app has three shadows, one per elevation (card, pop, sheet;
-     bound in its own block below); edge is the faint smudge under a field's
-     soft edge. The website and docs draw their borderless edges with the
-     ring inside xs and pop. Never two shadows on nested surfaces. */
   --shadow-edge: 0 1px 2px oklch(17.8% 0 0 / 5%);
-  /* Under every layered button, app and website: a lit top edge and a soft drop. */
   --shadow-button: inset 0 1px 0 oklch(100% 0 0 / 6%), 0 1px 1px oklch(0% 0 0 / 10%), 0 2px 6px -1px oklch(0% 0 0 / 6%);
   --shadow-xs: 0 0 0 1px oklch(17.8% 0 0 / 8%), 0 1px 2px oklch(17.8% 0 0 / 6%);
   --shadow-pop:
@@ -407,38 +273,22 @@
   --shadow-sheet:
     0 1px 2px oklch(21.8% 0.006 92 / 6%), 0 12px 32px -8px oklch(21.8% 0.006 92 / 18%);
 
-  /* Controls. Every interactive row in one view uses one height: 32,
-     28 compact, 48 for website calls to action. `row-app` is the app's
-     table and fact row, its header title row and the sidebar's ident row. */
   --control-sm: 28px;
   --control-md: 32px;
   --control-lg: 48px;
-  /* A primary target under a coarse pointer (the app binds 44); a tag; the
-     smallest target anywhere (WCAG 2.5.8), and the tap area around a small
-     control drawn in it (`hit-area`; the app binds 44 for touch). */
   --control-coarse: var(--control-md);
   --tag-height: 24px;
   --target-min: 24px;
   --target-hit: var(--target-min);
   --row-app: 40px;
   --nav-height: 64px;
-  /* The labelled sidebar's default and narrowest width; the reader may drag
-     it wider (to 480px), and the shell then sets this variable inline from
-     the stored width (lib/sidebar-width.ts). */
   --sidebar-width: 248px;
-  /* The sidebar below 1280px: one control wide inside its 12px inset (56px).
-     One `line` rule divides the sidebar from the page. */
   --sidebar-rail-width: calc(var(--control-md) + 24px);
 
-  /* Component geometry the components read. Each derives from a system token. */
-  /* What sticks under the app's top bar and page strips starts below them. */
   --sticky-header-offset: calc(
     var(--masthead-block-size, var(--masthead-height)) + var(--strips-block-size, 0px)
   );
-  /* The main column's gutter: 32 from 1280px, 24 below (rebound below). */
   --content-gutter: 32px;
-  /* App rhythm: header → 32 → controls → 16 → content; cards gap 16; card
-     padding 24. */
   --page-section-gap: 32px;
   --workspace-gap: 16px;
   --compact-gap: 12px;
@@ -451,17 +301,12 @@
   --table-header-height: var(--control-md);
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 8px;
-  /* The website's product screens' top bar (screen-app.css), the app's
-     48 masthead. The editor workspace's rows sit `page-band-gap` apart. */
   --page-header-band: 48px;
   --page-band-gap: 8px;
-  /* Website gutters: 20 below 768px, 40 to 1279px, 64 from 1280px. */
   --site-gutter: 20px;
   --marketing-nav-offset: calc(var(--nav-height) + 8px + env(safe-area-inset-top, 0px));
 }
 
-/* Dark. The same roles with the system's dark values; no token is added or
-   removed here. */
 :root[data-theme='dark'] {
   color-scheme: dark;
   --color-paper: oklch(14.5% 0 0);
@@ -507,10 +352,6 @@
   --shadow-sheet: 0 1px 2px oklch(0% 0 0 / 40%), 0 16px 40px -8px oklch(0% 0 0 / 60%);
 }
 
-/* The app's dark (docs/design.md). It rebinds every literal the app's light
-   block below sets: that block follows the system's dark at the same
-   specificity, so it would otherwise win here. The website and docs keep
-   the system's dark above. */
 :root[data-theme='dark']:not([data-public-surface]) {
   --color-ground: #09090a;
   --color-panel: #121213;
@@ -525,8 +366,6 @@
   --color-ink-hover: oklch(85% 0 0);
   --color-accent: #ff6a33;
   --color-accent-text: oklch(75.3% 0.155 41.6);
-  /* Washes sit about 1.2 from the surface and stay quiet: a notice is never
-     the loudest surface on a page. */
   --color-accent-wash: oklch(27% 0.041 43);
   --color-positive: oklch(81.4% 0.18 147.6);
   --color-positive-wash: oklch(27% 0.035 157);
@@ -545,14 +384,9 @@
   --nav-current-fill: var(--color-state-selected);
   --color-scrim: oklch(0% 0 0 / 60%);
   --shadow-card: none;
-  /* Black barely shows on a near-black ground, so an overlay also reads by a
-     lit top edge (inset: a child that fills the top would cover it). */
   --shadow-pop: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 4px 12px oklch(0% 0 0 / 30%);
   --shadow-sheet: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 16px 40px oklch(0% 0 0 / 45%);
 
-  /* Light text on a dark ground reads heavier, so every weight drops by 50
-     (owner, 2026-11-21). The type roles read --weight-*; the size utilities
-     the app uses read the rest. */
   --weight-regular: 350;
   --weight-medium: 450;
   --font-weight-normal: 350;
@@ -602,9 +436,6 @@
   box-shadow: var(--shadow-card, none);
 }
 
-/* The line language: solid is observed, dashed is drafted. `edge-draft`
-   draws a dashed `control-line` edge; with `data-draft="false"` (a person
-   accepted it) a solid edge fades in over it in 200ms: the ink sets. */
 @layer utilities {
   .edge-draft {
     position: relative;
@@ -625,10 +456,6 @@
   }
 }
 
-/* State layers: the state's ink overlay painted as a background image,
-   so it tints an opaque control (a surface button) and a transparent row
-   alike without replacing their fill. A selected element takes no hover
-   overlay, so the two never compete. */
 @utility overlay-hover {
   background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
 }
@@ -639,12 +466,6 @@
   background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
 }
 
-/* The website's layered face (owner, 2026-11-20: "just to have a subtle 3d
-   effect"); the app's buttons are flat (button.tsx). A faint vertical
-   gradient (--face-from/to), its state tint on top, a lit top edge and the
-   soft low shadow-button. A press drops the shadow; disabled is flat. Danger
-   stays flat (--face-to is its top): its crimson label fails 4.5:1 on the
-   gradient's foot under the tints. Unlayered, over the fill utilities. */
 [data-public-surface] {
   .face {
     --face-from: var(--color-face-from);
@@ -687,8 +508,6 @@
   }
 }
 
-/* A small control's tap area: centred on it and at least --target-hit square
-   (44 below 900px or under a coarse pointer); the drawn control keeps its size. */
 @layer components {
   .hit-area {
     position: relative;
@@ -704,20 +523,10 @@
   }
 }
 
-/* The app's system: paper and ink with one mark, a
-   compact even density tuned for a 982x800 window. The app's document is
-   the one without `data-public-surface`; the website and docs keep the
-   system's values above. */
 :root:not([data-public-surface]) {
-  /* Inherited: no paragraph ends on a lone word; nowrap rows keep one line. */
   text-wrap: pretty;
-  /* Everything on the panel is the panel's own colour (owner, 2026-11-21):
-     table heads, buttons, fields and menus; only hover and selected grey. */
   --table-head-ground: var(--color-panel);
   --table-ground: var(--color-surface);
-  /* The token table in docs/design.md. The older role names bind onto it:
-     chrome is the ground, surface the panel, well the raised fill, rule the
-     line, control-line the strong line. */
   --color-ground: #f2f2f4;
   --color-chrome: var(--color-ground);
   --color-panel: #ffffff;
@@ -727,7 +536,6 @@
   --color-well: #f7f8f9;
   --color-rule: rgb(0 0 0 / 8%);
   --color-control-line: rgb(0 0 0 / 12%);
-  /* Focus (AR-13): a 1px accent edge and a soft accent glow, both themes. */
   --color-focus: var(--color-accent);
   --focus-width: 1px;
   --focus-offset: 0px;
@@ -736,7 +544,6 @@
   --color-control-edge: var(--color-rule);
   --color-ink: #1d1d1d;
   --color-ink-2: #5f636a;
-  /* The primary button's hover: its ink fill one step lighter. */
   --color-ink-hover: oklch(32% 0.015 264);
   --color-on-ink: var(--color-panel);
   --color-accent: #e8501a;
@@ -759,8 +566,6 @@
   --color-state-pressed: var(--color-state-selected);
   --color-scrim: oklch(from var(--color-ink) l c h / 45%);
   --color-chart-grid: var(--color-rule);
-  /* The website's role names, held to the app's roles so a shared rule that
-     still names one renders in the app's palette. App code never uses them. */
   --color-paper: var(--color-ground);
   --color-surface-sunken: var(--color-well);
   --color-line: var(--color-rule);
@@ -774,10 +579,6 @@
   --color-warning-soft: var(--color-warning-wash);
   --color-info-soft: var(--color-info-wash);
 
-  /* Type (2.1): six sizes (12 14 16 20 24 32), one line height each (owner,
-     2026-11-19: no 13, no 28); weights 400 and 500, never 600. Numbers are
-     the sans face's tabular numerals. The page title is the display face at
-     20/28 400. */
   --text-title: 1.25rem;
   --text-title--line-height: 1.75rem;
   --text-heading: 1rem;
@@ -793,35 +594,21 @@
   --text-display: 1.5rem;
   --text-display--line-height: 2rem;
 
-  /* Shape (2.4): four radii plus round. Marks, tags, kbd chips and menu items
-     4; controls and wells 6; cards and menus 8; dialogs and drawers 12; round
-     only for avatars and switch thumbs. */
   --radius-mark: 4px;
   --radius-control: 6px;
   --radius-card: 8px;
   --radius-overlay: 12px;
-  /* One resting shadow: a card's lift. */
   --shadow-card: 0 1px 2px oklch(21% 0.034 263 / 5%);
   --shadow-pop: 0 4px 12px oklch(21% 0.034 263 / 10%), 0 1px 2px oklch(21% 0.034 263 / 6%);
   --shadow-sheet: 0 16px 40px oklch(21% 0.034 263 / 18%);
-  /* The accent mark ("you, here"). */
   --mark-width: 2px;
 
-  /* Density (2.2): controls 28 (owner, 2026-11-19), and 44 on flow pages;
-     below 900px or under a coarse pointer every control is 44 (block below);
-     tags 24; every target at least 24. Navigation rows 28 (44 in the
-     drawer). Table head 32, body rows 40. */
   --control-md: 28px;
   --control-lg: 44px;
   --control-coarse: 44px;
   --nav-row-height: 28px;
   --table-row-height: 40px;
 
-  /* Standard layouts (docs/design.md): the page header 44, the tab strip 36,
-     the toolbar strip one control and 8 above and below, each closed by a
-     rule across the panel (`PageFrame`). The panel sits `panel-inset` from
-     the window (none on the sidebar side, none below 900). Sidebar 224 from
-     1280, 200 from 900, a 56 rail of 40px buttons when collapsed. */
   --masthead-height: 44px;
   --page-tabs-height: 36px;
   --filter-bar-height: 44px;
@@ -829,22 +616,14 @@
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
-  /* The current nav row: a grey pill one step down from the ground. */
   --nav-current-fill: #e7e7ea;
   --panel-inset: 0px;
-  /* What a fitted page (a thread, a workbench) leaves for its own scrolling
-     region: the panel's inset, the header (as drawn: below `rail`
-     its actions can take a second row), a record page's h1, the body's top
-     padding and the panel's foot. */
   --route-chrome-height: calc(
     2 * var(--panel-inset) + var(--masthead-block-size, var(--masthead-height)) +
       var(--page-heading-block-size, 0px) + var(--page-pad-block) + 24px
   );
   --content-gutter: 24px;
 
-  /* Spacing roles (2.2), on the one scale 2 4 8 12 16 24 32 48 64: peers in a
-     control group 8, card padding and cards apart 16, the chrome to the first
-     card 24, page sections 24, flow blocks 48. */
   --compact-gap: 8px;
   --card-padding: 16px;
   --modal-padding: 16px;
@@ -852,11 +631,7 @@
   --page-top-gap: 24px;
   --page-section-gap: 24px;
   --flow-gap: 48px;
-  /* Empty space after a reading page's last content (`ReadingColumn`), so
-     content shrinking near the bottom never pulls the page or the scroll
-     position. `svh`, so a phone's collapsing toolbar never resizes it. */
   --page-end-space: 33svh;
-  /* The body's padding: the gutter at its sides, 20 above the first content. */
   --page-pad-inline: var(--content-gutter);
   --page-pad-block: 20px;
 }
@@ -876,10 +651,6 @@
     --panel-inset: 8px;
   }
 }
-/* Primary targets are 44 below 900px as well as under a coarse pointer (2.2):
-   navigation rows, masthead and row actions, page tabs, sheet buttons. A
-   small control (checkbox, switch, a field's end button) keeps its drawn
-   size and grows its tap area to 44. */
 @media (max-width: 899px), (pointer: coarse) {
   :root:not([data-public-surface]) {
     --target-hit: 44px;
@@ -894,9 +665,6 @@
   }
 }
 
-/* The sidebar's list fades at the end it can scroll towards (a mask on the
-   list, never a tinted tray); a list holding keyboard focus drops the fade
-   so the ring is never masked. */
 [data-sidebar-scroll][data-fade-bottom] {
   mask-image: linear-gradient(to bottom, black calc(100% - 32px), transparent);
 }
@@ -915,8 +683,6 @@
 [data-sidebar-scroll]:has(:focus-visible) {
   mask-image: none;
 }
-/* In the list's 16 gap, a group sits 8 below the rows before it and 2 below
-   a folded label, so folded labels share the rows' 34 pitch. */
 [data-sidebar-group] + [data-sidebar-group] {
   margin-top: -8px;
 }
@@ -924,7 +690,6 @@
   margin-top: -14px;
 }
 
-/* Below the shell breakpoint the website's main gutter narrows to space-6. */
 @media (max-width: 1279px) {
   :root[data-public-surface] {
     --content-gutter: 24px;
@@ -937,14 +702,7 @@
   }
 }
 
-/* The marketing site's responsive display sizes (owner, 2026-11-14): the
-   page title (H1) is 48 and a section heading 32 from 768px up, the owner's
-   982px desktop included, and 32 and 24 on phones; the home title keeps 60
-   (owner, 2026-11-19). Marketing pages only, so
-   a docs article title keeps its own fallback. */
 [data-marketing-surface] {
-  /* Surfaces take three radii, so an inner card stays concentric in a card's
-     8px inset; controls and chips take the system's 2–8. */
   --site-radius-inner: 4px;
   --site-radius-card: 12px;
   --site-radius-stage: 16px;
@@ -977,9 +735,6 @@
   }
 }
 
-/* The website and docs are flat on white paper (owner, 2026-11-14): no
-   button sheen, press shadow or press nudge, and edges are hairlines. Dark
-   keeps its own paper. The site's page colour is the docs' page too. */
 :root[data-public-surface]:not([data-theme='dark']) {
   --color-paper: oklch(100% 0 0);
   --color-site-page: oklch(100% 0 0);
@@ -995,9 +750,6 @@
   --marketing-nav-offset: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
 }
 
-/* The marketing site's effects palette (docs and the app keep theirs): big
-   effects are soft warm light drawn from the accent; small marks, rails and
-   wells are zero-chroma grey (owner, 2026-11-19). */
 :root[data-marketing-surface] {
   --color-face-page: var(--color-site-page);
   --color-site-mark: oklch(55.6% 0 0);
@@ -1009,19 +761,15 @@
   --color-site-well: oklch(97% 0 0);
   --color-site-well-edge: oklch(25% 0 0 / 0%);
   --color-site-vignette: oklch(72.3% 0.18 42.6 / 10%);
-  /* The home hero's backdrop (experiment, owner 2026-11-20). */
   --color-site-hero-base: oklch(100% 0 0);
   --color-site-hero-amber: oklch(78% 0.12 55 / 19%);
   --color-site-hero-umber: oklch(88% 0.06 60 / 12%);
   --color-site-hero-side: oklch(80% 0.11 55 / 12%);
-  /* Product images as brushed metal (experiment, owner 2026-11-20). */
   --color-site-metal-top: oklch(99% 0 0);
   --color-site-metal-bottom: oklch(95.5% 0 0);
   --color-site-metal-sheen: oklch(100% 0 0 / 55%);
   --color-site-metal-rim: oklch(100% 0 0 / 90%);
   --color-site-metal-edge: oklch(25% 0 0 / 10%);
-  /* The closing band: pale warm silk with ink text. Contrast is checked over
-     every stop with any two layers stacked. */
   --color-site-band-from: oklch(97.6% 0.018 70);
   --color-site-band-mid: oklch(94.4% 0.04 58);
   --color-site-band-to: oklch(91% 0.06 50);
@@ -1034,9 +782,6 @@
   --color-site-band-line: oklch(17.8% 0 0 / 80%);
 }
 
-/* The website's dark ground is the owner's warm near-black #131211 (owner,
-   2026-11-20); the docs keep theirs. The surface, inset and well above it
-   step at least 1.05 lighter. */
 :root[data-marketing-surface][data-theme='dark'] {
   --color-site-page: oklch(18.3% 0.0026 67.7);
   --color-paper: oklch(18.3% 0.0026 67.7);
@@ -1060,7 +805,6 @@
   --color-site-metal-sheen: oklch(100% 0 0 / 6%);
   --color-site-metal-rim: oklch(100% 0 0 / 18%);
   --color-site-metal-edge: oklch(100% 0 0 / 8%);
-  /* Deep, low-glow warm on near-black with light text. */
   --color-site-band-from: oklch(17% 0.03 45);
   --color-site-band-mid: oklch(13% 0.018 42);
   --color-site-band-to: oklch(10% 0.008 40);
@@ -1073,14 +817,11 @@
   --color-site-band-line: oklch(100% 0 0 / 45%);
 }
 
-/* A secondary (outline) button's edge is the control line, at least 3:1 on
-   paper and on the neutral panel in both themes. Drawn app screens keep the app's. */
 [data-public-surface]
   :is([data-button-variant='secondary'], .marketing-soft-button):not(:is(.cl-screen, .cl-vig) *) {
   border-color: var(--color-line-control);
 }
 
-/* Public eyebrows are quiet sans labels; product images keep the app's mono. */
 [data-public-surface] .type-eyebrow:not(:is(.cl-screen, .cl-vig) *) {
   color: var(--color-ink-secondary);
   font-family: var(--font-sans);
@@ -1107,10 +848,6 @@
   box-sizing: border-box;
 }
 
-/*
- * Scrollbars stay visually quiet until their owning scroll region is hovered.
- * Scrolling remains fully functional at all times.
- */
 * {
   scrollbar-color: transparent transparent;
 }
@@ -1143,32 +880,22 @@
   background-color: color-mix(in oklch, var(--color-ink-2)50%, transparent);
 }
 
-/* The app, login, onboarding and the website sit on `ground` (the website's
-   paper); the docs (`data-public-surface` alone on <html>) on the site's page
-   colour. Wide content scrolls in its owning region; document overflow stays
-   observable. */
 html {
   min-height: 100%;
   background: var(--color-ground);
-  /* Reserve the scrollbar track always, so short pages and long pages line up
-     and locking body scroll for a modal doesn't shift layout sideways. */
   scrollbar-gutter: stable;
   scrollbar-color: color-mix(in oklch, var(--color-ink-2)35%, transparent) transparent;
   scrollbar-width: thin;
 }
 
-/* The shell never scrolls the document, so it reserves no gutter for it. */
 html:has([data-app-surface]) {
   scrollbar-gutter: auto;
 }
-/* The panel is the page's scroller: in-page focus and anchors clear its
-   sticky header and strips, and a record page's action bar at its foot. */
 [data-main-column] {
   scroll-padding-top: calc(var(--sticky-header-offset) + var(--page-top-gap));
   &:has([data-page-band='action-bar']) {
     scroll-padding-bottom: calc(var(--filter-bar-height) + 2 * var(--content-gutter));
   }
-  /* A section rail stays put when a longer section brings the scrollbar in. */
   &:has([data-section-rail]) {
     scrollbar-gutter: stable;
   }
@@ -1206,10 +933,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   background: var(--color-site-page);
 }
 
-/* Type. Each role owns face, size, leading, weight and tracking; ink is
-   `ink` except caption and caption-strong, which support (`ink-2`). The
-   app's own bindings follow the shared roles below. A colour utility at the call site still wins, since
-   these sit in the components layer. Emphasis inside text is weight 500. */
 @layer components {
   .type-display,
   .type-title {
@@ -1248,7 +971,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     line-height: var(--text-subheading--line-height);
     font-weight: var(--weight-medium);
   }
-  /* 14/20 on every surface (the website's `body` is its 16px reading size). */
   .type-body {
     font-size: var(--text-body-sm);
     line-height: var(--text-body-sm--line-height);
@@ -1293,9 +1015,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--weight-medium);
   }
 
-  /* The app's roles (2.1): the sans face speaks, numbers included (its
-     tabular numerals); the mono face is only literal machine text (`code`);
-     nothing is uppercase or tracked. The website keeps its mono roles. */
   :root:not([data-public-surface]) :is(.type-caption-strong, .type-code) {
     letter-spacing: 0;
     color: var(--color-ink);
@@ -1326,8 +1045,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--weight-medium);
   }
 
-  /* The website's own roles, kept for its product screens (components/
-     marketing/screens) and docs: the app never uses them. */
   .type-page-title {
     font-family: var(--font-sans);
     font-size: var(--text-page-title);
@@ -1352,7 +1069,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     text-transform: uppercase;
     color: var(--color-ink-muted);
   }
-  /* The product screens' card and key-figure labels. */
   .type-screen-label {
     font-family: var(--font-mono);
     font-size: var(--text-screen-label);
@@ -1362,7 +1078,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     text-transform: uppercase;
     color: var(--color-ink-2);
   }
-  /* Key caps (Kbd): mono 12/16 in the app and on the website. */
   .type-data-sm {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
@@ -1372,10 +1087,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     letter-spacing: 0;
   }
 
-  /* Rendered Markdown (Agent output, evidence answers): reading text in the
-     primary ink, headings in the title and heading roles, code on
-     `surface-sunken` in the mono face. Generated headings start at h2 (see
-     markdown.tsx). */
   .prose-content {
     font-family: var(--font-sans);
     font-size: var(--text-prose);
@@ -1440,12 +1151,9 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     border-radius: var(--radius-control);
   }
   .prose-content .prose-table-frame table { margin: 0; }
-  /* In an Agent reply the prose stays on the surface; a table takes the light frame. */
   :root:not([data-public-surface]) [data-turn-rail] .prose-table-frame {
     border-radius: var(--radius-card);
   }
-  /* A table keeps readable columns and scrolls inside its frame; it never
-     squeezes its cells to the column width letter by letter. */
   .prose-content table {
     width: max-content;
     min-width: 100%;
@@ -1485,7 +1193,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .prose-compact :is(th, td) { padding: 0.5rem 0.75rem; }
 
 
-  /* The highlighter: your brand's phrase in a quoted answer. */
   .cl-mark {
     background: var(--color-accent-wash);
     color: var(--color-ink);
@@ -1495,10 +1202,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   }
 }
 
-/* The page workspace editor's text field ring, drawn inside the pane so the
-   scroller never clips it, and a pressed suggestion's card in the focus ink
-   over its own border utility. The rest of the editor's look loads with its route
-   (components/agent/workspace/page-workspace.css). */
 .page-editor .cm-editor.cm-focused {
   outline: none;
 }
@@ -1510,9 +1213,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
 }
 
 @layer base {
-  /* Headings are the sans face at the heading weight unless a display role
-     sets the display face, which is opt-in, so it never lands under 18px by
-     default. */
   h1,
   h2,
   h3,
@@ -1536,27 +1236,20 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--weight-medium);
   }
 
-  /* A column or row head names its cells: 400, never the browser's bold. */
   th {
     font-weight: var(--weight-regular);
   }
 
-  /* Glyphs draw at 1.75, so a 16px glyph matches the label beside it.
-     The stroke scales with the box, so the app's 12-14px glyphs take 2. */
   .tabler-icon {
     stroke-width: 1.75;
   }
   :root:not([data-public-surface]) .tabler-icon:is(.size-3, .size-3\.5) {
     stroke-width: 2;
   }
-  /* ProductImage: in light a shot's white backdrop melts into its tile. */
   :root:not([data-theme='dark']) [data-product-photo] {
     mix-blend-mode: multiply;
   }
 
-  /* The pointer affordance, declared once for the whole app. Keyed on ROLE as
-     well as tag, because the same control is a `button` in one primitive and a
-     `div` in another. */
   button,
   summary,
   select,
@@ -1584,16 +1277,11 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   }
 }
 
-/* Primary metadata ink keeps current/pressed navigation readable. */
 .focus-ring[aria-current='page'] .type-caption,
 a.focus-ring:active .type-caption {
   color: var(--color-ink);
 }
 
-/* Keyboard focus is a solid `focus` ring on every interactive element but a
-   field, never removed: on the website 2px of ink 2px out; in the app a 1px
-   accent edge on the control with a soft accent glow (AR-13, below). A
-   field lights its own edge instead (the field rule). */
 :focus-visible,
 .focus-ring:focus-visible {
   outline: var(--focus-width, 2px) solid var(--color-focus);
@@ -1616,34 +1304,20 @@ a.focus-ring:active .type-caption {
   box-shadow: 0 0 0 3px var(--focus-glow);
 }
 
-/* The ring's colour and width hold at rest too, so a `transition-colors`
-   control never fades its ring in from its text colour (an `ink-2` ring on
-   a sidebar row) and the resting outline reads as the same ring. */
 :where(:root:not([data-public-surface]) *) {
   outline-color: var(--color-focus);
   outline-width: var(--focus-width);
 }
 
-/* After a press (`data-input-modality="pointer"`, kept by
-   components/ui/input-modality.ts) nothing but a text field draws the ring:
-   browsers ring a clicked tab by heuristic, a menu row a script focused as
-   the pointer moved, and the element whose focus they restore when the
-   reader returns to the tab. The next key brings the ring back. A row whose
-   submenu is open never rings: focus is in the submenu, or the pointer
-   opened it. */
 [data-input-modality='pointer'] :focus-visible:not(input, textarea, select, [contenteditable]),
 [role='menuitem'][data-state='open']:focus-visible {
   outline: none;
 }
 
-/* Only a whole-row control inside a list that clips its corners, and a tab
-   inside its scroll row: the same ring, drawn 2px inside. Every other
-   control (a dialog's close included) takes the standard ring above. */
 .focus-ring-inset:focus-visible {
   outline: var(--focus-width, 2px) solid var(--color-focus);
   outline-offset: calc(-1 * var(--focus-width, 2px));
 }
-/* The app's inset rings glow inward, where their clipping frame shows it. */
 :root:not([data-public-surface]):not([data-input-modality='pointer'])
   :is(.focus-ring-inset, .table-frame tr, [data-row-title] a, .palette-field):is(
     :focus-visible,
@@ -1652,9 +1326,6 @@ a.focus-ring:active .type-caption {
   box-shadow: inset 0 0 0 3px var(--focus-glow);
 }
 
-/* A focused field lights its own edge: in the app the accent edge and its
-   glow (AR-13); on the website the edge thickens inside a `line` halo. An invalid field keeps its crimson edge (its own
-   `--field-focus-edge`). A framed field lights its frame. */
 .focus-input:focus-visible,
 .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
   border-color: var(--field-focus-edge, var(--color-focus));
@@ -1668,20 +1339,12 @@ a.focus-ring:active .type-caption {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--field-focus-edge) 24%, transparent);
 }
 
-/* A field the reader did not Tab into (an overlay or Edit action focused it
-   on open, or a press into a dialog's field) never takes the outline ring
-   (`data-quiet-focus`, components/ui/input-modality.ts); its edge still lights. */
 :root:not([data-public-surface])
   :is([data-quiet-focus]:focus-visible, .focus-frame:has([data-quiet-focus]:focus-visible)) {
   outline: none;
   box-shadow: none;
 }
 
-/* Containers. Every framed surface inside the app's panel (tables, strips,
-   setting rows, slips, charts) is the panel's colour in both themes; only a
-   table's head band, hover and selected fills and overlays differ (owner,
-   2026-11-20). What sits inside a container never draws a second frame, and
-   an inset (`.surface-inset`: quoted or raw material) is the sunken fill. */
 .table-frame {
   border: 1px solid var(--color-rule);
 }
@@ -1700,9 +1363,6 @@ a.focus-ring:active .type-caption {
   background: var(--color-well);
 }
 
-/* A card never sits in a card (2.4). Inside a card, a dialog or a drawer, a
-   card or a slip steps down to the inset, and a framed section to a plain
-   group (no edge or padding of its own). A clickable slip keeps its edge. */
 :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
   :is(.surface-card, .surface-slip) {
   background: var(--color-well);
@@ -1715,16 +1375,10 @@ a.focus-ring:active .type-caption {
 }
 
 
-/* Text entry belongs to the field frame. Auxiliary buttons keep their own
-   focus edge and do not also highlight the surrounding frame. */
 .focus-frame :is(input, textarea, select):focus-visible {
   outline: none;
 }
 
-/* A palette's search row (the command palette, docs search): the input is
-   the dialog's only field, so the row carries its focus. The app's palette
-   opens with the caret only; Tab back into the field draws the one standard
-   ring, inside because the dialog clips its edges. */
 .palette-field input:focus-visible {
   outline: none;
 }
@@ -1733,14 +1387,7 @@ a.focus-ring:active .type-caption {
   outline-offset: calc(-1 * var(--focus-width));
 }
 
-/* Rhythm (2.2) belongs to Section, the template and the grid, never a page.
-   A section that is not first in its container sits 32 below the block
-   above it. A container that already spaces its children (Stack,
-   PageSections, SectionStack, AppGrid) names its gap in `data-rhythm-gap`,
-   so the section adds only the difference. */
 @layer components {
-  /* The Settings layout: the page and each tab panel stack their groups 32
-     apart; a group's frame is its edge, so no section rule or margin is added. */
   [data-settings-sections],
   [data-settings-sections] > [role='tabpanel'] {
     display: flex;
@@ -1754,11 +1401,6 @@ a.focus-ring:active .type-caption {
       content: none;
     }
   }
-  /* Section spacing: no rule between page sections (owner, 2026-11-21),
-     only their spacing. A page section is a section, or a grid of them,
-     placed straight in the page body, a tab panel or a container that spaces
-     sections (`data-rhythm-gap`), not inside another section or a card.
-     Zero specificity, so the column overrides below win. */
   :where(
     :is([data-page-body], [data-page-body] :is([data-rhythm-gap], [role='tabpanel']))
       > :is(section, [data-app-grid]:has(> section)):not(:has([data-figure-strip]:last-child))
@@ -1776,9 +1418,6 @@ a.focus-ring:active .type-caption {
       --grid-gap-x: initial;
       --grid-gap-y: initial;
     }
-    /* In columns (`column-split` for pair and thirds, `column-wide` for
-       halves and main-aside; the page body is always in the main column) the
-       first row's later cells sit beside the first, from its top. */
     @container main (min-width: 688px) {
       &:is([data-app-grid='pair'], [data-app-grid='thirds']) {
         --grid-gap-x: calc(2 * var(--page-section-gap));
@@ -1822,8 +1461,6 @@ a.focus-ring:active .type-caption {
     --rhythm-gap-above: 4px;
   }
 
-  /* The account button carries the location mark while the page is one of
-     the account's (Settings, Billing, Pricing). */
   [data-sidebar-ident][aria-current='page'] {
     position: relative;
   }
@@ -1838,12 +1475,6 @@ a.focus-ring:active .type-caption {
   }
 }
 
-/* One primary per view (STA-03): an empty state on the page that offers an
-   action draws its main (first, secondary) button with the primary face; the
-   buttons after it keep the secondary face. The masthead's primary takes the
-   secondary face while it shows (StateBlock, MastheadPrimary). Both
-   attributes are app-only; the disabled rule below outranks these, so a
-   disabled button keeps the one disabled look. */
 [data-state-offer] [data-button-variant='secondary']:first-child {
   border-color: var(--color-primary);
   background-color: var(--color-primary);
@@ -1854,7 +1485,6 @@ a.focus-ring:active .type-caption {
   background-color: var(--color-raised);
   color: var(--color-ink);
 }
-/* A secondary button's 16px icon is `ink-2` beside its `ink` label. */
 :root:not([data-public-surface])
   :is([data-button-variant='secondary'], [data-demoted] [data-button-variant])
   svg {
@@ -1864,8 +1494,6 @@ a.focus-ring:active .type-caption {
   color: inherit;
 }
 
-/* Disabled (2.8): one look for every variant. It keeps its frame (the rule
-   edge on the raised fill, no ink fill), so it never reads as text. */
 :root:not([data-public-surface])
   [data-button-variant]:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
   background-color: var(--color-raised);
@@ -1972,7 +1600,6 @@ samp {
 }
 
 
-/* The live rung: one accent rung pulsing its opacity. */
 @keyframes live-rung {
   50% {
     opacity: 0.35;
@@ -1980,7 +1607,6 @@ samp {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Every motion goes; state changes become instant. */
   *,
   ::before,
   ::after {
@@ -1991,13 +1617,11 @@ samp {
   }
 }
 
-/* Skip link — the first tab stop. Off-screen until focused. */
 .skip-link {
   position: fixed;
   top: 0.5rem;
   left: 0.5rem;
   z-index: 100;
-  /* Far enough up that its drop shadow stays off screen too. */
   transform: translateY(calc(-100% - 5rem));
   border-radius: var(--radius-control);
   background: var(--color-surface);
@@ -2011,7 +1635,6 @@ samp {
   transform: translateY(0);
 }
 
-/* In-page anchors must clear the fixed chrome so linked sections land below it. */
 [id] {
   scroll-margin-top: calc(var(--sticky-header-offset) + 1.5rem);
 }
@@ -2020,7 +1643,6 @@ samp {
   scroll-margin-top: calc(var(--marketing-nav-offset) + 1.5rem);
 }
 
-/* Fixed chrome respects the notch on mobile. */
 .safe-top {
   padding-top: env(safe-area-inset-top, 0px);
 }
@@ -2041,11 +1663,6 @@ label {
   }
 }
 
-/* Every app table: a `rule` frame at radius 8 on the panel, a 32 head band
-   on `raised` under a hairline, 40 rows with hairlines between them. The
-   DataTable frame draws the edge (its foot band sits inside it) and clips
-   (not `hidden`), so sticky heads still pin; a Table on its own draws it on
-   its scroll frame. Title and toolbar sit on the page above the frame. */
 :root:not([data-public-surface]) :is([data-data-table-frame], .table-frame:not([data-data-table] *)) {
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-card);
@@ -2082,7 +1699,6 @@ label {
 :root:not([data-public-surface]) .table-frame thead th[aria-sort] {
   color: var(--color-ink);
 }
-/* Body text is the sans face; numbers line up in tabular numerals. */
 :root:not([data-public-surface]) .table-frame tbody :is(td, th) {
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
@@ -2090,7 +1706,6 @@ label {
 :root:not([data-public-surface]) .table-frame td.tabular-nums {
   font-variant-numeric: tabular-nums;
 }
-/* The first and last cells take 16, so text aligns with the card's padding. */
 :root:not([data-public-surface]) .table-frame tr > :first-child {
   padding-inline-start: 16px;
 }
@@ -2098,11 +1713,6 @@ label {
   padding-inline-end: 16px;
 }
 
-/* A DataTable's pinned block and column widths load with DataTable
-   (components/ui/data-table.css). */
-
-/* The identity cell's title link is the whole (pinned, positioned) cell to
-   the pointer, with the inset ring; the cell's other controls stay above it. */
 :is([data-pinned='1'] tr > :first-child, [data-pinned='2'] tr > :nth-child(2)) {
   & [data-row-title] a::after {
     content: '';
@@ -2118,9 +1728,6 @@ label {
   }
 }
 
-/* A StateBlock on the page sits on the surface with no box, padded 24. Inside
-   a container (a framed section, slip, table or dialog) it pads 16, and the
-   gaps under the icon tile and above the actions step down to 8 and 12. */
 :root:not([data-public-surface]) [data-state-frame] {
   --state-title-gap: 16px;
   --state-action-gap: 16px;
@@ -2141,9 +1748,6 @@ label {
   padding: 16px;
 }
 
-/* A plotted chart (one with a height role) on the page takes the light frame
-   a table takes, padded 12 by 16, its key inside; inside a container it
-   draws none. A drawing sized by its own rows stays on the surface. */
 :root:not([data-public-surface]) [data-chart-frame]:not([data-chart-frame='auto']) {
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-card);
@@ -2156,13 +1760,6 @@ label {
   padding: 0;
 }
 
-/* A DataTable column's alignment and numerals load with DataTable
-   (components/ui/data-table.css). */
-
-/* Rows are divided by `rule` lines between them only: drawn inside the row
-   (an inset line), never under the last row. A ledger row takes
-   the same line on its content edge: the row bleeds 12 each side for its
-   hover tint, and the line does not. */
 .table-frame tbody > tr > :is(td, th) {
   box-shadow: inset 0 -1px 0 var(--color-rule);
 }
@@ -2181,9 +1778,6 @@ label {
   box-shadow: none;
 }
 
-/* A row that opens something (TableRow with `onClick`) tints under a fine
-   pointer as one piece: the tint is on the cells, so the pinned first cell's
-   opaque fill takes it too. Other rows do not answer the pointer. */
 @media (hover: hover) and (pointer: fine) {
   :root:not([data-public-surface]) .table-frame tbody > tr[data-pressable]:hover > * {
     background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
@@ -2193,7 +1787,6 @@ label {
   background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
 }
 
-/* Your row's accent mark keeps the inset row hairline beside it. */
 :root:not([data-public-surface]) .table-frame tbody > tr[data-you] > :first-child {
   box-shadow:
     inset var(--mark-width) 0 0 var(--color-accent),
@@ -2203,9 +1796,6 @@ label {
   box-shadow: inset var(--mark-width) 0 0 var(--color-accent);
 }
 
-/* A row is the same height with or without a control in it: where the
-   control is taller than the row's line (44 under a coarse pointer), it lends
-   the difference from the cell's padding. */
 :root:not([data-public-surface])
   .table-frame
   tbody
@@ -2217,9 +1807,6 @@ label {
   );
 }
 
-/* ScrollFrame: the content fades out at the edge it can scroll towards (a
-   mask on the content itself, never a tinted tray behind it). A mask clips
-   the focus ring outside the box, so a focused frame drops its fade. */
 [data-scroll-frame][data-scroll-end] [data-scroll-content]:not(:focus-visible) {
   mask-image: linear-gradient(to left, transparent, black 24px);
 }
@@ -2236,12 +1823,6 @@ label {
   );
 }
 
-/* FigureStrip (`figureRows`, AR-3): one `rule`-framed strip at radius 8,
-   cells as wide as the first row's share, divided by hairlines. Each cell
-   draws its dividers outside its own start and top edge; the frame clips the
-   ones on its edge, so a wrapped strip never doubles a line. A cell is
-   10 + label 16 + 2 + value 28 + 10. The value sits at the foot, so a wrapped
-   label never moves it off the row's baseline. */
 [data-figure-strip] {
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-card);
@@ -2258,7 +1839,6 @@ label {
     -1px 0 0 var(--color-rule),
     0 -1px 0 var(--color-rule);
 }
-/* A label wraps between words only, never mid-word and never cut. */
 [data-figure-cell] dt {
   overflow-wrap: normal;
   word-break: normal;
@@ -2272,19 +1852,14 @@ label {
   align-self: end;
   min-height: var(--text-figure--line-height);
 }
-/* An absent value is its muted mark at body size on the value's 24px line. */
 [data-figure-value] [data-absence] {
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   font-weight: var(--weight-regular);
 }
-/* Loading: `well` blocks at the mark radius. */
 [data-figure-block] {
   border-radius: var(--radius-mark);
 }
-/* A pressable figure tints as one piece (its overlay-hover and -pressed
-   utilities); a chosen one fills with the well, inside the row's lines. The
-   filled series swatch marks the chosen one too. */
 [data-figure-cell][data-selected] {
   background-color: var(--color-well);
 }
@@ -2305,7 +1880,6 @@ label {
   background: var(--color-well);
 }
 
-/* A ruled FactList in the app: in a narrow card the value moves under its label. */
 :root:not([data-public-surface]) [data-fact-list='ruled'] {
   container-type: inline-size;
 }
@@ -2316,19 +1890,10 @@ label {
   }
 }
 
-/* Lines only between rows: the last ledger row draws none. */
 [data-ledger-item]:last-child::after {
   content: none;
 }
 
-/* Control states on HeroUI v3's timings (owner 2026-11-18). A held press
-   scales a control (`--press`: buttons and triggers .97, menu rows .98,
-   radios .95, checkboxes .92), never on the website or under reduced motion.
-   Never on a popup's trigger: its menu opens on press, anchored to the
-   trigger's scaling box, and slid 3px with it on a first open (owner,
-   2026-11-19: "it dances on first click"). Its colours ease over
-   --motion-fast on every surface. In the components layer, so a control's
-   own transition utility still wins over it. */
 @layer components {
   .press {
     transition:
@@ -2347,8 +1912,6 @@ label {
   }
 }
 
-/* A dropdown's chevron turns over while its list is open (not a disclosure's,
-   which points by itself), on the same --motion-open as every chevron. */
 :is([aria-haspopup], [role='combobox']) .tabler-icon-chevron-down {
   transition: rotate var(--motion-open) var(--ease-standard);
 }
@@ -2356,15 +1919,11 @@ label {
   rotate: 180deg;
 }
 
-/* A picture drawn once per theme (the sign-in showcase): only the current
-   theme's draws, from first paint, so the other is never fetched. */
 :root:not([data-theme='dark']) [data-theme-art='dark'],
 :root[data-theme='dark'] [data-theme-art='light'] {
   display: none;
 }
 
-/* Checkbox: the primary fill grows from 70% under the check (checkbox.tsx draws
-   the check). */
 .check-box::after {
   content: '';
   position: absolute;
@@ -2383,7 +1942,6 @@ label {
   scale: none;
 }
 
-/* A focused row rings inside itself, so the frame never clips it. */
 .table-frame tr:focus-visible {
   outline-offset: calc(-1 * var(--focus-width, 2px));
 }

@@ -16,7 +16,6 @@ import { terminalPassword } from './terminal-password.ts';
 import { redact } from '../billing/admin.ts';
 import { operatorDiagnostic, withOperatorDatabase } from './operator.ts';
 
-/** One terminal answer, trimmed, with an optional default. */
 export async function accountPrompt(label: string, fallback?: string): Promise<string> {
   const terminal = createInterface({ input: process.stdin, output: process.stdout });
   const hint = fallback === undefined ? '' : ` [${fallback}]`;
@@ -200,7 +199,6 @@ export function runPlatformAccountManager(actor: string) {
       const choice = await accountPrompt('Choice');
       if (choice === '0') break;
       try {
-        // Every read and mutation below rechecks the operator's live authority.
         if (choice === '1') {
           display(await platformAccountInventory(db, session)); // NOSONAR -- Interactive menu: one operator choice at a time.
           continue;

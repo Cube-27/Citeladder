@@ -79,7 +79,6 @@ function Navigation() {
   );
 }
 
-/** The tab as the screen draws it: its own actions lead the filter bar's end, before Export. */
 function LinksTab({ canAnalyze }: Readonly<{ canAnalyze?: boolean }>) {
   const links = useInternalLinksBands({
     scope: { projectId: project.id, workspaceId: project.workspace_id },
@@ -303,13 +302,11 @@ describe('Internal links', () => {
     );
     renderPanel();
     expect(await screen.findByText('Anchor 0')).toBeInTheDocument();
-    // No Action yet reads as an absence, never a blank cell.
     const firstRow = screen.getByRole('row', { name: /Anchor 0/ });
     expect(within(firstRow).getByText('No Action yet').closest('[data-absence]')).toHaveAttribute(
       'data-absence',
       'not_set',
     );
-    // The tab's own action and its one export sit in its filter bar, not the masthead.
     const header = screen.getByRole('banner');
     expect(within(header).queryByRole('button', { name: 'Analyze again' })).not.toBeInTheDocument();
     const controls = screen.getByRole('group', { name: 'Search and filters' });
@@ -347,7 +344,6 @@ describe('Internal links', () => {
       'Consider Anchor 11 when preparing this page for publication.',
     );
     expect(within(drawer).getByRole('button', { name: /Copy HTML/ })).toBeInTheDocument();
-    // The captured passage highlights the anchor, so it is not printed again.
     expect(within(drawer).queryByText('Suggested anchor text')).toBeNull();
   });
 
@@ -370,7 +366,6 @@ describe('Internal links', () => {
       `/site/crawls/${current.crawl_id}/pages/${link.source.site_url_id}`,
     );
     expect(screen.queryByRole('link', { name: 'Destination' })).toBeNull();
-    // With no captured placement the drawer names the anchor itself.
     await userEvent.click(
       screen.getByRole('button', { name: 'Review link from Source to Destination' }),
     );

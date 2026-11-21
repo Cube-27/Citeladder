@@ -6,14 +6,8 @@ import { TextLink } from '@/components/ui/text-link';
 import { websiteHref } from '@/lib/config/app-link';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 
-// Read once at load; rendering stays pure.
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
-/**
- * Account access (sign-in, sign-up and the mailbox screens): a Flow page with
- * no kicker (the heading names the screen) beside the product showcase,
- * closed by the copyright and legal links.
- */
 export function AuthRouteShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <FlowPage

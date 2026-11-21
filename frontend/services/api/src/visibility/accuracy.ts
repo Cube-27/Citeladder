@@ -1,13 +1,3 @@
-/**
- * Fact-check reads: the selection's accuracy summary, its claim pages and
- * export rows, its frozen facts with the verdicts citing them, and the claims
- * of one execution.
- *
- * Projections over persisted `answer_claims`, `fact_verifications`,
- * `claim_verdicts` and the frozen fact revisions; nothing is extracted,
- * verified, called or repaired here. Only audits that froze a fact-check
- * contribute, and a workspace outside the pilot reads `not_enabled`.
- */
 import {
   claimVerdictSchema,
   factTopicSchema,
@@ -76,7 +66,6 @@ const revisionIdsSchema = z.array(z.string()).catch([]);
 type Frozen = {
   versions: PerceptionVersions;
   factCheck: FrozenFactCheck;
-  /** Claim topics with a frozen fact in scope; a claim on any other topic is not covered. */
   topics: ReadonlySet<string>;
 };
 type Subject = { analysisId: string; frozen: Frozen };
@@ -98,7 +87,6 @@ function identityOf({ versions, factCheck }: Frozen) {
   ]);
 }
 
-/** The workspace's fact revisions by id; a revision on an unknown topic is left out. */
 async function factRevisions(
   db: Database,
   workspaceId: string,
@@ -129,7 +117,6 @@ async function factRevisions(
   );
 }
 
-/** Each analysis's extraction and claim rows with their statuses and cited facts. */
 async function claimsOf(
   db: Database,
   workspaceId: string,
@@ -164,7 +151,6 @@ async function claimsOf(
         .execute(),
     ),
   ]);
-  // Only the verification at the audit's frozen template version counts.
   const versionOf = new Map(
     perceptions.map((row) => [
       row.id,
@@ -238,7 +224,6 @@ async function claimsOf(
       const topic = factTopicSchema.safeParse(row.topic);
       if (!topic.success) return [];
       const verdict = verdicts.get(row.id);
-      // Only a verdict the claim's status reads from can be overridden.
       const target =
         verdict && !verdict.model_omitted && !row.low_confidence && topics.has(topic.data)
           ? verdict
@@ -268,7 +253,6 @@ async function claimsOf(
   return result;
 }
 
-/** The selection's fact-checked answers that name the brand. */
 async function selectionAnswers(
   db: Database,
   selection: RunSelection,
@@ -364,14 +348,12 @@ export async function getAccuracy(
     periodTrendSelection(db, scoped),
   ]);
   const summary = accuracySummary(answers, factChecked, settings);
-  // The headline reads the pool; a pooled period's trend reads every run in it.
   const trend = period
     ? accuracyTrend((await selectionAnswers(db, period, { citations: false })).answers)
     : summary.trend;
   return { ...summary, trend, source_audit_ids: auditIds };
 }
 
-/** The decoded cursor position; a malformed one is refused, never read as the start. */
 function cursorPosition(cursor: string, fingerprint: Record<string, unknown>) {
   const [observed_at, execution_id, ordinal] = decodeKeysetCursor(
     cursor,
@@ -394,7 +376,6 @@ function claimFilter(filters: ClaimFilters) {
       (claim.status.kind === 'verdict' && claim.status.verdict === filters.verdict));
 }
 
-/** The selection's frozen fact revisions, each with the verdicts that cite it. */
 export async function getAccuracyFacts(
   db: Database,
   selection: RunSelection,
@@ -424,12 +405,6 @@ export const CLAIM_EXPORT_COLUMNS = [
   'prompt',
 ] as const;
 
-/**
- * The selection's claims under `filters`, newest answer first, as export rows.
- * A claim without a verdict carries its status (pending, low confidence,
- * unavailable) in the verdict column, never a blank. An edited claim's verdict
- * is the person's, with the model's beside it.
- */
 export async function accuracyClaimRows(
   db: Database,
   selection: RunSelection,
@@ -450,8 +425,6 @@ export async function accuracyClaimRows(
     )
     .sort(claimOrder);
   assertExportBound(claims.length, settings.claims_export_max_rows);
-  // An additional market keeps its own label while it exists; the default market
-  // and a deleted one read as the country and language the run froze.
   const labels = new Map(
     (await listMarkets(db, selection)).map((market) => [market.id, market.label]),
   );
@@ -466,7 +439,6 @@ export async function accuracyClaimRows(
       claim: claim.claim,
       facts: claim.facts.map((fact) => `${fact.statement} (revision ${fact.revision})`).join('; '),
       verdict: claim.status.kind === 'verdict' ? claim.status.verdict : claim.status.kind,
-      // The model's verdict on every row that has one; a person's change keeps it (AV-12).
       model_verdict: claim.edited?.model_verdict ?? modelVerdict,
       engine: engineLabel(answer.logicalEngine),
       market: marketName(answer.auditId),
@@ -513,7 +485,6 @@ export async function getAccuracyClaims(
   };
 }
 
-/** One execution's brand claims; empty outside the pilot or for an audit without a fact-check. */
 export async function executionClaims(
   db: Database,
   input: { workspaceId: string; analysisId: string; configuration: unknown },

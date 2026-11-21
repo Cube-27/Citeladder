@@ -77,7 +77,6 @@ describe('audit HTTP family cutover', () => {
       `attachment; filename="audit-${t.auditId}.csv"`,
     );
     expect((await request(viewer, t.workspaceId, `/${t.auditId}/metrics`)).status).toBe(404);
-    // An extra HTTP funding selector cannot change manual BYOK admission.
     const created = await request(t.userId, t.workspaceId, '', 'POST', {
       ...body,
       repetitions: 1,
@@ -138,7 +137,6 @@ describe('audit HTTP family cutover', () => {
     const [header, ...rows] = (await csv.text()).trim().split('\r\n');
     const columns = header!.split(',');
     const cells = (row: string) => {
-      // No cell in these rows holds a comma.
       const values = row.split(',');
       return Object.fromEntries(
         [
@@ -273,7 +271,6 @@ describe('audit HTTP family cutover', () => {
 
   it('closes an open stream once its caller is removed from the workspace', async () => {
     const t = await seed();
-    // A running audit's stream would otherwise stay open for its full duration.
     const recheckingApp = createApp(
       testConfig({ AUDIT_SSE_POLL_SECONDS: '0.05', ABUSE_SSE_ACCESS_RECHECK_SECONDS: '1' }),
       db,
@@ -320,7 +317,6 @@ describe('audit HTTP family cutover', () => {
 
   it('ends a running audit stream at its maximum duration', async () => {
     const t = await seed();
-    // A poll interval longer than the stream may live: the wait itself must stop at the deadline.
     const bounded = auditRuntime({
       AUDIT_SSE_MAX_DURATION_SECONDS: '1',
       AUDIT_SSE_POLL_SECONDS: '5',

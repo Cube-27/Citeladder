@@ -99,9 +99,7 @@ describe('Agent built-in tools', () => {
       skillId: 'content',
       payload: { title: 'Guide', body: 'Body', format_id: 'article' },
     });
-    // A second new document in the same turn takes the next number.
     expect(saveDocument(catalog, turn, { ...draft, title: 'FAQ' }, bounds).document).toBe(3);
-    // A later response saving the same document again, by title or by number, keeps the first save.
     const repeat = {
       ok: false,
       text: 'Document 2 was already saved in this turn and that save was kept. Change it with edit_document, or reply now.',
@@ -112,7 +110,6 @@ describe('Agent built-in tools', () => {
     expect(saveDocument(catalog, turn, { ...draft, document: 2, body: 'Other' }, bounds)).toEqual(
       repeat,
     );
-    // Replacing another document with a staged document's title would duplicate it too.
     expect(saveDocument(catalog, turn, { ...draft, document: 1, body: 'Other' }, bounds)).toEqual(
       repeat,
     );
@@ -152,7 +149,6 @@ describe('Agent built-in tools', () => {
       document: 1,
       text: "Document 1 saved ('New'). Reply now.",
     });
-    // The document's format applies when the save names none.
     expect(turn.staged.get(1)?.payload).toMatchObject({ title: 'New', format_id: 'faq' });
     expect(saveDocument(catalog, turn, { document: 1, title: 'Again', body: 'C' }, bounds)).toEqual(
       {
@@ -180,7 +176,6 @@ describe('Agent built-in tools', () => {
       ok: false,
       text: 'Set format_id to one of: article, faq.',
     });
-    // The chat's pinned format applies when a new document names none.
     const continuing = state({ skill: content(), formatId: 'faq' });
     saveDocument(catalog, continuing, { title: 'T', body: 'B' }, bounds);
     expect(continuing.staged.get(1)?.payload).toMatchObject({ format_id: 'faq' });
@@ -195,7 +190,6 @@ describe('Agent built-in tools', () => {
 
   it('edits the named document with exact, unique replacements, all or none', () => {
     const turn = state({ documents: [saved()] });
-    // With one document the number may be left out, and no methodology is needed.
     expect(
       editDocument(
         catalog,
@@ -225,7 +219,6 @@ describe('Agent built-in tools', () => {
         target: null,
       },
     });
-    // A later edit in the same turn changes the staged text, not the saved one.
     editDocument(catalog, turn, { edits: [{ old_string: 'Intro.', new_string: 'Hi.' }] }, bounds);
     expect(turn.staged.get(1)?.payload.body).toBe('Hi.\n\nSizes run true to size.');
 
@@ -383,7 +376,6 @@ describe('Agent built-in tools', () => {
           replacement: 'School shoes for kids, sized by age.',
           needsInput: null,
           dependsOn: [],
-          // Writing the text for the Site Health finding replaces its advice.
           replaces: [open],
         },
         {
@@ -421,7 +413,6 @@ describe('Agent built-in tools', () => {
         'depends_on section needs old_string; for a field or the whole page use body. No suggestions were staged.',
       );
       expect(fresh.suggestions).toEqual([]);
-      // Only a page document takes suggestions.
       expect(
         suggestEdits(
           catalog,
@@ -437,14 +428,12 @@ describe('Agent built-in tools', () => {
     it('accepts only a rule the turn offers, or the rule of a Site Health finding open on the page', () => {
       const refused = (overrides: Record<string, unknown>, turn = pageTurn()) =>
         suggestEdits(catalog, turn, { suggestions: [suggestion(overrides)] }, bounds).text;
-      // A catalog rule whose evidence the turn lacks is not offered.
       expect(refused({ rule_id: 'coverage.cited_angles' })).toBe(
         'rule_id coverage.cited_angles is not a content rule offered for this page. Use one from the content_rules section: ai_answers.precise_terms, proof.specific_statistics. No suggestions were staged.',
       );
       expect(refused({ rule_id: 'clarity.made_up' })).toBe(
         'rule_id clarity.made_up is not a content rule offered for this page. Use one from the content_rules section: ai_answers.precise_terms, proof.specific_statistics. No suggestions were staged.',
       );
-      // Site Health raises its own rules; the model only writes the fix for one failing on the page.
       expect(refused({ rule_id: 'aeo.answer_first' })).toBe(
         'aeo.answer_first is a Site Health rule that is not failing on this page; Site Health raises it, not you. Write fixes only for the site_health_findings in content_rules. No suggestions were staged.',
       );
@@ -456,7 +445,6 @@ describe('Agent built-in tools', () => {
       ).toBe(
         'rule_id ai_answers.precise_terms is not a content rule offered for this page, and none are offered this turn; suggest only text for an open Site Health finding. No suggestions were staged.',
       );
-      // The open meta description finding takes its text even when no rule is offered.
       const bare = state({ ...pageTurn(), rules: new Set() });
       const finding = suggestEdits(
         catalog,
@@ -574,7 +562,6 @@ describe('Agent built-in tools', () => {
       ['save_document', true],
       ['suggest_edits', false],
     ]);
-    // The provider checks the same input schema the tool parses, without null branches.
     expect(tools[4]!.input_schema).toEqual({
       type: 'object',
       properties: { limit: { type: 'integer' } },
@@ -590,7 +577,6 @@ describe('propose_declaration on PostgreSQL', () => {
     await fixtures.cleanup();
     await db.destroy();
   });
-  /** An open page Action with one finding of `ruleId`, or none when `ruleId` is null. */
   async function action(scope: Scope, ruleId: string | null = 'brand_absent_high_value_prompt') {
     const where = { workspace_id: scope.workspaceId, project_id: scope.projectId };
     const target = `https://acme.example/page-${randomUUID().slice(0, 8)}`;
@@ -640,7 +626,6 @@ describe('propose_declaration on PostgreSQL', () => {
       text: 'Propose a declaration only for the chat’s Action, one the person mentioned, or one a read returned this turn. Read the Action first.',
     };
     expect(await propose(seen(scope, empty.id), unseen.id)).toEqual(notSeen);
-    // Another workspace's Action reads as unseen even when its id is known.
     expect(await propose(seen(scope, foreign.id), foreign.id)).toEqual(notSeen);
     expect((await propose(seen(scope, empty.id), empty.id)).text).toBe(
       'This Action cannot be declared now. No finding targets it. Tell the person instead of proposing it.',
@@ -664,7 +649,6 @@ describe('propose_declaration on PostgreSQL', () => {
       .runtime(
         scope,
         scripted([
-          // Two calls in one response run concurrently; only one proposal survives.
           [
             toolUse('propose_declaration', proposal, 'call_a'),
             toolUse('propose_declaration', proposal, 'call_b'),
@@ -688,7 +672,6 @@ describe('propose_declaration on PostgreSQL', () => {
       { kind: 'proposal', label: target.label },
     ]);
     expect(chat.messages[0]!.proposals).toEqual([]);
-    // The card renders from the chat's projection of the Action, not a later read.
     expect(chat.actions).toEqual([{ id: target.id, target_label: target.label, status: 'open' }]);
     expect(
       await db

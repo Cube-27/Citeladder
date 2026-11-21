@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
 
-/** A list this long gets a search box, so a reader never scrolls for a prompt. */
 const SEARCH_FROM = 10;
 
 type ChoiceFilter = Extract<FilterDefinition, { kind: 'choice' }>;
@@ -20,11 +19,6 @@ function isSearchable(filter: ChoiceFilter): boolean {
   return filter.searchable ?? total > SEARCH_FROM;
 }
 
-/**
- * One filter's menu body, the same in its chip's menu and in Filters: the
- * filter's name as the heading, its options ("Default" beside the unfiltered
- * one), then "Reset to …" once it is set.
- */
 export function FilterOptions({ filter }: Readonly<{ filter: FilterDefinition }>) {
   return (
     <>
@@ -40,18 +34,12 @@ export function FilterOptions({ filter }: Readonly<{ filter: FilterDefinition }>
   );
 }
 
-/**
- * "Latest run" reads "latest run" mid-sentence; a name ("United States",
- * "ChatGPT") keeps its capitals. A label whose second word is capitalised,
- * or that is one word, is taken as a name.
- */
 function resetTarget(label: string): string {
   const [first = '', second] = label.split(' ');
   const named = second === undefined || /^[A-Z]/.test(second) || /[A-Z]/.test(first.slice(1));
   return named ? label : `${label.charAt(0).toLowerCase()}${label.slice(1)}`;
 }
 
-/** A choice filter's options: a search box on a long list, then the options by group. */
 function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
@@ -108,11 +96,6 @@ function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
   );
 }
 
-/**
- * "Default" at the end of the unfiltered option, drawn as generated content:
- * the option's name and text stay its label, and "Reset to …" says the same
- * to a reader.
- */
 export function DefaultHint() {
   return (
     <span
@@ -123,25 +106,12 @@ export function DefaultHint() {
   );
 }
 
-/**
- * Opened from the keyboard, a menu panel takes focus; a field in it (a
- * choice list's search box, a custom filter's typed value) takes it instead, so
- * typing edits the field rather than jumping by letter. After the menu has
- * moved focus to its first option in the same event.
- */
 export function focusFieldOnEntry(event: FocusEvent<HTMLDivElement>) {
   if (event.target !== event.currentTarget) return;
   const input = event.currentTarget.querySelector('input');
   if (input) queueMicrotask(() => input.focus());
 }
 
-/**
- * A typed field inside a filter menu (a custom filter's value, a choice list's
- * search box): its keys edit the text, so they stop before the menu, which
- * would otherwise jump to an item by letter or close the submenu on Left.
- * Escape and Tab pass through, and so does Left from an empty field, which
- * returns to the list. Returns whether the key stayed with the field.
- */
 export function menuFieldKeys(event: KeyboardEvent<HTMLInputElement>): boolean {
   if (event.key === 'Escape' || event.key === 'Tab') return false;
   if (event.key === 'ArrowLeft' && event.currentTarget.value === '') return false;
@@ -149,7 +119,6 @@ export function menuFieldKeys(event: KeyboardEvent<HTMLInputElement>): boolean {
   return true;
 }
 
-/** Up from the first option goes back to the search box, wherever the options are drawn. */
 function backToSearch(event: KeyboardEvent<HTMLDivElement>) {
   if (event.key !== 'ArrowUp') return;
   const first = event.currentTarget.querySelector('[role="menuitemradio"]');
@@ -158,7 +127,6 @@ function backToSearch(event: KeyboardEvent<HTMLDivElement>) {
   event.currentTarget.closest('[role="menu"]')?.querySelector('input')?.focus();
 }
 
-/** The search box's keys stay with it; Down moves to the first option. */
 function searchKeys(event: KeyboardEvent<HTMLInputElement>) {
   if (!menuFieldKeys(event) || event.key !== 'ArrowDown') return;
   event.preventDefault();

@@ -15,7 +15,6 @@ import { CheckCircle2, XCircle } from '@/lib/icons';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { answerBrands, answerLinks, answerSources } from '@/lib/runs/answer-transcript';
 
-/** One check: its result, its name, and one line of detail that ends in an ellipsis when long. */
 function Outcome({
   label,
   detail,
@@ -60,7 +59,6 @@ function brandOutcomeDetail(evidence: ExecutionEvidence): string {
   return `First match at character ${evidence.brand_first_offset}`;
 }
 
-/** The four checks in one row on a desktop; two columns below it, one on a phone. */
 function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   const ownedNoun = evidence.owned_citation_count === 1 ? 'source' : 'sources';
   const competitorDetail =
@@ -97,11 +95,6 @@ function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }
   );
 }
 
-/**
- * The answer's text, or the sentence for its absence. An observed surface with
- * no text is two different things, and only the persisted OUTCOME separates
- * them: a measured absence is a finding, a missing capture a gap in ours.
- */
 function transcriptBody(evidence: ExecutionEvidence) {
   const text = evidence.answer_text.trim();
   if (text) return { kind: 'markdown', text } as const;
@@ -113,10 +106,6 @@ function transcriptBody(evidence: ExecutionEvidence) {
   return { kind: 'note', text: 'No answer text was captured for this execution.' } as const;
 }
 
-/**
- * One answer as a chat: the prompt and the engine's reply, then everything the
- * analysis found in it; the rail lists its brands, sources and searches.
- */
 export function AnswerEvidence({
   evidence,
   promptText,
@@ -155,7 +144,6 @@ export function AnswerEvidence({
           <EvidencePerception perception={evidence.perception} />
           <EvidenceClaims claims={evidence.claims} />
           <EvidenceAds ads={evidence.ads} />
-          {/* Only an observed surface has one; an LLM execution has no overview to report. */}
           {evidence.search_surface ? <SurfaceEvidence evidence={evidence.search_surface} /> : null}
           <EvidenceOutcomes evidence={evidence} />
         </>

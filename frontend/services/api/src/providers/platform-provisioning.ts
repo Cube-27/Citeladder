@@ -88,7 +88,6 @@ async function ensureConnection(
       credential_revision: randomUUID(),
       label: `platform ${transport} metadata`,
       base_url: '',
-      // Metadata provisioning makes no provider call and cannot certify credentials.
       last_test_status: '',
       last_tested_at: null,
       paused_at: null,
@@ -169,7 +168,6 @@ async function ensureTransport(
   };
 }
 
-/** Deployment-owned metadata only; never reads keys or uses customer BYOK custody. */
 export function provisionPlatformConnections(
   db: Database,
   actorEmail: string,

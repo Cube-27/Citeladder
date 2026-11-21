@@ -21,12 +21,6 @@ import { OnboardingPageClient } from './onboarding-page-client';
 const { hardNavigate } = vi.hoisted(() => ({ hardNavigate: vi.fn<(url: string) => void>() }));
 vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate }));
 
-/**
- * The first-project hand-off through the REAL selection and entitlement
- * providers. `onboarding-screen.test` mocks the project context, so it cannot
- * see what the providers do to the setup route once the project exists.
- */
-
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const DISCOVERY = '11111111-1111-4111-8111-111111111111';
 const PROJECT = '22222222-2222-4222-8222-222222222222';
@@ -233,8 +227,6 @@ async function createProject(router: ReturnType<typeof renderSetup>) {
 }
 
 it('opens the project a failed request committed instead of leaving setup open', async () => {
-  // The server finished creating the project, but the browser never saw the
-  // response (it gave up waiting, or the connection dropped).
   mswServer.use(
     http.post(`/api/v1/brand-discoveries/${DISCOVERY}/complete`, () => {
       projectExists = true;

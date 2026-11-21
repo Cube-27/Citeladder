@@ -17,7 +17,6 @@ import { readErrorProps } from '@/components/ui/notice';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'market', label: 'Market' },
-  // The metric names the KPI row uses: `mention_rate` here is the Visibility rate.
   { key: 'mention', label: 'Visibility', width: 'figure', kind: 'number' },
   { key: 'mention-change', label: 'Change', width: 'figure', kind: 'number' },
   {
@@ -43,10 +42,6 @@ function marketsState(query: UseQueryResult<VisibilityMarkets>): DataTableState 
   return undefined;
 }
 
-/**
- * Each market's latest run side by side. Markets are measured apart and never
- * pooled; a market without a run reads "Not run", never zero.
- */
 export function VisibilityByMarket({
   query,
   markets,

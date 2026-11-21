@@ -1,12 +1,3 @@
-/**
- * Pure selectors over the public billing catalog.
- *
- * These functions are the ONLY place a price, limit, or availability decision
- * is derived, and they derive it entirely from the catalog response. No module
- * here holds a price constant, and none may compute a total the server did not
- * send: a null price means that mode is not priced, which is a distinct
- * outcome from "free" and must never collapse to zero.
- */
 import type {
   BillingCatalog,
   CatalogAddon,
@@ -18,11 +9,6 @@ import type {
 import type { moneySchema, SubscriptionStatus } from '@citeladder/contracts/billing';
 import type { z } from 'zod';
 
-/**
- * Subscription states in which the workspace HAS a plan to change, cancel or
- * extend. Anything else — no subscription, ended, unpaid — is offered a new
- * subscription instead; `pending` is offered neither while it verifies.
- */
 export const SUBSCRIBED_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
   'active',
   'trialing',
@@ -32,10 +18,6 @@ export const SUBSCRIBED_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
 
 export type Money = z.infer<typeof moneySchema>;
 
-/**
- * What a tier's headline should show. The `unavailable` variant carries the
- * backend's own reason so no component invents copy for it.
- */
 export type HeadlinePrice =
   | { kind: 'price'; money: Money }
   | { kind: 'contact' }
@@ -45,7 +27,6 @@ export function catalogPlanByKey(catalog: BillingCatalog, key: string): CatalogP
   return catalog.plans.find((plan) => plan.key === key);
 }
 
-/** The display name of a plan, add-on or top-up; the key when the catalog has none. */
 export function catalogItemName(catalog: BillingCatalog, key: string): string {
   const entry = [...catalog.plans, ...catalog.addons, ...catalog.topups].find(
     (candidate) => candidate.key === key,
@@ -57,13 +38,6 @@ export function isSelfServeKey(key: string): key is SelfServePlanKey {
   return key === 'tier_1' || key === 'tier_2' || key === 'tier_3';
 }
 
-/**
- * The price to display for one plan in one credential mode.
- *
- * BYOK resolves to `base_price` and managed to `funded_total_price`; a null
- * price returns an explicit unavailable result. A contact-only plan never
- * shows a number at all.
- */
 export function headlinePrice(plan: CatalogPlan, mode: CredentialMode): HeadlinePrice {
   if (plan.contact_only) {
     return { kind: 'contact' };
@@ -82,12 +56,6 @@ export type CheckoutSelection =
   | { ok: true; catalog_key: SelfServePlanKey; credential_mode: CredentialMode }
   | { ok: false; reason: string | null };
 
-/**
- * The checkout request fields for one plan, or a refusal.
- *
- * Refuses contact-only plans and any mode the catalog marks unpurchasable —
- * the client must not be able to start a checkout the backend would reject.
- */
 export function checkoutSelection(plan: CatalogPlan, mode: CredentialMode): CheckoutSelection {
   if (plan.contact_only || !plan.self_serve || !isSelfServeKey(plan.key)) {
     return { ok: false, reason: plan.unavailable_reason };
@@ -100,15 +68,9 @@ export function checkoutSelection(plan: CatalogPlan, mode: CredentialMode): Chec
 
 export type ComparisonRow = {
   key: string;
-  /** Per-plan capability value, keyed by plan key. */
   values: Record<string, CatalogPlan['capabilities'][number] | undefined>;
 };
 
-/**
- * The comparison grid, derived from the union of capability keys the plans
- * publish — never from a hardcoded axis list, so a new backend capability
- * appears without a frontend change.
- */
 export function comparisonRows(catalog: BillingCatalog): ComparisonRow[] {
   const keys = new Set<string>();
   for (const plan of catalog.plans) {
@@ -128,13 +90,11 @@ export function isPurchasable(entry: CatalogAddon | CatalogTopup): boolean {
   return entry.availability === 'available' && entry.unit_price !== null;
 }
 
-/** Unknown catalog state must never be presented as a coming-soon launch. */
 export function selfServeCheckoutComingSoon(catalog: BillingCatalog): boolean {
   const selfServePlans = catalog.plans.filter((plan) => plan.self_serve && !plan.contact_only);
   return selfServePlans.length > 0 && selfServePlans.every((plan) => !plan.checkout_available);
 }
 
-/** No new plan can be bought: closed only when neither mode sells; managed alone still does. */
 export function newPlanCheckoutClosed(catalog: BillingCatalog): boolean {
   return (
     selfServeCheckoutComingSoon(catalog) &&
@@ -142,12 +102,6 @@ export function newPlanCheckoutClosed(catalog: BillingCatalog): boolean {
   );
 }
 
-/**
- * Format a catalog amount using the catalog's own currency and minor units.
- * Contains no currency or price constants — everything comes from the response.
- * The locale is fixed, like every other figure, so a server-rendered price
- * hydrates to the same text in any browser locale.
- */
 export function formatMoney(money: Money, minorUnits: number): string {
   const value = money.amount_minor / 10 ** minorUnits;
   return new Intl.NumberFormat('en-US', {
@@ -160,14 +114,6 @@ export function formatMoney(money: Money, minorUnits: number): string {
 
 export type PlanChangeDirection = 'upgrade' | 'downgrade';
 
-/**
- * Which way a move between two self-serve plans goes, for LABELLING only.
- *
- * Both prices come from the same catalog response, so they share a currency.
- * The server still decides the direction and prices an upgrade's prorated
- * charge; this only chooses which control the reader is offered. Equal or
- * missing prices answer `null`: no change is offered rather than a guess.
- */
 export function planChangeDirection(
   current: CatalogPlan,
   target: CatalogPlan,
@@ -178,7 +124,6 @@ export function planChangeDirection(
   return delta > 0 ? 'upgrade' : 'downgrade';
 }
 
-/** The add-ons and top-ups a subscriber on `planKey` may buy. */
 export function extrasForPlan(
   catalog: BillingCatalog,
   planKey: string,

@@ -16,7 +16,6 @@ import { probeConnection } from '../src/providers/probes.ts';
 import { dataforseoSecretIdentity } from '../src/providers/dataforseo-identity.ts';
 import { record } from '../src/db/json.ts';
 
-/** The audit worker suites' database, seeding and cleanup; call once per test file. */
 export function auditWorkerHarness() {
   const db = testDatabase(),
     fixtures = new VisibilityFixtures(db),
@@ -132,7 +131,6 @@ export function auditWorkerHarness() {
       { owner: 'worker', taskScope: scope, send, env: {}, ...(now ? { now } : {}) },
     );
   }
-  /** A Google AI Overview whose paid submission is known (`aio-task`), awaiting its free retrieval. */
   async function submittedOverview(pollCount: number) {
     const t = await seed(true, [], 'google_ai_overview');
     const connectionId = record(t.task.provider_route_snapshot).connection_id as string;

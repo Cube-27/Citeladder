@@ -9,7 +9,6 @@ import { nestedCategories } from '@/lib/products/category-tree';
 import type { useEngineCatalog } from '@/lib/providers/engines';
 import type { CommerceCatalog } from '@citeladder/contracts/commerce-suite';
 
-/** The reporting window every product page reads. */
 export function windowFilter(
   value: ProductWindowDays,
   onChange: (value: ProductWindowDays) => void,
@@ -22,10 +21,6 @@ export function windowFilter(
   });
 }
 
-/**
- * The scope every product page filters by: the window, the
- * engine and the prompt set the answers came from.
- */
 export function productScopeFilters({
   scope,
   engines,
@@ -65,11 +60,6 @@ export function productScopeFilters({
   ];
 }
 
-/**
- * The catalog category a page narrows to. A nested category names its
- * parents ("Coffee › Single Origin"); every option carries its product count,
- * and a parent's count includes its children's.
- */
 export function categoryFilter(
   value: string | null,
   catalog: Pick<CommerceCatalog, 'categories' | 'product_total'> | undefined,

@@ -12,18 +12,12 @@ import {
 import type { ActionTree } from '@/lib/api/actions';
 import { actionGoalSchema, type ActionGoal } from '@citeladder/contracts/actions';
 
-/**
- * The four goals as one FigureStrip, each its open count (New and In
- * progress); Let AI read your site says Blocking while a critical fix is New.
- * A figure jumps to its goal and opens it.
- */
 export function GoalStrip({
   goals,
   failed,
   onJump,
 }: Readonly<{
   goals: ActionTree['goals'] | undefined;
-  /** The read failed: counts say unavailable instead of loading or last known. */
   failed: boolean;
   onJump: (goal: ActionGoal) => void;
 }>) {
@@ -32,16 +26,13 @@ export function GoalStrip({
       label="Goals"
       twoLineLabels
       segments={actionGoalSchema.options.map((goal) => {
-        // A failed refresh says Unavailable rather than showing the last counts as current.
         const entry = failed ? undefined : goals?.find((candidate) => candidate.goal === goal);
         const label = ACTION_GOAL_LABEL[goal];
         const phrase = entry ? goalCountPhrase(goal, entry.count) : null;
         return {
           key: goal,
-          // The goal leads its count's words: body in ink over their ink-2 caption.
           label: <span className={textRole('body', 'text-ink')}>{label}</span>,
           loading: !failed && !goals,
-          // The count is the figure; its words follow in the caption, cut before the count is.
           value: entry ? (
             <span className="flex min-w-0 items-baseline gap-2" title={phrase ?? undefined}>
               <span className="shrink-0">{formatCount(entry.count)}</span>

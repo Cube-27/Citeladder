@@ -1,4 +1,3 @@
-/** A URL's issue history: the rules its latest audit no longer reports. */
 import { issueHistoryPageSchema } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 
@@ -16,14 +15,6 @@ import { shownIssueFilter } from './page-rows.ts';
 import { requireAdmitted } from './pages.ts';
 import { ruleTitle, type IssueRow } from './rules.ts';
 
-/**
- * A URL's resolved issues: rules found on it in earlier audits (or the latest
- * audit's superseded analyses) that its latest audit as the selected crawl
- * shows it (`pageAuditsSql`) no longer reports. One row per rule, its latest
- * record, newest first. Current open issues never appear (they are the page
- * detail), nor does an audit newer than that one; without a finalized latest
- * audit nothing is known to be resolved.
- */
 export async function issueHistory(
   db: Database,
   workspaceId: string,

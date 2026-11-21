@@ -1,6 +1,5 @@
 import type { PromptCandidate } from '@citeladder/contracts';
 
-/** What a reviewer should know about a candidate's quality check; null when it passed clean. */
 export function qualityStatusLabel(candidate: PromptCandidate): string | null {
   switch (candidate.quality_status) {
     case 'judged':
@@ -14,11 +13,6 @@ export function qualityStatusLabel(candidate: PromptCandidate): string | null {
   }
 }
 
-/**
- * Review copy for the quality judge's flags on a generated candidate.
- * Flags are signals about the question asked, never a score for the business;
- * an unknown flag code falls back to a generic prompt to double-check.
- */
 const QUALITY_FLAG_COPY: Record<string, string> = {
   decision_value: 'May be too generic to guide a buying decision',
   fits_business: 'May not fit your business',

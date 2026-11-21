@@ -9,8 +9,6 @@ resource "google_artifact_registry_repository" "images" {
     immutable_tags = false
   }
 
-  # Every deploy pushes new tags. Keep the last three versions of each image
-  # for rollback and delete anything else after a week. KEEP wins.
   cleanup_policy_dry_run = false
 
   cleanup_policies {
@@ -26,7 +24,7 @@ resource "google_artifact_registry_repository" "images" {
     action = "DELETE"
     condition {
       tag_state  = "ANY"
-      older_than = "604800s" # 7 days
+      older_than = "604800s"
     }
   }
 

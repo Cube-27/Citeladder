@@ -2,21 +2,8 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-/**
- * Card — the resting container: a `surface` box on the page ground that
- * groups one thing (a chart, a table, a form). Nobody clicks it, so it has no
- * edge: its fill is a step above the ground. `radius-lg` and the card's
- * inset on the box itself, so content that owns its edges (a table, a
- * scrolling list) sits in the same inset as text.
- *
- * Cards never nest and never take a coloured edge or fill; what groups inside
- * a card is an inset (`panelClasses`) or a divider. The card sets no display
- * of its own: a flex column would re-flow every card and put an overflow
- * boundary between a sticky child and its scroll container.
- */
 const CARD_FACE = 'bg-surface text-ink rounded-card shadow-card';
 
-/** The card, for a semantic element that is not a `section` (a list item, a link). */
 const cardClasses = () => cn('surface-card p-[var(--card-padding)]', CARD_FACE);
 
 export function Card({
@@ -26,22 +13,11 @@ export function Card({
 }: Readonly<ComponentPropsWithoutRef<'section'>>) {
   return (
     <section {...props} className={cn(cardClasses(), className)}>
-      {/* The card renders no title of its own, so a state inside keeps its parent's heading level. */}
       {children}
     </section>
   );
 }
 
-/**
- * CardHeader — the eyebrow, title and description on the left and `actions`
- * (a secondary or ghost Button, a Badge, a small control group) on the same
- * row at the right; when the row is too narrow the actions wrap below the
- * title rather than squeezing it. Title and description are one fact, 4
- * apart. When the card has more content the header closes with a hairline
- * across the card's full width: the header pads 16 above the rule and the
- * body starts 16 below it (the card inset on both sides), with no other
- * margin across the rule.
- */
 const HEADER_RULE =
   'not-last:-mx-[var(--card-padding)] not-last:mb-[var(--card-padding)] not-last:border-b not-last:border-rule not-last:px-[var(--card-padding)] not-last:pb-[var(--card-padding)]';
 
@@ -52,7 +28,6 @@ export function CardHeader({
   ...props
 }: Readonly<
   ComponentPropsWithoutRef<'header'> & {
-    /** Trailing controls or status on the title row; wraps below when narrow. */
     actions?: ReactNode;
   }
 >) {
@@ -74,7 +49,6 @@ export function CardHeader({
   );
 }
 
-/** CardEyebrow — the mono uppercase label above a CardTitle; never a heading. */
 export function CardEyebrow({
   children,
   className,

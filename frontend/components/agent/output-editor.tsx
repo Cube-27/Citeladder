@@ -11,14 +11,8 @@ import { agentWriteFailure } from '@/lib/agent/errors';
 import { agentMutations, type AgentDocumentRef, type AgentRevision } from '@/lib/api/agent';
 import { Notice } from '@/components/ui/notice';
 
-/** An edit in progress, bound to the revision it started from. */
 export type OutputDraft = { baseRevisionId: string; title: string; body: string };
 
-/**
- * A direct edit: saved as a new user revision on top of the one being edited.
- * The base is frozen when editing starts, so if the output moved on meanwhile
- * the server refuses the stale edit and nothing is lost — the draft stays.
- */
 export function OutputEditor({
   workspaceId,
   target,
@@ -46,7 +40,6 @@ export function OutputEditor({
       gap="compact"
       onSubmit={(event: FormEvent) => {
         event.preventDefault();
-        // The descriptor refreshes the chat and its revisions before this closes the editor.
         save.mutate(
           { ...target, baseRevisionId: draft.baseRevisionId, title, body },
           { onSuccess: onDone },

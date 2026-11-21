@@ -15,7 +15,6 @@ import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 const config = testConfig();
 const db = testDatabase(config);
 
-/** The headers a Worker sends for one upstream request. */
 async function signed(
   key: string,
   request: {
@@ -73,14 +72,12 @@ describe('health and readiness', () => {
         })
       ).status;
     const ingest = '/v1/crawl-logs/ingest/11111111-1111-4111-8111-111111111111';
-    // Reaches the route: an unknown source without a token is unauthorized, not routed away.
     expect(await status('POST', ingest, 'api.example.test')).toBe(401);
     for (const publicHost of ['app.example.test', 'example.test'])
       expect(await status('POST', ingest, publicHost)).toBe(404);
     for (const path of ['/ready', '/api/v1/auth/me', '/mcp/oauth/consent'])
       expect(await status('GET', path, 'api.example.test')).toBe(404);
     expect(await status('GET', '/ready', 'app.example.test')).toBe(200);
-    // MCP moved to the API host outright: the apex and app hosts no longer route it.
     expect(await status('GET', '/.well-known/oauth-authorization-server', 'api.example.test')).toBe(
       200,
     );
@@ -107,7 +104,6 @@ describe('health and readiness', () => {
     const publicHost = 'app.example.test';
     for (const path of ['/ready', '/api/v1/auth/me', '/mcp']) {
       expect(await code(path, { 'X-CiteLadder-Public-Host': publicHost })).toBe(403);
-      // The raw key is never a credential, and a foreign key's signature is refused.
       expect(
         await code(path, {
           'X-CiteLadder-Public-Host': publicHost,
@@ -123,7 +119,6 @@ describe('health and readiness', () => {
         expect(
           await code('/ready', await signed(token, { path: '/ready', publicHost: host })),
         ).toBe(200);
-    // A signature covers its path, method, host and time: none can be swapped.
     const ready = await signed(current, { path: '/ready', publicHost });
     expect(await code('/api/v1/auth/me', ready)).toBe(403);
     expect((await protectedApp.request('/ready', { method: 'POST', headers: ready })).status).toBe(
@@ -136,7 +131,6 @@ describe('health and readiness', () => {
     expect(
       await code('/ready', await signed(current, { path: '/ready', publicHost, timestamp: stale })),
     ).toBe(403);
-    // A valid signature alone is not enough: the public host must be one the Workers serve.
     for (const host of ['attacker.example', 'api-123.us-central1.run.app'])
       expect(
         await code('/ready', await signed(current, { path: '/ready', publicHost: host })),
@@ -156,7 +150,6 @@ describe('health and readiness', () => {
     expect(live.status).toBe(200);
     expect(await live.json()).toEqual({ status: 'ok' });
     expect((await protectedApp.request('/health', { method: 'POST' })).status).toBe(403);
-    // Only the exact path is exempt: no suffix, prefix, case or traversal variant.
     for (const path of [
       '/health/',
       '/healthz',
@@ -187,9 +180,7 @@ describe('health and readiness', () => {
         })
       ).text();
     expect(await identity('::ffff:203.0.113.7')).toBe('203.0.113.7');
-    // A malformed or absent address never becomes a shared rate-limit subject.
     expect(await identity('not-an-ip')).toBe('unavailable');
-    // The address is signed: changing it after signing is refused.
     const headers = await signed(key, {
       path: '/whoami',
       publicHost: 'app.example.test',
@@ -304,7 +295,6 @@ describe('request ids and the error envelope', () => {
       'unsupported_media_type',
     ]);
     expect(await post(null, json)).toEqual([415, 'unsupported_media_type']);
-    // A declared JSON body reaches validation, which refuses the incomplete workspace.
     expect(await post('application/json', json)).toEqual([422, 'validation_error']);
     expect(await post('application/json; charset=utf-8', json)).toEqual([422, 'validation_error']);
   });

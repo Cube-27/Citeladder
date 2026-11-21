@@ -21,8 +21,6 @@ vi.mock('@/lib/navigation/project-destination', () => ({
   useSelectWorkspace: () => selectWorkspace,
 }));
 
-// The transport is replaced on the module's own client object, so the real
-// mutation descriptor (and the refresh it carries) runs against it.
 vi.mock('@/lib/api/workspaces', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api/workspaces')>();
   Object.assign(actual.workspacesApi, { acceptInvitation });
@@ -45,14 +43,10 @@ describe('AcceptInvitationScreen', () => {
     acceptInvitation.mockResolvedValue({ id: WORKSPACE, name: 'Host', role: 'member' });
     const { rerender } = renderInvitation();
     await waitFor(() => expect(acceptInvitation).toHaveBeenCalledWith(TOKEN));
-    // A re-render must not re-post a single-use credential.
     rerender(<AcceptInvitationScreen />);
     expect(acceptInvitation).toHaveBeenCalledTimes(1);
 
     await waitFor(() => expect(selectWorkspace).toHaveBeenCalledWith(WORKSPACE, '/projects'));
-    // The destination is named explicitly and carries NO token: the shared
-    // navigation owner is what strips it, and this is the screen that proves
-    // the one-time credential never reaches the next URL or the history entry.
     const [, destination] = selectWorkspace.mock.calls[0]!;
     expect(destination).toBe('/projects');
     expect(destination).not.toContain(TOKEN);
@@ -77,7 +71,6 @@ describe('AcceptInvitationScreen', () => {
     );
     renderInvitation();
 
-    // The title says what happened; the code is reference text, never the headline.
     await screen.findByRole('heading', { level: 1, name: "This invitation can't be used" });
     expect(screen.queryByRole('heading', { name: 'Joining workspace' })).toBeNull();
     expect(screen.getByText(/Ask for a new link\./u)).toBeVisible();

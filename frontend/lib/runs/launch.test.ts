@@ -18,7 +18,6 @@ import {
 
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 const SET_ID = '22222222-2222-4222-8222-222222222222';
-/** The repetition range the prompt-set list carries, as the dialog passes it. */
 const LIMITS = { audit_repetitions_min: 1, audit_repetitions_max: 10 };
 const buildLaunchPayload = (launch: LaunchSelection) => buildWithLimits(launch, LIMITS);
 
@@ -155,8 +154,6 @@ describe('prompt batching', () => {
       makePrompt({ id: 'disabled', enabled: false, created_at: '2026-01-02T00:00:00Z' }),
       makePrompt({ id: 'earlier', created_at: '2026-01-03T00:00:00Z' }),
     ]);
-    // Archived and disabled prompts are not audit-eligible, so a batch must
-    // never spend a slot on one — the backend would reject the whole request.
     expect(auditablePrompts(set).map((prompt) => prompt.id)).toEqual(['earlier', 'later']);
   });
 

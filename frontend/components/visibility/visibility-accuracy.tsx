@@ -46,12 +46,6 @@ const CLAIM_VIEW_CODEC = stringUrlCodec<ClaimView>(
   'contradicted',
 );
 
-/**
- * What answers claimed about the brand, checked against its confirmed facts.
- * Accuracy always travels with its coverage, and a claim without a verdict is
- * a named state, never a zero. `lede` heads the key figures' card, `trend`
- * follows it, and `allClaims` and `byFact` are the claims card's other views.
- */
 export function AccuracyView({
   data,
   lede,
@@ -62,7 +56,6 @@ export function AccuracyView({
 }: Readonly<{
   data: AccuracyResponse;
   lede?: ReactNode;
-  /** Shown above the state when there are no facts or no claims yet, e.g. an import. */
   stateActions?: ReactNode;
   trend?: ReactNode;
   allClaims: ReactNode;
@@ -178,8 +171,6 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
                   </Tooltip>
                 ),
               },
-              // The two findings stay apart on the line: no confirmed fact on
-              // the point, and a fact that could not settle the claim.
               {
                 key: 'not_checked',
                 label: 'Not checked',
@@ -220,8 +211,6 @@ function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
                 </span>
               ))}
               <Inline as="span" className={textRole('caption', 'text-ink-2 flex-wrap')}>
-                {/* The badge takes the claim's own verdict tone; a claim
-                      without a verdict yet is neutral, not negative. */}
                 <StatusMark
                   variant="sentiment"
                   value={claim.verdict ? VERDICT_TONE[claim.verdict] : 'neutral'}

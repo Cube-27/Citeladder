@@ -74,7 +74,6 @@ describe('provider-free audit estimates and persisted exports', () => {
   it('estimates only the prompts a launch runs, never archived or over-plan ones', async () => {
     const t = await auditTenant(db, fixtures);
     await prompt(db, t.setId, 'An archived prompt', { status: 'archived' });
-    // Two slots: the fixture's prompt and the archived one fill them, so this one is over plan.
     await grant(db, await billingAccount(db, t.workspaceId), { key: 'prompt_slots', value: 2 });
     const overPlan = await prompt(db, t.setId, 'A prompt beyond the plan', {
       createdAt: new Date(Date.now() + 60_000),

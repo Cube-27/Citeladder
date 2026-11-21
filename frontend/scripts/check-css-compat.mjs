@@ -5,23 +5,6 @@ import postcss from 'postcss';
 import valueParser from 'postcss-value-parser';
 import { unsupported } from './browser-support-data.mjs';
 
-/**
- * Stylesheet half of the browser-compatibility gate (`pnpm check:compat`):
- * fails when authored CSS uses an at-rule, property, keyword value, function
- * or pseudo-class/element that a browser in the package.json browserslist
- * lacks, per MDN's browser-compat-data.
- *
- * A use passes when it is guarded: inside `@supports`, or a declaration that
- * follows another of the same property in its rule (the earlier one is the
- * fallback). Media query features and `<style>` in `.astro` files are not read.
- * Names BCD does not know (Tailwind's `@theme`, custom properties) pass.
- */
-
-/**
- * Features below the matrix that degrade acceptably, each with what a browser
- * without it shows. An entry no stylesheet needs any more fails the gate, so
- * a matrix raise or a removal takes it out of this list.
- */
 const ACKNOWLEDGED_ENHANCEMENTS = {
   'text-wrap: pretty': 'Paragraphs wrap greedily.',
   'scrollbar-color': 'Scrollbars keep the platform colours.',
@@ -49,8 +32,6 @@ const ACKNOWLEDGED_ENHANCEMENTS = {
 const STYLE_ROOTS = ['apps', 'components', 'lib', 'packages'];
 const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', '.astro', 'public']);
 
-// CSS functions by name: every `css.types` entry and each entry's members
-// (`light-dark` sits under `color`).
 const FUNCTIONS = new Map();
 for (const [name, feature] of Object.entries(bcd.css.types)) FUNCTIONS.set(name, feature);
 for (const type of Object.values(bcd.css.types)) {
@@ -66,8 +47,6 @@ function guardedBySupports(node) {
   return false;
 }
 
-// A declaration after another of the same property in its rule, prefixed or
-// not, is an enhancement over that fallback.
 function hasFallback(declaration) {
   const siblings = declaration.parent?.nodes ?? [];
   const property = declaration.prop.replace(/^-[a-z]+-/, '');
@@ -91,7 +70,6 @@ function declarationFeatures(declaration) {
   return features;
 }
 
-// The selector without attribute selectors and strings, whose colons are not pseudo-classes.
 function bareSelector(selector) {
   let bare = '';
   let closing = null;
@@ -120,7 +98,6 @@ function nodeFeatures(node) {
   return [];
 }
 
-/** Each feature in a stylesheet that a matrix browser lacks, once per feature and line. */
 export function cssCompatViolations(source, file, matrix) {
   const found = new Map();
   postcss.parse(source, { from: file }).walk((node) => {
@@ -128,7 +105,6 @@ export function cssCompatViolations(source, file, matrix) {
     for (const [feature, data] of nodeFeatures(node)) {
       const line = node.source?.start?.line ?? 0;
       const key = `${feature}@${line}`;
-      // A property the matrix lacks makes its keyword values moot.
       const property = feature.includes(': ') && found.has(`${feature.split(': ')[0]}@${line}`);
       if (found.has(key) || property) continue;
       const missing = unsupported(data, matrix);
@@ -138,10 +114,6 @@ export function cssCompatViolations(source, file, matrix) {
   return [...found.values()];
 }
 
-/**
- * Printable failures for `uses` (each `{ file, feature, line, missing }`):
- * every unacknowledged use, and every acknowledgement nothing used.
- */
 export function stylesheetFailures(uses, acknowledged = ACKNOWLEDGED_ENHANCEMENTS) {
   const failures = uses
     .filter((use) => !Object.hasOwn(acknowledged, use.feature))
@@ -171,7 +143,6 @@ function stylesheets(root, directory) {
   });
 }
 
-/** Failures across the authored stylesheets under `root`, as printable lines. */
 export function checkStylesheets(root, matrix) {
   const uses = STYLE_ROOTS.flatMap((directory) => stylesheets(root, directory)).flatMap((file) =>
     cssCompatViolations(fs.readFileSync(path.join(root, file), 'utf8'), file, matrix).map(

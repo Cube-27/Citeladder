@@ -15,7 +15,6 @@ import { PROMPT_RUNS, reserveTaskFunding } from './prompt-runs.ts';
 export const repairInput = auditRepairRequestSchema;
 const denied = (message: string) => new ApiError(409, message);
 
-/** A terminal audit that is not a probe run: a probe's answers are read per launch, so a new probe is its retry. */
 function repairable<Audit extends { audit_scope: string; status: string }>(
   parent: Audit | undefined,
 ) {
@@ -27,7 +26,6 @@ function repairable<Audit extends { audit_scope: string; status: string }>(
   return parent;
 }
 
-/** A repair is an immutable BYOK child of selected failed frozen slots, never a replay of paid dispatch. */
 export function createRepairAudit(
   db: Database,
   workspaceId: string,

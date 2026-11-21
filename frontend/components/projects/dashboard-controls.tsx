@@ -16,8 +16,6 @@ export function ProjectControls({
   onEditProject?: (project: Project) => void;
 }>) {
   const router = useNavigate();
-  // A Viewer is never offered the creation affordance, matching the switcher —
-  // and the backend refuses it either way.
   const { activeWorkspaceId, mayCreate, canAddProject, remainingProjectSlots } =
     useProjectCreation();
   if (!onEditProject && !mayCreate) return null;

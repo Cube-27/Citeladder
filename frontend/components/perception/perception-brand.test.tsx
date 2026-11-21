@@ -97,9 +97,7 @@ function response(overrides: Partial<PerceptionResponse> = {}): PerceptionRespon
 describe('Perception view', () => {
   it('heads with the negative share only from the classified minimum', () => {
     const { unmount } = render(<PerceptionView data={response()} />);
-    // 4 classified: no share in the headline or the lede, never "nothing negative".
     expect(screen.queryByRole('heading', { name: /^AI says/u })).toBeNull();
-    // The lede falls back to a neutral heading, said once.
     expect(screen.getAllByRole('heading', { name: 'How AI describes you' })).toHaveLength(1);
     const lede = within(screen.getByLabelText('Brand perception'));
     expect(lede.getAllByText('Too few classified')).toHaveLength(2);
@@ -139,7 +137,6 @@ describe('Perception view', () => {
         description: '1 pending · 1 unavailable (platform limit reached)',
       }),
     ).toHaveAccessibleName(/^Basis of /);
-    // One link in the criticism list until the theme is opened.
     expect(screen.getAllByRole('link', { name: '“support is slow”' })).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Ease of use' }));
     const links = screen.getAllByRole('link', { name: '“support is slow”' });

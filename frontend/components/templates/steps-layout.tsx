@@ -8,15 +8,6 @@ import { cn } from '@/lib/utils';
 
 export type StepItem<T extends string> = Readonly<{ value: T; label: string }>;
 
-/**
- * Steps: a task worked through in order, filling a shell page's body. The
- * steps run down a 224 column on the left (numbered, the current one on the
- * nav's current tile, completed ones ticked and clickable to go back to),
- * the current step's content beside them, and a raised action bar at the
- * panel's foot: `footerStart` at its left, `footerEnd` at its right. The body
- * fills the panel and scrolls inside itself, so the bar never moves with a
- * step's height.
- */
 export function StepsLayout<T extends string>({
   label,
   steps,
@@ -27,12 +18,10 @@ export function StepsLayout<T extends string>({
   footerEnd,
   children,
 }: Readonly<{
-  /** The step list's accessible name. */
   label: string;
   steps: readonly StepItem<T>[];
   current: T;
   onStep: (step: T) => void;
-  /** A faint line under the steps. */
   note?: ReactNode;
   footerStart: ReactNode;
   footerEnd: ReactNode;
@@ -91,7 +80,6 @@ export function StepsLayout<T extends string>({
   );
 }
 
-/** One step: a done step is a button back to it; the current and later ones are not. */
 function StepRow<T extends string>({
   step,
   position,

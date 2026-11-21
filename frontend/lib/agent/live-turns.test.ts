@@ -20,7 +20,6 @@ afterEach(() => {
 
 const CHAT = '11111111-1111-4111-8111-111111111111';
 
-/** A stream that sends `chunks` and then stays open until the request aborts. */
 function openStream(chunks: string[], signal: AbortSignal | null | undefined): Response {
   const encoder = new TextEncoder();
   const body = new ReadableStream<Uint8Array>({
@@ -158,7 +157,6 @@ it('tracks each parallel call by its id and target, and keeps the newest documen
         status: 'started',
         target: 'https://acme.example/returns',
       },
-      // A frame from before targets were sent reads as no target.
       { type: 'tool', ordinal: 1, call_id: 'b', tool: 'read_performance', status: 'started' },
       { type: 'tool', ordinal: 1, call_id: 'b', tool: 'read_performance', status: 'unavailable' },
       { type: 'document_delta', ordinal: 2, title: 'Plan', from: 0, text: 'Draft' },
@@ -201,7 +199,6 @@ it('rebuilds the document from deltas, resets it on a full snapshot and ignores 
   expect(fold([doc(0, 'One'), doc(9, ' lost'), doc(3, ' two')]).document?.body).toBe('One two');
 });
 
-/** A stream the test feeds frame by frame and closes. */
 function fedStream() {
   const encoder = new TextEncoder();
   let feed!: ReadableStreamDefaultController<Uint8Array>;
@@ -218,10 +215,6 @@ function fedStream() {
   };
 }
 
-/**
- * Frames run only when the test runs them and the fallback timeout never
- * fires; `requested` resolves when the store asks for its next frame.
- */
 function heldFrames(stream: ReturnType<typeof fedStream>) {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   const frames: FrameRequestCallback[] = [];

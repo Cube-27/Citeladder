@@ -1,22 +1,3 @@
-/**
- * Workspace membership and invitation endpoints.
- *
- * Everything here except `acceptInvitation` is administrative: the server
- * refuses any role without `manage_members`, and these helpers exist so the
- * UI can hide controls it already knows would be refused — never as the
- * boundary itself.
- *
- * An issued or resent invitation returns its acceptance token ONCE. Only the
- * hash is stored, so no later read can hand it back; the caller delivers the
- * link and must not persist the token.
- *
- * Every helper that names a workspace in its path also SENDS that workspace on
- * the request. Without it the transport falls back to the mutable active
- * selection, so a retry issued after a workspace switch could carry one
- * workspace's path with another's `X-Workspace-Id`. `acceptInvitation` is the
- * deliberate exception: the acceptor is not a member of anything yet, and the
- * token is what names the workspace.
- */
 import { mutationOptions, queryOptions, type Query, type QueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
@@ -45,7 +26,6 @@ export type WorkspaceMember = z.infer<typeof workspaceMemberSchema>;
 export type WorkspaceInvitation = z.infer<typeof workspaceInvitationSchema>;
 export type WorkspaceInvitationIssued = z.infer<typeof workspaceInvitationIssuedSchema>;
 
-/** The roles an invitation or a role change may name. Never `owner`. */
 export const ASSIGNABLE_WORKSPACE_ROLES = ['admin', 'member', 'viewer'] as const;
 export type AssignableWorkspaceRole = (typeof ASSIGNABLE_WORKSPACE_ROLES)[number];
 
@@ -54,19 +34,10 @@ const memberListSchema = z.array(workspaceMemberSchema);
 const invitationListSchema = z.array(workspaceInvitationSchema);
 
 export const workspacesApi = {
-  /**
-   * The person's memberships. Deliberately not workspace-scoped: it is what
-   * decides which workspaces exist.
-   */
   list: async (options?: ApiRequestOptions) => {
     const res = await apiClient.get<Workspace[]>('/workspaces', { ...options, workspaceId: null });
     return strictValidate(workspaceListSchema, res, 'workspaces.list');
   },
-  /**
-   * Create the caller's own workspace, accepting the Terms revision they were
-   * shown. A person owns at most one; this is where a self-serve trial starts.
-   * Not workspace-scoped: the workspace does not exist yet.
-   */
   create: async (input: { name: string; termsRevision: string }) =>
     strictValidate(
       workspaceSchema,
@@ -81,7 +52,6 @@ export const workspacesApi = {
       ),
       'workspaces.create',
     ),
-  /** Leave a workspace you do not own; your access ends at once. */
   leave: (workspaceId: string, options?: ApiRequestOptions) =>
     apiClient.post<void>(
       `/workspaces/${workspaceId}/members/leave`,
@@ -122,10 +92,6 @@ export const workspacesApi = {
       ...options,
       workspaceId,
     }),
-  /**
-   * Move the Owner designation to another member. The caller becomes Admin in
-   * the same transaction, so the workspace is never ownerless.
-   */
   transferOwnership: async (workspaceId: string, memberId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.post<WorkspaceMember[]>(
       `/workspaces/${workspaceId}/ownership`,
@@ -170,10 +136,6 @@ export const workspacesApi = {
       ...options,
       workspaceId,
     }),
-  /**
-   * Join an invited workspace. Deliberately not workspace-scoped: the token
-   * names the workspace, because the acceptor is not a member yet.
-   */
   acceptInvitation: async (token: string, options?: ApiRequestOptions) => {
     const res = await apiClient.post<Workspace>(
       '/workspaces/invitations/accept',
@@ -184,11 +146,6 @@ export const workspacesApi = {
   },
 };
 
-/**
- * Workspace reads. The membership list and a workspace's access are bootstrap
- * reads: they carry the bounded bootstrap timeout, so a stall reaches the
- * gate's retry notice in seconds on either creation path (loader or screen).
- */
 export const workspaceQueries = {
   list: () =>
     queryOptions({
@@ -214,15 +171,12 @@ export const workspaceQueries = {
     }),
 };
 
-/** Every workspace read: memberships, access, rosters and invitations. */
 export const refreshWorkspaces = (client: QueryClient) =>
   client.invalidateQueries({ queryKey: queryKeys.workspaces.all });
 
-/** Re-resolve one workspace's access from scratch, dropping the answer held now. */
 export const resetWorkspaceAccess = (client: QueryClient, workspaceId: string) =>
   client.resetQueries({ queryKey: queryKeys.workspaces.access(workspaceId), exact: true });
 
-/** Reads that serve recovery: identity, workspaces, and any query marked `accessRecovery`. */
 export function isAccessRecoveryQuery(query: {
   queryKey: readonly unknown[];
   meta?: Record<string, unknown>;
@@ -230,20 +184,12 @@ export function isAccessRecoveryQuery(query: {
   return isAccessRecoveryKey(query.queryKey) || query.meta?.accessRecovery === true;
 }
 
-/**
- * A workspace without access keeps only what recovery needs: every other read
- * is stopped and dropped, so nothing of the product renders from the cache.
- */
 export function dropProductReads(client: QueryClient) {
   const predicate = (query: Query) => !isAccessRecoveryQuery(query);
   void client.cancelQueries({ predicate });
   client.removeQueries({ predicate });
 }
 
-/**
- * A roster write re-reads the workspace in the background: an issued link is
- * shown, and a confirmation closes, as soon as the write itself lands.
- */
 const rosterRefreshed = {
   onSuccess: (
     _data: unknown,
@@ -255,14 +201,7 @@ const rosterRefreshed = {
   },
 };
 
-/** Workspace writes; each success refreshes or writes every read it changes. */
 export const workspaceMutations = {
-  /**
-   * Create the caller's own workspace; it joins the membership list at once.
-   * A refusal re-reads the Terms decision: the Terms may have changed since
-   * sign-in, and the re-read ends a session that holds none on the published
-   * revision.
-   */
   create: () =>
     mutationOptions({
       mutationFn: (input: { name: string; termsRevision: string }) => workspacesApi.create(input),
@@ -274,7 +213,6 @@ export const workspaceMutations = {
       onError: (_error, _input, _result, { client }) =>
         client.invalidateQueries({ queryKey: queryKeys.auth.terms() }),
     }),
-  /** Join an invited workspace; the memberships are re-read before the caller moves on. */
   acceptInvitation: () =>
     mutationOptions({
       mutationFn: (token: string) => workspacesApi.acceptInvitation(token),
@@ -310,7 +248,6 @@ export const workspaceMutations = {
         workspacesApi.removeMember(workspaceId, memberId, { workspaceId }),
       ...rosterRefreshed,
     }),
-  /** The roles change on both sides, so the memberships re-read too. */
   transferOwnership: (workspaceId: string) =>
     mutationOptions({
       mutationFn: (memberId: string) =>

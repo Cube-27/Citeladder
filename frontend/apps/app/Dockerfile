@@ -14,7 +14,6 @@ COPY frontend/services/api/package.json ./services/api/
 COPY frontend/packages/mcp-app/package.json ./packages/mcp-app/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# The runtime only runs `wrangler dev`: ship its locked closure, not the toolchain.
 FROM dependencies AS wrangler
 COPY frontend/scripts/copy-wrangler-runtime.mjs ./scripts/
 RUN node scripts/copy-wrangler-runtime.mjs /wrangler
@@ -47,9 +46,6 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend ./
 RUN pnpm build:vite
 
-# Local Compose only: production serves this build through the product Worker
-# (wrangler.jsonc). Run that same Worker so routing, headers and the API proxy
-# match production; LOCAL_WORKER_ORIGIN admits HTTP and the API container.
 FROM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1 AS runtime
 
 ENV NODE_ENV=production     HOME=/tmp     WRANGLER_SEND_METRICS=false

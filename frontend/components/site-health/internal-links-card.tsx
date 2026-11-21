@@ -10,17 +10,6 @@ import { StateBlock } from '@/components/ui/state-block';
 import { formatCount, formatPercent, pluralCount } from '@/lib/format';
 import { ClampText } from '@/components/ui/clamp-text';
 
-/**
- * Internal links — the crawl's persisted link-graph projection for this page.
- *
- * Two numbers that look alike and are not: `Inbound` counts every internal
- * link, navigation included; `Main-content inbound` counts only the ones the
- * DOM placed inside the page's primary region. A page with a large first number
- * and a zero second one is in the menu and nowhere else. `Depth from home` is
- * shortest path over all followable links, because a nav link is a real click.
- *
- * The caller distinguishes absent crawl measurements from an observed zero.
- */
 export function InternalLinksCard({
   links,
   crawlId,
@@ -56,7 +45,6 @@ export function InternalLinksCard({
     },
     {
       label: 'Depth from home',
-      // Null is a measurement: no observed link path reaches this page from the home page.
       value:
         links.depth_from_home === null
           ? 'Not reached from home'
@@ -112,8 +100,6 @@ function NeighbourList({
               key={`${neighbour.site_url_id ?? neighbour.url}`}
               className={ledgerItemClasses('items-start justify-between')}
             >
-              {/* An off-crawl target is counted but was never a node, so it has
-                  no detail route to link to. */}
               {neighbour.site_url_id ? (
                 <TextLink
                   text="caption"

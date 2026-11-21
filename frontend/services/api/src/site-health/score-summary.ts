@@ -1,10 +1,3 @@
-/**
- * One membership-scoped source set for active summaries and immutable
- * snapshots. The projection walks the selected pages in keyset batches of
- * `finalize.projection_pages` and folds each batch into the score, the
- * classification, the eligibility gate and the diagnostics, so no step holds
- * more than one batch's analyses and evaluations (CO-7).
- */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -17,7 +10,6 @@ import { ReadinessDiagnosticFold, WebDiagnosticFold } from './snapshot-diagnosti
 import type { Crawl } from './site-task.ts';
 import { compareText, scalarText } from '../text-order.ts';
 
-/** Read per call, so a changed setting applies without a restart. */
 const batchSize = () => policy.site_health.crawl.finalize.projection_pages;
 
 export function classificationState(classified: number, expected: number) {
@@ -40,7 +32,6 @@ export async function lockProfile(db: Database, crawl: Crawl) {
     .executeTakeFirstOrThrow();
 }
 
-/** The named evaluations, with only the columns scoring, rollups and diagnostics read. */
 function evaluationsById(db: Database, crawl: Crawl, ids: string[], siteOnly = false) {
   return db
     .selectFrom('site_rule_evaluations')
@@ -72,7 +63,6 @@ function evaluationsById(db: Database, crawl: Crawl, ids: string[], siteOnly = f
 }
 export type ProjectionEvaluation = Awaited<ReturnType<typeof evaluationsById>>[number];
 
-/** The next batch of active selected pages after `after`, in id order. */
 async function selectedAfter(
   db: Database,
   crawl: Crawl,
@@ -91,7 +81,6 @@ async function selectedAfter(
   return rows.map((row) => row.site_url_id);
 }
 
-/** The batch's completed analyses at their latest audit (`pageAuditsSql`, SH-B9). */
 function batchAnalyses(db: Database, crawl: Crawl, ids: string[]) {
   const batch = sql`any(${ids}::uuid[])`;
   return db
@@ -129,7 +118,6 @@ function batchAnalyses(db: Database, crawl: Crawl, ids: string[]) {
 }
 type Analysis = Awaited<ReturnType<typeof batchAnalyses>>[number];
 
-/** Each page's task in the crawl that audited it; a failed fetch has only its discover task. */
 async function batchTasks(db: Database, crawl: Crawl, ids: string[], rows: Analysis[]) {
   const auditedBy = new Map(rows.map((row) => [row.site_url_id, row.crawl_id]));
   const crawlIds = [...new Set([crawl.id, ...auditedBy.values()])];
@@ -161,7 +149,6 @@ async function batchTasks(db: Database, crawl: Crawl, ids: string[], rows: Analy
 }
 export type ProjectionTask = Awaited<ReturnType<typeof batchTasks>>[number];
 
-/** Walk the selected pages in batches, with each batch's analyses. */
 async function eachBatch(
   db: Database,
   crawl: Crawl,
@@ -179,11 +166,6 @@ async function eachBatch(
   }
 }
 
-/**
- * The site checks every page scores against: the site-scope evaluations the
- * measured analyses name, each once. A first pass, so pages can be scored as
- * they stream; it reads only site-scope rows.
- */
 async function sharedSiteEvaluations(db: Database, crawl: Crawl) {
   const shared = new Map<string, ProjectionEvaluation>();
   await eachBatch(db, crawl, async (_ids, rows) => {
@@ -257,7 +239,6 @@ class ClassificationFold {
   }
 }
 
-/** How many scored checks the pages measured, of those they expected. */
 function addCheckCounts(
   counts: { measured: number; expected: number },
   rows: ProjectionEvaluation[],
@@ -269,12 +250,6 @@ function addCheckCounts(
   }
 }
 
-/**
- * The selected pages' analyses, evaluations and tasks a snapshot's score
- * reads: each page's latest audit as the crawl shows it (`pageAuditsSql`,
- * SH-B9), each with the task of the crawl that audited it. A running crawl's
- * provisional card averages stored page scores instead (`live-score.ts`).
- */
 export async function measurementProjection(db: Database, crawl: Crawl) {
   const shared = await sharedSiteEvaluations(db, crawl);
   const measurement = new MeasurementFold(crawlSiteChecks(shared.map(persistedEvaluation)));
@@ -307,7 +282,6 @@ export async function measurementProjection(db: Database, crawl: Crawl) {
         page_kind: row.page_kind,
         evaluations: evaluations.map(persistedEvaluation),
       });
-      // A site evaluation every final revision names counts once, where first seen.
       const counted = evaluations.filter((evaluation) => {
         if (evaluation.scope !== 'site') return true;
         if (seenShared.has(evaluation.id)) return false;

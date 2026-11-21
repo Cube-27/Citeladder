@@ -30,7 +30,6 @@ const STARTER = {
   trial_days: null,
 } satisfies CatalogPlan;
 
-// BYOK checkout open and funded checkout closed, at distinct prices, so each mode reads its own.
 const GROWTH = {
   ...STARTER,
   key: 'tier_2',

@@ -28,7 +28,6 @@ type PromptLibraryDialogsProps = {
   pendingDelete: PendingDelete | null;
   setPendingDelete: (pending: PendingDelete | null) => void;
   confirmDelete: (pending: PendingDelete) => void;
-  /** The forms' server-enforced bounds; null until the prompt-set list loads. */
   limits: PromptFormLimits | null;
 };
 
@@ -61,7 +60,6 @@ export function PromptLibraryDialogs({
       onCancel={() => setPendingDelete(null)}
     />
   );
-  // The forms enforce the server's bounds, so they open once the list has listed them.
   if (!limits) return deleteDialog;
   return (
     <>

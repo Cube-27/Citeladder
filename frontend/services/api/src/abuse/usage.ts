@@ -1,13 +1,3 @@
-/**
- * Durable fixed-window usage counters (`usage_windows`) keyed by a hashed,
- * case-folded subject.
- *
- * A request consumes its budget in its own committed transaction before the
- * work it guards starts, so a failed import still spends its attempt. Work that
- * is one database write with no network I/O (an MCP client registration) may
- * spend inside that write's transaction instead, so a refusal spends nothing.
- * Per-visitor (`client`) subjects are networks, from `trustedClientNetwork`.
- */
 import { createHash, randomUUID } from 'node:crypto';
 
 import { sql } from 'kysely';
@@ -24,7 +14,6 @@ import {
 } from '../config/settings.ts';
 import { getLogger } from '../logging.ts';
 
-/** The `Retry-After` a request refused for too many active jobs carries. */
 export function activeJobRetrySeconds(source: SettingSource = process.env): number {
   return resolveSpec(
     'active_job_retry_after_seconds',
@@ -33,7 +22,6 @@ export function activeJobRetrySeconds(source: SettingSource = process.env): numb
   ) as number;
 }
 
-/** A resolved budget: who it counts, its persisted operation, its limit and its window. */
 export type Budget = {
   subject: BudgetSubject;
   operation: string;
@@ -41,17 +29,12 @@ export type Budget = {
   windowSeconds: number;
 };
 
-/** Budgets whose limit and window are fixed policy numbers, with no overridable setting. */
 type FixedBudgetName = {
   [K in BudgetName]: (typeof budgets)[K] extends { limit: number; windowSeconds: number }
     ? K
     : never;
 }[BudgetName];
 
-/**
- * A named budget from `config/abuse.ts`. Overridable limits resolve from
- * `settings`: the startup settings wherever a config is in reach.
- */
 export function budget(name: FixedBudgetName): Budget;
 export function budget(name: BudgetName, settings: SettingSource): Budget;
 export function budget(name: BudgetName, settings?: SettingSource): Budget {
@@ -69,10 +52,8 @@ export function budget(name: BudgetName, settings?: SettingSource): Budget {
   };
 }
 
-/** What an admitted spend left: units remaining in the window and whole seconds until it resets. */
 export type BudgetState = { remaining: number; resetSeconds: number };
 
-/** Spend `amount` units of `budget` for `subject`, or throw 429 with `Retry-After`. */
 export async function spendBudget(
   db: Database,
   budgetToSpend: Budget,
@@ -82,7 +63,6 @@ export async function spendBudget(
   await spendBudgetState(db, budgetToSpend, subject, options);
 }
 
-/** `spendBudget`, reporting what the admitted spend left in the window. */
 export async function spendBudgetState(
   db: Database,
   { subject: kind, ...limit }: Budget,
@@ -92,11 +72,6 @@ export async function spendBudgetState(
   return enforceSubjectRequest(db, kind, subject, { ...limit, amount }, at);
 }
 
-/**
- * Count `amount` units for `subject` without refusing: a threshold budget,
- * read by `budgetReached`, that changes how a request is handled rather than
- * whether it is admitted.
- */
 export async function countUse(
   db: Database,
   { subject: kind, operation, windowSeconds }: Budget,
@@ -106,7 +81,6 @@ export async function countUse(
   await addToWindow(db, kind, subject, { operation, windowSeconds, amount }, at);
 }
 
-/** Whether `subject` has used all of `budget` in the current window. */
 export async function budgetReached(
   db: Database,
   { subject: kind, operation, limit, windowSeconds }: Budget,
@@ -124,7 +98,6 @@ export async function budgetReached(
   return (row?.count ?? 0) >= limit;
 }
 
-/** Forget every window of one subject's named budget (a proven owner resets their failures). */
 export async function releaseBudget(
   db: Database,
   name: BudgetName,
@@ -139,7 +112,6 @@ export async function releaseBudget(
     .execute();
 }
 
-/** Subjects are case-folded and hashed; no raw address or identifier is stored. */
 function subjectHash(subjectValue: string): string {
   return createHash('sha256').update(subjectValue.trim().toLowerCase()).digest('hex');
 }
@@ -191,11 +163,6 @@ async function enforceSubjectRequest(
   return { remaining: limit - count, resetSeconds: secondsUntil(expires, now) };
 }
 
-/**
- * Add `amount` to the subject's current window in one atomic upsert and return
- * the window's count. With a `limit`, an addition that would pass it changes
- * nothing and returns null.
- */
 async function addToWindow(
   db: Database,
   subjectKind: BudgetSubject,
@@ -235,7 +202,6 @@ async function addToWindow(
   return added === undefined ? null : added.count;
 }
 
-/** Delete a bounded batch of security events older than the retention cutoff. */
 export async function pruneSecurityEvents(
   db: Database,
   now: Date,
@@ -267,7 +233,6 @@ export async function pruneSecurityEvents(
   });
 }
 
-/** Delete a bounded batch of expired windows; live windows are never touched. */
 export async function pruneUsageWindows(
   db: Database,
   now: Date,

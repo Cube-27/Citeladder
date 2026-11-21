@@ -10,11 +10,6 @@ import { leadingSources } from '@/lib/prompts/filter';
 
 import { NO_ANSWERS } from './prompt-figures';
 
-/**
- * The sites a prompt's answers cited, as their favicons, most citations first;
- * each names its domain and citations on hover or focus. `null` is a prompt
- * with no completed answer, which could cite nothing: unknown, not none.
- */
 export function CitedDomainMarks({
   sources,
 }: Readonly<{ sources: readonly CitedDomain[] | null }>) {
@@ -28,7 +23,6 @@ export function CitedDomainMarks({
           key={domain}
           content={`${domain}${owned ? ' (yours)' : ''}: ${citations} ${citations === 1 ? 'citation' : 'citations'}`}
         >
-          {/* Focusable so the name and count reach the keyboard too. */}
           <Pressable className="inline-flex w-auto">
             <span className="sr-only">{domain}</span>
             <BrandMark name={domain} websiteUrl={`https://${domain}`} placement="inline" />

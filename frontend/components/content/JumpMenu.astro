@@ -1,13 +1,4 @@
 ---
-/**
- * JumpMenu — where a rail or Toc goes on narrow screens (DocLayout,
- * ContentArticle): a 48px `surface` summary on the control edge with the
- * menu's name and a caret, filling its column,
- * closed by default, whose panel overlays the page, so opening it moves
- * nothing. It closes on a link, a click outside or Esc (focus back on its
- * summary). A panel holding a Toc hides the Toc's own title, which the
- * summary already shows, followed by the current section (toc-spy).
- */
 import { ChevronDown } from '@/lib/icons';
 
 interface Props {
@@ -39,7 +30,6 @@ const { label } = Astro.props;
     height: var(--control-lg);
     padding: 0 16px;
     background: var(--color-surface);
-    /* The outline control's edge: 3:1 or more on paper in both themes. */
     border: 1px solid var(--color-line-control);
     border-radius: var(--radius-md);
     color: var(--color-ink);
@@ -80,7 +70,6 @@ const { label } = Astro.props;
     padding: 12px 12px 12px 8px;
     background: var(--color-surface);
     border: 1px solid var(--color-line);
-    /* The website's inner radius; docs, which lack it, keep their own. */
     border-radius: var(--site-radius-inner, var(--radius-lg));
     opacity: 0;
     translate: 0 var(--cl-jump-shift, -4px);
@@ -88,7 +77,6 @@ const { label } = Astro.props;
       opacity var(--motion-close) var(--ease-exit),
       translate var(--motion-close) var(--ease-exit);
   }
-  /* The shared open/close motion: the details content stays rendered while it fades out. */
   .cl-jump::details-content {
     transition: content-visibility var(--motion-close) allow-discrete;
   }

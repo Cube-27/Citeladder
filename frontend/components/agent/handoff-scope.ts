@@ -8,13 +8,6 @@ import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatCount, formatDisplayDate, pluralCount } from '@/lib/format';
 
-/**
- * What a hand-off from the Actions pages covers, in the chips' words: one URL
- * by its last segment, then how many Actions touch it and its crawl (the URL
- * page's read, already cached when the page sent it), or an issue group's URL
- * count and how many of them the Agent is sent. Ticked URLs name themselves
- * (`contextChips`) and leave with the attached Action: `context` is what is sent.
- */
 export function useHandoffScope({
   scope,
   context,

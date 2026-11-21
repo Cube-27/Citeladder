@@ -6,10 +6,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
-/**
- * A History list (the Agent's chats): its search, then its rows or the
- * sentence standing in for them, then "Show more", 8 apart.
- */
 export function HistoryList({
   search,
   more,
@@ -24,12 +20,10 @@ export function HistoryList({
   );
 }
 
-/** A sentence standing in for the rows (none yet, none match). */
 export function HistoryNotice({ children }: Readonly<{ children: ReactNode }>) {
   return <p className={textRole('caption')}>{children}</p>;
 }
 
-/** A failed read of the list: its sentence on the rows' 12px inset, then its Retry. */
 export function HistoryFailed({ message, retry }: Readonly<{ message: string; retry: ReactNode }>) {
   return (
     <div className="flex min-w-0 items-center justify-between gap-2 pl-3">
@@ -47,11 +41,6 @@ export function HistoryRows({ label, children }: Readonly<{ label: string; child
   );
 }
 
-/**
- * One row: its title in `label` type with the live rung after it while the
- * record works, over a caption line; the current row is `ink` and carries the
- * accent rung. A cut line shows in full on hover and focus.
- */
 export function HistoryRow({
   href,
   active,

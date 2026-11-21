@@ -22,7 +22,6 @@ import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/noti
 
 const INVITE_FORM_ID = 'invite-member-form';
 
-/** Where an invitee accepts. The token is a URL parameter, never stored. */
 function acceptanceLink(token: string): string {
   const origin = typeof window === 'undefined' ? '' : window.location.origin;
   return `${origin}/invitations/accept?token=${encodeURIComponent(token)}`;
@@ -36,19 +35,11 @@ function deliveryNotice(delivery: 'accepted' | 'failed' | undefined): string {
   return 'Email status unknown. ';
 }
 
-/** Why the invite form cannot send to this address, or null when it can. */
 function inviteEmailError(address: string): string | null {
   if (!address) return 'Enter an email address.';
   return z.email().safeParse(address).success ? null : 'Enter a valid email address.';
 }
 
-/**
- * Issue an invitation and hand back its ONE-TIME acceptance link.
- *
- * There is no mail transport in this repository yet, so the administrator
- * delivers the link. The token is shown once and never stored here: only its
- * hash reaches the database, and no later read returns it.
- */
 export function InviteDialog({
   open,
   onOpenChange,
@@ -63,9 +54,7 @@ export function InviteDialog({
   issuedToken: string | null;
   delivery?: 'accepted' | 'failed';
   pending: boolean;
-  /** Why the last invitation was refused, shown where it was asked for. */
   error: MutationNoticeData | null;
-  /** Resolves once the invitation is issued; the address stays until then. */
   onInvite: (email: string, role: AssignableWorkspaceRole) => Promise<unknown>;
 }>) {
   const [email, setEmail] = useState('');
@@ -154,7 +143,6 @@ export function InviteDialog({
   );
 }
 
-/** Invitations still waiting to be accepted. Tokens are never listed. */
 export function PendingInvitations({
   read,
   busy,
@@ -172,10 +160,8 @@ export function PendingInvitations({
   onRevoke: (invitation: WorkspaceInvitation) => void;
 }>) {
   const invitations = read.data ?? [];
-  // Hidden only once a read confirms there is nothing pending; a failed read says so.
   if (!read.isLoading && !read.isError && invitations.length === 0) return null;
   return (
-    // The table is the named region; the group only heads it.
     <SettingsGroup title="Pending invitations" region={false}>
       <DataTable
         label="Pending invitations"
@@ -237,6 +223,5 @@ function invitationsState(
 const INVITATION_COLUMNS: readonly DataTableColumn[] = [
   { key: 'invitee', label: 'Invitee', kind: 'identity' },
   { key: 'role', label: 'Workspace role', kind: 'status' },
-  // Two buttons: the row-actions width, under a visually hidden head.
   { key: 'actions', label: 'Actions', kind: 'actions', width: 'rowActions', hideLabel: true },
 ];

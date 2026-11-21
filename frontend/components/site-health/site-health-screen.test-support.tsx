@@ -27,7 +27,6 @@ const project = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
 const entitlement = makeWorkspaceEntitlement({ workspace_id: WORKSPACE });
 const ENTITLEMENT_PATH = `/api/v1/workspaces/${WORKSPACE}/entitlements`;
 
-/** The project's crawl schedule; by default one that was never turned on. */
 function crawlSchedule(overrides: Partial<CrawlSchedule> = {}): CrawlSchedule {
   return {
     project_id: PROJECT,
@@ -41,7 +40,6 @@ function crawlSchedule(overrides: Partial<CrawlSchedule> = {}): CrawlSchedule {
   };
 }
 
-/** A crawl that discovered its three pages but failed the analysis pass. */
 function crawl(overrides: Record<string, unknown> = {}) {
   return makeSiteCrawl({
     id: CRAWL,
@@ -152,7 +150,6 @@ function overview(crawlId = CRAWL) {
   };
 }
 
-// Tests state the persisted server phase they render; backend tests own phase resolution.
 function mockRoutes(
   crawlOverrides: Record<string, unknown> = {},
   phase: SiteHealthDashboard['phase'] = 'dashboard',

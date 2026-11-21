@@ -92,7 +92,6 @@ describe('prompt sets', () => {
     expect(listed.body.prompt_sets.map((set) => set.id).sort()).toEqual(
       [t.setId, created.body.id].sort(),
     );
-    // Commerce's own set is told apart from the brand sets the library adds to.
     const commerce = await promptSet(db, t.projectId);
     await db
       .updateTable('prompt_sets')
@@ -105,7 +104,6 @@ describe('prompt sets', () => {
       [created.body.id]: 'brand',
       [commerce]: 'commerce',
     });
-    // The listed form bounds are the ones the write schemas enforce.
     const { persona_max_chars: personaMax } = listed.body.limits;
     const id = await prompt(db, t.setId, 'acme trail shoes');
     expect((await patch(`/prompts/${id}`, { persona: 'x'.repeat(personaMax) })).status).toBe(200);
@@ -257,8 +255,6 @@ describe('prompt edits', () => {
       status: 'archived',
       topicId: trail,
     });
-    // The topic writer deletes the prompt's topic, detaching it and taking
-    // "hydration packs" out of the project vocabulary.
     const activation = await db.transaction().execute(async (deletion) => {
       const { rows } = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(deletion);
       const blocker = rows[0]!.pid;
@@ -626,7 +622,6 @@ describe('candidate review', () => {
       branded: true,
       persona: 'Road runners',
     });
-    // Views omit the evidence; the provenance stays on the stored prompt.
     expect(review.body.accepted[0]).not.toHaveProperty('generation_evidence');
     const stored = await db
       .selectFrom('prompts')

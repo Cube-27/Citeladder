@@ -1,4 +1,3 @@
-/* ---------- Full app screens ---------- */
 .cl-screen {
   position: relative;
   display: flex;
@@ -14,25 +13,13 @@
   text-align: left;
 }
 
-/* The AI Visibility overview: KPIs, the trend and the brand ranking. */
-
-/* 704 tall: the aside (brands, then the by-engine card) ends on its padded edge. */
 .cl-screen--visibility {
   --screen-natural: 1200px;
   --screen-w: var(--screen-natural);
   --screen-h: 704px;
 }
 
-/* ---------- The app in its chrome: the home page's first view ----------
-   The shell's own geometry: the sidebar column, the ruled top bar
-   (`page-header-band`) shared by the project switcher and the page title,
-   the tab and filter bands `page-band-gap` apart, then the content
-   `page-section-gap` below. The live rows fold to a rail below 1280px, so
-   the screen draws them at full width with the same tokens. */
 .cl-screen--app {
-  /* The app's density (`:root:not([data-public-surface])` in
-     globals.css): the website keeps the system's looser spacing, so the
-     screen restores the app's values for everything inside it. */
   --content-gutter: 24px;
   --page-section-gap: 16px;
   --workspace-gap: 12px;
@@ -43,9 +30,6 @@
   --screen-natural: 1440px;
   --screen-w: var(--screen-natural);
   --screen-h: 820px;
-  /* The app's ground, then its chrome a step lighter, then cards. The website
-     aliases ground and chrome to its paper (white in light), so the screen
-     draws the app's steps from the website's own fills. */
   --color-ground: color-mix(in oklch, var(--color-surface), var(--color-surface-sunken) 50%);
   --color-chrome: color-mix(in oklch, var(--color-surface), var(--color-surface-sunken) 20%);
 
@@ -57,19 +41,14 @@
   background: var(--color-ground);
 }
 
-/* In dark the website's sunken fill is above its cards, so the ground is the paper. */
 :root[data-theme='dark'] .cl-screen--app {
   --color-ground: var(--color-paper);
   --color-chrome: color-mix(in oklch, var(--color-paper), var(--color-surface) 55%);
 }
 
-/* Insights runs past the hero frame's foot, which cuts it inside the competitors table. */
 .cl-screen--app-overview {
   --screen-h: 860px;
 }
-
-/* On the website the display face is the hero's H1 alone, so the drawn
-   app's page title is the sans face at 500 at its own size. */
 
 .cl-screen--app .type-page-title {
   font-family: var(--font-sans);
@@ -166,8 +145,6 @@
   color: var(--color-ink-secondary);
 }
 
-/* The current row is the app's 7% ink tile with the accent mark at its start. */
-
 .cl-app-nav-row.is-active {
   background: color-mix(in oklch, var(--color-ink) 7%, transparent);
   color: var(--color-ink);
@@ -200,8 +177,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* The foot's row sits at the sidebar's foot, above the account button. */
 
 .cl-app-nav-foot {
   margin-top: auto;
@@ -251,9 +226,6 @@
   margin-top: var(--page-section-gap);
 }
 
-/* A feature's page (ScreenAppPage): its screen as one card on the page, at
-   a reading width from the sidebar, as the app sets a section. */
-
 .cl-app-page > .cl-vig {
   flex: none;
   max-width: 760px;
@@ -261,8 +233,6 @@
   border-radius: var(--radius-lg);
   background: var(--color-surface);
 }
-
-/* Insights' lede: what the figures count, where you rank, who is ahead. */
 
 .cl-app-lede {
   display: flex;
@@ -274,8 +244,6 @@
 .cl-app-lede > p {
   margin: 0;
 }
-
-/* Site health's split Run new crawl: two faces joined on one edge. */
 
 .cl-app-split {
   display: flex;

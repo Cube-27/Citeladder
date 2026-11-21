@@ -2,11 +2,6 @@ import { Tag } from '@/components/ui/tag';
 import { Inline } from '@/components/ui/layout';
 import type { ModelProvenance } from '@citeladder/contracts';
 
-/**
- * The models behind a run's figures. One model is named; several say
- * "Multiple models" and list them, never electing one to stand in for the
- * rest, which would attribute every number to a model that produced only some.
- */
 export function MeasurementContext({
   provenance,
 }: Readonly<{ provenance: readonly ModelProvenance[] }>) {

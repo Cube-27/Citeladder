@@ -2,7 +2,6 @@ import { handle } from '@astrojs/cloudflare/handler';
 import type { WorkerEnv as GeneratedEnv } from '../worker-configuration';
 import { serveMarketingRequest } from './edge';
 
-// Local Wrangler sets this binding; production never does.
 type WorkerEnv = GeneratedEnv & { LOCAL_WORKER_ORIGIN?: string };
 type WorkerContext = Parameters<typeof handle>[2];
 

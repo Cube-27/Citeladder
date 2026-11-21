@@ -7,7 +7,6 @@ const LINE_WIDTH = {
   long: 'w-64',
 } as const;
 
-/** One line of `text` while it loads: that text role's line height, a block inside. */
 export function TextLineSkeleton({
   text,
   width,

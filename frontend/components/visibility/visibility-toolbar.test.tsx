@@ -44,7 +44,6 @@ function renderRow({
   );
 }
 
-/** The row's own chips, in order, by their accessible names ("Measurement: Latest run"). */
 function rowChips(): string[] {
   return screen
     .getAllByRole('button')
@@ -53,7 +52,6 @@ function rowChips(): string[] {
     .filter((name) => !name.startsWith('Filters'));
 }
 
-/** Opens Filters and lists its entries, in order, by their accessible names. */
 async function filtersMenu(): Promise<string[]> {
   await userEvent.setup().click(screen.getByRole('button', { name: /^Filters/ }));
   return screen.getAllByRole('menuitem').map((item) => item.getAttribute('aria-label') ?? '');
@@ -84,7 +82,6 @@ describe('useVisibilityFilterMenu', () => {
     const topics = { topics: TOPICS, onChangeTopic: vi.fn() };
     const markets = { markets: MARKETS, onChangeMarket: vi.fn() };
     const { unmount } = renderRow({ selectionMode: 'run', ...topics });
-    // One market hides its filter, so Topic takes the room it leaves.
     expect(rowChips()).toEqual([
       'Measurement: Latest run',
       'Engines: All engines',
@@ -170,7 +167,6 @@ describe('useVisibilityFilterMenu', () => {
       onChangeOutcome: vi.fn(),
     });
     expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeVisible();
-    // The set prompt follows Filters as a value chip, removable by name.
     expect(screen.getByRole('button', { name: 'Remove Prompt filter' })).toBeVisible();
     expect(await filtersMenu()).toEqual(['Prompt: Best CRM?', 'Answer outcome: All answers']);
   });

@@ -3,11 +3,6 @@ import { Passage } from '@/components/ui/passage';
 import { textRole } from '@/components/ui/typography';
 import { absenceBasis, presenceLabel, type PageEntity } from '@/lib/visibility/source-pages';
 
-/**
- * Where the business stands on a page we do not own. A presence carries its
- * passage; an absence carries how much was searched and how, because no
- * passage can show that something is missing.
- */
 export function BrandOnPage({
   heading,
   brand,

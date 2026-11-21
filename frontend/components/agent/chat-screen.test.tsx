@@ -73,7 +73,6 @@ describe('ChatScreen', () => {
     renderChat();
     await user.click(await screen.findByText('Context used'));
     expect(screen.getByText('Selected issue group')).toBeVisible();
-    // Omissions are disclosed in plain words, never as internal codes.
     expect(screen.getByText(/left out to fit this turn/)).toBeVisible();
     expect(screen.queryByText(/oldest_history|history messages/)).not.toBeInTheDocument();
   });
@@ -543,7 +542,6 @@ describe('ChatScreen', () => {
     expect(await screen.findByRole('menuitemradio', { name: continued })).toBeChecked();
     screen.getByRole('menuitemradio', { name: 'Search Console optimization' }).focus();
     await user.keyboard('{Enter}');
-    // Removing a pick returns to what the chat continues with; removing that is Automatic.
     await user.click(
       await screen.findByRole('button', { name: 'Remove Skill: Search Console optimization' }),
     );

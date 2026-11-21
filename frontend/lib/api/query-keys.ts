@@ -1,21 +1,3 @@
-/**
- * React Query key namespaces (F2).
- *
- * All ids are string UUIDs (workspace-scoped contract). One namespace per API
- * domain owner, each defined in its own module under `query-keys/`:
- *   - core.ts          — auth, workspaces, projects, prompts, providers
- *   - runs.ts          — runs (audits + executions), visibility, cited pages
- *   - site-health.ts   — site health (crawls, inventory, monitored, issues)
- *   - integrations.ts  — integrations (connections, sync runs)
- *   - performance.ts   — performance (dashboard, dimension tables, range task)
- *   - demand.ts        — search-demand projections
- *   - ai-traffic.ts  — AI-referral measurements
- *   - actions.ts       — actions (work queue, detail)
- *   - agent.ts         — agent chats, outputs, skills, instructions
- *   - commerce.ts      — commerce (catalog feed health, agentic product visibility)
- *
- * This facade assembles them under one `queryKeys` entry point.
- */
 import { actionKeys } from './query-keys/actions';
 import { agentKeys } from './query-keys/agent';
 import { aiTrafficKeys } from './query-keys/ai-traffic';

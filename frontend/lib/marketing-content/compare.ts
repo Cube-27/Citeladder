@@ -1,4 +1,3 @@
-/** Reviewed vendor positioning and evaluation copy; source dates are not release dates. */
 type ComparisonSource = {
   label: string;
   url: string;
@@ -8,29 +7,24 @@ type ComparisonSource = {
 export type Competitor = {
   slug: string;
   name: string;
-  /** The vendor's public positioning in one line, restated from the sourced `lead`. */
   tagline: string;
   lead: string;
   context: string;
   metaTitle: string;
   metaDescription: string;
-  /** When the comparison last changed in substance: its sitemap <lastmod> (see PageRecord). */
   updated: string;
   sources: readonly ComparisonSource[];
   whenBody: string;
-  /** The vendor's source availability and deployment options, as its own site states them. */
   openSource: string;
   conclusionHeading: string;
   conclusion: string;
 };
 
-/** Date the official sources below were last re-read. */
 const SOURCES_REVIEWED = '2026-10-02';
 
 export const COMPARISON_DISCLOSURE =
   'This comparison is written by CiteLadder. It summarizes public product information and provides evaluation questions. It is not an independent review or a promise that every feature is included in every plan.';
 
-/** CiteLadder's side of every comparison table; the same claims the leads make. */
 export const CITELADDER_POSITION = {
   focus:
     'Records AI answers to your prompts, analyses the sources they cite and checks your own pages in Site Health, in one project.',

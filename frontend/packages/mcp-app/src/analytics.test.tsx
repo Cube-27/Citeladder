@@ -20,7 +20,6 @@ const result = (project_id = project) => ({
 });
 const answerId = '44444444-4444-4444-8444-444444444444';
 const uuid = /[0-9a-f]{8}-[0-9a-f]{4}-/u;
-/** Everything a person or assistive technology can read, including collapsed sections. */
 function shownText() {
   const labelled = [...document.querySelectorAll('[aria-label],[title],[alt]')].flatMap((node) =>
     ['aria-label', 'title', 'alt'].map((name) => node.getAttribute(name) ?? ''),
@@ -337,7 +336,6 @@ describe('CiteLadder MCP App', () => {
       context: vi.fn(async () => undefined),
     });
     const row = { mention_count: 1, citation_rate: null, mention_rate: 0.5 };
-    // Event ticks need a time span: an earlier point without events.
     const withEarlier = <T extends object>(point: T) => [
       {
         ...point,
@@ -431,12 +429,10 @@ describe('CiteLadder MCP App', () => {
     expect(cells()).toContain('25.0%');
     await pick('Position');
     expect(cells()).toContain('1.5');
-    // Sentiment under the classified minimum gives that reason, never a value or a bare gap.
     await pick('Sentiment');
     expect(cells().some((text) => /Too few.*classified/i.test(text ?? ''))).toBe(true);
     await pick('Win rate');
     expect(cells()).toContain('40.0%');
-    // An unmeasured win rate is unavailable; one over no qualifying answer is not applicable.
     const competitor = async (name: string) => {
       await user.click(screen.getByRole('combobox', { name: 'Competitor' }));
       await user.click(screen.getByRole('option', { name }));
@@ -446,7 +442,6 @@ describe('CiteLadder MCP App', () => {
     expect(cells()).not.toContain('—Not applicable');
     await competitor('Initech');
     await vi.waitFor(() => expect(cells()).toContain('—Not applicable'));
-    // Placed on the time axis, the event is also listed in words under the chart.
     const legend = [...document.querySelectorAll('li')].map((item) => item.textContent);
     expect(legend).toContainEqual(
       expect.stringMatching(/ · Action live: Publish the pricing page$/),
@@ -650,7 +645,6 @@ describe('CiteLadder MCP App', () => {
       });
       controller.receive({
         ...result(),
-        // Sources without a resolved run carry the overview's reason.
         selection: { project_id: project, view },
         evidence: { state: 'unavailable', reason: 'metrics_pending' },
       });

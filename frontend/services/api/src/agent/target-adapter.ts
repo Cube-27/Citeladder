@@ -14,10 +14,8 @@ import type { AttachTarget } from './outputs.ts';
 
 type Output = Selectable<AgentOutputs>;
 type NamedTarget = { kind: AgentTargetKind; target: string };
-/** The longest target a document can hold for the person's choice (`agent_outputs.target_label`). */
 const NAMED_TARGET_MAX_CHARS = 255;
 
-/** `work`'s result, or null for a target no Action can carry (`ActionTargetError`). */
 async function unlessInvalidTarget<T>(work: Promise<T>): Promise<T | null> {
   try {
     return await work;
@@ -32,14 +30,6 @@ function payloadTarget(payload: OutputPayload): NamedTarget | null {
   return payload.target_kind && target ? { kind: payload.target_kind, target } : null;
 }
 
-/**
- * Invalid suggested targets preserve the deliverable for explicit retargeting.
- * A document without an Action attaches to the one its target names, and a
- * chat without one takes the first document's Action. A document that already
- * carries an Action (its chat's) records the page it names once: the Action's
- * own target when it is the same Action, else the named target, which the
- * person links to or declines (`chooseOutputTarget`).
- */
 export const attachAgentTarget: AttachTarget = async (db, chat, output, payload, userId) => {
   const named = payloadTarget(payload);
   if (!named) return;
@@ -62,7 +52,6 @@ export const attachAgentTarget: AttachTarget = async (db, chat, output, payload,
   await setOutputAction(db, chat, output.id, action);
 };
 
-/** A document records what it names once; a later revision does not reopen the choice. */
 async function recordNamedTarget(
   db: Database,
   chat: Chat,
@@ -90,13 +79,6 @@ async function recordNamedTarget(
     .execute();
 }
 
-/**
- * The person's answer to a document that names another page than its Action:
- * `link` re-attaches the document to the named page's Action (created when
- * none exists), `keep` keeps it with its Action. Either settles the choice.
- * A document whose revision anchors its Action's declaration stays with it.
- * Caller owns the transaction, authorized, with the chat locked and idle.
- */
 export async function chooseOutputTarget(
   db: Database,
   scope: Scope,
@@ -138,10 +120,6 @@ export async function chooseOutputTarget(
   await setOutputAction(db, chat, output.id, target);
 }
 
-/**
- * The page a document names apart from its Action, while the person has not
- * chosen: a settled document carries its Action's own target.
- */
 export function openTargetChoice(
   output: Pick<Output, 'action_id' | 'target_kind' | 'target_label'>,
   action: { target_kind: string; target_label: string } | undefined,
@@ -160,7 +138,6 @@ async function pendingTarget(db: Database, chat: Chat, output: Output) {
   return named ? { action, named } : null;
 }
 
-/** Whether a declaration of the Action names one of this document's revisions. */
 async function anchorsDeclaration(db: Database, chat: Chat, outputId: string, actionId: string) {
   const anchored = await db
     .selectFrom('opportunity_implementation_events as e')

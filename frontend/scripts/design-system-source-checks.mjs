@@ -7,10 +7,6 @@ const CLASS_COLOUR_LITERAL =
 const textOf = (node) =>
   node.type === 'TemplateElement' ? (node.value.cooked ?? node.value.raw) : stringValue(node);
 
-/**
- * A colour written as a literal in JSX - an arbitrary class (`text-[rgb(…)]`)
- * or an inline style - skips the theme, so dark mode never repaints it.
- */
 export function literalColourViolations(source, label) {
   if (!/^(?:apps|components|lib)\//.test(label) || !label.endsWith('.tsx')) return [];
   if (/\.(?:test|spec)\.tsx$/.test(label)) return [];
@@ -40,12 +36,6 @@ export function directRadixImportViolations(source, label) {
     : [];
 }
 
-/**
- * The app's Tailwind scans only the `@source` directories in app.css, so a
- * class used only in an unlisted directory is never generated and the element
- * renders unstyled. Every component directory listed code imports must be
- * listed too. `files` are `{ label, source }` relative to frontend/.
- */
 export function appSourceViolations(appCss, files) {
   const listed = [...appCss.matchAll(/@source\s+'\.\.\/\.\.\/\.\.\/([^']+)'/g)].map(([, path]) =>
     path.replace(/\/$/, ''),

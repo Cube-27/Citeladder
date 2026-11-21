@@ -24,7 +24,6 @@ import { ModelCalls } from '../src/agent/model-calls.ts';
 import { AgentQueue } from '../src/agent/queue.ts';
 import { ledgerBalances } from '../src/entitlements/ledger.ts';
 
-// The platform model, priced in configuration at Claude Haiku 5.5 rates.
 const platform = {
   ...gatewaySettings({}),
   apiKey: 'fixture-key',
@@ -32,7 +31,6 @@ const platform = {
   model: 'claude-haiku-5-5',
   maxOutputTokens: 16_384,
 };
-// A small request with the full output cap at the marked-up price.
 const HOLD = 11;
 const settings = agentSettings({});
 describe('Agent funding through the production ledger and shared pricing', () => {
@@ -185,7 +183,6 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const balances: unknown[] = [];
     const model = {
       ...(await agentModels(platform)(saved)),
-      // Every call is cut off, so the turn fails after its low-effort retry.
       converse: async () => {
         balances.push((await ledgerBalances(db, accountId, [grantId])).get(grantId)?.consumed);
         return result(reply('Cut off'), { stop: 'max_tokens' });
@@ -193,7 +190,6 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     };
     const calls = new ModelCalls(db, agentFunding(settings, platform));
     await agents.runtime(scope, model, { models: calls }).execute(lease);
-    // The first call was charged before the retry ran.
     expect(balances).toEqual([0, 1]);
     expect(await agents.run(saved.id)).toMatchObject({
       status: 'failed',
@@ -214,7 +210,6 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       { ordinal: 1, debited_credits: '1', input_tokens: '20' },
       { ordinal: 2, debited_credits: '1', input_tokens: '20' },
     ]);
-    // A repeated settlement of the same failed turn refunds nothing more.
     await db.transaction().execute(async (trx) => {
       await calls.settleFailed(trx, await agents.run(saved.id));
     });
@@ -236,7 +231,6 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const { run: saved, lease } = await run(scope);
     const calls = new ModelCalls(db, agentFunding(settings, platform));
     const attempt = await calls.dispatch(lease, 1, await agentModels(platform)(saved), request);
-    // 40 000 written tokens at the write rate plus 2 000 output tokens, 1 500 of them thinking.
     const usage = {
       input_tokens: 40_000,
       cached_input_tokens: 0,
@@ -267,7 +261,6 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const calls = new ModelCalls(db, agentFunding(settings, platform));
     const searching = { ...request, webSearches: 2 };
     const attempt = await calls.dispatch(lease, 1, await agentModels(platform)(saved), searching);
-    // Two searches at $10 per 1,000 with the 130% markup add 26 credits to the token hold.
     expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)?.reserved).toBe(HOLD + 26);
     const usage = {
       input_tokens: 20,
@@ -290,8 +283,6 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       debited_credits: '14',
       cost_microusd: '10007',
     });
-    // The internal-cost view carries the call at its cost before markup:
-    // $0.000002 input + $0.000005 output + $0.01 for the search.
     expect(
       await db
         .selectFrom('internal_costs')
@@ -323,7 +314,6 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     };
     const calls = new ModelCalls(db, agentFunding(settings, platform));
     await calls.call(lease, 1, await agentModels(platform, io)(saved), request);
-    // Five credits pay for the 99 input bytes and 7 652 output tokens, not the 16 384 cap.
     expect(sent).toEqual([7652]);
     expect(
       await db
@@ -338,7 +328,6 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     });
   });
   it('refuses a call below a minimum reply, counting only its own workspace’s credits', async () => {
-    // Another workspace's large balance is never drawn on.
     await tenant(1_000);
     const { scope } = await tenant(2);
     const { run: saved, lease } = await run(scope);
@@ -367,7 +356,6 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       ...request,
       messages: [opening],
     });
-    // 100 095 bytes held as one-hour cache writes, plus the output cap.
     expect(first.reserved_credits).toBe('37');
     const reported = { input_tokens: 25_000, output_tokens: 1_000 };
     await calls.receipt(scope.workspaceId, first.id, result(reply(), { usage: reported }));
@@ -380,9 +368,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       ],
     };
     const second = await calls.dispatch(lease, 2, model, next);
-    // 26 000 tokens read before, 119 bytes added and the 2 048-token margin.
     expect(second.reserved_credits).toBe('18');
-    // The most it can cost: everything it reads written to the one-hour cache, the whole cap.
     const worst = {
       input_tokens: 26_119,
       cache_write_input_tokens: 26_119,
@@ -420,7 +406,6 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const { scope, accountId, grantId } = await tenant(8);
     const { run: saved, lease } = await run(scope, 'plan');
     const responses = [
-      // The first call writes the document and is charged everything it held.
       result(save('The finished plan.'), {
         usage: { input_tokens: 100_000, output_tokens: 16_384 },
       }),
@@ -451,16 +436,11 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       .where('run_id', '=', saved.id)
       .executeTakeFirstOrThrow();
     expect(revision.body).toBe('The finished plan.');
-    // Work was delivered, so the call is not refunded.
     expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
       reserved: 0,
       consumed: 8,
     });
   });
-  /**
-   * One turn the browser closes while its second call is in flight: the first
-   * call returns `first`, charged one credit for its reported tokens.
-   */
   async function closedAfter(first: Response, skillId?: string) {
     const { scope, accountId, grantId } = await tenant();
     const store = agents.store({ admission: agentAdmission(settings, platform) });
@@ -515,7 +495,6 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     ]);
     expect(kept.revisions).toEqual(['The streamed plan.']);
     expect(kept.balance).toEqual({ reserved: 0, consumed: 1 });
-    // A turn closed before it staged anything delivered nothing and is refunded (B58).
     const refunded = await closedAfter(read());
     expect(refunded.run).toMatchObject({ status: 'failed', error_code: 'interrupted' });
     expect(refunded.replies).toEqual([recoveryReply('interrupted')]);

@@ -1,25 +1,6 @@
 import { Absence } from '@/components/ui/absence';
 import { cn } from '@/lib/utils';
 
-/**
- * Delta — a change: `caption-strong`, tabular, the signed number
- * and its unit with no arrow (the sign carries the direction without colour),
- * in the tone its meaning takes, with an optional basis ("vs Nov 7") in
- * `ink-2`.
- *
- * Colour follows meaning, not direction: `higher-is-better` paints a rise
- * `positive`, `lower-is-better` (rank, latency, errors) paints it
- * `negative`, and `neutral` stays `ink-2` because the movement is a fact,
- * not a verdict. A displayed zero is flat and signed like every other change:
- * `±0` plus its unit ("±0 pp") in `ink-2`, spoken "no change". The sign is a
- * true minus; it is shown, and the hidden word ("down 1.2") is what is spoken.
- *
- * The direction is decided from the value the reader SEES, after rounding, so
- * a movement of +0.04 never claims a direction it does not show.
- *
- * A change that cannot be compared (null, undefined or non-finite) is not
- * zero: it is an Absence, with the optional reason on hover and focus.
- */
 export type DeltaPolicy = 'higher-is-better' | 'lower-is-better' | 'neutral';
 
 type Direction = 'up' | 'down' | 'flat';
@@ -30,7 +11,6 @@ const SPOKEN = {
   flat: 'no change',
 } as const satisfies Record<Direction, string>;
 
-/** What the movement means under the policy; `data-outcome` exposes it. */
 type Outcome = 'improved' | 'worsened' | 'changed' | 'unchanged';
 
 function outcomeOf(direction: Direction, policy: DeltaPolicy): Outcome {
@@ -54,7 +34,6 @@ function roundedChange(value: number, precision: number) {
   return { direction, magnitude: Math.abs(rounded) };
 }
 
-// The website's product screens keep their 400 change line.
 const DELTA_FACE =
   'type-caption inline-flex items-baseline gap-1 font-medium tabular-nums whitespace-nowrap [[data-public-surface]_&]:font-mono [[data-public-surface]_&]:font-normal';
 
@@ -70,19 +49,12 @@ export function Delta({
   spokenContext,
   className,
 }: Readonly<{
-  /** The signed change, or null when there is nothing to compare against. */
   value: number | null | undefined;
-  /** Which direction is good. Decides the colour, never the arrow. */
   policy?: DeltaPolicy;
-  /** Decimal places the change is rounded to before its direction is decided. */
   precision?: number;
-  /** Appended to the magnitude, e.g. `' pp'`, `'%'`. */
   unit?: string;
-  /** Why there is no change, e.g. "No comparable run" — shown on hover/focus. */
   missingReason?: string;
-  /** The basis the change is measured against, e.g. "vs Nov 7", in `ink-2`. */
   context?: string;
-  /** The basis for screen readers only, where a visible one would crowd the figure. */
   spokenContext?: string;
   className?: string;
 }>) {

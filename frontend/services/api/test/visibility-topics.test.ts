@@ -1,9 +1,3 @@
-/**
- * The topic dimension (AV-5): finalization groups a run's answers by the
- * topic each prompt had when the run froze it, so refiling or renaming a
- * topic later never moves past answers, and every topic-filtered read serves
- * those frozen groups inside the reader's workspace.
- */
 import { randomUUID } from 'node:crypto';
 
 import { sql } from 'kysely';
@@ -46,12 +40,6 @@ async function get(t: Tenant, url: string) {
   return { status: response.status, json };
 }
 
-/**
- * Run 1 asks the road prompt under Pricing and the trail prompt under
- * Security. Pricing is then renamed and the trail prompt refiled to it, and
- * run 2 asks both under the renamed Pricing. Onboarding is never asked. The
- * fixture's project asks each prompt three times per run.
- */
 async function refiledHistory() {
   const t = await tenant();
   const pricing = await topic(db, t.projectId, 'Pricing');
@@ -70,7 +58,6 @@ async function refiledHistory() {
   return { t, pricing, security, onboarding, first, second };
 }
 
-// Every answer names the brand first, so it wins each one (AV-7).
 const measured = {
   visibility_rate: 1,
   share_of_voice: 1,
@@ -98,14 +85,12 @@ describe('topic dimension', () => {
       },
       { kind: 'measured', topic_id: security, name: 'Security', renamed_from: [], answers: 3 },
     ]);
-    // The latest run froze only the new name and asked nothing under Security.
     const latest = await read(t, t.projectId, '/topics');
     expect(latest.json.items).toMatchObject([
       { kind: 'not_run', topic_id: onboarding },
       { kind: 'measured', topic_id: pricing, renamed_from: [], answers: 6 },
       { kind: 'not_run', topic_id: security, renamed_from: [] },
     ]);
-    // The matrix reads the first run as it froze: the refiled trail prompt stays under Security.
     const matrix = await read(t, t.projectId, `/matrix?selection_mode=run&audit_id=${first}`);
     expect(matrix.json.axes).toMatchObject({
       topic: [
@@ -136,7 +121,6 @@ describe('topic dimension', () => {
       await responses(`&topic=${pricing}`),
       await responses(`&topic=${security}`),
     ]).toEqual([12, 9, 3]);
-    // The evidence and its prompt filter keep only the topic each run froze.
     const evidence = async (topicId: string) => {
       const { json } = await read(t, t.projectId, `/evidence?${runs}&topic=${topicId}`);
       const body = json as unknown as { items: unknown[]; prompt_options: unknown[] };
@@ -147,7 +131,6 @@ describe('topic dimension', () => {
       [3, 1],
     ]);
 
-    // A matched-subset comparison keeps only the selected topic's answers.
     const audits = await db
       .selectFrom('audits')
       .select(['id', 'configuration'])
@@ -171,7 +154,6 @@ describe('topic dimension', () => {
       [0, 3],
     ]);
 
-    // A failure outside the topic leaves the topic's own run sets comparable.
     await db
       .updateTable('metric_snapshots')
       .set({ metrics: sql`jsonb_set(metrics, '{coverage,requested}', '7')` })
@@ -189,7 +171,6 @@ describe('topic dimension', () => {
       'comparable',
     ]);
 
-    // By market reads each market's latest run in the topic: the latest asked no Security prompt.
     const marketStates = async (topicId: string) =>
       (
         (await read(t, t.projectId, `/markets?topic=${topicId}`)).json as unknown as {
@@ -224,7 +205,6 @@ describe('topic dimension', () => {
         created_at: new Date(),
       })
       .execute();
-    // The road prompt is unfiled, so the run freezes no topic.
     const unrecorded = await finalizedRun(t, ['https://review.example/a']);
     const rows = async (path: string) =>
       ((await read(t, t.projectId, path)).json.items as { name: string; kind: string }[]).map(
@@ -246,14 +226,12 @@ describe('topic dimension', () => {
       [{ kind: 'not_run' }],
     ]);
     expect(matrix.rankings.engine.map((row) => row.kind)).toEqual(['measured']);
-    // An engine that run never asked is not run, whatever it froze.
     expect(await rows('/topics?engine=gemini')).toEqual([['Pricing', 'not_run']]);
     const gemini = (await read(t, t.projectId, '/matrix?engine=gemini')).json as unknown as {
       grids: { topic_market: unknown[][] };
     };
     expect(gemini.grids.topic_market).toEqual([[{ kind: 'not_run' }]]);
 
-    // Filed now: the next run records Pricing; Onboarding was never asked.
     await db
       .updateTable('prompts')
       .set({ topic_id: pricing })
@@ -270,7 +248,6 @@ describe('topic dimension', () => {
       ['Pricing', 'measured'],
     ]);
 
-    // The block keeps the exact analyses it counts (invariant 5).
     const analyses = await db
       .selectFrom('response_analyses')
       .select('id')
@@ -289,7 +266,6 @@ describe('topic dimension', () => {
       analyses.map((row) => row.id).toSorted(),
     );
 
-    // A Commerce run writes no topic blocks; the same input for the brand run writes its one.
     const audit = await db
       .selectFrom('audits')
       .selectAll()
@@ -321,7 +297,6 @@ describe('topic dimension', () => {
     const foreignTopic = await topic(db, other.projectId, 'Pricing');
     expect((await read(other, t.projectId, '/topics')).status).toBe(404);
     expect((await read(other, t.projectId, `/trends?topic=${pricing}`)).status).toBe(404);
-    // Another workspace's topic groups none of this project's answers.
     const trend = await read(t, t.projectId, `/trends?topic=${foreignTopic}`);
     expect([trend.status, trend.json]).toEqual([200, []]);
     expect((await read(t, t.projectId, `/trends?topic=${pricing}`)).json).toHaveLength(2);

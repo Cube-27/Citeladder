@@ -3,10 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { TrailStep, RungStatus } from '@/components/ui/rung-trail';
 import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
 
-/** How long each revealed step holds before the next one completes. */
 const STEP_REVEAL_MS = 360;
 
-/** Where one step sits relative to the reveal's cursor. */
 function statusAt(index: number, done: number): RungStatus {
   if (index < done) return 'done';
   return index === done ? 'running' : 'pending';
@@ -17,12 +15,6 @@ function announcementFor(current: TrailStep | undefined, done: number): string {
   return `${current.label}. ${current.detail ?? ''}`;
 }
 
-/**
- * Onboarding's persisted phases can jump several steps between two polls.
- * With `stagger`, the jump is revealed one step every 360ms instead (at once
- * under reduced motion), and the step being worked on is what a screen reader
- * hears politely. A failed step is never hidden by the reveal.
- */
 export function useStaggeredSteps(
   steps: readonly TrailStep[],
   stagger: boolean,

@@ -8,7 +8,6 @@ export type SearchableSelectOption = { value: string; label: string; detail?: st
 
 type SelectOptionRenderer = (option: SearchableSelectOption) => ReactNode;
 
-/** An editable combobox for locally filtered or server-backed options. */
 export function SearchableSelect({
   id,
   ariaLabel,
@@ -51,8 +50,6 @@ export function SearchableSelect({
   const needle = (query ?? '').trim().toLowerCase();
   const filtered = needle ? options.filter((option) => matches(option, needle)) : options;
   const showList = open && filtered.length > 0;
-  // Options can shrink under an in-flight search after the highlight moved, so
-  // every read clamps to the list actually rendered rather than the stale index.
   const activeIndex = Math.min(highlight, filtered.length - 1);
   const activeOption = filtered[activeIndex];
 
@@ -157,7 +154,6 @@ export function SearchableSelect({
                 id={`${listId}-${index}`}
                 // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- ARIA listbox options keep focus on the editable input.
                 role="option"
-                // Options are reached through the input's active descendant, never by Tab.
                 tabIndex={-1}
                 aria-selected={option.value === value}
                 className={menuItemClasses({
@@ -207,7 +203,6 @@ function optionGridClass(hasLeading: boolean, hasEnd: boolean) {
   return 'grid-cols-[minmax(0,1fr)]';
 }
 
-/** The query while typing, else the selected option's label, else the raw value. */
 function inputText(query: string | null, selectedLabel: string | undefined, value: string) {
   return query ?? (selectedLabel || value);
 }

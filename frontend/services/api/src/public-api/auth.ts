@@ -1,14 +1,3 @@
-/**
- * Public API authentication: `Authorization: Bearer cl_live_…` only. Cookies
- * and `X-Workspace-Id` are never read.
- *
- * A request passes, in order: the key (401 `invalid_api_key`), the per-key
- * and per-workspace rate limits (429), the creator's active account and live membership, the
- * workspace's access and `api_access` grant (403), the operation's capability
- * from the creator's live role intersected with the key's scope (403), then
- * the path project and its owned IDs (404 outside the workspace, the key's
- * allowlist or the project).
- */
 import { apiKeyScopeSchema, type ApiKeyScope } from '@citeladder/contracts/api-keys';
 import type { MiddlewareHandler } from 'hono';
 
@@ -38,13 +27,9 @@ export function apiKeyAuth(
   return async (c, next) => {
     const key = await resolveCaller(db, config.auth.apiKeyPepper, c.req.header('authorization'));
     const rateLimit = await spendRateLimits(db, key);
-    // Prepared headers reach this middleware's own refusals and JSON replies;
-    // the second pass below covers replays and raw responses.
     for (const [name, value] of Object.entries(rateLimit)) c.header(name, value);
     const [member, creator] = await Promise.all([
       findWorkspaceMember(db, key.created_by_user_id, key.workspace_id),
-      // A key acts as its creator, so it stops when an operator disables them,
-      // exactly as their sessions and MCP connections do.
       db
         .selectFrom('users')
         .select(['is_active', 'registration_origin', 'email_verified_at'])
@@ -95,7 +80,6 @@ export function apiKeyAuth(
   };
 }
 
-/** The path's project, which must be in the key's workspace and allowlist (else 404). */
 async function pathProject(
   db: Database,
   workspaceId: string,

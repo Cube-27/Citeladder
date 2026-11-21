@@ -66,7 +66,6 @@ function pagesBody(items: unknown[], nextCursor: string | null = null) {
     items,
   };
 }
-/** The pager's announced range, e.g. "1–10 paths", whose noun is set muted. */
 function pagerRange(text: string) {
   return (_: string, element: Element | null) =>
     element?.tagName === 'OUTPUT' && element.textContent === text;
@@ -108,14 +107,12 @@ it('keeps inventory, zero, partial values and distinct unavailable reasons reada
   const row = await screen.findByRole('row', { name: /long-page/ });
   expect(within(row).getAllByRole('cell', { name: '0' })).toHaveLength(2);
   expect(within(row).getByRole('cell', { name: '1' })).toBeVisible();
-  // A partial count stays a bare number; its coverage is the row's Coverage mark.
   const partial = within(row).getByRole('button', {
     name: '12 citations',
   });
   expect(partial.textContent).toBe('12');
   const coverageCell = (cells: HTMLElement[]) => cells[4]!.textContent;
   expect(coverageCell(within(row).getAllByRole('cell'))).toBe('Partial');
-  // A missing value is the dash named by its absence's word, with why on focus.
   const missing = within(row).getByRole('button', { name: 'Not connected' });
   expect(missing.textContent).toBe('—Not connected');
   focusByKeyboard(missing);
@@ -142,7 +139,6 @@ it('leaves out a column no row measures, and gives way to one state when none is
     name: 'Path-level AI traffic with separate signal units',
   });
   await within(table).findByRole('row', { name: /\/a\b/ });
-  // Referrals, citations, findings and last crawl are absent on every row.
   expect(
     within(table)
       .getAllByRole('columnheader')
@@ -182,8 +178,6 @@ it('keeps the rows and the pager on screen while the next page loads', async () 
 
   await user.click(screen.getByRole('button', { name: 'Next page' }));
   await waitFor(() => expect(asked).toEqual(['first:10', 'page-2:10']));
-  // The next page is in flight: the first page's rows, the coverage line and
-  // the pager stay where they were, with navigation paused.
   expect(within(table).getByRole('row', { name: /first-10\b/ })).toBeVisible();
   expect(screen.getByText(/Crawl coverage unknown · 200 known pages/)).toBeVisible();
   expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
@@ -216,7 +210,6 @@ it('never shows one workspace’s rows while another workspace’s page loads', 
   });
   expect(await within(table).findByRole('row', { name: /first-workspace/ })).toBeVisible();
 
-  // The same project id under another workspace: the old rows must not stand in.
   view.rerender(
     <TrafficPages workspaceId={OTHER_WORKSPACE} projectId={PROJECT} filters={{ range: '30d' }} />,
   );

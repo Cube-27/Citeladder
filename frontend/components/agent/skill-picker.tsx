@@ -22,11 +22,6 @@ export function skillLabel(skills: AgentSkill[], skillId: string | null): string
   return skills.find((skill) => skill.id === skillId)?.label ?? null;
 }
 
-/**
- * The skill for the next turn: `undefined` keeps the default (what the chat
- * or its Action continues with), `null` is an explicit Automatic, else an id.
- * Any skill can write in any chat; a different deliverable becomes another document.
- */
 export function useSkillChoice({
   value,
   onChange,
@@ -37,11 +32,9 @@ export function useSkillChoice({
 }: Readonly<{
   value: string | null | undefined;
   onChange: (skillId: string | null | undefined) => void;
-  /** The chat already holds a document, so an unpicked skill continues its skill. */
   hasDocument?: boolean;
   inheritedSkillId?: string | null;
   hasAction?: boolean;
-  /** A workflow a handoff pinned: the default until a skill is picked or it is removed. */
   pinned?: Readonly<{ label: string; onRemove: () => void }>;
 }>) {
   const catalog = useAgentCatalog();
@@ -52,11 +45,8 @@ export function useSkillChoice({
     hasDocument,
     hasAction,
   });
-  // An id the catalog has not named (yet) is still a pick, never Automatic.
   const picked = value ? (skillLabel(skills, value) ?? '…') : null;
   const isDefault = value === undefined && defaultLabel !== null;
-  // A picked skill or a default the turn continues with reads as a chip;
-  // removing a pick returns to the default, removing the default is Automatic.
   let chip: Readonly<{ label: string; onRemove: () => void }> | undefined;
   if (picked) chip = { label: `Skill: ${picked}`, onRemove: () => onChange(undefined) };
   else if (isDefault)
@@ -76,7 +66,6 @@ export function useSkillChoice({
 }
 export type SkillChoice = ReturnType<typeof useSkillChoice>;
 
-/** The composer menu's Skills submenu. */
 export function SkillsSubmenu({
   choice,
   onSelect,
@@ -91,7 +80,6 @@ export function SkillsSubmenu({
   );
 }
 
-/** The skill options: the default, Automatic, then each group's skills. */
 export function SkillOptions({
   choice,
   onSelect,
@@ -113,7 +101,6 @@ export function SkillOptions({
         <MenuRadioItem value={INHERIT}>{choice.defaultLabel}</MenuRadioItem>
       ) : null}
       <MenuRadioItem value={AUTOMATIC}>Automatic</MenuRadioItem>
-      {/* Until the catalog is read, an empty list is not a plan without skills. */}
       {choice.status === 'pending' ? <MenuItem disabled>Loading skills…</MenuItem> : null}
       {choice.status === 'error' ? <MenuItem disabled>{"Couldn't load skills"}</MenuItem> : null}
       {[...groups].map(([group, rows]) => (
@@ -131,7 +118,6 @@ export function SkillOptions({
   );
 }
 
-/** What an unpicked turn runs: the pinned workflow, else what the chat or its Action continues with. */
 function defaultLabelFor(
   skills: AgentSkill[],
   {

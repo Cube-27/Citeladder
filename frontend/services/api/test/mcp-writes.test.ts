@@ -24,7 +24,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** A live grant for the tenant's user over its workspace, as consent mints one. */
 async function connection(
   tenant: { userId: string; workspaceId: string },
   scopes = ['citeladder:read', 'citeladder:write'],
@@ -251,7 +250,6 @@ it('archives, refiles and activates a selection only on confirmation, all or not
   await confirm(refile);
   expect(await filedUnder()).toBe(shoes);
 
-  // A prompt from another project refuses the selection before anything is prepared.
   const elsewhere = await auditTenant(db, fixtures);
   expect(
     await failure(
@@ -564,12 +562,10 @@ it('saves a reviewed topic plan as one change and refuses a topic from another p
 it('refuses topic previews and generation runs the owner refuses, before any model call', async () => {
   const tenant = await auditTenant(db, fixtures);
   const principal = await connection(tenant);
-  // No saved offerings: there is nothing to propose a topic from.
   expect(await failure(call(principal, 'preview_topics', { project_id: tenant.projectId }))).toBe(
     'Add at least one offering before proposing topics',
   );
   await topic(db, tenant.projectId, 'Road running');
-  // The distribution reaches the owner: a competitor share needs a competitor.
   expect(
     await failure(
       call(principal, 'generate_prompts', {
@@ -606,7 +602,6 @@ it('refuses topic previews and generation runs the owner refuses, before any mod
 it('replays a retried generation run by its run key instead of generating again', async () => {
   const tenant = await auditTenant(db, fixtures);
   const principal = await connection(tenant);
-  // A run this client already made with run key "agreed-run", staging nothing.
   await db
     .insertInto('prompt_generation_runs')
     .values({
@@ -632,7 +627,6 @@ it('replays a retried generation run by its run key instead of generating again'
       'Staged 0 of 10 requested suggestion(s) for review. Nothing is tracked until the user accepts them in CiteLadder.',
     review_url: `https://app.example.test/prompts/build?step=review&project=${tenant.projectId}`,
   });
-  // The same key for a different run is refused rather than replayed or run.
   expect(
     await failure(
       call(principal, 'generate_prompts', {
@@ -716,7 +710,6 @@ it('creates a prepared schedule in its project only on confirmation, recording t
 it('spends a narrower per-connection budget on changes', async () => {
   const tenant = await auditTenant(db, fixtures);
   const principal = await connection(tenant);
-  // Budgets are fixed clock windows; a held clock keeps every call in one of them.
   vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-01T10:00:15Z') });
   onTestFinished(() => {
     vi.useRealTimers();

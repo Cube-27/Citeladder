@@ -1,16 +1,9 @@
-/**
- * Win rate (AV-7): which tracked business an answer names first, and how often
- * each one is. Only the tracked roster competes, so an untracked name earlier
- * in the answer never wins, and an answer naming no tracked business is not
- * applicable rather than a loss.
- */
 import { firstNamedSchema, type FirstNamed } from '@citeladder/contracts/audits';
 import type { WinCounts } from '@citeladder/contracts/visibility';
 import { z } from 'zod';
 
 import { compareText } from '../text-order.ts';
 
-/** The tracked business named first; the brand wins an offset tie, as `brandPosition` ranks it. */
 export function firstNamed(input: {
   brandName: string;
   brandOffset: number | null;
@@ -38,7 +31,6 @@ export function firstNamedColumns(first: FirstNamed) {
 
 type StoredFirstNamed = { first_named_kind: string; first_named_name: string | null };
 
-/** The stored derivation. */
 export function storedFirstNamed(row: StoredFirstNamed): FirstNamed {
   return firstNamedSchema.parse({
     kind: row.first_named_kind,
@@ -50,14 +42,12 @@ const winTallySchema = z.object({
   answers: z.number().int(),
   first: z.record(z.string(), z.number().int()),
 });
-/** Answers naming a tracked business, and how many of them each business was named first in. */
 export type WinTally = z.infer<typeof winTallySchema>;
 
 // Own keys only: a tracked name such as "constructor" must not read Object.prototype.
 const ownCount = (first: WinTally['first'], name: string) =>
   Object.hasOwn(first, name) ? first[name]! : 0;
 
-/** The tally over a set of answers, keyed like share of voice. */
 export function winTally(answers: readonly FirstNamed[], brandKey: string): WinTally {
   const first: Record<string, number> = {};
   let counted = 0;
@@ -83,21 +73,18 @@ export function winTally(answers: readonly FirstNamed[], brandKey: string): WinT
   return { answers: counted, first };
 }
 
-/** The tally a metric block persisted; null for an unmeasured slice (`{}`), and a corrupt one fails. */
 export function storedWinTally(value: unknown): WinTally | null {
   return value === undefined ? null : winTallySchema.parse(value);
 }
 
 const UNAVAILABLE: WinCounts = { win_count: null, win_answers: null, win_rate: null };
 
-// No answer naming a tracked business is not applicable: no rate, never zero.
 const counted = (count: number, answers: number): WinCounts => ({
   win_count: count,
   win_answers: answers,
   win_rate: answers ? count / answers : null,
 });
 
-/** The brand's win counts over stored answers. */
 export function brandWinCounts(rows: readonly StoredFirstNamed[]): WinCounts {
   const named = rows.map(storedFirstNamed);
   return counted(
@@ -106,7 +93,6 @@ export function brandWinCounts(rows: readonly StoredFirstNamed[]): WinCounts {
   );
 }
 
-/** Summed counts; no part at all is unavailable. */
 export function sumWinCounts(parts: readonly WinCounts[]): WinCounts {
   let count = 0;
   let answers = 0;

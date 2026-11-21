@@ -2,26 +2,18 @@ import { ConfigError } from './config-error.ts';
 import { resolveSpec, type SettingSource, type SettingSpec } from './settings.ts';
 
 export const heartbeatFailureLimit = 2;
-/** Interactive POSTs borrow existing workers without waiting for a new job. */
 export const interactiveExecution = {
   admissionSeconds: 30,
   timeoutSeconds: 240,
   concurrency: 2,
 };
 
-/**
- * In-request work one API instance runs at a time: interactive audits and
- * Agent turns together. A full instance answers 429 with `Retry-After`; the
- * queued work stays durable. On shutdown, open work is stopped and given
- * `shutdownGraceMs` to settle before the server closes.
- */
 export const interactiveCapacity = {
   slots: 6,
   retryAfterSeconds: 15,
   shutdownGraceMs: 8000,
 };
 
-/** Runner lanes run concurrently; an idle lane is polled at most this far apart. */
 export const runnerLanes = {
   idlePollMs: 5000,
 };
@@ -53,7 +45,6 @@ const integer = (name: string, value: number, maximum: number): SettingSpec => (
 });
 const text = (name: string): SettingSpec => ({ env: [name], type: 'str', default: '' });
 
-/** The runner and Cloud Run execution settings, resolved like every other setting. */
 export const executionSpecs = {
   // Each successor execution costs a one-to-three-minute Cloud Run cold start.
   budget_seconds: integer('RUNNER_BUDGET_SECONDS', 600, 3600),
@@ -61,12 +52,9 @@ export const executionSpecs = {
   wake_timeout_ms: integer('RUNNER_WAKE_TIMEOUT_MS', 5000, 30000),
   wake_min_interval_ms: integer('RUNNER_WAKE_MIN_INTERVAL_MS', 5000, 60000),
   runner_job: text('CLOUD_RUN_RUNNER_JOB'),
-  // Set only by a runner starting its successor before its own deadline.
   handover: { env: ['RUNNER_HANDOVER'], type: 'bool', default: false },
-  // Cloud Scheduler's OIDC identity and audience for the API's periodic tick.
   scheduler_invoker: text('SCHEDULER_TICK_INVOKER'),
   scheduler_audience: text('SCHEDULER_TICK_AUDIENCE'),
-  // Periodic work admitted inside the scheduled request; a drain gets its own job.
   scheduler_budget_seconds: integer('SCHEDULER_TICK_BUDGET_SECONDS', 20, 120),
   origin_token: text('CITELADDER_ORIGIN_TOKEN'),
   previous_origin_token: text('CITELADDER_ORIGIN_TOKEN_PREVIOUS'),
@@ -114,7 +102,6 @@ export function executionSettings(source: SettingSource) {
     throw new ConfigError('Set SCHEDULER_TICK_INVOKER and SCHEDULER_TICK_AUDIENCE together');
   return {
     runnerJob,
-    /** Null serves no scheduled tick route; local loops run `src/tick.ts` instead. */
     scheduledTick: invoker
       ? { invoker, audience, budgetSeconds: setting('scheduler_budget_seconds') as number }
       : null,
@@ -133,7 +120,6 @@ export function executionSettings(source: SettingSource) {
 // hashtextextended(DRAIN_LOCK, 0): one drain per database at a time.
 export const DRAIN_LOCK = 'citeladder-runner-drain';
 
-/** Tables whose API mutations can leave executable or recoverable work. */
 export const executionTables = new Set([
   'analytics_tasks',
   'brand_discovery_tasks',

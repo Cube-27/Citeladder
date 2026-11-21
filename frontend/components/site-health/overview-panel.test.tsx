@@ -26,13 +26,11 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-/** One figure of the Overview's score row: its label, value, sub-line and link. */
 function stat(label: string) {
   const term = within(screen.getByTestId('overview-metrics')).getByText(label);
   return term.closest('[data-figure-cell]');
 }
 
-/** A terminal overview snapshot; each test overrides only what it is about. */
 const terminalOverview = (overrides: Record<string, unknown> = {}) => ({
   project_id: PROJECT,
   crawl_id: CRAWL,
@@ -208,9 +206,7 @@ describe('OverviewPanel', () => {
       screen.queryByRole('heading', { name: 'Classification completeness' }),
     ).not.toBeInTheDocument();
     expect(figureText('AEO checklist completion')).toBe('50%');
-    // Coverage is a share of the pages found, so it reads as a percentage, not a score.
     expect(figureText('Crawl coverage')).toBe('40%');
-    // Scores are printed figures, never a bar or rungs.
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Loading Overview details')).not.toBeInTheDocument();
@@ -246,7 +242,6 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    // 20 analyzed of 100 found is 20% coverage, not 100% of the 20 selected.
     await waitFor(() => expect(figureText('Crawl coverage')).toBe('20%'));
   });
 
@@ -294,7 +289,6 @@ describe('OverviewPanel', () => {
       />,
     );
     const links = within(screen.getByTestId('overview-metrics')).getAllByRole('link');
-    // Each figure's label is its link.
     expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
       ['Web fundamentals', '/issues?section=technical'],
       ['AEO readiness', '/issues?section=aeo'],
@@ -386,7 +380,6 @@ describe('OverviewPanel', () => {
     );
 
     await screen.findByRole('table', { name: 'Top issues' });
-    // One list, one area a row, each with its state.
     const areas = within(screen.getByRole('list', { name: 'Web fundamentals areas' }));
     expect(areas.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       'accessibilityMeasured',
@@ -489,10 +482,6 @@ describe('OverviewPanel', () => {
   }
 
   it('stays silent when the snapshot simply does not exist yet', async () => {
-    // Terminalization WRITES the snapshot, so 404 is this endpoint saying
-    // "not yet", not "something went wrong". It was reported as a red alert
-    // over a healthy run, because hovering the Overview tab warmed this key
-    // mid-crawl and the cached error outlived the disabled query.
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
         HttpResponse.json(
@@ -509,8 +498,6 @@ describe('OverviewPanel', () => {
   });
 
   it('still reports a snapshot read that genuinely failed', async () => {
-    // 403, not 500: the real retry policy applies in these tests, and a
-    // retried 5xx outlives the assertion's window rather than the condition.
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
         HttpResponse.json({ error: { message: 'Forbidden' } }, { status: 403 }),
@@ -519,7 +506,6 @@ describe('OverviewPanel', () => {
 
     renderTerminal();
 
-    // The shared read error names the failure and, for 403, the one recovery.
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Check your workspace access, then try again.');
     expect(alert).toHaveTextContent(ALERT);

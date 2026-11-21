@@ -1,10 +1,3 @@
-/**
- * A running crawl's provisional score card: the equal-page average of each
- * analyzed tracked page's stored provisional scores, with counts, in a few
- * grouped queries (owner, 2026-11-17). It never reads rule evaluations, so its
- * cost does not grow with checks per page. The terminal summary is still the
- * full rebuild from evaluations (`measurementProjection`).
- */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -26,7 +19,6 @@ type KindRow = {
   aeo_scored: number;
 };
 
-/** The crawl's current completed analyses of active tracked pages. */
 function currentAnalyses(db: Database, crawl: Crawl) {
   return db
     .selectFrom('site_page_analyses as p')
@@ -61,7 +53,6 @@ function kindRows(db: Database, crawl: Crawl): Promise<KindRow[]> {
     .execute();
 }
 
-/** Equal-page means and coverage over grouped rows; every live state reads `limited_evidence`. */
 function scores(rows: KindRow[]) {
   const total = (key: 'analyzed' | 'web_sum' | 'web_scored' | 'aeo_sum' | 'aeo_scored') =>
     rows.reduce((sum, row) => sum + row[key], 0);
@@ -90,11 +81,6 @@ function byPageKind(rows: KindRow[]) {
   );
 }
 
-/**
- * Tracked pages expected to classify, grouped by the error that ended their
- * task without an analysis (null while pending or analyzed). One task per
- * page, its analyze before its discover, as the terminal projection reads it.
- */
 function classificationErrors(db: Database, crawl: Crawl) {
   const tasks = db
     .selectFrom('site_crawl_tasks as t')
@@ -131,7 +117,6 @@ function classificationErrors(db: Database, crawl: Crawl) {
 }
 
 async function counts(db: Database, crawl: Crawl) {
-  // The crawl's current issues on active tracked pages, through `ix_site_issues_current` (CO-7).
   const issues = await db
     .selectFrom('site_issues as i')
     .select(sql<number>`count(*)::int`.as('count'))
@@ -183,7 +168,6 @@ function classification(rows: KindRow[], errors: { error: string | null; pages: 
   };
 }
 
-/** The live score card, or null before any tracked page is analyzed. */
 export async function liveScoreSummary(db: Database, crawl: Crawl) {
   const rows = await kindRows(db, crawl);
   if (!rows.length) return null;

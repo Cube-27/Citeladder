@@ -1,7 +1,3 @@
-/**
- * Market probe policy (AV-29 to AV-35): the questions, engines, repeats, the
- * AI-credit price of each answer and the labelling templates.
- */
 import { logicalEngineSchema } from '@citeladder/contracts/providers';
 import { z } from 'zod';
 import value from './probes.json' with { type: 'json' };

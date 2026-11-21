@@ -1,13 +1,3 @@
-/**
- * Opportunities domain endpoints.
- *
- * Owns transport for the Opportunities slice: the priority-sorted keyset
- * catalog and the shared queue order. Workflow status and implementation declarations belong to Actions
- * (`lib/api/actions.ts`). Every JSON response passes through `strictValidate`
- * (fail loud on any drift — the backend is the source of truth). All paths are relative
- * `/api/v1` (same-origin proxy, invariant 12) and every read accepts an
- * `AbortSignal` via `ApiRequestOptions`.
- */
 import { apiClient, type ApiRequestOptions } from './client';
 import {
   opportunitiesPageSchema,
@@ -18,7 +8,6 @@ import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
 import type { OpportunitiesPage } from '@citeladder/contracts';
 
-/** Keyset catalog params. Ordering is server-owned (priority desc, id desc). */
 export type OpportunitiesParams = {
   cursor?: string;
   limit?: number;

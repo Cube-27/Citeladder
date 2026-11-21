@@ -1,11 +1,3 @@
-/**
- * The changes an MCP grant prepares and the user then confirms: one entry per
- * kind holding the permission its command needs, the payload stored behind the
- * confirmation token and the one `execute` both steps run. A prepare tool
- * rehearses `execute` in a rolled-back transaction before it stores the
- * payload; `confirm_change` parses the stored payload back and runs the same
- * `execute` for real, inside the confirmation's transaction.
- */
 import { z } from 'zod';
 import { actionDeclarationRequestSchema } from '@citeladder/contracts/actions';
 import { promptStatusSchema } from '@citeladder/contracts/project';
@@ -28,7 +20,6 @@ import { operatorTransaction } from '../db/operator-transaction.ts';
 import { promptInput } from '../prompts/prompts.ts';
 import type { Evidence } from './types.ts';
 
-/** A prepared change's identity: its confirmation id and the project it was authorized for. */
 export type PreparedChange = Readonly<{ id: string; projectId: string }>;
 
 type Execute<S extends z.ZodType, P extends Permission> = (
@@ -46,11 +37,6 @@ function preparedKind<S extends z.ZodType, P extends Permission>(entry: {
 }) {
   return {
     permission: entry.permission,
-    /**
-     * The dry run: `execute` with every check, admission and write it makes,
-     * rolled back; owners join this transaction. `inspect` reads the
-     * rehearsed state before the rollback. Returns the payload to store.
-     */
     async rehearse<T>(
       db: Database,
       config: ServiceConfig,
@@ -66,7 +52,6 @@ function preparedKind<S extends z.ZodType, P extends Permission>(entry: {
       });
       return { payload, inspected };
     },
-    /** The confirmed run: the member's live role decides, as at prepare time. */
     confirm(
       trx: Database,
       config: ServiceConfig,
@@ -85,7 +70,6 @@ function preparedKind<S extends z.ZodType, P extends Permission>(entry: {
   };
 }
 
-/** The idempotency key a declaration confirmed through MCP records. */
 const declarationKey = (confirmationId: string) => `mcp:${confirmationId}`;
 
 export const preparedChanges = {

@@ -1,6 +1,5 @@
 import { SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
 
-/** Name and icon for browsers; the site is a website, not an installable app. */
 export function GET() {
   return new Response(
     JSON.stringify({

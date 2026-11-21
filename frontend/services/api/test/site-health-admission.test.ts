@@ -37,7 +37,6 @@ describe('URL admission', () => {
       disposition: 'inventory_only',
       itemKind: 'document',
     });
-    // Sitemaps are the one asset extension crawler infrastructure may fetch.
     expect(classifyUrlAdmission('https://example.test/sitemap.xml').accepted).toBe(false);
     expect(
       classifyUrlAdmission('https://example.test/sitemap-1.xml.gz', { infrastructure: 'sitemap' })
@@ -87,7 +86,6 @@ describe('URL admission', () => {
       priority('https://example.test/blog/widget'),
     );
     const kind = (path: string) => classifyUrlAdmission(`https://example.test${path}`).valueKind;
-    // Whole tokens and the section first, not any substring anywhere.
     expect(kind('/blog/product-review')).toBe('article');
     expect(kind('/about-us')).toBe('about');
     expect(kind('/help/getting-started')).toBe('guide');
@@ -262,7 +260,6 @@ describe('sitemaps', () => {
     const whole = collector();
     whole.add('https://example.test/sitemap.xml', read(urlset('https://example.test/1')), 0);
     expect([whole.urls.length, whole.truncated]).toEqual([1, false]);
-    // At the depth bound, a reference back to a read index leaves nothing unread.
     const looped = collector();
     const index = (loc: string) =>
       Buffer.from(`<sitemapindex><sitemap><loc>${loc}</loc></sitemap></sitemapindex>`);
@@ -297,7 +294,6 @@ describe('sitemaps', () => {
     expect(() => parseSitemap(Buffer.from('<urlset><url>'), 'text/xml', limits)).toThrow(
       SitemapParseError,
     );
-    // Over the byte cap is unread, not refused; malformed gzip is the server's answer.
     const thrown = (body: Buffer) => {
       try {
         parseSitemap(body, 'application/gzip', limits);
@@ -329,12 +325,10 @@ describe('sitemaps', () => {
     expect(walk.truncated).toBe(false);
     walk.add('https://example.test/u2.xml', read(urlset('c', 'd')), 1);
     expect([walk.urls, walk.truncated]).toEqual([['a', 'b', 'c'], true]);
-    // A fragment or spelling variant of a visited sitemap is the same document.
     const again = Buffer.from(
       '<sitemapindex><sitemap><loc>https://EXAMPLE.test/root.xml#top</loc></sitemap></sitemapindex>',
     );
     expect(walk.add('https://example.test/other.xml', read(again), 0)).toEqual([]);
-    // An index entry on another domain is not followed, so the list is a lower bound.
     const offsite = collector({ follows: (ref) => ref.startsWith('https://example.test/') });
     const mixed = Buffer.from(
       '<sitemapindex><sitemap><loc>https://example.test/s1.xml</loc></sitemap>' +

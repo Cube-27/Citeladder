@@ -42,7 +42,6 @@ describe('SectionHeader actions', () => {
   });
 });
 
-/** The text a screen reader reads: every text node outside an aria-hidden subtree. */
 function spokenText(root: Element) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let text = '';
@@ -59,12 +58,9 @@ describe('Delta', () => {
     );
     const fall = screen.getByText('1.2 pp').closest('[data-direction]');
     expect(fall?.textContent).toBe('down −1.2 ppvs last week');
-    // The sign is drawn with no arrow; a screen reader hears the word alone.
     expect(fall ? spokenText(fall) : null).toBe('down 1.2 ppvs last week');
-    // A falling rank is an improvement under lower-is-better.
     expect(fall).toHaveAttribute('data-outcome', 'improved');
 
-    // +0.04 rounds to a displayed 0.0: flat, a signed ±0 with its unit, spoken as no change.
     rerender(<Delta value={0.04} unit=" pp" />);
     const flat = container.querySelector('[data-direction]');
     expect(flat).toHaveAttribute('data-direction', 'flat');
@@ -118,12 +114,10 @@ describe('FigureStrip', () => {
     const cell = (label: string) => within(group).getByText(label).closest('[data-figure-cell]');
     expect(cell('TTFB')).toHaveTextContent('Not measured');
     expect(cell('Errors')?.textContent).toBe('Errors0');
-    // Two rows: the basis is the label's hint, never a line of its own.
     expect(cell('Crawl')?.textContent).toBe('CrawlLast crawl72');
     expect(
       within(group).getByRole('button', { name: 'Basis of Crawl' }),
     ).toHaveAccessibleDescription('Last crawl');
-    // The figure's action is its label, never a link or button of its own.
     fireEvent.click(within(group).getByRole('button', { name: 'TTFB' }));
     expect(onConnect).toHaveBeenCalledOnce();
     expect(within(group).getByRole('link', { name: 'Crawl' })).toHaveAttribute('href', '/issues');
@@ -194,7 +188,6 @@ describe('DataTable', () => {
         state={{ kind: 'empty', icon: Inbox, heading: 'No failed runs' }}
       />,
     );
-    // The empty state takes the table's place: no head row is left above it.
     expect(screen.queryByRole('columnheader', { name: 'Count' })).toBeNull();
     expect(screen.getByRole('heading', { level: 3, name: 'No failed runs' })).toBeVisible();
   });
@@ -262,7 +255,6 @@ describe('SortableTableHead', () => {
               onSort={onSort}
               numeric
             />
-            {/* An inactive column has no order, whatever its flag says. */}
             <SortableTableHead label="Page" active={false} descending onSort={vi.fn()} />
           </TableRow>
         </TableHeader>
@@ -354,11 +346,9 @@ describe('FilterBar and FilterTrigger', () => {
         }
       />,
     );
-    // The row draws its slots in document order, whatever order a page passes them in.
     const order = [
       screen.getByRole('radiogroup', { name: 'Pages shown' }),
       screen.getByRole('searchbox', { name: 'Search pages' }),
-      // A lone filter is its own trigger, named by its value.
       screen.getByRole('button', { name: 'Page kind: FAQ' }),
       screen.getByText('12 pages'),
       screen.getByRole('button', { name: 'Export' }),
@@ -401,7 +391,6 @@ describe('FilterBar and FilterTrigger', () => {
     );
     for (const name of ['Period: All', 'Engines: All', 'Market: All', 'Topic: One'])
       expect(screen.getByRole('button', { name })).toBeInTheDocument();
-    // The fifth icon filter and the plain one share Filters; the set one follows it as a chip.
     expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Prompts: All' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Remove Kind filter' })).toBeInTheDocument();
@@ -477,7 +466,6 @@ describe('FilterBar and FilterTrigger', () => {
         onChange: () => undefined,
       });
     const { rerender } = render(<FilterBar filters={[period('30d'), status(null)]} />);
-    // The name keeps the value the chip does not print; the window shows at the row's end.
     expect(screen.getByRole('button', { name: 'Period: Last 30 days' }).textContent).toBe('');
     expect(screen.getByText('Last 30 days')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Status: All statuses' })).toHaveTextContent(
@@ -488,7 +476,6 @@ describe('FilterBar and FilterTrigger', () => {
     expect(screen.getByRole('button', { name: 'Period: Last 7 days' })).toHaveTextContent(
       'Last 7 days',
     );
-    // Set, the chip prints the window itself, so the row's end does not repeat it.
     expect(screen.getAllByText(/Last 7 days/)).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Status: Open' })).toHaveAttribute('data-active');
   });
@@ -503,7 +490,6 @@ describe('Pager', () => {
         {...pageNumberControls(1, 2, onPageChange)}
       />,
     );
-    // The range is a polite status, so a page turn is announced.
     expect(screen.getByRole('status')).toHaveTextContent('1–10 of 12 prompts');
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
@@ -557,11 +543,9 @@ describe('StateBlock', () => {
     const { rerender } = render(<StateBlock key="shell" kind="loading" label="Loading shell…" />);
     expect(await screen.findByRole('status', { name: 'Loading shell…' })).toBeInTheDocument();
 
-    // A different owner's box (a fresh mount) continues the visible wait at once.
     rerender(<StateBlock key="page" kind="loading" label="Loading page…" />);
     expect(screen.getByRole('status', { name: 'Loading page…' })).toBeInTheDocument();
 
-    // A wait that starts with nothing showing is still held back.
     rerender(<p>Loaded</p>);
     rerender(<StateBlock key="section" kind="loading" label="Loading section…" />);
     expect(screen.queryByRole('status')).toBeNull();

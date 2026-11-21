@@ -21,7 +21,6 @@ import { AUDIT_STATES, pollAudits, runTitle } from '@/lib/runs/status';
 const failureNotice = (mutation: Readonly<{ isError: boolean; error: unknown }>, action: string) =>
   mutation.isError ? mutationNoticeForError(mutation.error, { action }) : null;
 
-/** Active-run progress, cancellation, failed-execution reruns, and evidence selection. */
 export function RunDetailScreen() {
   const params = useParams<{ runId: string }>();
   const router = useNavigate();
@@ -34,16 +33,13 @@ export function RunDetailScreen() {
 
   const auditQuery = useQuery({
     ...runsQueries.detail(workspaceId, runId),
-    // Polling remains the baseline; the run's event stream only accelerates it.
     refetchInterval: (query) => pollAudits(query.state.data?.status),
   });
 
   const active = auditQuery.data ? AUDIT_STATES[auditQuery.data.status].active : false;
 
-  // Only the audit row polls; the executions list follows its progress.
   const executionsQuery = useRunExecutions(runId, auditQuery.data);
 
-  // Stream is the accelerator; polling remains the reliable baseline.
   useRunEvents(runId, auditQuery.data?.project_id, active);
 
   const canRun = useWorkspaceCapability('run');
@@ -55,8 +51,6 @@ export function RunDetailScreen() {
     });
 
   const executions = executionsQuery.data ?? [];
-  // A matching URL selection wins over a transient in-table selection; a stale
-  // URL selection never masks a valid selection made in this view.
   const activeExecutionId = executions.some((execution) => execution.id === executionParam)
     ? executionParam
     : selectedExecutionId;
@@ -68,7 +62,6 @@ export function RunDetailScreen() {
   const timeZone = useDisplayTimeZone();
   const title = audit ? runTitle(audit, timeZone) : undefined;
 
-  // A 404 means the run is gone (deleted, or another workspace's), even with a cached copy.
   if (isNotFound(auditQuery.error)) return <NotFoundScreen />;
   return (
     <RecordPage

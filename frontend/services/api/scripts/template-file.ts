@@ -1,4 +1,3 @@
-/** Write a generated, formatted docs template, or with `--check` fail when the committed one is stale. */
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { format } from 'vite-plus/fmt';
 import { fmtConfig } from '../../../vp-shared-config.ts';
@@ -7,8 +6,6 @@ const directory = new URL('../../../apps/docs/public/templates/', import.meta.ur
 
 export async function writeTemplate(name: string, source: string, command: string) {
   const path = new URL(name, directory);
-  // The committed template passes the repository formatter, so the generator emits
-  // formatted code and the check compares like with like.
   const { ignorePatterns: _ignored, ...formatOptions } = fmtConfig;
   const formatted = await format(path.pathname, source, formatOptions);
   if (formatted.errors.length) throw new Error(`${name} does not parse`);

@@ -1,6 +1,3 @@
-/* ---------- Navbar: full-bleed, sticky, flat paper over a hairline ----------
-   Layers, bottom up: the page, the cookie bar, then the bar with its menus
-   and the phone sheet; dialogs and toasts sit over all of them. */
 .cl-navbar {
   position: sticky;
   z-index: var(--z-index-sticky);
@@ -9,16 +6,9 @@
   background: var(--site-page);
 }
 
-/* The bar's row is the page column: the logo and the last action sit on the
-   content edges. */
-
 .cl-navbar-anchor {
   position: relative;
 }
-
-/* The bar positions the mega menus (they sit in its list, after their triggers). */
-
-/* The bar is the menus' size container: a menu never outgrows the content row. */
 
 .cl-navbar-bar {
   position: relative;
@@ -37,11 +27,6 @@
   color: var(--color-ink);
 }
 
-/* ---------- Desktop menus: one Radix menu, one shared popup ----------
-   The root starts at the trigger row, so the stage hangs from the row's left
-   edge, and the popup takes the open menu's own width and height. */
-/* It never shrinks under its links, so the bar's 24px gap always separates
-   Pricing from the ThemeSwitch (the owner's 982px desktop included). */
 .cl-navmenu {
   position: relative;
   display: flex;
@@ -60,10 +45,6 @@
   padding: 0;
   list-style: none;
 }
-
-/* The hover pill: slides under the hovered, focused or open trigger. It keeps
-   one width and scales to the trigger (desktop-nav.tsx), so it moves by
-   transform alone. */
 
 .cl-navmenu-pill {
   position: absolute;
@@ -84,15 +65,9 @@
   opacity: 1;
 }
 
-/* Its first appearance jumps into place instead of sliding in from the left. */
-
 .cl-navmenu-pill[data-jump] {
   transition: opacity var(--motion-normal) var(--ease-menu);
 }
-
-/* 24px under the trigger row: its 16px inset in the bar plus the 8px gap.
-   A multi-column menu shifts it back to the bar's left edge (set inline);
-   it slides only when switching between open menus. */
 
 .cl-navmenu-stage {
   position: absolute;
@@ -103,12 +78,6 @@
 .cl-navmenu-stage[data-slide] {
   transition: transform var(--motion-menu) var(--ease-menu);
 }
-
-/* Flat, like the rest of the site: a line border on the surface, no shadow.
-   Radix measures the open menu; the popup animates to its width and height.
-   The clip trims the outgoing menu while the box shrinks, and reaches 24px
-   above the box so the hover bridge stays hit-testable. It pops in and out
-   from its trigger's centre (the origin is set inline). */
 
 .cl-navmenu-viewport {
   position: relative;
@@ -122,9 +91,6 @@
     width var(--motion-menu) var(--ease-menu),
     height var(--motion-menu) var(--ease-menu);
 }
-
-/* The hover bridge: covers the gap from the triggers down to the popup, so
-   the pointer can travel into it without the menu closing. */
 
 .cl-navmenu-viewport::before {
   position: absolute;
@@ -142,8 +108,6 @@
 .cl-navmenu-viewport[data-state='closed'] {
   animation: cl-nav-pop-out var(--motion-menu-exit) var(--ease-menu) forwards;
 }
-
-/* Each menu keeps its own width (its columns' content), which Radix measures. */
 
 .cl-navmenu-content {
   position: absolute;
@@ -186,8 +150,6 @@
     cl-nav-fade-out var(--motion-fast) var(--ease-standard) forwards,
     cl-nav-to-end var(--motion-menu) var(--ease-menu) forwards;
 }
-
-/* The groups settle in a beat after the popup. */
 
 .cl-navmenu-content[data-state='open'] .cl-mega-group {
   animation: cl-nav-rise var(--motion-menu-settle) var(--ease-menu) backwards;
@@ -286,8 +248,6 @@
     color var(--motion-fast) var(--ease-standard);
 }
 
-/* The pill draws the hover; the text only darkens. */
-
 .cl-navbar-link[data-state='open'],
 .cl-navbar-link[aria-current='page'],
 .cl-navbar-link[data-current] {
@@ -300,9 +260,6 @@
   }
 }
 
-/* The current section also carries a 2px ink bar on the bar's bottom edge,
-   over the hairline under the item, so it never relies on colour alone. */
-
 .cl-navbar-link:is([aria-current='page'], [data-current])::after {
   position: absolute;
   right: 12px;
@@ -314,7 +271,6 @@
   content: '';
 }
 
-/* A narrow bar (960–1039px wide) tightens the links so the row still fits. */
 @container (width < 1000px) {
   .cl-navbar-link {
     padding-inline: 8px;
@@ -341,9 +297,6 @@
   gap: 8px;
   margin-left: auto;
 }
-
-/* The bar's account actions (Log in, then Book a demo or Sign up): 36px
-   tall with 14px labels, under the page's 44px button. */
 
 .cl-navbar .cl-navbar-end > a {
   height: 36px;
@@ -385,18 +338,12 @@
   }
 }
 
-/* A 44px target under a coarse pointer, in the bar's 64px row. */
-
 @media (pointer: coarse) {
   .cl-navbar-toggle {
     width: 44px;
     height: 44px;
   }
 }
-
-/* The mobile sheet: the whole screen under the bar, on the page colour, its
-   rows on the page gutters, one hairline under each; the page behind it
-   stops scrolling. */
 
 .cl-navbar-sheet {
   position: fixed;
@@ -411,7 +358,6 @@
   overflow: auto;
   overscroll-behavior: contain;
   background: var(--site-page);
-  /* The shared open/close motion: in over --motion-open, out over --motion-close. */
   --cl-sheet-shift: -4px;
   transition:
     opacity var(--motion-open) var(--ease-standard),
@@ -478,8 +424,6 @@
   padding-bottom: 16px;
 }
 
-/* The group's label chip, then its rows; the chip's own padding insets it. */
-
 .cl-sheet-head {
   margin: 0 0 8px;
 }
@@ -495,8 +439,6 @@
   line-height: var(--text-body--line-height);
   text-decoration: none;
 }
-
-/* Each icon on the menu's duotone tile: the orange glyph on grey. */
 
 .cl-sheet-subrow:not(.cl-sheet-overview) > svg:first-child {
   box-sizing: border-box;
@@ -539,10 +481,6 @@
   padding-bottom: 8px;
 }
 
-/* The full bar (five 14px links, ThemeSwitch, both account actions) needs
-   about 800px of container, so it folds
-   into the sheet below 960px; the owner's 982px desktop keeps the links. */
-
 @media (max-width: 959px) {
   .cl-navmenu,
   .cl-navbar-hide-sm {
@@ -559,6 +497,3 @@
     display: none;
   }
 }
-
-/* Reduced motion needs no rules here: globals.css makes every transition
-   and animation instant. */

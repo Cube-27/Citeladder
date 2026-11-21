@@ -1,10 +1,3 @@
-/**
- * The single writer of Site Health crawl tasks, URL identities, observations
- * and system memberships. The frontier decides which URLs to admit, in order,
- * from state it reads once; these statements then apply those decisions in a
- * fixed number of round trips, whatever the batch size. The planner, the
- * executors and the crawl's successors write the same rows through here.
- */
 import { randomUUID } from 'node:crypto';
 import { ACTIVE_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
@@ -18,7 +11,6 @@ import type { Crawl } from './site-task.ts';
 /** Rows per multi-row insert, so a large sitemap stays under PostgreSQL's 65,535 bind parameters. */
 const ROWS_PER_INSERT = 1000;
 
-/** What admission already finds for a batch, keyed by URL hash or site URL id. */
 export type AdmissionState = {
   siteUrlIds: Map<string, string>;
   activeMembers: Set<string>;
@@ -51,7 +43,6 @@ export async function readAdmissionState(
   }
   const ids = [...state.siteUrlIds.values()];
   if (ids.length) {
-    // One transaction is one connection: these run in sequence either way.
     const members = await trx
       .selectFrom('monitored_site_urls')
       .select('site_url_id')
@@ -83,12 +74,6 @@ export async function readAdmissionState(
   return state;
 }
 
-/**
- * The only writer of URL identities. Every sighting, an admission or a planner
- * seed's own discover, records the URL as this crawl saw it: a new identity, or
- * an existing one refreshed, which resets an earlier crawl's depth, source and
- * disposition so this crawl re-decides them. Returns the id per URL hash.
- */
 export async function upsertSiteUrls(trx: Database, crawl: Crawl, items: Candidate[]) {
   const ids = new Map<string, string>();
   for (let offset = 0; offset < items.length; offset += ROWS_PER_INSERT) {
@@ -149,7 +134,6 @@ function upsertSiteUrlChunk(trx: Database, crawl: Crawl, items: Candidate[]) {
     .execute();
 }
 
-/** Insert or reactivate system memberships; returns how many became active now. */
 export async function activateMemberships(
   trx: Database,
   crawl: Crawl,
@@ -191,12 +175,6 @@ export async function activateMemberships(
   return rows.length;
 }
 
-/**
- * Append pages to the project's tracked set, in the given order, after its last
- * fill position. A page tracked before keeps its row and position (it is never
- * re-picked); a sample membership, which has no position, is taken over.
- * Returns the site URL ids that joined.
- */
 export async function joinTrackedSet(trx: Database, crawl: Crawl, siteUrlIds: string[]) {
   if (!siteUrlIds.length) return [];
   const now = new Date();
@@ -223,13 +201,6 @@ export async function joinTrackedSet(trx: Database, crawl: Crawl, siteUrlIds: st
   return rows.map((row) => row.site_url_id);
 }
 
-/**
- * Fit the tracked set to the plan's limit: the first `limit` pages in fill
- * order are active, the rest have left (`deselected_at` is when). A downgrade
- * trims the set from its end and an upgrade restores those pages first. A full
- * crawl tracks nothing else, so a leftover sample membership is released.
- * The caller holds the project's membership rows.
- */
 export async function fitTrackedSet(
   trx: Database,
   scope: { workspaceId: string; projectId: string },
@@ -259,7 +230,6 @@ export async function fitTrackedSet(
       .execute();
 }
 
-/** One sighting of a URL in a crawl, as `site_url_observations` keeps it. */
 export type Observation = {
   siteUrlId: string;
   sourceKind: string;
@@ -277,7 +247,6 @@ export type Observation = {
   title: string;
 };
 
-/** An admitted candidate's sighting, before any fetch of its own. */
 export function candidateObservation(
   siteUrlId: string,
   item: Candidate,
@@ -325,10 +294,6 @@ function observationValues(crawl: Crawl, row: Observation, now: Date) {
   };
 }
 
-/**
- * The only writer of observations. A crawl keeps its first sighting of each
- * URL: a later one, however rich, is dropped. Returns how many were new.
- */
 export async function insertObservations(trx: Database, crawl: Crawl, observed: Observation[]) {
   const now = new Date();
   let inserted = 0;
@@ -348,10 +313,8 @@ export async function insertObservations(trx: Database, crawl: Crawl, observed: 
   return inserted;
 }
 
-/** A URL the crawl's sitemaps list, as listed, and its first declared `<lastmod>` (null when none). */
 export type SitemapEntry = { siteUrlId: string; listedUrl: string; lastmod: string | null };
 
-/** The only writer of sitemap membership; an entry the crawl already recorded is kept. */
 export async function insertSitemapEntries(trx: Database, crawl: Crawl, entries: SitemapEntry[]) {
   const now = new Date();
   for (let offset = 0; offset < entries.length; offset += ROWS_PER_INSERT) {
@@ -374,7 +337,6 @@ export async function insertSitemapEntries(trx: Database, crawl: Crawl, entries:
   }
 }
 
-/** One `site_crawl_tasks` row to enqueue; unset fields are a root-level first-generation task. */
 export type CrawlTaskSeed = {
   kind: string;
   url: string;
@@ -386,23 +348,11 @@ export type CrawlTaskSeed = {
   priority?: number;
   position?: number;
   delaySeconds?: number;
-  /** The kind's own attempt cap; the Site Health `max_attempts` setting otherwise. */
   maxAttempts?: number;
 };
 
-/**
- * How an enqueue meets an existing row for the same task:
- * - `admit`, the crawl's URL admission: lands only in an active crawl, and a
- *   conflicting queued row has its priority raised (its wake-up pulled
- *   forward), so discovery's boost reaches a pre-seeded analyze task.
- * - `once`, planner seeds and crawl successors: the existing row is kept as is.
- */
 export type EnqueueMode = 'admit' | 'once';
 
-/**
- * The only writer of `site_crawl_tasks`: one idempotency key format, the Site
- * Health attempt budget, and the two conflict modes. Returns the new rows.
- */
 export async function enqueueCrawlTasks(
   trx: Database,
   crawl: Crawl,

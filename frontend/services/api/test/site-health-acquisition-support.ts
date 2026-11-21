@@ -41,11 +41,9 @@ type CrawlOptions = {
   sample?: boolean;
   config?: Record<string, unknown>;
   siteFacts?: unknown;
-  /** A full crawl's discovery before site setup settles it is pending. */
   discovery?: 'pending' | 'running';
 };
 
-/** Crawls, tasks and readers for the Site Health acquisition tests, over one test database. */
 export function acquisitionHarness(db: Database, fixtures: SiteFixtures) {
   async function crawl(options: CrawlOptions = {}, { monitored = 50, sample = 10 } = {}) {
     const seed = await fixtures.crawl('running');
@@ -83,7 +81,6 @@ export function acquisitionHarness(db: Database, fixtures: SiteFixtures) {
       .execute();
     return seed;
   }
-  /** A queued task of `kind` for the path, as crawl creation or admission would seed it. */
   async function queued(seed: SiteSeed, kind: 'discover' | 'site_setup', path = '/', depth = 0) {
     const identity = canonicalIdentity(path, seed.root);
     const id = await fixtures.task(seed, kind);
@@ -116,7 +113,6 @@ export function acquisitionHarness(db: Database, fixtures: SiteFixtures) {
   async function run(site: SiteHealthWorker, ...taskIds: string[]) {
     for (const id of taskIds) await site.execute(await lease(id, site.owner)); // NOSONAR -- Tasks run in the order given, as the worker would.
   }
-  /** Lease and run one `site_setup` task under the given settings, as the worker's runner would. */
   async function walkSetup(
     site: SiteHealthWorker,
     taskId: string,

@@ -12,23 +12,15 @@ import { BusinessFacts, OfferingsGrid, SuggestionsNotice } from './business-edit
 import { SaveFoot } from './save-foot';
 import type { BusinessDraftState } from './use-business-draft';
 
-/**
- * Agent › Context › Business map: the facts that steer prompt generation,
- * edited in place with the Prompt Builder's own editor and save. A role
- * without write access reads it. Save and Discard stay in view at the
- * panel's foot while anything is unsaved.
- */
 export function BusinessMapTab({
   business,
   projectId,
   workspaceId,
 }: Readonly<{
-  /** The draft, held by the page so it outlives a tab switch. */
   business: BusinessDraftState;
   projectId: string;
   workspaceId: string;
 }>) {
-  // The list bound the API enforces arrives with the prompt-set list.
   const sets = useQuery(promptsQueries.sets({ workspaceId, projectId }));
   const mayEdit = useWorkspaceCapability('write');
   const { draft, profile, map } = business;
@@ -73,7 +65,6 @@ export function BusinessMapTab({
   );
 }
 
-/** Discard (once something changed) and the one Save, pinned to the panel's foot. */
 function SaveBar({ business }: Readonly<{ business: BusinessDraftState }>) {
   const saving = business.save.isPending;
   return (

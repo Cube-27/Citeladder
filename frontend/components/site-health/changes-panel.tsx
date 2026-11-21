@@ -25,7 +25,6 @@ const CLASS_LABELS = {
   'critical-regression': 'Critical regression',
 } as const;
 
-/** A change class is a delta, so it carries the delta's direction. */
 const CLASS_TONES: Readonly<Record<keyof typeof CLASS_LABELS, StatusTone>> = {
   improvement: 'positive',
   'neutral-change': 'neutral',
@@ -33,7 +32,6 @@ const CLASS_TONES: Readonly<Record<keyof typeof CLASS_LABELS, StatusTone>> = {
   'critical-regression': 'negative',
 };
 
-/** The two crawls the summary compares, and whether their changes can be read. */
 function comparedPair(data: ChangeSummary | undefined) {
   const crawlAId = data?.crawl_a_id ?? undefined;
   const crawlBId = data?.crawl_b_id ?? undefined;
@@ -52,11 +50,6 @@ export function ChangesPanel({
   const summary = useQuery(siteHealthQueries.changesSummary(scope));
   const [selected, setSelected] = useState<ChangeObservation | undefined>(undefined);
   const { crawlAId, crawlBId, pairAvailable } = comparedPair(summary.data);
-  // A page turn keeps the rows and the pager on screen until the next changes
-  // land. The compared pair is part of the cursor's identity server-side, so
-  // a new pair restarts paging rather than replaying a refused cursor. No
-  // exact total: no persisted count describes one pair's change set, so the
-  // range stands alone rather than paying for a COUNT(*) per navigation.
   const { page, table } = useCursorTableQuery({
     workspaceId,
     // Rows carry over only within the same compared pair: a row of another
@@ -79,8 +72,6 @@ export function ChangesPanel({
     summary.data?.state === 'available'
       ? (summary.data.summary.counts_by_class as Record<string, number> | undefined)
       : undefined;
-  // Until the summary says which pair to compare, and whenever no pair can
-  // be compared, that answer stands in the table's place at its full height.
   const summaryState = comparisonState(summary, pairAvailable);
   const origin = sharedOrigin(page?.items.map((row) => row.normalized_url) ?? []);
   return (
@@ -92,7 +83,6 @@ export function ChangesPanel({
           shape={{ kind: 'figures', count: 4 }}
         />
       ) : null}
-      {/* Without a comparable pair the table's own state says why, once. */}
       {counts ? (
         <FigureStrip
           label="Tracked field changes since the previous crawl"
@@ -176,7 +166,6 @@ function ChangeRow({
   );
 }
 
-/** What the table shows while the summary decides, or cannot name, the two crawls it compares. */
 function comparisonState(
   summary: UseQueryResult<ChangeSummary>,
   pairAvailable: boolean,
@@ -215,8 +204,6 @@ function comparisonState(
   return undefined;
 }
 
-// Page is the one flexible column; the evidence is a button at the row's end.
-// The field is the secondary column the fit hides at 982.
 const CHANGE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'page', label: 'Page', kind: 'identity' },
   { key: 'field', label: 'Field', kind: 'text', width: 'category', priority: 'low' },

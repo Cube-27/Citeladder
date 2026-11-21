@@ -1,11 +1,3 @@
-/**
- * `executions`: one execution's persisted analysis and citation evidence, and
- * every successful execution one tracked prompt got across runs.
- *
- * `execution_id` is the
- * execution (`AuditTask`) id from `GET /audits/{id}/executions` or the
- * prompt's list; both reads are workspace-scoped and projection-only.
- */
 import { executionEvidenceSchema, promptAnswerSearchSchema } from '@citeladder/contracts/audits';
 import { promptAnswerPageSchema } from '@citeladder/contracts/visibility-prompt-answers';
 

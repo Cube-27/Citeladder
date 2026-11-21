@@ -1,12 +1,3 @@
-/**
- * Prose's Markdown blocks, for the docs (a Sätteri hast plugin) and the
- * website (a rehype plugin for react-markdown): fenced code becomes the
- * system's CodeBlock (a bar with the language and a Copy button over mono
- * code, comment lines and a leading `$ ` prompt in `ink-muted`, no other
- * syntax colours), and every table gets Prose's scroll frame. The markup's
- * styles and the Copy behaviour live in CodeBlock.astro, which Prose renders.
- */
-
 import type { SatteriResolvedOptions } from '@astrojs/markdown-satteri';
 
 // Sätteri's own plugin types, reached through the processor's options
@@ -28,7 +19,6 @@ const element = (
   children: Child[] = [],
 ): Element => ({ type: 'element', tagName, properties, children });
 
-/** Comment lines and the shell prompt are muted; everything else stays ink. */
 function codeLines(code: string): Child[] {
   const lines = code.replace(/\n$/, '').split('\n');
   return lines.flatMap((line, index) => {
@@ -46,7 +36,6 @@ function codeLines(code: string): Child[] {
   });
 }
 
-// Tabler's copy and check glyphs, drawn at the system's 16px icon size.
 const glyph = (name: 'copy' | 'check', children: Element[]) =>
   element(
     'svg',
@@ -64,13 +53,11 @@ const glyph = (name: 'copy' | 'check', children: Element[]) =>
     children,
   );
 
-/** The CodeBlock markup for one fence's source and language. */
 function codeBlock(source: string, language: string | null): Element {
   return element('figure', { className: ['cl-code'] }, [
     element('figcaption', { className: ['cl-code-bar'] }, [
       ...(language ? [element('span', { className: ['cl-code-lang'] }, [text(language)])] : []),
       element('output', { className: ['cl-code-status'], dataCodeCopyStatus: '' }, []),
-      // The block clips its corners and its code scrolls, so both rings draw inside.
       element(
         'button',
         { type: 'button', className: ['cl-code-copy', 'focus-ring-inset'], dataCodeCopy: '' },
@@ -101,7 +88,6 @@ function fenceLanguage(code: Element): string | null {
   return match ? match.slice('language-'.length) : null;
 }
 
-/** The Sätteri plugin, in the shape `satteri({ hastPlugins })` takes (the docs' Markdown). */
 export const proseMarkdownBlocks = {
   name: 'prose-markdown-blocks',
   element: {
@@ -120,11 +106,6 @@ export const proseMarkdownBlocks = {
   },
 } satisfies PluginDefinition;
 
-/**
- * The unified hast tree react-markdown hands a rehype plugin, as far as this
- * plugin reads it. Its elements have the same shape Sätteri's do, so both
- * plugins build the one CodeBlock markup.
- */
 type TreeNode = {
   type: string;
   tagName?: string;
@@ -143,11 +124,9 @@ function treeElement(node: Element): TreeNode {
 }
 
 type BlockOptions = Readonly<{
-  /** False when the renderer frames tables itself (to name each one by its heading). */
   tables?: boolean;
 }>;
 
-/** One node of the tree: the CodeBlock for a fence, a framed table, or itself. */
 function proseNode(node: TreeNode, options: BlockOptions): TreeNode {
   if (node.type !== 'element') return node;
   if (node.tagName === 'table' && options.tables !== false) {
@@ -169,11 +148,6 @@ function proseNode(node: TreeNode, options: BlockOptions): TreeNode {
   return node;
 }
 
-/**
- * The same blocks as a rehype plugin, for Markdown the website renders with
- * react-markdown (the research guides): fences become CodeBlocks and, unless
- * `tables` is false, tables get Prose's scroll frame.
- */
 export function rehypeProseBlocks(options: BlockOptions = {}) {
   return (tree: TreeNode) => {
     if (tree.children) tree.children = tree.children.map((child) => proseNode(child, options));

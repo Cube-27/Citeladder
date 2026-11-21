@@ -60,7 +60,6 @@ describe('internal link analysis admission', () => {
     ]);
     expect(responses.map((response) => response.status)).toEqual([200, 200]);
     const result = internalLinksReadSchema.parse(await (await request(seed)).json());
-    // With no provider configured, execution publishes honest unavailability immediately.
     expect(result.analysis).toMatchObject({ id, state: 'unavailable' });
     expect(result.analysis!.diagnostics!.pending).toBe(0);
     const tasks = await db
@@ -167,7 +166,6 @@ describe('internal link analysis admission', () => {
       { skipIfCurrent: true },
     );
     const result = internalLinksReadSchema.parse(await (await request(seed)).json());
-    // Overlap filtering can retain a different candidate from the same source.
     const link = result.analysis!.recommendations.find((item) => selectedIds.has(item.id))!;
     expect(link).toBeDefined();
     expect(link.action_id).not.toBeNull();
@@ -178,7 +176,6 @@ describe('internal link analysis admission', () => {
       .where('rule_id', '=', 'site_contextual_links')
       .where('superseded_at', 'is', null)
       .executeTakeFirstOrThrow();
-    // Another link-graph finding on the same page, so the declaration freezes a site rule check too.
     const orphanMemberId = randomUUID();
     await db
       .insertInto('opportunities')
@@ -211,7 +208,6 @@ describe('internal link analysis admission', () => {
       .where('id', '=', link.action_id!)
       .execute();
     const key = randomUUID();
-    // Declarations must fall inside the verification window, so stay relative to now.
     const declaredAt = new Date(Date.now() - 86_400_000).toISOString();
     const declare = (ids: string[]) =>
       app.request(`/api/v1/actions/${link.action_id}/declaration`, {
@@ -279,7 +275,6 @@ describe('internal link analysis admission', () => {
       .where('id', '=', first!.analysis!.id)
       .executeTakeFirstOrThrow();
     expect(saved.manifest).toMatchObject({ page_count: 3 });
-    // The cancelled run's judgment task has not settled, so the slot stays occupied.
     const replacement = { crawl_id: seed.crawl_id, idempotency_key: randomUUID() };
     expect((await request(seed, '/analyses', replacement)).status).toBe(409);
     await db
@@ -300,7 +295,6 @@ describe('internal link analysis admission', () => {
       const input = { crawl_id: seed.crawl_id, idempotency_key: randomUUID() };
       expect((await request(seed, '/analyses', input)).status).toBe(202);
       expect((await request(seed, '/analyses', input)).status).toBe(202);
-      // Free the active slot so only the daily window can refuse the next run.
       await db
         .updateTable('site_internal_link_runs')
         .set({ state: 'cancelled' })

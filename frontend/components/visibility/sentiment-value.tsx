@@ -5,10 +5,6 @@ import { textRole } from '@/components/ui/typography';
 import { availabilityLabel } from '@/lib/format';
 import { NOT_NAMED, sentimentReading } from '@/lib/visibility/perception';
 
-/**
- * A net sentiment cell: the signed value with a faint classified count, or
- * "Too few" below the minimum, which never reads as a zero.
- */
 export function SentimentValue({
   sentiment,
   tooFew = `${availabilityLabel('too_few')} classified`,

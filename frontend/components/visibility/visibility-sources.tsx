@@ -34,25 +34,12 @@ import {
   type SourceQueries,
 } from '@/lib/visibility/use-source-analysis';
 
-/**
- * A Sources tab: the domains, the URLs, or your pages read but not cited.
- *
- * Three levels, all driven by URL state so every one of them is linkable and
- * survives a reload: the inventory, one domain's pages, and one URL's own
- * page. They are not routes because the run / engine / period controls above
- * them narrow all three identically — a route would have had to re-establish
- * that selection, and the first drill-down to forget a filter would be
- * answering a different question from the table it was opened from.
- */
 export function VisibilitySources({
   tab,
   filters,
   queries,
 }: Readonly<{ tab: SourceTab; filters: SourceFilters; queries: SourceQueries }>) {
   const [openUrl, setOpenUrl] = useUrlState('source_url', optionalStringUrlCodec);
-  // `source_view` goes with the domain: opening a second domain while its
-  // Prompts tab was selected would otherwise land on that domain's Prompts,
-  // which is not where a reader who clicked a row expects to be.
   const [domain, setDomain] = useUrlState('source_domain', optionalStringUrlCodec, {
     clearKeys: ['source_cursor', 'source_offset', 'source_as_of', 'source_url', 'source_view'],
   });
@@ -111,29 +98,20 @@ export function SourcesPanel({
   dimension: 'domain' | 'url';
   filters: SourceFilters;
   queries: SourceQueries;
-  /** Set on a domain's own page, where the table lists only its pages. */
   domain?: string | null;
   onOpenUrl: (url: string) => void;
-  /** Required whenever the domain dimension can be shown. */
   onOpenDomain?: (domain: string) => void;
-  /** The Read, not cited tab: your read pages lead in the table's place. */
   readNotCited?: boolean;
 }>) {
   const [offset] = useUrlState('source_offset', optionalStringUrlCodec);
   const [cursor] = useUrlState('source_cursor', optionalStringUrlCodec);
   const [asOf] = useUrlState('source_as_of', optionalStringUrlCodec);
-  // The table's filters are the page's (`useTableFilters`); the panel reads them.
   const [sourceType] = useUrlState('source_type', optionalStringUrlCodec);
   const gapOnly = useGapOnly(dimension, readNotCited);
   const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState('');
-  // The sort is in the address with its table, so another table's sort never applies.
   const [storedSort, setStoredSort] = useUrlState('source_sort', SOURCE_SORT_CODEC);
   const sort: SortState = storedSort?.dimension === dimension ? storedSort.sort : null;
-  // What the panel was showing last render, so a dimension change can clear the
-  // controls that do not carry over -- page three of domains is not page three
-  // of URLs, and `editorial` is not a page format. Done during render rather
-  // than in an effect so the table never paints one frame of the old search.
   const [shownDimension, setShownDimension] = useState(dimension);
   if (shownDimension !== dimension) {
     setShownDimension(dimension);
@@ -141,11 +119,7 @@ export function SourcesPanel({
     setSearch('');
   }
 
-  // On a domain's own page the publisher is fixed by the route above, so a
-  // pick never applies there.
   const [pickedDomain] = useUrlState('source_pick', optionalStringUrlCodec);
-  // The publisher filter is a URL-table filter: the Domains view neither
-  // offers it nor reads a pick left over from the URLs view.
   const activeDomain = domain ?? (dimension === 'url' ? pickedDomain : null);
   const scope = { dimension, domain: activeDomain, cursor, asOf, sourceType, gapOnly, pageSize };
   const { sourceQuery } = useSourceAnalysis(filters, queries, scope);
@@ -159,7 +133,6 @@ export function SourcesPanel({
     enabled: readNotCited,
     limit: pageSize,
   });
-  // Movement is an inventory question; a domain's own page has no peers to rank.
   const moversQuery = useSourceMovers(filters, queries, { dimension, enabled: !domain });
   const comparable = queries.visibilityQuery.data?.comparison?.status === 'comparable';
   const onPageSizeChange = (value: number) => {
@@ -169,8 +142,6 @@ export function SourcesPanel({
 
   const data = sourceQuery.data;
   const slices = typeSlices(data?.category_totals, dimension);
-  // Search and sort narrow what is LOADED. The footer reports the loaded count
-  // against the server's total, so a reader can see the difference.
   const rows = useMemo(
     () =>
       sortItems(
@@ -189,7 +160,6 @@ export function SourcesPanel({
           : { column, direction: 'desc' },
     });
 
-  // One toolbar for both bodies, so switching to near misses moves nothing.
   const toolbar = sourceTableToolbar({
     dimension,
     search,
@@ -242,8 +212,6 @@ export function SourcesPanel({
         />
       )}
 
-      {/* The table leads; the usage over time and the type mix explain it below.
-          Both chart citations, which near misses by definition are not. */}
       {tableAnswered ? (
         <>
           {readNotCited ? null : (
@@ -261,35 +229,19 @@ export function SourcesPanel({
   );
 }
 
-/**
- * Whether the table's read has answered. Its row count is unknown until then,
- * so what follows the table is placed after: a page of loading rows
- * collapsing to a few would pull it up.
- */
 function answered(query: Readonly<{ data: unknown; isError: boolean }>): boolean {
   return query.data !== undefined || query.isError;
 }
 
-/** The page's first row from the address: zero when absent or not a count. */
 function pageOffset(raw: string | null): number {
   return Math.max(0, Number.parseInt(raw ?? '0', 10) || 0);
 }
 
-/** Only pages have a standing, so the gaps filter applies to the URL table alone. */
 function useGapOnly(dimension: 'domain' | 'url', readNotCited: boolean) {
   const [standing] = useUrlState('source_standing', optionalStringUrlCodec);
   return dimension === 'url' && !readNotCited && standing === 'gap';
 }
 
-/**
- * Which of the four things the table is doing right now.
- *
- * Four states, kept apart on purpose: nothing has been measured yet, the
- * filters exclude everything, the rows are on their way, and the read failed.
- * They are not interchangeable -- "no cited sources in this selection" is a
- * finding, "could not load sources" is a fault -- and a reader who cannot tell
- * them apart cannot tell whether to change the filter or retry.
- */
 function tableState({
   query,
   rows,
@@ -303,8 +255,6 @@ function tableState({
   searching: boolean;
   gapOnly: boolean;
 }>): DataTableState | undefined {
-  // A failed read keeps the header and columns, with the fault stated in the
-  // body: an error is a fault to retry, never presented as an empty finding.
   if (query.isError) {
     return {
       kind: 'error',
@@ -313,8 +263,6 @@ function tableState({
       fallback: 'Check your connection and try again.',
     };
   }
-  // The selection has settled on a measured run (`SelectionGate`), so no data
-  // yet is this read on its way, never an empty finding.
   if (!query.data) return { kind: 'loading', label: 'Loading sources…' };
   if (rows.length) return undefined;
   return {
@@ -332,7 +280,6 @@ function emptyHeading(searching: boolean, gapOnly: boolean, narrowed: boolean): 
   return 'No cited sources in this selection';
 }
 
-/** Whichever table the dimension calls for, carrying its own state inside it. */
 function SourceTable({
   dimension,
   query,

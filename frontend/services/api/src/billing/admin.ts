@@ -1,4 +1,3 @@
-/** Trusted, explicit-target commercial operations. Caller never supplies actor rows. */
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Selectable } from 'kysely';
@@ -58,7 +57,6 @@ export type CatalogOperation =
 type CatalogRow = Selectable<BillingCatalogRevisions>;
 type ParsedContext = z.output<typeof contextSchema>;
 
-/** A publication replay must repeat its revision, actor and reason. */
 async function checkPublishReplay(
   db: Database,
   ctx: ParsedContext,
@@ -91,11 +89,6 @@ async function checkPublishReplay(
     throw new Error('catalog_idempotency_conflict');
 }
 
-/**
- * An import replay must repeat its revision, payload, actor and reason. It
- * answers from the request's own record, so a draft a later import replaced
- * is never rewritten by an earlier request's replay; null for a new request.
- */
 async function importReplay(
   db: Database,
   ctx: ParsedContext,
@@ -157,8 +150,6 @@ async function importCatalog(
     const changed =
       digest(validateCatalog(jsonObject(row.payload, 'billing_catalog_revisions.payload'))) !==
       digest(payload);
-    // A draft never published may be replaced, e.g. once its provider plans are
-    // bound; a published or retired revision is immutable.
     if (
       changed &&
       row.publication_state === 'draft' &&
@@ -381,7 +372,6 @@ export function inspectAccount(
   });
 }
 
-/** Run after identity bootstrap commits. Skip branches stay catalog-free. */
 export function initializeCatalog(db: Database, actorEmail: string, mode: ProviderMode | null) {
   return db.transaction().execute(async (trx) => {
     const actor = await requirePlatformAdmin(trx, actorEmail);
@@ -394,8 +384,6 @@ export function initializeCatalog(db: Database, actorEmail: string, mode: Provid
     if (current) {
       return catalog(trx, current.revision);
     }
-    // Nested transactions are unnecessary: use the same locked transaction and
-    // authoritative validation for idempotent initialization.
     const revision = catalogAuthoring.revision;
     let draft = await trx
       .selectFrom('billing_catalog_revisions')

@@ -68,11 +68,9 @@ it('says the crawler catalog failed inside the activity table instead of showing
     { projectSelection: { activeProject: project } },
   );
   const table = await screen.findByRole('region', { name: 'Retained automated request activity' });
-  // The failure is the table's state, in the table's place.
   expect(await within(table).findByRole('alert')).toHaveTextContent('Not Found');
   expect(within(table).queryByText('openai_oai_searchbot')).not.toBeInTheDocument();
 
-  // Once the catalog answers, the same rows name their bot.
   mswServer.use(
     http.get(root + '/crawl-logs/catalog', () =>
       HttpResponse.json({
@@ -91,7 +89,6 @@ it('says the crawler catalog failed inside the activity table instead of showing
   await view.queryClient.refetchQueries({ predicate: (q) => q.queryKey.includes('catalog') });
   expect((await within(table).findAllByRole('cell', { name: 'OAI-SearchBot' }))[0]).toBeVisible();
   expect(within(table).queryByRole('alert')).not.toBeInTheDocument();
-  // The project's own host drops from the path; a foreign host stays printed.
   const paths = within(table)
     .getAllByRole('row')
     .slice(1)
@@ -161,7 +158,6 @@ it.each([
   const user = userEvent.setup();
   renderWithProviders(<TrafficSetupState ga4Missing={input.ga4Missing} crawlAvailable />);
   expect(screen.getByRole('heading', { name: input.heading })).toBeVisible();
-  // GA4 is connected from Referrals, which sets it up in place.
   const ga4 = screen.queryByRole('link', { name: 'Connect Google Analytics 4' });
   if (input.ga4Missing) expect(ga4?.getAttribute('href')).toMatch(/tab=referrals/);
   else expect(ga4).toBeNull();

@@ -50,12 +50,6 @@ function failStorageWrites() {
   };
 }
 
-/**
- * What is worth pinning is the consent contract, not the layout: the banner
- * appears only while undecided, both answers are one click, and — the part a
- * regulator cares about — rejecting must leave `hasAnalyticsConsent` false so
- * a future analytics loader stays off.
- */
 describe('CookieBanner', () => {
   beforeEach(() => {
     window.localStorage.clear();

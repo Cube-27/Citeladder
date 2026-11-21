@@ -19,11 +19,8 @@ import { ProjectLink } from '@/components/ui/project-link';
 
 const COLUMNS: readonly DataTableColumn[] = [{ key: 'suggestion', label: 'Suggestion' }];
 
-/** The suggestions picked for review, held by the builder so its footer can track them. */
 export function useCandidateSelection(candidates: readonly PromptCandidate[]) {
   const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
-  // Reviewed ids leave `candidates` and so drop out of `selected`; a failed
-  // request keeps the selection for a retry.
   const selected = useMemo(
     () => candidates.filter((candidate) => picked.has(candidate.id)).map((c) => c.id),
     [candidates, picked],
@@ -33,12 +30,6 @@ export function useCandidateSelection(candidates: readonly PromptCandidate[]) {
 
 export type CandidateSelection = ReturnType<typeof useCandidateSelection>;
 
-/**
- * Generated prompts awaiting review. Only accepted candidates become tracked
- * prompts (the builder's footer accepts the selection); rejected ones are
- * deleted. Rows arrive ranked; quality flags are advisory and never hide a
- * suggestion.
- */
 export function CandidateReview({
   candidates,
   topics,
@@ -141,7 +132,6 @@ export function CandidateReview({
   );
 }
 
-/** The review list for the Prompt Builder, bound to the candidates hook. */
 export function CandidateReviewPanel({
   review,
   topics,
@@ -187,11 +177,6 @@ export function CandidateReviewPanel({
   );
 }
 
-/**
- * How many generated prompts wait for review, and whether that is known yet.
- * The library holds its first paint until it is, so the notice never lands
- * above a table already on screen and pushes it down.
- */
 export function usePendingReview({
   scope,
   promptSet,
@@ -203,12 +188,10 @@ export function usePendingReview({
   });
   return {
     count: hidden ? 0 : (pending.data?.length ?? 0),
-    // No set, no candidates read: a disabled or skipped read stays pending.
     settled: hidden || promptSet === null || !pending.isPending,
   };
 }
 
-/** Library prompt that suggestions are waiting, linking to the Prompt builder's review step. */
 export function PendingReviewNotice({ count }: Readonly<{ count: number }>) {
   if (!count) return null;
   return (

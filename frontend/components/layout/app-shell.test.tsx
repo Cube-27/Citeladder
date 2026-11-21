@@ -16,7 +16,6 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 function renderShell() {
-  // The shell's own reads (the open-Actions count, chats) answer empty.
   mswServer.use(http.get('/api/v1/*', () => HttpResponse.json({ items: [], next_cursor: null })));
   return renderWithProviders(
     <EntitlementProvider>
@@ -32,7 +31,6 @@ function renderShell() {
 
 const SIDEBAR_WIDTH_KEY = 'citeladder:app:sidebar-width';
 
-/** The width the shell's grid gives the sidebar column, or '' for the token's default. */
 function sidebarWidth() {
   const frame = screen.getByRole('main').parentElement;
   if (!frame) throw new Error('The shell frame is missing.');
@@ -63,7 +61,6 @@ describe('AppShell resizable sidebar', () => {
     const handle = screen.getByRole('separator', { name: 'Resize sidebar' });
     expect(sidebarWidth()).toBe('');
 
-    // Below 1280px the default is the compact 200.
     fireEvent.pointerDown(handle, { button: 0, pointerId: 4, clientX: 200 });
     fireEvent.pointerMove(handle, { pointerId: 4, clientX: 308 });
     expect(sidebarWidth()).toBe('308px');
@@ -77,7 +74,6 @@ describe('AppShell resizable sidebar', () => {
 
   it('resizes from the keyboard within its bounds, down to the compact width, and resets on double-click', async () => {
     const user = userEvent.setup();
-    // 40% of a 1000px window is 400, below the 480 ceiling.
     window.innerWidth = 1000;
     renderShell();
     const handle = screen.getByRole('separator', { name: 'Resize sidebar' });
@@ -110,7 +106,6 @@ describe('AppShell resizable sidebar', () => {
 
   it('steps through preset widths on a click that does not drag, wrapping to the compact width', async () => {
     const user = userEvent.setup();
-    // 40% of a 1000px window is 400, so the 480 preset is out of reach.
     window.innerWidth = 1000;
     renderShell();
     const handle = screen.getByRole('separator', { name: 'Resize sidebar' });
@@ -134,7 +129,6 @@ describe('AppShell resizable sidebar', () => {
     const { unmount } = renderShell();
     const frame = () => screen.getByRole('main').parentElement;
     expect(frame()).toHaveAttribute('data-sidebar-state', 'expanded');
-    // The toggle sits in the sidebar's foot, straight above the account (AR-8).
     const toggle = screen.getByRole('button', { name: 'Collapse sidebar' });
     const sidebar = screen.getByRole('complementary', { name: 'Sidebar' });
     const controls = [...sidebar.querySelectorAll('a, button')];
@@ -145,7 +139,6 @@ describe('AppShell resizable sidebar', () => {
 
     await user.click(toggle);
     expect(frame()).toHaveAttribute('data-sidebar-state', 'collapsed');
-    // The rail keeps its width: there is nothing to drag.
     expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).not.toBeInTheDocument();
     unmount();
 
@@ -165,15 +158,11 @@ describe('AppShell resizable sidebar', () => {
       ...within(sidebar).getAllByRole('button'),
       ...within(sidebar).getAllByRole('link'),
     ];
-    // Project, Dashboard, Agent, Home, Brand, Tracking, Website, Search,
-    // Commerce, Integrations, the collapse toggle, account: 40px each, 8
-    // inside the rail's ends and 4 between its parts.
     expect(buttons).toHaveLength(12);
     const controls = [...sidebar.querySelectorAll('a, button')];
     expect(controls.at(-2)).toBe(within(sidebar).getByRole('button', { name: 'Expand sidebar' }));
     expect(2 * 8 + buttons.length * 40 + 4 * 4).toBeLessThanOrEqual(520);
 
-    // A group opens its flyout with the right arrow, marking the current page.
     const analyze = within(sidebar).getByRole('button', { name: 'Website' });
     expect(analyze).toHaveAttribute('aria-current', 'true');
     analyze.focus();
@@ -196,7 +185,6 @@ describe('AppShell resizable sidebar', () => {
     // jsdom lays nothing out; report every line as wider than the sidebar.
     vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(1000);
 
-    // Labelled, even a cut email opens no tooltip.
     focusByKeyboard(account());
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     act(() => account().blur());
@@ -219,7 +207,6 @@ describe('AppShell navigation drawer', () => {
     const drawer = screen.getByRole('dialog', { name: 'Navigation' });
     expect(within(drawer).getByRole('link', { name: 'Keyword research' })).toBeVisible();
     expect(within(drawer).getByRole('link', { name: 'Sources' })).toBeVisible();
-    // The page behind the modal drawer is hidden from assistive technology.
     expect(menu).toHaveAttribute('aria-expanded', 'true');
 
     await user.keyboard('{Escape}');

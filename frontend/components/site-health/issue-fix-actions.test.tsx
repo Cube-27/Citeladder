@@ -18,12 +18,10 @@ import {
 
 const ISSUES = `/api/v1/site-crawls/${CRAWL}/issues`;
 const FIXES = `/api/v1/site-crawls/${CRAWL}/issue-fixes`;
-/** The Issues screen with issue A open, as a link to it opens it. */
 const OPEN = `/issues?issue=${ISSUE_A}`;
 const TITLE = 'WebSite schema is missing';
 const RERUN = 'ffffffff-1111-4111-8111-111111111111';
 
-/** Issue A's fix progress: `fixed` of its 32 pages fixed, `rerun` tracked pages still open. */
 const progress = (fixed: number, rerun: number | null) => ({
   group_id: ISSUE_A,
   affected_url_count: 32,
@@ -86,7 +84,6 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
       http.get(FIXES, () =>
         HttpResponse.json({ crawl_id: CRAWL, items: [progress(landed ? 3 : 0, 3)] }),
       ),
-      // The re-audit has already ended when it is first read: its pages verified fixed.
       http.get(`/api/v1/site-crawls/${RERUN}`, () => {
         landed = true;
         return HttpResponse.json({ ...SITE_HEALTH_CRAWL, id: RERUN, status: 'completed' });
@@ -154,7 +151,6 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
   });
 
   it('says the fix progress could not load instead of hiding the actions', async () => {
-    // A refusal the client does not retry on its own, so the error shows at once.
     mswServer.use(
       http.get(FIXES, () =>
         HttpResponse.json(

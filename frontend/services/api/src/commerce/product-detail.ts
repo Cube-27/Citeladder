@@ -1,14 +1,3 @@
-/**
- * One product holder's page (commerce improvement PR 4): its Products row and
- * the answers behind it, over the same executions the Products table reads.
- *
- * The row is the table's own read narrowed to this holder, so the page and the
- * table never disagree. The sections come from one SQL read over the same
- * scoped slots: competing holders by shared executions, merchants, the
- * citations and fan-out queries of the executions it appeared in, per-prompt
- * metrics and the answers themselves. It reads only persisted rows, every
- * table filtered to the authorized workspace and project.
- */
 import { commerceProductDetailSchema } from '@citeladder/contracts/commerce-suite';
 import { sql } from 'kysely';
 import { z } from 'zod';
@@ -208,7 +197,6 @@ async function sections(
 
 const catalogSchema = commerceProductDetailSchema.shape.product.shape.catalog.unwrap();
 
-/** An owned product's editable record: its fields, catalog image and category names. */
 async function catalogRecord(db: Database, scope: CommerceScope, holder: string) {
   const [product, categories] = await Promise.all([
     db
@@ -232,19 +220,12 @@ async function catalogRecord(db: Database, scope: CommerceScope, holder: string)
   });
 }
 
-/**
- * The page for `holder`: an owned product (active or archived), an approved
- * competitor or an AI-observed one, as the Products table lists it; any record
- * of a merged competitor opens its one page. A holder the table would not list
- * (rejected, another project's) is not found.
- */
 export async function productDetail(
   db: Database,
   scope: CommerceScope,
   holder: string,
   executions: ExecutionScope,
 ) {
-  // The row names the merged holder the sections read; a bad window is refused first.
   const page = await productMetrics(db, scope, {
     ...executions,
     source: 'all',

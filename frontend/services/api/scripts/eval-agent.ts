@@ -1,19 +1,3 @@
-/**
- * Live Agent eval: drives fixed chats through the local Agent API as the
- * development login and records, per turn, the time to the first visible text,
- * the total time, model and tool calls, tokens (cached included) and the saved
- * reply and document. Operator-run only (it calls the configured model and
- * spends provider budget); never part of CI. Turns go through the HTTP API and
- * are measured from the attempt rows, so the same cases measure any runtime
- * that keeps them; project rows only resolve the cases' placeholders and
- * Actions.
- *
- *   pnpm --filter @citeladder/api agent:eval --live --label baseline
- *   pnpm --filter @citeladder/api agent:eval --report baseline,native
- *
- * Records append to `agent-eval/<label>.jsonl` in the worktree's Git directory;
- * `--report` prints a metrics table and writes a side-by-side reply review.
- */
 import { randomUUID } from 'node:crypto';
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -58,7 +42,6 @@ const turnSchema = z.strictObject({
   action: z.strictObject({ skill_id: z.string(), target_kind: z.string().optional() }).optional(),
 });
 type TurnSpec = z.infer<typeof turnSchema>;
-// Parsed at start, so a typo in a case fails before any provider spend.
 const cases = z
   .array(
     z.strictObject({
@@ -89,12 +72,10 @@ const recordSchema = z.looseObject({
   output: z.looseObject({ title: z.string(), body: z.string() }).nullish(),
 });
 type EvalRecord = z.infer<typeof recordSchema>;
-// Event shapes differ between runtimes; only the type tag is required.
 const eventSchema = z.looseObject({ type: z.string() });
 
 const directory = join(gitDirectory(process.cwd()), 'agent-eval');
 
-/** Labels name files in the eval directory, so they stay plain file names. */
 function labelFile(label: string, extension: string) {
   if (!/^[\w-]+$/.test(label))
     throw new Error(`Label "${label}" may use only letters, digits, - and _`);
@@ -135,7 +116,6 @@ async function live() {
   }
 }
 
-/** The development login's password goes only to a loopback API. */
 function localApi(value: string) {
   const url = new URL(value);
   if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname))
@@ -153,7 +133,6 @@ type CaseContext = {
   write: (record: object) => Promise<void>;
 };
 
-/** Runs a case's turns in one chat; a failed turn ends the case. */
 async function runCase(context: CaseContext, item: (typeof cases)[number]) {
   const { db, client, project, vars, write } = context;
   let chatId: string | null = null;
@@ -199,7 +178,6 @@ async function resolveProject(
   return { id: project.id, workspaceId: project.workspace_id };
 }
 
-/** Values the cases name, read from the project so the cases fit any local data. */
 async function placeholders(db: Database, projectId: string): Promise<Placeholders> {
   const [project, prompt, competitor] = await Promise.all([
     db
@@ -321,7 +299,6 @@ async function turn(
     await (await call(client, `/agent/chats/${accepted.chat_id}`)).json(),
   );
   const reply = detail.messages.findLast((message) => message.role === 'agent');
-  // The document this turn's reply saved, when it saved one.
   const saved = detail.outputs.findLast((output) => reply && output.message_id === reply.id);
   const revision = saved?.latest_revision;
   return {
@@ -343,7 +320,6 @@ async function turn(
   };
 }
 
-/** Times the first visible text whatever the event shape, so old and new runtimes compare. */
 async function stream(client: Client, chatId: string, runId: string) {
   const started = performance.now();
   const response = await call(client, `/agent/chats/${chatId}/runs/${runId}/run`, {
@@ -422,7 +398,6 @@ async function attempts(db: Database, workspaceId: string, runId: string) {
       .orderBy('agent_tool_attempts.ordinal')
       .execute(),
   ]);
-  // A call that reported no count makes the turn's total unknown, not lower.
   const sum = (
     key:
       | 'input_tokens'
@@ -462,7 +437,6 @@ async function load(label: string) {
     .split('\n')
     .filter(Boolean)
     .map((line) => recordSchema.parse(JSON.parse(line)));
-  // A rerun under the same label replaces that turn's earlier record.
   const latest = new Map(records.map((record) => [`${record.case}#${record.step}`, record]));
   return [...latest.values()];
 }
@@ -477,7 +451,6 @@ function metrics(records: EvalRecord[]): Record<string, string> {
   const done = records.filter((record) => !record.failed);
   const numbers = (key: keyof EvalRecord) =>
     done.map((record) => record[key]).filter((value): value is number => typeof value === 'number');
-  // Turns with an unknown count are left out and flagged, never counted as zero.
   const perTurn = (key: keyof EvalRecord, digits = 1) => {
     const samples = numbers(key);
     if (samples.length === 0) return '—';
@@ -556,6 +529,5 @@ function answer(label: string, record: EvalRecord | undefined) {
   return parts.join('\n\n');
 }
 
-// Runs after every declaration above is initialised.
 if (values.report) await report(values.report.split(','));
 else await live();

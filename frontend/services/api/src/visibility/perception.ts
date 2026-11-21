@@ -1,12 +1,3 @@
-/**
- * Answer perception reads: the selection summary, its quote pages and the
- * per-entity perception of one execution.
- *
- * Projections over persisted `answer_perceptions` / `entity_sentiments` and
- * the deterministic entity assessments; nothing is classified, called or
- * repaired here. In a perceived audit, a named entity without a perception
- * row is pending; an audit admitted without perception contributes nothing.
- */
 import { z } from 'zod';
 import {
   perceptionLabelSchema,
@@ -63,7 +54,6 @@ const assessmentsSchema = z
   )
   .catch([]);
 type Assessment = z.infer<typeof assessmentsSchema>[number];
-// A theme id no project theme holds (deleted, or none) reads as the fallback.
 const aspectsSchema = z
   .array(
     z.object({
@@ -89,7 +79,6 @@ type Perceived = {
   entities: Map<string, EntityRow>;
 };
 
-/** Each of these projects' theme ids with its current name. */
 async function themeNames(db: Database, workspaceId: string, projectIds: readonly string[]) {
   const rows = await db
     .selectFrom('project_themes')
@@ -112,7 +101,6 @@ function entityRow(row: unknown, names: ReadonlyMap<string, string>): EntityRow 
   };
 }
 
-/** Each analysis's perception row at the extractor version its audit froze (`wanted`). */
 export async function perceptionRows(
   db: Database,
   workspaceId: string,
@@ -138,7 +126,6 @@ export async function perceptionRows(
   ).filter((row) => wanted.get(row.analysis_id) === row.extractor_version);
 }
 
-/** Each analysis's perception at its extractor version, with its entity rows. */
 async function perceptionsOf(
   db: Database,
   workspaceId: string,
@@ -186,7 +173,6 @@ async function perceptionsOf(
   );
 }
 
-/** The named entities of one analysis as mentions, with the entity row behind each. */
 function mentionsOf(assessments: readonly Assessment[], perceived: Perceived | undefined) {
   return assessments
     .filter((row) => isNamed(row.state))
@@ -203,10 +189,6 @@ function mentionsOf(assessments: readonly Assessment[], perceived: Perceived | u
     });
 }
 
-/**
- * The selection's perceived answers; citations only when the caller reads
- * drivers. The Perception page's own reads add the brand questions.
- */
 async function selectionAnswers(
   db: Database,
   selection: RunSelection,
@@ -286,7 +268,6 @@ export async function getPerception(
   ]);
   const summary = perceptionSummary(answers, policy.perception);
   applyIdentities(summary.entities, await brandIdentities(db, scoped));
-  // The headline reads the pool; a pooled period's trend reads every run in it.
   const trend = period
     ? perceptionTrend(
         (await selectionAnswers(db, period, { citations: false, brandQuestions: true })).answers,
@@ -295,19 +276,11 @@ export async function getPerception(
   return { ...summary, trend, source_audit_ids: auditIds };
 }
 
-/**
- * The selection's answers with their frozen topic; null when any was admitted
- * without perception, so a pool never reads as only its perceived runs.
- */
 export async function perceivedAnswers(db: Database, selection: RunSelection) {
   const { answers, partial } = await selectionAnswers(db, selection, { citations: false });
   return partial ? null : answers;
 }
 
-/**
- * Each group of runs' business sentiments, from one read of the selection's
- * answers; a group holding a run admitted without perception reads null.
- */
 export async function groupedSentiments(
   db: Database,
   selection: RunSelection,
@@ -322,7 +295,6 @@ export async function groupedSentiments(
   );
 }
 
-/** Each named business's net sentiment over these answers, the brand first. */
 export function sentimentsOf(answers: readonly PerceptionAnswer[]) {
   return entityScores(answers).map(({ name, is_brand, score, coverage }) => ({
     name,
@@ -337,11 +309,6 @@ export function sentimentsOf(answers: readonly PerceptionAnswer[]) {
   }));
 }
 
-/**
- * Per perceived audit, the brand's mentions in each of its analyses, read in
- * one batch. An audit admitted without perception has no entry. The audits
- * and analyses are already scoped.
- */
 export async function brandMentionsByAudit(
   db: Database,
   input: {
@@ -381,7 +348,6 @@ export async function brandMentionsByAudit(
   );
 }
 
-/** The decoded cursor position; a malformed one is refused, never read as the start. */
 function cursorPosition(cursor: string, fingerprint: Record<string, unknown>) {
   const [observed_at, execution_id, entity, ordinal] = decodeKeysetCursor(
     cursor,
@@ -442,7 +408,6 @@ export async function getPerceptionQuotes(
   };
 }
 
-/** One execution's per-entity perception; empty for an audit admitted without perception. */
 export async function executionPerception(
   db: Database,
   input: {

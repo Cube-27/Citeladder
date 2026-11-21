@@ -1,7 +1,3 @@
-/**
- * The docs guide's Google Cloud sink filter comes from the live crawler catalog.
- * Rewrites the marked block in the AI Traffic article; `--check` fails when it is stale.
- */
 import { readFile, writeFile } from 'node:fs/promises';
 import { gcpLogFilter } from '../src/crawl-logs/gcp-filter.ts';
 

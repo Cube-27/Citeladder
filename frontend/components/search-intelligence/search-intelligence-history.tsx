@@ -15,7 +15,6 @@ import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
-/** One month of saved history; a null value is an unobserved month and draws as a gap. */
 type HistoryRow = {
   date: string;
   backlinks: number | null;
@@ -28,7 +27,6 @@ function useHistory(datasetId: string) {
   return useQuery(searchIntelligenceQueries.datasetHistory({ workspaceId, projectId }, datasetId));
 }
 
-/** The monthly backlink history, in its own card: a different capture from the summary above. */
 export function SearchIntelligenceHistory({
   dataset,
 }: Readonly<{ dataset: SearchIntelligenceDataset }>) {
@@ -126,7 +124,6 @@ function validHistoryDate(date: string): boolean {
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
 }
 
-/** One row per month from the first date's month to the last's; missing months are gaps. */
 function fillMonths(rows: HistoryRow[], firstDate: string, lastDate: string): HistoryRow[] {
   const byMonth = new Map(rows.map((row) => [row.date.slice(0, 7), row]));
   const start = new Date(`${firstDate.slice(0, 7)}-01T00:00:00Z`);

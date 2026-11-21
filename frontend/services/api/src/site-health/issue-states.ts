@@ -1,28 +1,3 @@
-/**
- * Issue state: each issue's lifecycle across audits, kept per project, page and
- * rule in `site_issue_states`, and the project's open count per day in
- * `site_issue_trend` (SH-B2, SH-B8, SH-B9).
- *
- * An audit lands when a crawl publishes its pages' final analyses (a full
- * crawl, a cancelled one, or a single-page rerun). In that transaction every
- * page the crawl audited (`issue-audits.ts`) moves its issues' states:
- *
- * - a page analyzed at its own URL opens or keeps what it found, resolves what
- *   a determinate evaluation now passes, and reopens a resolved issue as
- *   regressed; a rule the audit did not evaluate keeps its state;
- * - a page that answered 404/410, or redirected, gets that issue instead, and
- *   its other unresolved issues read `page_unavailable`, never resolved;
- * - a page whose fetch failed otherwise was not audited, and keeps every state;
- * - a page that left the tracked set reads `no_longer_tracked` until an audit
- *   lands on it again.
- *
- * A page's newest audit decides: an audit older than one the page already
- * landed changes nothing. Mark fixed (`markIssueFixed`) moves an open issue to
- * `marked_fixed`; only a later audit resolves or reopens it. The day's trend point is the project's open count
- * after the landing. States are a derived projection with the exact issue,
- * evaluation, analysis or fetch attempt that decided them; issues, evaluations
- * and attempts stay as written.
- */
 import { randomUUID } from 'node:crypto';
 import { sql, type Insertable, type Selectable } from 'kysely';
 
@@ -49,7 +24,6 @@ type IssueState =
   | 'no_longer_tracked';
 
 type StateRow = Selectable<SiteIssueStates>;
-/** What decided a state: exactly one audit's evidence, by id. */
 type Source = {
   analysisId: string | null;
   attemptId: string | null;
@@ -65,7 +39,6 @@ type Landing = {
 type Scope = { workspaceId: string; projectId: string };
 
 const isResolved = (state: string) => state === 'resolved';
-/** States no audit can judge until the page answers, or is tracked, again. */
 const SUSPENDED = new Set<string>(['page_unavailable', 'no_longer_tracked']);
 
 const NO_SOURCE: Source = {
@@ -75,7 +48,6 @@ const NO_SOURCE: Source = {
   issueId: null,
 };
 
-/** One page's state rows as an audit decides them, given the page's existing states. */
 function pageStates(
   scope: Scope,
   siteUrlId: string,
@@ -112,7 +84,6 @@ function pageStates(
       source_analysis_id: source.analysisId,
       source_attempt_id: source.attemptId,
       source_evaluation_id: source.evaluationId,
-      // The issue that last found it stays named until another one does.
       source_issue_id: source.issueId ?? prior?.source_issue_id ?? null,
       evidence:
         extra.evidence === undefined
@@ -125,11 +96,6 @@ function pageStates(
       updated_at: landing.now,
     });
   };
-  /**
-   * The state a rule takes when this audit finds it: a resolved issue found
-   * again regressed. A page fetched before the person marked it fixed cannot
-   * judge that fix, so the mark stands until a later audit decides.
-   */
   const found = (ruleId: string): IssueState => {
     const prior = byRule.get(ruleId);
     if (
@@ -147,10 +113,6 @@ function pageStates(
   return { rows, write, found, resolve };
 }
 
-/**
- * The rows one page's audit writes, given the page's existing states. Pure: the
- * caller has already decided this audit is the page's newest.
- */
 function nextIssueStates(
   scope: Scope,
   audit: PageAudit,
@@ -167,7 +129,6 @@ type PageStates = ReturnType<typeof pageStates>;
 type Analyzed = Extract<PageAudit, { kind: 'analyzed' }>;
 type Unavailable = Extract<PageAudit, { kind: 'unavailable' }>;
 
-/** A page analyzed at its own URL: what it found opens, what it passed resolves. */
 function analyzedStates(
   { write, found, resolve }: PageStates,
   audit: Analyzed,
@@ -184,17 +145,13 @@ function analyzedStates(
   for (const [ruleId, passed] of audit.passed)
     if (!audit.found.has(ruleId))
       resolve(ruleId, { ...page, evaluationId: passed.evaluationId }, passed.ruleVersion);
-  // Answering at its own URL is the verification for the availability issues.
   for (const ruleId of AVAILABILITY_RULES) resolve(ruleId, page);
-  // The page answers again, or is tracked again: an issue this audit did not
-  // judge is open, not verified.
   const judged = (ruleId: string) => audit.found.has(ruleId) || audit.passed.has(ruleId);
   for (const prior of existing)
     if (SUSPENDED.has(prior.state) && !judged(prior.rule_id))
       write(prior.rule_id, 'open', page, {});
 }
 
-/** A page that answered 404/410 or redirected: that issue opens, the rest read unavailable. */
 function unavailableStates(
   { write, found, resolve }: PageStates,
   audit: Unavailable,
@@ -213,10 +170,8 @@ function unavailableStates(
       write(prior.rule_id, 'page_unavailable', source, {});
 }
 
-/** When a crawl audited its pages: the crawl's audit time, as its analyses record. */
 const auditTime = (crawl: Crawl) => new Date(crawl.started_at ?? crawl.created_at);
 
-/** Pages a newer audit of another crawl already decided. */
 async function newerAudited(db: Database, crawl: Crawl, pageIds: string[], auditAt: Date) {
   const rows = await db
     .selectFrom('site_page_analyses as a')
@@ -236,12 +191,6 @@ async function newerAudited(db: Database, crawl: Crawl, pageIds: string[], audit
   return new Set(rows.map((row) => row.site_url_id));
 }
 
-/**
- * Land the crawl's audit: move the audited pages' issue states, one keyset
- * batch of pages at a time, and write the day's open count. The caller owns
- * the transaction; a project lock orders landings of the same project.
- * Replaying a landing writes the same states.
- */
 export async function landIssueStates(db: Database, crawl: Crawl): Promise<void> {
   const scope = {
     workspaceId: crawl.workspace_id,
@@ -321,13 +270,6 @@ async function landAuditBatch(
       .execute();
 }
 
-/**
- * A page whose membership left the set (a plan downgrade, `fitTrackedSet`) is
- * never audited again, so its unresolved issues read `no_longer_tracked`, never
- * resolved, and leave the open count. A page tracked again returns to `open`
- * when an audit lands on it (`analyzedStates`). Not an audit: the deciding
- * sources and audit time stay the page's last audit's.
- */
 async function releaseUntrackedStates(db: Database, scope: Scope, now: Date) {
   await db
     .updateTable('site_issue_states as s')
@@ -348,14 +290,6 @@ async function releaseUntrackedStates(db: Database, scope: Scope, now: Date) {
 const lockIssueStates = (db: Database, scope: Scope) =>
   subjectXactLock(db, `site-issue-states:${scope.workspaceId}:${scope.projectId}`);
 
-/**
- * Mark fixed (SH-B12): the person says they fixed `ruleId` on these pages. An
- * open or regressed issue reads `marked_fixed` until an audit fetched after the
- * mark decides it; nothing else moves, and only an audit resolves it. A page
- * already marked keeps its first mark. Returns the pages it marked. The caller
- * owns the transaction. The open count is unchanged (`marked_fixed` is open), so
- * no trend point moves.
- */
 export async function markIssueFixed(
   db: Database,
   scope: Scope & { ruleId: string; siteUrlIds: readonly string[] },
@@ -376,7 +310,6 @@ export async function markIssueFixed(
   return rows.map((row) => row.site_url_id);
 }
 
-/** The project's open issue count after this landing, as today's trend point. */
 async function writeTrendPoint(db: Database, crawl: Crawl, now: Date) {
   await sql`
     insert into site_issue_trend

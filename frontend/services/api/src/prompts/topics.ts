@@ -1,12 +1,3 @@
-/**
- * Topics: per-project prompt categories, nested at most one level.
- *
- * Generation and Commerce also create topics, under the same project
- * advisory lock every TypeScript topic writer takes first, so a delete or a
- * re-parent never interleaves with generation's topic resolution. Names are
- * unique per project case-insensitively (`uq_topic_project_name`); deleting a
- * topic detaches its prompts.
- */
 import { randomUUID } from 'node:crypto';
 
 import type { Kysely } from 'kysely';
@@ -48,11 +39,6 @@ export const topicUpdate = topicUpdateRequestSchema.extend({
   description: description.nullish(),
 });
 const offeringName = z.string().trim().min(1).max(policy.brand_identity.profile_product_max_chars);
-/**
- * The Prompt Builder's reviewed topic plan, applied at once: proposals and new
- * topics to create (a proposal names the saved offerings it covers), existing
- * topics to rename and existing topics to delete.
- */
 const confirmShape = topicConfirmRequestSchema.shape;
 export const topicConfirm = topicConfirmRequestSchema.extend({
   create: z
@@ -67,7 +53,6 @@ export const topicConfirm = topicConfirmRequestSchema.extend({
   rename: z
     .array(confirmShape.rename.unwrap().element.extend({ name }))
     .max(P.create_batch_max)
-    // One final name per topic: a repeated id would apply only its first name.
     .refine((items) => new Set(items.map((item) => item.id)).size === items.length, {
       message: 'Rename each topic once',
     })
@@ -90,7 +75,6 @@ async function scopedTopic(db: Kysely<DB>, scope: RecordScope, topicId: string):
   return topic;
 }
 
-/** Active prompts per topic of the project, for the topics rail. */
 async function activeCounts(
   db: Kysely<DB>,
   { workspaceId, projectId }: ProjectScope,
@@ -116,11 +100,6 @@ async function view(db: Kysely<DB>, topic: TopicRow): Promise<TopicView> {
   );
 }
 
-/**
- * Enforce same-project, depth-one nesting for a parent assignment. The caller
- * holds the project lock, so neither side gains a parent or children before
- * commit.
- */
 async function validateParent(
   db: Kysely<DB>,
   { workspaceId, projectId }: ProjectScope,
@@ -158,7 +137,6 @@ async function writing<T>(write: () => Promise<T>): Promise<T> {
   }
 }
 
-/** The scope's project topics; Commerce's topics stay out of brand lists. */
 export async function listTopics(db: Database, scope: ProjectScope): Promise<TopicView[]> {
   const [topics, counts] = await Promise.all([
     brandTopics(db, scope).selectAll().orderBy('name').orderBy('id').execute(),
@@ -209,8 +187,6 @@ export async function updateTopic(
   return writing(() =>
     inTransaction(db, async (trx) => {
       const topic = await scopedTopic(trx, scope, topicId);
-      // Every topic edit changes binding vocabulary or hierarchy: serialize it
-      // with the prompt writers that read them.
       await acquireProjectLock(trx, topic.project_id);
       const reparent = 'parent_id' in input;
       const parentId = input.parent_id ?? null;
@@ -250,12 +226,6 @@ export async function deleteTopic(
   });
 }
 
-/**
- * Records which saved offerings each topic covers in
- * `business_context.topic_offerings` (read by `topicOfferings`), and forgets
- * the links of `removed` topics. Only offerings the profile still lists are
- * kept, in its spelling. The caller holds the project lock.
- */
 export async function linkTopicOfferings(
   trx: Kysely<DB>,
   scope: { workspaceId: string; projectId: string },
@@ -292,13 +262,6 @@ export async function linkTopicOfferings(
     .execute();
 }
 
-/**
- * Apply a reviewed topic plan in one transaction under the project lock:
- * delete, then rename, then create, so a name a deleted or renamed topic
- * frees can be reused. A created proposal is `generated` and linked to the
- * offerings it covers; a topic the person added is `manual`. Returns the
- * project's topics afterwards.
- */
 export async function confirmTopics(
   db: Database,
   workspaceId: string,
@@ -368,10 +331,6 @@ export async function confirmTopics(
   return listTopics(db, { workspaceId, projectId });
 }
 
-/**
- * Topic ids for the given names (keyed lower-case, blanks ignored), creating
- * unknown names as manual topics. The caller holds the project lock.
- */
 export async function resolveTopicsByName(
   db: Kysely<DB>,
   { workspaceId, projectId }: { workspaceId: string; projectId: string },
@@ -419,11 +378,6 @@ export async function resolveTopicsByName(
   return resolved;
 }
 
-/**
- * One topic of the project with its active prompts in text order, or null
- * when the project has no such topic. Both reads name the workspace and the
- * project, so a foreign id reads as absent.
- */
 export async function topicWithPrompts(
   db: Database,
   { workspaceId, projectId }: { workspaceId: string; projectId: string },

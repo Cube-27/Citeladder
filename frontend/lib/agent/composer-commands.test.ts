@@ -80,12 +80,10 @@ describe('pasted Action links', () => {
       text: 'Find @School uniform shops and @Returns policy',
       mentions: [a, b],
     });
-    // Past the bound a link stays as typed; one already mentioned adds no second mention.
     expect(withLinkMentions({ text, mentions: [a], resolved, max: 1 })).toEqual({
       text: `Find @School uniform shops and ${link(ACTION_B)}`,
       mentions: [a],
     });
-    // A link no longer in the message (sent or deleted meanwhile) adds nothing.
     expect(withLinkMentions({ text: 'Find it', mentions: [], resolved, max: 5 })).toEqual({
       text: 'Find it',
       mentions: [],

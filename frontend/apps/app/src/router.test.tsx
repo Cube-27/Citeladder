@@ -5,11 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const bootstrap = vi.hoisted(() => vi.fn());
 const sessionRead = vi.hoisted(() => ({ fails: false }));
-// This file is about chunk download and shell persistence across a navigation.
-// The real bootstrap loader would issue the session and workspace reads, which
-// belong to `bootstrap-loader.test.ts`; here they would only make the route
-// wait on a request nothing answers. The session wait these tests care about is
-// modelled by the `PrivateRouteLayout` stub below.
 vi.mock('@/lib/project/bootstrap-loader', () => ({
   bootstrapPrivateRoutes: () => {
     if (sessionRead.fails) throw new Error('session read failed');
@@ -72,14 +67,12 @@ describe('application route recovery', () => {
     render(<RouterProvider router={router} />);
 
     await screen.findByRole('button', { name: 'Finish session' });
-    // The bootstrap effect flushes asynchronously after the button paints.
     await waitFor(() => expect(bootstrap).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(download).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole('heading', { name: 'Issues' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Finish session' }));
     const shell = screen.getByRole('region', { name: 'Application shell' });
-    // The wait is the route's own frame: its titled identity band and the Issues summary.
     expect(
       await screen.findByRole('status', { name: 'Loading the issue summary' }),
     ).toBeInTheDocument();
@@ -124,14 +117,12 @@ describe('application route recovery', () => {
     const router = await privateRouter();
     render(<RouterProvider router={router} />);
 
-    // The shell's `main` is there from the first frame; the error arrives in it.
     const heading = await screen.findByRole('heading', {
       level: 1,
       name: 'This page could not be opened',
     });
     const main = screen.getByRole('main');
     expect(main).toHaveAttribute('id', 'main');
-    // One heading: the page's own (FOC-03).
     expect(within(main).getAllByRole('heading')).toEqual([heading]);
     expect(within(main).getByRole('button', { name: 'Reload page' })).toBeInTheDocument();
     expect(within(main).getByRole('link', { name: 'Go to Overview' })).toHaveAttribute(

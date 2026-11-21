@@ -1,4 +1,3 @@
-/** Compose the overview from existing persisted owners; this read acquires nothing. */
 import { comparisonBasis, type ComparedAnswers } from '@citeladder/contracts/comparison-reason';
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import { sql, type Selectable } from 'kysely';
@@ -23,7 +22,6 @@ import type { ProjectScope } from './brand-profile.ts';
 import { readProject } from './service.ts';
 
 type View = z.input<typeof commandCenterSchema>;
-/** What the overview shows of a run and its baseline. */
 const AUDIT_COLUMNS = ['id', 'completed_at', 'created_at', 'benchmark_mode'] as const;
 type Audit = Pick<Selectable<Audits>, (typeof AUDIT_COLUMNS)[number]>;
 const instant = (audit: Audit) => (audit.completed_at ?? audit.created_at).toISOString();
@@ -48,14 +46,6 @@ function state(
     limitations,
   };
 }
-/**
- * The selected run and the baseline its changes compare with: the one audit
- * finalization persisted for the run's core cohort across all engines
- * (`visibility/baselines.ts`), the same run Visibility compares with. Whole-run
- * changes are like for like when that comparison is `comparable`; a
- * `matched_subset` changes over the shared answers Visibility compares
- * (`sharedChange`); any other status keeps its own name and leaves changes unset.
- */
 async function comparableAudits(db: Database, scope: ProjectScope, auditId: string | null) {
   const query = db
     .selectFrom('audits')
@@ -64,8 +54,6 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
     .where('project_id', '=', scope.projectId)
     .where('status', 'in', policy.visibility.dashboard_audit_statuses)
     .where('audit_scope', '=', policy.visibility.brand_audit_scope);
-  // The overview follows the default market's latest brand run, the one
-  // Visibility calls latest; a chosen run brings its own market.
   const latestId = await latestBrandRunId(db, { ...scope, marketId: null });
   const selectedId = auditId ?? latestId;
   const selected = selectedId
@@ -111,7 +99,6 @@ async function visibility(
   if (!audit) return null;
   return getRunVisibility(db, scope, audit.id, policy.visibility.core_cohort);
 }
-/** One side of a change: a whole run, or the shared answers of a matched subset. */
 type ChangeSide = { visibility_rate?: number | null; rankings: RankingRow[] };
 type Change = { after: ChangeSide; before: ChangeSide } | null;
 async function sharedChange(
@@ -145,7 +132,6 @@ const withAnswers = (
   answers: ComparedAnswers | null,
 ): View['measurement'] => measured && { ...measured, comparison_answers: answers };
 const brandOf = (side: ChangeSide | undefined) => side?.rankings.find((row) => row.is_brand);
-// With no share of voice (nobody named) the sort order is alphabetical, not a rank.
 const rankOf = (side: ChangeSide | undefined) => {
   const row = brandOf(side);
   return side && row?.share_of_voice != null ? side.rankings.indexOf(row) + 1 : null;
@@ -164,7 +150,6 @@ function metrics(current: VisibilityResponse | null, change: Change): View['stat
   const after = brandOf(change?.after);
   const before = brandOf(change?.before);
   return {
-    // Visibility is the share of answers naming the brand, as on the Visibility page.
     visibility: {
       value: percent(current?.visibility_rate),
       delta: delta(percent(change?.after.visibility_rate), percent(change?.before.visibility_rate)),
@@ -205,12 +190,6 @@ function movements(
     .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
     .slice(0, 4);
 }
-/**
- * The one step that most moves AI visibility next. Measurement comes first,
- * because nothing else can be judged without it: prompts, then the first
- * audit (or the one under way), then the top Action, then the site crawl and
- * the search integrations that sharpen later Actions.
- */
 function nextAction({
   actions,
   promptCount,
@@ -355,9 +334,7 @@ export async function commandCenter(
   // The project read authorizes the scope before anything else is read.
   const project = await readProject(db, scope);
   const audits = await comparableAudits(db, scope, auditId);
-  // The action order is read once: it orders the actions and versions them.
   const order = readOpportunityOrder(db, scope);
-  // Independent reads of persisted state, issued together.
   const [
     current,
     previous,
@@ -399,7 +376,6 @@ export async function commandCenter(
       .where('prompts.status', '=', 'active')
       .where('prompts.enabled', '=', true)
       .executeTakeFirstOrThrow(),
-    // Only the first audit's progress is a next action; a tracked project skips the read.
     audits
       ? undefined
       : db
@@ -412,7 +388,6 @@ export async function commandCenter(
           .orderBy('created_at', 'desc')
           .limit(1)
           .executeTakeFirst(),
-    // Both depend only on the selected run and its baseline.
     measurement(db, scope, audits),
     sharedChange(db, scope, audits),
   ]);

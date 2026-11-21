@@ -1,6 +1,3 @@
-/* ---------- Breadcrumbs ----------
-   One line, never wider than its column: the current crumb gives way first
-   and ends in an ellipsis, so no chevron is left dangling. */
 .cl-crumbs {
   max-width: 100%;
   min-width: 0;

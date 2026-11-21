@@ -37,13 +37,6 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'formats', label: 'Answer formats', width: 'name', priority: 'low' },
 ];
 
-/**
- * Every answer this prompt got, newest run first, 25 a page. Pages are keyset:
- * Older follows the server's cursor and Newer pops back to the page before, so
- * a run landing meanwhile never shifts what the reader is on. The parent keys
- * this by its filters, so a filter change starts again at the newest answer.
- * Each row opens the answer's evidence.
- */
 export function PromptPastAnswers({
   promptId,
   promptText,
@@ -58,7 +51,6 @@ export function PromptPastAnswers({
   const scope = useProjectScope();
   const engines = useEngineCatalog();
   const timeZone = useDisplayTimeZone();
-  // The cursors of the pages before this one; the first page has none.
   const [cursors, setCursors] = useState<readonly string[]>([]);
   const [opened, setOpened] = useState<string | null>(null);
   const read = useQuery({
@@ -105,7 +97,6 @@ export function PromptPastAnswers({
             onClick={() => setOpened(answer.execution_id)}
           >
             <TableCell>
-              {/* The whole row opens the answer; the date is the keyboard's way in. */}
               <TextLink asChild underline="hover">
                 <Pressable
                   aria-haspopup="dialog"
@@ -179,7 +170,6 @@ function tableState(
 
 type Brand = PromptAnswer['brands'][number];
 
-/** The shown brand the stored value says was named first; none when no tracked brand was. */
 function firstOf(brands: readonly Brand[], first: FirstNamed): Brand | undefined {
   if (first.kind !== 'brand' && first.kind !== 'competitor') return undefined;
   const key = first.name.trim().toLowerCase();
@@ -188,15 +178,10 @@ function firstOf(brands: readonly Brand[], first: FirstNamed): Brand | undefined
   );
 }
 
-/**
- * Tracked brands as their marks, in the given order; none is "No tracked brand".
- * The brand stored as named first also shows its name, bold.
- */
 export function BrandsNamed({
   brands,
   first,
 }: Readonly<{ brands: readonly Brand[]; first?: FirstNamed }>) {
-  // Measured, and no tracked brand was named: a finding, never "not measured".
   if (!brands.length) return <Absence state="none" label="No tracked brand" />;
   const lead = first ? firstOf(brands, first) : undefined;
   return (
@@ -242,7 +227,6 @@ function SearchUsed({ search }: Readonly<{ search: PromptAnswer['search'] }>) {
     case 'not_used':
       return 'No';
     case 'not_reported':
-      // The engine exposes no search signal: its own state, never "No".
       return <Absence state="unavailable" label="Not reported" />;
     default: {
       const unreachable: never = search;

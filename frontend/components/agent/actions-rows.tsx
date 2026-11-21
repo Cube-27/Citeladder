@@ -14,7 +14,6 @@ import { firstSentence } from '@/lib/site-health/issues';
 
 import { useActionsPageContext } from './actions-page-context';
 
-/** What one row covers, in the reader's unit. */
 const SCOPE_BY_KIND: Readonly<Record<string, string>> = {
   prompt: '1 prompt',
   planned_page: 'New page',
@@ -27,7 +26,6 @@ const SCOPE_BY_KIND: Readonly<Record<string, string>> = {
 
 export function scopeLabel(action: Pick<Action, 'target_kind' | 'page_count'>): string {
   if (action.target_kind === 'issue_family') {
-    // Unknown (no cohort read) is not the whole site: only a cohort naming no URL is.
     if (action.page_count === null) return 'Not stated';
     return action.page_count > 0 ? pluralCount(action.page_count, 'URL') : 'Whole site';
   }
@@ -42,17 +40,11 @@ export function sourceLabel(action: Pick<Action, 'families' | 'origin'>): string
 
 const IMPACT_LEVEL = { high: 3, medium: 2, low: 1 } as const;
 
-/** An Action's impact as three bars and a word; an unscored one says so. */
 export function Impact({ band }: Readonly<{ band: Action['priority_band'] }>) {
   if (!band) return <span>Not scored</span>;
   return <ImpactBars level={IMPACT_LEVEL[band]}>{IMPACT_LABEL[band]}</ImpactBars>;
 }
 
-/**
- * One grouping's rows in their own box: its first ten from the tree read,
- * then "Show N more", ten at a time from the grouping's list read. Rows
- * already shown are kept while the next ten load.
- */
 export function GroupingRows({
   refOf,
   grouping,
@@ -105,7 +97,6 @@ function ActionRow({ action, refOf }: Readonly<{ action: Action; refOf: Grouping
   const { selection } = useActionsPageContext();
   const title = actionTarget(action);
   const whole = selection.hasGrouping(refOf);
-  // What is specific to this row: its rule's fix or its finding, as Issues words it.
   const caption = [
     action.finding_class === 'advisory' ? 'Advisory' : null,
     action.summary

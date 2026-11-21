@@ -46,8 +46,6 @@ test.describe('marketing routes', () => {
         copy.description,
       );
       await expect(page.locator('main')).toContainText(copy.lead);
-      // The page's product screen is server-rendered: the frame's name and
-      // the screen's figures are in the HTML even with JavaScript disabled.
       const heroFrame = page.locator('main figure.cl-frame').first();
       await expect(heroFrame.locator('.cl-frame-well[role="img"]')).toHaveAttribute(
         'aria-label',
@@ -157,9 +155,6 @@ test.describe('marketing routes', () => {
           await route.continue();
         });
         await page.goto(path, { waitUntil: 'commit' });
-        // A card rail's images are layers its cards open (none drawn on a
-        // phone until a row opens); the rail's own height is held by the
-        // frames after it, which this measures.
         const frames = page.locator('main .cl-frame:not([data-card-rail-track] .cl-frame)');
         await expect(frames.first()).toBeVisible();
         await page.waitForFunction(() =>
@@ -398,7 +393,6 @@ test.describe('marketing routes', () => {
     for (const { path, copy } of entries) {
       const response = await request.get(path);
       expect(response.status()).toBe(200);
-      // Parse the HTTP response itself, before hydration or browser rendering.
       const initial = await page.evaluate(
         (html) => {
           const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -491,8 +485,6 @@ test.describe('marketing routes', () => {
       await page.setViewportSize({ width, height: 900 });
       for (const path of ['/', '/solutions']) {
         await page.goto(path);
-        // A card rail scrolls sideways by design: its later cards sit past the
-        // edge inside the row, so the row itself must fit instead of each frame.
         const frames = page.locator('main .cl-frame:not([data-card-rail-track] .cl-frame)');
         await expect(frames.first()).toBeVisible();
         const widest = await page
@@ -512,9 +504,6 @@ test.describe('marketing routes', () => {
       }
     }
 
-    // A hero picture is the desktop screen scaled down whole, never reflowed
-    // to a phone layout: natural layout width, every column, a well that ends
-    // where the scaled screen does.
     await page.setViewportSize({ width: 390, height: 900 });
     for (const { path, part } of [
       { path: '/', part: '.cl-app-side' },
@@ -560,11 +549,6 @@ test.describe('marketing routes', () => {
   test('shared navigation and footer work from a subpage', async ({ page }) => {
     await page.goto('/faq');
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    // The desktop menu is a `client:load` island that hydrates after the load
-    // event `goto` waits for, and Astro drops the island's `ssr` attribute when
-    // hydration starts, not when it finishes. A click before then reaches
-    // markup with no handler and the menu never opens, so press until it does;
-    // an open menu is not pressed again, which would close it.
     const blog = nav.getByRole('link', { name: /Blog & guides/ });
     await expect(async () => {
       if (!(await blog.isVisible())) {
@@ -585,7 +569,6 @@ test.describe('marketing routes', () => {
       'href',
       'https://docs.citeladder.com/changelog/',
     );
-    // The social row sits under the launch badges, outside the link columns.
     const siteFooter = page.getByRole('contentinfo');
     await expect(siteFooter.getByRole('link', { name: 'github.com' })).toHaveAttribute(
       'href',

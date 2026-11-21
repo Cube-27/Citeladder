@@ -3,8 +3,6 @@ import { describe, expect, it } from 'vite-plus/test';
 import { evidenceFacts, evidenceLead } from './issue-evidence';
 import { siteLevelEvidence } from './site-level-evidence';
 
-// Every evidence blob below is a verbatim row from a real persisted crawl
-// (hiutdenim.co.uk, 200 pages) — the shapes these formatters have to survive.
 describe('evidenceFacts', () => {
   it('names the absent notations rather than restating the title', () => {
     expect(
@@ -35,13 +33,11 @@ describe('evidenceFacts', () => {
     expect(evidenceFacts('technical.sitemap_url_unreachable', evidence)).toEqual([
       'https://example.test/gone → 404',
     ]);
-    // A link on the page reads as its path, under a lead naming where it is.
     expect(evidenceFacts('technical.broken_internal_link', evidence)).toEqual(['/gone → 404']);
     expect(evidenceLead('technical.broken_internal_link')).toBe('Broken links on this page:');
   });
 
   it('collapses quick-view query variants of one link into one fact', () => {
-    // thenetreturn.com/pages/testimonials: each product link also appears as `?qv=…`.
     const broken = {
       failing_targets: [
         { url: 'https://www.thenetreturn.com/products/garmin-approach-r10-copy', status_code: 404 },
@@ -98,7 +94,6 @@ describe('evidenceFacts', () => {
   });
 
   it('names a noindex directive and why the page was meant to be indexed', () => {
-    // thenetreturn.com/collections/all-store-products, verbatim minus context ids.
     expect(
       evidenceFacts('technical.indexable', {
         noindex: true,
@@ -263,7 +258,6 @@ describe('evidenceFacts', () => {
     expect(evidenceFacts('technical.sitewide_link_redirect', evidence)).toEqual([
       '/collections/golf-simulator-screens → /collections/simulation/ (on 438 pages)',
     ]);
-    // An unanswered link is named unreachable, not dropped.
     expect(
       evidenceFacts('technical.sitewide_broken_link', {
         ...shared,
@@ -376,7 +370,6 @@ describe('evidenceFacts', () => {
         reason: 'offer_state_missing',
       }),
     ).toEqual(['Offer']);
-    // A price shown only as text still lacks the Offer markup itself.
     expect(
       evidenceFacts('aeo.offer_freshness_signal', {
         offer: true,

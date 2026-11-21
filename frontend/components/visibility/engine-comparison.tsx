@@ -41,9 +41,6 @@ export function EngineComparison({
         {engines.map((engine) => (
           <TableRow key={engine.logical_engine}>
             <TableCell>
-              {/* The engine by its name over the model it pinned; an observed
-                surface (a consumer app, a results page) pinned none, so its
-                route id is never shown. */}
               <TableCellLines
                 title
                 primary={
@@ -65,10 +62,6 @@ export function EngineComparison({
             </TableCell>
             <TableCell numeric>{formatRate(engine.brand_mention_rate)}</TableCell>
             <TableCell numeric>{formatRate(engine.owned_citation_rate)}</TableCell>
-            {/* This read "N measured / M expected", or "expected count
-              unavailable" — the run's own bookkeeping. How many answers
-              a rate is drawn from is the reader's business; how many we
-              hoped for is not. */}
             <TableCell numeric>{formatCount(engine.total_completed)}</TableCell>
           </TableRow>
         ))}
@@ -77,7 +70,6 @@ export function EngineComparison({
   );
 }
 
-/** The models an engine's answers pinned, by name; empty for an observed surface. */
 function modelsOf(
   visibility: Visibility,
   engine: string,

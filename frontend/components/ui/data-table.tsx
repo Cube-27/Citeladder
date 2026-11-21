@@ -29,35 +29,6 @@ export type { DataTableColumn, DataTableSelection, DataTableState };
 
 export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'className'>;
 
-/**
- * DataTable — the record table organism: an optional header bar (title,
- * toolbar) on the page surface, then the table in its `rule` frame (head 32
- * on `raised`, rows 40 with hairlines between them), and a footer bar with
- * the Pager. The page passes data, columns and
- * rows; it sets no geometry.
- *
- *   columns — each column declares its kind, which sets the head's and every
- *            cell's alignment, face and width together (`columnRules`): the
- *            flexible column takes the spare width, the others hug their
- *            content. When the floors do not fit the frame,
- *            `priority: 'low'` columns hide, the last first (`useFittedColumns`).
- *   pinned — the identity column (with the selection checkbox in the same
- *            pinned block) stays in view while the table scrolls sideways,
- *            and the scroller's scroll padding equals the pinned width, so a
- *            focused cell is never under it.
- *   rows   — every row is one line, cut with an ellipsis and the full value
- *            in a tooltip; secondary text follows the primary inline
- *            (`TableCellLines`). A short page draws no blank rows; a view
- *            under `reserveRows` holds its page as plain space.
- *   states — loading keeps the head and draws a page of block rows; a filter
- *            that empties a table keeps the head; an empty, not-measured or
- *            failed read replaces the whole table, head included (inside
- *            its footprint under `reserveRows`). A page
- *            that knows from its data that nothing was measured passes the
- *            not-measured state; the table never guesses it from its cells.
- *   zone   — a table with a `date` column states its time zone once, in
- *            the footer bar; its date-times carry none (`TableTime`).
- */
 export function DataTable({
   title,
   description,
@@ -75,36 +46,20 @@ export function DataTable({
   label,
   reserveRows = false,
 }: Readonly<{
-  /** The table's heading: an h2 on the page, an h3 inside a section. */
   title?: string;
-  /** One caption line under the title row: what the figures are. */
   description?: ReactNode;
-  /** At the head's end, centred on the title: a view switch, or the table's own actions (Columns, Export). */
   actions?: ReactNode;
   toolbar?: FilterBarProps;
   columns: readonly DataTableColumn[];
-  /** The page's `TableRow`s. Ignored while `state` is set. */
   children?: ReactNode;
-  /** Rows on this page; under `reserveRows`, the rest of the page is held as plain space. */
   rowCount?: number;
-  /** Rows per page: the footprint reserved for rows and for every state. */
   pageSize?: number;
-  /** What to show instead of rows. */
   state?: DataTableState | DataTableInlineEmpty;
   pager?: DataTablePager;
-  /** A background refetch while the current rows stay on screen. */
   busy?: Readonly<{ active: boolean; label: string }>;
   selection?: DataTableSelection;
-  /** A note in the footer bar (a source, a period). */
   footer?: ReactNode;
-  /** The table's accessible name when it has no visible title. */
   label?: string;
-  /**
-   * One of several views of the same table (its tabs or filters): keep the
-   * pager and a full page's height (blank space, not blank rows) even when
-   * this view fits on one page, and hold that footprint under an empty or
-   * failed view, so switching views never moves what follows.
-   */
   reserveRows?: boolean;
 }>) {
   const headingId = useId();
@@ -151,8 +106,6 @@ export function DataTable({
             cells={parts.colSpan}
             colSpan={shown.length + (selection ? 1 : 0)}
             state={replacing ? undefined : state}
-            // Loading cannot know yet whether the rows fit on one page: it
-            // draws the page asked for, the likelier loaded height.
             pageSize={state?.kind === 'loading' ? pageSize : paging.pageSize}
             rowCount={rowCount}
             reserve={reserveRows}
@@ -167,10 +120,6 @@ export function DataTable({
   );
 }
 
-/**
- * A state that takes the table's place. In a table that reserves its rows it
- * lies over the unseen frame and footer, so it keeps their footprint.
- */
 function HeldFootprint({
   state,
   level,
@@ -200,11 +149,6 @@ function HeldFootprint({
   );
 }
 
-/**
- * What the table derives from its props alone: its cell count, its name (the
- * visible title, else `label`, shared by the region and the table), how many
- * leading columns stay pinned, and whether it shows date-times.
- */
 function dataTableParts({
   title,
   label,
@@ -230,20 +174,14 @@ function dataTableParts({
   };
 }
 
-/** A state under the table's own title takes the next level. */
 const stateLevel = (title: string | undefined, level: HeadingLevel): HeadingLevel => {
   if (!title) return level;
   return level === 1 ? 2 : 3;
 };
 
-/** Whether a state drops the table and its pager, rather than holding their footprint. */
 const dropsTable = (replacing: ReturnType<typeof replacingState>, reserveRows: boolean) =>
   replacing !== null && !reserveRows;
 
-/**
- * The state that takes the table's place, head included: an empty,
- * not-measured or failed read. Loading and filtered-empty keep the head.
- */
 function replacingState(
   state: DataTableState | DataTableInlineEmpty | undefined,
 ): ComponentProps<typeof StateBlock> | null {
@@ -268,11 +206,6 @@ function ReplacingState({
   );
 }
 
-/**
- * The table in its scrolling frame. `scope` is what the column rules target;
- * `pinned` is how many leading columns stay in view (the identity column,
- * and the selection box before it).
- */
 function DataTableFrame({
   hidden,
   scroll,
@@ -290,9 +223,7 @@ function DataTableFrame({
   pinned: 1 | 2;
   frameRef: RefObject<HTMLDivElement | null>;
   scope: string;
-  /** The column rules, and the hidden boxes that measure the column floors. */
   probe: ReactNode;
-  /** The foot band: the note, the steppers and the Pager. */
   foot: ReactNode;
   children: ReactNode;
 }>) {
@@ -322,11 +253,6 @@ function DataTableFrame({
   );
 }
 
-/**
- * The foot band, 40 high under a hairline inside the frame: the note
- * (source, period) on the left, the Pager on the right; nothing when there
- * is neither. A wide table scrolls by its scrollbar, with no stepper buttons.
- */
 function DataTableFoot({
   footer,
   pager,
@@ -349,16 +275,6 @@ function DataTableFoot({
   );
 }
 
-/**
- * Whether the rows run past one page: another page either way, or (with a
- * rows-per-page select) more rows than the smallest page holds, so a reader on
- * a bigger page can still step back down. A table that fits on one page shows
- * no pager and no blank rows (owner, 2026-10-21).
- *
- * A reader who picked a bigger page keeps the pager even when everything now
- * fits on it and no exact total exists: the select they just used must not
- * vanish from under the pointer and strand them on the bigger page.
- */
 function hasMorePages(pager: DataTablePager): boolean {
   if (pager.canPrev || pager.canNext) return true;
   if (pager.pageSize === undefined) return false;
@@ -368,11 +284,6 @@ function hasMorePages(pager: DataTablePager): boolean {
   return total !== undefined && total > smallest;
 }
 
-/**
- * The pager to draw and the page of rows to reserve. A fixed list with no
- * pager (top movers), and a view that shares its footprint with its sibling
- * views (`reserveRows`), keep their reserved rows.
- */
 function pagingLayout(
   pager: DataTablePager | undefined,
   pageSize: number | undefined,
@@ -382,11 +293,6 @@ function pagingLayout(
   return reserveRows || hasMorePages(pager) ? { pager, pageSize } : {};
 }
 
-/**
- * The header bar, on the surface above the frame: the title, then the
- * toolbar on one row, the description one caption line under it; 12 above
- * the frame, on the frame's left edge.
- */
 function DataTableHeader({
   title,
   headingId,
@@ -414,7 +320,6 @@ function DataTableHeader({
     </>
   );
   if (!actions) return <header className="grid min-w-0 gap-1 pb-3">{head}</header>;
-  // As a section head: the switch sits level with the title, and wraps under the caption when narrow.
   return (
     <header className="flex flex-wrap items-start justify-between gap-2 pb-3">
       <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{head}</div>
@@ -423,7 +328,6 @@ function DataTableHeader({
   );
 }
 
-/** The title line: the heading, then the toolbar beside it. */
 function TitleRow({
   title,
   headingId,
@@ -435,7 +339,6 @@ function TitleRow({
   level: HeadingLevel;
   toolbar?: FilterBarProps;
 }>) {
-  // The level a block in this place takes: h2 on the page, h3 inside a section.
   const Heading = level === 3 ? 'h3' : 'h2';
   return (
     <div

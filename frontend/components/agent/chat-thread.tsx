@@ -13,16 +13,9 @@ import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import type { AgentChatDetail, AgentOutput } from '@/lib/api/agent';
 import { Notice } from '@/components/ui/notice';
 
-/**
- * One chat's conversation and reply composer, shared by the full Agent screen
- * and the Dashboard panel so both behave the same: the message appears at
- * once, the reply streams, Stop replaces Send while a turn runs, and the last
- * turn can be retried, regenerated or edited.
- */
 export function useChatThread(workspaceId: string, detail: AgentChatDetail) {
   const chatId = detail.chat.id;
   const access = useAgentAccess();
-  // A page chat reading its page has no turn yet, and nothing can be sent until it does.
   const runActive = isRunActive(detail.latest_run) || isPageReading(detail.page_fetch);
   const turn = useFollowUp(workspaceId, detail);
   const cancel = useCancelRun(workspaceId);
@@ -40,7 +33,6 @@ export function ChatConversation({
 }: Readonly<{
   thread: ChatThread;
   detail: AgentChatDetail;
-  /** How one document is shown in the thread; omitted (the page workspace), documents are not. */
   renderOutput?: (output: AgentOutput) => ReactNode;
 }>) {
   const { turn, access, runActive } = thread;
@@ -59,7 +51,6 @@ export function ChatConversation({
         pendingMessage={turn.pendingMessage}
         canSend={access.canSend && !turn.pending && !runActive}
       />
-      {/* Notices keep the thread's reading column instead of the page's full width. */}
       {!access.canSend || turn.failure ? (
         <AgentThread>
           {access.canSend ? null : <Notice tone="info">{access.message}</Notice>}

@@ -31,7 +31,6 @@ export function clearSessionCookie(c: Context, config: ServiceConfig): void {
  */
 const SIGN_OUT_CLEAR_SITE_DATA = '"cache"';
 
-/** End the browser's session: its cookies, and the account's cached pages. */
 export function endBrowserSession(c: Context, config: ServiceConfig): void {
   clearSessionCookie(c, config);
   clearOAuthCookies(c, config);

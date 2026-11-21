@@ -1,10 +1,5 @@
 @import '../../content/prose.css';
 
-/* ---------- Reading pages: guides, posts, legal and reference ----------
-   The shared Prose keeps its 720 column for tables, figures and code; on the
-   website running text holds to a 65-character measure inside it, except in
-   an article, whose one 640px column every block shares. Links in copy are
-   ink with an underline: the accent stays a mark. */
 .cl-site .cl-prose > :is(p, ul, ol, h2, h3, h4, blockquote, dl) {
   max-width: 65ch;
 }
@@ -17,11 +12,6 @@
 .cl-site .cl-ahead .cl-ahead-lead a {
   color: var(--color-ink);
 }
-
-/* At every width an article's running prose is body 16/26 in the primary
-   ink, its opening paragraph included; h2 is the site's section heading and
-   h3 24/30 sans 500, stepping down on phones through the site tokens. The
-   docs' Prose keeps its own headings. */
 
 .cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) {
   color: var(--color-ink);
@@ -46,7 +36,6 @@
   letter-spacing: normal;
 }
 
-/* An article quote is a note in the reading size beside a hairline rule. */
 .cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) blockquote:not([class]) {
   margin-top: 20px;
   margin-bottom: 0;
@@ -59,8 +48,6 @@
   line-height: var(--text-body--line-height);
 }
 
-/* A list number is set like the text it numbers: the same face, size and
-   ink, in tabular figures. */
 .cl-site .cl-prose ol:not([class]) > li::marker {
   color: inherit;
   font-family: inherit;
@@ -68,7 +55,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* A short code token stays on one line. */
 .cl-site .cl-prose code[data-whole] {
   white-space: nowrap;
 }
@@ -80,17 +66,6 @@
   }
 }
 
-/* One table pattern at every width. The first column stays put (paper
-   behind it) while a table wider than its frame scrolls over an
-   always-visible scrollbar, a shade on the end edge while more columns lie
-   beyond it. Short columns (labels, models, figures) take their content's
-   width and prose columns the rest; a figure stays on one line in tabular
-   numerals sharing a right edge with its header, which may wrap. A source
-   column renders as a 14px secondary line under the row's first cell. */
-
-/* A table sits at the running text's width and widens only as far as its
-   columns need (its min-content width), up to the Prose column; past that
-   it scrolls (owner, 2026-11-14). */
 .cl-site .cl-prose-table {
   width: min-content;
   min-width: 100%;
@@ -103,8 +78,6 @@
      quiet scrollbar would otherwise hide it until hover. */
   scrollbar-color: auto;
   scrollbar-width: auto;
-  /* The paper cover scrolls with the table (local) and hides the shade once
-     the last column is in view; the shade stays on the frame's edge. */
   background:
     linear-gradient(to left, var(--site-page) 40%, transparent) right / 48px 100% no-repeat local,
     linear-gradient(to left, color-mix(in oklch, var(--color-ink) 20%, transparent), transparent)
@@ -126,9 +99,6 @@
   min-width: 100%;
 }
 
-/* In an article with a Toc a table may widen on to the content's right edge
-   (100cqw is the grid), the edge the nav and footer share; across the grid's
-   third track from 1280px. */
 .cl-site .cl-cpage-article--toc .cl-cpage-article-body .cl-prose-table {
   max-width: 100cqw;
 }
@@ -165,12 +135,10 @@
   white-space: nowrap;
 }
 
-/* A prose column never narrows to a word a line. */
 .cl-site .cl-prose-table td:not([data-fit], [data-numeric]) {
   min-width: 144px;
 }
 
-/* A long header over figures wraps, evenly, rather than widening them. */
 .cl-site .cl-prose-table th[data-numeric]:not([data-fit]) {
   min-width: 96px;
   text-wrap: balance;
@@ -200,10 +168,6 @@
   text-align: right;
 }
 
-/* Citation markers: the sans face at 12px, medium in the secondary ink,
-   underlined only under the pointer or focus; a cluster never wraps and
-   keeps 2px between its markers. */
-
 .cl-site .cl-icite a,
 .cl-site .cl-prose .cl-icite a {
   position: relative;
@@ -231,7 +195,6 @@
   }
 }
 
-/* A 24px hit area round each marker; the glyph keeps its size. */
 .cl-site .cl-icite a::after {
   content: '';
   position: absolute;

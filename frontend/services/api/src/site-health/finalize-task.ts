@@ -1,12 +1,3 @@
-/**
- * The `finalize` task (owner decision CO-2): a drained crawl, or a cancelled
- * crawl with evidence, publishes here under the task's lease. It prepares
- * outside any transaction, appends final revisions in short batches under the
- * crawl lock (the root first, so its site checks reach every page), then
- * publishes in one durable transaction that settles the task. Every step is
- * replay-safe: a page with a final revision drops out of the pending set, and
- * canonical aliases are marked only by a pass that finalized nothing yet.
- */
 import { sql } from 'kysely';
 import { isActiveCrawl } from '@citeladder/contracts/site-health';
 
@@ -35,7 +26,6 @@ import { publishCancelledCrawl, publishDrainedCrawl } from './terminal-publicati
 
 const FINALIZE = policy.site_health.crawl.finalize;
 type Mode = 'drained' | 'cancelled';
-/** The crawl left the mode the task started in (Stop landed); the task is cancelled. */
 class Stopped extends Abandoned {}
 
 function modeOf(crawl: Crawl): Mode | null {
@@ -43,12 +33,6 @@ function modeOf(crawl: Crawl): Mode | null {
   return crawl.status === 'cancelled' ? 'cancelled' : null;
 }
 
-/**
- * One transaction holding the crawl lock and the task's lease fence (key
- * share, so the heartbeat still extends it). Batches commit asynchronously
- * (CO-1); the publication settles the fetch hold, so it commits durably.
- * Resolves false when the lease or the crawl's mode was lost.
- */
 async function commit(
   ctx: SiteTaskContext,
   claimed: SiteTask,
@@ -78,7 +62,6 @@ async function commit(
   return committed === true;
 }
 
-/** Whether an earlier pass already appended final revisions (and so marked the aliases). */
 async function anyFinalized(db: Database, crawl: Crawl) {
   const row = await db
     .selectFrom('site_page_analyses')
@@ -92,7 +75,6 @@ async function anyFinalized(db: Database, crawl: Crawl) {
   return row !== undefined;
 }
 
-/** The batch's analyses still current and unfinalized, under the crawl lock. */
 async function stillPending(db: Database, crawl: Crawl, ids: string[]) {
   const rows = await db
     .selectFrom('site_page_analyses')
@@ -108,7 +90,6 @@ async function stillPending(db: Database, crawl: Crawl, ids: string[]) {
   return ids.filter((id) => pending.has(id));
 }
 
-/** The batch's crawl-finalize evaluations, without a rule an analysis already recorded. */
 async function freshEvaluations(
   db: Database,
   crawl: Crawl,
@@ -136,7 +117,6 @@ async function freshEvaluations(
   }));
 }
 
-/** Run one claimed `finalize` task: batches, then the publication that settles it. */
 export async function runFinalize(ctx: SiteTaskContext, claimed: SiteTask) {
   ctx.signal.throwIfAborted();
   const scope = await loadScope(ctx.db, claimed);
@@ -144,7 +124,6 @@ export async function runFinalize(ctx: SiteTaskContext, claimed: SiteTask) {
   const mode = modeOf(scope.crawl);
   if (!mode) return cancelTask(ctx.db, claimed, ctx.owner);
   const { crawl } = scope;
-  // A cancelled crawl publishes what it analyzed: no alias or cross-page pass.
   let aliases =
     mode === 'drained' && !(await anyFinalized(ctx.db, crawl))
       ? await duplicateAliases(ctx.db, crawl)
@@ -167,10 +146,8 @@ export async function runFinalize(ctx: SiteTaskContext, claimed: SiteTask) {
           held.crawl,
           await freshEvaluations(trx, held.crawl, pending, prepared),
         );
-      // Read after the root's batch inserted its crawl-wide site checks.
       sources ??= await crawlSiteSources(trx, held.crawl);
       await appendFinalRevisions(trx, held.crawl, pending, sources);
-      // The batch's issues (its new cross-page findings among them) are current now.
       await syncIssueCurrency(trx, held.crawl, pending);
     };
     const committed = await commit(ctx, claimed, { mode, body: write }); // NOSONAR -- One short transaction per batch, in order.

@@ -19,11 +19,6 @@ import type { useAccuracy, useFactViews } from '@/lib/visibility/use-accuracy';
 
 type FactViews = ReturnType<typeof useFactViews>;
 
-/**
- * The Perception page's Fact-checking tab (pilot only): the accuracy view
- * under its lede, the claims per run, every claim with its verdict, and the
- * claims by frozen fact.
- */
 export function PerceptionFactChecking({
   query,
   views,
@@ -69,7 +64,6 @@ function FactCheckingLede({
   );
 }
 
-/** Edit and import facts always; export only when there are claims to export. */
 function FactActions({
   claims,
   exporting,

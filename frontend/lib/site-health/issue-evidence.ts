@@ -1,30 +1,3 @@
-/**
- * What a failing check actually found, written in the notation of the fix.
- *
- * The issue title already says what is wrong ("Missing structured data"). The
- * evidence line's only job is to name the SPECIFIC thing that was absent, in
- * the spelling the reader will type to fix it: `og:title`, `JSON-LD`,
- * `<link rel="canonical">`, `input[name="q"]`, `h3 → h5`.
- *
- * Three rules, learned from the first version of this file:
- *
- *   1. NEVER RESTATE THE TITLE. "Block count: 0. Has json ld: false. Has
- *      microdata: false." is three sentences to say what "Missing structured
- *      data" already said. `JSON-LD, Microdata` is the new information.
- *   2. NEVER SHOW A NUMBER THE READER CANNOT ACT ON. The evaluator records an
- *      ordinal for each offending form control; "#16" names a position in a
- *      list the reader has no way to see. A selector is findable, an ordinal
- *      is not. Counts stay only where the count IS the finding (a TTFB
- *      measurement against its budget, a repeated heading skip).
- *   3. NEVER REPEAT ONE FACT. `pairwise` over a document's heading levels
- *      genuinely produces `h1 → h4` three times; rendered as three identical
- *      lines it reads as a rendering bug. Tallied, it reads as a measurement.
- *
- * Pure. The formatter is keyed by `rule_id` because notation is a property of
- * the rule, not of the evidence shape — two rules can persist the same keys
- * and mean different things.
- */
-
 import {
   originOf,
   records,
@@ -36,18 +9,9 @@ import {
 } from './evidence-values';
 import { pageListRules, siteLevelFacts, siteLevelRules } from './site-level-evidence';
 
-/** More than this and the reader is scanning, not reading. */
 const MAX_FACTS = 8;
 const MAX_FACT_CHARS = 140;
 
-/**
- * The notations the page does NOT have. A check that fails on two of three
- * signals names those two and stays silent about the one that passed.
- *
- * An EMPTY ARRAY counts as absent. It is truthy in JavaScript, and the
- * evaluator records "no currency observed" as `currency: []` — read as a plain
- * flag, that made the one thing actually missing the one thing not reported.
- */
 function absent(evidence: Evidence, notations: Readonly<Record<string, string>>): string[] {
   return Object.entries(notations)
     .filter(([key]) => {
@@ -57,12 +21,10 @@ function absent(evidence: Evidence, notations: Readonly<Record<string, string>>)
     .map(([, notation]) => notation);
 }
 
-/** A length advisory: `72 characters (recommended 30–60)`. */
 const lengthRange = (evidence: Evidence) => [
   `${String(evidence.length)} characters (recommended ${String(evidence.min_chars)}–${String(evidence.max_chars)})`,
 ];
 
-/** Collapse repeats into a count: three `h1 → h4` lines become `h1 → h4 ×3`. */
 function tally(values: readonly string[]): string[] {
   const counts = new Map<string, number>();
   for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
@@ -73,10 +35,6 @@ function humanize(value: string): string {
   return value.replaceAll('_', ' ').trim();
 }
 
-// ---------------------------------------------------------------------------
-// Per-rule formatters
-// ---------------------------------------------------------------------------
-
 function headingSkips(evidence: Evidence): string[] {
   return tally(
     records(evidence.skips)
@@ -85,7 +43,6 @@ function headingSkips(evidence: Evidence): string[] {
   );
 }
 
-/** Escape quoted CSS attribute values without browser globals. */
 function cssAttribute(value: string): string {
   return value.replace(
     /["\\\n\r\f]/gu,
@@ -93,7 +50,6 @@ function cssAttribute(value: string): string {
   );
 }
 
-/** Prefer IDs, names, then types; never expose persisted ordinals. */
 function controlSelector(control: Evidence): string {
   const tag = text(control.tag).toLowerCase();
   if (!tag) return '';
@@ -113,11 +69,6 @@ function formControls(evidence: Evidence): string[] {
   );
 }
 
-/**
- * Schema findings in dotted schema.org notation. A missing property is named
- * under the type that should carry it (`Product.offers.priceCurrency`), which
- * is both the convention and the path into the JSON-LD block.
- */
 function schemaProperties(evidence: Evidence): string[] {
   const type = text(evidence.schema_type) || textList(evidence.expected_types)[0] || 'Schema';
   return textList(evidence.missing).map((path) => `${type}.${path}`);
@@ -132,7 +83,6 @@ function schemaTypeMismatch(evidence: Evidence): string[] {
     : expected;
 }
 
-/** The required atoms a composite readiness contract did not observe. */
 function unmetAtoms(evidence: Evidence): string[] {
   return records(evidence.atoms)
     .filter((atom) => atom.outcome === 'missing' || atom.outcome === 'partial')
@@ -150,11 +100,6 @@ function failingLinkTargets(evidence: Evidence): string[] {
     );
 }
 
-/**
- * Links found ON this page, one fact per distinct link. The same link with
- * different query strings (a theme's `?qv=` quick-view variants) is one thing
- * to fix, so it collapses into one fact with a variant count.
- */
 function pageLinks(
   evidence: Evidence,
   outcome: (target: Evidence, origin: string | null) => string,
@@ -177,7 +122,6 @@ function pageLinks(
   });
 }
 
-/** Where a redirecting link on this page lands; a link back to this page says so. */
 function linkRedirects(evidence: Evidence, pageUrl: string | null): string[] {
   const page = pageUrl ? withoutQuery(pageUrl) : null;
   return pageLinks(evidence, (target, origin) => {
@@ -196,7 +140,6 @@ function brokenLinks(evidence: Evidence): string[] {
   );
 }
 
-/** A redirecting URL and where it landed; an abandoned one is named a loop. */
 function redirectTargets(evidence: Evidence): string[] {
   return records(evidence.failing_targets)
     .filter((target) => text(target.url).length > 0)
@@ -208,7 +151,6 @@ function redirectTargets(evidence: Evidence): string[] {
     });
 }
 
-/** Why the declared canonical is not the URL to index, spelled as the target's state. */
 function canonicalTarget(evidence: Evidence): string[] {
   const target = text(evidence.target_url) || textList(evidence.declarations)[0] || '';
   switch (evidence.reason) {
@@ -221,7 +163,6 @@ function canonicalTarget(evidence: Evidence): string[] {
     case 'canonical_target_error':
       return [`${target} → ${String(evidence.status_code)}`];
     default: {
-      // Conflicting, invalid or cross-origin: the declarations are what to fix.
       const declarations = textList(evidence.declarations);
       return declarations.length ? declarations : reasonPhrase(evidence);
     }
@@ -272,7 +213,6 @@ function offerFreshness(evidence: Evidence): string[] {
     : reasonPhrase(evidence);
 }
 
-/** A noindex directive, and the signal that says the page was meant to be indexed. */
 function indexable(evidence: Evidence): string[] {
   if (evidence.noindex !== true) return reasonPhrase(evidence);
   const directives = evidence.nofollow === true ? 'noindex, nofollow' : 'noindex';
@@ -284,11 +224,6 @@ function indexable(evidence: Evidence): string[] {
   return why ? [directives, why] : [directives];
 }
 
-/**
- * Rules whose evidence has a native notation. Anything absent from this table
- * falls through to `reasonPhrase` and then to bounded scalars, so a new rule
- * still renders something honest before it gets a spelling of its own.
- */
 const FACTS_BY_RULE: Readonly<
   Record<string, (evidence: Evidence, pageUrl: string | null) => string[]>
 > = {
@@ -377,11 +312,6 @@ const FACTS_BY_RULE: Readonly<
   ),
 };
 
-/**
- * The words before the facts, for rules whose facts are not about the page's
- * own markup. A redirecting link is named under the page that CONTAINS it;
- * without "Links on this page" the line reads as the page itself redirecting.
- */
 const LEAD_BY_RULE: Readonly<Record<string, string>> = {
   'technical.internal_link_redirect': 'Links on this page that redirect:',
   'technical.broken_internal_link': 'Broken links on this page:',
@@ -394,22 +324,15 @@ const LEAD_BY_RULE: Readonly<Record<string, string>> = {
   'architecture.unhubbed_page_kind': 'Affected pages:',
 };
 
-/** The label to print before a rule's facts, when the facts need one. */
 export function evidenceLead(ruleId: string): string | null {
   return LEAD_BY_RULE[ruleId] ?? null;
 }
 
-/**
- * The evaluator's own reason code, spelled as words. Used only when a rule has
- * no notation of its own — a check about a RELATIONSHIP ("no question-answer
- * pairs") has no field name to point at.
- */
 function reasonPhrase(evidence: Evidence): string[] {
   const reason = text(evidence.reason);
   return reason ? [humanize(reason)] : [];
 }
 
-/** Keys that describe the evaluator, not the page. */
 const INTERNAL_KEYS = new Set(['reason', 'reason_code', 'threshold', 'scope', 'page_kind']);
 
 function isIdentifierKey(key: string): boolean {
@@ -431,13 +354,6 @@ function scalarFacts(evidence: Evidence): string[] {
   return Object.entries(evidence).flatMap(([key, value]) => scalarFact(key, value));
 }
 
-/**
- * The facts to show under one failing check, most specific source first.
- *
- * Returns an empty list when nothing can be said without inventing it — the
- * caller then renders nothing at all rather than a placeholder, because the
- * title plus "how to fix" already stand on their own.
- */
 export function evidenceFacts(
   ruleId: string,
   evidence: Evidence,

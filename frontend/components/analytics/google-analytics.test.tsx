@@ -21,7 +21,6 @@ function gtagCommands(): unknown[] {
 }
 
 const cleanups: (() => void)[] = [];
-/** Start the loader as the layout's script does, stopping it after the test. */
 function startAnalytics() {
   const stop = startGoogleAnalytics('G-TEST');
   cleanups.push(stop);
@@ -95,7 +94,6 @@ describe('GoogleAnalytics', () => {
     gtag.mockClear();
     await user.click(screen.getByText('Book a demo'));
     expect(gtag).not.toHaveBeenCalled();
-    // Once stopped, even a consented demo CTA is no longer tracked.
     stop();
     act(() => writeConsent('accepted'));
     document.body.insertAdjacentHTML(
@@ -178,8 +176,6 @@ describe('GoogleAnalytics', () => {
       document.cookie = '_ga=optional; path=/';
       document.cookie = 'citeladder_session=essential; path=/';
 
-      // A loaded tag continues to run after its script element exists, so
-      // revocation must reach it through Consent Mode.
       await act(async () => writeConsent('rejected'));
 
       expect(gtag).toHaveBeenCalledWith('consent', 'update', { analytics_storage: 'denied' });

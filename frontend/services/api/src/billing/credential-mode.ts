@@ -2,11 +2,6 @@ import type { CredentialMode } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 
-/**
- * A workspace on a live managed plan measures on the platform's engine and
- * DataForSEO keys; every other workspace brings its own (B32). The plan the
- * customer bought decides, never the request.
- */
 export function credentialModeOf(
   current: { credential_mode: string; status: string } | null | undefined,
 ): CredentialMode {
@@ -16,7 +11,6 @@ export function credentialModeOf(
     : 'byok';
 }
 
-/** The credential mode of the workspace's current base subscription. */
 export async function workspaceCredentialMode(
   db: Database,
   workspaceId: string,

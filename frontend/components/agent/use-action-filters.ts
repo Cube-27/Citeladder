@@ -14,12 +14,6 @@ import type {
 import { setUrlParams, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { actionPriorityBandSchema, actionStatusSchema } from '@citeladder/contracts/actions';
 
-/**
- * The Actions page's view, all URL state: which statuses show (every one by
- * default), what the tree groups by first (Goal), and the Impact and Source
- * filters behind Filters.
- */
-
 const ALL = 'all';
 export type StatusChoice = ActionStatus | typeof ALL;
 
@@ -104,7 +98,6 @@ export function useActionFilters() {
     definitions,
     status,
     setStatus,
-    /** The statuses the page lists, in order. */
     statuses: status === ALL ? actionStatusSchema.options : [status],
     groupBy,
     setGroupBy,

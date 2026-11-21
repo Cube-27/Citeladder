@@ -212,16 +212,13 @@ describe('Overview PDF', () => {
     expect(text).toContain('2nd');
     expect(text).toContain('of 2 brands');
     expect(text).toContain('of answers cite you · 2 engines');
-    // The metric keeps the app's name in the PDF.
     expect(text).toContain('Owned citation rate');
     expect(text).not.toContain('Citation share');
     expect(text).toContain('1 prompt measured');
-    // Ligatures stay out of the text layer, so "first" and "Offerings" copy and search intact.
     expect(text).toContain('first-time investors');
     expect(text).toContain('Offerings');
     expect(text).toContain('Financial planning');
     expect(text).toContain('Globex');
-    // The generic industry placeholder, raw engine keys, codes and IDs never print.
     expect(text).not.toContain('General');
     expect(text).not.toMatch(/\b(chatgpt|claude)\b/u);
     expect(text).not.toMatch(/\((s)\)|Unknown|opp-formula|Formula/u);
@@ -270,7 +267,6 @@ describe('Overview PDF', () => {
     const text = await reportText(tenant);
     expect(text).toContain('rising.example 0% 100% +100 pts');
     expect(text).toContain('falling.example 100% 0% −100 pts');
-    // Only the latest run's one answer, not both runs' answers pooled.
     expect(text).toContain('1 answer showed which pages the engine read.');
     expect(text).toContain('https://acme.example/pricing 1 0');
   });
@@ -309,7 +305,6 @@ describe('Overview PDF', () => {
       });
     };
     await run('2026-09-01T00:00:00Z', [false, false], 2);
-    // Prompt 2 failed in the earlier run's place, so only prompts 0 and 1 match.
     await run('2026-09-08T00:00:00Z', [true, true, false], 4);
     await saveLayout(tenant, ['project_state']);
 

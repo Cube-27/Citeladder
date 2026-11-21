@@ -1,7 +1,3 @@
-/* ---------- ProductFrame ---------- */
-/* `--frame-pad`: the one backdrop padding round every product image on the
-   website (a FeatureCard's well included); only the hero drops its foot. */
-
 .cl-frame {
   --frame-pad: 24px;
 
@@ -17,10 +13,6 @@
   }
 }
 
-/* The product image's frame stands on the site background with no panel of
-   its own (experiment, owner 2026-11-20); no text sits on it (the caption is
-   under the screen). */
-
 .cl-frame-card {
   display: flex;
   flex: 1;
@@ -33,12 +25,6 @@
   box-shadow: none;
 }
 
-/* The well holds the screen; its height is the screen's. In a cell taller
-   than the screen (a bento row beside a taller tile) it grows and centres the
-   screen. `overflow` only guards browsers without container query units.
-   With no supporting text the frame is one card: the well has no fill
-   or edge and the vignette sits straight on the card. */
-
 .cl-frame-well {
   display: flex;
   flex: 1;
@@ -47,19 +33,9 @@
   overflow: hidden;
 }
 
-/* Only a FeatureCard, whose copy sits under its image, gets the well (a
-   stage) with the card radius; its padding is `--frame-pad` (features.css). */
-
 .cl-fcard .cl-frame-well {
   border-radius: var(--site-radius-card);
 }
-
-/* A vignette's frame is at most 760 wide (a 694px card at 1440), centred in
-   a wider slot, so a card image is never stretched across the page. In a
-   FeatureCard the card is the frame and the well takes the card's width.
-   When a bento row is taller than a tile's own content, the vignette fills
-   its well and its rows share the extra height, so neighbouring tiles match
-   with no empty band of grey. */
 
 .cl-frame--fluid {
   width: 100%;
@@ -70,9 +46,6 @@
 .cl-fcard > .cl-frame--fluid {
   max-width: none;
 }
-
-/* Below 1280px heroes and splits stack, so the frame spans the text column
-   (the page gutters) instead of sitting centred inside it. */
 
 @media (max-width: 1279px) {
   .cl-frame--fluid {
@@ -108,10 +81,6 @@
   transform-origin: 0 0;
 }
 
-/* From 1280px a full-width frame never scales its screen under 0.9: a frame
-   narrower than that lays the screen out narrower instead. A split hero's
-   screen keeps its natural width and scales whole, like a screenshot. */
-
 @media (min-width: 1280px) {
   .cl-frame--scale .cl-frame-screen > .cl-screen {
     --screen-w: min(var(--screen-natural), calc(100cqi / 0.9));
@@ -121,23 +90,15 @@
     --screen-w: var(--screen-natural);
   }
 
-  /* The home page's main image draws the app at its real size (scale 1),
-     laid out at the frame's width. */
   .cl-frame--hero .cl-frame-screen > .cl-screen {
     --screen-w: min(var(--screen-natural), 100cqi);
   }
 }
 
-/* Inside a product image no text sets under the caption size (12px): the
-   smaller product roles take the caption size, mono deltas included. */
-
 .cl-frame-screen {
   --text-eyebrow: var(--text-caption);
   --text-data: var(--text-caption);
 }
-
-/* A product image draws the app, so it keeps the app's body sizes where the
-   website's own body type steps down on a phone. */
 
 @media (max-width: 767px) {
   .cl-frame-screen {
@@ -170,16 +131,10 @@
   line-height: var(--text-body--line-height);
 }
 
-/* ---------- A product image on its own: stage, then its white card ---------- */
-/* The well has no fill of its own. */
-
 .cl-frame-card > .cl-frame-well {
   overflow: visible;
   border: 0;
 }
-
-/* The picture's own white card, edged by a hairline ring, never a shadow;
-   the backdrop's centred halo lights it from behind. */
 
 .cl-frame-card > .cl-frame-well > .cl-frame-screen {
   overflow: hidden;
@@ -194,16 +149,9 @@
   }
 }
 
-/* A full app screen sits in its panel clipped at the panel's inner edge, so
-   the crop never lands on the panel's rim. Its cards and the drawn app carry
-   their own edges, so the screen draws no second ring or fill around them. */
-
 .cl-frame--scale > .cl-frame-card {
   overflow: hidden;
 }
-
-/* The hero's screen runs to the panel's foot: no padding under it, and its
-   own foot edge dropped so it reads as cut by the frame. */
 
 .cl-frame--hero > .cl-frame-card {
   padding-bottom: 0;
@@ -226,9 +174,6 @@
   background: none;
   box-shadow: none;
 }
-
-/* A screen drawn without the app's shell (panels only) sits on the app's
-   page fill, so the backdrop never shows through the gaps between panels. */
 
 .cl-frame--scale
   > .cl-frame-card

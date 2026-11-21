@@ -101,8 +101,6 @@ describe('AI Traffic opening requests', () => {
     await waitFor(() =>
       expect(asked.sort()).toEqual(['insights ?range=30d', 'overview ?range=30d']),
     );
-    // The loading frame draws the tab row, but no view is selected until
-    // availability is known.
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'false');
     expect(screen.queryByText('Referral coverage is partial')).not.toBeInTheDocument();
 
@@ -125,7 +123,6 @@ describe('AI Traffic opening requests', () => {
     );
     renderWithProviders(<AiTrafficScreen />, { projectSelection: { activeProject: project } });
 
-    // The view's own observer retries the failed read once when it mounts.
     await waitFor(() => expect(reads).toBe(2));
     expect(await screen.findByText('Referral coverage is partial')).toBeVisible();
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');

@@ -312,7 +312,6 @@ it('serializes account authorization before row locks while agreement recording 
   const actorLocked = Promise.withResolvers<void>(),
     releaseActor = Promise.withResolvers<void>();
   let paused = false;
-  // Pause the actual agreement command after its admin row has been locked.
   const recordingDb = db.withPlugin({
     transformQuery: ({ node }) => node,
     transformResult: async ({ result }) => {

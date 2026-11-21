@@ -7,10 +7,6 @@ import { connectionSecret } from './platform-secrets.ts';
 
 const credential = z.object({ login: z.string().min(1), password: z.string().min(1) });
 const stripCharacters = new Set(Array.from(policy.dataforseo.strip_characters));
-/**
- * The quota-pool identity of a DataForSEO connection's account: password
- * changes and connection IDs do not split a provider account's pool.
- */
 export function connectionPoolIdentity(
   connection: Parameters<typeof connectionSecret>[0],
   encryptionKey: string,
@@ -18,7 +14,6 @@ export function connectionPoolIdentity(
 ) {
   return dataforseoSecretIdentity(connectionSecret(connection, encryptionKey, env), encryptionKey);
 }
-/** The quota-pool identity of a decrypted DataForSEO login pair. */
 export function dataforseoSecretIdentity(packed: string, encryptionKey: string) {
   let payload: unknown;
   try {

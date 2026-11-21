@@ -1,13 +1,4 @@
 ---
-/**
- * CodeBlock — a code sample: a `control-md` bar on `surface-sunken` with the
- * language in a mono eyebrow and a fixed-width ghost Copy button; a status
- * beside it reads "Copied" for 1.6s (the icon turns a check) or "Couldn’t
- * copy" in `negative`. Below, mono `code` (13/22) in `ink`; comment lines and a
- * leading `$ ` prompt in `ink-muted`. The markup comes from Markdown fences
- * (prose-blocks.ts); this component owns its look and the Copy behaviour,
- * and Prose renders it once per page.
- */
 ---
 
 <style is:global>
@@ -69,7 +60,6 @@
       color: var(--color-ink);
     }
   }
-  /* Under a coarse pointer the bar and its Copy are a 44px target. */
   @media (pointer: coarse) {
     .cl-code-bar,
     .cl-code-copy {
@@ -112,7 +102,6 @@
 </style>
 
 <script>
-  // One delegated listener copies the block's code and reports the outcome.
   import { installCodeCopy } from './code-copy';
   installCodeCopy();
 </script>

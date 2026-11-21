@@ -46,12 +46,9 @@ function VisibilityWorkspace({
     ...useSelectionPageFilters({ view, filters, queries }),
     ...useTableFilters({ view, filters, queries }),
   ];
-  // The root spans the whole page: the filters every tab shares and the
-  // tab's table filters share one strip, and the panels are one band below.
   return (
     <TabsRoot value={filters.activeTab} onValueChange={filters.selectTab}>
       <ReportPage
-        // Empty, the state carries the next step, so the masthead leaves out Launch run.
         actions={<VisibilityActions launch={state !== 'empty'} />}
         tabs={
           <TabRow
@@ -84,7 +81,6 @@ function DashboardPanel({
   filters: ReturnType<typeof useVisibilityFilters>;
   queries: ReturnType<typeof useVisibilityQueries>;
 }>) {
-  // Every panel reads the selection's run, so each waits behind its state.
   const gated = (panel: (selected: Visibility) => ReactNode) => (
     <SelectionGate query={queries.visibilityQuery}>{panel}</SelectionGate>
   );

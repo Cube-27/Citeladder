@@ -5,21 +5,11 @@ import { openRazorpay, RAZORPAY_SDK_NAME } from './razorpay-checkout';
 
 type Checkout = Awaited<ReturnType<typeof billingApi.checkout>>;
 
-/** What the browser did with a checkout initialization. */
 export type CheckoutOutcome =
   | { kind: 'callback'; callback: CheckoutVerifyRequest }
   | { kind: 'dismissed' }
   | { kind: 'unsupported' };
 
-/**
- * The SHARED browser-checkout dispatcher (plan §3.4).
- *
- * It reads only the neutral initialization contract — an adapter name,
- * a publishable key and the provider's reference — and never a vendor field
- * name. Each vendor's SDK loader and callback shape stay inside that vendor's
- * module, so adding a provider is a new branch here plus its own module,
- * not a change to everything that touches checkout.
- */
 export async function startCheckoutFlow(
   checkout: Checkout,
   email: string,

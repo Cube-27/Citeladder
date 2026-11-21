@@ -8,7 +8,6 @@ import { CtaBand, FaqList } from '../sections/steps-faq-cta';
 
 type FreeTool = (typeof FREE_TOOLS)[number];
 
-/** A tool as a ContentIndex row: its name, what it does and what it needs. */
 function toolRow(tool: FreeTool) {
   return {
     title: tool.title,
@@ -18,7 +17,6 @@ function toolRow(tool: FreeTool) {
   };
 }
 
-/** The tools as ContentIndex groups, one per category in catalog order. */
 export function toolGroups(tools: readonly FreeTool[] = FREE_TOOLS) {
   const groups = new Map<string, FreeTool[]>();
   for (const tool of tools) groups.set(tool.category, [...(groups.get(tool.category) ?? []), tool]);
@@ -28,7 +26,6 @@ export function toolGroups(tools: readonly FreeTool[] = FREE_TOOLS) {
   }));
 }
 
-/** Every tool except the one on the page, as one ContentIndex group. */
 export function otherTools(slug: FreeTool['slug']) {
   return [
     {
@@ -54,7 +51,6 @@ const TOOL_FACTS = [
   },
 ] as const;
 
-/** What every tool can and cannot check, as Prose children. */
 export function ToolFacts() {
   return (
     <>
@@ -68,7 +64,6 @@ export function ToolFacts() {
   );
 }
 
-/** The tools index's closing band, toward Site Health. */
 export function SiteHealthCta() {
   return (
     <PageSection label="Site-wide evidence">
@@ -81,11 +76,6 @@ export function SiteHealthCta() {
   );
 }
 
-/**
- * The notes under a tool, as Prose children: what it checks, how to read the
- * result and its questions where it has a guide, then what the tool can tell
- * you. Rendered by `/tools/[slug]`.
- */
 export function ToolNotes({ slug }: Readonly<{ slug: FreeTool['slug'] }>) {
   const tool = FREE_TOOLS.find((entry) => entry.slug === slug);
   if (!tool) return null;

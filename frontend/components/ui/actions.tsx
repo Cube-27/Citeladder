@@ -18,14 +18,6 @@ import {
 } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/**
- * A named action, defined once (3.1): its label, glyph and look follow the
- * kind of action, never the page, so one name never renders with two looks.
- * `primary` is the one action a view exists for and lives only in the
- * masthead's primary slot or last in a sheet's footer; anything else that
- * does or opens something is `secondary`, and anything that destroys is
- * `danger`.
- */
 type ActionPreset = Readonly<{ label: string; variant: ButtonVariant; icon?: IconGlyph }>;
 
 export const ACTIONS = {
@@ -47,17 +39,10 @@ type ActionName = keyof typeof ACTIONS;
 
 type ActionButtonProps = Omit<ButtonProps, 'variant' | 'asChild' | 'children'> & {
   action: ActionName;
-  /** Opens a screen instead: an app route, scoped to the active project. */
   href?: string;
-  /** Outside the masthead (a state block, a checklist step) a primary action is drawn secondary. */
   secondary?: boolean;
 };
 
-/**
- * The named action as a button, or as a link that looks like one (`href`).
- * `aria-label` may add the object it acts on ("View evidence for …"); the
- * visible words are always the preset's.
- */
 export function ActionButton({
   action,
   href,

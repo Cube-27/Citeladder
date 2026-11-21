@@ -10,7 +10,6 @@ import { StateBlock } from '@/components/ui/state-block';
 type RunDetailViewProps = {
   audit: Audit | undefined;
   auditLoading: boolean;
-  /** The audit read: its failure, and the retry of exactly that read. */
   auditRead: RetryableRead;
   executions: Execution[] | undefined;
   executionsLoading: boolean;
@@ -56,7 +55,6 @@ function AuditSection({
   );
 }
 
-/** What the executions table shows instead of rows, if anything. */
 function executionsState({
   executions,
   executionsLoading,
@@ -85,12 +83,8 @@ function executionsState({
 }
 
 export function RunDetailView(props: Readonly<RunDetailViewProps>) {
-  // One error per page: a failed run read stands alone rather than over a
-  // second failed or loading table, but executions that did load stay shown.
   if (props.auditRead.error && !props.audit && !props.executions)
     return <AuditSection {...props} />;
-  // The run's status line and notices (a failed or partial run's error) sit
-  // above the table, so the table is placed only once the run has drawn them.
   if (!props.audit && !props.auditRead.error) return <AuditSection {...props} />;
   return (
     <>

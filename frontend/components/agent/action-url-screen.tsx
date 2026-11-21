@@ -25,11 +25,6 @@ import { pageKindLabel } from '@/lib/site-health/page-kinds';
 
 type UrlActions = Awaited<ReturnType<typeof actionsApi.urlActions>>;
 
-/**
- * One URL's page (plan v3): the trail (through the Action it was opened
- * from, if any), the path as the h1, its Details and every Action on it,
- * then "Fix this URL with Agent". One read of the URL's Actions.
- */
 export function ActionUrlScreen() {
   const { siteUrlId = '' } = useParams();
   const scope = useProjectScope();
@@ -121,10 +116,8 @@ function UrlDock({ siteUrlId, unreadable }: Readonly<{ siteUrlId: string; unread
   );
 }
 
-/** What the Agent is asked when a URL is handed to it (the approved mockup's words). */
 const URL_ASK = 'Fix every action on this URL, starting with the shared ones.';
 
-/** Actions › goal › grouping › the Action it came from, or Actions alone. */
 function trail(from: FromAction | null): Crumb[] {
   if (!from) return [{ label: 'Actions', href: '/actions' }];
   return [...listCrumbs(from), { label: from.title, href: `/actions/${from.id}` }];

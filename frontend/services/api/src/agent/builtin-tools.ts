@@ -1,14 +1,3 @@
-/**
- * The Agent's built-in tools. They are not reads: `load_skill` supplies a
- * methodology, `save_document` stages a whole document, `edit_document`
- * stages exact replacements in one and `suggest_edits` stages suggestions on
- * a page document for the person to apply (`propose_declaration`, in
- * `proposals.ts`, stages a declaration for them to confirm). A chat holds several documents,
- * each named by its number ("Document 2"); the runtime commits every staged
- * document and suggestion with the reply in one transaction (F14). Each
- * refusal says how to correct the call, so the model fixes it instead of the
- * turn ending.
- */
 import { z } from 'zod';
 import { policy } from '../config.ts';
 import { argumentProblem } from '../mcp/tools.ts';
@@ -43,14 +32,11 @@ export const EDIT_DOCUMENT = 'edit_document';
 export const SUGGEST_EDITS = 'suggest_edits';
 const suggestionPolicy = policy.content_optimization.suggestions;
 
-/** The short label a document is named by, for the model and the person. */
 export function documentLabel(number: number) {
   return `Document ${number}`;
 }
-/** A built-in's result about one document starts with its label, so a replayed turn says which. */
 export const DOCUMENT_RESULT = /^Document (\d+)\b/u;
 
-/** One of the chat's saved documents, as the turn read it. */
 export type SavedDocument = {
   number: number;
   kind: string;
@@ -59,26 +45,17 @@ export type SavedDocument = {
   title: string;
   body: string;
 };
-/** A document this turn staged: a new one or a revision of a saved one. */
 type StagedDocument = { kind: string; skillId: string; payload: OutputPayload };
 
-/** What the built-ins read and change during one turn. */
 export type DocumentState = {
   skill: Skill | undefined;
   skillSource: string | null;
-  /** The pinned format, else the latest document's, used when a new document names none. */
   formatId: string | null;
-  /** The chat's saved documents, in number order. */
   documents: SavedDocument[];
-  /** This turn's staged documents by number; committed only with the reply. */
   staged: Map<number, StagedDocument>;
-  /** UUIDs the person wrote (`writtenIds`): a staged document keeps them. */
   personIds: ReadonlySet<string>;
-  /** Each page document's SEO fields and stored suggestions, by number. */
   pages: ReadonlyMap<number, PageState>;
-  /** The rules this turn's `content_rules` section offers, Site Health findings on the page included. */
   rules: ReadonlySet<string>;
-  /** This turn's staged suggestions; committed only with the reply. */
   suggestions: StagedSuggestion[];
 };
 export type BuiltinOutcome = { ok: boolean; text: string; document?: number };
@@ -200,7 +177,6 @@ export function isBuiltin(name: string) {
   return BUILTINS.has(name);
 }
 
-/** The method plus the rules for saving it, as `load_skill` returns and a pinned skill is supplied. */
 export function methodology(
   skill: Skill,
   state: Pick<DocumentState, 'formatId'>,
@@ -222,7 +198,6 @@ export function methodology(
     .join('\n\n');
 }
 
-/** Any methodology may be loaded: a document of another kind is saved as a new document. */
 export function loadSkill(
   catalog: SkillCatalog,
   state: DocumentState,
@@ -241,13 +216,11 @@ export function loadSkill(
   return { ok: true, text: methodology(skill, state, bounds) };
 }
 
-/** Every number in use: the saved documents and this turn's new ones. */
 function numbers(state: DocumentState) {
   return [
     ...new Set([...state.documents.map((document) => document.number), ...state.staged.keys()]),
   ];
 }
-/** A document as the turn now holds it: staged this turn, else as saved. */
 function current(state: DocumentState, number: number) {
   const staged = state.staged.get(number);
   const saved = state.documents.find((document) => document.number === number);
@@ -299,7 +272,6 @@ const saved = (title: string) => ` saved ('${title}'). Reply now.`;
 const sameTitle = (left: string, right: string) =>
   left.trim().toLocaleLowerCase() === right.trim().toLocaleLowerCase();
 
-/** A whole save of a document this turn already staged: the first is kept and the rest go through edit_document. */
 function repeatedSave(state: DocumentState, requested: number | null | undefined, title: string) {
   const repeat =
     requested && state.staged.has(requested)
@@ -309,11 +281,6 @@ function repeatedSave(state: DocumentState, requested: number | null | undefined
   return `${documentLabel(repeat)} was already saved in this turn and that save was kept. Change it with edit_document, or reply now.`;
 }
 
-/**
- * Stages a whole document. A number replaces that document and must match the
- * loaded methodology's kind; without one the document is new. A document is
- * saved whole once per turn, so a later save never silently wins or duplicates it.
- */
 export function saveDocument(
   catalog: SkillCatalog,
   state: DocumentState,
@@ -368,7 +335,6 @@ export function saveDocument(
   );
 }
 
-/** Applies every replacement in order, or none: each must match exactly once. */
 function replaced(
   body: string,
   edits: { old_string: string; new_string: string }[],
@@ -396,7 +362,6 @@ function editLabel(count: number) {
   return count === 1 ? 'the edit' : `${count} edits`;
 }
 
-/** Stages exact replacements in one document; it keeps its kind, methodology and format. */
 export function editDocument(
   catalog: SkillCatalog,
   state: DocumentState,
@@ -441,7 +406,6 @@ export function editDocument(
   return outcome.ok ? followedBy(state, number, base.body, outcome) : outcome;
 }
 
-/** Suggestions staged earlier in the turn follow a staged edit; one it changed is dropped and the reply says so. */
 function followedBy(
   state: DocumentState,
   number: number,
@@ -458,7 +422,6 @@ function followedBy(
   };
 }
 
-/** The page document a suggestion call names, with its text as the turn holds it. */
 function pageFor(
   state: DocumentState,
   requested: number | null | undefined,
@@ -482,11 +445,6 @@ function pageFor(
   return { ok: true, number, body, state: page };
 }
 
-/**
- * Stages suggestions on a page document, all or none: each must name text
- * that matches once, an SEO field, or the whole page, and is resolved to the
- * stored finding's anchor here. They commit with the reply.
- */
 export function suggestEdits(
   catalog: SkillCatalog,
   state: DocumentState,

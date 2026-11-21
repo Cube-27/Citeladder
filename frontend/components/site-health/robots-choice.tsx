@@ -8,7 +8,6 @@ import { MenuItem } from '@/components/ui/menu';
 import { SPLIT_ACTION_JOIN, SplitButton } from '@/components/ui/split-button';
 import { Tooltip } from '@/components/ui/tooltip';
 
-/** A page fetched although robots.txt excludes it, because its crawl ignored robots.txt. */
 export function RobotsExcludedBadge() {
   return (
     <Tooltip content="Fetched because the crawl ignored robots.txt.">
@@ -17,7 +16,6 @@ export function RobotsExcludedBadge() {
   );
 }
 
-/** How a crawl's robots choice reads beside the crawl button and the schedule; null when it respects robots.txt. */
 export function robotsChoiceNote(choice: CrawlRobotsChoice | undefined) {
   if (choice?.handling !== 'ignore') return null;
   return choice.decided_by_email
@@ -25,12 +23,6 @@ export function robotsChoiceNote(choice: CrawlRobotsChoice | undefined) {
     : 'Ignores robots.txt';
 }
 
-/**
- * The one crawl action (SH-B7): it audits the project's tracked pages again and
- * keeps the newest crawl's robots choice. Its menu switches that choice for
- * this crawl on; ignoring robots.txt needs the person to confirm they are
- * authorized to crawl the site, and the server records who confirmed it.
- */
 export function StartCrawlControl({
   siteUrl,
   robots,
@@ -38,10 +30,8 @@ export function StartCrawlControl({
   onStart,
 }: Readonly<{
   siteUrl: string;
-  /** The newest crawl's robots choice, which the crawl keeps. */
   robots: CrawlRobotsChoice;
   pending: boolean;
-  /** No choice keeps the newest crawl's. */
   onStart: (robots?: CrawlRobotsHandling) => void;
 }>) {
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);

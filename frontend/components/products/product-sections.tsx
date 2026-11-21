@@ -25,7 +25,6 @@ const OUTCOMES: Record<Answer['outcome'], { label: string; tone: StatusValue }> 
   unranked: { label: 'Unranked', tone: 'info' },
 };
 
-/** A table's one-sentence empty state, or nothing while it has rows. */
 const emptyWhen = (rows: readonly unknown[], message: string) =>
   rows.length ? undefined : ({ kind: 'empty', inline: true, message } as const);
 
@@ -239,7 +238,6 @@ const ANSWER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'open', label: 'Open answer', kind: 'actions', width: 'action' },
 ];
 
-/** Each answer that named it, newest first; opening one shows the stored answer. */
 export function Answers({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   const [open, setOpen] = useState<Answer | null>(null);
   const engines = useEngineCatalog();

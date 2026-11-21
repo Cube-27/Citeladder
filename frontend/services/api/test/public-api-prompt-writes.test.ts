@@ -1,4 +1,3 @@
-/** Public bulk prompt writes: all or nothing over a selection held to the key's project. */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, afterEach, expect, it } from 'vitest';

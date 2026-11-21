@@ -1,12 +1,3 @@
-/**
- * The runs whose owned citations AI Traffic reports over a window: each audit
- * tracked scope's newest `completed` run created inside it (market probes ask
- * brand-named questions, so they never count), with the metric snapshot
- * its finalization wrote. Overview, Pages and the URL detail all select runs
- * this way and read the snapshot's persisted citation facts; none of them
- * counts citation rows. A run without a snapshot has no fact (`not computed`),
- * which is not zero.
- */
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { windowBounds } from '../crawl-logs/reads.ts';
@@ -38,7 +29,6 @@ export function citationRuns(
     .orderBy('a.id', 'desc');
 }
 
-/** Whether the window's runs have persisted citation facts to read. */
 export type CitationCoverage = 'no_completed_run' | 'not_computed' | 'measured';
 
 export function citationCoverage(

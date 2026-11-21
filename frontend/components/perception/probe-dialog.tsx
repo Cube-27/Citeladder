@@ -19,7 +19,6 @@ import { PLANS_HREF } from '@/lib/billing/plan-limit';
 import { formatCount } from '@/lib/format';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
-/** What the dialog confirms: one probe now, or one on every scheduled run. */
 export type ProbeIntent = { kind: 'run' } | { kind: 'schedule'; cadence: 'daily' | 'weekly' };
 
 const COPY = {
@@ -38,7 +37,6 @@ const COPY = {
   },
 } as const;
 
-/** Confirm a probe or its schedule before it spends: what it asks, and the AI credits each run costs (AV-34). */
 export function ProbeDialog({
   scope,
   quote,
@@ -139,7 +137,6 @@ export function ProbeDialog({
   );
 }
 
-/** Why Run probe is off: the trial, a key to add, unmeasurable markets or too many questions. */
 function Blocked({
   blocked,
   connecting,

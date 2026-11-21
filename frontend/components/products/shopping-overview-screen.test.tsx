@@ -126,15 +126,12 @@ describe('Shopping overview', () => {
       '50.0%',
       '1.5',
     ]);
-    // Never named: a real zero visibility, but no rank to measure.
-    // Your rows carry the accent mark, not "Your product" on every row.
     expect(rowCells(ranking, 'Acme Merino Sock')).toEqual([
       'Acme Merino SockAcme',
       '0.0%',
       '—Unavailable',
       '—Unavailable',
     ]);
-    // Every product opens its page in the overview's window, competitors included.
     expect(within(ranking).getByRole('link', { name: 'Acme Road Runner' })).toHaveAttribute(
       'href',
       `/products/${ROAD}?window=90`,
@@ -161,10 +158,8 @@ describe('Shopping overview', () => {
       '1',
     ]);
     const fanout = table('Top fan-out queries');
-    // The third answer searched without exposing its queries: unknown, not "no search".
     expect(fanout).toHaveTextContent('3 answers · 1 with queries · 1 without a search · 1 unknown');
     expect(rowCells(fanout, 'best road running shoes')).toEqual(['best road running shoes', '2']);
-    // No category chosen: no category shelf.
     expect(screen.queryByText('Category shelf')).not.toBeInTheDocument();
   });
 
@@ -182,13 +177,10 @@ describe('Shopping overview', () => {
     renderWithProviders(<Harness />, projectRoute);
 
     const shelf = (await screen.findByText('Category shelf')).closest('section')!;
-    // The one next step: the category's own page, where its shopping prompts are set up.
     const setUp = within(shelf).getByRole('link', { name: 'Set up its shopping prompts' });
     expect(new URL(setUp.getAttribute('href')!, 'https://app.test').pathname).toBe(
       `/products/${CATEGORY}`,
     );
-    // No answer in the window: one empty state with its next step, not a table of zeros.
-    // Directly under the page, its heading is the h2 rung below the masthead h1.
     const heading = screen.getByRole('heading', {
       level: 2,
       name: 'No shopping answers in the last 30 days',
@@ -236,7 +228,6 @@ describe('Shopping overview', () => {
     expect(within(shelf).getByText('40.0%')).toBeInTheDocument();
     expect(within(shelf).getByText('25.0%')).toBeInTheDocument();
     expect(within(shelf).getByText('2.0')).toBeInTheDocument();
-    // Measured, but no answer ranked a product: unavailable, not "not measured".
     expect(within(shelf).getByText('Unavailable')).toBeInTheDocument();
     expect(within(shelf).queryByText('Not measured')).not.toBeInTheDocument();
   });
@@ -257,7 +248,6 @@ describe('Shopping overview', () => {
         return HttpResponse.json(OVERVIEW);
       }),
     );
-    // A project switch kept the previous project's category in the URL.
     renderWithProviders(<ShoppingOverviewScreen />, {
       ...projectRoute,
       initialEntries: [`/products/overview?project=${PROJECT_ID}&category=${FOREIGN_CATEGORY}`],

@@ -20,11 +20,6 @@ const KIND_TITLE = {
   topup: 'Review your top-up',
 } as const;
 
-/**
- * The one confirm-and-pay step. Whatever was chosen — a plan, an upgrade's
- * prorated charge, an add-on or a top-up — the server's quote is shown in
- * full with the consent copy before the payment provider opens.
- */
 export function PurchaseReview({
   checkout,
   catalog,
@@ -34,7 +29,6 @@ export function PurchaseReview({
   checkout: Checkout;
   catalog: BillingCatalog;
   itemName: (key: string) => string;
-  /** When an upgraded subscription next renews, at the new plan's price. */
   renewsOn?: string | null;
 }>) {
   const prepared = checkout.prepared;

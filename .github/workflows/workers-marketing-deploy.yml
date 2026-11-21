@@ -8,7 +8,6 @@ on:
         type: boolean
         default: false
 
-# Deny by default; every job grants what it needs.
 permissions: {}
 
 concurrency:
@@ -19,11 +18,9 @@ jobs:
   build:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    # require-green-main reads ci.yml's and compose-smoke.yml's runs for this commit.
     permissions:
       actions: read
       contents: read
-    # Up to 30 minutes waiting for CI (require-green-main), then the build.
     timeout-minutes: 50
     outputs:
       fingerprint: ${{ steps.config.outputs.fingerprint }}
@@ -42,8 +39,6 @@ jobs:
         id: config
         shell: bash
         env:
-          # Self-serve sign-up stays closed unless the repository variable
-          # opens it together with the API's PUBLIC_SIGNUP_ENABLED.
           SELF_SERVE_SIGNUP: ${{ vars.SELF_SERVE_SIGNUP || 'false' }}
         run: |
           [[ "$SELF_SERVE_SIGNUP" =~ ^(true|false)$ ]]
@@ -51,7 +46,6 @@ jobs:
             echo 'PUBLIC_WEBSITE_ORIGIN=https://citeladder.com'
             echo 'PUBLIC_APP_ORIGIN=https://app.citeladder.com'
             echo "NEXT_PUBLIC_SELF_SERVE_SIGNUP=$SELF_SERVE_SIGNUP"
-            # The Turnstile site key is public; its secret is the Worker secret TURNSTILE_SECRET_KEY.
             echo 'PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAAFS7i6wNJ4sAbY-8'
           } >> "$GITHUB_ENV"
           values=$'https://citeladder.com\nhttps://app.citeladder.com\nturnstile=0x4AAAAAAFS7i6wNJ4sAbY-8\nsignup='"$SELF_SERVE_SIGNUP"
@@ -92,7 +86,6 @@ jobs:
         run: |
           test -n "$GH_TOKEN"
           node frontend/scripts/pull-licensed-fonts.mjs frontend/apps/marketing/dist/client/fonts
-      # The live sitemap before this deploy is the baseline for IndexNow's changed URLs.
       - name: Save live sitemap
         id: live_sitemap
         continue-on-error: true
@@ -108,7 +101,6 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           pnpm deploy:marketing
-      # A failed submission never fails a deploy that is already live.
       - name: Submit changed URLs to IndexNow
         continue-on-error: true
         shell: bash

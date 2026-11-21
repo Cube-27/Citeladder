@@ -19,26 +19,10 @@ import { ControlCount } from '@/components/ui/tabs';
 import { ChevronLeft, ListFilter } from '@/lib/icons';
 import { useMediaQuery } from '@/lib/use-media-query';
 
-/** How many filters are off their default value. */
 function activeFilterCount(filters: readonly FilterDefinition[]): number {
   return filters.filter((filter) => !filter.isDefault).length;
 }
 
-/**
- * FiltersMenu — the row's less frequent filters behind one button, with a
- * count of those set. Its menu lists each filter's name and current value;
- * each opens a submenu of its options (the filter's name as the heading,
- * "Reset to …" once set). Long lists get a search box. Radix's menu keyboard
- * model throughout: arrows move, Right or Enter opens a filter, Left comes
- * back, Escape closes. The menu opens toward the content from the button's
- * edge on that side (`align`: `end` for a button at its row's far right).
- *
- * On a phone a submenu has no room beside the menu, so there a filter opens
- * its options in the menu itself, under a Back row.
- *
- * The filters' state stays with their owners (URL state on every current
- * page); this only draws them.
- */
 export function FiltersMenu({
   filters,
   align = 'start',
@@ -82,21 +66,13 @@ export function FiltersMenu({
   );
 }
 
-/** Below this width a submenu cannot stand beside the menu (two 224px panels). */
 const NARROW_QUERY = '(max-width: 639px)';
 
-/**
- * The phone form: the menu lists the filters; choosing one shows its options
- * in the same panel under a Back row, and Back returns to the list. The menu
- * unmounts on close, so it always reopens on the list.
- */
 function DrillInFilters({ filters }: Readonly<{ filters: readonly FilterDefinition[] }>) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [returnTo, setReturnTo] = useState<string | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const open = filters.find((filter) => filter.id === openId);
-  // Focus follows the step: the options (or their search box) going in, the
-  // filter's own row coming back.
   useEffect(() => {
     const root = panel.current;
     if (!root) return;

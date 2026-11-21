@@ -37,7 +37,6 @@ const TEXT_FIELDS = [
   { key: 'mpn', label: 'MPN' },
 ] as const;
 
-/** The edit drawer: a catalog product's fields, saved as one edit of what changed. */
 function ProductEditDrawer({
   scope,
   product,
@@ -51,8 +50,6 @@ function ProductEditDrawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }>) {
-  // The record as the drawer opened on it: a refetch while it is open never
-  // turns an untouched field into a change that would overwrite newer data.
   const [initial] = useState(() => productEditForm(product, catalog));
   const [values, setValues] = useState<ProductEditForm>(initial);
   const [invalid, setInvalid] = useState<string | null>(null);
@@ -138,15 +135,9 @@ function ProductEditDrawer({
   );
 }
 
-/**
- * "Add to tracking" for a product the answers showed but nobody approved
- * (CM6): one click approves the AI-observed competitor, so it is matched as
- * an approved competitor from then on.
- */
 export function AddToTracking(
   props: Readonly<{ scope: ProjectScope; candidateId: string; name: string }>,
 ) {
-  // Approving a competitor is a write; a role without it is not offered one.
   return useWorkspaceCapability('write') ? <AddToTrackingButton {...props} /> : null;
 }
 
@@ -180,12 +171,6 @@ const ARCHIVED_NOTE =
 
 type ControlParts = Readonly<{ notices: ReactNode; actions: ReactNode }>;
 
-/**
- * A catalog product's own controls on its page: Edit, and Archive or Restore.
- * An archived product says so; it keeps its history but leaves the catalog,
- * new matching and shopping prompts until restored. `children` places the
- * notices under the status line and the action buttons in the page header.
- */
 export function ProductCatalogControls({
   scope,
   product,
@@ -206,7 +191,6 @@ export function ProductCatalogControls({
       lifecycle_state: archived ? 'active' : 'archived',
     });
   const lifecycleLabel = archived ? 'Restore' : 'Archive';
-  // Editing and archiving are writes; a role without them reads the state only.
   const canWrite = useWorkspaceCapability('write');
   if (!canWrite) {
     return children({
@@ -254,7 +238,6 @@ export function ProductCatalogControls({
           {lifecycle.isPending ? 'Archiving…' : 'Archive'}
         </Button>
       )}
-      {/* Mounted while open, so each edit starts from the record as last read. */}
       {editing ? (
         <ProductEditDrawer
           scope={scope}

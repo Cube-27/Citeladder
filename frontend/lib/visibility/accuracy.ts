@@ -1,8 +1,3 @@
-/**
- * Display helpers for fact-check accuracy. Values are projected from the read,
- * never recomputed; a missing value stays `null` so the component draws the
- * shared missing mark rather than a zero.
- */
 import type {
   AccuracyClaim,
   AccuracyCoverage,
@@ -31,7 +26,6 @@ export const VERDICT_LABELS: Record<ClaimVerdict, string> = {
   not_covered: 'Not covered',
 };
 
-/** The shared tone scale: supported reads as success, contradicted as danger. */
 export const VERDICT_TONE: Record<ClaimVerdict, SentimentValue> = {
   supported: 'positive',
   contradicted: 'negative',
@@ -61,7 +55,6 @@ const REASON_COPY: Record<Reason, string> = {
   model_changed: 'The checker model changed after these runs started, so they were not checked.',
 };
 
-/** The heading and sentence for a read that has no value to show. */
 export function accuracyStateCopy(
   state: Exclude<AccuracyResponse['state'], 'value'>,
   reason: AccuracyResponse['reason'],
@@ -87,7 +80,6 @@ export function accuracyStateCopy(
   }
 }
 
-/** A claim's verdict, or why it has none, in words: each state stays distinct. */
 function claimStateWords(claim: Pick<AccuracyClaim, 'status' | 'verdict' | 'reason'>): string {
   switch (claim.status) {
     case 'verdict':
@@ -105,11 +97,6 @@ function claimStateWords(claim: Pick<AccuracyClaim, 'status' | 'verdict' | 'reas
   }
 }
 
-/**
- * The Agent hand-off question for one claim: the claim, the answer's words,
- * the facts it was checked against and its verdict, so the chat starts from
- * them. The Agent only reads; a verdict changes on this screen alone.
- */
 export function claimAgentPrompt(claim: AccuracyClaim, engine: string): string {
   const facts = claim.facts.map((fact) => fact.statement).join('; ');
   const verdict = claimStateWords(claim);
@@ -120,7 +107,6 @@ export function claimAgentPrompt(claim: AccuracyClaim, engine: string): string {
   ].join(' ');
 }
 
-/** Only a contradicted claim has something to correct. */
 function agentAsk(claim: Pick<AccuracyClaim, 'status' | 'verdict'>, engine: string): string {
   const verdict = claim.status === 'verdict' ? claim.verdict : null;
   if (verdict === 'contradicted') return `Help me correct what ${engine} says about us.`;
@@ -129,11 +115,6 @@ function agentAsk(claim: Pick<AccuracyClaim, 'status' | 'verdict'>, engine: stri
   return `Help me check what ${engine} says about us.`;
 }
 
-/**
- * Contradicted claims against the comparable run before, when the figures are
- * one run's (the newest trend point); null for a pooled selection or no
- * comparable earlier run.
- */
 export function contradictedChange(
   data: Pick<AccuracyResponse, 'source_audit_ids' | 'trend'>,
 ): number | null {
@@ -144,7 +125,6 @@ export function contradictedChange(
   return latest.score.coverage.contradicted - previous.score.coverage.contradicted;
 }
 
-/** "N of M claims with a verdict", then every other non-empty bucket. */
 export function accuracyCoverageLine(coverage: AccuracyCoverage): string {
   const verdicts =
     coverage.supported + coverage.contradicted + coverage.inconclusive + coverage.not_covered;
@@ -154,7 +134,6 @@ export function accuracyCoverageLine(coverage: AccuracyCoverage): string {
   ].join(' · ');
 }
 
-/** Every non-empty pending or unread bucket besides the checked claims. */
 export function accuracyCoverageExtras(coverage: AccuracyCoverage): string[] {
   const parts: string[] = [];
   if (coverage.pending) parts.push(`${coverage.pending} pending`);

@@ -6,7 +6,6 @@ import './page-highlight.css';
 
 export type HighlightStat = Readonly<{ label: string; value: string; sub?: ReactNode }>;
 
-/** Stat columns: a set of stats holds one row (six included), never 4 + 2. */
 function statColumns(count: number): 1 | 2 | 3 | 4 | 6 {
   if (count <= 1) return 1;
   if (count === 2) return 2;
@@ -15,12 +14,6 @@ function statColumns(count: number): 1 | 2 | 3 | 4 | 6 {
   return 4;
 }
 
-/**
- * PageHighlight: the page's lead tile, a flat bordered card on the surface
- * like every other card (never inverted). Stats never orphan: three
- * hold one row while the tile is 480px wide and then stack; four go 4,
- * 2 × 2, then 1.
- */
 export function PageHighlight({
   title,
   body,
@@ -33,7 +26,6 @@ export function PageHighlight({
   title: ReactNode;
   body?: ReactNode;
   stats?: readonly HighlightStat[];
-  /** A short ordered how-to (for a tile with no numbers), each title over its line. */
   steps?: readonly Readonly<{ title: string; body: ReactNode }>[];
   action?: ReactNode;
   as?: 'h2' | 'h3';

@@ -17,26 +17,12 @@ import { StateBlock } from '@/components/ui/state-block';
 import { wellClasses } from '@/components/ui/slip';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
-/**
- * What one Google AI Overview actually showed.
- *
- * The presence table is the point of this panel. Mentioned, linked and cited
- * are three INDEPENDENT observations — the answer text named you, an inline
- * link pointed at you, a root reference cited you — and they come apart in
- * both directions. A brand can be linked without being cited and cited
- * without being named. Collapsing them into one "appeared" column would
- * delete the finding a reader came here for, so each has its own column and
- * none is derived from another.
- */
-
-/** Three states, because the surface has three, and only one is a finding. */
 function presenceLabel(evidence: SearchSurfaceEvidence): string {
   if (evidence.aio_present === true) return 'Shown';
   if (evidence.aio_present === false) return 'Not shown';
   return 'Not observed';
 }
 
-/** One yes/no cell. Never colour alone: the icon carries a text label too. */
 function SignalCell({ present, label }: Readonly<{ present: boolean; label: string }>) {
   return (
     <TableCell>
@@ -66,8 +52,6 @@ function EntityRow({ entity }: Readonly<{ entity: SurfaceEntity }>) {
       <SignalCell present={entity.linked} label="Linked from the answer" />
       <SignalCell present={entity.cited} label="Cited in the references" />
       <TableCell numeric>
-        {/* Null is "never named", which is not last place, so it says so
-            rather than taking a number one position behind everyone else. */}
         {entity.mention_order === null ? (
           <span className="text-ink-2">Not named</span>
         ) : (
@@ -97,8 +81,6 @@ function PresenceTable({ entities }: Readonly<{ entities: readonly SurfaceEntity
               kind: 'empty',
               headingLevel: 3,
               icon: Users,
-              // Empty either when no brands were tracked or when no answer
-              // was scored for this observation; the read cannot tell which.
               heading: 'No brand presence recorded for this response',
             }
           : undefined
@@ -140,9 +122,6 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
             const href = safeLinkUrl(link.url);
             const title = link.title || link.domain || link.url;
             return (
-              // An overview can point at the same URL from two places in its
-              // own text, so the URL alone is not unique among siblings. The
-              // element it was drawn from is what separates them.
               <LedgerItem
                 key={`${link.element_index}-${link.url}`}
                 title={
@@ -164,12 +143,6 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
   );
 }
 
-/**
- * When Google captured the page, kept apart from when we collected it.
- *
- * The two differ by however long the task sat in the provider's queue, and a
- * reader comparing overviews across days needs the capture time, not ours.
- */
 function SurfaceFooter({ evidence }: Readonly<{ evidence: SearchSurfaceEvidence }>) {
   return (
     <MetaFooter>

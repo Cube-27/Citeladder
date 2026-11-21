@@ -20,32 +20,20 @@ import {
 } from '@/lib/agent/composer-commands';
 import type { AgentAttachment } from '@citeladder/contracts/agent';
 
-/** Inline `/` and `@` commands: the options for a token, and what a pick does. */
 export type ComposerCommands = {
   options: (token: CommandToken) => CommandOption[];
-  /**
-   * The token under the caret became active or its text changed. Options are
-   * asked for during render, so a search the server answers starts here.
-   */
   onTrigger?: (trigger: CommandToken['trigger'], query: string) => void;
   onPick: (option: CommandOption, token: CommandToken) => void;
-  /**
-   * Text was pasted into the field; `edit` rewrites the message as it is when
-   * the paste's links resolve.
-   */
   onPaste?: (pasted: string, edit: (change: (current: string) => string) => void) => void;
-  /** Actions this message mentions, shown as removable chips. */
   mentions: readonly Mention[];
   onRemoveMention: (id: string) => void;
   openSkillPicker?: (removeCommand: () => void, restoreFocus: () => void) => void;
   closeSkillPicker?: () => boolean;
-  /** Long pastes the message carries as attachments instead of text. */
   pastes?: ComposerPastes;
 };
 
 export type ComposerPastes = {
   items: readonly { key: string; text: string }[];
-  /** Takes a paste as an attachment; false leaves it to the field as typed text. */
   add: (text: string) => boolean;
   remove: (key: string) => void;
 };
@@ -60,12 +48,6 @@ type MenuState = {
   selected: number;
 };
 
-/**
- * The composer's message field. With `commands` it is an ARIA combobox with a
- * listbox above it: focus stays in the field, arrows move, Enter or Tab
- * picks, Escape closes until the text changes. Otherwise Enter submits and
- * Shift+Enter adds a line.
- */
 export function CommandField({
   id,
   value,
@@ -96,7 +78,6 @@ export function CommandField({
   const trigger = state.token?.trigger ?? null;
   const query = state.token?.query ?? '';
   const onTrigger = commands?.onTrigger;
-  // The message as it is now, for a paste whose links resolve after later typing.
   const latest = useRef(value);
 
   useEffect(() => {
@@ -124,7 +105,6 @@ export function CommandField({
     setActive(0);
   };
 
-  /** Handles a key the open menu owns; false lets the field handle it. */
   const menuKey = (event: KeyboardEvent<HTMLTextAreaElement>): boolean => {
     if (!open) return false;
     const count = state.options.length;
@@ -155,7 +135,6 @@ export function CommandField({
         ref={field}
         id={id}
         maxRows={maxRows}
-        // The text field owns focus; the surrounding form keeps its resting edge.
         placement="composer"
         value={value}
         disabled={disabled}
@@ -196,7 +175,6 @@ export function CommandField({
         onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
         onPaste={(event) => {
           const pasted = event.clipboardData.getData('text/plain');
-          // A long paste becomes an attachment; shorter text keeps its Action links resolving.
           if (commands?.pastes?.add(pasted)) event.preventDefault();
           else commands?.onPaste?.(pasted, (change) => onChange(change(latest.current)));
         }}

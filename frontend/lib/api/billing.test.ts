@@ -72,8 +72,6 @@ describe('billing API contract', () => {
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/api/v1/billing/subscriptions');
-    // The server owns every amount. A body carrying a price, currency, region
-    // or external id would mean the browser could influence the charge.
     expect(JSON.parse(String(init.body))).toEqual({
       catalog_key: 'tier_2',
       credential_mode: 'byok',
@@ -173,8 +171,6 @@ describe('billing API contract', () => {
       razorpay_plan_id: 'plan_leaked',
     });
 
-    // Additive provider fields must never break the UI — they are stripped
-    // from the parsed output, so the leak never reaches app state.
     const catalog = await billingApi.workspaceCatalog('IN');
     expect('razorpay_plan_id' in catalog).toBe(false);
   });

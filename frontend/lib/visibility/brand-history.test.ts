@@ -93,7 +93,6 @@ describe('measurement history', () => {
 });
 
 describe('range presets', () => {
-  // Two mounts of the same screen, seconds apart: the trend key must not change.
   it('resolves a preset to the same day-aligned bound across mounts', () => {
     const scope = { workspaceId: 'w-1', projectId: 'p-1' };
     const keyAt = (now: string) =>

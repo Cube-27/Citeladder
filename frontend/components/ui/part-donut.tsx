@@ -17,13 +17,9 @@ import { cn } from '@/lib/utils';
 export type Part = Readonly<{
   label: string;
   value: number;
-  /** Your own share: the accent. At most one part is you. */
   you?: boolean;
-  /** The merged remainder: `data-other`, so it never reads as another brand. */
   other?: boolean;
-  /** Who the part is (a rival's domain), for its page-wide colour; defaults to `label`. */
   identity?: string;
-  /** A status reading (sentiment) instead of an identity: its status colour, never a series hue. */
   status?: PartStatus;
 }>;
 
@@ -41,7 +37,6 @@ const WELL = 'var(--color-well)';
 type Row = Readonly<{
   label: string;
   value: number;
-  /** Its `data-part` name, segment colour and swatch class; null inks it `well`. */
   ink: { part: string; color: string; fill: string } | null;
   share: number;
 }>;
@@ -51,18 +46,6 @@ function partInk(status: PartStatus | undefined, tone: SeriesTone): NonNullable<
   return { part: tone, color: seriesColor(tone), fill: SERIES_FILL[tone] };
 }
 
-/**
- * PartDonut — part to whole as a donut with its legend (swatch, name, share
- * and count), the whole counted in its hole. Segments run clockwise from the
- * top, divided by thin gaps; you take the accent, rivals their page-wide
- * identity colours (`SeriesTonesContext`, else in order), and the merged
- * remainder `data-other`. Assistive technology reads every share and count
- * from the shared ChartTable; the ring and legend are hidden from it.
- *
- * When `total` exceeds the parts, the rest belongs to no part: it stays a
- * `well` segment listed as `remainderLabel`, so the parts are never stretched
- * to a whole they do not cover.
- */
 export function PartDonut({
   parts,
   total,
@@ -71,15 +54,11 @@ export function PartDonut({
   format = formatCount,
   label,
 }: Readonly<{
-  /** At most four parts; your own first when there is one. */
   parts: readonly Part[];
-  /** The whole the shares are of; defaults to the parts' sum. */
   total?: number;
-  /** What the whole counts ("citations"), printed under it in the hole. */
   totalLabel?: string;
   remainderLabel?: string;
   format?: (value: number) => string;
-  /** What the donut breaks down, e.g. "Source types". */
   label: string;
 }>) {
   const shown = parts.slice(0, 4);
@@ -89,7 +68,6 @@ export function PartDonut({
   const hasYou = shown.some((part) => part.you);
   const known = useContext(SeriesTonesContext);
   const rows: Row[] = shown.map((part, index) => {
-    // Rivals take their hues in order, after you and never counting the remainder.
     const rank = shown.slice(0, index).filter((before) => !before.you && !before.other).length;
     const placed = seriesTone(part, hasYou ? rank + 1 : rank, hasYou);
     let tone: SeriesTone = part.you ? 'you' : placed;
@@ -100,7 +78,6 @@ export function PartDonut({
   if (remainder > 0)
     rows.push({ label: remainderLabel, value: remainder, ink: null, share: remainder / whole });
   return (
-    // The legend's floor keeps its names whole: a card too narrow for it puts the legend under the ring.
     <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3">
       <ChartTable
         label={totalLabel ? `${label}: ${format(whole)} ${totalLabel}` : label}
@@ -150,18 +127,10 @@ export function PartDonut({
 
 type DonutSegment = Readonly<{
   key: string;
-  /** Its share of the whole, 0 to 1. */
   share: number;
-  /** Its colour, a CSS colour. */
   color: string;
 }>;
 
-/**
- * DonutRing — the bare ring in HeroUI's chart style (owner, 2026-11-19), drawn
- * with Recharts: clockwise from the top in rounded segments with small gaps;
- * decorative, so its caller names it. A zero is left out, and an empty whole
- * is one `well` ring.
- */
 function DonutRing({
   segments,
   size,

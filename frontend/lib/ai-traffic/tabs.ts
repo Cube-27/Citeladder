@@ -6,7 +6,6 @@ export const TRAFFIC_TABS = [
   { value: 'pages', label: 'Pages', crawlOnly: false },
   { value: 'activity', label: 'Activity', crawlOnly: true },
 ] as const;
-/** Views that show crawl logs alone; they are dropped when collection is unavailable. */
 export const CRAWL_ONLY_TABS: ReadonlySet<string> = new Set(
   TRAFFIC_TABS.filter((t) => t.crawlOnly).map((t) => t.value),
 );

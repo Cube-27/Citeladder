@@ -1,4 +1,3 @@
-/** Site Health policy. */
 import { createHash } from 'node:crypto';
 import { compareText } from '../text-order.ts';
 import architecture from './site-health/architecture.json' with { type: 'json' };
@@ -27,7 +26,6 @@ export function classifierVersion(base: string, inputs: unknown) {
 const { version: classifierBase, ...classificationPolicy } = analysis.page_analysis.classification;
 const ruleVersion = 'sh-rules-1';
 
-/** Mutation-time allowance projection shares the acquisition owner's bounds. */
 export const siteHealthRuntime = {
   settings: {
     automatic_page_limit: settings.automatic_page_limit,

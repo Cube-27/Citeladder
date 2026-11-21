@@ -399,8 +399,6 @@ describe('perception metrics', () => {
       ['run-b', -100, true],
       ['run-c', -100, false],
     ]);
-    // Same versions under another frozen model, measurement configuration or
-    // none that can be compared is not like for like either.
     const remodelled = perceptionSummary(
       [
         answer('run-a', '2026-10-01T00:00:00Z', 't1', 'positive'),

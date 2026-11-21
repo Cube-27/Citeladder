@@ -7,13 +7,6 @@ import type { DemandSnapshot } from '@/lib/api/demand';
 import { isActionableGap, numericMetric } from '@/lib/demand/signals';
 import { formatCount } from '@/lib/format';
 
-/**
- * Latent demand: impressions across every non-branded (actionable) signal,
- * the one figure the per-type counts on the filters do not already give.
- * With no such signal the sum is a true zero; when none reported impressions
- * it was not measured, which is not zero; and when only some did, the text
- * says the sum covers those signals rather than passing it off as the whole.
- */
 export function DemandLatentDemand({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) {
   const observed = snapshot.signals
     .filter(isActionableGap)

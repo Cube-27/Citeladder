@@ -17,7 +17,6 @@ import { SITE_HEALTH_TABS } from '@/lib/site-health/tabs';
 import { VISIBILITY_TABS } from '@/lib/visibility/tabs';
 import { RouteLoadingScreen } from './page-shell';
 
-// The held row draws each screen's own list, so a renamed or reordered tab cannot drift.
 const labels = (items: readonly { label: string }[]) => items.map((item) => item.label);
 
 function renderAt(path: string) {
@@ -40,7 +39,6 @@ describe('RouteLoadingScreen', () => {
       'ranked_actions',
       'company_facts',
     ]);
-    // Half widgets pair up in a row's grid; a full widget takes a row alone.
     expect(widgets.map((widget) => widget.parentElement?.hasAttribute('data-app-grid'))).toEqual([
       false,
       true,
@@ -49,7 +47,6 @@ describe('RouteLoadingScreen', () => {
       false,
       false,
     ]);
-    // Project state's four figures, owned citation rate the fourth.
     expect(widgets[0]?.querySelectorAll('[data-figure-cell]')).toHaveLength(4);
   });
 

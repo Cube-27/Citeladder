@@ -10,8 +10,6 @@ import {
   makePageSummary as page,
 } from '@/test/fixtures/site-health';
 
-/** A DIFFERENT crawl than the table is rendering — the row must link back to
- * the crawl that actually analyzed the page, not the one in view. */
 const SOURCE_CRAWL = '33333333-3333-4333-8333-333333333333';
 
 function LocationDisplay() {
@@ -106,7 +104,6 @@ describe('PagesTable', () => {
     const row = screen.getByText('Homepage').closest('tr');
     expect(row).not.toBeNull();
     expect(within(row!).getByRole('cell', { name: 'Excluded' })).toBeInTheDocument();
-    // A measured score is the number alone: no evidence caption under it.
     expect(within(row!).getByRole('cell', { name: '46' })).toBeInTheDocument();
     expect(within(row!).queryByText('Limited evidence')).not.toBeInTheDocument();
     expect(within(row!).queryByText(/confidence/i)).not.toBeInTheDocument();
@@ -164,11 +161,8 @@ describe('PagesTable', () => {
         ]}
       />,
     );
-    // No zeroes rendered for the missing scores.
     expect(screen.queryByText('0')).not.toBeInTheDocument();
-    // Blocked status badge is shown.
     expect(screen.getByText('Blocked')).toBeInTheDocument();
-    // Placeholder appears for the missing score/issue cells.
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
   });
 

@@ -50,7 +50,6 @@ export function publicPricingSelectionHref(
   return new URL(`${PRICING_RETURN_PATH}?${params}`, appOrigin).toString();
 }
 
-/** Capture before the login redirect; the URL carries no account data. */
 export function capturePublicPricingSelection(url: URL): boolean {
   if (!['kind', 'catalog_key', 'quantity', 'byok'].some((key) => url.searchParams.has(key))) {
     return false;

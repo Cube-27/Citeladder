@@ -1,9 +1,3 @@
-/**
- * Win rate (AV-7) on GET /visibility, against the real PostgreSQL schema: per
- * brand and engine, not applicable when no tracked business was named, and pooled over a
- * period as counts. Per frozen topic it is in visibility-topics.test.ts.
- * Workspace isolation of the route is in visibility-reads.test.ts.
- */
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { route, visibilityReads, type Row } from './visibility-read-support.ts';
@@ -15,7 +9,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** A stored four-answer aggregate. */
 function aggregate(wins: { answers: number; brand: number }): Record<string, unknown> {
   return {
     win_tally: {
@@ -59,7 +52,6 @@ describe('GET /visibility win rate', () => {
       { logical_engine: 'chatgpt', win_count: 1, win_answers: 3, win_rate: 1 / 3 },
     ]);
 
-    // No answer named a tracked business: not applicable, never a zero rate.
     const none = await get(tenant, route(tenant), { audit_id: before });
     expect(byName(none.body.rankings)['Acme Corp']).toMatchObject({
       win_count: 0,

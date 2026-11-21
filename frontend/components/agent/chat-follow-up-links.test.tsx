@@ -63,13 +63,11 @@ describe('A follow-up with an Action link', () => {
     );
 
     const reply = await screen.findByLabelText('Reply to the agent');
-    // The catalog's refinements show once it has loaded, with the mention bound links need.
     await screen.findByRole('button', { name: 'Make it shorter' });
     await user.click(reply);
     await user.paste('x'.repeat(AGENT_PASTE_ATTACHMENT_MIN_CHARS));
     await user.type(reply, `See ${link}`);
     await user.click(screen.getByRole('button', { name: 'Send' }));
-    // Typed and removed while the link resolves: the send keeps the typing and drops the paste.
     await user.type(reply, ' Also');
     await user.click(screen.getByRole('button', { name: 'Remove Pasted text, 1 line' }));
     release();

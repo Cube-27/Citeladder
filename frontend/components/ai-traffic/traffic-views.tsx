@@ -41,7 +41,6 @@ const CRAWLER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'breakdown', label: 'Folder and resource breakdown', priority: 'low' },
 ];
 const COVERAGE_COLUMNS: readonly DataTableColumn[] = [
-  // A day without a time: the date floor, not the date-time role.
   { key: 'day', label: 'Day', kind: 'date', width: 'category' },
   { key: 'source', label: 'Source', width: 'name' },
   { key: 'coverage', label: 'Coverage' },
@@ -82,8 +81,6 @@ export function TrafficOverview({
   const crawlConnected = data.crawl.connection !== 'not_connected';
   return (
     <TabPanel value="overview">
-      {/* The figures lead: they say what the window measured before the
-          patterns read across it. */}
       <SectionStack>
         <OverviewFigures
           data={data}
@@ -110,14 +107,8 @@ export function TrafficOverview({
     </TabPanel>
   );
 }
-/** A crawl-log table, and how to clear its narrowing. */
 type CrawlTableScope = TrafficTableScope & Readonly<{ onClearFilters: () => void }>;
 
-/**
- * An empty narrowed table is "none match", with Clear filters. Unnarrowed,
- * absence is an observation within the available logs, not proof of no
- * traffic. (With no crawl log source the screen shows its setup state instead.)
- */
 function noMatches(
   { filters, onClearFilters }: CrawlTableScope,
   copy: Readonly<{ heading: string }>,
@@ -126,7 +117,6 @@ function noMatches(
   return { kind: 'empty', icon: SearchX, ...copy };
 }
 
-/** A drawer opened from a row reads the table's window, not its narrowing. */
 function windowFilters(filters: TrafficFilters): TrafficFilters {
   return { range: filters.range, verification: filters.verification };
 }
@@ -198,11 +188,6 @@ export function TrafficCrawlers(scope: CrawlTableScope) {
     </TabPanel>
   );
 }
-/**
- * What the activity table shows while the crawler catalog cannot name its
- * bots: rows of raw bot ids would read as findings, so the catalog's own
- * loading or failure takes the table's place, in the same footprint.
- */
 function catalogState(
   catalog: UseQueryResult<z.infer<typeof crawlCatalogSchema>>,
 ): DataTableState | undefined {
@@ -218,7 +203,6 @@ function catalogState(
 }
 export function TrafficActivity(scope: CrawlTableScope) {
   const { workspaceId, projectId, filters } = scope;
-  // The screen's controls read the same entry, so this adds no request.
   const catalog = useQuery(aiTrafficQueries.catalog({ workspaceId, projectId }));
   const website = useProjectScope().project.website_url;
   const { page, table } = useCursorTableQuery({
@@ -250,7 +234,6 @@ export function TrafficActivity(scope: CrawlTableScope) {
                 {catalog.data?.bots.find((b) => b.bot_id === r.bot_id)?.label ?? r.bot_id}
               </TableCell>
               <TableCell>
-                {/* The path alone on the project's own host; a foreign host stays printed. */}
                 <TableCellLines
                   primary={
                     <UrlText
@@ -286,15 +269,10 @@ function SourceLines({
 }: Readonly<{ source?: z.infer<typeof crawlCoverageResponseSchema>['sources'][number] }>) {
   return <CellLines lines={[source?.host ?? 'Removed source', words(source?.setup ?? '')]} />;
 }
-/**
- * A primary value with its qualifiers beneath it in caption ink: one line
- * each, so the row never grows past two; cut text moves into a tooltip.
- */
 function CellLines({ lines }: Readonly<{ lines: string[] }>) {
   const [first, ...rest] = lines.filter(Boolean);
   return <TableCellLines primary={first} secondary={rest.join(' · ')} />;
 }
-/** Reasons survive raw retention because rollups keep them. */
 function reasonEntries(values: Record<string, number>) {
   return Object.entries(values)
     .filter(([key]) => key !== 'verified')
@@ -306,7 +284,6 @@ function entries(values: Record<string, number>) {
     .map(([key, value]) => words(key) + ': ' + value)
     .join(' · ');
 }
-/** The three largest, then how many more: a crawler can touch hundreds of folders. */
 const TOP_ENTRIES = 3;
 function topEntries(values: Record<string, number>) {
   const sorted = Object.entries(values).sort(([, a], [, b]) => b - a);

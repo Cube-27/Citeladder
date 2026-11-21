@@ -49,18 +49,10 @@ export function AuthEmailField({
   );
 }
 
-/** Account access's password field: the product's field with its reveal control. */
 export function AuthPasswordField(props: PasswordFieldProps) {
   return <PasswordField {...props} />;
 }
 
-/**
- * The Terms decision, made on the sign-in and sign-up forms for email and
- * Google alike, so no screen after sign-in asks again: continuing is agreeing.
- * Every way in points to this line as its description. The Privacy Policy is
- * acknowledged as notice, not bundled into the agreement: processing does not
- * rest on this consent.
- */
 function TermsNotice({ id, signup }: Readonly<{ id: string; signup: boolean }>) {
   return (
     <AuthLegal id={id}>
@@ -81,13 +73,8 @@ function LegalLink({ href, children }: Readonly<{ href: string; children: string
   );
 }
 
-/**
- * The Terms decision the form sends with every way in: the published revision
- * (undefined while it loads) and whether this form creates an account.
- */
 type TermsDecision = { revision: string | undefined; signup: boolean };
 
-/** A Google start's input: a sign-up start (given its widget) also carries the token. */
 function googleStartInput(
   termsRevision: string,
   verification: Turnstile | undefined,
@@ -98,7 +85,6 @@ function googleStartInput(
     : { returnTo, termsRevision, signup: false };
 }
 
-/** Why a Google start failed: the verification refusal says what to do itself. */
 function googleStartNotice(err: unknown): string {
   if (!(err instanceof ApiError)) return 'Unable to start Google sign-in. Please try email below.';
   if (err.code?.startsWith('human_verification_')) return err.message;
@@ -106,11 +92,6 @@ function googleStartNotice(err: unknown): string {
   return 'Unable to start Google sign-in. Please try email below.';
 }
 
-/**
- * Continue with Google. The start carries the Terms decision, sealed in the
- * signed state for the callback to record; only a sign-up start can create an
- * account. `termsNoticeId` is the agreement line the button is described by.
- */
 function GoogleEntry({
   revision,
   signup,
@@ -120,7 +101,6 @@ function GoogleEntry({
   revision: string | undefined;
   signup: boolean;
   termsNoticeId: string;
-  /** Sign-up's Turnstile widget: a sign-up start carries its token. */
   verification: Turnstile | undefined;
 }>) {
   const [notice, setNotice] = useState<string | null>(null);
@@ -128,8 +108,6 @@ function GoogleEntry({
   const unverified = signup && !verification?.solved;
 
   async function start() {
-    // The button stays live for the whole round trip otherwise, and a second
-    // click starts a second authorization before the first can redirect.
     if (pending || !revision || unverified) return;
     setPending(true);
     setNotice(null);
@@ -142,8 +120,6 @@ function GoogleEntry({
     } catch (err) {
       setNotice(googleStartNotice(err));
     } finally {
-      // Cleared even on the success path: `hardNavigate` may be a no-op in a
-      // test, and a permanently disabled button would strand the user.
       setPending(false);
       // The token is single-use, spent or not.
       if (signup) verification?.reset();
@@ -166,14 +142,6 @@ function GoogleEntry({
   );
 }
 
-/**
- * Sign-in, sign-up and the mailbox screens, centred under the logo: the title
- * and line, the form's one alert directly above the first field, the fields,
- * the Turnstile slot (when challenged) and the full-width submit, then the
- * "or" rule and Continue with Google (when the form authenticates), the switch
- * to the other form and the agreement line. An error about one field is that
- * field's own error; the heading also names the document.
- */
 export function AuthFormShell({
   title,
   description,
@@ -192,7 +160,6 @@ export function AuthFormShell({
   children,
 }: Readonly<{
   title: string;
-  /** A line under the title; sign-in and sign-up have none unless they report something. */
   description?: ReactNode;
   error?: string;
   onSubmit: NonNullable<ComponentProps<'form'>['onSubmit']>;
@@ -204,26 +171,13 @@ export function AuthFormShell({
   footerLabel: string;
   showForm?: boolean;
   showFooter?: boolean;
-  /**
-   * Sign-in and sign-up: Continue with Google, and the agreement line every
-   * way in is described by. Every way in stays disabled until the published
-   * revision has loaded. Mailbox and unavailable screens authenticate no one
-   * and omit it.
-   */
   terms?: TermsDecision;
-  /**
-   * Sign-up, the email-link requests and a challenged sign-in: the Turnstile
-   * widget, in a reserved slot between the fields and submit. Submit, and a
-   * sign-up's Continue with Google, stay disabled until it hands over a token.
-   * Sign-in passes it only once the API has challenged it.
-   */
   verification?: Turnstile;
   children: ReactNode;
 }>) {
   const consent = useConsentGate(showForm ? terms : undefined, showForm ? verification : undefined);
   const notice = error ? <Notice tone="negative">{error}</Notice> : null;
 
-  // Only sign-in and sign-up switch to each other with motion.
   const switching = showForm && terms !== undefined;
 
   return (
@@ -316,7 +270,6 @@ function AuthEmailForm({
     <AuthForm onSubmit={handleSubmit}>
       {children}
 
-      {/* Sign-up's check is one of its own fields in the switch from sign-in. */}
       {check && consent.terms?.signup ? <AuthSwitchOnly>{check}</AuthSwitchOnly> : check}
 
       {/* Not `pending`: Button's pending sets `disabled`, which drops focus to
@@ -333,13 +286,6 @@ function AuthEmailForm({
   );
 }
 
-/**
- * What holds a form's ways in: the published Terms revision for a form that
- * authenticates (`terms` given) and the Turnstile token for one that is
- * challenged (`verification` given). `noticeId` is the agreement line's id;
- * `held` stays true until the revision has loaded and the widget has handed
- * over a token.
- */
 function useConsentGate(terms: TermsDecision | undefined, verification: Turnstile | undefined) {
   const noticeId = useId();
   const held =
@@ -348,7 +294,6 @@ function useConsentGate(terms: TermsDecision | undefined, verification: Turnstil
   return { terms, verification, noticeId, held };
 }
 
-/** The links under the sign-in fields: recovery and a new verification email. */
 export function AuthRecoveryLinks({
   links,
 }: Readonly<{ links: readonly { href: string; label: string }[] }>) {

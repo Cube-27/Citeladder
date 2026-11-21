@@ -1,14 +1,3 @@
-/**
- * Run confirmation, cancellation and saved preferences.
- *
- * Review creation freezes the call plan and quote, and the TypeScript
- * analytics worker executes it once queued. Confirmation is the
- * only step that commits the workspace to paid calls, so it re-checks the
- * review under the project lock and enqueues the acquisition in the same
- * transaction. A managed analysis holds its estimate in AI credits in that
- * same transaction (B41). Every mutation takes the `search_intelligence_runs`
- * row lock.
- */
 import { asApiErrorCode, type ApiErrorCode } from '@citeladder/contracts/error-codes';
 
 import { policy } from '../config.ts';
@@ -55,7 +44,6 @@ function lockRun(trx: Database, scope: Scope, runId: string) {
 
 type LockedRun = NonNullable<Awaited<ReturnType<typeof lockRun>>>;
 
-/** Refuse a review that can no longer commit paid work as quoted. */
 async function assertConfirmable(trx: Database, scope: Scope, run: LockedRun, now: Date) {
   if (run.status !== RUN_REVIEWED)
     throw conflict(asApiErrorCode('review_not_confirmable'), 'Review is no longer confirmable');
@@ -82,7 +70,6 @@ async function assertConfirmable(trx: Database, scope: Scope, run: LockedRun, no
     );
 }
 
-/** A managed analysis's credit hold, committed with its confirmation; none for BYOK. */
 async function holdCredits(trx: Database, run: LockedRun) {
   if (run.credential_source !== 'platform' || !run.estimated_credits) return null;
   return holdProviderCredits(
@@ -93,7 +80,6 @@ async function holdCredits(trx: Database, run: LockedRun) {
   );
 }
 
-/** Enqueue acquisition; return the existing task when already enqueued. */
 async function enqueueAcquisition(trx: Database, scope: Scope, runId: string): Promise<string> {
   const created = await enqueueTask(trx, {
     workspaceId: scope.workspace.workspaceId,
@@ -111,7 +97,6 @@ async function enqueueAcquisition(trx: Database, scope: Scope, runId: string): P
   return existing.id;
 }
 
-/** Confirm a reviewed run once; a repeated confirmation returns the run unchanged. */
 export function confirmRun(db: Database, scope: Scope, runId: string) {
   return db.transaction().execute(async (trx) => {
     // The project lock serializes confirmations, so one acquisition is active.
@@ -127,7 +112,6 @@ export function confirmRun(db: Database, scope: Scope, runId: string) {
     const now = new Date();
     await assertConfirmable(trx, scope, run, now);
     const plan = jsonObjects(run.call_plan, 'search_intelligence_runs.call_plan');
-    // Every dataset reused from a recent snapshot: nothing to acquire.
     const transition =
       plan.length === 0
         ? { status: RUN_SUCCEEDED, completed_at: now }
@@ -146,7 +130,6 @@ export function confirmRun(db: Database, scope: Scope, runId: string) {
   });
 }
 
-/** Cancel an unfinished run and its unfinished acquisition task; a managed hold settles. */
 export async function cancelRun(db: Database, scope: Scope, runId: string) {
   const view = await db.transaction().execute(async (trx) => {
     const run = await lockRun(trx, scope, runId);
@@ -176,8 +159,6 @@ export async function cancelRun(db: Database, scope: Scope, runId: string) {
     );
     return runView(cancelled);
   });
-  // Only a managed analysis holds credits; one with a request in flight keeps
-  // its hold open until recovery settles it.
   if (view.credential_mode !== 'funded') return view;
   const settled = await settleResearchCharge(db, {
     workspaceId: scope.workspace.workspaceId,

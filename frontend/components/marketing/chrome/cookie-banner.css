@@ -1,8 +1,3 @@
-/* ---------- CookieBanner: a slim bar docked along the bottom ----------
-   Full width over a hairline: the text, then Reject and Accept as the same
-   outlined button. It never takes more than a quarter of the height (its text
-   scrolls inside first), and it sits under the navbar's layer, so an open
-   phone menu covers it. It opens and closes on the shared sheet motion. */
 .cl-cookie {
   --cl-cookie-shift: 4px;
 
@@ -75,8 +70,6 @@
   gap: 8px;
 }
 
-/* On a phone the buttons go under the text, and the region keeps its name
-   ("Cookie consent") without the title line. */
 @media (max-width: 767px) {
   .cl-cookie {
     flex-direction: column;

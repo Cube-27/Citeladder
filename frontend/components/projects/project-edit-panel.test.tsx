@@ -35,8 +35,6 @@ afterAll(() => mswServer.close());
 
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 
-// The competitor carries its id, so the fixture satisfies Project outright; the
-// previous literal needed an `as unknown as Project` cast to hide its absence.
 const project = makeProject({
   id: PROJECT_ID,
   workspace_id: '22222222-2222-4222-8222-222222222222',
@@ -52,7 +50,6 @@ const project = makeProject({
   ],
 });
 
-/** The body of the project update the panel sends, once it is sent. */
 function captureSave() {
   const sent: { body?: Record<string, unknown> } = {};
   mswServer.use(
@@ -77,10 +74,7 @@ describe('ProjectEditPanel', () => {
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
     await waitFor(() => expect(sent.body).toBeDefined());
-    // Brand aliases are edited in Context › Brand facts, so a save here leaves them alone.
     expect(sent.body).not.toHaveProperty('brand');
-    // The panel does not edit per-competitor aliases, so a rename must keep
-    // the ones the project already had, and the id keeps the competitor.
     expect(sent.body?.competitors).toEqual([
       {
         id: '44444444-4444-4444-8444-444444444444',

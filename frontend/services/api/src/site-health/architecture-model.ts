@@ -1,4 +1,3 @@
-/** Conservative structure over a bounded observed crawl; no inferred missing pages. */
 import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
 import { compareText, stripTrailing } from '../text-order.ts';
@@ -18,7 +17,6 @@ export type ArchitecturePage = {
   depth: number | null;
   inbound: number;
   outbound: number;
-  /** Outbound links placed in the page's main content, not its shared menus. */
   contentOutbound: number;
   indexable: boolean | null;
   facts: Record<string, unknown>;
@@ -33,7 +31,6 @@ function median(values: number[]) {
   if (!sorted.length) return null;
   return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
 }
-/** Pages sharing one non-blank key, largest set first. */
 function setsBy(members: ArchitecturePage[], keyOf: (page: ArchitecturePage) => string) {
   const signatures = new Map<string, { first: ArchitecturePage; pages: ArchitecturePage[] }>();
   for (const page of members) {
@@ -47,7 +44,6 @@ function setsBy(members: ArchitecturePage[], keyOf: (page: ArchitecturePage) => 
     .filter((set) => set.pages.length > 1)
     .sort((a, b) => b.pages.length - a.pages.length || compareText(a.first.url, b.first.url));
 }
-/** Pages sharing one exact title or description (case and whitespace aside); blank never matches. */
 export const exactDuplicateSets = (members: ArchitecturePage[], field: 'title' | 'description') =>
   setsBy(members, (page) => normalized(page[field]));
 function kindRow(kind: string, members: ArchitecturePage[]) {
@@ -73,7 +69,6 @@ function linking(pages: ArchitecturePage[]) {
   const incoming = pages.filter((page) => page.inbound > 0).length;
   const orphans = pages.filter((page) => page.kind !== 'homepage' && page.inbound === 0);
   return {
-    // Unique destinations per page, summed; site-wide menus repeat on every page.
     internal_link_count: pages.reduce((sum, page) => sum + page.outbound, 0),
     content_link_count: pages.reduce((sum, page) => sum + page.contentOutbound, 0),
     pages_with_incoming_count: incoming,

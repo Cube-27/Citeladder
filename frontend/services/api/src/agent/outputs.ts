@@ -21,10 +21,8 @@ import { requireIdle } from './store.ts';
 
 type Output = Selectable<OutputTable>;
 type Revision = Selectable<AgentOutputRevisions>;
-/** One of a chat's documents with its latest revision. */
 export type ChatDocument = { output: Output; revision: Revision };
 
-/** The chat's documents in the order it created them, each with its latest revision. */
 export async function chatDocuments(db: Database, chat: Chat): Promise<ChatDocument[]> {
   const outputs = await db
     .selectFrom('agent_outputs')
@@ -56,7 +54,6 @@ export async function chatDocuments(db: Database, chat: Chat): Promise<ChatDocum
   });
 }
 
-/** The document a chat most recently changed: its default methodology and format. */
 export function latestDocument(documents: readonly ChatDocument[]) {
   return documents.reduce<ChatDocument | null>(
     (latest, document) =>
@@ -65,14 +62,11 @@ export function latestDocument(documents: readonly ChatDocument[]) {
   );
 }
 
-/** One chat document by id, with its latest revision; `null` when the chat has no such document. */
 export async function chatDocument(db: Database, chat: Chat, outputId: string) {
   const documents = await chatDocuments(db, chat);
   return documents.find((document) => document.output.id === outputId) ?? null;
 }
 
-/** Existing Action owner attaches targets in the same terminal transaction.
- * Required even for untargeted replies: no second Action writer lives here. */
 export type AttachTarget = (
   db: Database,
   chat: Chat,
@@ -81,11 +75,6 @@ export type AttachTarget = (
   userId: string,
 ) => Promise<void>;
 
-/**
- * Saves one document the turn staged: a new revision of document `number`,
- * or that document created when the chat has none by that number. A document
- * that moved on from the revision the turn read, or of another kind, conflicts.
- */
 export async function saveAgentOutput(
   db: Database,
   chat: Chat,
@@ -146,26 +135,22 @@ export async function saveAgentOutput(
     author_user_id: null,
     title: payload.title,
     body: payload.body,
-    // A body edit keeps a page's SEO fields; the model edits only the body.
     fields: pageFields(current?.revision.fields ?? null),
     source_refs: [...new Set(input.refs)],
     web_sources: input.webSources,
   });
-  // The Agent's edit stales the open suggestions it changed, as a person's does.
   await recheckOpen(db, ownerOf(chat), output.id, { actor: 'agent', runId: input.runId });
   return revision;
 }
 
 const ownerOf = (chat: Chat) => ({ workspaceId: chat.workspace_id, projectId: chat.project_id });
 
-/** A page revision's SEO block, as fetched or last edited. */
 const pageFieldsSchema = z.strictObject({
   title: z.string(),
   meta_description: z.string(),
   json_ld: z.string(),
 });
 export type PageFields = z.infer<typeof pageFieldsSchema>;
-/** The stored SEO block of a revision: a page's fields, or null for every other document. */
 function pageFields(value: unknown): PageFields | null {
   return value === null ? null : pageFieldsSchema.parse(value);
 }
@@ -200,11 +185,6 @@ function appendRevision(
     .executeTakeFirstOrThrow();
 }
 
-/**
- * A fetched page becomes the chat's next document: revision 1 is authored
- * `fetch`, its body the page's main content as Markdown and its fields the
- * page's SEO block. It carries the chat's Action like any document of the chat.
- */
 export async function createFetchedDocument(
   db: Database,
   chat: Chat,
@@ -258,10 +238,6 @@ export async function createFetchedDocument(
   return { output, revision };
 }
 
-/**
- * A person's change to a chat: authorized, with the chat locked and no turn
- * or page fetch running, in one transaction that marks the chat active.
- */
 export function changeIdleChat<T>(
   database: Database,
   scope: Scope,
@@ -278,11 +254,6 @@ export function changeIdleChat<T>(
   });
 }
 
-/**
- * A person's new revision of a document from its latest one: the title,
- * body and SEO fields as given, the sources kept. The caller rechecks the
- * document's open suggestions once its own events are recorded.
- */
 export async function appendUserRevision(
   db: Database,
   scope: Scope,
@@ -307,7 +278,6 @@ export class AgentOutputs {
   constructor(db: Database) {
     this.db = db;
   }
-  /** A person's edit of one document, against the revision they edited. */
   edit(
     scope: Scope,
     chatId: string,
@@ -389,7 +359,6 @@ export class AgentOutputs {
     });
   }
 }
-/** A person's change makes the document the chat's most recently changed one. */
 function touchOutput(db: Database, scope: Scope, outputId: string) {
   return db
     .updateTable('agent_outputs')

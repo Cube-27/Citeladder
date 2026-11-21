@@ -7,7 +7,6 @@ import type {
 } from '@/components/agent/use-actions-page';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 
-/** What every level of the Actions tree shares: the reads' scope and view, the open levels and the ticks. */
 type ActionsPageContextValue = Readonly<{
   scope: ProjectScope;
   view: ActionsView;

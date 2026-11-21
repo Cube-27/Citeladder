@@ -1,4 +1,3 @@
-/** Brand acquisition bounds and vocabulary, owned by the TypeScript runtime. */
 export const brandEvidence = {
   request_timeout_seconds: 5,
   total_timeout_seconds: 12,
@@ -81,9 +80,6 @@ export const brandEvidence = {
     'terms',
     'wishlist',
   ],
-  // A retailer's customer-service pages often sit under `services/` or `store/`,
-  // which rank as offering hubs; these rank last instead. Whole phrases, so
-  // "Gift hampers" is unaffected; "click collect" is "Click & Collect".
   utility_link_phrases: [
     'buy now pay later',
     'click and collect',

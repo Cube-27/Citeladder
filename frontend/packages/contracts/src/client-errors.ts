@@ -1,17 +1,8 @@
-/**
- * Browser reports to the API's logs. `POST /api/v1/client-errors` takes an
- * error or a slow interaction: what failed or lagged and on which screen,
- * never what the reader typed or viewed. The body is strict, so an extra field
- * is refused rather than logged; who reported it comes from the session, never
- * from here. `cspReportBatchSchema` is the Reporting API's policy violations
- * (`CSP_REPORTS_PATH` in route-ownership).
- */
 import { z } from 'zod';
 
 const CLIENT_ERROR_KINDS = ['chunk_load', 'render', 'route', 'unhandled'] as const;
 export type ClientErrorKind = (typeof CLIENT_ERROR_KINDS)[number];
 
-/** Field lengths, in characters; the reporter truncates to them before sending. */
 export const CLIENT_ERROR_FIELD_LIMITS = {
   message: 500,
   stack: 4000,
@@ -22,19 +13,16 @@ export const CLIENT_ERROR_FIELD_LIMITS = {
   invoker: 128,
 } as const;
 
-/** The scripts a slow interaction report names, longest first. */
 export const SLOW_INTERACTION_SCRIPT_LIMIT = 3;
 
 const limits = CLIENT_ERROR_FIELD_LIMITS;
 const noQuery = /^[^?#\s]*$/u;
 const milliseconds = z.number().int().min(0).max(600_000);
 
-/** The screen's path: no query string or fragment. */
 const route = z
   .string()
   .max(limits.route)
   .regex(/^\/[^?#\s]*$/u);
-/** The build that reported it: a commit SHA, or `development`. */
 const release = z
   .string()
   .min(1)
@@ -47,7 +35,6 @@ const errorReportSchema = z.strictObject({
   stack: z.string().max(limits.stack).nullable(),
   route,
   release,
-  /** The boundary that caught it, such as `chart`. */
   component: z
     .string()
     .min(1)
@@ -56,11 +43,6 @@ const errorReportSchema = z.strictObject({
     .optional(),
 });
 
-/**
- * The page load's slowest interaction (Interaction to Next Paint), with its
- * phases and the scripts that ran in the frames it spanned. `target` is the
- * element's tag name only, never its text or attributes.
- */
 const slowInteractionReportSchema = z.strictObject({
   kind: z.literal('slow_interaction'),
   route,
@@ -78,7 +60,6 @@ const slowInteractionReportSchema = z.strictObject({
     .array(
       z.strictObject({
         source: z.string().max(limits.script).regex(noQuery),
-        /** Such as `BUTTON#send.onclick` or `Window.setTimeout`. */
         invoker: z
           .string()
           .max(limits.invoker)
@@ -96,7 +77,6 @@ export const clientReportSchema = z.discriminatedUnion('kind', [
 ]);
 export type ClientReport = z.infer<typeof clientReportSchema>;
 
-/** The most reports one Reporting API delivery may carry. */
 const CSP_REPORT_BATCH_LIMIT = 20;
 
 const reportUrl = z.string().max(2048);
@@ -124,7 +104,6 @@ const cspViolationSchema = z.object({
   }),
 });
 
-/** Another report type sent to the same endpoint, which the sink ignores. */
 const otherReportSchema = z.object({
   type: z
     .string()
@@ -132,19 +111,11 @@ const otherReportSchema = z.object({
     .refine((type) => type !== 'csp-violation'),
 });
 
-/** A Reporting API delivery (`application/reports+json`). */
 export const cspReportBatchSchema = z
   .array(z.union([cspViolationSchema, otherReportSchema]))
   .min(1)
   .max(CSP_REPORT_BATCH_LIMIT);
 
-/**
- * Text with every URL's query string and fragment removed, since either can
- * carry what a reader searched for or a token a link handed them. Absolute,
- * root-relative and relative URLs all count: a word is treated as a URL when
- * the part before its `?` or `#` holds a `/` (or a scheme), or what follows
- * is a `key=value` query. A stack frame's trailing `:line:column` stays.
- */
 export function withoutQueryStrings(text: string): string {
   return text.replaceAll(/[^\s'"`()<>]+/gu, (word) => {
     const position = /(?::\d+){1,2}$/u.exec(word)?.[0] ?? '';

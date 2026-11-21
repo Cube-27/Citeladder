@@ -30,10 +30,6 @@ import { StateBlock } from '@/components/ui/state-block';
 import { SectionContent, TitledSection } from '@/components/ui/section';
 import { availabilityLabel, formatCount, formatPercent, pluralCount } from '@/lib/format';
 
-/**
- * A measurement state in sentence case ("Limited evidence"); the shared
- * token helper title-cases every word.
- */
 const MEASUREMENT_LABELS: Record<string, string> = {
   measured: 'Measured',
   limited_evidence: 'Limited evidence',
@@ -46,10 +42,6 @@ function measurementLabel(state: string): string {
   return MEASUREMENT_LABELS[state] ?? statusLabel(state);
 }
 
-/**
- * A pillar with no score is the Absence dash, named for why: no check applies
- * to the site, or how far it was measured.
- */
 function Unscored({
   dimension,
 }: Readonly<{ dimension: SiteHealthOverview['aeo_dimensions'][number] }>) {
@@ -117,7 +109,6 @@ function DimensionLedger({
               }
             />
           </TableCell>
-          {/* The number only; a pillar with no score says why. */}
           <TableCell numeric>
             {dimension.score === null ? (
               <Unscored dimension={dimension} />
@@ -144,9 +135,6 @@ const PILLAR_COLUMNS: readonly DataTableColumn[] = [
   { key: 'coverage', label: 'Coverage', kind: 'number' },
 ];
 
-// Issues and advisories share the table, so a class column would print the
-// same word on most rows; an advisory carries its own badge beside its title
-// instead, as it does on a page's issue list.
 const TOP_ISSUE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'impact', label: 'Impact', kind: 'status', width: 'figure' },
   { key: 'issue', label: 'Issue', kind: 'identity' },
@@ -186,9 +174,6 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
                 href={issueHref(issue)}
                 className="inline-flex min-h-6 min-w-0 items-center"
               >
-                {/* One line, cut with its full title in a tooltip: beside an
-                    Advisory badge in a half-width card, two clamped lines
-                    broke a title mid-word ("Recommend / ed schema"). */}
                 <ClampText lines={1}>{issueTitle(issue)}</ClampText>
               </TextLink>
               {issue.finding_class === 'advisory' ? <Tag>Advisory</Tag> : null}
@@ -209,8 +194,6 @@ function WebFundamentalsCard({
     <TitledSection title="Web fundamentals">
       <SectionContent>
         <Stack gap="workspace">
-          {/* One list, one area a row: a 2 × 2 grid of badges left uneven
-              cells in a row of equal-height cards. */}
           <ul aria-label="Web fundamentals areas" className={ledgerClasses()}>
             {data.areas.map((area) => (
               <Inline as="li" key={area.key} className={ledgerItemClasses('justify-between')}>
@@ -228,7 +211,6 @@ function WebFundamentalsCard({
   );
 }
 
-/** Open issues on the tracked pages, one point per day an audit landed (SH-B9). */
 function OpenIssuesTrendCard({
   points,
 }: Readonly<{ points: SiteHealthOverview['open_issue_trend'] }>) {
@@ -244,7 +226,6 @@ function OpenIssuesTrendCard({
             }))}
             label="Open issues over time"
             name="Open issues"
-            // Your own site's count, read alone: no brand is compared, so no line is the accent.
             you={false}
             height="sm"
             yMin={0}
@@ -325,7 +306,6 @@ function measurementTone(state: string): 'success' | 'warning' | 'info' {
   return 'info';
 }
 
-/** An area's measurement badge; never checked or not applicable is the Absence dash. */
 function MeasurementMark({ state }: Readonly<{ state: string }>) {
   if (state === 'not_measured' || state === 'not_applicable')
     return <Absence state={state} label={measurementLabel(state)} />;
@@ -338,7 +318,6 @@ function MeasurementMark({ state }: Readonly<{ state: string }>) {
 
 function issueHref(issue: SiteHealthOverview['top_issues'][number]): string {
   const params = new URLSearchParams({ rule: issue.rule_id });
-  // The tab the rule is listed under, so the filtered list is the one on screen.
   if (issue.section && issue.section !== 'technical') params.set('section', issue.section);
   return `/issues?${params.toString()}`;
 }

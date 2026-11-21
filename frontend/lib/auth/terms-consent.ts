@@ -3,22 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { authQueries } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/errors';
 
-/**
- * The published Terms revision the sign-in and sign-up forms ask a visitor to
- * accept. Every way in sends it with the decision, and the server records that
- * decision with the account when the person authenticates, so no screen after
- * sign-in asks again.
- */
 export function usePublishedTerms(enabled = true) {
   const terms = useQuery({ ...authQueries.policies(), enabled });
   const { refetch } = terms;
   return {
     revision: terms.data?.terms_revision,
     error: terms.error,
-    /**
-     * Pass a refused request through: when the Terms were republished after
-     * this form loaded, read the new revision so the next attempt carries it.
-     */
     refreshOnRevisionChange: (error: unknown) => {
       if (isApiCode(error, 'policy_revision_changed')) void refetch();
       throw error;
@@ -26,15 +16,10 @@ export function usePublishedTerms(enabled = true) {
   };
 }
 
-/**
- * Whether the server refused a workspace step because this session holds no
- * Terms decision on the published revision (the Terms changed after sign-in).
- */
 export function sessionLacksTerms(error: unknown): boolean {
   return isApiCode(error, 'terms_decision_required');
 }
 
-/** Whether a request named a Terms revision the server no longer publishes. */
 export function revisionChanged(error: unknown): boolean {
   return isApiCode(error, 'policy_revision_changed');
 }

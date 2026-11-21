@@ -1,8 +1,3 @@
-/**
- * The deterministic core of fact-checking: which extracted claims survive,
- * how verdicts are downgraded, the claims addendum, and the accuracy metrics
- * with their coverage states.
- */
 import { describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
@@ -20,7 +15,6 @@ import { validateVerdicts, verifyPackage } from '../src/perception/verify.ts';
 import { checkedTopics, factScope, type FrozenFactCheck } from '../src/perception/admission.ts';
 
 const facts = policy.perception.fact_check;
-/** A frozen fact check with one fact per listed topic and the configured neighbours. */
 const frozenWith = (...topics: FrozenFactCheck['facts'][number]['topic'][]): FrozenFactCheck => ({
   claims_version: 'c',
   verify_template_version: 'v',
@@ -182,7 +176,6 @@ describe('verdict validation', () => {
 
   it('checks a claim filed under an adjacent topic against the fact that decides it', () => {
     const factCheck = frozenWith('specs', 'markets');
-    // A plan's contents filed under plans, and a country filed under availability.
     const built = verifyPackage({
       version: 'v',
       brand: 'Acme',
@@ -244,7 +237,6 @@ describe('verdict validation', () => {
       ['claim-a', 'contradicted', ['rev-price'], false, false],
       ['claim-b', 'inconclusive', [], false, false],
       ['claim-c', 'inconclusive', ['rev-price'], true, false],
-      // The model left claim-d out: flagged, so it never reads as "no fact covers it".
       ['claim-d', 'not_covered', [], false, true],
     ]);
     expect(result.drops).toEqual({
@@ -290,7 +282,6 @@ describe('accuracy metrics', () => {
           claims: [
             row(0, { kind: 'verdict', verdict: 'supported' }),
             row(1, { kind: 'verdict', verdict: 'supported' }),
-            // A person's verdict counts in its bucket and in `edited`.
             {
               ...row(2, { kind: 'verdict', verdict: 'contradicted' }),
               edited: { model_verdict: 'supported', note: null, at: '2026-10-02T00:00:00Z' },
@@ -347,11 +338,9 @@ describe('accuracy metrics', () => {
       facts,
     );
     expect([failed.state, failed.reason]).toEqual(['unavailable', 'model_error']);
-    // A checked run whose answers never named the brand has no claims, not no facts.
     expect(accuracySummary([], true, facts).state).toBe('no_claims');
     expect(accuracySummary([], false, facts).state).toBe('no_facts');
 
-    // By fact: an uncited revision is not raised only once nothing is left to check.
     const revision = {
       revision_id: '00000000-0000-4000-8000-0000000000f1',
       fact_id: '00000000-0000-4000-8000-0000000000f2',
@@ -400,14 +389,12 @@ describe('accuracy metrics', () => {
       model_omitted: false,
       override: null,
     };
-    // The placeholder verdict an omitted claim is stored with.
     const omitted = {
       verdict: 'not_covered' as const,
       low_confidence: false,
       model_omitted: true,
       override: null,
     };
-    // A person's verdict decides even where the model was unsure.
     const overridden = {
       ...supported,
       low_confidence: true,

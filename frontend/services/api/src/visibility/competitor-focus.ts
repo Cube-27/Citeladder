@@ -1,9 +1,3 @@
-/**
- * One roster competitor against the brand over a selection (AV-6): the
- * domains cited in answers naming it, and the prompts where it is named and
- * the brand is not. Projections over persisted answers, competitor mentions
- * and citations; nothing is classified, called or repaired here.
- */
 import type { CompetitorFocus } from '@citeladder/contracts/visibility-competitor';
 import { sql } from 'kysely';
 
@@ -14,7 +8,6 @@ import { evidenceScope, observedAt, type RunSelection } from './selection.ts';
 
 const limits = policy.visibility;
 
-/** The project's roster entry with exactly this name, or null. */
 async function rosterEntry(db: Database, selection: RunSelection, name: string) {
   const found = await db
     .selectFrom('competitors')
@@ -28,10 +21,6 @@ async function rosterEntry(db: Database, selection: RunSelection, name: string) 
   return found ?? null;
 }
 
-/**
- * The competitor's focus over the selection, or null when `name` is not on
- * the project's roster. Mentions are matched by the name each run recorded.
- */
 export async function getCompetitorFocus(
   db: Database,
   selection: RunSelection,
@@ -70,7 +59,6 @@ export async function getCompetitorFocus(
       .limit(limits.competitor_sources_limit)
       .execute(),
     evidenceScope(db, scoped)
-      // A deleted prompt keeps no id: its frozen text identifies it.
       .select([
         sql<string | null>`snapshot.prompt_id`.as('prompt_id'),
         sql<string>`(array_agg(snapshot.text order by ${observedAt} desc, snapshot.id))[1]`.as(

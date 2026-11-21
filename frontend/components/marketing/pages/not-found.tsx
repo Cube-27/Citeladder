@@ -5,11 +5,6 @@ import { PageSection } from '../sections/page-section';
 
 type Link = Readonly<{ label: string; href: string }>;
 
-/**
- * The 404 page: Home and Contact lead as buttons and the other recovery links
- * follow as cards. The links come from the worker's not-found module, which
- * also writes the Markdown 404 for agents, so both list the same pages.
- */
 export function NotFoundPage({ links }: Readonly<{ links: readonly Link[] }>) {
   const suggested = links
     .filter((link) => link.href !== '/' && link.href !== '/contact')

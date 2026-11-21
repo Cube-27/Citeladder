@@ -8,14 +8,6 @@ import type { Audit } from '@citeladder/contracts';
 
 import { ProgressPanel, RunActions } from './progress-panel';
 
-/**
- * `components/runs` shipped with no colocated tests. The run lifecycle surface
- * is the one place a user can stop work that costs money, so the assertions
- * that matter are about the Cancel affordance: it is offered while — and only
- * while — the backend says it would still accept a cooperative cancel
- * (`cancelable`). A reporting run is not cancelable (execution and analysis are
- * already done), nor is a finished one.
- */
 const BASE_AUDIT: Audit = {
   id: '11111111-1111-4111-8111-111111111111',
   workspace_id: '22222222-2222-4222-8222-222222222222',
@@ -42,7 +34,6 @@ const BASE_AUDIT: Audit = {
   completed_at: null,
 };
 
-/** The run route renders the actions in its identity band beside the panel. */
 function renderPanel(
   audit: Partial<Audit> = {},
   props: { cancelPending?: boolean; onRerunFailures?: () => void; rerunPending?: boolean } = {},
@@ -94,7 +85,6 @@ describe('ProgressPanel', () => {
   it('disables Cancel and says so while a cancel is in flight', () => {
     renderPanel({ status: 'running' }, { cancelPending: true });
 
-    // Prevents a second cancel request against an already-cancelling run.
     expect(cancelButton()).toBeDisabled();
     expect(screen.getByText('Cancelling…')).toBeVisible();
   });

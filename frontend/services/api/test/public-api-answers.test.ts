@@ -1,4 +1,3 @@
-/** Public answers: one prompt's answers across runs and one run's answers, held to the key's project. */
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { prompt, promptSet } from './prompt-fixtures.ts';
@@ -15,7 +14,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** A key held to one project, two runs of one of its prompts, and another project's run. */
 async function answeredPrompt() {
   const tenant = await withApiAccess(await fixtures.tenant());
   const other = { ...tenant, projectId: await fixtures.project(tenant.workspaceId) };

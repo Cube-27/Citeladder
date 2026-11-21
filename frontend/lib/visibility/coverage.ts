@@ -2,10 +2,6 @@ import type { Visibility } from '@citeladder/contracts';
 import { comparisonBasis } from '@citeladder/contracts/comparison-reason';
 import { formatCount, pluralCount as plural } from '@/lib/format';
 
-/**
- * The headline tiles' shortfall, "60 of 80 answers · 20 failed", only when
- * answers failed or were not run; a complete selection needs no line.
- */
 export function answerShortfall(selected: Visibility): string | null {
   const counts = selected.counts;
   if (!counts || (!counts.failed && !counts.not_run)) return null;
@@ -22,7 +18,6 @@ export function answerShortfall(selected: Visibility): string | null {
     .join(' · ');
 }
 
-/** "8 of 12 answers comparable" when the change covers only the shared answers; else null. */
 export function subsetChangeNote(selected: Visibility): string | null {
   const comparison = selected.comparison;
   if (comparison?.status !== 'matched_subset') return null;
@@ -33,7 +28,6 @@ export function subsetChangeNote(selected: Visibility): string | null {
   return basis.kind === 'matched_subset' ? basis.note : null;
 }
 
-/** The selection's one basis line: its shortfall and a subset change, or null when neither applies. */
 export function selectionBasis(selected: Visibility): string | null {
   return (
     [answerShortfall(selected), subsetChangeNote(selected)].filter(Boolean).join(' · ') || null

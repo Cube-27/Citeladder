@@ -90,8 +90,6 @@ function prepareExtra(input: PurchaseInput) {
   ) {
     throw new Error('This purchase is no longer available. Please select it again.');
   }
-  // The same quote review and provider checkout as a plan, paying the
-  // one-time order the server creates for this exact quantity.
   return checkout.prepare({
     purchase: {
       kind: selection.kind === 'addon' ? 'addon' : 'topup',
@@ -119,7 +117,6 @@ function PurchaseButton({
 }>) {
   const label = pending ? 'Preparing…' : 'Review current quote';
   return (
-    // Once quoted, the quote's own confirm is the one primary.
     <Button
       variant={quoted ? 'secondary' : 'primary'}
       disabled={!canBuy || !workspaceId || pending || quoted || priceUnavailable}
@@ -310,11 +307,6 @@ function QuoteConfirmation({
   );
 }
 
-/**
- * A route-level failure the checkout status does not already report. Errors
- * raised inside the checkout hook become its notice, so repeating them here
- * printed the same message twice.
- */
 function BillingErrorNotice({
   error,
   fallback,
@@ -326,7 +318,6 @@ function BillingErrorNotice({
   return <Notice tone="negative">{message}</Notice>;
 }
 
-/** The workspace's plan as Billing names it; unknown until the entitlement is read. */
 type CurrentPlanRead =
   | Readonly<{ kind: 'unknown' }>
   | Readonly<{ kind: 'none' }>
@@ -336,8 +327,6 @@ function currentPlanRead(
   entitlement: BillingEntitlement | undefined,
   catalog: BillingCatalog | undefined,
 ): CurrentPlanRead {
-  // An unresolved entitlement claims nothing, and only a live subscription is
-  // the current plan: pending, ended or unpaid ones are neither a plan nor none.
   if (entitlement?.status !== 'resolved') return { kind: 'unknown' };
   const subscription = entitlement.subscription;
   if (!subscription) return { kind: 'none' };
@@ -434,7 +423,6 @@ export default function PricingRoute() {
   const canBuy = useWorkspaceCapability('manage_billing');
   const queryClient = useQueryClient();
   const catalogQuery = useWorkspaceCatalog(activeWorkspaceId, country);
-  // The same read Billing's current plan names its plan from.
   const entitlementQuery = useQuery({
     ...billingQueries.entitlement(activeWorkspaceId),
     retry: false,
@@ -484,7 +472,6 @@ export default function PricingRoute() {
 
   return (
     <SettingsPage
-      // The "nothing chosen" state carries this action; anything else keeps it here.
       actions={
         selection || isError ? (
           <MastheadPrimary>
@@ -504,7 +491,6 @@ export default function PricingRoute() {
         selection={selection}
         offered={offered}
         currentPlan={currentPlanRead(
-          // A failed refetch keeps the last data; it no longer says what the plan is.
           entitlementQuery.isError ? undefined : entitlementQuery.data,
           catalog,
         )}

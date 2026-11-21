@@ -8,13 +8,6 @@ import { AUDIT_STATES } from '@/lib/runs/status';
 import type { ActiveRun } from '@/lib/visibility/dashboard';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-/**
- * Empty state for a project with no completed runs. The dashboard is a
- * projection over completed audits, so there is nothing to render until one
- * finishes. It carries its own next step: "Add prompts" while no prompt is
- * active, then Launch run (the masthead leaves it out meanwhile), or, while a
- * run is in progress, the way to watch it.
- */
 export function VisibilityEmptyState({ activeRun }: Readonly<{ activeRun: ActiveRun | null }>) {
   const canRun = useWorkspaceCapability('run');
   if (activeRun)

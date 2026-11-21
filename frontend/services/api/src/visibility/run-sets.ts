@@ -1,10 +1,3 @@
-/**
- * Whether a selected run set may be compared with a baseline run set.
- *
- * The prompt and source tables ask the same question. Two sets compare only when every run is known, the
- * baseline finished entirely before the selection, every run is fully
- * covered and all share one frozen identity and versions.
- */
 import { frozenComparisonKey } from '../analysis/comparison.ts';
 import type { Database } from '../db/database.ts';
 import { utcText } from '../db/timestamps.ts';
@@ -28,7 +21,6 @@ export async function runSetComparisonStatus(
   const rows = await db
     .selectFrom('audits as audit')
     .innerJoin('metric_snapshots as snapshot', 'snapshot.audit_id', 'audit.id')
-    // Under a topic, coverage is the topic's: a failure elsewhere in the run is not its gap.
     .leftJoin('audit_topic_metrics as topic', (join) =>
       join
         .onRef('topic.audit_id', '=', 'audit.id')
@@ -51,7 +43,6 @@ export async function runSetComparisonStatus(
   if (rows.length !== ids.size || !rows.every((row) => ids.has(row.id))) {
     return 'identity_unavailable';
   }
-  // An unfinished run cannot be shown to precede another.
   const dates = (wanted: readonly string[]) =>
     rows.filter((row) => wanted.includes(row.id)).map((row) => row.completed_at);
   const current = dates(input.currentIds);
@@ -77,13 +68,11 @@ export async function runSetComparisonStatus(
   return identities.size !== 1 || input.currentIds.length === 0 ? 'changed_context' : 'comparable';
 }
 
-/** Whether a run answered everything the selection asks of it; under a topic, only that topic. */
 function covered(
   row: { metrics: unknown; topic_metrics: unknown },
   selection: { cohort: string; engine: string | null; topicId: string | null },
 ): boolean {
   const block = selection.topicId ? row.topic_metrics : row.metrics;
-  // A run that asked nothing in the topic has no answers there to be missing.
   if (block === null) return true;
   const cohort = cohortMetrics(block, selection.cohort);
   const metrics = selection.engine === null ? cohort : engineMetrics(cohort, selection.engine);

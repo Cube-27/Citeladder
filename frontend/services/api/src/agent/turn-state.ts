@@ -12,7 +12,6 @@ import type { Turn } from './runtime.ts';
 import { fetchesPage } from './skills.ts';
 import type { TurnState } from './turn-budget.ts';
 
-/** The chat's page documents, which take suggestions, with their SEO fields. */
 export function pageDocuments(documents: Awaited<ReturnType<typeof chatDocuments>>) {
   return documents.flatMap(({ output, revision }) =>
     fetchesPage({ outputKind: output.kind }) && revision.fields !== null
@@ -26,11 +25,9 @@ export function pageDocuments(documents: Awaited<ReturnType<typeof chatDocuments
       : [],
   );
 }
-/** The workflow's pinned format, else the latest document's. */
 function currentFormat(turn: Turn) {
   return turn.manifest.workflow?.format_id ?? turn.latest?.output.format_id ?? null;
 }
-/** The web searches a response ran: as the provider reported them, else as its blocks show. */
 export function reportedSearches(response: ModelResult) {
   const reported = response.usage.web_search_requests;
   return typeof reported === 'number' ? reported : webSearchBlocks(response.blocks).calls.length;
@@ -69,7 +66,6 @@ export function initialState(catalog: SkillCatalog, turn: Turn): TurnState {
     contextHash: '',
   };
 }
-/** A document a built-in staged: new to the chat, saved whole over an earlier one, or edited. */
 export function documentStep(
   turn: Turn,
   state: TurnState,
@@ -81,7 +77,6 @@ export function documentStep(
   const title = stepText(state.staged.get(number)?.payload.title ?? '');
   return { kind: 'document', action, number, title } as const;
 }
-/** Records one response's web searches: a step per result, and the pages each returned. */
 function searched(state: TurnState, ordinal: number, blocks: ConversationBlock[]) {
   const { calls, results } = webSearchBlocks(blocks);
   for (const call of calls) state.queries.set(call.id, call.query);
@@ -97,7 +92,6 @@ function searched(state: TurnState, ordinal: number, blocks: ConversationBlock[]
       if (!state.web.has(source.url)) state.web.set(source.url, source.title);
   }
 }
-/** Appends a kept response as the assistant's message and records its step and searches. */
 export function accepted(state: TurnState, ordinal: number, response: ModelResult) {
   // An empty assistant message would make every later replay of this chat invalid.
   const blocks = response.blocks.length ? response.blocks : [{ type: 'text', text: '(no answer)' }];

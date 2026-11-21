@@ -9,7 +9,6 @@ import { chooseFilterOption } from '@/test/all-filters';
 import { renderWithProviders } from '@/test/render';
 import { InventorySection } from './inventory-section';
 
-/** The Pages tab's browser: the view switch and filter above its table. */
 function PagesBrowser() {
   return <InventorySection mode="scored" crawl={makeSiteCrawl()} active={false} />;
 }
@@ -24,7 +23,6 @@ afterAll(() => mswServer.close());
 
 describe('InventorySection', () => {
   it('keeps the page browser’s rows and pager on screen while the next page loads', async () => {
-    // A full first page of ten rows, then one more on the second.
     const firstPage = [
       makePageSummary({ title: 'Homepage' }),
       ...Array.from({ length: 9 }, (_, index) =>
@@ -53,7 +51,6 @@ describe('InventorySection', () => {
     await user.click(await screen.findByRole('button', { name: 'Next page' }));
 
     const table = screen.getByRole('region', { name: 'Pages' });
-    // The rows of the page being left stay drawn while the next one loads.
     expect(within(table).getByText('Homepage')).toBeInTheDocument();
     expect(table).toHaveAttribute('aria-busy', 'true');
     expect(within(table).getByRole('button', { name: 'Previous page' })).toBeInTheDocument();

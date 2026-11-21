@@ -7,12 +7,8 @@ const uuid = () => z.uuid();
 // Billing responses never expose provider ids, provider plan ids, or secrets.
 // ---------------------------------------------------------------------------
 
-// Plan keys are LOCKED to the four the backend publishes. A retired `free`/
-// `paid` key must fail parsing rather than render as an unknown tier.
-// The billing vocabularies: every package parses these values with these schemas.
 export const planCatalogKeySchema = z.enum(['tier_1', 'tier_2', 'tier_3', 'enterprise']);
 export type PlanCatalogKey = z.infer<typeof planCatalogKeySchema>;
-/** The plans a workspace buys itself; Enterprise is sold by contract. */
 export const selfServePlanKeySchema = planCatalogKeySchema.exclude(['enterprise']);
 export type SelfServePlanKey = z.infer<typeof selfServePlanKeySchema>;
 export const credentialModeSchema = z.enum(['byok', 'funded']);
@@ -26,10 +22,6 @@ export type ProviderMode = z.infer<typeof providerModeSchema>;
 export const taxTreatmentSchema = z.enum(['CGST_SGST', 'IGST', 'EXPORT_ZERO_RATED']);
 export type TaxTreatment = z.infer<typeof taxTreatmentSchema>;
 export const taxBehaviorSchema = z.enum(['inclusive', 'exclusive']);
-/**
- * A base subscription's state, as stored (`ck_billing_subscription_status`)
- * and served. `cancelled` stays current until the provider confirms (B52).
- */
 export const subscriptionStatusSchema = z.enum([
   'pending',
   'trialing',
@@ -70,12 +62,6 @@ export const moneySchema = responseObject({
   amount_minor: z.number().int().nonnegative(),
 });
 
-/**
- * The server-resolved charge. `quote_id` is an opaque digest that proves the
- * displayed terms without exposing any provider identity — the frontend
- * compares its displayed price against `base_price` here and never computes a
- * total of its own.
- */
 export const resolvedQuoteSchema = responseObject({
   quote_id: z.string(),
   catalog_revision: z.string(),
@@ -111,11 +97,6 @@ const catalogProviderRouteSchema = responseObject({
   model: z.string(),
 });
 
-/**
- * PUBLIC provider row — availability only, never workspace state. Grok,
- * Perplexity and Copilot appear here as `unavailable` with an empty `routes`
- * list; that absence of a route is what makes them non-connectable.
- */
 const catalogProviderSchema = responseObject({
   key: z.string(),
   label: z.string(),
@@ -135,9 +116,7 @@ const catalogPlanSchema = responseObject({
   self_serve: z.boolean(),
   contact_only: z.boolean(),
   contact_url: z.string().nullable(),
-  /** The BYOK price; customers pay their providers directly. */
   base_price: moneySchema.nullable(),
-  /** The managed price, with platform keys included (B32). */
   funded_total_price: moneySchema.nullable(),
   checkout_available: z.boolean(),
   funded_checkout_available: z.boolean(),
@@ -148,11 +127,6 @@ const catalogPlanSchema = responseObject({
   trial_days: z.number().int().nullable(),
 });
 
-/**
- * A one-time add-on or top-up. Its grants last `expiry_days` after purchase
- * or until the paid plan ends, whichever is earlier, and only a plan in
- * `eligible_plan_keys` can buy it.
- */
 const catalogItemSchema = responseObject({
   key: z.string(),
   name: z.string(),
@@ -183,7 +157,6 @@ export const workspaceEntitlementSchema = responseObject({
   registry_revision: z.string(),
   entitlement_lifecycle_version: z.number().int().nonnegative(),
   valid_until: z.string().nullable(),
-  /** 'funded' on a managed plan: the platform supplies engine and DataForSEO keys (B32). */
   credential_mode: credentialModeSchema,
   capabilities: z.array(
     responseObject({
@@ -194,9 +167,6 @@ export const workspaceEntitlementSchema = responseObject({
       provenance: z.literal('effective_grant'),
     }),
   ),
-  // Member-safe remaining-allowance hints for occupancy counters. Three
-  // integers per key and nothing else: enough to hide a "New project" control
-  // a Member could not use, without exposing the workspace's finances.
   occupancy: z.array(
     responseObject({
       key: z.string(),
@@ -205,9 +175,6 @@ export const workspaceEntitlementSchema = responseObject({
       remaining: z.number().int(),
     }),
   ),
-  // The Site Health runtime the same grants resolve to. An unresolved account
-  // gets the sample runtime: a server-selected sample and no count disclosure.
-  // `count_disclosure` gates every discovered-count disclosure.
   site_health: responseObject({
     sample_url_limit: z.number().int().nonnegative(),
     count_disclosure: z.boolean(),
@@ -271,7 +238,6 @@ const resolvedCapabilitySchema = responseObject({
   ordered_draw_grant_ids: z.array(uuid()),
 });
 
-/** The one plan change waiting for the next renewal. */
 const scheduledPlanChangeSchema = responseObject({
   direction: z.enum(['upgrade', 'downgrade']),
   catalog_key: z.string(),
@@ -281,12 +247,10 @@ const scheduledPlanChangeSchema = responseObject({
 
 const subscriptionSummarySchema = responseObject({
   catalog_key: z.string(),
-  /** The mode this subscription was bought in, which prices and gates its plan changes. */
   credential_mode: credentialModeSchema,
   status: subscriptionStatusSchema,
   current_period_end: z.string().nullable(),
   cancel_at_period_end: z.boolean(),
-  /** Until when a scheduled cancellation can be undone; null when it cannot (B46). */
   resumable_until: z.string().nullable(),
   scheduled_change: scheduledPlanChangeSchema.nullable(),
 });
@@ -348,7 +312,6 @@ export const billingUsageSchema = responseObject({
   items: z.array(usageItemSchema),
 });
 
-/** Every commercial POST answers with this. `quote` is always present. */
 export const activationSchema = responseObject({
   activation_id: uuid(),
   kind: activationKindSchema,
@@ -360,11 +323,6 @@ export const activationSchema = responseObject({
   failure_code: z.string().nullable(),
 });
 
-/**
- * A base-plan change. An upgrade answers `payment_required` with its pending
- * prorated charge in `activation`; a downgrade is `requested`/`scheduled` for
- * `effective_at` and carries no activation.
- */
 export const planChangeSchema = responseObject({
   direction: z.enum(['upgrade', 'downgrade']),
   catalog_key: z.string(),
@@ -373,20 +331,12 @@ export const planChangeSchema = responseObject({
   activation: activationSchema.nullable(),
 });
 
-/**
- * Deactivation has its OWN vocabulary — deliberately not the activation state
- * machine. Parsing a DELETE through `activationSchema` would invent a
- * pending/failed lifecycle the backend never reports.
- */
 export const subscriptionChangeSchema = responseObject({
   catalog_key: z.string(),
   status: z.enum(['cancellation_scheduled', 'already_scheduled', 'resumed', 'nothing_to_resume']),
   effective_at: z.string(),
 });
 
-// --- Authenticated provider connection state -------------------------------
-// Separate contract from the PUBLIC catalog above: availability is what we
-// sell, connection state is what this workspace actually has.
 export const providerConnectionStateSchema = z.enum([
   'connected',
   'missing',
@@ -423,11 +373,9 @@ export const subscriptionCheckoutSchema = responseObject({
   activation_id: uuid(),
   provider: z.string(),
   provider_mode: providerModeSchema,
-  /** The browser SDK adapter that opens this checkout. */
   sdk_name: z.literal('razorpay-checkout'),
   public_key: z.string(),
   reference: z.string(),
-  /** A recurring `subscription` or a one-time `order` (add-on, top-up, upgrade). */
   reference_kind: z.enum(['subscription', 'order', '']),
   expires_at: z.string(),
   quote: resolvedQuoteSchema,
@@ -438,7 +386,6 @@ export const billingInvoiceSchema = responseObject({
   invoice_number: z.string(),
   receipt_number: z.string(),
   document_kind: z.enum(['gst_tax_receipt', 'export_receipt', 'credit_note']),
-  // `credited` marks a credit note; its `paid_at` is the issue time.
   status: z.enum(['paid', 'credited']),
   description: z.string(),
   original_invoice_number: z.string().nullable(),
@@ -462,8 +409,6 @@ export const billingInvoicesSchema = z.union([
   billingInvoiceListSchema.transform((value) => value.invoices),
 ]);
 
-/** The authenticated workspace projection, distinct from public availability. */
 export type ProviderConnectionState = z.infer<typeof providerConnectionStateSchema>;
 export type ProviderConnectionStateEntry = z.infer<typeof providerConnectionStateEntrySchema>;
-/** The Site Health runtime the workspace entitlement resolves. */
 export type SiteHealthEntitlement = z.infer<typeof workspaceEntitlementSchema>['site_health'];

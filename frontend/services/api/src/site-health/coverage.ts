@@ -1,4 +1,3 @@
-/** Conservative crawl coverage from saved discovery state; never acquisition on a read. */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -20,16 +19,8 @@ export type CoverageSignals = {
   failedDiscoveryTaskCount: number;
   analyzedUrlCount: number;
   failedUrlCount: number;
-  /** This crawl's automatic analysis allowance (the plan's monitored pages); null when none was recorded. */
   automaticLimit: number | null;
-  /** Found and analyzed URLs per admission value tier; empty when nothing went through the frontier. */
   valueKinds?: ValueKindCoverage[];
-  /**
-   * A crawl whose discovery was its sitemap: how many URLs it listed, whether
-   * a document's parse limit cut the read short, how many documents went
-   * unread, and how many listed URLs this crawl audits. Null for an HTML walk
-   * or a sample.
-   */
   sitemap?: {
     discovered: number;
     limitReached: boolean;
@@ -41,11 +32,6 @@ export type ValueKindCoverage = { kind: string; found: number; analyzed: number 
 
 const BOUNDED_DISCOVERY = new Set(['cancelled', 'sample_completed', 'stopped']);
 
-/**
- * A sitemap crawl covers the site only when its sitemap was read whole and
- * this crawl audits every URL it lists; a tracked set smaller than the site
- * is partial coverage, never complete.
- */
 function sitemapPartialReasons(
   signals: CoverageSignals,
   sitemap: NonNullable<CoverageSignals['sitemap']>,
@@ -58,11 +44,6 @@ function sitemapPartialReasons(
   return reasons;
 }
 
-/**
- * A limit, a pending frontier or an explicit bound cut discovery short. The
- * requested page limit only cut it short when frontier URLs were left: a site
- * with exactly that many pages exhausted its frontier.
- */
 function partialReasons(signals: CoverageSignals) {
   if (signals.sitemap) return sitemapPartialReasons(signals, signals.sitemap);
   const reasons: string[] = [];
@@ -84,7 +65,6 @@ function partialReasons(signals: CoverageSignals) {
   return reasons;
 }
 
-/** Discovery that failed, observed nothing or never completed proves nothing about coverage. */
 function unknownReasons(signals: CoverageSignals) {
   const reasons: string[] = [];
   if (signals.failedDiscoveryTaskCount) reasons.push('discovery_failed');
@@ -93,11 +73,6 @@ function unknownReasons(signals: CoverageSignals) {
   return reasons;
 }
 
-/**
- * The safest state the frozen facts support: `partial` when discovery was cut
- * short, `unknown` when it failed or never completed, and `complete` only for
- * an exhausted frontier.
- */
 export function assessCoverage(signals: CoverageSignals) {
   const partial = partialReasons(signals);
   const unknown = partial.length ? [] : unknownReasons(signals);
@@ -126,7 +101,6 @@ export function assessCoverage(signals: CoverageSignals) {
   };
 }
 
-/** The crawl's frozen allowance, or null when none was recorded (never a silent zero). */
 function allowance(value: unknown) {
   if (value === undefined || value === null || value === '') return null;
   const limit = Number(value);
@@ -136,11 +110,6 @@ function allowance(value: unknown) {
 const PRIORITIES: Record<string, number> = policy.site_health.crawl.value_priorities;
 const EXPECTED_KINDS: readonly string[] = policy.site_health.crawl.coverage_expected_value_kinds;
 
-/**
- * "Kind not found" apart from "found but not analyzed": the crawl's frontier by
- * value tier, with the expected tiers it never found as zero. A crawl that
- * admitted nothing through the frontier (a sample) has no funnel to report.
- */
 export async function valueKindCoverage(db: Database, crawl: Crawl): Promise<ValueKindCoverage[]> {
   const rows = await db
     .selectFrom('site_discovery_frontier as f')
@@ -180,12 +149,6 @@ export async function valueKindCoverage(db: Database, crawl: Crawl): Promise<Val
   );
 }
 
-/**
- * A failed `site_crawl_tasks` row whose failure is expected: the URL was
- * excluded, is gone or is not an HTML page. A crawl that met only these still
- * explored everything it could, so they never make it partial or its coverage
- * unknown.
- */
 export const expectedTaskFailure = failedAs('site_crawl_tasks', ['excluded', 'not_page', 'gone']);
 
 export async function crawlCoverage(db: Database, crawl: Crawl) {
@@ -195,15 +158,10 @@ export async function crawlCoverage(db: Database, crawl: Crawl) {
   });
 }
 
-/**
- * Whether the crawl inventoried the whole site: coverage `complete`, so no
- * limit, pending frontier, sample or other bound cut discovery short.
- */
 export async function inventoryComplete(db: Database, crawl: Crawl) {
   return assessCoverage(await coverageSignals(db, crawl)).state === 'complete';
 }
 
-/** A full crawl whose site setup found sitemap URLs discovered through them, not an HTML walk. */
 async function sitemapCoverage(db: Database, crawl: Crawl) {
   if (crawl.sample_mode) return null;
   const sitemap = record(record(crawl.site_facts).sitemap);
@@ -221,7 +179,6 @@ async function sitemapCoverage(db: Database, crawl: Crawl) {
     .where('e.crawl_id', '=', crawl.id)
     .executeTakeFirstOrThrow();
   const unreadDocuments = Number(sitemap.unread_count) || 0;
-  // A sitemap that stayed unreadable is still the crawl's discovery: no HTML walk replaced it.
   if (!members.listed && !unreadDocuments) return null;
   return {
     // A stored zero stays visible; only a missing count falls back to the entries.

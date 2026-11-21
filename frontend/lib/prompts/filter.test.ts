@@ -102,7 +102,6 @@ describe('filterPrompts', () => {
     expect(ids('', { branded: 'enabled' })).toEqual(['b']);
   });
 
-  // 'c' was never measured: it named and cited nothing, so either filter drops it.
   const mentions = new Map<string, PromptMentions>([
     [
       'a',
@@ -133,7 +132,6 @@ describe('filterPrompts', () => {
       { value: 'brand', label: 'Acme' },
       { value: 'competitor:rival co', label: 'Rival Co' },
     ]);
-    // The tracked brand matches under any name a run recorded; a competitor by its resolved name.
     expect(ids('', { brands: [brand!.value] }, prompts, mentions)).toEqual(['a']);
     expect(ids('', { brands: [rival!.value] }, prompts, mentions)).toEqual(['b']);
     expect(ids('', { brands: [brand!.value, rival!.value] }, prompts, mentions)).toEqual([

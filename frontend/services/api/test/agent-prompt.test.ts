@@ -208,7 +208,6 @@ describe('structurally bounded Agent context and tool results', () => {
         `citeladder://opportunity/${trimmed}`,
       ]),
     );
-    // The mention is trimmed to fit, so neither it nor its finding is a source.
     const supplied = suppliedManifest(manifest, 1500);
     expect(supplied.omissions).toEqual(['mentioned_action:00000000-0000-4000-8000-000000000002']);
     expect(supplied.citations).toEqual(

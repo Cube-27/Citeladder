@@ -93,7 +93,6 @@ describe('workspace authorization and root allocation', () => {
     actors.push(user);
     const cookie = await userCookie(user);
     const terms = { terms_revision: policy.auth.terms_revision, accept_terms: true };
-    // A session without a sign-in or sign-up decision on the published revision is refused.
     const refused = await request('', 'POST', { name: 'Undecided', ...terms }, cookie);
     expect(refused.status).toBe(409);
     expect(((await refused.json()) as { error: { code: string } }).error.code).toBe(
@@ -360,7 +359,6 @@ describe('team members need a plan', () => {
     const trialOwner = await fixtures.user();
     const space = await fixtures.ownedWorkspace(trialOwner, { access: false });
     const account = await billingAccount(db, space);
-    // Open, but without the team grant, as a trial is.
     await grant(db, account, { key: 'workspace_access', value: 1, sourceKind: 'override' });
     const cookie = await userCookie(trialOwner);
     const guest = await fixtures.user();
@@ -397,7 +395,6 @@ describe('team members need a plan', () => {
         .where('workspace_id', '=', space)
         .execute(),
     ).toHaveLength(1);
-    // Revoking a link never needs the plan.
     expect(
       (await request(`/${space}/invitations/${invitation.id}`, 'DELETE', undefined, cookie)).status,
     ).toBe(204);
@@ -406,7 +403,6 @@ describe('team members need a plan', () => {
 
 describe('invitations follow their issuer authority', () => {
   it('revokes the links a member issued once they are demoted or removed, and keeps the rest', async () => {
-    // Its own workspace, so its role receipts stay out of the shared one.
     const spaceOwner = await fixtures.user();
     actors.push(spaceOwner);
     const space = await fixtures.ownedWorkspace(spaceOwner);
@@ -447,7 +443,6 @@ describe('invitations follow their issuer authority', () => {
     const beforeRemoval = await invite(adminCookie);
     expect(await member()).toBe(204);
     expect(await beforeRemoval()).toBe(400);
-    // An issuer disabled by an operator keeps membership, but their links stop.
     const other = await fixtures.user();
     actors.push(other);
     await fixtures.member(space, other, 'admin');
@@ -473,7 +468,6 @@ describe('invitations follow their issuer authority', () => {
     const { token } = (await issued.json()) as { token: string };
     const guestCookie = await userCookie(guest);
     let accepted: Promise<Response> | undefined;
-    // The operator's disable holds the issuer's row while the guest accepts.
     await db.transaction().execute(async (trx) => {
       await trx.selectFrom('users').select('id').where('id', '=', spaceOwner).forUpdate().execute();
       accepted = request('/invitations/accept', 'POST', { token }, guestCookie);
@@ -734,8 +728,6 @@ describe('Terms', () => {
       ).accepted_at,
     ).toBeNull();
     const body = { terms_revision: policy.auth.terms_revision, accept_terms: true };
-    // The request flag alone is not consent: the decision made on the sign-in
-    // form must already be on the account.
     const undecided = await request(`/${workspace}/policies`, 'POST', body);
     expect(undecided.status).toBe(409);
     expect(((await undecided.json()) as { error: { code: string } }).error.code).toBe(

@@ -1,10 +1,3 @@
-/**
- * MCP changes, listed and callable only by a grant holding `citeladder:write`.
- * Small edits run directly; larger ones are prepared (a dry run of their
- * kind's `execute` in `confirmed-changes.ts`) and run only through
- * `confirm_change`, by that same `execute`, after the user agreed. The member's live role decides every change; the in-app Agent never
- * sees this catalogue.
- */
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { actionUserStatusSchema } from '@citeladder/contracts/actions';
@@ -52,7 +45,6 @@ import { appLink } from './links.ts';
 import { argumentProblem, inputSchema } from './tools.ts';
 import { McpInputError, type Evidence, type McpPrincipal } from './types.ts';
 
-/** The one-step changes; each is also its tool's name. */
 type DirectKind =
   | 'create_topic'
   | 'rename_topic'
@@ -64,10 +56,8 @@ type DirectKind =
   | 'cancel_audit'
   | 'delete_topic'
   | 'confirm_topics';
-/** Each change an MCP grant can make; its security event targets the project. */
 export type McpWriteKind = DirectKind | 'generate_prompts' | ConfirmedKind;
 
-/** `origin` is the app's browser origin, for links into CiteLadder screens. */
 type Context = { db: Database; config: ServiceConfig; principal: McpPrincipal; origin: string };
 type Annotations = {
   readOnlyHint: false;
@@ -113,11 +103,6 @@ const markets = marketIdList
     'Market ids from get_project_business_context; null is the default market. Omit for the default market only.',
   )
   .nullish();
-/**
- * A single-step change: authorized for the project against its command's
- * permission, run, and recorded in one transaction. `run` returns the
- * user-facing outcome.
- */
 function direct<S extends z.ZodObject<{ project_id: typeof uuid }>, P extends Permission>(
   kind: DirectKind,
   permission: P,
@@ -143,12 +128,9 @@ function direct<S extends z.ZodObject<{ project_id: typeof uuid }>, P extends Pe
   };
 }
 
-/** A new prepared change's identity, before its rehearsal. */
 const newChange = (projectId: string): PreparedChange => ({ id: randomUUID(), projectId });
-/** A rehearsal that reads nothing back. */
 const noInspection = () => Promise.resolve(null);
 
-/** A prepared change: what will happen, and the token the user's yes unlocks. */
 async function prepared(
   context: Context,
   input: Omit<Parameters<typeof issueConfirmation>[2], 'principal'> & { preview: string },
@@ -170,10 +152,6 @@ async function prepared(
 
 const quoted = (texts: readonly string[]) => texts.map((text) => `"${text}"`).join(', ');
 
-/**
- * A generation run as the user reviews it: the staged suggestions without
- * ids, what limited the run, and the CiteLadder screen where they accept.
- */
 function generated(
   origin: string,
   projectId: string,
@@ -197,11 +175,6 @@ function generated(
   };
 }
 
-/**
- * Rehearse one status or topic change over a selection. A prompt outside the
- * project refuses the whole selection; one already in the target state is
- * skipped and counted in the preview.
- */
 async function preparePromptChange(
   context: Context,
   args: {
@@ -562,7 +535,6 @@ const writeDefinitions = {
         'The read_seed_queries ids the user kept for that source; omit for all of them.',
       ),
     }),
-    // A retry with the same run_key replays the persisted run.
     annotations: hints(false, true),
     run: async (context, args) => {
       const { project_id: projectId, prompt_set_id: setId, run_key: runKey, ...request } = args;
@@ -625,7 +597,6 @@ const writeDefinitions = {
     }),
     annotations: hints(false, false),
     run: async (context, args) => {
-      // Refuse a role that cannot add before showing what would be added.
       const actor = authorize(
         await writeActor(context.db, context.principal, args.project_id),
         preparedChanges.add_prompts.permission,
@@ -639,7 +610,6 @@ const writeDefinitions = {
           text: item.text,
           topic_id: item.topic_id ?? null,
           intent: item.intent ?? '',
-          // An omitted cohort stays omitted: creation files it by brand naming.
           ...(item.cohort ? { cohort: item.cohort } : {}),
         }),
       );
@@ -870,7 +840,6 @@ const writeDefinitions = {
         preparedChanges.declare_implemented.permission,
       );
       const change = newChange(args.project_id);
-      // The dry run finds the Action only in this project.
       const { payload } = await preparedChanges.declare_implemented.rehearse(
         context.db,
         context.config,
@@ -913,7 +882,6 @@ const writeDefinitions = {
         .max(64)
         .describe('The confirmation_token the prepare tool returned, exactly as given.'),
     }),
-    // A confirmed audit launch asks external AI engines.
     annotations: { ...hints(true, false), openWorldHint: true },
     run: async ({ db, config, principal }, args) => {
       const { kind, result } = await confirmChange(db, config, principal, args.confirmation_token);

@@ -23,7 +23,6 @@ import { refreshRuntime } from '../site-health/plan-runtime.ts';
 
 const logger = getLogger('api.billing');
 
-/** Renews a claim a third of the way through each lease; returns its stop. */
 function renewing(seconds: number, renew: () => Promise<boolean>) {
   return maintainLease(renew, Math.max(100, Math.min(30_000, (seconds * 1000) / 3))).stop;
 }
@@ -44,7 +43,6 @@ async function applyReference(
     .executeTakeFirst();
   if (!pending) return false;
   const workspace = await lockOwner(db, pending.billing_account_id);
-  // Settlement decides whether evidence for an abandoned order is a late capture.
   if (pending.status === 'pending' || pending.status === 'abandoned')
     await settlePending(db, pending.id, mode, evidence, authority);
   else if (pending.status === 'activated' && evidence.kind === 'base') {
@@ -61,7 +59,6 @@ async function applyReference(
   return true;
 }
 
-/** Leases the next due pending intent, counting the attempt, or null. */
 function claimPending(
   db: Database,
   config: ServiceConfig,
@@ -125,11 +122,6 @@ function claimPending(
   });
 }
 
-/**
- * Asks the provider to cancel; true once it confirms or definitely refuses
- * (e.g. already cancelled). A refusal is final and the caller reads the
- * provider's state next; only uncertainty throws, so the sweep retries.
- */
 async function cancelAtProvider(provider: BillingProvider, reference: string, atEnd: boolean) {
   try {
     const cancelled = await provider.cancel(reference, atEnd);
@@ -152,7 +144,6 @@ function unpaid(evidence: Evidence | null) {
   );
 }
 
-/** Claims one row at a time so a batch never expires while waiting for earlier I/O. */
 async function pendingProbe(
   db: Database,
   config: ServiceConfig,
@@ -482,16 +473,11 @@ async function subscriptionProbe(
     const state = evidence.kind === 'base' ? evidence.subscription : null;
     // Halted (retries exhausted) ends now, so it can never charge again unseen.
     const halted = state?.status === policy.billing.subscription_status.unpaid;
-    // A fully refunded current period ends now: its cancellation was committed
-    // with the refund and is sent here, retried until the provider ends it (B52),
-    // also after a renewal the provider charged meanwhile moved the period (B71).
     const refunded =
       state !== null &&
       !policy.billing.contracts.terminal_subscription_statuses.includes(state.status) &&
       (refundCancelled(sub) ||
         (await periodRefunded(db, sub, sub.current_period_start, sub.current_period_end)));
-    // A held cancellation goes to the provider at the lead before renewal and
-    // is retried while the provider still shows the subscription renewing (B46).
     const due =
       sub.cancel_at_period_end &&
       sub.current_period_end !== null &&
@@ -548,7 +534,6 @@ async function subscriptionProbe(
   return sub.id;
 }
 
-/** Commits that the held cancellation is being sent; false once the customer resumed. */
 async function markCancellationSent(db: Database, id: string) {
   const marked = await db
     .updateTable('billing_subscriptions')
@@ -559,10 +544,6 @@ async function markCancellationSent(db: Database, id: string) {
   return marked.numUpdatedRows > 0n;
 }
 
-/**
- * A process that died during a row's final attempt leaves it pending at the maximum, which the
- * probe never claims again; once that attempt's lease has expired it is quarantined.
- */
 async function quarantineExhaustedWebhooks(
   db: Database,
   config: ServiceConfig,
@@ -587,7 +568,6 @@ async function quarantineExhaustedWebhooks(
   reportQuarantined(quarantined);
 }
 
-/** Three bounded sweeps, with persisted leases and no transaction across I/O. */
 export async function recoverBilling(
   db: Database,
   config: ServiceConfig,

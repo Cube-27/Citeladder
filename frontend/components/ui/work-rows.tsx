@@ -5,16 +5,8 @@ import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
-/** The table frame: a `rule` edge at radius 8 on the panel, clipping its rows. */
 export const ROWS_SHELL = 'border-rule rounded-card bg-surface overflow-clip border';
 
-/**
- * A tree leaf's work rows in the table frame: a 32px head on `raised`, then
- * 40px one-line rows of tick, title (its muted line inline after it), scope,
- * impact and source. The columns are fixed, so no row moves another; below
- * desktop, scope and source fold away; below 768 the muted line folds too, so the
- * title keeps the cell, and impact keeps 88 for its bars and word.
- */
 const GRID =
   'grid grid-cols-[20px_1fr_120px] phone:grid-cols-[20px_1fr_88px] desktop:grid-cols-[20px_1fr_92px_120px_110px] items-center gap-3 phone:gap-2 px-4 phone:px-3';
 const WIDE = 'hidden desktop:block';
@@ -26,10 +18,8 @@ export function WorkRows({
   more,
 }: Readonly<{
   label: string;
-  /** The title, scope, impact and source heads. */
   heads: readonly [string, string, string, string];
   children: ReactNode;
-  /** A "Show more" under the rows, if any. */
   more?: ReactNode;
 }>) {
   const [title, scope, impact, source] = heads;
@@ -57,10 +47,6 @@ export function WorkRows({
   );
 }
 
-/**
- * One work row. The title links to the item and stretches over the row, so
- * the row opens it; the tick sits above the link and only ticks.
- */
 export function WorkRow({
   tick,
   href,
@@ -103,7 +89,6 @@ export function WorkRow({
   );
 }
 
-/** "Show N more" under a box's rows: one 40px line, the same while the next rows load. */
 export function WorkRowsMore({
   onClick,
   disabled,

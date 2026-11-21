@@ -49,9 +49,6 @@ export function CopyButton({
     }
   }
 
-  // An icon-only button says what it does through its label alone, so the
-  // copied confirmation has to live there too. A labelled one keeps its action
-  // text steady; the check icon and toast confirm success without resizing it.
   const iconLabel = status === 'copied' ? copiedLabel : 'Copy';
   let label: ReactNode = children;
   if (status === 'error') label = 'Copy failed. Retry.';

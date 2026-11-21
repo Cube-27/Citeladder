@@ -14,7 +14,6 @@ describe('Worker origin transport', () => {
   it('fixes the upstream and strips spoofed forwarding credentials', async () => {
     const transport = vi.fn(async (request: Request) => {
       expect(request.url).toBe('https://origin.citeladder.com/api/v1/items?next=%2F');
-      // The key itself never leaves the Worker; the request carries a signature over its facts.
       expect(request.headers.get('x-citeladder-origin-token')).toBeNull();
       const timestamp = Number(request.headers.get('x-citeladder-origin-timestamp'));
       expect(Math.abs(timestamp - Date.now() / 1000)).toBeLessThan(5);
@@ -114,7 +113,6 @@ describe('Worker origin transport', () => {
     ]);
     const revalidated = await send('/api/v1/overview', { 'If-None-Match': tag });
     expect([revalidated.status, await revalidated.text()]).toEqual([304, '']);
-    // A private max-age would serve a cached copy without re-checking access.
     for (const path of ['/api/v1/cached', '/api/v1/other'])
       expect((await send(path)).headers.get('cache-control')).toBe('private, no-store');
   });

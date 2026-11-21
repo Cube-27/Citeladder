@@ -17,7 +17,6 @@ function cellText(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-/** Fields that hold a page address: one line, the path's tail kept, without the column's shared origin. */
 const URL_FIELDS: ReadonlySet<string> = new Set(['url', 'url_from']);
 
 function displayValue(row: SearchIntelligenceRow, column: SearchColumn, origin: string | null) {
@@ -34,13 +33,8 @@ function columnsFor(kind: string) {
   return SEARCH_COLUMNS_BY_KIND[kind] ?? SEARCH_COLUMNS_BY_KIND.footprint;
 }
 
-/** Text columns that hold one short word ("commercial", "Yes"), not a name. */
 const SHORT_TEXT_FIELDS: ReadonlySet<string> = new Set(['intent', 'dofollow']);
 
-/**
- * What a column holds: the first is the row's identity (the keyword, query,
- * page or domain); a page address is a url; a one-word field a status.
- */
 function columnKind(column: SearchColumn, first: boolean): DataTableColumn['kind'] {
   if (first) return URL_FIELDS.has(column.field) ? 'url' : 'identity';
   if (column.numeric) return 'number';
@@ -48,21 +42,12 @@ function columnKind(column: SearchColumn, first: boolean): DataTableColumn['kind
   return SHORT_TEXT_FIELDS.has(column.field) ? 'status' : 'text';
 }
 
-/**
- * Figures take the figure width, so the identity and the columns before the
- * low-priority tail (CPC, difficulty, intent) fit the main column at 982; the
- * tail hides where the frame has no room. A second text column is a name.
- */
 function columnWidth(column: SearchColumn, first: boolean): DataTableColumn['width'] {
   if (first || URL_FIELDS.has(column.field)) return 'flex';
   if (column.numeric) return 'figure';
   return SHORT_TEXT_FIELDS.has(column.field) ? 'status' : 'name';
 }
 
-/**
- * A dataset kind's columns for the shared `DataTable`: every column but a
- * detail one sorts on the server.
- */
 export function searchIntelligenceColumns({
   kind,
   order,
@@ -88,7 +73,6 @@ export function searchIntelligenceColumns({
   }));
 }
 
-/** One page of saved rows; the first cell opens the row's evidence. */
 export function SearchIntelligenceRows({
   kind,
   rows,
@@ -119,7 +103,6 @@ export function SearchIntelligenceRows({
                 aria-label={`View evidence for ${row.keyword || row.domain || row.url}`}
                 onClick={() => onSelect(row)}
               >
-                {/* The row's identity keeps its host: a backlink's source site is the finding. */}
                 {URL_FIELDS.has(column.field) ? (
                   displayValue(row, column, null)
                 ) : (

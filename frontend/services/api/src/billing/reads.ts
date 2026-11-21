@@ -30,13 +30,6 @@ function unavailableReason(available: boolean, contactOnly: boolean) {
   return contactOnly ? 'contact_only' : 'checkout_unavailable';
 }
 
-/**
- * The catalog as a reader may buy from it: anonymous readers (marketing) are
- * never on the checkout allow-list, a workspace is when the operator granted it
- * (B2), so in-app billing and marketing follow the same signal. Add-ons and
- * top-ups are priced in the workspace's credential mode, the mode a purchase is
- * quoted in; anonymous readers see the BYOK price.
- */
 export async function publicCatalog(
   db: Database,
   config: ServiceConfig,
@@ -75,7 +68,6 @@ export async function publicCatalog(
     currency,
     currency_minor_units: 2,
     plans: published.payload.plans.map((plan) => {
-      // Each mode is purchasable only with its own verified provider plan (B32).
       const offer = (mode: CredentialMode) => {
         const price = plan.regional_prices[mode][region];
         const listed = mode === 'byok' ? plan.byok_price : plan.funded_price;
@@ -135,7 +127,6 @@ export async function publicCatalog(
   });
 }
 
-/** What each occupancy counter has in use, counted as its admission check counts it. */
 async function occupancyHints(
   db: Database,
   workspaceId: string,
@@ -230,7 +221,6 @@ export async function entitlementRead(
 }
 
 export async function usageRead(db: Database, workspaceId: string, at: Date) {
-  // Independent pool reads run together; balances need the selected grants.
   const [account, occupancy] = await Promise.all([
     workspaceAccount(db, workspaceId),
     occupancyCounts(db, workspaceId, at),
@@ -241,11 +231,6 @@ export async function usageRead(db: Database, workspaceId: string, at: Date) {
   ]);
   const balances = await grantBalances(db, account.id, state.selected);
   const rates = new Map([['manual_runs_per_day', manualRuns]]);
-  /**
-   * A consumable sums its grants' ledger balances. Occupancy and rate counters
-   * count what is in use as admission does: no occupancy grant admits none,
-   * and no rate grant means no rate limit.
-   */
   const aggregate = (
     key: string,
     type: string,
@@ -265,7 +250,6 @@ export async function usageRead(db: Database, workspaceId: string, at: Date) {
     };
     if (state.error) return unknown;
     if (type === 'counter.consumable') {
-      // Remaining is what admission can hold: the sum of each grant's own remainder.
       const [allowance, consumed, reserved, remaining] = [
         sum('allowance'),
         sum('consumed'),

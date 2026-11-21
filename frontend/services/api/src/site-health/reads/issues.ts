@@ -1,22 +1,3 @@
-/**
- * The grouped issue catalog and one group's occurrences.
- *
- * A crawl's issues are each page's current issues from its latest audit as
- * the crawl shows it, plus the crawl's site-level findings (`viewIssuesSql`,
- * SH-B9): a page rerun landing after the crawl moves its page. Groups
- * are `(rule, finding class)` within the crawl, identified by a stable UUID;
- * the summary counts groups rather than occurrences, so its tiles match the
- * list.
- *
- * The list holds defects and advisories together unless a finding class
- * narrows it. The unfiltered list and summary of each finding class, and of
- * both together, are persisted per crawl once its issues are final, and again when a page rerun lands in it
- * (`site-health/issue-catalog.ts`), and read from there. A filtered read
- * (search, severity, category, dimension, rule, page, page kind) and a crawl
- * whose catalog is not written yet compute them
- * here. A persisted summary keeps the monitored affected count of its
- * publication, so it lags a tracked-set change until the next one.
- */
 import {
   siteIssueDetailSchema,
   siteIssuesPageSchema,
@@ -62,21 +43,9 @@ export type IssueFilters = {
   rule: string | null;
   siteUrlId: string | null;
   pageKind: string | null;
-  /** Null lists defects and advisories together. */
   findingClass: string | null;
 };
 
-/**
- * Issues that belong to one page kind, for the page-kind filter (currency
- * itself is the persisted `is_current` flag).
- *
- * Every finalized analysis names the crawl's site checks among its sources, so
- * matching on those sources alone would file a site-level finding under every
- * kind. A per-page finding belongs to the kind of its own page's current,
- * finalized analysis; a finding persisted once for the site (a sitewide link,
- * an architecture rule) belongs to the kinds its evidence counts pages of, and
- * `siteLevelScope` counts only those pages.
- */
 function ofPageKind(crawl: Crawl, pageKind: string) {
   return sql`(case when ${siteLevelRule}
     then coalesce(i.evidence -> 'page_kind_counts' ? ${pageKind}, false)
@@ -84,10 +53,6 @@ function ofPageKind(crawl: Crawl, pageKind: string) {
     end)`;
 }
 
-/**
- * The issue's own page has a current, finalized analysis of the kind (and
- * `also` holds) in the audit the issue came from.
- */
 function onPageOfKind(crawl: Crawl, pageKind: string, also = sql``) {
   return sql`exists (
     select 1 from site_page_analyses a
@@ -96,16 +61,10 @@ function onPageOfKind(crawl: Crawl, pageKind: string, also = sql``) {
       and a.page_kind = ${pageKind} ${also})`;
 }
 
-/**
- * The issues the crawl shows: each page's current issues from its latest
- * audit and the crawl's site-level findings (`viewIssuesSql`, SH-B9). The
- * writers keep `is_current` (`issue-currency.ts`).
- */
 const currentIssues = (crawl: Crawl) => viewIssuesSql(crawl);
 
 function issueWhere(crawl: Crawl, filters: IssueFilters): RawBuilder<unknown> {
   const clauses = [currentIssues(crawl)];
-  // The catalog shows three tiers; `high` includes `critical`.
   if (filters.severity === 'high') clauses.push(sql`i.severity in ('high', 'critical')`);
   else if (filters.severity) clauses.push(sql`i.severity = ${filters.severity}`);
   if (filters.category) clauses.push(sql`i.category = ${filters.category}`);
@@ -115,7 +74,6 @@ function issueWhere(crawl: Crawl, filters: IssueFilters): RawBuilder<unknown> {
   if (filters.pageKind) clauses.push(ofPageKind(crawl, filters.pageKind));
   if (filters.findingClass) clauses.push(sql`i.finding_class = ${filters.findingClass}`);
   if (filters.query) {
-    // The reader searches the titles they see ("broken internal links"), not rule ids.
     const query = filters.query.trim();
     clauses.push(
       sql`(i.rule_id ilike ${containsPattern(query)} or i.rule_id = any(${rulesTitled(query)}::text[]))`,
@@ -126,16 +84,12 @@ function issueWhere(crawl: Crawl, filters: IssueFilters): RawBuilder<unknown> {
 
 type Group = IssueRow & { affected_url_count: number; group_id: string };
 type IssueItem = z.infer<typeof siteIssuesPageSchema>['items'][number];
-/** The summary a catalog persists: the tab counts ride each read. */
 export type IssueSummary = Omit<z.input<typeof siteIssuesPageSchema>['summary'], 'section_counts'>;
 
-/** The finding classes the catalog lists, each with its own groups and summary. */
 export const ISSUE_FINDING_CLASSES = ['defect', 'advisory'] as const;
 
-/** A persisted catalog's `finding_class`: the class, or `all` for both classes together. */
 export const catalogClassKey = (findingClass: string | null) => findingClass ?? 'all';
 
-/** No filter beyond the finding class: the catalog its writers persist per crawl. */
 export const unfilteredIssues = (findingClass: string | null): IssueFilters => ({
   query: null,
   severity: null,
@@ -156,7 +110,6 @@ const isUnfiltered = (filters: IssueFilters) =>
   !filters.siteUrlId &&
   !filters.pageKind;
 
-/** Matching rule groups, each with its earliest current occurrence as the representative. */
 async function issueGroups(db: Database, crawl: Crawl, filters: IssueFilters): Promise<Group[]> {
   const { rows } = await sql<IssueRow & { affected_url_count: number }>`
     with matching as (
@@ -181,33 +134,26 @@ async function issueGroups(db: Database, crawl: Crawl, filters: IssueFilters): P
 
 const compareGroups = groupOrder('severity');
 
-/** How the catalog page is cut and ordered: one tab, one ordering. Neither narrows the summary. */
 export type IssueView = { section: IssueSection | null; sort: IssueSort };
 const ALL_SECTIONS_BY_SEVERITY: IssueView = { section: null, sort: 'severity' };
 
-/** Issue groups per tab. */
 function sectionCounts(groups: readonly Pick<IssueItem, 'dimension' | 'category'>[]) {
   const counts: Record<IssueSection, number> = { technical: 0, content: 0, aeo: 0 };
   for (const group of groups) counts[issueSection(group)] += 1;
   return counts;
 }
 
-/** The summary's issue scope: severity and dimension chips never narrow it. */
 function summaryScope(crawl: Crawl, filters: IssueFilters) {
   const unchipped = { ...filters, severity: null, dimension: null };
   return {
     scoped: issueWhere(crawl, unchipped),
     anyClass: issueWhere(crawl, { ...unchipped, findingClass: null }),
-    // Under a page-kind filter the homepage row that carries a site-level
-    // finding is a page of that kind only when the homepage itself is one; the
-    // finding's own pages of the kind come from its evidence (`siteLevelScope`).
     countedPage: filters.pageKind
       ? sql`not ${siteLevelRule} or ${onPageOfKind(crawl, filters.pageKind)}`
       : sql`true`,
   };
 }
 
-/** Group counts for the tiles and chips: severity and dimension chips never narrow them. */
 export async function issueSummary(
   db: Database,
   crawl: Crawl,
@@ -232,8 +178,6 @@ export async function issueSummary(
     sql<{ rule_id: string; evidence: unknown }>`
       select i.rule_id, i.evidence from site_issues i
       where ${scoped} and ${siteLevelRule}`.execute(db),
-    // Affected pages the project tracks when the summary is computed; a
-    // persisted catalog keeps the count of its publication (owner, 2026-11-20).
     sql<{ monitored: number }>`
       select count(distinct i.site_url_id) filter (where (${countedPage}) and i.site_url_id in (
         select m.site_url_id from monitored_site_urls m
@@ -249,7 +193,6 @@ export async function issueSummary(
     low: 0,
     info: 0,
   };
-  // `critical` folds into `high`, matching the High filter's rows.
   for (const row of severities.rows) {
     const key = row.severity === 'critical' ? 'high' : row.severity;
     severityCounts[key] = (severityCounts[key] ?? 0) + row.count;
@@ -280,7 +223,6 @@ export async function issueSummary(
   };
 }
 
-/** The distinct classified page kinds each rule's affected pages carry. */
 export async function pageKindsByRule(
   db: Database,
   crawl: Crawl,
@@ -324,10 +266,6 @@ export async function issues(
     sort: view.sort,
   };
   const after = decodeGroupCursor(paging.cursor, fingerprint);
-  // The unfiltered catalog is persisted once its crawl's issues are final;
-  // any other filter, and a crawl not yet published, is computed here. The
-  // tab and the ordering cut the listed groups, so the persisted catalog
-  // serves every tab.
   const catalog = isUnfiltered(filters)
     ? await persistedCatalog(db, crawl, filters.findingClass)
     : null;
@@ -349,11 +287,6 @@ export async function issues(
   });
 }
 
-/**
- * Every group `filters` matches as the list shows it, worst first. The
- * catalog writer persists this for the unfiltered read
- * (`site-health/issue-catalog.ts`).
- */
 export async function catalogItems(
   db: Database,
   crawl: Crawl,
@@ -393,7 +326,6 @@ const catalogSchema = z.object({
   summary: siteIssuesPageSchema.shape.summary.omit({ section_counts: true }),
 });
 
-/** The crawl's persisted unfiltered catalog for the class, or null before its issues are final. */
 async function persistedCatalog(db: Database, crawl: Crawl, findingClass: string | null) {
   const row = await db
     .selectFrom('site_issue_catalogs')
@@ -402,7 +334,6 @@ async function persistedCatalog(db: Database, crawl: Crawl, findingClass: string
     .where('crawl_id', '=', crawl.id)
     .where('finding_class', '=', catalogClassKey(findingClass))
     .executeTakeFirst();
-  // A catalog the current contract no longer parses is recomputed, never served or thrown.
   const parsed = row ? catalogSchema.safeParse(row) : null;
   return parsed?.success ? parsed.data : null;
 }
@@ -414,7 +345,6 @@ export async function issueDetail(
   groupId: string,
   paging: Paging,
   siteUrlId?: string,
-  /** The catalog's page-kind filter: the rail lists the pages the list row counted. */
   pageKind: string | null = null,
 ) {
   const crawl = await loadCrawl(db, workspaceId, crawlId);

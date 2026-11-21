@@ -18,8 +18,6 @@ vi.mock('@/lib/api/auth', () => ({
   authApi: { security, logout },
   authQueries: { security: () => ({ queryKey: ['auth', 'security'], queryFn: () => security() }) },
 }));
-// The transport is replaced on the module's own client object, so the gate's
-// real access read and cache clearing run against it.
 vi.mock('@/lib/api/workspaces', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api/workspaces')>();
   Object.assign(actual.workspacesApi, { access });
@@ -30,7 +28,6 @@ vi.mock('@/lib/project/project-context', () => ({
   useOptionalProjectContext: project,
   useWorkspaceCapability: capability,
 }));
-// The plans an ended workspace may buy; checkout opens for Starter.
 vi.mock('@/lib/billing/use-workspace-catalog', () => ({
   useWorkspaceCatalog: () => ({
     isError: false,
@@ -117,7 +114,6 @@ it.each([false, true])(
   },
 );
 
-/** The gate over a piece of chrome (an uncontrolled field) and the content slot. */
 function gatedTree() {
   return (
     <WorkspaceAccessGate>
@@ -243,7 +239,6 @@ it('reports a failed access read as a retryable error, not as access that ended'
   try {
     access.mockRejectedValue(new ApiError('Service unavailable', 503, ''));
     renderWithProviders(gatedTree());
-    // The read's own automatic retries run out first.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);
     });
@@ -294,7 +289,6 @@ it('blocks expired product content and leaves support, switching and account rec
   const account = screen.getByRole('button', { name: 'Account security' });
   account.focus();
   await act(async () => account.click());
-  // Its code loads on demand; the button enables once the account's security read answers.
   await waitFor(() =>
     expect(screen.getByRole('button', { name: 'Email password setup link' })).toBeEnabled(),
   );

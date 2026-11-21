@@ -1,8 +1,3 @@
-/**
- * A prompt row's share of voice, brand sentiment and web-search share, from
- * its persisted answers. Each travels with its counts so a period pools the
- * counts, never the shares.
- */
 import type { NetSentiment, WebSearchShare as WebSearch } from '@citeladder/contracts/visibility';
 
 import { netSentiment, pooledSentiment, type Mention } from '../perception/metrics.ts';
@@ -11,7 +6,6 @@ import { searchOf } from './prompt-answers.ts';
 
 type Answer = { id: string; search_used: boolean; fanout_state: string };
 
-/** The brand's share of every tracked-brand naming; null when nobody was named. */
 function shareOfVoice(named: readonly BrandCount[]): number | null {
   const total = named.reduce((sum, entry) => sum + entry.responses, 0);
   const brand = named.reduce(
@@ -27,11 +21,6 @@ function pooledSearch(parts: readonly Pick<WebSearch, 'searched' | 'reported'>[]
   return { searched, reported, share: reported ? searched / reported : null };
 }
 
-/**
- * One run's signals for a prompt. Only answers whose engine reports search
- * use count toward web search. `brandMentions` is absent for a run admitted
- * without perception.
- */
 export function promptSignals(input: {
   answered: readonly Answer[];
   named: readonly BrandCount[];
@@ -53,10 +42,6 @@ export function promptSignals(input: {
   };
 }
 
-/**
- * A period's signals: pooled counts, and share of voice over the pooled
- * namings. One run without perception leaves the period's sentiment unknown.
- */
 export function pooledSignals(
   items: readonly { sentiment?: NetSentiment | null; web_search?: WebSearch }[],
   named: readonly BrandCount[],

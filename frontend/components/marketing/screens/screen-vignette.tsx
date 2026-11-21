@@ -7,13 +7,6 @@ import type { Change } from './demo-data';
 import { ScreenDelta } from './screen-parts';
 import './screen-vignette.css';
 
-/**
- * The website's one card image: a vignette. One white card at the width of
- * its well (never scaled), a title over an optional meta line with an
- * optional badge at the right, then one body: four rows, three figures over
- * a small chart, or a short panel. Every vignette uses the same type scale,
- * so neighbouring tiles read alike.
- */
 export function Vignette({
   title,
   meta,
@@ -21,7 +14,6 @@ export function Vignette({
   children,
 }: Readonly<{
   title: string;
-  /** One line under the title saying what the card counts. */
   meta?: string;
   badge?: ReactNode;
   children: ReactNode;
@@ -42,24 +34,15 @@ export function Vignette({
 
 export type VignetteRow = Readonly<{
   key: string;
-  /** A 20px mark or icon before the label. */
   lead?: ReactNode;
   label: ReactNode;
-  /** A muted line under the label. */
   secondary?: ReactNode;
-  /** A middle column (a bar, marks or a badge) dropped when the card is narrow. */
   extra?: ReactNode;
-  /** The figure or state at the right. */
   value: ReactNode;
 }>;
 
-/** Exactly four rows, so every row-list vignette is the same height as its neighbours. */
 export type VignetteFourRows = readonly [VignetteRow, VignetteRow, VignetteRow, VignetteRow];
 
-/**
- * The first four of a demo list as rows. The demo data is static, so a list
- * shorter than four fails the build, never a visitor's page.
- */
 export function fourRows<Item>(
   items: readonly Item[],
   toRow: (item: Item) => VignetteRow,
@@ -71,10 +54,6 @@ export function fourRows<Item>(
   return [toRow(a), toRow(b), toRow(c), toRow(d)];
 }
 
-/**
- * The vignette's list. Every row in a list has the same parts, so its
- * columns line up; the middle column drops below 420px of card width.
- */
 export function VignetteRows({
   label,
   rows,
@@ -105,7 +84,6 @@ export function VignetteRows({
 
 type VignetteStat = Readonly<{ label: string; value: string; change: Change }>;
 
-/** Three figures in a row, each label over its value over its change. */
 export function VignetteStats({
   stats,
 }: Readonly<{ stats: readonly [VignetteStat, VignetteStat, VignetteStat] }>) {
@@ -124,7 +102,6 @@ export function VignetteStats({
   );
 }
 
-/** A share of the row's whole as a thin `data-1` bar on the `chart-grid` track. */
 export function VignetteBar({ share }: Readonly<{ share: number }>) {
   const width = Math.min(1, Math.max(0, share)) * 100;
   return (
@@ -134,15 +111,8 @@ export function VignetteBar({ share }: Readonly<{ share: number }>) {
   );
 }
 
-/** Plot coordinates run 0–100 on both axes and stretch to the plot's box. */
 const PLOT = 100;
 
-/**
- * One series over time at the width of its card: the TrendChart's marks (a
- * 2px `data-1` line that never scales, `chart-grid` gridlines, a faint area
- * and a dot on the latest point) in a stretched plot, with the axis labels
- * in HTML at real size. Every week is read from the hidden caption.
- */
 export function VignetteChart({
   label,
   weeks,
@@ -150,11 +120,9 @@ export function VignetteChart({
   ticks,
   format,
 }: Readonly<{
-  /** What the chart shows, e.g. "Weekly clicks from Google Search". */
   label: string;
   weeks: readonly string[];
   values: readonly number[];
-  /** The y-axis gridlines, lowest first; the first and last bound the plot. */
   ticks: readonly [number, number, ...number[]];
   format: (value: number) => string;
 }>) {
@@ -178,8 +146,6 @@ export function VignetteChart({
           ))}
         </div>
         <div className="cl-vig-area">
-          {/* Absolutely placed, so the plot's grid row sets its height and the
-              square viewBox never does (a hero frame has no height to fill). */}
           <svg
             focusable="false"
             viewBox={`0 0 ${PLOT} ${PLOT}`}

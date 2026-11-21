@@ -3,12 +3,6 @@ import { Lock } from '@/lib/icons';
 
 import './page-form.css';
 
-/**
- * PageForm: a website form card (contact, demo) with its header, a status
- * slot, the fields, and a foot holding the Turnstile check and the submit
- * button. The Turnstile slot is reserved at 300 × 65 before the widget
- * loads, so the submit button never moves.
- */
 export function PageForm({
   title,
   description,
@@ -23,14 +17,11 @@ export function PageForm({
 }: Readonly<{
   title?: string;
   description?: ReactNode;
-  /** A Callout for the submit result, above the fields. */
   status?: ReactNode;
-  /** The Turnstile widget; `false` when the form has no check. */
   turnstile?: ReactNode | false;
   submit: ReactNode;
   note?: ReactNode;
   onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
-  /** True while a submission is in flight. */
   busy?: boolean;
   as?: 'h2' | 'h3';
   children: ReactNode;

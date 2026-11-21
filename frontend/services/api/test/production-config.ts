@@ -1,7 +1,5 @@
-/** Deterministic deployment fixture, never a live credential or endpoint. */
 import { createHash } from 'node:crypto';
 
-/** Production carries no development login; only demo mode's account signs in with one. */
 export const demoLoginPassword = createHash('sha256')
   .update('production-config-test-login')
   .digest('hex');

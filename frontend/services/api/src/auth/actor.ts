@@ -1,12 +1,3 @@
-/**
- * Who performs a product command: a signed-in member, a public API key
- * acting for the member who created it, or an MCP grant holding
- * `citeladder:write` acting for its member after their confirmation.
- *
- * `role` is always the live membership role, loaded for the request, so a
- * demotion narrows what a key can do at once. A key's scopes intersect that
- * role; they never widen it.
- */
 import type { ApiKeyScope } from '@citeladder/contracts/api-keys';
 import type { Context } from 'hono';
 
@@ -21,10 +12,6 @@ export type Actor = {
   scopes: ReadonlySet<ApiKeyScope> | 'all';
 };
 
-/**
- * 403 unless the actor's role permits `capability` and, for a key, the key
- * holds `scope`. A command with no public scope is closed to every key.
- */
 export function requireCapability(
   actor: Actor,
   capability: WorkspaceCapability,
@@ -41,16 +28,10 @@ export function requireCapability(
     );
 }
 
-/**
- * The project the request named: a public API path's (always), a browser
- * route's under `/projects/{project_id}`, or null on a flat browser route.
- * Commands find the records they change only in it.
- */
 export function requestProjectOf(c: Context<AppEnv>): string | null {
   return c.get('workspace').projectId;
 }
 
-/** The request's actor: its API key's, or the signed-in member's. */
 export function actorOf(c: Context<AppEnv>): Actor {
   const actor = c.get('actor');
   if (actor) return actor;

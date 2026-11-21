@@ -24,14 +24,12 @@ describe('AI referral display helpers', () => {
       { label: 'Nov 9', axisLabel: 'Nov 9', value: 120, breakBefore: false },
       { label: 'Nov 16 (in progress)', axisLabel: 'Nov 16', value: 31, breakBefore: true },
     ]);
-    // A first bucket clamped to the window's start (a Sunday) is ticked at its week's Monday.
     expect(
       toCountChartPoints([{ date: '2026-10-18', value: 9 }, ...series], WEEKLY).slice(0, 2),
     ).toEqual([
       { label: 'Oct 18 (partial week)', axisLabel: 'Oct 12', value: 9, breakBefore: false },
       { label: 'Nov 9', axisLabel: 'Nov 9', value: 120, breakBefore: true },
     ]);
-    // The window closing on the week's Sunday completes it; a month runs to its last day.
     expect(
       toPercentChartPoints(series, { granularity: 'week', windowEnd: '2026-11-22' }).map(
         (point) => point.breakBefore,

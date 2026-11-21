@@ -1,4 +1,3 @@
-/** Native account/catalog composition on an empty disposable baseline database. */
 import { beforeEach, expect, it } from 'vitest';
 import { join } from 'node:path';
 import { disposableDatabase } from './disposable-database.ts';
@@ -66,7 +65,6 @@ it('commits identity before a catalog failure, refuses unauthorized publication,
   ).toBe('published');
 }, 60000);
 it('production startup refuses a development login and touches no identity, publishing the catalog once the operator exists', async () => {
-  // Startup admission never connects: the fixture database URL only satisfies the policy.
   const production = { ...env, ...productionEnv };
   await expect(bootstrapDeployment(db, production)).rejects.toThrow(
     'DEV_LOGIN_PASSWORD must be unset',
@@ -75,7 +73,6 @@ it('production startup refuses a development login and touches no identity, publ
   expect(await bootstrapDeployment(db, passwordless)).toEqual({ skipped: true, catalog: false });
   expect(await db.selectFrom('users').select('id').execute()).toEqual([]);
   expect(await db.selectFrom('billing_catalog_revisions').select('id').execute()).toEqual([]);
-  // The operator identity exists from an earlier (development) bootstrap.
   await bootstrapDeployment(db, env, async () => {
     throw new Error('catalog deferred');
   }).catch(() => undefined);

@@ -2,10 +2,6 @@ import { ChevronDown } from '@/lib/icons';
 import type { ReactNode } from 'react';
 import { textRole } from './typography';
 
-/**
- * Native keyboard-accessible disclosure: the trigger tints on hover and its
- * chevron turns over when open; the panel eases open (ui-motion.css).
- */
 export function Disclosure({
   title,
   children,
@@ -27,7 +23,6 @@ export function Disclosure({
         )}
       >
         {title}
-        {/* It turns on the panel's timing (ui-motion.css). */}
         <ChevronDown className="size-3.5 shrink-0" aria-hidden />
       </summary>
       <div className="grid min-w-0 gap-3 pt-3">{children}</div>

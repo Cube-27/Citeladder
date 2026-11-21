@@ -6,10 +6,6 @@ import { visibilityQueries } from '@/lib/api/visibility-queries';
 import type { ActiveProjectScope } from '@/lib/project/active-project-scope';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
 
-/**
- * The project's markets, and each one's latest run side by side once there is
- * more than the default. Both reads are persisted projections.
- */
 export function useMarketVisibility(
   requestScope: Pick<ActiveProjectScope, 'workspaceId' | 'projectId'>,
   params: { cohort: VisibilityCohortParam; topic?: string },

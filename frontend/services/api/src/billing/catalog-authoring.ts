@@ -15,7 +15,6 @@ import { catalogSchema } from './catalog.ts';
 import { billingSettings, type BillingSettings } from './config.ts';
 import { compareText } from '../text-order.ts';
 
-/** Decimal strings are converted to rational integers, never binary floating-point money. */
 function fraction(value: string) {
   const [, whole, places = ''] = /^(\d+)(?:\.(\d+))?$/u.exec(value) ?? [];
   if (whole === undefined || value.length > 100) throw new Error('invalid_decimal_rate');
@@ -78,7 +77,6 @@ const plan = z.strictObject({
   ...catalogSchema.shape.plans.element.shape,
   byok_price: basePrice.nullable(),
   funded_price: basePrice.nullable(),
-  /** Recurring prices per credential mode and region: BYOK, and managed (B32). */
   regional_prices: z
     .strictObject({
       byok: z.partialRecord(billingRegionSchema, regionalPrice).default({}),
@@ -247,7 +245,6 @@ function validateItemPrice(region: string, price: z.infer<typeof itemPrice>, usd
     !price.tax_rate
   )
     throw new Error('catalog_item_price_invalid');
-  // The frozen rate is the one its quotes use (B45); refuse one they could not.
   taxMinor(price.amount_minor, price.tax_rate);
 }
 
@@ -350,7 +347,6 @@ export function launchCatalog(options: {
       fx_inr_per_usd: rate,
       metadata: cfg.revision,
     };
-    // One recurring provider plan per credential mode and region.
     const regional = (mode: 'BYOK' | 'Managed', usdMinor: number) =>
       !options.mode
         ? {}

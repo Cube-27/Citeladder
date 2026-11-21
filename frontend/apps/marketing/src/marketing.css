@@ -1,18 +1,3 @@
-/*
- * The public site's stylesheet entry: Tailwind, the system's tokens and the
- * sources it scans. MarketingLayout loads it, then site-base.css (the shared
- * base). Every component's rules (website sections, chrome, product screens)
- * sit in a .css file next to the component and load only on pages that render it.
- *
- * Same reasoning as `apps/app/src/app.css`, pointed the other way: the
- * marketing pages were shipping the product's utilities — the whole site-health
- * catalog, the settings screens, the agent — in a stylesheet that blocks the
- * first paint of the page anonymous visitors actually land on.
- *
- * `components/ui` stays in the list because the public chrome uses the shared
- * primitives (the account menu, the logo, typography roles), and `lib` because
- * variant helpers live there.
- */
 /* The imports come first: CSS drops an `@import` that follows another
    at-rule, and putting the `@source` list above this one silently shipped a
    stylesheet with no design system in it at all. */
@@ -28,10 +13,6 @@
 @source '../../../components/ui';
 @source '../../../lib';
 
-/* Public CTAs: the app's button face at the app's 44px flow height, one
-   height for every page-level call to action (hero, sections, the closing
-   band, the phone sheet). Only the website renders them, so they sit here,
-   straight after the shared globals, rather than in the app's stylesheet. */
 [data-public-surface] .marketing-cta-button {
   height: auto;
   min-height: 44px;
@@ -42,9 +23,6 @@
   transition-property: transform, background-color, color, border-color, box-shadow;
 }
 
-/* The website's button edges follow the owner's reference (2026-11-20): a
-   soft hairline on a secondary (its words name it, so no 3:1) and a step
-   darker than the fill on a primary. Drawn app screens keep the app's. */
 [data-public-surface]
   :is([data-button-variant='secondary'], .marketing-soft-button):not(:is(.cl-screen, .cl-vig) *) {
   border-color: var(--color-button-edge);
@@ -72,10 +50,6 @@
   }
 }
 
-/* ── Motion ─────────────────────────────────────────────────────────────── */
-
-/* Page to page, the site cross-fades (the browser's default root fade) while
-   the sticky navbar holds still; reduced motion swaps pages instantly. */
 @media (prefers-reduced-motion: no-preference) {
   @view-transition {
     navigation: auto;
@@ -91,8 +65,6 @@
   }
 }
 
-/* Arrow glyphs in calls to action lean toward where they go, only for
-   readers who have not asked for reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
   [data-public-surface] .marketing-cta-button svg.tabler-icon-arrow-up-right {
     transition: transform var(--motion-slow) var(--ease-standard);

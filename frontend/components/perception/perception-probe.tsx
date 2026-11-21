@@ -15,7 +15,6 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 
 type ProbeView = 'market' | 'objections';
 
-/** Perception's Market or Objections tab: the probe bar over the newest labelled probe. */
 export function PerceptionProbe({ view }: Readonly<{ view: ProbeView }>) {
   const { workspaceId, projectId } = useProjectScope();
   const scope = { workspaceId, projectId };
@@ -23,7 +22,6 @@ export function PerceptionProbe({ view }: Readonly<{ view: ProbeView }>) {
   const status = useQuery(probeQueries.status(scope));
   const [intent, setIntent] = useState<ProbeIntent | null>(null);
   const basis = probeBasis(status.data);
-  // A read waits for the status, whose newest probe keys it.
   const market = useQuery({
     ...probeQueries.market(scope, basis),
     enabled: status.isSuccess && view === 'market',
@@ -45,7 +43,6 @@ export function PerceptionProbe({ view }: Readonly<{ view: ProbeView }>) {
         fallback="Check your connection and try again."
       />
     );
-  // The quote reads balances and keys, which change outside this page.
   const confirm = (next: ProbeIntent) => {
     refreshProbeStatus(client, scope);
     setIntent(next);
@@ -86,7 +83,6 @@ export function PerceptionProbe({ view }: Readonly<{ view: ProbeView }>) {
   );
 }
 
-/** A probe read: its labelled value, or its loading, failed and no-probe-yet states. */
 function ProbeRead<Value>({
   read,
   title,

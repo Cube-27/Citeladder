@@ -1,17 +1,3 @@
-/**
- * The `site_setup` task, one per crawl: resolve robots and the AI-crawler
- * stance, probe llms.txt and the http:// origin, and run a full crawl's discovery (SH-B5). It walks
- * the sitemap tree (`sitemap-walk.ts`), saves every admissible URL it lists to
- * the crawl's inventory, stores their count (the crawl's discovered count, a
- * lower bound when a safety ceiling cut it short) and fills the tracked set's
- * free slots from them. A walk with unread documents is retried after a delay;
- * only a site without a sitemap starts the HTML walk from the root. The root
- * analysis waits only on robots and llms.txt evidence,
- * so those publish first (with the sitemap marked pending); the inventory then
- * lands in chunked commits and discovery in a final one, all under the same
- * lease. A reclaimed task whose facts are published but still pending resumes
- * at the walk.
- */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
@@ -49,7 +35,6 @@ import {
 import { canonicalIdentity } from './url-identity.ts';
 
 const crawlPolicy = policy.site_health.crawl;
-/** Listed URLs per inventory commit: each holds the crawl's lock only this long. */
 const INVENTORY_CHUNK = 1000;
 
 export function setupSettings(env: SettingSource = process.env) {
@@ -74,11 +59,9 @@ export function setupSettings(env: SettingSource = process.env) {
 type Settings = ReturnType<typeof setupSettings>;
 type Robots = Awaited<ReturnType<SiteTaskContext['fetcher']['acquirer']['robots']>>;
 
-/** How the robots.txt response reads in the dashboard: a missing file is not a failure. */
 function robotsStatus(robots: Robots | null) {
   if (robots?.body != null) return crawlPolicy.robots_statuses.fetched;
   if (robots?.restricted) return crawlPolicy.robots_statuses.access_blocked;
-  // Unreachable, rate-limited, failing or unresolved redirects pause the crawl; other 4xx is a missing file.
   if (!robots?.readable) return crawlPolicy.robots_statuses.fetch_failed;
   return crawlPolicy.robots_statuses.not_found;
 }
@@ -103,7 +86,6 @@ async function wellKnown(ctx: SiteTaskContext, url: string, settings: Settings) 
   }
 }
 
-/** The facts the root analysis waits on; the sitemap section is dashboard evidence only. */
 async function siteEvidence(
   ctx: SiteTaskContext,
   origin: string,
@@ -114,7 +96,6 @@ async function siteEvidence(
   const robots = origin ? await ctx.fetcher.acquirer.robots(origin) : null;
   const observedAt = new Date().toISOString();
   const llmsUrl = origin ? `${origin}${crawlPolicy.llms_path}` : '';
-  // A sample crawl ingests no sitemap, so it makes no llms.txt request it would not act on.
   const llms = { fetched: false, url: llmsUrl, status_code: null as number | null, present: false };
   if (walks && llmsUrl && robots?.permits(llmsUrl) !== false) {
     const page = await wellKnown(ctx, llmsUrl, settings);
@@ -148,7 +129,6 @@ async function siteEvidence(
 }
 type SiteFacts = Record<string, unknown>;
 
-/** Site URL ids of the given URL hashes this crawl already observed. */
 async function observedIds(trx: Database, crawl: Crawl, hashes: string[]) {
   // One single-table lateral per probe (LIMIT 1 keeps each from flattening), so
   // no plan can drive from the crawl's observations: a new crawl has no
@@ -171,13 +151,6 @@ async function observedIds(trx: Database, crawl: Crawl, hashes: string[]) {
   return new Map(rows.map((row) => [row.url_hash, row.id]));
 }
 
-/**
- * Every listed URL joins the crawl's inventory as a sighting with its sitemap
- * entry, in chunked commits before the runtime-locked one, so a large sitemap
- * never holds the workspace lock. A URL this crawl already observed (the root,
- * planner seeds) keeps the identity and sighting it recorded. Rewriting a
- * chunk is idempotent. Resolves false when the lease or the crawl was lost.
- */
 async function saveSitemapInventory(ctx: SiteTaskContext, claimed: SiteTask, listed: SitemapUrl[]) {
   for (let offset = 0; offset < listed.length; offset += INVENTORY_CHUNK) {
     const chunk = listed.slice(offset, offset + INVENTORY_CHUNK);
@@ -197,8 +170,6 @@ async function saveSitemapInventory(ctx: SiteTaskContext, claimed: SiteTask, lis
         crawl,
         fresh.map((item) => candidateObservation(ids.get(item.hash)!, item, null)),
       );
-      // Each chunk shows on the crawl as it lands; a large sitemap otherwise reads
-      // "0 pages discovered" for minutes. `persist` settles the exact count.
       if (added > 0)
         await trx
           .updateTable('site_crawls')
@@ -224,13 +195,6 @@ async function saveSitemapInventory(ctx: SiteTaskContext, claimed: SiteTask, lis
   return true;
 }
 
-/**
- * The sitemap fills the tracked set's free slots in the stable order and
- * queues the new pages' analysis, one window of the order per short commit
- * under the runtime lock (CO-7): a sitemap of tens of thousands of URLs never
- * holds the workspace or crawl lock for long. A replayed window skips the
- * pages already tracked. Resolves false when the lease or the crawl was lost.
- */
 async function trackSitemapPages(ctx: SiteTaskContext, claimed: SiteTask, listed: SitemapUrl[]) {
   const ordered = orderedUnique(listed.map(({ item }) => item));
   for (let offset = 0; offset < ordered.length; offset += INVENTORY_CHUNK) {
@@ -263,19 +227,12 @@ async function trackSitemapPages(ctx: SiteTaskContext, claimed: SiteTask, listed
   return true;
 }
 
-/**
- * Discovery after the walk: a sitemap that listed admissible URLs is the
- * crawl's discovery, its count stored and the tracked set filled from it; one
- * that exists but stayed unreadable leaves the crawl what it already knows.
- * Only a site without a sitemap starts the HTML walk from the root (SH-B5).
- */
 async function discover(
   trx: Database,
   crawl: Crawl,
   walk: SitemapWalk | null,
 ): Promise<{ discovered?: number; discoveryStatus?: 'completed' | 'running' }> {
   if (crawl.sample_mode || crawl.discovery_status !== 'pending') return {};
-  // The listed pages were tracked in their own commits (`trackSitemapPages`).
   if (walk?.listed.length) return { discovered: walk.discovered, discoveryStatus: 'completed' };
   if (walk?.unread) return { discoveryStatus: 'completed' };
   await enqueueCrawlTasks(
@@ -287,7 +244,6 @@ async function discover(
   return { discoveryStatus: 'running' };
 }
 
-/** Same-origin known URLs, root first: sitemap URLs, then those the crawl has observed. */
 async function policySample(
   trx: Database,
   crawl: Crawl,
@@ -318,7 +274,6 @@ async function policySample(
   return [...sample].slice(0, size);
 }
 
-/** The second commit: discovery, the resolved facts and the task outcome. */
 async function persist(
   ctx: SiteTaskContext,
   claimed: SiteTask,
@@ -350,7 +305,6 @@ async function persist(
     const sample = await policySample(trx, crawl, origin, urls, settings.policySampleSize);
     const parsed = robotsPolicy(origin, Number(robots.status_code ?? 0), snapshot?.body ?? '');
     const tokens = new Map(policy.crawlers.bots.map((bot) => [bot.bot_id, bot.robots_tokens]));
-    // Root access and the matched group were published in commit one and stay frozen.
     const bots = (Array.isArray(robots.bots) ? robots.bots.map(record) : []).map((bot) => ({
       ...bot,
       ...crawlerSamplePolicy(
@@ -375,7 +329,6 @@ async function persist(
         ...(discovery.discovered === undefined
           ? {}
           : { discovered_url_count: discovery.discovered }),
-        // A crawl stopped meanwhile keeps its cancelled discovery.
         ...(discovery.discoveryStatus && locked.crawl.discovery_status === 'pending'
           ? { discovery_status: discovery.discoveryStatus }
           : {}),
@@ -413,7 +366,6 @@ export async function runSiteSetup(
     const observed = await siteEvidence(ctx, origin, walks, settings);
     facts = observed.facts;
     const evidence = facts;
-    // Commit one: the root page's wait clears here, before the walk.
     const committed = await commitTask(ctx, claimed, async (trx, lock) => {
       const { crawl: locked } = await lock();
       const snapshot =
@@ -458,11 +410,6 @@ async function walkThenPersist(input: Parameters<typeof sitemapDiscovery>[0]) {
   await persist(input.ctx, input.claimed, found.facts, found.walk, input.settings);
 }
 
-/**
- * A sitemap a document of which went unread is walked again later, from its
- * seeds: a CDN may serve an index naming children the site has since replaced.
- * The facts stay pending, so the requeued task resumes at the walk.
- */
 async function deferWalk(
   ctx: SiteTaskContext,
   claimed: SiteTask,
@@ -480,12 +427,6 @@ async function deferWalk(
   });
 }
 
-/**
- * A full crawl's sitemap discovery: walk the tree from the declared sitemaps
- * (or the default paths), save every listed URL to the inventory, and fold the
- * counts into the facts. A walk with unread documents is retried within its
- * budget before it counts; `lost` when the lease or the crawl was lost meanwhile.
- */
 async function sitemapDiscovery(input: {
   ctx: SiteTaskContext;
   claimed: SiteTask;
@@ -519,13 +460,10 @@ async function sitemapDiscovery(input: {
     sitemap: {
       fetched: walk.fileCount > 0,
       file_count: walk.fileCount,
-      // "Discovered N", or "at least N" when a ceiling or an unread document cut it short.
       discovered_count: walk.discovered,
       discovered_complete: walk.complete,
       limit_reached: walk.limitReached,
-      // Documents no answer settled: without a read one, "No sitemap" stays unknown.
       unread_count: walk.unread,
-      // Served documents that are not sitemap XML: "Sitemap could not be parsed", never "No sitemap".
       invalid_count: walk.invalidCount,
       invalid_documents: walk.invalid,
       ...(retries ? { retries } : {}),

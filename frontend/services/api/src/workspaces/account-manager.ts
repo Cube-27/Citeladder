@@ -134,7 +134,6 @@ async function authorizePlatform(db: Database, session: PlatformSession) {
   return actor;
 }
 
-/** Safe identity/workspace inventory, available only to a live authenticated platform operator. */
 export function platformAccountInventory(db: Database, session: PlatformSession) {
   return db.transaction().execute(async (trx) => {
     await authorizePlatform(trx, session);
@@ -220,7 +219,6 @@ async function grantAccess(
 
 type SharedWorkspace = { workspaceId: string; accountId: string; role: AssignableRole };
 
-/** Joining an existing workspace: lock it and resolve its account once for the batch. */
 async function resolveSharedWorkspace(
   db: Database,
   action: Extract<PlatformAction, { kind: 'create' }>,
@@ -240,7 +238,6 @@ async function resolveSharedWorkspace(
   return { workspaceId, accountId: account.id, role };
 }
 
-/** Operator-created identities join immediately. Existing identities still use invitations. */
 async function joinSharedWorkspace(
   db: Database,
   actorId: string,
@@ -262,10 +259,6 @@ async function joinSharedWorkspace(
   await recordSecurityEvent(db, 'membership.join', actorId, shared.workspaceId, userId);
 }
 
-/**
- * A person joining a shared workspace owns none until they create their own.
- * An owned workspace gets the operator baseline; extra access is a separate bundle.
- */
 async function placeAccount(
   db: Database,
   actorId: string,
@@ -280,7 +273,6 @@ async function placeAccount(
   return { personal, target };
 }
 
-/** The workspaces a created account's grants can land in: its target and its personal workspace. */
 function accountWorkspaces(account: {
   workspace_id: string;
   personal_workspace_id: string | null;
@@ -341,7 +333,6 @@ async function createAccounts(
   return { created, access };
 }
 
-/** Refuse unknown/current FK dependants, including future schema additions. */
 async function requireUnused(db: Database, table: string, id: string, allowed: readonly string[]) {
   const qualifiedTable = `public.${table}`;
   const references = await sql<{
@@ -369,7 +360,6 @@ async function requireUnused(db: Database, table: string, id: string, allowed: r
   if (dependants.rows.some((row) => row.present)) throw new Error('account_has_retained_activity');
 }
 
-/** Platform menu changes only customer identities, never an administrator or the operator. */
 function requireCustomerIdentity(
   user: { id: string; role: string },
   session: PlatformSession,
@@ -378,7 +368,6 @@ function requireCustomerIdentity(
   if (user.id === session.actorId || user.role !== 'user') throw new Error(failure);
 }
 
-/** Locks the user's workspaces and row, then refuses if their identity or memberships changed. */
 async function lockMemberships(
   db: Database,
   user: { id: string; role: string; registration_origin: string },
@@ -466,8 +455,6 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
       .executeTakeFirst();
     if (extra) throw new Error('account_has_retained_activity');
   }
-  // A new account's workspace, billing row and operator baseline (with its
-  // derived runtime row) can be removed; any other grant or history blocks this.
   await revokeCreatorKeys(
     db,
     memberships.filter((member) => member.role !== 'owner').map((member) => member.workspace_id),
@@ -493,7 +480,6 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
 
 type MemberAction = Extract<PlatformAction, { kind: 'role' | 'password' | 'remove' }>;
 
-/** A role change, removal or password reset for one member of a workspace. */
 async function applyMemberAction(
   trx: Database,
   session: PlatformSession,
@@ -546,7 +532,6 @@ async function applyMemberAction(
   return { passwordUpdated: true };
 }
 
-/** Preview runs the same transaction and rolls back every identity, membership and grant. */
 export async function managePlatformAccounts(
   db: Database,
   session: PlatformSession,
@@ -624,7 +609,6 @@ export async function managePlatformAccounts(
     }
     throw new Error('unknown_account_action');
   });
-  // Grants committed under the capacity lock; each runtime follows in its own order.
   if (request.apply === true)
     for (const workspaceId of new Set(granted)) await refreshRuntime(db, workspaceId); // NOSONAR -- One workspace's runtime per transaction.
   getLogger('api.billing.operator').info('account.management', {
@@ -637,7 +621,6 @@ export async function managePlatformAccounts(
   return result;
 }
 
-/** Password verification has no public-login repair or billing side effects. */
 export async function authenticateOperator(
   db: Database,
   email: string,
@@ -665,7 +648,6 @@ export async function authenticateOperator(
   return session;
 }
 
-/** Called only after confirmation. All live authority and target checks occur under locks. */
 export async function manageAccount(db: Database, session: OperatorSession, action: AccountAction) {
   const email = action.kind === 'list' ? null : emailSchema.parse(action.email.trim());
   const role =

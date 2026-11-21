@@ -17,20 +17,8 @@ import {
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
 
-/**
- * The Performance charts: one chart per selected GSC metric, stacked so they
- * share the x axis, each on its own y scale with tick labels. Clicks and
- * impressions differ by orders of magnitude and CTR is a fraction while
- * position is a rank, so one shared scale would flatten every series but
- * the largest. The comparison window is drawn against the selection day by
- * day (position N against position N): it covers other dates, which each
- * point's label names. A null bucket is an unmeasured one: the line breaks.
- */
-
-/** A metric's line: ink or a cool hue (never the accent: no series here is "you") and its marker. */
 export type MetricMark = Readonly<{ tone: SeriesTone; shape: MarkerShape }>;
 
-/** Each metric's mark, shared by its figure's key and its line. */
 export const METRIC_MARKS: Record<PerformanceMetricKey, MetricMark> = {
   clicks: { tone: 'rival-1', shape: 'square' },
   impressions: { tone: 'rival-2', shape: 'diamond' },
@@ -38,24 +26,20 @@ export const METRIC_MARKS: Record<PerformanceMetricKey, MetricMark> = {
   position: { tone: 'rival-4', shape: 'circle' },
 };
 
-/** Every metric keeps its figure's colour on its chart, in the figures' order. */
 const METRIC_TONES = seriesTones(METRIC_CARDS.map((card) => card.label));
 
 export type ChartSeries = {
   key: PerformanceMetricKey;
   label: string;
-  /** The metric's line colour and marker, shared with its figure's key. */
   mark: MetricMark;
   selected: PerformanceChartPoint[];
   comparison: PerformanceChartPoint[] | null;
 };
 
-/** Positions on the shared axis: the longer of the selection and its comparison. */
 function positionCount(series: ChartSeries): number {
   return Math.max(series.selected.length, series.comparison?.length ?? 0);
 }
 
-/** Each position as a chart point: dated, and naming the comparison day it is read against. */
 function chartPoints(series: ChartSeries): TrendPoint[] {
   return Array.from({ length: positionCount(series) }, (_, index) => {
     const point = series.selected[index];

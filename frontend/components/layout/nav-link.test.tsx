@@ -17,7 +17,6 @@ const sink = vi.fn((_url: string, _init: RequestInit) =>
 
 beforeEach(() => {
   vi.stubGlobal('fetch', sink);
-  // React reports the caught error; the assertions are on what renders and is sent.
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 afterEach(() => {

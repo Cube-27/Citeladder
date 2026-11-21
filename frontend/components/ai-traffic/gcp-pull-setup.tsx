@@ -17,7 +17,6 @@ import { wellClasses } from '@/components/ui/slip';
 type Source = z.infer<typeof crawlSourceSchema>;
 type GcpPull = z.infer<typeof crawlSourceListSchema>['gcp_pull'];
 
-/** Copyable preformatted text: generated commands or the sink filter. */
 function CodeText({ value, label }: Readonly<{ value: string; label: string }>) {
   return (
     <Stack>
@@ -31,7 +30,6 @@ function CodeText({ value, label }: Readonly<{ value: string; label: string }>) 
   );
 }
 
-/** The subscription CiteLadder pulls and the load balancer sample rate the customer set. */
 export function GcpFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
   const { subscription, setSubscription, sampleRate, setSampleRate } = model;
   return (
@@ -63,7 +61,6 @@ export function GcpFields({ model }: Readonly<{ model: ReturnType<typeof useCraw
   );
 }
 
-/** What the setup involves before the source, and its label nonce, exist. */
 export function GcpSteps() {
   return (
     <p className="type-body text-ink-2">
@@ -72,7 +69,6 @@ export function GcpSteps() {
   );
 }
 
-/** The created source's setup commands and its subscription check. */
 export function GcpSourceSetup({
   source,
   gcp,
@@ -124,7 +120,6 @@ export function GcpSourceSetup({
   );
 }
 
-/** The crawler catalog changed: each live pull source still on an older filter asks for it. */
 export function SinkFilterUpdates({
   data,
   projectId,
@@ -150,7 +145,6 @@ export function SinkFilterUpdates({
     />
   ));
 }
-/** Each source owns its confirmation, so one source's pending or failed state stays on it. */
 function SinkFilterUpdate({
   source,
   gcp,

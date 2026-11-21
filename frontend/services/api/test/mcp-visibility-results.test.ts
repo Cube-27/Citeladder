@@ -28,7 +28,6 @@ it('reads answers from the latest completed run of this project when no audit_id
   const latest = await fixtures.audit(tenant, { completedAt: new Date('2026-10-02T00:00:00Z') });
   const { taskId } = await fixtures.execution(tenant, { auditId: latest });
   await fixtures.audit(tenant, { completedAt: null, status: 'running' });
-  // Another workspace's newer run is never the default.
   const foreign = await fixtures.tenant();
   await fixtures.execution(foreign, {
     auditId: await fixtures.audit(foreign, { completedAt: new Date('2026-10-03T00:00:00Z') }),
@@ -62,7 +61,6 @@ it('filters by a topic of this project only, and tells an unasked topic apart fr
     });
   const auditId = await fixtures.audit(tenant);
   await fixtures.metricSnapshot(tenant, auditId, { metrics: { total_completed: 1 } });
-  // An unasked topic is not measured, never an empty (zero) page.
   for (const name of [
     'read_visibility_overview',
     'read_visibility_results',
@@ -113,7 +111,6 @@ it('filters by a topic of this project only, and tells an unasked topic apart fr
       to_at: '2026-02-01T00:00:00Z',
     }),
   ).rejects.toThrow('topic_id is not a topic of this project');
-  // Outside the fact-checking pilot the by-fact view has no value, never an empty list.
   expect(await read('read_fact_checks', { view: 'facts' })).toEqual({
     state: 'unavailable',
     reason: 'not_enabled',
@@ -128,7 +125,6 @@ it("pages one run's prompt scores strongest first, never another workspace's", a
     state: 'unavailable',
     reason: 'no_completed_run',
   });
-  // A score needs the frozen prompt its run asked.
   const scored = async (
     owner: Tenant,
     auditId: string,
@@ -154,7 +150,6 @@ it("pages one run's prompt scores strongest first, never another workspace's", a
     artifact_refs: [{ kind: 'audit', id: auditId }],
   });
   const cursor = (first.pagination as { next_cursor: string }).next_cursor;
-  // A run finishing between pages does not shift them: the cursor keeps its run.
   const newer = await fixtures.audit(tenant, { completedAt: new Date(Date.now() + 60_000) });
   await scored(tenant, newer, { promptIndex: 0, promptText: 'new', composite: 99 });
   expect(await read('read_prompt_metrics', { limit: 1, cursor })).toMatchObject({

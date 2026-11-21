@@ -8,25 +8,17 @@ import { refused, type ToolOutcome } from './tools.ts';
 
 type StepRecord = z.input<typeof agentStepSchema>;
 export type TurnState = DocumentState & {
-  /** Records this turn's reads supplied to the model: the reply's sources. */
   read: string[];
-  /** Web pages this turn's searches returned, by URL: sources apart from CiteLadder records. */
   web: Map<string, string>;
-  /** Each web search's query by call id, until its result arrives. */
   queries: Map<string, string>;
-  /** The last response left a provider-hosted search for the next call to continue. */
   waiting: boolean;
-  /** Web searches the provider ran this turn, discarded responses included. */
   searches: number;
   steps: StepRecord[];
-  /** This turn’s proposals for the person to confirm; committed only with the reply. */
   proposals: AgentProposal[];
   toolsUsed: number;
-  /** This turn's messages, appended in order and persisted as its transcript. */
   messages: ConversationMessage[];
   contextHash: string;
 };
-/** Why a read cannot run in this step, or null when it may. */
 export function readLimit(budget: Budget, toolsUsed: number, parallel: number): ToolOutcome | null {
   if (toolsUsed >= budget.max_tool_calls)
     return refused(
@@ -40,13 +32,6 @@ export function readLimit(budget: Budget, toolsUsed: number, parallel: number): 
     );
   return null;
 }
-/**
- * The web searches the next call may run, and is held for: what is left of the
- * turn's budget, at most the per-call cap. None left offers no search tool. A
- * search the previous response left waiting (beside a read, or paused) runs
- * in the next call, which must offer the tool, so at least one is offered then.
- * The last call starts no new search: one left waiting there could never run.
- */
 function searchAllowance(budget: Budget, used: number, waiting: boolean, last: boolean) {
   const left = last ? 0 : Math.max(0, budget.max_web_searches - used);
   const allowed = Math.min(left, budget.max_web_searches_per_call);
@@ -62,7 +47,6 @@ export function retryEffort(effort: Budget['reasoning_effort'], ordinal: number,
     throw new AgentError('output_too_long');
   return 'low' as const;
 }
-/** A turn never ends without a reply, even when the model wrote none. */
 export function noReply(reads: number) {
   const read = reads === 1 ? 'one read' : `${reads} reads`;
   return reads
@@ -97,7 +81,6 @@ export function nextSearches(model: AgentModel, budget: Budget, state: TurnState
   if (model.adapter !== 'anthropic') return 0;
   return searchAllowance(budget, state.searches, state.waiting, ordinal === budget.max_model_calls);
 }
-/** One step's tool results, with the step's reminder unless a search waits on them. */
 export function resultsMessage(
   budget: Budget,
   state: TurnState,

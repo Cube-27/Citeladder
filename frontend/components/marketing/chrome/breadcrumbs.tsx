@@ -3,10 +3,6 @@ import './breadcrumbs.css';
 
 export type Crumb = Readonly<{ label: string; href?: string }>;
 
-/**
- * Breadcrumbs: the trail above a page's H1. Every crumb but the last links
- * up; the last is the current page and says so.
- */
 export function Breadcrumbs({ items }: Readonly<{ items: readonly Crumb[] }>) {
   return (
     <nav aria-label="Breadcrumb" className="cl-crumbs">

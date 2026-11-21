@@ -1,4 +1,3 @@
-/** The shared MCP catalogue runs under live membership on the chat's fixed project. */
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
@@ -16,11 +15,6 @@ const availability = z.enum([
   'unavailable',
   policy.demand.QUERY_EVIDENCE_STATE_OBSERVED_ZERO,
 ]);
-/**
- * What the model reads: the result without its artifact references. Those are
- * recorded as the attempt's sources (the app shows them), and each row keeps
- * its own `record_uri` to open; repeating them would crowd rows out of the bound.
- */
 function modelData(data: Record<string, Json>) {
   const { artifact_refs: _refs, ...rest } = data;
   return rest;
@@ -29,7 +23,6 @@ function outcome(value: unknown) {
   const data = z.record(z.string(), z.json()).parse(value);
   const refs = z.array(reference).parse(data.artifact_refs ?? []);
   const unavailable = availability.parse(data.state ?? 'available') === 'unavailable';
-  // The reason an absent read gives is the omission the turn records.
   const reason = unavailable && typeof data.reason === 'string' ? [{ reason: data.reason }] : [];
   return {
     state: unavailable ? ('unavailable' as const) : ('available' as const),
@@ -41,10 +34,6 @@ function outcome(value: unknown) {
     omissions: [...z.array(z.json()).parse(data.omissions ?? []), ...reason],
   };
 }
-/**
- * About half the page, never a size the tool refuses (some accept only fixed
- * sizes); otherwise the largest accepted size that is still smaller.
- */
 export function smallerLimit(schema: z.ZodType, from: number) {
   let fallback: number | null = null;
   for (let limit = from - 1; limit >= 1; limit--) {
@@ -54,12 +43,6 @@ export function smallerLimit(schema: z.ZodType, from: number) {
   }
   return fallback;
 }
-/**
- * The Agent's page size for a shared read whose `limit` accepts every size up
- * to the Agent's maximum and has no default of its own: smaller pages than an
- * MCP client's, so a representative sample is the first thing the model sees
- * and more is one cursor away. Other limits (fixed sizes, own defaults) stay.
- */
 function agentPage(schema: z.ZodType | undefined) {
   const { read_default_limit: fallback, read_max_limit: max } = agentPolicy;
   if (!schema || schema.safeParse(undefined).data !== undefined) return null;
@@ -77,7 +60,6 @@ function agentPage(schema: z.ZodType | undefined) {
 }
 const fetchedRecord = z.object({ id: z.string() });
 const searchResults = z.object({ results: z.array(fetchedRecord) });
-/** `fetch` and `search` name their records by `id`, not as artifact references; they are still what the read supplied. */
 function namedRecords(name: string, data: unknown): string[] {
   if (name === 'fetch') {
     const fetched = fetchedRecord.safeParse(data);
@@ -86,13 +68,11 @@ function namedRecords(name: string, data: unknown): string[] {
   if (name === 'search') return searchResults.parse(data).results.map((result) => result.id);
   return [];
 }
-// The chat's project is fixed, and MCP App views render nothing in a chat.
 const NOT_FOR_AGENT = new Set(['list_projects', ...presentationTools]);
 const MISSING_TOOLS: ReadonlySet<string> = new Set([
   ...NOT_FOR_AGENT,
   ...writeTools.map((tool) => tool.name),
 ]);
-/** A shared description without its sentences naming an MCP tool the Agent lacks, so the model never reaches for one. */
 function agentDescription(description: string) {
   return description
     .split(/(?<=\.)\s+/u)
@@ -104,7 +84,6 @@ function agentDescription(description: string) {
     )
     .join(' ');
 }
-/** The shared reads, each stopped by its signal: the read timeout and Stop end the work, not only the wait. */
 export function sharedReads(db: Database): ReadTool[] {
   return Object.entries(definitions)
     .filter(([name]) => !NOT_FOR_AGENT.has(name))
@@ -164,7 +143,6 @@ export function sharedReads(db: Database): ReadTool[] {
 }
 export function agentTools(db: Database) {
   const entries = sharedReads(db);
-  // The version fingerprints exactly what the model is offered.
   const catalog = JSON.stringify(toolDefinitions(entries));
   const version = `agent-tools-${createHash('sha256').update(catalog).digest('hex').slice(0, 16)}`;
   return new ToolRegistry(version, entries);

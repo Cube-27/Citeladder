@@ -53,10 +53,8 @@ const SCOPE_LABELS: Record<AuditSchedule['audit_scope'], string> = {
   commerce: 'Commerce AI Shelf',
   probe: 'Market probe',
 };
-/** A probe's schedule is set from Perception's probe bar, not here. */
 const CREATE_SCOPES = ['brand', 'commerce'] as const;
 
-/** Compact schedule ledger: schedules use the same frozen prompt set and engines as a run. */
 export function AuditSchedules({
   projectId,
   promptSets,
@@ -82,8 +80,6 @@ function WorkspaceSchedules({
   const resumeMutation = useMutation(runsMutations.resumeSchedule(scope));
   const canWrite = useWorkspaceCapability('write');
 
-  // Two page sections in the compact column, the page's rule between them:
-  // the schedules as one-line rows, then the new-schedule form as its own block.
   return (
     <>
       <TitledSection title="Scheduled audits">
@@ -123,18 +119,15 @@ function WorkspaceSchedules({
           </Stack>
         </SectionContent>
       </TitledSection>
-      {/* Scheduling is offered only to a role that may write schedules. */}
       {canWrite ? <ScheduleForm scope={scope} promptSets={promptSets} markets={markets} /> : null}
     </>
   );
 }
 
-/** A form field in the Settings convention: the label at the left, the control at the right. */
 function FormRow({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return <SettingRow label={label} control={children} />;
 }
 
-/** The new-schedule form and its outcome, for a role that may write schedules. */
 function ScheduleForm({
   scope,
   promptSets,
@@ -162,8 +155,6 @@ function ScheduleForm({
       engines,
       market_ids: marketIds,
     });
-  // The engine choices come from the catalogue; until it loads none are shown,
-  // so nothing may be scheduled against an engine the user cannot see.
   const canCreate =
     !createMutation.isPending &&
     catalog.order.length > 0 &&
@@ -219,7 +210,6 @@ function ScheduleForm({
             as="fieldset"
             aria-label="Engines"
             gap="item"
-            // Columns as wide as their longest name, so "Google AI Overview" keeps one line.
             className="grid-cols-[auto_auto] justify-start gap-x-4"
           >
             {catalog.order.map((engine) => (
@@ -240,7 +230,6 @@ function ScheduleForm({
         </FormRow>
         <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
         <div className="flex justify-end">
-          {/* The masthead's Launch run is the page's one primary. */}
           <Button variant="secondary" onClick={createSchedule} disabled={!canCreate}>
             <Icon icon={CalendarPlus} />
             {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
@@ -266,7 +255,6 @@ const scheduleReady = (
   marketIds: readonly (string | null)[],
 ) => Boolean(promptSetId) && engines.length > 0 && marketIds.length > 0;
 
-/** Which markets each occurrence measures; offered once a project has more than its default. */
 function MarketChecklist({
   markets,
   marketIds,
@@ -301,7 +289,6 @@ const cadenceLabel = (schedule: AuditSchedule) =>
     ? `Every ${schedule.interval_minutes} minutes`
     : CADENCE_LABELS[schedule.cadence];
 
-/** The schedule's markets by label, or nothing while the project has only its default. */
 function marketSummary(schedule: AuditSchedule, markets: readonly ProjectMarket[]): string {
   if (markets.length < 2) return '';
   const labels = schedule.market_ids.map(
@@ -346,11 +333,9 @@ function ScheduleRow({
   promptSets: readonly PromptSet[];
   markets: readonly ProjectMarket[];
   resuming: boolean;
-  /** Resumes a paused schedule; omitted for a role that may not. */
   onResume?: () => void;
 }>) {
   const catalog = useEngineCatalog();
-  // A one-time schedule that ran is finished, not paused; resuming would run it again.
   const resumable = !schedule.enabled && !finishedOnce(schedule) && onResume;
   const promptSet =
     promptSets.find((set) => set.id === schedule.prompt_set_id)?.name ?? 'Removed prompt set';

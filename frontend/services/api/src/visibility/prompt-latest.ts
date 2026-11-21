@@ -1,9 +1,3 @@
-/**
- * The prompt library's figures: every tracked prompt's own latest
- * measurement in the market, in its own cohort, with the change since the run
- * that measured that same prompt before it (owner, 2026-11-15). A run that
- * measured other prompts never hides an earlier result.
- */
 import { sql } from 'kysely';
 
 import { frozenComparisonKey } from '../analysis/comparison.ts';
@@ -28,7 +22,6 @@ type Measurement = {
   rank: number;
 };
 
-/** Each tracked prompt's two newest scored brand runs in the market, ranked newest first. */
 async function recentMeasurements(db: Database, scope: RunScope): Promise<Measurement[]> {
   const { rows } = await sql<Measurement>`
     select * from (
@@ -54,7 +47,6 @@ async function recentMeasurements(db: Database, scope: RunScope): Promise<Measur
   return rows;
 }
 
-/** The change since the prompt's previous measurement, or why there is none. */
 function change(pair: {
   current: Measurement;
   previous: Measurement | undefined;
@@ -81,7 +73,6 @@ function change(pair: {
 
 const pairKey = (promptId: string, auditId: string) => `${promptId}:${auditId}`;
 
-/** Each measured pair's row, read in the pair's own cohort; the runs are already scoped. */
 async function measuredRows(db: Database, scope: RunScope, recent: readonly Measurement[]) {
   const wanted = new Set(recent.map((row) => pairKey(row.prompt_id, row.audit_id)));
   const reads = [...groupBy(recent, (row) => row.cohort)].map(([cohort, measured]) =>
@@ -97,7 +88,6 @@ async function measuredRows(db: Database, scope: RunScope, recent: readonly Meas
   return rows;
 }
 
-/** One read with one meaning: it takes no engine, cohort, named run or baseline. */
 export async function getLatestPromptMetrics(
   db: Database,
   scope: RunScope,

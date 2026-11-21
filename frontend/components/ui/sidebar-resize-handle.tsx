@@ -12,18 +12,6 @@ function currentBounds() {
   return sidebarWidthBounds(typeof window === 'undefined' ? 0 : window.innerWidth);
 }
 
-/**
- * The labelled sidebar's inner edge, where the reader sizes it (from `rail:`;
- * the collapsed rail and the drawer keep their widths; owner, 2026-11-15). A
- * WAI-ARIA window splitter: drag it, click it to step through preset widths
- * (the non-drag way, WCAG 2.5.7), or focus it and use ← / → (16px, Shift
- * 48px); a double-click restores the default for the window (224, or 200
- * below 1280px); Home takes the minimum (the compact 200) and End the maximum
- * (480px, never more than 40% of the window). At rest the sidebar's own rule
- * shows and hover paints nothing (owner, 2026-11-21); the handle's hairline
- * takes the ink while dragging. The shared interaction stops text selection
- * mid-drag.
- */
 export function SidebarResizeHandle({ sidebarId }: Readonly<{ sidebarId: string }>) {
   const helpId = useId();
   const { width, preview, commit } = useSidebarWidthControl();
@@ -58,7 +46,6 @@ export function SidebarResizeHandle({ sidebarId }: Readonly<{ sidebarId: string 
       onClick={resize.onClick}
       onDoubleClick={resize.onDoubleClick}
       onKeyDown={resize.onKeyDown}
-      // A 24px hit area (WCAG 2.5.8) centred on the edge; the drawn line stays 1px.
       className="focus-ring group rail:flex absolute inset-y-0 end-0 hidden w-6 translate-x-1/2 cursor-col-resize touch-none justify-center"
     >
       <span

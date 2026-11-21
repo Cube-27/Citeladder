@@ -1,9 +1,3 @@
-/**
- * What a crawl's settled tasks say about it, assessed under the crawl lock:
- * counters from their task and observation authorities, and the discovery,
- * inventory and analysis sub-states. Assessment changes the crawl in memory;
- * `saveState` persists it.
- */
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -15,11 +9,6 @@ import { failedAs } from './task-outcome.ts';
 const TERMINAL_TASK = policy.task_queue.terminal;
 export const LIFECYCLE_KINDS = ['discover', 'site_setup', 'analyze'];
 const EXCLUDED = failedAs('site_crawl_tasks', ['excluded']);
-/**
- * The row is its page's latest generation of its kind: a rerun's generation
- * supersedes the earlier ones, so a page is counted once, by its newest
- * outcome (the `ROW_TASK_ORDER` rule the crawl counters read).
- */
 const LATEST_GENERATION = sql<boolean>`not exists (
   select 1 from site_crawl_tasks newer
   where newer.workspace_id = site_crawl_tasks.workspace_id
@@ -47,16 +36,13 @@ const NONE: Counts = {
   expected: 0,
 };
 
-/** Task outcomes that drive one locked reconcile, from one grouped scan. */
 type Summary = {
   discoverOpen: number;
   discoverFailed: number;
   analyzeOpen: number;
   analyzeTotal: number;
   analyzeSucceeded: number;
-  /** Pages the crawl could ever analyze: cancelled tasks and policy exclusions are not failures. */
   analyzeApplicable: number;
-  /** Applicable pages neither analyzed nor expected to fail (gone, not HTML). */
   analyzeShortfall: number;
 };
 
@@ -74,7 +60,6 @@ async function taskSummary(
       sql<number>`count(*) filter (where status = 'cancelled')::int`.as('cancelled'),
       sql<number>`count(*) filter (where status = 'failed')::int`.as('failed'),
       sql<number>`count(*) filter (where status = 'failed' and ${EXCLUDED})::int`.as('excluded'),
-      // Discovery or analysis that met only robots/admission exclusions, non-HTML and 404/410s is complete.
       sql<number>`count(*) filter (where status = 'failed' and ${expectedTaskFailure})::int`.as(
         'expected',
       ),
@@ -98,7 +83,6 @@ async function taskSummary(
   };
 }
 
-/** Distinct URLs with a terminally failed fetch or analysis; exclusions and blank hashes are not pages that failed. */
 async function failedUrlCount(db: Database, crawl: Crawl) {
   const row = await db
     .selectFrom('site_crawl_tasks')
@@ -114,12 +98,10 @@ async function failedUrlCount(db: Database, crawl: Crawl) {
   return row.count;
 }
 
-/** Pages the crawl analyzed, the count every reconcile persists. Page commits never write it. */
 export async function analyzedPageCount(db: Database, crawl: Pick<Crawl, 'workspace_id' | 'id'>) {
   return (await taskSummary(db, crawl)).analyzeSucceeded;
 }
 
-/** Repair counters from their task and observation authorities; admission never moves down. */
 async function refreshCounters(db: Database, crawl: Crawl, summary: Summary) {
   const observed = await db
     .selectFrom('site_url_observations')
@@ -136,20 +118,12 @@ async function refreshCounters(db: Database, crawl: Crawl, summary: Summary) {
   crawl.admitted_url_count = Math.max(crawl.admitted_url_count, observed.count);
 }
 
-/**
- * Progressive discovery state; returns whether the crawl failed outright and
- * whether discovery fell short. A crawl fails outright when discovery found
- * nothing and nothing was analyzed, or when it had pages to analyze and every
- * one of them failed: a root that answered is no evidence about any page.
- */
 function reconcileDiscovery(crawl: Crawl, summary: Summary) {
   const discoveryFailed = crawl.discovered_url_count === 0;
   // A recrawl that analyzed monitored pages after its root was blocked holds
   // useful partial evidence; it is not a failed crawl.
   const fullyFailed =
     summary.analyzeSucceeded === 0 && (discoveryFailed || summary.analyzeApplicable > 0);
-  // A full crawl's discovery is pending until site setup settles it; a setup that
-  // failed for good never started it.
   if (!summary.discoverOpen && ['pending', 'running'].includes(crawl.discovery_status))
     crawl.discovery_status = discoveryFailed ? 'failed' : 'completed';
   return {
@@ -158,12 +132,6 @@ function reconcileDiscovery(crawl: Crawl, summary: Summary) {
   };
 }
 
-/**
- * `inventory_complete` once discovery has drained: only an inventory no limit,
- * pending frontier, sample or other bound cut short is the whole site. Its
- * inputs settle with discovery, so it is decided when discovery settles and
- * again when the crawl drains (a sample or rerun never runs discovery here).
- */
 async function reconcileInventory(
   db: Database,
   crawl: Crawl,
@@ -182,7 +150,6 @@ function analysisOutcome(summary: Summary, fullyFailed: boolean) {
   return summary.analyzeSucceeded > 0 ? 'partially_completed' : 'failed';
 }
 
-/** Analysis starts with its first admitted task and settles once discovery and analysis drain. */
 function reconcileAnalysis(crawl: Crawl, summary: Summary, fullyFailed: boolean) {
   if (summary.analyzeTotal > 0 && crawl.analysis_status === 'pending')
     crawl.analysis_status = 'running';
@@ -192,7 +159,6 @@ function reconcileAnalysis(crawl: Crawl, summary: Summary, fullyFailed: boolean)
     crawl.analysis_status = analysisOutcome(summary, fullyFailed);
 }
 
-/** Assess an active crawl the caller holds locked; `drained` once no lifecycle task is open. */
 export async function assessCrawl(db: Database, crawl: Crawl) {
   const summary = await taskSummary(db, crawl);
   await refreshCounters(db, crawl, summary);

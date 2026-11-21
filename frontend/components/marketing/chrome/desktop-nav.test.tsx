@@ -4,11 +4,6 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import { DesktopNav } from './desktop-nav';
 
-/**
- * The desktop menus as a visitor drives them by click and keyboard. Hover
- * timing and the popup's motion need a real layout engine and are covered
- * by the landing-nav E2E spec.
- */
 describe('DesktopNav', () => {
   it('opens a menu on a click and closes it on a second click', async () => {
     const user = userEvent.setup();
@@ -50,8 +45,6 @@ describe('DesktopNav', () => {
     render(<DesktopNav path="/" />);
     const resources = screen.getByRole('button', { name: 'Resources' });
 
-    // A keyboard visitor opens it from the trigger. (A click would also send
-    // a mouse hover, whose 50ms open intent can reopen the menu after Escape.)
     resources.focus();
     await user.keyboard('{Enter}');
     expect(resources).toHaveAttribute('aria-expanded', 'true');
@@ -82,13 +75,11 @@ describe('DesktopNav', () => {
     expect(screen.getByRole('button', { name: 'Resources' })).not.toHaveAttribute('data-current');
     unmount();
 
-    // A page a menu lists marks its trigger, even outside the menu's own section.
     const listed = render(<DesktopNav path="/open-source" />);
     expect(screen.getByRole('button', { name: 'Resources' })).toHaveAttribute('data-current', '');
     expect(screen.getByRole('button', { name: 'Platform' })).not.toHaveAttribute('data-current');
     listed.unmount();
 
-    // A study section and a root-level guide the menu does not list still mark Resources.
     for (const path of [
       '/ai-crawlers/gptbot',
       '/claude-recommendations',

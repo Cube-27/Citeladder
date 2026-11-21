@@ -1,4 +1,3 @@
-/** Optional search transports. Candidate pages are acquired by Site Health. */
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { policy } from '../config.ts';
@@ -27,7 +26,6 @@ export type SearchOutcome = {
   results: SearchResult[];
   providerVersion?: string;
 };
-/** Every Tavily and Keenable request is metered for the workspace (B13, B18). */
 export type CompetitorSearch = (
   query: string,
   locale: string,
@@ -93,7 +91,6 @@ export function competitorSearch(
                 include_raw_content: false,
               }),
             });
-            // A refused request is a failed call: recorded at no cost, not the request fee.
             if (!value.ok) throw new Error('Search failed');
             return { value, usage: null };
           },
@@ -123,7 +120,6 @@ export function competitorSearch(
           }),
         };
       } catch (error) {
-        // Keenable is the fallback; the outcome records `provider_failed` if it is unavailable too.
         logSearchFailure('tavily', error, startedAt);
         failed = true;
       }

@@ -1,9 +1,3 @@
-/**
- * The URLs each Action touches (`action_urls`): an issue group's cohort, a page
- * Action's one owned URL. Action sync rewrites a synced Action's rows inside
- * the refresh transaction; a cleared Action keeps its last ones, like its last
- * members. A whole-site issue group touches no listed URL.
- */
 import { sql, type RawBuilder, type SqlBool } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -31,19 +25,10 @@ function urlCursor(actionId: string, cursor: string) {
   }
 }
 
-/**
- * A URL's page type in the crawl that last saw it: one probe of
- * `uq_site_page_analysis_current`; null when that crawl did not classify it.
- */
 export const pageKindOf = sql<string | null>`(select spa.page_kind from site_page_analyses spa
   where spa.workspace_id = site_urls.workspace_id and spa.crawl_id = site_urls.last_seen_crawl_id
     and spa.site_url_id = site_urls.id and spa.is_current)`;
 
-/**
- * One page of the URLs an Action touches, in URL order, with their total, each
- * with its page type and how many Actions matching `counted` touch it.
- * `wholeSite` marks an issue group whose rule names no page.
- */
 export async function actionUrlsPage(
   db: Database,
   action: { id: string; workspace_id: string; project_id: string },
@@ -98,7 +83,6 @@ export async function actionUrlsPage(
   };
 }
 
-/** How many Actions matching `counted` touch each URL: one group-by over `ix_action_urls_site_url`. */
 async function countsByUrl(
   db: Database,
   scope: { workspace_id: string; project_id: string },
@@ -122,7 +106,6 @@ async function countsByUrl(
   return new Map(rows.map((row) => [row.site_url_id, row.count]));
 }
 
-/** What one synced Action says about its URLs. */
 export type ActionUrlSource = Readonly<{
   actionId: string;
   kind: string;
@@ -130,11 +113,6 @@ export type ActionUrlSource = Readonly<{
   cohort: Readonly<{ whole_site: boolean; pages: readonly { site_url_id: string }[] }> | null;
 }>;
 
-/**
- * Bring every synced Action's URL rows to its current set: delete only the
- * pairs that are gone and add only the new ones, so a resync that changed
- * nothing writes nothing. Caller owns the transaction.
- */
 export async function writeActionUrls(trx: Database, scope: Scope, synced: ActionUrlSource[]) {
   if (!synced.length) return;
   const pageUrls = [...new Set(synced.flatMap((s) => (s.kind === 'page' && s.url ? [s.url] : [])))];
@@ -151,13 +129,11 @@ export async function writeActionUrls(trx: Database, scope: Scope, synced: Actio
     ).map((row) => [row.normalized_url, row.id]),
   );
   const urlIds = (s: ActionUrlSource): string[] => {
-    // A whole-site group's one page is where its finding is filed, not a URL it touches.
     if (s.cohort)
       return s.cohort.whole_site ? [] : parseUuids(s.cohort.pages.map((page) => page.site_url_id));
     const id = s.kind === 'page' && s.url ? owned.get(s.url) : undefined;
     return id ? [id] : [];
   };
-  // The wanted pairs as two parallel arrays: two bind parameters at any size.
   const actionIds: string[] = [];
   const siteUrlIds: string[] = [];
   for (const s of synced)

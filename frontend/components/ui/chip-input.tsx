@@ -5,12 +5,10 @@ import { FIELD_EDGE } from '@/components/ui/input';
 import { Check, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/** One value, and whether it is still a model's or discovery's unaccepted suggestion. */
 export type ChipItem = Readonly<{ value: string; suggested?: boolean }>;
 
 const sameValue = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-/** `items` with each new value appended once (any case), up to `max`. */
 function appended(items: readonly ChipItem[], values: readonly string[], max?: number) {
   const next = [...items];
   for (const raw of values) {
@@ -22,7 +20,6 @@ function appended(items: readonly ChipItem[], values: readonly string[], max?: n
   return next;
 }
 
-/** The keys that add a typed value, and how a pasted text splits into values. */
 const SEPARATORS = {
   line: { keys: ['Enter'], split: /[\n\r]+/ },
   comma: { keys: ['Enter', ','], split: /[\n\r,]+/ },
@@ -31,16 +28,6 @@ const SEPARATORS = {
 const TOKEN_REMOVE =
   'focus-ring text-ink-2 hover:text-ink grid size-4 shrink-0 place-items-center rounded-mark opacity-0 transition-opacity group-hover/token:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 disabled:hidden';
 
-/**
- * ValuesInput — several short values in one box: each a token, then an add
- * field filling the rest of the line. Enter (and a comma, with `separates="comma"`)
- * adds what was typed; leaving the field adds it too; pasting several lines
- * (or comma-separated values) adds each. Backspace in the empty field removes
- * the last token; ArrowLeft walks the tokens, where Delete removes one, so
- * Tab only ever moves between fields. A suggestion is drawn dashed; `onAccept`
- * offers one tick that accepts the box's suggestions. `cell` drops the edge
- * for a grid cell, which shows its frame only while focused.
- */
 export function ValuesInput({
   label,
   items,
@@ -54,19 +41,15 @@ export function ValuesInput({
   pending: heldPending,
   onPendingChange,
 }: Readonly<{
-  /** Names the values; the add field is "Add to …". */
   label: string;
   items: readonly ChipItem[];
   onChange: (items: ChipItem[]) => void;
-  /** Accepts this box's suggestions; offered only while it holds one. */
   onAccept?: () => void;
   max?: number;
   disabled?: boolean;
   placeholder?: string;
-  /** What ends a value: a line (Enter, pasted lines), or also a comma. */
   separates?: keyof typeof SEPARATORS;
   variant?: 'field' | 'cell';
-  /** The typed value, when the owner holds it. */
   pending?: string;
   onPendingChange?: (value: string) => void;
 }>) {
@@ -126,7 +109,6 @@ export function ValuesInput({
   const accepting = onAccept !== undefined && items.some((item) => item.suggested);
 
   return (
-    // The add field grows to fill the rest of its line, so a press there lands in it.
     <div ref={box} className={boxClasses({ variant, accepting, disabled })}>
       {items.length ? (
         <ul aria-label={label} className="contents">
@@ -158,7 +140,6 @@ export function ValuesInput({
   );
 }
 
-/** A field's box, or a grid cell's edgeless one; room is kept for the accept tick. */
 function boxClasses({
   variant,
   accepting,
@@ -174,7 +155,6 @@ function boxClasses({
   );
 }
 
-/** One value; its remove button is reached by the arrow keys, not Tab. */
 function Token({
   item,
   disabled,
@@ -213,7 +193,6 @@ function Token({
   );
 }
 
-/** The box's one accept, in its top corner, clear of the wrapping tokens. */
 function AcceptTick({
   label,
   disabled,
@@ -232,12 +211,6 @@ function AcceptTick({
   );
 }
 
-/**
- * ChipInput — a named group of short values: its legend, the ValuesInput and,
- * with `max`, an "n/max" counter. A value is one entry however many commas it
- * holds, so a category such as "bays for golf courses, and community centres"
- * stays one.
- */
 export function ChipInput({
   label,
   max,

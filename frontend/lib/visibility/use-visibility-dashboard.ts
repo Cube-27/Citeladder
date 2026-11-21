@@ -47,7 +47,6 @@ const tabCodec = stringUrlCodec(
   VISIBILITY_TABS.map(({ id }) => id),
   'domains' as VisibilityTab,
 );
-/** A Sources tab is its own result set: a page, filter or drill-down never carries over. */
 const sourceKeys = [
   'source_cursor',
   'source_offset',
@@ -59,44 +58,28 @@ const sourceKeys = [
   'source_url',
   'source_view',
 ];
-// The URL accepts any engine the wire contract names; the toolbar offers the catalogue's.
 const engineCodec = stringUrlCodec(['all', ...logicalEngineSchema.options], 'all');
 const rangeCodec = stringUrlCodec<TrendRange>(['all', '30d', '90d', '1y'], '90d');
 const granularityCodec = stringUrlCodec<TrendGranularity>(['run', 'day', 'week', 'month'], 'run');
 
-/**
- * Pools every run in the period: the mode and its window in one URL write, so
- * a stale `run` cannot outlive the switch. Writes the URL directly rather than
- * closing over hook state, so its identity is stable across renders.
- */
 function selectPeriod(value: TrendRange) {
   setUrlParams({
     selection: 'range',
     run: null,
     range: value,
     from: rangeToFrom(value) ?? null,
-    // No upper bound: a preset means "up to now", and pinning `to` to the
-    // moment the reader picked it froze the window there, so every run that
-    // completed afterwards stayed out of the series until they picked the
-    // same range again.
     to: null,
     configuration: null,
     ...Object.fromEntries(pageKeys.map((key) => [key, null])),
   });
 }
 
-/** A link to Visibility Sources for one run, in the URL keys `useVisibilityFilters` reads. */
 export function visibilityRunSourcesHref(runId: string) {
   return `/visibility?${new URLSearchParams({ tab: 'domains', run: runId }).toString()}`;
 }
 
-/** The evidence filters an answers slice replaces; the shared selection keys stay. */
 const EVIDENCE_SLICE_KEYS = ['cursor', 'as_of', 'outcome', 'competitor', 'prompt', 'domain', 'url'];
 
-/**
- * Query fanouts narrowed to one slice, from a Brand page: the shared filters
- * (market, measurement, prompts) carry over, the page's own keys do not.
- */
 export function visibilityEvidenceHref(
   search: string,
   slice: Readonly<Record<string, string | null>>,
@@ -133,7 +116,6 @@ export function useVisibilityFilters() {
     clearKeys: pageKeys,
   });
   const [granularity, setGranularity] = useUrlState('granularity', granularityCodec);
-  // Without `cohort` in the URL the project's remembered choice applies.
   const { projectId } = useProjectScope();
   const cohortCodec = useMemo(() => cohortUrlCodec(projectId), [projectId]);
   const [cohort, setCohortUrl] = useUrlState('cohort', cohortCodec, {
@@ -147,15 +129,12 @@ export function useVisibilityFilters() {
     [projectId, setCohortUrl],
   );
   const [baselineId, setBaselineId] = useUrlState('baseline', optionalStringUrlCodec);
-  // A non-default market's id; absent is the project default. Runs, baselines
-  // and pooled configurations belong to one market, so a switch drops them.
   const [market, setMarket] = useUrlState('market', optionalStringUrlCodec, {
     clearKeys: [...pageKeys, 'run', 'baseline', 'configuration'],
   });
   const [outcome, setOutcome] = useUrlState('outcome', optionalStringUrlCodec, {
     clearKeys: pageKeys,
   });
-  // A project topic id: answers to prompts filed under it when their run froze them.
   const [topic, setTopic] = useUrlState('topic', optionalStringUrlCodec, {
     clearKeys: pageKeys,
   });
@@ -198,8 +177,6 @@ export function useVisibilityFilters() {
     domain,
     url,
     selectionMode,
-    // One write, so selecting a run from range mode cannot leave
-    // `selection=range` behind on a stale URL and ignore the run.
     selectMeasurement: (runId: string | null) =>
       setUrlParams({
         selection: 'run',
@@ -224,9 +201,6 @@ export function useVisibilityFilters() {
         cursor: null,
         as_of: null,
       }),
-    // The answers themselves live on Query fanouts now: it is the tab that
-    // renders execution evidence, and sending a reader to Sources would hand
-    // them an inventory when they asked to see what was said.
     openEvidence: (slice: Record<string, string | null>) =>
       setUrlParams({
         tab: 'query-fanout',
@@ -236,13 +210,6 @@ export function useVisibilityFilters() {
   };
 }
 
-/**
- * Which runs the projection actually resolved to.
- *
- * A range answers with the set it pooled; a single run answers with itself and
- * no set at all. The difference decides how every dependent read is scoped, so
- * it is read off the response once rather than re-derived at each call site.
- */
 function resolvedSelection(
   data:
     | {
@@ -259,12 +226,10 @@ function resolvedSelection(
   return {
     activeRunId: data?.audit_id ?? null,
     selectedRunIds: range ? data.source_audit_ids : undefined,
-    /** The pooled period's window: trends read every run in it, not the pool alone. */
     selectedPeriod: range ? { from: data.from_at ?? undefined, to: data.to_at ?? undefined } : null,
   };
 }
 
-/** The selection's reads; `view` decides which of the optional ones the screen draws. */
 export function useVisibilityQueries(
   filters: ReturnType<typeof useVisibilityFilters>,
   view: VisibilityView,
@@ -290,7 +255,6 @@ export function useVisibilityQueries(
   );
   const selectedParams = selectionParams(filters, from, engine);
   const projectionOptions = visibilityQueries.project(requestScope, selectedParams);
-  // Every tab resolves the same concrete run before dependent requests.
   const visibilityQuery = useQuery({
     ...projectionOptions,
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
@@ -341,18 +305,10 @@ export function useVisibilityQueries(
   };
   const evidenceQuery = useQuery({
     ...evidenceOptions,
-    // Every filter and every page is a new key, so without this the populated
-    // card was torn down and replaced by a skeleton for each round trip —
-    // reading page one and asking for page two blanked what you were reading.
-    // Scoped to the project, so a switch still returns to an explicit load
-    // rather than relabelling the previous workspace's evidence.
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
     enabled: hasEvidenceScope && isEvidenceTab(view),
   });
   const prefetchTab = (tab: VisibilityTab) => {
-    // Competitor analysis reads the project's page inventory, not this run's
-    // evidence. Warming the evidence request for it would spend a round trip
-    // on a dataset that tab never shows.
     if (isEvidenceTab(tab) && hasEvidenceScope) {
       warmQuery(queryClient, evidenceOptions);
     }
@@ -376,12 +332,7 @@ export function useVisibilityQueries(
     topic,
     evidenceQuery,
     surfaceRatesQuery,
-    // Null unless the surface filter names an observed surface, which is what
-    // decides whether the rates panel belongs on the page at all.
     surfaceEngine,
-    // The scope and filters the evidence was read under. The fanout tab re-uses
-    // them to ask the server for SELECTION-wide totals and per-query shares, so
-    // they describe the same population the table is drawn from.
     evidenceScope: {
       audit_id: evidenceParams.audit_id,
       audit_ids: evidenceParams.audit_ids,
@@ -413,7 +364,6 @@ function useVisibilityRuns(
       pollAudits(brandRuns(query.state.data).map((audit) => audit.status)),
   });
   const audits = useMemo(() => brandRuns(auditsQuery.data), [auditsQuery.data]);
-  // The run picker offers the selected market's runs only; markets never pool.
   const runOptions = useMemo(
     () =>
       toRunOptions(
@@ -425,14 +375,6 @@ function useVisibilityRuns(
   const allRuns = useMemo(() => toRunOptions(audits, timeZone), [audits, timeZone]);
   const hasRuns = allRuns.length > 0;
   const activeRun = useMemo(() => findActiveRun(audits), [audits]);
-  // Both halves matter. Keying on the latest run alone missed a project's FIRST
-  // run — it stayed one id from queued to completed, so nothing invalidated and
-  // the 404 the projection answered with while the snapshot was still being
-  // written stayed on screen until a manual reload. Keying on the active run
-  // alone would miss a later run arriving. The pair moves in either case.
-  // The ACTIVE run's id, not merely whether one exists: one run finishing as
-  // the next begins keeps 'active' true, and a signal that cannot see the
-  // swap leaves the finished run's results uninvalidated.
   const runSignal = `${allRuns[0]?.id ?? ''}:${activeRun?.id ?? 'idle'}`;
   const previousSignal = useRef<string | undefined>(undefined);
   const auditsLoaded = auditsQuery.isSuccess;
@@ -440,7 +382,6 @@ function useVisibilityRuns(
     if (!auditsLoaded) return;
     const previous = previousSignal.current;
     previousSignal.current = runSignal;
-    // `undefined` is the first resolved list, not a transition to react to.
     if (previous !== undefined && previous !== runSignal) {
       void refreshVisibility(queryClient, projectId);
     }
@@ -449,12 +390,6 @@ function useVisibilityRuns(
   return { queryClient, auditsQuery, runOptions, hasRuns, activeRun };
 }
 
-/**
- * Three selection modes, and the run id only distinguishes two of them.
- *
- * `range` pools every run in the period; without one, an explicit run id means
- * that run and its absence means whatever is latest.
- */
 function selectionModeParam(
   filters: ReturnType<typeof useVisibilityFilters>,
 ): 'range' | 'run' | 'latest' {
@@ -481,7 +416,6 @@ function selectionParams(
   };
 }
 
-/** The evidence read's params: the run scope, engine and every active evidence filter. */
 function evidenceSelectionParams(
   filters: ReturnType<typeof useVisibilityFilters>,
   activeRunId: string | null,

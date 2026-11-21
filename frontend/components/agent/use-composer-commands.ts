@@ -21,28 +21,18 @@ import { useDebounced } from '@/lib/use-debounced';
 
 const ACTION = 'action:';
 
-/** A message ready to send: its text with resolved Action links replaced, every mention's id and its pastes. */
 type Prepared = { message: string; mentions: string[]; attachments: PastedText[] };
 
-/** The message to send, and how to rewrite the draft it came from. */
 type Draft = Readonly<{ message: string; edit: (change: (current: string) => string) => void }>;
 
 export type ComposerMenuState = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Opened by `/`: the menu is the skills list alone. */
   skillsOnly: boolean;
   onSelect: () => void;
   onCloseAutoFocus: (event: Event) => void;
 };
 
-/**
- * The composer's `/` skill command, `@` Action mentions and pasted-text
- * attachments. Mentions are typed Action IDs the server resolves and
- * authorizes when the turn is queued; their labels here are only for display.
- * A pasted link to an Action of this project becomes a mention, on paste or
- * at the latest on send.
- */
 export function useComposerCommands({
   workspaceId,
   projectId,
@@ -53,24 +43,16 @@ export function useComposerCommands({
   pastes: ComposerPastes;
   clear: () => void;
   restore: (saved: { mentions: readonly Mention[]; pastes: readonly PastedText[] }) => void;
-  /**
-   * Resolves the message's Action links, then sends; at once when it has none.
-   * Resolved links become `@label` in the draft too, unless it changed meanwhile.
-   */
   prepare: (draft: Draft, send: (prepared: Prepared) => void) => void;
-  /** A send is waiting for its Action links: the composer is pending. */
   resolving: boolean;
-  /** The composer's + menu; `/` opens it on its Skills submenu. */
   menu: ComposerMenuState;
   scope: { workspaceId: string; projectId: string };
 } {
   const client = useQueryClient();
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [pastes, setPastes] = useState<ComposerPastes['items'][number][]>([]);
-  // A paste has no id of its own; a key per paste lets one be removed.
   const pasteCount = useRef(0);
   const keyed = (text: string) => ({ key: `paste-${++pasteCount.current}`, text });
-  // What the chips hold when a send goes out, which may be after its links resolve.
   const latestMentions = useRef(mentions);
   const latestPastes = useRef(pastes);
   useEffect(() => {
@@ -83,19 +65,16 @@ export function useComposerCommands({
   const [skillsOnly, setSkillsOnly] = useState(false);
   const removeCommand = useRef<(() => void) | null>(null);
   const restoreFocus = useRef<(() => void) | null>(null);
-  // Most messages mention nothing, so nothing is searched until `@` is typed.
   const [search, setSearch] = useState<string | null>(null);
   const onTrigger = useCallback((trigger: CommandToken['trigger'], query: string) => {
     if (trigger === '@') setSearch(query);
   }, []);
   const searched = useDebounced(search, AGENT_MENTION_SEARCH_DEBOUNCE_MS);
-  // The mention bound the server enforces travels on the catalog the composer screens load.
   const limits = useAgentCatalog().limits;
   const mentionsMax = limits?.mentions_max ?? null;
   const actions = useQuery({
     ...actionsQueries.mentionSearch({ workspaceId, projectId }, searched ?? ''),
     enabled: searched !== null && Boolean(workspaceId && projectId),
-    // The last results narrow under the typed text while the next search loads.
     placeholderData: keepPreviousData,
   });
 
@@ -110,7 +89,6 @@ export function useComposerCommands({
       replacement: `@${action.target_label}`,
     }));
 
-  /** Each link to an Action of this project, with the label its read gives; others are dropped. */
   const resolveLinks = async (text: string) => {
     const links = actionLinks(text, { origin: window.location.origin, projectId });
     const resolved = await Promise.all(
@@ -121,7 +99,6 @@ export function useComposerCommands({
             ? [{ url, mention: { id: action.id, label: action.target_label } }]
             : [];
         } catch {
-          // Not found or not readable: the link stays as typed.
           return [];
         }
       }),
@@ -129,7 +106,6 @@ export function useComposerCommands({
     return resolved.flat();
   };
 
-  /** Applies resolved links to `text` and the current mentions. */
   const applyLinks = (text: string, resolved: Awaited<ReturnType<typeof resolveLinks>>) => {
     const next = withLinkMentions({
       text,
@@ -145,7 +121,6 @@ export function useComposerCommands({
   return {
     options: (token) => {
       if (token.trigger === '/') return [];
-      // Until the catalog lists the bound, no mention is offered that the server might refuse.
       if (mentionsMax === null || mentions.length >= mentionsMax) return [];
       return matchOptions(actionOptions, token.query);
     },
@@ -162,7 +137,6 @@ export function useComposerCommands({
       });
     },
     prepare: ({ message, edit }, send) => {
-      // One send at a time: a second press while links resolve would start a second turn.
       if (resolvingRef.current) return;
       const finish = (text: string) =>
         send({
@@ -179,7 +153,6 @@ export function useComposerCommands({
       void resolveLinks(message)
         .then((resolved) => {
           const text = applyLinks(message, resolved);
-          // Typing while the links resolved is kept.
           if (text !== message)
             edit((current) => (current.trim() === message.trim() ? text : current));
           finish(text);
@@ -207,7 +180,6 @@ export function useComposerCommands({
       open: menuOpen,
       onOpenChange: (open) => {
         setMenuOpen(open);
-        // Only the + button opens it here; the closing menu keeps its face.
         if (open) setSkillsOnly(false);
         else removeCommand.current = null;
       },
@@ -228,7 +200,6 @@ export function useComposerCommands({
     pastes: {
       items: pastes,
       add: (text) => {
-        // Short, past a bound the server enforces, or before the catalog lists them: plain text.
         const fits =
           limits != null &&
           text.length >= AGENT_PASTE_ATTACHMENT_MIN_CHARS &&
@@ -254,7 +225,6 @@ export function useComposerCommands({
 }
 export type ComposerState = ReturnType<typeof useComposerCommands>;
 
-/** The pastes as the request sends them. */
 function pasteAttachments(pastes: ComposerPastes['items']): PastedText[] {
   return pastes.map(({ text }) => ({ kind: 'pasted_text', text }));
 }

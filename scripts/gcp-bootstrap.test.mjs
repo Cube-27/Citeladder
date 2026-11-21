@@ -13,7 +13,6 @@ const OPTIONS = {
   environment: 'gcp-demo',
 };
 
-/** A stubbed gcloud and Resource Manager; `existing` names the resources `describe` finds. */
 function stubs({ existing = false, labels, operations = [{ done: true }], failOn } = {}) {
   const calls = [];
   const requests = [];

@@ -1,7 +1,5 @@
-/** Actions list responses as the API sends them. */
 import { PROJECT } from '@/test/agent-chat-fixture';
 
-/** One open Action as the list sends it. */
 export function actionItem(id: string, label: string, projectId = PROJECT) {
   return {
     id,
@@ -29,7 +27,6 @@ export function actionItem(id: string, label: string, projectId = PROJECT) {
   };
 }
 
-/** One Action as its own read sends it. */
 export function actionDetail(id: string, label: string, projectId = PROJECT) {
   return {
     ...actionItem(id, label, projectId),
@@ -41,7 +38,6 @@ export function actionDetail(id: string, label: string, projectId = PROJECT) {
   };
 }
 
-/** One page of the Actions list: the rows, the next cursor, and the given status counts. */
 export function actionsPage(
   items: readonly unknown[] = [],
   counts: Readonly<{ status_counts?: Record<string, number>; next_cursor?: string | null }> = {},

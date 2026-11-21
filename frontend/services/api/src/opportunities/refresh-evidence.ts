@@ -1,8 +1,3 @@
-/**
- * Persisted evidence one refresh's detectors read: confirmed prompt declines
- * and one audit's visibility answers. Projections of existing rows only;
- * nothing here detects, scores or writes.
- */
 import { policy } from '../config.ts';
 import type {
   AnalysisEvidence,
@@ -20,7 +15,6 @@ const o = policy.opportunity.opportunities;
 
 const strings = (value: unknown): string[] => (Array.isArray(value) ? value.map(String) : []);
 
-/** Confirmed prompt movements, projected into the shared hit model. */
 export async function confirmedDeclineHits(
   db: Database,
   workspaceId: string,
@@ -64,21 +58,17 @@ type DeclineRow = {
   source_analysis_ids: unknown;
 };
 
-/** Confidence ranks a confirmed decline between the floor and 1. */
 export function declineValue(confidence: number): number {
   const floor = o.CONFIRMED_DECLINE_CONFIDENCE_FLOOR;
   return floor + (1 - floor) * Math.min(1, Math.max(0, confidence));
 }
 
-/** Size in multiples of the materiality the audit confirmed; at least one, capped. */
 export function declineGap(delta: number | null): number {
-  // An unmeasured size is the materiality the audit confirmed, never zero.
   if (delta === null) return 1;
   const multiple = Math.abs(delta) / policy.audits.analysis.prompt_decline_materiality_points;
   return Math.min(o.CONFIRMED_DECLINE_GAP_CAP, Math.max(1, multiple));
 }
 
-/** One confirmed prompt decline as an Opportunity hit. */
 function declineHit(row: DeclineRow, auditId: string): DetectorHit {
   return {
     rule_id: 'confirmed_prompt_decline',
@@ -105,7 +95,6 @@ function declineHit(row: DeclineRow, auditId: string): DetectorHit {
   };
 }
 
-/** The project's reviewed owned domains, in one deterministic order. */
 /** Owned domains reach the workspace only through their scoped project. */
 async function ownedDomainList(
   db: Database,
@@ -167,7 +156,6 @@ async function answerCredits(db: Database, scope: WorkspaceScope, analysisIds: s
   return { credits, citations };
 }
 
-/** One audit's analyses, citations, mentions and prompt snapshots, plus its metric snapshot id. */
 export async function loadVisibilityEvidence(
   db: Database,
   workspaceId: string,

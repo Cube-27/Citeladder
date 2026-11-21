@@ -66,20 +66,6 @@ const EVENT_COLOR = {
 
 const defaultFormat = (value: number) => `${Math.round(value * 100) / 100}`;
 
-/**
- * AreaChart — the app's time series, drawn with Recharts in HeroUI's chart
- * style (owner, 2026-11-19): monotone lines with a gradient fill, your line
- * the accent at 2px over a stronger fill, rivals in their page-wide hues
- * (`SeriesTonesContext`) at 1.5px. A missing period breaks the line under a
- * `well` band; nothing is interpolated across it, and a point marked
- * `breakBefore` is never joined to the one before. A key above names every
- * line with its latest value; with more than one line each line also takes
- * its own marker shape, so lines part without colour. Method changes are
- * dashed warning rules, events thin rules in their kind's ink. The tooltip
- * card follows the pointer and the arrow keys (Recharts' keyboard layer); a
- * summary and a table carry every value to assistive technology. One period
- * prints as rows of values unless `lonePoint="plot"`.
- */
 export function AreaChart({
   data,
   name,
@@ -214,7 +200,6 @@ function AreaPlot({
     yMax,
   });
   const span = Math.max(1, (xs.at(-1) ?? 0) - (xs[0] ?? 0));
-  // A band's word only where it fits: about 80px of the plot.
   const fits = (gap: { from: number; to: number }) => ((gap.to - gap.from) / span) * width >= 80;
   const axisLabel = new Map(
     xs.map((x, index) => [x, data[index]?.axisLabel ?? data[index]?.label]),
@@ -253,7 +238,6 @@ function AreaPlot({
           type="number"
           domain={['dataMin', 'dataMax']}
           ticks={xs}
-          // One stride for every label that shows, so the axis stays even; the latest point keeps its label.
           interval="equidistantPreserveEnd"
           minTickGap={24}
           tickFormatter={(x: number) => axisLabel.get(x) ?? ''}
@@ -348,7 +332,6 @@ function AreaPlot({
   );
 }
 
-/** A line's dot: its shape when the key names lines by shape, or a point no segment reaches. */
 function LineDot({
   cx,
   cy,

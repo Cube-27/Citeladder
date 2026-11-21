@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { auditLaunchRequestSchema } from '@citeladder/contracts/audit-requests';
 import { auditScopeSchema } from '@citeladder/contracts/audits';
 import { auditPolicy } from './config.ts';
-/** A launch's markets: distinct ids, `null` for the project default. */
 export const marketIdList = z
   .array(z.uuid().nullable())
   .min(1)
@@ -17,7 +16,6 @@ export const repetitionsInput = z
   .nullish();
 const auditFields = auditLaunchRequestSchema.extend({
   repetitions: repetitionsInput,
-  /** One audit per market; `null` is the project's default market. */
   market_ids: marketIdsInput,
 });
 const selectedPrompts = (input: { prompt_set_id?: string | null; prompt_ids: string[] }) =>
@@ -27,14 +25,9 @@ export const auditRequestInput = auditFields.refine(
   selectedPrompts,
   'Select a prompt set or prompt IDs',
 );
-/** Every launch, including the scheduler's and the probe owner's probe runs. */
 export const auditInput = auditFields
   .extend({ audit_scope: auditScopeSchema.default('brand') })
   .refine(selectedPrompts, 'Select a prompt set or prompt IDs');
-/**
- * A public API launch: the project comes from the path, and the caller caps the
- * estimate's maximum attempt count (every answer times its retry budget).
- */
 export const auditLaunchInput = auditFields
   .omit({ project_id: true })
   .extend({ max_attempts: z.int().min(1) })

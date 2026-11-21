@@ -1,15 +1,3 @@
-/**
- * The `probe_labelling` analytics executor: once every market run of a probe
- * launch ended, one task labels all its answers in bounded per-market calls
- * (known-for themes, objection groups, the brands each theme answer names).
- * The calls are paid for by the AI credits each answer held at admission, so
- * they are metered as included.
- *
- * Reads commit before the calls and no transaction spans them; the labels,
- * any new objection groups and the outcome land in the worker's lease-fenced
- * terminal transaction, once per launch (`probe_labellings.launch_id`). A
- * call that fails retries the task; an exhausted task still records an outcome.
- */
 import { randomUUID } from 'node:crypto';
 
 import type { Insertable } from 'kysely';
@@ -46,7 +34,6 @@ import { listGroups, saveAnswerItems, saveGroups } from './objection-groups.ts';
 
 const probes = policy.probes;
 
-/** The launch's answered runs, oldest first, and every recorded answer across them. */
 async function loadLaunch(db: Database, task: QueueTask, scope: Scope) {
   const launchId = parseUuid(payloadString(task, 'launch_id'));
   if (launchId === null) throw new Error('probe_labelling payload missing launch_id');
@@ -93,7 +80,6 @@ async function labelled(db: Database, scope: Scope, launchId: string) {
 
 class LabellingFailed extends Error {}
 
-/** One labelling call; an unusable output or provider fault fails the attempt. */
 async function ask<Value, Result>(
   gateway: ModelGateway,
   calls: ModelCall[],
@@ -129,8 +115,6 @@ async function label(db: Database, gateway: ModelGateway, scope: Scope, launch: 
   const calls: ModelCall[] = [];
   const max = probes.max_items_per_answer;
   const labels: Labels = { known: [], objections: { items: [], newGroups: [] }, themes: [] };
-  // One known-for and one objection call per market run keeps each request one
-  // market's size; a later market sees the groups earlier ones named (AV-28).
   for (const run of Map.groupBy(launch.answers, (answer) => answer.auditId).values()) {
     const of = (question: string): LabelAnswer[] =>
       run.filter((answer) => answer.question.question === question);
@@ -175,7 +159,6 @@ async function label(db: Database, gateway: ModelGateway, scope: Scope, launch: 
       };
     }
   }
-  // One call per theme question: each market's question names its country.
   const byQuestion = Map.groupBy(
     launch.answers.filter((answer) => answer.question.question === 'theme'),
     (answer) => answer.questionText,
@@ -183,7 +166,6 @@ async function label(db: Database, gateway: ModelGateway, scope: Scope, launch: 
   for (const [question, answers] of byQuestion) {
     const [sample] = answers;
     const asked = sample?.question;
-    // A theme deleted since admission has no row to label against.
     if (asked?.question !== 'theme' || !themes.some((theme) => theme.id === asked.theme_id))
       continue;
     const request = {
@@ -202,11 +184,6 @@ type Outcome =
   | { outcome: 'labelled'; labels: Labels }
   | { outcome: 'unavailable'; reason: 'model_not_configured' | 'task_failed' };
 
-/**
- * The answer item rows, against the themes and groups as they stand now: a
- * theme deleted during the calls reads as Other (or drops a theme answer's
- * brands), and a reason whose group was deleted or merged away drops.
- */
 async function answerRows(
   db: Database,
   scope: Scope,
@@ -321,7 +298,6 @@ export function probeLabelling(
   };
 }
 
-/** A task that exhausted its attempts still records why the probe has no labels. */
 export async function compensateProbeLabelling(db: Database, task: QueueTask) {
   const scope = { workspaceId: task.workspace_id, projectId: await taskProject(db, task) };
   const launch = await loadLaunch(db, task, scope);

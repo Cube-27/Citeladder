@@ -55,7 +55,6 @@ const admin = { ...base, capability: 'manage_members' } as const;
 const memberPath = { workspace_id: uuid, member_id: uuid };
 const invitationPath = { workspace_id: uuid, invitation_id: uuid };
 const accept = invitationAcceptRequestSchema;
-// The assignable roles are workspace policy.
 const roleUpdate = memberRoleUpdateRequestSchema.extend({ role: assignableRoleSchema });
 const transfer = ownershipTransferRequestSchema;
 const invite = invitationCreateRequestSchema.extend({ role: assignableRoleSchema });
@@ -101,8 +100,6 @@ export const workspaceRoutes = [
     async handle({ c, db }) {
       const { name, terms_revision } = await readBody(c, workspaceCreate);
       const userId = c.get('user').id;
-      // The creator's own recorded Terms decision (signup or review) carries
-      // into the workspace they create; without it the request is refused.
       await requireAccountTermsDecision(db, userId, terms_revision);
       const created = await db.transaction().execute(async (trx) => {
         const workspace = await createWorkspace(trx, userId, name);
@@ -114,7 +111,6 @@ export const workspaceRoutes = [
         });
         return workspace;
       });
-      // Its grants committed under the capacity lock; the runtime follows in its own order.
       await refreshRuntime(db, created.id);
       return created;
     },

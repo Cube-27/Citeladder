@@ -1,10 +1,3 @@
-/**
- * Regenerate `src/config/disposable-email-domains.json` from the upstream
- * disposable-email-domains blocklist (CC0-1.0), pinned to the commit it read.
- *
- * Run by a person (`pnpm --filter @citeladder/api disposable-domains:refresh`),
- * reviewed as an ordinary diff and committed. The API never fetches the list.
- */
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
@@ -14,7 +7,6 @@ const LIST_PATH = 'disposable_email_blocklist.conf';
 const OUTPUT = fileURLToPath(
   new URL('../src/config/disposable-email-domains.json', import.meta.url),
 );
-// A domain label run as the list writes it: lowercase, dot-separated, no wildcard.
 const DOMAIN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}$/u;
 
 async function fetchText(url: string): Promise<string> {

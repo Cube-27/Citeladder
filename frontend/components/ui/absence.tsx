@@ -13,25 +13,15 @@ import { cn } from '@/lib/utils';
 type AbsenceProps = Readonly<
   Omit<ComponentPropsWithoutRef<'span'>, 'children'> & {
     state?: DataAvailabilityState;
-    /** Why this particular value is absent, when its column cannot say it. */
     reason?: string;
-    /** The word, when the state's own word is not the reader's ("Couldn't load"). */
     label?: string;
   }
 >;
 
-/** A formatter's result where no table cell or figure prints it: the text, or its Absence. */
 export function printed(value: Formatted): ReactNode {
   return isAbsent(value) ? <Absence state={value.absent} /> : value;
 }
 
-/**
- * Absence — a missing value in a value position: the muted em dash in `ink-2`
- * whatever the kind (owner 2026-11-18), its word from the one list
- * (`availabilityLabel`, lib/format.ts) kept as its tooltip and accessible name
- * so the kinds stay distinct. Never blank: a blank and a zero are opposite
- * findings. A `reason` hangs off a real button, so it is reachable by keyboard.
- */
 export function Absence({
   state = 'not_measured',
   reason,

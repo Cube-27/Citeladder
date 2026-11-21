@@ -23,7 +23,6 @@ const saved = {
   target_hostname: 'owned.test',
 } as SearchIntelligenceDataset;
 
-/** The page's composition: the strip's controls above the tab's collection. */
 function Tab({
   tab,
   datasets,

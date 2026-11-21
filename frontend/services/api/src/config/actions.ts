@@ -1,4 +1,3 @@
-/** Actions catalog: deterministic decisions over persisted evidence. */
 import {
   ACTION_BULK_MAX,
   actionTargetKindSchema,
@@ -13,13 +12,8 @@ import type { SourceClass } from '@citeladder/contracts/opportunities';
 import type { IssueSection } from '@citeladder/contracts/site-health';
 import { opportunities } from './opportunity.ts';
 
-/** An approach branch's target kinds, checked against the contract's; none admits every kind. */
 const kinds = (...listed: ActionTargetKind[]): ActionTargetKind[] => listed;
 
-/**
- * The Actions page's goals in their fixed order, each with its groupings in
- * order (plan v3, owner 2026-11-16). Persisted on each Action at sync.
- */
 const ACTION_GOALS = {
   read_site: ['seo', 'aeo', 'content'],
   own_pages: [
@@ -35,10 +29,6 @@ const ACTION_GOALS = {
   wrong_claims: [],
 } as const satisfies Record<ActionGoal, readonly ActionGrouping[]>;
 
-/**
- * Where an Action's strongest finding files it: a fixed grouping for its rule,
- * its Site Health rule's Issues section, or its cited page's source class.
- */
 type GroupingSource =
   | Readonly<{ kind: 'fixed'; grouping: ActionGrouping }>
   | Readonly<{ kind: 'issue_section' }>
@@ -77,14 +67,12 @@ const RULE_GROUPING: Readonly<Record<string, GroupingSource>> = {
   catalog_fields_missing: fixed('product_pages'),
 };
 
-/** Site Health Issues sections as "Let AI read your site" groupings. */
 const ISSUE_SECTION_GROUPING = {
   technical: 'seo',
   aeo: 'aeo',
   content: 'content',
 } as const satisfies Record<IssueSection, ActionGrouping>;
 
-/** A cited page's source class as a "Get mentioned elsewhere" grouping; any other class is `other_sources`. */
 const SOURCE_CLASS_GROUPING: Readonly<Partial<Record<SourceClass, ActionGrouping>>> = {
   editorial_third_party: 'editorial',
   community: 'ugc',
@@ -100,7 +88,6 @@ export const actions = {
   ACTION_DIAGNOSIS_VERSION: 'action-diagnosis-1',
   ACTION_PRIORITY_VERSION: 'action-priority-1',
   ACTION_TARGET_KINDS: actionTargetKindSchema.options,
-  /** The target kinds a document the Agent saves may name, and an Agent-origin Action may have. */
   AGENT_TARGET_KINDS: ['page', 'planned_page'] as const satisfies readonly ActionTargetKind[],
   PLANNED_PAGE_TOPIC_MAX_CHARS: 120,
   ACTION_ORIGIN_EVIDENCE: 'evidence',
@@ -110,10 +97,6 @@ export const actions = {
   ACTION_STATUS_IMPLEMENTED: 'implemented',
   ACTION_STATUS_MEASURING: 'measuring',
   ACTION_STATUS_DONE: 'done',
-  /**
-   * The status a user sees for each persisted effective status, and the
-   * measurement badge a Done Action carries (owner 2026-11-16).
-   */
   ACTION_STATUS_VIEW: {
     open: { status: 'open', measurement: null },
     in_progress: { status: 'in_progress', measurement: null },
@@ -125,19 +108,15 @@ export const actions = {
     string,
     { status: ActionStatus; measurement: ActionMeasurement | null }
   >,
-  /** Stored status → the stored statuses a user decision may move it to. */
   ACTION_TRANSITIONS: {
     open: ['in_progress', 'dismissed'],
     in_progress: ['dismissed'],
     dismissed: ['open', 'in_progress'],
     implemented: [],
   } as const satisfies Record<string, readonly ActionUserStatus[]>,
-  /** Stored statuses Mark implemented accepts: New and In progress, never Declined. */
   ACTION_DECLARABLE_STATUSES: ['in_progress', 'open'],
   ACTION_ACTIVE_STATUSES: ['in_progress', 'open'],
-  /** The most Actions one bulk status change names or reaches through its filter: the contract's bound. */
   ACTION_BULK_MAX,
-  /** The longest text the Actions list searches labels for. */
   ACTION_SEARCH_MAX_CHARS: 200,
   EVIDENCE_FAMILIES: [
     'ai_visibility',
@@ -182,13 +161,6 @@ export const actions = {
     catalog_fields_missing: 'commerce',
   },
   ACTION_PRIORITY_ROUNDING_DECIMALS: 1,
-  // Each branch's `messages` prefill the Agent chat an Action opens (AS3): the
-  // first template whose placeholders the Action's own evidence fills is used,
-  // so a missing fact drops to a plainer sentence rather than being invented.
-  // `{target}` is the Action's label; `{issue}` the title of the branch's
-  // strongest finding; `{angle}` a content gap's angle; `{competitors}` the
-  // competitors read on an earned page. The last template of every branch
-  // names `{target}` alone, so one always fills.
   APPROACH_TREE: [
     {
       approach: 'earned_placement',
@@ -205,7 +177,6 @@ export const actions = {
       target_kinds: kinds(),
     },
     {
-      // One fix for an issue a shared template or component causes on every page.
       approach: 'fix_technical',
       rule_ids: ['site_issue_family'],
       skill_id: 'technical_health',
@@ -269,8 +240,6 @@ export const actions = {
         'Do not invent statistics, quotes or sources.',
       ],
       target_kinds: kinds('planned_page'),
-      // The Agent workflow (`workflows.json` id) a finding of this branch hands
-      // off with, and what it carries: the finding's Opportunity, or the page URL.
       handoff: { workflow_id: 'article', context: 'opportunity' },
     },
     {
@@ -286,7 +255,6 @@ export const actions = {
         'Do not invent statistics, quotes or sources.',
       ],
       target_kinds: kinds('page'),
-      // The page is fetched into a page document before the first turn (phase 2, E3).
       handoff: { workflow_id: 'optimize_page', context: 'page_url' },
     },
     {
@@ -332,33 +300,15 @@ export const actions = {
   ISSUE_SECTION_GROUPING,
   SOURCE_CLASS_GROUPING,
   SOURCE_CLASS_GROUPING_DEFAULT: 'other_sources' as const satisfies ActionGrouping,
-  /**
-   * An Action no finding files (an Agent row, or one not yet synced since
-   * groupings were persisted): a planned page creates content, anything else
-   * improves a page.
-   */
   AGENT_KIND_GROUPING: { planned_page: 'create_content' } as Readonly<
     Partial<Record<string, ActionGrouping>>
   >,
   ACTION_GROUPING_FALLBACK: 'improve_pages' as const satisfies ActionGrouping,
-  /** Rows the Actions tree shows per grouping, and each "Show more" page. */
   ACTION_TREE_PAGE_SIZE: 10,
-  /**
-   * The goal strip flags "Let AI read your site" as blocking while a New
-   * Action of these groupings scores a critical finding (critical × 10).
-   */
   ACTION_BLOCKING_GROUPINGS: ['seo', 'aeo'] as const satisfies readonly ActionGrouping[],
   ACTION_BLOCKING_MIN_PRIORITY: 40,
-  /** URLs an Action's detail lists per page. */
   ACTION_URLS_PAGE_SIZE: 10,
-  /**
-   * Floors of an Action's priority bands. A crawl or catalog finding scores its
-   * severity × 10 (critical 40, high 30, medium 20, low 10), so these keep its
-   * band equal to its severity; a prompt gap's value and gap factors lift it.
-   * An unscored Action has no band.
-   */
   ACTION_PRIORITY_BANDS: { high: 30, medium: 20 },
-  // Each check kind names its reading (`opportunities/checks/`).
   LEG_VISIBILITY_RUN: 'next_visibility_run' as const,
   LEG_SEARCH_CONSOLE_WINDOW: 'next_search_console_window' as const,
   LEG_CRAWL: 'next_crawl' as const,
@@ -372,22 +322,18 @@ export const actions = {
   ACTION_LABEL_MAX_CHARS: 255,
 };
 
-// Every detector must name its evidence source, for diagnosis and measurement.
 const unmappedRules = Object.keys(opportunities.OPPORTUNITY_RULES_BY_ID).filter(
   (rule) => !Object.hasOwn(actions.RULE_EVIDENCE_FAMILY, rule),
 );
 if (unmappedRules.length)
   throw new Error(`Rules without an evidence family: ${unmappedRules.join(', ')}`);
 
-// Every detector files its Actions under a grouping.
 const ungroupedRules = Object.keys(opportunities.OPPORTUNITY_RULES_BY_ID).filter(
   (rule) => !Object.hasOwn(RULE_GROUPING, rule),
 );
 if (ungroupedRules.length)
   throw new Error(`Rules without an Actions grouping: ${ungroupedRules.join(', ')}`);
 
-// Every handoff template names known facts, and every branch ends on one that
-// needs only the Action's label, so a message always fills.
 const HANDOFF_FACTS = new Set(['target', 'issue', 'angle', 'competitors']);
 for (const branch of [...actions.APPROACH_TREE, actions.DEFAULT_APPROACH]) {
   const named = branch.messages.map((template) =>

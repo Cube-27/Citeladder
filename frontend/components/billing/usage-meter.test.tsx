@@ -6,14 +6,6 @@ import { DISPLAY_TIME_ZONE_COOKIE } from '@/lib/display-timezone';
 
 import { UsageTable } from './usage-meter';
 
-/**
- * The rule this table exists to enforce is that `limit_state` is the ONLY
- * authority for what the numbers mean. An `unknown` allowance drawn as an empty
- * bar reads as "none left" when it means "we could not resolve this" — the user
- * then believes they are out of quota they may well have. `unlimited` drawn as
- * a bar is the mirror mistake. Both are asserted here as the ABSENCE of a
- * meter, beside a row that has one.
- */
 function item(overrides: Partial<UsageItem> = {}): UsageItem {
   return {
     key: 'prompt_slots',
@@ -32,7 +24,6 @@ function item(overrides: Partial<UsageItem> = {}): UsageItem {
   } as UsageItem;
 }
 
-/** A metered table: the subject row, then a used finite row that always meters. */
 function renderRow(subject: UsageItem) {
   render(<UsageTable items={[subject, item({ key: 'project_slots' })]} />);
   const [, row] = screen.getAllByRole('row');
@@ -40,7 +31,6 @@ function renderRow(subject: UsageItem) {
   return row;
 }
 
-/** The row's cells as text, the quota first. */
 const cells = (row: HTMLElement) =>
   within(row)
     .getAllByRole('cell')
@@ -118,8 +108,6 @@ describe('UsageTable', () => {
   });
 
   it('never overfills the bar past full', () => {
-    // Over-consumption is possible (a reservation settling high); the bar must
-    // clamp rather than overflow its track.
     const row = renderRow(item({ allowance: 100, consumed: 150, remaining: 0 }));
     const meter = within(row).getByRole('meter');
     expect(meter).toHaveAttribute('aria-valuenow', '100');

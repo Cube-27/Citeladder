@@ -1,8 +1,3 @@
-/**
- * One tracked prompt's past answers over HTTP: every successful answer across
- * runs, newest first, keyset-paged and filtered, against the real PostgreSQL
- * schema with workspace isolation.
- */
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { record } from '../src/db/json.ts';
@@ -39,7 +34,6 @@ async function answer(
   return taskId;
 }
 
-/** Three runs of one prompt, plus answers the list must never show. */
 async function measuredPrompt() {
   const tenant = await fixtures.tenant();
   const setId = await promptSet(db, tenant.projectId);
@@ -65,7 +59,6 @@ async function measuredPrompt() {
     auditId: late,
     promptId,
     engine: 'claude',
-    // Offsets tie; the stored first-named value is the answer, never re-derived.
     analysis: {
       competitorMentions: ['Globex', 'Initech'],
       mentionOffsets: { Globex: 5, Initech: 5 },
@@ -79,7 +72,6 @@ async function measuredPrompt() {
     providerMetadata: { fanout_availability: 'unavailable' },
     analysis: {},
   });
-  // Never listed: a failed task, another prompt's answer, an unsettled run.
   await fixtures.execution(tenant, {
     auditId: late,
     promptId,
@@ -129,7 +121,6 @@ describe('GET /projects/{project_id}/prompts/{prompt_id}/executions', () => {
       cited: false,
       search: 'not_used',
     });
-    // An AI Overview exposes no search signal: not reported, never "no".
     expect(rows.get(overview)).toMatchObject({ brands: [], search: 'not_reported' });
   });
 

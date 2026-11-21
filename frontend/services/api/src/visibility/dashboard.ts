@@ -1,11 +1,3 @@
-/**
- * The selected-measurement visibility dashboard: one run, or one frozen
- * configuration pooled across a period.
- *
- * Computed from the persisted `MetricSnapshot`; no
- * cross-run trend here (that is `/visibility/trends`). The latest run is the
- * default selection, and a range pools only runs of one configuration.
- */
 import { auditStatusSchema } from '@citeladder/contracts/audits';
 import type { visibilitySchema } from '@citeladder/contracts/visibility';
 import { sql } from 'kysely';
@@ -92,7 +84,6 @@ export async function getVisibility(
   }
   if (query.selectionMode === 'range') return rangeVisibility(db, requested, query);
   const run = await selectedRun(db, requested, query.auditId);
-  // A named run is read in its own market: comparisons stay inside it.
   const scope = { ...requested, marketId: run.marketId };
   const view = await runView(db, scope, run, query);
   const [comparison, gaps] = await Promise.all([
@@ -122,7 +113,6 @@ export async function getVisibility(
   return { ...view.response, comparison };
 }
 
-/** One run's projection with no baseline comparison, for summary surfaces such as Overview. */
 export async function getRunVisibility(
   db: Database,
   scope: RunScope,
@@ -134,10 +124,6 @@ export async function getRunVisibility(
   return (await runView(db, scope, run, { auditId, logicalEngine: null, cohort })).response;
 }
 
-/**
- * One run against the baseline finalization persisted for it, all engines, as
- * Visibility compares it; Overview reads its matched-subset change from here.
- */
 export async function getRunComparison(
   db: Database,
   scope: RunScope,
@@ -172,7 +158,6 @@ const brandRuns = (db: Database, scope: RunScope) =>
     .where('project_id', '=', scope.projectId)
     .where('audit_scope', '=', visibility.brand_audit_scope);
 
-/** The latest dashboard-ready brand run (`latestBrandRunId`), or not measured. */
 async function latestDashboardRunId(db: Database, scope: RunScope): Promise<string> {
   const latest = await latestBrandRunId(db, { ...scope, marketId: marketOf(scope) });
   if (latest === null)
@@ -180,7 +165,6 @@ async function latestDashboardRunId(db: Database, scope: RunScope): Promise<stri
   return latest;
 }
 
-/** The runs an evidence summary covers: the selection, or the latest dashboard-ready run. */
 export async function scopedSelection(
   db: Database,
   selection: RunSelection,
@@ -190,7 +174,6 @@ export async function scopedSelection(
   return { ...scoped, auditId: await latestDashboardRunId(db, scoped) };
 }
 
-/** The named run, or the latest dashboard-ready one; its snapshot must exist. */
 async function selectedRun(
   db: Database,
   scope: RunScope,
@@ -244,7 +227,6 @@ async function selectedRun(
   };
 }
 
-/** The run's block for the scope's topic; a run that asked no prompt under it measured nothing there. */
 export async function topicBlock(
   db: Database,
   key: { workspaceId: string; auditId: string; topicId: string },
@@ -289,7 +271,6 @@ function citationTotals(metrics: Metrics): NonNullable<VisibilityResponse['citat
   };
 }
 
-/** One run's projection before any comparison is applied. */
 async function runView(
   db: Database,
   scope: RunScope,
@@ -327,7 +308,6 @@ async function runView(
       visibility_score: selectedScore(run.visibilityScore, metrics, query.cohort, engine),
       visibility_rate: observedRate(metrics, 'brand_mention_rate'),
       owned_citation_rate: observedRate(metrics, 'owned_citation_rate'),
-      // The preserved prompt composite: a different measure from the score.
       prompt_performance_score: promptPerformance(metrics),
       counts,
       comparison_key: frozenComparisonKey(run.configuration, engine),
@@ -342,9 +322,6 @@ async function runView(
   };
 }
 
-// --- Range: one frozen configuration pooled across an explicit period -----
-
-/** A configuration is its identity plus the versions that computed it. */
 function configurationGroup(source: TrendSource): string {
   return `${source.comparisonKey || source.auditId}:${source.analyzerVersion}:${source.scoringRuleVersion}`;
 }
@@ -367,8 +344,6 @@ function rangeGroups(
   );
   if (groups.size === 0)
     throw new AnalysisNotFoundError('No measurements in the selected period', 'not_measured');
-  // The configuration measured most recently, unless the reader chose one;
-  // a whole prompt set wins over runs of selected prompts.
   let key = query.configurationKey;
   if (key === null) {
     let latest: TrendSource | null = null;
@@ -394,7 +369,6 @@ function rangeGroups(
   return { groups, key: key!, sources };
 }
 
-/** Per-engine rows over the selected runs; a configured engine never answered is unavailable. */
 function rangeEngines(
   runs: readonly MeasuredRun[],
   sources: readonly TrendSource[],
@@ -454,7 +428,6 @@ function unavailableCounts(): MeasurementCounts {
   };
 }
 
-/** The same configuration over the equally long period just before this one. */
 async function comparePeriod(
   db: Database,
   scope: RunScope,
@@ -519,17 +492,12 @@ function asRankingRow(row: TrendPoint['rankings'][number]): RankingRow {
 function rangeWindow(query: Pick<DashboardQuery, 'fromAt' | 'toAt'>) {
   const fromAt = query.fromAt && toUtc(query.fromAt);
   const toAt = query.toAt ? toUtc(query.toAt) : fromEpochMicros(BigInt(Date.now()) * 1000n);
-  // An open period ends now, so it cannot start later than now.
   if (fromAt && epochMicros(fromAt) > epochMicros(toAt)) {
     throw new TrendQueryError("'from' must not be after 'to'");
   }
   return { fromAt, toAt };
 }
 
-/**
- * The whole runs a dashboard selection reads: the selected run, or the
- * range's chosen configuration. A breakdown of the selection reads these.
- */
 export async function selectionRuns(
   db: Database,
   requested: RunScope,
@@ -605,7 +573,6 @@ async function rangeVisibility(
     owned_citation_rate: point.owned_citation_rate,
     prompt_performance_score: null,
     visibility_score: null,
-    // Pooled like the counts above; the last run's own values would describe one run only.
     avg_position: point.avg_position ?? null,
     model_provenance: point.model_provenance ?? [],
     citation_totals: undefined,

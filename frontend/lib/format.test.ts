@@ -74,12 +74,9 @@ describe('dates and times', () => {
     const at = '2026-11-14T11:33:00Z';
     expect(formatDisplayDate(at, 'Asia/Kolkata')).toBe('Nov 14, 2026');
     expect(formatDisplayTimestamp(at, 'Asia/Kolkata')).toBe('Nov 14, 2026, 05:03 PM');
-    // Formatters are cached per zone: one never borrows another's.
     expect(formatDisplayTimestamp(at, 'Europe/Paris')).toBe('Nov 14, 2026, 12:33 PM');
-    // An unknown zone falls back to UTC every time.
     expect(formatDisplayTimestamp(at, 'Not/A_Zone')).toBe('Nov 14, 2026, 11:33 AM');
     expect(formatDisplayTimestamp(at, 'Not/A_Zone')).toBe('Nov 14, 2026, 11:33 AM');
-    // A strip's meta: day, month and 24-hour time in the zone, without year or zone.
     expect(formatStripTimestamp(at, 'Asia/Kolkata')).toBe('14 Nov 17:03');
     expect(formatStripTimestamp('2026-11-18T00:05:00Z', 'Europe/Paris')).toBe('18 Nov 01:05');
     expect(formatStripTimestamp(at, 'Not/A_Zone')).toBe('14 Nov 11:33');

@@ -2,11 +2,6 @@ import { BarChart3 } from '@/lib/icons';
 import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 import { StateBlock } from '@/components/ui/state-block';
 
-/**
- * Empty state for the AI Traffic referrals view. Referral measurement begins
- * once a GA4 source/medium report has been imported, so GA4 is connected here
- * rather than in Settings; once it is, only the waiting-for-import line shows.
- */
 export function AiReferralsEmptyState() {
   return (
     <DataSourceSetup

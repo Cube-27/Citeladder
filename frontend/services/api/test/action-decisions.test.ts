@@ -1,4 +1,3 @@
-/** Action status decisions on the real routes: Accept, Decline, Restore, one at a time and in bulk. */
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { ActionSeed } from './action-support.ts';
@@ -22,12 +21,12 @@ describe('Action status decisions', () => {
       const body = (await response.json()) as { status?: string };
       return [response.status, response.ok ? body.status : null];
     };
-    expect(await patch('in_progress')).toEqual([200, 'in_progress']); // Accept
-    expect(await patch('open')).toEqual([422, null]); // In progress cannot go back to New
-    expect(await patch('dismissed')).toEqual([200, 'dismissed']); // Decline
-    expect(await patch('open')).toEqual([200, 'open']); // Restore
-    expect(await patch('dismissed')).toEqual([200, 'dismissed']); // Decline a New one
-    expect(await patch('in_progress')).toEqual([200, 'in_progress']); // Accept a declined one
+    expect(await patch('in_progress')).toEqual([200, 'in_progress']);
+    expect(await patch('open')).toEqual([422, null]);
+    expect(await patch('dismissed')).toEqual([200, 'dismissed']);
+    expect(await patch('open')).toEqual([200, 'open']);
+    expect(await patch('dismissed')).toEqual([200, 'dismissed']);
+    expect(await patch('in_progress')).toEqual([200, 'in_progress']);
     const events = await db
       .selectFrom('action_status_events')
       .select(['previous_status', 'next_status'])
@@ -46,7 +45,6 @@ describe('Action status decisions', () => {
       done: 0,
       dismissed: 0,
     });
-    // Mark implemented moves In progress to Done, which no decision changes.
     expect((await declare(s, 'accepted')).status).toBe(201);
     expect(await patch('dismissed')).toEqual([422, null]);
     const done = await pageBody(await request(s, `${list}?status=done`));
@@ -74,23 +72,19 @@ describe('Action status decisions', () => {
       );
     const theirs = await statuses(foreign);
 
-    // Another workspace's id is skipped, never updated.
     const named = [actionId(s), actionId(s, otherRule), actionId(foreign)];
     expect(await bulk({ ids: named, to: 'dismissed' })).toEqual([
       200,
       { updated: 2, skipped: 1, truncated: false },
     ]);
-    // A ticked grouping reaches only its own Actions; the one left is not in SEO.
     expect(await bulk({ filter: { status: 'open', grouping: 'seo' }, to: 'in_progress' })).toEqual([
       200,
       { updated: 0, skipped: 0, truncated: false },
     ]);
-    // Accept all: every New Action the filter matches, here the one left.
     expect(await bulk({ filter: { status: 'open' }, to: 'in_progress' })).toEqual([
       200,
       { updated: 1, skipped: 0, truncated: false },
     ]);
-    // In progress cannot be restored to New: matched, skipped.
     expect(await bulk({ filter: { status: 'in_progress' }, to: 'open' })).toEqual([
       200,
       { updated: 0, skipped: 1, truncated: false },
@@ -102,7 +96,6 @@ describe('Action status decisions', () => {
     });
     expect(await eventCount(s)).toBe(3);
 
-    // Two changes racing over the same Actions in opposite orders: each moves once.
     const raced = await Promise.all([
       bulk({ ids: [actionId(s), actionId(s, otherRule)], to: 'open' }),
       bulk({ ids: [actionId(s, otherRule), actionId(s)], to: 'open' }),
@@ -110,13 +103,11 @@ describe('Action status decisions', () => {
     expect(raced.map(([, body]) => (body as { updated: number }).updated).sort()).toEqual([0, 2]);
     expect(await eventCount(s)).toBe(5);
 
-    // Neither ids and a filter together, nor more than 100 ids.
     expect((await bulk({ ids: [actionId(s)], filter: { status: 'open' }, to: 'open' }))[0]).toBe(
       422,
     );
     const many = Array.from({ length: 101 }, () => randomUUID());
     expect((await bulk({ ids: many, to: 'dismissed' }))[0]).toBe(422);
-    // Another workspace cannot reach this project, by ids or by filter.
     expect((await bulk({ ids: [actionId(s)], to: 'open' }, foreign))[0]).toBe(404);
     expect((await bulk({ filter: { status: 'dismissed' }, to: 'open' }, foreign))[0]).toBe(404);
     expect(await statuses(foreign)).toEqual(theirs);

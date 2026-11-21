@@ -4,23 +4,8 @@ import { Pressable } from '@/components/ui/pressable';
 import { ChevronLeft, ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/**
- * Calendar — a month grid for picking one ISO (`YYYY-MM-DD`) day.
- *
- * Built from tokens rather than a calendar library: the surface needs one
- * bounded single-date grid, and every visual it needs (control radius, accent
- * fill, muted text, focus ring) already exists in the system.
- *
- * Dates are handled as ISO STRINGS end to end, never as `Date` objects. A
- * `Date` carries a time zone, so parsing "2026-09-05" and formatting it back
- * can shift the day either side of UTC — the exact bug that makes a picked
- * date arrive as the day before. The only `Date` used is a UTC-noon anchor
- * for grid arithmetic, which no zone can push across a day boundary.
- */
-
 const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] as const;
 
-/** A UTC-noon `Date` for one ISO day — safe for month/day arithmetic. */
 function anchor(iso: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!match) return null;
@@ -44,13 +29,10 @@ function toIso(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** Monday-first index (0-6) of a UTC date's weekday. */
 function weekdayIndex(date: Date): number {
   return (date.getUTCDay() + 6) % 7;
 }
 
-// Explicit locale, not the ambient one: the server and the browser would
-// otherwise resolve different defaults and the heading would hydrate mismatched.
 const monthLabelFormat = new Intl.DateTimeFormat('en-US', {
   month: 'long',
   year: 'numeric',
@@ -65,7 +47,6 @@ function addMonths(date: Date, delta: number): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + delta, 1, 12));
 }
 
-/** Every day shown for `month`'s grid, padded to whole Monday-first weeks. */
 function monthGrid(month: Date): string[] {
   const first = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), 1, 12));
   const start = new Date(first);
@@ -75,8 +56,6 @@ function monthGrid(month: Date): string[] {
     const day = new Date(start);
     day.setUTCDate(start.getUTCDate() + index);
     days.push(toIso(day));
-    // Stop after the week that completes the month rather than always
-    // drawing six rows, so the panel does not jump height between months.
     if (index % 7 === 6 && day.getUTCMonth() !== month.getUTCMonth() && index >= 27) break;
   }
   return days;
@@ -89,10 +68,8 @@ export function Calendar({
   max,
   ariaLabel,
 }: Readonly<{
-  /** Selected ISO day, or '' when none is chosen yet. */
   value: string;
   onSelect: (iso: string) => void;
-  /** Inclusive ISO bounds; days outside them are disabled. */
   min?: string;
   max?: string;
   ariaLabel: string;
@@ -104,8 +81,6 @@ export function Calendar({
   const days = monthGrid(month);
   const monthIndex = month.getUTCMonth();
 
-  // Weeks of seven, so the grid can be a real <table>: a calendar IS tabular
-  // data, and native table semantics beat ARIA roles for screen readers.
   const weeks: string[][] = [];
   for (let index = 0; index < days.length; index += 7) {
     weeks.push(days.slice(index, index + 7));
@@ -123,7 +98,6 @@ export function Calendar({
         >
           <ChevronLeft className="size-3.5" aria-hidden />
         </Pressable>
-        {/* Announced on change so a screen reader hears the month it moved to. */}
         <span aria-live="polite" className="type-body">
           {monthLabel(month)}
         </span>
@@ -169,9 +143,6 @@ export function Calendar({
                         isSelected
                           ? 'bg-primary text-on-primary enabled:hover:bg-primary-hover enabled:active:bg-primary-hover'
                           : 'enabled:hover:overlay-hover enabled:active:overlay-pressed',
-                        // Days spilling in from the neighbouring months stay
-                        // legible but recede, so the current month reads as
-                        // the subject.
                         outside && !isSelected && 'text-ink-2',
                       )}
                     >

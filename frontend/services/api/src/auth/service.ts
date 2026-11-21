@@ -46,7 +46,6 @@ export async function registerUser(
   // Duplicate addresses pay the same hashing cost and receive the same response.
   const encoded = await hashPassword(password);
   const registeredId = await db.transaction().execute(async (trx) => {
-    // Signing up creates no workspace: onboarding creates the owned one and its trial.
     const user = await createIdentity(trx, email, encoded);
     if (user) {
       await trx
@@ -65,7 +64,6 @@ export async function registerUser(
   if (registeredId) logger.info('auth.registered', { user_id: registeredId });
 }
 
-/** Identity insertion only; caller explicitly chooses workspace/access provisioning. */
 export async function createIdentity(db: Database, email: string, passwordHash: string) {
   await subjectXactLock(db, `auth.email:${email.trim().toLowerCase()}`);
   const now = new Date();
@@ -134,11 +132,6 @@ export async function authenticateUser(
   return authenticated;
 }
 
-/**
- * Sign out everywhere: every session ends. `disconnect` also revokes this
- * person's MCP grants and the API keys they created, in the same transaction;
- * plain sign-out leaves integrations working.
- */
 export async function logoutUser(
   db: Database,
   userId: string,

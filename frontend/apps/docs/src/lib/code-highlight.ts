@@ -1,9 +1,3 @@
-/**
- * A small deterministic highlighter for the API examples: it splits a JSON,
- * shell, JavaScript or Python sample into coloured tokens at build time, so the
- * docs ship no highlighting library or client script. It only colours: the
- * tokens' text, joined, is always the input.
- */
 export type CodeLanguage = 'json' | 'shell' | 'javascript' | 'python';
 type CodeTokenKind = 'key' | 'string' | 'number' | 'literal' | 'keyword' | 'comment';
 export type CodeToken = { kind: CodeTokenKind | null; text: string };
@@ -43,7 +37,6 @@ function pattern(language: CodeLanguage): RegExp {
   );
 }
 
-/** A string or bare word directly followed by a colon is an object key. */
 const isKey = (code: string, end: number) => /^[ \t]*:/u.test(code.slice(end, end + 8));
 
 function kindOf(match: RegExpExecArray, code: string, language: CodeLanguage): CodeToken['kind'] {
@@ -77,7 +70,6 @@ export function highlightCode(code: string, language: CodeLanguage): CodeToken[]
 const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
 const escape = (text: string) => text.replaceAll(/[&<>"]/gu, (char) => ESCAPES[char] ?? char);
 
-/** The sample as escaped HTML, each coloured token in a `cl-tok-<kind>` span. */
 export function highlightHtml(code: string, language: CodeLanguage): string {
   return highlightCode(code, language)
     .map(({ kind, text }) =>

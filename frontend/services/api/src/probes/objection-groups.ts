@@ -1,9 +1,3 @@
-/**
- * A project's objection groups (AV-28): probes create them, people rename,
- * merge and delete them. Names are unique per project case-insensitively.
- * Merging moves every labelled reason onto the kept group; deleting a group
- * deletes its reasons, so it no longer reads as an objection.
- */
 import { randomUUID } from 'node:crypto';
 
 import { objectionGroupRequestSchema } from '@citeladder/contracts/probes';
@@ -22,7 +16,6 @@ export const groupRequest = objectionGroupRequestSchema.extend({
   name: nameSchema(policy.probes.group_name_max_chars),
 });
 
-/** The project's groups, oldest first. */
 export function listGroups(db: Database, scope: Scope) {
   return db
     .selectFrom('probe_objection_groups')
@@ -34,7 +27,6 @@ export function listGroups(db: Database, scope: Scope) {
     .execute();
 }
 
-/** Creates a probe's new groups (a concurrent probe may have made one) and maps every name to its id. */
 export async function saveGroups(db: Database, scope: Scope, names: readonly string[], at: Date) {
   if (names.length)
     await db
@@ -81,7 +73,6 @@ export async function renameGroup(
   }
 }
 
-/** Moves `groupId`'s reasons onto `intoId` and removes it; both must be the project's. */
 export function mergeGroups(db: Database, scope: Scope & { groupId: string; intoId: string }) {
   if (scope.groupId === scope.intoId) throw new ApiError(400, 'Choose another group to merge into');
   return inTransaction(db, async (trx) => {

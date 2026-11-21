@@ -114,7 +114,6 @@ describe('Architecture panel', () => {
 
     expect(await screen.findByRole('heading', { name: 'Page kinds' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Observed hierarchy pages' })).toBeInTheDocument();
-    // Persisted summaries, not recomputed ones.
     expect(screen.getByText('66.7%')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
     expect(screen.getByText('8 including menus')).toBeInTheDocument();
@@ -141,10 +140,8 @@ describe('Architecture panel', () => {
     const tree = await screen.findByRole('region', { name: 'Observed hierarchy pages' });
     const row = (url: string) => within(tree).getByRole('link', { name: url }).parentElement!;
     expect(row('https://acme.test/shop/bags')).toHaveTextContent('Breadcrumb');
-    // Rows print the path without the origin every row shares.
     const bootsRow = row('https://acme.test/shop/boots');
     expect(bootsRow.textContent).toBe('/shop/bootsProduct');
-    // The home page is the root, not a page missing its parent.
     expect(row('https://acme.test/').textContent).toBe('/Homepage');
   });
 
@@ -203,8 +200,6 @@ describe('Architecture panel', () => {
     const orphans = screen.getAllByText('Orphaned pages')[0]!.closest('div');
     expect(within(orphans!).getByText('1')).toBeInTheDocument();
     expect(screen.queryByText(/withheld/i)).toBeNull();
-    // The scope note is what keeps the number honest: it is a claim about the
-    // pages this crawl fetched, not about the whole site.
     expect(screen.getAllByText('within this crawl').length).toBeGreaterThan(0);
   });
 
@@ -239,8 +234,6 @@ describe('Architecture panel', () => {
     stubArchitecture();
     renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
 
-    // The card shows the number only; the evidence lives behind it. The
-    // control is named by what it DOES — "1" alone is not a reason to press it.
     const orphanCount = await screen.findByRole('button', { name: 'View 1 orphaned page' });
     expect(screen.queryByText('Boots')).toBeNull();
 

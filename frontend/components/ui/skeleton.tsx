@@ -10,7 +10,6 @@ import type { ChartHeight } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 
 type SkeletonProps = Readonly<{
-  /** What is loading, as a verb: "Loading runs". */
   label?: string;
   className?: string;
 }> &
@@ -23,21 +22,6 @@ type SkeletonProps = Readonly<{
     | Readonly<{ variant: 'chart'; height?: ChartHeight }>
   );
 
-/**
- * Skeleton — the shape of what is loading, made of `well` blocks (radius 4)
- * on the real card: never lines. Each variant is shaped like what it stands
- * for, at its final size, so content arriving moves nothing by more than 8px.
- * A soft shimmer crosses the blocks; under reduced motion they are still.
- *
- *   `text`  — two or three blocks of unequal width.
- *   `table` — the real column count: a head row and `rows` rows (40).
- *   `stat`  — `count` metric cards: a label block over a value block.
- *   `facts` — `rows` rows (40) of a label block beside a value block.
- *   `list`  — `rows` rows (48) of a tile, a title block and a caption block.
- *   `chart` — one block at the chart's height.
- *
- * The blocks are drawing, not content: only the verb is announced, after a beat.
- */
 export function Skeleton(props: SkeletonProps) {
   return (
     <SkeletonFrame

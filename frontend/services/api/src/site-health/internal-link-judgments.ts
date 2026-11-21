@@ -187,8 +187,6 @@ async function judge(
       },
     }));
   } catch (error) {
-    // Only a provider fault or the job deadline settles as uncertain; any
-    // other fault fails the task so it retries and terminal compensation runs.
     let reason = 'deadline_exceeded';
     if (!signal.aborted) {
       if (!(error instanceof ModelError)) throw error;
@@ -245,7 +243,6 @@ export function internalLinkJudge(
   return async (task, { db }) => {
     await taskProject(db, task);
     const raw = clientFactory();
-    // Recorded, not charged (B13).
     const client = raw && meterFor(db, task.workspace_id).jev(raw, 'internal_link_judge');
     const requests = await prepare(db, task, client);
     const controller = new AbortController();

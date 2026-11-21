@@ -1,12 +1,3 @@
-/**
- * A person's Apply, Dismiss, Revert, Apply all and Dismiss all on a page
- * document's suggestions (content optimization §3, phase 2 E4). Each names the
- * latest revision the person saw: a newer one is a conflict, never a silent
- * rebase. Each runs with the chat locked and idle. A suggestion whose span,
- * field or dependencies changed is marked stale instead of applied, and an
- * applied change appends one user revision, after which every other open
- * suggestion is rechecked against it.
- */
 import { z } from 'zod';
 import {
   agentSuggestionResultSchema,
@@ -39,12 +30,10 @@ import {
 
 type Result = z.input<typeof agentSuggestionResultSchema>;
 type Revision = Awaited<ReturnType<typeof appendUserRevision>>;
-/** One replacement to make: a body span or an SEO field. */
 type Edit =
   | { kind: 'span'; at: Span; text: string }
   | { kind: 'field'; field: PageField; text: string };
 
-/** The latest revision with the edits made, and where each span edit's text now sits. */
 function edited(chain: RevisionChain, title: string, edits: readonly Edit[]) {
   const spans = edits.flatMap((edit) => (edit.kind === 'span' ? [edit] : []));
   const { body, placed } = replaceSpans(chain.latest.body, spans);
@@ -60,7 +49,6 @@ function edited(chain: RevisionChain, title: string, edits: readonly Edit[]) {
   };
 }
 
-/** The replacement that applies a ready suggestion where it is now. */
 function applying(suggestion: Suggestion, at: Span | null): Edit {
   const text = suggestion.row.replacement ?? '';
   const { anchor } = suggestion;
@@ -69,7 +57,6 @@ function applying(suggestion: Suggestion, at: Span | null): Edit {
   throw new AgentError('suggestion_not_ready');
 }
 
-/** The replacement that puts an applied suggestion's original text back, or null when that text was edited since. */
 function reverting(suggestion: Suggestion, chain: RevisionChain): Edit | null {
   const { anchor, row } = suggestion;
   if (anchor.kind === 'field')
@@ -81,7 +68,6 @@ function reverting(suggestion: Suggestion, chain: RevisionChain): Edit | null {
   return at ? { kind: 'span', at, text: anchor.quote.exact } : null;
 }
 
-/** Whether an earlier edit in the same Apply all changed something this suggestion depends on. */
 function dependsOnBatch(entry: Entry, batch: readonly Edit[]) {
   const section = entry.located?.ok ? entry.located.section : null;
   return entry.suggestion.dependsOn.some((dependency) => {
@@ -100,7 +86,6 @@ export class PageSuggestions {
     this.db = db;
   }
 
-  /** Runs one change on the document the person saw, as its latest revision. */
   private change<T>(
     scope: Scope,
     target: { chatId: string; outputId: string; baseId: string },
@@ -116,7 +101,6 @@ export class PageSuggestions {
     });
   }
 
-  /** Appends the user revision for these edits; the caller records its events, then rechecks. */
   private async revise(db: Database, context: Context, edits: readonly Edit[]) {
     const { content, positionOf } = edited(context.chain, context.document.revision.title, edits);
     const revision = await appendUserRevision(
@@ -129,7 +113,6 @@ export class PageSuggestions {
     return { revision, positionOf };
   }
 
-  /** The suggestion as it now reads, with the change's outcome. */
   private async result(
     db: Database,
     context: Context,
@@ -186,12 +169,6 @@ export class PageSuggestions {
     });
   }
 
-  /**
-   * Returns an applied or dismissed suggestion to open (E4). An applied one's
-   * original text is restored only while its replacement is unchanged;
-   * otherwise the revert is refused. A dismissed one reopens only if it still
-   * holds, and is otherwise marked stale.
-   */
   revert(scope: Scope, target: Target) {
     return this.change(scope, target, async (db, context) => {
       const entry = find(context.entries, target.suggestionId);
@@ -232,12 +209,6 @@ export class PageSuggestions {
     return this.result(db, context, suggestion.row.id, 'reverted', { revision });
   }
 
-  /**
-   * Applies every open ready suggestion that holds and competes with no other
-   * open one, in position order, in one revision. One whose dependency an
-   * earlier one in the batch changed goes stale instead. Competing ones stay
-   * open for the person to choose; those needing input are skipped.
-   */
   applyAll(scope: Scope, target: Omit<Target, 'suggestionId'>) {
     return this.change(scope, target, async (db, context) => {
       let staled = await this.staleBroken(db, context);
@@ -297,7 +268,6 @@ export class PageSuggestions {
     });
   }
 
-  /** Dismisses every open suggestion of the document. */
   dismissAll(scope: Scope, target: Omit<Target, 'suggestionId'>) {
     return this.change(scope, target, async (db, context) => {
       const open = context.entries.filter((entry) => entry.status === 'open');
@@ -315,7 +285,6 @@ export class PageSuggestions {
     });
   }
 
-  /** Marks every open suggestion that no longer holds stale; returns how many. */
   private async staleBroken(db: Database, context: Context) {
     let staled = 0;
     for (const entry of context.entries)

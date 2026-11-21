@@ -10,11 +10,9 @@ locals {
   # Fixed so the deploy workflow can compose DATABASE_URL before Terraform runs.
   db_address = cidrhost(local.subnet_cidr, 10)
 
-  # Generated once by the deploy workflow, or copied from protected GitHub secrets.
   required_secret_env = {
-    OAUTH_GOOGLE_CLIENT_ID     = "citeladder-google-oauth-client-id"
-    OAUTH_GOOGLE_CLIENT_SECRET = "citeladder-google-oauth-client-secret"
-    # The least-privilege citeladder_app role; the migrate job converges its password.
+    OAUTH_GOOGLE_CLIENT_ID           = "citeladder-google-oauth-client-id"
+    OAUTH_GOOGLE_CLIENT_SECRET       = "citeladder-google-oauth-client-secret"
     DATABASE_URL                     = "citeladder-database-url"
     JWT_SECRET_KEY                   = "citeladder-jwt-secret"
     ENCRYPTION_KEY                   = "citeladder-encryption-key"
@@ -22,25 +20,21 @@ locals {
     API_KEY_PEPPER                   = "citeladder-api-key-pepper"
     INTEGRATION_GOOGLE_CLIENT_ID     = "citeladder-google-oauth-client-id"
     INTEGRATION_GOOGLE_CLIENT_SECRET = "citeladder-google-oauth-client-secret"
-    # Signs checkout quotes; generated, and independent of every provider secret.
-    BILLING_QUOTE_SIGNING_SECRET = "citeladder-billing-quote-secret"
+    BILLING_QUOTE_SIGNING_SECRET     = "citeladder-billing-quote-secret"
   }
   # Present only while the protected environment supplies a value; Cloud Run
   # cannot reference a secret without an enabled version.
   optional_secret_env = {
-    # Demo mode's single account only; production carries no development login (BL9).
-    DEV_LOGIN_PASSWORD                  = "citeladder-demo-password"
-    RESEND_API_KEY                      = "citeladder-resend-api-key"
-    DEFAULT_AGENT_API_KEY               = "citeladder-default-agent-api-key"
-    KEENABLE_API_KEY                    = "citeladder-keenable-api-key"
-    JEV_API_KEY                         = "citeladder-jev-api-key"
-    TAVILY_API_KEY                      = "citeladder-tavily-api-key"
-    INTEGRATION_MICROSOFT_CLIENT_ID     = "citeladder-bing-oauth-client-id"
-    INTEGRATION_MICROSOFT_CLIENT_SECRET = "citeladder-bing-oauth-client-secret"
-    DATAFORSEO_API_LOGIN                = "citeladder-dataforseo-login"
-    DATAFORSEO_API_PASSWORD             = "citeladder-dataforseo-password"
-    # Billing (recovery runs in the runner, so every service needs them) and
-    # the platform engine keys managed plans measure on.
+    DEV_LOGIN_PASSWORD                       = "citeladder-demo-password"
+    RESEND_API_KEY                           = "citeladder-resend-api-key"
+    DEFAULT_AGENT_API_KEY                    = "citeladder-default-agent-api-key"
+    KEENABLE_API_KEY                         = "citeladder-keenable-api-key"
+    JEV_API_KEY                              = "citeladder-jev-api-key"
+    TAVILY_API_KEY                           = "citeladder-tavily-api-key"
+    INTEGRATION_MICROSOFT_CLIENT_ID          = "citeladder-bing-oauth-client-id"
+    INTEGRATION_MICROSOFT_CLIENT_SECRET      = "citeladder-bing-oauth-client-secret"
+    DATAFORSEO_API_LOGIN                     = "citeladder-dataforseo-login"
+    DATAFORSEO_API_PASSWORD                  = "citeladder-dataforseo-password"
     BILLING_RAZORPAY_KEY_SECRET              = "citeladder-razorpay-key-secret"
     BILLING_RAZORPAY_WEBHOOK_SECRET          = "citeladder-razorpay-webhook-secret"
     BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET = "citeladder-razorpay-webhook-previous-secret"
@@ -50,21 +44,17 @@ locals {
   }
   api_secret_env = {
     CITELADDER_ORIGIN_TOKEN = "citeladder-worker-origin-token"
-    # Verifies Turnstile on sign-up and email-link requests; without it they fail closed.
-    TURNSTILE_SECRET_KEY = "citeladder-turnstile-secret"
+    TURNSTILE_SECRET_KEY    = "citeladder-turnstile-secret"
   }
   api_optional_secret_env = {
     CITELADDER_ORIGIN_TOKEN_PREVIOUS = "citeladder-worker-origin-token-previous"
   }
 
-  # The schema owner's URL: only the migrate job reads it.
   migration_secret_env = {
     MIGRATION_DATABASE_URL = "citeladder-migration-database-url"
   }
 
   runtime_secret_ids = toset(concat(
-    # The owner's password (the VM applies it) and the application role's
-    # (composed into DATABASE_URL by the deploy workflow).
     ["citeladder-db-password", "citeladder-db-app-password"],
     values(local.migration_secret_env),
     values(local.required_secret_env),
@@ -84,10 +74,8 @@ locals {
 
   runner_job = "projects/${var.project_id}/locations/${var.region}/jobs/${local.name}-runner"
 
-  # The scheduled tick's ID-token audience; any fixed string the API also knows.
   tick_audience = "${local.name}-api/internal/tick"
 
-  # Non-secret configuration shared by the API, runner and migration.
   shared_env = merge(
     {
       APP_ENV                     = "production"

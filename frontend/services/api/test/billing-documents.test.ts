@@ -163,7 +163,6 @@ describe('persisted billing documents', () => {
     const pages = await pdfText(bytes);
     const text = pages.join(' ');
     expect(text).toContain('INR 1,180.00');
-    // Amount digits are set in the figure face, the labels in Inter.
     const embedded = Buffer.from(bytes).toString('latin1');
     expect(embedded).toMatch(/\/BaseFont \/[A-Z]{6}\+JetBrainsMono-Regular/u);
     expect(embedded).toMatch(/\/BaseFont \/[A-Z]{6}\+Inter-Regular/u);
@@ -252,7 +251,6 @@ describe('persisted billing documents', () => {
     const row = invoice(randomUUID());
     row.total_amount_minor += 1;
     await expect(renderInvoicePdf(row)).rejects.toThrow('inconsistent');
-    // Totals that sum correctly still fail when tax sits outside the treatment's own rows.
     const misfiled = invoice(randomUUID());
     Object.assign((misfiled.payload as Record<string, Record<string, unknown>>).amounts!, {
       cgst_minor: 9000,

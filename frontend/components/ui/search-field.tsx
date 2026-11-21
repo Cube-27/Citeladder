@@ -14,20 +14,9 @@ export type SearchFieldProps = Omit<
   onValueChange: (value: string) => void;
   pending?: boolean;
   onClear?: () => void;
-  /**
-   * A cap shown while the field is empty; ⌘ or Ctrl plus its last key focuses
-   * the field. `true` is "⌘K". Only the page's main search takes one.
-   */
   shortcut?: true | string;
 };
 
-/**
- * SearchField — the search and filter box at the top of a list: the search
- * icon (a spinner while results load), the query, and one fixed-width end
- * slot holding the shortcut cap when empty or the clear button with a query,
- * so nothing moves when the query appears. The x button and Escape both clear
- * and keep focus. It filters as you type: no submit button.
- */
 export function SearchField({
   value,
   onValueChange,

@@ -180,7 +180,6 @@ function composite(group: AggregateExecution[], config: ScoringConfig) {
   const competitors = sum(scores.map((s) => strings(s.competitors_mentioned).length));
   const visibility = n ? round(mentioned / n, 4) : 0,
     ownedRate = n ? round(owned / n, 4) : 0;
-  // Nobody named is not applicable, not a loss to every rival: it leaves the composite.
   const competitive =
     mentioned + competitors ? round(mentioned / (mentioned + competitors), 4) : null;
   const components: Record<string, number> = { visibility, owned_citations: ownedRate },
@@ -259,7 +258,6 @@ function promptMetrics(rows: AggregateExecution[], config: ScoringConfig) {
 }
 export type AnswerCounts = { answers: number; mentioned: number; cited: number };
 
-/** How many answers there are, and how many mentioned the brand or cited an owned domain. */
 export function answerCounts(
   answers: readonly { brand_mentioned?: unknown; owned_domain_cited?: unknown }[],
 ): AnswerCounts {
@@ -270,18 +268,12 @@ export function answerCounts(
   };
 }
 
-/**
- * Brand-mention and owned-citation rates: the one definition the run
- * aggregate and every per-prompt, per-engine or pooled read share. No answer
- * is no rate (null), never zero.
- */
 export function answerRates({
   answers,
   mentioned,
   cited,
 }: {
   answers: number;
-  /** Null when the count was never recorded: its rate is unknown too. */
   mentioned: number | null;
   cited: number | null;
 }) {
@@ -331,8 +323,6 @@ export function aggregateRun(rows: AggregateExecution[], config: ScoringConfig) 
       queryScores.length,
     ),
     search_use_rate: rate(count(scores, 'search_used'), total),
-    // Over the answers that exposed their search queries: an answer that hid
-    // them is unknown, not zero queries. Null when none exposed any.
     avg_queries_per_execution: queryCoverage
       ? round(sum(queried.map((s) => Number(s.search_query_count) || 0)) / queryCoverage, 2)
       : null,

@@ -1,14 +1,3 @@
-/**
- * The app's route manifest: every destination the browser can open, declared
- * once. The router, the sidebar, the command palette, the account menu, page
- * titles, the workspace-only test and the project-switch landing all derive
- * from it, so adding or renaming a screen is one edit here.
- *
- * Data only: no React at runtime and no static domain import. Each screen is a
- * `() => import()` so the shell's boot download carries none of them. The
- * build loads this file in Node (apps/app/boot-shell.ts): type imports, and
- * runtime imports only of import-free data modules by relative `.ts` path.
- */
 import type { LoadingShape } from '@/components/ui/skeleton-block';
 import type { IconName } from '@/lib/icons';
 import type {
@@ -29,10 +18,6 @@ import { SETTINGS_TABS } from '../settings/tabs.ts';
 import { SITE_HEALTH_TABS } from '../site-health/tabs.ts';
 import { VISIBILITY_TABS } from '../visibility/tabs.ts';
 
-/**
- * Dashboard mode's groups in order, with their labels. Each group answers one question: how AI sees the brand, what is
- * measured and what AI reads, the brand's own site, classic search, products.
- */
 export const DASHBOARD_SIDEBAR_GROUPS = [
   { group: 'home', title: 'Home' },
   { group: 'brand', title: 'Brand' },
@@ -42,7 +27,6 @@ export const DASHBOARD_SIDEBAR_GROUPS = [
   { group: 'commerce', title: 'Commerce' },
 ] as const satisfies readonly { group: SidebarGroup; title: string }[];
 
-/** Pick one named export of a lazily loaded module as the route's screen. */
 function pick<M, K extends keyof M>(
   load: () => Promise<M>,
   name: K,
@@ -55,12 +39,10 @@ type RouteInput<P extends string> = Partial<Omit<AppRouteRecord, 'path' | 'scree
   screen: Screen;
 };
 
-/** A destination; unless it says otherwise, a project page inside the shell. */
 function page<const P extends string>(input: RouteInput<P>): AppRouteRecord & { path: P } {
   return { title: null, scope: 'project', shell: true, ...input };
 }
 
-/** A page outside the shell: public (no session) or a signed-in flow step. */
 function flow<const P extends string>(
   path: P,
   scope: 'public' | 'workspace',
@@ -70,12 +52,10 @@ function flow<const P extends string>(
   return page({ path, scope, shell: false, screen, ...extra });
 }
 
-/** A nav entry listed in one sidebar group (and so in the palette's). */
 function listed(label: string, icon: IconName, group: SidebarGroup): NavEntry {
   return { label, icon, placements: [`sidebar:${group}`] };
 }
 
-/** Every screen's loader, named once; a route refers to its screen by name. */
 const screens = {
   mailbox: () => import('@/components/auth/mailbox-screen'),
   login: pick(() => import('@/components/auth/auth-routes'), 'LoginRoute'),
@@ -154,14 +134,11 @@ const cards = (
   shapes: readonly LoadingShape[],
   frame: Omit<Extract<RouteLoading, { kind: 'cards' }>, 'kind' | 'shapes'> = {},
 ): RouteLoading => ({ kind: 'cards', shapes, ...frame });
-/** A page's tabs as `?param=value` names them, in the row's order: its screen's own list. */
 const held = (param: string, items: HeldTabs['items']): HeldTabs => ({ param, items });
 const tab = (value: string, label: string) => ({ value, label });
-/** A record: its identity card. */
 const RECORD_LOADING = cards([facts(3)]);
 
 export const APP_ROUTES = [
-  // Public: no session.
   flow('/verify-email', 'public', screens.mailbox, credential),
   flow('/reset-password', 'public', screens.mailbox, credential),
   flow('/forgot-password', 'public', screens.mailbox),
@@ -169,11 +146,9 @@ export const APP_ROUTES = [
   flow('/login', 'public', screens.login),
   flow('/register', 'public', screens.register),
 
-  // Signed in, before the shell opens.
   flow('/workspaces', 'workspace', screens.workspaces),
   flow('/onboarding', 'workspace', screens.onboarding),
 
-  // The application shell, in the order of the product loop (the sidebar's).
   page({
     path: '/projects',
     width: 'narrow',
@@ -197,7 +172,6 @@ export const APP_ROUTES = [
     title: 'Page detail',
     collection: '/site',
     screen: screens.pageDetail,
-    // URL, Kind (a tag) and Audited, then the page's scores.
     loading: cards([facts(3, [1]), figures(3)]),
   }),
   page({
@@ -205,7 +179,6 @@ export const APP_ROUTES = [
     width: 'narrow',
     title: 'Issues',
     screen: screens.issues,
-    // The summary, then the table under its switch and search row.
     loading: { kind: 'issues' },
     nav: [listed('Issues', 'issues', 'website')],
   }),
@@ -213,7 +186,6 @@ export const APP_ROUTES = [
     path: '/performance',
     title: 'Performance',
     screen: screens.performance,
-    // No tab row: its range toolbar is the filter row.
     loading: cards([figures(4), chart], { filters: true }),
     nav: [listed('Performance', 'performance', 'search')],
   }),
@@ -221,7 +193,6 @@ export const APP_ROUTES = [
     path: '/search-intelligence',
     title: 'Keyword research',
     screen: screens.keywords,
-    // Opens on Demand: its signals table under a held control strip.
     loading: cards([table(8)], {
       tabs: held('tab', SEARCH_INTELLIGENCE_TABS),
       filters: true,
@@ -234,7 +205,6 @@ export const APP_ROUTES = [
     path: '/products/overview',
     title: 'Shopping',
     screen: screens.shoppingOverview,
-    // Answers and Product recommendations, then the five-column ranking.
     loading: cards([figures(2), table(5)], { filters: true }),
     nav: [listed('Shopping', 'reports', 'commerce')],
   }),
@@ -242,7 +212,6 @@ export const APP_ROUTES = [
     path: '/products',
     title: 'Products',
     screen: screens.products,
-    // The catalog's four figures, then the product and its seven metrics.
     loading: cards([figures(4), table(8)], { filters: true }),
     nav: [listed('Products', 'products', 'commerce')],
   }),
@@ -251,7 +220,6 @@ export const APP_ROUTES = [
     title: 'Product',
     collection: '/products',
     screen: screens.product,
-    // The product's one-row identity, then its six KPIs.
     loading: cards([facts(1), figures(6)]),
   }),
   page({
@@ -259,9 +227,7 @@ export const APP_ROUTES = [
     width: 'narrow',
     title: 'Actions',
     screen: screens.actions,
-    // The intro, the goal strip, then Action, Priority and Source: one stack.
     loading: cards([figures(4), table(3)], { filters: true, intro: true, stacked: true }),
-    // A Dashboard page: every Action in the app, Issues included (owner, 2026-11-16).
     nav: [
       {
         label: 'Actions',
@@ -277,7 +243,6 @@ export const APP_ROUTES = [
     title: 'Action',
     collection: '/actions',
     screen: screens.action,
-    // The Details card: Status, Impact, Scope, Source, Grouping.
     loading: cards([facts(5)]),
   }),
   page({
@@ -286,15 +251,12 @@ export const APP_ROUTES = [
     title: 'URL',
     collection: '/actions',
     screen: screens.actionUrl,
-    // The Details card: Page type, Last crawled, Open actions.
     loading: cards([facts(3)]),
   }),
-  // Brand: how AI sees the brand.
   page({
     path: '/insights',
     title: 'Insights',
     screen: screens.insights,
-    // The lede's key figures, then the trend.
     loading: cards([figures(3), chart], { filters: true }),
     nav: [listed('Insights', 'insights', 'brand')],
   }),
@@ -302,14 +264,12 @@ export const APP_ROUTES = [
     path: '/perception',
     title: 'Perception',
     screen: screens.perception,
-    // Fact-checking, shown only to the pilot, is last and arrives after; so does its fifth figure.
     loading: cards([figures(4), chart], {
       tabs: held('tab', PUBLIC_PERCEPTION_TABS),
       filters: true,
     }),
     nav: [
       listed('Perception', 'perception', 'brand'),
-      // A non-pilot project opens on Brand: the page owns the pilot gate.
       {
         label: 'Fact-checking',
         icon: 'factChecking',
@@ -322,7 +282,6 @@ export const APP_ROUTES = [
     path: '/competitors',
     title: 'Competitors',
     screen: screens.competitors,
-    // The ranking (as its own pending table, seven columns), then the suggestions.
     loading: cards([table(7), table(4)], { filters: true }),
     nav: [listed('Competitors', 'competitors', 'brand')],
   }),
@@ -331,7 +290,6 @@ export const APP_ROUTES = [
     title: 'Competitor',
     collection: '/competitors',
     screen: screens.competitor,
-    // Its figures beside yours, the trend, then sources and prompts side by side.
     loading: cards([figures(5), chart, table(3)], { filters: true }),
   }),
   page({
@@ -340,7 +298,6 @@ export const APP_ROUTES = [
     title: 'Agent',
     screen: screens.newChat,
     loading: { kind: 'new-chat' },
-    // Agent mode draws it as its "New chat" button, first in the list.
     nav: [{ label: 'New chat', icon: 'newChat', placements: ['sidebar:agent'] }],
   }),
   page({
@@ -364,7 +321,6 @@ export const APP_ROUTES = [
     width: 'narrow',
     title: 'Context',
     screen: screens.context,
-    // The Company facts form's five fields.
     loading: cards([facts(5)], { rail: { ...held('tab', CONTEXT_TABS), wide: ['map'] } }),
     nav: [listed('Context', 'context', 'agent')],
   }),
@@ -383,7 +339,6 @@ export const APP_ROUTES = [
     path: '/prompts/build',
     title: 'Prompt builder',
     screen: screens.promptBuilder,
-    // The step list beside the business step's fields.
     loading: cards([facts(6)]),
     nav: [listed('Prompt builder', 'promptBuilder', 'tracking')],
   }),
@@ -392,14 +347,12 @@ export const APP_ROUTES = [
     title: 'Prompt',
     collection: '/prompts',
     screen: screens.prompt,
-    // Titled by the prompt itself: its market and engine filters, then its seven figures.
     loading: cards([figures(7), chart], { filters: true }),
   }),
   page({
     path: '/visibility',
     title: 'Sources',
     screen: screens.visibility,
-    // Domains, the default tab, opens on its cited-domain table and charts.
     loading: cards([table(8), chart], {
       tabs: held(
         'tab',
@@ -437,14 +390,12 @@ export const APP_ROUTES = [
     title: 'Run',
     collection: '/runs',
     screen: screens.run,
-    // Requested, Completed and Failed, then the five-column executions.
     loading: cards([figures(3), table(5)]),
   }),
   page({
     path: '/ai-traffic',
     title: 'AI traffic',
     screen: screens.aiTraffic,
-    // Overview's key figures under the filter row, then the crawl trend.
     loading: cards([figures(5), chart], {
       filters: true,
       tabs: held('tab', TRAFFIC_TABS),
@@ -452,14 +403,12 @@ export const APP_ROUTES = [
     nav: [listed('AI traffic', 'aiTraffic', 'website')],
   }),
 
-  // The workspace's own pages, inside the shell.
   page({
     path: '/settings',
     width: 'narrow',
     title: 'Settings',
     scope: 'workspace',
     screen: screens.settings,
-    // Account's Profile card: the identity row, then two facts.
     loading: cards([facts(3)], { rail: held('tab', SETTINGS_TABS) }),
     nav: [
       {
@@ -491,7 +440,6 @@ export const APP_ROUTES = [
     title: 'Billing',
     scope: 'workspace',
     screen: screens.billing,
-    // The current plan (its access tag), then usage.
     loading: cards([facts(3, [1]), table(5)]),
     nav: [{ label: 'Billing', icon: 'billing', placements: ['account'] }],
   }),
@@ -502,13 +450,11 @@ export const APP_ROUTES = [
     scope: 'workspace',
     screen: screens.pricing,
   }),
-  // An invitation is a Flow page: it opens before the shell, as setup does.
   flow('/invitations/accept', 'workspace', screens.invitation, credential),
 ];
 
 export type AppRoutePath = (typeof APP_ROUTES)[number]['path'];
 
-/** A manifest record, with its path known to be one of the manifest's. */
 type AppRoute = AppRouteRecord & { path: AppRoutePath };
 
 const ROUTES: readonly AppRoute[] = APP_ROUTES;
@@ -526,16 +472,10 @@ function matchesPattern(pattern: string, pathname: string): boolean {
   );
 }
 
-/** The route whose pattern matches the whole pathname, if any. */
 export function findAppRoute(pathname: string): AppRoute | undefined {
   return ROUTES.find((route) => matchesPattern(route.path, pathname));
 }
 
-/**
- * The route the pathname belongs to: its own route, or else the deepest
- * parameter-free route it sits below. Every tab and unknown sub-path of
- * Website is still Website.
- */
 function sectionRoute(pathname: string): AppRoute | undefined {
   const own = findAppRoute(pathname);
   if (own) return own;
@@ -549,85 +489,56 @@ function sectionRoute(pathname: string): AppRoute | undefined {
 
 const FALLBACK_TITLE = 'CiteLadder';
 
-/** The page header and document title for a pathname. */
 export function resolveTitle(pathname: string): string {
   return sectionRoute(pathname)?.title ?? FALLBACK_TITLE;
 }
 
-/** The loading frame for a pathname: its section's, else a record's. */
 export function routeLoading(pathname: string): RouteLoading {
   return sectionRoute(pathname)?.loading ?? RECORD_LOADING;
 }
 
-/** A page's width: its section's, else the main column's. */
 export function routeWidth(pathname: string): NonNullable<AppRouteRecord['width']> | 'full' {
   return sectionRoute(pathname)?.width ?? 'full';
 }
 
-/** Whether the path is one of the application shell's titled pages. */
 export function hasPageTitle(pathname: string): boolean {
   const route = sectionRoute(pathname);
   return Boolean(route?.shell && route.title);
 }
 
-/** Whether the path is a flow step outside the shell (sign-in, setup, the chooser). */
 export function isFlowPath(pathname: string): boolean {
   return sectionRoute(pathname)?.shell === false;
 }
 
-/** The Overview, where `/` and a workspace switch land. */
 export const HOME_PATH = '/projects' satisfies AppRoutePath;
 
-/** Whether the path is one of the Agent's own pages, known or not (they have no "Ask agent"). */
 export function isAgentPath(pathname: string): boolean {
   return pathname === '/agent' || pathname.startsWith('/agent/');
 }
 
-/** The shell's two modes; the sidebar lists one at a time. */
 export type NavigationMode = 'dashboard' | 'agent';
 
-/** The mode a path belongs to: every Agent page is Agent mode, everything else Dashboard. */
 export function navigationMode(pathname: string): NavigationMode {
   return isAgentPath(pathname) ? 'agent' : 'dashboard';
 }
 
-/** Where a mode opens when it has no remembered route for the project. */
 export const MODE_HOMES = {
   dashboard: HOME_PATH,
   agent: '/agent',
 } as const satisfies Record<NavigationMode, AppRoutePath>;
 
-/**
- * Whether the route manages the WORKSPACE rather than working inside a project.
- *
- * A workspace with no projects is a valid workspace: its owner may still need
- * billing, members and settings, and an invitee at an acceptance link has not
- * joined anything yet. Sending these to project creation made an empty
- * workspace unmanageable.
- */
 export function isWorkspaceOnlyRoute(pathname: string | null): boolean {
   return pathname ? sectionRoute(pathname)?.scope === 'workspace' : false;
 }
 
-/**
- * Where a project switch lands from this pathname. A path naming one
- * project's crawl, run, prompt, chat or Action would ask the next project for
- * a record it does not have, so it lands on that section's collection.
- */
 export function projectSwitchPathname(pathname: string): string {
   return findAppRoute(pathname)?.collection ?? pathname;
 }
 
-/**
- * Where a workspace switch lands: the same page with its record ids dropped,
- * as a project switch does, or Overview for a path no screen owns
- * (owner, 2026-11-18).
- */
 export function workspaceSwitchPathname(pathname: string): string {
   return findAppRoute(pathname) ? projectSwitchPathname(pathname) : HOME_PATH;
 }
 
-/** Every entry listed at a placement, in manifest order (`listedLast` entries after). */
 export function navDestinations(placement: NavPlacement): readonly NavDestination[] {
   const entries = ROUTES.flatMap((route) =>
     (route.nav ?? [])

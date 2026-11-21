@@ -31,12 +31,6 @@ const COLUMNS = [
   { key: 'actions', label: 'Actions', kind: 'actions' },
 ] as const satisfies readonly DataTableColumn[];
 
-/**
- * Every claim in the selection with the fact it was checked against and its
- * verdict. A person may change a verdict (AV-12); the row then carries an
- * "Edited" tag naming the model's verdict. "Ask Agent" opens a read-only chat
- * about the claim.
- */
 export function ClaimsTable({ views }: Readonly<{ views: Pick<Views, 'claims' | 'override'> }>) {
   const { claims: query, override } = views;
   const [editing, setEditing] = useState<AccuracyClaim | null>(null);

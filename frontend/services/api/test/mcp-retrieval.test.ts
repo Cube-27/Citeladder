@@ -100,7 +100,6 @@ it('rejects arbitrary sources and ambiguous continuation parameters', () => {
     'not a record uri',
   ])
     expect(() => parseRecordId(uri)).toThrow(McpInputError);
-  // A web page is refused with the reads that cover it; a prompt record id is accepted.
   expect(() => parseRecordId('https://example.test/file')).toThrow(
     "id must be a citeladder:// record id exactly as a read or search returned it. Read a page on the project's site with read_page_text and a page AI answers cited with read_source_url; fetch reads no other web pages.",
   );

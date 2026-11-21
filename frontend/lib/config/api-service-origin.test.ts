@@ -17,7 +17,6 @@ describe('resolveApiServiceOrigin', () => {
     'http://[::ffff:127.0.0.1]:8100',
     'http://[::ffff:7f00:1]:8100',
     'http://[0:0:0:0:0:ffff:127.0.0.1]:8100',
-    // Non-loopback mapped literals are rejected too: conservative by design.
     'http://[::ffff:192.168.1.1]:8100',
   ])('rejects the IPv4-mapped IPv6 literal %s in production', (origin) => {
     expect(() => resolveApiServiceOrigin(origin, true)).toThrow(/loopback host/i);

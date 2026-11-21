@@ -26,7 +26,6 @@ import {
 const NEW_CRAWL = '55555555-5555-4555-8555-555555555555';
 const TASK_ID = '66666666-6666-4666-8666-666666666666';
 
-/** A resolved issue as the page's issue history lists it. */
 function resolvedIssue(id: string, title: string) {
   return {
     id,
@@ -45,7 +44,6 @@ function resolvedIssue(id: string, title: string) {
   };
 }
 
-/** Open the page's History drawer with the issue history answered by `history`. */
 async function openHistory(history: HttpResponseResolver) {
   mswServer.use(
     http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}`, () => HttpResponse.json(detail())),
@@ -57,17 +55,14 @@ async function openHistory(history: HttpResponseResolver) {
   return { user, drawer: await screen.findByRole('dialog', { name: 'Issue history' }) };
 }
 
-/** The "All issues" card, found by its heading. */
 function allIssues(heading: string): HTMLElement {
   return screen.getByRole('heading', { name: heading }).closest('section')!;
 }
 
-/** The new chat a link would start, as the Agent reads it. */
 function handoffOf(link: HTMLElement) {
   return parseAgentHandoff(new URL(link.getAttribute('href')!, 'http://x').searchParams);
 }
 
-/** The masthead's Ask agent, reduced to what it opens with. */
 function PanelSeedProbe() {
   const panel = useAgentPanel();
   return (
@@ -80,7 +75,6 @@ function PanelSeedProbe() {
   );
 }
 
-/** The page's own context, as the agent panel opens with it. */
 async function openedSeed(user: ReturnType<typeof userEvent.setup>): Promise<AgentHandoff> {
   await user.click(screen.getByRole('button', { name: 'Open agent panel' }));
   return JSON.parse(screen.getByTestId('panel-seed').textContent!) as AgentHandoff;
@@ -229,7 +223,6 @@ describe('UrlDetail', () => {
     expect(
       await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 }),
     ).toBeInTheDocument();
-    // The trail and the h1 name the page; the identity card never repeats it.
     await screen.findByRole('navigation', { name: 'Breadcrumb' });
     expect(
       screen
@@ -237,11 +230,9 @@ describe('UrlDetail', () => {
         .map((node) => (node.closest('nav') ? 'trail' : node.tagName)),
     ).toEqual(['trail', 'H1']);
     expect(screen.getByText('Product')).toBeInTheDocument();
-    // Delivery metric: TTFB rendered with ms suffix.
     expect(screen.getByText('840ms')).toBeInTheDocument();
     expect(screen.getByText('200')).toBeInTheDocument();
 
-    // High-severity issue is ordered before the low-severity one.
     const list = allIssues('All issues (2)');
     const high = within(list).getByText('WebSite schema is missing');
     const low = within(list).getByText('FAQ schema not present');
@@ -257,7 +248,6 @@ describe('UrlDetail', () => {
   it('offers re-audits only to a role that may run one', async () => {
     mswServer.use(...handlers(detail()));
     const { unmount } = renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-    // The masthead holds the page's one re-audit action; issues never repeat it.
     expect(await screen.findAllByRole('button', { name: /^Re-audit/ })).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Re-audit this page' })).toBeVisible();
     unmount();
@@ -337,7 +327,6 @@ describe('UrlDetail', () => {
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
-    // No score ring at all: a missing measurement never renders as 0.
     expect(
       screen.queryByRole('img', { name: /^(Web fundamentals|AEO readiness) score:/ }),
     ).toBeNull();
@@ -382,7 +371,6 @@ describe('UrlDetail', () => {
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(figureText('Web fundamentals')).toBe('46');
     expect(figureText('AEO readiness')).toBe('64');
-    // Completion is a share, read as a percentage.
     expect(figureText('AEO checklist completion')).toBe('75%');
   });
 
@@ -453,10 +441,8 @@ describe('UrlDetail', () => {
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    // A 0 ms reading is an unmeasured hop, never an instant response.
     expect(screen.queryByText('0ms')).not.toBeInTheDocument();
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
-    // Byte counts do NOT share the zero rule — they still render normally.
     expect(screen.getByText('39.1 KB')).toBeInTheDocument();
   });
 
@@ -508,9 +494,6 @@ describe('UrlDetail', () => {
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     await user.click(screen.getByRole('button', { name: 'Re-audit this page' }));
 
-    // The rerun ran in a NEW crawl, so the client routes to that fresh
-    // identity's canonical detail route (with ?rerun=1 to auto-start polling
-    // on the new mount) rather than continuing to poll the terminal source.
     await waitFor(() =>
       expect(screen.getByTestId('location')).toHaveTextContent(
         `/site/crawls/${NEW_CRAWL}/pages/${URL_ID}?rerun=1`,
@@ -532,8 +515,6 @@ describe('UrlDetail', () => {
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     await user.click(screen.getByRole('button', { name: 'Re-audit this page' }));
 
-    // `role="alert"` does not take its accessible name from its contents, so
-    // find the alert and assert on its text.
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(
       'This page is not in your monitored set, so it can’t be re-audited.',
@@ -557,14 +538,11 @@ describe('UrlDetail', () => {
       `/site/crawls/${NEW_CRAWL}/pages/${URL_ID}?rerun=1`,
     );
 
-    // No button click: `?rerun=1` seeds polling on mount, so the fresh run's
-    // progress advances to its terminal snapshot on its own.
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getByText('Pending')).toBeInTheDocument();
     await waitFor(() => expect(getCallCount).toBeGreaterThanOrEqual(statuses.length), {
       timeout: 15_000,
     });
-    // The terminal snapshot drops the in-progress badge.
     await waitFor(() => expect(screen.queryByText('Running')).not.toBeInTheDocument());
     expect(screen.queryByText('Pending')).not.toBeInTheDocument();
   }, 20_000);
@@ -582,7 +560,6 @@ describe('UrlDetail', () => {
     await user.click(summary);
     expect(disclosure).toHaveAttribute('open');
     expect(within(disclosure).getByText('840ms')).toBeVisible();
-    // Inbound and main-content inbound are different facts and both are shown.
     expect(within(disclosure).getByText('Main-content inbound')).toBeVisible();
     expect(screen.getByText('7 pages crawled')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'https://acme.com/collections/bags' })).toHaveAttribute(
@@ -634,12 +611,10 @@ describe('UrlDetail', () => {
       'WebSite schema is missingHighAEO',
       'FAQ schema not presentLowAEO',
     ]);
-    // Said once: each title appears on one row only, open or closed.
     await user.click(rows[1]!);
     await user.click(rows[0]!);
     for (const title of ['WebSite schema is missing', 'FAQ schema not present'])
       expect(screen.getAllByText(title)).toHaveLength(1);
-    // An open row carries its fix and the scores it holds down.
     const faq = document.getElementById(rows[1]!.getAttribute('aria-controls')!)!;
     expect(within(faq).getByText('Add FAQPage markup to the questions.')).toBeInTheDocument();
     const website = document.getElementById(rows[0]!.getAttribute('aria-controls')!)!;
@@ -649,12 +624,10 @@ describe('UrlDetail', () => {
         .map((badge) => badge.textContent),
     ).toEqual(['AEO readiness', 'Web fundamentals']);
     expect(screen.getByText('Advisories (1)')).toBeInTheDocument();
-    // The section head names advisories; a row never repeats it or carries a severity.
     const advisory = screen.getByText('Missing meta description').closest('li')!;
     expect(within(advisory).queryByText('Advisory')).toBeNull();
     expect(within(advisory).queryByText('Medium')).not.toBeInTheDocument();
     expect(within(advisory).getByText('AEO')).toBeInTheDocument();
-    // The page's scores lead, above its issues.
     expect(figureText('Web fundamentals')).toBe('46');
     const score = document.querySelector('[data-figure-strip]')!;
     expect(score.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -671,7 +644,6 @@ describe('UrlDetail', () => {
     );
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
 
-    // The masthead's Ask agent carries the page; the page draws no second one.
     expect(screen.queryByRole('link', { name: 'Ask agent about this page' })).toBeNull();
     const page = await openedSeed(user);
     expect(page.context).toEqual({ target_site_url_id: URL_ID, target_url: 'https://acme.com/' });
@@ -727,7 +699,6 @@ describe('UrlDetail', () => {
     expect(seventh).toHaveAttribute('aria-expanded', 'true');
     const body = document.getElementById(seventh.getAttribute('aria-controls')!)!;
     expect(within(body).getByRole('button', { name: 'Copy fix prompt' })).toBeVisible();
-    // Only the chosen row opens.
     expect(within(list).getAllByRole('button', { expanded: true })).toEqual([seventh]);
   });
 

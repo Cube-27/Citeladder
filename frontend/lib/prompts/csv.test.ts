@@ -11,7 +11,6 @@ import {
   type PromptCsvLimits,
 } from './csv';
 
-/** The bounds the prompt-set list carries, as the import dialog passes them. */
 const LIMITS: PromptCsvLimits = { import_rows_max: 500, persona_max_chars: 120 };
 const parsePromptCsv = (raw: string, limits = LIMITS) => parseWithLimits(raw, limits);
 
@@ -88,7 +87,6 @@ describe('parsePromptCsv', () => {
   });
 
   it('flags rows the server would refuse and drops them', () => {
-    // Lengths are code points, as the server counts them: 255 emoji fit.
     const parsed = parsePromptCsv(
       `topic,prompt\nShoes,\n${'x'.repeat(256)},Fit?\nShoes,${'p'.repeat(301)}\n${'😀'.repeat(255)},Good`,
     );

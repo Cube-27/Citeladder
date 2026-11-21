@@ -44,8 +44,6 @@ describe('pending pricing intent', () => {
     expect(readPendingIntent(NOW)).toBeNull();
   });
 
-  // This record is attacker-writable session state. Every one of these cases
-  // must be rejected BEFORE it can influence a request.
   it.each([
     ['a different version', { version: 2 }],
     ['an unknown kind', { kind: 'refund' }],
@@ -77,7 +75,6 @@ describe('pending pricing intent', () => {
     writePendingIntent(intent());
     const raw = globalThis.sessionStorage.getItem('citeladder.pendingPricingIntent.v1') ?? '';
 
-    // The record must never become a channel for values the server owns.
     for (const forbidden of [
       'amount',
       'price',

@@ -38,12 +38,10 @@ import {
 export function frozenShelfIds(frozen: Record<string, unknown>) {
   return strings(frozen.prompt_target_ids).filter((id) => z.uuid().safeParse(id).success);
 }
-/** The catalog revision an audit froze at admission (`configuration.commerce_catalog`), if any. */
 export function frozenRevisionId(configuration: unknown): string | null {
   const parsed = z.uuid().safeParse(record(record(configuration).commerce_catalog).revision_id);
   return parsed.success ? parsed.data : null;
 }
-/** A resolver that runs its model call under the answer's workspace meter. */
 export type MeterableShelfResolver = {
   model: string;
   resolve(spans: string[], meter: Meter): Promise<unknown>;
@@ -93,7 +91,6 @@ function metered(
   };
 }
 
-/** The columns one shelf slot sets; the rest come from the pass. */
 type SlotFields = Omit<
   Insertable<CommerceRecommendationObservations>,
   | 'id'
@@ -110,13 +107,6 @@ type SlotFields = Omit<
   | 'created_at'
 >;
 type Versions = { parser: string; matcher: string; resolver: string };
-/**
- * One derivation of one stored answer: the catalog it is matched against and
- * the target, revision and versions its pass records. A targeted pass keeps
- * every span, as the AI Shelf always has; an untargeted pass (an answer no
- * buyer prompt targets) keeps only spans that name a holder, and every
- * organic carousel card.
- */
 export type PassContext = {
   workspaceId: string;
   projectId: string;
@@ -131,7 +121,6 @@ export type PassContext = {
   locale: string;
 };
 type Pass = PassContext & { passId: string };
-/** The stored answer a pass reads: raw text, provider response and citations. */
 export type StoredAnswer = {
   artifactId: string;
   answerText: string;
@@ -140,11 +129,6 @@ export type StoredAnswer = {
   capturedAt: Date;
 };
 
-/**
- * A recommendation matching neither catalog product nor approved competitor
- * may be a new AI-observed competitor of the answer's target; an answer no
- * buyer prompt targets creates none.
- */
 async function observedCandidate(
   db: Database,
   ctx: PassContext,
@@ -175,11 +159,6 @@ async function observedCandidate(
     url,
   );
 }
-/**
- * An AI-observed candidate is classified by its review state when the answer
- * is recorded: approved holds a slot like a frozen competitor, pending is its
- * own class outside the share, and rejected is excluded from the shelf.
- */
 function observationClassification(matched: ShelfMatch, candidate: { state: string } | null) {
   if (matched.product) return 'owned';
   if (matched.competitor) return 'approved_competitor';
@@ -187,7 +166,6 @@ function observationClassification(matched: ShelfMatch, candidate: { state: stri
   if (candidate.state === 'approved') return 'approved_competitor';
   return candidate.state === 'rejected' ? 'rejected_competitor' : 'ai_observed_competitor';
 }
-/** The identity columns of a slot held by a match or an AI-observed candidate. */
 function holderFields(
   matched: ShelfMatch,
   candidate: Candidate | null,
@@ -269,7 +247,6 @@ async function recordObservation(
     merchant_domain: merchant.domain,
     model_version: model,
     resolver_outcome: outcome,
-    // The resolver's prompt template, recorded whenever its model was called.
     resolver_template_version: model ? pass.versions.resolver : null,
     rank: span.rank,
     order_observable: span.orderObservable,
@@ -291,13 +268,6 @@ async function recordObservation(
 }
 
 type CardHolder = { matched: ShelfMatch; candidate: Candidate | null };
-/**
- * The holder an earlier card with the same ChatGPT product key was matched
- * to, when that holder is on this pass's shelf: a catalog product or approved
- * competitor, or this target's AI-observed candidate. Only matches recorded
- * before the answer was captured count, so re-deriving an older answer never
- * inherits a match a later audit made.
- */
 async function rememberedHolder(
   db: Database,
   { workspaceId, projectId, target, catalog }: PassContext,
@@ -336,12 +306,6 @@ async function rememberedHolder(
     .executeTakeFirst();
   return candidate ? { matched: NO_MATCH, candidate } : null;
 }
-/**
- * Card matching order: the card's URL, then its ChatGPT product key as an
- * earlier card was matched, then the shelf's name rules over the title. An
- * unmatched card linking a page off the business's hosts may create an
- * AI-observed competitor of the answer's target; the card itself is that evidence.
- */
 async function cardHolder(
   db: Database,
   ctx: PassContext,
@@ -380,7 +344,6 @@ async function cardHolder(
 /** numeric(14,2) holds prices below 10^12; anything larger is not a price. */
 const cardPrice = (price: number | null) =>
   price !== null && price < 1e12 ? price.toFixed(2) : null;
-/** One ranked `shopping_result` slot per organic carousel card; never sent to the resolver. */
 async function recordCard(db: Database, pass: Pass, card: ShoppingResult, answer: StoredAnswer) {
   const { matched, candidate } = await cardHolder(db, pass, card, answer.capturedAt);
   const bounded = (value: string | null) => (value === null ? null : boundedText(value, 255));
@@ -473,7 +436,6 @@ export async function recordPass(
         matched,
         { answerText: answer.answerText, sourceUrls },
       );
-    // An untargeted answer keeps only the spans that name a holder.
     if (!ctx.target && !matched.product && !matched.competitor) continue;
     await /* NOSONAR -- One transaction: statements run in order. */ recordObservation(
       trx,
@@ -488,7 +450,6 @@ export async function recordPass(
       },
     );
   }
-  // ChatGPT carousel cards come from the stored provider response, beside the text spans.
   const cards = parseShoppingResults(record(answer.providerMetadata).raw_response);
   for (const card of cards)
     await /* NOSONAR -- One transaction: statements run in order. */ recordCard(
@@ -504,7 +465,6 @@ const targetRefSchema = z.object({
   target_kind: z.enum(['product', 'category']),
   target_id: z.uuid(),
 });
-/** The buyer-prompt target an audit froze for one execution's prompt, if any. */
 export async function promptTarget(
   db: Database,
   audit: Selectable<Audits>,
@@ -526,7 +486,6 @@ export async function promptTarget(
   const parsed = targetRefSchema.safeParse(target);
   return parsed.success ? parsed.data : null;
 }
-/** The answer's locale, for currency markers such as `$`. */
 export function auditLocale(audit: Selectable<Audits>) {
   const config = record(audit.configuration);
   return [config.language_code, config.country_code]
@@ -537,7 +496,6 @@ const frozenString = (frozen: Record<string, unknown>, key: string, fallback: st
   const value = frozen[key];
   return typeof value === 'string' ? value : fallback;
 };
-/** The parser, matcher and resolver versions an audit froze; the policy's for keys it lacks. */
 export function frozenVersions(frozen: Record<string, unknown>): Versions {
   const current = auditPolicy.commerce_versions;
   return {
@@ -547,12 +505,6 @@ export function frozenVersions(frozen: Record<string, unknown>): Versions {
   };
 }
 
-/**
- * The live pass context of one execution. A buyer prompt's answer is matched
- * against the target evidence the audit froze; any other answer of a project
- * with a frozen catalog revision against that whole revision. Null when the
- * answer has nothing to match.
- */
 async function liveContext(
   db: Database,
   task: AuditTask,
@@ -616,9 +568,6 @@ export async function prepareShelfExecution(
     .executeTakeFirstOrThrow();
   const ctx = await liveContext(db, task, audit);
   if (!ctx) return deriveExecution;
-  // Only a buyer prompt's answer calls the resolver: an untargeted pass keeps
-  // only holder matches and creates no AI-observed competitor, so a model call
-  // could add nothing the deterministic matcher misses.
   const modelResolver = (): ShelfResolver | undefined => {
     if (!ctx.target) return undefined;
     return metered(

@@ -1,8 +1,3 @@
-/**
- * Product-page copy for /platform and its capabilities. Published paths and
- * labels belong to nav.ts; the page records live in the measure, outcomes,
- * diagnose and improve modules, and their shared shape in platform-page-types.ts.
- */
 import { DIAGNOSE_PAGES } from './platform-pages-diagnose';
 import { IMPROVE_PAGES } from './platform-pages-improve';
 import { MEASURE_PAGES } from './platform-pages-measure';

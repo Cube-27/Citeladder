@@ -74,7 +74,6 @@ describe('siteCrawlSchema (Free redaction / nullable totals)', () => {
   });
 
   it('strips an unexpected count-bearing key on a crawl (no leaked total)', () => {
-    // A leaked total must never reach app state — stripped on parse.
     const parsed = strictValidate(siteCrawlSchema, { ...crawl, hidden_full_total: 9999 }, 'crawl');
     expect('hidden_full_total' in parsed).toBe(false);
   });
@@ -86,9 +85,6 @@ describe('siteHealthApi.getCrawl site_facts (v2 P2 contract)', () => {
   afterAll(() => mswServer.close());
 
   it('validates a real crawl response carrying a populated site_facts', async () => {
-    // Regression: the backend ALWAYS serializes `site_facts`, so a strict
-    // schema without the field made every crawl read throw
-    // "API validation failure in siteHealth.getCrawl".
     mswServer.use(http.get(`/api/v1/site-crawls/${UUID}`, () => HttpResponse.json(crawl)));
     const result = await siteHealthApi.getCrawl(UUID);
     expect(result.site_facts).toEqual(siteFacts);
@@ -127,8 +123,6 @@ describe('siteCrawlSchema site_facts (v2 P2 contract)', () => {
   });
 
   it('rejects a crawl payload that omits site_facts (required, never optional)', () => {
-    // The backend response model always serializes the key, so a missing key
-    // is real drift — keeping it required is what pins that contract.
     const { site_facts: _omitted, ...withoutSiteFacts } = crawl;
     expect(() =>
       strictValidate(siteCrawlSchema, withoutSiteFacts, 'siteHealth.getCrawl'),
@@ -214,7 +208,6 @@ describe('cursorPageSchema', () => {
   });
 
   it('strips an offset / page-total field (no count side channel)', () => {
-    // No count side channel: a leaked total is stripped from parsed output.
     const parsed = strictValidate(page, { items: [], next_cursor: null, total: 25000 }, 'page');
     expect('total' in parsed).toBe(false);
   });
@@ -303,8 +296,6 @@ describe('pageDetailSchema (field_cwv_available literal false)', () => {
     issue_count: 2,
     last_audited: '2026-07-15T00:00:00Z',
     page_kind: 'homepage',
-    // T5 contract: the backend page-detail serializer always carries this key
-    // (null until the URL has an analysis) — the fixture must include it.
 
     page_kind_evidence: null,
     page_traits: [],
@@ -462,9 +453,6 @@ describe('siteIssueSchema + siteHealthErrorSchema', () => {
     };
     const parsed = strictValidate(siteIssueSchema, issue, 'issue');
     expect(parsed.severity).toBe('high');
-    // The page types a grouped issue reaches ride the list row: "which of my
-    // page types does this actually affect" is the first question on the
-    // Issues screen, and the affected COUNT cannot answer it.
     expect(parsed.page_kinds).toEqual(['article', 'guide']);
   });
 
@@ -557,8 +545,6 @@ describe('what a crawl change refreshes', () => {
 
   function seeded() {
     const client = new QueryClient();
-    // A first page and a deep cursor page of the same list, plus another filter
-    // combination — all three exist simultaneously in the real screen.
     client.setQueryData(FIRST_PAGE, { items: [] });
     client.setQueryData(DEEP_PAGE, { items: [] });
     client.setQueryData(FIRST_INVENTORY, { items: [] });
@@ -584,7 +570,6 @@ describe('what a crawl change refreshes', () => {
 
     void refreshCrawlViews(client, CRAWL);
 
-    // The rows under review must not shift, and the dashboard is the poll trigger.
     expect(invalidated(client, DEEP_PAGE)).toBe(false);
     expect(invalidated(client, DASHBOARD)).toBe(false);
   });
@@ -662,7 +647,6 @@ describe('AEO Readiness contract', () => {
   });
 });
 
-// Sanity: cursorPageSchema is generic and composes with any item schema.
 describe('cursorPageSchema generics', () => {
   it('composes with a trivial item schema', () => {
     const page = cursorPageSchema(z.strictObject({ x: z.number() }));

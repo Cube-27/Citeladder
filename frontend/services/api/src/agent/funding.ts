@@ -1,12 +1,3 @@
-/**
- * Agent funding: the Agent always uses the platform gateway and spends AI
- * credits (B19). Each dispatch holds its maximum cost at the shared token
- * prices, plus the web searches that call may run (B59), shrinking its output
- * cap when the balance covers less (B60); it settles once to the reported
- * tokens and searches, and a failed turn's debits are refunded (B58). The
- * ledger and the pricing are the same ones every other platform AI call uses
- * (B12-B15).
- */
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
@@ -45,7 +36,6 @@ async function account(db: Database, workspaceId: string) {
   if (!id) throw new AgentError('funding_unavailable');
   return id;
 }
-/** The plan gate for the Agent; any refusal is the Agent's `capability_unavailable`. */
 async function capability(db: Database, workspaceId: string) {
   const id = await account(db, workspaceId);
   try {
@@ -110,15 +100,6 @@ async function recheck(db: Database, run: Run, settings: Settings, platform: Gat
   if (run.funding_source === 'development' && !(await development(db, run.user_id, settings)))
     throw new AgentError('funding_unavailable');
 }
-/**
- * An upper bound on the input tokens of a call. A turn's first call holds
- * every byte as a token (a byte-level tokenizer never emits more tokens than
- * bytes). A later call reads what the turn's previous call read, which that
- * call reported, plus what was added since: its answer (at most its reported
- * output, thinking included) and the new messages' bytes, plus a margin for
- * tool definitions that differ between calls, such as the search tool. The
- * byte bound still applies when it is lower.
- */
 async function inputBound(db: Database, run: Run, bytes: number) {
   const previous = await db
     .selectFrom('agent_model_attempts')
@@ -141,12 +122,6 @@ async function inputBound(db: Database, run: Run, bytes: number) {
   const added = Math.max(0, bytes - Number(previous.input_bytes));
   return Math.min(bytes, read + added + agentPolicy.hold_input_margin_tokens);
 }
-/**
- * The hold for a call: its full cost bound when the balance covers it.
- * Otherwise the call is shrunk, not refused: its output cap is lowered to what
- * the balance covers, down to a minimum reply; only a balance below that floor
- * refuses it (B60).
- */
 function sizedHold(
   price: ModelPrice,
   available: number,
@@ -237,8 +212,6 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
       if (!attempt.reservation_id) throw new AgentError('funding_unavailable');
       const reserved = Number(attempt.reserved_credits);
       const charged = price && usage ? chargeCredits(price, usage) : null;
-      // As platform metering: a call that did not complete pays only the usage it
-      // reported; an answer with unreadable usage pays the fallback.
       const failed = attempt.outcome !== 'completed';
       const credits =
         failed && charged === null
@@ -259,7 +232,6 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
         costMicrousd: cost,
       };
     },
-    // A failed turn is not charged (B58): each debit gets one append-only refund.
     refund: async (db, run) => {
       if (run.funding_source !== 'platform') return;
       await account(db, run.workspace_id);

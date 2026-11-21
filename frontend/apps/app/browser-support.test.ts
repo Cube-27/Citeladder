@@ -3,14 +3,11 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-// The classic script index.html runs before the app shell.
 const script = readFileSync(join(import.meta.dirname, '../../public/browser-support.js'), 'utf8');
 
 function runOnPage(): HTMLElement {
   document.documentElement.removeAttribute('data-browser-support');
-  // index.html's first-paint shell, which React or the notice replaces.
   document.body.innerHTML = '<div id="root"><div class="boot-shell"></div></div>';
-  // Runs the shipped classic script as the browser does.
   new Function(script)();
   const root = document.getElementById('root');
   if (!root) throw new Error('root missing');

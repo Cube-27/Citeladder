@@ -50,7 +50,6 @@ const needsInput = spanSuggestion(NEEDS, BODY, 'Teams pay more', {
 const pageChat = (body = BODY, revisionId = REV1, number = 1) =>
   sharedPageChat(body, { revisionId, number });
 
-/** Serves a page chat and its suggestions; `state` changes what later reads return. */
 function serve(initial: { chat: Record<string, unknown>; suggestions: Record<string, unknown> }) {
   const state = { ...initial, chatReads: 0, sent: [] as unknown[] };
   mswServer.use(

@@ -45,7 +45,6 @@ describe('RecordPage', () => {
     const heading = await screen.findByRole('heading', { level: 1 });
     expect(heading).toHaveTextContent('Runs');
     expect(masthead()).toContainElement(heading);
-    // The page's nav section leads the title.
     expect(masthead().textContent).toBe('TrackingRuns');
     expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
   });

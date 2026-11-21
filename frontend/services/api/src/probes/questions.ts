@@ -1,10 +1,3 @@
-/**
- * The probe's questions (AV-30 to AV-32): about the brand only, what it is
- * known for and why someone might not choose it, then one question per
- * project theme naming the category. Admission freezes them as prompt
- * snapshots without a library prompt; each carries its question in
- * `generation_evidence.probe`, which the labelling and the reads parse.
- */
 import { MARKET_COUNTRIES } from '@citeladder/contracts/markets';
 import { z } from 'zod';
 
@@ -25,13 +18,11 @@ const probeQuestionSchema = z.discriminatedUnion('question', [
 ]);
 export type ProbeQuestion = z.infer<typeof probeQuestionSchema>;
 
-/** The probe question a snapshot froze, or null for any other snapshot. */
 export function frozenQuestion(evidence: unknown): ProbeQuestion | null {
   const parsed = probeQuestionSchema.safeParse(record(evidence).probe);
   return parsed.success ? parsed.data : null;
 }
 
-/** A prompt as admission freezes it; a probe's has no library prompt. */
 export type FrozenPrompt = {
   id: string | null;
   text: string;
@@ -45,21 +36,15 @@ export type FrozenPrompt = {
   generation_evidence: unknown;
 };
 
-/** The category the theme questions name: the reviewed one, else the project's industry. */
 function probeCategory(context: unknown, industry: string) {
   return scalarText(record(context).category).trim() || industry.trim();
 }
 
-/** A market's country as a theme question names it ("Australia"). */
 export function countryName(countryCode: string) {
   const code = countryCode.trim().toUpperCase();
   return MARKET_COUNTRIES.find((country) => country.value === code)?.label ?? code;
 }
 
-/**
- * The questions for a brand, category, market country and themes, in asking
- * order. A theme question names the country, or engines answer with global brands.
- */
 export function probeQuestions(input: {
   brand: string;
   category: string;
@@ -94,7 +79,6 @@ export function probeQuestions(input: {
   ];
 }
 
-/** The brand, category and themes the probe asks about, read under the caller's scope. */
 export async function probeSubject(
   db: Database,
   scope: { workspaceId: string; projectId: string },
@@ -121,7 +105,6 @@ export async function probeSubject(
   };
 }
 
-/** The frozen prompts of a probe run in the market of `countryCode`. */
 export async function probePrompts(
   db: Database,
   scope: { workspaceId: string; projectId: string },
@@ -130,7 +113,6 @@ export async function probePrompts(
   return probeQuestions({ ...(await probeSubject(db, scope)), country: countryName(countryCode) });
 }
 
-/** The requested engines that can run a probe: search-capable ones only (AV-31). */
 export function probeEngines(requested: readonly Engine[]): Engine[] {
   const engines = [...new Set(requested)].filter((engine) => probes.engines.includes(engine));
   if (!engines.length)

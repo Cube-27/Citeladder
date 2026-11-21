@@ -1,9 +1,3 @@
-/**
- * The combined transaction lock DAG (architecture.md) at the real PostgreSQL
- * boundary: Site Health controls, crawl admission, worker publication and
- * grant changes take their locks in one order, so their interleavings wait
- * instead of deadlocking.
- */
 import { randomUUID } from 'node:crypto';
 import { Kysely, PostgresDialect, sql } from 'kysely';
 import pg from 'pg';
@@ -31,7 +25,6 @@ const db = testDatabase(config);
 const fixtures = new SiteFixtures(db);
 const accounts: string[] = [];
 
-/** Every statement the logging connection runs, in order. */
 const statements: string[] = [];
 const logged: Database = new Kysely<DB>({
   dialect: new PostgresDialect({ pool: new pg.Pool(poolOptions(config)) }),
@@ -53,7 +46,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** The combined lock DAG, Site Health prefix first: a transaction only moves rightward. */
 const RANK = [
   'project',
   'runtime',
@@ -74,7 +66,6 @@ const TABLE_LOCKS: Record<string, string> = {
   account_grants: 'grants',
 };
 
-/** The lock a statement acquires, or null for one that takes no lock of the DAG. */
 function lockOf(statement: string) {
   if (statement.includes('pg_advisory_xact_lock')) return 'capacity';
   const locking = /\bfor (?:update|no key update)\b/u.test(statement);
@@ -87,10 +78,6 @@ function lockOf(statement: string) {
   return TABLE_LOCKS[table] ?? table;
 }
 
-/**
- * Run `work` in one logged transaction and return the order in which it first
- * took each lock, asserting that order never steps back in the DAG.
- */
 async function lockOrder(work: (trx: Database) => Promise<unknown>) {
   statements.length = 0;
   await logged.transaction().execute(work);
@@ -111,7 +98,6 @@ async function monitoredCrawl(limit: number) {
   await grant(db, account, { key: 'monitored_urls', value: limit });
   const page = await fixtures.page(seed, '/a', {}, { observed: true });
   await fixtures.monitor(seed, [page.id]);
-  // The runtime row the worker and controls lock, resolved from the grant.
   await refreshRuntime(db, seed.workspaceId);
   return { seed, account, page };
 }
@@ -121,7 +107,6 @@ async function backendPid(trx: Database) {
   return result.rows[0]!.pid;
 }
 
-/** Wait until another backend is queued behind a lock `pid` holds. */
 async function blocksAnother(pid: number) {
   await vi.waitFor(
     async () => {
@@ -134,7 +119,6 @@ async function blocksAnother(pid: number) {
   );
 }
 
-/** A URL a discover commit admits into the seed's project. */
 function foundUrl(seed: SiteSeed, path: string) {
   const identity = canonicalIdentity(path, seed.root);
   const now = new Date();
@@ -173,13 +157,11 @@ async function monitoredLimit(seed: SiteSeed) {
 describe('Site Health lock order', () => {
   it('refuses a page rerun during a discover commit without waiting on its locks', async () => {
     const { seed, page } = await monitoredCrawl(1);
-    // A discover commit locks the runtime first, then the crawl (lockSiteTask).
     const worker = await db.startTransaction().execute();
     try {
       await lockRuntime(worker, seed.workspaceId);
       // It writes a URL it found: the foreign key key-share locks the project row.
       await worker.insertInto('site_urls').values(foundUrl(seed, '/found')).execute();
-      // The running crawl refuses the rerun before the runtime lock the worker holds (SH-B4).
       await expect(
         db
           .transaction()
@@ -205,7 +187,6 @@ describe('Site Health lock order', () => {
     let refresh: Promise<void> | undefined;
     try {
       await lockRuntime(worker, seed.workspaceId);
-      // The billing transaction never waits on the runtime the worker holds.
       await db.transaction().execute((trx) =>
         issueBundle(trx, {
           workspaceId: seed.workspaceId,
@@ -301,7 +282,6 @@ describe('Site Health lock order', () => {
     }).then((committed) => order.push(`first:${committed}`));
     const pid = await holding.promise;
     try {
-      // A second page commit takes the same crawl lock while the first holds it.
       expect(await commitTask(ctx, second!, async (_trx, lock) => void (await lock('share')))).toBe(
         true,
       );
@@ -310,11 +290,9 @@ describe('Site Health lock order', () => {
       released.resolve();
       await Promise.all([open, stop]);
     } finally {
-      // A failed step still ends the first commit, so its crawl lock never outlives the test.
       released.resolve();
       await open;
     }
-    // A commit after Stop finds the crawl stopped and writes nothing.
     expect(await commitTask(ctx, third!, async (_trx, lock) => void (await lock('share')))).toBe(
       false,
     );
@@ -329,15 +307,12 @@ describe('Site Health lock order', () => {
       .where('id', '=', seed.crawlId)
       .execute();
     const discover = await fixtures.task(seed, 'discover');
-    // Outstanding analysis keeps the crawl undrained.
     await fixtures.analyzable(seed, '/a');
     const writer = await db.startTransaction().execute();
     try {
       await lockedCrawl(writer, seed);
       const reconcile = reconcileCrawl(db, seed.workspaceId, seed.crawlId, { refreshScore: false });
-      // The reconcile read the crawl with its discovery open and now waits on the lock.
       await blocksAnother(await backendPid(writer));
-      // A discover commit: its page found, its task settled.
       await writer
         .updateTable('site_crawl_tasks')
         .set({ status: 'succeeded', completed_at: new Date() })
@@ -384,7 +359,6 @@ describe('Site Health lock order', () => {
       await lockedCrawl(writer, seed);
       const reconcile = reconcileCrawl(db, seed.workspaceId, seed.crawlId);
       await blocksAnother(await backendPid(writer));
-      // The task Stop skipped cancels itself; no crawl column moves.
       await writer
         .updateTable('site_crawl_tasks')
         .set({ status: 'cancelled', completed_at: new Date() })
@@ -399,7 +373,6 @@ describe('Site Health lock order', () => {
   });
 });
 
-/** The analyze task leased to `owner`, as a claim hands it to the worker. */
 function leased(page: { taskId: string }, owner: string): Promise<SiteTask> {
   return db
     .updateTable('site_crawl_tasks')

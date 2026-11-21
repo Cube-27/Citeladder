@@ -1,16 +1,9 @@
-/**
- * In-browser CSV parsing for the brand-facts import. The browser reads the
- * file and flags rows it can already tell are unusable; the API checks every
- * row again (lengths, duplicates, the project's fact limit) and answers each.
- * Imported facts are drafts until a person confirms them.
- */
 import { factTopicSchema, type FactTopic } from '@citeladder/contracts/fact-checking';
 import type { BrandFactImportRequest } from '@citeladder/contracts/project-requests';
 
 import { tokenizeCsv } from '@/lib/prompts/csv';
 import { TOPIC_LABELS } from '@/lib/visibility/accuracy';
 
-/** The import's column contract, in the order the sample file uses. */
 export const FACT_CSV_COLUMNS = ['topic', 'statement', 'source_url'] as const;
 
 export const FACT_CSV_SAMPLE_ROWS: readonly (readonly [string, string, string])[] = [
@@ -30,7 +23,6 @@ type FactImportRow = BrandFactImportRequest['rows'][number];
 export type ParsedFactRow = { line: number; input: FactImportRow; errors: string[] };
 export type ParsedFactCsv = { rows: ParsedFactRow[]; errors: string[] };
 
-/** A topic by its key or its label, in any case. */
 function topicOf(value: string): FactTopic | null {
   const wanted = value.trim().toLowerCase();
   const byKey = factTopicSchema.safeParse(wanted);
@@ -75,11 +67,6 @@ function parseRow(
   };
 }
 
-/**
- * Parse a facts CSV. A header naming at least the topic and statement columns is required.
- * `maxRows` is the API's import cap (null before the list read brings it; the API still
- * refuses a larger request whole).
- */
 export function parseFactCsv(raw: string, maxRows: number | null): ParsedFactCsv {
   const [header, ...data] = tokenizeCsv(raw);
   if (!header) return { rows: [], errors: ['The file is empty.'] };

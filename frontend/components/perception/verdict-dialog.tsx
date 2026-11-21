@@ -24,16 +24,11 @@ const OPTIONS = overrideVerdictSchema.options.map((value) => ({
   label: VERDICT_LABELS[value],
 }));
 
-/** The verdict to preselect: the claim's own when a person may give it, else the first. */
 function initialVerdict(claim: AccuracyClaim): OverrideVerdict {
   const current = overrideVerdictSchema.safeParse(claim.verdict);
   return current.success ? current.data : 'supported';
 }
 
-/**
- * Change one claim's verdict (AV-12). The change is appended beside the
- * model's verdict, which stays on record; accuracy counts the person's.
- */
 export function VerdictDialog({
   claim,
   override,

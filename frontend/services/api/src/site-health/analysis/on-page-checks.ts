@@ -1,8 +1,3 @@
-/**
- * On-page parity checks over persisted facts: JSON-LD syntax, the H1, the
- * HTTP origin, and the length advisories. Thresholds are site health policy;
- * the advisories are never scored.
- */
 import { analysisPolicy, limits, words } from './policy.ts';
 import { passFail } from './delivery-checks.ts';
 import { count, list, record, text, type Facts } from './read-facts.ts';
@@ -22,7 +17,6 @@ function h1Present(facts: Facts): CheckResult {
   return [passFail(h1 > 0), { h1_count: h1 }];
 }
 
-/** A length advisory over a present field; an empty field is the presence rule's finding. */
 const lengthInRange =
   (field: 'title' | 'meta_description', range: { min_chars: number; max_chars: number }) =>
   (facts: Facts): CheckResult => {
@@ -37,7 +31,6 @@ const lengthInRange =
 
 function thinContent(facts: Facts): CheckResult {
   const minimum = advisories.thin_content_min_words;
-  // Text past the stored bound is long by construction.
   if (facts.primary_content_truncated === true)
     return ['satisfied', { minimum_words: minimum, truncated: true }];
   const found = words(text(facts.primary_content_text)).length;
@@ -50,7 +43,6 @@ function longParagraphs(facts: Facts): CheckResult {
   const maximum = advisories.long_paragraph_max_words;
   const counts = list(facts.primary_paragraph_word_counts).map(count);
   const long = counts.filter((value) => value > maximum);
-  // The facts keep a bounded prefix: a full list without a long paragraph proves nothing about the rest.
   if (!long.length && counts.length >= limits.paragraphs_kept)
     return ['unknown', { reason: 'paragraphs_truncated', paragraph_count: counts.length }];
   return [
@@ -64,9 +56,7 @@ function longParagraphs(facts: Facts): CheckResult {
   ];
 }
 
-/** The `http://` origin probe site setup recorded: it must hand every visitor to HTTPS. */
 function httpRedirectsToHttps(facts: Facts): CheckResult {
-  // A root served over plain HTTP is `technical.https`'s finding.
   if (!text(record(facts.delivery).final_url).startsWith('https://'))
     return ['not_applicable', { reason: 'root_not_https' }];
   const probe = record(record(facts.site).http_origin);

@@ -30,7 +30,6 @@ describe('stale sitemap index', () => {
     const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
     const setup = await queued(seed, 'site_setup');
     const requests: string[] = [];
-    // A cached index names a child the site has since replaced.
     const site = worker(
       {
         '/robots.txt': { body: 'User-agent: *\n', contentType: 'text/plain' },
@@ -46,7 +45,6 @@ describe('stale sitemap index', () => {
       retries: 1,
     });
     await walkSetup(site, setup, settings);
-    // Each walk re-fetches the index past the cache once; the fresh copy names the same child.
     expect(requests.filter((path) => path.endsWith('.xml'))).toEqual([
       '/sitemap.xml',
       '/gone.xml',
@@ -105,7 +103,6 @@ describe('stale sitemap index', () => {
 
   it.each([
     { shared: false, unread: 0 },
-    // A child another index still names stays unread when the fresh copy drops it.
     { shared: true, unread: 1 },
   ])(
     're-fetches a cached index whose children are all gone, past the cache (shared child: $shared)',
@@ -122,16 +119,13 @@ describe('stale sitemap index', () => {
           },
           '/fine.xml': shared ? index('/pages.xml', '/gone-a.xml') : index('/pages.xml'),
           '/pages.xml': urlset(url('/a')),
-          // The CDN's cached copy names children the site has since replaced.
           '/sitemap.xml': index('/gone-a.xml', '/gone-b.xml'),
           [busted]: index('/fresh.xml'),
           '/fresh.xml': urlset(url('/b'), url('/c')),
         },
         requests,
       );
-      // One document per wave, so the request order is the queue order.
       await walkSetup(site, setup, { ...setupSettings({}), concurrency: 1, walkRetries: 0 });
-      // The index whose child was read is fetched once; the stale one once more, past the cache.
       expect(requests.filter((path) => path.includes('.xml'))).toEqual([
         '/sitemap.xml',
         '/fine.xml',

@@ -18,7 +18,6 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'actions', label: 'Actions', kind: 'actions', width: 'rowActions', hideLabel: true },
 ];
 
-/** What the roster shows instead of rows, if anything. */
 function rosterState({
   isLoading,
   isError,
@@ -51,15 +50,6 @@ function rosterState({
   return undefined;
 }
 
-/**
- * The workspace roster, with its search on the table's own header.
- * The Owner row is inert: the single designated Owner changes only through a
- * transfer, which swaps both roles in one server transaction, so no control
- * here can leave the workspace ownerless. Every control reports an intent; the
- * caller confirms it before anything changes. Transfer is offered only to the
- * Owner (`onTransfer` absent otherwise), and your own row offers nothing:
- * leaving is a workspace action, not a removal.
- */
 export function MemberRoster({
   members,
   toolbar,
@@ -74,9 +64,7 @@ export function MemberRoster({
   onRemove,
 }: Readonly<{
   members: readonly WorkspaceMember[];
-  /** The roster's search. */
   toolbar: FilterBarProps;
-  /** The search text when it matches nobody; null otherwise. */
   noMatch: string | null;
   isLoading: boolean;
   isError: boolean;

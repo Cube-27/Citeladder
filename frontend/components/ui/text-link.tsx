@@ -7,33 +7,6 @@ import { ArrowRight, ArrowUpRight } from '@/lib/icons';
 import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
 import { cn } from '@/lib/utils';
 
-/**
- * TextLink — the text link, with the 2px focus ring.
- *
- * On the website a sentence link is underlined at rest (`underline="always"`,
- * the default); in the app every link underlines only on hover and focus.
- * A table row title or a metric card's
- * action label takes `underline="hover"`: `ink` text with no underline at
- * rest (its place names it as the way in), the 1px current-colour underline
- * appearing on hover and on keyboard focus. Text that is not a link is never
- * underlined (an unsafe external URL renders as plain text without one).
- *
- *   tone `ink` (default, the app): `ink` with a `control-line` underline
- *     that turns `ink` on hover.
- *   tone `prose` (docs, blog and legal copy): `accent-ink` with a solid
- *     underline that thickens on hover.
- *   tone `muted` (footers, metadata): `ink-2` with the same underline.
- *
- *   variant `internal` — an app route, scoped to the active project (or
- *     `projectId`) through `ProjectLink`.
- *   variant `external` — an API-supplied http(s) URL: a new tab, `noopener
- *     noreferrer`, a 14px `arrow-up-right` and "(opens in a new tab)" for
- *     assistive tech. An unsafe or missing URL renders as plain text.
- *
- * `text` is the type role the link sits at (`control` by default; `inherit`
- * only inside a sentence: a link in a list or table cell takes the role of
- * its text). `asChild` keeps the recipe on a link the caller owns.
- */
 type TextLinkVariant = 'internal' | 'external';
 export type TextLinkText = TextRole | 'inherit';
 export type TextLinkTone = 'ink' | 'prose' | 'muted';
@@ -44,8 +17,6 @@ const TONE: Record<TextLinkTone, string> = {
   muted: 'text-ink-2 hover:text-ink',
 };
 
-// The app draws no underline at rest, only on hover and focus (owner,
-// 2026-11-21); the website keeps its control-line underline that inks on hover.
 const APP_REST =
   '[:root:not([data-public-surface])_&]:decoration-transparent [:root:not([data-public-surface])_&]:hover:decoration-current [:root:not([data-public-surface])_&]:focus-visible:decoration-current';
 
@@ -55,7 +26,6 @@ const UNDERLINE = {
     'decoration-control-line hover:decoration-current focus-visible:decoration-current',
     APP_REST,
   ),
-  // A row title: the underline is drawn clear at rest and inks on hover or focus.
   hover:
     'text-ink decoration-transparent hover:decoration-current focus-visible:decoration-current',
 } as const;
@@ -79,23 +49,15 @@ function textLinkClasses({
   return text === 'inherit' ? recipe : textRole(text, recipe);
 }
 
-/**
- * Where the link goes. Each variant takes only the props it reads: a project
- * scope means nothing to an external URL, and under `asChild` the child link
- * owns its destination.
- */
 type TextLinkTarget =
   | {
       variant?: 'internal';
-      /** An app route. */
       href?: string | null;
-      /** The project the route belongs to, when not the active one. */
       projectId?: string | null;
       asChild?: false;
     }
   | {
       variant: 'external';
-      /** An http(s) URL. */
       href?: string | null;
       projectId?: never;
       asChild?: false;
@@ -104,7 +66,6 @@ type TextLinkTarget =
       variant?: TextLinkVariant;
       href?: never;
       projectId?: never;
-      /** Apply the recipe (and glyphs) to the single child link instead. */
       asChild: true;
     };
 
@@ -113,7 +74,6 @@ type TextLinkProps = Readonly<
     TextLinkTarget & {
       tone?: TextLinkTone;
       text?: TextLinkText;
-      /** `hover` for a row title or metric action label: no underline at rest. */
       underline?: TextLinkUnderline;
       children: ReactNode;
     }
@@ -133,7 +93,6 @@ function withGlyphs(variant: TextLinkVariant, children: ReactNode): ReactNode[] 
         aria-hidden
       />
     );
-    // A text label keeps its last word with the glyph, so the glyph never wraps alone.
     const split = typeof children === 'string' ? /^(.*\s)?(\S+)\s*$/su.exec(children) : null;
     return [
       ...(split
@@ -199,14 +158,6 @@ export function TextLink({
   );
 }
 
-/**
- * ArrowLink — a standalone "go there" link: the label and an `arrow-right` in
- * `ink`, 16/24 medium, 8px apart. The label is underlined at rest (1px, 4px
- * offset, `control-line`), turning `ink` on hover as the arrow moves 2px
- * right in 120ms; under reduced motion the arrow stays still. Without `href` it renders a span for the last line
- * of a card that is itself the link (the card's hover drives it). An app
- * route is scoped to the active project through `ProjectLink`.
- */
 export function ArrowLink({
   href,
   projectId,

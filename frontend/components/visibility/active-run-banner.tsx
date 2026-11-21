@@ -5,12 +5,6 @@ import type { ActiveRun } from '@/lib/visibility/dashboard';
 import { TextLink } from '@/components/ui/text-link';
 import { Notice } from '@/components/ui/notice';
 
-/**
- * In-progress run banner for the Visibility workspace. An active run has no
- * metric snapshot yet, so it can't appear in the run selector — this banner is
- * how the user learns a run is underway (and where to watch it) instead of
- * seeing stale data or a bare empty state after navigating back mid-run.
- */
 export function ActiveRunBanner({ run }: Readonly<{ run: ActiveRun }>) {
   return (
     <Notice tone="info">

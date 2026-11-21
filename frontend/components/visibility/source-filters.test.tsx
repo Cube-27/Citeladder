@@ -35,9 +35,7 @@ describe('Sources filters', () => {
       'Standing: Gaps: competitors listed, not you',
       'Domain: All domains',
     ]);
-    // Read, not cited is itself a standing, so its tab offers no standing filter.
     expect(filters('url', 'ugc', TYPES, null)).toEqual(['URL type: UGC', 'Domain: All domains']);
-    // One option is nothing to choose between, unless it is already filtering.
     expect(filters('domain', null, [TYPES[0]!])).toEqual([]);
     expect(filters('domain', 'editorial', [TYPES[0]!])).toEqual(['Domain type: Editorial']);
   });

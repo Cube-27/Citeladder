@@ -26,12 +26,6 @@ import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
-/**
- * One plan as a card, the one place the Settings layout draws cards: its
- * name, its price in mono, what it is, then its controls in a foot pinned to
- * the card's bottom, so a row of cards lines its buttons up. The workspace's
- * own plan carries the accent "you" rule along its top and says so in words.
- */
 export function PlanCard({
   name,
   price,
@@ -73,7 +67,6 @@ export function PlanCard({
   );
 }
 
-/** Plans side by side: one row of equal cards while they fit, else one per line. */
 export function PlanCards({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="@container min-w-0">
@@ -93,13 +86,11 @@ export function PlanRow({
   onCheckout,
 }: Readonly<{
   plan: CatalogPlan;
-  /** Your own provider keys, or managed: the platform's keys at the managed price (B32). */
   mode: CredentialMode;
   currencyMinorUnits: number;
   country: string;
   billingDetails: BillingCustomerDetails;
   pending: boolean;
-  /** The reader's role may not buy; the screen says why once, above. */
   locked?: boolean;
   onCheckout: (key: SelfServePlanKey, details: BillingCustomerDetails) => void;
 }>) {
@@ -148,7 +139,6 @@ export function PlanRow({
   );
 }
 
-/** Only India adds the tax note; every other country sees the bare figure. */
 function monthlyPriceLabel(
   price: HeadlinePrice,
   currencyMinorUnits: number,
@@ -160,7 +150,6 @@ function monthlyPriceLabel(
   return `${formatMoney(price.money, currencyMinorUnits)} / month${tax}`;
 }
 
-/** A plan the caller cannot check out still names itself, then says why not. */
 function planCheckoutLabel(pending: boolean, available: boolean, planName: string): string {
   if (pending) return 'Preparing quote…';
   if (available) return `Choose ${planName}`;

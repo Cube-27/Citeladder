@@ -1,11 +1,4 @@
 ---
-/**
- * A blog post (the WebBlogPost template): a ContentArticle with the
- * ArticleHeader, an "On this page" rail of the post's sections, the typed
- * body blocks in Prose, then the sources, author
- * and pager; related reading and the closing band after it. Research guides
- * filed under /blog render through ResearchLayout.
- */
 import type { GetStaticPaths } from 'astro';
 import ArticleHeader from '@/components/content/ArticleHeader.astro';
 import ArticlePager from '@/components/content/ArticlePager.astro';
@@ -64,7 +57,6 @@ function postView(post: BlogPost) {
       .filter((candidate): candidate is BlogPost => candidate !== undefined),
     previous: link(index > 0 ? POSTS[index - 1] : undefined),
     next: link(index >= 0 ? POSTS[index + 1] : undefined),
-    // The post's sections, for the "On this page" rail beside the body.
     toc: post.body.flatMap((block) =>
       block.type === 'heading' ? [{ id: headingId(block.text), label: block.text, level: 2 }] : [],
     ),

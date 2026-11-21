@@ -24,7 +24,6 @@ import {
 } from './billing-support.ts';
 import { grant } from './prompt-fixtures.ts';
 
-/** Settles a Razorpay refund for the tenant, as provider recovery does. */
 const refundIn = (
   trx: Database,
   t: { workspaceId: string; accountId: string },
@@ -60,7 +59,6 @@ describe('billing money and access owner', () => {
     );
   const pending = (id: string) =>
     db.selectFrom('pending_activations').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
-  // A subscriber whose access and flags come only from the plan bundle they bought.
   async function activated() {
     const t = await fixtures.tenant({ access: false });
     const response = await buy(t.workspaceId);
@@ -145,7 +143,6 @@ describe('billing money and access owner', () => {
       .where('key', 'in', ['team_members', 'project_deletion'])
       .execute();
     expect(flags.map((grant) => grant.key).sort()).toEqual(['project_deletion', 'team_members']);
-    // Once the paid period ends unrenewed, the customer is lapsed, never an expired trial.
     const periodEnd = evidence.subscription.end!;
     const afterPlan = new Date(periodEnd.getTime() + 86_400_000);
     expect(await workspaceAccess(db, t.workspaceId, afterPlan)).toEqual({
@@ -177,7 +174,6 @@ describe('billing money and access owner', () => {
       (await workspaceEntitlementRead(db, t.workspaceId, new Date())).credential_mode,
       (await entitlementRead(db, config, t.workspaceId, new Date())).subscription?.credential_mode,
     ];
-    // Unpaid, the workspace is not yet managed.
     expect(await modes()).toEqual(['byok', undefined]);
     await db
       .transaction()
@@ -215,7 +211,6 @@ describe('billing money and access owner', () => {
   it('preserves uncertain creation and recovers without creating or granting twice', async () => {
     const t = await fixtures.tenant();
     const key = randomUUID();
-    // The committed intent is truthful: the client polls while recovery resolves it.
     const accepted = await purchase(
       db,
       config,
@@ -294,10 +289,8 @@ describe('billing money and access owner', () => {
     );
     expect(cancel).toHaveBeenCalledTimes(1);
     expect((await pending(row.id)).status).toBe('abandoned');
-    // The terminal row no longer blocks a new base purchase.
     expect((await buy(t.workspaceId)).status).toBe('pending');
   });
-  // A base checkout past its abandon window, due for the sweep's final probe.
   async function lapsingCheckout() {
     const t = await fixtures.tenant({ access: false });
     const row = await pending((await buy(t.workspaceId)).activation_id);
@@ -331,7 +324,6 @@ describe('billing money and access owner', () => {
   });
   it('grants a checkout paid as the abandon sweep cancels it until its paid end, and leaves it pending no longer', async () => {
     const { t, row } = await lapsingCheckout();
-    // Unpaid when read; once cancelled the provider shows the payment that landed meanwhile.
     const paidThenCancelled = paidSubscription(row, { status: 'cancelled', version: 2 });
     const reads = [paidSubscription(row, { status: 'created', payment: null })];
     const cancel = vi.fn(async (reference: string) => ({
@@ -724,8 +716,6 @@ describe('billing money and access owner', () => {
     };
     await settle(rest);
     expect((await workspaceAccess(db, t.workspaceId)).status).toBe('subscription_lapsed');
-    // Cancelled now; the row stays current until the provider confirms, so a
-    // second base plan cannot be bought meanwhile.
     expect(await current()).toEqual({
       status: 'cancelled',
       is_current: true,
@@ -738,7 +728,6 @@ describe('billing money and access owner', () => {
     const revoked = await revocations();
     await settle(rest);
     expect(await revocations()).toBe(revoked);
-    // The sweep cancels at the provider immediately, then ends the subscription.
     let state = { ...t.evidence.subscription, version: 2 };
     const cancel = vi.fn(async (_reference: string, _atEnd: boolean) => {
       state = { ...state, status: 'cancelled', version: 3 };
@@ -760,7 +749,6 @@ describe('billing money and access owner', () => {
       cancel_at_period_end: true,
     });
     expect((await workspaceAccess(db, t.workspaceId)).status).toBe('subscription_lapsed');
-    // A replayed refund and a later sweep change nothing; a new plan can be bought.
     await settle(rest);
     await recoverBilling(db, sweep, provider);
     expect(cancel).toHaveBeenCalledTimes(1);
@@ -780,7 +768,6 @@ describe('billing money and access owner', () => {
         createdAt: new Date(),
       }),
     );
-    // The provider renewed before it saw the cancellation.
     const start = t.evidence.subscription.end!;
     const end = new Date(start.getTime() + 30 * 86_400_000);
     const renewal = {
@@ -825,7 +812,6 @@ describe('billing money and access owner', () => {
         .execute();
     expect(await renewedGrants()).toEqual([]);
     expect((await workspaceAccess(db, t.workspaceId)).status).toBe('subscription_lapsed');
-    // The sweep still cancels at once, and the charged renewal keeps nothing running.
     let state = { ...renewal, payment: null, version: 3 };
     const cancel = vi.fn(async (_reference: string, _atEnd: boolean) => {
       state = { ...state, status: 'cancelled', version: 4 };
@@ -1021,8 +1007,6 @@ describe('billing money and access owner', () => {
         createdAt: new Date(),
       }),
     );
-    // Cancelled at once, the base period's and the upgrade's grants revoked,
-    // and the scheduled upgrade gone with the subscription (B70).
     expect(await current()).toEqual({
       status: 'cancelled',
       is_current: true,
@@ -1031,8 +1015,6 @@ describe('billing money and access owner', () => {
     });
     expect(await unrevoked()).toEqual([]);
     expect((await workspaceAccess(db, t.workspaceId)).status).toBe('subscription_lapsed');
-    // The provider still reports the paid base period: the sweep cancels now
-    // and the unrefunded base payment does not keep the period running.
     const ref = t.sub.external_subscription_id;
     let state = { ...t.evidence.subscription, payment: null, version: 2 };
     const cancel = vi.fn(async (_reference: string, _atEnd: boolean) => {
@@ -1220,7 +1202,6 @@ describe('billing money and access owner', () => {
       notes: { citeladder_intent_id: row.id, citeladder_account_ref: t.accountId },
       payment: null,
     } as const;
-    // A declined attempt leaves the order open: the customer may retry on it.
     await db.transaction().execute((trx) => settlePending(trx, row.id, 'test', unpaid, 'webhook'));
     expect((await pending(row.id)).status).toBe('pending');
     await db
@@ -1244,7 +1225,6 @@ describe('billing money and access owner', () => {
       },
     };
     const app = createApp(config, db);
-    // The browser's signed callback for that payment reopens the order for recovery.
     const verified = await app.request(`/api/v1/billing/activations/${row.id}/verify`, {
       method: 'POST',
       headers: {
@@ -1265,7 +1245,6 @@ describe('billing money and access owner', () => {
     expect(verified.status).toBe(202);
     expect(((await verified.json()) as { status: string }).status).toBe('pending');
     expect((await pending(row.id)).status).toBe('pending');
-    // Its probe saw no capture yet and abandoned it again; the webhook still settles it.
     await db
       .updateTable('pending_activations')
       .set({ status: 'abandoned' })
@@ -1381,9 +1360,7 @@ describe('billing money and access owner', () => {
       is_current: true,
       cancel_at_period_end: false,
     });
-    // The halted row still blocks a second base subscription.
     await expect(buy(t.workspaceId)).rejects.toMatchObject({ status: 409 });
-    // The customer fixed the mandate: a resumed subscription is never cancelled.
     const resumed = { ...t.evidence.subscription, payment: null, version: 3 };
     await settle(resumed);
     const untouched = vi.fn(async () => {
@@ -1402,13 +1379,10 @@ describe('billing money and access owner', () => {
       .set({ reconciliation_next_at: new Date() })
       .where('id', '=', t.sub.id)
       .execute();
-    // Every current subscription is swept, so this one is reached whatever is queued.
     const sweep = { ...config, billing: { ...config.billing, batchSize: 1000 } };
     await recoverBilling(db, sweep, ours(resumed));
     expect(untouched).not.toHaveBeenCalled();
     expect(await current()).toMatchObject({ status: 'active', cancel_at_period_end: false });
-    // Halted again: the sweep cancels now, and a definite refusal (already
-    // cancelled at the provider) still lets it apply the provider's state.
     await settle({ ...halted, version: 4 });
     let provider = { ...halted, version: 4 };
     const cancel = vi.fn(async (_reference: string, _atEnd: boolean) => {
@@ -1428,7 +1402,6 @@ describe('billing money and access owner', () => {
       }),
     );
     expect(cancel.mock.calls).toEqual([[ref, false]]);
-    // The paid period runs to its end; nothing renews after it.
     expect(await current()).toMatchObject({
       status: 'cancel_scheduled',
       is_current: true,
@@ -1467,7 +1440,6 @@ describe('billing money and access owner', () => {
     );
     expect(result).toMatchObject({ direction: 'downgrade', status: 'scheduled' });
     expect(change).toHaveBeenCalledTimes(1);
-    // A refused switch is reported, and the same key can request it again.
     const refused = await activated();
     const key = randomUUID();
     const reject = vi.fn(async () => {
@@ -1516,7 +1488,6 @@ describe('billing money and access owner', () => {
     await expect(
       changePlan(db, config, t.workspaceId, 'tier_2', key, fakeProvider({ change: reject })),
     ).rejects.toMatchObject({ status: 502 });
-    // The process died after recording the refusal, before deleting the replay record.
     const [row] = committed;
     await db
       .insertInto('idempotency_records')
@@ -1579,9 +1550,7 @@ describe('billing money and access owner', () => {
     expect(read.subscription?.resumable_until).toBe(
       new Date(t.sub.current_period_end!.getTime() - 2 * 86_400_000).toISOString(),
     );
-    // Before the lead, recovery sends nothing and the customer may change their mind.
     const cancel = vi.fn(async () => paidSubscription(t.row).subscription);
-    // Only this subscription answers; the sweep leaves every other one alone.
     const early = fakeProvider({
       cancel,
       evidence: async (id) => {
@@ -1607,7 +1576,6 @@ describe('billing money and access owner', () => {
       status: 'nothing_to_resume',
     });
 
-    // Cancelled again and inside the lead: recovery sends it, and resume is over.
     await cancelSubscription(db, config, t.workspaceId);
     const lead = {
       ...config,
@@ -1699,10 +1667,8 @@ describe('billing money and access owner', () => {
           .where('external_event_id', '=', id)
           .executeTakeFirstOrThrow()
       ).processing_state;
-    // An applied event keeps its outcome; the conflicting replay is still refused.
     expect(await deliver(conflicting, eventId)).toBe(400);
     expect(await state(eventId)).toBe('completed');
-    // An event not yet applied is quarantined for review instead.
     const unapplied = randomUUID();
     expect(await deliver(body, unapplied)).toBe(204);
     const records: Record<string, unknown>[] = [];
@@ -1770,7 +1736,6 @@ describe('billing money and access owner', () => {
       stored: ['pending'],
     });
     expect(await deliver(open, 'never-configured')).toEqual(refused);
-    // Expired, not yet started, longer than 24 hours, inverted or unset: the old secret is dead.
     expect(
       await deliver({ previousStart: at(-hour), previousEnd: at(-1000) }, 'rotated-out'),
     ).toEqual(refused);
@@ -1887,7 +1852,6 @@ describe('billing money and access owner', () => {
       expect(response.status).toBe(204);
       return eventId;
     };
-    // Both rows were claimed for their final attempt and the process died before any outcome.
     const died = async (eventId: string, leaseExpiresAt: Date) =>
       db
         .updateTable('billing_webhook_events')
@@ -1929,7 +1893,6 @@ describe('billing money and access owner', () => {
       },
       [leased]: { external_event_id: leased, processing_state: 'pending', error_code: '' },
     });
-    // The quarantine alert matches one ERROR record per newly quarantined event.
     const ids = new Set(rows.map((row) => row.id));
     expect(
       records.filter(
@@ -1957,7 +1920,6 @@ describe('billing money and access owner', () => {
           'x-workspace-id': workspace,
         },
       });
-    // Billing reads are administrative: owner and admin succeed, member and viewer are refused.
     const admin = await fixtures.user();
     await fixtures.member(t.workspaceId, admin, 'admin');
     const viewer = await fixtures.user();
@@ -2177,7 +2139,6 @@ describe('billing money and access owner', () => {
     ).toMatchObject({ status: 'pending' });
   });
   it('leaves an expired trial exactly the path to buying a plan', async () => {
-    // A public signup: the trial is its only grant.
     const userId = await fixtures.user();
     const workspaceId = await fixtures.ownedWorkspace(userId, { access: false });
     const user = await db
@@ -2219,7 +2180,6 @@ describe('billing money and access owner', () => {
     const status = async (path: string, init: RequestInit = {}) =>
       (await app.request(`/api/v1${path}`, { ...init, headers: { ...headers, ...init.headers } }))
         .status;
-    // A checkout that cannot reach the provider stays pending for recovery.
     const transport = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
     try {
       expect({

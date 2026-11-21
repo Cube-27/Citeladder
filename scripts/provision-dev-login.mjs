@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-/**
- * Interactive account management for the deployed CiteLadder app.
- *
- *   node scripts/provision-dev-login.mjs
- *   node scripts/provision-dev-login.mjs --use-existing-tunnel --local-port 15432
- */
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { connect, createServer } from 'node:net';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -107,9 +101,7 @@ async function openTunnel(databasePort) {
     if (tunnel.exitCode !== null || tunnel.signalCode !== null) return;
     try {
       process.kill(-tunnel.pid, 'SIGTERM');
-    } catch {
-      // Already gone.
-    }
+    } catch {}
   };
   let diagnostic = '';
   tunnel.stderr.setEncoding('utf8').on('data', (chunk) => (diagnostic += chunk));
@@ -175,7 +167,6 @@ async function main() {
       DB_SSL_MODE: 'disable',
       CITELADDER_DISABLE_DOTENV: '1',
     };
-    // Production keeps no operator password secret (BL9): the manager prompts without echo.
     delete env.ACCOUNT_MANAGER_OPERATOR_PASSWORD;
     const manager = [accountManager, '--platform', '--actor', options.actor];
     const result = spawnSync('node', manager, { stdio: 'inherit', env }); // NOSONAR: the operator's node from PATH.

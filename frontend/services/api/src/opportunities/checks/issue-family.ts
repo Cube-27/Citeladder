@@ -1,16 +1,3 @@
-/**
- * One Site Health rule across a frozen cohort of pages (an issue family),
- * read in a crawl comparable with the one the cohort came from.
- *
- * Every cohort page passing (or no longer applying, counted apart) verifies
- * the check. Some cleared and some failing is `partially_resolved`, none
- * cleared is `still_failing`; both name the pages still failing. A crawl with a different analyzer or rule catalog, or
- * one that read no cohort page (or only passing ones, leaving the rest
- * unread), is inconclusive and says why. A family larger than its cohort
- * counts the pages beyond it as uncovered and is never verified (SH-B2): a
- * cohort that clears reads `cohort_sampled`. A site-level rule reads its one
- * site-level finding instead (`readSiteLevel`).
- */
 import {
   siteIssueFamilyEvidenceSchema,
   type IssueFamilyCohort,
@@ -27,19 +14,11 @@ import { outcome, type CheckOutcome } from '../verification-decisions.ts';
 import type { CheckModule, MemberFacts } from './kind.ts';
 import { latestAudits, once, type ReadContext } from './read-context.ts';
 
-/**
- * A page whose rule now passes, or no longer applies, has the defect cleared;
- * the reading counts the two apart.
- */
 const PASSING = 'satisfied';
 const NOT_APPLICABLE = 'not_applicable';
 const FAILING = new Set(['missing', 'partial']);
 const ANSWERED = new Set([PASSING, NOT_APPLICABLE, ...FAILING]);
 
-/**
- * An issue-family finding's cohort as its evidence stores it; null for any
- * other finding or unreadable evidence.
- */
 export function familyCohort(
   member: Pick<MemberFacts, 'rule_id' | 'evidence'>,
 ): IssueFamilyCohort | null {
@@ -73,12 +52,6 @@ const comparable = (left: CrawlVersions, right: CrawlVersions) =>
   left.analyzer_version === right.analyzer_version &&
   left.rule_catalog_version === right.rule_catalog_version;
 
-/**
- * Each cohort page's reading of the rule as this crawl shows it: its latest
- * finalized audit (`latestAudits`, SH-B9), fetched after go-live, and that
- * analysis's evaluation of the rule. A page rerun reads through the site crawl
- * it lands in, so re-auditing the last failing page can verify the family.
- */
 async function cohortReadings(
   ctx: ReadContext,
   crawlId: string,
@@ -108,12 +81,6 @@ async function cohortReadings(
   return rows;
 }
 
-/**
- * A site-level rule (architecture, sitewide links) is judged once over the
- * whole crawl and names its pages in its evidence: the crawl, begun after
- * go-live, verifies the check when it no longer files the rule, and otherwise
- * fails the cohort pages its finding still names (every page, for the whole site).
- */
 async function readSiteLevel(
   ctx: ReadContext,
   crawlId: string,
@@ -136,7 +103,6 @@ async function readSiteLevel(
     pages: { ...empty, unread: check.site_url_ids.length },
   };
   if (!crawl?.after) return unread;
-  // A crawl that never evaluated the rule (no architecture pass, a page rerun) says nothing of it.
   const evaluations = await ctx.db
     .selectFrom('site_rule_evaluations as e')
     .innerJoin('site_page_analyses as a', (join) =>
@@ -179,7 +145,6 @@ async function readSiteLevel(
   };
 }
 
-/** The cohort pages as `{ site_url_id, url }`, in URL order. */
 async function cohortUrls(ctx: ReadContext, ids: readonly string[]) {
   if (!ids.length) return [];
   const rows = await ctx.scope
@@ -218,7 +183,6 @@ async function readCohort(
   const notApplicable = answered.filter((row) => row.outcome === NOT_APPLICABLE).length;
   const cleared = passing + notApplicable;
   const unread = check.site_url_ids.length - answered.length;
-  // The family's pages beyond the frozen cohort: never read, so never verified.
   const uncovered = Math.max(0, check.page_count - check.site_url_ids.length);
   const pages = { failing, passing, not_applicable: notApplicable, unread, uncovered };
   if (failing.length)

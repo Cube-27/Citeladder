@@ -1,10 +1,3 @@
-/**
- * Bulk prompt changes across one project's sets: file a selection under a
- * topic, or delete it. Each runs in one transaction under the project lock,
- * and every id must be a prompt of
- * the project: one that is not refuses the whole request rather than being
- * skipped.
- */
 import {
   promptBulkDeleteRequestSchema,
   promptBulkTopicRequestSchema,
@@ -32,11 +25,6 @@ const ids = promptBulkDeleteRequestSchema.shape.prompt_ids.max(P.bulk_prompts_ma
 export const promptBulkDelete = promptBulkDeleteRequestSchema.extend({ prompt_ids: ids });
 export const promptBulkTopic = promptBulkTopicRequestSchema.extend({ prompt_ids: ids });
 
-/**
- * File the prompts under `topic_id` (null: no topic). Past runs keep the topic
- * they froze. An active prompt that moves must bind to its new topic, as a
- * single re-file must; one that fails refuses the whole request.
- */
 export async function assignPromptTopic(
   db: Database,
   scope: ProjectScope,
@@ -71,7 +59,6 @@ export async function assignPromptTopic(
   });
 }
 
-/** Delete the prompts at once. Their past runs and reports keep the answers. */
 export async function deletePrompts(
   db: Database,
   scope: ProjectScope,

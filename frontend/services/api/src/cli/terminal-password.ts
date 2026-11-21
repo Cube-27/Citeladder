@@ -7,7 +7,6 @@ type TerminalInput = Readable & {
 };
 type TerminalOutput = Writable & { isTTY?: boolean };
 
-/** Decode complete UTF-8 characters without echo and restore terminal state on every exit. */
 export async function terminalPassword(
   label: string,
   input: TerminalInput = process.stdin,

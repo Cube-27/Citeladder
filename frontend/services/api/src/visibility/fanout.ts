@@ -1,4 +1,3 @@
-/** Selection-wide SQL tallies over fanout settled on each derived answer. */
 import type { visibilityFanoutSummarySchema } from '@citeladder/contracts/visibility-evidence';
 import { type RawBuilder, sql } from 'kysely';
 import type { z } from 'zod';
@@ -20,7 +19,6 @@ export type FanoutResponse = z.input<typeof visibilityFanoutSummarySchema>;
 type FanoutOptions = {
   query: string | null;
   search: string | null;
-  /** Top pages by occurrences; rising and falling are one page by share change. */
   order: 'top' | 'rising' | 'falling';
   cursor: string | null;
   limit: number;
@@ -208,7 +206,6 @@ export async function getVisibilityFanout(
   const { audit_ids: auditIds, ...totals } = summary;
   const items = totals.items.slice(0, options.limit);
   const answers = totals.answers.slice(0, options.limit);
-  // A falling query may live only in the previous run; its brands are that run's.
   const brands = await queryBrands(db, selection, [
     ...auditIds,
     ...(previousId ? [previousId] : []),
@@ -217,13 +214,11 @@ export async function getVisibilityFanout(
     ...totals,
     compared: previousId !== null,
     items: items.map((item) => ({ ...item, brands: brands(item.query) })),
-    // `id` and `created_at` only key the cursor; the contract does not carry them.
     answers: answers.map(({ id: _id, created_at: _createdAt, ...answer }) => answer),
     next_cursor: nextCursor({ options, filters, asOf, totals, items, answers }),
   };
 }
 
-/** The previous comparable run's answers under the same engine, topic, cohort and answer filters. */
 function previousAnswers(
   db: Database,
   selection: RunSelection,
@@ -237,7 +232,6 @@ function previousAnswers(
   return previousId === null ? scope.where(sql<boolean>`false`) : scope;
 }
 
-/** Top pages by occurrences after the cursor; rising and falling are one page by share change. */
 function pageOrder(options: FanoutOptions, queryAfter: RawBuilder<boolean>) {
   switch (options.order) {
     case 'top':
@@ -265,7 +259,6 @@ function pageOrder(options: FanoutOptions, queryAfter: RawBuilder<boolean>) {
   }
 }
 
-/** The cursor to the next page of queries (Top only) or of a query's answers, or null. */
 function nextCursor(input: {
   options: FanoutOptions;
   filters: Record<string, unknown>;

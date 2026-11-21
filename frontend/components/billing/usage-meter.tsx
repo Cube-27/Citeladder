@@ -12,19 +12,7 @@ import { CellMeter, type MeterTone } from '@/components/ui/meter';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { formatCount } from '@/lib/format';
 
-/**
- * Usage limits: one table for every state, a row per quota.
- *
- * `limit_state` is the ONLY authority for what the numbers mean. The backend
- * never uses null to mean both "unlimited" and "unresolved", so neither does
- * this table: an `unlimited` row shows what has been consumed with no bar and
- * no ceiling, and an `unknown` row says so rather than rendering zero. A
- * missing allowance is never drawn as an empty meter — that reads as "none
- * left" when it means "we don't know". The Usage column shows only once
- * something is used; with nothing used every bar would be empty.
- */
 export function UsageTable({ items }: Readonly<{ items: readonly UsageItem[] }>) {
-  // A held reservation is usage too.
   const metered = items.some((item) => (item.consumed ?? 0) > 0 || Boolean(item.reserved));
   return (
     <DataTable label="Usage limits" columns={metered ? METERED_COLUMNS : COLUMNS}>
@@ -51,7 +39,6 @@ type Figures = Readonly<{ used: ReactNode; allowance: ReactNode; remaining: Reac
 const count = (value: number | null) =>
   value === null ? <Absence state="not_measured" /> : formatCount(value);
 
-/** The row's three figures, by `limit_state`. */
 function figuresOf(item: UsageItem): Figures {
   switch (item.limit_state) {
     case 'unknown':
@@ -67,14 +54,11 @@ function figuresOf(item: UsageItem): Figures {
         remaining: <Absence state="not_applicable" />,
       };
     case 'finite': {
-      // `finite`: the backend guarantees every numeric aggregate is present.
       const allowance = item.allowance ?? 0;
       const consumed = item.consumed ?? 0;
-      // A real zero limit with nothing used: the plan does not include it.
       if (allowance === 0 && consumed === 0)
         return {
           used: formatCount(0),
-          // A plan fact the reader can act on (upgrade), so it stays a word.
           allowance: 'Not included',
           remaining: <Absence state="not_applicable" />,
         };
@@ -115,7 +99,6 @@ function UsageRow({ item, metered }: Readonly<{ item: UsageItem; metered: boolea
   );
 }
 
-/** What the figures leave out: an unresolved allowance, a reservation, a reset or an expiry. */
 function quotaNote(item: UsageItem, unit: string): ReactNode {
   if (item.limit_state === 'unknown') return 'Allowance unresolved.';
   const reserved = item.reserved ? `${formatCount(item.reserved)} ${unit} reserved. ` : null;
@@ -129,10 +112,6 @@ function quotaNote(item: UsageItem, unit: string): ReactNode {
   );
 }
 
-/**
- * Reset and expiry copy. Consumable balances forfeit at expiry, so that has to
- * be visible next to the balance rather than only at purchase.
- */
 function timingNote(item: UsageItem, unit: string): ReactNode {
   if (item.resets_at)
     return (
@@ -141,7 +120,6 @@ function timingNote(item: UsageItem, unit: string): ReactNode {
       </>
     );
   if (!item.earliest_expiry) return null;
-  // Only a consumable balance is forfeited; a slot allowance simply ends.
   return (
     <>
       {item.capability_type === 'counter.consumable' ? `Unused ${unit} expire` : 'Ends'}{' '}
@@ -150,7 +128,6 @@ function timingNote(item: UsageItem, unit: string): ReactNode {
   );
 }
 
-/** `ink` below 80% of the allowance, `warning` from it, `negative` at the limit. */
 function toneOf(consumed: number, allowance: number): MeterTone {
   if (allowance <= 0) return consumed > 0 ? 'negative' : 'ink';
   const ratio = consumed / allowance;
@@ -159,7 +136,6 @@ function toneOf(consumed: number, allowance: number): MeterTone {
   return 'ink';
 }
 
-/** A finite quota's use against its allowance; any other row has no bar, and the cell says why. */
 function UsageBar({
   item,
   label,
@@ -181,7 +157,6 @@ function UsageBar({
   );
 }
 
-/** Reader-facing names for the backend's counter keys. The key is the backend's, the label is ours. */
 const USAGE_LABELS: Readonly<Record<string, { label: string; unit: string }>> = {
   prompt_slots: { label: 'Prompts', unit: 'prompts' },
   project_slots: { label: 'Projects', unit: 'projects' },
@@ -194,7 +169,6 @@ const USAGE_LABELS: Readonly<Record<string, { label: string; unit: string }>> = 
   site_health_page_fetches_per_period: { label: 'Website page fetches', unit: 'fetches' },
 };
 
-/** A key this map does not name still renders: `new_counter` → `New counter`. */
 function usageLabel(item: UsageItem) {
   const known = USAGE_LABELS[item.key];
   if (known) return known;

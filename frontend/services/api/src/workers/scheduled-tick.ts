@@ -1,10 +1,3 @@
-/**
- * Cloud Scheduler's periodic tick, served by the API instead of a job.
- *
- * Starting a job costs a container cold start each time; the periodic owners
- * themselves take well under a second. The request runs them under a short
- * budget, then starts the runner job only when a lane has work due.
- */
 import type { Hono } from 'hono';
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import type { ServiceConfig } from '../config.ts';
@@ -22,7 +15,6 @@ const googleKeys = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2
 
 type SchedulerIdentity = { invoker: string; audience: string };
 
-/** Whether the bearer token is a Google-signed ID token for the scheduler's identity. */
 async function fromScheduler(
   authorization: string | undefined,
   expected: SchedulerIdentity,
@@ -67,8 +59,6 @@ export function registerScheduledTick(
     const { lanes, periodic } = await owners;
     const signal = c.req.raw.signal;
     const deadline = performance.now() + tick.budgetSeconds * 1000;
-    // Unobserved: a maintenance write alone never starts a job. Every lane but
-    // billing reports when its work is due, and billing runs periodically here.
     const failures = await runPeriodic(periodic, { signal, deadline });
     const runnerStarted = await startSuccessor({
       lanes,

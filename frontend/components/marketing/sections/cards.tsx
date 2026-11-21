@@ -21,12 +21,6 @@ export type RelatedCard = Readonly<{
   linkLabel?: string;
 }>;
 
-/**
- * RelatedCards: where to go next, as the website's one link row (the blog
- * index's): each row is the link, the title over its summary and an arrow
- * at the row's right edge, between hairline rules. `columns` lays the rows
- * two up from 1024px, for long lists. A `linkLabel` is for screen readers.
- */
 export function RelatedCards({
   items,
   layout = 'index',
@@ -50,9 +44,7 @@ export function RelatedCards({
   );
 }
 
-/** QuestionCards: the questions a capability answers, bare, in ruled columns (two or three, by count). */
 export function QuestionCards({ questions }: Readonly<{ questions: readonly string[] }>) {
-  // Two columns where three would leave a short last row (4 or 8 questions).
   const cols = questions.length % 3 !== 0 && questions.length % 2 === 0 ? 2 : 3;
   return (
     <ul className="cl-qlist" data-cols={cols}>
@@ -65,10 +57,6 @@ export function QuestionCards({ questions }: Readonly<{ questions: readonly stri
   );
 }
 
-/**
- * LogoTile: an integration or engine as a tile, its mark top-left over its name. With
- * `hideName` the name is for screen readers only; with an `href` the tile links.
- */
 export function LogoTile({
   engine,
   name,
@@ -104,10 +92,6 @@ export function LogoTile({
   );
 }
 
-/**
- * EngineStrip: the answer engines CiteLadder collects from, each mark beside
- * its name, under one muted label.
- */
 export function EngineStrip({
   label = 'Answers collected from',
   engines = ['chatgpt', 'claude', 'gemini', 'google'],
@@ -115,7 +99,6 @@ export function EngineStrip({
 }: Readonly<{
   label?: string;
   engines?: readonly EngineKey[];
-  /** What the answers are collected through, where that is not the engine's name (an API). */
   names?: Readonly<Partial<Record<EngineKey, string>>>;
 }>) {
   return (

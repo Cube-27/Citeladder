@@ -33,6 +33,5 @@ export async function readToolFile(file: File) {
       `Use valid UTF-8 XML within the ${FREE_TOOL_LIMIT_LABELS.text}-character limit.`,
     );
   }
-  // Over the character limit is the same "Input exceeds" refusal as a paste.
   return boundedText(text);
 }

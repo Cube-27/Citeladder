@@ -21,44 +21,18 @@ import { MentionRuleFields, mentionRuleDraft, type MentionRuleDraft } from './me
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
-/**
- * Edit an existing project's configuration.
- *
- * Onboarding replaced `/setup` and owns *creation*; this owns everything
- * afterwards. Without it, a brand's website, competitors and domains were fixed
- * at whatever discovery produced on day one — the gap left by retiring the
- * setup edit form.
- *
- * Deliberately a flat panel, not a stepper. The old edit surface was a
- * five-step wizard, which is the wrong shape for changing one domain: a wizard
- * is for a task you do once, a panel is for a thing you keep. Everything is
- * visible at once. The brand's aliases are edited in Context › Brand facts.
- *
- * Comma-separated text for the list fields rather than per-row editors: these
- * are short lists of short strings.
- */
 const splitList = (value: string): string[] =>
   value
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean);
 
-/**
- * Draft rows carry a stable `key` because the list is editable AND removable.
- * Keyed by array index, removing the first of three rows shifted every row's
- * identity: React reused the same DOM inputs for different competitors, so
- * focus, selection, and any in-flight IME composition landed on the wrong row.
- * The counter is module-scoped and monotonic — it only has to be unique within
- * one mounted list, never persisted or sent to the backend.
- */
 let competitorKeySeq = 0;
 const nextCompetitorKey = () => {
   competitorKeySeq += 1;
   return `competitor-${competitorKeySeq}`;
 };
 
-// Aliases are not edited here; each row carries its own so a rename keeps them.
-// A tracked row carries its `id`, so a rename keeps the competitor and its logo.
 type CompetitorDraft = {
   key: string;
   id?: string;
@@ -68,7 +42,6 @@ type CompetitorDraft = {
   rule: MentionRuleDraft;
 };
 
-/** Only rules a person changed are saved; the rest keep following their defaults. */
 function touchedRules(entities: readonly { name: string; rule: MentionRuleDraft }[]) {
   return entities.flatMap(({ name, rule }) =>
     name.trim() && rule.touched
@@ -84,7 +57,6 @@ function touchedRules(entities: readonly { name: string; rule: MentionRuleDraft 
   );
 }
 
-/** An unnamed competitor row still needs something for a screen reader to say. */
 function competitorName(name: string, index: number): string {
   return name || `competitor ${index + 1}`;
 }
@@ -104,9 +76,6 @@ export function ProjectEditPanel({
   const [websiteUrl, setWebsiteUrl] = useState(project.website_url);
   const [country, setCountry] = useState(project.country_code);
   const [language, setLanguage] = useState(project.language_code);
-  // Lazy initializers: these join/map the project's arrays, and a bare
-  // `useState(expr)` re-runs `expr` on every keystroke in this panel only to
-  // throw the result away.
   const [brandRule, setBrandRule] = useState(() => mentionRuleDraft(project.brand.matching));
   const [ownedDomains, setOwnedDomains] = useState(() => project.owned_domains.join(', '));
   const [unintendedDomains, setUnintendedDomains] = useState(() =>
@@ -206,7 +175,6 @@ export function ProjectEditPanel({
                 value={brandName}
                 onChange={(event) => {
                   setBrandName(event.target.value);
-                  // Rules are saved by name, so a renamed entity carries its rule.
                   setBrandRule((rule) => ({ ...rule, touched: true }));
                 }}
               />

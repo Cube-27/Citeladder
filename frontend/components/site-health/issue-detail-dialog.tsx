@@ -26,11 +26,6 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
-/**
- * The issue a drawer describes: its catalog row, or — for an issue the address
- * names that is not on the listed page — its detail, which carries the same
- * facts but no page types.
- */
 export type IssueHead = Pick<
   SiteIssue,
   | 'group_id'
@@ -45,11 +40,6 @@ export type IssueHead = Pick<
 > &
   Partial<Pick<SiteIssue, 'page_kinds'>>;
 
-/**
- * One issue in full, over the Issues list: what it is, how to fix it, the ways
- * to act on it, how many of its pages are fixed (Mark fixed, Re-run all), and
- * the pages it was found on, each linking to its page.
- */
 export function IssueDetailDrawer({
   issue,
   scope,
@@ -61,7 +51,6 @@ export function IssueDetailDrawer({
   onClose,
 }: Readonly<{
   issue: IssueHead;
-  /** The project the crawl belongs to: Re-run all refreshes its reads once it lands. */
   scope: IssueFixScope;
   crawlId: string;
   detailQuery: UseQueryResult<SiteIssueDetail>;
@@ -70,8 +59,6 @@ export function IssueDetailDrawer({
   onNext: () => void;
   onClose: () => void;
 }>) {
-  // The query keeps the previous issue's page while this one loads; those
-  // pages are not this issue's, so the drawer waits rather than caption them.
   const loaded = detailQuery.isError ? undefined : detailQuery.data;
   const detail = loaded?.group_id === issue.group_id ? loaded : undefined;
   const handoff = {
@@ -87,12 +74,8 @@ export function IssueDetailDrawer({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      // Severity, category and the page count are the row's columns; the
-      // drawer says only what the row does not.
       title={issueTitle(issue)}
       footer={
-        // A later page that failed keeps the pager, so the reader can still
-        // step back to the pages that loaded.
         detail || canPrevious ? (
           // The retained page keeps its `next_cursor` while the next one is in
           // flight, so a second click would push the SAME cursor onto the
@@ -109,9 +92,6 @@ export function IssueDetailDrawer({
         ) : null
       }
     >
-      {/* The rule's description is phrased as the PASSING state ("Page is not
-          blocked from indexing…"); printed under a failing title it read as a
-          contradiction. The fix is what the reader came for, so it leads. */}
       {issue.remediation ? (
         <Stack gap="tight" className="min-w-0">
           <span className="type-caption">How to fix</span>
@@ -145,11 +125,6 @@ export function IssueDetailDrawer({
   );
 }
 
-/**
- * An issue the address names that no listed row describes (another tab, page
- * or a stale link), before its own read has answered: loading, or why it
- * could not load, with a retry. Closing it clears the selection.
- */
 export function PendingIssueDrawer({
   detailQuery,
   onClose,
@@ -176,7 +151,6 @@ export function PendingIssueDrawer({
   );
 }
 
-/** What to ask the agent about an issue: across its pages, or on one page. */
 export function askAgentPrompt(
   issue: Pick<SiteIssue, 'title' | 'rule_id' | 'affected_url_count'>,
   page?: string,
@@ -200,7 +174,6 @@ function OccurrenceList({
   detail: SiteIssueDetail | undefined;
   crawlId: string;
   query: UseQueryResult<SiteIssueDetail>;
-  /** No earlier page of occurrences was paged past. */
   firstPage: boolean;
 }>) {
   if (query.isError)
@@ -212,22 +185,14 @@ function OccurrenceList({
         title="Couldn't load affected URLs"
       />
     );
-  // The list no longer waits for this read, so "none" and "not yet" are now
-  // genuinely different answers here. Claiming the first while the second is
-  // true told the reader an issue affected nothing, a moment before showing
-  // them the pages it affects.
   if (query.isPending || !detail) {
     return <Skeleton variant="list" rows={3} label="Loading affected pages" />;
   }
   if (detail.occurrences.length === 0)
     return <StateBlock kind="empty" inline message="No affected URLs found." />;
-  // A site-level finding has one occurrence, on the homepage; the pages it
-  // found are in that occurrence's evidence.
   const first = detail.occurrences[0];
   const siteLevel = first ? siteLevelEvidence(issue.rule_id, first.evidence) : null;
   if (siteLevel) return <SiteLevelList evidence={siteLevel} crawlId={crawlId} />;
-  // Grouping sees only the loaded page of occurrences. The loaded rows are
-  // the whole list only when nothing was paged past and nothing follows.
   const complete = firstPage && !detail.next_cursor;
   const loaded = loadedPageCount(detail.occurrences);
   return (
@@ -259,7 +224,6 @@ function OccurrenceList({
   );
 }
 
-/** Evidence found on one page only: the page, what it lacks, and a question about it. */
 function PageOccurrence({
   issue,
   occurrence,
@@ -351,10 +315,6 @@ function SiteLevelList({
   );
 }
 
-/**
- * Duplicate metadata, one row per set of pages sharing a title or meta
- * description: what they share, how many share it, and the pages.
- */
 function DuplicateSetList({
   evidence,
   crawlId,
@@ -413,10 +373,6 @@ function DuplicateSetList({
   );
 }
 
-/**
- * A sitewide link finding, one row per link target: where the link lands, how
- * many pages carry it, and a sample of them. One template fix clears the row.
- */
 function LinkTargetList({
   evidence,
   crawlId,
@@ -467,7 +423,6 @@ function LinkTargetList({
   );
 }
 
-/** A fix prompt any assistant or developer can act on, from the rule's own words. */
 export function buildFixPrompt(
   issue: Pick<
     SiteIssue,

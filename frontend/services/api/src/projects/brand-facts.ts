@@ -1,12 +1,3 @@
-/**
- * Brand facts: the user-owned statements fact-checking compares answers
- * against. Gated by the workspace's `fact_checking` grant (the pilot).
- *
- * Every change appends a `brand_fact_revisions` row and moves the fact's
- * current revision; an edit names the revision it read, so a stale edit is a
- * conflict, never a silent overwrite. Audits freeze the confirmed revisions
- * they check against, so later edits never rewrite an earlier verdict.
- */
 import { randomUUID } from 'node:crypto';
 
 import {
@@ -47,13 +38,11 @@ export const brandFactCreate = brandFactCreateRequestSchema.extend({
   source_url: sourceUrl,
 });
 
-/** A partial edit of the revision the editor read; absent fields are kept. */
 export const brandFactUpdate = brandFactUpdateRequestSchema.extend({
   statement: statement.optional(),
   source_url: sourceUrl,
 });
 
-/** Whether the workspace is in the fact-checking pilot (unlocked read of its grants). */
 export function factCheckingEnabled(db: Database, workspaceId: string): Promise<boolean> {
   return new WorkspaceEntitlements(db, workspaceId).grants(policy.entitlements.fact_checking);
 }
@@ -70,7 +59,6 @@ function view(row: Selectable<BrandFacts>): BrandFact {
   };
 }
 
-/** The project's facts by topic, confirmed first; empty and disabled outside the pilot. */
 export async function listBrandFacts(
   db: Database,
   scope: ProjectScope,
@@ -116,7 +104,6 @@ function revisionOf(row: Selectable<BrandFacts>, userId: string | null) {
   };
 }
 
-/** A new draft fact; drafts are never checked against until confirmed. */
 export function createBrandFact(
   db: Database,
   scope: ProjectScope,
@@ -169,17 +156,10 @@ const ROW_ERRORS: Record<string, string> = {
   source_url: 'Source URL must be an http or https address.',
 };
 
-/** Same topic and statement, ignoring case and spacing: the import's duplicate test. */
 function factKey(topic: string, statement: string) {
   return `${topic}\n${statement.normalize('NFKC').toLowerCase().replace(/\s+/gu, ' ').trim()}`;
 }
 
-/**
- * Facts from a CSV, each a new draft: an import never confirms a fact, so
- * nothing imported is checked against until a person confirms it. A row is
- * answered on its own: invalid, a duplicate of a kept fact or an earlier
- * row, or created while the project has room.
- */
 export function importBrandFacts(
   db: Database,
   scope: ProjectScope,
@@ -246,7 +226,6 @@ export function importBrandFacts(
   });
 }
 
-/** Apply an edit to the revision the editor read, appending the next revision. */
 export function updateBrandFact(
   db: Database,
   scope: ProjectScope,

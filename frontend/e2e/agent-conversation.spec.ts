@@ -60,7 +60,6 @@ function chatDetail(): AgentChatDetail {
       skill_source: 'chat',
       evidence_refs: [],
       web_sources: [],
-      // A written reply records its model call; only an unanswered turn's reply has none.
       steps: index % 2 ? [{ kind: 'model', ordinal: 1 }] : [],
       mentions: [],
       attachments: [],
@@ -75,7 +74,6 @@ function chatDetail(): AgentChatDetail {
       steps_used: 1,
       error_code: '',
       error_detail: '',
-      // A turn that has just started, so the page reads it at its quickest cadence.
       created_at: new Date().toISOString(),
       completed_at: null,
       progress: [],
@@ -127,8 +125,6 @@ for (const width of [1440, 390]) {
     expect(
       await thread.evaluate((element) => element.scrollWidth - element.clientWidth),
     ).toBeLessThanOrEqual(0);
-    // Each chip is one line inside the bubble, which stays inside the thread;
-    // a URL chip keeps its tail visible and is named by the whole, readable URL.
     const threadBox = (await thread.boundingBox())!;
     const bubble = (await page
       .getByText(/^Fix these pages/)
@@ -212,7 +208,6 @@ for (const width of [1280, 390]) {
     await expect(page.getByRole('combobox')).toHaveCount(1);
     await reply.fill('Explain the first recommendation.');
     await reply.press('Enter');
-    // The composer keeps its text while the turn is pending; assert the sent message.
     const followUp = page
       .getByRole('paragraph')
       .filter({ hasText: /^Explain the first recommendation\.$/ });
@@ -266,7 +261,6 @@ for (const width of [1280, 390]) {
       );
       await page.route(`**/api/v1/agent/chats/${CHAT}/runs/${RUN}/cancel`, (route) => {
         current.latest_run!.status = 'cancelled';
-        // The server answers a stopped turn with a saved reply.
         current.messages.push({
           ...current.messages.at(-1)!,
           id: '77777777-7777-4777-8777-999999999997',
@@ -291,7 +285,6 @@ for (const width of [1280, 390]) {
         fixtureProjectPath(surface === 'page' ? `/agent/chats/${CHAT}` : '/projects'),
       );
       if (surface === 'panel') {
-        // Below 900px the masthead folds "Ask agent" behind "More".
         if (width < 900) {
           await page.getByRole('button', { name: 'More', exact: true }).click();
           await page.getByRole('menuitem', { name: 'Ask agent' }).click();
@@ -305,27 +298,21 @@ for (const width of [1280, 390]) {
       await expect(reply).toBeVisible();
       await page.getByText('Context used', { exact: true }).click();
       await expect(page.getByText('Selected crawl robots policy', { exact: true })).toBeVisible();
-      // Context is described in plain words; record identities never reach the reader.
       await expect(page.getByText(RUN)).toHaveCount(0);
-      // The thread's replies carry the same words as captions; the chip has a remove control.
       await expect(
         page.getByRole('button', { name: 'Remove Skill: Continue with Growth plan', exact: true }),
       ).toBeVisible();
       await reply.fill('Draft kept while working');
-      // While the turn runs, Stop takes Send's place and drafting continues.
       await expect(page.getByRole('button', { name: 'Send', exact: true })).toHaveCount(0);
-      // The + menu opens the control row and Stop ends it, on one line.
       const menuBox = await page
         .getByRole('button', { name: 'Add a skill or Action' })
         .boundingBox();
       const stopBox = await page.getByRole('button', { name: 'Stop', exact: true }).boundingBox();
       expect(Math.abs(menuBox!.y - stopBox!.y)).toBeLessThanOrEqual(1);
       expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(stopBox!.x);
-      // Only the thread scrolls, in its own region on both surfaces.
       const thread = page.getByRole('region', { name: 'Agent conversation' });
       await thread.evaluate((element) => element.scrollTo(0, 0));
       await expect(page.getByRole('button', { name: 'Jump to latest' })).toBeAttached();
-      // A round arrow centred just above the composer, over the end of the thread.
       const jumpBox = await page.getByRole('button', { name: 'Jump to latest' }).boundingBox();
       const replyBox = await reply.boundingBox();
       expect(jumpBox!.width).toBe(jumpBox!.height);
@@ -364,13 +351,11 @@ for (const width of [1280, 390]) {
         (element) => element.scrollHeight - element.scrollTop - element.clientHeight,
       );
       expect(remaining).toBeLessThanOrEqual(1);
-      // Following the thread never scrolls the panel under the page header.
       expect(await page.locator('#main').evaluate((panel) => panel.scrollTop)).toBe(0);
       await expect(reply).toHaveValue('Draft kept while working');
       const stop = page.getByRole('button', { name: 'Stop', exact: true });
       await stop.focus();
       await stop.press('Enter');
-      // Scoped to the thread: the saved reply is also in the screen-reader announcement.
       await expect(
         page
           .getByRole('list', { name: 'Messages' })
@@ -392,7 +377,6 @@ for (const width of [1280, 390]) {
       await page.getByRole('button', { name: 'Add a skill or Action' }).click();
       await page.getByRole('menuitem', { name: 'Skills: Growth plan' }).click();
       await page.getByRole('menuitemradio', { name: 'Automatic', exact: true }).click();
-      // The menu hands focus back to + after its exit animation; Enter typed before then opens +.
       await expect(page.getByRole('button', { name: 'Add a skill or Action' })).toBeFocused();
       await reply.fill('Explain this');
       await reply.press('Shift+Enter');

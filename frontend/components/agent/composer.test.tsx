@@ -29,7 +29,6 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 
-/** A host as the chat screens wire it: its own draft, skill and commands. */
 function Host({ busy = false }: Readonly<{ busy?: boolean }>) {
   const [value, setValue] = useState('');
   const [skillId, setSkillId] = useState<string | null | undefined>(undefined);

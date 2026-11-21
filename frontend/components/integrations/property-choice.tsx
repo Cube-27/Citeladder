@@ -22,7 +22,6 @@ import { Notice } from '@/components/ui/notice';
 
 const onlyItem = <T,>(items: readonly T[]) => (items.length === 1 ? items[0] : undefined);
 
-/** The one property worth offering as a single click, if any. */
 function suggestedProperty(provider: IntegrationProvider, properties: IntegrationProperty[]) {
   const matching = properties.filter((property) => property.matches_project === true);
   return (
@@ -33,13 +32,6 @@ function suggestedProperty(provider: IntegrationProvider, properties: Integratio
   );
 }
 
-/**
- * Choose the property a source imports into the project. Discovery is a live
- * provider call, so it starts on request, or by itself when the user has just
- * returned from consent; the project's own property is offered as one click.
- * Returns the row's buttons (`action`, at the row's end) apart from what
- * opens under it (`body`: progress, the list, a failure).
- */
 export function usePropertyChoice({
   provider,
   connection,
@@ -56,7 +48,6 @@ export function usePropertyChoice({
   const discovery = useMutation(
     integrationsMutations.discoverProperties(connection.workspace_id, connection.id),
   );
-  // Discovery names the project, so its own properties are marked.
   const discover = () => discovery.mutate(projectId);
   const select = useMutation(
     integrationsMutations.createMapping(connection.workspace_id, connection.id),
@@ -64,7 +55,6 @@ export function usePropertyChoice({
   const choose = (propertyRef: string) =>
     select.mutate({ provider, property_ref: propertyRef, project_id: projectId });
   const pendingRef = select.isPending ? (select.variables?.property_ref ?? null) : null;
-  // Returning from consent, the list is what the user came back for.
   const started = useRef(false);
   useEffect(() => {
     if (!autoStart || started.current) return;
@@ -118,7 +108,6 @@ export function usePropertyChoice({
   };
 }
 
-/** Saving the chosen property failed: the reason, in the row. */
 function SaveFailure({ error }: Readonly<{ error: Error | null }>) {
   if (!error) return null;
   return (
@@ -129,7 +118,6 @@ function SaveFailure({ error }: Readonly<{ error: Error | null }>) {
   );
 }
 
-/** The suggested property as one click, and the way to every other one. */
 function SuggestionButtons({
   label,
   suggestedLabel,
@@ -169,7 +157,6 @@ function SuggestionButtons({
   );
 }
 
-/** Discovery before it has a list: the button, progress, or the failure with a retry. */
 function discoveryStatus({
   noun,
   discovery,
@@ -209,7 +196,6 @@ function discoveryStatus({
   };
 }
 
-/** Every discovered property; another site's property is shown but cannot be used. */
 function PropertyList({
   source,
   properties,

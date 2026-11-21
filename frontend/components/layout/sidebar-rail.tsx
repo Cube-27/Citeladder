@@ -14,7 +14,6 @@ const OpenActionCountLabel = lazy(() =>
   })),
 );
 
-/** A rail button for a single destination: a link, named by its tooltip and label. */
 export function RailLink({ item, active }: Readonly<{ item: NavItem; active: boolean }>) {
   const Icon = item.icon;
   return (
@@ -38,11 +37,6 @@ export function RailLink({ item, active }: Readonly<{ item: NavItem; active: boo
   );
 }
 
-/**
- * A rail button that opens a flyout beside the rail: on click, Enter, Space
- * or the right arrow. Escape closes it and returns focus to the button. The
- * button of the group that holds the current page carries the current mark.
- */
 export function RailFlyout({
   label,
   icon: Icon,
@@ -75,7 +69,6 @@ export function RailFlyout({
   );
 }
 
-/** A group's flyout: its destinations as menu links, the current one marked. */
 export function RailGroupMenu({
   label,
   icon,

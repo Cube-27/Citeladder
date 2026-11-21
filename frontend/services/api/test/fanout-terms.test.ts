@@ -1,9 +1,3 @@
-/**
- * Fanout queries (AV-8): exact-query counts and brand matches persisted at
- * finalization, and the Query fanouts read's share, change against the
- * previous comparable run and brands under the tab's filters, against real
- * PostgreSQL.
- */
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { countQueries, persistFanoutTerms } from '../src/analysis/fanout-terms.ts';
@@ -63,7 +57,6 @@ describe('fanout query counts', () => {
   });
 });
 
-/** One finalized run whose answers searched for `queries`, its fanout queries persisted. */
 async function finalizedRun(
   tenant: Tenant,
   completedAt: string,
@@ -148,17 +141,14 @@ describe('GET /visibility/fanout share, change and brands', () => {
       'NW pricing',
       'acmecloud review',
     ]);
-    // A query only the previous run searched falls to zero with that run's brands.
     expect(rows(await read({ order: 'falling' }))).toEqual([
       { query: 'free trial', event_count: 0, share: 0, change: -0.333333, brands: [] },
       { query: 'acme pricing', event_count: 2, share: 0.4, change: -0.266667, brands: acme },
     ]);
-    // The engine filter narrows both runs, so shares and changes are Gemini's alone.
     expect(rows(await read({ engine: 'gemini' }))).toEqual([
       { query: 'acme pricing', event_count: 1, share: 0.5, change: -0.5, brands: acme },
       { query: 'acmecloud review', event_count: 1, share: 0.5, change: 0.5, brands: acme },
     ]);
-    // Several runs have no one previous run: shares stay, changes are not compared.
     const pooled = (await get(tenant, route(tenant, '/fanout'), { audit_ids: [february, march] }))
       .body;
     expect(pooled.compared).toBe(false);
@@ -200,7 +190,6 @@ describe('GET /visibility/fanout share, change and brands', () => {
     ]);
     const quiet = (await get(tenant, route(tenant, '/fanout'), { audit_id: silent })).body;
     expect(quiet).toMatchObject({ compared: false, items: [] });
-    // A run of selected prompts is neither compared nor ever a baseline.
     const selected = await finalizedRun(
       tenant,
       '2026-03-15T00:00:00Z',
@@ -208,7 +197,6 @@ describe('GET /visibility/fanout share, change and brands', () => {
       { panel_hash: 'panel-subset', prompt_selection: 'selected' },
     );
     expect(await compared(selected)).toBe(false);
-    // The next run compares with February, not with the silent or selected runs in between.
     const next = await finalizedRun(tenant, '2026-04-01T00:00:00Z', [
       { engine: 'chatgpt', queries: ['acme pricing', 'acme trial'] },
     ]);
@@ -218,7 +206,6 @@ describe('GET /visibility/fanout share, change and brands', () => {
       );
     expect(await read('rising')).toEqual([{ query: 'acme trial', change: 0.5 }]);
     expect(await read('falling')).toEqual([{ query: 'acme pricing', change: -0.5 }]);
-    // A changed panel is a different measurement, as on the trend.
     const changed = await finalizedRun(
       tenant,
       '2026-05-01T00:00:00Z',

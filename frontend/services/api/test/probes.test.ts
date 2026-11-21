@@ -1,9 +1,3 @@
-/**
- * Market probes against real PostgreSQL: admission freezes the probe's own
- * questions and holds AI credits per answer (refused cleanly when they run
- * out), labelling persists themes, fixed objection groups and theme ranks,
- * the reads score them, and everything stays inside its workspace.
- */
 import { sql } from 'kysely';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -43,7 +37,6 @@ afterAll(() => db.destroy());
 
 type Tenant = Awaited<ReturnType<typeof auditTenant>>;
 
-/** A BYOK tenant (a ChatGPT key) with AI credits, one theme and one competitor. */
 async function probeTenant(credits = 1000) {
   const t = await auditTenant(db, fixtures);
   await grant(db, await billingAccount(db, t.workspaceId), { key: 'ai_credits', value: credits });
@@ -105,7 +98,6 @@ describe('probe admission', () => {
       .select(['logical_engine'])
       .where('audit_id', '=', auditId)
       .execute();
-    // AI Overviews is not a probe engine; ChatGPT answers each question three times.
     expect(tasks).toHaveLength(9);
     expect(new Set(tasks.map((task) => task.logical_engine))).toEqual(new Set(['chatgpt']));
     const holds = await ledger(t.workspaceId);
@@ -147,7 +139,6 @@ describe('probe admission', () => {
     await grant(db, await billingAccount(db, t.workspaceId), { key: 'market_slots', value: 1 });
     await addMarket(db, t, { country_code: 'BR', language_code: 'pt', label: '' });
     const perMarket = 3 * policy.probes.repetitions;
-    // On its own ChatGPT key the workspace probes both markets.
     const { quote } = await probeStatus(db, t, runtime);
     expect([quote.markets.length, quote.answers]).toEqual([2, 2 * perMarket]);
     const ids = await runProbe(db, t, { fingerprint: quote.fingerprint }, runtime);
@@ -156,7 +147,6 @@ describe('probe admission', () => {
       2,
       quote.credits,
     ]);
-    // The quote's balance is what holds may still draw: the launch's holds leave it.
     expect((await probeStatus(db, t, runtime)).quote.balance).toBe(quote.balance! - quote.credits);
     // Managed, Brazil skips Gemini (no location control) and the Gemini app (no Portuguese).
     await managedPlan(db, t.workspaceId);
@@ -181,7 +171,6 @@ describe('probe admission', () => {
 
   it('blocks Run probe past the task limit in a market, and in a trial, refusing the launch', async () => {
     const { t } = await probeTenant();
-    // Three questions asked three times on ChatGPT: exactly the limit.
     const limited = auditRuntime({ AUDIT_MAX_TASKS_PER_AUDIT: '9' });
     const quote = async () => (await probeStatus(db, t, limited)).quote;
     expect((await quote()).blocked).toBeNull();
@@ -191,7 +180,6 @@ describe('probe admission', () => {
     await expect(runProbe(db, t, { fingerprint: over.fingerprint }, limited)).rejects.toMatchObject(
       { status: 422 },
     );
-    // The trial allows one ask on ChatGPT; a probe asks three times.
     const account = await billingAccount(db, t.workspaceId);
     await asOwner((owner) =>
       owner
@@ -227,11 +215,9 @@ describe('probe admission', () => {
         .execute();
     const fingerprint = async (scope: Tenant) =>
       (await probeStatus(db, scope, runtime)).quote.fingerprint;
-    // Turning a schedule on confirms the shown cost per run.
     await expect(
       setProbeSchedule(db, t, { cadence: 'weekly', fingerprint: 'stale' }, runtime),
     ).rejects.toMatchObject({ status: 409, code: 'probe_quote_changed' });
-    // It serializes on the project without waiting on a launch's key-share lock.
     await db.transaction().execute(async (launching) => {
       await launching
         .selectFrom('projects')
@@ -268,7 +254,6 @@ describe('probe admission', () => {
   });
 });
 
-/** Answers every task and completes the probe, as execution and finalization would. */
 async function answered(t: Tenant, auditId: string) {
   await db
     .updateTable('audit_tasks')
@@ -285,7 +270,6 @@ async function answered(t: Tenant, auditId: string) {
   await ended(t, auditId, 'completed');
 }
 
-/** Ends a run through the audit state machine, as finalization or cancellation does. */
 async function ended(t: Tenant, auditId: string, status: 'completed' | 'cancelled') {
   const steps = status === 'completed' ? ['running', 'analyzing', 'reporting', status] : [status];
   await db.transaction().execute(async (trx) => {
@@ -302,7 +286,6 @@ const launchOf = async (auditId: string) =>
       .executeTakeFirstOrThrow()
   ).launch_id!;
 
-/** A fake gateway answering each labelling request by its question. */
 function labeller(
   outputs: { known: unknown; objection: unknown; theme: unknown },
   onCall: (sent: string) => Promise<void> = async () => {},
@@ -463,7 +446,6 @@ describe('probe labelling and reads', () => {
         },
       }),
     );
-    // A re-delivered task labels nothing twice.
     await enqueueProbeLabelling(db, {
       workspaceId: t.workspaceId,
       projectId: t.projectId,
@@ -481,12 +463,9 @@ describe('probe labelling and reads', () => {
       ]),
     ).toEqual([
       ['Too expensive', 100, ['chatgpt'], [97, 100], 0],
-      // Not raised before is 0 then, never unknown.
       ['Slow delivery', 90, ['chatgpt'], [0, 90], 0],
-      // Not raised in this probe, its sources are not applicable.
       ['Fit runs small', 0, [], [63, 0], null],
     ]);
-    // The average reads only the groups an engine raised in this probe.
     expect([objections.average, objections.answered_by]).toEqual([95, ['chatgpt']]);
     const labellings = await db
       .selectFrom('probe_labellings')
@@ -509,7 +488,6 @@ describe('probe labelling and reads', () => {
       .orderBy('name')
       .execute();
     const [fit, price] = groups;
-    // Another workspace reads nothing and edits nothing.
     expect(
       await probeObjections(db, { workspaceId: other.t.workspaceId, projectId: owner.t.projectId }),
     ).toEqual({
@@ -525,7 +503,6 @@ describe('probe labelling and reads', () => {
     await expect(
       mergeGroups(db, { ...other.t, groupId: fit!.id, intoId: price!.id }),
     ).rejects.toMatchObject({ status: 404 });
-    // The owner merges fit into price: every reason now scores under price.
     await mergeGroups(db, { ...owner.t, groupId: fit!.id, intoId: price!.id });
     const objections = await probeObjections(db, owner.t);
     if (objections.state !== 'value') throw new Error('expected a labelled probe');
@@ -558,7 +535,6 @@ describe('probe labelling and reads', () => {
         sent.push(body);
       }),
     );
-    // One objection call groups every market's reasons.
     expect(sent.filter((body) => body.includes('not choose'))).toHaveLength(1);
     const market = await probeMarket(db, t);
     if (market.state !== 'value') throw new Error('expected a labelled probe');
@@ -587,7 +563,6 @@ describe('probe labelling and reads', () => {
     expect(new Set(market.probe.markets.map((row) => row.country_code))).toEqual(
       new Set(['BR', 'US']),
     );
-    // English and Portuguese markets: no one language to show.
     expect(market.language_code).toBe('');
   });
 
@@ -688,7 +663,6 @@ describe('probe labelling and reads', () => {
       score: 63,
       engines: ['chatgpt'],
       sources: 1,
-      // Two of the three objection answers raised it, each citing the review.
       pages: [
         {
           url: 'https://reviews.test/acme',

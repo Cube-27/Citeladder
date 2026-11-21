@@ -8,11 +8,6 @@ import { Inline } from '@/components/ui/layout';
 import { SettingField, SettingRow } from '@/components/ui/setting-row';
 import { textRole } from '@/components/ui/typography';
 
-/**
- * Context's add form for one short name, such as an alias or a theme: the
- * last row of the list it adds to, its field across the row with the add
- * button at the field's end.
- */
 export function AddNameForm({
   title,
   field,
@@ -27,7 +22,6 @@ export function AddNameForm({
   onAdd: (name: string) => Promise<unknown>;
 }>) {
   const [draft, setDraft] = useState('');
-  // A refused name stays in the field; only a saved one clears it.
   const submit = async () => {
     const sent = draft;
     try {
@@ -67,7 +61,6 @@ export function AddNameForm({
   );
 }
 
-/** One saved name, edited inline and deleted in place; read-only without `mayEdit`. */
 export function EditableNameRow({
   name,
   verb,
@@ -77,7 +70,6 @@ export function EditableNameRow({
   onDelete,
 }: Readonly<{
   name: string;
-  /** The edit button's word, such as Edit or Rename. */
   verb: string;
   mayEdit: boolean;
   pending: boolean;
@@ -123,8 +115,6 @@ export function EditableNameRow({
           variant="secondary"
           disabled={pending || !editing.trim()}
           onClick={() => {
-            // The draft stays open until the save lands, so a failed save loses
-            // nothing; a draft edited since the save was sent stays open too.
             const sent = editing;
             onSave(sent.trim()).then(
               () => setEditing((current) => (current === sent ? null : current)),

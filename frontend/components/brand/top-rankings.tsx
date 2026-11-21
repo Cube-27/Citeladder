@@ -21,12 +21,6 @@ const byCodec = stringUrlCodec(
   'topic',
 );
 
-/**
- * Insights → Top rankings (W6): in each segment, the five tracked brands
- * named most often, as the read ranks them. A segment the selection never
- * asked reads "Not run", one whose topic the run never recorded is left out;
- * your brand's chip takes the accent wash.
- */
 export function TopRankings({
   query,
   selected,

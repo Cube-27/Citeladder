@@ -57,7 +57,6 @@ describe('SplitBar', () => {
     fireEvent.pointerMove(bar, { clientX: 171, pointerId: 1 });
     expect(shown()).toBe('75/0/25');
     fireEvent.pointerUp(bar, { pointerId: 1 });
-    // The drag ended: moving the pointer changes nothing.
     fireEvent.pointerMove(bar, { clientX: 20, pointerId: 1 });
     expect(shown()).toBe('75/0/25');
   });

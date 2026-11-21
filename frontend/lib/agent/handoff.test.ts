@@ -98,7 +98,6 @@ describe('agent handoff', () => {
     expect(contextChips(ticked.context)).toEqual([
       { key: 'action_url_ids', label: '2 selected URLs' },
     ]);
-    // Ticked URLs without their Action name nothing; one URL needs no Action.
     expect(parse(`/agent?action_url_id=${PAGE}`).context).toEqual({});
     const one = parse(agentHandoffHref({ urlActionsSiteUrlId: PAGE }));
     expect(one.context).toEqual({ url_actions_reference: { site_url_id: PAGE } });

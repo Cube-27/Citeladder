@@ -1,10 +1,3 @@
-/**
- * Insights → Performance matrix and Top rankings (W6): each project market's
- * latest dashboard-ready run in the selection, with its persisted per-topic
- * blocks and perceptions, folded by `matrix-cells.ts`. The selection's own
- * market supplies every cell off the market axis; the engine and topic filters
- * narrow their axes to the one item. Reads only; no provider call, no repair.
- */
 import type { VisibilityMatrix } from '@citeladder/contracts/visibility-matrix';
 
 import type { Database } from '../db/database.ts';
@@ -19,7 +12,6 @@ import { AnalysisNotFoundError } from './selection.ts';
 
 type Query = Omit<DashboardQuery, 'baselineId'>;
 
-/** A market's latest run in the selection; another market's run is never the named one. */
 async function latestRun(db: Database, scope: RunScope, query: Query, own: boolean) {
   const runs = await selectionRuns(
     db,
@@ -39,7 +31,6 @@ async function latestRun(db: Database, scope: RunScope, query: Query, own: boole
   return runs.at(-1) ?? null;
 }
 
-/** The selection's market: a named run brings its own (as `selectionRuns` reads it). */
 async function stripMarket(db: Database, scope: RunScope, query: Query) {
   if (query.selectionMode === 'range' || query.auditId === null) return scope.marketId ?? null;
   const named = await db

@@ -1,9 +1,3 @@
-/**
- * Answer perception against real PostgreSQL: the enqueue that follows an
- * analysis, the executor's persisted outcomes (classified, capped, not
- * configured, invalid), lease recovery and terminal compensation, and
- * workspace isolation. The model gateway is a fake transport.
- */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -29,7 +23,6 @@ const configuration = {
     extractor_version: 'perception-extract-test',
     template_version: 'perception-template-test',
     metrics_version: 'perception-metrics-test',
-    // The fake gateway's model.
     model: 'test',
   },
 };
@@ -46,7 +39,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** A succeeded execution analysed the way the result transaction analyses it. */
 async function analysed(
   owner: Tenant,
   auditId: string,
@@ -214,7 +206,6 @@ describe('perception executor', () => {
       created_at: new Date(),
       updated_at: new Date(),
     });
-    // Another workspace's Support theme is never offered or matched here.
     const other = await fixtures.tenant();
     await db
       .insertInto('project_themes')
@@ -423,7 +414,6 @@ describe('untracked business names', () => {
       .where('audit_id', '=', auditId)
       .execute();
 
-  /** One answer at (engine, prompt), perceived with the labelled names. */
   async function perceive(auditId: string, engine: string, promptIndex: number) {
     const { analysisId } = await analysed(tenant, auditId, NAMING, { engine, promptIndex });
     await drain(tenant, fakeGateway([labelled]).factory);
@@ -435,8 +425,6 @@ describe('untracked business names', () => {
     const first = await perceive(auditId, 'chatgpt', 0);
     const second = await perceive(auditId, 'perplexity', 1);
     const [perception] = await perceptions(tenant.workspaceId);
-    // Dedupe is by normalised name; tracked names and aliases, names absent
-    // from the passages and overlong names are dropped and counted.
     expect(perception?.drop_counts).toEqual({
       name_duplicate: 1,
       name_tracked: 1,
@@ -453,7 +441,6 @@ describe('untracked business names', () => {
       { analysis_id: first, name: 'Ledgerly', name_key: 'ledgerly' },
       { analysis_id: second, name: 'Ledgerly', name_key: 'ledgerly' },
     ]);
-    // Two prompts are below the configured three.
     expect(await candidates(auditId)).toEqual([]);
 
     const third = await perceive(auditId, 'chatgpt', 2);
@@ -471,7 +458,6 @@ describe('untracked business names', () => {
       status: 'pending',
     });
 
-    // A rejected name is never suggested again, whatever a later audit sees.
     await rejectSuggestion(
       db,
       { workspaceId: tenant.workspaceId, projectId: tenant.projectId, userId: tenant.userId },

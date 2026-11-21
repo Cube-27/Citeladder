@@ -17,16 +17,6 @@ type DomainChoice = Readonly<{
 
 const ALL = 'all';
 
-/**
- * The Sources table's filters, for the page's Filters menu, in the order
- * they keep: type first, then the two that only mean something for pages
- * (standing, which the Read, not cited tab does not offer, and the publisher,
- * which the Domains tab and a domain's own page do not offer).
- *
- * A filter with one option is nothing to choose between and is not listed --
- * unless it is already filtering, where removing it would strand the reader
- * with no way back to "All".
- */
 export function sourceTableFilters({
   dimension,
   type,
@@ -36,7 +26,6 @@ export function sourceTableFilters({
   dimension: 'domain' | 'url';
   type: TypeChoice;
   standing: StandingChoice | null;
-  /** Absent where the publisher is fixed or meaningless. */
   domain: DomainChoice | null;
 }>): FilterDefinition[] {
   const urls = dimension === 'url';
@@ -48,7 +37,6 @@ export function sourceTableFilters({
   return filters;
 }
 
-/** Narrows the table to one domain type, or one URL type. */
 function typeFilter(urls: boolean, { value, options, onChange }: TypeChoice): FilterDefinition {
   return choiceFilter({
     id: 'source-type',
@@ -67,10 +55,6 @@ function typeFilter(urls: boolean, { value, options, onChange }: TypeChoice): Fi
   });
 }
 
-/**
- * Narrows the URL table to gaps: pages whose latest reading lists a tracked
- * competitor and not you; a page nobody has read is never a gap.
- */
 function standingFilter({ gapOnly, onChange }: StandingChoice): FilterDefinition {
   return choiceFilter<'all' | 'gap'>({
     id: 'source-standing',
@@ -89,7 +73,6 @@ function standingFilter({ gapOnly, onChange }: StandingChoice): FilterDefinition
   });
 }
 
-/** Narrows every table on the tab to one publisher. */
 function domainFilter({ value, options, onChange }: DomainChoice): FilterDefinition {
   return choiceFilter({
     id: 'source-domain',

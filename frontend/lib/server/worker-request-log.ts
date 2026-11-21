@@ -1,10 +1,3 @@
-/**
- * The product Workers' request log. Cloudflare's invocation logs record each
- * request's full URL, so an OAuth callback's `code` and `state` (or any
- * emailed token) would sit in the edge logs; those are off in `wrangler.jsonc`
- * and this one line per request records the path without query or fragment,
- * with the ray ID and duration an invocation record carried.
- */
 type WorkerFetch<Env> = (request: Request, env: Env) => Promise<Response>;
 
 function requestLine(request: Request, started: number) {
@@ -18,7 +11,6 @@ function requestLine(request: Request, started: number) {
   };
 }
 
-/** `handler` with one structured log line per request: method, host, path, ray, duration and outcome. */
 export function withRequestLog<Env>(handler: WorkerFetch<Env>): WorkerFetch<Env> {
   return async (request, env) => {
     const started = Date.now();

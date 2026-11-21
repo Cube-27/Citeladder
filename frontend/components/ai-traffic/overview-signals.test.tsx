@@ -78,10 +78,8 @@ function figures(
     />
   );
 }
-/** The figure cell a label names: its label, value, basis and action. */
 const figure = (label: string) =>
   screen.getByText(label).closest('[data-figure-cell]') as HTMLElement;
-/** Why a figure is absent: the label's info hint, heard as its description. */
 const whyAbsent = (label: string) => screen.getByRole('button', { name: `About ${label}` });
 const basis = (label: string) => screen.getByRole('button', { name: `Basis of ${label}` });
 
@@ -153,27 +151,23 @@ it('shows a measured zero as 0 and a window with no completed run as not run yet
 
 it("offers GA4's own next step once, under the figures, until a referral snapshot exists", () => {
   const view = renderWithProviders(figures({}));
-  // The figure says only its absence; the step sits once under the strip.
   const referral = within(figure('AI referral sessions'));
   expect(referral.getByText('Not connected')).toBeVisible();
   expect(referral.queryByRole('link')).not.toBeInTheDocument();
   expect(screen.getAllByRole('link', { name: 'Connect GA4' })).toHaveLength(1);
   expect(screen.queryByText(/GA4 · Synced/)).not.toBeInTheDocument();
 
-  // A connected GA4 with no snapshot yet is never told to connect, nor is an unknown one.
   view.rerender(figures({}, true, { kind: 'choose', connection: ga4Connection }));
   expect(within(figure('AI referral sessions')).getByText('Not set')).toBeVisible();
   expect(screen.getByRole('link', { name: 'Choose GA4 property' })).toBeVisible();
   expect(screen.queryByRole('link', { name: 'Connect GA4' })).not.toBeInTheDocument();
   view.rerender(figures({}, true, null));
-  // An unknown GA4 step is never assumed to be "not run yet".
   expect(within(figure('AI referral sessions')).getByText('Unavailable')).toBeVisible();
   expect(whyAbsent('AI referral sessions')).toHaveAccessibleDescription(
     'Referral sessions appear once GA4 imports a report.',
   );
   expect(screen.queryByRole('link', { name: /GA4/ })).not.toBeInTheDocument();
 
-  // The report day keeps its calendar date in a display zone west of UTC.
   document.cookie = 'citeladder-display-timezone=America%2FNew_York; path=/';
   onTestFinished(() => {
     document.cookie = 'citeladder-display-timezone=; path=/; max-age=0';
@@ -191,7 +185,6 @@ it("offers GA4's own next step once, under the figures, until a referral snapsho
   );
   const cell = within(figure('AI referral sessions'));
   expect(cell.getByText('0')).toBeVisible();
-  // The source and its report day are the figure's basis hint.
   expect(basis('AI referral sessions')).toHaveAccessibleDescription(/GA4 · Synced/);
   expect(basis('AI referral sessions')).toHaveAccessibleDescription(/Jul 22, 2026/);
   expect(screen.queryByRole('link', { name: 'Connect GA4' })).not.toBeInTheDocument();

@@ -20,17 +20,11 @@ const SEARCH_OPTIONS: readonly { value: PromptAnswerSearch; label: string }[] = 
   { value: 'not_reported', label: 'Not reported' },
 ];
 
-/**
- * The prompt page's control strip past Market: the engine, which the whole
- * page reads, then the period, brand named, cited and search used, which
- * narrow Past answers. Each lives in the address so a shared link keeps it.
- */
 export function usePromptAnswerFilters({
   market,
   marketChoice,
 }: Readonly<{
   market: string | null;
-  /** The page's Market filter, absent with one market. */
   marketChoice: FilterDefinition | null;
 }>): Readonly<{
   engine: string | null;

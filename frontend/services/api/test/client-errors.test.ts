@@ -23,7 +23,6 @@ const report = {
   component: 'chart',
 };
 
-/** Fixture requests carry no socket, so every one is the `unavailable` client. */
 async function clearClientBudget() {
   await db
     .deleteFrom('usage_windows')
@@ -144,7 +143,6 @@ describe('client error sink', () => {
       expect(result.status).toBe(204);
       reporters.push(result.records.map((r) => [r.user_id, r.workspace_id]));
     }
-    // No header never falls back to the user's own workspace; a foreign one is never trusted.
     expect(reporters).toEqual([[[userId, null]], [[userId, null]]]);
   });
 

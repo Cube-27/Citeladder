@@ -4,27 +4,16 @@ import { ChevronRight } from '@/lib/icons';
 import { ProjectLink } from '@/components/ui/project-link';
 import { textRole } from '@/components/ui/typography';
 
-/** One step of the trail: a link back up (with the history state it opens with), or the page itself. */
 export type Crumb = Readonly<{
   label: string;
   href?: string;
   state?: unknown;
-  /** Drawn before the page's own name, such as a brand's logo. */
   mark?: ReactNode;
 }>;
 
-/**
- * Where a page sits, one line in the masthead: each step up is a quiet link
- * cut at 272px, the last is the page itself. The whole trail cuts rather
- * than wraps, so a long title never changes the masthead's height: the page's
- * own name cuts first (down to 48px), then the middle crumbs, and the first
- * crumb only when nothing else is left to cut. The page's h1 is in its body
- * (`PageFrame`).
- */
 export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
   const current = parts.at(-1);
   return (
-    // As the masthead's title: under `rail` it adds no width of its own, so a long trail cuts.
     <nav aria-label="Breadcrumb" className="not-rail:w-0 flex min-w-28 flex-1">
       <ol className={textRole('body', 'text-ink-2 flex min-w-0 items-center gap-2')}>
         {parts.slice(0, -1).map((part, index) => (

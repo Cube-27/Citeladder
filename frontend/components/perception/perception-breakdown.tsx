@@ -41,12 +41,10 @@ const SEGMENT_HEAD: Record<Segment, string> = {
   prompt: 'Prompt',
 };
 
-/** A table with nothing to list says so in one line, not a block state. */
 function noneHere(message: string): ComponentProps<typeof DataTable>['state'] {
   return { kind: 'empty', inline: true, message };
 }
 
-/** The brand's perception broken down by theme, topic, engine, prompt and cited source. */
 export function PerceptionBreakdown({ data }: Readonly<{ data: PerceptionResponse }>) {
   const [view, setView] = useUrlState('breakdown', VIEW_CODEC, { history: 'replace' });
   const switcher = (
@@ -145,7 +143,6 @@ function ThemeTable({
   );
 }
 
-/** A theme's quote under it: the quote gives up the hidden bar column's cell. */
 function QuoteRow({
   quote,
   engine,

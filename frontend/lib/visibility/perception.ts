@@ -1,8 +1,3 @@
-/**
- * Display helpers for answer perception. Values are projected from the read,
- * never recomputed; a missing value stays `null` so the component draws the
- * shared missing mark rather than a zero.
- */
 import type { NetSentiment } from '@citeladder/contracts';
 import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
 import { availabilityLabel, percentText } from '@/lib/format';
@@ -11,18 +6,12 @@ import type {
   PerceptionResponse,
 } from '@citeladder/contracts/visibility-perception';
 
-/** Net sentiment as a signed whole number, or null when nothing was classified. */
 export function formatNet(value: number | null): string | null {
   if (value === null || Number.isNaN(value)) return null;
   const rounded = Math.round(value);
   return rounded > 0 ? `+${rounded}` : String(rounded);
 }
 
-/**
- * A net sentiment reading for a table cell or figure: not measured when the
- * read carried none, no mentions when nothing named the brand, too few below
- * the minimum classified count (never a zero), else the signed value.
- */
 export function sentimentReading(
   sentiment: NetSentiment | null | undefined,
   minimum = PERCEPTION_MIN_CLASSIFIED,
@@ -39,10 +28,8 @@ export function sentimentReading(
   return { kind: 'value', net: reading.text, classified, mentions };
 }
 
-/** The words for a brand no answer named: distinct from a classified "None". */
 export const NOT_NAMED = 'Not named';
 
-/** A sentiment reading as a figure's value and the word for its absence. */
 export function sentimentFigureValue(sentiment: NetSentiment | null | undefined): {
   value: string | null;
   missingLabel: string;
@@ -60,12 +47,6 @@ function missingSentimentLabel(kind: ReturnType<typeof sentimentReading>['kind']
   return availabilityLabel('not_measured');
 }
 
-/**
- * A share or net value computed over `basis` counted items (classified
- * mentions, or answers for Recommended): too few below the minimum, never a
- * figure from a handful. Every perception figure outside a table row reads
- * through this, so one minimum governs them all.
- */
 export type GatedReading =
   | { kind: 'too_few'; basis: number; minimum: number }
   | { kind: 'value'; text: string };
@@ -95,7 +76,6 @@ export function netReading(
   return gated(formatNet(net ?? null), basis, minimum);
 }
 
-/** A gated reading as a figure's value and absence word, "Too few <noun>" below the minimum. */
 export function gatedFigure(
   reading: GatedReading,
   noun = 'classified',
@@ -119,7 +99,6 @@ const REASON_COPY: Record<NonNullable<PerceptionResponse['reason']>, string> = {
     'The classifier model changed after these runs started, so they were not classified.',
 };
 
-/** The heading and sentence for a read that has no value to show. */
 export function stateCopy(
   state: Exclude<PerceptionResponse['state'], 'value'>,
   reason: PerceptionResponse['reason'],
@@ -156,7 +135,6 @@ const UNAVAILABLE_SHORT: Record<NonNullable<PerceptionResponse['reason']>, strin
 type Score = PerceptionResponse['entities'][number]['score'];
 type Theme = PerceptionResponse['themes'][number];
 
-/** The Brand tab's headline, from the brand's own classified mentions; null below the minimum. */
 export function negativeHeadline(
   score: Score | null | undefined,
   minimum = PERCEPTION_MIN_CLASSIFIED,
@@ -167,7 +145,6 @@ export function negativeHeadline(
   return `AI says something negative about you in ${Math.round(score.negative_share * 100)}% of classified mentions`;
 }
 
-/** Themes ranked by their negative or positive mentions, the top `limit` with any. */
 export function rankThemes(
   themes: readonly Theme[],
   order: 'negative' | 'positive',
@@ -179,7 +156,6 @@ export function rankThemes(
     .slice(0, limit);
 }
 
-/** A theme's negative share of its polar mentions (0–1), or null below the classified minimum. */
 export function themeNegativeShare(
   theme: Pick<Theme, 'negative' | 'positive'>,
   minimum = PERCEPTION_MIN_CLASSIFIED,
@@ -188,10 +164,6 @@ export function themeNegativeShare(
   return meetsMinimum(polar, minimum) ? theme.negative / polar : null;
 }
 
-/**
- * Net sentiment per run for the trend chart. A point whose versions differ
- * from the one before breaks the line; one under the classified minimum is a gap.
- */
 export function sentimentTrend(
   trend: PerceptionResponse['trend'],
   formatDate: (iso: string) => string,
@@ -205,10 +177,6 @@ export function sentimentTrend(
   }));
 }
 
-/**
- * One breakdown row: shares only from `minimum` classified mentions; below it
- * the row is too few classified and carries no share at all.
- */
 export type BreakdownRow =
   | { kind: 'too_few'; classified: number; mentions: number; needed: number }
   | {
@@ -240,7 +208,6 @@ export function breakdownRow(
   };
 }
 
-/** "N of M mentions classified", then every other bucket that is non-empty. */
 export function coverageLine(coverage: PerceptionCoverage): string {
   return [
     `${coverage.classified} of ${coverage.mentions} mentions classified`,
@@ -248,7 +215,6 @@ export function coverageLine(coverage: PerceptionCoverage): string {
   ].join(' · ');
 }
 
-/** Every non-empty bucket besides the classified mentions. */
 export function coverageExtras(coverage: PerceptionCoverage): string[] {
   const parts: string[] = [];
   if (coverage.pending) parts.push(`${coverage.pending} pending`);

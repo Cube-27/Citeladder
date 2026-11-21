@@ -58,8 +58,6 @@ function SiteHealthContent({
   });
   const blocking = projectBlockingState(screen);
   const mutationsAllowed = !entitlementQuery.isError;
-  // Crawl controls are offered only to a role that may run crawls; the
-  // schedule, a saved setting, only to one that may write.
   const canRun = useWorkspaceCapability('run');
   const canWrite = useWorkspaceCapability('write');
   const schedule = useCrawlSchedule(
@@ -67,7 +65,6 @@ function SiteHealthContent({
     Boolean(crawl) && mutationsAllowed && canWrite,
     crawl?.robots,
   );
-  // Internal links' search, filters and header actions act on the analysis its panel draws.
   const links = useInternalLinksBands({
     scope: { projectId, workspaceId },
     enabled: tab === 'internal-links' && !blocking && Boolean(crawl),
@@ -80,9 +77,6 @@ function SiteHealthContent({
     links: links.controls,
     linksActions: links.actions,
   });
-  // The masthead holds the crawl controls and is the same on every tab; a
-  // tab's own actions (Internal links' Analyze again, each export) sit at the
-  // end of that tab's control row or table toolbar.
   const headerActions =
     crawl && mutationsAllowed && canRun ? (
       <CrawlActions
@@ -96,9 +90,6 @@ function SiteHealthContent({
       />
     ) : undefined;
   const prefetchTab = useSiteHealthTabPrefetch(workspaceId, projectId, crawl?.id, !active);
-  // Every state draws the loaded page's bands — the tab row included — with
-  // the state where the panel will be, so a failed read or the first load
-  // never takes the tabs away and the work arrives without moving them.
   return (
     <TabsRoot value={tab} onValueChange={selectTab}>
       <ReportPage
@@ -119,8 +110,6 @@ function SiteHealthContent({
             <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
             {schedule.notice}
             <SiteHealthRefreshFailures screen={screen} />
-            {/* Every tab opens on the crawl's status line; before the first
-                crawl every tab says the same one next step. */}
             {crawl ? (
               <>
                 <CrawlStatusLine
@@ -153,7 +142,6 @@ function SiteHealthContent({
   );
 }
 
-/** The crawl's status line, above every tab's panel. */
 function CrawlStatusLine({
   crawl,
   screen,
@@ -163,7 +151,6 @@ function CrawlStatusLine({
   screen: ReturnType<typeof useSiteHealthScreen>;
   mutationsAllowed: boolean;
 }>) {
-  // A failed crawl's notice offers a rerun only to a role that may run one.
   const rerunAllowed = useWorkspaceCapability('run') && mutationsAllowed;
   return (
     <StatusStrip
@@ -177,12 +164,6 @@ function CrawlStatusLine({
   );
 }
 
-/**
- * The selected tab's control row: Internal links alone has one (Pages' view,
- * filter and export scope its table, so they lead that table's toolbar), and
- * it ends with that tab's own run action before its export. It holds the row
- * through the first load, so its work starts on the same line once it lands.
- */
 function tabControls({
   tab,
   blocking,
@@ -192,7 +173,6 @@ function tabControls({
 }: Readonly<{
   tab: SiteHealthTab;
   blocking: BlockingState | null;
-  /** False before the first crawl, when the tab holds only the first-crawl state. */
   crawled: boolean;
   links: FilterBarProps | undefined;
   linksActions: ReactNode;
@@ -212,7 +192,6 @@ function tabControls({
   };
 }
 
-/** What stands in for the analysis: the one first-load wait, or a state that replaces the page. */
 type BlockingState =
   | Readonly<{ kind: 'loading'; label: string }>
   | Readonly<{ kind: 'state'; node: ReactNode }>;
@@ -222,7 +201,6 @@ function SiteHealthBlocked({ blocking }: Readonly<{ blocking: BlockingState }>) 
     case 'state':
       return blocking.node;
     case 'loading':
-      // The default tab's shape: its figures, then its table.
       return (
         <Stack gap="workspace" className="min-w-0">
           <StateBlock kind="loading" label={blocking.label} shape={{ kind: 'figures' }} />
@@ -277,16 +255,6 @@ function SiteHealthRefreshFailures({
   );
 }
 
-/**
- * Warm the tab the pointer is heading for.
- *
- * `terminal` gates the Overview alone, because the Overview snapshot does not
- * EXIST until the crawl terminalizes — warming it mid-crawl fetched a 404 into
- * the very cache entry the panel reads, and React Query keeps an error once it
- * has one. Hovering a tab is not a request to report a failure. Every other
- * projection here answers with its own "not available yet" payload instead of
- * an error, so those stay warm at any point in the run.
- */
 function useSiteHealthTabPrefetch(
   workspaceId: string,
   projectId: string,
@@ -343,11 +311,6 @@ function SiteHealthNotices({
   );
 }
 
-/**
- * Site Health always opens on Pages and never changes tab by itself: not
- * while the crawl resolves, starts, runs or finishes (owner, 2026-11-02). A
- * tab the reader picks, or a `?tab=` link, stays as chosen.
- */
 const TAB_CODEC = stringUrlCodec<SiteHealthTab>(
   SITE_HEALTH_TABS.map((item) => item.value),
   'pages',
@@ -402,7 +365,6 @@ function AnalysisPanel({
   }
 }
 
-/** The project before its first crawl, on every tab; starting one is offered to a role that may run it. */
 function FirstCrawl({
   canRun,
   ...run
@@ -499,12 +461,10 @@ function CrawlActions({
   onCancel,
   onStart,
 }: Readonly<{
-  /** The shown crawl: its site and robots choice, which the next crawl keeps. */
   crawl: Pick<SiteCrawl, 'root_url' | 'robots'>;
   active: boolean;
   cancelPending: boolean;
   startPending: boolean;
-  /** The crawl schedule, beside the crawl button. */
   schedule: ReactNode;
   onCancel: () => void;
   onStart: (robots?: CrawlRobotsHandling) => void;

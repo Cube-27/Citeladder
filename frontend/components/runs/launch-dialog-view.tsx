@@ -25,7 +25,6 @@ import { textRole } from '@/components/ui/typography';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { wellClasses } from '@/components/ui/slip';
 
-/** The prompt-set list read, kept apart from the list it yields. */
 type PromptSetsRead = RetryableRead & Readonly<{ status: 'pending' | 'error' | 'success' }>;
 
 type Estimate = {
@@ -36,15 +35,6 @@ type Estimate = {
   estimated_total_cost_microusd: number | null;
 };
 
-/**
- * The prompt selection: a locked, named one, or the project's prompt sets.
- *
- * "Locked" is one contract with the launch payload — whenever the caller fixes
- * the prompts (a prompt set OR an explicit id list), the field states what will
- * run instead of offering a control whose value the payload would ignore. A
- * locked field never reads the prompt-set list, so an empty list is not the
- * caller's problem and "add prompts first" would be the wrong advice.
- */
 function PromptSetField({
   promptSets,
   promptSetsRead,
@@ -71,8 +61,6 @@ function PromptSetField({
         if (locked) {
           return <p className={textRole('body', 'text-ink-2')}>{label}</p>;
         }
-        // A failed list is not an empty one: "add prompts first" would send a
-        // reader with many prompt sets off to recreate them.
         if (promptSetsRead.status === 'error') {
           return (
             <Notice
@@ -107,13 +95,6 @@ function PromptSetField({
   );
 }
 
-/**
- * Which slice of the set to run.
- *
- * Only offered when there is more than one batch, unless a refresh invalidated
- * a prior choice. In that case it stays visible so the user can explicitly
- * recover to "All prompts" without silently broadening the launch.
- */
 function BatchField({
   batches,
   batchIndex,
@@ -146,12 +127,6 @@ function BatchField({
   );
 }
 
-/**
- * Provider setup inside the launch dialog, instead of a second dialog stacked
- * on this one. It grows inside the dialog body, the one scroll, and a verified
- * save refreshes the shared connections query, which turns the engine chips on
- * without leaving the dialog. Run probe offers it too when no key can probe.
- */
 export function InlineProviderSetup({
   connecting,
   onClose,
@@ -164,16 +139,11 @@ export function InlineProviderSetup({
         <p className={textRole('body', 'text-ink-2')}>Connect a provider</p>
         <IconButton icon={X} label="Close provider setup" onClick={onClose} />
       </Inline>
-      {/* Keyed by engine so clicking another engine opens its provider. */}
       <ProviderList key={engine ?? 'any'} expandEngine={engine} compact={compact} />
     </Stack>
   );
 }
 
-/**
- * Which markets to measure from: one run each. Only offered once the project
- * has more than its default market.
- */
 function MarketsField({
   markets,
   marketIds,
@@ -204,10 +174,6 @@ function MarketsField({
   );
 }
 
-/**
- * A required chip group as a label-left row: the fieldset is the control
- * column, named by the label beside it.
- */
 function ChoiceRow({ label, children }: Readonly<{ label: string; children: React.ReactNode }>) {
   const labelId = useId();
   return (
@@ -219,11 +185,6 @@ function ChoiceRow({ label, children }: Readonly<{ label: string; children: Reac
   );
 }
 
-/**
- * One chip anatomy for every choice in the dialog (engines and markets): a
- * selected chip shows a check and the pressed tint; an unselected one may
- * lead with its own glyph (Plus for an engine still to connect).
- */
 function ChoiceChip({
   selected,
   onClick,
@@ -244,7 +205,6 @@ function ChoiceChip({
   );
 }
 
-/** A disabled primary names its reason to assistive tech only (owner, 2026-11-21: no helper text). */
 function LaunchFooter({
   blocker,
   pending,
@@ -326,7 +286,6 @@ function EstimateNote({ estimate }: Readonly<{ estimate: Estimate }>) {
   );
 }
 
-/** A prompt set names its size only when the server counted it. */
 function promptSetLabel(set: Readonly<{ name: string; prompt_count?: number | null }>): string {
   const count = typeof set.prompt_count === 'number' ? ` (${set.prompt_count})` : '';
   return `${set.name}${count}`;
@@ -375,7 +334,6 @@ export function LaunchDialogView({
   setEngines: React.Dispatch<React.SetStateAction<LogicalEngine[]>>;
   repetitions: number;
   setRepetitions: React.Dispatch<React.SetStateAction<number>>;
-  /** The range the API accepts, from the prompt-set list; null until it loads. */
   repetitionLimits: RepetitionLimits | null;
   markets: readonly ProjectMarket[];
   marketIds: (string | null)[];
@@ -388,7 +346,6 @@ export function LaunchDialogView({
   setConnecting: (target: LogicalEngine | 'any' | null) => void;
   promptSetLocked?: boolean;
   promptSelectionLabel?: string;
-  /** Why Launch run is disabled, or null when the selection can launch. */
   blocker: string | null;
 }>) {
   const catalog = useEngineCatalog();

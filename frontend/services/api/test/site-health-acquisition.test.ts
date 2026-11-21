@@ -10,7 +10,6 @@ import { orderedUnique } from '../src/site-health/tracked-set.ts';
 import { duplicateAliases, markDuplicates } from '../src/site-health/canonical-alias.ts';
 import type { Crawl } from '../src/site-health/site-task.ts';
 
-/** Resolve the crawl's alias chains and mark them, as the finalize task's first commit does. */
 const reconcileDuplicateAliases = async (crawl: Crawl) =>
   markDuplicates(db, crawl, await duplicateAliases(db, crawl));
 import { crawlCoverage, valueKindCoverage } from '../src/site-health/coverage.ts';
@@ -154,14 +153,12 @@ describe('discover', () => {
       url('/c'),
     ]);
     expect(new Set(frontier.map((row) => row.status))).toEqual(new Set(['admitted']));
-    // The root already has its discover task; each new link gets one.
     expect((await tasks(seed, 'discover')).map((row) => row.requested_url)).toEqual([
       url('/'),
       url('/blog/b'),
       url('/c'),
       url('/products/a'),
     ]);
-    // Only a fetched page joins the tracked set: so far the root, analyzed after its discovery.
     expect(await memberships(seed)).toEqual([
       { normalized_url: url('/'), active: true, selection_source: 'bootstrap' },
     ]);
@@ -170,7 +167,6 @@ describe('discover', () => {
     ]);
     expect(await crawlRow(seed)).toMatchObject({ admitted_url_count: 3, discovered_url_count: 1 });
 
-    // Each fetched child joins while the set has room (two pages); the rest is inventory only.
     const children = await tasks(seed, 'discover');
     const child = (path: string) => children.find((row) => row.requested_url === url(path))!.id;
     await run(site, child('/products/a'), child('/blog/b'));
@@ -187,7 +183,6 @@ describe('discover', () => {
   it('lists a link that fails to fetch as an error, with every page that links it', async () => {
     const seed = await crawl();
     const root = await queued(seed, 'discover');
-    // A seeded URL (exact-URL input) starts without an identity, and nothing links it.
     const seeded = await queued(seed, 'discover', '/seeded');
     const site = worker({
       '/': { body: links('/a', '/gone') },
@@ -219,7 +214,6 @@ describe('discover', () => {
       { url: url('/gone'), status: 'error', code: 'http_4xx', linked_from: [url('/'), url('/a')] },
       { url: url('/seeded'), status: 'error', code: 'http_4xx', linked_from: [] },
     ]);
-    // The recount the cadence persists; the read itself may lag it (CO-3).
     const counters = await taskCounters(db, await crawlRow(seed));
     expect(counters).toMatchObject({ errors: 2, failure_breakdown: { http_4xx: 2 } });
   });
@@ -229,7 +223,6 @@ describe('discover', () => {
     const earlier = await fixtures.sibling(seed);
     const identity = canonicalIdentity('/seeded', seed.root);
     const then = new Date(Date.now() - 86_400_000);
-    // The earlier crawl left the URL excluded, deeper, and sighted from a sitemap.
     await db
       .insertInto('site_urls')
       .values({
@@ -329,7 +322,6 @@ describe('discover', () => {
     await run(site, root);
     const children = await tasks(seed, 'discover');
     const child = (path: string) => children.find((row) => row.requested_url === url(path))!.id;
-    // Each alias commits before its target is fetched.
     await run(site, child('/live-alias'), child('/dead-alias'), child('/live'), child('/dead'));
     expect((await tasks(seed, 'analyze')).map((row) => row.requested_url)).toEqual([
       url('/'),
@@ -339,7 +331,6 @@ describe('discover', () => {
     ]);
 
     await reconcileDuplicateAliases(await crawlRow(seed));
-    // The 404 never joined the tracked set; an alias that joined stays tracked (SH-B8).
     expect(
       (await memberships(seed)).map((row) => [row.normalized_url.slice(20), row.active]),
     ).toEqual([
@@ -368,7 +359,6 @@ describe('discover', () => {
       '/flaky': { status: 500 },
     });
     await run(site, root);
-    // A 500 retries until its attempts run out; the others settle on their first.
     for (const child of (await tasks(seed, 'discover')).filter((row) => row.id !== root))
       do await run(site, child.id);
       while ((await task(child.id)).status === 'retry_wait');
@@ -563,7 +553,6 @@ describe('site setup', () => {
     contentType: 'application/xml',
     body: `<urlset>${paths.map((path) => `<url><loc>${path}</loc></url>`).join('')}</urlset>`,
   });
-  /** The runner context the worker hands its tasks. */
   const runnerOf = (site: SiteHealthWorker) => ({
     db,
     owner: site.owner,
@@ -643,7 +632,6 @@ describe('site setup', () => {
       invalid_count: 0,
       invalid_documents: [],
     });
-    // The http:// origin probe reads that origin's robots.txt before its root, like any fetch.
     expect(requests).toEqual([
       '/robots.txt',
       '/llms.txt',
@@ -663,9 +651,7 @@ describe('site setup', () => {
     expect(await observations(seed)).toEqual([
       { observed_url: url('/a'), source_kind: 'sitemap', depth: 1 },
     ]);
-    // The cart URL is refused, so only the admitted URL keeps its first declared lastmod.
     expect(await entries(seed)).toEqual([{ listed_url: url('/a'), lastmod: '2026-09-01' }]);
-    // Discovery fetched no page: the tracked page is analyzed directly.
     expect(await tasks(seed, 'discover')).toEqual([]);
     expect((await tasks(seed, 'analyze')).map((row) => row.requested_url)).toEqual([url('/a')]);
     expect((await memberships(seed)).map((row) => row.normalized_url)).toEqual([url('/a')]);
@@ -696,25 +682,20 @@ describe('site setup', () => {
         return runSiteSetup(ctx, claimed, { ...setupSettings({}), maxSiteUrls: 4 });
       },
     });
-    // The site-wide ceiling kept four of five URLs: "at least 4". Two pages fill the tracked set,
-    // most valuable first; the PDF counts as discovered but is a document, never a tracked page.
     expect(record(record((await crawlRow(seed)).site_facts).sitemap)).toMatchObject({
       discovered_count: 4,
       discovered_complete: false,
       limit_reached: true,
       unread_count: 0,
     });
-    // The inventory's size, not the tracked pages added to it (a reconcile may have counted it).
     expect(await crawlRow(seed)).toMatchObject({ discovered_url_count: 4, admitted_url_count: 4 });
     expect((await memberships(seed)).map((row) => row.normalized_url)).toEqual([
       url('/about'),
       url('/products/a'),
     ]);
-    // Every listed URL joins the inventory with its sitemap entry, tracked or not.
     const listed = [url('/about'), url('/blog/x'), url('/products/a'), url('/products/manual.pdf')];
     expect((await observations(seed)).map((row) => row.observed_url)).toEqual(listed);
     expect((await entries(seed)).map((row) => row.listed_url)).toEqual(listed);
-    // Coverage counts the listed pages this crawl audits, not every saved one.
     expect((await crawlCoverage(db, await crawlRow(seed))).evidence).toMatchObject({
       reasons: ['sitemap_limit_reached', 'tracked_pages_below_site'],
       sitemap: { discovered: 4, limitReached: true, unreadDocuments: 0, tracked: 2 },
@@ -723,7 +704,6 @@ describe('site setup', () => {
 
   it('records a sitemap entry for a URL the crawl already observed without rewriting it', async () => {
     const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
-    // Admission tracks and observes the root before site setup runs.
     const root = await fixtures.page(seed, '/', {}, { observed: true });
     await fixtures.monitor(seed, [root.id]);
     const setup = await queued(seed, 'site_setup');
@@ -737,7 +717,6 @@ describe('site setup', () => {
       }),
       setup,
     );
-    // The root keeps its first sighting and identity; its sitemap entry records membership.
     expect(await observations(seed)).toEqual([
       { observed_url: url('/'), source_kind: 'link', depth: 0 },
       { observed_url: url('/a'), source_kind: 'sitemap', depth: 1 },
@@ -756,7 +735,6 @@ describe('site setup', () => {
       worker({ '/robots.txt': { body: 'User-agent: *\n', contentType: 'text/plain' } }),
       setup,
     );
-    // A 404 answers that the site has no sitemap there.
     expect(record(record((await crawlRow(seed)).site_facts).sitemap)).toMatchObject({
       fetched: false,
       discovered_count: 0,
@@ -797,7 +775,6 @@ describe('site setup', () => {
       },
       walkedPaths,
     );
-    // Published facts still marked pending resume at the walk, without re-probing robots.
     await db
       .updateTable('site_crawls')
       .set({
@@ -815,7 +792,6 @@ describe('site setup', () => {
         const settings = setupSettings({});
         return runSiteSetup(ctx, claimed, {
           ...settings,
-          // One document per wave, so the request order is the queue order.
           concurrency: 1,
           maxDocuments: 3,
           sitemap: { ...settings.sitemap, maxDecodedBytes: 400 },
@@ -823,9 +799,7 @@ describe('site setup', () => {
       },
     });
     const walked = record((await crawlRow(full)).site_facts);
-    // The off-domain entry is never fetched, and the document ceiling leaves s3.xml unwalked.
     expect(walkedPaths).toEqual(['/robots.txt', '/index.xml', '/s1.xml', '/s2.xml']);
-    // The index names s1.xml, so its 404 leaves it unread; s2.xml is over the byte cap.
     expect(walked.sitemap).toEqual({
       fetched: true,
       file_count: 1,
@@ -898,7 +872,6 @@ describe('frontier admission', () => {
       'https://shop.example/products/net?srsltid=AfmBOo',
     ])
       expect(canonicalIdentity(decorated)).toEqual(page);
-    // A parameter that selects different content still names a different page.
     expect(canonicalIdentity('https://shop.example/products/net?page=2').url).toBe(
       'https://shop.example/products/net?page=2',
     );
@@ -975,7 +948,6 @@ describe('frontier admission', () => {
   it('counts a recrawl’s monitored pages once when it discovers them again', async () => {
     const seed = await crawl({ config: { automatic_monitor_limit: 0, requested_page_limit: 10 } });
     await queued(seed, 'discover');
-    // A recrawl seeds an observation for each monitored page before it fetches anything.
     for (const path of ['/a', '/b', '/c']) await fixtures.page(seed, path, {}, { observed: true });
     await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
     await admit(seed, ['/a', '/b', '/c']);
@@ -1030,7 +1002,6 @@ describe('frontier admission', () => {
   it('never lets an inadmissible twin displace its pair, and samples one twin per crawl', async () => {
     const full = await crawl({ config: { automatic_monitor_limit: 0 } });
     const [apex] = candidates(['/guide']);
-    // Ranked first but too deep to admit: the admissible twin must still get the slot.
     const deep = { ...twinOf(apex!), depth: 999, priority: 1000 };
     expect((await admit(full, [deep, apex!])).admitted).toBe(1);
 
@@ -1060,7 +1031,6 @@ describe('frontier admission', () => {
       .selectAll()
       .where('id', '=', sample.crawlId)
       .executeTakeFirstOrThrow();
-    // A sample admits without a frontier: no funnel, rather than "nothing found".
     expect(await valueKindCoverage(db, sampled)).toEqual([]);
   });
 

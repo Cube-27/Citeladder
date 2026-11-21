@@ -1,19 +1,3 @@
-/**
- * The Products table read: one keyset-paged SQL read of every product holder's
- * metrics over persisted observations (commerce improvement PR 3, formula
- * version 1 of the plan's "Metric definitions").
- *
- * Scope is the successful executions in the window (and engine and prompt set,
- * when filtered) whose answer has a match pass; each answer counts once,
- * through its latest pass (highest catalog revision, then newest). Branded
- * comparisons stay out, as they stay out of organic Visibility and the AI
- * Shelf. A holder (an owned product or a competitor candidate) holds at most
- * one slot per execution, at its best rank: a ranked slot beats an unranked
- * one and a carousel card's rank wins over a text-list rank.
- *
- * It reads only persisted rows: no provider, model or repair, and every table
- * is filtered to the authorized workspace and project.
- */
 import {
   commerceProductPageSchema,
   commerceProductRowSchema,
@@ -47,13 +31,9 @@ export type ProductQuery = {
   sort: CommerceProductSort;
   cursor: string | null;
   limit: number;
-  /** One holder's row only: the detail page's KPIs, never set by the table. */
   holder?: string;
-  /** Every merchant, not the table's top few: commerce Actions judge the whole list. */
   allMerchants?: boolean;
-  /** The window ends here rather than now: an Action records the instant it measured. */
   until?: Date;
-  /** Only executions completed after this instant: an Action's later window. */
   after?: Date;
 };
 
@@ -62,12 +42,6 @@ const NOTHING = sql``;
 const OWNED_PRODUCT = sql<string>`p.id`;
 const COMPETITOR_TARGET = sql<string>`c.target_id`;
 
-/**
- * Every sort is ascending on one float key, then the lowercased name, then the
- * holder id, so a keyset cursor is one row comparison. A descending metric is
- * negated; a missing one sorts last. Visibility shares its denominator across
- * rows, so it orders by appearances, an exact integer.
- */
 const SORT_KEYS: Record<CommerceProductSort, RawBuilder<number>> = {
   visibility: sql`-f.appearances::float8`,
   win_rate: sql`-coalesce(f.win_rate, -1)`,
@@ -75,13 +49,8 @@ const SORT_KEYS: Record<CommerceProductSort, RawBuilder<number>> = {
   name: sql`0::float8`,
 };
 
-/** Owned, approved competitor or AI-observed competitor: the holders a Commerce metrics read lists. */
 export const holderKindSchema = commerceProductRowSchema.shape.kind;
 
-/**
- * The competitor candidates a Commerce metrics read lists, on the candidate
- * table aliased `alias`: approved ones, and pending ones the AI observed.
- */
 export function listedCompetitor(alias: string) {
   const state = sql.ref(alias + '.state');
   const source = sql.ref(alias + '.source_kind');
@@ -114,7 +83,6 @@ const rowSchema = z.object({
   category_ids: z.array(z.uuid()).nullable(),
 });
 
-/** `%` and `_` in the reader's text match themselves, not any character. */
 const ESCAPED_MATCH = String.raw`\$&`;
 const likePattern = (text: string) => `%${text.replaceAll(/[\\%_]/gu, ESCAPED_MATCH)}%`;
 
@@ -133,7 +101,6 @@ function cursorPosition(query: ProductQuery, filters: Record<string, unknown>) {
   }
 }
 
-/** The executions a product read covers: its window, engine and prompt set. */
 export type ExecutionScope = Pick<
   ProductQuery,
   'windowDays' | 'engine' | 'promptSet' | 'until' | 'after'
@@ -146,21 +113,9 @@ function requireWindow(windowDays: number) {
     });
 }
 
-/** A slot's best observation first: ordered, then carousel, then rank. */
 const SLOT_RANKING = sql`(o.order_observable AND o.rank IS NOT NULL) DESC,
       (o.surface_kind = 'shopping_result') DESC, o.rank ASC NULLS LAST, o.created_at, o.id`;
 
-/**
- * The CTEs every Commerce metrics read (the Products table, a product's page
- * and the Shopping overview) starts from: `scoped_passes`, each successful
- * non-branded execution in scope once, through its latest match pass;
- * `executions`, their count (the visibility denominator); `competitor_holders`,
- * each listed candidate's holder (one product's records under several targets
- * share a canonical page and merge into one holder, approved first, then the
- * oldest); `observed`, the holder observations of those passes; and `slots`,
- * each holder's one slot per execution at its best rank. A window outside the
- * configured ones is refused.
- */
 export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
   requireWindow(executions.windowDays);
   const ws = scope.workspaceId,
@@ -220,15 +175,6 @@ export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
     )`;
 }
 
-/**
- * The product holders a read lists, as `kind, holder_id, name, brand, url,
- * catalog_price, catalog_price_max, catalog_currency, members` rows: the active catalog (or with
- * `archived` the archived one), and with `all` the approved and AI-observed
- * competitors, one row per merged holder whose `members` are its candidate
- * records; with a category, only its own. One `holder`'s read under
- * `all` (the product page) takes its product in either state; under `catalog`
- * it stays the active product alone. It reads `scopedSlots`' `competitor_holders`.
- */
 export function holderRows(
   scope: CommerceScope,
   {
@@ -242,14 +188,12 @@ export function holderRows(
   const inCategory = (column: RawBuilder<string>) => sql`${column} IN (
       SELECT m.product_id FROM commerce_product_categories m
       WHERE m.workspace_id = ${ws} AND m.project_id = ${project} AND m.category_id = ${category})`;
-  // Optional fragments are built here, so the read below has no nested templates.
   const competitorInCategory = category
     ? sql`AND EXISTS (SELECT 1 FROM commerce_competitor_candidates c
            WHERE c.workspace_id = ${ws} AND c.project_id = ${project} AND c.id = ANY(g.members)
              AND ((c.target_kind = 'category' AND c.target_id = ${category})
                OR (c.target_kind = 'product' AND ${inCategory(COMPETITOR_TARGET)})))`
     : NOTHING;
-  // A merged holder is approved when any of its records is: that one heads it.
   const competitors =
     source === 'all'
       ? sql`UNION ALL
@@ -264,7 +208,6 @@ export function holderRows(
         WHERE true ${competitorInCategory}`
       : NOTHING;
   const ownedInCategory = category ? sql`AND ${inCategory(OWNED_PRODUCT)}` : NOTHING;
-  // A product page reads its holder archived or not; any other read takes one state.
   const listedState = source === 'archived' ? 'archived' : 'active';
   const anyState = holder !== undefined && source === 'all';
   const ownedLifecycle = anyState ? NOTHING : sql`AND p.lifecycle_state = ${listedState}`;
@@ -282,7 +225,6 @@ export function holderRows(
 
 export async function productMetrics(db: Database, scope: CommerceScope, query: ProductQuery) {
   const slotsInScope = scopedSlots(scope, query);
-  // A cursor is bound to its project and filters; any other read refuses it.
   const { cursor: _cursor, limit: _limit, ...rest } = query;
   const filters = { ...rest, project: scope.projectId };
   const position = cursorPosition(query, filters);
@@ -292,7 +234,6 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
   const searchFilter = search
     ? sql`AND (h.name ILIKE ${search} OR h.brand ILIKE ${search} OR h.url ILIKE ${search})`
     : NOTHING;
-  // Any record of a merged holder opens its row.
   const holderFilter = query.holder ? sql`AND ${query.holder}::uuid = ANY(h.members)` : NOTHING;
   // LIMIT NULL is no limit.
   const merchantLimit = query.allMerchants ? null : policy.commerce.products.merchant_limit;
@@ -375,7 +316,6 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
     ORDER BY page.sort_key, page.name_key, page.holder_id
   `.execute(db);
   const rows = result.rows.map((row) => rowSchema.parse(row));
-  // The executions row always exists; the page joins to it laterally.
   const [first] = rows;
   if (!first) throw new Error('Products read returned no executions row');
   const present = rows.filter((row) => row.holder_id !== null);

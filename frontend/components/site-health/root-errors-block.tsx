@@ -7,15 +7,6 @@ import type { RootError } from '@citeladder/contracts';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 
-/**
- * Root-failure block for the Errors & Blocked tab (SH-4 — B3).
- *
- * When the crawl's START URL itself failed, no page row exists to list — the
- * failure's only evidence is the terminal root-target fetch attempts the
- * worker persisted, one per REAL network call. These rows are deliberately
- * NON-clickable and carry no `site_url_id`: the URL was never admitted into
- * the inventory, so there is no PageDetail behind them.
- */
 export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
   if (errors.length === 0) return null;
   const keyOccurrences = new Map<string, number>();

@@ -63,8 +63,6 @@ describe('ChatScreen running turn', () => {
     const reading = new Promise<void>((resolve) => {
       read = resolve;
     });
-    // The first read holding the saved question waits, so the accepted send is
-    // on screen before it lands.
     let save!: () => void;
     const saved = new Promise<void>((resolve) => {
       save = resolve;
@@ -99,7 +97,6 @@ describe('ChatScreen running turn', () => {
                 frame({ type: 'tool', ordinal: 1, call_id, tool, status: 'started' }),
               );
             await reading;
-            // A later step writes under what was already written.
             controller.enqueue(frame({ type: 'step', ordinal: 2 }));
             controller.enqueue(frame({ type: 'reply_delta', ordinal: 2, text: 'Then more.' }));
             await held;
@@ -115,27 +112,21 @@ describe('ChatScreen running turn', () => {
     renderChat();
 
     const field = await screen.findByLabelText('Reply to the agent');
-    // One polite region, there from the start, reads each reply saved while the
-    // chat is open, never the replies it opened with.
     const announced = document.querySelector('[aria-live="polite"][aria-busy]')!;
     expect(screen.getByText('Here are the edits.')).toBeVisible();
     expect(announced).toBeEmptyDOMElement();
     await user.type(field, 'Why this order?');
     await user.click(screen.getByRole('button', { name: 'Send' }));
     const live = await screen.findByRole('article', { name: 'Agent reply in progress' });
-    // The accepted send stays in the thread until the chat read holds it.
     expect(screen.getByText('Why this order?')).toBeVisible();
     save();
     await vi.waitFor(() => expect(live).toHaveTextContent('Partly written'));
-    // Streamed text is never read: the region waits, busy and empty.
     expect(announced).toHaveAttribute('aria-busy', 'true');
     expect(announced).toBeEmptyDOMElement();
     expect(within(live).getByText('Thinking')).toBeVisible();
-    // One status line heads the turn; the reads one response asked for fold into it.
     const status = (
       await within(live).findByText('Running 2 reads at once…', { selector: 'summary *' })
     ).closest('summary')!;
-    // The status is read from a live region outside the summary, which is a button.
     expect(within(live).getByRole('status')).toHaveTextContent('Running 2 reads at once…');
     expect(status.querySelector('output')).toBeNull();
     expect(live.textContent!.indexOf('Running 2 reads')).toBeLessThan(
@@ -148,13 +139,11 @@ describe('ChatScreen running turn', () => {
         .map((item) => item.textContent),
     ).toEqual(['Reading Website, Running', 'Reading search performance, Running']);
     read();
-    // The same line says what comes next, and the next text is added under the first.
     await vi.waitFor(() => expect(status).toHaveTextContent('Deciding the next step…'));
     expect(live).toContainElement(status);
     await vi.waitFor(() => expect(live).toHaveTextContent('Partly writtenThen more.'));
     expect(screen.getAllByText('Why this order?')).toHaveLength(1);
     release();
-    // The saved reply replaces the live one; the two may land in separate renders.
     await vi.waitFor(() => {
       expect(screen.getByText('The saved answer.', { selector: 'article p' })).toBeVisible();
       expect(
@@ -199,7 +188,6 @@ describe('ChatScreen running turn', () => {
       status: 'failed',
       error_code: 'stopped_at_limit',
     });
-    // Turns now always end with a reply; an older one may have ended silently.
     stopped.messages = stopped.messages.filter((message) => message.role === 'user');
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
@@ -219,7 +207,6 @@ describe('ChatScreen running turn', () => {
         HttpResponse.json(
           detail(revision(REV1, 1, 'agent', 'Body.'), {
             status: 'running',
-            // The first attempt was interrupted; only the current attempt's reads are this turn's.
             progress: [
               { ordinal: 1, status: 'completed', tool: 'read_actions', run_attempt: 1 },
               { ordinal: 1, status: 'unavailable', tool: 'read_site_health', run_attempt: 2 },
@@ -263,7 +250,6 @@ describe('ChatScreen running turn', () => {
     expect(within(pane).getByRole('button', { name: 'Edit' })).toBeDisabled();
     expect(screen.getByLabelText('Reply to the agent')).toBeEnabled();
     await user.type(screen.getByLabelText('Reply to the agent'), 'Next question');
-    // While the turn runs, Stop takes Send's place; drafting continues.
     expect(screen.queryByRole('button', { name: 'Send' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Stop' }));
     expect(cancels).toHaveLength(1);

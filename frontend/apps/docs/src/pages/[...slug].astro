@@ -9,7 +9,6 @@ import Prose from '@/components/content/Prose.astro';
 import ToolReference from '../components/ToolReference.astro';
 
 export function getStaticPaths() {
-  // The API section pages through itself, the guides through theirs.
   const neighbours = (article: (typeof articles)[number]) =>
     articles.filter((other) => (other.group === API_GROUP) === (article.group === API_GROUP));
   return articles.map((article) => {
@@ -32,7 +31,6 @@ const jsonLd = docsArticleJsonLd({
   updated: article.updated,
   websiteUrl: websiteHref('/'),
 });
-// The Toc drops a heading's step number ("2. Pick prompts"); its anchor keeps it.
 const toc = headings.map((heading) => ({
   id: heading.slug,
   label: heading.text.replace(/^\d+[.)]\s+/, ''),

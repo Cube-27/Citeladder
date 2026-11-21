@@ -1,4 +1,3 @@
-/** Persisted crawl listing and the short, idempotent stop transaction. */
 import { setTimeout } from 'node:timers/promises';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
@@ -116,7 +115,6 @@ function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
           .skipLocked(),
       )
       .execute();
-    // Every task Stop could take is settled; a skipped one's settlement recounts (`reconcileAfterTask`).
     await persistTerminalCounters(trx, { ...crawl, status: 'cancelled' });
     // Task mutation precedes capacity/account locks taken by reservation release.
     await settleCrawlFetches(trx, crawl);
@@ -124,7 +122,6 @@ function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
   });
 }
 
-/** Replay the entire stop transaction after bounded PostgreSQL lock conflicts. */
 export function cancelCrawl(db: Database, workspaceId: string, crawlId: string) {
   return cancelWithRetry(db, workspaceId, crawlId, 0);
 }

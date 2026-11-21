@@ -16,7 +16,6 @@ describe('LandingPage', () => {
     vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
     render(<LandingPage />);
 
-    // The hero's action is the first one on the page; the closing band repeats it.
     expect(screen.getAllByRole('link', { name: label })[0]).toHaveAttribute('href', href);
   });
 
@@ -59,7 +58,6 @@ describe('LandingPage', () => {
       '/platform/agents',
       '/platform/mcp',
     ]);
-    // Each card's heading is its one line, linking to the module's page.
     const keywords = within(rail).getByRole('heading', {
       name: 'Research keywords, competitors and backlinks.',
     });

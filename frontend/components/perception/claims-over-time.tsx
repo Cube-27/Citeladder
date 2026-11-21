@@ -12,11 +12,6 @@ const STACK = [
 ] as const;
 const SERIES = STACK.map(({ key, fill }) => ({ name: VERDICT_LABELS[key], fill }));
 
-/**
- * Supported, contradicted and inconclusive claims per run, stacked. A run not
- * comparable with the one before (templates, metrics or facts changed) is
- * marked the way the trend charts mark a method change.
- */
 export function ClaimsOverTime({ trend }: Readonly<{ trend: AccuracyResponse['trend'] }>) {
   const bars = trend.map((point, index) => {
     const day = point.completed_at.slice(0, 10);

@@ -11,11 +11,9 @@ type ToastTone = 'neutral' | 'positive' | 'negative';
 
 type ToastOptions = Readonly<{
   tone?: ToastTone;
-  /** The one next step ("Undo", "Retry now"), a small secondary button under the text. */
   action?: Readonly<{ label: string; onClick: () => void }>;
 }>;
 
-/** `open` turns false when the toast closes; it leaves once its close animation ends. */
 type ToastMessage = ToastOptions & {
   id: number;
   open: boolean;
@@ -26,14 +24,8 @@ type ToastApi = { notify: (title: string, description?: string, options?: ToastO
 
 const ToastContext = createContext<ToastApi>({ notify: () => undefined });
 
-/**
- * Neutral and positive toasts close after 6s unless hovered or focused;
- * negative ones, and any with an action, stay until dismissed.
- */
 const TOAST_DURATION_MS = 6000;
-/** Never more than three at once: the oldest leaves first. */
 const MAX_TOASTS = 3;
-/** The space between toasts when the stack opens into a list. */
 const STACK_GAP_PX = 8;
 
 const TONE_ICON = {
@@ -44,7 +36,6 @@ const TONE_ICON = {
 
 type StackVars = CSSProperties & Record<`--${string}`, string | number>;
 
-/** Each toast's own height, measured so the collapsed stack fits the front one. */
 function useToastHeights() {
   const [heights, setHeights] = useState<Readonly<Record<number, number>>>({});
   const measure = useCallback(
@@ -66,7 +57,6 @@ function useToastHeights() {
   return { heights, measure };
 }
 
-/** Each open toast's offset in the opened list (newest first) and the list's height. */
 function stackLayout(
   shown: readonly ToastMessage[],
   heights: Readonly<Record<number, number>>,
@@ -80,16 +70,6 @@ function stackLayout(
   return { offsets, listHeight: Math.max(0, total - STACK_GAP_PX) };
 }
 
-/**
- * Toast — a brief message about something that just happened, top-right under
- * the masthead (clear of a composer docked at the foot): the pop face
- * (`raised`, 1px `rule` edge, radius 8, `shadow-pop`), 400px. The newest is
- * the front of a stack; up to two older ones peek behind it with their content
- * hidden, and the stack opens into a list on hover or focus (ui-motion.css).
- * The tone shows only in the 16px icon plus a screen-reader word; negative
- * toasts are announced assertively and stay until dismissed, as does a toast
- * with an action.
- */
 export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [messages, setMessages] = useState<ToastMessage[]>([]);
   const { heights, measure } = useToastHeights();
@@ -114,7 +94,6 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, []);
   const value = useMemo(() => ({ notify }), [notify]);
 
-  // Newest first: an open toast's place in the stack; a closing one takes its place among all.
   const newestFirst = [...messages].reverse();
   const shown = newestFirst.filter((message) => message.open);
   const { offsets, listHeight } = stackLayout(shown, heights);

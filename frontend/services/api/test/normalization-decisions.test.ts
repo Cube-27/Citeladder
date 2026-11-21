@@ -51,7 +51,6 @@ describe('recorded evidence normalization', () => {
     expect(normalizeDomain('https://[broken/')).toBe('');
     expect(domainMatches('https://docs.brand.test/a', 'brand.test')).toBe(true);
     expect(domainMatches('brand.test.evil.test', 'brand.test')).toBe(false);
-    // A trailing-dot host is the same host.
     expect(normalizeDomain('https://Brand.COM./pricing')).toBe('brand.com');
     expect(domainMatches('https://www.brand.com./pricing', 'brand.com')).toBe(true);
     const p = policy.opportunity.source_patterns;
@@ -67,14 +66,11 @@ describe('recorded evidence normalization', () => {
 
   it('keeps a site on a shared platform whole, and other sites at their registrable domain', () => {
     expect(siteDomain('https://www.shop.acme.co.uk/a')).toBe('acme.co.uk');
-    // The public suffix list's private section.
     expect(siteDomain('acme.myshopify.com')).toBe('acme.myshopify.com');
     expect(siteDomain('https://acme.github.io/docs')).toBe('acme.github.io');
-    // The configured shared-platform list.
     expect(siteDomain('blog.acme.wordpress.com')).toBe('acme.wordpress.com');
     expect(siteDomain('wordpress.com')).toBe('wordpress.com');
     expect(siteDomain('https://[broken/')).toBeNull();
-    // A store on the platform owns only itself.
     const owned = siteDomain('acme.myshopify.com');
     expect(domainMatches('https://acme.myshopify.com/products/a', owned)).toBe(true);
     expect(domainMatches('https://rival.myshopify.com/products/a', owned)).toBe(false);

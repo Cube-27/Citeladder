@@ -1,7 +1,3 @@
-# TypeScript API service (docs/plans/citeladder-typescript-migration.md PR 1).
-# Node 26 strips the service's erasable TypeScript at load time, so the image
-# ships source. Node 26 bookworm-slim: the tag keeps Dependabot's digest
-# updates on this image family; a bare digest let it pick the full `node` image.
 FROM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1 AS dependencies
 
 ENV PNPM_HOME=/pnpm
@@ -30,7 +26,6 @@ RUN pnpm --filter @citeladder/mcp-app build \
     && mkdir -p services/api/assets/mcp-app/v1 \
     && cp packages/mcp-app/dist/analytics.html services/api/assets/mcp-app/v1/analytics.html \
     && cp apps/app/src/globals.css services/api/assets/design-tokens.css
-# Export only this service's production graph, not the workspace-wide store.
 RUN pnpm --filter @citeladder/api deploy --prod --ignore-scripts /runtime
 # Node strips our workspace TypeScript only outside node_modules. Keep the
 # deployed contracts package linked to a source directory, as in development.
@@ -48,7 +43,6 @@ ENV NODE_ENV=production \
     PORT=8100
 WORKDIR /app
 
-# Dependencies and source stay root-owned and read-only to the runtime user.
 COPY --from=dependencies --chown=0:0 /runtime ./
 
 USER node

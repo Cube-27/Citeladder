@@ -1,11 +1,3 @@
-/**
- * Where the business stands on cited pages, and the Action to get listed.
- *
- * Shared by the Sources URL table (per row, and its `gap` filter) and one
- * URL's own page. Standing comes from the latest SUCCESSFUL reading only, so
- * a later failed attempt never erases what was learned, and a page nobody read
- * carries no verdict. Reads persisted rows only; nothing here fetches.
- */
 import type { pageStandingSchema } from '@citeladder/contracts/visibility-evidence';
 import { sql } from 'kysely';
 import type { z } from 'zod';
@@ -27,14 +19,9 @@ export type PageStanding = z.infer<typeof pageStandingSchema>;
 
 const s = policy.opportunity.source_pages;
 const classes = policy.opportunity.source_patterns;
-// Pages that belong to the business or a competitor can never list the business.
 const OWN_PAGE_CLASSES = policy.opportunity.earned_actions.EARNED_EXCLUDED_SOURCE_CLASSES;
 const INSPECTED = s.INSPECTION_INSPECTED;
 
-/**
- * One page's standing. A page that belongs to the business or to a
- * competitor can never list it, so it is named as such rather than judged.
- */
 export function pageStanding(
   page: { source_class: string | null; inspection_state: string },
   reading: Reading | undefined,
@@ -52,10 +39,6 @@ export function pageStanding(
   return isListingGap(page, presences) ? 'gap' : 'read';
 }
 
-/**
- * The project's pages for `hashes` (at least one), each with its standing, by url hash.
- * A hash with no page is absent: nobody looked, which is not nothing wrong.
- */
 export async function pageStandings(db: Database, scope: ProjectScope, hashes: readonly string[]) {
   const pages = await db
     .selectFrom('source_pages as page')
@@ -94,14 +77,6 @@ export async function pageStandings(db: Database, scope: ProjectScope, hashes: r
   return byHash;
 }
 
-/**
- * The url hashes of this project's `gap` pages, as an uncorrelated SQL
- * subquery: `isListingGap` over each page's latest successful reading under
- * the roster in force (`latestReadings` reads the same one), so the
- * filter pages through exactly the rows that show the gap standing (and that
- * the earned-page detector makes Actions of). Evaluated once per read, not
- * once per citation.
- */
 export function gapPageHashes(selection: RunSelection) {
   const scope = { workspaceId: selection.workspaceId, projectId: selection.projectId };
   return sql<string>`

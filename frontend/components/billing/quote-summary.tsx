@@ -11,11 +11,6 @@ const TREATMENT_LABEL: Record<BillingQuote['tax_treatment'], string> = {
   EXPORT_ZERO_RATED: 'Export of service, zero-rated',
 };
 
-/**
- * The server quote, line by line: base, any discount, each GST component the
- * quote actually carries, and the total. Every figure is the server's own;
- * nothing here adds, rounds or converts.
- */
 export function BillingQuoteSummary({
   quote,
   currencyMinorUnits = 2,

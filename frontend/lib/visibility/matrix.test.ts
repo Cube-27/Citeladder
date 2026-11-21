@@ -15,7 +15,6 @@ const measuredCell = (over: Partial<Extract<MatrixCell, { kind: 'measured' }>>):
 });
 
 const empty: MatrixCell[][] = [];
-// engine_brand[engine][brand]: two engines by two brands.
 const grids: VisibilityMatrix['grids'] = {
   engine_topic: empty,
   engine_market: empty,

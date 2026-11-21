@@ -1,13 +1,3 @@
-/**
- * The consumable hold module: the one owner of the append-only
- * `consumable_ledger`. A feature holds units for a subject before dispatch,
- * then settles the hold (debit what it spent, at most what it holds, and
- * release the rest), releases it outright, or refunds the subject's debits.
- * Every write takes the account's capacity lock, derives its idempotency keys
- * from the subject or the reservation, and refuses with a typed `LedgerError`.
- * Each feature keeps its own policy on top: how much to hold (Agent B60), what
- * a refusal means to its caller, and when to refund (Agent B58).
- */
 import { randomUUID } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
@@ -34,7 +24,6 @@ export type LedgerCode =
   | 'settle_units_invalid'
   | 'subject_not_found';
 
-/** A refusal from the hold module; `message` repeats the code for logs. */
 export class LedgerError extends Error {
   readonly code: LedgerCode;
   constructor(code: LedgerCode) {
@@ -48,19 +37,16 @@ export type Subject =
   | { kind: 'audit'; id: string; workspaceId: string; auditId: string }
   | AgentSubject
   | { kind: 'site_crawl' | 'platform_call'; id: string; workspaceId: string };
-/** One hold request; an Agent run holds once per model dispatch. */
 export type Hold =
   | { subject: Exclude<Subject, AgentSubject>; units: number }
   | { subject: AgentSubject; units: number; dispatchId: string };
 type Entry = Selectable<ConsumableLedger>;
 const logger = getLogger('api.entitlements');
 
-/** The account's capacity lock: every hold, settlement and capacity admission takes it. */
 export function capacityLock(db: Database, accountId: string) {
   return advisoryXactLock(db, policy.entitlements.capacity_lock, accountId);
 }
 
-/** The workspace's billing account, if it has one. */
 export async function billingAccountId(db: Database, workspaceId: string) {
   const row = await db
     .selectFrom('billing_accounts')
@@ -75,7 +61,6 @@ function auditFingerprint(value: Record<string, string | number>) {
   return digest(Object.fromEntries(Object.entries(value).sort(([a], [b]) => compareText(a, b))));
 }
 
-/** The hold's idempotency key, derived from its subject (formats are persisted). */
 function holdKey(hold: Hold) {
   if ('dispatchId' in hold) return `agent:${hold.dispatchId}:hold`;
   switch (hold.subject.kind) {
@@ -113,10 +98,6 @@ function verifySubject(db: Database, subject: Subject) {
     .executeTakeFirst();
 }
 
-/**
- * Draws `units` from grants in draw order against their remaining balances,
- * counting what it draws as reserved so the next draw sees it.
- */
 function allocate(
   grants: readonly { id: string; value: number }[],
   balances: Map<string, { reserved: number; consumed: number }>,
@@ -141,7 +122,6 @@ type KeyedHold = Hold & { key: string };
 // chunks run in sequence because they share the caller's transaction.
 const CHUNK = 500;
 
-/** Subjects missing under the lock: audit tasks in one query, the rest one by one. */
 async function missingSubject(db: Database, subjects: readonly Subject[]) {
   const tasks = subjects.filter((subject) => subject.kind === 'audit');
   if (tasks.length) {
@@ -183,12 +163,6 @@ export async function hold(
   return { accountId, reservationId };
 }
 
-/**
- * Holds every request against one workspace account under a single capacity
- * lock, state read and balance aggregate, allocating in order as if each were
- * held alone. Returns one reservation id per hold; any shortfall refuses them
- * all. A replay of a recorded hold returns its reservation.
- */
 export async function holdAll(
   db: Database,
   request: { workspaceId: string; capability: string; at: Date; holds: readonly Hold[] },
@@ -226,11 +200,6 @@ export async function holdAll(
   };
 }
 
-/**
- * Allocates and records the holds no prior entry covers, in order, so each
- * draws against what the earlier ones reserved. Any shortfall refuses them
- * all. Returns each hold's new reservation id by idempotency key.
- */
 async function reserveFresh(
   db: Database,
   {
@@ -278,7 +247,6 @@ async function reserveFresh(
   return ids;
 }
 
-/** What one grant has left after its reservations and debits: the one balance formula. */
 function grantRemaining(
   grant: { id: string; value: number },
   balances: ReadonlyMap<string, { reserved: number; consumed: number }>,
@@ -287,10 +255,6 @@ function grantRemaining(
   return Math.max(0, grant.value - balance.reserved - balance.consumed);
 }
 
-/**
- * Allowance, reserved, consumed and remaining units of each grant, read from
- * the ledger: the projection usage reads and admission share.
- */
 export async function grantBalances(
   db: Database,
   accountId: string,
@@ -336,7 +300,6 @@ export async function remaining(
   };
 }
 
-/** The request fingerprint an idempotent replay of this hold must repeat. */
 function holdFingerprint(accountId: string, capability: string, { subject, units }: KeyedHold) {
   return subject.kind === 'audit'
     ? auditFingerprint({
@@ -355,7 +318,6 @@ function holdFingerprint(accountId: string, capability: string, { subject, units
       });
 }
 
-/** Holds already recorded under their idempotency keys; a key reused for another request throws. */
 async function priorHolds(
   db: Database,
   accountId: string,
@@ -412,7 +374,6 @@ async function lockedDrawOrder(
   return drawOrder(candidates, state.end);
 }
 
-/** One grant's share of a reservation as a ledger row. */
 function reservationRow(
   { subject, key }: KeyedHold,
   allocation: { grantId: string; units: number },
@@ -447,7 +408,6 @@ function reservationRow(
   };
 }
 
-/** The typed subject reference columns; only the subject's own kind is set. */
 function subjectColumns(subject: Subject) {
   return {
     audit_id: subject.kind === 'audit' ? subject.auditId : null,
@@ -458,15 +418,8 @@ function subjectColumns(subject: Subject) {
   };
 }
 
-/** Units a reservation still holds: reserved minus released (debits release their units). */
 export const openReservedUnits = sql<number>`sum(case when entry_kind = 'reservation' then units when entry_kind = 'release' then -units else 0 end)`;
 
-/**
- * Whether an audit, crawl, Agent run or Keyword Research run of the project
- * still holds reserved units. Deleting the project then would leave a hold
- * nothing can release (a Keyword Research run's provider-call hold settles
- * only through its run), so the units would stay reserved for good.
- */
 export async function projectHoldsReservations(
   db: Database,
   workspaceId: string,
@@ -518,11 +471,6 @@ export async function projectHoldsReservations(
   return open !== undefined;
 }
 
-/**
- * Reserved and consumed units of these grants. The ledger is append-only and
- * keeps every expired grant's history, so a balance reads only the grants
- * the caller selected (`ix_consumable_ledger_grant_key_created`).
- */
 export async function ledgerBalances(db: Database, accountId: string, grantIds: readonly string[]) {
   const balances = new Map<string, { reserved: number; consumed: number }>();
   if (!grantIds.length) return balances;
@@ -547,7 +495,6 @@ export async function ledgerBalances(db: Database, accountId: string, grantIds: 
   return balances;
 }
 
-/** The subject's reservations of a capability, in a stable order. */
 export async function holdsOf(db: Database, subject: Subject, capability: string) {
   const rows = await db
     .selectFrom('consumable_ledger')
@@ -563,10 +510,6 @@ export async function holdsOf(db: Database, subject: Subject, capability: string
   return rows.map((row) => row.reservation_id);
 }
 
-/**
- * The reservation's rows under its account's capacity lock, and what each
- * grant's share still holds (reserved minus released).
- */
 async function openReservation(db: Database, workspaceId: string, reservationId: string) {
   const owner = await db
     .selectFrom('consumable_ledger')
@@ -600,7 +543,6 @@ async function openReservation(db: Database, workspaceId: string, reservationId:
   return { rows, holds, open };
 }
 
-/** A derived ledger row: the parent's identity with this entry's facts. */
 function entry(
   base: Entry,
   facts: {
@@ -626,7 +568,6 @@ function entry(
   };
 }
 
-/** Release rows freeing everything each grant's share still holds. */
 function releaseEntries(
   open: readonly { row: Entry; units: number }[],
   reservationId: string,
@@ -647,12 +588,6 @@ function releaseEntries(
     );
 }
 
-/**
- * Closes a hold: debits `min(spent, held)`, one debit per dispatch, and
- * releases the rest. Settling a closed hold writes nothing; a debit recorded
- * for this attempt or dispatch by an earlier writer must repeat its request.
- * Returns the units debited now.
- */
 export async function settle(
   db: Database,
   request: {
@@ -722,7 +657,6 @@ export async function settle(
   return units;
 }
 
-/** Releases everything the hold still holds; releasing a closed hold writes nothing. */
 export async function release(
   db: Database,
   request: { workspaceId: string; reservationId: string; at: Date },
@@ -733,10 +667,6 @@ export async function release(
   if (entries.length) await db.insertInto('consumable_ledger').values(entries).execute();
 }
 
-/**
- * Refunds everything the subject was debited and not yet refunded, one
- * append-only refund per debit; a repeat refunds nothing.
- */
 export async function refundSubject(db: Database, request: { subject: Subject; at: Date }) {
   const { subject, at } = request;
   const accountId = await billingAccountId(db, subject.workspaceId);

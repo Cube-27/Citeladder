@@ -7,9 +7,6 @@ import { Notice } from '@/components/ui/notice';
 
 type ConnectionState = ReturnType<typeof useProviderConnection>;
 
-/**
- * The bearer-key shape: one write-only field.
- */
 function ApiKeyField({ state }: Readonly<{ state: ConnectionState }>) {
   const { configured, apiKey, setApiKey } = state;
   return (
@@ -28,13 +25,6 @@ function ApiKeyField({ state }: Readonly<{ state: ConnectionState }>) {
   );
 }
 
-/**
- * The HTTP Basic shape: a login and a password, both required together.
- *
- * Rotation takes both halves. Replacing one half against a remembered other
- * half would leave the stored credential in a state nobody entered, so the
- * row asks for the pair every time it asks at all.
- */
 function BasicAuthFields({ state }: Readonly<{ state: ConnectionState }>) {
   const { configured, apiLogin, setApiLogin, apiPassword, setApiPassword } = state;
   return (
@@ -67,15 +57,6 @@ function BasicAuthFields({ state }: Readonly<{ state: ConnectionState }>) {
   );
 }
 
-/**
- * Shared BYOK credential fields + save/test feedback for one provider
- * credential — the presentation half of `useProviderConnection`.
- *
- * Two credential shapes are supported because two auth schemes are: a bearer
- * key, and an HTTP Basic login/password pair. Both stay write-only (never
- * pre-filled — the stored secret is never on the wire); this component is the
- * single home for that invariant's copy.
- */
 export function ProviderConnectionFields({
   state,
 }: Readonly<{

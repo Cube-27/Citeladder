@@ -17,7 +17,6 @@ const addressFields = [
   ['billing_postal_code', 'Postal code', 'postal-code'],
 ] as const satisfies ReadonlyArray<readonly [keyof BillingCustomerDetails, string, string]>;
 
-/** The buyer's billing details as setting rows, for the caller's checkout frame. */
 export function BillingDetailsForm({ country, details, setDetails }: BillingDetailsFormProps) {
   const update = (key: keyof BillingCustomerDetails, value: string | boolean) =>
     setDetails({ ...details, [key]: value });

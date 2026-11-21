@@ -16,17 +16,11 @@ import {
   type DataTableColumn,
 } from '@/components/ui/data-table-columns';
 
-/** A column as the fit sees it: its floor in px, and whether it may hide. */
 export type FitColumn = Readonly<{ floor: number; low: boolean }>;
 
-/** The narrowest the table may be, in px: every column's floor and the select column. */
 const tableFloor = (columns: readonly FitColumn[], select: number) =>
   columns.reduce((sum, column) => sum + column.floor, select);
 
-/**
- * The indices of the low-priority columns to hide so the table fits its
- * frame: the last low column first, until the floors fit or none is left.
- */
 export function hiddenLowColumns({
   columns,
   select,
@@ -42,14 +36,8 @@ export function hiddenLowColumns({
   return [...hidden].sort((a, b) => a - b);
 }
 
-/**
- * The keys of the columns a table shows, for a row whose cell spans columns:
- * a spanning row keeps every cell (its positions are not the columns'), so
- * its span counts only the shown columns. Undefined outside a DataTable.
- */
 export const ShownColumnsContext = createContext<ReadonlySet<string> | undefined>(undefined);
 
-/** How many of `keys` the table shows: a spanning cell's `colSpan`. */
 export function useShownSpan(keys: readonly string[]): number {
   const shown = useContext(ShownColumnsContext);
   return shown ? keys.filter((key) => shown.has(key)).length : keys.length;
@@ -58,11 +46,6 @@ export function useShownSpan(keys: readonly string[]): number {
 const sameList = (a: readonly number[], b: readonly number[]) =>
   a.length === b.length && a.every((value, index) => value === b[index]);
 
-/**
- * The table's column rules, and which low-priority columns the frame has no
- * room for. A hidden probe resolves every column's floor to px inside the
- * frame, and a resize observer re-fits as the frame changes, before paint.
- */
 export function useFittedColumns({
   columns,
   selection,
@@ -119,11 +102,6 @@ export function useFittedColumns({
   };
 }
 
-/**
- * One zero-height box per column at the width the fit expects it to take
- * (`fitFloor`), the select column first; a `desktopOnly` column measures zero
- * where the narrow layout drops it.
- */
 function FloorProbe({
   ref,
   columns,

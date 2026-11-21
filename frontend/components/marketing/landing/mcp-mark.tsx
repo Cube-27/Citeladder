@@ -1,6 +1,5 @@
 import type { SVGProps } from 'react';
 
-/** The Model Context Protocol mark, in `currentColor` so it reads on either theme's tile. */
 export function McpMark(props: Readonly<SVGProps<SVGSVGElement>>) {
   return (
     <svg

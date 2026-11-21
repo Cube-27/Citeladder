@@ -35,15 +35,6 @@ const CONTEXT_TAB_CODEC = stringUrlCodec<ContextTab>(
   'facts',
 );
 
-/**
- * What the agent knows about the business before it reads any evidence, one
- * tab per subject: the company facts, the themes Perception classifies
- * answers against, the business map (offerings and the facts that steer
- * prompt generation, the Prompt Builder's own editor, in the 1040 column),
- * the tracked competitors, the pilot's Brand facts, and the project's Agent
- * instructions. Each tab is a stack of settings groups; a form's Save sits in
- * its frame's foot.
- */
 export function ContextScreen() {
   const { workspaceId, project } = useProjectScope();
   return <ContextWorkspace workspaceId={workspaceId} project={project} />;
@@ -55,7 +46,6 @@ function ContextWorkspace({
 }: Readonly<{ workspaceId: string; project: Project }>) {
   const [requestedTab, setTab] = useUrlState('tab', CONTEXT_TAB_CODEC);
   const profile = useQuery(projectQueries.brandProfile({ workspaceId, projectId: project.id }));
-  // Brand facts always holds the aliases; its facts list waits on the pilot gate.
   const facts = useBrandFacts();
   const form = useBrandProfileForm({
     projectId: project.id,
@@ -63,7 +53,6 @@ function ContextWorkspace({
     profile: profile.data,
   });
   const instructions = useAgentInstructions(workspaceId, project.id);
-  // Held above the tabs, like the profile form, so a tab switch keeps unsaved edits.
   const business = useBusinessDraft({ workspaceId, projectId: project.id });
 
   return (
@@ -126,7 +115,6 @@ function ContextPanels({
   );
 }
 
-/** The profile's loading or read error, in the one query-state footprint. */
 function ProfileState({ profile }: Readonly<{ profile: ProfileRead }>) {
   if (profile.isPending)
     return (
@@ -146,10 +134,6 @@ function ProfileState({ profile }: Readonly<{ profile: ProfileRead }>) {
   );
 }
 
-/**
- * The brand's aliases, then the facts answers are checked against; the facts
- * show only inside the fact-checking pilot, or with the gate's read error.
- */
 function BrandFactsTab({
   facts,
   workspaceId,

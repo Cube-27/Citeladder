@@ -1,16 +1,8 @@
-/**
- * The page title and prose of every public operation. The OpenAPI document
- * carries them as `summary` and `description`, and the docs site renders the
- * same text, so an operation is described once. Examples are generated from the
- * schemas (`example.ts`); `REQUEST_EXAMPLES` replaces a generated request body
- * where the generated one would mislead.
- */
 import { OPERATION_TEXT } from './operation-docs-text.ts';
 
 export type OperationDoc = {
   summary: string;
   description: string;
-  /** A request body example that replaces the generated one. */
   request?: unknown;
 };
 
@@ -19,7 +11,6 @@ const IDEMPOTENCY_ADVICE =
   ' Send an Idempotency-Key header so a retry within 24 hours never runs it twice.';
 const SET_ID = '00000000-0000-4000-8000-000000000001';
 
-/** The key of an operation: its method and its path below the project, `GET /prompts`. */
 export function docKey(method: string, path: string): string {
   return `${method.toUpperCase()} ${relativePath(path)}`;
 }

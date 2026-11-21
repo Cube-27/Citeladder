@@ -46,7 +46,6 @@ export type Advanced = {
   saveDefaults: boolean;
 };
 
-/** The offered markets, plus the saved one when the server no longer offers it. */
 export function marketOptions(location: string, markets: SearchIntelligenceReadiness['markets']) {
   const options = searchMarketOptions(markets);
   return location && !options.some((item) => item.value === location)
@@ -54,10 +53,6 @@ export function marketOptions(location: string, markets: SearchIntelligenceReadi
     : options;
 }
 
-/**
- * The datasets on offer: your website and the first competitor open, the other
- * competitors one disclosure away so a first review stays short.
- */
 export function DatasetChoices({
   readiness,
   isSelected,

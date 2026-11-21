@@ -1,8 +1,3 @@
-/**
- * The Actions page's data (plan v3) against real PostgreSQL: issue-group
- * Actions for defects and advisories only, each filed under its goal and
- * grouping with its URLs in `action_urls`; the tree, grouping-page and URL reads, each workspace-authorized.
- */
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -57,7 +52,6 @@ const DIAGNOSTIC: Rule = {
   category: 'security',
 };
 
-// Read as site-level, but no site-level evidence contract knows it.
 const UNKNOWN_SITE_LEVEL: Rule = {
   rule_id: 'architecture.fixture_unknown',
   finding_class: 'defect',
@@ -66,7 +60,6 @@ const UNKNOWN_SITE_LEVEL: Rule = {
   category: 'architecture',
 };
 
-/** One crawled page failing each of `rules`, with its evaluations and current issues. */
 async function failingPage(trx: Database, seed: SiteSeed, path: string, rules: readonly Rule[]) {
   const fixtures = new SiteFixtures(trx);
   const at = new Date(Date.now() - 3_600_000);
@@ -128,7 +121,6 @@ async function failingPage(trx: Database, seed: SiteSeed, path: string, rules: r
   return { id: page.id, url: `https://example.test${path}` };
 }
 
-/** A crawl with a defect on 12 pages, an advisory on 3 of them, a diagnostic on 2, an unknown site-level rule on 1. */
 async function crawledProject() {
   return db.transaction().execute(async (trx) => {
     const seed = await new SiteFixtures(trx).crawl();
@@ -205,7 +197,6 @@ describe('issue-group Actions', () => {
       ids(own.pages.slice(0, 3)),
       ids(own.pages),
     ]);
-    // A rule's label is no topic: both groups fall under no topic.
     const path = `/api/v1/projects/${own.seed.projectId}/actions/tree?group_by=topic`;
     const byTopic = actionTreeSchema.parse(await (await request(own.seed, path)).json());
     expect(byTopic.groups.map((group) => [group.key, group.count])).toEqual([['', 2]]);
@@ -234,7 +225,6 @@ describe('issue-group Actions', () => {
         'Add schema.org structured data (JSON-LD preferred).',
         'advisory',
       ],
-      // An Agent Action without findings has no secondary line and no class.
       [agentPage.id, null, null],
     ]);
     expect(read.page_kind).toBe('product');
@@ -256,7 +246,6 @@ describe('issue-group Actions', () => {
       own.pages.map((page) => page.url),
     ]);
     expect(second.next_cursor).toBeNull();
-    // /p00 also carries the advisory and the Agent's page Action; /p01-/p02 the advisory.
     expect(first.items.map((url) => [url.page_kind, url.open_action_count])).toEqual([
       ['product', 3],
       ['product', 2],
@@ -274,7 +263,6 @@ describe('issue-group Actions', () => {
     await db
       .transaction()
       .execute(async (trx) => {
-        // Was /p00-/p02; /p02 leaves, /p03 joins, and another workspace's page is refused.
         const pages = [p0!, p1!, p3!, foreign.pages[0]!.id].map((site_url_id) => ({ site_url_id }));
         await writeActionUrls(trx, scopeOf(own.seed), [
           {
@@ -329,7 +317,6 @@ describe('Agent hand-off scopes', () => {
       defect!.id,
     );
     expect(ticked.action?.selected_urls).toEqual([own.pages[0]!.url, own.pages[1]!.url]);
-    // Page 4 is not one of the advisory group's three URLs.
     await expect(
       manifest(own.seed, { action_url_ids: [own.pages[4]!.id] }, advisory!.id),
     ).rejects.toMatchObject({ code: 'agent_context_unavailable' });
@@ -351,7 +338,6 @@ describe('Agent hand-off scopes', () => {
 });
 
 describe('the Actions tree', () => {
-  /** 23 prompt Actions scored 100 down to 78, two SEO ones, one declined, one not yet synced. */
   async function treeProject() {
     const seed = await new SiteFixtures(db).crawl();
     seeds.push(seed);
@@ -462,7 +448,6 @@ describe('the Actions tree', () => {
       prompts.slice(10, 20).map((p) => p.target_label),
     );
 
-    // A status filter narrows the groups; the goal strip still counts open work.
     const declined = actionTreeSchema.parse(
       await (await request(seed, `${base}/tree?status=dismissed`)).json(),
     );
@@ -478,7 +463,6 @@ describe('the Actions tree', () => {
       ['high', 24],
       ['low', 2],
     ]);
-    // Undiagnosed Actions group under the empty approach, and page under it too.
     const byApproach = actionTreeSchema.parse(
       await (await request(seed, `${base}/tree?group_by=what_to_do`)).json(),
     );
@@ -495,7 +479,6 @@ describe('the Actions tree', () => {
     expect(morePage.items.map((item) => item.target_label)).toEqual(
       prompts.slice(10, 20).map((p) => p.target_label),
     );
-    // As the page sends it: one status's tree, then that grouping's next rows.
     const newOnly = actionTreeSchema.parse(
       await (await request(seed, `${base}/tree?status=open&group_by=what_to_do`)).json(),
     );
@@ -508,7 +491,6 @@ describe('the Actions tree', () => {
       actionsPageSchema.parse(await newPage.json()).items.map((item) => item.target_label),
     ).toEqual(prompts.slice(10, 20).map((p) => p.target_label));
 
-    // A list filter narrows the strip and the tree alike: no Action has this topic.
     const products = actionTreeSchema.parse(
       await (await request(seed, `${base}/tree?topic=products`)).json(),
     );

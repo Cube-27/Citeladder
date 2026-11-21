@@ -31,13 +31,8 @@ import { typeLabel } from '@/lib/visibility/sources';
 
 type Group = ProbeObjectionsValue['groups'][number];
 
-/** The packaged Agent skill an objection's chat pins (AV-37). */
 const OBJECTION_SKILL = 'objection_sources';
 
-/**
- * The Objections tab (AV-36): why AI says a buyer might not choose the brand,
- * grouped across probes, with each group's position score and its sources.
- */
 export function PerceptionObjections({
   scope,
   data,
@@ -162,7 +157,6 @@ function ObjectionTable({
   );
 }
 
-/** A group's cited pages; a group this probe did not raise has none to count. */
 function Sources({ sources }: Readonly<{ sources: Group['sources'] }>) {
   if (sources === null) return <Absence state="not_applicable" label="Not raised" />;
   return sources || <Absence state="none" label="No sources" />;

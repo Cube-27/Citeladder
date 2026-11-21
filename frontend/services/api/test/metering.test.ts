@@ -23,7 +23,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** A platform gateway on the priced model whose provider answers with `usage`. */
 function gateway(reply: () => Response | Promise<Response>) {
   const fetch = vi.fn<typeof globalThis.fetch>(async () => reply());
   return {
@@ -34,7 +33,6 @@ function gateway(reply: () => Response | Promise<Response>) {
         apiKey: 'fixture-key',
         baseUrl: 'https://model.test/v1',
         model: 'claude-haiku-5-5',
-        // Above every feature's own output cap, which sizes each call and its hold.
         maxOutputTokens: 100_000,
         attempts: 1,
       },
@@ -75,7 +73,6 @@ const calls = (workspaceId: string) =>
 describe('platform AI metering', () => {
   it('prices tokens at the serving model with the markup, in whole credits rounded up', () => {
     const haiku = modelPrice('claude-haiku-5-5', '')!;
-    // 10k input and 2k output tokens cost $0.002; marked up and rounded: 3 credits.
     expect(chargeCredits(haiku, { input_tokens: 10_000, output_tokens: 2_000 })).toBe(3);
     expect(chargeCredits(haiku, { input_tokens: 10, output_tokens: null })).toBeNull();
     expect(
@@ -85,8 +82,6 @@ describe('platform AI metering', () => {
         output_tokens: 1,
       }),
     ).toBeNull();
-    // B53: cache reads at the cached rate, cache writes at the write rate, thinking inside output.
-    // $0.01 uncached + $0.008 read + $0.0125 written + $0.05 output = $0.0805; ×1.3 → 105 credits.
     expect(
       chargeCredits(haiku, {
         input_tokens: 1_000_000,
@@ -103,7 +98,6 @@ describe('platform AI metering', () => {
         output_tokens: 1,
       }),
     ).toBeNull();
-    // One-hour writes cost twice the base rate: $0.01 + $0.008 + $0.02 + $0.05 = $0.088 → 115.
     expect(
       chargeCredits(haiku, {
         input_tokens: 1_000_000,
@@ -121,11 +115,8 @@ describe('platform AI metering', () => {
         output_tokens: 1,
       }),
     ).toBeNull();
-    // A cached call's hold prices every input byte at the dearest (one-hour) write rate:
-    // 1M bytes → $0.20 → 260.
     expect(cachedReservationCredits(haiku, 1_000_000, 0)).toBe(260);
     expect(reservationCredits(haiku, 1_000_000, 0)).toBe(130);
-    // An unpriced model has no price, except the configured gateway model at the default rate.
     expect(modelPrice('unpriced-model', 'gateway-model')).toBeNull();
     expect(modelPrice('gateway-model', 'gateway-model')).toEqual(haiku);
   });
@@ -151,7 +142,6 @@ describe('platform AI metering', () => {
     });
     const metered = meterFor(db, t.workspaceId).gateway(raw, 'prompt_generation');
     await metered.structured('s', 'u', z.object({ ok: z.boolean() }));
-    // The hold was committed before the provider was reached.
     expect(heldDuringCall).toBeGreaterThan(0);
     expect(await spent(t.workspaceId)).toEqual({ held: 0, debited: 3 });
     expect(await calls(t.workspaceId)).toEqual([
@@ -196,7 +186,6 @@ describe('platform AI metering', () => {
     ).rejects.toThrow();
     expect(await spent(t.workspaceId)).toEqual({ held: 0, debited: 3 });
     expect((await calls(t.workspaceId)).map((call) => [call.status, call.credits])).toEqual([
-      // The provider answered and was paid; the caller could not parse the answer.
       ['settled', 3],
       ['failed', 0],
     ]);
@@ -263,8 +252,6 @@ describe('platform AI metering', () => {
     await meter
       .gateway(raw, 'answer_perception')
       .structured('s', 'u', z.object({ ok: z.boolean() }));
-    // One internal-cost view across sources: $0.008 a Tavily search, $0.004 a
-    // Keenable request, nothing for a failed one, and 50 + 5 Haiku tokens round up to 8.
     expect(
       await db
         .selectFrom('internal_costs')
@@ -348,7 +335,6 @@ describe('platform AI metering', () => {
   });
 
   it('fails an uncharged call whose cost row cannot be written', async () => {
-    // No such workspace: the row's foreign key refuses it, and the call does not pass silently.
     const unknownWorkspace = '00000000-0000-4000-8000-000000000000';
     await expect(
       meterFor(db, unknownWorkspace).call(
@@ -371,7 +357,6 @@ describe('platform AI metering', () => {
     await meter.call('commerce_competitor_discovery', tavily, search);
     const rates = policy.costs.platform;
     const configured = rates.daily_uncharged_ceiling_microusd;
-    // Today's uncharged spend now includes this test's $0.008 search, so this ceiling is reached.
     rates.daily_uncharged_ceiling_microusd = 8000;
     try {
       await expect(meter.call('research_evidence', tavily, search)).rejects.toMatchObject({
@@ -384,7 +369,6 @@ describe('platform AI metering', () => {
       await expect(
         meter.gateway(perception, 'answer_perception').complete('s', 'u'),
       ).rejects.toMatchObject({ code: 'platform_spend_paused' });
-      // A credit-funded call is paid by its hold and still runs.
       const { gateway: paid } = gateway(
         answer('{"ok":true}', {
           prompt_tokens: 10_000,
@@ -427,7 +411,6 @@ describe('platform AI metering', () => {
     } finally {
       spy.mockRestore();
     }
-    // Settled now, so the abandoned-call sweep never charges it the fallback.
     expect(await spent(t.workspaceId)).toEqual({ held: 0, debited: 0 });
     expect((await calls(t.workspaceId)).map((call) => [call.status, call.credits])).toEqual([
       ['failed', 0],
@@ -502,8 +485,6 @@ describe('platform AI metering', () => {
     const sentCaps = fetch.mock.calls.map(
       ([, init]) => JSON.parse(String(init?.body)).max_completion_tokens,
     );
-    // 16,000 and 8,000 output tokens at $0.50 per million, marked up 30%: 11 and 6
-    // credits, where the gateway's 100,000-token maximum would hold 65.
     expect({ held, sentCaps }).toEqual({
       held: [11, 6],
       sentCaps: [16_000, 8_000],
@@ -515,7 +496,6 @@ describe('platform AI metering', () => {
     await credited(t, 100);
     const { gateway: raw } = gateway(answer('{}', {}));
     const crashed = meterFor(db, t.workspaceId)
-      // Prompt generation's 16,000-token output cap holds 11 credits, above the fallback.
       .gateway({ ...raw, complete: () => new Promise(() => {}) }, 'prompt_generation')
       .complete('s', 'u');
     void crashed;

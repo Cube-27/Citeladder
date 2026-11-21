@@ -1,10 +1,3 @@
-/**
- * The Objections tab (W13, AV-35/36): each objection group's position score
- * in the newest labelled probe, the engines raising it, its scores over the
- * recent probes, and the pages the answers raising it cited. An answer that
- * did not search cites nothing, so a raised group can truly have no sources;
- * a group this probe did not raise has none to count.
- */
 import { citationClassificationSchema } from '@citeladder/contracts/audits';
 import type { ProbeObjections, ProbeObjectionsValue } from '@citeladder/contracts/probes';
 
@@ -21,7 +14,6 @@ import { distinctPlaces, positionScores, scoreOf } from './scores.ts';
 const probes = policy.probes;
 type Page = ProbeObjectionsValue['groups'][number]['pages'][number];
 
-/** Each group's score over a probe's objection answers, and how many answers there were. */
 function groupScores(answers: readonly ProbeAnswer[]) {
   const asked = answers.filter((answer) => answer.question.question === 'objection');
   return {
@@ -38,7 +30,6 @@ function groupScores(answers: readonly ProbeAnswer[]) {
   };
 }
 
-/** The pages each group's answers cited, most cited first. */
 async function groupPages(db: Database, scope: Scope, asked: readonly ProbeAnswer[]) {
   const taskIds = asked.map((answer) => answer.taskId);
   const rows = taskIds.length
@@ -93,7 +84,6 @@ export async function probeObjections(db: Database, scope: Scope): Promise<Probe
   ]);
   const [latestAnswers = []] = history;
   const current = groupScores(latestAnswers);
-  // Oldest first, the newest probe last.
   const scored = history.map(groupScores).reverse();
   const pagesOf = await groupPages(db, scope, current.asked);
   const rows = groups.map((group) => {
@@ -113,7 +103,6 @@ export async function probeObjections(db: Database, scope: Scope): Promise<Probe
       ...(raising.size ? pagesOf(group.id) : { sources: null, pages: [] }),
     };
   });
-  // A late, rare objection can average to 0 and still be raised by an engine.
   const raised = rows.filter((row) => row.engines.length > 0);
   const answering = new Set(current.asked.map((answer) => answer.engine));
   return {
@@ -129,7 +118,6 @@ export async function probeObjections(db: Database, scope: Scope): Promise<Probe
   };
 }
 
-/** One objection as the Objections tab shows it, for an Agent chat (AV-37); null when not this project's. */
 export async function probeObjection(db: Database, scope: Scope, groupId: string) {
   const objections = await probeObjections(db, scope);
   if (objections.state !== 'value') return null;

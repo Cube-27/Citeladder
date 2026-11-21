@@ -62,10 +62,6 @@ function mutationFailure(
     : undefined;
 }
 
-/**
- * A prompt's Enable/Disable. The new state shows at once, so a second press on a
- * row whose save is still in flight is ignored; rows save independently.
- */
 function usePromptToggle(scope: ProjectScope) {
   const mutation = useMutation(promptsMutations.setEnabled(scope));
   const [saving, setSaving] = useState<ReadonlySet<string>>(new Set());
@@ -83,12 +79,10 @@ function usePromptToggle(scope: ProjectScope) {
   return { press, mutation };
 }
 
-/** Each topic's name by id; none until the topic list is read. */
 function topicNamesOf(topics: readonly Topic[] | undefined) {
   return topics && new Map(topics.map((topic) => [topic.id, topic.name]));
 }
 
-/** The topics read to report, unless a failed library read already says the page failed. */
 function topicsLoadError<Read extends RetryableRead & { isError: boolean }>(
   read: Read,
   pageFailed: boolean,
@@ -96,12 +90,10 @@ function topicsLoadError<Read extends RetryableRead & { isError: boolean }>(
   return read.isError && !pageFailed ? read : null;
 }
 
-/** Clear filters, offered only while the tab holds prompts the filters hide. */
 function clearWhenNarrowed(tabRows: number, clear: () => void) {
   return tabRows ? clear : undefined;
 }
 
-/** A failed Enable/Disable; the row's status has already rolled back. */
 function ToggleFailure({ toggle }: Readonly<{ toggle: { isError: boolean; error: unknown } }>) {
   if (!toggle.isError) return null;
   return (
@@ -112,7 +104,6 @@ function ToggleFailure({ toggle }: Readonly<{ toggle: { isError: boolean; error:
   );
 }
 
-/** A failed figures read with nothing loaded: the table shows no measured columns, so say why. */
 function FiguresFailure({ measurements }: Readonly<{ measurements: PromptMeasurements }>) {
   if (measurements.kind !== 'failed') return null;
   return (
@@ -130,11 +121,6 @@ const ROW_CHANGE_FAILED = {
   archived: 'archive this prompt',
 } as const satisfies Record<PromptStatus, string>;
 
-/**
- * Whether the library still shows its first-load frame. Prompts often arrive
- * with the project, before the latest run's figures; a run adds four columns,
- * and adding them beside rows already on screen moved every cell sideways.
- */
 function awaitingFirstLoad(
   state: Readonly<{
     promptsLoading: boolean;
@@ -151,10 +137,8 @@ const STATUS_LABELS = { active: 'Active', archived: 'Archived' } satisfies Recor
   PromptStatus,
   string
 >;
-/** The prompt table's page (`PromptTable`). */
 const PAGE_KEYS = ['page'];
 
-/** The library's body: the failed first read, the empty library, or the table. */
 function libraryBodyFor({
   failedEmpty,
   hasPrompts,
@@ -182,10 +166,6 @@ function libraryBodyFor({
   return hasPrompts ? table : <PromptEmptyState add={add} />;
 }
 
-/**
- * The Brands and Sources choices once a run exists. An active choice stays
- * offered after a refresh that drops it, so it can still be cleared.
- */
 function measuredChoicesFor({
   measurements,
   project,
@@ -202,7 +182,6 @@ function measuredChoicesFor({
   };
 }
 
-/** A library that never held a prompt has nothing to sort, search or filter. */
 function libraryFilterBar(hasPrompts: boolean, controls: FilterBarProps): ReactNode {
   return hasPrompts ? <FilterBar {...controls} /> : undefined;
 }
@@ -214,20 +193,10 @@ function libraryTabs(
   return hasPrompts ? <PromptStatusTabs counts={counts} /> : undefined;
 }
 
-/**
- * Prompt library client (F7). Owns the active prompt set (via F5 project
- * context), the topic/status/search filter state, and every CRUD, import,
- * lifecycle, and AI-generation mutation. Layout: one control row (Active /
- * Archived, search, Topic, filters) over the prompt table at the page's full
- * width; topics are added, renamed and deleted from the Topic menu's dialogs
- * (owner, 2026-11-06). "Prompt Builder" opens its own page, which steers
- * generation and reviews its suggestions.
- */
 // react-doctor-disable-next-line react-doctor/no-giant-component -- this component only orchestrates queries/mutations; toolbar, topic rail, table, empty state, and dialogs are extracted.
 export function PromptLibrary() {
   const { workspaceId, projectId, project } = useProjectScope();
   const scope = { workspaceId, projectId };
-  // A role that may not edit prompts reads the library with no edit controls.
   const canWrite = useWorkspaceCapability('write');
   const {
     promptSet,
@@ -245,7 +214,6 @@ export function PromptLibrary() {
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<PromptFilters>(emptyFilters);
-  // Another status tab lists other prompts: it opens on their first page.
   const [statusFilter, setStatusFilter] = useUrlState('status', promptStatusCodec, {
     clearKeys: PAGE_KEYS,
   });
@@ -269,7 +237,6 @@ export function PromptLibrary() {
       tone: 'negative',
     });
 
-  // Every descriptor refreshes the library's reads; these add the screen's own reaction.
   const closeForm = () => {
     setFormOpen(false);
     setEditing(undefined);
@@ -288,7 +255,6 @@ export function PromptLibrary() {
     },
   });
 
-  // A fresh Add topic starts without the last attempt's error.
   const openAddTopic = () => {
     topicMutations.create.reset();
     setTopicDialog('add');
@@ -296,7 +262,6 @@ export function PromptLibrary() {
 
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
-  // Status -> topic -> search/filters, preserving order.
   const byStatus = useMemo(
     () => prompts.filter((prompt) => prompt.status === statusFilter),
     [prompts, statusFilter],
@@ -312,8 +277,6 @@ export function PromptLibrary() {
     () => filterPrompts({ prompts: byTopic, search, filters, mentions: measured }),
     [byTopic, search, filters, measured],
   );
-  // A filter change shows other rows: a new selection, on the first page. The
-  // status tab clears the page in the address itself, so Back keeps its page.
   const filterKey = JSON.stringify([selectedTopicId, search, filters]);
   const selection = useRowSelection(visible, `${statusFilter}:${filterKey}`);
   const bulk = usePromptBulk(scope, { topics, onDone: selection.clear });
@@ -368,7 +331,6 @@ export function PromptLibrary() {
     onAdd: openAdd,
     onGenerate: () => void navigate(projectHref(PROMPT_BUILDER_HREF)),
   };
-  // Every edit control of the library, for a role that may edit prompts.
   const edits = canWrite
     ? {
         rows: {
@@ -385,10 +347,6 @@ export function PromptLibrary() {
       }
     : undefined;
 
-  // An empty library and a library filtered to nothing read differently: one
-  // needs a way to add prompts, the other needs its filter loosened.
-  // A failed read with nothing to show takes the empty state's slot; a failed
-  // refresh keeps the prompts already shown and says so above them.
   const failedEmpty = Boolean(error) && !hasPrompts;
   const libraryBody = libraryBodyFor({
     failedEmpty,
@@ -415,7 +373,6 @@ export function PromptLibrary() {
             setSelectedTopicId(null);
           })}
         />
-        {/* The zero-height dock goes after the table: before it, it doubled the section gap. */}
         <PromptBulkBar
           selected={selection.selected}
           topics={topics}
@@ -429,8 +386,6 @@ export function PromptLibrary() {
     ),
   });
 
-  // Status, search and filters share one control band once loaded; the first
-  // load holds it so the table starts where the box stood.
   const figuresRead = measurements.kind !== 'loading';
   if (
     awaitingFirstLoad({

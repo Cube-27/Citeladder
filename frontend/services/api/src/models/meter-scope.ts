@@ -1,9 +1,3 @@
-/**
- * The metering scope every platform provider call runs inside (B18). The
- * metering owner opens it after committing any credit hold; the gateway, the
- * JEV judge and the research and discovery clients refuse a call without it,
- * so a new feature cannot reach a paid provider unmetered.
- */
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 export type MeterScope = { workspaceId: string; feature: string };
@@ -15,14 +9,12 @@ export class UnmeteredCallError extends Error {
   }
 }
 
-/** Throws unless the caller runs inside a metering scope. */
 export function assertMetered(provider: string): MeterScope {
   const current = scope.getStore();
   if (!current) throw new UnmeteredCallError(provider);
   return current;
 }
 
-/** Runs `call` inside `meter`; only metering owners call this. */
 export function runMetered<T>(meter: MeterScope, call: () => Promise<T>): Promise<T> {
   return scope.run(meter, call);
 }

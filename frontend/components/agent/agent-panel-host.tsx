@@ -8,8 +8,6 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useAgentPanel } from '@/lib/agent/panel-context';
 import { useProjectContext } from '@/lib/project/project-context';
 
-// The panel renders chats (markdown, composer, skills); it stays out of the
-// chunk the shell needs before it can paint and loads on first open.
 const AgentPanel = lazy(() =>
   import('./agent-panel').then(({ AgentPanel }) => ({ default: AgentPanel })),
 );
@@ -20,12 +18,6 @@ function usePanelAvailable(): boolean {
   return Boolean(activeProjectId && activeWorkspaceId) && !isAgentPath(pathname);
 }
 
-/**
- * "Ask agent", last in the masthead of every page but the Agent's own: it
- * opens the agent panel over the screen. A page rendered outside the shell (a
- * preview, a test) has no panel and so no trigger, and never reads the
- * project context it lacks. It keeps its word at every width (below 900px, in More).
- */
 export function AgentPanelTrigger() {
   const panel = useAgentPanel();
   if (!panel) return null;
@@ -47,11 +39,9 @@ function PanelTrigger({ open }: Readonly<{ open: () => void }>) {
   );
 }
 
-/** Mounts the panel once it is first opened, then keeps it for its transitions. */
 export function AgentPanelHost() {
   const open = useAgentPanel()?.open ?? false;
   const [opened, setOpened] = useState(open);
-  // Adjusted during render, so the first open mounts the panel in one pass.
   if (open && !opened) setOpened(true);
   if (!opened) return null;
   return (

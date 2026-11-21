@@ -34,10 +34,6 @@ import { Notice } from '@/components/ui/notice';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 
-/**
- * The OAuth callback's result on this screen, read once and then removed from
- * the address bar so a refresh never shows it again.
- */
 function useOAuthReturn() {
   const [params, setParams] = useSearchParams();
   const [result] = useState(() => ({
@@ -62,7 +58,6 @@ function useOAuthReturn() {
   return { connected, error: result.error };
 }
 
-/** A Connect row starts from the provider that opened it, so it is never empty. */
 type FamilyProviders = [IntegrationProvider, ...IntegrationProvider[]];
 
 type Row =
@@ -73,7 +68,6 @@ type Row =
       step: Exclude<SourceStep, { kind: 'connect' }>;
     };
 
-/** One Connect row per grant family: a single Google consent covers Search Console and GA4. */
 function setupRows(
   providers: readonly IntegrationProvider[],
   steps: ReadonlyMap<IntegrationProvider, SourceStep>,
@@ -129,10 +123,6 @@ function RowFrame({
   );
 }
 
-/**
- * The caller's "Connect …" title only while a required source is unconnected;
- * a connected one names its own next step instead.
- */
 function setupTitle(
   required: readonly IntegrationProvider[],
   steps: ReadonlyMap<IntegrationProvider, SourceStep>,
@@ -150,7 +140,6 @@ function setupTitle(
   return 'Data sources';
 }
 
-/** Google's Connect is the named action (3.1); Bing's has its own name. */
 function ConnectButton({
   family,
   onConnect,
@@ -164,7 +153,6 @@ function ConnectButton({
   );
 }
 
-/** Not yet connected: one consent for the family's sources. */
 function ConnectRow({
   family,
   providers,
@@ -234,7 +222,6 @@ function SourceRow({
         title={source.label}
         status={
           <Inline as="span" gap="meta" className="min-w-0">
-            {/* A GA4 property is a number; a Search Console property is a site. */}
             {step.connection.provider === 'ga4' ? (
               <InlineFigure>{step.mapping.property_ref}</InlineFigure>
             ) : (
@@ -266,7 +253,6 @@ function SourceRow({
   );
 }
 
-/** Connected, no property yet: the choice's buttons at the row's end, its list under it. */
 function ChooseRow({
   status,
   ...choice
@@ -280,10 +266,6 @@ function ChooseRow({
   );
 }
 
-/**
- * The families still to connect when every source answered as unconnected and
- * the callback has nothing to report; otherwise null.
- */
 function unconnectedFamilies({
   sources,
   oauth,
@@ -302,7 +284,6 @@ function unconnectedFamilies({
   return families;
 }
 
-/** Nothing connected yet: the page's empty state, with each family's Connect. */
 function UnconnectedState({
   heading,
   icon,
@@ -334,19 +315,6 @@ function UnconnectedState({
   return <StateBlock kind="empty" icon={icon} heading={heading} action={action} />;
 }
 
-/**
- * Connect a data source without leaving the screen that needs it.
- *
- * Each source shows only its next step: Connect (one Google consent covers
- * Search Console and Analytics), Reconnect, or choose the property — with the
- * property that belongs to this project offered as a single click. Consent
- * returns here rather than to Settings, and choosing a property starts the
- * history import at once.
- *
- * Renders nothing once every `required` source imports into the project, so a
- * screen can keep it mounted; `optional` sources are offered alongside while
- * setup is still incomplete.
- */
 export function DataSourceSetup({
   required,
   optional = [],
@@ -357,12 +325,7 @@ export function DataSourceSetup({
   required: readonly IntegrationProvider[];
   optional?: readonly IntegrationProvider[];
   title: string;
-  /** Shown in place of the setup card once every required source is ready. */
   whenReady?: ReactNode;
-  /**
-   * The page's own empty state while no source is connected at all: the first
-   * family's Connect leads, a second family's is the quiet supporting action.
-   */
   unconnected?: Readonly<{ heading: string; icon?: IconGlyph }>;
 }>) {
   const { activeProject, activeWorkspaceId } = useProjectContext();
@@ -373,12 +336,10 @@ export function DataSourceSetup({
   const sources = useDataSources(activeWorkspaceId, activeProject?.id ?? null, providers);
   const oauth = useOAuthReturn();
 
-  // Until the reads answer, no source is known to be missing: claim nothing.
   if (!activeProject || !activeWorkspaceId || sources.loading) return null;
   const allReady = required.every((provider) => sources.steps.get(provider)?.kind === 'ready');
   if (!sources.error && allReady && !oauth.error) return whenReady;
 
-  // The callback params were already stripped from the address on return.
   const startConnect = (family: GrantFamily) =>
     hardNavigate(
       integrationsApi.oauthStartUrl(
@@ -413,7 +374,6 @@ export function DataSourceSetup({
   );
 }
 
-/** The setup card: what the callback reported, then each source's next step. */
 function SetupCard({
   required,
   title,
@@ -434,7 +394,6 @@ function SetupCard({
   startConnect: (family: GrantFamily) => void;
 }>) {
   return (
-    // At the prose width, so a row's Connect button sits close to its text.
     <Section
       data-testid="data-source-setup"
       className="mx-auto w-full max-w-[var(--container-prose)]"
@@ -458,7 +417,6 @@ function SetupCard({
             onRetry={sources.retry}
           />
         ) : (
-          // A failed read knows no source's step, so no row is guessed from it.
           <ul className={ledgerClasses()}>
             {rows.map((row) =>
               row.kind === 'connect' ? (

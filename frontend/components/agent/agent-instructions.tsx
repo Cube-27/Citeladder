@@ -12,18 +12,11 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 
-/**
- * The project's Agent instructions and their draft. The draft follows the
- * persisted text until it is edited; a local edit survives background
- * refreshes and a save that lands after later typing. The page holds this
- * state, so a draft survives switching tabs.
- */
 export function useAgentInstructions(workspaceId: string, projectId: string) {
   const scope = { workspaceId, projectId };
   const query = useQuery(agentQueries.instructions(scope));
   const mayEdit = useWorkspaceCapability('run');
   const text = query.data?.text ?? '';
-  // Null follows persisted data; a local edit survives background refreshes.
   const [edit, setEdit] = useState<{ text: string | null; baseline: string; version: number }>({
     text: null,
     baseline: text,
@@ -31,10 +24,6 @@ export function useAgentInstructions(workspaceId: string, projectId: string) {
   });
   const draft = edit.text ?? text;
   const save = useMutation(agentMutations.saveInstructions(scope));
-  /**
-   * Send `submitted`. The draft clears only when nothing was typed after it
-   * (the edit version and text still match); later typing stays the draft.
-   */
   const submit = (submitted: string) => {
     const submittedVersion = edit.version;
     save.mutate(submitted, {
@@ -71,7 +60,6 @@ export function useAgentInstructions(workspaceId: string, projectId: string) {
 
 type AgentInstructions = ReturnType<typeof useAgentInstructions>;
 
-/** The Agent instructions tab: audience, voice and standing requirements, read-only without `run`. */
 export function AgentInstructionsCard({
   instructions,
 }: Readonly<{ instructions: AgentInstructions }>) {
@@ -122,7 +110,6 @@ export function AgentInstructionsCard({
             ) : null
           }
         >
-          {/* Never saved: an editor sees the empty field's example; a reader, None. */}
           {!query.data.created_at && !mayEdit ? (
             <Absence state="none" />
           ) : (

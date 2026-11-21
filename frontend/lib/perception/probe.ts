@@ -2,7 +2,6 @@ import type { ProbeMarketValue, ProbeObjectionsValue } from '@citeladder/contrac
 
 type ThemeRow = ProbeMarketValue['themes'][number];
 
-/** The Market tab's headline and KPI picks, from a labelled probe. */
 export function marketSummary(data: ProbeMarketValue) {
   const top = data.known_for.find((item) => item.theme_id !== null && item.score > 0);
   // Ties put the brand first, so a led theme is one the brand tops having been named.
@@ -32,7 +31,6 @@ function headline(brand: string, top: string | undefined, best: ThemeRow | undef
   return `AI describes ${brand} as ${top}, and it competes best on ${best.theme}`;
 }
 
-/** The Objections tab's headline and KPI picks: groups the probe raised. */
 export function objectionsSummary(data: ProbeObjectionsValue) {
   // A late, rare objection can average to 0 and still be raised by an engine.
   const raised = data.groups.filter((group) => group.engines.length > 0);

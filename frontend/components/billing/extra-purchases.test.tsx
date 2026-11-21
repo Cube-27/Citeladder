@@ -75,7 +75,6 @@ describe('ExtraPurchases', () => {
       />,
     );
     const active = screen.getByRole('region', { name: 'Active purchases' });
-    // In force when the entitlement resolved: the lapsed top-up drops, a revocation still ahead keeps its add-on.
     expect(within(active).getByText('+2 projects')).toBeVisible();
     expect(within(active).getByText('+7 projects')).toBeVisible();
     expect(within(active).queryByText('+5 projects')).toBeNull();
@@ -124,12 +123,10 @@ describe('ExtraPurchases', () => {
       />,
     );
     const seats = screen.getByRole('button', { name: 'Buy Seats' });
-    // Focusable, so a keyboard reaches its reason, but it buys nothing.
     seats.focus();
     expect(seats).toHaveFocus();
     expect(seats).toHaveAttribute('aria-disabled', 'true');
     expect(seats).toHaveAccessibleDescription(CLOSED);
-    // Each gated Buy's reason is a visible caption in its own row.
     expect(screen.queryAllByText(CLOSED, { selector: 'p' })).toHaveLength(captions);
     expect(seats.closest('[data-setting-row]')).toHaveTextContent(CLOSED);
     const markets = screen.getByRole('button', { name: 'Buy Markets' });

@@ -44,7 +44,6 @@ async function request(tenant: Tenant, path: string, method = 'GET') {
   });
 }
 
-/** Land the crawl's audit the way terminal publication does: under its lock. */
 async function land(seed: SiteSeed) {
   await db.transaction().execute(async (trx) => {
     const crawl = await trx
@@ -58,7 +57,6 @@ async function land(seed: SiteSeed) {
   });
 }
 
-/** Another crawl of the seed's project, audited at `at`. */
 async function crawlAt(seed: SiteSeed, at: Date, rerun = false): Promise<SiteSeed> {
   const crawlId = await fixtures.sibling(seed, {
     created_at: at,
@@ -68,7 +66,6 @@ async function crawlAt(seed: SiteSeed, at: Date, rerun = false): Promise<SiteSee
   return { ...seed, crawlId };
 }
 
-/** The page analyzed in `seed`'s crawl; a `missing` sitemap evaluation is an issue. */
 async function audit(
   seed: SiteSeed,
   path: string,
@@ -122,7 +119,6 @@ async function fileIssue({
     .execute();
 }
 
-/** The issue group's id as the Issues list names it. */
 async function groupOf(seed: SiteSeed, ruleId = SITEMAP) {
   const response = await request(seed, `/site-crawls/${seed.crawlId}/issues`);
   expect(response.status, await response.clone().text()).toBe(200);
@@ -156,7 +152,6 @@ async function stateOf(seed: SiteSeed, siteUrlId: string) {
 }
 
 const at = (minutes: number) => new Date(Date.UTC(2026, 10, 1, 9, minutes));
-/** After any mark a test makes now: an audit fetched once the person said it was fixed. */
 const afterMark = (minutes: number) => new Date(Date.now() + minutes * 60_000);
 
 describe('Mark fixed (SH-B12)', () => {
@@ -181,7 +176,6 @@ describe('Mark fixed (SH-B12)', () => {
       fixed_url_count: 2,
       verified_url_count: 0,
     });
-    // Marked fixed is still open until an audit verifies it.
     expect(
       await db
         .selectFrom('site_issue_trend')
@@ -191,13 +185,11 @@ describe('Mark fixed (SH-B12)', () => {
         .execute(),
     ).toEqual([{ open_count: 2 }]);
 
-    // A crawl that fetched /a before the mark finds the issue: the mark stands.
     const before = await crawlAt(seed, at(5), true);
     await audit(before, '/a', 'missing', a.id);
     await land(before);
     expect(await stateOf(seed, a.id)).toBe('marked_fixed');
 
-    // Audits after the mark decide: /a passes and resolves, /b still fails and reopens.
     const verify = await crawlAt(seed, afterMark(1), true);
     await audit(verify, '/a', 'satisfied', a.id);
     await land(verify);
@@ -258,13 +250,11 @@ describe('Mark fixed (SH-B12)', () => {
     await fixtures.monitor(seed, [a.id, b.id, c.id]);
     const groupId = await groupOf(full);
 
-    // A re-audit after the crawl verifies /a and finds the issue on /c.
     const rerun = await crawlAt(seed, at(10), true);
     await audit(rerun, '/a', 'satisfied', a.id);
     await audit(rerun, '/c', 'missing', c.id);
     await land(rerun);
 
-    // The crawl now shows the issue on /b and /c; /a counts as fixed and verified.
     expect(await progress(full, groupId)).toEqual({ affected: 3, fixed: 1, verified: 1, rerun: 2 });
   });
 
@@ -283,7 +273,6 @@ describe('Mark fixed (SH-B12)', () => {
     for (const [path, method] of paths)
       expect((await request(foreign, path, method)).status).toBe(404);
     expect(await progress(full, groupId)).toMatchObject({ fixed: 0 });
-    // An issue the crawl does not have is not found either.
     expect(
       (
         await request(
@@ -304,7 +293,6 @@ describe('Re-run all (SH-B12)', () => {
     await grant(db, account, { key: 'site_health_page_fetches_per_period', value: fetches });
   }
 
-  /** /a and /b tracked and failing, /c failing but untracked, /d tracked and since resolved. */
   async function issueOnFourPages() {
     const seed = await fixtures.crawl('completed');
     const full = await crawlAt(seed, at(0));
@@ -362,7 +350,6 @@ describe('Re-run all (SH-B12)', () => {
     );
     expect(held.map((row) => Number(row.units))).toEqual([2]);
 
-    // While that re-audit runs, another is refused and adds no work (SH-B4).
     const again = await request(full, path, 'POST');
     expect(again.status).toBe(409);
     expect(await again.json()).toMatchObject({ error: { code: 'crawl_already_active' } });

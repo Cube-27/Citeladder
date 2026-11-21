@@ -1,9 +1,3 @@
-/**
- * The bounded model input for one answer: for each mentioned business, the
- * sentences that name it plus one sentence either side. Offsets are code
- * points, the unit the entity assessment already stores, converted from the
- * UTF-16 indexes the regex and the sentence segmenter report.
- */
 import { createHash } from 'node:crypto';
 
 import { countedMatches, trackedEntities } from '../analysis/entity-assessment.ts';
@@ -11,7 +5,6 @@ import { namedByPrompt, type ScoringConfig } from '../analysis/scoring.ts';
 import type { PerceptionPolicy } from '../config/perception.ts';
 import { canonicalJson } from '../canonical-json.ts';
 
-/** A code-point span of the answer and its exact text. */
 export type Span = { start: number; end: number; text: string };
 
 export type EntityPassages = {
@@ -26,20 +19,16 @@ export type PerceptionPackage = {
   template_version: string;
   language: string;
   prompt: string;
-  /** The project's themes when the answer was classified; the fallback is implied. */
   themes: { id: string; name: string }[];
   entities: EntityPassages[];
 };
 
-/** States of the deterministic assessment that mean the entity is not named. */
 const NOT_NAMED = new Set(['absent', 'unavailable']);
 
-/** Whether an entity assessment state means the entity is named in the answer. */
 export function isNamed(state: string): boolean {
   return !NOT_NAMED.has(state);
 }
 
-/** True when any assessed entity is named in the answer (an empty list names none). */
 export function namesAnyEntity(assessments: readonly { state: string }[]): boolean {
   return assessments.some((row) => isNamed(row.state));
 }
@@ -48,12 +37,10 @@ function segmenter(languageCode: string) {
   try {
     return new Intl.Segmenter(languageCode || 'en', { granularity: 'sentence' });
   } catch {
-    // An unrecognised stored language code still segments; English rules are the fallback.
     return new Intl.Segmenter('en', { granularity: 'sentence' });
   }
 }
 
-/** Code-point offset of every UTF-16 index, so spans convert explicitly. */
 function codePointIndex(text: string): (utf16: number) => number {
   const offsets = new Uint32Array(text.length + 1);
   let points = 0;
@@ -70,7 +57,6 @@ function codePointIndex(text: string): (utf16: number) => number {
 
 type Range = { start: number; end: number };
 
-/** Sentence ranges (UTF-16) with their surrounding whitespace trimmed away. */
 function sentences(answer: string, languageCode: string): Range[] {
   const ranges: Range[] = [];
   for (const { index, segment } of segmenter(languageCode).segment(answer)) {
@@ -81,9 +67,7 @@ function sentences(answer: string, languageCode: string): Range[] {
   return ranges;
 }
 
-/** Answer ranges (UTF-16) of the sentences holding an occurrence, widened by one either side and merged. */
 function windows(occurrences: readonly number[], ranges: readonly Range[]): Range[] {
-  // Occurrences arrive in answer order, so one forward walk finds each sentence.
   const hit: number[] = [];
   let sentence = 0;
   for (const offset of occurrences) {
@@ -96,7 +80,6 @@ function windows(occurrences: readonly number[], ranges: readonly Range[]): Rang
   return mergeAdjacent(hit, ranges);
 }
 
-/** The ranges of ascending sentence indexes, adjacent indexes merged into one range. */
 function mergeAdjacent(indexes: readonly number[], ranges: readonly Range[]): Range[] {
   const merged: Range[] = [];
   let previous = -2;
@@ -111,18 +94,12 @@ function mergeAdjacent(indexes: readonly number[], ranges: readonly Range[]): Ra
   return merged;
 }
 
-/** At most `budget` code points of a window, kept around its mention so the naming survives a cut. */
 function clip(start: number, end: number, mention: number, budget: number) {
   if (end - start <= budget) return { start, end };
   const from = Math.min(Math.max(start, mention - Math.floor(budget / 2)), end - budget);
   return { start: from, end: from + budget };
 }
 
-/**
- * Passages for each named entity: brand first, then competitors by first
- * mention. Under a brand-named prompt the brand's passage is the whole answer
- * from its start, within the budget, whether or not it writes the name (AV-26).
- */
 export function entityPassages(input: {
   answer: string;
   languageCode: string;
@@ -139,7 +116,6 @@ export function entityPassages(input: {
     entity: ReturnType<typeof trackedEntities>[number];
     occurrences: number[];
     first: number;
-    /** Fixed windows (the whole answer), or null to window the occurrences. */
     windows: Range[] | null;
   };
   const named = trackedEntities(input.config).flatMap((entity): Named[] => {
@@ -179,7 +155,6 @@ export function entityPassages(input: {
   });
 }
 
-/** SHA-256 of the key-sorted package, so equal packages hash equally. */
 export function packageHash(pkg: PerceptionPackage): string {
   return createHash('sha256').update(canonicalJson(pkg, false)).digest('hex');
 }

@@ -16,14 +16,12 @@ import { textRole } from '@/components/ui/typography';
 import type { DataAvailabilityState, Formatted } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-/** A heat tint from 0 (low) to 1 (high): the accent washed in up to half strength, as `HeatValue`. */
 const heat = (place: number) =>
   `color-mix(in oklch, var(--color-accent) ${Math.round(4 + 46 * Math.min(1, Math.max(0, place)))}%, var(--color-surface))`;
 const HATCH = 'repeating-linear-gradient(135deg, transparent 0 6px, var(--color-rule) 6px 7px)';
 
 export type HeatValue =
   | { kind: 'value'; text: string; detail: string; tint: number }
-  /** Not run, too few, not measured: hatched, never tinted as a value. */
   | { kind: 'void'; state: DataAvailabilityState; label: string };
 
 type HeatTableProps = Readonly<{
@@ -33,10 +31,6 @@ type HeatTableProps = Readonly<{
   rows: readonly { key: string; header: ReactNode; cells: readonly HeatValue[] }[];
 }>;
 
-/**
- * HeatTable — a matrix of figures: row labels in a fixed column, then one
- * centred column per item, each cell a heat-tinted value over its basis.
- */
 export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps) {
   return (
     <Table fixed ariaLabelledBy={labelledBy}>
@@ -84,10 +78,6 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
   );
 }
 
-/**
- * A heat or rank table while its read is pending: the same head and rows at
- * the loaded height, so the sections under it do not move when it answers.
- */
 export function GridTableSkeleton({
   label,
   rows,
@@ -136,7 +126,6 @@ export function GridTableSkeleton({
   );
 }
 
-/** The heat table's foot: a note, then the Low → High tint scale. */
 export function HeatScale({ note }: Readonly<{ note: string }>) {
   return (
     <div className={textRole('caption', 'flex items-center gap-2')}>
@@ -160,10 +149,6 @@ export type RankChip = {
   own: boolean;
 };
 
-/**
- * RankTable — each segment's leaders as chips in place columns; your own chip
- * takes the accent wash. A segment without leaders reads `empty` in every place.
- */
 export function RankTable({
   labelledBy,
   corner,
@@ -226,7 +211,6 @@ export function RankTable({
   );
 }
 
-/** The rank table's key: other brands on the well, yours on the accent wash. */
 export function RankLegend() {
   return (
     <div className={textRole('caption', 'flex items-center gap-4')}>
@@ -242,10 +226,6 @@ export function RankLegend() {
   );
 }
 
-/**
- * An axis label: a leading mark, the text cut to one line, then a trailing tag
- * or a faint note whose tooltip explains it ("· renamed").
- */
 export function AxisItemLabel({
   lead,
   text,

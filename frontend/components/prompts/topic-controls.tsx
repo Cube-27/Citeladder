@@ -22,7 +22,6 @@ import { StateBlock } from '@/components/ui/state-block';
 
 type TopicMutations = ReturnType<typeof useTopicMutations>;
 
-/** The failed topics read, retried in place; null while topics loaded. */
 type TopicsLoadError = RetryableRead | null;
 
 function TopicsLoadNotice({ read }: Readonly<{ read: RetryableRead }>) {
@@ -36,16 +35,8 @@ function TopicsLoadNotice({ read }: Readonly<{ read: RetryableRead }>) {
   );
 }
 
-/** The filter value for "All topics". */
 const ALL_TOPICS = '';
 
-/**
- * The Topic filter, the prompt library's folder chip (owner, 2026-11-06: it
- * replaced the topics side panel so the table keeps the page's width). "All
- * topics", then every topic with its active-prompt count, a subtopic named
- * with its parent; the menu ends with "Add topic" and
- * "Manage topics…", which open the dialogs below. Selection filters the table.
- */
 export function topicFilter({
   topics,
   selectedTopicId,
@@ -53,10 +44,8 @@ export function topicFilter({
   manage,
 }: Readonly<{
   topics: readonly Topic[];
-  /** null = "All topics". */
   selectedTopicId: string | null;
   onSelect: (topicId: string | null) => void;
-  /** Opens the topic dialogs, for a role that may edit topics; omitted otherwise. */
   manage?: Readonly<{ onAdd: () => void; onManage: () => void }>;
 }>): FilterDefinition {
   const ordered = orderTopicsForRail(topics);
@@ -102,11 +91,6 @@ export function topicFilter({
   };
 }
 
-/**
- * Adds a topic, or a subtopic under a top-level topic (subtopics nest one
- * level deep). A failed create keeps the dialog open with the typed name so
- * the person can retry; a successful one closes it.
- */
 export function AddTopicDialog({
   open,
   onOpenChange,
@@ -118,7 +102,6 @@ export function AddTopicDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   topics: readonly Topic[];
-  /** Rejects when the create fails; the error is then shown from `error`. */
   onCreate: (name: string, parentId: string | null) => Promise<void>;
   isCreating?: boolean;
   error?: MutationNoticeData | null;
@@ -141,9 +124,7 @@ export function AddTopicDialog({
     try {
       await onCreate(trimmed, parentId || null);
       close(false);
-    } catch {
-      // Shown through `error`; the typed name stays for a retry.
-    }
+    } catch {}
   };
 
   return (
@@ -208,11 +189,6 @@ export function AddTopicDialog({
 
 export type TopicDialog = 'add' | 'manage';
 
-/**
- * The library's topic-load notice and its two topic dialogs over one set of
- * topic writes. A create
- * failure shows in Add topic; rename and delete failures show in Manage topics.
- */
 export function TopicDialogs({
   dialog,
   onDialogChange,
@@ -260,11 +236,6 @@ export function TopicDialogs({
   );
 }
 
-/**
- * Every topic with its active-prompt count and its rename and delete
- * actions. Deleting asks first (the library's confirmation) and detaches the
- * topic's prompts — it never deletes them.
- */
 export function ManageTopicsDialog({
   open,
   onOpenChange,
@@ -278,7 +249,6 @@ export function ManageTopicsDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   topics: readonly Topic[];
-  /** Rejects when the rename fails; the typed name then stays for a retry. */
   onRename: (topic: Topic, name: string) => Promise<void>;
   onDelete: (topic: Topic) => void;
   onAdd: () => void;
@@ -317,7 +287,6 @@ export function ManageTopicsDialog({
           ))}
         </TreeList>
       ) : null}
-      {/* A failed read is not zero topics: its notice above stands alone. */}
       {!ordered.length && !loadError ? (
         <StateBlock kind="empty" inline message="No topics yet." />
       ) : null}
@@ -333,7 +302,6 @@ function TopicRow({
   onDelete,
 }: Readonly<{
   topic: Topic;
-  /** Parent-qualified for a subtopic, so same-named subtopics stay distinct. */
   name: string;
   nested: boolean;
   onRename: (name: string) => Promise<void>;
@@ -362,7 +330,6 @@ function TopicRow({
             label={`Rename topic ${name}`}
             onClick={() => setRenaming(true)}
           />
-          {/* Neutral at rest like Rename: the confirmation carries the danger. */}
           <IconButton icon={Trash2} label={`Delete topic ${name}`} onClick={onDelete} />
         </>
       }
@@ -370,11 +337,6 @@ function TopicRow({
   );
 }
 
-/**
- * A topic's name, edited in place. Enter saves (Escape closes the dialog,
- * dropping the edit); a failed save keeps the typed name so the person can
- * retry, and an unchanged or empty name saves nothing.
- */
 function TopicRenameForm({
   current,
   name,
@@ -401,7 +363,6 @@ function TopicRenameForm({
       await onRename(trimmed);
       onDone();
     } catch {
-      // Shown through the dialog's error; keep the typed name.
     } finally {
       setSaving(false);
     }

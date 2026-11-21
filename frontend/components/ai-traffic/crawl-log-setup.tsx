@@ -42,12 +42,10 @@ export function CrawlLogSetup({
   model,
 }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
   const { setup, setSetup, origin, setOrigin, setSampling, setFilter, setPoint, mutation } = model;
-  // `setup` is typed to the options' values; the first option is the default.
   const chosen = CRAWL_LOG_SETUPS.find((s) => s.value === setup) ?? CRAWL_LOG_SETUPS[0];
   const steps = SETUP_STEPS[setup];
   const firehose = setup === 'aws_firehose';
   const gcp = setup === 'gcp_pubsub_pull';
-  // Without a reader service account (local development) the pull connector cannot run.
   const pullUnavailable = model.sources.data?.gcp_pull.availability !== 'available';
   let fields = <DeclaredFields model={model} />;
   if (firehose) fields = <FirehoseFields model={model} />;
@@ -109,7 +107,6 @@ export function CrawlLogSetup({
     </Stack>
   );
 }
-/** Format, collection point and sampling a custom sender declares; Firehose fixes all three. */
 function DeclaredFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
   const { format, setFormat, point, setPoint, sampling, setSampling, rate, setRate } = model;
   const { filter, setFilter } = model;
@@ -170,7 +167,6 @@ function DeclaredFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
     </>
   );
 }
-/** The stream's declared buffer interval and whether it runs the filter Lambda. */
 function FirehoseFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
   const { bufferInterval, setBufferInterval, declaredFiltered, setDeclaredFiltered } = model;
   return (
@@ -197,7 +193,6 @@ function FirehoseFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
     </>
   );
 }
-/** Generated AWS console steps; the endpoint and token appear once the source exists. */
 function FirehoseSteps({ interval }: Readonly<{ interval: string }>) {
   return (
     <Stack as="ol" gap="tight" className="type-body text-ink-2 list-inside list-decimal">
@@ -246,7 +241,6 @@ export function CrawlLogCredential({
     );
   return issued ? <IssuedToken issued={issued} /> : null;
 }
-/** A newly issued or rotated token with the endpoint its setup sends to. */
 export function IssuedToken({
   issued,
 }: Readonly<{
@@ -269,7 +263,6 @@ export function IssuedToken({
     </Notice>
   );
 }
-/** The dialog's one committing action, held in its footer. */
 export function CrawlLogSetupSubmit({
   model,
 }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {

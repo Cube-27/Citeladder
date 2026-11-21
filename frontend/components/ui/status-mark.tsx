@@ -3,14 +3,8 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 
-/**
- * The tones a status may take: semantic hues appear
- * only in status marks, changes, notices and validation, and never alone.
- * `you` is the accent: only a citation's own-domain classification.
- */
 export type StatusTone = 'neutral' | 'positive' | 'negative' | 'warning' | 'info' | 'you';
 
-/** Each tone's 6px dot. */
 const TONE_DOT: Record<StatusTone, string> = {
   neutral: 'bg-ink-2',
   positive: 'bg-positive',
@@ -20,17 +14,11 @@ const TONE_DOT: Record<StatusTone, string> = {
   you: 'bg-accent',
 };
 
-/** What a mark draws before its word: the tone's dot, the live rung or priority bars. */
 type Glyph = 'dot' | 'live' | Readonly<{ bars: 1 | 2 | 3 }>;
 
 type Mark = Readonly<{ tone: StatusTone; glyph: Glyph }>;
 const mark = (tone: StatusTone, glyph: Glyph = 'dot'): Mark => ({ tone, glyph });
 
-/*
- * One vocabulary per domain, defined once: a product value resolves to a
- * tone, so the same state reads the same mark wherever it shows. The word
- * always names the state; the dot's tone repeats it (WCAG 1.4.1).
- */
 const statusMarks = {
   success: mark('positive'),
   warning: mark('warning'),
@@ -45,14 +33,12 @@ const sentimentMarks = {
   mixed: mark('warning'),
 } as const satisfies Record<string, Mark>;
 
-/** Citation classification: your own pages carry the accent; everyone else is neutral. */
 const classificationMarks = {
   owned: mark('you'),
   competitor: mark('neutral'),
   'third-party': mark('neutral'),
 } as const satisfies Record<string, Mark>;
 
-/** Running and queued are info; partial and cancelled warning; failed negative. */
 const runStatusMarks = {
   draft: mark('neutral'),
   queued: mark('info'),
@@ -65,9 +51,6 @@ const runStatusMarks = {
   cancelled: mark('warning'),
 } as const satisfies Record<string, Mark>;
 
-/**
- * Severity: Critical and High negative, Medium warning, Low and Info neutral.
- */
 const severityMarks = {
   critical: mark('negative'),
   high: mark('negative'),
@@ -76,11 +59,6 @@ const severityMarks = {
   info: mark('neutral'),
 } as const satisfies Record<string, Mark>;
 
-/**
- * Priority is an order: three ascending bars with three, two or one filled
- * tell the three apart, and the empty bars are drawn, so the glyph keeps its
- * shape. High alone takes a hue, so it stands apart from Medium at a glance.
- */
 const priorityMarks = {
   high: mark('negative', { bars: 3 }),
   medium: mark('neutral', { bars: 2 }),
@@ -138,7 +116,6 @@ function MarkGlyph({ tone, glyph }: Mark) {
   return <PriorityBars filled={glyph.bars} tone={tone} />;
 }
 
-/** Bar heights and left edges in a 16px box, lowest first. */
 const PRIORITY_BARS = [
   { x: 2, height: 4 },
   { x: 7, height: 8 },
@@ -169,14 +146,6 @@ function PriorityBars({ filled, tone }: Readonly<{ filled: 1 | 2 | 3; tone: Stat
   );
 }
 
-/**
- * StatusMark — the only way to show a status, priority or severity: the
- * tone's 6px dot and a 12px word at 500 in `ink`, 20 high, with no frame;
- * priority's bars sit in a pill (radius full, a `rule` edge), so a column of marks reads as a pattern and
- * every mark still says its state. A running state draws the live rung,
- * priority its bars. It is never cut: it sizes to its word, and its column's
- * floor makes room.
- */
 export function StatusMark(props: Readonly<StatusMarkProps>) {
   const {
     children,
@@ -193,7 +162,6 @@ export function StatusMark(props: Readonly<StatusMarkProps>) {
       data-status-tone={statusMark.tone}
       className={cn(
         'type-caption text-ink inline-flex h-5 shrink-0 items-center gap-1.5 align-middle font-medium whitespace-nowrap',
-        // A dot or live mark is bare text (owner, 2026-11-21); priority bars keep the pill.
         typeof statusMark.glyph === 'object' && 'border-rule rounded-full border px-2',
         className,
       )}

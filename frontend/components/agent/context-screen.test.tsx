@@ -19,7 +19,6 @@ const instructionsEndpoint = `/api/v1/projects/${project.id}/agent/instructions`
 const profileEndpoint = `/api/v1/projects/${project.id}/brand-profile`;
 const limits = { statement_max_chars: 300, facts_import_max_rows: 150 };
 const saved = (text: string) => ({ text, revision: 1, created_at: '2026-09-26T10:00:00Z' });
-/** The instructions read as the harness's active workspace caches it. */
 const instructionsKey = queryKeys.agent.instructions({
   workspaceId: testProjectSelection().activeWorkspaceId,
   projectId: project.id,
@@ -69,10 +68,6 @@ function ContextScope({ activeProject }: { activeProject: ReturnType<typeof make
   );
 }
 
-/**
- * A project's Context reads: its profile, saved instructions, no suggestions,
- * and outside the fact-checking pilot unless a test says otherwise.
- */
 function renderContext({
   profile = emptyProfile,
   activeProject = project,
@@ -82,7 +77,6 @@ function renderContext({
   profile?: BrandProfile;
   activeProject?: ReturnType<typeof makeProject>;
   tab?: string;
-  /** Reads that replace the defaults. */
   handlers?: RequestHandler[];
 } = {}) {
   mswServer.use(
@@ -97,7 +91,6 @@ function renderContext({
   return renderWithProviders(<ContextScope activeProject={activeProject} />);
 }
 
-/** The business map tab's reads: the map, and the prompt-set list that carries its list bound. */
 function mapReads(map: BusinessMap = { available_offerings: [], offerings: [] }) {
   return [
     http.get(`/api/v1/projects/${project.id}/business-map`, () => HttpResponse.json(map)),
@@ -105,7 +98,6 @@ function mapReads(map: BusinessMap = { available_offerings: [], offerings: [] })
   ];
 }
 
-/** Records the body of the next profile save and answers with `reply`. */
 function captureProfileSave(reply: (body: unknown) => Response) {
   const capture: { body?: unknown } = {};
   mswServer.use(
@@ -126,7 +118,6 @@ describe('Context layout', () => {
         .getAllByRole('tab')
         .map((tab) => tab.textContent),
     ).toEqual(['Company', 'Themes', 'Business map', 'Competitors', 'Instructions', 'Brand facts']);
-    // The instructions are a tab of their own, not a section under every tab.
     expect(screen.queryByRole('textbox', { name: 'Agent instructions' })).not.toBeInTheDocument();
   });
 
@@ -143,7 +134,6 @@ describe('Context layout', () => {
   it('offers the save that belongs to the active tab', async () => {
     const user = userEvent.setup({ delay: null });
     renderContext({ handlers: mapReads() });
-    // A blank profile offers no save until a change.
     const idle = await screen.findByRole('button', { name: 'Save brand knowledge' });
     expect(idle).toHaveAttribute('aria-disabled', 'true');
     expect(idle).toHaveAccessibleDescription('No changes to save');
@@ -295,7 +285,6 @@ describe('Company facts', () => {
     await user.click(screen.getByLabelText('Where they buy it'));
     await user.click(screen.getByRole('option', { name: 'Worldwide' }));
     await user.click(screen.getByRole('button', { name: 'Save brand knowledge' }));
-    // Untouched facets and fields are not resubmitted, so they are not marked reviewed.
     await waitFor(() =>
       expect(save.body).toEqual({
         category: 'product feed management platform',
@@ -369,8 +358,6 @@ describe('Competitors', () => {
 
     const tracked = await screen.findByRole('group', { name: 'Tracked competitors' });
     const rows = [...tracked.querySelectorAll('[data-setting-row]')];
-    // Contoso has no cached logo, so its mark falls back to its first letter;
-    // each row ends in the competitor's domains.
     expect(rows.map((row) => row.textContent)).toEqual([
       'Northstar—Not set',
       'CContosocontoso.test',
@@ -408,7 +395,6 @@ describe('Business map', () => {
     business_context: {
       buyer_roles: ['Club coach', 'Parent'],
       business_model: 'd2c_product',
-      // Discovery inferred the roles; a person has saved the business model.
       field_sources: { buyer_roles: 'inferred', business_model: 'reviewed' },
     },
   };
@@ -425,7 +411,6 @@ describe('Business map', () => {
     );
     renderContext({ profile: golfProfile, tab: 'map', handlers: mapReads(golfMap) });
 
-    // Two inferred roles and one suggested situation; a suggestion says so in its name.
     expect(await screen.findByText('3 suggestions')).toBeVisible();
     expect(
       within(screen.getByRole('list', { name: `Situations: ${offering}` })).getByRole('listitem'),
@@ -434,7 +419,6 @@ describe('Business map', () => {
       'Products sold direct',
     );
 
-    // An offering with commas is one offering, and a repeat in any case is ignored.
     const add = screen.getByRole('textbox', { name: 'Add offering' });
     await user.type(add, 'Nets, cages and mats{Enter}');
     await user.type(add, 'golf PRACTICE net{Enter}');
@@ -468,7 +452,6 @@ describe('Business map', () => {
         ],
       }),
     );
-    // Accepting sends the inferred roles unchanged, so the API records them reviewed.
     expect(profileSave.body).toEqual({
       products_services: [offering, 'Nets, cages and mats'],
       buyer_roles: ['Club coach', 'Parent'],
@@ -505,7 +488,6 @@ describe('Business map', () => {
     expect(await screen.findByRole('combobox', { name: 'Business model' })).toHaveTextContent(
       'Not set',
     );
-    // Nothing suggested: no suggestions notice.
     expect(screen.queryByRole('button', { name: 'Accept all' })).not.toBeInTheDocument();
   });
 });

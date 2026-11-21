@@ -28,8 +28,6 @@ import { StateBlock } from '@/components/ui/state-block';
 import { SectionStack } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 
-// Shown only once access has ended, so the plan checkout and account security
-// load on demand instead of in the shell's first chunk.
 const AccountSecurity = lazy(() => import('@/components/settings/account-security'));
 const RestorePlan = lazy(() =>
   import('@/components/billing/restore-plan').then(({ RestorePlan }) => ({ default: RestorePlan })),
@@ -51,7 +49,6 @@ function accessTitle(access: z.infer<typeof accessSchema> | undefined, deadline:
     : 'Workspace access';
 }
 
-/** A trial or plan that ended can be restored by buying a plan; anything else cannot. */
 function restorable(access: z.infer<typeof accessSchema> | undefined, deadline: number | null) {
   return (
     access?.status === 'trial_expired' ||
@@ -98,12 +95,8 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   } = useProjectContext();
   const location = useLocation();
   const client = useQueryClient();
-  // Re-renders once the access deadline passes, so the expired grant is
-  // re-evaluated against the clock.
   const [, tick] = useReducer((count: number) => count + 1, 0);
   useAccessLoss(activeWorkspaceId);
-  // Accepting an invitation, choosing a workspace and setting up your own never
-  // wait on the selected workspace's access; someone with no workspace has none.
   const recovery =
     routePath(location.pathname) === '/invitations/accept' ||
     isWorkspaceFreeRoute(location.pathname, location.search) ||
@@ -111,8 +104,6 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   const access = useQuery({
     ...workspaceQueries.access(activeWorkspaceId ?? ''),
     enabled: Boolean(activeWorkspaceId) && !recovery,
-    // The bootstrap loader has just fetched this answer; reuse it rather than
-    // asking again on mount. Expiry, product 403s and focus still recheck.
     refetchOnWindowFocus: 'always',
   });
   const deadline = access.data?.expires_at ? Date.parse(access.data.expires_at) : null;
@@ -149,8 +140,6 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
     return <GateHold held={!recovery && !allowed}>{children}</GateHold>;
   }
   const retry = () => (activeWorkspaceId ? void access.refetch() : retryWorkspaces());
-  // A read that failed says nothing about access: it is a retryable error,
-  // never the "access ended" screen, which needs an answer that says so.
   const failure = failedRead({ access, activeWorkspaceId, workspaceFailed });
   if (failure) {
     return (
@@ -177,10 +166,6 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   );
 }
 
-/**
- * The failed read behind an unanswered gate: the access read of the selected
- * workspace, or workspace discovery when none is selected. Null when nothing failed.
- */
 function failedRead({
   access,
   activeWorkspaceId,
@@ -194,7 +179,6 @@ function failedRead({
   return access.isError && !access.data ? { error: access.error } : null;
 }
 
-/** Where a workspace without access lands: buy a plan, ask support, switch, or leave. */
 function AccessEnded({
   title,
   restorable: canRestore,
@@ -259,7 +243,6 @@ function AccessEnded({
               <Link
                 to={workspaceDestination(HOME_PATH, null, workspace.id)}
                 onClick={(event) => {
-                  // A modified click opens the link's own URL in a new tab.
                   if (
                     event.button !== 0 ||
                     event.metaKey ||

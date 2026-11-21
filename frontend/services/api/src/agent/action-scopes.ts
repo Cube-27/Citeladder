@@ -1,10 +1,3 @@
-/**
- * Agent hand-off scopes from the Actions page (plan v3), beside one Action's
- * own context (an issue group's rule, URL count, first URLs and snippet): the
- * URLs a user ticked on an Action, and one URL with every Action on it. Both
- * are resolved and workspace-authorized from persisted `action_urls`; a ref
- * naming anything outside the project refuses admission.
- */
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
@@ -21,7 +14,6 @@ const refsSchema = z.object({
   url_actions_reference: z.object({ site_url_id: z.uuid() }).nullish(),
 });
 
-/** The ticked URLs of `actionId`, in URL order, without query strings. */
 async function selectedUrls(db: Database, scope: Scope, actionId: string, ids: string[]) {
   const rows = await db
     .selectFrom('action_urls')
@@ -41,10 +33,6 @@ async function selectedUrls(db: Database, scope: Scope, actionId: string, ids: s
   return rows.map((row) => withoutQuery(row.url));
 }
 
-/**
- * What the scope refs add: `selected_urls` on the chat's Action, and a
- * `url_actions` section listing every Action on one URL (at most `MAX`).
- */
 export async function actionScopes(
   db: Database,
   scope: Scope,

@@ -95,7 +95,6 @@ describe('A URL page', () => {
       },
     });
 
-    // The h1 holds the route's name until the URL is read.
     expect(
       await screen.findByRole('heading', { level: 1, name: /\/shop\/…\/bb0556/ }),
     ).toBeVisible();
@@ -104,12 +103,7 @@ describe('A URL page', () => {
       within(details)
         .getAllByRole('definition')
         .map((d) => d.textContent),
-    ).toEqual([
-      'Product',
-      'Nov 10, 2026',
-      // The declined Action is listed but not open.
-      '1 on this URL',
-    ]);
+    ).toEqual(['Product', 'Nov 10, 2026', '1 on this URL']);
     expect(
       within(screen.getByRole('list', { name: 'Actions on this URL' }))
         .getAllByRole('listitem')

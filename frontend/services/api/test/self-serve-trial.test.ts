@@ -14,7 +14,6 @@ const db = testDatabase();
 const fixtures = new VisibilityFixtures(db);
 const accounts: string[] = [];
 
-/** The trial starts at workspace creation; move this one's window eight days back. */
 function ageTrial(accountId: string) {
   return asOwner((owner) =>
     owner
@@ -28,7 +27,6 @@ function ageTrial(accountId: string) {
       .execute(),
   );
 }
-/** A public signup under `email` that has created its workspace. */
 async function publicSignup(email: string) {
   const t = await fixtures.tenant({ access: false });
   const user = await db
@@ -200,13 +198,10 @@ it('serializes the trial’s 20 prompt runs, returns failed runs and spends a su
     reason: { status: 403, code: 'prompt_runs_exhausted' },
   });
   const held = tasks.slice(0, 21).filter((_, index) => results[index]!.status === 'fulfilled');
-  // A failed answer returns its run, so one more can be held.
   await settle(held[0]!, false);
   await reserve(tasks[21]!);
-  // A recorded answer spends its run, once however often it settles.
   await settle(held[1]!, true);
   await settle(held[1]!, true);
-  // One audit's runs are held together: two free runs refuse three tasks outright.
   await settle(held[2]!, false);
   await settle(held[3]!, false);
   await expect(reserveAll(tasks.slice(22, 25))).rejects.toMatchObject({

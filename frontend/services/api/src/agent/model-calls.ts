@@ -20,7 +20,6 @@ export type AgentModel = {
   adapter: string;
   endpointHost: string;
   model: string;
-  /** `listener` sees text, thinking and tool input as they stream; display only. */
   converse: (
     request: ModelRequest,
     signal: AbortSignal,
@@ -31,11 +30,8 @@ type Hold = {
   reservationId: string | null;
   credits: number;
   pricingRevision: string;
-  /** The output cap the hold covers; the call is sent with it. Omitted: the route's cap. */
   outputTokens?: number;
 };
-/** Funding owner validates the exact frozen destination/capability per dispatch;
- * reserve/settle/reconcile execute on the caller transaction. No credentials returned. */
 export type Funding = {
   reserve: (
     db: Database,
@@ -47,15 +43,12 @@ export type Funding = {
   settle: (
     db: Database,
     attempt: ModelAttempt,
-    /** The provider's reported usage, a failed call's included; null when it reported none. */
     usage: Usage | null,
   ) => Promise<{
     credits: number;
-    /** Stored as `settlement_status`, whose CHECK also admits the dispatch-time values. */
     status: 'settled' | 'zero_debit';
-    /** The call's internal cost; null when unknown. */ costMicrousd: number | null;
+    costMicrousd: number | null;
   }>;
-  /** Refunds every credit the run's settled calls debited; idempotent (B58). */
   refund: (db: Database, run: Run) => Promise<void>;
 };
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
@@ -129,7 +122,6 @@ export class ModelCalls {
           pricing_revision: hold.pricingRevision,
           reservation_id: hold.reservationId,
           reserved_credits: hold.credits,
-          // What the next call of the turn sizes its input hold from.
           input_bytes: conversationInputBytes(request),
           max_output_tokens: hold.outputTokens ?? null,
           debited_credits: 0,
@@ -169,7 +161,6 @@ export class ModelCalls {
     workspaceId: string,
     attemptId: string,
     result: ModelResult | null,
-    /** Tokens a failed call still reported, charged as platform metering charges them. */
     failedUsage: Usage | null = null,
   ) {
     const outcome = result ? 'completed' : 'failed';
@@ -241,7 +232,6 @@ export class ModelCalls {
           output_hash: result ? hash(JSON.stringify(result.blocks)) : '',
           error_code: result ? '' : 'provider_error',
           latency_ms: result?.latency_ms ?? null,
-          // How this call used the prompt cache, for cost and cache analysis.
           response_id: result?.response_id.slice(0, 128) ?? '',
           cache_write_1h_input_tokens: usage('cache_write_1h_input_tokens'),
           web_search_requests: usage('web_search_requests'),
@@ -270,12 +260,10 @@ export class ModelCalls {
   ) {
     executionSignal?.throwIfAborted();
     const attempt = await this.dispatch(lease, ordinal, model, request).catch((error: unknown) => {
-      // The dispatch transaction rolled back: no hold, attempt or request exists.
       if (error instanceof AgentError && error.code === 'funding_unavailable')
         throw new RefusedDispatch();
       throw error;
     });
-    // A call the balance covers only in part is sent with the output cap it was held for.
     const sent =
       attempt.max_output_tokens === null
         ? request
@@ -341,7 +329,6 @@ export class ModelCalls {
         .execute();
     }
   }
-  /** A failed turn saves nothing: its calls settle as recorded, then their credits are refunded. */
   async settleFailed(db: Database, run: Run) {
     await this.reconcile(db, run);
     await this.funding.refund(db, run);

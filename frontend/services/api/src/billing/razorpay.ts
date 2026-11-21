@@ -94,7 +94,6 @@ export interface BillingProvider {
   refund(reference: string): Promise<RefundEvidence>;
 }
 
-/** A provider response body and the Unix second the provider served it, if it said. */
 type ProviderResponse = { data: Record<string, unknown>; servedAt: number | null };
 
 function servedAt(response: Response): number | null {
@@ -126,12 +125,6 @@ export function configured(
   );
 }
 
-/**
- * Whether a buyer may start a checkout (B2). Allow-listed workspaces can buy
- * while the audience is the allow-list; test keys in production serve only
- * them even once it is opened to everyone. Anonymous readers are never on it.
- */
-/** Whether checkout is limited to allow-listed workspaces right now (B2, B42). */
 export function audienceRestricted(settings: BillingSettings, adapter: RazorpaySettings) {
   return settings.audience !== 'everyone' || (adapter.mode === 'test' && adapter.production);
 }
@@ -161,14 +154,6 @@ export function checkoutAvailable(
   );
 }
 
-/**
- * The subscription a provider response reports. Its state version is the
- * second the provider served it (the response's `Date` header): the
- * subscription entity carries no update time, and a webhook only prompts this
- * read, so the provider's own clock at the read is the time the state is
- * known at. A later read never ranks below an earlier one already settled; a
- * response without the header is refused.
- */
 function subscription({ data, servedAt }: ProviderResponse): SubscriptionEvidence {
   const row = subscriptionSchema.parse(data);
   if (servedAt === null) throw new ProviderError(true, 'provider_invalid_response');
@@ -308,11 +293,6 @@ export class RazorpayProvider implements BillingProvider {
       throw new ProviderError(true, 'provider_amount_mismatch');
     return reference.parse(data.id);
   }
-  /**
-   * Finds the record a crashed checkout created, by the intent's own keys: an
-   * order by its receipt, a subscription by its plan within the minutes after
-   * the intent committed, never by listing the whole account.
-   */
   async recover(pending: Pending): Promise<string | null> {
     const created = Math.floor(pending.created_at.getTime() / 1000);
     const path =

@@ -28,14 +28,6 @@ export function OnboardingPageClient() {
   );
 }
 
-/**
- * The creation screen's own precondition check.
- *
- * It asks about the WORKSPACE, not the account: whether this workspace is
- * resolved, and whether its allowance leaves room for another project. A
- * workspace with no projects is a normal starting point here, so an empty
- * list is never an error.
- */
 function ProjectSetupGate() {
   const queryClient = useQueryClient();
   const { status, activeWorkspaceId, workspaces, retry: retryContext } = useProjectContext();
@@ -66,9 +58,6 @@ function ProjectSetupGate() {
   }
   if (setsUpOwnWorkspace(status, workspaces, searchParams.get('setup'))) return <WorkspaceSetup />;
   if (status === 'unavailable') {
-    // Reached by linking here with a `?project=` that is missing, unauthorized,
-    // or contradicts the workspace. Creating a project is not the answer to a
-    // request that named a different one.
     return <ProjectSetupBlocked title="That project is unavailable" projectsHref={projectsHref} />;
   }
   if (status === 'resolving' || activeWorkspaceId === null || entitlementLoading) {
@@ -93,10 +82,6 @@ function ProjectSetupGate() {
   return <OnboardingScreen />;
 }
 
-/**
- * Someone who owns no workspace sets one up first: always when they belong to
- * none, and on request when they only have workspaces they were invited to.
- */
 function setsUpOwnWorkspace(
   status: string,
   workspaces: readonly { role: string }[],
@@ -117,7 +102,6 @@ function ProjectSetupLoading({
     return () => window.clearTimeout(timer);
   }, [attempt]);
 
-  // The flow's plain frame, never a loading card on a blank page (PR 524).
   if (!stalled) return <FirstFrame />;
   return (
     <ProjectSetupBlocked
@@ -143,7 +127,6 @@ function ProjectSetupBlocked({
   children?: ReactNode;
   onRetry?: () => void;
   projectsHref: string;
-  /** A limit a bigger plan lifts: offer the plans first. */
   plans?: boolean;
 }>) {
   return (

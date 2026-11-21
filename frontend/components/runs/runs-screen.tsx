@@ -52,10 +52,8 @@ const statusCodec = stringUrlCodec<StatusFilter>(
   'all',
 );
 
-/** Active-project run list, status filtering (kept in the URL), launch, and schedule management. */
 export function RunsScreen() {
   const { workspaceId, projectId, project } = useProjectScope();
-  // Another status lists other runs: it opens on their first page (`RunsTable`).
   const [statusFilter, setStatusFilter] = useUrlState('status', statusCodec, {
     clearKeys: ['page'],
   });
@@ -75,21 +73,14 @@ export function RunsScreen() {
   );
   const anyActive = audits.some((audit) => AUDIT_STATES[audit.status].active);
 
-  // Gate only on the runs list: the schedules query errors independently
-  // (and refetches whenever its card remounts onto the errored cache entry),
-  // so gating the whole screen on it would pin the page on a spinner forever.
-  // Launching is offered only to a role that may run audits.
   const canRun = useWorkspaceCapability('run');
   const readiness = useLaunchReadiness(projectId);
-  // With no run yet, the empty state carries the next step, not the masthead.
   const empty = runsQuery.isSuccess && audits.length === 0;
   const actions = empty ? undefined : (
     <MastheadPrimary>
       <LaunchAuditButton />
     </MastheadPrimary>
   );
-  // The status choices are the page's tabs, each with the number of runs it
-  // keeps. A never-filled list has none.
   const tabs =
     audits.length === 0 ? undefined : (
       <TabRow
@@ -125,7 +116,6 @@ export function RunsScreen() {
           />
         </TabPanel>
 
-        {/* A schedule runs active prompts, so it waits until one exists. */}
         {readiness.kind === 'ready' ? (
           <AuditSchedules projectId={projectId} promptSets={project.prompt_sets} />
         ) : null}
@@ -143,15 +133,12 @@ function RunsContent({
   canRun,
   promptsReady,
 }: Readonly<{
-  /** The runs read: its failure, and the retry of exactly that read. */
   read: RetryableRead;
   audits: Audit[];
   filteredAudits: Audit[];
   statusFilter: StatusFilter;
   anyActive: boolean;
-  /** Whether this role may launch an audit. */
   canRun: boolean;
-  /** False while no active prompt exists, so the next step is adding one. */
   promptsReady: boolean;
 }>) {
   if (read.error) {

@@ -64,9 +64,7 @@ describe('Insights lede', () => {
     expect(screen.getByRole('heading', { name: "You're #2 in AI visibility" })).toBeVisible();
     expect(screen.getByText('Kmart Australia is named more often.')).toBeVisible();
     expect(screen.getByText('Position')).toBeVisible();
-    // The rank is a place; the position is an average and keeps its decimal.
     expect(screen.getByText('2.5')).toBeVisible();
-    // No first-named data reads as not measured, never "unavailable".
     expect(screen.getByText('Not measured')).toBeVisible();
     unmount();
 
@@ -114,8 +112,6 @@ describe('Your brand over time', () => {
     expect(lineNames(focused.container).some((name) => name.startsWith('You'))).toBe(false);
     focused.unmount();
 
-    // A brand carried in from another run's URL must not draw an empty chart
-    // captioned with a brand this run never measured.
     window.history.replaceState(null, '', '/insights?brand=Ghost');
     const fallback = render(<BrandTrend query={twoRuns} selected={selected} />);
     const roster = lineNames(fallback.container);
@@ -152,7 +148,6 @@ describe('Your brand over time', () => {
     expect(container.querySelector('[data-single-measurement]')).toBeNull();
     expect(container.querySelectorAll('[data-trend-point="you"]')).toHaveLength(1);
     expect(lineNames(container)).toEqual(['You', 'Kmart Australia', 'Target Australia']);
-    // Each brand's mark sits in its key entry.
     expect(container.querySelectorAll('ul[aria-hidden] li [data-brand-mark]')).toHaveLength(3);
   });
 
@@ -163,7 +158,6 @@ describe('Your brand over time', () => {
         selected={selected}
       />,
     );
-    // Each key entry is the brand's mark initial, its name, then its latest value.
     const key = [...container.querySelectorAll('ul[aria-hidden] li')].map(
       (item) => item.textContent,
     );

@@ -1,10 +1,3 @@
-/**
- * Single source of truth for the demand-signal taxonomy.
- *
- * Signal grouping was previously written out three times (filter tabs, tab
- * counts, KPI cards), each free to drift from the others. Every grouping,
- * label, and metric read now derives from the maps here.
- */
 import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { DemandSignal } from '@/lib/api/demand';
@@ -28,7 +21,6 @@ export type FilterTab =
   | 'trends'
   | 'branded';
 
-/** Which signal types each filter tab admits. `all` admits everything. */
 const SIGNAL_GROUPS: Readonly<Record<Exclude<FilterTab, 'all'>, readonly SignalType[]>> = {
   striking_distance: ['striking_distance'],
   cannibalization: ['query_cannibalization'],
@@ -37,7 +29,6 @@ const SIGNAL_GROUPS: Readonly<Record<Exclude<FilterTab, 'all'>, readonly SignalT
   branded: ['branded_query_performance'],
 };
 
-/** Tab order and labels for the filter bar. */
 export const FILTER_TABS: readonly { tab: FilterTab; label: string }[] = [
   { tab: 'all', label: 'All signals' },
   { tab: 'striking_distance', label: 'Striking distance' },
@@ -47,13 +38,8 @@ export const FILTER_TABS: readonly { tab: FilterTab; label: string }[] = [
   { tab: 'branded', label: 'Branded' },
 ];
 
-/** A definition that states a detector threshold reads it from the snapshot's policy. */
 type Definition = string | ((policy: DemandDetectorPolicy) => string);
 
-/**
- * Each signal type's chip label and its one-sentence definition. The screen
- * explains a type once, in its legend, rather than repeating prose per row.
- */
 const SIGNAL_TYPE_META: Readonly<Record<SignalType, { label: string; definition: Definition }>> = {
   striking_distance: {
     label: 'Striking distance',
@@ -101,7 +87,6 @@ export function signalTypeMeta(signalType: string) {
   );
 }
 
-/** A signal type's one-sentence definition, with the detector thresholds it states. */
 export function signalDefinition(signalType: string, policy: DemandDetectorPolicy): string {
   const { definition } = signalTypeMeta(signalType);
   return typeof definition === 'string' ? definition : definition(policy);
@@ -116,21 +101,15 @@ export function countByTab(signals: readonly DemandSignal[], tab: FilterTab): nu
   return signals.reduce((total, signal) => total + (matchesTab(signal, tab) ? 1 : 0), 0);
 }
 
-/** Branded demand is navigational, so it is excluded from every gap rollup. */
 export function isActionableGap(signal: DemandSignal): boolean {
   return signal.signal_type !== 'branded_query_performance';
 }
 
-/**
- * A metric value, or `null` when the backend did not observe one. Callers must
- * decide how an unobserved metric renders — this never invents a zero.
- */
 export function numericMetric(signal: DemandSignal, key: string): number | null {
   const value = signal.metrics[key];
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-/** The human-facing subject of a signal, tolerant of a non-string `target`. */
 export function signalTarget(signal: DemandSignal): string {
   const target = signal.evidence.target;
   if (typeof target === 'string' && target.trim()) return target;
@@ -141,29 +120,12 @@ function signalTargetKind(signal: DemandSignal): 'Page' | 'Query' {
   return signal.evidence.target_kind === 'page' ? 'Page' : 'Query';
 }
 
-/**
- * `signal.page_url` as a link target, or `null` when it is not a safe absolute
- * web URL.
- *
- * Stricter than the Markdown sanitiser in `lib/markdown/safe-url`: a demand
- * page URL is always an absolute address observed by the crawler, so relative
- * and `mailto:` values are rejected here rather than allowed. The value
- * ultimately originates from third-party Search Console data, so it is never
- * put in an `href` unvalidated.
- */
 export function safePageUrl(pageUrl: string | null | undefined): string | null {
   return pageUrl && parseAbsoluteHttpUrl(pageUrl) ? pageUrl.trim() : null;
 }
 
 export type CompetingPage = { url: string; impressions: number; share: number };
 
-/**
- * Competing URLs from cannibalization evidence, or `[]` when absent.
- *
- * `evidence` is `Record<string, unknown>`, so every field is validated: a page
- * missing `impressions`/`share` would otherwise reach `.toLocaleString()` and
- * `.toFixed()` on `undefined` at render time.
- */
 export function competingPages(signal: DemandSignal): CompetingPage[] {
   const pages = signal.evidence.pages;
   if (!Array.isArray(pages)) return [];
@@ -180,10 +142,6 @@ export function competingPages(signal: DemandSignal): CompetingPage[] {
   });
 }
 
-/**
- * Ask agent about one signal: its id travels as a typed reference the server
- * resolves, and its page (when it is a safe URL) as the chat's target.
- */
 export function demandSignalHandoffHref(signal: DemandSignal): string {
   const target = signalTarget(signal);
   const subject = target ? ` for "${target}"` : '';
@@ -196,10 +154,6 @@ export function demandSignalHandoffHref(signal: DemandSignal): string {
 
 export type RankedSignal = { signal: DemandSignal; rank: number };
 
-/**
- * The page a signal is about: its own target for a page signal, the resolved
- * landing page for a query signal, or null when none was resolved.
- */
 export function signalPage(signal: DemandSignal): string | null {
   if (signalTargetKind(signal) === 'Page') {
     const target = signal.evidence.target;
@@ -208,12 +162,6 @@ export function signalPage(signal: DemandSignal): string | null {
   return signal.page_url.trim() || null;
 }
 
-/**
- * The page a query signal landed on, as the line under its query: path only
- * when the page is a safe absolute URL (every page is on the project's own
- * site, so the host repeats on every row), else the stored value verbatim.
- * A page signal's subject already IS the page, so it has no second line.
- */
 export function signalPageLine(signal: DemandSignal): string | null {
   if (signalTargetKind(signal) === 'Page') return null;
   const page = signalPage(signal);
@@ -221,26 +169,17 @@ export function signalPageLine(signal: DemandSignal): string | null {
   return pagePath(page);
 }
 
-/** A page on the project's own site by path; the stored value when not a safe URL. */
 function pagePath(page: string): string {
   const parsed = parseAbsoluteHttpUrl(page);
   return parsed ? `${parsed.pathname}${parsed.search}` : page;
 }
 
-/**
- * A signal's subject as the table's two lines. The column mixes queries and
- * pages, so the second line always names which one the row is about: a query
- * over the path it landed on, a page by its path (the host repeats on every
- * row) over the word "Page".
- */
 export function signalSubject(signal: DemandSignal): { primary: string; secondary: string } {
   if (signalTargetKind(signal) === 'Page') {
     const page = signalPage(signal);
     return { primary: page ? pagePath(page) : signalTarget(signal), secondary: 'Page' };
   }
   const landing = signalPageLine(signal);
-  // "Query" only when the evidence says so; a snapshot that never recorded
-  // the kind keeps that unknown visible rather than passing as a query.
   const kind = signal.evidence.target_kind === 'query' ? 'Query' : 'Kind not reported';
   return {
     primary: signalTarget(signal),

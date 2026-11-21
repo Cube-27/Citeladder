@@ -19,16 +19,11 @@ import type { PromptHistory } from '@citeladder/contracts';
 
 import { NO_ANSWERS, NOT_MEASURED } from './prompt-figures';
 
-/** A run's owned citation rate; with no answer to cite from it is unavailable, not unmeasured. */
 function ownedRate(point: PromptHistory['points'][number]) {
   if (point.owned_citation_rate !== null) return formatPercent(point.owned_citation_rate);
   return point.counts.responses === 0 ? NO_ANSWERS : NOT_MEASURED;
 }
 
-/**
- * Visibility and owned citation rate per run, with declared work marked. A
- * single run plots its one point per line, as the Insights trend does.
- */
 export function PromptTrend({ history }: Readonly<{ history: PromptHistory }>) {
   const timeZone = useDisplayTimeZone();
   const { points } = history;
@@ -57,7 +52,6 @@ export function PromptTrend({ history }: Readonly<{ history: PromptHistory }>) {
   );
 }
 
-/** The chart's data as a table: every run that measured the prompt, newest first. */
 function RunData({ points }: Readonly<{ points: PromptHistory['points'] }>) {
   const timeZone = useDisplayTimeZone();
   return (
@@ -88,7 +82,6 @@ const RUN_DATA_COLUMNS: readonly DataTableColumn[] = [
   { key: 'owned', label: 'Owned rate', width: 'figure', kind: 'number' },
 ];
 
-/** The Actions measured on this prompt, and when each was marked implemented. */
 export function PromptImplementations({ history }: Readonly<{ history: PromptHistory }>) {
   const timeZone = useDisplayTimeZone();
   if (!history.implementations.length) return null;

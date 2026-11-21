@@ -1,8 +1,3 @@
-/**
- * Visibility query and mutation descriptors, so a screen, an Overview widget
- * and navigation intent request the SAME key from one definition instead of
- * each assembling its own, and a write refreshes every read it changes.
- */
 import {
   infiniteQueryOptions,
   mutationOptions,
@@ -22,10 +17,6 @@ type ParamsOf<Read extends keyof Api> = Parameters<Api[Read]>[1];
 
 const hasCode = (error: unknown, code: string) => error instanceof ApiError && error.code === code;
 
-/**
- * The selection's run exists but its metrics are not written yet: its own
- * state ("still being prepared"), never "nothing measured" and never a failure.
- */
 export const isMetricsPending = (error: unknown) => hasCode(error, 'visibility_metrics_pending');
 
 const scoped = (scope: ProjectScope, signal?: AbortSignal) => ({
@@ -34,15 +25,6 @@ const scoped = (scope: ProjectScope, signal?: AbortSignal) => ({
 });
 
 export const visibilityQueries = {
-  /**
-   * The selection's projection, or `null` when the server answers
-   * `visibility_not_measured` (no completed measured run, or a period that
-   * measured nothing). Cached as an error it was always stale, so every mount
-   * re-asked for the same answer; a run arriving or finishing invalidates
-   * `visibility.all` instead. Metrics still being written
-   * (`visibility_metrics_pending`, see `isMetricsPending`), a run that does not
-   * exist and every other failure stay errors.
-   */
   project: (scope: ProjectScope, params: ProjectVisibilityParams) =>
     queryOptions({
       queryKey: queryKeys.visibility.selection(scope, params),
@@ -65,14 +47,12 @@ export const visibilityQueries = {
       queryFn: ({ signal }) =>
         visibilityApi.getVisibilityTrends(scope.projectId, params, scoped(scope, signal)),
     }),
-  /** The selection's By topic rows. */
   topics: (scope: ProjectScope, params: ParamsOf<'getVisibilityTopics'>) =>
     queryOptions({
       queryKey: queryKeys.visibility.topics(scope, params),
       queryFn: ({ signal }) =>
         visibilityApi.getVisibilityTopics(scope.projectId, params, scoped(scope, signal)),
     }),
-  /** The selection's performance matrix and top rankings. */
   matrix: (scope: ProjectScope, params: ParamsOf<'getVisibilityMatrix'>) =>
     queryOptions({
       queryKey: queryKeys.visibility.matrix(scope, params),
@@ -139,7 +119,6 @@ export const visibilityQueries = {
       queryFn: ({ signal }) =>
         visibilityApi.getAccuracyFacts(scope.projectId, params, scoped(scope, signal)),
     }),
-  /** The selection's claims, paged by the read's own cursor. */
   accuracyClaims: (scope: ProjectScope, params: Omit<ParamsOf<'getAccuracyClaims'>, 'cursor'>) =>
     infiniteQueryOptions({
       queryKey: queryKeys.visibility.accuracyClaims(scope, params),
@@ -152,7 +131,6 @@ export const visibilityQueries = {
       initialPageParam: undefined as string | undefined,
       getNextPageParam: (last) => last.next_cursor ?? undefined,
     }),
-  /** Ad creatives, paged by the read's own cursor. */
   ads: (scope: ProjectScope, params: Omit<ParamsOf<'getAds'>, 'cursor'>) =>
     infiniteQueryOptions({
       queryKey: queryKeys.visibility.ads(scope, params),
@@ -183,7 +161,6 @@ export const visibilityQueries = {
       queryFn: ({ signal }) =>
         visibilityApi.getMarketVisibility(scope.projectId, params, scoped(scope, signal)),
     }),
-  /** One run's prompt rows; `null` reads the latest default-market run (Overview). */
   prompts: (scope: ProjectScope, auditId: string | null = null) =>
     queryOptions({
       queryKey: queryKeys.visibility.prompts(scope, auditId),
@@ -194,7 +171,6 @@ export const visibilityQueries = {
           scoped(scope, signal),
         ),
     }),
-  /** Each tracked prompt's row from the run that last measured it (Prompts table). */
   latestPerPrompt: (scope: ProjectScope) =>
     queryOptions({
       queryKey: queryKeys.visibility.latestPerPrompt(scope),
@@ -221,13 +197,7 @@ export const visibilityQueries = {
     }),
 };
 
-/** Visibility writes; each success refreshes every read it changes. */
 export const visibilityMutations = {
-  /**
-   * Accepting an observed competitor adds it to the project (its competitor
-   * list), drops it from the suggestions, and re-scores every Visibility read
-   * that names competitors.
-   */
   acceptCompetitorSuggestion: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: (candidateId: string) =>
@@ -238,7 +208,6 @@ export const visibilityMutations = {
           client.invalidateQueries({ queryKey: queryKeys.projects.all }),
         ]),
     }),
-  /** Rejecting a suggestion drops it from the list; no metric changes. */
   rejectCompetitorSuggestion: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: (candidateId: string) =>
@@ -248,7 +217,6 @@ export const visibilityMutations = {
           queryKey: queryKeys.visibility.resource(scope.projectId, 'competitor-suggestions'),
         }),
     }),
-  /** A person's verdict on one claim: accuracy, its claims and By fact all re-read it. */
   overrideVerdict: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: ({ verdictId, input }: { verdictId: string; input: VerdictOverrideRequest }) =>
@@ -258,9 +226,5 @@ export const visibilityMutations = {
     }),
 };
 
-/**
- * A run arrived or finished for the project: every Visibility read re-derives
- * from the new set of measured runs.
- */
 export const refreshVisibility = (client: QueryClient, projectId: string) =>
   client.invalidateQueries({ queryKey: queryKeys.visibility.project(projectId) });

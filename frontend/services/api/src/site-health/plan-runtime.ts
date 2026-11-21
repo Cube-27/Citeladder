@@ -1,15 +1,3 @@
-/**
- * The workspace's Site Health runtime: discovery mode, URL caps and the
- * monitored allowance its plan resolves to. `runtimeProjection` derives it;
- * `resolveRuntime` is the only writer of `workspace_site_health_runtime`.
- *
- * The runtime row is a Site Health domain lock, so it precedes the account
- * capacity lock (architecture's combined lock DAG). Crawl admission holds it
- * with `holdRuntime`, takes its other domain locks, then resolves it. A grant
- * change never writes it inside the billing transaction: its owner calls
- * `refreshRuntime` after that transaction commits. Reads resolve the same
- * projection without writing.
- */
 import { randomUUID } from 'node:crypto';
 import type { Selectable } from 'kysely';
 import { policy } from '../config.ts';
@@ -20,11 +8,6 @@ import { lockAccount } from '../entitlements/grants.ts';
 import { billingAccountId } from '../entitlements/ledger.ts';
 import { accountState } from '../entitlements/state.ts';
 
-/**
- * The Site Health runtime an account state resolves to. An unresolved or
- * missing account gets the sample runtime: no monitored allowance, no count
- * disclosure.
- */
 export function runtimeProjection(
   state: { error: string | null; values: ReadonlyMap<string, number> } | null,
 ) {
@@ -75,12 +58,6 @@ export async function holdRuntime(db: Database, workspaceId: string) {
     .executeTakeFirstOrThrow();
 }
 
-/**
- * Persist the runtime the account's grants resolve to now. The caller holds
- * the runtime row (`holdRuntime`) and every other domain lock it needs, since
- * this takes the capacity and account locks. A workspace with no billing
- * account keeps its sample runtime; its state is null.
- */
 export async function resolveRuntime(
   db: Database,
   held: Selectable<WorkspaceSiteHealthRuntime>,
@@ -104,12 +81,6 @@ export async function resolveRuntime(
   return { state, runtime };
 }
 
-/**
- * Re-resolve a workspace's runtime after a grant change commits, in its own
- * transaction that follows the domain prefix (runtime, then capacity and
- * account). Refuses to run inside a transaction, which could already hold
- * billing locks.
- */
 export async function refreshRuntime(db: Database, workspaceId: string) {
   if (db.isTransaction)
     throw new Error('refreshRuntime runs after the billing transaction commits');

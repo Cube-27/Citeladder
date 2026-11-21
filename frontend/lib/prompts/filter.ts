@@ -1,22 +1,12 @@
-/**
- * Prompt search + filter model (F7). Pure functions so the toolbar stays
- * presentational and filtering is unit-testable.
- */
 import type { CitedDomain, NamedBrand, Prompt } from '@citeladder/contracts';
 
-/** Tri-state for the enabled / branded filters. */
 export type EnabledFilter = 'all' | 'enabled' | 'disabled';
 
 export type PromptFilters = {
-  /** Selected intents (empty = all intents). */
   intents: string[];
-  /** Selected buyer stages (empty = all stages). */
   stages: string[];
-  /** Selected personas (empty = all personas). */
   personas: string[];
-  /** Selected brands by `brandKey` (empty = all brands). */
   brands: string[];
-  /** Selected cited domains (empty = all sources). */
   sources: string[];
   enabled: EnabledFilter;
   branded: EnabledFilter;
@@ -32,36 +22,26 @@ export const emptyFilters: PromptFilters = {
   branded: 'all',
 };
 
-/** What a prompt's latest measured answers named and cited. */
 export type PromptMentions = Readonly<{
   named: readonly Pick<NamedBrand, 'kind' | 'name'>[];
-  /** Most citations first. */
   sources: readonly CitedDomain[];
 }>;
 
 type FilterOption = Readonly<{ value: string; label: string }>;
 
-/** How many cited domains a row shows before its "+N". */
 const LEADING_SOURCES = 3;
 
-/** The personas the library uses, for the filter menu; untagged prompts add none. */
 export function personaOptions(prompts: readonly Prompt[]): string[] {
   return [...new Set(prompts.map((prompt) => prompt.persona).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b),
   );
 }
 
-/**
- * A named brand's filter value. The tracked brand is one value whatever name an
- * older run recorded; a competitor is its name, matched as the API resolves
- * names (whitespace-collapsed, lowercased).
- */
 function brandKey(brand: Pick<NamedBrand, 'kind' | 'name'>): string {
   if (brand.kind === 'brand') return 'brand';
   return `competitor:${brand.name.trim().replace(/\s+/gu, ' ').toLowerCase()}`;
 }
 
-/** The project's brand, then its tracked competitors, for the Brands filter. */
 export function brandOptions(project: {
   brand_name: string;
   competitors: readonly { name: string }[];
@@ -74,10 +54,6 @@ export function brandOptions(project: {
   return [...options].map(([value, label]) => ({ value, label }));
 }
 
-/**
- * Every domain the measured answers cited, most citations first, the project's
- * own marked; a selected domain no longer cited stays last, so it can be cleared.
- */
 export function sourceOptions(
   mentions: Iterable<PromptMentions>,
   selected: readonly string[] = [],
@@ -98,7 +74,6 @@ export function sourceOptions(
   return [...cited, ...stale.map((domain) => ({ value: domain, label: domain }))];
 }
 
-/** A row's leading cited domains and how many more it cited. */
 export function leadingSources(sources: readonly CitedDomain[]): {
   shown: readonly CitedDomain[];
   more: number;
@@ -114,16 +89,10 @@ function matchesTriState(value: boolean, filter: EnabledFilter): boolean {
   return filter === 'enabled' ? value : !value;
 }
 
-/** Whether any selected value is among a prompt's; nothing selected keeps every prompt. */
 function matchesAny(selected: ReadonlySet<string>, values: readonly string[] | undefined) {
   return selected.size === 0 || Boolean(values?.some((value) => selected.has(value)));
 }
 
-/**
- * Apply search + filters to a prompt list, preserving order. The Brands and
- * Sources filters read each prompt's latest measurement: a prompt no run
- * measured has named and cited nothing, so either filter leaves it out.
- */
 export function filterPrompts({
   prompts,
   search,
@@ -156,7 +125,6 @@ export function filterPrompts({
   });
 }
 
-/** Whether a prompt's latest answers named any selected brand and cited any selected domain. */
 function matchesMeasured(
   measured: PromptMentions | undefined,
   selected: Readonly<{ brands: ReadonlySet<string>; sources: ReadonlySet<string> }>,

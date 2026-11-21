@@ -26,10 +26,6 @@ export const policiesApi = {
 };
 
 export const policyQueries = {
-  /**
-   * The person's Terms acceptance for one workspace. Acceptance only changes
-   * through `policyMutations.accept`, which writes this read itself.
-   */
   workspace: (workspaceId: string) =>
     queryOptions({
       queryKey: queryKeys.policies.workspace(workspaceId),
@@ -39,11 +35,6 @@ export const policyQueries = {
 };
 
 export const policyMutations = {
-  /**
-   * Record acceptance of a Terms revision; the answer is the workspace's new
-   * status. The workspace is a variable, so one gate outlives a switch and
-   * tells its own workspace's attempt from the last one's.
-   */
   accept: () =>
     mutationOptions({
       mutationFn: ({ workspaceId, revision }: { workspaceId: string; revision: string }) =>

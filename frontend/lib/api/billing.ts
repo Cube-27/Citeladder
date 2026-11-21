@@ -1,16 +1,3 @@
-/**
- * Billing domain endpoints (v8 commercial surface).
- *
- * The server owns every amount. A request from here carries a catalog key, a
- * quantity, a credential mode, ISO country and bounded billing evidence —
- * never a price, a currency, a margin, or an external provider/plan id
- * (invariant 6). The activation
- * response's `quote` is what proves the terms the user was shown.
- *
- * Every commercial POST is idempotent: the caller supplies an
- * `Idempotency-Key` and a retry of the same key replays the stored response
- * rather than charging twice.
- */
 import {
   mutationOptions,
   partialMatchKey,
@@ -74,7 +61,6 @@ export function emptyBillingCustomerDetails(): BillingCustomerDetails {
   };
 }
 
-/** Validation only gates the form; tax and treatment remain server decisions. */
 export function billingDetailsError(
   countryCode: string,
   details: BillingCustomerDetails,
@@ -94,13 +80,6 @@ export function billingDetailsError(
   return null;
 }
 
-/**
- * A fresh idempotency key for one commercial intent.
- *
- * Mirrors `createRequestId` in `client.ts`. The key is a per-account
- * uniqueness token, not a secret or a capability — it authorizes nothing on
- * its own, and the backend scopes every lookup to the authenticated account.
- */
 export function createIdempotencyKey(): string {
   return globalThis.crypto.randomUUID();
 }
@@ -168,7 +147,6 @@ export const billingApi = {
   invoicePdf: (invoiceId: string, options?: ApiRequestOptions) =>
     apiClient.getBlob(`/billing/invoices/${encodeURIComponent(invoiceId)}/pdf`, options),
 
-  /** Start a base-plan checkout. */
   createSubscription: async (
     input: SubscriptionCheckoutRequest,
     idempotencyKey: string,
@@ -218,10 +196,6 @@ export const billingApi = {
     return strictValidate(activationSchema, response, 'billing.purchaseTopup');
   },
 
-  /**
-   * Change the base plan. The server decides the direction and prices an
-   * upgrade's prorated charge; the browser names only the target plan.
-   */
   changePlan: async (
     catalogKey: SelfServePlanKey,
     idempotencyKey: string,
@@ -245,16 +219,7 @@ export const billingApi = {
   },
 };
 
-/**
- * The shell's billing reads, one definition each for the route loader that
- * warms them and the provider and screens that read them.
- */
 export const billingQueries = {
-  /**
-   * What the workspace may do, its allowance hints and its Site Health
-   * runtime. The empty-workspace gate blocks on this read, so it carries the
-   * bounded bootstrap timeout: a stall reaches the retry notice in seconds.
-   */
   workspaceEntitlement: (workspaceId: string) =>
     queryOptions({
       queryKey: queryKeys.billing.workspaceEntitlement(workspaceId),
@@ -265,13 +230,11 @@ export const billingQueries = {
           timeoutMs: getBootstrapReadTimeoutMs(),
         }),
     }),
-  /** Owner/Admin-private usage; not a gate input, so it keeps the default timeout. */
   usage: (workspaceId: string | null) =>
     queryOptions({
       queryKey: queryKeys.billing.usage(workspaceId),
       queryFn: workspaceId ? ({ signal }) => billingApi.usage({ signal, workspaceId }) : skipToken,
     }),
-  /** The plan, grants and allowance the billing screen manages (Owner/Admin). */
   entitlement: (workspaceId: string | null) =>
     queryOptions({
       queryKey: queryKeys.billing.entitlement(workspaceId),
@@ -286,20 +249,13 @@ export const billingQueries = {
         ? ({ signal }) => billingApi.invoices({ signal, workspaceId })
         : skipToken,
     }),
-  /**
-   * The plans this workspace may buy: checkout opens only where the server
-   * says so (B2), the same signal that hides prices on the public pricing page.
-   */
   workspaceCatalog: (workspaceId: string | null, countryCode: string | undefined) =>
     queryOptions({
       queryKey: queryKeys.billing.workspaceCatalog(workspaceId, countryCode),
       queryFn: workspaceId
         ? ({ signal }) => billingApi.workspaceCatalog(countryCode, { signal, workspaceId })
         : skipToken,
-      // An ended workspace buys its plan from this list, so the access gate keeps it.
       meta: { accessRecovery: true },
-      // A country change keeps the shown plans while the new prices load; another
-      // workspace's plans are never shown for this one.
       placeholderData: (previous, previousQuery) =>
         previousQuery &&
         partialMatchKey(previousQuery.queryKey, queryKeys.billing.workspaceCatalogs(workspaceId))
@@ -308,28 +264,18 @@ export const billingQueries = {
     }),
 };
 
-/** Every billing read: a commercial change can move the plan, grants, usage and invoices. */
 export const refreshBilling = (client: QueryClient) =>
   client.invalidateQueries({ queryKey: queryKeys.billing.all });
 
-/**
- * Re-ask every billing read now, including ones that already failed: a retry
- * of a gate that waits on the allowance must not wait for a stale mark.
- */
 export const refetchBilling = (client: QueryClient) =>
   client.refetchQueries({ queryKey: queryKeys.billing.all });
 
-/**
- * A verified purchase: billing moves, and a new plan can restore a workspace
- * whose trial or plan had ended, so its access read refreshes too.
- */
 export async function refreshAfterPurchase(client: QueryClient, workspaceId: string | null) {
   await refreshBilling(client);
   if (workspaceId)
     await client.invalidateQueries({ queryKey: queryKeys.workspaces.access(workspaceId) });
 }
 
-/** Subscription writes on the billing screen; each success refreshes every billing read. */
 export const billingMutations = {
   resumeSubscription: (workspaceId: string | null) =>
     mutationOptions({
@@ -341,10 +287,6 @@ export const billingMutations = {
       mutationFn: () => billingApi.cancelSubscription({ workspaceId }),
       onSuccess: (_change, _vars, _result, { client }) => refreshBilling(client),
     }),
-  /**
-   * A downgrade: the server schedules it with no charge, so it needs no
-   * checkout. Each call is a new idempotent request.
-   */
   downgrade: (workspaceId: string | null) =>
     mutationOptions({
       mutationFn: (key: SelfServePlanKey) =>

@@ -40,7 +40,6 @@ export async function auditTenant(db: Database, fixtures: VisibilityFixtures) {
   return { ...t, setId, promptId, connectionId: connection.id };
 }
 
-/** Puts the workspace on a live managed (platform-key) plan, as a paid managed checkout does. */
 export async function managedPlan(db: Database, workspaceId: string) {
   const accountId = await billingAccount(db, workspaceId);
   const now = new Date();

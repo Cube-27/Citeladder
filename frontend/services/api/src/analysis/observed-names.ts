@@ -1,10 +1,3 @@
-/**
- * Name-based competitor suggestions (AV-11): untracked names the perception
- * call labelled become a review candidate once seen in enough prompts across
- * enough engines, never a tracked competitor. Perception settles answer by
- * answer after finalization, so each settled answer refreshes its audit's
- * candidates; the suggestions lock makes every refresh see the ones before it.
- */
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
@@ -23,7 +16,6 @@ const aliasList = z.array(z.string());
 
 type Seen = Evidence & { spellings: Map<string, number> };
 
-/** The spelling the answers used most, ties broken by text order. */
 function displayName(spellings: Map<string, number>): string {
   let best = { name: '', count: 0 };
   for (const [name, count] of spellings)
@@ -64,7 +56,6 @@ async function observations(db: Database, workspaceId: string, auditId: string) 
   return seen;
 }
 
-/** Recount the audit's name candidates after an answer's names were persisted. */
 export async function refreshNamedCandidates(
   db: Database,
   scope: { workspaceId: string; projectId: string; auditId: string },

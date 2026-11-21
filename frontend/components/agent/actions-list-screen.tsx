@@ -25,19 +25,12 @@ import { formatCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import type { ActionGoal } from '@citeladder/contracts/actions';
 
-/**
- * The Actions page (plan v3): status → goal → grouping → action, from one
- * tree read per open status. New opens on its first goal and that goal's
- * first grouping. Every level has a fixed height, so opening, closing,
- * ticking or deciding only changes what is below it.
- */
 export function ActionsScreen() {
   const scope = useProjectScope();
   const view = useActionFilters();
   const location = useLocation();
   const lead: ActionStatus = view.statuses.includes('open') ? 'open' : (view.statuses[0] ?? 'open');
   const primary = useStatusTree(scope, view, lead);
-  // A breadcrumb on an Action or URL page opens its goal and grouping here.
   const [arrived] = useState(() => {
     const parsed = listJumpSchema.safeParse(location.state);
     return parsed.success && view.groupBy === 'goal' ? parsed.data : null;
@@ -53,7 +46,6 @@ export function ActionsScreen() {
     row?.focus({ preventScroll: true });
     return row !== null;
   };
-  // A jump scrolls once the goal tree holding its row has landed.
   useEffect(() => {
     const target = pendingJump.current;
     if (!target || primary.data?.group_by !== 'goal' || primary.isPlaceholderData) return;
@@ -91,7 +83,6 @@ export function ActionsScreen() {
   );
 }
 
-/** The levels a breadcrumb jump opens: its status, goal and grouping. */
 function jumpKeys(jump: ListJump | null): string[] {
   if (!jump) return [];
   return [
@@ -101,7 +92,6 @@ function jumpKeys(jump: ListJump | null): string[] {
   ];
 }
 
-/** New (or the one status shown), its first group and that group's first grouping. */
 function defaultOpen(status: ActionStatus, tree: ActionTree | undefined): string[] {
   const first = tree?.groups[0];
   const grouping = first?.groupings[0];
@@ -112,7 +102,6 @@ function defaultOpen(status: ActionStatus, tree: ActionTree | undefined): string
   ];
 }
 
-/** Accept or Decline what is ticked; the dock takes no space, so ticking moves nothing. */
 function BulkBar() {
   const { scope, view, selection } = useActionsPageContext();
   const bulk = useBulkDecision(scope, view, selection);

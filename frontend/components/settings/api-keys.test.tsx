@@ -17,7 +17,6 @@ const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const ACME = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const BETA = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const KEY = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
-/** A fixture shaped like a key, deliberately low-entropy so it reads as fake. */
 const SHOWN_ONCE = `cl_live_Ab12Cd34${'x'.repeat(43)}`;
 
 const { list, create, revoke } = vi.hoisted(() => ({
@@ -25,8 +24,6 @@ const { list, create, revoke } = vi.hoisted(() => ({
   create: vi.fn<(workspaceId: string, input: ApiKeyCreate) => Promise<ApiKeyCreated>>(),
   revoke: vi.fn<(workspaceId: string, keyId: string) => Promise<ApiKey>>(),
 }));
-// The transport is replaced on the module's own client object, so the real
-// query and mutation descriptors run against it.
 Object.assign(apiKeysApi, { list, create, revoke });
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({
@@ -91,7 +88,6 @@ it('sends the end of the chosen day in the display time zone and lists that day'
   expect(dialog).toHaveTextContent('Ends at midnight, Asia/Kolkata');
   await user.type(within(dialog).getByLabelText(/Name/u), 'CI export');
   const expiry = within(dialog).getByRole('textbox', { name: 'Expiry date' });
-  // A day that does not exist is refused in the field, before any request.
   await user.type(expiry, '2026-02-30');
   expect(dialog).toHaveTextContent('Enter a date as YYYY-MM-DD.');
   expect(within(dialog).getByRole('button', { name: 'Create key' })).toBeDisabled();
@@ -111,7 +107,6 @@ it('lists a key by name, prefix, scopes and projects without its ID', async () =
   expect(row).toHaveTextContent(
     'CI exportcl_live_Ab12Cd34… · Created by ana@example.test · Created Oct 1, 2026',
   );
-  // The state is the Status column's mark, its last use the caption under it.
   expect(row).toHaveTextContent('ActiveNot used yetread, audits:runAcme');
   expect(row?.textContent).not.toContain(KEY);
   expect(screen.getByText('1 of 50,200 keys in use')).toBeInTheDocument();

@@ -1,14 +1,8 @@
-/**
- * The untracked business names the perception model labelled (AV-11). The
- * model only names; a name survives when the passages it was sent contain it
- * and no tracked business or alias matches it, and every drop is counted.
- */
 import { normalizeAlias } from '../analysis/aliases.ts';
 import { countedMatches } from '../analysis/entity-assessment.ts';
 import type { PerceptionPolicy } from '../config/perception.ts';
 import type { PerceptionPackage } from './passages.ts';
 
-/** A verified name as the passages write it, with the key suggestions group by. */
 export type UntrackedName = { name: string; name_key: string };
 
 export type NameDropReason =
@@ -21,7 +15,6 @@ export type NameDropReason =
 
 type Tracked = readonly { name: string; aliases: readonly string[] }[];
 
-/** Whether a tracked business's name or alias matches `name`, either way round. */
 export function isTracked(name: string, tracked: Tracked): boolean {
   const key = normalizeAlias(name);
   return tracked.some(({ name: own, aliases }) => {
@@ -34,10 +27,6 @@ export function isTracked(name: string, tracked: Tracked): boolean {
   });
 }
 
-/**
- * The verified, deduplicated names; null when the model returned no list,
- * so an answer whose names are unknown never reads as naming none.
- */
 export function untrackedNames(input: {
   pkg: PerceptionPackage;
   names: readonly string[] | undefined;

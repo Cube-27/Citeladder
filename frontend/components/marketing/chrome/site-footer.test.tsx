@@ -7,10 +7,6 @@ import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
 
 import { SiteFooter } from './site-footer';
 
-/**
- * The footer is a static server-rendered component with no islands. Cover
- * published destinations, account entry and legal links.
- */
 describe('SiteFooter', () => {
   it('makes published platform destinations reachable from the footer', () => {
     render(<SiteFooter />);
@@ -43,7 +39,6 @@ describe('SiteFooter', () => {
 
     expect(screen.queryByRole('link', { name: /book a demo/i })).toBeNull();
     expect(screen.queryByRole('link', { name: /log in/i })).toBeNull();
-    // The AI references sit in the Company column, not the legal strip.
     const footerNav = screen.getByRole('navigation', { name: 'Footer' });
     expect(within(footerNav).getByRole('link', { name: 'AI Instructions' })).toHaveAttribute(
       'href',
@@ -70,8 +65,6 @@ describe('SiteFooter', () => {
   it('links every CiteLadder policy exactly once, in the same tab', () => {
     render(<SiteFooter />);
 
-    // The policies are CiteLadder's own pages on this domain, so none of them
-    // may leave the site the way the former parent-company links did.
     for (const { label, href } of FOOTER_LEGAL_LINKS) {
       const scope = screen.getByRole('navigation', {
         name: href === '/contact' ? 'Footer' : 'Legal',
@@ -87,16 +80,12 @@ describe('SiteFooter', () => {
   it('names the parent company in the ownership line', () => {
     render(<SiteFooter />);
 
-    // The line reads "© 2026 CiteLadder. A Cube27 product." with Cube27 as a
-    // link, so the text is split across nodes — match the paragraph's own
-    // normalised content rather than a single text node.
     const footer = screen.getByRole('contentinfo');
     const ownership = within(footer).getByText(
       (_content, element) =>
         element?.tagName === 'P' && /a cube27 product/i.test(element.textContent ?? ''),
     );
     expect(ownership).toBeInTheDocument();
-    // Guard against the epoch year leaking into the copyright line.
     expect(ownership.textContent).not.toMatch(/© 1970/);
     expect(within(ownership).getByRole('link', { name: 'Cube27' })).toHaveAttribute(
       'href',
@@ -131,7 +120,6 @@ describe('SiteFooter', () => {
     for (const [name, href] of profiles) {
       const link = within(footer).getByRole('link', { name });
       expect(link).toHaveAttribute('href', href);
-      // Icon-only: the domain is its accessible name, not visible text.
       expect(link.textContent).toBe('');
       expect(within(footerNav).queryByRole('link', { name })).toBeNull();
     }

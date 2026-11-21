@@ -23,7 +23,6 @@ function captureUpstream() {
   return sent;
 }
 
-/** Sends each call with a bearer and a cookie; every one must reach the origin. */
 async function forwardAll(authorization: string, calls: readonly (readonly [string, string])[]) {
   const sent = captureUpstream();
   for (const [method, path] of calls) {

@@ -83,7 +83,6 @@ it('creates an invited identity that owns no workspace, stores a hashed token an
     .executeTakeFirstOrThrow();
   createdId = created.id;
   expect(await verifyPassword('password123', created.hashed_password)).toBe(true);
-  // An invited person owns nothing until they create their own workspace.
   expect(
     await db
       .selectFrom('workspace_members')
@@ -107,7 +106,6 @@ it('creates an invited identity that owns no workspace, stores a hashed token an
       .where('workspace_id', '=', workspace)
       .execute(),
   ).toEqual([{ workspace_id: workspace, role: 'viewer' }]);
-  // Accepting provisions nothing: the plan's one grant is all the account holds.
   expect(
     await db
       .selectFrom('account_grants')
@@ -121,7 +119,6 @@ it.each(['deactivate', 'demote', 'remove', 'password', 'sessions'])(
   'rechecks %s revocation after operator confirmation and before each choice',
   async (revocation) => {
     await manageAccount(db, session, { kind: 'list' });
-    // A separate connection commits the revocation while the terminal collects confirmation.
     const original = await db
       .selectFrom('users')
       .selectAll()
@@ -226,7 +223,6 @@ it('bounds roles, targets members only and invalidates sessions when resetting a
   await expect(
     manageAccount(db, session, { kind: 'password', email: email(admin), password: 'newpass123' }),
   ).rejects.toThrow('account_password_forbidden');
-  // A member who also belongs elsewhere keeps their global password out of this admin's reach.
   const shared = await fixtures.user();
   await fixtures.member(workspace, shared, 'member');
   await fixtures.member(foreign, shared, 'member');
@@ -312,7 +308,6 @@ it('bounds roles, targets members only and invalidates sessions when resetting a
       email: email(target),
       password: 'newpass123',
     });
-    // Recovery ends what the old credentials could have minted, and nothing else.
     expect(await revocation(targetAccess)).toEqual({ grant: true, key: 'credential_reset' });
     expect(await revocation(untouched)).toEqual({ grant: false, key: null });
   } finally {

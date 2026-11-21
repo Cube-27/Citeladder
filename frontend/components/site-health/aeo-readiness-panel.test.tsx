@@ -181,7 +181,6 @@ describe('AEO readiness', () => {
         .getAllByRole('columnheader')
         .map((head) => head.textContent),
     ).toEqual(['Dimension', 'Score', 'Coverage', 'State']);
-    // Two bands, two tones: "Nearly there" no longer reads as "Needs work".
     expect(within(table).getByText('Needs work').closest('[data-status-tone]')).toHaveAttribute(
       'data-status-tone',
       'warning',
@@ -191,7 +190,6 @@ describe('AEO readiness', () => {
 
     await userEvent.click(nearly);
     const drawer = await screen.findByRole('dialog', { name: 'Structure evidence' });
-    // A check's state is a status badge, not a bare caption.
     expect(within(drawer).getByText('Passing').closest('[data-status-tone]')).toHaveAttribute(
       'data-status-tone',
       'positive',
@@ -234,12 +232,9 @@ describe('AEO readiness', () => {
     stubReadiness({ dimensions });
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
 
-    // The pillar still reports its number, but an unresolved check bars the
-    // top band: a perfect score over an incomplete set is not a pass.
     const row = (await screen.findByText('Answerability')).closest('tr');
     expect(within(row!).queryByText('Passing')).toBeNull();
     expect(within(row!).getByText('Nearly there')).toBeInTheDocument();
-    // The printed 100 and the lower band carry the reason, so they agree.
     expect(within(row!).getByText('1 check incomplete')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Answerability evidence' }));
     expect(screen.getAllByText('Incomplete')).toHaveLength(1);
@@ -297,13 +292,11 @@ describe('AEO readiness', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
     const link = screen.getByRole('link', { name: 'acme.test/blogs/american-summer' });
     expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${PAGE_A}`);
-    // One row per page — the old drawer repeated the URL once per rule.
     expect(screen.getAllByRole('link', { name: 'acme.test/blogs/american-summer' })).toHaveLength(
       1,
     );
     const row = link.closest('li');
     expect(within(row!).getByText(/No question headings/)).toBeInTheDocument();
-    // Raw outcome tokens are gone.
     expect(screen.queryByText('fail')).toBeNull();
   });
 
@@ -323,7 +316,6 @@ describe('AEO readiness', () => {
   it('shows the persisted empty state rather than an empty grid', async () => {
     stubReadiness({ state: 'not_measured', crawl_id: null, limitations: ['Run a crawl first.'] });
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-    // An informational notice is a polite status, not an alert.
     expect(await screen.findByRole('status')).toHaveTextContent('Run a crawl first.');
   });
 
@@ -342,9 +334,6 @@ describe('AEO readiness', () => {
   });
 
   it('gives a code-only page the fix prompt rather than no action at all', async () => {
-    // Every finding names a next action. A page whose failures are all
-    // template or header changes cannot open a draft or a roadmap, but it must
-    // still hand the reader something to give a developer.
     stubReadiness({
       dimensions: DIMENSIONS.map(([key, label], index) => {
         const base = dimension(key, label, index === 0);

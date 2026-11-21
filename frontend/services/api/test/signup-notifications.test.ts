@@ -39,7 +39,6 @@ async function signup(verifiedAt: Date | null, domain = 'fixtures.citeladder.com
   users.push(user.id);
   return user;
 }
-/** Other files' signups share the database; tick until a pass sends nothing. */
 async function tickUntilIdle() {
   while ((await notifyVerifiedSignups(db, config, now)) > 0);
 }

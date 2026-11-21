@@ -48,20 +48,13 @@ import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 type Metric = (typeof VISIBILITY_METRICS)[number]['value'];
 
-/** The plotted metric, on URL key `metric`, for every trend section. */
 export const metricCodec = stringUrlCodec(
   VISIBILITY_METRICS.map((item) => item.value),
   'brand_mention_rate',
 );
 
-/** The Focus menu's value for the default roster. */
 const ALL_BRANDS = '__all__';
 
-/**
- * Insights' lede: what the figures count, where you rank and who is beside
- * you, then the key figures. The rank and names come from the same ranking
- * the Competitors table draws, computed in code.
- */
 export function InsightsLede({ selected }: Readonly<{ selected: Visibility }>) {
   const shortfall = selectionBasis(selected);
   const { headline, sub } = standingHeadline(brandStanding(selected.rankings));
@@ -82,11 +75,6 @@ export function InsightsLede({ selected }: Readonly<{ selected: Visibility }>) {
   );
 }
 
-/**
- * What "All runs in period" actually pooled: runs are only comparable within
- * one frozen configuration, so a period pools the most recent one's runs and
- * says how many it left out.
- */
 function PooledSelectionNote({ selected }: Readonly<{ selected: Visibility }>) {
   const groups = selected.configuration_groups;
   if (selected.selection_mode !== 'range' || !groups) return null;
@@ -111,8 +99,6 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
       delta: change == null ? null : <Delta value={change} unit=" pp" />,
     };
   };
-  // An average, not a rank: the mean place an answer names you in. Runs measured
-  // before mention offsets were persisted have none, and the figure is omitted.
   const position = brand?.avg_position ?? selected.avg_position ?? null;
   const segments: FigureSegment[] = [
     {
@@ -148,7 +134,6 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
   return <FigureStrip segments={segments} />;
 }
 
-/** Net sentiment with the classified count beneath; below the minimum it is too few, never zero. */
 function sentimentFigure(sentiment: NetSentiment): FigureSegment {
   return {
     key: 'sentiment',
@@ -163,7 +148,6 @@ function sentimentFigure(sentiment: NetSentiment): FigureSegment {
   };
 }
 
-/** Win rate (AV-7): of the answers naming a brand you track, the share naming yours first. */
 function winRateSegment(brand: RankingRow | undefined, unmeasured: Absent | null): FigureSegment {
   const answers = brand?.win_answers ?? null;
   const rate = brand?.win_rate ?? null;
@@ -183,12 +167,6 @@ function winRateSegment(brand: RankingRow | undefined, unmeasured: Absent | null
   };
 }
 
-/**
- * "Your brand over time": the plotted metric, and Focus to plot one tracked
- * brand alone. Focus is URL-held so a comparison survives a reload; a name
- * this selection never measured falls back to the full roster rather than
- * drawing an empty chart that reads as "measured, scored zero".
- */
 export function BrandTrend({
   query,
   selected,
@@ -201,8 +179,6 @@ export function BrandTrend({
   const brands = orderByVisibility(selected.rankings);
   const focusedBrand = brands.some((row) => row.name === focused) ? focused : null;
   const brandName = selected.rankings.find((row) => row.is_brand)?.name ?? null;
-  // Focusing the tracked brand is its OWN series, which the projection
-  // publishes directly; a competitor's comes from the rankings.
   const focusedIsBrand = focusedBrand !== null && focusedBrand === brandName;
   const lines = (points: readonly VisibilityTrendPoint[], timeZone: string): TrendLines => ({
     name: focusedBrand ?? 'You',
@@ -211,7 +187,6 @@ export function BrandTrend({
       focusedBrand === null || focusedIsBrand
         ? toChartPoints(points, metric, timeZone)
         : toNamedChartPoints(points, metric, focusedBrand, timeZone),
-    // One focused brand means one line.
     series: focusedBrand === null ? toCompetitorSeries(points, metric) : [],
   });
   return (
@@ -247,10 +222,8 @@ export function BrandTrend({
   );
 }
 
-/** A trend's lines for one metric: the lead line (yours or the focused brand's) and those against it. */
 export type TrendLines = Readonly<{
   name: string;
-  /** The lead line's brand for its mark; null marks it as yours. */
   markName: string | null;
   lead: ReturnType<typeof toChartPoints>;
   series: readonly TrendSeries[];
@@ -260,14 +233,11 @@ type TrendSectionProps = Readonly<{
   query: UseQueryResult<VisibilityTrendPoint[], unknown>;
   metric: Metric;
   lines: (points: readonly VisibilityTrendPoint[], timeZone: string) => TrendLines;
-  /** Whether the loading chart draws a key, as the drawn chart will. */
   keyed: boolean;
   lonePoint: 'list' | 'plot';
 }>;
 
-/** The failed read, the loading chart, no runs in the window, or the line chart. */
 export function TrendSection({ query, keyed, ...chart }: TrendSectionProps) {
-  // No data yet is loading, never an empty chart; retained data stays while it refetches.
   if (query.isPending)
     return (
       <StateBlock kind="loading" label="Loading the history…" shape={{ kind: 'chart', keyed }} />

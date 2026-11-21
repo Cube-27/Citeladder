@@ -2,10 +2,6 @@ import { useState } from 'react';
 
 import { cn, emailInitials } from '@/lib/utils';
 
-/**
- * A placement, never a size: `byline` (20px) inline in a byline, `row` (28px)
- * in rows, menus and the account button, `profile` (40px) in a profile header.
- */
 const PLACEMENT = {
   byline: 'size-5 type-caption',
   row: 'size-7 type-caption',
@@ -14,19 +10,11 @@ const PLACEMENT = {
 
 export type AvatarPlacement = keyof typeof PLACEMENT;
 
-/**
- * Avatar — a person's photo or initials in a circle: the first and last
- * word's first letters in `ink` on `surface-sunken` with a 1px `line` border; a
- * failed photo falls back to the initials. Never coloured per person, never
- * a company (that is `BrandMark`). Decorative: the adjacent text or the
- * control's name says who it is.
- */
 export function Avatar({
   name,
   src,
   placement = 'row',
 }: Readonly<{
-  /** The person's name or email; the initials come from it. */
   name: string;
   src?: string | null;
   placement?: AvatarPlacement;

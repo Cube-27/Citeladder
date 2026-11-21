@@ -1,16 +1,3 @@
-/**
- * Entitlement resolution: fold one billing account's grants into capability
- * values at an instant.
- *
- * Billing writes grants, revocations and subscriptions; `entitlements/state.ts`
- * reads them (the one loader) and this folds what it read. One corrupt grant
- * makes the whole account unresolved, which callers treat as a denial.
- *
- * Selection: exactly one primary bundle (highest `profile_priority`, then
- * `bundle_id`) plus every supplement. Flags OR, levels take the maximum, and
- * counters add. Add-ons and top-ups count only while the current base
- * subscription has a readable period end, and never past it.
- */
 import { policy } from '../config.ts';
 
 export type GrantRow = {
@@ -38,10 +25,8 @@ const PAID_ACCESS = new Set(policy.entitlements.paid_access_sources);
 const PRIMARY = 'primary';
 const SUPPLEMENT = 'supplement';
 
-/** A grant row outside the registry; the account it belongs to is unresolved. */
 export class CorruptGrant extends Error {}
 
-/** Flags are 0 or 1, levels an ordinal of the definition, counters non-negative. */
 function valueFits(definition: { type: string; levels: number }, value: number): boolean {
   if (definition.type === 'flag') return value === 0 || value === 1;
   if (definition.type === 'level') return value >= 0 && value < definition.levels;
@@ -62,7 +47,6 @@ function validate(grant: GrantRow): void {
     throw new CorruptGrant('primary grant is missing bundle identity');
 }
 
-/** When a grant stops counting; `null` never expires, `-Infinity` never started. */
 export function expiryMs(grant: GrantRow, subscriptionEnd: Date | null): number | null {
   const own = grant.valid_until?.getTime() ?? null;
   if (!PAID_ACCESS.has(grant.source_kind)) return own;
@@ -70,7 +54,6 @@ export function expiryMs(grant: GrantRow, subscriptionEnd: Date | null): number 
   return own === null ? subscriptionEnd.getTime() : Math.min(own, subscriptionEnd.getTime());
 }
 
-/** Each grant's earliest revocation instant. */
 function revocationTimes(revocations: readonly RevocationRow[]): Map<string, number> {
   const revokedAt = new Map<string, number>();
   for (const { grant_id: id, effective_from: from } of revocations) {
@@ -91,7 +74,6 @@ function isActive(
   return expiry === null || now < expiry;
 }
 
-/** The selected primary bundle: highest priority, then bundle id. */
 function primaryBundle(active: readonly GrantRow[]): string | null {
   let best: { priority: number; id: string } | null = null;
   for (const grant of active) {
@@ -105,14 +87,12 @@ function primaryBundle(active: readonly GrantRow[]): string | null {
   return best?.id ?? null;
 }
 
-/** Flags OR, levels take the maximum, counters add. */
 function combine(type: string, prior: number, value: number): number {
   if (type === 'flag') return prior === 1 || value === 1 ? 1 : 0;
   if (type === 'level') return Math.max(prior, value);
   return prior + value;
 }
 
-/** Earliest future change to the selected projection, including future grants. */
 export function entitlementChangeAt(
   grants: readonly GrantRow[],
   revocations: readonly RevocationRow[],
@@ -136,7 +116,6 @@ export function entitlementChangeAt(
   return future.length ? new Date(Math.min(...future)) : null;
 }
 
-/** Grants selected at `at`; throws `CorruptGrant` on any invalid row. */
 export function selectedGrants(
   grants: readonly GrantRow[],
   revocations: readonly RevocationRow[],
@@ -152,7 +131,6 @@ export function selectedGrants(
   return active.filter((grant) => grant.bundle_role !== PRIMARY || grant.bundle_id === bundle);
 }
 
-/** Capability values at `at`; throws `CorruptGrant` on any invalid row. */
 export function foldEntitlement(
   grants: readonly GrantRow[],
   revocations: readonly RevocationRow[],

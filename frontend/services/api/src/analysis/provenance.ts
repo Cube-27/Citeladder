@@ -1,10 +1,3 @@
-/**
- * Frozen retrieval and route provenance, for one execution or one run.
- *
- * The task's request snapshot wins, then its
- * route snapshot, then the audit's frozen measurement policy. Live
- * configuration is never consulted.
- */
 import { auditFrozenRetrievalEnabled } from '../audits/frozen-configuration.ts';
 import { logicalEngines } from '../config/providers.ts';
 import { compareText } from '../text-order.ts';
@@ -33,7 +26,6 @@ export function executionFrozenProvenance(input: {
   return retrieval ?? auditFrozenRetrievalEnabled(input.auditConfiguration);
 }
 
-/** One measured route on an aggregate surface. */
 export type ModelProvenance = {
   logical_engine: string;
   transport_provider: string;
@@ -41,7 +33,6 @@ export type ModelProvenance = {
   retrieval_enabled: boolean;
 };
 
-// Catalog order is the sorted engine catalog; unknown engines sort after it.
 const ENGINE_ORDER = new Map<string, number>(
   logicalEngines.toSorted(compareText).map((engine, index) => [engine, index]),
 );
@@ -50,7 +41,6 @@ function engineRank(engine: string): number {
   return ENGINE_ORDER.get(engine) ?? ENGINE_ORDER.size;
 }
 
-/** Exact duplicates removed, in stable catalog order. */
 export function buildModelProvenance(items: Iterable<ModelProvenance>): ModelProvenance[] {
   const unique = new Map<string, ModelProvenance>();
   for (const item of items) {
@@ -68,12 +58,10 @@ export function buildModelProvenance(items: Iterable<ModelProvenance>): ModelPro
       compareText(left.logical_engine, right.logical_engine) ||
       compareText(left.transport_provider, right.transport_provider) ||
       compareText(left.transport_model, right.transport_model) ||
-      // Off, then on.
       Number(left.retrieval_enabled) - Number(right.retrieval_enabled),
   );
 }
 
-/** A run's routes from its frozen engine snapshots, with its frozen retrieval state. */
 export function modelProvenanceFor(
   engineSnapshots: readonly {
     logical_engine: string;

@@ -10,16 +10,13 @@ import { textRole } from '@/components/ui/typography';
 import { ArrowRight } from '@/lib/icons';
 import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 
-/** Whether a loop stage has evidence yet. */
 export const reached = (stage: CommandCenter['loop']['connected']) =>
   stage.state === 'observed' || stage.state === 'partial';
 
-/** The Overview shows its start card until a run is measured and prompts are tracked. */
 export function needsStart(data: CommandCenter): boolean {
   return !data.measurement || data.active_prompt_count === 0;
 }
 
-/** The steps in order; the first one not done is the one you are on, the rest wait. */
 function startSteps(data: CommandCenter): SetupStep[] {
   const running = data.next_action.kind === 'audit_running';
   const steps = [
@@ -45,11 +42,6 @@ function startSteps(data: CommandCenter): SetupStep[] {
   });
 }
 
-/**
- * The one card a project sees before its Overview has figures: the steps as
- * one checklist under its progress, the step you are on carrying its one button. Widgets join it
- * as their data arrives. Each step's button is its named action's one look.
- */
 export function OverviewStart({ data }: Readonly<{ data: CommandCenter }>) {
   const firstRun = !data.measurement;
   const steps = startSteps(data);

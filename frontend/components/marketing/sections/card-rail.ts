@@ -1,11 +1,3 @@
-/**
- * Mounts a CardRail: its previous and next buttons move the row one card,
- * and a button is disabled when the row cannot move that way (both, when
- * every card already fits). Each RailCard's plus, or a press on the card
- * outside its links, opens the card in place and closes any other; the open
- * card's close (the same button) or a second press closes it. Shows the
- * controls once they work.
- */
 export function mountCardRail(rail: HTMLElement): void {
   const nav = rail.querySelector<HTMLElement>('[data-card-rail-nav]');
   const track = rail.querySelector<HTMLElement>('[data-card-rail-track]');
@@ -20,7 +12,6 @@ export function mountCardRail(rail: HTMLElement): void {
     const gap = Number.parseFloat(getComputedStyle(track).columnGap) || 0;
     return first instanceof HTMLElement ? first.offsetWidth + gap : track.clientWidth;
   };
-  // Tells a screen reader which card the buttons brought to the start.
   const announce = (direction: -1 | 1) => {
     const items = [...track.children];
     const step = cardStep();
@@ -49,8 +40,6 @@ export function mountCardRail(rail: HTMLElement): void {
     if (!toggle || !more) return;
     toggle.setAttribute('aria-expanded', String(open));
     toggle.setAttribute('aria-label', `${open ? 'Close' : 'More about'} ${toggle.dataset.label}`);
-    // A closed card's open layers stay out of reach; the stylesheet fades
-    // them (and the miniature, which a phone's open row keeps).
     const page = card.querySelector<HTMLElement>('.cl-railcard-page');
     for (const layer of [more, page]) {
       layer?.toggleAttribute('inert', !open);
@@ -59,9 +48,6 @@ export function mountCardRail(rail: HTMLElement): void {
     }
     card.toggleAttribute('data-expanded', open);
   };
-  // As in the reference, a card opens where it stands: its left edge stays
-  // put and it widens to the right (the row does not scroll), while any
-  // other open card closes in the same motion.
   const toggleCard = (card: HTMLElement) => {
     const open = card.dataset.expanded === undefined;
     for (const other of cards) if (other !== card) setOpen(other, false);
@@ -70,8 +56,6 @@ export function mountCardRail(rail: HTMLElement): void {
   };
   for (const card of cards) {
     card.addEventListener('click', (event) => {
-      // A link inside the card still navigates; the toggle and the card's
-      // own surface open or close it.
       if (event.target instanceof Element && event.target.closest('a')) return;
       toggleCard(card);
     });

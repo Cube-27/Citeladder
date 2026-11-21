@@ -33,7 +33,6 @@ import {
 
 const logger = getLogger('api.billing');
 
-/** Takes the account lock through its owning workspace; returns that workspace. */
 export async function lockOwner(db: Database, accountId: string) {
   const { workspace_id: workspaceId } = await db
     .selectFrom('billing_accounts')
@@ -48,7 +47,6 @@ type Frozen = Awaited<ReturnType<typeof catalog>>;
 type Quote = z.infer<typeof resolvedQuoteSchema>;
 type PaymentRecord = Extract<Evidence, { kind: 'payment' }>;
 
-/** Creates the base subscription and settles its first paid period; false while unpaid. */
 async function settleBase(
   db: Database,
   pending: Pending,
@@ -65,8 +63,6 @@ async function settleBase(
     evidence.subscription.priceRef !== pending.external_price_id
   )
     refuse('price_ref_mismatch');
-  // A checkout paid as the abandon sweep cancels it is still the customer's
-  // paid period: it settles and runs to the paid end (B71).
   const { status } = evidence.subscription;
   if (!evidence.subscription.payment || !(grantedStates.has(status) || terminalStates.has(status)))
     return false;
@@ -128,7 +124,6 @@ async function settleBase(
   return true;
 }
 
-/** Add-on or top-up: a fixed-expiry supplement within a live base period. */
 async function settlePack(
   db: Database,
   pending: Pending,
@@ -156,8 +151,6 @@ async function settlePack(
     payment.paidAt >= base.current_period_end ||
     !policy.billing.contracts.live_subscription_statuses.includes(base.status)
   ) {
-    // Paid (late, after abandonment) while no base period covered it: nothing
-    // to supplement. An operator reviews the payment for a refund.
     logger.warning('billing.pack_paid_without_base', { activation_id: pending.id });
     return;
   }
@@ -177,7 +170,6 @@ async function settlePack(
   });
 }
 
-/** Settles an upgrade or pack payment; false while the evidence carries no payment yet. */
 async function settleOneOff(
   db: Database,
   pending: Pending,
@@ -252,12 +244,6 @@ export async function settlePending(
     .execute();
 }
 
-/**
- * Records one paid period's receipt and its plan bundle. A period paid while
- * the provider already reports the subscription ended still runs to its paid
- * end (B71); one charged after a full refund cancelled the subscription grants
- * nothing and is flagged for an operator refund (B71).
- */
 async function settlePeriod(
   db: Database,
   sub: Subscription,
@@ -332,11 +318,6 @@ async function settlePeriod(
     });
 }
 
-/**
- * A terminal provider state keeps a verified paid period (its end is returned)
- * unless a payment for it was refunded in full (B52, B70); otherwise the
- * subscription's remaining grants are revoked now.
- */
 async function endTerminal(
   db: Database,
   sub: Subscription,
@@ -355,7 +336,6 @@ async function endTerminal(
     .where('period_end', '>', now)
     .orderBy('period_end', 'desc')
     .executeTakeFirst();
-  // A refund-cancelled subscription keeps no later period it was charged for (B71).
   if (
     paid?.period_end &&
     !refundCancelled(sub) &&
@@ -368,7 +348,6 @@ async function endTerminal(
     .where('billing_account_id', '=', sub.billing_account_id)
     .where('source_ref', '=', sourceRef({ kind: 'subscription', subscriptionId: sub.id }))
     .where((eb) => eb.or([eb('period_end', 'is', null), eb('period_end', '>', now)]))
-    // A grant already revoked by then (a full refund, B52) is not revoked twice.
     .where(({ not, exists, selectFrom }) =>
       not(
         exists(
@@ -393,7 +372,6 @@ async function endTerminal(
   return null;
 }
 
-/** The subscription's state after this evidence; a paid terminal period runs to its end. */
 async function periodOutcome(
   db: Database,
   sub: Subscription,
@@ -405,8 +383,6 @@ async function periodOutcome(
     event.cancelAtEnd && event.status === STATUS.active ? STATUS.cancel_scheduled : event.status;
   const settled = { status, end: event.end, endedAt: sub.ended_at, current: sub.is_current };
   if (!terminalStates.has(status))
-    // A fully refunded current period stays cancelled until the provider
-    // confirms (B52), even if a renewal was charged meanwhile (B71).
     return refundCancelled(sub) ||
       (sub.is_current && (await periodRefunded(db, sub, event.start, event.end)))
       ? { ...settled, status: STATUS.cancelled }
@@ -507,8 +483,6 @@ async function settleUpgrade(
     .executeTakeFirst();
   const end = sub?.is_current ? sub.current_period_end : null;
   if (!sub || !end || end <= paidAt) {
-    // Paid after the upgraded period ended: nothing left to grant. An operator
-    // reviews the payment for a refund.
     logger.warning('billing.upgrade_paid_after_period', { activation_id: pending.id });
     return;
   }
@@ -543,7 +517,6 @@ async function settleUpgrade(
         source: pending.id,
         terms: change.terms,
       }),
-      // The next subscription sweep makes the provider call promptly.
       reconciliation_next_at: new Date(),
       updated_at: new Date(),
     })
@@ -551,11 +524,6 @@ async function settleUpgrade(
     .execute();
 }
 
-/**
- * Settles a processed provider refund: records its receipt and credit note,
- * and when this refund completes a full refund of the payment, applies B52.
- * A replayed refund records nothing and applies nothing again.
- */
 export async function settleRefund(
   db: Database,
   request: {
@@ -571,14 +539,6 @@ export async function settleRefund(
   if (recorded?.full) await endRefundedPayment(db, workspaceId, recorded.payment, refund);
 }
 
-/**
- * A payment refunded in full grants nothing more. When it paid for the base
- * subscription's current period, its own payment (B52) or an upgrade bought in
- * it (B70), the subscription is cancelled now: the period's plan grants, an
- * upgrade's included, are revoked in this transaction, a scheduled plan change
- * ends with it, and the row stays current until the subscription sweep's
- * provider cancellation is confirmed, so the provider cannot charge unseen.
- */
 async function endRefundedPayment(
   db: Database,
   workspaceId: string,
@@ -622,11 +582,9 @@ async function endRefundedPayment(
     .updateTable('billing_subscriptions')
     .set({
       status: STATUS.cancelled,
-      // Nothing left to resume: the cancellation is decided, not held (B46).
       cancel_at_period_end: true,
       cancellation_sent_at: now,
       reconciliation_next_at: now,
-      // The subscription never renews, so no scheduled plan change survives it (B70).
       scheduled_change: null,
       updated_at: now,
     })

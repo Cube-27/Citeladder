@@ -1,24 +1,9 @@
-/**
- * Site Health page-kind vocabulary + presentation helpers (v2 P1) — PURE.
- *
- * The SINGLE shared mapping from the backend `page_kind` classification
- * vocabulary to humanized labels — every badge, filter control, and the
- * dashboard per-type breakdown reads it from here (no duplicated maps).
- * No transport, no React.
- */
 import { pageKindSchema } from '@citeladder/contracts/site-health';
 import type { PageKind, PageKindScoreSummary } from '@citeladder/contracts';
 import { sentenceCaseStatus } from '@/lib/utils';
 
-/**
- * Every page type in stable display order (filter control + breakdown
- * table). Derived from the API-contract zod enum (the same derivation as
- * `lib/prompts/forms.ts` `intentValues`) so the vocabulary has exactly one
- * frontend owner.
- */
 export const PAGE_KINDS: readonly PageKind[] = pageKindSchema.options;
 
-/** Humanized label per page type — the one shared mapping. */
 const PAGE_KIND_LABELS: Record<PageKind, string> = {
   homepage: 'Homepage',
   article: 'Article',
@@ -41,11 +26,6 @@ const PAGE_KIND_LABELS: Record<PageKind, string> = {
   other: 'Other',
 };
 
-/**
- * Display label for a page type. An unknown value (a vocabulary the frontend
- * has not caught up with) falls back to sentence case instead of rendering
- * blank — the same defensive fallback `issueTitle` applies to blank titles.
- */
 export function pageKindLabel(pageKind: string): string {
   return isPageKind(pageKind) ? PAGE_KIND_LABELS[pageKind] : sentenceCaseStatus(pageKind);
 }
@@ -54,14 +34,8 @@ function isPageKind(value: string): value is PageKind {
   return Object.hasOwn(PAGE_KIND_LABELS, value);
 }
 
-/** One display row of the dashboard per-page-kind score breakdown. */
 export type PageKindScoreRow = PageKindScoreSummary & { page_kind: string };
 
-/**
- * Order a `score_summary.by_page_kind` map for display: the `PAGE_KINDS`
- * order first, then any unknown types alphabetically — stable and
- * deterministic, never dependent on the API's map insertion order.
- */
 export function byPageKindRows(
   byPageKind: Record<string, PageKindScoreSummary>,
 ): PageKindScoreRow[] {

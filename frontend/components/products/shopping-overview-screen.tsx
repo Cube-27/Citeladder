@@ -51,7 +51,6 @@ const rankingCodec = stringUrlCodec<Ranking>(
 );
 type Overview = CommerceShoppingOverview;
 
-/** A card's empty state in place of its table: what belongs here and why it is empty. */
 const emptyTable = (heading: string) => ({ kind: 'empty', icon: ShoppingBag, heading }) as const;
 
 const VISIBILITY: DataTableColumn = {
@@ -83,7 +82,6 @@ const SHARE_COLUMN: DataTableColumn = {
   width: 'metric',
 };
 
-/** A rate or mean as a narrow cell's Value: unavailable when nothing in scope measured it. */
 function Measured({
   value,
   format,
@@ -107,7 +105,6 @@ function MetricCells({ row }: Readonly<{ row: CommerceOverviewProduct | Commerce
   );
 }
 
-/** Brands (with Share of Shelf) or products, by appearances in the window. */
 function RankingTable({
   overview,
   scope,
@@ -142,7 +139,6 @@ function RankingTable({
         ? overview.brands.map((row) => (
             <TableRow key={row.brand} highlight={row.owned}>
               <TableCell>
-                {/* Only your brand is marked; every other row is a competitor. */}
                 <TableCellLines
                   title
                   primary={row.brand}
@@ -240,10 +236,6 @@ function MerchantTable({ rows }: Readonly<{ rows: Overview['merchants'] }>) {
   );
 }
 
-/**
- * What the query list stands on. An answer that searched without exposing its
- * queries, or has no analysis yet, is unknown: neither a search nor none.
- */
 function fanoutCoverage(fanout: Overview['fanout']) {
   const unknown = fanout.answers - fanout.answers_with_queries - fanout.answers_without_search;
   const parts = [
@@ -260,7 +252,6 @@ function FanoutTable({ fanout }: Readonly<{ fanout: Overview['fanout'] }>) {
   return (
     <DataTable
       title="Top fan-out queries"
-      // A coverage sentence only when there are answers to cover.
       description={fanout.answers ? fanoutCoverage(fanout) : undefined}
       columns={[
         { key: 'query', label: 'Query', kind: 'identity' },
@@ -285,15 +276,10 @@ function FanoutTable({ fanout }: Readonly<{ fanout: Overview['fanout'] }>) {
 
 const shelfPercent = (value: number | null) => (value === null ? null : formatRate(value));
 
-/**
- * The chosen category's AI Shelf from its latest Commerce run: the
- * category-target metrics, unchanged. Not measured until a run covers it.
- */
 function CategoryShelf({
   shelf,
   categoryId,
 }: Readonly<{ shelf: Overview['category_shelf']; categoryId: string }>) {
-  // A run measured it but a metric had no denominator: unavailable, not unmeasured.
   const missing = shelf ? 'unavailable' : 'not_measured';
   const segments = [
     {
@@ -344,11 +330,6 @@ function CategoryShelf({
   );
 }
 
-/**
- * What the screen draws for one read of the overview; each product links to
- * its page in `windowDays`, the window the overview was read in. A failed
- * read stays inside the page, under its filter bar.
- */
 export function OverviewSections({
   query,
   windowDays,
@@ -378,7 +359,6 @@ export function OverviewSections({
   const shelf = overview.category ? (
     <CategoryShelf shelf={overview.category_shelf} categoryId={overview.category} />
   ) : null;
-  // No answer in the window: one empty state for the page, never a ranking of zeros.
   if (overview.executions === 0)
     return (
       <>
@@ -397,7 +377,6 @@ export function OverviewSections({
     );
   return (
     <>
-      {/* The page's question first: how you stand on the chosen category's shelf. */}
       {shelf}
       <FigureStrip
         segments={[
@@ -437,12 +416,6 @@ export function OverviewSections({
   );
 }
 
-/**
- * Commerce's Shopping overview (commerce improvement PR 5): how brands and
- * products rank in AI shopping answers over a window, which catalog products
- * are most and least visible, where answers send shoppers and what they
- * searched; with a category, its AI Shelf from the latest Commerce run.
- */
 export function ShoppingOverviewScreen() {
   const { workspaceId, projectId } = useProjectScope();
   const scope = { workspaceId, projectId };
@@ -450,15 +423,11 @@ export function ShoppingOverviewScreen() {
   const { filters } = overviewFilters;
   const catalog = useQuery(commerceQueries.catalog(scope));
   const known = catalog.data?.categories ?? [];
-  // A project switch keeps the `category` parameter; another project's category reads as none.
   const category = known.some((row) => row.id === filters.category) ? filters.category : null;
   const query = useQuery({
     ...commerceQueries.overview(scope, overviewSearch({ ...filters, category })),
-    // A category in the URL waits for the catalog that says whether it is this project's.
     enabled: !filters.category || !catalog.isPending,
   });
-  // An empty window asks the widest one, unfiltered: with no answer there
-  // either, the filters have nothing to narrow and stay hidden.
   const widest = useQuery({
     ...commerceQueries.overview(scope, overviewSearch({ window: WIDEST_WINDOW, category: null })),
     enabled: query.data?.executions === 0,
@@ -467,8 +436,6 @@ export function ShoppingOverviewScreen() {
   return (
     <ReportPage
       actions={
-        // Shopping reads the catalog; what to do next lives on Products. With
-        // no answers the empty state holds this link, so it shows once.
         query.data?.executions === 0 ? null : (
           <Button asChild variant="secondary">
             <ProjectLink href="/products">Open Products</ProjectLink>

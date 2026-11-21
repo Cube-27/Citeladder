@@ -22,7 +22,6 @@ import type { ProjectScope } from '@/lib/api/query-keys/scope';
 
 type Group = Readonly<{ id: string; name: string }>;
 
-/** An objection group's Rename, Merge into and Delete. */
 export function ObjectionActions({
   scope,
   group,

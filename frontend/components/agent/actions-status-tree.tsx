@@ -21,7 +21,6 @@ import { formatCount } from '@/lib/format';
 
 import { useActionsPageContext } from './actions-page-context';
 
-/** The open-state key of each tree level. */
 export const levelKey = {
   status: (status: ActionStatus) => `s:${status}`,
   group: (status: ActionStatus, group: string) => `g:${status}:${group}`,
@@ -29,7 +28,6 @@ export const levelKey = {
     `x:${status}:${group}:${grouping}`,
 };
 
-/** The id of a group's row, which the goal strip jumps to. */
 export const groupAnchor = (status: ActionStatus, group: string) => `actions-${status}-${group}`;
 
 const TONE: Record<ActionStatus, StateDotTone> = {
@@ -46,10 +44,6 @@ const EMPTY: Record<ActionStatus, string> = {
   dismissed: 'No declined actions',
 };
 
-/**
- * One status: its row (ring, name, project-wide count) and, open, its tree
- * from its own read. Loading, failed and empty keep the rows' 40px rhythm.
- */
 export function StatusSection({
   status,
   count,
@@ -99,7 +93,6 @@ function StatusBody({
   return <TreeLoading label="Loading actions…" />;
 }
 
-/** A goal (or the group the page groups by): a shaded row with its count, then its groupings. */
 function GroupSection({
   status,
   group,
@@ -146,7 +139,6 @@ function GroupSection({
   );
 }
 
-/** A grouping: its tick (every Action in it), name and count; open, its rows. */
 function GroupingSection({
   refOf,
   grouping,

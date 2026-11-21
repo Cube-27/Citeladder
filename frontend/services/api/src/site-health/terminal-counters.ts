@@ -1,16 +1,3 @@
-/**
- * A crawl's dashboard counters, persisted on its row so reading it never
- * rescans its tasks and analyses: `terminal_counters` once it is terminal,
- * `live_counters` while it runs.
- *
- * The owner that makes a crawl terminal (terminalization, cancellation) writes
- * them in that transaction, after its last task changed; a rewrite of a
- * terminal crawl's analyses (a late analysis over a finalized one, a duplicate
- * alias retiring analyses, the cancelled crawl's publication) writes them
- * again. The post-settle reconcile rewrites the live ones on a cadence, so they
- * may lag by that interval (CO-3). The live monitored selection is
- * configuration, not crawl evidence, and stays out of them.
- */
 import { ACTIVE_CRAWL_STATUSES, isActiveCrawl } from '@citeladder/contracts/site-health';
 
 import type { Database } from '../db/database.ts';
@@ -18,7 +5,6 @@ import { isTerminal } from './reads/crawl.ts';
 import { taskCounters } from './reads/crawl-counters.ts';
 import { CRAWL_COLUMNS, type Crawl } from './site-task.ts';
 
-/** Persist the counters of a crawl whose in-memory status is already terminal. */
 export async function persistTerminalCounters(db: Database, crawl: Crawl): Promise<void> {
   if (!isTerminal(crawl)) throw new TypeError('Only a terminal crawl persists its counters');
   const counters = await taskCounters(db, crawl);
@@ -30,7 +16,6 @@ export async function persistTerminalCounters(db: Database, crawl: Crawl): Promi
     .execute();
 }
 
-/** Rewrite the counters after a terminal crawl's analyses changed; an active crawl counts live. */
 export async function refreshTerminalCounters(db: Database, crawl: Crawl): Promise<void> {
   if (isTerminal(crawl)) await persistTerminalCounters(db, crawl);
 }

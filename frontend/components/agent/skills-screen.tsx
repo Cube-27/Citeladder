@@ -32,10 +32,6 @@ import { cn } from '@/lib/utils';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
-/**
- * The skills the agent can apply: name, one sentence and what each produces.
- * Read-only; methodology text is never shown and nothing is downloadable.
- */
 export function SkillsScreen() {
   const { workspaceId } = useProjectScope();
   const query = useQuery(agentQueries.skills(workspaceId));
@@ -56,7 +52,6 @@ export function SkillsScreen() {
   return <ReportPage>{body}</ReportPage>;
 }
 
-/** A skill's icon, by the catalog's output kind (`config/agent-skills.ts`). */
 const OUTPUT_ICONS: Readonly<Record<string, IconGlyph>> = {
   plan: ListTodo,
   measurement: BarChart3,
@@ -78,8 +73,6 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
     const label = skillGroupLabel(skill.group);
     groups.set(label, [...(groups.get(label) ?? []), skill]);
   }
-  // A plain wrapper: the groups are one list, not page sections, so no rule
-  // between them (owner, 2026-11-19); each Section keeps its 32 above.
   return (
     <div className="min-w-0">
       {[...groups].map(([group, rows]) => (
@@ -104,17 +97,12 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
   );
 }
 
-/**
- * A skill as one list row that starts a chat with it: icon, name, its sentence
- * inline in `ink-2`, and what it produces at the end. The whole row is the link.
- */
 function SkillRow({ skill, output }: Readonly<{ skill: AgentSkill; output: string | undefined }>) {
   const detailId = useId();
   return (
     <li className="hover:overlay-hover relative flex min-h-[var(--table-row-height)] min-w-0 items-center gap-2 px-4">
       <Icon icon={OUTPUT_ICONS[skill.output_kind] ?? Sparkles} className="text-ink-2" />
       <span className={textRole('body', 'flex min-w-0 flex-1 items-baseline gap-2')}>
-        {/* The link's name replaces its content, so what it does is its description. */}
         <ProjectLink
           href={agentHandoffHref({ skillId: skill.id })}
           aria-label={`Start a chat with ${skill.label}`}

@@ -1,24 +1,8 @@
 import { createIdempotencyKey } from '@/lib/api/billing';
 
-/**
- * The storage bucket for one (buyer, workspace) pair.
- *
- * `null` is the public pricing page, which names no workspace and lets the
- * server resolve the buyer's default one. It gets its own bucket rather than
- * borrowing a selected workspace's: the client cannot tell which workspace
- * the server will pick, so it must not claim a key minted for a named one.
- */
 const bucket = (userId: string, workspaceId: string | null) =>
   `billing-checkout:${userId}:${workspaceId ?? 'default'}`;
 
-/**
- * A workspace-bound retry breadcrumb. Never carries a price or a credential.
- *
- * The workspace is part of the identity because the purchase is: the same
- * person buying the same plan for two workspaces is two purchases, and
- * reusing one idempotency key across them would replay the first workspace's
- * activation into the second.
- */
 export function checkoutAttempt(
   userId: string,
   workspaceId: string | null,

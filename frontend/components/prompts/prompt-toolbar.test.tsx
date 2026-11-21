@@ -78,7 +78,6 @@ describe('promptFilterControls filters', () => {
     }
 
     render(<Harness />);
-    // Branded is the row's tag chip; Enabled lives in Filters.
     await chooseFilterOption(user, 'Branded', 'Branded only');
     expect(await openFilterRow(user, 'Branded', 'Branded only')).toHaveAttribute('data-active');
     expect(await openFilterRow(user, 'Enabled', 'All prompts')).toBeVisible();
@@ -86,7 +85,6 @@ describe('promptFilterControls filters', () => {
     await chooseFilterOption(user, 'Enabled', 'Disabled only');
     expect(screen.getByRole('button', { name: 'Remove Enabled filter' })).toBeVisible();
 
-    // Both resets land, though each patches the filters in the same tick.
     await user.click(screen.getByRole('button', { name: 'Clear' }));
     expect(screen.getByRole('button', { name: 'Branded: All prompts' })).not.toHaveAttribute(
       'data-active',

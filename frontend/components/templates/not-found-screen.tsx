@@ -5,10 +5,6 @@ import { HOME_PATH } from '@/lib/navigation/app-routes';
 
 import { NoticePage } from './notice-page';
 
-/**
- * The shell's not-found state: an application URL that matches no screen, or
- * a record the API answers 404 for (deleted, or another workspace's).
- */
 export function NotFoundScreen() {
   return (
     <NoticePage

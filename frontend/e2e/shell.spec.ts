@@ -19,14 +19,11 @@ test('the first-load indicator keeps pulsing until the workspace answers', async
   });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto(fixtureProjectPath('/projects'));
-  // The shell is drawn at once; the Overview's own loading frame holds its place.
   const indicator = page
     .locator('[data-skeleton="overview"]')
     .getByRole('status', { name: 'Loading the Overview' });
   try {
     await expect(indicator).toBeVisible();
-    // A sweep crosses its skeleton blocks; still blocks would read as stuck.
-    // The first block (the meta line) stands outside a shape, so it sweeps alone.
     const block = page.locator('[data-skeleton="overview"] [data-skeleton-block]').first();
     const shimmer = () =>
       block.evaluate((element) => getComputedStyle(element, '::after').translate);
@@ -38,30 +35,21 @@ test('the first-load indicator keeps pulsing until the workspace answers', async
   await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
 });
 
-/** Authenticated shell navigation and persistent launcher workflows. */
 test('authenticated shell exposes authorized navigation and search, and navigation loads routes', async ({
   page,
 }) => {
-  // stubAuthedShell supplies the canonical user/project AND the 404 catch-all
-  // that keeps unstubbed downstream queries (audits, entitlements) from 401-ing
-  // the live backend and bouncing the session to /login.
   await stubAuthedShell(page);
 
   await page.goto(fixtureProjectPath('/visibility'));
 
-  // The groups and their destinations are pinned in
-  // components/layout/sidebar-nav.test.tsx. What that render cannot show is
-  // that the authed layout mounts the mode's nav landmark around the page.
   const nav = page.getByRole('navigation', { name: 'Dashboard' });
   await expect(nav.getByRole('link', { name: 'Site health', exact: true })).toBeVisible();
 
-  // Project switcher shows the active brand.
   await expect(page.getByText('Acme').first()).toBeVisible();
 
   await expect(page.getByRole('heading', { level: 1, name: 'Sources' })).toBeVisible();
   await expect(page.getByRole('button', { name: /search or jump to/i })).toBeVisible();
 
-  // Primary navigation loads the destination route.
   await nav.getByRole('link', { name: 'Performance', exact: true }).click();
   await page.waitForURL((url) => url.pathname === '/performance');
   await expect(page.getByRole('heading', { level: 1, name: 'Performance' })).toBeVisible();
@@ -82,9 +70,6 @@ test('runs resolve on their own while the schedules empty state waits for its re
   });
   await page.goto(fixtureProjectPath('/runs'));
   try {
-    // The runs list owns its first paint: an empty read is shown as soon as it
-    // settles. The schedules card must not pre-announce emptiness while its
-    // read is still in flight — that state belongs to the settled answer.
     await expect(page.getByRole('heading', { name: 'No runs yet' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Scheduled audits' })).toBeVisible();
     await expect(page.getByText('No scheduled audits yet.')).toHaveCount(0);
@@ -102,7 +87,6 @@ test('below 1280px the sidebar keeps every destination named and the palette on 
   await stubAuthedShell(page);
   await page.goto(fixtureProjectPath('/projects'));
 
-  // Each destination keeps its name and still navigates.
   const nav = page.getByRole('navigation', { name: 'Dashboard' });
   const performance = nav.getByRole('link', { name: 'Performance', exact: true });
   await expect(performance).toBeVisible();
@@ -110,7 +94,6 @@ test('below 1280px the sidebar keeps every destination named and the palette on 
   await page.waitForURL((url) => url.pathname === '/performance');
   await expect(page.getByRole('heading', { level: 1, name: 'Performance' })).toBeVisible();
 
-  // The palette's button is in the top bar, not the rail; the shortcut opens it too.
   const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
   await page.getByRole('button', { name: /search or jump to/i }).click();
   await expect(palette).toBeVisible();
@@ -124,7 +107,6 @@ test('below 1280px the sidebar keeps every destination named and the palette on 
 
 test('the prompt builder scrolls inside its pane and never scrolls the panel', async ({ page }) => {
   const projectApi = `**/api/v1/projects/${FIXTURE_PROJECT.id}`;
-  // Enough offerings that each row's hidden "Not set" text lies far below the fold.
   const offerings = Array.from({ length: 40 }, (_, index) => `Offering ${index + 1}`);
   const noSources = {
     description: null,
@@ -189,7 +171,6 @@ test('the prompt builder scrolls inside its pane and never scrolls the panel', a
       return {
         scrollTop: panel.scrollTop,
         overflow: panel.scrollHeight - panel.clientHeight,
-        // The page fills the panel: the action bar rests at its foot.
         barAtFoot: bar !== undefined && bar.bottom <= foot && bar.bottom > foot - 64,
       };
     });
@@ -225,16 +206,10 @@ test('project lookup failure retries in place and only confirmed empty projects 
       : route.fulfill({ json: [] }),
   );
   await page.goto('/projects');
-  // The workspace resolved; it is the PROJECT list that 403'd, and the notice
-  // says so rather than sending the reader after an access problem that is
-  // not there.
   await expect(page.getByRole('heading', { name: 'Projects could not be loaded' })).toBeVisible();
   await expect(page).toHaveURL(/\/projects$/);
   failed = false;
   await page.getByRole('button', { name: 'Retry', exact: true }).click();
-  // The redirect carries the workspace the project will be created in — the
-  // one the fixture put the reader in — so a refresh of the creation route
-  // cannot silently re-target it.
   await expect(page).toHaveURL(`/onboarding?workspace=${FIXTURE_WORKSPACE_ID}`);
   await expect(page.getByRole('heading', { name: 'Add your brand' })).toBeVisible();
 });

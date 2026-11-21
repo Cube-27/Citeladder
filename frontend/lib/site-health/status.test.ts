@@ -36,7 +36,6 @@ describe('polling / cancel / terminal predicates', () => {
       status: 'running' as const,
       started_at: new Date(now - msAgo).toISOString(),
       created_at: new Date(now - msAgo).toISOString(),
-      // Progressing: last write was just now, so it is never "silent".
       updated_at: new Date(now - 1_000).toISOString(),
     });
 
@@ -57,8 +56,6 @@ describe('polling / cancel / terminal predicates', () => {
   });
 
   it('keeps polling a long crawl that is still writing progress', () => {
-    // The stall cutoff is about SILENCE, not duration: an hour-long crawl that
-    // updated a second ago is healthy and must not be abandoned.
     const now = Date.parse('2026-07-29T12:00:00Z');
     const crawl = {
       status: 'running' as const,
@@ -104,8 +101,6 @@ describe('polling / cancel / terminal predicates', () => {
   });
 
   it('keeps polling when timestamps are unusable rather than giving up', () => {
-    // Clock skew / a bad timestamp must degrade to the baseline cadence — the
-    // one thing it must never do is silently stop progress.
     const now = Date.parse('2026-07-29T12:00:00Z');
     expect(
       crawlPollInterval(
@@ -154,9 +149,6 @@ describe('discovery provisional / sample-mode copy', () => {
   });
 
   it('is NEVER provisional for a sample-mode crawl, even mid-discovery', () => {
-    // Free sample discovery must never imply continued full-site scanning —
-    // the shared helper enforces this directly rather than leaving it to
-    // every caller to remember to check `sample_mode` first.
     expect(isDiscoveryProvisional({ ...base, sample_mode: true })).toBe(false);
   });
 
@@ -297,8 +289,6 @@ describe('dashboardRunNotice', () => {
   });
 
   it('shows no notice when only discovered links could not be fetched', () => {
-    // Every real site has a few dead or non-page links; that is a normal crawl
-    // with nothing to retry, so only an analysis shortfall earns a notice.
     const partial = { ...noticeBase, status: 'partially_completed' as const };
     expect(dashboardRunNotice({ ...partial, partial_reason: 'discovery_incomplete' })).toBeNull();
     expect(
@@ -314,7 +304,6 @@ describe('dashboardRunNotice', () => {
   it('labels a failed-with-data dashboard with a Failed badge', () => {
     const notice = dashboardRunNotice({ ...noticeBase, status: 'failed' });
     expect(notice?.badge).toBe('failed');
-    // Partial results exist — the "so far" phrasing stays, with the reason.
     expect(notice?.message).toMatch(/The pages analyzed so far are shown/);
   });
 
@@ -386,8 +375,6 @@ describe('score / count / date placeholders', () => {
     expect(formatScore(null)).toEqual({ absent: 'not_measured' });
     expect(formatScore(Number.NaN)).toEqual({ absent: 'not_measured' });
     expect(formatScore(0)).toBe('0');
-    // Whole numbers: the tenth is an artefact of the division, not a
-    // measurement, and it changes with one check on one page.
     expect(formatScore(88.25)).toBe('88');
     expect(formatScore(27.210884353741495)).toBe('27');
   });

@@ -53,7 +53,6 @@ describe('Dialog', () => {
     const email = screen.getByRole('textbox', { name: 'Email' });
     expect([email, email.hasAttribute('data-quiet-focus')]).toEqual([document.activeElement, true]);
 
-    // A choice first (a range whose dates mean "Custom") keeps Radix's default.
     rerender(<Dialog open={false} onOpenChange={() => {}} title="Invite member" />);
     rerender(
       <Dialog open onOpenChange={() => {}} title="Invite member">
@@ -204,7 +203,6 @@ describe('Menu', () => {
     const trigger = screen.getByRole('button', { name: 'Menu' });
     expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    // Items are not mounted until opened.
     expect(screen.queryByText('Edit')).not.toBeInTheDocument();
   });
 
@@ -444,7 +442,6 @@ describe('ToastProvider', () => {
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(onUndo).toHaveBeenCalledTimes(1);
-    // The action closes its toast, so the next newest comes to the front.
     expect(inFront()).toEqual(['Prompt saved']);
   });
 });

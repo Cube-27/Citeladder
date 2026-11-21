@@ -1,12 +1,3 @@
-/**
- * The "By topic" breakdown of a dashboard selection: per project topic, the
- * selected runs' answers to prompts filed under it when each run froze them.
- *
- * Reads the per-topic blocks audit finalization persisted
- * (`analysis/run-metrics.ts`) and folds them as the trend folds whole runs; it
- * never re-reads answers or refiles prompts. A topic the selected runs never
- * asked reads `not_run`, never zero.
- */
 import type { VisibilityTopicRow, VisibilityTopics } from '@citeladder/contracts/visibility-topics';
 
 import type { Database } from '../db/database.ts';
@@ -61,7 +52,6 @@ export async function getVisibilityTopics(
           )
           .execute(),
   ]);
-  // Runs load oldest first; so do each topic's sources and frozen names.
   const runIndex = new Map(runs.map((run, index) => [run.auditId, index]));
   const sources = new Map<string, TrendSource[]>();
   const frozenNames = new Map<string, string[]>();
@@ -89,7 +79,6 @@ export async function getVisibilityTopics(
   const items = [...new Set([...current.keys(), ...frozenNames.keys()])]
     .map((topicId): VisibilityTopicRow => {
       const frozen = [...new Set((frozenNames.get(topicId) ?? []).filter(Boolean).toReversed())];
-      // A topic deleted since keeps the name its latest run froze.
       const name = current.get(topicId) ?? frozen[0] ?? '';
       const identity = {
         topic_id: topicId,

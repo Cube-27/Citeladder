@@ -1,8 +1,3 @@
-/**
- * The application role at the real PostgreSQL boundary (invariants 4 and 16):
- * the services connect as `citeladder_app`, which writes rows but never
- * rewrites or removes append-only evidence, attempt and ledger rows.
- */
 import { randomUUID } from 'node:crypto';
 
 import { sql } from 'kysely';
@@ -43,13 +38,11 @@ const APPEND_ONLY = [
   'source_page_snapshots',
 ];
 
-/** The SQLSTATE PostgreSQL raises for a statement against `table`, or 'allowed'. */
 async function outcome(
   statement: 'update' | 'delete',
   table: string,
   column = 'id',
 ): Promise<string> {
-  // A statement that matches no row still needs the privilege, so nothing changes either way.
   const query =
     statement === 'update'
       ? sql`update ${sql.table(table)} set ${sql.ref(column)} = ${sql.ref(column)} where false`
@@ -69,7 +62,6 @@ describe('the application role', () => {
   });
 
   it('is refused UPDATE and DELETE on exactly the append-only tables', async () => {
-    // Each table with its first column, the target of a no-op assignment.
     const { rows } = await sql<{ table: string; column: string }>`
       select distinct on (c.relname) c.relname::text as table, a.attname::text as column
       from pg_class c
@@ -136,7 +128,6 @@ describe('the application role', () => {
       .executeTakeFirstOrThrow();
     expect(kept).toEqual({ value: 5 });
 
-    // Removing the workspace cascades through the schema's own foreign keys.
     await db.deleteFrom('workspaces').where('id', '=', workspace).execute();
     const left = await asOwner((schemaOwner) =>
       schemaOwner.selectFrom('account_grants').select('id').where('id', '=', id).execute(),

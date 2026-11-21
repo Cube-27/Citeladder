@@ -46,7 +46,6 @@ const cheapest = makePrompt({
   topic_id: CRM,
 });
 
-/** The project's crawl pages, topics and prompts as the API answers; posts are recorded. */
 function serve(pages: { crawl_id: string | null; items: unknown[] }, posted: unknown[] = []) {
   mswServer.use(
     http.get(`/api/v1/projects/${PROJECT}/actions/analyze/pages`, () =>
@@ -136,7 +135,6 @@ describe('Analyze a page', () => {
 
     await user.click(within(dialog).getByRole('combobox', { name: 'Topic' }));
     await user.click(await screen.findByRole('option', { name: /CRM software/ }));
-    // Every prompt of the topic starts selected.
     expect(within(dialog).getByText('2 of 2')).toBeVisible();
     expect(generate).toBeEnabled();
 

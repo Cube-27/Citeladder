@@ -36,16 +36,8 @@ const PURPOSE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'requests', label: 'Requests', width: 'figure', kind: 'number' },
 ];
 
-/** Rows per page of the daily purpose table (client-side; the series arrives whole). */
 const PURPOSE_PAGE_SIZE = 10;
 
-/**
- * The Overview's key figures, as stat cards: first whether AI sends you
- * visits (the referral sessions GA4 reported), then what the crawl logs
- * observed and the citations AI Visibility tracked. A figure that cannot be
- * read says which absence it is and carries the one step that fixes it. The
- * notes that qualify the whole window sit under the title.
- */
 export function OverviewFigures({
   data,
   projectId,
@@ -55,9 +47,7 @@ export function OverviewFigures({
 }: Readonly<{
   data: Overview;
   projectId: string;
-  /** GA4's connection step from the one owner; `null` while it is unknown. */
   ga4: SourceStep | null;
-  /** False when this workspace cannot collect crawl logs yet. */
   crawlAvailable: boolean;
   onConnectCrawl?: () => void;
 }>) {
@@ -66,7 +56,6 @@ export function OverviewFigures({
   const crawlMissing =
     crawlAvailable && data.crawl.connection === 'not_connected' && onConnectCrawl !== undefined;
   return (
-    // The status line (the crawl logs' coverage and freshness), then the strip.
     <Stack gap="workspace" className="min-w-0">
       <CrawlNotes crawl={data.crawl} available={crawlAvailable} />
       <Stack gap="compact">
@@ -78,7 +67,6 @@ export function OverviewFigures({
             citationFigure(data.citations),
           ]}
         />
-        {/* Each missing source's one next step, once, under the figures it would fill. */}
         {ga4Missing ? (
           <StateBlock
             kind="empty"
@@ -106,15 +94,10 @@ export function OverviewFigures({
   );
 }
 
-/**
- * Whether any key figure is measured or on its way (a source connected). Until
- * one is, and GA4 is not connected either, the Overview is its setup state.
- */
 export function overviewStarted(data: Overview): boolean {
   return data.crawl.connection !== 'not_connected' || overviewMeasured(data);
 }
 
-/** Whether any key figure holds a measurement; patterns read across them only then. */
 export function overviewMeasured(data: Overview): boolean {
   return (
     data.referrals.window_end !== null ||
@@ -123,7 +106,6 @@ export function overviewMeasured(data: Overview): boolean {
   );
 }
 
-/** Short enough that every label in the strip holds one line, so values share a baseline. */
 const CRAWL_REQUESTS = 'Crawler requests';
 
 const CRAWL_EMPTY = {
@@ -183,10 +165,6 @@ function crawlFigures(crawl: CrawlSummary, available: boolean): FigureSegment[] 
   ];
 }
 
-/**
- * No crawler requests in the window. Not connected is its own word, with the
- * connect step under the strip; otherwise why waits behind the hint.
- */
 function noRequestsFigure({
   connection,
   status,
@@ -218,13 +196,11 @@ function noRequestsFigure({
 
 function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null): FigureSegment {
   const latest = referrals.referral_volume.at(-1);
-  // Only a persisted snapshot carries a window; without one nothing has synced.
   const synced = referrals.window_end !== null;
   const share = sharePhrase(referrals);
   const unsynced = referralSetup(ga4);
   const reported = referrals.referral_volume.length > 0;
   const label = 'AI referral sessions';
-  // A step under the strip already says why; only GA4's own wait needs the hint.
   const hinted = !reported && (synced || unsynced.action === null);
   return {
     key: 'referrals',
@@ -238,7 +214,6 @@ function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null
         <>
           {reported ? `${share}GA4 · Synced` : null}
           {referrals.window_end === null ? null : (
-            // A report day is a calendar date, not an instant: it reads the same in every zone.
             <>
               {reported ? ' · Report through ' : 'Report through '}
               <time dateTime={referrals.window_end}>{formatWindowDate(referrals.window_end)}</time>
@@ -249,15 +224,12 @@ function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null
   };
 }
 
-/** The latest day's share of sessions as a lead-in, or nothing when it was not measured. */
 function sharePhrase(referrals: Overview['referrals']): string {
   const value = referrals.referral_share.at(-1)?.value ?? null;
   return value === null ? '' : `${formatPercent(value)} of sessions · `;
 }
 
-/** Which absence a referral figure is before GA4 has synced, by GA4's step. */
 function unsyncedKind(ga4: SourceStep | null): DataAvailabilityState {
-  // GA4's step is unknown (its read is pending or failed), never assumed.
   if (ga4 === null) return 'unavailable';
   switch (ga4.kind) {
     case 'connect':
@@ -272,12 +244,10 @@ function unsyncedKind(ga4: SourceStep | null): DataAvailabilityState {
   }
 }
 
-/** Why a figure has no value: a sentence is not a figure's job, so it waits behind the hint. */
 function WhyAbsent({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return <InfoHint label={`About ${label}`}>{children}</InfoHint>;
 }
 
-/** Before a referral snapshot exists: GA4's real step, never a guessed "not connected". */
 function referralSetup(ga4: SourceStep | null): { note: string; action: string | null } {
   if (ga4 === null)
     return { note: 'Referral sessions appear once GA4 imports a report.', action: null };
@@ -310,7 +280,6 @@ function citationFigure(citations: Overview['citations']): FigureSegment {
     key: 'citations',
     label: 'Tracked citations',
     value: measured ? formatCount(citations.count) : null,
-    // No run is "not run yet"; a run not yet counted is unavailable for now.
     missingState: !measured && citations.reason === 'no_completed_run' ? 'not_run' : 'unavailable',
     sub: measured ? citations.label : `${citations.label} · ${citationGapLabel(citations.reason)}`,
   };
@@ -321,7 +290,6 @@ const COVERAGE_NOTE: Partial<Record<CrawlSummary['coverage'], string>> = {
   declared_complete: 'Complete within the reported file scan.',
 };
 
-/** What qualifies every crawl figure in the window: its coverage and when it was processed. */
 function CrawlNotes({ crawl, available }: Readonly<{ crawl: CrawlSummary; available: boolean }>) {
   if (!available) return null;
   const coverage = COVERAGE_NOTE[crawl.coverage] ?? null;
@@ -339,10 +307,6 @@ function CrawlNotes({ crawl, available }: Readonly<{ crawl: CrawlSummary; availa
   );
 }
 
-/**
- * Requests per reporting day and purpose, newest day first, a page at a
- * time: a 90-day window holds hundreds of rows.
- */
 export function RequestsByPurpose({ series }: Readonly<{ series: CrawlSummary['series'] }>) {
   const rows = [...series].reverse();
   const { page, setPage, pageCount, from, to } = useTablePage(rows.length, {

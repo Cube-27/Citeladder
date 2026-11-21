@@ -17,7 +17,6 @@ const bootRoot = (/<div id="root">([\s\S]*?)<\/div>\s*<!--/u.exec(indexHtml)?.[1
   bootSidebarHtml(manifest),
 );
 
-/** Runs the generated classic script on the shipped index.html's boot frame at a path. */
 function bootAt(path: string) {
   window.history.replaceState(null, '', path);
   document.head.innerHTML = `<style>${bootStyle}</style>`;
@@ -97,7 +96,6 @@ describe('boot-title.js', () => {
 });
 
 describe('the boot shell geometry', () => {
-  // The app's tokens: the first `:root:not([data-public-surface])` block.
   const appTokens = /:root:not\(\[data-public-surface\]\) \{([\s\S]*?)\n\}/u.exec(
     readFileSync(join(import.meta.dirname, 'src/globals.css'), 'utf8'),
   )?.[1];

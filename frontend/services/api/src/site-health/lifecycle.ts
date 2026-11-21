@@ -1,14 +1,3 @@
-/**
- * A crawl goes terminal here and in its `finalize` task, nowhere else. Every
- * entry point writes under the crawl row FOR NO KEY UPDATE and short-circuits on a
- * crawl that is no longer active (a stopped one only recounts), so the
- * per-task reconcile, terminal lease recovery, the stalled backstop and the
- * overdue watchdog are idempotent and safe to run concurrently. A drained
- * crawl stays active and enqueues one `finalize` task, which appends the final
- * page revisions in batches and then atomically publishes the snapshot, score
- * summary and terminal status (`finalize-task.ts`). When that task fails for
- * good, the next reconcile ends the crawl failed with the recorded reason.
- */
 import { ACTIVE_CRAWL_STATUSES, isActiveCrawl } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 
@@ -39,21 +28,11 @@ const TERMINAL_STATUSES = sql.join(TERMINAL_TASK.map((status) => sql.lit(status)
 const OVERDUE = policy.site_health.page_analysis.acquisition.error_codes.crawl_overdue;
 
 type ReconcileOptions = {
-  /**
-   * Rebuild the provisional score while work remains. Only a new analysis can
-   * change it, and the rebuild reloads the whole measurement projection, so a
-   * settled discover or failed analysis skips it.
-   */
   refreshScore?: boolean;
 };
 
-/** The provisional score a drained crawl publishes beside its `finalize` task, if it rebuilds one. */
 type Score = () => Promise<LiveSummary | null>;
 
-/**
- * A drained crawl publishes through its one `finalize` task. One that failed
- * for good (its third attempt, or failed as overdue) ends the crawl failed.
- */
 async function settleDrained(db: Database, crawl: Crawl, score: Score) {
   const task = await drainedFinalizeTask(db, crawl);
   if (task && TERMINAL_TASK.includes(task.status)) return failFinalization(db, crawl, task);
@@ -64,9 +43,7 @@ async function settleDrained(db: Database, crawl: Crawl, score: Score) {
   await enqueueFinalize(db, crawl, 'drained');
 }
 
-/** Reconcile one crawl whose row the caller holds locked. */
 async function reconcileLockedCrawl(db: Database, crawl: Crawl, options: ReconcileOptions = {}) {
-  // Stop skips a task another transaction holds; its later settlement recounts.
   if (crawl.status === 'cancelled') return persistTerminalCounters(db, crawl);
   if (!isActiveCrawl(crawl.status)) return;
   const rescore = options.refreshScore ?? true;
@@ -92,7 +69,6 @@ async function assessUnlocked(
   read: Crawl,
   options: ReconcileOptions,
 ): Promise<Assessed> {
-  // A copy: the assessment moves the row's state in memory, and `read` is compared later.
   const crawl = { ...read };
   if (crawl.status === 'cancelled') return { kind: 'recount' };
   if (!isActiveCrawl(crawl.status)) return { kind: 'settled' };
@@ -107,7 +83,6 @@ async function assessUnlocked(
   };
 }
 
-/** Write what `assessUnlocked` read, under the crawl lock of a row no state write moved since. */
 async function applyAssessed(db: Database, assessed: Extract<Assessed, { kind: 'active' }>) {
   const { crawl, score } = assessed;
   if (assessed.drained) return settleDrained(db, crawl, async () => score);
@@ -126,7 +101,6 @@ function lockCrawl(db: Database, workspaceId: string, crawlId: string) {
     .executeTakeFirst();
 }
 
-/** Whether a crawl state write landed between the two reads of the row. */
 const stateMoved = (read: Crawl, locked: Crawl) =>
   locked.updated_at.getTime() !== read.updated_at.getTime() ||
   (
@@ -139,14 +113,6 @@ const stateMoved = (read: Crawl, locked: Crawl) =>
     ] as const
   ).some((column) => locked[column] !== read[column]);
 
-/**
- * Reconcile a crawl. Its crawl-wide reads (the task summary, the counters, the
- * provisional score) run before the crawl lock every Stop and crawl writer
- * waits on; the lock is taken only to write them. Every crawl state write
- * moves `updated_at`, so a row that moved since the read is assessed again
- * under the lock. A task settled meanwhile changes no row: its own reconcile
- * follows its commit.
- */
 export async function reconcileCrawl(
   db: Database,
   workspaceId: string,
@@ -203,16 +169,9 @@ function settledRow(db: Database, task: SettledTask) {
     .executeTakeFirst();
 }
 
-/**
- * What a settled row can change. A discover while discovery continues and an
- * analysis (analyzed, failed or cancelled) while siblings remain move no
- * boundary, only live progress. Anything else may settle discovery, analysis
- * or the crawl.
- */
 function settlement(row: NonNullable<Awaited<ReturnType<typeof settledRow>>>) {
   const running = row.crawl_status === 'running';
   if (row.task_kind === 'discover' && running && row.discovering) return 'discovery_progress';
-  // Only terminal rows reach here: failed, cancelled, or succeeded with its artifact.
   const analyzed =
     row.task_kind === 'analyze' && (row.status !== 'succeeded' || row.result_artifact_id !== null);
   return analyzed && running && row.analysis_status === 'running' && row.outstanding
@@ -220,18 +179,6 @@ function settlement(row: NonNullable<Awaited<ReturnType<typeof settledRow>>>) {
     : 'boundary';
 }
 
-/**
- * Reconcile after a lifecycle or finalize task settles, unless its row cannot
- * have moved a boundary. A row still non-terminal (deferred, re-queued, lease
- * lost) is itself the outstanding work; progress-only settlements recount
- * discovery or refresh the live summary on cadence, since taking the crawl
- * lock for each is pure contention with every task commit and the user's
- * Stop. Other settlements update counters and sub-states without rebuilding
- * the score they cannot change. At each boundary and on their own cadence,
- * the live counters an active crawl's reads render are recounted onto its row
- * (CO-3).
- */
-/** A running crawl's score and Issues publications, each on its own cadence (CO-7). */
 async function publishAnalysisProgress(
   db: Database,
   { task, cadence, pages }: { task: SettledTask; cadence: CrawlCadences; pages: number },
@@ -264,16 +211,10 @@ export async function reconcileAfterTask(db: Database, task: SettledTask, cadenc
       return unhandled;
     }
   }
-  // The next settlement after a boundary may be far off (a finalize, a backoff).
   if (kind === 'boundary' || cadence.counters.admits(task.crawl_id))
     await persistLiveCounters(db, task);
 }
 
-/**
- * Run one backstop's per-crawl work in order. A crawl that fails is logged and
- * skipped so the rest of the batch still settles; it is retried next pass.
- * Returns how many crawls the work acted on (`false` means it skipped one).
- */
 async function eachCrawl<T extends { id: string }>(
   crawls: T[],
   failure: string,
@@ -289,12 +230,6 @@ async function eachCrawl<T extends { id: string }>(
   return acted;
 }
 
-/**
- * The terminalization backstop: an active crawl with no outstanding work and
- * no write for the stall threshold. Any route that drains a crawl's last task
- * without reconciling it (a process killed between acknowledgement and
- * reconcile, a recovered lease) would otherwise leave it active forever.
- */
 export async function reconcileStalled(db: Database, settings: SiteWorkerSettings['lifecycle']) {
   if (settings.stalledSeconds <= 0) return 0;
   const cutoff = new Date(Date.now() - settings.stalledSeconds * 1000);
@@ -325,12 +260,6 @@ export async function reconcileStalled(db: Database, settings: SiteWorkerSetting
   });
 }
 
-/**
- * Active crawls that stopped settling tasks (or heartbeating a finalize) for
- * `noProgressSeconds` (longer than a runner gap, so an idle runner never
- * counts as a stall), or that ran
- * past the absolute `overdueSeconds` cap; one crawl when `crawlId` is given.
- */
 function overdueCrawls(db: Database, settings: SiteWorkerSettings['lifecycle'], crawlId?: string) {
   const at = (seconds: number) => new Date(Date.now() - seconds * 1000);
   const started = sql<Date>`coalesce(c.started_at, c.created_at)`;
@@ -354,14 +283,6 @@ function overdueCrawls(db: Database, settings: SiteWorkerSettings['lifecycle'], 
     .execute();
 }
 
-/**
- * Terminalize crawls that stopped making progress or outran their cap (owner,
- * 2026-11-17). The stall backstop only sees drained crawls; one task held
- * non-terminal forever is invisible to it. The scan is a candidate list: each
- * crawl is re-checked under its own lock, its outstanding tasks fail with
- * `crawl_overdue`, and the same transaction reconciles what it gathered. A
- * finalize task failed this way ends the crawl failed.
- */
 export async function reconcileOverdue(db: Database, settings: SiteWorkerSettings['lifecycle']) {
   if (settings.overdueSeconds <= 0) return 0;
   const candidates = await overdueCrawls(db, settings);
@@ -400,16 +321,6 @@ export async function reconcileOverdue(db: Database, settings: SiteWorkerSetting
   });
 }
 
-/**
- * A cancelled crawl's measurement evidence is published by a `finalize` task,
- * enqueued here once. The selection mirrors the snapshot writer's own
- * condition (a completed analysis or classification-expected task of an
- * active monitored page), so a crawl with nothing to publish is never chosen.
- * A page rerun writes no snapshot, so its `change_intel` successor marks it
- * published instead. A crawl that already has a finalize task other than the
- * one Stop cancelled is not chosen again: one whose publication failed for
- * good stays cancelled (CO-2).
- */
 export async function publishCancelledCrawls(db: Database, batch: number) {
   const pending = await db
     .selectFrom('site_crawls as c')

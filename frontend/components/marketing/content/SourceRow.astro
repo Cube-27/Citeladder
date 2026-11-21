@@ -1,16 +1,9 @@
 ---
-/**
- * SourceRow — one numbered source in a SourcesList: the mono number, the
- * source itself (the default slot: publisher, linked title and any note) and
- * a mono line with the domain.
- */
 interface Props {
   n: number;
-  /** The source's address, for its domain line. */
   href?: string;
 }
 const { n, href } = Astro.props;
-// A site-relative source is one of CiteLadder's own pages.
 function domainOf(address: string | undefined) {
   if (!address) return undefined;
   if (!/^https?:\/\//.test(address)) return 'citeladder.com';

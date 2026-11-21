@@ -24,17 +24,10 @@ import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { Notice } from '@/components/ui/notice';
 
-/** Outputs with at least this many titled sections get a contents list. */
 const CONTENTS_MIN_SECTIONS = 3;
 
 type SectionMode = { index: number; mode: 'revise' | 'edit'; revisionId: string };
 
-/**
- * The output as a document the reader works on section by section. A section
- * can be edited in place (saved as a new user revision with every other
- * section unchanged) or sent to the agent with an instruction, which is an
- * ordinary follow-up turn. Both are refused while a turn is running.
- */
 export function OutputCanvas({
   workspaceId,
   target,
@@ -52,7 +45,6 @@ export function OutputCanvas({
 }>) {
   const sections = splitSections(revision.body);
   const [opened, setOpened] = useState<SectionMode | null>(null);
-  // An open editor or revise form belongs to the revision it was opened on.
   const active = opened?.revisionId === revision.id ? opened : null;
   const titled = sections.filter((section) => section.heading !== null);
   const knownHosts = useAgentLinkHosts(revision.web_sources);
@@ -103,7 +95,6 @@ export function OutputCanvas({
               revision={revision}
               index={index}
               initial={section.text}
-              // Closing one section's editor leaves another section's open form alone.
               onDone={() => setOpened((current) => (current?.index === index ? null : current))}
             />
           }
@@ -149,7 +140,6 @@ function SectionBlock({
   onRevise: (instruction: string) => void;
   editor: ReactNode;
 }>) {
-  // A kept draft reopens its editor when the reader returns to this revision.
   const mode = useSectionDraft(draftKey) === undefined ? requestedMode : 'edit';
   if (!section.text.trim()) return null;
   const name = sectionName(section);
@@ -161,7 +151,6 @@ function SectionBlock({
         <ContentMarkdown markdown={section.text} density="compact" knownHosts={knownHosts} />
       )}
       {locked || mode === 'edit' ? null : (
-        // Quiet until the section is hovered or focused; always shown on touch.
         <Inline className="flex-wrap transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
           <Button
             variant="quiet"
@@ -223,10 +212,6 @@ function ReviseForm({
   );
 }
 
-/**
- * An edit of one section, saved on top of the revision it started from; the
- * server refuses it if the output moved on meanwhile, and the text stays.
- */
 function SectionEditor({
   workspaceId,
   target,

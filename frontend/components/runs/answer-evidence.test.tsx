@@ -151,7 +151,6 @@ describe('Answer transcript', () => {
         'Try **Acme** or Rival Co. See [plumb.example](https://plumb.example/guide), or ask Other Brand.',
       brand_first_offset: 4,
       competitors_mentioned: ['Rival Co', 'Other Brand'],
-      // The API's order and positions; the view adds only the marks.
       named: [
         { name: 'Acme', kind: 'brand', offset: 4, position: 1 },
         { name: 'Rival Co', kind: 'competitor', offset: 12, position: 2 },
@@ -165,28 +164,23 @@ describe('Answer transcript', () => {
     });
 
     const conversation = screen.getByRole('list', { name: 'Conversation' });
-    // The prompt is your message; the answer's brands with offsets are chips in its text.
     expect(within(conversation).getByText('best plumber')).toBeVisible();
     const chips = [...conversation.querySelectorAll('[data-brand-chip]')];
-    // Each chip carries its brand's first-mention position, the same number as the rail.
     expect(chips.map((chip) => chip.textContent)).toEqual([
       'Position 1AAcmeYou',
       'Position 2RRival Co',
     ]);
     expect(chips[0]?.closest('strong')).not.toBeNull();
     expect(within(chips[0] as HTMLElement).getByText('You')).toBeVisible();
-    // Other Brand has no stored offset: plain text in the answer, listed in the rail.
     expect(within(conversation).getByText(/or ask Other Brand\./u)).toBeVisible();
 
     const brands = screen.getByRole('list', { name: 'Brands, by first mention' });
-    // Each row: its position, the mark's letter (no logo in tests), the name, "You" on yours.
     expect(
       within(brands)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual(['Position 1AAcmeYou', 'Position 2RRival Co', '—Position not recordedOOther Brand']);
 
-    // The cited link is a source chip in place; the rail lists each address once with its count.
     const link = within(conversation).getByRole('link', { name: /plumb\.example/u });
     expect(link).toHaveAttribute('href', 'https://plumb.example/guide');
     expect(link).toHaveAttribute('data-source-chip', 'plumb.example');
@@ -195,7 +189,6 @@ describe('Answer transcript', () => {
     expect(within(sources).getByText('Cited 2 times')).toBeVisible();
     expect(within(sources).getAllByText('You')).toHaveLength(1);
 
-    // Only searches whose wording was exposed are listed.
     const searches = await screen.findByRole('list', { name: 'Searches the engine ran' });
     expect(
       within(searches)
@@ -224,7 +217,6 @@ describe('Answer transcript', () => {
     ]);
     unmount();
 
-    // An observed answer without links has no section; an unobserved one says why it has none.
     const { unmount: second } = renderAnswer({
       answer_text: 'No links here.',
       answer_formats: { kind: 'observed', formats: [], in_text_links: 0 },
@@ -259,7 +251,6 @@ describe('Answer transcript', () => {
       await screen.findByText('2 searches ran; the engine did not expose their wording.'),
     ).toBeInTheDocument();
     second();
-    // No fanout row: the count is known, not why the words are missing.
     serveSearches(null);
     renderAnswer({ search_used: true, search_query_count: 3 });
     expect(

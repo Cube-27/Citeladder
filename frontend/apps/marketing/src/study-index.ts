@@ -1,10 +1,6 @@
 import type { StudyIndex } from '@/lib/marketing-content/studies/index-types';
 import { studyPagesUnder } from './research-articles';
 
-/**
- * A study section's pages as ContentIndex groups, in the index's group order.
- * A page whose `index_group` names no group of the index is a content error.
- */
 export function studyGroups(index: StudyIndex, prefix: string) {
   const pages = studyPagesUnder(prefix);
   const unknown = pages.filter(

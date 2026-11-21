@@ -40,7 +40,6 @@ type SecurityEvent =
   | 'mcp.workspace_revoke'
   | `mcp.write.${McpWriteKind}`;
 
-/** Append in the mutation transaction; no arbitrary payload or secrets. */
 export async function recordSecurityEvent(
   db: Database,
   event: SecurityEvent,

@@ -73,7 +73,6 @@ beforeEach(() => {
         },
       ]),
     ),
-    // The list carries the switcher's fields only; each view is its own read.
     http.get('/api/v1/projects', () =>
       HttpResponse.json(
         [ACME, GLOBEX].map(({ id, name, brand_name, website_url }) => ({
@@ -151,7 +150,6 @@ it('asks for a project’s view while its row is highlighted, so choosing it rea
   expect(await screen.findByRole('heading', { name: 'Opened globex' })).toBeInTheDocument();
   expect(router.state.location.search).toBe(`?project=${GLOBEX.id}`);
   expect(paths.filter((path) => path === globexView)).toEqual([globexView]);
-  // The trigger is the mark's initial and the brand as stored, no domain.
   expect(screen.getByRole('button', { name: 'GlobeX' }).textContent).toBe('GGlobeX');
   expect(screen.queryByText('globex.example')).toBeNull();
   router.dispose();

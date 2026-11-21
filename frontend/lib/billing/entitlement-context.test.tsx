@@ -51,17 +51,6 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'bypass' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-/**
- * Until the WORKSPACE resolves the entitlement query has nothing to ask about
- * and sits DISABLED — and a disabled query is not `isLoading`. Reading that
- * alone reported a settled "no capabilities" during the busiest moment of a
- * cold start, and the shell drew itself without the controls it was about to
- * gain, then grew them a moment later.
- *
- * The workspace deliberately does NOT come from the active project any more: a
- * workspace with no project still has entitlements, and that is exactly the
- * workspace being asked whether it may create its first one.
- */
 describe('EntitlementProvider', () => {
   it('drops cached positive authority when a later workspace entitlement read fails', async () => {
     selection = { activeWorkspaceId: WORKSPACE, status: 'ready' };

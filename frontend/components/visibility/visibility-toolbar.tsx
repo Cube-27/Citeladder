@@ -25,15 +25,8 @@ import {
 } from '@/lib/visibility/trends';
 
 type EngineFilter = LogicalEngine | 'all';
-/** The public Visibility guide; the app has no help route of its own. */
 const METRICS_HELP_URL = docsHref('/visibility/');
 
-/**
- * The prompt cohort: whether the questions name a brand. Unbranded questions
- * are the honest headline; branded comparison questions name the brand or a
- * competitor, so they read separately. The filter is called "Prompts", so the
- * two cohorts name only their branding.
- */
 const COHORT_LABELS = {
   core: 'Unbranded',
   comparison: 'Branded',
@@ -45,7 +38,6 @@ type ToolbarProps = Readonly<{
   selectionMode?: 'run' | 'range';
   runs: RunOption[];
   selectedRunId: string | null;
-  /** Selects a run AND leaves range mode in one URL write. */
   onSelectMeasurement: (runId: string | null) => void;
   engine: EngineFilter;
   onChangeEngine: (engine: EngineFilter) => void;
@@ -53,7 +45,6 @@ type ToolbarProps = Readonly<{
   promptId: string | null;
   onChangePrompt: (promptId: string | null) => void;
   range: TrendRange;
-  /** Pools every run in the period, in one URL write. */
   onSelectPeriod: (range: TrendRange) => void;
   granularity: TrendGranularity;
   onChangeGranularity: (granularity: TrendGranularity) => void;
@@ -62,28 +53,13 @@ type ToolbarProps = Readonly<{
   outcome?: string | null;
   onChangeOutcome?: (outcome: string | null) => void;
   markets?: readonly ProjectMarket[];
-  /** A non-default market's id; `null` is the project default. */
   market?: string | null;
   onChangeMarket?: (market: string | null) => void;
-  /** The project's topics; a page that reads by frozen topic passes them. */
   topics?: readonly { id: string; name: string }[];
   topic?: string | null;
   onChangeTopic?: (topic: string | null) => void;
 }>;
 
-/**
- * The filters every AI visibility view shares, for its control row. Every
- * one answers a question a customer would ask: which market, which
- * measurement, about which prompts and surfaces, over what period.
- *
- * The period is one of the measurement's choices, and a grouping only means
- * something while the page pools every run in it, so Group by is listed only
- * then, inside Filters. The prompt and answer-outcome filters apply where
- * answers are rendered (Query fanouts).
- *
- * The analyst controls that named internal machinery (a comparison baseline,
- * a frozen configuration) stay honoured from the URL and are not offered.
- */
 export function useVisibilityFilterMenu(props: ToolbarProps): FilterDefinition[] {
   const catalog = useEngineCatalog();
   const evidence = isEvidenceTab(props.view);
@@ -134,12 +110,6 @@ type FilterId =
   | 'outcome'
   | 'granularity';
 
-/**
- * Each page's row and Filters. On the brand pages every icon filter is
- * listed for the row, in order, so one takes the room a hidden market
- * leaves; `FilterBar` keeps four icon chips and opens Filters only for two
- * or more of the rest (owner, 2026-11-19).
- */
 function placement(view: VisibilityView): Readonly<{
   row: readonly FilterId[];
   inFilters: readonly FilterId[];
@@ -154,7 +124,6 @@ function placement(view: VisibilityView): Readonly<{
 
 const DEFAULT_MARKET = 'default';
 
-/** Which market the page reads; offered only once a project measures more than one. */
 export function marketFilter({
   markets = [],
   market = null,
@@ -182,11 +151,6 @@ export function marketFilter({
 const LATEST = '__latest__';
 const PERIOD = 'period:';
 
-/**
- * Which measurement the page is reading: the latest run, every run in a
- * period, or one named run. One filter, because "which runs am I looking at"
- * is one question, not a mode and a window held apart.
- */
 function measurementFilter({
   runs,
   selectedRunId,
@@ -197,8 +161,6 @@ function measurementFilter({
 }: ToolbarProps): FilterDefinition {
   const pooled = selectionMode === 'range';
   const selected = runs.find((run) => run.id === selectedRunId);
-  // A selected run the list no longer carries is not the latest run: saying so
-  // keeps a stale link from reading as a fresh measurement.
   const missingRunLabel = selectedRunId ? 'Run unavailable' : 'Latest run';
   const [latest] = runs;
   const periods = RANGE_OPTIONS.map((option) => ({ ...option, value: `${PERIOD}${option.value}` }));
@@ -206,7 +168,6 @@ function measurementFilter({
     id: 'measurement',
     label: 'Measurement',
     icon: 'period',
-    // The run read, named at the row's end while the chip shows only its icon.
     windowLabel: latest ? `Latest run · ${latest.label}` : undefined,
     value: pooled ? `${PERIOD}${range}` : (selectedRunId ?? LATEST),
     defaultValue: LATEST,
@@ -230,11 +191,6 @@ function measurementFilter({
   });
 }
 
-/**
- * Which engine the page is reading, in two groups. An answer engine is ASKED
- * a question and answers with a model; Google's AI Overview is OBSERVED on a
- * results page and has no model, so it is grouped as an observed surface.
- */
 function engineFilter(
   { engine, onChangeEngine }: ToolbarProps,
   catalog: ReturnType<typeof useEngineCatalog>,
@@ -264,10 +220,6 @@ function engineFilter(
 
 const EVERY_TOPIC = '__all__';
 
-/**
- * Which project topic the answers were filed under when their run froze them
- * (AV-5), so a prompt refiled later keeps its old answers where they were.
- */
 function topicFilter({
   topics = [],
   topic = null,
@@ -298,7 +250,6 @@ function topicFilter({
 
 const EVERY_PROMPT = '__all__';
 
-/** One tracked prompt; the list is long, so its submenu searches. */
 function promptFilter({ promptOptions, promptId, onChangePrompt }: ToolbarProps): FilterDefinition {
   return choiceFilter({
     id: 'prompt',
@@ -329,10 +280,6 @@ function outcomeFilter({ outcome, onChangeOutcome }: ToolbarProps): FilterDefini
   });
 }
 
-/**
- * Header actions beside the page title: run a new audit, and how the metrics
- * work. `launch: false` when the empty state carries Launch run itself.
- */
 export function VisibilityActions({ launch = true }: Readonly<{ launch?: boolean }>) {
   return (
     <>

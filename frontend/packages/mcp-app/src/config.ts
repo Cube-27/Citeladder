@@ -1,4 +1,3 @@
-/** UI-only bounds and defaults. Product metrics remain server-owned. */
 export const appPolicy = {
   version: '1.0.0',
   historyDays: 30,

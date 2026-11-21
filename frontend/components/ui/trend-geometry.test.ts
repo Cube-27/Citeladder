@@ -4,7 +4,6 @@ import { labelledIndexes, trendScale } from './trend-geometry';
 
 const DAY = 86_400_000;
 
-/** A 400px chart whose tick labels are three characters wide (a 36px gutter). */
 function scaleOf(count: number, width = 400) {
   return trendScale({
     width,
@@ -18,7 +17,6 @@ function scaleOf(count: number, width = 400) {
 describe('trendScale', () => {
   it('keeps the first and last of two runs inside the plot, each with its date', () => {
     const scale = scaleOf(2);
-    // The plot runs from 36 to 376; each end point sits 32px inside it.
     expect([scale.x(0), scale.x(1)]).toEqual([68, 344]);
     expect(labelledIndexes(scale, 2)).toEqual([0, 1]);
   });
@@ -37,7 +35,6 @@ describe('trendScale', () => {
       timestamps: [0, 1 * DAY, 4 * DAY],
       tickWidth: () => 3,
     });
-    // 276px between the insets: day 1 of 4 is a quarter of the way along.
     expect([0, 1, 2].map(scale.x)).toEqual([68, 137, 344]);
   });
 
@@ -62,7 +59,6 @@ describe('trendScale', () => {
   });
 
   it('puts the tick gutter and the top inset on the 4px grid', () => {
-    // Five characters measure 51px; the gutter snaps to 52.
     const scale = trendScale({
       width: 400,
       height: 200,

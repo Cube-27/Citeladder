@@ -1,8 +1,3 @@
-/**
- * Deterministic checks on the model's output. Only what the answer verifiably
- * says survives: a quote must be found in that entity's own passages, an
- * unknown entity is dropped, and every drop is counted by reason.
- */
 import { factTopicSchema, type FactTopic } from '@citeladder/contracts/fact-checking';
 
 import type { FactCheckPolicy, PerceptionPolicy } from '../config/perception.ts';
@@ -11,10 +6,8 @@ import type { ExtractedClaim, Label, PerceptionOutput } from './model.ts';
 import type { PerceptionPackage, Span } from './passages.ts';
 
 export type VerifiedAspect = {
-  /** The project theme's id; null for the fallback, which no theme row holds. */
   theme_id: string | null;
   polarity: 'positive' | 'negative';
-  /** The answer's own text at `start`..`end` (code points). */
   quote: string;
   start: number;
   end: number;
@@ -25,10 +18,8 @@ export type EntitySentiment = {
   entity_name: string;
   entity_kind: 'brand' | 'competitor';
   label: Label;
-  /** Null when the model returned nothing for an entity it was sent. */
   confidence: number | null;
   low_confidence: boolean;
-  /** The model was sent this entity and left it out: no judgement, not `not_assessable`. */
   model_omitted: boolean;
   passage_spans: Span[];
   aspects: VerifiedAspect[];
@@ -47,7 +38,6 @@ export type DropReason =
   | 'claim_duplicate'
   | 'claim_limit';
 
-/** `text` with whitespace runs collapsed to one space, and each kept char's source index. */
 function collapsed(text: string) {
   let out = '';
   const source: number[] = [];
@@ -62,7 +52,6 @@ function collapsed(text: string) {
   return { out, source };
 }
 
-/** The code-point offsets of `quote` inside one of `spans`, after whitespace normalisation. */
 export function locateQuote(quote: string, spans: readonly Span[]) {
   const wanted = quote.replaceAll(/\s+/gu, ' ').trim();
   if (!wanted) return null;
@@ -79,10 +68,6 @@ export function locateQuote(quote: string, spans: readonly Span[]) {
   return null;
 }
 
-/**
- * The aspects whose quotes are found in the entity's passages, each theme
- * matched to a project theme's id by name; any other theme is the fallback.
- */
 function verifiedAspects(
   aspects: PerceptionOutput['entities'][number]['aspects'],
   spans: readonly Span[],
@@ -154,8 +139,6 @@ export function validateOutput(
       aspects,
     });
   }
-  // Every entity sent gets a row, so coverage never silently shrinks; one the
-  // model left out is marked omitted, never read as its `not_assessable` judgement.
   const entities = pkg.entities.map((entity): EntitySentiment => {
     const result = results.get(entity.entity_id);
     if (result) return result;
@@ -175,12 +158,10 @@ export function validateOutput(
   return { entities, drops };
 }
 
-/** A brand claim whose quote was found in the brand's own passages. */
 export type VerifiedClaim = {
   ordinal: number;
   topic: FactTopic;
   claim: string;
-  /** The answer's own text at `start`..`end` (code points). */
   quote: string;
   start: number;
   end: number;
@@ -188,10 +169,6 @@ export type VerifiedClaim = {
   low_confidence: boolean;
 };
 
-/**
- * The brand's claims that survive: quoted from the brand's passages (never a
- * competitor's), on an allowed topic, one per quote, at most the cap.
- */
 export function validateClaims(
   pkg: PerceptionPackage,
   claims: readonly ExtractedClaim[],

@@ -98,7 +98,6 @@ it('reclaims retryable leases, spends one attempt, and fences the old owner afte
     kinds: ['link_metrics'],
     scope: { workspaceId: seed.workspaceId, taskIds: [id] },
   });
-  // The claim itself starts the task: no separate commit moves it to running.
   expect(tasks.map((task) => [task.id, task.status])).toEqual([[id, 'running']]);
   expect(await worker.queue.heartbeat(id, 'dead-worker', seed.workspaceId)).toBe(false);
   const lockAs = (owner: string, task = claimed) =>
@@ -113,7 +112,6 @@ it('reclaims retryable leases, spends one attempt, and fences the old owner afte
     status: 'running',
     lease_owner: 'replacement',
   });
-  // Finish the fixture so subsequent queue-drain tests cannot claim it.
   await db
     .updateTable('site_crawl_tasks')
     .set({ status: 'cancelled' })
@@ -292,7 +290,6 @@ it('refills a freed slot while a slow task is still running', async () => {
   const slowDone = new Promise<void>((resolve) => {
     releaseSlow = resolve;
   });
-  // Without refilling, the third task would wait for the slow one: fail fast instead of hanging.
   const fallback = setTimeout(releaseSlow, 3000);
   const worker = new SiteHealthWorker(db, {
     settings,
@@ -322,7 +319,6 @@ it('opens another claim window while no peer of its group has work due', async (
       [1, 2, 3].map(async () => fixtures.task(await fixtures.crawl(), 'link_metrics')),
     );
     const worker = new SiteHealthWorker(db, {
-      // Every window ends at its first settlement.
       settings: { ...settings, claimWindow: 1e-9 },
       executors: { link_metrics: async () => {} },
     });
@@ -384,7 +380,6 @@ it('guards scoped maintenance failures and throttles reconciliation while contin
     now += 1000;
     expect(await worker.runOnce()).toBe(0);
     expect(reconcile).toHaveBeenCalledTimes(2);
-    // The score refresh follows the crawl's cadence: its first pass refreshed.
     expect(reconcile).toHaveBeenLastCalledWith(db, seed.workspaceId, seed.crawlId, {
       refreshScore: false,
     });
@@ -403,7 +398,6 @@ it('guards scoped maintenance failures and throttles reconciliation while contin
 it('fails a long crawl only once it stops settling tasks', async () => {
   const twoHoursAgo = new Date(Date.now() - 2 * 3600_000);
   const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000);
-  /** The open task: an analyze, or a drained crawl's finalize running under its heartbeat. */
   const crawlLastSettled = async (minutesAgo: number, finalizeHeartbeat?: number) => {
     const seed = await fixtures.crawl('running');
     await db
@@ -434,7 +428,6 @@ it('fails a long crawl only once it stops settling tasks', async () => {
   };
   const moving = await crawlLastSettled(5);
   const stuck = await crawlLastSettled(40);
-  // A finalize committing batches for 40 minutes is progress; one whose heartbeat stopped is not.
   const publishing = await crawlLastSettled(40, 1);
   const silent = await crawlLastSettled(40, 40);
   await lifecycle.reconcileOverdue(db, { ...settings.lifecycle, batch: 1000 });
@@ -524,7 +517,6 @@ it('scores a running crawl as the mean of its tracked pages’ stored scores', a
     .execute();
   const evaluation = await fixtures.evaluation(seed, home, 'technical.indexable', 'missing');
   await fixtures.issue(seed, home, 'technical.indexable', evaluation);
-  // A running crawl's issues are current as its analyses write them (CO-7).
   await db
     .updateTable('site_issues')
     .set({ is_current: true })
@@ -561,7 +553,6 @@ it('refreshes a running crawl summary without overwriting one that settled meanw
     await fixtures.analyzable(seed, '/pending');
     const cadence = crawlCadences(siteWorkerSettings({}).scoreRefresh);
     const task = { id: page.taskId, crawl_id: seed.crawlId, workspace_id: seed.workspaceId };
-    // A task commit holds the crawl lock while the refresh starts; the crawl may settle meanwhile.
     let refreshing: Promise<unknown> = Promise.resolve();
     await db.transaction().execute(async (trx) => {
       await sql`select id from site_crawls where id = ${seed.crawlId} for update`.execute(trx);
@@ -591,13 +582,11 @@ it('renders the counters an active crawl persisted, probing an expired lease at 
   const target = { workspace_id: seed.workspaceId, crawl_id: seed.crawlId };
   const read = async () => crawlCounters(db, await crawlOf(seed.crawlId));
   await persistLiveCounters(db, target);
-  // Admitted after the persisted copy: the read lags until the next recount (CO-3).
   await fixtures.analyzable(seed, '/later');
   expect(await read()).toMatchObject({
     queued: 1,
     activity: { state: 'working', reason: 'active_work', queue_depth: 1 },
   });
-  // A copy taken during a backoff reads as waiting until the backoff ends, then as work.
   const copy = record((await crawlOf(seed.crawlId)).live_counters);
   const waitingUntil = async (at: number) => {
     const activity = { ...record(copy.activity), state: 'waiting', reason: 'retry_backoff' };
@@ -620,7 +609,6 @@ it('renders the counters an active crawl persisted, probing an expired lease at 
   });
   await persistLiveCounters(db, target);
   expect(await read()).toMatchObject({ queued: 1, running: 1 });
-  // A crawl that went terminal keeps the copy it had.
   await db
     .updateTable('site_crawls')
     .set({ status: 'completed' })

@@ -27,8 +27,6 @@ export function DashboardScreen({
   const { workspaceId, projectId, project } = useProjectScope();
   const scope = { workspaceId, projectId };
   const commandCenter = useQuery(projectQueries.commandCenter(scope));
-  // The layout does not depend on the command center, so it is asked for
-  // beside it rather than once the command center has rendered.
   const layout = useQuery(projectQueries.overviewLayout(scope));
   useWarmWidgets(project, layout.data?.widgets);
 
@@ -54,11 +52,6 @@ export function DashboardScreen({
   );
 }
 
-/**
- * Start the widgets' reads as soon as the layout names them, instead of when
- * they mount behind the command center. Best-effort: a widget still asks for
- * its own read and reports its own failure.
- */
 function useWarmWidgets(project: Project, widgets: readonly OverviewWidget[] | undefined) {
   const client = useQueryClient();
   useEffect(() => {
@@ -66,7 +59,6 @@ function useWarmWidgets(project: Project, widgets: readonly OverviewWidget[] | u
   }, [client, project, widgets]);
 }
 
-/** The widget grid's shape: a card per widget with its body's shape, so nothing moves when they land. */
 function DashboardLoading({ widgets }: Readonly<{ widgets?: readonly OverviewWidget[] }>) {
   return (
     <ReportPage>
@@ -140,7 +132,6 @@ function DashboardData({
           Someone else changed this Overview. The latest layout is shown; make your change again.
         </Notice>
       ) : null}
-      {/* While editing, every saved widget is shown, so the whole layout can be arranged. */}
       <OverviewGrid
         widgets={editing ? saved.widgets : widgets}
         editing={canEdit && editing}

@@ -19,13 +19,6 @@ import { StateBlock } from '@/components/ui/state-block';
 
 const FORM_ID = 'workspace-setup-form';
 
-/**
- * Create the person's own workspace before its first project. This is where
- * their trial starts. The Terms decision was made on the sign-in or sign-up
- * form and recorded with the account, so the person goes straight to naming
- * the workspace. A session older than the published revision holds no
- * decision on it: it ends, and the sign-in form asks for the decision.
- */
 export function WorkspaceSetup() {
   const terms = useQuery(authQueries.terms());
   const leave = useSignOutForChangedTerms(terms.isSuccess && !terms.data.accepted_at);

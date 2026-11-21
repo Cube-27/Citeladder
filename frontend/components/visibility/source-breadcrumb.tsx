@@ -7,17 +7,6 @@ import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 
-/**
- * Where in Sources the reader is, and the way back out.
- *
- * A real `<nav>` with a list, not a row of styled buttons: the trail is how
- * someone using a screen reader learns there is a level above this one, and a
- * back arrow alone never says what it goes back TO.
- *
- * The last crumb is the current page and is not a control. Making it one would
- * offer a reader a link to where they already are. Without `current` the
- * trail ends at its last crumb: the page's own heading names the page.
- */
 export function SourceBreadcrumb({
   trail,
   current,

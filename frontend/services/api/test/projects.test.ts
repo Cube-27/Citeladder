@@ -432,7 +432,6 @@ describe('project owner', () => {
         'X-Workspace-Id': a.workspaceId,
       },
     });
-    // The switcher's summary, not the project view: no prompts, competitors or domains.
     expect(await response.json()).toEqual([
       {
         id: project.id,
@@ -480,7 +479,6 @@ describe('project owner', () => {
         feature: 'chatgpt',
         provider: 'test',
         model: 'test-model',
-        // The fixture's answer reports no usage: its cost is unknown, not zero.
         cost_microusd: null,
       },
     ]);
@@ -546,7 +544,6 @@ describe('project owner', () => {
       .where('reservation_id', '=', reservationId)
       .orderBy('entry_kind')
       .execute();
-    // Billing keeps the exact source IDs of work that no longer exists.
     expect(ledger).toEqual([
       { entry_kind: 'release', subject_id: audit, audit_id: audit, task_id: taskId },
       { entry_kind: 'reservation', subject_id: audit, audit_id: audit, task_id: taskId },
@@ -615,7 +612,6 @@ describe('project owner', () => {
   });
 
   const day = 86_400_000;
-  /** A public workspace whose only access was a trial that ended `endedDaysAgo` days ago. */
   async function trialWorkspace(
     endedDaysAgo: number,
     { paid = false, project = true, checkout = false } = {},
@@ -626,11 +622,9 @@ describe('project owner', () => {
       .set({ registration_origin: 'public' })
       .where('id', '=', t.accountId)
       .execute();
-    // Made while the trial was open, then the fixture's operator grants give way to it.
     const created = project
       ? await createProject(db, t.workspaceId, t.userId, projectCreate.parse({ name: 'Trial' }))
       : null;
-    // A discovery still in progress has no project to cascade from.
     const discovery = await createDiscovery(
       db,
       t.workspaceId,
@@ -641,7 +635,6 @@ describe('project owner', () => {
       }),
       randomUUID(),
     );
-    // The fixture's operator access grant is not a trial; this account is trial-only.
     await asOwner((owner) =>
       owner.deleteFrom('account_grants').where('billing_account_id', '=', t.accountId).execute(),
     );
@@ -666,7 +659,6 @@ describe('project owner', () => {
       })
       .execute();
     if (paid) await grant(db, t.accountId, { key: 'project_slots', value: 1 });
-    // A returning customer paid for a plan whose settlement has not landed yet.
     if (checkout)
       await db
         .insertInto('pending_activations')
@@ -698,7 +690,6 @@ describe('project owner', () => {
     };
   }
 
-  /** Which of the workspace's project and discovery are still stored. */
   async function survivors(workspace: { projectId: string | null; discoveryId: string }) {
     const projects = await db
       .selectFrom('projects')
@@ -754,7 +745,6 @@ describe('project owner', () => {
     const purge = await db.transaction().execute(async (issuer) => {
       const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(issuer);
       await advisoryXactLock(issuer, policy.entitlements.capacity_lock, workspace.accountId);
-      // An operator grant that has already ended, committed after the candidates were chosen.
       await grant(issuer, workspace.accountId, {
         key: 'workspace_access',
         value: 1,
@@ -815,7 +805,6 @@ describe('project owner', () => {
       projectCreate.parse({ name: 'Overview' }),
     );
     const scope = { workspaceId: t.workspaceId, projectId: project.id };
-    // Measurement leads the ladder: without prompts there is nothing to measure.
     expect((await commandCenter(db, scope, null)).next_action).toMatchObject({
       kind: 'configure_prompts',
       href: '/prompts',
@@ -832,7 +821,6 @@ describe('project owner', () => {
       loop: { tracked: { state: 'not_run' } },
       state: { visibility: { value: null, delta: null } },
     });
-    // A first audit under way is reported as running, not as a step to take.
     const running = await new VisibilityFixtures(db).audit(
       { userId: t.userId, ...scope },
       { status: 'running', completedAt: null },

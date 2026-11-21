@@ -1,4 +1,3 @@
-/** The crawl contract every Site Health read shares. Nothing here writes. */
 import { isActiveCrawl, type crawlCountersSchema } from '@citeladder/contracts/site-health';
 import type { z } from 'zod';
 
@@ -17,7 +16,6 @@ const num = (value: unknown) => (typeof value === 'number' ? value : null);
 const text = (value: unknown, fallback: string) =>
   typeof value === 'string' && value !== '' ? value : fallback;
 
-/** The worker-written `score_summary`, or null before scoring. */
 export function scoreSummary(crawl: ProjectedCrawl) {
   const summary = record(crawl.score_summary);
   if (Object.keys(summary).length === 0) return null;
@@ -48,7 +46,6 @@ export function scoreSummary(crawl: ProjectedCrawl) {
     selected_count: int(summary.selected_count),
     analyzed_count: int(summary.analyzed_count),
     issue_count: int(summary.issue_count),
-    // The version the crawl was pinned to, never the current configuration.
     scoring_version: text(summary.scoring_version, crawl.scoring_version),
     classified_page_count: int(summary.classified_page_count),
     other_page_count: int(summary.other_page_count),
@@ -58,7 +55,6 @@ export function scoreSummary(crawl: ProjectedCrawl) {
     classification_state: text(summary.classification_state, NOT_MEASURED),
     classification_reason_groups: record(summary.classification_reason_groups),
     classification_formula_version: text(summary.classification_formula_version, ''),
-    // The stored summary keeps its classification source id lists; no reader renders them.
     scored_page_kind_set: strings(summary.scored_page_kind_set),
     scored_page_count_by_kind: record(summary.scored_page_count_by_kind),
     by_page_kind: Object.fromEntries(byKind),
@@ -67,11 +63,6 @@ export function scoreSummary(crawl: ProjectedCrawl) {
 
 const iso = (value: Date | null) => value?.toISOString() ?? null;
 
-/**
- * The crawl contract, with discovered totals redacted unless the crawl was
- * frozen with count disclosure. The inventory total is the larger of fetched
- * and admitted URLs: a sitemap crawl fetches the root once and admits many.
- */
 export async function crawlProjection(
   db: Database,
   crawl: ProjectedCrawl,
@@ -80,7 +71,6 @@ export async function crawlProjection(
   return projectCrawl(crawl, await crawlCounters(db, crawl), options);
 }
 
-/** The crawl's frozen robots choice and who confirmed an `ignore`. */
 function robotsChoice(crawl: Crawl) {
   const frozen = record(crawl.configuration);
   if (frozen.robots !== 'ignore')
@@ -93,7 +83,6 @@ function robotsChoice(crawl: Crawl) {
   };
 }
 
-/** The crawl contract; `counters` come from `crawlCounters`, the one chooser. */
 export function projectCrawl(
   crawl: ProjectedCrawl,
   counters: Counters,
@@ -116,7 +105,6 @@ export function projectCrawl(
     inventory_complete: crawl.inventory_complete,
     partial_reason: crawl.partial_reason,
     visible_url_count: crawl.admitted_url_count,
-    // A running crawl's row is recounted only by its reconciles; its live counters lead.
     analyzed_count: isActiveCrawl(crawl.status)
       ? Math.max(crawl.analyzed_url_count, counters.analyzed)
       : crawl.analyzed_url_count,

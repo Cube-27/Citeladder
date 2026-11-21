@@ -1,11 +1,3 @@
-/**
- * Public API keys: one workspace each, an optional project allowlist, and
- * scopes that intersect the creator's live role.
- *
- * The secret is shown once; only its HMAC (keyed by `API_KEY_PEPPER`) is
- * stored, found by its public prefix and compared in constant time. A key
- * whose creator leaves the workspace is revoked in that transaction.
- */
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 
 import {
@@ -35,10 +27,8 @@ export type ApiKeyRow = Selectable<ApiKeys>;
 const P = policy.public_api;
 const PREFIX_LENGTH = P.key_prefix.length + P.prefix_random_chars;
 
-/** `cl_live_` + random prefix characters + 32 random bytes, base62. */
 function newSecret(): { prefix: string; secret: string } {
   const prefix = P.key_prefix + base62(P.prefix_random_chars);
-  // 43 base62 characters carry at least 256 bits.
   const body = base62(base62Length(P.secret_random_bytes * 8));
   return { prefix, secret: prefix + body };
 }
@@ -98,16 +88,6 @@ export async function listApiKeys(
   };
 }
 
-/**
- * Create a key for the acting Owner/Admin. `read` is always granted; every
- * allowlisted project must belong to the workspace.
- */
-/**
- * Mint a key for the signed-in creator. The creator's row is locked and their
- * session version rechecked in the transaction, so a key cannot be minted by a
- * session that a concurrent password reset or change has already ended (the
- * reset revokes only keys that exist when it commits).
- */
 export async function createApiKey(
   db: Database,
   pepper: string,
@@ -143,7 +123,6 @@ export async function createApiKey(
       if (owned.length !== projectIds.length)
         throw new ApiError(422, 'Every project must belong to this workspace');
     }
-    // 62^8 prefixes: a few candidates checked in one query never all collide.
     const candidates = Array.from({ length: 4 }, newSecret);
     const taken = new Set(
       (
@@ -188,7 +167,6 @@ export async function createApiKey(
   });
 }
 
-/** Revoke one key; revoking a revoked key is a no-op. */
 export function revokeApiKey(
   db: Database,
   workspaceId: string,
@@ -221,7 +199,6 @@ function invalidKey(message = 'A valid API key is required'): ApiError {
   });
 }
 
-/** Record a refused revoked/expired key at most once per key per interval. */
 async function recordRejection(
   db: Database,
   row: Pick<ApiKeyRow, 'id' | 'workspace_id' | 'created_by_user_id'>,
@@ -244,7 +221,6 @@ async function recordRejection(
   });
 }
 
-/** The live key a `Bearer` header names, or 401 `invalid_api_key`. */
 export async function resolveCaller(
   db: Database,
   pepper: string,
@@ -261,7 +237,6 @@ export async function resolveCaller(
     .executeTakeFirst();
   if (!found || !timingSafeEqual(found.secret_hmac, secretDigest(pepper, presented)))
     throw invalidKey();
-  // The digest has done its job; it never leaves this function.
   const { secret_hmac: _digest, ...row } = found;
   if (row.revoked_at) {
     await recordRejection(db, row, 'api_key.rejected_revoked', now);
@@ -274,7 +249,6 @@ export async function resolveCaller(
   return row;
 }
 
-/** Stamp `last_used_at` at most once per resolution window. */
 export async function touchApiKey(
   db: Database,
   row: Pick<ApiKeyRow, 'id' | 'last_used_at'>,

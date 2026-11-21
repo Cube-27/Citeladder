@@ -55,7 +55,6 @@ const PROJECT_ROW = {
   updated_at: '2026-01-01T00:00:00Z',
 };
 
-/** What the workspace's list carries for the project. */
 const PROJECT_SUMMARY = {
   id: PROJECT,
   name: 'Acme',
@@ -96,7 +95,6 @@ function stub({ projects, slots = 1 }: { projects: unknown[]; slots?: number }) 
   );
 }
 
-/** A response the test releases when it chooses. */
 function deferred() {
   let answer!: (response: HttpResponse<DefaultBodyType>) => void;
   const response = new Promise<HttpResponse<DefaultBodyType>>((resolve) => {
@@ -105,7 +103,6 @@ function deferred() {
   return { response, answer };
 }
 
-/** What the loader did: a redirect's destination, or null for "let it render". */
 async function run(pathname: string): Promise<string | null> {
   const request = new Request(`https://citeladder.local${pathname}`);
   try {
@@ -119,8 +116,6 @@ async function run(pathname: string): Promise<string | null> {
 
 beforeAll(async () => {
   mswServer.listen({ onUnhandledFrame: 'bypass' });
-  // Route prefetches import these lazily; a first import still resolving after
-  // its test ended would send that test's reads into the next one's log.
   await Promise.all([import('@/lib/api/projects'), import('@/lib/overview/widget-queries')]);
 });
 afterAll(() => mswServer.close());
@@ -136,22 +131,12 @@ beforeEach(() => {
   );
 });
 afterEach(async () => {
-  // A read still retrying must not reach the next test's request log.
   await client.cancelQueries();
   client.clear();
   mswServer.resetHandlers();
   setAppQueryClient(undefined);
 });
 
-/**
- * The shell's opening decision, made before anything mounts.
- *
- * What these guard is the DIRECTION of each answer, and — just as much — the
- * states that must NOT produce one. A read that failed, an allowance nobody
- * confirmed, a project that is merely missing: each has a notice and a retry
- * of its own in `OnboardingGate`, and a loader that redirected or threw on any
- * of them would replace that with a bare route error.
- */
 describe('bootstrapPrivateRoutes', () => {
   it.each(['/projects', '/onboarding'])(
     'settles access alongside workspace reads before mounting %s',
@@ -215,9 +200,6 @@ describe('bootstrapPrivateRoutes', () => {
   });
 
   it('starts the session and membership reads together rather than in series', async () => {
-    // A degraded network multiplies every serialized round trip, and both
-    // reads need only the session cookie, so the membership list must not
-    // queue behind `me`. Prove both are in flight before either has answered.
     const entered: string[] = [];
     let answerMe!: (response: HttpResponse<DefaultBodyType>) => void;
     let answerWorkspaces!: (response: HttpResponse<DefaultBodyType>) => void;
@@ -244,8 +226,6 @@ describe('bootstrapPrivateRoutes', () => {
 
     const pending = run('/projects');
     await waitFor(() => expect(entered).toContain('workspaces'));
-    // `me` is still unanswered (its deferred is pending by construction), so
-    // the membership read can only have started alongside it.
     expect(entered).toContain('me');
 
     answerMe(HttpResponse.json({ user: USER }));
@@ -274,17 +254,12 @@ describe('bootstrapPrivateRoutes', () => {
   });
 
   it('does not route a workspace-only destination on the projects it lacks', async () => {
-    // Settings and onboarding manage the WORKSPACE. An empty one is a normal
-    // place to be on those routes, not a reason to redirect.
     stub({ projects: [] });
     expect(await run('/settings')).toBeNull();
     expect(await run('/onboarding')).toBeNull();
   });
 
   it('renders rather than redirects when a read fails', async () => {
-    // The gate owns "your workspace could not be loaded" and its retry. A
-    // loader that threw here would show a route error instead and lose which
-    // read actually failed.
     mswServer.use(
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: USER })),
       http.get('/api/v1/workspaces', () =>
@@ -295,8 +270,6 @@ describe('bootstrapPrivateRoutes', () => {
   });
 
   it('does not offer creation on an allowance nobody confirmed', async () => {
-    // An unread allowance is not evidence of a spare slot. Routing into setup
-    // on it is how a transient failure becomes a rejected creation attempt.
     mswServer.use(
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: USER })),
       http.get('/api/v1/workspaces', () => HttpResponse.json([WORKSPACE_ROW])),
@@ -358,7 +331,6 @@ describe('bootstrapPrivateRoutes', () => {
   });
 
   describe('a reload of a project address', () => {
-    /** Every request path (with its query) the loader sends while `work` runs. */
     function recordRequests() {
       const paths: string[] = [];
       const listener = ({ request }: { request: Request }) => {
@@ -403,7 +375,6 @@ describe('bootstrapPrivateRoutes', () => {
           `/api/v1/projects/${PROJECT}/crawl-logs/sources`,
         ],
       ],
-      // A tab in the address warms that tab's reads, not the landing tab's.
       [
         `/ai-traffic?project=${PROJECT}&tab=pages`,
         [`/api/v1/projects/${PROJECT}/crawl-logs/sources`],
@@ -422,7 +393,6 @@ describe('bootstrapPrivateRoutes', () => {
       mswServer.use(
         http.get(`/api/v1/workspaces/${WORKSPACE}/access`, () => access),
         http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)),
-        // What the screen reads answer is not this test's concern.
         http.get(`/api/v1/projects/${PROJECT}/*`, () =>
           HttpResponse.json({ error: { message: 'not here' } }, { status: 404 }),
         ),
@@ -434,8 +404,6 @@ describe('bootstrapPrivateRoutes', () => {
         settled = true;
         return location;
       });
-      // The shell's Actions badge read rides along on every screen; this test
-      // is about the screen's own reads.
       const screenReads = () =>
         requests.paths
           .filter((path) => path.startsWith(`/api/v1/projects/${PROJECT}/`))
@@ -475,11 +443,9 @@ describe('bootstrapPrivateRoutes', () => {
         `/api/v1/projects/${PROJECT}/actions`,
         `/api/v1/projects/${PROJECT}/site-health`,
       ];
-      // `me` and the membership list are unanswered by construction.
       await waitFor(() =>
         expect(firstRound.filter((path) => started().includes(path))).toEqual(firstRound),
       );
-      // Site Health reads the workspace entitlement; its own copy is gone.
       expect(started().filter((path) => path.endsWith('/entitlements'))).toEqual([
         `/api/v1/workspaces/${WORKSPACE}/entitlements`,
       ]);
@@ -488,13 +454,11 @@ describe('bootstrapPrivateRoutes', () => {
       me.answer(HttpResponse.json({ user: USER }));
       memberships.answer(HttpResponse.json([WORKSPACE_ROW]));
       expect(await pending).toBeNull();
-      // An Owner's usage waits only for the membership list to name the role.
       await waitFor(() => expect(started()).toContain('/api/v1/billing/usage'));
       requests.stop();
     });
 
     it('after sign-in, reads the selected project’s view and its screen before redirecting to it', async () => {
-      // Sign-in clears the remembered project, so nothing can be guessed.
       stub({ projects: [PROJECT_SUMMARY] });
       mswServer.use(
         http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)),
@@ -506,7 +470,6 @@ describe('bootstrapPrivateRoutes', () => {
       const started = () => requests.paths.map((path) => path.replace(/\?.*$/u, ''));
 
       expect(await run('/projects')).toBe(`/projects?project=${PROJECT}`);
-      // Only the first pass ran: the redirected load would join these, not start them.
       await waitFor(() =>
         expect(
           [`/api/v1/projects/${PROJECT}`, `/api/v1/projects/${PROJECT}/command-center`].filter(
@@ -540,8 +503,6 @@ describe('bootstrapPrivateRoutes', () => {
           ),
         ),
         http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)),
-        // Asked under the wrong workspace, the dashboard is still answering
-        // `Project not found` when the project names its own.
         http.get(`/api/v1/projects/${PROJECT}/site-health`, async ({ request }) => {
           if (request.headers.get('x-workspace-id') === WORKSPACE) return HttpResponse.json(empty);
           await delay(200);

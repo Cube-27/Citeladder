@@ -1,4 +1,3 @@
-/** Persisted Action reads, target attachment and explicit workflow decisions. */
 import { randomUUID } from 'node:crypto';
 import {
   ACTION_STATUS_ANY,
@@ -55,11 +54,6 @@ import {
 
 const a = policy.opportunity.actions;
 
-/**
- * The Action a target the Agent names, created when none exists. Throws
- * `ActionTargetError` for a target no Action can carry. Caller owns the
- * transaction. Refresh and attachments share its project lock.
- */
 export async function attachOrCreateAction(
   db: Database,
   scope: Scope,
@@ -91,7 +85,6 @@ export async function attachOrCreateAction(
       created_at: now,
       updated_at: now,
       status: a.ACTION_STATUS_OPEN,
-      // A new Action has no output or declaration yet: its stored status is what it reads as.
       effective_status: a.ACTION_STATUS_OPEN,
       target_prompt_id: null,
       priority_score: null,
@@ -108,14 +101,12 @@ export async function attachOrCreateAction(
     .where('project_id', '=', scope.projectId)
     .where('group_key', '=', identity.key)
     .executeTakeFirstOrThrow();
-  // A page Action's one URL, as action sync writes it for evidence rows.
   if (action.target_kind === 'page')
     await writeActionUrls(db, scope, [
       { actionId: action.id, kind: action.target_kind, url: action.target_url, cohort: null },
     ]);
   return action;
 }
-/** Where an Action no finding files sits on the Actions page (`AGENT_KIND_GROUPING`). */
 function agentGrouping(kind: string) {
   const grouping = a.AGENT_KIND_GROUPING[kind] ?? a.ACTION_GROUPING_FALLBACK;
   return { goal: goalOf(grouping), goal_grouping: grouping };
@@ -126,11 +117,6 @@ const jsonList = (value: unknown): unknown[] => (Array.isArray(value) ? value : 
 const stringList = (value: unknown): string[] =>
   jsonList(value).filter((v): v is string => typeof v === 'string');
 
-/**
- * The row's secondary line, from config and the row alone: an issue family's
- * Site Health fix as Issues shows it, else the strongest finding's title as
- * action sync stored it in the diagnosis; null for an Agent row without findings.
- */
 function actionSummary(row: ActionRow, cohort: ReturnType<typeof storedCohort>): string | null {
   if (cohort) return ruleRemediation(cohort.rule_id);
   const diagnosis = actionDetailSchema.shape.diagnosis.safeParse(row.diagnosis);
@@ -167,7 +153,6 @@ export function actionItem(row: ActionRow) {
   };
 }
 
-/** An Action the list shows: its evidence still stands, or the Agent made it. Search shows the same. */
 export const LISTED_ACTION = sql<SqlBool>`(actions.evidence_cleared_at is null or actions.origin = ${a.ACTION_ORIGIN_AGENT})`;
 
 function listed(db: Database, scope: Scope) {
@@ -192,7 +177,6 @@ function cursorPosition(cursor: string, filters: Record<string, unknown>) {
   }
 }
 
-/** Every approach a diagnosis can store (the tree's and the default's), and an undiagnosed Agent Action's ''. */
 const KNOWN_APPROACHES = [
   ...new Set([
     ...a.APPROACH_TREE.map((branch) => branch.approach),
@@ -201,19 +185,13 @@ const KNOWN_APPROACHES = [
   ]),
 ];
 
-/**
- * The list's filters; null (or absent) leaves a filter off. A null status is
- * the work queue (open and in progress); `any` keeps every status.
- */
 type ActionListFilters = {
   status: string | null;
-  /** Text the Action's label contains, case-insensitively. */
   q?: string | null;
   target_kind?: string | null;
   approach?: string | null;
   priority?: string | null;
   family?: string | null;
-  /** The Actions page's persisted grouping, and its tree's other group keys. */
   grouping?: string | null;
   ownership?: string | null;
   topic?: string | null;
@@ -221,7 +199,6 @@ type ActionListFilters = {
   cursor: string | null;
 };
 
-/** `value` checked against `allowed`; an unknown value is a 422, never an empty list. */
 function known<T extends string>(
   name: string,
   value: string | null | undefined,
@@ -252,7 +229,6 @@ export function parseFilters(filters: ActionFilterInput) {
   };
 }
 
-/** The listed Actions every list filter matches. */
 function filteredActions(db: Database, scope: Scope, filters: ReturnType<typeof parseFilters>) {
   let filtered = listed(db, scope);
   if (filters.grouping) filtered = filtered.where(groupingSql, '=', filters.grouping);
@@ -271,17 +247,14 @@ function filteredActions(db: Database, scope: Scope, filters: ReturnType<typeof 
     filtered = filtered.where(
       sql<SqlBool>`actions.families @> ${JSON.stringify([filters.family])}::jsonb`,
     );
-  // The tree's Impact band: the low band holds unscored Actions too.
   if (filters.priority) filtered = filtered.where(impactSql, '=', filters.priority);
   return filtered;
 }
 
-/** The listed Actions every list filter matches: a bulk change's reach. */
 export function matchingActions(db: Database, scope: Scope, raw: ActionFilterInput) {
   return filteredActions(db, scope, parseFilters(raw));
 }
 
-/** The list read's cursor after `last` under `filters`, as the tree hands it to "Show more". */
 export function listCursor(
   scope: Scope,
   filters: ReturnType<typeof parseFilters>,
@@ -349,7 +322,6 @@ export async function requireAction(
   return row;
 }
 
-/** The live opportunities among `ids`, in that order. */
 function inMemberOrder<T extends { id: string }>(ids: readonly string[], rows: readonly T[]) {
   const byId = new Map(rows.map((row) => [row.id, row]));
   return ids.flatMap((id) => {
@@ -358,7 +330,6 @@ function inMemberOrder<T extends { id: string }>(ids: readonly string[], rows: r
   });
 }
 
-/** The Action's project findings among `ids`, in that order; only live ones unless `superseded`. */
 async function findingsOf(db: Database, action: ActionRow, ids: string[], superseded: boolean) {
   let query = db
     .selectFrom('opportunities')
@@ -370,20 +341,11 @@ async function findingsOf(db: Database, action: ActionRow, ids: string[], supers
   return inMemberOrder(ids, await query.execute());
 }
 
-/**
- * The finding ids a declaration freezes: the current members, or the last
- * non-empty set when a recrawl resolved them all.
- */
 function declarableIds(action: ActionRow): string[] {
   const current = stringList(action.member_opportunity_ids);
   return current.length ? current : stringList(action.last_member_opportunity_ids);
 }
 
-/**
- * The members a declaration freezes: the live current members or, once a
- * refresh cleared them all, the last set it superseded (`resolved`). Foreign
- * or missing rows are never read.
- */
 export async function declarableMembers(db: Database, action: ActionRow) {
   const ids = declarableIds(action);
   if (!ids.length) return { members: [], resolved: false };
@@ -391,7 +353,6 @@ export async function declarableMembers(db: Database, action: ActionRow) {
   return { members: await findingsOf(db, action, ids, resolved), resolved };
 }
 
-/** The Action's live members keyed by its id, so it runs beside the Action read. */
 function memberRows(db: Database, workspaceId: string, actionId: string) {
   return db
     .selectFrom('opportunities')
@@ -410,7 +371,6 @@ function memberRows(db: Database, workspaceId: string, actionId: string) {
 const measuredBy = measurementLegSchema.shape.leg.nullable();
 
 export async function getAction(db: Database, workspaceId: string, actionId: string) {
-  // The declaration and members key on the Action id, so all three run together.
   const [action, declaration, rows] = await Promise.all([
     requireAction(db, { workspaceId, projectId: null }, actionId),
     db
@@ -426,7 +386,6 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
     targetDetail(db, action, stringList(declaration?.member_opportunity_ids)),
     readActionUrls(db, action, null),
   ]);
-  // The cohort's pages page through `urls`; the detail carries its summary.
   const cohort = shown ? actionDetailSchema.shape.cohort.parse(shown) : null;
   return {
     ...actionItem(action),
@@ -437,11 +396,9 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
       remediation: row.remediation || '',
       content_gap_evidence: contentGapEvidence(row),
     })),
-    // The earliest go-live a declaration accepts; new evidence measures it from there.
     declarable_since: new Date(
       Date.now() - policy.opportunity.opportunities.VERIFICATION_WINDOW_DAYS * 86_400_000,
     ).toISOString(),
-    // Before a declaration: which reading would measure each finding.
     member_measurement: Object.fromEntries(
       members.map((row) => [row.id, measuredBy.parse(memberMeasurementLeg(row))]),
     ),
@@ -451,10 +408,8 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
   };
 }
 
-/** A listed Action a reader counts as open: New or In progress. */
 const OPEN_LISTED_ACTION = sql<SqlBool>`${LISTED_ACTION} and actions.effective_status = any(${persistedStatuses(['open', 'in_progress'])}::text[])`;
 
-/** A page of the URLs `action` touches; an issue group naming none is the whole site. */
 function readActionUrls(db: Database, action: ActionRow, cursor: string | null) {
   return actionUrlsPage(db, action, {
     cursor,
@@ -463,7 +418,6 @@ function readActionUrls(db: Database, action: ActionRow, cursor: string | null) 
   });
 }
 
-/** `GET /actions/{id}/urls`: the next page of an Action's URLs. */
 export async function getActionUrls(
   db: Database,
   workspaceId: string,

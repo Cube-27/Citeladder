@@ -29,8 +29,6 @@ import { StateBlock } from '@/components/ui/state-block';
 const HISTORY_LIMIT = 25;
 const RERUN_SEARCH_PARAM = 'rerun';
 
-/** Query and rerun controller for a crawl-bounded Site Health URL detail. */
-/** `/site/crawls/:crawlId/pages/:siteUrlId`: one crawl-bounded page detail. */
 export function PageDetailScreen() {
   const { crawlId, siteUrlId } = useParams<{ crawlId: string; siteUrlId: string }>();
   if (!crawlId || !siteUrlId) return null;
@@ -45,8 +43,6 @@ export function UrlDetail({
   const { workspaceId } = useProjectScope();
   const router = useNavigate();
   const searchParams = useSearchParams()[0];
-  // A re-audit navigates to its own crawl's page with `?rerun=1`; poll from
-  // mount so its queued/running progress shows without a manual reload.
   const [rerunPolling] = useState(() => searchParams.get(RERUN_SEARCH_PARAM) === '1');
   // The cache can still hold the prior terminal snapshot immediately after a
   // rerun succeeds. Polling must continue until the fresh queued/running state
@@ -64,9 +60,7 @@ export function UrlDetail({
         preActivePollCountRef,
       ),
   });
-  // A re-audit is always its own one-page crawl: follow it to that crawl's page.
   const rerun = useMutation(siteHealthMutations.rerunPage(workspaceId));
-  // A re-audit is a crawl, offered only to a role that may run one.
   const canRun = useWorkspaceCapability('run');
   const startRerun = () =>
     rerun.mutate(
@@ -120,7 +114,6 @@ export function UrlDetail({
       }
       history={
         <IssueHistoryButton
-          // A finished re-audit changes what is resolved: start the history over.
           key={`history:${crawlId}:${siteUrlId}:${detailQuery.data.last_audited ?? ''}`}
           workspaceId={workspaceId}
           crawlId={crawlId}
@@ -165,7 +158,6 @@ function rerunErrorMessage(error: unknown): string {
 
 type HistoryTarget = Readonly<{ workspaceId: string; crawlId: string; siteUrlId: string }>;
 
-/** Opens the page's resolved issues in a drawer; nothing is read until it opens. */
 function IssueHistoryButton(target: HistoryTarget) {
   const [open, setOpen] = useState(false);
   // Read on first open, then kept so the drawer does not blank as it closes.
@@ -190,16 +182,12 @@ function IssueHistoryButton(target: HistoryTarget) {
 }
 
 function IssueHistory({ workspaceId, crawlId, siteUrlId }: HistoryTarget) {
-  // A page turn keeps the rows and the pager in place until the next page
-  // lands; the first load, a failed read and an empty history draw inside the
-  // table at the height of a full page.
   const { page, table } = useCursorTableQuery({
     workspaceId,
     scopeId: crawlId,
     scope: siteUrlId,
     query: (request) => ({
       ...siteHealthQueries.issueHistory(workspaceId, crawlId, siteUrlId, request),
-      // Read fresh each time the drawer is first opened for an audit.
       staleTime: 0,
     }),
     noun: 'resolved issues',

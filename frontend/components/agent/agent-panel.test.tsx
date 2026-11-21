@@ -93,7 +93,6 @@ const DETAIL = {
   outputs: [],
 };
 
-/** Lets a test change the screen's context, as a background refetch would. */
 const screenPrompt = { set: (_prompt: string) => {} };
 
 const issueRenders = { count: 0 };
@@ -101,7 +100,6 @@ const countIssueRender = () => {
   issueRenders.count += 1;
 };
 
-/** A Dashboard screen offering the typed page it is showing. */
 function IssueScreen() {
   const [prompt, setPrompt] = useState('Fix the missing meta description.');
   useEffect(() => {
@@ -177,7 +175,6 @@ describe('AgentPanel', () => {
     const rendersBeforeOpen = issueRenders.count;
     await user.click(trigger);
     const panel = await screen.findByRole('dialog', { name: 'Agent' });
-    // Opening the panel never re-renders the screen that published the context.
     expect(issueRenders.count).toBe(rendersBeforeOpen);
     expect(within(panel).getByLabelText('Message the agent')).toHaveValue(
       'Fix the missing meta description.',
@@ -197,7 +194,6 @@ describe('AgentPanel', () => {
     expect(within(panel).getByRole('button', { name: 'Edit last request' })).toBeVisible();
     await user.click(within(panel).getByLabelText('Reply to the agent'));
     await user.paste('y'.repeat(AGENT_PASTE_ATTACHMENT_MIN_CHARS));
-    // A paste alone is a draft that editing the last request would replace.
     expect(
       within(panel).getByRole('button', { name: 'Replace draft with last request' }),
     ).toBeVisible();

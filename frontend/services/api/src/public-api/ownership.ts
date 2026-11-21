@@ -1,22 +1,9 @@
-/**
- * Public paths nest every resource under `/v1/projects/{project_id}`, and a
- * key restricted to one project must never reach another project's rows
- * through an ID it learned elsewhere.
- *
- * Writes need nothing here: every command finds the record it changes only in
- * the path's project (`db/workspace-scope.ts` `RecordScope`). Some read owners
- * still find a prompt set, prompt, audit, Action or crawl by workspace only, so
- * a read first proves each such path ID belongs to the path's project. Every
- * other `*_id` parameter is listed as handed to its owner with the project.
- * An unlisted one fails closed: the route answers 500 until it is listed.
- */
 import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import { parseUuid } from '../http/uuid.ts';
 
 type ProjectOf = (db: Database, workspaceId: string, id: string) => Promise<string | undefined>;
 
-/** A table carrying `workspace_id` and `project_id` itself. */
 const scoped =
   (table: 'audits' | 'actions' | 'site_crawls' | 'site_urls'): ProjectOf =>
   async (db, workspaceId, id) =>
@@ -52,7 +39,6 @@ const promptProject: ProjectOf = async (db, workspaceId, id) =>
       .executeTakeFirst()
   )?.project_id;
 
-/** The owner receives the path project and finds the record only in it. */
 const BY_OWNER = 'owner';
 
 const OWNERS: Readonly<Record<string, { resource: string; project: ProjectOf } | typeof BY_OWNER>> =
@@ -68,15 +54,9 @@ const OWNERS: Readonly<Record<string, { resource: string; project: ProjectOf } |
     candidate_id: BY_OWNER,
     schedule_id: BY_OWNER,
     dataset_id: BY_OWNER,
-    // An issue group is derived from its crawl and found only inside the path
-    // crawl, which `crawl_id` above proves is the path project's.
     group_id: BY_OWNER,
   };
 
-/**
- * 404 unless every owned path ID of a read belongs to `projectId`; an
- * unlisted `*_id` parameter throws on reads and writes alike.
- */
 export async function requirePathOwnership(
   db: Database,
   workspaceId: string,
@@ -89,7 +69,6 @@ export async function requirePathOwnership(
     const owner = Object.hasOwn(OWNERS, name) ? OWNERS[name] : undefined;
     if (owner === undefined) throw new Error(`Public path parameter ${name} has no owner`);
     const id = parseUuid(raw);
-    // A malformed ID is the route's own 422; only a well-formed one is resolved.
     return owner === BY_OWNER || access === 'write' || id === null ? [] : [{ owner, id }];
   });
   const projects = await Promise.all(

@@ -32,27 +32,16 @@ const SENTIMENT_HINT =
 const POSITION_HINT =
   'Where a brand tends to appear among the brands you track, averaged over the answers that name it. 1.0 means it is named first every time.';
 
-/**
- * Where you stand against the brands you track: how often each is named, its
- * share of voice, where it lands among the brands an answer names, and how
- * that moved. Rows run highest visibility first, so the order is the rank.
- *
- * A missing change is an em dash. The table is never paged: it holds at most six
- * brands (owner, 2026-10-21).
- */
 export function RankingRowsTable({
   rows,
   description,
 }: Readonly<{
   rows: readonly RankingRow[];
-  /** The shared-answer basis when the change covers only part of the selection. */
   description?: string;
 }>) {
   const navigate = useNavigate();
   const ordered = orderByVisibility(rows);
-  // Runs measured before mention offsets were persisted have no position.
   const anyPosition = ordered.some((row) => row.avg_position != null);
-  // Runs admitted without perception classify no mention.
   const anySentiment = ordered.some((row) => row.sentiment != null);
   return (
     <TitledSection title={TITLE} description={description}>
@@ -71,8 +60,6 @@ export function RankingRowsTable({
         }
       >
         {ordered.map((row) => {
-          // A matched-subset delta is the same measurement over the cells both
-          // runs share; the note above the table says which one it is.
           const change = row.matched_visibility_delta ?? row.visibility_delta;
           return (
             <TableRow
@@ -89,7 +76,6 @@ export function RankingRowsTable({
                 <Inline as="span">
                   <BrandMark name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
                   <ClampText lines={1} className={textRole('emphasis')}>
-                    {/* The whole row opens the competitor; the name is the keyboard's way in. */}
                     {row.is_brand ? (
                       row.name
                     ) : (
@@ -132,7 +118,6 @@ export function RankingRowsTable({
   );
 }
 
-/** The rate beside its bar; an unmeasured rate is an absence, never an empty bar. */
 function VisibilityValue({ row }: Readonly<{ row: RankingRow }>) {
   if (row.mention_rate == null) return <Absence />;
   const value = percentText(row.mention_rate);
@@ -150,16 +135,11 @@ function VisibilityValue({ row }: Readonly<{ row: RankingRow }>) {
   );
 }
 
-/** No answer naming a tracked brand is not applicable, not zero. */
 function WinRateValue({ row }: Readonly<{ row: RankingRow }>) {
   if (row.win_rate != null) return <span>{percentText(row.win_rate)}</span>;
   return <Absence state={winRateAbsence(row)} />;
 }
 
-/**
- * The table while the selection is read: its title, a caption line and one
- * block row per brand the project tracks, so what follows stays put.
- */
 export function RankingRowsPending({ brands }: Readonly<{ brands: number }>) {
   return (
     <TitledSection title={TITLE}>
@@ -182,7 +162,6 @@ function rankingColumns({
 }>): DataTableColumn[] {
   return [
     { key: 'brand', label: 'Brand', kind: 'identity' },
-    // Wide enough for the 120px bar beside its rate.
     { key: 'visibility', label: 'Visibility', width: 'name', kind: 'number' },
     {
       key: 'sov',

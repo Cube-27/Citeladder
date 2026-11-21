@@ -120,9 +120,7 @@ function assertSavedTargetsUnchanged(current: SavedProject, saved: Map<string, C
     let same = false;
     try {
       same = canonicalJson(comparison(current, id)) === canonicalJson(target);
-    } catch {
-      /* changed or removed */
-    }
+    } catch {}
     if (!same) throw error('target_changed', 'Competitors changed; review again');
   }
 }
@@ -147,7 +145,6 @@ async function assertPreviousRun(
     .executeTakeFirst();
   if (!found) throw notFound('Previous run');
 }
-/** The frozen connection and its account identity: the plan picks whose account (B40). */
 async function frozenConnection(
   trx: Database,
   scope: Scope,
@@ -176,7 +173,6 @@ function datasetDepth(selection: Review['datasets'][number]) {
   if (SEARCH_DATASET_KINDS[selection.kind].fixedDepth) return 1;
   return selection.depth;
 }
-/** A recent complete dataset for the same scope, reused instead of buying it again. */
 function reusableSnapshot(
   trx: Database,
   scope: Scope,
@@ -194,7 +190,6 @@ function reusableSnapshot(
     .orderBy('published_at', 'desc')
     .executeTakeFirst();
 }
-/** The quoted call plan for each reviewed dataset, minus those a recent dataset already covers. */
 async function planDatasets(
   trx: Database,
   scope: Scope,
@@ -264,7 +259,6 @@ async function planDatasets(
         endpoint: request.endpoint,
         request: request.payload,
         page,
-        // Each page's own price; the pages sum to the dataset's quote.
         estimated_cost_usd: String(pageEstimateMicrousd(selection.kind, pageRows) / 1e6),
       });
     }
@@ -350,7 +344,6 @@ export async function createReview(
         connection_revision: connection.credential_revision,
         account_identity: identity,
         credential_source: source,
-        // A managed analysis is priced in AI credits; it is charged the credits only (B40, B41).
         estimated_credits: source === 'platform' ? costCredits(total) : null,
         charged_credits: null,
         platform_call_id: null,

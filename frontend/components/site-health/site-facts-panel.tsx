@@ -84,8 +84,6 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
         </SectionDescription>
       </SectionHeader>
       <SectionContent>
-        {/* Each disclosure is its own target, a workspace gap from the next
-            group, so a summary never touches the filter above it. */}
         <Stack gap="workspace" className="min-w-0">
           {unknown ? <Notice tone="warning">robots.txt could not be read.</Notice> : null}
           <Disclosure title={crawlerSummary(view)}>
@@ -121,10 +119,8 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
   );
 }
 
-/** One line for the closed crawler list: the total, then each policy that occurs. */
 function crawlerSummary(view: SiteFactsView): string {
   const bots = view.robots.bots;
-  // The label table lists every policy in display order, so a new one is counted.
   const policies = Object.entries(crawlerPolicyLabels)
     .map(([policy, label]) => ({
       label,
@@ -202,7 +198,6 @@ function PolicySample({ bot }: Readonly<{ bot: CrawlerBot }>) {
     bot.policy === 'unknown'
       ? 'Unknown'
       : `${formatCount(bot.disallowed_url_count)} of ${formatCount(bot.evaluated_url_count)} known URLs disallowed`;
-  // One line per crawler: the sample truncates in a narrow column and keeps its full text.
   return (
     <ClampText lines={1} className={textRole('caption')}>
       {sample}

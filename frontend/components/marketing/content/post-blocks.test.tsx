@@ -7,13 +7,6 @@ import { POSTS } from '@/lib/marketing-content/blog';
 import { headingId, withOccurrenceKeys } from './heading-id';
 import { blockIdentity, PostBlock } from './post-blocks';
 
-/**
- * The rich block renderers behind a guide body. The plain blocks (heading,
- * paragraph, list) are covered through the page test; these cases pin the
- * structural ones, whose payloads used to be untyped and could silently render
- * an empty frame.
- */
-
 describe('PostBlock', () => {
   it('renders typed internal links and citations that point at the listed source', () => {
     render(
@@ -46,7 +39,6 @@ describe('PostBlock', () => {
     const citation = screen.getByRole('link', { name: 'Source 1: Official guidance' });
     expect(citation).toHaveAttribute('href', '#source-1');
     expect(citation).toHaveTextContent('[1]');
-    // The marker joins the word before it; a string before a link keeps its space.
     expect(citation.closest('p')?.textContent).toBe(
       'Read solutionsProvider documentation and the source\u2060[1]',
     );
@@ -183,8 +175,6 @@ describe('PostBlock', () => {
       />,
     );
 
-    // The rule, not the paint: a bare percentage at or above the threshold is
-    // the only cell marked, so this survives a change of visual treatment.
     const emphasis = (text: string) => screen.getByText(text).getAttribute('data-emphasised');
     expect(emphasis('+40%')).toBe('true');
     expect(emphasis('+12%')).toBeNull();
@@ -276,8 +266,6 @@ describe('block keys and anchors', () => {
   });
 
   it('identifies every block shape a published post uses', () => {
-    // A block whose identity threw or collapsed to the same string for two
-    // different shapes would produce duplicate React keys across a body.
     for (const post of POSTS) {
       const keys = withOccurrenceKeys(post.body, blockIdentity).map(({ key }) => key);
       expect(new Set(keys).size, post.slug).toBe(post.body.length);
@@ -286,11 +274,6 @@ describe('block keys and anchors', () => {
 });
 
 describe('heading outline', () => {
-  /**
-   * Every published post's rendered heading levels, in document order.
-   * Assertions below read this rather than each block in isolation, because a
-   * skip is a relationship between two blocks, not a property of either.
-   */
   function renderedLevels(body: readonly BlogBlock[]): number[] {
     const { container } = render(
       <>
@@ -308,7 +291,6 @@ describe('heading outline', () => {
     'never skips a level in %s',
     (slug, post) => {
       const levels = renderedLevels(post.body);
-      // The post title is the h1, so the body starts at h2.
       const outline = [1, ...levels];
       const skips = outline.flatMap((level, index) =>
         index > 0 && level > outline[index - 1]! + 1 ? [`${outline[index - 1]} -> ${level}`] : [],
@@ -326,7 +308,6 @@ describe('heading outline', () => {
         data: { steps: [{ step: '1', title: 'Connect', desc: 'Link the sources.' }] },
       },
     ]);
-    // The unconditional h3 keeps the diagram's steps one level under their section.
     expect(levels).toEqual([2, 3]);
   });
 });

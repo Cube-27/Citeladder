@@ -11,7 +11,6 @@ const COPIED: Readonly<Record<PageExportFormat, string>> = {
   text: 'Copied as plain text',
 };
 
-/** HTML goes to the clipboard as HTML, with plain text beside it for apps that paste text. */
 async function copyPage(body: string, format: PageExportFormat) {
   const value = pageExport(body, format);
   if (format !== 'html' || typeof ClipboardItem === 'undefined') {
@@ -26,10 +25,6 @@ async function copyPage(body: string, format: PageExportFormat) {
   ]);
 }
 
-/**
- * Export ▾: the page on screen copied as Markdown, HTML or plain text, or
- * downloaded as `.md` or `.html`. The title tag names the file.
- */
 export function ExportMenu({ title, body }: Readonly<{ title: string; body: string }>) {
   const { notify } = useToast();
   const copy = (format: PageExportFormat) =>

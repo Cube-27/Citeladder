@@ -1,4 +1,3 @@
-/** Agent context orchestrates existing persisted owners, never acquisition. */
 import { agentContextRefsSchema } from '@citeladder/contracts/agent';
 import { policy } from '../config.ts';
 import { plainJson, record } from '../db/json.ts';
@@ -86,12 +85,6 @@ async function resolveIssueGroup(db: OriginDb, scope: OriginScope, refs: OriginR
     },
   };
 }
-/**
- * The topic and prompts a page chat optimizes for (Analyze a page): the
- * topic's name and the chosen prompts it still holds. A topic since deleted
- * reads as null and a prompt since archived or moved is counted apart, never
- * dropped silently.
- */
 async function resolvePrompts(db: OriginDb, scope: OriginScope, refs: OriginRefs) {
   const ref = refs.prompt_reference;
   if (!ref) return null;

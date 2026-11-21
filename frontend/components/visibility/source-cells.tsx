@@ -4,7 +4,6 @@ import { TableCell, TableCellLines } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import type { SortState, SourcesData } from '@/lib/visibility/sources';
 
-/** The source's own mark and name, with the favicon a reader recognises first. */
 export function SourceName({
   name,
   host,
@@ -18,14 +17,6 @@ export function SourceName({
   );
 }
 
-/**
- * A numeric cell that marks an absent value rather than spelling it out.
- *
- * The formatters answer `null` for "nothing to show"; deciding what that MEANS
- * is the table's job, and every numeric column here means the same thing by it.
- * The reason is said once, on the column header, instead of once per row --
- * see `Absence` for why the mark is not simply blank.
- */
 export function NumericCell({
   value,
   desktopOnly,
@@ -37,10 +28,6 @@ export function NumericCell({
   );
 }
 
-/**
- * A Retrieved cell. Null means no answer in the selection exposed what it
- * read, which is "Unavailable", never a read of zero.
- */
 export function RetrievedCell({ value }: Readonly<{ value: string | null }>) {
   return (
     <TableCell numeric>
@@ -54,7 +41,6 @@ export function RetrievedCell({ value }: Readonly<{ value: string | null }>) {
   );
 }
 
-/** The Retrieved header's explanation, naming the engines whose reads are unknown. */
 export function retrievedHint(
   base: string,
   retrieval: SourcesData['retrieval'] | undefined,
@@ -65,7 +51,6 @@ export function retrievedHint(
   return `${base} Not available for ${unavailable.map((key) => engineLabel(key)).join(', ')}, which do not expose the pages they read.`;
 }
 
-/** One sortable column's header state, from the table's single sort. */
 export function sortProps(sort: SortState, onSort: (column: string) => void, column: string) {
   return {
     active: sort?.column === column,

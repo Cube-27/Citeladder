@@ -86,7 +86,6 @@ beforeAll(async () => {
   );
   await ingest(db, stored, Buffer.from(lines.join('\n')), {});
   await refreshCrawlLogs(db, scope(), now, [day]);
-  // This fixture records the complete collection claim; the separate Crawl Logs suite validates gap detection.
   await db
     .insertInto('crawl_log_coverage_daily')
     .values({
@@ -145,7 +144,6 @@ beforeAll(async () => {
         created_at: now,
       })
       .execute();
-  // Landing rows take their AI source from the persisted source/medium classifications.
   await seedClassifiedPairs(db, imported, {
     date: day,
     pairs: [
@@ -191,8 +189,6 @@ describe('A3 persisted Pages join', () => {
     expect((await pagesRead(db, scope(), options)).items).toEqual([]);
   });
   it('never counts citation rows on Overview when the run has no persisted citation fact', async () => {
-    // The fixture run is completed with three owned citations but was never
-    // finalized, so it has no fact: Overview says not computed, not 3 or 0.
     const config = testConfig(),
       app = createApp(config, db);
     const cookie =
@@ -277,7 +273,6 @@ describe('A3 persisted Pages join', () => {
       crawl: { state: 'value', value: 6 },
       referrals: { state: 'value', value: 8 },
       key_events: 3,
-      // The fixture run was never finalized: three owned citation rows, no fact.
       citations: { state: 'unavailable', value: null, reason: 'not_computed' },
       findings: { state: 'zero', value: 0 },
       errors_4xx: 2,
@@ -306,7 +301,6 @@ describe('A3 persisted Pages join', () => {
       .where('source_id', '=', sourceId)
       .where('reporting_date', '=', new Date(day))
       .execute();
-    // A URL's flags are the distinct union of its landing rows, without multiplying its sums.
     await setLanding(['chatgpt'], { analytics_quality: '["thresholding","sampling"]' });
     await setLanding(['claude'], { analytics_quality: '["thresholding"]' });
     expect(
@@ -376,9 +370,7 @@ describe('A3 persisted Pages join', () => {
         evening,
         '/quiet',
       ]);
-      // A new first page reads the new reporting day.
       expect((await pagesRead(db, scope(), { range: '30d', limit: 1 })).window_end).toBe(morning);
-      // The cursor's window must span the preset it continues.
       await expect(
         pagesRead(db, scope(), { range: '90d', limit: 1, cursor: first.next_cursor }),
       ).rejects.toThrow(/cursor/);
@@ -436,7 +428,6 @@ describe('A3 persisted Pages join', () => {
         },
       );
     const { max_export_rows: bound, export_batch_rows: batch } = crawlLogs;
-    // One-row batches: every row after the first continues from the previous batch's keyset.
     crawlLogs.export_batch_rows = 1;
     try {
       const response = await exportCsv();
@@ -455,7 +446,6 @@ describe('A3 persisted Pages join', () => {
       row = result.items.find((r) => r.url_hash === guide)!;
     expect([row.crawl.state, row.referrals.state]).toEqual(['non_comparable', 'non_comparable']);
     await setLanding(['chatgpt', 'claude'], { reporting_timezone: 'UTC' });
-    // Even a complete empty crawl leg has a reporting timezone to compare.
     await db
       .updateTable('crawl_log_coverage_daily')
       .set({ reporting_timezone: 'Asia/Kolkata' })
@@ -652,7 +642,6 @@ describe('A3 persisted Pages join', () => {
     expect(await read(seed, 'read_ai_traffic_pages', filters)).toMatchObject({
       state: 'available',
     });
-    // Revoking the source keeps its retained history readable.
     const setStatus = (status: string) =>
       db.updateTable('crawl_log_sources').set({ status }).where('id', '=', sourceId).execute();
     await setStatus('revoked');
@@ -760,7 +749,6 @@ describe('A3 persisted insight gates', () => {
       .where('window_end', '=', new Date(day))
       .where('window_start', '<', new Date(day))
       .execute();
-    // Every preset ends on the latest day GA4 has reported, not on a day still in progress.
     expect(saved).toHaveLength(3);
     expect(saved[0]!.provenance).toHaveProperty('crawl_rollup_ids');
     expect(await insightsRead(db, scope(), { range: '30d' })).toMatchObject({
@@ -789,7 +777,6 @@ describe('A3 persisted insight gates', () => {
   it('derives nothing for a project without GA4', async () => {
     const other = await fixtures.crawl();
     const otherScope = { workspaceId: other.workspaceId, projectId: other.projectId };
-    // The request is queued like any other; the executor settles it without GA4.
     const id = await enqueueCoalesced(db, { ...insightsRefresh, ...otherScope });
     const queued = await db
       .selectFrom('analytics_tasks')

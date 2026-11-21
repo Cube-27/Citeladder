@@ -21,7 +21,6 @@ describe('Notice kind="read"', () => {
       />,
     );
 
-    // The subject and the notice's own sentence, never the status text; the reference is a copy control.
     expect(screen.getByRole('alert')).toHaveTextContent(
       "Error: Couldn't load the dataThe request failed or timed out.RetryCopy reference",
     );
@@ -95,7 +94,6 @@ describe('Notice', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Saved');
 
-    // A standing caveat is read in place, never announced (A11Y-05).
     rerender(
       <Notice tone="negative" standing>
         This cannot be undone.

@@ -9,7 +9,6 @@ import type { Highlight } from '@/lib/markdown/highlight';
 import { TOPIC_LABELS, VERDICT_LABELS, VERDICT_TONE } from '@/lib/visibility/accuracy';
 import { wellClasses } from '@/components/ui/slip';
 
-/** Supported and contradicted claims, to mark in the rendered answer. */
 export function claimHighlights(claims: readonly ExecutionClaim[]): Highlight[] {
   return claims.flatMap((claim): Highlight[] => {
     if (claim.verdict === 'supported') return [{ text: claim.quote, tone: 'positive' }];
@@ -36,7 +35,6 @@ export function VerdictChip({
   return <Tag>{claim.status === 'verdict' ? 'Unchecked' : STATE_WORDS[claim.status]}</Tag>;
 }
 
-/** The factual claims this answer made about the brand, with the facts behind each verdict. */
 export function EvidenceClaims({ claims }: Readonly<{ claims: readonly ExecutionClaim[] }>) {
   if (!claims.length) return null;
   return (

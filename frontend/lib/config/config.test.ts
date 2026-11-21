@@ -1,7 +1,4 @@
 // @vitest-environment node
-//
-// Pure logic: no DOM, no window, no React render. The suite-wide jsdom
-// default costs a full environment per file and buys nothing here.
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import { PENDING_PRICING_INTENT_MAX_AGE_MS, USAGE_METER_WARNING_RATIO } from './billing';
@@ -24,14 +21,6 @@ import {
   SITE_HEALTH_STREAM_RECONNECT_BASE_MS,
   SITE_HEALTH_STREAM_RECONNECT_MAX_MS,
 } from './site-health';
-
-/**
- * `lib/config` is the frontend's config owner (invariant 1) and had no tests.
- * These lock the rules the values have to satisfy — not the values themselves,
- * which are meant to be tuned. A test that just restates a number would fail on
- * every deliberate change and prove nothing; these fail only when a change
- * makes the configuration incoherent.
- */
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -78,8 +67,6 @@ describe('public origins', () => {
 
 describe('operational config', () => {
   it('keeps browser traffic same-origin', () => {
-    // Invariant 12: browser calls go through the frontend proxy, never to an
-    // absolute backend origin.
     expect(API_BASE_URL).toBe('/api/v1');
     expect(API_BASE_URL.startsWith('/')).toBe(true);
   });
@@ -102,8 +89,6 @@ describe('operational config', () => {
   it.each(['0', '-1', 'soon', '', 'NaN', '8s', '1.5', '1e3', 'Infinity', '9007199254740992'])(
     'ignores the unusable override %j and keeps the default',
     (value) => {
-      // A zero or negative timeout would abort every request immediately, so
-      // an unusable value must not be honoured.
       process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS = value;
       expect(getApiRequestTimeoutMs()).toBe(DEFAULT_API_REQUEST_TIMEOUT_MS);
     },
@@ -112,9 +97,6 @@ describe('operational config', () => {
   it('keeps the bootstrap read bound under the ordinary request timeout', () => {
     delete process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS;
     delete process.env.NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS;
-    // The shell's opening reads exist to reach the gate's retry path while a
-    // stall is still news; a bootstrap bound at or above the ordinary request
-    // timeout would bound nothing.
     expect(getBootstrapReadTimeoutMs()).toBe(DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS);
     expect(getBootstrapReadTimeoutMs()).toBeLessThan(getApiRequestTimeoutMs());
   });
@@ -139,7 +121,6 @@ describe('stream reconnect cadences', () => {
     ['site health', SITE_HEALTH_STREAM_RECONNECT_BASE_MS, SITE_HEALTH_STREAM_RECONNECT_MAX_MS],
   ])('backs %s off from a base up to a ceiling', (_name, base, max) => {
     expect(base).toBeGreaterThan(0);
-    // A ceiling at or below the base would defeat the backoff entirely.
     expect(base).toBeLessThan(max);
   });
 

@@ -7,11 +7,6 @@ import { textRole } from '@/components/ui/typography';
 import { ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/**
- * Rows that each open a page, in the table frame with no head row: 40px each on fixed
- * columns (an optional tick, the name, two 96px facts, a chevron), so no row
- * moves another; below 768 the first fact folds away so the name keeps its width; a "Show more" (`WorkRowsMore`) closes the box.
- */
 const FACT = 'w-24 shrink-0 truncate';
 
 export function LinkRows({
@@ -29,10 +24,6 @@ export function LinkRows({
   );
 }
 
-/**
- * One row. Its name links to the page and stretches over the row, so the
- * whole row opens it; the tick sits above the link and only ticks.
- */
 export function LinkRow({
   tick,
   href,
@@ -42,7 +33,6 @@ export function LinkRow({
 }: Readonly<{
   tick?: ReactNode;
   href: string;
-  /** History state the page opens with (where it was reached from). */
   state?: unknown;
   name: ReactNode;
   facts: readonly [ReactNode, ReactNode];

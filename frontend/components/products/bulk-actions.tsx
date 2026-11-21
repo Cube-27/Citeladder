@@ -7,7 +7,6 @@ import { X } from '@/lib/icons';
 import { humanizeApiError } from '@/lib/api/errors';
 import { Section } from '@/components/ui/section';
 
-/** Selection-only bulk actions for the checked catalog products. */
 export function BulkActions({
   count,
   pending,

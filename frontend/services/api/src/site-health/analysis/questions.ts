@@ -1,4 +1,3 @@
-/** Question-and-answer relationships observed in page-owned server HTML. */
 import {
   ancestors,
   attribute,
@@ -35,7 +34,6 @@ const DEFINITION_PREFIXES = ['definition ', 'definition of ', 'meaning of ', 'de
 const maxPairs = regionPolicy.page_owned_max_question_answer_pairs;
 const maxHops = analysisPolicy.facts.answer_first_max_hops;
 
-/** An explicit question or a bounded definition request. */
 export function isAnswerHeading(text: string) {
   const normalized = squash(text.toLowerCase());
   if (!normalized) return false;
@@ -46,7 +44,6 @@ export function isAnswerHeading(text: string) {
   );
 }
 
-/** Distinct question relationships, regardless of whether they are answered. */
 export function observedQuestionCount(value: unknown) {
   if (!Array.isArray(value)) return 0;
   const questions = new Set<string>();
@@ -84,7 +81,6 @@ function firstChildAnswer(node: HtmlElement, scope: Scope) {
   return '';
 }
 
-/** Elements after `heading` in document order, inside its section, outside its own subtree. */
 function* followingInScope(heading: HtmlElement, scope: Scope): Generator<HtmlElement> {
   const answerScope =
     [...ancestors(heading)].find((node) => ['article', 'section'].includes(node.tagName)) ??
@@ -115,10 +111,6 @@ function siblingAnswer(heading: HtmlElement, scope: Scope) {
   return '';
 }
 
-/**
- * A title's byline, date and table of contents sit between it and the body:
- * only text-bearing elements spend hops, and the body's article wrapper is not a boundary.
- */
 function followingAnswer(heading: HtmlElement, scope: Scope) {
   let hops = 0;
   for (const node of followingInScope(heading, scope)) {
@@ -134,7 +126,6 @@ function followingAnswer(heading: HtmlElement, scope: Scope) {
 const associatedAnswer = (heading: HtmlElement, scope: Scope) =>
   siblingAnswer(heading, scope) || followingAnswer(heading, scope);
 
-/** "Definition", "Table of contents", a bare author name: a label, not an answer. */
 const LABEL = /^\p{L}+(?:\s\p{L}+){0,2}$/u;
 const SKIPPED_TAGS = new Set(['aside', 'nav']);
 const skipped = (node: HtmlElement) => SKIPPED_TAGS.has(node.tagName);
@@ -142,7 +133,6 @@ const ownText = (node: HtmlElement) =>
   node.childNodes.some(
     (child) => child.nodeName === '#text' && 'value' in child && child.value.trim(),
   );
-/** Table-of-contents and navigation subtrees, and text-free wrappers, spend no hops. */
 const passedOver = (node: HtmlElement) =>
   skipped(node) || [...ancestors(node)].some(skipped) || !ownText(node);
 
@@ -203,10 +193,6 @@ function controlTarget(control: HtmlElement) {
   return target;
 }
 
-/**
- * A collapsed accordion hides its panel (`aria-hidden`, `hidden`) until opened,
- * but the answer is in the served HTML that crawlers read.
- */
 function collapsedPanel(control: HtmlElement, panel: HtmlElement, scope: Scope) {
   if (attribute(control, 'aria-expanded').trim().toLowerCase() !== 'false') return false;
   if (!outsideContainers(panel, scope.containers)) return false;
@@ -268,7 +254,6 @@ function headingRelationships(scope: Scope, found: Relationships) {
   }
 }
 
-/** Observed questions with their directly associated answer, if any. */
 export function questionAnswerRelationships(scope: Scope): QuestionAnswer[] {
   const found = new Relationships();
   detailsRelationships(scope, found);
@@ -277,7 +262,6 @@ export function questionAnswerRelationships(scope: Scope): QuestionAnswer[] {
   return found.items;
 }
 
-/** The first answer directly associated with a page-owned question heading. */
 export function directAnswer(scope: Scope) {
   let accepted = 0;
   for (const heading of elements(scope.region)) {

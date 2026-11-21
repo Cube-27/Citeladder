@@ -17,7 +17,6 @@ import type { visibilitySourceNearMissesSchema } from '@citeladder/contracts/vis
 
 type NearMisses = z.infer<typeof visibilitySourceNearMissesSchema>;
 
-/** Your pages an engine read and did not cite, over the same selection as the table. */
 export function useSourceNearMisses(
   filters: SourceFilters,
   queries: SourceQueries,
@@ -31,9 +30,6 @@ export function useSourceNearMisses(
       params,
     ),
     enabled,
-    // A filter or page-size change keeps the rows until the next ones land,
-    // so the table never drops to a loading state; a selection with no run
-    // has nothing to keep.
     placeholderData: enabled
       ? (data, previous) => retainPreviousDataForScope(queries.projectId, data, previous)
       : undefined,
@@ -83,7 +79,6 @@ function nearMissState(
     };
   }
   const data = query.data;
-  // No data yet is a read on its way, never "every page was cited".
   if (!data) return { kind: 'loading', label: 'Loading your pages read but not cited…' };
   if (data.items.length) return undefined;
   if (data.responses === 0)
@@ -93,7 +88,6 @@ function nearMissState(
       icon: Link2Off,
       heading: 'No engine in this selection exposes the pages it read',
     };
-  // The verdict covers only engines that expose what they read; the rest are unknown.
   const unavailable = data.unavailable_engines;
   return {
     kind: 'empty',
@@ -106,13 +100,6 @@ function nearMissState(
   };
 }
 
-/**
- * The near-miss table, in the source table's place under the same toolbar:
- * a page that reached the engine and still lost the citation. Read and Cited
- * count answers whose engine exposes what it read. The list is the
- * most-missed pages up to the page size; it does not page further, but keeps
- * the same pager footer so switching to this view moves nothing.
- */
 export function NearMissTable({
   query,
   pageSize,

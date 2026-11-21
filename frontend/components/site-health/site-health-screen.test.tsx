@@ -62,7 +62,6 @@ describe('SiteHealthScreen — Website tab deep links', () => {
       'true',
     );
     expect(await screen.findByText('Architecture is not available yet.')).toBeVisible();
-    // The pages export belongs to the Pages table's toolbar: another tab has none.
     expect(screen.getByRole('button', { name: 'Run new crawl' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('tab', { name: 'Pages' }));
@@ -82,7 +81,6 @@ describe('SiteHealthScreen — Website tab deep links', () => {
 
     renderScreen();
 
-    // The loading frame already selects Pages, so the selection never moves.
     expect(await screen.findByRole('tab', { name: 'Pages' })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -204,7 +202,6 @@ describe('SiteHealthScreen — loading failures', () => {
 
     renderScreen();
 
-    // A failed first read says so in place of the panel; the tabs stay usable.
     expect(await screen.findByText('Dashboard unavailable')).toBeVisible();
     expect(screen.getByRole('tablist', { name: 'Site health analysis' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Run new crawl' })).not.toBeInTheDocument();
@@ -236,8 +233,6 @@ describe('SiteHealthScreen — loading failures', () => {
     );
 
     const { queryClient } = renderScreen();
-    // The crawl's own controls mean the evidence has loaded; the tab row alone
-    // is already drawn by the loading frame.
     expect(await screen.findByRole('button', { name: 'Run new crawl' })).toBeVisible();
 
     available = false;
@@ -305,7 +300,6 @@ describe('SiteHealthScreen — loading failures', () => {
   });
 });
 
-/** A response the test releases when it chooses, so a loading frame can be inspected. */
 function held() {
   let release!: () => void;
   const released = new Promise<void>((resolve) => {
@@ -330,7 +324,6 @@ function loadingRegions() {
   return document.querySelectorAll('[data-state-block="loading"]');
 }
 
-/** The loading shapes on screen, in order. */
 function loadingShapes() {
   return [...document.querySelectorAll('[data-skeleton]')].map((node) =>
     node.getAttribute('data-skeleton'),
@@ -356,13 +349,11 @@ describe('SiteHealthScreen — loading frames', () => {
 
     renderScreen();
 
-    // The crawl is still being read: the loaded page's tab row, one box.
     expect(await screen.findByRole('tablist', { name: 'Site health analysis' })).toBeVisible();
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
     expect(loadingShapes()).toEqual(['figures', 'table']);
     expect(screen.queryByTestId('overview-metrics')).not.toBeInTheDocument();
 
-    // The crawl is known but its Overview is not: still loading, no scores.
     dashboard.release();
     expect(await screen.findByRole('button', { name: 'Run new crawl' })).toBeVisible();
     expect(loadingShapes()).toEqual(['figures', 'table']);
@@ -441,7 +432,6 @@ describe('SiteHealthScreen — before the first crawl', () => {
     const runButtons = screen.getAllByRole('button', { name: 'Run new crawl' });
     expect(runButtons).toHaveLength(1);
     expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
-    // Every tab says the same next step, its own placeholder gone.
     await user.click(screen.getByRole('tab', { name: 'Changes' }));
     expect(screen.getByRole('heading', { name: 'Run your first site crawl' })).toBeVisible();
     expect(screen.queryByText('Not measured')).not.toBeInTheDocument();
@@ -616,7 +606,6 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
       screen.queryByText('Could not load Site Health. Please refresh.'),
     ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Run new crawl' })).toBeInTheDocument();
-    // Finishing the crawl never moves the reader off Pages (owner, 2026-11-02).
     expect(screen.getByRole('tab', { name: 'Pages' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('site-health-canonical')).toBe(canonical);
     expect(screen.queryByTestId('site-health-overview')).not.toBeInTheDocument();
@@ -624,7 +613,6 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
 });
 
 describe('SiteHealthScreen — crawl schedule', () => {
-  /** Opens the schedule menu of a schedule that is off, once it has loaded. */
   async function openOffSchedule() {
     const trigger = await screen.findByRole('button', { name: 'Crawl schedule: Off' });
     await waitFor(() => expect(trigger).toBeEnabled());

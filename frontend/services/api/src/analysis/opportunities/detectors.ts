@@ -106,12 +106,6 @@ export const detectOwnedPageNotCited = (e: VisibilityEvidence) =>
 
 const family = p.SITE_ISSUE_FAMILY;
 
-/**
- * One finding per Issues group of a defect or advisory rule (IA1): its cohort
- * counts every affected page and lists the first `COHORT_PAGES_MAX` in URL
- * order, citing the group's issues. A defect ranks just above an advisory of
- * its severity.
- */
 export function detectIssueGroups(e: SiteEvidence): DetectorHit[] {
   if (!rules[family.RULE_ID]!.enabled) return [];
   return e.families

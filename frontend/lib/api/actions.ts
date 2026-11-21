@@ -1,11 +1,3 @@
-/**
- * Actions endpoints + query/mutation options.
- *
- * An Action is the unit of work over the Opportunity store: every live
- * Opportunity sharing one target, plus Agent work on that target. Reads are
- * persisted projections; the writes are the user's workflow decision and
- * the implementation declaration.
- */
 import {
   infiniteQueryOptions,
   mutationOptions,
@@ -55,24 +47,19 @@ export type ActionDeclaration = z.infer<typeof actionDeclarationSchema>;
 export type MeasurementLeg = ActionDeclaration['legs'][number];
 export type AnalyzablePage = z.infer<typeof analyzablePagesSchema>['items'][number];
 
-/** The Actions page's filters beside its status and grouping. */
 export type ActionTreeFilters = Readonly<{ priority?: ActionPriorityBand; family?: string }>;
 
-/** One tree read: a status, what it groups by first, and the filters. */
 export type ActionTreeParams = ActionTreeFilters &
   Readonly<{ status: ActionStatus; group_by: ActionTreeGroupBy }>;
 
-/** The page's first read with nothing in its address: New, by goal. The route prefetch warms it. */
 export const DEFAULT_ACTION_TREE = {
   status: 'open',
   group_by: 'goal',
 } as const satisfies ActionTreeParams;
 
-/** One tree grouping's rows: the tree's filters, its group's own filter and the grouping. */
 export type ActionGroupingParams = Readonly<{
   status: ActionStatus;
   grouping: string;
-  /** The tree's Impact filter, or an Impact group's band. */
   priority?: string;
   family?: string;
   approach?: string;
@@ -83,14 +70,11 @@ export type ActionGroupingParams = Readonly<{
 export type ActionsParams = {
   cursor?: string;
   limit?: number;
-  /** Omitted: the work queue (open and in progress); `any` keeps every status. */
   status?: ActionStatus | typeof ACTION_STATUS_ANY;
-  /** Text the Action's label contains. */
   q?: string;
   target_kind?: string;
   approach?: string;
   priority?: ActionPriorityBand;
-  /** An evidence family: the Action's Source. */
   family?: string;
 };
 
@@ -106,7 +90,6 @@ export const actionsApi = {
       ),
       'actions.list',
     ),
-  /** The tree's grouping rows or any filtered page: the list read with free-form filters. */
   page: async (projectId: string, query: Query, options?: ApiRequestOptions) =>
     strictValidate(
       actionsPageSchema,
@@ -141,7 +124,6 @@ export const actionsApi = {
       await apiClient.get(`/actions/${actionId}`, options),
       'actions.get',
     ),
-  /** The next page of an Action's URLs, from the cursor the previous page gave. */
   urls: async (actionId: string, cursor: string, options?: ApiRequestOptions) =>
     strictValidate(
       actionUrlsPageSchema,
@@ -151,7 +133,6 @@ export const actionsApi = {
       ),
       'actions.urls',
     ),
-  /** Every Action touching one of the project's URLs. */
   urlActions: async (projectId: string, siteUrlId: string, options?: ApiRequestOptions) =>
     strictValidate(
       urlActionsSchema,
@@ -207,12 +188,6 @@ export const actionsApi = {
     ),
 };
 
-/**
- * One page of Actions. Without a limit it is the Actions table's first page
- * at its default size, so the navigation badge, the Agent's top Actions and
- * the table share one request instead of asking for two page sizes of the
- * same queue.
- */
 function actionListQuery(scope: ProjectScope, params?: ActionsParams) {
   const request = { ...params, limit: params?.limit ?? TABLE_DEFAULT_PAGE_SIZE };
   return queryOptions({
@@ -231,17 +206,14 @@ function actionListQuery(scope: ProjectScope, params?: ActionsParams) {
   });
 }
 
-/** Action reads: the work queue, the composer's mention pool and one Action. */
 export const actionsQueries = {
   list: actionListQuery,
-  /** The Actions page under one status: counts, goals and each grouping's first rows. */
   tree: (scope: ProjectScope, params: ActionTreeParams) =>
     queryOptions({
       queryKey: queryKeys.actions.tree(scope, params),
       queryFn: ({ signal }) =>
         actionsApi.tree(scope.projectId, params, { signal, workspaceId: scope.workspaceId }),
     }),
-  /** A grouping's rows past the tree's first page, a page per "Show more", from the tree's cursor. */
   groupingRows: (scope: ProjectScope, params: ActionGroupingParams, cursor: string) =>
     infiniteQueryOptions({
       queryKey: queryKeys.actions.groupingRows(scope, params, cursor),
@@ -254,10 +226,6 @@ export const actionsQueries = {
         ),
       getNextPageParam: (page) => page.next_cursor ?? undefined,
     }),
-  /**
-   * The Actions the Agent composer's `@` menu offers for typed text: any
-   * status, so an Action being measured or done is still found by name.
-   */
   mentionSearch: (scope: ProjectScope, search: string) =>
     actionListQuery(scope, {
       status: ACTION_STATUS_ANY,
@@ -269,7 +237,6 @@ export const actionsQueries = {
       queryKey: queryKeys.actions.detail(workspaceId, actionId),
       queryFn: ({ signal }) => actionsApi.get(actionId, { signal, workspaceId }),
     }),
-  /** An Action's URLs past the detail's first page, a page per "Show more", from its cursor. */
   urls: (workspaceId: string | null, actionId: string, cursor: string) =>
     infiniteQueryOptions({
       queryKey: queryKeys.actions.urls(workspaceId, actionId, cursor),
@@ -287,7 +254,6 @@ export const actionsQueries = {
           workspaceId: scope.workspaceId,
         }),
     }),
-  /** Analyze a page's picker: the latest crawl's content pages matching `search`. */
   analyzablePages: (scope: ProjectScope, search: string) =>
     queryOptions({
       queryKey: queryKeys.actions.analyzePages(scope, search.trim()),
@@ -299,45 +265,31 @@ export const actionsQueries = {
     }),
 };
 
-/** Every Action read: a status change or a declaration moves the queue, its counts and the detail. */
 const refreshActions = (client: QueryClient) =>
   client.invalidateQueries({ queryKey: queryKeys.actions.all });
 
-/**
- * The Site Health internal-links review: declaring selected link
- * recommendations implemented changes which ones it still offers.
- */
 const refreshInternalLinkReview = (client: QueryClient, projectId: string) =>
   client.invalidateQueries({
     queryKey: queryKeys.siteHealth.resource(projectId, 'internal-links'),
   });
 
-/** Action writes; each success refreshes every read it changes. */
 export const actionsMutations = {
   updateStatus: (workspaceId: string | null) =>
     mutationOptions({
       mutationFn: (vars: { actionId: string; status: ActionUserStatus }) =>
         actionsApi.updateStatus(vars.actionId, vars.status, { workspaceId }),
-      // The refresh runs in the background: the control settles on the write.
       onSuccess: (_action, _vars, _result, { client }) => void refreshActions(client),
     }),
-  /** One decision on the ticked Actions, or on every Action a filter matches (Accept all). */
   bulkStatus: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: (body: ActionBulkStatusRequest) =>
         actionsApi.bulkStatus(scope.projectId, body, { workspaceId: scope.workspaceId }),
       onSettled: (_result, _error, _body, _context, { client }) => void refreshActions(client),
     }),
-  /**
-   * A declaration closes the Action's work; one naming internal-link
-   * recommendations also changes the internal-links review it came from. The
-   * refresh runs in the background, so the dialog closes on the write.
-   */
   declare: (workspaceId: string | null) =>
     mutationOptions({
       mutationFn: (vars: {
         actionId: string;
-        /** The Action's project, whose internal-links review the declaration may change. */
         projectId: string;
         input: ActionDeclarationRequest;
         idempotencyKey: string;
@@ -350,10 +302,6 @@ export const actionsMutations = {
             : undefined,
         ]),
     }),
-  /**
-   * Analyze a page: the page's Action (new or reused) and a new page chat on
-   * it. The Actions list and the Agent's chat list both gain a row.
-   */
   analyze: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: (vars: { input: ActionAnalyzeRequest; idempotencyKey: string }) =>

@@ -6,10 +6,6 @@ import { ToolbarTableLoading } from '@/components/ui/table-loading';
 import { ROWS_SHELL } from '@/components/ui/work-rows';
 import { cn } from '@/lib/utils';
 
-/**
- * The Issues summary at its loaded height (the six-figure strip, then three
- * 40px rows), so the table below does not move.
- */
 export function IssuesSummaryLoading() {
   return (
     <SkeletonFrame label="Loading the issue summary" variant="summary">
@@ -32,11 +28,6 @@ export function IssuesSummaryLoading() {
   );
 }
 
-/**
- * The Issues page before its first read: the summary, then the table under
- * its held toolbar (the Technical / Content / AEO switch's row over the search
- * row). Apart from the loaded page, so the route's loading frame draws it too.
- */
 export function IssuesPageLoading() {
   return (
     <>

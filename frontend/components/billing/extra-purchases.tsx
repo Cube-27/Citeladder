@@ -25,7 +25,6 @@ function clampQuantity(value: number, entry: CatalogAddon | CatalogTopup): numbe
 
 type Extra = CatalogAddon | CatalogTopup;
 
-/** Why an extra cannot be bought, or null when it can. */
 function gateReason(entry: Extra): string | null {
   if (isPurchasable(entry) || !entry.unavailable_reason) return null;
   return billingReasonMessage(entry.unavailable_reason);
@@ -137,10 +136,6 @@ function ExtraRow({
 
 type ExtraGrant = BillingEntitlement['grants'][number];
 
-/**
- * Add-on and top-up grants in force when the entitlement resolved. `grants`
- * holds the account's whole history, lapsed and revoked grants included.
- */
 function activeExtraGrants(entitlement: BillingEntitlement | null): ExtraGrant[] {
   if (!entitlement) return [];
   const at = Date.parse(entitlement.resolved_at);
@@ -154,7 +149,6 @@ function activeExtraGrants(entitlement: BillingEntitlement | null): ExtraGrant[]
   );
 }
 
-/** Add-on and top-up grants still in force, each with the date it lapses. */
 function ActiveExtras({ grants }: Readonly<{ grants: readonly ExtraGrant[] }>) {
   if (grants.length === 0) return null;
   return (
@@ -181,11 +175,6 @@ function ActiveExtras({ grants }: Readonly<{ grants: readonly ExtraGrant[] }>) {
   );
 }
 
-/**
- * One-time add-ons and top-ups for the current plan. Each purchase goes
- * through the server quote first; the quantity picker is bounded by the
- * catalog's own limits and the server re-checks them.
- */
 export function ExtraPurchases({
   catalog,
   planKey,
@@ -201,7 +190,6 @@ export function ExtraPurchases({
 }>) {
   const { addons, topups } = extrasForPlan(catalog, planKey);
   const grants = activeExtraGrants(entitlement);
-  // Purchases still in force stay listed even when the catalogue offers nothing more to buy.
   if (addons.length === 0 && topups.length === 0 && grants.length === 0) return null;
   const extras = [
     ...addons.map((entry) => ({ entry, kind: 'addon' as const })),

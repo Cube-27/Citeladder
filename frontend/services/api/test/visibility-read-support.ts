@@ -1,7 +1,3 @@
-/**
- * The visibility read tests' shared harness: one app over the real PostgreSQL
- * schema per test file, a signed-in GET, and runs with a frozen configuration.
- */
 import { randomUUID } from 'node:crypto';
 
 import { createApp } from '../src/app.ts';
@@ -14,7 +10,6 @@ export type Row = Record<string, unknown>;
 export const route = (tenant: Tenant, suffix = '') =>
   `/api/v1/projects/${tenant.projectId}/visibility${suffix}`;
 
-/** A frozen configuration complete enough to carry a comparison identity. */
 export function frozen(overrides: Record<string, unknown> = {}): Json {
   return {
     brand_name: 'Acme Corp',
@@ -85,7 +80,6 @@ export function visibilityReads() {
     return auditId;
   }
 
-  /** A new non-default market for the tenant's project. */
   async function newMarket(tenant: Tenant): Promise<string> {
     const marketId = randomUUID();
     await db

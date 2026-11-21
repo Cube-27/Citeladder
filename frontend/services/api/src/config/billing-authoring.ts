@@ -1,4 +1,3 @@
-/** Launch authoring policy; persisted revisions remain the commercial authority. */
 export const catalogAuthoring = {
   revision: 'launch-pricing-v1',
   usdInrRate: '90',

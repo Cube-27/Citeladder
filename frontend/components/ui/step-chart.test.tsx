@@ -10,7 +10,6 @@ const rows = (name: string) =>
     .getAllByRole('row')
     .map((row) => row.textContent);
 
-/** The drawn runs of a line: each `M` lifts the pen after a gap or a break. */
 const runsOf = (container: HTMLElement, tone = 'you') =>
   (container
     .querySelector(`[data-trend-line="${tone}"] path[fill="none"]`)
@@ -63,7 +62,6 @@ describe('StepChart', () => {
     expect(container.querySelector('[data-gap-bands]')).toHaveTextContent('No reading');
     expect(container.querySelectorAll('[data-gap-bands] rect')).toHaveLength(1);
     expect(container.querySelectorAll('[data-trend-line="you"] circle')).toHaveLength(4);
-    // Only your line carries the soft fill, and only under runs of two or more points.
     expect(container.querySelectorAll('[data-you-fill]')).toHaveLength(1);
   });
 
@@ -158,7 +156,6 @@ describe('StepChart', () => {
     );
     expect(labels()).toEqual([]);
     expect(container.querySelector('ul[aria-hidden]')).toHaveTextContent('You50Globex51');
-    // Keyed, each line takes its own shape so colour is not the only cue.
     expect(shapes()).toEqual([
       ['rival-1', 'square'],
       ['you', 'circle'],

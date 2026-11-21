@@ -11,7 +11,6 @@ const demoEnv = {
   DEV_LOGIN_PASSWORD: demoLoginPassword,
 };
 
-/** Every non-empty secret-named value `.env.example` ships, commented examples included. */
 function exampleSecrets(): Record<string, string> {
   const secretName = /(?:SECRET|PASSWORD|PEPPER|SALT|TOKEN|_KEY)(?:_PREVIOUS)?$/u;
   const text = readFileSync(new URL('../../../../.env.example', import.meta.url), 'utf8');
@@ -24,7 +23,6 @@ function exampleSecrets(): Record<string, string> {
   return secrets;
 }
 
-/** One value `.env.example` ships; a renamed or removed entry fails loudly. */
 function shippedSecret(secrets: Record<string, string>, name: string): string {
   const value = secrets[name];
   if (value === undefined) throw new Error(`.env.example no longer ships ${name}`);

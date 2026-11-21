@@ -1,13 +1,3 @@
-/**
- * Prompts: manual create, edit, delete, bulk review transitions and bulk
- * import.
- *
- * Inserts go through `insertPrompts` (`insert.ts`), which takes the project,
- * set and account capacity locks in that order and charges only rows that can
- * actually insert (a duplicate never consumes a prompt slot). Text entering active measurement passes topical
- * binding (`binding.ts`) against the persisted project identity and the
- * prompt's own topic.
- */
 import type { promptCohortSchema } from '@citeladder/contracts/project';
 import {
   promptBulkStatusRequestSchema,
@@ -60,7 +50,6 @@ const theme = z.string().max(P.theme_max_chars);
 const intent = z.string().max(P.intent_max_chars);
 const persona = z.string().trim().max(P.persona_max_chars);
 
-/** An omitted cohort is filed by whether the text names the brand (`brand-filing.ts`). */
 export const promptInput = promptCreateRequestSchema.extend({
   text,
   theme: theme.default(''),
@@ -90,7 +79,6 @@ export const promptImport = promptImportRequestSchema.extend({
   prompts: z.array(importRow).max(P.import_max_rows),
 });
 
-/** Trim and lower-case an intent; an unknown one is unspecified (''). */
 function normalizeIntent(value: string): string {
   const normalized = value.trim().toLowerCase();
   return INTENTS.has(normalized) ? normalized : '';
@@ -99,7 +87,6 @@ function normalizeIntent(value: string): string {
 type Cohort = z.infer<typeof promptCohortSchema>;
 const cohortColumns = (cohort: Cohort) => ({ cohort, branded: brandedCohort(cohort) });
 
-/** A prompt in the caller's workspace (and named project) with its project, or `Prompt not found`. */
 export async function scopedPrompt(
   db: Kysely<DB>,
   workspaceId: string,
@@ -121,7 +108,6 @@ export async function scopedPrompt(
   return row;
 }
 
-/** Every one of `promptIds` in the project, or a 404 naming how many are not in it. */
 export async function scopedPrompts(
   db: Kysely<DB>,
   scope: { workspaceId: string; projectId: string },
@@ -149,7 +135,6 @@ export async function scopedPrompts(
   return rows;
 }
 
-/** The topic's persisted name and description, or 404 outside the project. */
 export async function topicText(
   db: Kysely<DB>,
   scope: ProjectScope,
@@ -165,7 +150,6 @@ export async function topicText(
   return [topic.name, topic.description].filter(Boolean).join(' ');
 }
 
-/** The project scope of a prompt set already found in its workspace. */
 function setScope(set: { workspace_id: string; project_id: string }): ProjectScope {
   return { workspaceId: set.workspace_id, projectId: set.project_id };
 }
@@ -198,20 +182,12 @@ export async function createPrompt(
   return firstOf(await createPrompts(db, scope, promptSetId, [input]), 'created prompt');
 }
 
-/**
- * Create manual prompts in one transaction: every one binds and is new to the
- * set (and to the batch), or nothing is created.
- */
 type Screened<T> = {
   input: T;
   hash: string;
   problem: { kind: 'binding'; failure: BindingFailure } | { kind: 'duplicate' } | null;
 };
 
-/**
- * Each input with what stops it inserting: a topical binding failure, or text
- * equivalent to an earlier input or to a prompt already in the set.
- */
 async function screen<T extends { text: string; topic_id?: string | null }>(
   db: Kysely<DB>,
   set: { id: string; workspace_id: string; project_id: string },
@@ -235,7 +211,6 @@ async function screen<T extends { text: string; topic_id?: string | null }>(
         .where('normalized_text_hash', 'in', hashes)
         .execute()
     : [];
-  // Texts already in the set, then each input that passes: only those can repeat.
   const taken = new Set(existing.map((row) => row.normalized_text_hash));
   return inputs.map((input) => {
     const hash = promptTextHash(input.text);
@@ -253,10 +228,6 @@ async function screen<T extends { text: string; topic_id?: string | null }>(
   });
 }
 
-/**
- * The inputs `createPrompts` would accept, and each dropped one with why. A
- * read: the insert screens again under its locks.
- */
 export async function screenPrompts(
   db: Database,
   scope: RecordScope,
@@ -316,7 +287,6 @@ export async function createPrompts(
   });
 }
 
-/** A request passes its own entitlements, so the over-limit view reuses the access read. */
 export async function updatePrompt(
   db: Database,
   scope: RecordScope,
@@ -334,7 +304,6 @@ export async function updatePrompt(
   }
 }
 
-/** The prompt row `FOR UPDATE`, read after its project lock; 404 once it is deleted. */
 async function lockedPrompt(db: Kysely<DB>, promptId: string): Promise<PromptRow> {
   const prompt = await db
     .selectFrom('prompts')
@@ -346,12 +315,6 @@ async function lockedPrompt(db: Kysely<DB>, promptId: string): Promise<PromptRow
   return prompt;
 }
 
-/**
- * The edit, under the project lock that topic writers take, so the topic and
- * vocabulary it binds against cannot change before it commits. The prompt is
- * re-read under that lock: a re-file or status change that committed while
- * this edit waited decides what it must bind to.
- */
 async function applyPromptUpdate(
   db: Kysely<DB>,
   scope: RecordScope,
@@ -368,15 +331,12 @@ async function applyPromptUpdate(
   const projectScope = { workspaceId: scope.workspaceId, projectId };
   await acquireProjectLock(db, projectId);
   const prompt = await lockedPrompt(db, promptId);
-  // An explicit null detaches the prompt; an absent key leaves its topic.
   const topicGiven = 'topic_id' in input;
   const topicId = topicGiven ? (input.topic_id ?? null) : prompt.topic_id;
   if (topicGiven && topicId !== null) await topicText(db, projectScope, topicId);
   const activates = input.status === P.status_active && prompt.status !== P.status_active;
-  // Slots go by creation order, so this edit cannot move a prompt across the limit.
   const overLimit = await overLimitPromptIds(db, entitlements);
   if (activates && overLimit.has(prompt.id)) throw overLimitSelection(1);
-  // Re-filing an active prompt under another topic changes what it must bind to.
   const refiled =
     topicId !== prompt.topic_id && (input.status ?? prompt.status) === P.status_active;
   if (input.text != null || activates || refiled) {
@@ -395,7 +355,6 @@ async function applyPromptUpdate(
   return promptView(row, overLimit);
 }
 
-/** The columns an edit sets, apart from its topic. */
 function editedColumns(input: z.infer<typeof promptUpdate>): Partial<PromptRow> {
   return {
     ...(input.text == null
@@ -420,7 +379,6 @@ export async function deletePrompt(
   await db.deleteFrom('prompts').where('id', '=', prompt.id).execute();
 }
 
-/** File prompts already scoped to the project under `topicId` (null: none). */
 export async function refilePrompts(
   db: Kysely<DB>,
   scope: ProjectScope,
@@ -434,7 +392,6 @@ export async function refilePrompts(
     .execute();
 }
 
-/** Delete prompts already scoped to the project; how many rows went. */
 export async function deleteScopedPrompts(
   db: Kysely<DB>,
   scope: ProjectScope,
@@ -450,7 +407,6 @@ export async function deleteScopedPrompts(
 
 type Failed<T> = { item: T; failure: BindingFailure; code: string; message: string };
 
-/** Each failing item; the whole request is rejected if any fail. */
 export function failures<T>(
   items: readonly T[],
   check: (item: T) => BindingFailure | null,
@@ -461,10 +417,6 @@ export function failures<T>(
   });
 }
 
-/**
- * Archive or activate prompts of one set; all of them, or none (404). A prompt
- * beyond the plan's prompt slots is never measured, so it cannot be activated.
- */
 export async function bulkSetStatus(
   db: Database,
   scope: RecordScope,
@@ -519,13 +471,6 @@ export async function bulkSetStatus(
   return readPromptSet(db, entitlements, promptSetId);
 }
 
-/**
- * Import parsed rows as `imported` prompts, atomically: every non-blank row
- * must bind, and an over-allowance import inserts nothing. Blank rows are
- * skipped and duplicates (in the set, or repeated in the upload) are dropped
- * before occupancy is charged. A row's topic name reuses a project topic
- * (case-insensitively) or creates one, only for rows that insert.
- */
 export async function importPrompts(
   db: Database,
   scope: RecordScope,
@@ -553,7 +498,6 @@ export async function importPrompts(
         },
       );
     }
-    // Topics are created only for rows that insert, so screen duplicates first.
     const byHash = new Map<string, (typeof rows)[number]>();
     for (const row of rows) {
       const hash = row.text ? promptTextHash(row.text) : '';
@@ -568,7 +512,6 @@ export async function importPrompts(
       .execute();
     for (const { normalized_text_hash: hash } of existing) byHash.delete(hash);
     if (byHash.size === 0) return;
-    // An over-allowance refusal from the insert rolls these topics back with it.
     const topics = await resolveTopicsByName(
       trx,
       { workspaceId, projectId: set.project_id },

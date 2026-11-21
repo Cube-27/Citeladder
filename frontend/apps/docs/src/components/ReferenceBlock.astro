@@ -1,9 +1,4 @@
 ---
-/**
- * The frame of an MCP tool reference: an anchored section with its head (title, mono line, description)
- * in the prose measure, then its parameter tables, 24px apart. The head's
- * parts are styled here; each block supplies them in the `head` slot.
- */
 interface Props {
   id: string;
 }
@@ -29,7 +24,6 @@ const { id } = Astro.props;
     gap: 12px;
     max-width: var(--container-prose);
   }
-  /* An operation sits under its page's display-face h2, so its title is the sans face. */
   .cl-docs-op :global(.cl-docs-op-title) {
     color: var(--color-ink);
     font-size: var(--text-heading);

@@ -1,14 +1,3 @@
-/**
- * Evidence-backed competitor suggestions from completed audits.
- *
- * The audit projection records candidates, a cited domain or a name the
- * answers used; a person accepts one here, which adds (or reuses) a tracked
- * competitor, or rejects it, which keeps later audits from suggesting it
- * again. Either decision records who made it and when, on every pending row
- * of that domain or name. Accepts take the project row lock before the
- * candidate row, so concurrent accepts cannot both add a competitor past the
- * project ceiling or duplicate one.
- */
 import { competitorSchema } from '@citeladder/contracts/project';
 import { observedCompetitorSchema } from '@citeladder/contracts/visibility';
 import type { Selectable } from 'kysely';
@@ -28,7 +17,6 @@ import type { ProjectScope } from './brand-profile.ts';
 type Suggestion = z.input<typeof observedCompetitorSchema>;
 type Competitor = z.input<typeof competitorSchema>;
 type Row = Selectable<ObservedEntityCandidates>;
-/** A person's decision on a suggestion, as the route's actor makes it. */
 type Decision = ProjectScope & { userId: string };
 
 const {
@@ -39,7 +27,6 @@ const {
 const ids = z.array(z.string());
 const strings = z.array(z.string());
 
-/** The variant a stored row is; the table's check keeps kind and key consistent. */
 function view(row: Row): Suggestion {
   const shared = {
     id: row.id,
@@ -67,13 +54,11 @@ function view(row: Row): Suggestion {
   throw new Error(`Competitor suggestion ${row.id} has an unknown kind`);
 }
 
-/** The domain or name a suggestion stands for, the same across audits. */
 const keyOf = (row: Pick<Row, 'kind' | 'domain' | 'name_key'>) =>
   `${row.kind}:${row.domain ?? row.name_key ?? ''}`;
 
 type RosterRow = { name: string; aliases: unknown; domains: unknown };
 
-/** Whether a tracked competitor already stands for the candidate, by name, alias or domain. */
 function tracks(row: RosterRow, candidate: Pick<Row, 'name' | 'domain'>): boolean {
   const { domain } = candidate;
   return (
@@ -82,10 +67,6 @@ function tracks(row: RosterRow, candidate: Pick<Row, 'name' | 'domain'>): boolea
   );
 }
 
-/**
- * Pending suggestions, one per domain or name (its latest audit's), strongest
- * first. One the roster now tracks (added by hand, or an alias since) is left out.
- */
 export async function listSuggestions(db: Database, scope: ProjectScope): Promise<Suggestion[]> {
   const [rows, roster] = await Promise.all([
     suggestionRows(db, scope)
@@ -115,7 +96,6 @@ export async function listSuggestions(db: Database, scope: ProjectScope): Promis
     .map(view);
 }
 
-/** The candidate under the transaction's locks, or 404 outside the project. */
 async function lockedCandidate(trx: Database, scope: ProjectScope, candidateId: string) {
   await lockSuggestions(trx, scope);
   const candidate = await suggestionRows(trx, scope)
@@ -127,7 +107,6 @@ async function lockedCandidate(trx: Database, scope: ProjectScope, candidateId: 
   return candidate;
 }
 
-/** Record the decision on every pending row of the candidate's domain or name. */
 function decide(
   trx: Database,
   decision: Decision,
@@ -148,10 +127,6 @@ function decide(
     .execute();
 }
 
-/**
- * Track the suggested competitor: an existing competitor with the same name,
- * alias or domain is reused, otherwise one is added within the project ceiling.
- */
 export function acceptSuggestion(
   db: Database,
   decision: Decision,
@@ -186,10 +161,6 @@ export function acceptSuggestion(
   });
 }
 
-/**
- * Reject the suggestion, returned as rejected; later audits never suggest its
- * domain or name again. Rejecting twice keeps the first decision.
- */
 export function rejectSuggestion(
   db: Database,
   decision: Decision,

@@ -1,9 +1,3 @@
-/**
- * The project's brand topics: every topic except Commerce's. `topics` has no
- * scope column, so a topic is Commerce's when it files prompts and every one
- * of them is bound to a Commerce target; a topic with no prompts is brand.
- * Brand reads (topic lists, By topic, the matrix) start here.
- */
 import type { ExpressionBuilder } from 'kysely';
 
 import type { Database } from '../db/database.ts';

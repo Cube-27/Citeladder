@@ -1,9 +1,3 @@
-/**
- * Site Health page acquisition: robots and durable suppression at every hop,
- * the crawler's hard URL exclusions on every redirect, per-host pacing, and a
- * per-call trace so each real network request becomes one attempt row. Errors
- * use the Site Health fetch-error vocabulary the read API classifies.
- */
 import type { CrawlRobotsHandling } from '@citeladder/contracts/site-health';
 import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
@@ -28,7 +22,6 @@ import { hardExcluded, inScope } from './url-admission.ts';
 const a = policy.site_health.page_analysis.acquisition;
 const codes = a.error_codes;
 const BOT_MARKERS = a.bot_block_body_markers.map((marker) => marker.toLowerCase());
-// A gate refusal with no cached policy to classify (transient, or expired) may pass later.
 const RETRYABLE = new Set([codes.timeout, codes.connection_failed, codes.robots_unavailable]);
 const ROBOTS_GATE_CODES = new Set(['robots_disallowed', 'robots_unavailable']);
 const FETCH_ERROR_CODES: Record<string, string> = {
@@ -54,7 +47,6 @@ export function siteFetchSettings(env: SettingSource = process.env) {
   };
 }
 
-/** A challenge interstitial rather than the page: terminal, since retrying cannot pass it. */
 export function isBotBlock(page: FetchedPage) {
   // A 429 asks the crawler to slow down; CDN rate-limit pages carry challenge scripts too.
   if (page.status === 429) return false;
@@ -73,7 +65,6 @@ export function isBotBlock(page: FetchedPage) {
 
 const TLS_CODES: Record<string, string> = a.tls_certificate_error_codes;
 
-/** The named certificate failure in an error or its causes; null for any other failure. */
 export function tlsCertificateCode(error: unknown): string | null {
   for (let current = error, depth = 0; current instanceof Error && depth < 4; depth++) {
     const code = 'code' in current ? current.code : undefined;
@@ -105,16 +96,9 @@ export type SiteFetchResult = {
   page: FetchedPage;
   calls: FetchCall[];
   latencyMs: number;
-  /** Fetched despite a robots.txt exclusion, because the crawl ignores robots.txt. */
   robotsExcluded: boolean;
 };
 
-/**
- * The crawl's frozen robots choice, per destination. `ignore` covers only the
- * project's own site (its registrable domain and subdomains): a redirect off
- * the site still respects that host's robots.txt. A crawl without the choice
- * respects robots.txt everywhere.
- */
 export function crawlRobotsHandling(configuration: unknown): RobotsChoice {
   const frozen = record(configuration);
   const domain =
@@ -141,7 +125,6 @@ export class SitePageFetcher {
     );
   }
 
-  /** The robots decision for the requested URL, before any page request. */
   async #robotsDenial(
     url: URL,
     handling: CrawlRobotsHandling,
@@ -166,15 +149,12 @@ export class SitePageFetcher {
     return { ok: false, code, detail, retryable, calls: [], latencyMs: null };
   }
 
-  /** The shared gate refuses a redirect hop with two codes; classify it as the requested URL is. */
   async #hopDenial(error: unknown, hop: URL | undefined, handling: RobotsChoice) {
     if (!hop || !(error instanceof FetchError) || !ROBOTS_GATE_CODES.has(error.code)) return null;
-    // Cache only: a transient policy is never cached, and asking again would repeat its retries.
     const cached = this.acquirer.cachedRobots(hop.origin);
     return cached ? this.#robotsDenial(hop, handling(hop), cached) : null;
   }
 
-  /** Whether robots.txt excludes any URL this fetch requested under an `ignore` choice. */
   async #excluded(handling: RobotsChoice, urls: string[]) {
     for (const href of new Set(urls)) {
       const url = new URL(href);
@@ -185,13 +165,6 @@ export class SitePageFetcher {
     return false;
   }
 
-  /**
-   * `admit` screens the page and every redirect hop (default: the hard
-   * exclusions); discovery narrows it to the crawl's scope. `contentTypes`
-   * defaults to HTML. `robots` is the crawl's own choice per destination and
-   * defaults to respecting robots.txt; only the project's site crawl passes
-   * `crawlRobotsHandling`.
-   */
   async fetch(
     requested: string,
     options: {
@@ -219,7 +192,6 @@ export class SitePageFetcher {
         redirects: this.settings.acquisition.redirects,
         contentTypes: [...(options.contentTypes ?? a.html_content_types), ''],
         headerNames: a.persisted_response_headers,
-        // Admission screens the page and every redirect hop, never robots.txt.
         admit: (hop) => {
           hops.push(hop);
           if (!admit(hop)) throw new FetchError(codes.url_admission_rejected);
@@ -227,7 +199,6 @@ export class SitePageFetcher {
         onCall: (call) => calls.push(call),
         robots: handling,
       });
-      // A 429 slows every task bound for the host, not just this one.
       if (page.status === 429)
         this.acquirer.coolDown(
           new URL(page.url).origin,

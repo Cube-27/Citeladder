@@ -1,7 +1,3 @@
-/**
- * Freeze the access gate and its exact acquisition/evaluation sources. A fold
- * fed one batch of selected pages at a time (`score-summary.ts`).
- */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -15,21 +11,14 @@ type EligibilityTask =
   | { status: string; error_code: string; status_code?: number | null }
   | undefined;
 
-/**
- * One selected page's search-eligibility state and status bucket. Only the
- * critical checkpoints gate it; a page that left the corpus by policy is
- * excluded, and an unresolved failure is an error, not a blocker.
- */
 export function eligibilityState(outcomes: Record<string, string>, task: EligibilityTask) {
   const failure =
     task?.status === 'failed'
       ? taskOutcome({ errorCode: task.error_code, statusCode: task.status_code })
       : null;
-  // The site's own robots.txt exclusion is its choice, not a blocker to fix.
   if (failure === 'excluded') return { state: 'excluded', status: 'excluded' } as const;
   // A removed page cannot be indexed; the broken-link check reports whoever links to it.
   if (failure === 'gone') return { state: 'excluded', status: 'error' } as const;
-  // So is the page's own noindex, unless the owner said the page should be indexed.
   if (outcomes['search.indexability'] === 'not_applicable')
     return { state: 'excluded', status: 'audited' } as const;
   const critical = CRITICAL.map((key) => outcomes[key] ?? 'unknown');
@@ -42,7 +31,6 @@ export function eligibilityState(outcomes: Record<string, string>, task: Eligibi
 type Evaluation = ProjectionEvaluation;
 type Task = ProjectionTask;
 
-/** Acquisition's own checkpoint: an artifact satisfies it, a robots denial is an observed miss. */
 function representation(task: Task | undefined) {
   if (task?.result_artifact_id)
     return { outcome: 'satisfied', reason: 'supported_public_representation' };
@@ -59,7 +47,6 @@ const checkpoint = (key: string, evaluation: Evaluation | undefined) => ({
   source_evaluation_id: evaluation?.id ?? null,
 });
 
-/** The crawl gate: any blocker blocks, then any unknown, then any eligible page. */
 function gate(totals: Record<'eligible' | 'blocked' | 'unknown' | 'excluded', number>) {
   const order = ['blocked', 'unknown', 'eligible', 'excluded'] as const;
   return order.find((state) => totals[state] > 0) ?? 'unknown';
@@ -72,7 +59,6 @@ async function latestAttempts(db: Database, crawl: Crawl, taskIds: string[]) {
     .select(['id', 'task_id', 'status_code'])
     .distinctOn('task_id')
     .where('workspace_id', '=', crawl.workspace_id)
-    // Each task is the one of the audit the page's analysis came from.
     .where('task_id', '=', sql<string>`any(${taskIds}::uuid[])`)
     .orderBy('task_id')
     .orderBy('attempt_number', 'desc')
@@ -82,7 +68,6 @@ async function latestAttempts(db: Database, crawl: Crawl, taskIds: string[]) {
   return new Map(attempts.map((row) => [row.task_id, row]));
 }
 
-/** The last evaluation of `rule`, by id, among the page's. */
 function lastOf(rows: Evaluation[], rule: string) {
   let found: Evaluation | undefined;
   for (const row of rows)
@@ -90,14 +75,12 @@ function lastOf(rows: Evaluation[], rule: string) {
   return found;
 }
 
-/** One batch of selected pages: each page's task and its own evaluations. */
 export type EligibilityBatch = {
   selectedIds: string[];
   tasks: Map<string, Task>;
   evaluations: Map<string, Evaluation[]>;
 };
 
-/** The crawl's eligibility, fed in selected-page order; `crawler` is the crawl's one site verdict. */
 export class EligibilityFold {
   private readonly totals = { eligible: 0, blocked: 0, unknown: 0, excluded: 0 };
   private readonly statuses = { audited: 0, blocked: 0, excluded: 0, error: 0, pending: 0 };

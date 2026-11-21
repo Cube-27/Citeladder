@@ -1,4 +1,3 @@
-/** Action workflow commands: a status decision and an implementation declaration. */
 import type { z } from 'zod';
 
 import { policy } from '../config.ts';
@@ -20,7 +19,6 @@ export const ACTIONS_WRITE = permission({ capability: 'write', scope: 'actions:w
 type Writer = Authorized<typeof ACTIONS_WRITE>;
 const KEY_MAX = policy.opportunity.opportunities.IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN;
 
-/** The scope the actor's Action is found in. */
 const scopeOf = (actor: Writer, projectId: string | null): RecordScope => ({
   workspaceId: actor.workspaceId,
   projectId,
@@ -37,7 +35,6 @@ export function setActionStatus(
   return updateActionStatus(db, scope, actionId, status, actor.userId);
 }
 
-/** Accept or Decline many Actions of one project, or Restore them. */
 export function setActionStatuses(
   db: Database,
   actor: Writer,
@@ -52,7 +49,6 @@ export function setActionStatuses(
   );
 }
 
-/** A repeated key replays the recorded declaration (`created: false`). */
 export async function declareAction(
   db: Database,
   actor: Writer,
@@ -68,7 +64,6 @@ export async function declareAction(
   const result = await declareOwnedAction(db, scope, actionId, actor.userId, key, {
     ...input,
     output_revision_id: input.output_revision_id ? parseUuid(input.output_revision_id) : null,
-    // A blank reference (trimmed by the schema) records none.
     deployment_reference: input.deployment_reference || null,
   });
   return { declaration: await declarationView(db, result.row), created: result.created };

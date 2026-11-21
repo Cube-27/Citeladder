@@ -13,7 +13,6 @@ import { issueSeveritySchema } from '@citeladder/contracts';
 
 type PageCheck = AgentPageFetchDone['checks'][number];
 
-/** A value as it reads on the page, or that the page has none. */
 function FieldValue({ value }: Readonly<{ value: string }>) {
   if (!value.trim()) return <Absence state="none" />;
   return <span className={textRole('body', '[overflow-wrap:anywhere]')}>{value}</span>;
@@ -33,11 +32,6 @@ function CheckRow({ check }: Readonly<{ check: PageCheck }>) {
   );
 }
 
-/**
- * The SEO tab (E5): the page's SEO fields as the latest revision holds them,
- * and Website's page-local checks as they judged the page when it was
- * fetched. Editing the page does not rerun the checks, and the tab says so.
- */
 export function SeoPanel({
   fields,
   fetch,

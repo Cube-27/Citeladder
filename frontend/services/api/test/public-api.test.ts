@@ -30,7 +30,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** A public write behind `withIdempotency`, authenticated as the given key. */
 function idempotentApp(
   workspaceId: string,
   apiKeyId: string,
@@ -89,7 +88,6 @@ describe('API keys', () => {
 
   it('refuses to mint a key for a session that a password reset ended mid-request', async () => {
     const tenant = await withApiAccess(await fixtures.tenant());
-    // The request authenticated at version 0; a reset committed before its transaction.
     await db
       .updateTable('users')
       .set({ session_version: 1 })
@@ -372,7 +370,6 @@ describe('public API requests', () => {
   it('reports what is left of the key’s and the workspace’s windows on every response', async () => {
     const tenant = await withApiAccess(await fixtures.tenant());
     const { key, secret } = await createKey(tenant);
-    // 18 seconds into a fixed minute window, so 42 seconds remain.
     vi.useFakeTimers({ toFake: ['Date'], now: Math.ceil(Date.now() / 60_000) * 60_000 + 18_000 });
     try {
       await spendBudget(db, budget('public_api_key'), key.id, { amount: 10 });
@@ -409,7 +406,6 @@ describe('public API requests', () => {
     expect(listed.items.map((item) => item.id)).toEqual([tenant.projectId]);
     expect((await api(secret, `/projects/${other}/topics`)).status).toBe(404);
     expect((await api(secret, `/projects/${foreign.projectId}/topics`)).status).toBe(404);
-    // A prompt from another project is not reachable through an allowed project's path.
     const crossed = await api(secret, `/projects/${tenant.projectId}/prompts/${otherPrompt}`, {
       method: 'PATCH',
       body: { enabled: false },
@@ -643,7 +639,6 @@ describe('public API requests', () => {
       idempotencyKey: 'launch-2',
     });
     expect(launched.status).toBe(201);
-    // One launch, one audit per market: the default market alone here.
     const [audit, ...others] = (await launched.json()) as { id: string; status: string }[];
     expect([audit?.status, others]).toEqual(['queued', []]);
     const listed = (await (await api(secret, `/projects/${tenant.projectId}/audits`)).json()) as {
@@ -719,7 +714,6 @@ describe('public API requests', () => {
         `/projects/${tenant.projectId}/prompts?limit=2&cursor=${listed.next_cursor}`,
       )
     ).json()) as { items: { text: string }[]; next_cursor: string | null };
-    // Brand diagnostics have no per-prompt visibility reading.
     expect(next).toMatchObject({
       items: [
         {
@@ -729,7 +723,6 @@ describe('public API requests', () => {
       ],
       next_cursor: null,
     });
-    // A cursor belongs to its endpoint and filters.
     const elsewhere = await api(
       secret,
       `/projects/${tenant.projectId}/prompts?limit=2&status=archived&cursor=${listed.next_cursor}`,
@@ -747,7 +740,6 @@ describe('public API requests', () => {
     };
     expect(document.paths['/v1/projects/{project_id}/audits']).toHaveProperty('post');
     expect(Object.keys(document.paths).every((path) => path.startsWith('/v1/'))).toBe(true);
-    // Shared shapes are named once and every reference resolves to one.
     expect(document.paths['/v1/projects/{project_id}/prompt-sets/{prompt_set_id}']).toMatchObject({
       get: {
         responses: {

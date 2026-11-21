@@ -1,11 +1,3 @@
-/* Experiment (owner, 2026-11-20): product images stand apart from the site
-   background. Dark: brushed metal - a sheen lighter at the top that falls
-   away, a faint diagonal highlight, a bright rim along the top edge, a
-   hairline border, and panels that let the metal through. Light: the
-   secondary button's face at image size - its white-to-warm gradient, its
-   edge and its shadow - with the app's own white panels on it. Colours are the
-   site-metal and button tokens in globals.css. */
-
 :root[data-marketing-surface][data-theme='dark'] .cl-screen {
   --color-surface: color-mix(in oklch, var(--color-site-metal-top) 45%, transparent);
 

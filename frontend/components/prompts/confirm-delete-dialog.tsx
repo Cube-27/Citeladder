@@ -40,7 +40,6 @@ function copy(pending: PendingDelete): { title: string; description: string; con
   }
 }
 
-/** Deletion states its effect before it happens; a stray click no longer unfiles a topic. */
 export function deleteRequest(
   pending: PendingDelete | null,
   onConfirm: () => void,

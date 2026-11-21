@@ -18,11 +18,6 @@ import { MemberSettings } from './member-settings';
 import { ROLE_SUMMARY, roleLabel } from './member-roles';
 import { Notice } from '@/components/ui/notice';
 
-/**
- * The selected workspace as you stand in it: its name, your role and what that
- * role allows, a way out for anyone but the Owner, and the members for those
- * who manage them.
- */
 export function WorkspacePanel() {
   const { activeWorkspace } = useProjectContext();
   const mayManage = useWorkspaceCapability('manage_members');
@@ -31,7 +26,6 @@ export function WorkspacePanel() {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const leave = useMutation({
     mutationFn: (workspaceId: string) => workspacesApi.leave(workspaceId),
-    // The chooser decides where someone goes next, including setting up their own.
     onSuccess: () => restartAt(queryClient, WORKSPACE_CHOOSER_PATH),
   });
   if (!activeWorkspace) return null;
@@ -51,7 +45,6 @@ export function WorkspacePanel() {
 
       {mayManage ? <MemberSettings mayInvite={mayInvite} /> : null}
 
-      {/* Leaving is the tab's one destructive action, so it is the last group. */}
       <SettingsGroup title="Leave workspace">
         {leave.isError ? (
           <Notice

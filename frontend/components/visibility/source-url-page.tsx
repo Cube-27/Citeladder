@@ -19,14 +19,6 @@ import { SectionContent, TitledSection } from '@/components/ui/section';
 
 type Page = z.infer<typeof visibilitySourceUrlSchema>['page'];
 
-/**
- * What the business can do about one cited page, and what the page says.
- *
- * It leads with where the business stands — listed, absent beside listed
- * competitors, or not judged yet and why — because that decides whether
- * there is anything to do. Every name shown as on the page carries the line
- * that proves it; a page nobody read shows no verdicts at all.
- */
 export function SourceUrlPageCard({
   url,
   page,
@@ -35,7 +27,6 @@ export function SourceUrlPageCard({
   if (loading) return <Skeleton variant="facts" />;
   if (page === undefined) return null;
   const standing = page?.standing ?? 'untracked';
-  // A competitor's own page can never list the business: nothing to show or do.
   if (standing === 'competitor') return null;
   const brand = brandVerdict(page?.entities);
   return (
@@ -61,13 +52,6 @@ export function SourceUrlPageCard({
   );
 }
 
-/**
- * The two ways to act on the gap. Every Gap page is an Action (AS4), which
- * carries the brief and the measurement, and its chat opens with the
- * Action's own request written; until the next refresh makes one (the page
- * was read after the last run), the Agent can still draft the request from
- * the page itself.
- */
 function GetListed({ url, actionId }: Readonly<{ url: string; actionId: string | null }>) {
   return (
     <Inline className="flex-wrap">
@@ -109,7 +93,6 @@ function pageTypeFact(
   return `Page type: ${type}${basisNote}.`;
 }
 
-/** When it was read, how much of it, and what kind of page it is by what evidence. */
 function PageFacts({ page }: Readonly<{ page: NonNullable<Page> }>) {
   const type = urlTypeLabel(page.page_format);
   const basis = pageFormatBasis(page.page_format_method);

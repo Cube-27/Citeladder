@@ -6,10 +6,7 @@ import { z } from 'zod';
 export const actionStatusSchema = z.enum(['open', 'in_progress', 'done', 'dismissed']);
 export type ActionStatus = z.infer<typeof actionStatusSchema>;
 
-// A Done Action's measurement underneath its status: measuring until every
-// expected check verified, then verified. Null before Done.
 export const actionMeasurementSchema = z.enum(['measuring', 'verified']);
 export type ActionMeasurement = z.infer<typeof actionMeasurementSchema>;
 
-/** The Actions list's status filter value that keeps every status. */
 export const ACTION_STATUS_ANY = 'any';

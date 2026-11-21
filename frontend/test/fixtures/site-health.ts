@@ -1,18 +1,3 @@
-/**
- * Typed builders for the site-health API shapes.
- *
- * Five suites used to hand-write the same ~48-field `SiteCrawl` literal, and
- * two of them hand-wrote the same `PageSummary` literal byte-for-byte. The
- * copies had already started to disagree about fields nobody was asserting
- * (`site_facts.robots.status` present in one, absent in three), which is how a
- * "fixture" stops describing the backend and starts describing whichever test
- * was edited last.
- *
- * Every builder returns a fully-populated, schema-valid object and takes an
- * overrides bag, so a test states ONLY the fields its assertion depends on.
- * Reach for an override rather than a second builder: a divergent default here
- * is a drift the type checker cannot catch.
- */
 import type { WorkspaceEntitlement } from '@/lib/api/billing';
 import type { PageSummary, SiteCrawl, SiteHealthEntitlement } from '@citeladder/contracts';
 
@@ -21,11 +6,6 @@ export const SITE_HEALTH_UUID_2 = '22222222-2222-4222-8222-222222222222';
 const SITE_HEALTH_WORKSPACE = '33333333-3333-4333-8333-333333333333';
 const SITE_HEALTH_PROFILE = '55555555-5555-4555-8555-555555555555';
 
-/**
- * The bounded site-facts blob the worker persists (the `site_setup` task in
- * frontend/services/api/src/site-health/site-setup-task.ts): robots AI-crawler stance,
- * llms.txt probe, sitemap file list. The backend always emits the key.
- */
 export type SiteFactsFixture = {
   robots: Record<string, unknown>;
   llms_txt: Record<string, unknown>;
@@ -101,14 +81,12 @@ export function makeSiteFacts(overrides: Partial<SiteFactsFixture> = {}): SiteFa
   };
 }
 
-/** A workspace's Site Health runtime: its sample size and count disclosure. */
 export function makeSiteHealthEntitlement(
   overrides: Partial<SiteHealthEntitlement> = {},
 ): SiteHealthEntitlement {
   return { sample_url_limit: 10, count_disclosure: true, ...overrides };
 }
 
-/** A resolved workspace entitlement carrying that Site Health runtime. */
 export function makeWorkspaceEntitlement(
   overrides: Partial<WorkspaceEntitlement> = {},
 ): WorkspaceEntitlement {
@@ -126,7 +104,6 @@ export function makeWorkspaceEntitlement(
   };
 }
 
-/** A terminal, fully-analyzed crawl of a three-page site. */
 export function makeSiteCrawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
   return {
     id: SITE_HEALTH_UUID_2,
@@ -187,8 +164,6 @@ export function makeSiteCrawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
   };
 }
 
-/** A completed, monitored page. `page_kind` differs from `title` so that
- * badge-text assertions stay unambiguous. */
 export function makePageSummary(overrides: Partial<PageSummary> = {}): PageSummary {
   return {
     site_url_id: SITE_HEALTH_UUID,

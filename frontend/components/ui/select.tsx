@@ -24,25 +24,10 @@ function radixValue(value: string | undefined): string | undefined {
 type SelectOption<T extends string> = {
   value: T;
   label: ReactNode;
-  /**
-   * A figure beside the label in the menu (a count). It never reaches the
-   * trigger, so a detail that loads late or changes does not resize it.
-   */
   detail?: string;
-  /** A line under the label in the list (12/16 `ink-muted`); a disabled option says why. */
   description?: string;
   disabled?: boolean;
 };
-
-/**
- * Select — a closed trigger that opens a listbox (Radix: arrows move, Enter
- * picks, Escape closes, disabled options are skipped). The trigger is the
- * secondary button's face (`TRIGGER_BOX`) sized to its value, with a
- * `chevron-down` that turns over while open (owner 2026-11-18: a pick may
- * resize it). The list is the menu panel with 28px rows (48px with a
- * description); the selected row shows a check in a
- * reserved slot, so nothing shifts. For long lists use `SearchableSelect`.
- */
 
 export type SelectProps<T extends string> = {
   value?: T;

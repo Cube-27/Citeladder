@@ -86,8 +86,6 @@ describe('PromptTable pagination', () => {
 
     const [, brandRow, shelfRow] = screen.getAllByRole('row');
     expect(within(brandRow!).getAllByRole('cell')[2]!.textContent).toBe('50.0%');
-    // Not "not measured": no run will ever measure it one prompt at a time.
-    // Every value position holds the dash, named with the reason.
     const shelfCells = within(shelfRow!).getAllByRole('cell');
     expect(shelfCells[2]!.textContent).toBe('—Measured with Shopping');
     expect(shelfRow!.querySelectorAll('[data-absence="not_applicable"]')).toHaveLength(7);
@@ -118,8 +116,6 @@ describe('PromptTable pagination', () => {
         .slice(0, 2)
         .map((cell) => cell.textContent);
     expect(cells(filed)).toEqual(['Prompt number 1', 'Espresso at home']);
-    // Kept after a downgrade, but audits skip it until a slot frees. Filed
-    // under no topic is a finding; a topic the list doesn't name is not.
     expect(cells(overLimit)).toEqual(['Prompt number 2Beyond the plan limit', '—No topic']);
     expect(
       within(overLimit!).getAllByRole('cell')[1]!.querySelector('[data-absence]'),
@@ -197,7 +193,6 @@ describe('PromptTable pagination', () => {
                     change: { kind: 'not_compared', reason: 'changed_context' },
                     position: null,
                     shareOfVoice: 0,
-                    // Classified, but fewer than the minimum: too few, not a zero.
                     sentiment: {
                       mentions: 6,
                       classified: 4,
@@ -243,23 +238,15 @@ describe('PromptTable pagination', () => {
     const cells = within(row!).getAllByRole('cell');
     const unnamedCells = within(unnamedRow!).getAllByRole('cell');
     expect([2, 8, 9].map((index) => cells[index]!.textContent)).toEqual(['50.0%', '40.0%', '+50']);
-    // Measured zero share and too few classified are different readings, neither
-    // a zero sentiment. A prompt whose answers never named you has no position:
-    // not named, not unmeasured.
     expect(unnamedCells.slice(7, 10).map((cell) => cell.textContent)).toEqual([
       '—Not named',
       '0.0%',
       '—Too few',
     ]);
-    // An average position keeps its decimal; it is not a rank.
     expect(cells[7]!.textContent).toBe('2.0');
-    // Three marks, each named for a screen reader, then the fourth as overflow.
     expect(cells[4]).toHaveTextContent('AcmeAGlobexGInitechI+1 more');
     expect(cells[5]!.textContent).toBe('25.0%');
-    // Measured, and no brand named: zero, not the "not measured" mark.
     expect(unnamedCells[4]!.textContent).toBe('—None');
-    // No change is never a zero: a first measurement has nothing to compare, and
-    // a pair measured differently is not compared.
     expect(cells[3]!.querySelector('[data-absence]')).toHaveAttribute(
       'data-absence',
       'not_applicable',
@@ -276,7 +263,6 @@ describe('PromptTable pagination', () => {
     const view = renderTable(prompts);
 
     const table = screen.getByRole('table');
-    // Page 1 shows the first 10 rows with the mono page indicator.
     expect(within(table).getByText('Prompt number 1')).toBeInTheDocument();
     expect(within(table).queryByText('Prompt number 11')).not.toBeInTheDocument();
     expect(
@@ -299,7 +285,6 @@ describe('PromptTable pagination', () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
-    // The page is in the address, so a reload opens on it.
     expect(window.location.search).toBe('?page=2');
     view.unmount();
     renderTable(prompts);
@@ -338,7 +323,6 @@ describe('PromptTable pagination', () => {
       ),
     ).toBeInTheDocument();
 
-    // A refetch/filter shrinking the list clamps the page into range.
     rerender(
       <MemoryRouter>
         <TooltipProvider>
@@ -346,7 +330,6 @@ describe('PromptTable pagination', () => {
         </TooltipProvider>
       </MemoryRouter>,
     );
-    // Five prompts fit on one page, so the table shows them with no pager.
     expect(screen.getByText('Prompt number 1')).toBeInTheDocument();
     expect(screen.getByText('Prompt number 5')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
@@ -421,7 +404,6 @@ describe('PromptTable pagination', () => {
     const [, row] = screen.getAllByRole('row');
 
     await user.click(within(row!).getByText('50.0%'));
-    // The question keeps its history address for a modified click; a plain click opens the answer.
     const question = screen.getByRole('link', { name: 'Prompt number 1' });
     expect(question).toHaveAttribute('href', `/prompts/${measured.id}`);
     await user.click(question);
@@ -430,7 +412,6 @@ describe('PromptTable pagination', () => {
       [measured, ANSWER],
     ]);
     expect(screen.getByTestId('pathname').textContent).toBe('/prompts');
-    // No run measured the other prompt: its question still links to its history.
     expect(screen.getByRole('link', { name: 'Prompt number 2' })).toHaveAttribute(
       'href',
       `/prompts/${unmeasured.id}`,

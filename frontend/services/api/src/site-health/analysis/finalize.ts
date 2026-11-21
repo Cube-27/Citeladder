@@ -1,4 +1,3 @@
-/** Cross-page checks use only the persisted acquisition evidence supplied by the caller. */
 import { policy } from '../../config.ts';
 import { strings } from '../../db/json.ts';
 import { scalarText } from '../../text-order.ts';
@@ -40,7 +39,6 @@ export function finalizeEvaluation(
   };
 }
 
-/** Incomplete coverage without an observed failure stays unknown, never a pass. */
 function entityOutcome(failures: number, checked: number, total: number) {
   if (failures) return failures === checked ? 'missing' : 'partial';
   return checked < total ? 'unknown' : 'satisfied';
@@ -81,20 +79,12 @@ export function entitySetEvaluation(
   });
 }
 
-/** The page's declared canonicals: every `<link rel=canonical>`, or the one extracted URL. */
 export function canonicalDeclarations(facts: Record<string, unknown>) {
   const declarations = strings(facts.canonical_declarations);
   const single = scalarText(facts.canonical_url);
   return declarations.length || !single ? declarations : [single];
 }
 
-/**
- * A canonical must name the URL search engines should index: one declaration,
- * same origin, answering directly (no redirect), and, when this crawl analyzed
- * another target page, one that is indexable and names itself canonical. A
- * self-canonical, or a target fetched but not analyzed, is judged on its
- * response alone (`target_page_checked: false`).
- */
 export function canonicalIntegrity(input: {
   declarations: string[];
   finalUrl: string;
@@ -146,13 +136,6 @@ export function canonicalIntegrity(input: {
   });
 }
 
-/**
- * "No sitemap" (SH-B5): a full crawl's site setup read no sitemap document and
- * the server answered for every one it tried, so the crawl fell back to an
- * HTML walk. A sample never reads sitemaps; a crawl whose setup never published
- * its sitemap facts, or whose documents went unanswered (no response, a
- * timeout, a rate limit or a server error), has no evidence either way.
- */
 export function sitemapPresent(input: { sampleMode: boolean; sitemap: Record<string, unknown> }) {
   const rule = 'technical.sitemap_present';
   if (input.sampleMode)
@@ -162,7 +145,6 @@ export function sitemapPresent(input: { sampleMode: boolean; sitemap: Record<str
   const files = Number(input.sitemap.file_count) || 0;
   const unread = Number(input.sitemap.unread_count) || 0;
   const invalid = Number(input.sitemap.invalid_count) || 0;
-  // A served document that does not parse is `technical.sitemap_valid`'s finding.
   if (!input.sitemap.fetched && invalid > 0)
     return finalizeEvaluation(rule, 'not_applicable', {
       reason: 'sitemap_invalid',
@@ -179,10 +161,6 @@ export function sitemapPresent(input: { sampleMode: boolean; sitemap: Record<str
   });
 }
 
-/**
- * "Sitemap could not be parsed": a sitemap URL answered with a body that is
- * not sitemap XML. Evidence is the same site setup walk `sitemapPresent` reads.
- */
 export function sitemapValid(input: { sampleMode: boolean; sitemap: Record<string, unknown> }) {
   const rule = 'technical.sitemap_valid';
   if (input.sampleMode)
@@ -196,7 +174,6 @@ export function sitemapValid(input: { sampleMode: boolean; sitemap: Record<strin
   const invalid = input.sitemap.invalid_count;
   const files = integer(input.sitemap.file_count);
   const unread = integer(input.sitemap.unread_count);
-  // A document that went unanswered may be the broken one.
   if (!invalid && unread)
     return finalizeEvaluation(rule, 'unknown', {
       reason: 'sitemap_unavailable',

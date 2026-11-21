@@ -1,8 +1,3 @@
-/**
- * Answer formats and in-text links read at analysis from the stored artifact,
- * against real PostgreSQL: format found, none found, unavailable and not
- * applicable stay distinct on the analysis and in the evidence read.
- */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, describe, expect, it } from 'vitest';
@@ -23,7 +18,6 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** Derive one answer whose immutable artifact stores `rawResponse`. */
 async function derive(tenant: Tenant, auditId: string, engine: string, rawResponse: unknown) {
   const { taskId } = await fixtures.execution(tenant, { auditId, engine, analysis: null });
   const artifactId = randomUUID();
@@ -85,9 +79,7 @@ describe('answer formats at analysis', () => {
     expect(results.map(({ artifact_id: _id, ...row }) => row)).toEqual([
       {
         answer_format_state: 'observed',
-        // The ad's nested product block is a paid placement, never a format.
         answer_formats: ['map', 'comparison', 'image'],
-        // acme.example/agencies (tracking stripped) and rival.example/pricing once; card links skipped.
         in_text_link_count: 2,
         read: { kind: 'observed', formats: ['map', 'comparison', 'image'], in_text_links: 2 },
       },

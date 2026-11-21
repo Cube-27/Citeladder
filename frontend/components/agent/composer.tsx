@@ -9,13 +9,6 @@ import { ComposerMenu } from './composer-menu';
 import type { SkillChoice } from './skill-picker';
 import type { ComposerState } from './use-composer-commands';
 
-/**
- * The message box every Agent surface shares. Enter sends, Shift+Enter adds a
- * line. Context chips show the typed references the turn will carry; optional
- * ones can be removed before sending. The + menu sets the skill or opens an
- * Action; typing `/` at a word start opens it on the skills and `@` lists
- * Actions to mention (arrows move, Enter or Tab picks, Escape closes).
- */
 export function Composer({
   id,
   label,
@@ -43,22 +36,16 @@ export function Composer({
   onSubmit: () => void;
   pending: boolean;
   disabled: boolean;
-  /** An accepted run blocks another send while the user may keep drafting. */
   submissionDisabled?: boolean;
   placeholder: string;
   chips?: ContextChip[];
   onRemoveChip?: (chip: ContextChip) => void;
-  /** The Action the chat is about, first among the chips: one removable line. */
   attachment?: Readonly<{ label: string; onRemove: () => void }>;
-  /** What the hand-off covers ("201 URLs (first 50 sent)", "4 actions on this URL"): fixed chips after the context. */
   scope?: readonly string[];
-  /** The skill the turn will run, picked or continued: a chip after the Action, and the menu's Skills. */
   skill: SkillChoice;
   commands: ComposerState;
-  /** While a turn runs, the send button stops it instead. */
   onStop?: () => void;
   stopping?: boolean;
-  /** A failed send the draft still holds: Retry replaces Send; an edited draft sends. */
   onRetry?: () => void;
 }>) {
   const canSend = !disabled && !submissionDisabled && !pending && value.trim().length > 0;
@@ -89,7 +76,6 @@ export function Composer({
             onEnter={() => {
               if (canSend) onSubmit();
             }}
-            // While the menu cannot open, a typed `/` stays text instead of waiting to open it.
             commands={menuDisabled ? { ...commands, openSkillPicker: undefined } : commands}
             disabled={disabled}
             placeholder={placeholder}
@@ -119,11 +105,6 @@ export function Composer({
   );
 }
 
-/**
- * The composer's four statuses: `ready` sends,
- * `submitted` is sending, `streaming` is a running turn that Stop ends, and
- * `error` is a failed send that Retry sends again.
- */
 type ComposerStatus = 'ready' | 'submitted' | 'streaming' | 'error';
 
 function composerStatus({
@@ -136,7 +117,6 @@ function composerStatus({
   return onRetry ? 'error' : 'ready';
 }
 
-/** One control in one box per status, so the control row never reflows. */
 function SubmitControl({
   status,
   canSend,
@@ -198,11 +178,6 @@ function SubmitControl({
 
 type Chip = Readonly<{ label: string; onRemove?: () => void }>;
 
-/**
- * The chip row, as the hand-off reads: the Action, its context, what that
- * covers ("201 URLs (first 50 sent)"), the skill, then mentions and pastes;
- * null when empty.
- */
 function composerChips({
   attachment,
   chips,

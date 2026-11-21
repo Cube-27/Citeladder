@@ -1,9 +1,4 @@
 locals {
-  # Waits for a fresh or replaced database VM, applies the pending migrations
-  # as the schema owner (a changed applied file or unledgered tables fail
-  # here), sets the citeladder_app role's password from DATABASE_URL, then
-  # runs the native identity/grants/catalog bootstrap. Any failure prevents the API
-  # rollout; the job can be retried idempotently.
   migrate_script = "node src/cli/migrate.ts --wait-seconds 300 && exec node src/cli/bootstrap-account.ts"
 }
 
@@ -12,12 +7,11 @@ resource "google_cloud_run_v2_service" "api" {
   location             = var.region
   ingress              = "INGRESS_TRAFFIC_ALL"
   deletion_protection  = false
-  invoker_iam_disabled = true # Admission is the Workers' origin token, checked by the API.
+  invoker_iam_disabled = true
   labels               = local.labels
 
   template {
-    service_account = google_service_account.runtime.email
-    # An Agent turn lives inside its streamed request (turn_timeout_seconds 1800).
+    service_account                  = google_service_account.runtime.email
     timeout                          = "1860s"
     max_instance_request_concurrency = 40
 
@@ -83,9 +77,6 @@ resource "google_cloud_run_v2_service" "api" {
         failure_threshold = 20
       }
 
-      # GET /health alone skips the origin token (AR-10). It never touches the
-      # database, so an outage there does not restart healthy instances; a
-      # wedged event loop (90 s without an answer) does.
       liveness_probe {
         http_get {
           path = "/health"
@@ -98,9 +89,6 @@ resource "google_cloud_run_v2_service" "api" {
     }
   }
 
-  # The deploy workflow owns traffic: it pins the serving revision before an
-  # apply, smokes the new revision at a tagged URL with no traffic, and only
-  # then moves traffic to it. A failed smoke leaves the old revision serving.
   lifecycle {
     ignore_changes = [traffic]
   }
@@ -110,9 +98,7 @@ resource "google_cloud_run_v2_service" "api" {
 
 resource "google_cloud_run_v2_job" "execution" {
   for_each = {
-    runner = { args = ["src/runner.ts"], memory = "1Gi" }
-    # Operator billing commands against the private database, run with
-    # `gcloud run jobs execute citeladder-billing --args=...` (runbook).
+    runner  = { args = ["src/runner.ts"], memory = "1Gi" }
     billing = { args = ["src/cli/billing-admin.ts", "--help"], memory = "512Mi" }
   }
 
@@ -128,8 +114,7 @@ resource "google_cloud_run_v2_job" "execution" {
     template {
       service_account = google_service_account.jobs.email
       max_retries     = 0
-      # Admission stops at the budget; claimed work then finishes before exit.
-      timeout = "${var.runner_budget_seconds + 600}s"
+      timeout         = "${var.runner_budget_seconds + 600}s"
 
       vpc_access {
         network_interfaces {
@@ -152,7 +137,6 @@ resource "google_cloud_run_v2_job" "execution" {
         }
 
         dynamic "env" {
-          # A drain that ends with work due soon starts its own successor.
           for_each = merge(local.shared_env, { CLOUD_RUN_RUNNER_JOB = local.runner_job })
           content {
             name  = env.key
@@ -222,8 +206,6 @@ resource "google_cloud_run_v2_job" "migrate" {
         }
 
         dynamic "env" {
-          # Migrations run as the schema owner; the identity bootstrap that
-          # follows connects as the application role, like every service.
           for_each = merge(local.shared_secret_env, local.migration_secret_env)
           content {
             name = env.key
@@ -239,7 +221,6 @@ resource "google_cloud_run_v2_job" "migrate" {
     }
   }
 
-  # Targeting this job in the deploy also converges the database it migrates.
   depends_on = [
     google_secret_manager_secret_iam_member.migrate,
     google_compute_instance.db,
@@ -247,9 +228,6 @@ resource "google_cloud_run_v2_job" "migrate" {
   ]
 }
 
-# One periodic tick, served by the API: lease recovery, due schedules and sync
-# dispatch run in the request; due work starts the runner job. A job per tick
-# paid a container cold start every time and outran the Cloud Run free tier.
 resource "google_cloud_scheduler_job" "tick" {
   name             = "${local.name}-tick"
   region           = var.region

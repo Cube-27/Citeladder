@@ -1,8 +1,3 @@
-/**
- * The project's monitored set and re-audits of its pages (one page, or an
- * issue's Re-run all). Crawls pick the set;
- * nothing edits it, and no new work enters a running crawl (SH-B4, SH-B13).
- */
 import { ACTIVE_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
 import { notFound } from '../errors.ts';
 import type { Database } from '../db/database.ts';
@@ -13,7 +8,6 @@ import { controls, crawlError } from './planner-policy.ts';
 import { monitoredQuota } from './reads/runtime.ts';
 import { lockTrackedSet } from './tracked-set.ts';
 
-/** The project's monitored set; its route authorizes the path project. */
 export async function monitoredSet(db: Database, workspaceId: string, projectId: string) {
   const rows = await db
     .selectFrom('monitored_site_urls as m')
@@ -54,13 +48,6 @@ export async function monitoredSet(db: Database, workspaceId: string, projectId:
   };
 }
 
-/**
- * Lock a project's Site Health controls in the combined lock DAG: project,
- * runtime, membership, the active crawl, profile, then the capacity and
- * account locks that resolve the runtime. Workers publish runtime, membership,
- * crawl, task and settle crawl, profile, capacity, so neither waits on a lock
- * the other holds out of order.
- */
 async function lockControlScope(db: Database, workspaceId: string, projectId: string) {
   const project = await db
     .selectFrom('projects')
@@ -96,11 +83,6 @@ async function lockControlScope(db: Database, workspaceId: string, projectId: st
   return { crawl, runtime, profile };
 }
 
-/**
- * Re-audit one monitored page as its own one-page crawl. A running crawl
- * refuses it (SH-B4): the person tries again when that crawl finishes, so no
- * work joins a crawl outside its fetch hold.
- */
 export async function rerunPage(
   db: Database,
   workspaceId: string,
@@ -132,11 +114,6 @@ export async function rerunPage(
   };
 }
 
-/**
- * Re-audit the tracked pages `pick` chooses as one crawl, under the control
- * locks. A running crawl refuses it (SH-B4); `pick` sees the active tracked
- * pages only after that check, so it never decides against a set in flux.
- */
 export async function rerunTrackedPages(
   db: Database,
   workspaceId: string,
@@ -153,7 +130,6 @@ export async function rerunTrackedPages(
     .where('active', '=', true)
     .execute();
   const chosen = new Set(pick(members.map((row) => row.site_url_id)));
-  // Every membership is system-picked, so any analysis allowance covers it.
   if (scope.runtime.monitored_url_limit <= 0 && scope.runtime.sample_url_limit <= 0)
     crawlError(
       'The current monitored-URL allowance does not allow analysis of this URL',
@@ -174,7 +150,6 @@ export async function rerunTrackedPages(
   const [first, ...rest] = urls;
   if (!first || urls.length !== chosen.size)
     crawlError('Site URL not found in this project', 'invalid_selection');
-  // A re-audit names no robots choice, so it keeps the project's (`crawlRequest`).
   const { robots, robotsDecision } = controls(await crawlRequest(db, workspaceId, projectId));
   return createPageRerunCrawl(
     db,

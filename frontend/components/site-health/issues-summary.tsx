@@ -18,20 +18,12 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED } from '@/components/ui/state-block';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
-/**
- * The top of the Issues screen: how many issue types the crawl has, how many
- * are high severity, and the few to fix first. It reads the crawl's
- * unfiltered issues, so it never changes as the list below is searched or
- * filtered.
- */
 export function IssuesSummary({
   query,
   fixes = [],
   onOpen,
 }: Readonly<{
-  /** The crawl's worst issues, unfiltered; its summary counts the whole crawl. */
   query: UseQueryResult<SiteIssuesPage>;
-  /** How far each issue's fix has come; an issue with none fixed shows no line. */
   fixes?: readonly IssueFixProgress[];
   onOpen: (groupId: string) => void;
 }>) {
@@ -54,10 +46,6 @@ export function IssuesSummary({
   );
 }
 
-/**
- * The crawl in one metric strip: issue types, advisories, the pages they
- * reach, then the issue types at each severity. A real zero prints as 0.
- */
 function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary'] }>) {
   const figure = (key: string, label: string, value: number) => ({
     key,
@@ -89,10 +77,6 @@ const SEVERITIES = [
   { key: 'low', label: 'Low' },
 ] as const;
 
-/**
- * The worst issues, worst first, in 40px rows that each open the issue's
- * detail: its title and fix in one line, its severity, its pages.
- */
 function FixFirst({
   issues,
   fixes,

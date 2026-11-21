@@ -19,7 +19,6 @@ const protectedEnv = {
 const google = await generateKeyPair('RS256');
 const keys = createLocalJWKSet({ keys: [{ ...(await exportJWK(google.publicKey)), kid: 'k1' }] });
 
-/** An ID token like the one Cloud Scheduler sends, signed by the test key. */
 function idToken(claims: { email: string; aud: string; iss?: string }) {
   return new SignJWT({ email: claims.email, email_verified: true })
     .setProtectedHeader({ alg: 'RS256', kid: 'k1' })
@@ -79,7 +78,6 @@ describe('scheduled tick', () => {
       'crawl-log-maintenance',
       'billing-recovery',
     ]);
-    // The disk usage alert reads this byte count; any real PostgreSQL database exceeds 1 MB.
     expect(sizes).toEqual([expect.any(Number)]);
     expect(sizes[0]).toBeGreaterThan(1_000_000);
   });

@@ -4,11 +4,9 @@ import type { SearchIntelligenceDataset } from '../lib/api/search-intelligence';
 
 const id = (value: number) => `33333333-3333-4333-8333-${String(value).padStart(12, '0')}`;
 
-/** Picks a saved scope or market from its filter in the control row (in Filters when grouped). */
 async function chooseSaved(page: Page, label: string, option: string) {
   const name = new RegExp(`^${label}:`);
   const all = page.getByRole('button', { name: /^Filters/ });
-  // Wait for the row to draw one or the other before choosing.
   await expect(all.or(page.getByRole('button', { name })).first()).toBeVisible();
   if (await all.isVisible()) {
     await all.click();
@@ -228,7 +226,6 @@ for (const viewport of [
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       viewport.width,
     );
-    // A narrow masthead folds its actions into More, a real menu.
     if (viewport.width < 900) {
       await page.getByRole('button', { name: 'More', exact: true }).click();
       await page.getByRole('menuitem', { name: 'New analysis' }).click();

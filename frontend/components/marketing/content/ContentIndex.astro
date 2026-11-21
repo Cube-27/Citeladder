@@ -1,14 +1,4 @@
 ---
-/**
- * ContentIndex — the listing on the research, blog and tools index pages:
- * groups of whole-row links (a 500-weight title, a one-line excerpt and a
- * meta line) between hairlines, the group's title, description and count on
- * their own row above its rows, which take the full width, a row's meta in a
- * 320px left column from 1024px. Every list closes on its own hairline,
- * except where an untitled group follows straight on. A row's arrow sits at
- * its right edge, in RelatedCards' 20px column, and
- * turns `ink` and its title underlines on hover; nothing moves.
- */
 import { ArrowRight } from '@/lib/icons';
 
 type ContentIndexItem =Readonly<{
@@ -23,14 +13,12 @@ type ContentIndexGroup =Readonly<{
   id?: string;
   title?: string;
   description?: string;
-  /** The mono count under the description, such as "5 guides". */
   count?: string;
   items: readonly ContentIndexItem[];
 }>;
 
 interface Props {
   groups: readonly ContentIndexGroup[];
-  /** The heading level of the group titles. */
   as?: 'h2' | 'h3';
 }
 const { groups, as: Heading = 'h2' } = Astro.props;
@@ -98,7 +86,6 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     gap: 12px;
     max-width: var(--container-prose);
   }
-  /* A group title is a section heading, set like the website's section h2. */
   .cl-cpage-index-title {
     margin: 0;
     color: var(--color-ink);
@@ -129,8 +116,6 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     border-top: 1px solid var(--color-line);
     list-style: none;
   }
-  /* The arrow sits at the row's right edge; the title and excerpt column
-     grows to 720 at most. */
   .cl-cpage-index-link {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 20px;
@@ -173,14 +158,12 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
   }
-  /* Dates and meta are the sans face, as in the featured card and the article byline. */
   .cl-cpage-index-meta {
     margin-top: 4px;
     color: var(--color-ink-muted);
     font-size: var(--text-body-sm);
     line-height: var(--text-body-sm--line-height);
   }
-  /* Each meta part (a date, a read time, a topic) wraps whole. */
   .cl-cpage-index-part {
     white-space: nowrap;
   }
@@ -192,12 +175,9 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     color: var(--color-ink-muted);
     transition: color var(--motion-fast) var(--ease-standard);
   }
-  /* An untitled next group's top hairline closes this one, so only one line falls between. */
   .cl-cpage-index-group:has(+ .cl-cpage-index-group--untitled) .cl-cpage-index-list > li:last-child > .cl-cpage-index-link {
     border-bottom: 0;
   }
-  /* A full-width row with a meta line reads like a contents page: the
-     meta in its own left column, level with the title. */
   @media (min-width: 1024px) {
     .cl-cpage-index-link:has(.cl-cpage-index-meta) {
       grid-template-columns: 320px minmax(0, 1fr) 20px;

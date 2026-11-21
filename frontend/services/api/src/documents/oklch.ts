@@ -1,7 +1,3 @@
-/**
- * `oklch(L% C H)` as the `#rrggbb` PDFKit paints, by CSS Color 4's OKLab
- * matrices and clipped to sRGB: globals.css writes its colour tokens in oklch.
- */
 type Vector = readonly [number, number, number];
 type Matrix = readonly [Vector, Vector, Vector];
 

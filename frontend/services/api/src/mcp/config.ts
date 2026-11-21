@@ -13,7 +13,6 @@ export const mcpPolicy = policy.mcp.constants;
  * included; unknown extras such as `offline_access` narrow away (RFC 6749
  * §3.3). A request naming no scope may receive every supported one.
  */
-/** Whether stored scopes include `citeladder:write`. */
 export const holdsWrite = (scopes: readonly string[]) => scopes.includes(mcpPolicy.write_scope);
 
 export function grantableScopes(requested: string | null | undefined): string[] {
@@ -46,7 +45,6 @@ export function loadMcpConfig(config: ServiceConfig, source: SettingSource = con
     '',
   );
   const enabled = value('enabled') as boolean;
-  // The protocol origin is the API host; issuer, resource and discovery all derive from it.
   const configured = config.auth.publicApiUrl.trim();
   let origin = configured.replace(/\/$/u, '');
   const allowedEmail = String(value('allowed_account_email')).trim().toLowerCase();

@@ -99,7 +99,6 @@ test('Performance distinguishes first use, measured zero, and Bing-only evidence
   await page.route('**/api/v1/integrations', (route) => route.fulfill({ json: [] }));
 
   await page.goto(fixtureProjectPath('/performance'));
-  // First use: the page's state says what to connect, and there is no range to choose.
   await expect(page.getByRole('heading', { name: 'Connect Google and Bing' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Connect Bing' })).toBeVisible();
   await expect(page.getByRole('radiogroup', { name: 'Date range' })).toHaveCount(0);

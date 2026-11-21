@@ -20,7 +20,6 @@ import { SaveFoot } from './save-foot';
 import type { BrandProfileForm } from './use-brand-profile-form';
 import { Notice } from '@/components/ui/notice';
 
-/** The profile save's outcome, above the form it was saved from. */
 function ProfileSaveNotices({ form }: Readonly<{ form: BrandProfileForm }>) {
   if (form.error)
     return (
@@ -32,7 +31,6 @@ function ProfileSaveNotices({ form }: Readonly<{ form: BrandProfileForm }>) {
   return form.notice ? <Notice tone="positive">{form.notice}</Notice> : null;
 }
 
-/** The Company facts form's one save. */
 function ProfileSaveFoot({ form }: Readonly<{ form: BrandProfileForm }>) {
   return (
     <SaveFoot
@@ -44,13 +42,6 @@ function ProfileSaveFoot({ form }: Readonly<{ form: BrandProfileForm }>) {
   );
 }
 
-/**
- * Category, buyer type and market scope decide which questions prompt
- * generation asks, so a wrong onboarding answer must stay correctable here,
- * beside the target audience, description and positioning. Offerings are the
- * Business map tab's (and the Prompt Builder's). Short facts are rows with their
- * control at the right; long text takes the row's width under its label.
- */
 export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>) {
   const { draft, identity, saving } = form;
   return (
@@ -64,7 +55,6 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
               rows={2}
               disabled={saving}
               value={identity.category}
-              // One line of text that wraps; Enter adds no line break.
               onChange={(event) =>
                 form.setIdentity({
                   ...identity,
@@ -126,7 +116,6 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
   );
 }
 
-/** A single choice of the identity, as a row with its select at the right. */
 function FacetChoice<T extends string>({
   label,
   value,
@@ -160,10 +149,6 @@ function FacetChoice<T extends string>({
   );
 }
 
-/**
- * The project's tracked competitors, one row each with its domains. They
- * are edited with the rest of the project's configuration, which this opens.
- */
 export function TrackedCompetitorsCard({ project }: Readonly<{ project: Project }>) {
   const mayEdit = useWorkspaceCapability('write');
   const [editing, setEditing] = useState(false);

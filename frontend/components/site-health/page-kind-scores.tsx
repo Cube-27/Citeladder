@@ -9,25 +9,6 @@ import { formatScore, measurementCaveat } from '@/lib/site-health/status';
 import { formatCount, formatPercent } from '@/lib/format';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
-/**
- * Dashboard per-page-kind score breakdown.
- * Renders `score_summary.by_page_kind` — one row per observed page-kind
- * bucket with its analyzed count and mean Web fundamentals and AEO scores.
- * The panel is data-driven and follows the same dashboard-then-crawl fallback
- * as the score cards. Classification completeness and the exact scored cohort
- * come from their own persisted fields. An `other` bucket can be scored by
- * independently applicable checks even though classification abstained.
- * Missing renders the not-measured Absence dash, never a fabricated zero.
- *
- * READ-ONLY by design. This used to expand each row into an accordion holding
- * its own paginated URL list, checkboxes, and a "Re-analyze selected" button —
- * a page-selection UI nested inside a table cell. The canonical inventory is
- * the only URL surface; re-auditing one page belongs on its detail screen.
- */
-/**
- * No summary yet (nothing analysed) and a summary with no classified page
- * kinds are different states, so they say different things.
- */
 function emptyState(unmeasured: boolean, rowCount: number) {
   if (rowCount > 0) return undefined;
   return {
@@ -45,8 +26,6 @@ export function PageKindScores({
   crawl: SiteCrawl | null;
   dashboard: SiteHealthDashboard | undefined;
 }>) {
-  // The section keeps its place with no summary yet: it draws its own empty
-  // state instead of vanishing and pulling the sections below it up.
   const summary = dashboard?.score_summary ?? crawl?.score_summary ?? null;
   const rows = summary === null ? [] : byPageKindRows(summary.by_page_kind);
 
@@ -108,7 +87,6 @@ function MeasurementValue({
   state,
 }: Readonly<{ score: number | null; coverage: number | null; state: string }>) {
   if (score !== null) {
-    // Keep measurement qualifications accessible without a repeated caption row.
     const caveat = measurementCaveat(state, coverage);
     return (
       <span>

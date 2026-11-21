@@ -1,8 +1,3 @@
-/**
- * The probe's deterministic parts: the position score (AV-35) and the mapping
- * of labelling output onto the project's themes, its fixed objection groups
- * (AV-28) and its tracked businesses.
- */
 import { describe, expect, it } from 'vitest';
 
 import { canMeasure } from '../src/audits/freeze.ts';
@@ -52,7 +47,6 @@ describe('position score', () => {
       ['price', 0],
       ['comfort', 1],
     ]);
-    // A brand list keeps untracked names' places: the first rank a key was named at.
     expect([
       ...firstPlaces([
         { key: 'rival', rank: 3 },
@@ -79,7 +73,6 @@ describe('rank in top theme', () => {
     { kind: 'brand' as const, id: null, name: 'Acme', aliases: [] },
     { kind: 'competitor' as const, id: 'rival', name: 'Rival', aliases: [] },
   ];
-  /** 21 theme answers naming Rival first; the brand at place 9 in `brandNamed` of them. */
   const asked = (brandNamed: number) =>
     Array.from({ length: 21 }, (_, n) => ({
       taskId: `task-${n}`,
@@ -99,7 +92,6 @@ describe('rank in top theme', () => {
   const top = [{ theme_id: themeId, theme: 'Comfort', score: 50 }];
 
   it('ranks a brand named once even when its averaged score rounds to 0', () => {
-    // One mention at place 9 over 21 answers scores 10 / 21, rounded to 0.
     expect(rankInTopTheme(asked(1), top, roster)).toEqual({ kind: 'rank', rank: 2 });
     expect(rankInTopTheme(asked(0), top, roster)).toEqual({ kind: 'not_named' });
   });
@@ -183,7 +175,6 @@ describe('labelling output mapping', () => {
               { theme: 'Funding', quote: '' },
             ],
           },
-          // A number no answer has, and a repeat, are dropped.
           { answer: 9, points: [{ theme: 'All-day Comfort', quote: '' }] },
           { answer: 1, points: [{ theme: 'All-day Comfort', quote: '' }] },
         ],

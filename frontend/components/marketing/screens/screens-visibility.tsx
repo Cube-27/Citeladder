@@ -38,7 +38,6 @@ function Cite({ index }: Readonly<{ index: number }>) {
   return source ? <Citation index={source.index} domain={source.domain} own={source.own} /> : null;
 }
 
-/** One engine's answer to one prompt: the brand passage highlighted, each claim with its source. */
 export function ScreenAnswer() {
   return (
     <Vignette
@@ -71,10 +70,6 @@ export function ScreenAnswer() {
   );
 }
 
-/**
- * The AI Visibility overview, a full app layout at 1200 × 704 scaled to fit
- * its frame: the KPI row, the trend against competitors and the brand ranking.
- */
 export function ScreenVisibility() {
   return (
     <div className="cl-screen cl-screen--visibility">
@@ -124,15 +119,9 @@ export function ScreenVisibility() {
   );
 }
 
-/** Every citation this week, across every domain. */
 const CITATIONS = CITED_DOMAINS.reduce((total, domain) => total + domain.value, 0);
-/** The bars scale to the most-cited domain. */
 const TOP_CITED = Math.max(1, ...CITED_DOMAINS.map((domain) => domain.value));
 
-/**
- * Cited sources: the four domains answers cite most, each with its share of
- * every citation and its citation count, your own site named.
- */
 export function ScreenSources() {
   return (
     <Vignette
@@ -159,10 +148,8 @@ export function ScreenSources() {
   );
 }
 
-/** The prompts the card lists: short buyer questions with a spread of results. */
 const PROMPT_ROWS = [0, 1, 3, 5].flatMap((index) => PROMPTS[index] ?? []);
 
-/** The tracked prompts: which engines name the brand for each, and its visibility. */
 export function ScreenPrompts() {
   return (
     <Vignette
@@ -184,10 +171,8 @@ export function ScreenPrompts() {
   );
 }
 
-/** The retrieval bars scale to the engine that fetched the page most. */
 const TOP_RETRIEVALS = Math.max(1, ...PAGE_RETRIEVALS.map((row) => row.retrievals));
 
-/** One of your cited pages: which engines fetched it and how often each cited it. */
 export function ScreenCitedUrl() {
   return (
     <Vignette

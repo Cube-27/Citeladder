@@ -17,17 +17,8 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 import { IssuesPageLoading } from '@/components/site-health/issues-summary-loading';
 
-/**
- * Issues screen container (Slice 8, mockup 710).
- *
- * Resolves the active project's current (latest/selected) crawl via the
- * dashboard projection, then renders the grouped Issues catalog for that
- * crawl. If no crawl has produced issues yet, it directs the user to run Site
- * Health first (the catalog is per-crawl and there is nothing to group).
- */
 export function IssuesScreen() {
   const { workspaceId, projectId } = useProjectScope();
-  // A running crawl publishes its Issues in batches; the list follows its progress.
   const dashboardQuery = useLiveCrawlDashboard({ workspaceId, projectId });
   return (
     <IssuesDataRegion workspaceId={workspaceId} projectId={projectId} dashboard={dashboardQuery} />
@@ -58,7 +49,6 @@ function IssuesDataRegion({
         <StateBlock
           kind="error"
           error={dashboard.error}
-          // An access failure's own guidance follows the headline instead.
           fallback={accessDenied ? '' : READ_FAILED}
           title={
             accessDenied
@@ -139,10 +129,6 @@ function IssuesLoadedRegion({
   );
 }
 
-/**
- * A running crawl publishes its Issues in batches, and a stopped or failed one
- * keeps what it found: either way the list is incomplete, so it says so.
- */
 function IssuesRunNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   const message = CRAWL_STATES[crawlDisplayStatus(crawl)].active
     ? 'Crawl in progress. Issues update in batches as pages are analyzed.'

@@ -56,11 +56,9 @@ async function appendObservation(db: Database, task: AuditTask, result: Overview
       )
       .execute();
 }
-/** Whether a Google AI Overview result is an observation (present or absent) rather than a failure. */
 export const isOverviewObservation = (result: OverviewResult) =>
   searchPolicy.surface.successful_outcomes.includes(result.outcome);
 
-/** Observation, raw evidence, derived analysis and queue terminal state share the owned transaction. */
 export function persistOverviewObservation(
   db: Database,
   task: AuditTask,
@@ -83,7 +81,6 @@ export function persistOverviewObservation(
   );
 }
 
-/** A failed overview keeps its observation as evidence and terminalizes the task without analysis. */
 export function persistOverviewFailure(
   db: Database,
   task: AuditTask,
@@ -123,7 +120,6 @@ type SurfaceExchange = {
   paid?: boolean;
   resetPoll?: boolean;
 };
-/** Paid intent already committed. This phase records the exchange and parks without spending the retry budget. */
 export function persistSurfaceExchange(
   db: Database,
   claimed: AuditTask,

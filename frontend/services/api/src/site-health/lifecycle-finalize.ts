@@ -1,12 +1,3 @@
-/**
- * Cross-page terminal evaluations. `prepareFinalization` runs outside any
- * transaction: it keyset-reads the crawl's unfinalized analyses with only the
- * facts the cross-page rules read, and builds their shared context in memory.
- * The finalize task then judges and revises the pages in short batches.
- * Every page's links and hreflang targets are kept as indices into one shared
- * URL table, so the context of tens of thousands of pages stays far under the
- * runner's memory (CO-7).
- */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -51,7 +42,6 @@ import { canonicalUrl, canonicalIdentity } from './url-identity.ts';
 type Facts = Record<string, unknown>;
 type Alternates = Map<string, Uint32Array>;
 
-/** Each distinct URL the crawl's pages name, once; pages hold indices into it. */
 class UrlTable {
   readonly urls: string[] = [];
   readonly #index = new Map<string, number>();
@@ -77,11 +67,6 @@ const settings = policy.site_health.crawl.finalize;
 
 const sorted = (values: Iterable<string>) => [...new Set(values)].sort(compareText);
 
-/**
- * One graph edge per source and target. A URL admission refuses (an excluded
- * host such as `app.`, path, query or asset extension) is never fetched, so it
- * is never an edge nor a target the broken-link check waits on.
- */
 function internalTargets(finalUrl: string, facts: Facts) {
   const result = new Set<string>();
   for (const { anchor } of pageAnchors(facts)) {
@@ -91,10 +76,6 @@ function internalTargets(finalUrl: string, facts: Facts) {
   }
   return sorted(result);
 }
-/**
- * A page whose content was never observed (a client-rendered shell) shows no
- * links, so its link checks have nothing to judge: unknown, never a pass.
- */
 function unobservedLinks(facts: Facts, links: string[]) {
   const extraction = record(facts.extraction);
   if (links.length || extraction.state !== 'unavailable') return null;
@@ -107,13 +88,11 @@ function unobservedLinks(facts: Facts, links: string[]) {
     }),
   );
 }
-/** The raw URLs the page's hreflang alternates declare: all the cross-check reads. */
 const alternatesOf = (facts: Facts) =>
   Array.isArray(facts.hreflang_alternates)
     ? facts.hreflang_alternates.map((alternate) => scalarText(record(alternate).url))
     : [];
 
-/** Cross-check one page's hreflang cluster against the pages this crawl analyzed. */
 function hreflang(
   source: string | null,
   alternates: string[],
@@ -145,18 +124,12 @@ function hreflang(
   });
 }
 
-/** The page's one declared canonical in identity form; null for none or a conflicting set. */
 function declaredCanonical(finalUrl: string, facts: Facts) {
   const unique = [...new Set(canonicalDeclarations(facts).map((value) => value.trim()))];
   const only = onlyOf(unique.filter(Boolean));
   return only === undefined ? null : canonicalUrl(only, finalUrl);
 }
 
-/**
- * A page joins the duplicate comparison when it is a successful, indexable
- * page that names no other canonical: noindex and canonicalised copies have
- * already said which page should be indexed.
- */
 function duplicateCandidate(
   url: string | null,
   finalUrl: string,
@@ -176,7 +149,6 @@ function duplicateCandidate(
   );
 }
 
-/** What the cross-page rules keep of one analyzed page once its facts are dropped. */
 function analyzedPage(finalUrl: string, facts: Facts, table: UrlTable) {
   const url = canonicalUrl(finalUrl);
   const links = internalTargets(finalUrl, facts);
@@ -196,7 +168,6 @@ function analyzedPage(finalUrl: string, facts: Facts, table: UrlTable) {
   };
 }
 
-/** Only the facts the cross-page rules read, and only for completed analyses. */
 const ruleFacts = sql<unknown>`case when p.status = 'completed' then jsonb_build_object(
   'title', a.normalized_facts -> 'title',
   'canonical_declarations', a.normalized_facts -> 'canonical_declarations',
@@ -209,11 +180,6 @@ const ruleFacts = sql<unknown>`case when p.status = 'completed' then jsonb_build
   'delivery', jsonb_build_object('status_code', a.normalized_facts -> 'delivery' -> 'status_code'),
   'primary_content_text', a.normalized_facts -> 'primary_content_text') end`;
 
-/**
- * One keyset page of the crawl's current analyses. With `context`, finalized
- * ones too, with their rule facts: a resumed pass judges the pages still
- * pending against the whole crawl, as an uninterrupted one does.
- */
 function currentAfter(db: Database, crawl: Crawl, after: string | null, context: boolean) {
   return db
     .selectFrom('site_page_analyses as p')
@@ -254,7 +220,6 @@ function currentAfter(db: Database, crawl: Crawl, after: string | null, context:
 type Current = Awaited<ReturnType<typeof currentAfter>>[number];
 type Analyzed = Omit<Current, 'facts' | 'final_url'> & ReturnType<typeof analyzedPage>;
 
-/** Every analyzed page's duplicate comparison, keyed by its identity URL. */
 function duplicateComparisons(pages: Analyzed[]) {
   const fingerprints = new Map<string, Fingerprint>();
   const excluded = new Map<string, string>();
@@ -281,10 +246,6 @@ function duplicateComparisons(pages: Analyzed[]) {
   };
 }
 
-/**
- * The sitemap URLs this crawl audits: the listed pages it tracks. An untracked
- * listed URL is never fetched, so it can neither pass nor fail these checks.
- */
 async function sitemapObservations(db: Database, crawl: Crawl) {
   const rows = await db
     .selectFrom('site_sitemap_entries as e')
@@ -306,7 +267,6 @@ async function sitemapObservations(db: Database, crawl: Crawl) {
   return rows.map((row) => row.listed_url);
 }
 
-/** The root page also carries the crawl-wide sitemap presence, orphan and reachability checks. */
 async function rootEvaluations(
   db: Database,
   crawl: Crawl,
@@ -338,7 +298,6 @@ async function rootEvaluations(
   ];
 }
 
-/** The pages linking each sitewide target, in URL order. */
 function linkingPages(pages: Analyzed[], sitewide: ReadonlySet<string>, table: UrlTable) {
   const result = new Map<string, LinkingPage[]>();
   for (const page of pages)
@@ -367,11 +326,6 @@ const rootHashOf = (crawl: Crawl) => {
 
 type PrepareOptions = { crossPage: boolean; retiring: ReadonlySet<string> };
 
-/**
- * Keyset-read the pending pages, root first, leaving out the aliases about to
- * be retired, and with `crossPage` every current completed analysis's rule
- * facts, dropping each page's facts once read.
- */
 async function readCurrent(db: Database, crawl: Crawl, options: PrepareOptions) {
   const rootHash = rootHashOf(crawl);
   const table = new UrlTable();
@@ -396,16 +350,9 @@ async function readCurrent(db: Database, crawl: Crawl, options: PrepareOptions) 
   return { rootHash, pendingIds, analyzed, table };
 }
 
-/**
- * Read the pages to finalize. With `crossPage`, also build the context each
- * pending completed page is judged from, out of every current completed
- * analysis (one a replayed pass already finalized included); a cancelled
- * crawl only appends final revisions.
- */
 export async function prepareFinalization(db: Database, crawl: Crawl, options: PrepareOptions) {
   const { rootHash, pendingIds, analyzed, table } = await readCurrent(db, crawl, options);
   if (!analyzed.length) return { pendingIds, judge: (_id: string): Judged | null => null };
-  // The first analyzed page of an identity URL, by artifact, speaks for it.
   analyzed.sort((a, b) => compareText(a.artifact_id, b.artifact_id) || compareText(a.id, b.id));
   const resolutions = await fetchResolutions(db, crawl);
   const pages: Alternates = new Map();
@@ -418,9 +365,6 @@ export async function prepareFinalization(db: Database, crawl: Crawl, options: P
   const duplicates = duplicateComparisons(analyzed);
   const linked = new Set<string>();
   for (const page of analyzed) for (const url of table.values(page.links)) linked.add(url);
-  // Sitewide links are judged once, on the root; without the root in this crawl
-  // every page keeps judging them itself. A root an earlier pass finalized
-  // already holds its crawl-wide findings.
   const root = analyzed.find((page) => page.url_hash === rootHash);
   const sitewide = root
     ? sitewideTargets(analyzed.map((page) => table.values(page.links)))
@@ -432,7 +376,6 @@ export async function prepareFinalization(db: Database, crawl: Crawl, options: P
       ]
     : [];
   const byId = new Map(analyzed.filter((page) => page.pending).map((page) => [page.id, page]));
-  /** One pending analysis's crawl-finalize evaluations; null for one not completed. */
   const judge = (analysisId: string): Judged | null => {
     const page = byId.get(analysisId);
     if (!page) return null;

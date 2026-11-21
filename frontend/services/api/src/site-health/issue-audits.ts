@@ -1,10 +1,3 @@
-/**
- * What one crawl's audit found on each page it audited: the input a landing
- * (`issue-states.ts`) moves issue states from. Read-only: a page analyzed at
- * its own URL reports the rules with a current issue and those a determinate
- * evaluation passed; a page whose fetch ended at another URL, or whose newest
- * analyze attempt answered 404/410, reports that instead.
- */
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -19,15 +12,12 @@ const GONE_STATUSES = policy.site_health.reads.task_outcomes.gone_status_codes;
 
 type Finding = { issueId: string; evaluationId: string; ruleVersion: string };
 
-/** One page's outcome in one audit. */
 export type PageAudit =
   | {
       kind: 'analyzed';
       siteUrlId: string;
       analysisId: string;
-      /** Rules with a current issue on the page. */
       found: ReadonlyMap<string, Finding>;
-      /** Rules a determinate evaluation passed: the evaluation that verified each. */
       passed: ReadonlyMap<string, { evaluationId: string; ruleVersion: string }>;
     }
   | {
@@ -39,20 +29,16 @@ export type PageAudit =
       evidence: Record<string, unknown>;
     };
 
-/** Whether the artifact's final URL is another page than the one tracked. */
 function redirected(finalUrl: string, trackedHash: string) {
   try {
     return canonicalIdentity(finalUrl).hash !== trackedHash;
   } catch {
-    // An unparseable final URL is no evidence of a redirect.
     return false;
   }
 }
 
-/** Read per call, so a changed setting applies without a restart. */
 const batchSize = () => policy.site_health.crawl.finalize.projection_pages;
 
-/** The next batch of pages the crawl audited after `after`, in id order. */
 async function auditedPagesAfter(
   db: Database,
   crawl: Crawl,
@@ -73,10 +59,6 @@ async function auditedPagesAfter(
   return rows.map((row) => row.site_url_id);
 }
 
-/**
- * Every page the crawl audited, with what the audit found, one keyset batch of
- * pages at a time so a landing never holds the whole crawl (CO-7).
- */
 export async function eachPageAuditBatch(
   db: Database,
   crawl: Crawl,
@@ -94,7 +76,6 @@ export async function eachPageAuditBatch(
   }
 }
 
-/** The named pages' audits. */
 async function pageAudits(db: Database, crawl: Crawl, pageIds: string[]): Promise<PageAudit[]> {
   const analyses = await db
     .selectFrom('site_page_analyses as a')
@@ -146,9 +127,6 @@ async function analyzedAudits(
   if (!analyses.length) return [];
   const current = new Map(analyses.map((row) => [row.site_url_id, row]));
   const pageIds = [...current.keys()];
-  // The page's own evaluations: those its current analysis names, plus the
-  // site-level findings later written against it. Site checks every analysis
-  // names belong to the root page and are judged there.
   const evaluations = await db
     .selectFrom('site_rule_evaluations as e')
     .innerJoin('site_page_analyses as p', (join) =>
@@ -202,7 +180,6 @@ async function analyzedAudits(
   for (const row of evaluations) {
     const analysis = current.get(row.site_url_id);
     const audit = audits.get(row.site_url_id);
-    // Evaluations are already the page's own, so a named id is its current analysis's.
     const named =
       namedIds.has(row.id) ||
       (row.source_architecture_id !== null && row.analysis_id === analysis?.id);
@@ -215,7 +192,6 @@ async function analyzedAudits(
   return [...audits.values()];
 }
 
-/** Pages whose newest analyze generation in the crawl failed with 404/410. */
 async function goneAudits(db: Database, crawl: Crawl, pageIds: string[]): Promise<PageAudit[]> {
   const rows = await db
     .selectFrom((query) =>

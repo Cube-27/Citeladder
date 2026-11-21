@@ -37,7 +37,6 @@ const fetcher = new SitePageFetcher(
 );
 const row = (id: string) =>
   db.selectFrom('site_crawl_tasks').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
-/** Lease task `id` to `owner` after `attempts` spent attempts, as a claim would. */
 function lease(id: string, owner: string, attempts: number) {
   return db
     .updateTable('site_crawl_tasks')
@@ -61,7 +60,6 @@ async function runningCrawl(): Promise<SiteSeed> {
     .execute();
   return seed;
 }
-/** Whole seconds from `before` until the settled task becomes claimable again. */
 const delay = (task: { available_at: Date }, before: number) =>
   Math.round((task.available_at.getTime() - before) / 1000);
 
@@ -112,7 +110,6 @@ it('fences a task whose lease was reclaimed while it ran: the old owner settles 
     settings,
     executors: {
       link_metrics: async (trx, crawl) => {
-        // Recovery reclaimed the lease and another worker claimed the next attempt.
         await db
           .updateTable('site_crawl_tasks')
           .set({ lease_owner: 'next-owner', attempt_count: 1 })
@@ -145,7 +142,6 @@ it('fences a task whose lease was reclaimed while it ran: the old owner settles 
     attempt_count: 1,
     completed_at: null,
   });
-  // The stale run's own writes rolled back with it.
   expect(await analyzed()).toEqual({ analyzed_url_count: 7 });
   await db
     .updateTable('site_crawl_tasks')
@@ -154,7 +150,6 @@ it('fences a task whose lease was reclaimed while it ran: the old owner settles 
     .execute();
 });
 
-/** Recovery reclaimed the lease (one attempt) and the same owner claimed the task again. */
 const reclaimedBySameOwner = () => ({
   attempt_count: 1,
   heartbeat_at: new Date('2026-01-01T00:00:00Z'),
@@ -200,7 +195,6 @@ it('never starts a stale claim once the same owner re-claimed the next attempt',
   await db.updateTable('site_crawl_tasks').set(reclaimed).where('id', '=', id).execute();
   await worker.execute(stale);
 
-  // The live claim is untouched, waiting for its own slot to run it.
   expect(await row(id)).toMatchObject({
     status: 'running',
     lease_owner: 'same-owner',
@@ -223,7 +217,6 @@ it('lets a stale analyze slot of the same owner write nothing to the live claim'
     ...reclaimed,
   });
 
-  // The live slot runs the same page to a classified success.
   await worker.execute(await row(page.taskId));
   expect(await row(page.taskId)).toMatchObject({
     status: 'succeeded',
@@ -270,7 +263,6 @@ it('starts a queued crawl for its first task, and cancels the task when Stop got
   const started = await startCrawl(ctx, await loaded(first.taskId));
   expect([started?.crawl.status, started?.crawl.started_at === null]).toEqual(['running', false]);
 
-  // Stop commits after the second task loaded its still-queued crawl.
   await db
     .updateTable('site_crawls')
     .set({ status: 'cancelled' })

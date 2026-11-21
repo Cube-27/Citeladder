@@ -13,7 +13,6 @@ import {
   migrationSummary,
 } from './schema-migrations.ts';
 
-/** A fresh or replaced database VM may still be starting; retry the connection until the deadline. */
 async function connect(databaseUrl: string, deadline: number): Promise<pg.Client> {
   const client = migrationClient(databaseUrl);
   try {
@@ -27,12 +26,6 @@ async function connect(databaseUrl: string, deadline: number): Promise<pg.Client
   }
 }
 
-/**
- * The migrate job's schema step: as the schema owner (`MIGRATION_DATABASE_URL`),
- * apply the pending migrations, or confirm none, let the application role log
- * in with the password in the services' `DATABASE_URL`, then keep the Site
- * Health evidence partitions ahead of the calendar, and exit.
- */
 async function main() {
   const { values } = parseArgs({ options: { 'wait-seconds': { type: 'string', default: '0' } } });
   const waitSeconds = Number(values['wait-seconds']);
@@ -57,7 +50,6 @@ async function main() {
 try {
   await main();
 } catch (error) {
-  // The shared operator redaction already names a failed statement's SQLSTATE.
   console.error(operatorDiagnostic(error));
   process.exitCode = 1;
 }

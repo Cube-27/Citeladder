@@ -5,19 +5,7 @@ import { integrationsApi } from '@/lib/api/integrations';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-/**
- * Settings → Integrations when the workspace has no connections yet: the
- * page's empty state, Connect Google its main action and Connect Bing the
- * supporting one.
- *
- * Both are full-page navigations to the same-origin OAuth start endpoints
- * (302s — never apiClient fetches): one Google consent links Search Console +
- * Analytics 4 on a shared grant; Bing needs its own consent because a Google
- * token cannot authorize Bing Webmaster Tools (the Bing account itself may
- * still have been created with a Google ID).
- */
 export function IntegrationsEmptyState({ workspaceId }: Readonly<{ workspaceId: string }>) {
-  // Connecting is a credential action, offered only to a role that may take it.
   const canManage = useWorkspaceCapability('manage_credentials');
   return (
     <StateBlock

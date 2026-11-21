@@ -42,7 +42,6 @@ function response(state: 'available' | 'unavailable' | 'non_comparable') {
   };
 }
 
-/** One persisted change of the A → B pair. */
 function change(id: string, url: string) {
   return {
     ...response('available'),
@@ -148,7 +147,6 @@ describe('Website Changes', () => {
 
     const pageLink = await screen.findByRole('link', { name: 'https://acme.test/guide' });
     expect(pageLink).toHaveAttribute('href', `/site/crawls/${CRAWL_B}/pages/${SITE_URL}`);
-    // The cell drops the origin its column shares and keeps the path, never the host alone.
     expect(pageLink.textContent).toBe('/guide');
     expect(screen.getByRole('cell', { name: 'HTTP status' })).toBeInTheDocument();
     const table = screen.getByRole('region', { name: 'Website changes' });
@@ -160,7 +158,6 @@ describe('Website Changes', () => {
     });
     await userEvent.click(open);
     const drawer = await screen.findByRole('dialog', { name: 'Change evidence' });
-    // The row names the field and the page; the drawer holds only their values.
     expect(within(drawer).queryByText('HTTP status')).toBeNull();
     expect(within(drawer).queryByText('https://acme.test/guide')).toBeNull();
     expect(within(drawer).getByRole('region', { name: 'Before' })).toHaveTextContent('200');
@@ -285,7 +282,6 @@ describe('Website Changes', () => {
       }),
     );
 
-    // The old pair's row would now link under the new head crawl: it must not stay.
     const table = screen.getByRole('region', { name: 'Website changes' });
     expect(
       await within(table).findByRole('status', { name: 'Loading persisted website changes…' }),

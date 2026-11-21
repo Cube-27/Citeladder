@@ -12,14 +12,11 @@ import { VISIBILITY_METRICS } from '@/lib/config/visibility';
 import { useUrlState } from '@/lib/navigation/url-state';
 import { toChartPoints, toNamedChartPoints } from '@/lib/visibility/trends';
 
-/** "<Competitor> against you": the competitor's line and yours, with the trend's markers. */
 export function CompetitorTrend({
   name,
   query,
 }: Readonly<{ name: string; query: UseQueryResult<VisibilityTrendPoint[], unknown> }>) {
   const [metric, setMetric] = useUrlState('metric', metricCodec);
-  // Your line is the chart's first (the "you" tone); a point that did not
-  // measure the competitor is a gap in theirs, never a zero.
   const lines = (points: readonly VisibilityTrendPoint[], timeZone: string): TrendLines => ({
     name: 'You',
     markName: null,

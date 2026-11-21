@@ -1,11 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-/**
- * The latest value, always ending on the newest, repainted after twice the
- * last repaint's duration (state update to layout effect) within `floor` and
- * `cap`: the stream's deltas are an outside clock, and this paces the repaint
- * to what a repaint costs.
- */
 export function useAdaptiveThrottle<T>(
   value: T,
   { floor, cap }: { floor: number; cap: number },

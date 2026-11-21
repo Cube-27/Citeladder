@@ -37,32 +37,17 @@ function pageLabel(url: string) {
 
 type DimensionBand = 'Critical' | 'Needs work' | 'Nearly there' | 'Passing' | 'Excluded';
 
-/** A band, or the absence a pillar without one prints as the Absence dash. */
 type DimensionState =
   | DimensionBand
   | Extract<DataAvailabilityState, 'not_applicable' | 'not_measured'>;
 
-/**
- * Say how the pillar SCORED, not whether any single check failed.
- *
- * The old rule flipped a pillar to red "Needs work" on one missing check
- * anywhere in the crawl, which put a 98-scoring Structure pillar in the same
- * state as a 0-scoring Evidence one and gave the reader nothing to prioritise
- * by. Bands come off the score the table already shows, so the badge and the
- * number can never contradict each other.
- */
 function dimensionState(dimension: ReadinessDimension): DimensionState {
   if (dimension.dimension_applicability === 'not_applicable') return 'not_applicable';
   if (dimension.dimension_measurement_state === 'excluded') return 'Excluded';
   if (dimension.score === null) return 'not_measured';
-  // Round prioritization bands for display. Passing below still requires an
-  // actual perfect score over a complete measurement.
   const band = scoreBand(Math.round(dimension.score));
   if (band === 'low') return 'Critical';
   if (band === 'mid') return 'Needs work';
-  // A perfect score over an INCOMPLETE set is not a pass. Unresolved checks
-  // cap the badge one band below, so "Passing" only ever means every
-  // applicable check resolved and every one of them passed.
   const unresolved =
     dimension.dimension_measurement_state !== 'measured' ||
     dimension.unresolved_count > 0 ||
@@ -73,11 +58,6 @@ function dimensionState(dimension: ReadinessDimension): DimensionState {
   return 'Passing';
 }
 
-/**
- * Why a pillar that prints 100 is still "Nearly there". The band drops a step
- * while a check is unresolved; without the reason the word and the number
- * contradict each other. Below a printed 100 the number is the reason.
- */
 function bandReason(dimension: ReadinessDimension): string | null {
   if (dimension.score === null || Math.round(dimension.score) < 100) return null;
   if (dimensionState(dimension) !== 'Nearly there') return null;
@@ -96,9 +76,6 @@ function bandReason(dimension: ReadinessDimension): string | null {
   return 'Not every check resolved';
 }
 
-/**
- * Each band its own tone, so "Nearly there" never reads as "Needs work".
- */
 const DIMENSION_TONES: Record<DimensionBand, StatusTone> = {
   Critical: 'negative',
   'Needs work': 'warning',
@@ -109,7 +86,6 @@ const DIMENSION_TONES: Record<DimensionBand, StatusTone> = {
 
 type CheckState = 'Incomplete' | 'Needs work' | 'Passing' | 'Did not apply' | 'Not checked';
 
-/** A check's state in the same tones as the pillar bands it rolls up into. */
 const CHECK_TONES: Record<CheckState, StatusTone> = {
   Incomplete: 'info',
   'Needs work': 'warning',
@@ -178,8 +154,6 @@ function ReadinessLedger({
         const reason = bandReason(dimension);
         const open = () => onOpen(dimension.key);
         return (
-          // The row is the drawer's trigger; its name cell is the button a
-          // keyboard and a screen reader reach, named by the pillar.
           <TableRow key={dimension.key} onClick={open} className="cursor-pointer">
             <TableCell>
               <Pressable
@@ -196,8 +170,6 @@ function ReadinessLedger({
                 </ClampText>
               </Pressable>
             </TableCell>
-            {/* The number only; the State column says why a
-                dimension has none. */}
             <TableCell numeric>{formatScore(dimension.score)}</TableCell>
             <TableCell numeric>
               {dimension.coverage === null ? (
@@ -207,7 +179,6 @@ function ReadinessLedger({
               )}
             </TableCell>
             <TableCell>
-              {/* Reads "Nearly there: 1 check unresolved". */}
               <Inline>
                 {state === 'not_applicable' || state === 'not_measured' ? (
                   <Absence state={state} />
@@ -228,7 +199,6 @@ const READINESS_COLUMNS: readonly DataTableColumn[] = [
   { key: 'dimension', label: 'Dimension', kind: 'identity' },
   { key: 'score', label: 'Score', kind: 'number' },
   { key: 'coverage', label: 'Coverage', kind: 'number' },
-  // The mark never cuts and its reason takes what is left, so the state flexes too.
   { key: 'state', label: 'State', kind: 'status', width: 'flex' },
 ];
 
@@ -302,7 +272,6 @@ function checkState(check: ReadinessCheck): CheckState {
   return 'Not checked';
 }
 
-/** Says whether the list is the whole set or only its worst rows. */
 function failingPagesCaption(shown: number, total: number): string | undefined {
   if (total === 0) return '—';
   return shown < total ? `Worst ${formatCount(shown)} of ${formatCount(total)}` : undefined;
@@ -348,7 +317,6 @@ function FailingPages({
   );
 }
 
-/** The next action for one failing page: the prompt for its failing checks. */
 function PageActions({
   page,
   dimensionLabel,
@@ -356,7 +324,6 @@ function PageActions({
   page: ReadinessDimension['evidence_pages'][number];
   dimensionLabel: string;
 }>) {
-  // Every failing check gets the prompt a developer or assistant can act on.
   const promptChecks = page.failed_checks;
   return (
     <Inline gap="compact" className="flex-wrap">
@@ -372,7 +339,6 @@ function PageActions({
   );
 }
 
-/** The failing checks for one page, in a form a developer or agent can act on. */
 function fixPrompt(
   dimensionLabel: string,
   url: string,

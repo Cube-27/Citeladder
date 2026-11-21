@@ -28,11 +28,6 @@ import {
 import { Notice } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 
-/**
- * The Internal links tab's content. Its read, header actions and control band
- * come from `useInternalLinksBands`, which the screen owns: this draws the
- * notices, the suggestions and the review drawer.
- */
 export function InternalLinksPanel({
   read,
   workspaceId,
@@ -103,8 +98,6 @@ function StartState({ read }: Readonly<{ read: LinksRead }>) {
   const canRun = useWorkspaceCapability('run');
   const data = read.data;
   if (!data) return null;
-  // One block in its own card, so the tab's empty state holds the card's footprint.
-  // Before the first crawl the screen shows its own state, so this is a crawl still running.
   if (!data.crawl_id)
     return (
       <Section>
@@ -154,7 +147,6 @@ function LinksResult({
     <>
       {analysis.stale ? <Notice tone="warning">From an earlier crawl.</Notice> : null}
       {notice ? <Notice tone="info">{notice}</Notice> : null}
-      {/* A run that could not check pairs has no result; never render it as empty. */}
       {['unavailable', 'failed', 'cancelled'].includes(analysis.state) &&
       !analysis.recommendations.length ? null : (
         <LinksBody analysis={analysis} links={links} onSelect={onSelect} />
@@ -199,7 +191,6 @@ const LINK_COLUMNS: readonly DataTableColumn[] = [
   { key: 'review', label: 'Review', kind: 'actions', width: 'button', hideLabel: true },
 ];
 
-/** Distinguish "nothing to compare" from "compared and nothing qualified". */
 function emptyReason(analysis: InternalLinkAnalysis): string {
   const summary = analysis.diagnostics;
   if (analysis.recommendations.length) return 'No matches.';
@@ -225,7 +216,6 @@ function LinksTable({
     <DataTable
       label="Internal link suggestions"
       columns={LINK_COLUMNS}
-      // A table of more than one page reserves a full page, so the pager stays put.
       pageSize={links.length > pageSize ? pageSize : undefined}
       rowCount={paged.length}
       state={
@@ -279,22 +269,16 @@ function LinksTable({
   );
 }
 
-/** The link's Action status; a status this build does not know is not "no Action". */
 function LinkActionStatus({ status }: Readonly<{ status: string | null }>) {
   if (status === null) return <NoAction />;
   if (status in ACTION_STATUS_LABEL) return <ActionStatusBadge status={status as ActionStatus} />;
   return <Absence state="unavailable" label="Unknown status" />;
 }
 
-/**
- * A suggestion no Action tracks yet: the shared missing mark rather than the
- * same words on every row, still named for assistive technology.
- */
 function NoAction() {
   return <Absence state="not_set" label="No Action yet" />;
 }
 
-/** A page by its title, then its path inline; the source page's title links to its page detail. */
 function PageCell({
   page,
   href,

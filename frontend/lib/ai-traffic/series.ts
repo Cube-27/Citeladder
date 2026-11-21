@@ -1,4 +1,3 @@
-/** Display-only helpers for the persisted AI-referral projection. */
 import type { TrendPoint } from '@/components/ui/series-data';
 import type { AiReferrals, AiSource } from '@/lib/api/ai-traffic';
 import { formatShortDate } from '@/lib/format';
@@ -6,10 +5,8 @@ import { label } from './vocabulary';
 
 type SeriesPoint = { date: string; value: number | null };
 
-/** How the series is bucketed, and the last day its window holds. */
 type Bucketing = Readonly<{ granularity: AiReferrals['granularity']; windowEnd: string | null }>;
 
-/** The first and last day of the calendar bucket holding `day`: its ISO week, or its month. */
 function bucketBounds(day: string, granularity: AiReferrals['granularity']) {
   const at = new Date(`${day}T00:00:00Z`);
   const [year, month, date] = [at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()];
@@ -30,12 +27,6 @@ function bucketBounds(day: string, granularity: AiReferrals['granularity']) {
   }
 }
 
-/**
- * A bucket the window cuts holds only part of its period: the first (clamped
- * to the window's start) and the last (the window ends inside it). Each stands
- * apart from the line and says so, rather than plotting as a rise or a fall;
- * the axis names every bucket by its start, so its ticks stay one period apart.
- */
 function chartPoints(
   points: readonly SeriesPoint[],
   { granularity, windowEnd }: Bucketing,

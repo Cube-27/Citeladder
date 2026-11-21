@@ -1,4 +1,3 @@
-/** Guides and solution anchors a platform page may list under "Keep exploring". */
 export const PLATFORM_GUIDES: Readonly<Record<string, { title: string; desc: string }>> = {
   '/ai-citation-tracking': {
     title: 'AI citation tracking guide',

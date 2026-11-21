@@ -1,11 +1,3 @@
-/**
- * Prompt sets: a project's prompt library containers.
- *
- * Project bootstrap and Commerce also create sets; deleting one takes the
- * project lock and then the set lock, the order generation holds while
- * it stages candidates, so a delete never lands between its re-resolution and
- * its inserts.
- */
 import { randomUUID } from 'node:crypto';
 
 import {
@@ -36,7 +28,6 @@ export const promptSetUpdate = promptSetUpdateRequestSchema.extend({
   description: z.string().max(1024).nullish(),
 });
 
-/** A set in the caller's workspace (and named project), or `Prompt set not found`. */
 export async function scopedPromptSet(
   db: Kysely<DB>,
   workspaceId: string,
@@ -56,7 +47,6 @@ export async function scopedPromptSet(
   return row;
 }
 
-/** The sets' views, each with its prompts in creation order. */
 async function views(
   db: Database,
   entitlements: WorkspaceEntitlements,
@@ -81,10 +71,6 @@ async function views(
   return sets.map((set) => promptSetView(set, bySet.get(set.id) ?? [], overLimit));
 }
 
-/**
- * One set of the entitlements' workspace. A request passes its own
- * (`c.get('entitlements')`), so the prompt allowance is not read again.
- */
 export async function readPromptSet(
   db: Database,
   entitlements: WorkspaceEntitlements,
@@ -96,7 +82,6 @@ export async function readPromptSet(
   return view!;
 }
 
-/** The entitlements' workspace's sets, optionally of one project. */
 export async function listPromptSets(
   db: Database,
   entitlements: WorkspaceEntitlements,
@@ -115,10 +100,6 @@ export async function listPromptSets(
   return views(db, entitlements, sets);
 }
 
-/**
- * The bounds the request schemas enforce on the forms a prompt-set list opens,
- * read from the same policy values so the browser never restates them.
- */
 export function promptFormLimits(): PromptFormLimits {
   const generation = policy.prompts.generation;
   return {

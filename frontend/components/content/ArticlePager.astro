@@ -1,17 +1,10 @@
 ---
-/**
- * ArticlePager — the previous and next guides at the foot of a page: two
- * half-width links between 1px `line` rules (no boxes), the direction in
- * `ink-muted` with a chevron that nudges on hover and the title in `label-lg`.
- * Next keeps the right column when there is no Previous; the two stack below 768px.
- */
 import { ChevronLeft, ChevronRight } from '@/lib/icons';
 
 type Link = { title: string; href: string };
 interface Props {
   previous?: Link;
   next?: Link;
-  /** The navigation landmark's name. */
   label?: string;
 }
 const { previous, next, label = 'Adjacent articles' } = Astro.props;

@@ -1,4 +1,3 @@
-/** Plan changes on a current base subscription: paid upgrades and scheduled downgrades. */
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { z } from 'zod';
@@ -23,7 +22,6 @@ import {
 import { frozenTermsSchema, scheduledSchema } from './settlement-terms.ts';
 import { activationResponse, createPending, dispatch, workspaceAccount } from './purchases.ts';
 
-/** Commits a downgrade for the period end; the provider switch follows the commit. */
 async function scheduleDowngrade(
   db: Database,
   {
@@ -86,7 +84,6 @@ async function scheduleDowngrade(
   return response;
 }
 
-/** Whether the current subscription's scheduled change from this key was refused by the provider. */
 async function refusedFromKey(db: Database, accountId: string, key: string) {
   const sub = await db
     .selectFrom('billing_subscriptions')
@@ -151,10 +148,6 @@ async function replayedPlanChange(db: Database, accountId: string, key: string, 
   return null;
 }
 
-/**
- * A repeat request for the downgrade already scheduled replays that schedule;
- * any other live (not provider-rejected) schedule blocks a new change.
- */
 function replayedScheduledDowngrade(scheduledChange: unknown, subId: string, targetKey: string) {
   if (!scheduledChange) return null;
   const scheduled = scheduledSchema.parse(scheduledChange);
@@ -227,7 +220,6 @@ export async function changePlan(
     if (!plan) refuse('catalog_key_unknown');
     const now = new Date();
     const identity = identitySchema.parse(account.billing_profile);
-    // A plan change keeps the subscription's mode; switching mode is a new plan.
     const mode = sub.credential_mode === 'funded' ? 'funded' : 'byok';
     const target = baseIntent(
       config.billing,
@@ -252,8 +244,6 @@ export async function changePlan(
     const current = frozenTermsSchema.parse(sub.frozen_terms);
     if (current.currency !== terms.currency) refuse('plan_change_unavailable');
     const difference = target.quote.base_price.amount_minor - current.quote.base_price.amount_minor;
-    // The checkout switch stops new charges; a downgrade charges nothing and
-    // needs only the provider that already bills this subscription.
     if (
       !(difference > 0
         ? checkoutAvailable(
@@ -326,7 +316,6 @@ export async function changePlan(
     };
   const state = prepared.subId ? await pushChange(db, prepared.subId, adapter) : null;
   if (state === 'provider_rejected') {
-    // The refused change stays replaceable; a retry with the same key re-requests it.
     await db
       .deleteFrom('idempotency_records')
       .where('idempotency_key', '=', key)
@@ -344,14 +333,12 @@ export async function changePlan(
   return state === 'scheduled' ? { ...prepared.response, status: state } : prepared.response;
 }
 
-/** Push a requested change to the provider; returns the state it recorded. */
 export async function pushChange(db: Database, id: string, provider: BillingProvider) {
   const sub = await db
     .selectFrom('billing_subscriptions')
     .selectAll()
     .where('id', '=', id)
     .executeTakeFirstOrThrow();
-  // An ending subscription never renews onto the new plan.
   if (
     !sub.scheduled_change ||
     !sub.is_current ||

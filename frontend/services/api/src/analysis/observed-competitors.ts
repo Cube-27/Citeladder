@@ -12,7 +12,6 @@ import type { ScoringConfig } from './scoring.ts';
 const CITED = 'cited_domain';
 export const NAMED = 'named_in_answers';
 
-/** The project's suggestion rows, of every audit and status. */
 export function suggestionRows(db: Database, scope: ProjectScope) {
   return db
     .selectFrom('observed_entity_candidates')
@@ -29,7 +28,6 @@ export function lockSuggestions(db: Database, scope: ProjectScope) {
   return subjectXactLock(db, `competitor-suggestions:${scope.projectId}`);
 }
 
-/** The engines the audit asked, the "of M" beside a candidate's engine count. */
 async function auditEngineTotal(
   db: Database,
   scope: ProjectScope & { auditId: string },
@@ -44,7 +42,6 @@ async function auditEngineTotal(
   return Number(row.engines);
 }
 
-/** Repeated third-party citations create review candidates, never tracked competitors. */
 export async function persistObservedCompetitors(
   db: Database,
   audit: Selectable<Audits>,
@@ -55,7 +52,6 @@ export async function persistObservedCompetitors(
   const rules = policy.audits.observed_competitors;
   const scope = { workspaceId: audit.workspace_id, projectId: audit.project_id };
   await lockSuggestions(db, scope);
-  // A rejected domain stays rejected: later audits never suggest it again.
   const rejected = await suggestionRows(db, scope)
     .select('domain')
     .where('kind', '=', CITED)
@@ -148,7 +144,6 @@ export async function persistObservedCompetitors(
     .execute();
 }
 
-/** The answers a candidate was seen in. */
 export type Evidence = {
   prompts: Set<number>;
   engines: Set<string>;
@@ -156,10 +151,6 @@ export type Evidence = {
   artifacts: Set<string>;
 };
 
-/**
- * Write an audit's name candidates (AV-11), recounted as perception settles:
- * an existing row takes the new counts and keeps its status.
- */
 export async function upsertNamedCandidates(
   db: Database,
   scope: ProjectScope & { auditId: string },

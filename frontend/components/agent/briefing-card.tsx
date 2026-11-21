@@ -12,12 +12,6 @@ import { AGENT_BRIEFING_ACTIONS } from '@/lib/config/agent';
 const BRIEFING_REQUEST =
   'What should I work on this week? Brief me on the highest-value work, why each item matters with its evidence, and the first step for each.';
 
-/**
- * "What should I work on?": one click starts a growth-plan chat that mentions
- * the project's top open Actions, so their diagnoses are in its context. It
- * runs only when the user asks; nothing is scheduled. It sits on the surface
- * under the composer, whose Send is the page's one primary, so Brief me is secondary.
- */
 export function BriefingCard({
   workspaceId,
   projectId,

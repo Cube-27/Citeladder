@@ -171,7 +171,6 @@ describe('plan gate', () => {
           () => 'admitted',
           (error: unknown) => error,
         );
-      // The gate is waiting on the capacity lock before the grant commits.
       await vi.waitFor(
         async () => {
           const blocked = await sql<{ waiting: boolean }>`select exists (

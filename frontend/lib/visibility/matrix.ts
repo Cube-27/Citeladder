@@ -1,8 +1,3 @@
-/**
- * Display helpers for the Insights performance matrix. Values are projected
- * from the read, never recomputed; a cell keeps not run, too few and not
- * measured apart, and only a measured value takes a heat tint.
- */
 import type {
   MatrixCell,
   MatrixDimension,
@@ -23,7 +18,6 @@ export type CellReading =
 
 const ORDER: readonly MatrixDimension[] = ['engine', 'topic', 'market', 'brand'];
 
-/** The cell of row item `row` against column item `column`, whichever pair order the read stores. */
 export function cellAt(
   grids: VisibilityMatrix['grids'],
   axes: { rows: MatrixDimension; columns: MatrixDimension },
@@ -68,10 +62,6 @@ export function cellReading(cell: MatrixCell | undefined, metric: MatrixMetric):
   return { kind: 'value', value, text, answers };
 }
 
-/**
- * Each value's place from low (0) to high (1) among the values shown, so the
- * tint compares cells on screen. A lower position is better, so it reads high.
- */
 export function heatScale(values: readonly number[], metric: MatrixMetric) {
   const low = Math.min(...values);
   const high = Math.max(...values);
@@ -81,19 +71,16 @@ export function heatScale(values: readonly number[], metric: MatrixMetric) {
   };
 }
 
-/** A measured value as a CSV number: rates in percent to one decimal, the rest to two. */
 function csvNumber(value: number, metric: MatrixMetric): number {
   return metric === 'avg_position' || metric === 'sentiment'
     ? Math.round(value * 100) / 100
     : Math.round(value * 1000) / 10;
 }
 
-/** The CSV header for a metric, naming the unit a rate is exported in. */
 export function matrixCsvMetricHeader(metric: MatrixMetric, label: string): string {
   return metric === 'avg_position' || metric === 'sentiment' ? label : `${label} (%)`;
 }
 
-/** The matrix on screen as CSV rows: row label, column label, value as a number, answers. */
 export function matrixCsvRows({
   readings,
   rowLabels,

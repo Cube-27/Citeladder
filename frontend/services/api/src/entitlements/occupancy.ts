@@ -1,18 +1,3 @@
-/**
- * Occupancy: what a workspace holds now (projects, prompts, API keys,
- * additional markets, monitored URLs) against its plan's allowance. One
- * counter table counts each; `admit(key, n)` admits `n` more under the
- * account capacity lock, in the same transaction as the insert it guards, so
- * concurrent writers cannot exceed the grant. The capacity lock is the last
- * lock a path takes after the project and prompt-set locks.
- *
- * Prompt slots: every prompt in the workspace counts, whatever its status or
- * origin; only deletion frees a slot.
- *
- * Fail closed: a workspace with no billing account, or an account whose
- * grants cannot resolve, is a 403 `occupancy_unresolved`, and a resolved
- * account with no grant for a counter has an allowance of zero.
- */
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { sql } from 'kysely';
 
@@ -33,7 +18,6 @@ const LIMIT_EXCEEDED = asApiErrorCode(codes.limit_exceeded);
 const unresolved = () =>
   new ApiError(403, 'Billing entitlement is unavailable for this account', { code: UNRESOLVED });
 
-/** The workspace's billing account, locked for capacity checks, or a 403. */
 export async function lockWorkspaceCapacity(db: Database, workspaceId: string): Promise<string> {
   const accountId = await billingAccountId(db, workspaceId);
   if (accountId === undefined) {
@@ -49,7 +33,6 @@ export async function lockWorkspaceCapacity(db: Database, workspaceId: string): 
   return accountId;
 }
 
-/** The workspace's resolved grants, read under its account's capacity lock, or a 403. */
 export async function lockedGrants(db: Database, workspaceId: string, at = new Date()) {
   const accountId = await lockWorkspaceCapacity(db, workspaceId);
   const resolved = await resolveAccountEntitlement(db, { accountId, workspaceId }, at);
@@ -72,7 +55,6 @@ async function projectCount(db: Database, workspaceId: string) {
   );
 }
 
-/** Every prompt that takes a slot, whatever its status or origin, with its project. */
 function slotPrompts(db: Database) {
   return db
     .selectFrom('prompts')
@@ -89,7 +71,6 @@ async function promptCount(db: Database, workspaceId: string) {
   );
 }
 
-/** The workspace's unrevoked, unexpired API keys. */
 async function apiKeyCount(db: Database, workspaceId: string, at: Date) {
   return count(
     await db
@@ -102,7 +83,6 @@ async function apiKeyCount(db: Database, workspaceId: string, at: Date) {
   );
 }
 
-/** The workspace's additional measurement markets (a project's default market is free). */
 async function marketCount(db: Database, workspaceId: string) {
   return count(
     await db
@@ -116,9 +96,7 @@ async function marketCount(db: Database, workspaceId: string) {
 type Use = { allowance: number; current: number; requested: number };
 type Counter = {
   count: (db: Database, workspaceId: string, at: Date) => Promise<number>;
-  /** A flag the plan must also grant before any is admitted. */
   requires?: { key: string; refusal: () => ApiError };
-  /** The refusal for going over; counted-only counters have none. */
   refuse?: (use: Use) => ApiError;
 };
 
@@ -126,7 +104,6 @@ const limit = (message: string, key: string, use: Use) =>
   new ApiError(403, message, { code: LIMIT_EXCEEDED, details: { key, ...use } });
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** The occupancy counters, keyed by their capability. */
 const COUNTERS = {
   project_slots: {
     count: projectCount,
@@ -182,10 +159,6 @@ export type AdmittedCounter = {
   [K in keyof typeof COUNTERS]: (typeof COUNTERS)[K] extends { refuse: unknown } ? K : never;
 }[keyof typeof COUNTERS];
 
-/**
- * Admits `requested` more of counter `key` for the workspace, or throws its
- * refusal. Takes the capacity lock; the caller inserts in the same transaction.
- */
 export async function admit(
   db: Database,
   workspaceId: string,
@@ -207,7 +180,6 @@ export async function admit(
   throw counter.refuse(use);
 }
 
-/** Every counter's current use; unlocked, for reads. */
 export async function occupancyCounts(
   db: Database,
   workspaceId: string,
@@ -223,14 +195,6 @@ export async function occupancyCounts(
   );
 }
 
-/**
- * Prompts beyond the workspace's `prompt_slots` allowance, the newest first
- * out: after a downgrade they are kept, shown, and never measured. Unlocked,
- * so reads can use it. With no `prompt_slots` grant every prompt is over the
- * limit. Grants that cannot resolve are unavailable, not a zero allowance: like
- * admission it refuses (403 `occupancy_unresolved`) instead of marking every
- * prompt over the limit. A request that passed the access gate always resolves.
- */
 export async function overLimitPromptIds(
   db: Database,
   entitlements: WorkspaceEntitlements,
@@ -248,7 +212,6 @@ export async function overLimitPromptIds(
   return new Set(rows.map((row) => row.id));
 }
 
-/** The refusal for an audit that names prompts beyond the plan's prompt slots. */
 export function overLimitSelection(excluded: number) {
   return new ApiError(403, 'Some selected prompts are beyond your plan’s prompt limit', {
     code: LIMIT_EXCEEDED,
@@ -256,10 +219,6 @@ export function overLimitSelection(excluded: number) {
   });
 }
 
-/**
- * Prompt slots in use and the `prompt_slots` allowance, zero when none is granted.
- * Takes the capacity lock, so it reads after a same-transaction insert.
- */
 export async function promptOccupancy(
   db: Database,
   workspaceId: string,

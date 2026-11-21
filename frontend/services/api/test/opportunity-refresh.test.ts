@@ -1,10 +1,3 @@
-/**
- * Opportunity refresh and routes against real PostgreSQL. Native fixtures seed
- * evidence and the native enqueue owner admits execution.
- *
- * Covers detection and supersession, the queue, the project lock and the
- * Action handoffs.
- */
 import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -36,11 +29,6 @@ const URL_B = 'https://acme.test/b';
 type Seed = OpportunitySeed;
 const seeds: Seed[] = [];
 
-/**
- * The opportunity scenario, whose crawl found Site Health defects on /a, /b
- * and /c, plus a content gap on /b: ten citations across two domains, one a
- * competitor's, so its priority is 2 × 1 × (1 + log10(10) + 1/2) × 10 = 50.
- */
 async function seed(): Promise<Seed> {
   const created = await seedOpportunityScenario(db);
   const pageB = await db
@@ -185,7 +173,6 @@ describe('opportunity_refresh', () => {
       analyzer_version: o.ANALYZER_VERSION,
       formula_version: o.FORMULA_VERSION,
     });
-    // Each crawl defect's Issues group is one finding citing its issues (IA1).
     expect(snapshot.source_issue_ids).toEqual(
       expect.arrayContaining([own.issue_structured_id, own.issue_content_id]),
     );
@@ -196,7 +183,6 @@ describe('opportunity_refresh', () => {
       ['brand_absent_high_value_prompt', 120],
       ['owned_page_not_cited', 80],
       ['content_gap_improve_page', 50],
-      // A defect scores its severity × 10, just above an advisory of that severity.
       ['site_issue_family', 30.3],
       ['site_issue_family', 20.2],
       ['site_issue_family', 10.1],
@@ -213,8 +199,6 @@ describe('opportunity_refresh', () => {
     const gap = byRule(rows, 'content_gap_improve_page');
     expect(gap).toMatchObject({ target_url: URL_B, source_issue_ids: [] });
     expect(rows.every((row) => row.action_id !== null)).toBe(true);
-    // Page /b's Action holds its content gap and nothing from its Site Health
-    // defect, which is its Issues group's own Action, like /a's and /c's.
     const actions = await db
       .selectFrom('actions')
       .selectAll()
@@ -222,8 +206,6 @@ describe('opportunity_refresh', () => {
       .orderBy('target_kind')
       .orderBy('target_label')
       .execute();
-    // Each row's secondary line: an issue group's catalog description (none for
-    // a rule the catalog does not define), else its strongest finding's title.
     expect(
       actions.map(actionItem).map((item) => [item.target_kind, item.target_label, item.summary]),
     ).toEqual([
@@ -318,7 +300,6 @@ describe('opportunity_refresh', () => {
     const before = await snapshotCount(s);
     await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
     expect(await snapshotCount(s)).toBe(before);
-    // A description is not matching identity: no catalog revision or match pass follows it.
     await editProduct(db, scope(s), productId, { description: 'Waterproof trail shoe' });
     await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
     expect(await snapshotCount(s)).toBe(before + 1);
@@ -326,10 +307,6 @@ describe('opportunity_refresh', () => {
     expect(await snapshotCount(s)).toBe(before + 1);
   });
 
-  /**
-   * A completed Commerce run whose one category prompt was answered with a
-   * third-party citation and no uploaded product.
-   */
   async function uncoveredCategoryRun(tenant: Tenant, completedAt: Date) {
     const auditId = await visibility.audit(tenant, { scope: 'commerce', completedAt });
     const categoryId = randomUUID();
@@ -385,7 +362,6 @@ describe('opportunity_refresh', () => {
   it('keeps brand and Commerce Actions when a Commerce run follows the brand run', async () => {
     const s = await seed();
     const tenant = { userId: s.user_id, workspaceId: s.workspace_id, projectId: s.project_id };
-    // Completed after the seed's brand run, so it is the project's newest run of any scope.
     const categoryId = await uncoveredCategoryRun(tenant, new Date(Date.now() + 60_000));
     await recomputeOpportunities(db, scope(s));
     const rows = await live(s);
@@ -405,7 +381,6 @@ describe('opportunity_refresh', () => {
       .where('workspace_id', '=', s.workspace_id)
       .orderBy('created_at', 'desc')
       .executeTakeFirstOrThrow();
-    // The brand evidence still comes from the brand run.
     expect(snapshot.audit_id).toBe(s.audit_id);
   });
 
@@ -464,7 +439,6 @@ describe('opportunity_refresh', () => {
       .where('id', '=', id)
       .executeTakeFirstOrThrow();
     expect(task).toEqual({ status: 'succeeded', attempt_count: 1 });
-    // Already current: the second trigger claims, finds nothing new, writes nothing.
     expect(await snapshotCount(own)).toBe(snapshots);
   });
 
@@ -525,7 +499,6 @@ describe('opportunity_refresh', () => {
 
     const snapshot = await recomputeOpportunities(db, scope(s));
 
-    // The crawl's three Issues groups stand; the cited prompt findings vanish.
     expect(snapshot.total_count).toBe(4);
     const second = await live(s);
     expect(second.map((row) => row.rule_id)).toEqual([
@@ -556,7 +529,6 @@ describe('opportunity_refresh', () => {
     const absent = closed.get(byRule(first, 'brand_absent_high_value_prompt').id);
     expect(absent?.superseded_at).not.toBeNull();
     expect(absent?.superseded_by_id).toBeNull();
-    // Its prompt Action keeps its row with the evidence cleared.
     const cleared = await db
       .selectFrom('actions')
       .select(['member_opportunity_ids', 'priority_score', 'evidence_cleared_at', 'diagnosis'])

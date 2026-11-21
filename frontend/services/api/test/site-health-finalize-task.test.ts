@@ -11,10 +11,6 @@ import { billingAccount, grant } from './prompt-fixtures.ts';
 import { asOwner, testDatabase } from './support.ts';
 import { FinalizeFixtures, type SiteSeed } from './site-health-finalize-fixtures.ts';
 
-/**
- * One-shot hooks around the next asynchronous commit: in a finalize run that
- * is its first batch. `before` runs inside the transaction, `after` once it committed.
- */
 type Hook = () => Promise<void>;
 const nextBatch = vi.hoisted(() => ({
   before: null as Hook | null,
@@ -68,7 +64,6 @@ const finalizeTasks = (seed: SiteSeed) =>
     .where('task_kind', '=', 'finalize')
     .orderBy('created_at')
     .execute();
-/** Make the crawl's finalize task due again, past its retry backoff. */
 const retryNow = (seed: SiteSeed) =>
   db
     .updateTable('site_crawl_tasks')
@@ -77,14 +72,12 @@ const retryNow = (seed: SiteSeed) =>
     .where('task_kind', '=', 'finalize')
     .execute();
 const CRAWL_TABLES = new Set(['site_page_analyses', 'site_rule_evaluations', 'site_issues']);
-/** The table a query reads first: its FROM for a built query, the first `from` of raw SQL. */
 function primaryTable(node: RootOperationNode) {
   if (node.kind === 'SelectQueryNode')
     return /"name":"(\w+)"/.exec(JSON.stringify(node.from))?.[1] ?? '';
   const text = node.kind === 'RawNode' ? node.sqlFragments.join(' ') : '';
   return /\bfrom\s+(\w+)/.exec(text)?.[1] ?? '';
 }
-/** A view of the test database that records the most rows any one read returned per crawl-sized table. */
 function rowCounter() {
   const tables = new Map<QueryId, string>();
   const most: Record<string, number> = {};
@@ -102,7 +95,6 @@ function rowCounter() {
   };
   return { db: db.withPlugin(plugin), most };
 }
-/** A completed analysis of an active monitored page, settled by its own analyze task. */
 async function monitoredPage(seed: SiteSeed, path: string, facts: Record<string, unknown> = {}) {
   const member = await fixtures.analyzable(seed, path);
   await db.deleteFrom('site_crawl_tasks').where('id', '=', member.taskId).execute();
@@ -138,17 +130,14 @@ describe('finalize task', () => {
       status: (await crawlRow(seed.crawlId)).status,
     });
     const initial = await state();
-    // A batch that fails inside its transaction leaves nothing behind.
     nextBatch.before = () => Promise.reject(new Error('batch write failed'));
     expect(await finalize(seed)).toBe(true);
     expect(await state()).toEqual(initial);
-    // A batch that committed before the runner died is not appended again.
     await retryNow(seed);
     nextBatch.after = () => Promise.reject(new Error('runner stopped after a batch'));
     expect(await finalize(seed)).toBe(true);
     const batched = await state();
     expect(batched.status).toBe('running');
-    // Both pages hold a current final revision; both initials are retired.
     expect(batched.analyses.filter((row) => row.endsWith(':true:true'))).toHaveLength(2);
     await retryNow(seed);
     expect(await finalize(seed)).toBe(true);
@@ -187,7 +176,6 @@ describe('finalize task', () => {
     const first = await fixtures.page(seed, '/a', copy);
     const second = await fixtures.page(seed, '/b', copy);
     const size = policy.site_health.crawl.finalize.batch_pages;
-    // The root and one copy commit in the first batch; the other copy is left for the replay.
     policy.site_health.crawl.finalize.batch_pages = 2;
     try {
       nextBatch.after = () => Promise.reject(new Error('runner stopped after a batch'));
@@ -216,7 +204,6 @@ describe('finalize task', () => {
         nextBatch.before = () => Promise.reject(new Error('batch write failed'));
         await finalize(seed); // NOSONAR -- Attempts in order.
       }
-      // A failed finalize is never claimed again.
       expect(await finalize(seed)).toBe(false);
       return finalizeTasks(seed);
     };
@@ -233,7 +220,6 @@ describe('finalize task', () => {
       policy.site_health.crawl.finalize.error_message,
     ]);
     expect(record(crawl.terminal_counters)).toMatchObject({ queued: 0, running: 0 });
-    // The fetch hold is settled: all of it released, the one analyzed page debited.
     const ledger = await db
       .selectFrom('consumable_ledger')
       .select(['entry_kind', 'units'])
@@ -251,7 +237,6 @@ describe('finalize task', () => {
     expect(failed.map((row) => record(record(row.payload).failure).code)).toEqual([
       'finalize_failed',
     ]);
-    // A cancelled crawl whose publication fails for good stays cancelled, unpublished.
     const stopped = await fixtures.crawl('running');
     await monitoredPage(stopped, '/');
     await cancelCrawl(db, stopped.workspaceId, stopped.crawlId);
@@ -323,7 +308,6 @@ describe('finalize task', () => {
       .where('s.crawl_id', '=', seed.crawlId)
       .executeTakeFirstOrThrow();
     expect(published.count).toBe(paths.length);
-    // Every page is published, yet no read held more than one batch of two pages.
     const perPage = await db
       .selectFrom('site_rule_evaluations')
       .select(sql<number>`count(*)::int`.as('count'))
@@ -332,7 +316,6 @@ describe('finalize task', () => {
       .orderBy(sql`count(*)`, 'desc')
       .executeTakeFirstOrThrow();
     expect(counter.most.site_page_analyses).toBe(2);
-    // Two pages' evaluations, and the root's site checks every final revision names.
     expect(counter.most.site_rule_evaluations).toBeLessThanOrEqual(3 * perPage.count);
   });
 });

@@ -10,11 +10,6 @@ import {
 import { FIELD_EDGE } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
-/**
- * Textarea — the multi-line field in the shared field frame (`FIELD_EDGE`):
- * 8/12px padding, `body` text, at least two control heights tall, resizing
- * vertically only. Focus and error come from the shared `.focus-input` rule.
- */
 const textareaClasses =
   'text-ink placeholder:text-ink-2 type-body block w-full rounded-control border disabled:cursor-not-allowed disabled:opacity-60';
 
@@ -23,14 +18,6 @@ const fieldClasses = cn(
   FIELD_EDGE,
 );
 
-/**
- * Inside the Agent composer the composer is the box and draws the one focus
- * boundary (its `focus-frame`): the field drops its edge, fill, resize
- * handle, resting height and focus treatment. It starts one control tall
- * (one line inside 4px padding) and grows with its text to `maxRows` lines,
- * then scrolls inside. `field-sizing` does the growing where the browser has
- * it; elsewhere the layout effect below measures.
- */
 const composerClasses =
   'field-sizing-content min-h-[var(--control-md)] resize-none border-0 bg-transparent px-2 py-1 max-h-[calc(var(--field-max-rows)*1lh+0.5rem)]';
 
@@ -47,9 +34,7 @@ export function Textarea({
   ...props
 }: Readonly<
   ComponentPropsWithoutRef<'textarea'> & {
-    /** `composer`: the message field inside the Agent composer, one line that grows. */
     placement?: 'field' | 'composer';
-    /** The composer field's tallest height, in lines. */
     maxRows?: number;
     ref?: Ref<HTMLTextAreaElement>;
   }
@@ -69,7 +54,6 @@ export function Textarea({
     '--field-max-rows': maxRows,
   };
   const { value } = props;
-  // Fits the field to its text after each change, before paint, so it never flickers.
   useLayoutEffect(() => {
     const field = own.current;
     if (!grows || !field || sizesItself()) return;

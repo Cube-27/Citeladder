@@ -1,4 +1,3 @@
-/* ---------- ToolPanel: form 5/12, result well 7/12 at a 420px floor ---------- */
 .cl-tool {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
@@ -40,7 +39,6 @@
   margin-top: 12px;
 }
 
-/* The well sits 32px inside the shell on its outer sides, level with the inputs' inset. */
 .cl-tool-result {
   display: flex;
   flex-direction: column;
@@ -51,7 +49,6 @@
   background: var(--color-surface);
 }
 
-/* A drawn preview inside the result (the social card) sits on the site well. */
 .cl-tool-preview {
   overflow: hidden;
   border-radius: var(--site-radius-inner);
@@ -93,8 +90,6 @@
   margin-left: auto;
 }
 
-/* The zero-height copy of the longest message holds the width, so the Copy
-   button does not move when a message appears. */
 .cl-tool-copy-status {
   display: inline-flex;
   flex-direction: column;
@@ -140,7 +135,6 @@
   text-align: center;
 }
 
-/* The status line under a live preview, before the tool has run. */
 .cl-tool-hint {
   margin: 0;
   color: var(--color-ink-muted);
@@ -169,8 +163,6 @@
     margin: 0 16px 16px;
   }
 
-  /* A phone has no room for the message beside the buttons: the actions drop
-     under the title and the message takes a reserved line under the buttons. */
   .cl-tool-bar {
     flex-wrap: wrap;
   }
@@ -188,8 +180,6 @@
   }
 }
 
-/* A file input's button is the secondary button ("Load example") set 4px
-   inside the field, centred with the file name beside it. */
 .cl-tool input[type='file'] {
   padding: 4px 12px 4px 4px;
   color: var(--color-ink-secondary);
@@ -216,13 +206,11 @@
   }
 }
 
-/* A date field and its segments use the form's sans face, not the browser's. */
 .cl-tool input[type='date'],
 .cl-tool input[type='date']::-webkit-datetime-edit {
   font-family: var(--font-sans);
 }
 
-/* A checkbox group's helper reads like a Field's hint. */
 .cl-tool-group-hint {
   margin-bottom: 8px;
   color: var(--color-ink-muted);

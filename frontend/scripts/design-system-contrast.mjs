@@ -1,12 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/**
- * WCAG AA contrast of the token pairs in apps/app/src/globals.css, in every
- * palette the product renders: text 4.5:1, marks 3:1. A translucent token is
- * composited onto the fill beneath it before measuring.
- */
-
 const TOKEN_CSS = 'apps/app/src/globals.css';
 const LIGHT = ':root';
 const DARK = ":root[data-theme='dark']";
@@ -17,7 +11,6 @@ const PUBLIC_LIGHT = ":root[data-public-surface]:not([data-theme='dark'])";
 const PUBLIC_DARK = ":root[data-public-surface][data-theme='dark']";
 const MARKETING_LIGHT = ':root[data-marketing-surface]';
 const MARKETING_DARK = ":root[data-marketing-surface][data-theme='dark']";
-/** Each palette as the rule blocks that build it, in cascade order. */
 const SCOPES = [
   { name: LIGHT, layers: [LIGHT], kind: 'website' },
   { name: DARK, layers: [DARK], kind: 'website' },
@@ -37,7 +30,6 @@ const WEBSITE_GROUNDS = ['paper', 'chrome', 'surface', 'surface-sunken'].map(col
 const APP_FILLS = ['ground', 'panel', 'raised', 'raised-2'].map(color);
 const APP_SERIES = ['data-you', 'data-rival-1', 'data-rival-2', 'data-rival-3', 'data-rival-4'];
 
-/** Rows apply to every scope unless `only` names the one kind they hold on. */
 const CONTRAST_PAIRS = [
   {
     inks: ['ink', 'ink-secondary', 'ink-muted'].map(color),
@@ -101,12 +93,10 @@ const CONTRAST_PAIRS = [
   },
   { inks: [color('site-mark')], surfaces: [color('site-page')], minimum: 3, only: 'marketing' },
   { inks: ['ink', 'ink-2'].map(color), surfaces: APP_FILLS, minimum: 4.5, only: 'app' },
-  // The focus ring's 1px accent edge (AR-13) carries its 3:1 on every fill.
   { inks: [color('focus')], surfaces: APP_FILLS, minimum: 3, only: 'app' },
   {
     inks: ['ink', 'ink-2'].map(color),
     surfaces: ['state-hover', 'state-pressed', 'state-selected'].map(color),
-    // raised-2 is itself the hover fill on raised; no state tints it.
     over: ['ground', 'panel', 'raised'].map(color),
     minimum: 4.5,
     only: 'app',
@@ -189,7 +179,6 @@ const alphaOf = (text) => {
   return text.endsWith('%') ? Number(text.slice(0, -1)) / 100 : Number(text);
 };
 
-/** Six-digit hex, `rgb(r g b / a%)` or `oklch(L% C H / a%)` as `{ rgb, alpha }`. */
 function parseColour(value) {
   const text = String(value ?? '')
     .trim()
@@ -221,7 +210,6 @@ function contrastRatio(first, second) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-/** Source-over composite of a colour onto an opaque hex backdrop. */
 function composite(value, backdrop) {
   const colour = parseColour(value);
   if (colour?.alpha === 1) return toHex(colour.rgb);
@@ -232,7 +220,6 @@ function composite(value, backdrop) {
   );
 }
 
-/** Top-level rules as `{ selectors, body }`; nested blocks are skipped whole. */
 function topLevelRules(clean) {
   const rules = [];
   let cursor = 0;
@@ -256,7 +243,6 @@ function topLevelRules(clean) {
   return rules;
 }
 
-/** A rule body's own `--token: value;` declarations, skipping nested blocks. */
 function customProperties(body) {
   const segments = body.replace(/\{[^{}]*\}/g, ';').split(';');
   return segments.flatMap((segment) => {
@@ -288,7 +274,6 @@ export function paletteDeclarations(source, selector) {
   ]);
 }
 
-/** `oklch(from var(--token) l c h / a)`: the token's colour at a new alpha. */
 const RELATIVE = /^oklch\(\s*from\s+var\((--[\w-]+)\)\s+l\s+c\s+h\s*(?:\/\s*([\d.]+)%\s*)?\)$/;
 
 /**
@@ -347,7 +332,6 @@ export function paletteViolations(source) {
     : [`${TOKEN_CSS}: dark theme token mapping is missing`];
   for (const { name, layers, kind } of SCOPES) {
     const palette = resolvePalette(source, layers);
-    // The marketing scopes are website palettes too.
     const holds = (row) =>
       row.only === undefined ||
       row.only === kind ||

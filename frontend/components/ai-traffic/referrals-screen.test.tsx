@@ -70,7 +70,6 @@ describe('AiReferralsScreen', () => {
     );
     renderWithProviders(<AiReferralsScreen />, { projectSelection: { activeProject } });
 
-    // GA4 is connected in place rather than through Settings.
     expect(
       await screen.findByRole('region', { name: 'Connect Google Analytics 4' }),
     ).toBeInTheDocument();
@@ -133,7 +132,6 @@ describe('AiReferralsScreen', () => {
             ga4_landing_daily: [
               { ...day, day: '2026-07-20', excluded_hosts: 0 },
               { ...day, day: '2026-07-21', excluded_hosts: 0 },
-              // A day never imported carries no count of its own.
               { ...day, day: '2026-07-22', revision: null, excluded_hosts: 0 },
             ],
           },

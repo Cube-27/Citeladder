@@ -19,8 +19,6 @@ import {
 import { routePath } from '../../lib/navigation/route-path';
 import type { WorkerEnv as GeneratedEnv } from './worker-configuration';
 
-// Local Compose runs this Worker under `wrangler dev` over HTTP against the
-// API container; production never sets the binding.
 type WorkerEnv = GeneratedEnv & { LOCAL_WORKER_ORIGIN?: string };
 
 // Vite's build.assetsDir; unhashed public/ files (for example the theme
@@ -48,8 +46,6 @@ function decorate(result: Response, html = false, immutable = false): Response {
   return new Response(result.body, { status: result.status, headers });
 }
 
-// The API host's MCP and OAuth path families (`/mcp`, `/authorize`,
-// `/.well-known`, ...), which this host never serves.
 const API_HOST_ROOTS = [...new Set([...MCP_API_HOST_PATHS].map((path) => path.split('/')[1]))].map(
   (segment) => `/${segment}`,
 );
@@ -101,8 +97,6 @@ async function dynamicRoute(
   env: WorkerEnv,
   path: string,
 ): Promise<Response | null> {
-  // Signed payment delivery, machine routes (API host) and operational
-  // endpoints have another owner. Reject them before a proxy can create a second host.
   if (
     /^\/api\/v1\/billing\/webhooks(?:\/|$)/.test(path) ||
     /^\/v1(?:\/|$)/.test(path) ||
@@ -110,7 +104,6 @@ async function dynamicRoute(
   ) {
     return response('Not found.', 404);
   }
-  // The browser API and MCP consent; consent is a page and its form post only.
   if (
     isIngressPath(path) &&
     (path !== MCP_CONSENT_PATH || ['GET', 'POST'].includes(request.method))
@@ -148,7 +141,6 @@ async function staticOrNavigation(
     const html = asset.headers.get('content-type')?.includes('text/html') ?? false;
     return decorate(asset, html, !html && isFingerprinted(path));
   }
-  // HEAD probes (uptime checks, `curl -I`) rarely send an HTML Accept header.
   const document =
     request.method === 'HEAD' || request.headers.get('accept')?.includes('text/html');
   if (isResource(path) || !document) {

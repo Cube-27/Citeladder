@@ -101,7 +101,6 @@ describe('product Worker routing', () => {
         ...isolation,
         ...reporting,
       });
-      // An MCP client's OAuth window signs in on its way to consent and must keep its opener.
       for (const path of ['/login', '/register/', '/mcp/oauth/consent']) {
         expect(
           (await handleAppRequest(request(path), env)).headers.get('cross-origin-opener-policy'),
@@ -221,7 +220,6 @@ describe('product Worker routing', () => {
     try {
       const response = await handleAppRequest(local, {
         ...env,
-        // Local Compose overrides the generated production upstream.
         ORIGIN_UPSTREAM: 'http://api-service:8100' as typeof env.ORIGIN_UPSTREAM,
         LOCAL_WORKER_ORIGIN: 'true',
       });

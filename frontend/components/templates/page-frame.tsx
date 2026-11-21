@@ -19,43 +19,18 @@ const Breadcrumb = lazy(() =>
   import('@/components/ui/breadcrumb').then(({ Breadcrumb }) => ({ default: Breadcrumb })),
 );
 
-/** The slots every shell template shares (top to bottom). */
 export type PageFrameSlots = Readonly<{
-  /** The record's name or a screen's own title; else the route's manifest title. */
   title?: string;
-  /** The steps above this page; else its route's collection. Empty: a top-level page. */
   trail?: readonly Crumb[];
-  /** The page's own crumb when it differs from the title (a short path, a logo). */
   crumb?: Pick<Crumb, 'label' | 'mark'>;
-  /** The header's own actions: secondary first, then at most one primary. */
   actions?: ReactNode;
-  /** The tab strip: the page's sub-views. */
   tabs?: ReactNode;
-  /** The toolbar strip: view switch, search and filters; the count and one action at its end. */
   filters?: ReactNode;
 }>;
 
-/** A strip across the panel's gutters, its content on the page column's edges. */
 const STRIP =
   'border-rule flex min-w-0 border-b px-[calc(var(--page-pad-inline)+var(--page-start,0px))]';
 
-/**
- * The anatomy every shell page shares (docs/design.md, Standard layouts):
- * the page header, then the optional tab strip (36) and toolbar strip (one
- * line of 28 controls, 8 above and below), each closed by a rule across the
- * whole panel and sticky under the header, then the body, 20 below the last
- * rule. A page passes content into the slots and sets no geometry of its own.
- * The header's title is the page's place: its nav section, then the title,
- * or for a record under its collection the trail, with the record's name as
- * the h1 above the strips. No page has a back arrow. The header's menu
- * button, search and "Ask agent" come from the shell and keep the panel's
- * right edge on every page. A narrow route (its manifest `width`) centres its
- * strips' content and body in `max-w-thread` (1040), a compact one in
- * `--container-prose` (720), and starts the header's title on that column's
- * edge; `fill` keeps a workbench across the panel. Every page ends 24
- * below its content, so one that fits never scrolls; a fitted body (a
- * thread, a workbench, steps) fills the panel and scrolls inside itself.
- */
 export function PageFrame({
   title,
   trail,
@@ -123,10 +98,6 @@ export function PageFrame({
   );
 }
 
-/**
- * A record page's h1, above its strips. Its height is published, so a fitted
- * page (a workbench, the prompt builder) still fills the window exactly.
- */
 function PageHeading({
   title,
   strips,
@@ -145,11 +116,6 @@ function PageHeading({
   );
 }
 
-/**
- * The tab strip, then the toolbar strip, pinned together under the header
- * (owner, 2026-11-19: "the tabs and filters rows should be sticky"). Their
- * height is published, so in-page scrolling and focus clear them.
- */
 function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>) {
   const strips = useRef<HTMLDivElement>(null);
   usePublishedHeight(strips, '--strips-block-size');
@@ -160,7 +126,6 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
       className="bg-panel z-sticky sticky top-[var(--masthead-block-size,var(--masthead-height))] -mx-[var(--page-pad-inline)] flex min-w-0 flex-col"
     >
       {tabs ? (
-        // The tabs fill the strip, so the current tab's mark sits on its rule.
         <div data-page-band="tabs" className={cn(STRIP, 'h-[var(--page-tabs-height)] items-end')}>
           {tabs}
         </div>
@@ -179,7 +144,6 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
 
 type PageWidth = ReturnType<typeof routeWidth>;
 
-/** A narrow page's column: its record heading and body, centred in the panel. */
 const PAGE_COLUMN: Record<PageWidth, string | false> = {
   full: false,
   narrow: 'max-w-thread mx-auto w-full',
@@ -187,14 +151,12 @@ const PAGE_COLUMN: Record<PageWidth, string | false> = {
   compact: 'mx-auto w-full max-w-[var(--container-prose)]',
 };
 
-/** Where the header's title and the strips' content start: on the page column's left edge. */
 const PAGE_START: Record<PageWidth, string | false> = {
   full: false,
   narrow: '[--page-start:max(0px,calc((100cqw_-_var(--container-thread))/2))]',
   compact: '[--page-start:max(0px,calc((100cqw_-_var(--container-prose))/2))]',
 };
 
-/** The body's sections, 24 apart, on the one left edge. */
 export function PageSections({
   className,
   children,
@@ -210,8 +172,6 @@ export function PageSections({
   );
 }
 
-/** The route's title, announced by the shell when a page overrides it. */
-/** A section the title or trail already names ("Agent › Agent") says nothing. */
 function mastheadSection(section: Readonly<{ title: string }>, firstName: string) {
   return section.title === firstName ? null : section;
 }

@@ -1,17 +1,3 @@
-/**
- * The contracting entity and the shared model for CiteLadder's legal pages.
- *
- * CiteLadder is a product, not a company. Its policies are CiteLadder's own
- * documents, published on this domain, but the entity every one of them binds
- * is the parent company, Cube27 IT Private Limited. `PARENT_COMPANY` is the one
- * record of that entity; policy text and chrome read it rather than restating
- * a name or an address.
- *
- * Owner-supplied fields that are not yet approved stay empty and are omitted
- * from the rendered pages rather than invented. The open items are tracked in
- * `docs/operations/legal-decisions.md`.
- */
-
 export const PARENT_COMPANY = {
   name: 'Cube27',
   legalName: 'Cube27 IT Private Limited',
@@ -22,17 +8,12 @@ export const PARENT_COMPANY = {
   email: 'contact@cube27.com',
 } as const;
 
-/**
- * Details the policies need but the owner has not yet approved. An empty
- * string hides the line it would fill; nothing renders a placeholder.
- */
 export const LEGAL_ENTITY = {
   registrationNumber: 'CIN U72900PN2020PTC194984',
   grievanceContact: '',
   phone: '',
 } as const;
 
-/** "Cube27 IT Private Limited, operating CiteLadder, <address>". */
 export const OPERATOR_LINE = `${PARENT_COMPANY.legalName}, operating CiteLadder, ${PARENT_COMPANY.address}`;
 
 type LegalSection = {
@@ -41,7 +22,6 @@ type LegalSection = {
   paragraphs?: readonly string[];
   bullets?: readonly string[];
   note?: string;
-  /** A reference table; the first cell of each row is its row header. */
   table?: {
     caption: string;
     headings: readonly string[];
@@ -49,18 +29,11 @@ type LegalSection = {
   };
 };
 
-/**
- * A policy's page record (see PageRecord) and its content. The published
- * list, in footer order, is `LEGAL_DOCUMENTS` (legal-documents.ts).
- */
 export type LegalDocument = {
   path: `/${string}`;
-  /** The browser title, such as "Terms of Service · CiteLadder". */
   metaTitle: string;
-  /** When the document was last revised (not a legal effective date): its "Last updated" line and sitemap <lastmod>. */
   updated: string;
   title: string;
-  /** The name in the footer and the policies rail, when it is not the title. */
   navLabel?: string;
   description: string;
   sections: readonly LegalSection[];

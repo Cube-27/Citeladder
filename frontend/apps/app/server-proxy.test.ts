@@ -3,7 +3,6 @@ import { createServerProxy } from './server-proxy';
 
 const PROJECT = '/api/v1/projects/00000000-0000-4000-8000-000000000000';
 
-/** The origin Vite proxies `url` to: the first key, in insertion order, that matches. */
 function upstream(url: string): string | undefined {
   const table = createServerProxy('http://api-service.test');
   const key = Object.keys(table).find((entry) => new RegExp(entry).test(url));
@@ -37,7 +36,6 @@ describe('dev server proxy', () => {
       '/apix',
       '/tokens',
       '/mcpx',
-      // MCP and its OAuth endpoints live on the API host, never the app origin.
       '/mcp',
       '/mcp/register',
       '/token?grant=1',

@@ -73,7 +73,6 @@ async function seed() {
   taskIds.push(...tasks.map((task) => task.id));
   return { ...t, auditId, tasks };
 }
-/** One task's prompt run, held at admission: spent, and still held. */
 async function runs(taskId: string) {
   const rows = await db
     .selectFrom('consumable_ledger')
@@ -156,7 +155,6 @@ describe('audit recovery against PostgreSQL', () => {
       .where('id', '!=', task.id)
       .execute();
     const [stale] = await queue.claim('worker', 1, scope);
-    // The stale slot's heartbeat stalled past the lease; maintenance reclaims it.
     await db
       .updateTable('audit_tasks')
       .set({ lease_expires_at: sql<Date>`clock_timestamp() - interval '1 second'` })
@@ -208,7 +206,6 @@ describe('audit recovery against PostgreSQL', () => {
       .where('id', '=', task.id)
       .execute();
     for (let reclaim = 0; reclaim < 3; reclaim++) {
-      // The polling process died holding the lease.
       await db
         .updateTable('audit_tasks')
         .set({
@@ -264,7 +261,6 @@ describe('audit recovery against PostgreSQL', () => {
         parents.push(auditId);
       });
     const reclaimed = await Promise.all([maintenance.runOnce(at), maintenance.runOnce(at)]);
-    // Concurrent SKIP LOCKED passes may defer a sibling task while its audit is locked.
     reclaimed.push(await maintenance.runOnce(at));
     expect(reclaimed.reduce((a, b) => a + b, 0)).toBe(3);
     const tasks = await db
@@ -278,7 +274,6 @@ describe('audit recovery against PostgreSQL', () => {
       provider_poll_count: 0,
       lease_owner: null,
     });
-    // A paid lap counts toward the poll ceiling, so a receipt save that keeps failing ends.
     expect(tasks.find((row) => row.id === t.tasks[1]!.id)).toMatchObject({
       status: 'submission_uncertain',
       attempt_count: 3,

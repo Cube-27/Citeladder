@@ -1,11 +1,3 @@
-/**
- * Project themes: the buyer-facing themes perception classifies each answer's
- * aspects against (AV-27, AV-39). Onboarding research saves at most its
- * configured few; people add, rename and delete them without a limit. Names
- * are unique per project case-insensitively and never the fallback's name.
- * Aspects keep a theme's id, so a rename shows everywhere and a deleted
- * theme's past aspects read as the fallback.
- */
 import { randomUUID } from 'node:crypto';
 
 import type { ProjectTheme } from '@citeladder/contracts/project';
@@ -22,14 +14,10 @@ import type { ProjectScope } from './brand-profile.ts';
 
 const limits = policy.perception.project_themes;
 
-/** A theme or objection group name as stored: spaces collapsed, trimmed. */
 export const cleanName = (name: string) => name.replaceAll(/\s+/gu, ' ').trim();
-/** The one way perception, probe labelling and research compare names: case and spacing aside. */
 export const nameKey = (name: string) => cleanName(name).toLowerCase();
-/** Each row's id by its name key. */
 export const idsByName = (rows: readonly { id: string; name: string }[]) =>
   new Map(rows.map((row) => [nameKey(row.name), row.id]));
-/** A stored name from a request, so two names never read as one. */
 export const nameSchema = (maxChars: number) =>
   z.string().transform(cleanName).pipe(z.string().min(1).max(maxChars));
 
@@ -59,7 +47,6 @@ async function writing<T>(write: () => Promise<T>): Promise<T> {
   }
 }
 
-/** The project's themes in display order. */
 export async function listThemes(db: Kysely<DB>, scope: ProjectScope): Promise<ProjectTheme[]> {
   const rows = await db
     .selectFrom('project_themes')
@@ -73,7 +60,6 @@ export async function listThemes(db: Kysely<DB>, scope: ProjectScope): Promise<P
   return rows.map(view);
 }
 
-/** A person's theme, after the project's others. */
 export function createTheme(db: Database, scope: ProjectScope, input: ThemeRequest) {
   const now = new Date();
   return writing(async () =>
@@ -128,7 +114,6 @@ export async function deleteTheme(db: Database, scope: ProjectScope & { themeId:
   if (!result.numDeletedRows) throw notFound('Theme');
 }
 
-/** Research's themes for a project created in the caller's transaction, in research order. */
 export async function saveResearchThemes(
   trx: Kysely<DB>,
   scope: ProjectScope,

@@ -255,7 +255,6 @@ it('keeps identity fixed while retrying malformed provisional competitors', asyn
     ['competitor_suggestions', 'succeeded'],
   ]);
   expect(result.snapshot.field_evidence_refs).toEqual({ description: [ref] });
-  // Company facts, long or repeated names, the fallback and low confidence go; at most 8 stay.
   expect(result.snapshot.themes).toEqual([
     'Price',
     'Delivery speed',
@@ -423,7 +422,6 @@ it("ranks a retailer's departments above customer-service pages under services o
     'Store Finder',
     'Click & Collect',
   ]);
-  // A gift-card seller's own product pages still count as its offerings.
   expect(
     labels([
       ['/products/gift-cards', 'Gift Cards'],
@@ -562,7 +560,6 @@ describe('identity deadline', () => {
             { title: 'Acme', url: 'https://acme.com/about', snippet: 'Analytics services' },
           ],
         });
-  /** The real gateway over a provider whose identity answer takes `identityMs` on the fake clock. */
   function slowIdentityGateway(identityMs: number) {
     const replies = [
       { status: 'ready', profile: { category: 'Analytics' }, signature: { category: 'Analytics' } },

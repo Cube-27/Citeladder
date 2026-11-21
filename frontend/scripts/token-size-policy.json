@@ -30,14 +30,9 @@
     { "glob": "frontend/services/api/src/mcp/write-tools.ts", "reason": "MCP write-tool registry" }
   ],
   "baseline": {
-    "frontend/services/api/src/commerce/shelf.ts": 6222,
-    "frontend/services/api/src/content-gaps/refresh.ts": 6436,
-    "frontend/services/api/src/entitlements/ledger.ts": 6952,
-    "frontend/services/api/src/mcp/evidence-site.ts": 6601,
-    "frontend/services/api/src/routes/integrations.ts": 6740,
-    "frontend/services/api/src/site-health/analysis/facts.ts": 6303,
-    "frontend/services/api/src/site-health/frontier.ts": 6558,
-    "frontend/services/api/src/workers/integration-worker.ts": 6380,
-    "frontend/services/api/src/workspaces/account-manager.ts": 6937
+    "frontend/services/api/src/entitlements/ledger.ts": 6005,
+    "frontend/services/api/src/routes/integrations.ts": 6376,
+    "frontend/services/api/src/workers/integration-worker.ts": 6007,
+    "frontend/services/api/src/workspaces/account-manager.ts": 6580
   }
 }

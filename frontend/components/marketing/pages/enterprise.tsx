@@ -6,12 +6,6 @@ import { columnsFor } from '../sections/site-parts';
 import { CtaBand } from '../sections/steps-faq-cta';
 import { CatalogFrame } from '../screens/screen-catalog';
 
-/**
- * Enterprise (`/enterprise`). Every statement here describes how the product
- * is built today; there are no certifications, customers or commitments that
- * an agreement has not set.
- */
-
 const EVIDENCE_POINTS = [
   'Raw answers stored before any metric',
   'Scoring rules open source under AGPL-3.0',
@@ -93,7 +87,6 @@ const AGREEMENT = [
   },
 ] as const;
 
-/** The evidence trail: short copy beside the sources an auditor opens. */
 function EvidenceSplit() {
   return (
     <FeatureSplit

@@ -17,12 +17,6 @@ const FAILURE_TONE: Record<FailureOutcome, NoticeTone> = {
   unknown: 'info',
 };
 
-/**
- * An unanswered turn, in place of a reply: how it ended, how many attempts
- * ended so and when the last did, then the run's own explanation. Only the
- * latest turn's outcome is known, so only it is an alert (announced once, when
- * it appears or another attempt joins it); an earlier one is a quiet note.
- */
 export function TurnFailure({
   failures,
   outcome,

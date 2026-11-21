@@ -1,10 +1,3 @@
-/**
- * The AI-credit charge of a managed analysis (B40, B41). Confirmation held the
- * estimate; once the analysis ends it is charged the DataForSEO cost of every
- * request that succeeded (its estimate when DataForSEO reports none), never
- * above the hold, and the rest is released. A failed, refused or unanswered
- * request is never billed to the customer.
- */
 import type { NotNull } from 'kysely';
 import { settleProviderCredits } from '../billing/metering.ts';
 import type { Database } from '../db/database.ts';
@@ -14,10 +7,8 @@ import { si, usdUnits } from './requests.ts';
 const logger = getLogger('workers.research');
 const ENDED = ['succeeded', 'failed', 'partial', 'cancelled', 'uncertain'];
 
-/** A stored USD amount as whole micro-USD, rounded up. */
 const microusd = (value: string) => Math.ceil(usdUnits(value) / 100);
 
-/** Settles one ended analysis's hold and returns the run; null while it runs, a request is in flight, or it is settled. */
 export function settleResearchCharge(
   db: Database,
   run: { workspaceId: string; runId: string },
@@ -57,7 +48,6 @@ export function settleResearchCharge(
       )
     )
       return null;
-    // Only a request that succeeded is billed; a failed or unanswered one is free.
     const cost = sent
       .filter((call) => call.sanitized_response !== null && call.status !== 'failed')
       .reduce(
@@ -76,7 +66,6 @@ export function settleResearchCharge(
   });
 }
 
-/** Settles ended managed analyses whose holds are still open; the research-recovery lane runs it. */
 export async function settleResearchCharges(db: Database, at = new Date(), canAdmit = () => true) {
   if (!canAdmit()) return 0;
   const open = await db
@@ -91,7 +80,6 @@ export async function settleResearchCharges(db: Database, at = new Date(), canAd
   let settled = 0;
   for (const run of open) {
     if (!canAdmit()) break;
-    // One run per transaction, each under its own lock; a failing run never stops the batch.
     const key = { workspaceId: run.workspace_id, runId: run.id };
     try {
       if (await settleResearchCharge(db, key, at)) settled++; // NOSONAR -- One run per transaction, each under its own lock.

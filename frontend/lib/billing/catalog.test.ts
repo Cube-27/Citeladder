@@ -56,8 +56,6 @@ describe('headlinePrice', () => {
     });
   });
 
-  // The central rule of this release: unpriced is NOT free. A funded headline
-  // must never resolve to a number, least of all zero.
   it('returns unavailable — never zero — when the managed price is null', () => {
     const result = headlinePrice(plan({ unavailable_reason: 'funded_not_priced' }), 'funded');
     expect(result).toEqual({ kind: 'unavailable', reason: 'funded_not_priced' });
@@ -133,8 +131,6 @@ describe('comparisonRows', () => {
 
     expect(rows.map((row) => row.key)).toEqual(['project_slots', 'crawl_logs']);
     expect(rows[0]?.values.tier_2?.value).toBe(5);
-    // A plan that does not publish a key has no value for it — the caller
-    // renders that as "not included", never as zero.
     expect(rows[1]!.values.tier_1).toBeUndefined();
   });
 });

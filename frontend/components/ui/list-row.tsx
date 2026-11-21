@@ -17,37 +17,15 @@ import { Check, ChevronDown } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-/**
- * The one selected-row treatment for a selectable list beside its detail
- * (catalog tree, issue list).
- *
- * Selected takes the shared selected tint and the foreground ink, the same
- * filled face as a selected tab, segment or navigation row (owner,
- * 2026-11-04: active states are buttons, not marks). Unselected rows take the
- * neutral hover and pressed tints. The state itself must also be in the markup — the caller
- * sets `aria-current` (navigation-like lists), `aria-selected` (a
- * listbox/grid option) or `aria-pressed` (a toggle); colour is never the only
- * signal.
- *
- * Layout (padding, gap, grid) stays with the caller: rows differ in anatomy,
- * not in state.
- */
 function listRowClasses({ selected = false }: Readonly<{ selected?: boolean }> = {}) {
   return cn(
     'relative rounded-control transition-[background-color,color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
-    // Three states, three overlays: selected never looks hovered.
     selected
       ? 'overlay-selected text-ink'
       : 'text-ink-2 hover:overlay-hover hover:text-ink active:overlay-pressed',
   );
 }
 
-/**
- * One choice in a list where pressing the row IS the commit (a property to
- * import, an account to use): a title, one caption line, and at the end a
- * spinner while the choice is being applied or the check once it is. The row
- * owns its padding (12 across, 8 down) and the pressed state.
- */
 export function OptionRow({
   title,
   caption,
@@ -80,23 +58,15 @@ export function OptionRow({
         {caption ? <ClampText className="type-caption tabular-nums">{caption}</ClampText> : null}
       </span>
       {pending ? <Spinner className="text-ink-2" /> : null}
-      {/* Selected is a mark that is not colour: the check, in ink. */}
       {selected && !pending ? <Icon icon={Check} className="text-ink" /> : null}
     </Pressable>
   );
 }
 
-/** A ruled list of `DisclosureRow`s. */
 export function DisclosureList({ children }: Readonly<{ children: ReactNode }>) {
   return <ul className="divide-rule grid min-w-0 divide-y">{children}</ul>;
 }
 
-/**
- * A row that opens in place (an issue on a page): the title, then its facts
- * inline, 40 tall, with a chevron at the end and `aria-expanded`. Open, its
- * body sits under it on `well` (12 down, 16 across, radius 6). It bleeds 12
- * past its list, so every row's text starts on one edge.
- */
 export function DisclosureRow({
   title,
   meta,
@@ -104,7 +74,6 @@ export function DisclosureRow({
 }: Readonly<{
   title: ReactNode;
   meta: ReactNode;
-  /** Rendered only while open. */
   children: ReactNode;
 }>) {
   const [open, setOpen] = useState(false);
@@ -118,7 +87,6 @@ export function DisclosureRow({
         className={cn(listRowClasses(), pressableRowClasses, 'min-h-10')}
       >
         <span className="flex min-w-0 flex-1 items-center gap-3">
-          {/* The title gives way (its whole text in a tooltip); the severity never does. */}
           <ClampText className={textRole('label', 'text-ink min-w-0')}>{title}</ClampText>
           <span className={textRole('caption', 'text-ink-2 flex shrink-0 items-center gap-3')}>
             {meta}
@@ -140,7 +108,6 @@ export function DisclosureRow({
   );
 }
 
-/** A tree list: its `TreeItem`s and `TreeItemForm`s, 2 apart. */
 export function TreeList({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
     <ul aria-label={label} className="flex min-w-0 flex-col gap-0.5">
@@ -149,14 +116,6 @@ export function TreeList({ label, children }: Readonly<{ label: string; children
   );
 }
 
-/**
- * A tree list's row (topics and their subtopics, in the dialog that manages
- * them): one control tall — the label, truncated with the whole name behind
- * a tooltip, an optional count, and icon actions (`IconButton`s) at the
- * row's end. A nested item (one level deep) is indented 12 from its parent.
- * The row owns the height, the indent and the gaps; the page passes names,
- * counts and actions.
- */
 export function TreeItem({
   label,
   count,
@@ -186,15 +145,9 @@ export function TreeItem({
   );
 }
 
-/** A tree option's indent per depth, 16 a level (category paths stop at six levels). */
 const TREE_INDENT = ['', 'ms-4', 'ms-8', 'ms-12', 'ms-16', 'ms-20'] as const;
 const treeIndent = (depth: number) => TREE_INDENT[Math.min(depth, TREE_INDENT.length - 1)];
 
-/**
- * A tree list's row that is a box to tick (a proposed category to keep):
- * the checkbox and its label, an optional badge after it, indented 16 a
- * level of `depth`.
- */
 export function TreeCheckOption({
   label,
   checked,
@@ -225,10 +178,6 @@ export function TreeCheckOption({
   );
 }
 
-/**
- * A tree item's name edited in place: the field and its submit on one row,
- * at the item's own indent so the edit stays where the name was.
- */
 export function TreeItemForm({
   nested = false,
   onSubmit,
@@ -249,13 +198,6 @@ export function TreeItemForm({
   );
 }
 
-/**
- * A two-line item in a list its card frames (a data source and its
- * property), one grid: a 20px icon, the text column (the title, which wraps
- * and never cuts, over one caption line), the item's status, then its
- * actions; 12 down, flush with the column's edges, 12 between parts. Below a 640px list the
- * actions wrap to a third line under the text, left-aligned with it.
- */
 export function ItemRow({
   icon,
   title,

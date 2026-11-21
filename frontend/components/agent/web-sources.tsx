@@ -5,10 +5,6 @@ import { textRole } from '@/components/ui/typography';
 import { type AgentWebSource } from '@/lib/api/agent';
 import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
 
-/**
- * Pages a web search returned, kept apart from the CiteLadder records a reply
- * cites: they are outside observations, not project data.
- */
 export function WebSources({ sources }: Readonly<{ sources: readonly AgentWebSource[] }>) {
   if (sources.length === 0) return null;
   return (

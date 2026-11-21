@@ -43,11 +43,9 @@ const prompt = {
 
 type Item = ReturnType<typeof fix> | typeof prompt;
 
-/** The project's New Actions as the server holds them; a bulk Accept moves rows out. */
 function serve() {
   const state = {
     aeo: [
-      // A cohort naming no URL is the whole site; an unread one is unknown.
       fix(1, 'aeo', 0),
       fix(2, 'aeo', null),
       ...Array.from({ length: 10 }, (_, i) => fix(i + 3, 'aeo')),
@@ -139,7 +137,6 @@ describe('Actions', () => {
     renderActions();
 
     expect(await screen.findByRole('table', { name: '12 actions' })).toBeVisible();
-    // The tree's levels, open then closed, top to bottom; the toolbar's menus say no count.
     const levels = (expanded: boolean) =>
       screen
         .getAllByRole('button', { expanded })

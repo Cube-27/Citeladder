@@ -41,10 +41,8 @@ test('guides and local anchors resolve, and missing pages return 404', async ({ 
       .locator('nav.cl-docs-side a')
       .evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).pathname));
   const guideRoutes = await railRoutes();
-  // The API section has its own rail; its endpoint groups start closed.
   await page.goto('/api/');
   const routes = [...new Set([...guideRoutes, ...(await railRoutes())])];
-  // Generated pages, such as a schema's, are reached by links rather than the rail.
   const sitemap = await (await page.request.get('/sitemap.xml')).text();
   const registered = new Set([
     ...routes,
@@ -52,8 +50,6 @@ test('guides and local anchors resolve, and missing pages return 404', async ({ 
       (match) => new URL(match[1] ?? '').pathname,
     ),
   ]);
-  // One visit per route records its rendered ids, so anchors are checked
-  // against them instead of re-navigating to every hash link.
   const ids = new Map<string, Set<string>>();
   const links = new Set<string>();
   for (const route of routes) {
@@ -147,7 +143,6 @@ test('contents omit step numbering without changing article anchors and follow t
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/quickstart/');
   const contents = page.getByRole('navigation', { name: 'On this page' });
-  // The quickstart's sections are numbered steps; the second is below the fold.
   const link = contents.getByRole('link').nth(1);
   const hash = (await link.getAttribute('href')) ?? '';
   const label = await link.innerText();

@@ -13,28 +13,18 @@ import { textRole } from '@/components/ui/typography';
 import { ABSENCE_MARK, type Formatted, isAbsent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-/** The plot heights a chart may take: 160, 240 and 320. */
 const FRAME_HEIGHT = {
   sm: 'min-h-[var(--chart-height-sm)]',
   md: 'min-h-[var(--chart-height-md)]',
   lg: 'min-h-[var(--chart-height-lg)]',
 } as const satisfies Record<ChartHeight, string>;
 
-/**
- * ChartFrame — the box every chart and every state standing in for it share
- *: the height role as a floor, so loading, a
- * read error or an empty selection hold the plot's footprint, and the text
- * summary assistive technology reads instead of the drawing. A drawing sized
- * by its own rows (a distribution of MeterRows, an AreaChart of one
- * measurement) passes no `height`.
- */
 export function ChartFrame({
   height,
   summary,
   children,
 }: Readonly<{
   height?: ChartHeight;
-  /** One or two sentences: what the chart shows and where it ends. */
   summary?: string;
   children: ReactNode;
 }>) {
@@ -49,7 +39,6 @@ export function ChartFrame({
   );
 }
 
-/** A series' key mark: a 12 × 2 rule in its ink, with its marker shape when it has one. */
 function SeriesSwatch({ tone, shape }: Readonly<{ tone: SeriesTone; shape?: MarkerShape }>) {
   if (shape)
     return (
@@ -79,25 +68,18 @@ function SeriesSwatch({ tone, shape }: Readonly<{ tone: SeriesTone; shape?: Mark
 
 export type KeyEntry = Readonly<{
   name: string;
-  /** The brand's logo, drawn between the swatch and the name. */
   mark?: ReactNode;
   tone: SeriesTone;
   shape?: MarkerShape;
   value?: Formatted;
 }>;
 
-/** A key's latest value; an absence is the muted mark (the summary and table say it in words). */
 function KeyValue({ value }: Readonly<{ value: Formatted }>) {
   if (isAbsent(value))
     return <span className="type-caption text-ink-2 shrink-0">{ABSENCE_MARK}</span>;
   return <span className="type-caption text-ink shrink-0 tabular-nums">{value}</span>;
 }
 
-/**
- * A chart's key, only when end labels would collide: one wrapping row of
- * swatch, name and latest value. Hidden from assistive technology, which
- * reads the chart's summary and table.
- */
 export function ChartKey({
   entries,
   eventsLabel,
@@ -135,10 +117,6 @@ const TIP_WIDTH = 216;
 const TIP_GAP = 16;
 const TIP_INSET = 8;
 
-/**
- * Beside the crosshair, flipped to its left where it would run off the frame,
- * and never closer than 8 to either edge; on whole pixels.
- */
 export function chartTipLeft(x: number, frameWidth: number) {
   const right = x + TIP_GAP;
   const left = right + TIP_WIDTH > frameWidth - TIP_INSET ? x - TIP_GAP - TIP_WIDTH : right;
@@ -146,7 +124,6 @@ export function chartTipLeft(x: number, frameWidth: number) {
   return Math.round(Math.min(max, Math.max(TIP_INSET, left)));
 }
 
-/** The tooltip: a sheet with the point's label and one tabular value per series. */
 export function ChartTipSheet({
   title,
   x,
@@ -156,7 +133,6 @@ export function ChartTipSheet({
   note,
 }: Readonly<{
   title: string;
-  /** The crosshair's position. */
   x: number;
   frameWidth: number;
   top: number;
@@ -186,10 +162,6 @@ export function ChartTipSheet({
   );
 }
 
-/**
- * Every value of a chart, and every drawn marker, for a reader who cannot see
- * the plot: one row per series, values right-aligned under right-aligned heads.
- */
 export function ChartTable({
   label,
   columns,

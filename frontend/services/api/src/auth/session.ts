@@ -1,8 +1,3 @@
-/**
- * Session verification: an HS256 JWT in the HttpOnly session cookie, whose
- * `ver` claim must equal the user's `session_version`. Issuance belongs to the
- * auth service.
- */
 import type { Context, MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { errors as joseErrors, jwtVerify } from 'jose';
@@ -22,7 +17,6 @@ import {
 
 type SessionClaims = Record<string, unknown>;
 
-/** The account fields the session read already holds, enough for `/auth/me`. */
 type SessionProfile = {
   id: string;
   email: string;
@@ -92,10 +86,6 @@ function readTarget(c: Context<AppEnv>, rule: MembershipRule): TargetRead {
   }
 }
 
-/**
- * The session's user and, with a target, its membership, in one statement.
- * Membership columns are null when the user holds no such membership.
- */
 async function sessionRow(db: Database, userId: string, target: MembershipTarget | null) {
   const user = db.selectFrom('users').select(USER_COLUMNS).where('users.id', '=', userId);
   if (target === null) {
@@ -112,13 +102,6 @@ async function sessionRow(db: Database, userId: string, target: MembershipTarget
     .executeTakeFirst();
 }
 
-/**
- * Prove the session and, given a membership rule, resolve the workspace in the
- * same read: one statement per request. Refusals keep their order: the
- * session (401), the request's target (400/422), membership (404), then the
- * rule's capability (403). The resolved user and workspace live on the request
- * context for every handler; nothing is kept across requests.
- */
 export function sessionUser(
   config: ServiceConfig,
   db: Database,
@@ -136,8 +119,6 @@ export function sessionUser(
 
     const target = membership && readTarget(c, membership);
     const row = await sessionRow(db, userId, target?.ok ? target.target : null);
-    // A decoded token naming no row is a stale session (e.g. after a local
-    // database reset), not a disabled account.
     if (row === undefined) throw unauthorized('Session no longer valid');
     if (!row.is_active) throw unauthorized('Inactive user');
     if (requiresEmailVerification(row)) throw unauthorized('Email verification required');

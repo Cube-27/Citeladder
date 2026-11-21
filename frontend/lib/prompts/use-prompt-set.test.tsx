@@ -116,7 +116,6 @@ it('reads every set as one library and adds to the main brand set, not the newes
     id: COMMERCE,
     name: 'Commerce Buyer Prompts',
     kind: 'commerce',
-    // Older than the brand sets, yet listed after them.
     created_at: '2025-06-01T00:00:00Z',
   };
   const HOLIDAY = '66666666-6666-4666-8666-666666666666';
@@ -132,7 +131,6 @@ it('reads every set as one library and adds to the main brand set, not the newes
     name: 'Holiday',
     created_at: '2026-08-01T00:00:00Z',
   };
-  // The API lists the newest set first.
   vi.spyOn(promptsApi, 'listPromptSets').mockResolvedValue(makeSetList([holiday, brand, commerce]));
   const create = vi.spyOn(promptsApi, 'createPromptSet');
   function Library() {

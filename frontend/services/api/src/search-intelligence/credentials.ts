@@ -1,8 +1,3 @@
-/**
- * Which DataForSEO account a Search Intelligence analysis runs on (B40): a
- * managed workspace researches on the platform's account and pays in AI
- * credits; a BYOK workspace uses its own connection and is not charged.
- */
 import type { CredentialMode } from '@citeladder/contracts/billing';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { Selectable } from 'kysely';
@@ -19,7 +14,6 @@ type Connection = Selectable<ProviderConnections>;
 type Run = Selectable<SearchIntelligenceRuns>;
 export type CredentialSource = 'byok' | 'platform';
 
-/** The workspace's own DataForSEO connections a review may use: active, tested ok and keyed. */
 export function workspaceConnections(db: Database, workspace: WorkspaceScope) {
   return workspace
     .selectFrom(db, 'provider_connections')
@@ -33,7 +27,6 @@ export function workspaceConnections(db: Database, workspace: WorkspaceScope) {
     .execute();
 }
 
-/** The platform's DataForSEO connection, when one is configured, tested and unpaused. */
 export function platformConnection(db: Database, at = new Date()) {
   return db
     .selectFrom('provider_connections as c')
@@ -51,7 +44,6 @@ export function platformConnection(db: Database, at = new Date()) {
     .executeTakeFirst();
 }
 
-/** The connection a new review freezes, by the workspace's plan; refused when none is usable. */
 export async function reviewConnection(
   db: Database,
   workspace: WorkspaceScope,
@@ -79,7 +71,6 @@ export async function reviewConnection(
   return { connection, source: 'byok' };
 }
 
-/** The run's frozen connection while it is still the one reviewed; undefined once it changed. */
 export function runConnection(db: Database, run: Run) {
   return db
     .selectFrom('provider_connections as c')
@@ -96,7 +87,6 @@ export function runConnection(db: Database, run: Run) {
     .$if(run.credential_source === 'platform', (query) =>
       query
         .where('w.is_system', '=', true)
-        // A paused platform connection sends nothing until its pause ends.
         .where((eb) =>
           eb.or([eb('c.paused_at', 'is', null), eb('c.pause_until', '<=', new Date())]),
         ),

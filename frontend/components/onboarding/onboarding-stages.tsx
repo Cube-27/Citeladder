@@ -20,10 +20,8 @@ import { Notice } from '@/components/ui/notice';
 
 const MARKET_OPTIONS = [{ value: 'GLOBAL', label: 'Global' }, ...MARKET_COUNTRIES];
 
-/** Each stage's heading; focus moves here when the stage changes. */
 export const STAGE_HEADING_ID = 'onboarding-stage-heading';
 
-/** A stage's footer: the way back (none on the first step) and its one ink action. */
 export type StageActions = Readonly<{ back?: ReactNode; next: ReactNode }>;
 
 export function BrandStage({
@@ -131,7 +129,6 @@ export function DiscoveryStage({
   const warnings = discovery.discovery?.warnings ?? [];
   const failed = discovery.discovery?.status === 'failed';
   const errorCode = discovery.discovery?.error_code ?? '';
-  // One recovery per screen: the failure carries it, else the first degraded warning.
   const rerunWarning = failed ? undefined : warnings.find((code) => RERUN_WARNINGS.has(code));
   const rerun = (
     <Button variant="secondary" onClick={onRerun} disabled={discovery.isRunning}>
@@ -210,10 +207,6 @@ export function CreationStage({
   );
 }
 
-/**
- * A stage's steps, with the overall count as a (visually hidden) progress bar
- * and the step being worked on announced politely.
- */
 function StageSteps({
   label,
   steps,
@@ -284,9 +277,6 @@ export function ReviewStage({
         ) : null}
         <CompletionStateAlert failed={completionFailed} />
       </ReviewNotices>
-      {/* In reading order: the websites and competitor picks, each with the
-          reason Create project waits beneath it, then (beside them from
-          desktop:) what you sell and who buys it. */}
       <StepColumns>
         <Stack gap="workspace" className="min-w-0">
           <ReviewStep
@@ -329,13 +319,6 @@ export function ReviewStage({
   );
 }
 
-/**
- * Anything that stopped "Create project", above the fields it concerns.
- *
- * These used to sit below both columns — past the fold on a laptop — so a
- * refused or timed-out creation looked like a button that did nothing. A new
- * failure brings this region into view. Empty, it takes no room.
- */
 function ReviewNotices({ failed, children }: Readonly<{ failed: boolean; children: ReactNode }>) {
   const region = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -373,12 +356,9 @@ function CompletionStateAlert({ failed }: Readonly<{ failed: boolean }>) {
   return null;
 }
 
-/** Warnings a fresh run may clear: research that did not finish or found no competitors. */
 const RERUN_WARNINGS = new Set(['research_degraded', 'competitors_not_found']);
-/** Failures caused by the website address itself; the reader may need to correct it. */
 const SITE_FAILURES = new Set(['invalid_url', 'site_not_found', 'ssrf_blocked', 'out_of_scope']);
 
-/** A rerun cannot lift a plan limit, so that failure offers billing instead. */
 function FailureRecovery({
   code,
   rerun,

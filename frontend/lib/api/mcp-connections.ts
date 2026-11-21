@@ -21,7 +21,6 @@ export const mcpConnectionsApi = {
     apiClient.delete<void>(`${path(workspaceId)}/${id}`, { workspaceId }),
 };
 
-/** Without a workspace these are the account's own connections; with one, the workspace's. */
 export const mcpConnectionQueries = {
   list: (workspaceId?: string) =>
     queryOptions({
@@ -31,10 +30,6 @@ export const mcpConnectionQueries = {
 };
 
 export const mcpConnectionMutations = {
-  /**
-   * Revoking from either view changes both, so every connection list re-reads,
-   * in the background: the confirmation closes as soon as the revocation lands.
-   */
   revoke: (workspaceId?: string) =>
     mutationOptions({
       mutationFn: (id: string) => mcpConnectionsApi.revoke(id, workspaceId),

@@ -10,16 +10,6 @@ import { renderWithProviders as render, selectionAs } from '@/test/render';
 import { ActiveRunBanner } from './active-run-banner';
 import { VisibilityEmptyState } from './empty-state';
 
-/**
- * The three "there is nothing to show yet" surfaces of the Visibility
- * workspace.
- *
- * The distinction that matters: "you have never run an audit" and "your audit
- * is still running" are different situations with different correct actions.
- * Showing the launch CTA to someone whose run is already in flight invites a
- * duplicate, paid run; showing a bare empty state hides the fact that results
- * are on the way.
- */
 const run: ActiveRun = {
   id: '11111111-1111-4111-8111-111111111111',
   status: 'running',
@@ -66,14 +56,11 @@ describe('VisibilityEmptyState', () => {
   it('links to the running run instead of inviting a duplicate', () => {
     render(<VisibilityEmptyState activeRun={run} />);
 
-    // Offering "launch" here would invite a second paid run for results that
-    // are already on the way.
     expect(screen.queryByRole('button', { name: /Launch/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Watch live progress' })).toHaveAttribute(
       'href',
       `/runs/${run.id}`,
     );
-    // The banner it replaced named the run's status; the block still does.
     expect(screen.getByText('Running')).toBeVisible();
   });
 });
@@ -86,8 +73,6 @@ describe('ActiveRunBanner', () => {
   });
 
   it('links to that exact run rather than the runs list', () => {
-    // An active run has no metric snapshot, so it cannot appear in the run
-    // selector; this link is the only way to reach it from here.
     render(<ActiveRunBanner run={run} />);
 
     expect(screen.getByRole('link', { name: /Watch live progress/ })).toHaveAttribute(

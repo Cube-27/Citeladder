@@ -22,7 +22,6 @@ describe('ScoreSection', () => {
 
     render(<ScoreSection crawl={null} dashboard={dashboard} />);
 
-    // The three scores, and the two page counts that need a crawl.
     expect(screen.getAllByText('Not measured')).toHaveLength(5);
   });
 

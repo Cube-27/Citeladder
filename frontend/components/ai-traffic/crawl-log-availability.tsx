@@ -5,10 +5,6 @@ import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { Notice } from '@/components/ui/notice';
 import { TextLink } from '@/components/ui/text-link';
 
-/**
- * Why crawl log collection is unavailable: the plan lacks AI crawler logs (an
- * upgrade link) or CiteLadder paused collection everywhere. Nothing when available.
- */
 export function CrawlLogAvailabilityNotice({
   availability,
   workspaceId,

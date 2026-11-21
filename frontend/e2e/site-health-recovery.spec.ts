@@ -48,7 +48,6 @@ test('Site Health retries only its failed initial read inside the authenticated 
   });
 
   await page.goto(fixtureProjectPath('/site'));
-  // A server fault shows the screen's own sentence, never the server's words.
   await expect(page.getByText('The request failed or timed out.')).toBeVisible();
   await expect(page.getByText('Dashboard temporarily unavailable')).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Dashboard' })).toBeVisible();

@@ -230,7 +230,6 @@ describe('NewChatScreen', () => {
     const user = userEvent.setup();
     renderNewChat('?workflow=linkedin_post&prompt=Promote+the+guide');
     await screen.findByRole('button', { name: 'Remove Skill: LinkedIn post' });
-    // The menu names the pin as the chip does, until a skill replaces it.
     await openComposerSubmenu(user, /^Skills: LinkedIn post$/);
     expect(await screen.findByRole('menuitemradio', { name: 'LinkedIn post' })).toBeChecked();
     screen.getByRole('menuitemradio', { name: 'Growth plan' }).focus();
@@ -297,7 +296,6 @@ describe('NewChatScreen', () => {
   });
 
   it('reports a failed catalog read instead of showing no skills', async () => {
-    // The first matching handler answers, so the failure goes ahead of the base set.
     mswServer.use(
       http.get('/api/v1/agent/skills', () =>
         HttpResponse.json({ detail: 'Bad request' }, { status: 400 }),
@@ -308,7 +306,6 @@ describe('NewChatScreen', () => {
     renderNewChat('');
 
     expect(await screen.findByText("Couldn't load skills")).toBeVisible();
-    // The + menu says so too, rather than offering only Automatic.
     await openComposerSubmenu(user, /^Skills: Automatic$/);
     expect(await screen.findByRole('menuitem', { name: "Couldn't load skills" })).toHaveAttribute(
       'aria-disabled',
@@ -337,8 +334,6 @@ describe('NewChatScreen', () => {
     await user.type(message, '/');
     await user.click(await screen.findByRole('menuitemradio', { name: 'Growth plan' }));
     expect(screen.getByText('Skill: Growth plan')).toBeVisible();
-    // The pick hands focus and the caret back to the field on the next frame;
-    // typing before then lands ahead of the restored caret.
     await waitFor(() => expect(message).toHaveFocus());
     await user.type(message, 'Compare @pric');
     await user.click(await screen.findByRole('option', { name: /Pricing page/ }));
@@ -367,13 +362,11 @@ describe('NewChatScreen', () => {
     await user.paste('Short ');
     await user.paste(brief);
     await user.paste(`Other\n${brief}`);
-    // A short paste is typed text; each long one is a chip instead.
     expect(message).toHaveValue('Short ');
     expect(screen.getAllByRole('button', { name: 'View Pasted text, 2 lines' })).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: 'Remove Pasted text, 3 lines' }));
     await user.click(screen.getByRole('button', { name: 'View Pasted text, 2 lines' }));
     const viewer = await screen.findByRole('dialog', { name: 'Pasted text' });
-    // Shown as pasted, line breaks kept.
     expect(within(viewer).getByText(/^Brief line/).textContent).toBe(brief);
     await user.click(within(viewer).getByRole('button', { name: 'Close dialog' }));
     await user.type(message, 'summarize this{Enter}');
@@ -414,11 +407,9 @@ describe('NewChatScreen', () => {
   });
 
   it('searches every status by the typed text once @ is typed, and shows each status', async () => {
-    // Out of the work queue, so only a search across every status finds it.
     const measuring = { ...actionItem(PRICING, 'School uniforms'), status: 'done' };
     const reads: string[] = [];
     mswServer.use(
-      // Ahead of the base handlers, so it answers the Actions reads.
       http.get(`/api/v1/projects/${PROJECT}/actions`, ({ request }) => {
         const params = new URL(request.url).searchParams;
         reads.push(params.toString());
@@ -433,7 +424,6 @@ describe('NewChatScreen', () => {
 
     const message = await screen.findByLabelText('Message the agent');
     await user.type(message, 'Compare ');
-    // The page's own Top Actions read the work queue; nothing is searched yet.
     await vi.waitFor(() => expect(reads).toEqual(['limit=10']));
 
     await user.type(message, '@uniform');
@@ -489,10 +479,8 @@ describe('NewChatScreen', () => {
 
     const message = await screen.findByDisplayValue(`Compare ${own} with ${foreign}`);
     await user.type(message, '{Enter}');
-    // A second press while the links resolve starts no second chat.
     await user.type(message, '{Enter}');
     release();
-    // While the chat starts, the field shows what was sent, beside its mention chip.
     await waitFor(() => expect(message).toHaveValue(`Compare @Pricing page with ${foreign}`));
     expect(screen.getByRole('button', { name: 'Remove @Pricing page' })).toBeVisible();
     create();
@@ -565,16 +553,13 @@ describe('NewChatScreen', () => {
 
     await openComposerSubmenu(user, /^Actions$/);
     const start = await screen.findByRole('menuitem', { name: 'Work on Pricing page' });
-    // Capped at three, then the whole list.
     expect(screen.getByRole('menuitem', { name: 'Work on Docs' })).toBeVisible();
     expect(screen.queryByRole('menuitem', { name: 'Work on Careers' })).toBeNull();
     expect(screen.getByRole('menuitem', { name: 'All Actions' })).toHaveAttribute(
       'href',
       `/actions?project=${PROJECT}`,
     );
-    // Ids only: the Action's message is read on New chat, never put in the URL.
     expect(start).toHaveAttribute('href', `/agent?action_id=${PRICING}&project=${PROJECT}`);
-    // The command hint is a caption that stays once typing starts.
     expect(screen.getByText('Type / to pick a skill or @ to mention an Action.')).toBeVisible();
   });
 
@@ -603,7 +588,6 @@ describe('NewChatScreen', () => {
     const user = userEvent.setup();
     renderNewChat(`?action_id=${PRICING}`);
 
-    // One line in the composer, above the written message; no briefing.
     await screen.findByDisplayValue('Work on Pricing page.');
     expect(screen.getByText('Action: Create a new page: Pricing page')).toBeVisible();
     expect(screen.queryByRole('region', { name: 'What should I work on?' })).toBeNull();
@@ -612,7 +596,6 @@ describe('NewChatScreen', () => {
     await user.click(
       screen.getByRole('button', { name: 'Remove Action: Create a new page: Pricing page' }),
     );
-    // The message stays as written; the briefing comes back.
     expect(screen.getByLabelText('Message the agent')).toHaveValue('Work on Pricing page.');
     expect(await screen.findByRole('region', { name: 'What should I work on?' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Send' }));
@@ -674,7 +657,6 @@ describe('NewChatScreen', () => {
       name: 'Work on Pricing page',
     });
 
-    // Written from the Action once it is read.
     const message = await screen.findByDisplayValue('Work on Pricing page.');
     expect(message).toHaveAccessibleName('Message the agent');
     expect(screen.getByText('Action: Create a new page: Pricing page')).toBeVisible();
@@ -699,7 +681,6 @@ describe('NewChatScreen', () => {
     const user = userEvent.setup();
     renderNewChat('');
 
-    // Open beneath the composer, with nothing to expand first.
     const briefing = await screen.findByRole('region', { name: 'What should I work on?' });
     expect(await within(briefing).findByText(/top 2 open Actions/)).toBeVisible();
     await user.click(within(briefing).getByRole('button', { name: 'Brief me' }));

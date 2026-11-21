@@ -13,7 +13,6 @@ import type { SubscriptionStatus } from '@citeladder/contracts/billing';
 import { Notice } from '@/components/ui/notice';
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 
-/** Subscriptions a customer can still cancel; any other state has nothing left to cancel. */
 const CANCELLABLE_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
   'active',
   'trialing',
@@ -26,7 +25,6 @@ export type BillingCancellation = {
   pending: boolean;
   error: unknown;
   confirm: () => void;
-  /** Undo a scheduled cancellation while it is still held (B46). */
   resume: () => void;
   resuming: boolean;
   resumeError: unknown;
@@ -34,11 +32,6 @@ export type BillingCancellation = {
 
 type Subscription = NonNullable<BillingEntitlement['subscription']>;
 
-/**
- * What a non-active subscription state means for the reader's access. Each
- * line states only what the server's status already establishes; `null`
- * means the plan summary above says enough.
- */
 const STATUS_NOTICE: Readonly<
   Partial<Record<SubscriptionStatus, { tone: 'info' | 'warning' | 'negative'; text: string }>>
 > = {
@@ -86,7 +79,6 @@ function ScheduledChange({
   );
 }
 
-/** What the workspace is on: the plan's row, its notices above it. */
 export function CurrentPlan({
   entitlement,
   currentPlan,
@@ -115,8 +107,6 @@ export function CurrentPlan({
           }
           action={
             <>
-              {/* The kind of access is a classification, not a state: neutral. The
-                  unresolved case is a fault, and the warning above says so. */}
               <Tag>{accessLabel(entitlement)}</Tag>
               {canManage && subscription?.resumable_until ? (
                 <Button
@@ -137,10 +127,6 @@ export function CurrentPlan({
   );
 }
 
-/**
- * Scheduling a cancellation for a plan that renews: the page's one danger
- * action, so its own last group. Nothing to show once one is scheduled.
- */
 export function CancelPlan({
   entitlement,
   canManage,
@@ -181,7 +167,6 @@ export function CancelPlan({
   );
 }
 
-/** How long a cancellation can still be undone, and why an undo failed. */
 function ResumeNotice({
   subscription,
   cancellation,
@@ -204,7 +189,6 @@ function ResumeNotice({
   );
 }
 
-/** An operator grant: beside a paid plan it speaks for the grant alone, never the plan. */
 function OverrideNotice({ besidePlan }: Readonly<{ besidePlan: boolean }>) {
   return (
     <Notice tone="info">
@@ -214,7 +198,6 @@ function OverrideNotice({ besidePlan }: Readonly<{ besidePlan: boolean }>) {
   );
 }
 
-/** Everything the reader should know about the plan's state, most urgent first. */
 function PlanNotices({
   entitlement,
   planName,

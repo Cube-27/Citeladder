@@ -5,11 +5,9 @@ import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@citela
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { formatCount } from '@/lib/format';
 
-/** One Site Health figure in the FigureStrip, and where to act on it. */
 export type AuditMetric = {
   title: string;
   value: number | null;
-  /** A score and a percent are 0–100; a count is a page count. */
   valueUnit?: 'score' | 'percent' | 'count';
   href?: string;
   unavailable?: ReactNode;
@@ -35,7 +33,6 @@ function auditSegment({
   return { ...base, value: valueUnit === 'percent' ? `${score}%` : String(score) };
 }
 
-/** The Site Health scores, as one FigureStrip. */
 export function AuditScores({
   metrics,
   testId,
@@ -120,7 +117,6 @@ function measurementMetric(context: MetricContext): AuditMetric {
 const count = (value: unknown) =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 
-/** Found and analyzed pages: saved by the crawl, absent on older snapshots. */
 function coverageCounts(coverage: SiteHealthOverview['crawl_coverage'] | undefined) {
   const evidence = coverage?.evidence ?? {};
   const found = count(evidence.observation_count);
@@ -131,7 +127,6 @@ function coverageCounts(coverage: SiteHealthOverview['crawl_coverage'] | undefin
 
 function crawlMetric(context: MetricContext): AuditMetric {
   const counts = coverageCounts(context.overview?.crawl_coverage);
-  // Share of the pages the crawl found, not of the pages it chose: 20 of 100 is not 100%.
   let progress = context.selected > 0 ? (100 * context.analyzed) / context.selected : null;
   if (counts)
     progress = counts.found ? (100 * Math.min(counts.analyzed, counts.found)) / counts.found : null;

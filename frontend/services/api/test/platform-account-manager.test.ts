@@ -35,7 +35,6 @@ beforeAll(async () => {
     .set({ role: 'admin', hashed_password: await hashPassword(password) })
     .where('id', '=', actor)
     .execute();
-  // Unprovisioned: the account manager is what grants this shared workspace its access.
   workspace = await fixtures.ownedWorkspace(await fixtures.user(), { access: false });
   accountId = await billingAccount(db, workspace);
   session = await authenticatePlatformOperator(db, `${actor}@example.test`, password);
@@ -111,7 +110,6 @@ it('joins a batch as workspace Admins atomically and grants the shared account o
     role: 'admin',
     access: { allowance: 40, until: null },
   });
-  // Joining a shared workspace leaves each person free to create their own.
   expect(result.created.map((user) => user.personal_workspace_id)).toEqual([null, null]);
   const resolved = await resolveAccountEntitlement(
     db,
@@ -250,7 +248,6 @@ it('retains grant history when deletion is refused, and disables/reenables login
     .executeTakeFirstOrThrow();
   expect(user.is_active).toBe(true);
   expect(user.session_version).toBe(2);
-  // Password resets are refused for platform administrators, like disable/delete.
   await db.updateTable('users').set({ role: 'admin' }).where('id', '=', target.user_id).execute();
   await expect(
     managePlatformAccounts(
@@ -326,9 +323,7 @@ it('replays an access grant without increasing allowances and revokes exact gran
   );
   const resolved = await resolveAccountEntitlement(db, action, new Date());
   if (resolved.status !== 'resolved') throw new Error('Expected resolved grants');
-  // Revocation returns the account to its baseline.
   expect(resolved.values.get('prompt_slots')).toBe(before.values.get('prompt_slots'));
-  // Revoked grants stay as history.
   const retained = await db
     .selectFrom('account_grants')
     .select('id')

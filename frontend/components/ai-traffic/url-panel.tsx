@@ -27,10 +27,6 @@ import { FactList } from '@/components/ui/facts';
 type Leg = z.infer<typeof trafficLegSchema>;
 type UrlEvidenceData = z.infer<typeof aiTrafficUrlSchema>;
 
-/**
- * A leg in a table cell: its count, or its absence word with why in the
- * tooltip. Partial coverage is the row's Coverage mark, not part of the count.
- */
 export function TrafficLeg({ leg, unit }: Readonly<{ leg: Leg; unit: string }>) {
   const detail = trafficLegExplanation(leg, unit);
   if (leg.value === null) return <LegAbsence leg={leg} reason={detail} />;
@@ -52,7 +48,6 @@ export function TrafficLeg({ leg, unit }: Readonly<{ leg: Leg; unit: string }>) 
     formatCount(leg.value)
   );
 }
-/** A leg with no value, as the absence it is; an unknown leg keeps its own word. */
 function LegAbsence({ leg, reason }: Readonly<{ leg: Pick<Leg, 'state'>; reason?: string }>) {
   if (leg.state === 'not_connected') return <Absence state="not_connected" reason={reason} />;
   return (
@@ -72,7 +67,6 @@ export function UrlPanel({
   urlHash: string | null;
   onClose: () => void;
   filters?: TrafficFilters;
-  /** Opened from a Pages row, which already shows each count: the drawer leaves them out. */
   fromRow?: boolean;
 }>) {
   const { workspaceId, projectId } = useProjectScope();
@@ -116,16 +110,13 @@ export function UrlPanel({
   );
 }
 
-/** One metric of the page record: its name, its value or absence, and a link to its source. */
 type MetricRow = Readonly<{
   name: string;
   value: ReactNode;
-  /** Qualifies a value (its coverage); never shown beside an absence. */
   note?: string | null;
   link?: Readonly<{ label: string; to: string }>;
 }>;
 
-/** A leg's row value: its count with its state and coverage note, or its one absence word. */
 function legRow(leg: Leg): Pick<MetricRow, 'value' | 'note'> {
   if (leg.value === null) return { value: <LegAbsence leg={leg} /> };
   const notes = new Set(
@@ -168,7 +159,6 @@ function UrlEvidence({
     },
     {
       name: 'Key events (GA4)',
-      // Key events come from the referral sessions' GA4 rows, so they share its connection and quality.
       ...legRow({ ...page.referrals, value: page.key_events }),
     },
     {
@@ -229,11 +219,6 @@ function UrlEvidence({
   );
 }
 
-/**
- * The window's first and last observations per crawler, AI source and
- * citation: its own titled list, one row each, the name left and its count
- * and dates right, so a long run of crawlers never wraps inside a fact row.
- */
 function Observations({
   data,
   botLabel,
@@ -279,7 +264,6 @@ function Observations({
   );
 }
 
-/** A link out of the drawer: the one Link look, on a route already scoped to the project. */
 function PanelLink({ to, children }: Readonly<{ to: string; children: ReactNode }>) {
   return (
     <TextLink asChild text="inherit">
@@ -295,7 +279,6 @@ export function TrafficUrlButton({
 }: Readonly<{
   urlHash: string;
   filters?: TrafficFilters;
-  /** An accessible name when the visible text alone does not identify the page. */
   label?: string;
   children?: ReactNode;
 }>) {

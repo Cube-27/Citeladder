@@ -1,8 +1,3 @@
-/**
- * Billing's 409 refusals: each reason is the envelope `code` clients branch
- * on, with the sentence a buyer or operator reads as the `message`
- * (docs/api-error-contract.md).
- */
 import type { ApiErrorCode } from '@citeladder/contracts/error-codes';
 
 import { conflict } from '../errors.ts';
@@ -63,7 +58,6 @@ const REFUSALS = {
 
 export type BillingRefusal = keyof typeof REFUSALS;
 
-/** Refuse a billing operation with 409, its reason as the code. */
 export function refuse(reason: BillingRefusal): never {
   return conflict(reason, REFUSALS[reason]);
 }

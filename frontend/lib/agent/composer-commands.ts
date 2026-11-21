@@ -1,9 +1,3 @@
-/**
- * Composer commands, typed inline: `/` opens the + menu on the skills and `@`
- * mentions an Action. A command token starts at the beginning of the message
- * or after whitespace and runs to the caret; picking an option replaces the
- * token. A pasted link to an Action's page becomes a mention too.
- */
 import type { ActionStatus } from '@/lib/api/actions';
 
 type CommandTrigger = '/' | '@';
@@ -14,15 +8,12 @@ export type CommandOption = {
   key: string;
   label: string;
   detail?: string;
-  /** An Action option's current status, shown beside its label. */
   status?: ActionStatus;
-  /** Text that replaces the token; empty removes it. */
   replacement: string;
 };
 
 export type Mention = { id: string; label: string };
 
-/** Options one command menu shows at most. */
 const COMMAND_OPTIONS_MAX = 6;
 
 const TOKEN = /(^|\s)([/@])([^\s/@]{0,40})$/;
@@ -30,7 +21,6 @@ const TOKEN = /(^|\s)([/@])([^\s/@]{0,40})$/;
 export function tokenAt(text: string, caret: number): CommandToken | null {
   const match = TOKEN.exec(text.slice(0, caret));
   if (!match) return null;
-  // Every group takes part in a match; the lead and query may be empty.
   const [, lead = '', trigger, query = ''] = match;
   return {
     trigger: trigger === '@' ? '@' : '/',
@@ -40,7 +30,6 @@ export function tokenAt(text: string, caret: number): CommandToken | null {
   };
 }
 
-/** The message with the token replaced, and where the caret lands. */
 export function applyOption(
   text: string,
   token: CommandToken,
@@ -52,7 +41,6 @@ export function applyOption(
   return { text: before + insert + after, caret: before.length + insert.length };
 }
 
-/** Options whose label contains every word of the query, case-insensitively. */
 export function matchOptions(options: readonly CommandOption[], query: string): CommandOption[] {
   const words = query
     .toLowerCase()
@@ -71,20 +59,14 @@ const TRAILING = new Set('.,;:!?)]');
 const ACTION_PATH =
   /^\/actions\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/iu;
 
-/** A link in the message to an Action's page in this app. */
 export type ActionLink = { url: string; actionId: string };
 
-/**
- * Links to an Action's page on `origin`, once each. A link that names another
- * project is left alone: a mention can only name an Action of this one.
- */
 export function actionLinks(
   text: string,
   { origin, projectId }: Readonly<{ origin: string; projectId: string }>,
 ): ActionLink[] {
   const links = new Map<string, ActionLink>();
   for (const [raw] of text.matchAll(LINK)) {
-    // Sentence punctuation after a pasted link is not part of it.
     let end = raw.length;
     while (end > 0 && TRAILING.has(raw.charAt(end - 1))) end--;
     const url = raw.slice(0, end);
@@ -102,12 +84,6 @@ export function actionLinks(
   return [...links.values()];
 }
 
-/**
- * The message with each resolved link that is still in it replaced by
- * `@label`, and the mentions it adds, up to `max` mentions in all. A link to
- * an Action already mentioned is replaced without a second mention; one past
- * the bound stays as typed.
- */
 export function withLinkMentions({
   text,
   mentions,

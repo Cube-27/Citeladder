@@ -8,7 +8,6 @@ import {
   supportMatrix,
 } from '../../frontend/scripts/check-browser-compat.mjs';
 
-// The raised matrix (owner, 2026-11-13) and the one it replaced.
 const RAISED = supportMatrix([
   'chrome >= 123',
   'edge >= 123',
@@ -83,7 +82,6 @@ test('passes an API read only through optional chaining, not a direct read', () 
   assert.deepEqual(apis(source, RAISED), ['trustedTypes@3']);
 });
 
-// The matrix the owner approved on 2026-11-13 (PR 3 raises package.json to it).
 const NEXT = supportMatrix([
   'chrome >= 123',
   'edge >= 123',

@@ -7,26 +7,16 @@ import { textRole } from '@/components/ui/typography';
 import { Check, ChevronRight, CircleHelp, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-/**
- * The one state set every step takes: pending
- * (`rule` rung), running (the live ink rung), done (ink rung, check),
- * failed (crimson rung, cross), unavailable (`well` rung and its word), unknown (hollow
- * rung, question glyph; never read as unavailable).
- */
 export type RungStatus = 'pending' | 'running' | 'done' | 'failed' | 'unavailable' | 'unknown';
 
 export type TrailStep = Readonly<{
-  /** Stable key; the label when omitted. */
   id?: string;
   label: string;
   status: RungStatus;
-  /** One line: a count while running, the cause and next step on failure. */
   detail?: string | null;
-  /** Elapsed or finishing time, already formatted ("0:42"). */
   time?: string;
 }>;
 
-/** The word a screen reader hears after each label. */
 const STATUS_WORD = {
   pending: 'Waiting',
   running: 'Running',
@@ -64,15 +54,6 @@ function StepGlyph({ status }: Readonly<{ status: RungStatus }>) {
   return null;
 }
 
-/**
- * RungTrail — one rail with a rung per step: agent
- * activity, onboarding research, crawl and audit progress, readiness. The
- * vertical form lists steps down a rail with each step's label, detail and
- * time; the horizontal form lays a flow's steps across one rail. Every label
- * carries its status word for screen readers, so the trail reads without
- * the rungs. `size="lg"` (a setup flow's steps) sets the vertical form's
- * labels at 16 and its rows 12 apart.
- */
 export function RungTrail({
   steps,
   label,
@@ -81,7 +62,6 @@ export function RungTrail({
   className,
 }: Readonly<{
   steps: readonly TrailStep[];
-  /** What the steps are of ("Discovering your brand"). */
   label: string;
   orientation?: 'vertical' | 'horizontal';
   size?: RowSize;
@@ -141,13 +121,6 @@ export function RungTrail({
 
 type RowSize = 'md' | 'lg';
 
-/**
- * A row's geometry per size: the line its rung and glyph centre on, the rail
- * and how its connector reaches the next row, and the label's role. `md`
- * bridges its 8 gap from a one-line rail; `lg`'s rail stretches down the
- * row, its 12 gap sitting under the label. The `lg` label (16/24) keeps one
- * role and only gains weight while running, so a row never changes height.
- */
 const ROW_SIZE = {
   md: {
     row: 'pb-2',
@@ -169,7 +142,6 @@ const ROW_SIZE = {
   },
 } as const satisfies Record<RowSize, unknown>;
 
-/** One step: the rail and its rung, the glyph, the label and detail, the time. */
 function RungRow({
   step,
   first,
@@ -221,7 +193,6 @@ function RungRow({
             {step.detail}
           </span>
         ) : null}
-        {/* The faint rung says it with its word; the label already says it to screen readers. */}
         {!step.detail && step.status === 'unavailable' ? (
           <span aria-hidden className={textRole('caption')}>
             {STATUS_WORD.unavailable}
@@ -233,12 +204,10 @@ function RungRow({
   );
 }
 
-/** A setup step: finished, the one you are on (`next`, or `running` once started), or still to come. */
 export type SetupStep = Readonly<{
   id: string;
   label: string;
   state: 'done' | 'next' | 'running' | 'waiting';
-  /** The current step's one action. */
   action?: ReactNode;
 }>;
 
@@ -249,12 +218,6 @@ const SETUP_WORD = {
   waiting: 'Waiting',
 } as const satisfies Record<SetupStep['state'], string>;
 
-/**
- * SetupSteps — a checklist of setup steps in a framed list of 40px rows: a
- * check once done, the step's title and its state word, and on the step you
- * are on a 2px accent mark (it is "here"), the title at 500 and its action
- * at the row's end. Waiting steps are in the secondary ink.
- */
 export function SetupSteps({
   steps,
   label,
@@ -305,11 +268,6 @@ export function SetupSteps({
   );
 }
 
-/**
- * A trail folded under a one-line summary: a finished turn's activity opens
- * from its summary; a running one shows its status and seconds in a line
- * that keeps one height from start to end, and announces only the status.
- */
 export function FoldedTrail({
   summary,
   live,
@@ -318,11 +276,9 @@ export function FoldedTrail({
   empty,
 }: Readonly<{
   summary?: ReactNode;
-  /** The running form: the current status and the seconds since it started. */
   live?: Readonly<{ status: string; seconds: number }>;
   label: string;
   steps: readonly TrailStep[];
-  /** What the open trail says before any step exists. */
   empty?: string;
 }>) {
   return (

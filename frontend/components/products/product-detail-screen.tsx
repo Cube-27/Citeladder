@@ -50,10 +50,8 @@ import { Section, SectionHeader, SectionStack, SectionTitle } from '@/components
 import { FigureStrip } from '@/components/ui/figure-strip';
 import type { LoadingShape } from '@/components/ui/skeleton-block';
 
-/** The product's identity card as it loads: its one row. */
 const PRODUCT_IDENTITY = { kind: 'facts', rows: 1 } satisfies LoadingShape;
 
-/** The KPIs, in the plan's order; merchants have their own section below. */
 const KPIS = [
   'visibility',
   'win_rate',
@@ -63,17 +61,10 @@ const KPIS = [
   'catalog_price',
 ] as const;
 
-/** Products, opened with the filters this page was reached under. */
 const trailFrom = (filters: ProductScopeFilters) => [
   { label: 'Products', href: `/products?${productScopeSearch(filters)}` },
 ];
 
-/**
- * `/products/:id`: a product holder's page (commerce improvement PR 4), or a
- * category's setup. Products and categories share the path, so an id the
- * catalog lists as a category opens its competitors and shopping prompts;
- * any other id is a product holder, which the detail read finds or refuses.
- */
 export function ProductDetailScreen() {
   const { targetId = '' } = useParams();
   const { projectId } = useProjectScope();
@@ -103,7 +94,6 @@ export function ProductDetailScreen() {
     return (
       <CategorySetup category={category} projectId={projectId} queries={queries} trail={trail} />
     );
-  // Keyed by holder, so typed prompt text and launch state never carry to the next page.
   return (
     <HolderDetail
       key={targetId}
@@ -117,7 +107,6 @@ export function ProductDetailScreen() {
 
 type Trail = ReturnType<typeof trailFrom>;
 
-/** A category's own page: who competes on its shelf, and its shopping-prompt matrix. */
 function CategorySetup({
   category,
   projectId,
@@ -218,8 +207,6 @@ function HolderDetail({
       {named ? (
         <Answers detail={data} />
       ) : (
-        // Every section below reads the answers that named it: with none,
-        // one sentence says so instead of six empty tables.
         <Section>
           <StateBlock
             kind="empty"
@@ -228,7 +215,6 @@ function HolderDetail({
           />
         </Section>
       )}
-      {/* An archived product takes no new competitors or shopping prompts until restored. */}
       {data.product.kind === 'owned' && data.product.catalog?.lifecycle_state !== 'archived' ? (
         <ProductSetup detail={data} projectId={projectId} queries={queries} />
       ) : null}
@@ -249,11 +235,6 @@ function HolderDetail({
   );
 }
 
-/**
- * The record's status line (the masthead names it): an info hint holding who
- * holds it, the answers it is read from and a listing title that differs
- * from the name, then the image and the link to its page; its notices below.
- */
 function ProductIdentity({
   detail,
   notices,
@@ -291,7 +272,6 @@ function ProductIdentity({
   );
 }
 
-/** Its figures in one strip, at the strip's own figure style, each label carrying its definition. */
 function ProductKpis({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   return (
     <FigureStrip
@@ -305,7 +285,6 @@ function ProductKpis({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
           label,
           value: cell.kind === 'value' ? cell.text : <MissingValue cell={cell} />,
           sub: cell.note,
-          // The definition is a hint on the label, not a paragraph under every figure.
           marker: column ? <InfoHint label={`About ${label}`}>{column.hint}</InfoHint> : undefined,
         };
       })}
@@ -313,7 +292,6 @@ function ProductKpis({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   );
 }
 
-/** Competitor discovery and review, hero-product prompts, and the Actions. */
 function ProductSetup({
   detail,
   projectId,

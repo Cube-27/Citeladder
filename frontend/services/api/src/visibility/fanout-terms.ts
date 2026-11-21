@@ -1,8 +1,3 @@
-/**
- * The persisted per-run fanout facts the Query fanouts table reads (AV-8):
- * which run a one-run selection compares with, and the tracked brands each
- * query names, both written at finalization.
- */
 import { storedQueriesSchema } from '../analysis/fanout-terms.ts';
 import type { Database } from '../db/database.ts';
 import { compareText } from '../text-order.ts';
@@ -12,7 +7,6 @@ import { selectedRuns, type RunSelection } from './selection.ts';
 
 type Brands = FanoutResponse['items'][number]['brands'];
 
-/** The previous comparable run of a selection that holds exactly one run, or null. */
 export async function comparedRunId(db: Database, selection: RunSelection) {
   const [run, other] = await selectedRuns(db, selection).select('audit.id').limit(2).execute();
   if (!run || other) return null;
@@ -25,10 +19,6 @@ export async function comparedRunId(db: Database, selection: RunSelection) {
   return row?.previous_audit_id ?? null;
 }
 
-/**
- * Per query, the tracked brands it names in any of `auditIds`, with their
- * marks. A query reads null when none of those runs counted fanout queries.
- */
 export async function queryBrands(
   db: Database,
   selection: RunSelection,
@@ -53,7 +43,6 @@ export async function queryBrands(
   const identities = await brandIdentities(db, selection);
   return (query) =>
     [...(named.get(query)?.values() ?? [])]
-      // 'brand' sorts before 'competitor': the brand first, then competitors by name.
       .sort((a, b) => compareText(a.kind, b.kind) || compareText(a.name, b.name))
       .map((brand) => {
         const identity = identities.get(identityKey(brand.name));

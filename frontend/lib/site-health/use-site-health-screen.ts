@@ -23,7 +23,6 @@ import {
   type SiteHealthPhase,
 } from '@/lib/site-health/status';
 
-/** The page browser's first Monitored page at its default size and ordering. */
 export function monitoredPagePreviewParams(active: boolean) {
   return {
     limit: TABLE_DEFAULT_PAGE_SIZE,
@@ -37,11 +36,6 @@ function canLoadPagePreview(crawlId: string | undefined, phase: SiteHealthPhase)
   return Boolean(crawlId) && (phase === 'analyzing' || phase === 'dashboard');
 }
 
-/**
- * The page preview the screen requests once its dashboard names a crawl in an
- * analyzing or scored phase, or null before then. The route prefetcher warms
- * it from the same answer, so the warmed entry is the one the screen reads.
- */
 export function pagePreviewQuery(workspaceId: string, dashboard: SiteHealthDashboard | null) {
   const crawl = dashboard?.crawl ?? null;
   const phase: SiteHealthPhase = dashboard?.phase ?? 'resolving';
@@ -53,68 +47,29 @@ export function pagePreviewQuery(workspaceId: string, dashboard: SiteHealthDashb
   );
 }
 
-/**
- * Data orchestration for the Site Health screen (Slice 7).
- *
- * Owns the entitlement / dashboard / pages / discovery-preview / monitored
- * queries, the create/cancel mutations, the export flow, and the phase
- * resolution. Progress is POLLING-FIRST: the credentialed SSE stream is only an
- * invalidation accelerator (a dropped stream never stops progress). Exports are
- * authenticated blob downloads so a non-default workspace's `X-Workspace-Id`
- * is preserved. The dashboard and the lists it refreshes stay live through
- * `useLiveCrawlDashboard`.
- */
 export function useSiteHealthScreen() {
   const { workspaceId, projectId } = useProjectScope();
   const requestScope = { workspaceId, projectId };
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  // The shell's own workspace entitlement: it resolves the Site Health runtime
-  // from the same grants, and the route loader has already asked for it.
   const entitlementQuery = useQuery(billingQueries.workspaceEntitlement(workspaceId));
 
-  // An earlier crawl opens by URL (`?crawl_id=`); without one the screen reads the latest.
   const [pinnedCrawlId, setPinnedCrawlId] = useUrlState('crawl_id', optionalStringUrlCodec);
   const dashboardQuery = useLiveCrawlDashboard(requestScope, pinnedCrawlId ?? undefined);
 
   const crawl: SiteCrawl | null = dashboardQuery.data?.crawl ?? null;
   const active = crawl ? CRAWL_STATES[crawl.status].active : false;
-  // Evidence-derived backend activity state; never inferred from client time.
   const stalled = isCrawlStalled(crawl);
-  // THE phase, resolved server-side from the crawl, the entitlement, and the
-  // project's monitored set at one instant. `'resolving'` only means the
-  // dashboard request has not landed yet — there is no client-side precedence
-  // chain racing three independently-loading queries any more.
   const phase: SiteHealthPhase = dashboardQuery.data?.phase ?? 'resolving';
 
-  // The live score preview shares the exact first-page query key rendered by
-  // ScoredInventory. During an active crawl that first view contains completed
-  // rows only, so results appear progressively instead of rendering the whole
-  // pre-seeded pending set at once. Once terminal, it returns to the complete
-  // monitored projection.
   const pagesQuery = useQuery({
     ...siteHealthQueries.pages(workspaceId, crawl?.id ?? '', monitoredPagePreviewParams(active)),
     enabled: canLoadPagePreview(crawl?.id, phase),
   });
 
-  // The one thing still derived from the phase: what the always-mounted
-  // inventory section renders. The crawl rides along so a FAILED terminal
-  // phase keeps the scored page browser (B3 — the Errors & Blocked tab renders
-  // the root-failure block).
   const inventoryMode: InventoryMode = inventoryModeForPhase(phase, crawl);
 
-  // "Starting a crawl" spans two distinct phases: the POST that creates the
-  // crawl, and the projection refresh that first shows it. The mutation owns
-  // only the first — it settles at POST success, so a slow or failed
-  // projection refetch can neither extend the mutation lifecycle (and disable
-  // the control indefinitely) nor report a failure for a crawl that already
-  // exists. The `starting` state carries the button guard and strip notice
-  // through the refresh window; the descriptor's refresh releases it when it
-  // lands. Each attempt carries a token, and every callback applies its state
-  // change only while its token is still the active one — a late callback
-  // from an earlier creation (e.g. the reader switched projects mid-POST) can
-  // neither overwrite nor clear a newer attempt's state.
   const [starting, setStarting] = useState<{
     projectId: string;
     crawlId: string | null;
@@ -126,7 +81,6 @@ export function useSiteHealthScreen() {
   const cancelMutation = useMutation(siteHealthMutations.cancelCrawl(requestScope));
   const startCrawl = (input?: StartCrawlInput) => {
     const variables = input ?? { project_id: projectId };
-    // A new crawl is the one to watch, not the earlier one the address opened.
     setPinnedCrawlId(null, 'replace');
     createAttemptRef.current += 1;
     const token = createAttemptRef.current;
@@ -135,10 +89,6 @@ export function useSiteHealthScreen() {
       onSuccess: (created, _variables, start) => {
         if (token === createAttemptRef.current)
           setStarting({ projectId: variables.project_id, crawlId: created.id, token });
-        // The projection has answered for the created crawl once the refresh
-        // settles (a refetch failure also settles it — bounded by the client's
-        // request timeout), so show the refreshed state instead of a
-        // permanent "Starting…" notice. A stale attempt never clears a newer one.
         void Promise.resolve(start?.refreshed).finally(() =>
           setStarting((current) => (current?.token === token ? null : current)),
         );
@@ -148,15 +98,9 @@ export function useSiteHealthScreen() {
       },
     });
   };
-  // A failed start is retried with exactly what it sent: its project and robots choice.
   const retryStart = () => startCrawl(createMutation.variables);
   const cancelCrawl = () => crawl && cancelMutation.mutate(crawl.id);
 
-  // A create is genuinely in flight, or its projection refresh has not yet
-  // acknowledged it: the button says "Starting…" and a second click cannot
-  // fire a duplicate. Scoped to the create's own project so a sticky state
-  // from another project (after a project switch) can never disable this
-  // screen's control.
   const startPending = starting?.projectId === projectId;
 
   const runExport = async (format: ExportFormat, view: ExportView) => {

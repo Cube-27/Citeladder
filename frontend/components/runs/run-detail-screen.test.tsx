@@ -12,7 +12,6 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders, selectionAs } from '@/test/render';
 import { RunDetailScreen } from './run-detail-screen';
 
-// The live stream only accelerates polling; this test drives the cancel path.
 vi.mock('@/lib/runs/use-run-events', () => ({ useRunEvents: () => {} }));
 
 const RUN = '00000001-1111-4111-8111-111111111111';
@@ -45,7 +44,6 @@ function audit(status: Audit['status']): Audit {
   };
 }
 
-/** A Commerce read mounted beside the run, counting how often it is fetched. */
 function ShelfReader({ onFetch }: Readonly<{ onFetch: () => void }>) {
   useQuery({
     queryKey: [...queryKeys.commerce.all, 'shelf-under-test'],
@@ -120,7 +118,6 @@ describe('RunDetailScreen', () => {
 
     expect(await screen.findByRole('button', { name: 'Export CSV' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Cancel run' })).toBeNull();
-    // The page is titled by the run itself, not by its collection.
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       'Commerce audit · Aug 1, 2026',
     );

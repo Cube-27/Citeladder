@@ -8,7 +8,6 @@ import './reading.css';
 
 type RichPart = Extract<BlogBlock, { type: 'richParagraph' }>['content'][number];
 
-/** The text a rich part contributes to its block's identity. */
 function richPartIdentity(part: RichPart): string {
   if (typeof part === 'string') return part;
   return part.type === 'link' ? part.text : part.sourceId;
@@ -30,12 +29,6 @@ export function blockIdentity(block: BlogBlock): string {
   return `${block.type}:${block.title ?? ''}`;
 }
 
-/**
- * A `heatmap` table emphasises its strongest cells. Only a bare percentage is
- * eligible, and only at or above this figure — enough of a gap from the rest
- * of a column that the highlight reads as "this is the one", rather than
- * emphasising most of the table and so nothing.
- */
 const HEATMAP_EMPHASIS_PERCENT = 33;
 
 function emphasisedCell(cell: string, heatmap: boolean | undefined): boolean {
@@ -43,21 +36,13 @@ function emphasisedCell(cell: string, heatmap: boolean | undefined): boolean {
   return Number.parseFloat(cell) >= HEATMAP_EMPHASIS_PERCENT;
 }
 
-/** Longest cell, in characters, that still sizes its column to its content. */
 const FIT_CELL_LENGTH = 24;
-/** Longest header kept on one line over such a column; a longer one wraps. */
 const FIT_HEADER_LENGTH = 16;
 
-/** Magnitude words and hedges that still leave a figure, as in "over 1.1 billion". */
 const FIGURE_WORDS = /\b(?:thousand|million|billion|trillion|over|under|about|nearly)\b/gi;
 
-/** Text led by a figure, as in "7359 bytes", "~48% in February" or "down 20". */
 const FIGURE_LED = /^(?:(?:over|under|about|nearly|up|down)\s+)?[~<>+-]?\$?\d/i;
 
-/**
- * A figure, not a phrase: a digit, short, and either led by the figure or
- * with no other word of four letters or more.
- */
 export function isNumericCell(text: string) {
   const value = text.trim();
   return (
@@ -67,10 +52,6 @@ export function isNumericCell(text: string) {
   );
 }
 
-/**
- * A column of mostly figures, its other cells led by a figure or short notes
- * ("none found"), shares a right edge with its header.
- */
 export function endAlignedColumn(cells: readonly string[]) {
   const filled = cells.map((cell) => cell.trim()).filter(Boolean);
   const figures = filled.filter(isNumericCell).length;
@@ -82,26 +63,17 @@ export function endAlignedColumn(cells: readonly string[]) {
   );
 }
 
-/**
- * A short column (a label, stage, model or figure) takes its content's width
- * on one line, leaving the rest of the table to its prose columns.
- */
 function fitColumn({ cells, header }: Readonly<{ cells: readonly string[]; header: string }>) {
   const fit = cells.every((cell) => cell.trim().length <= FIT_CELL_LENGTH);
   return { cells: fit, header: fit && header.trim().length <= FIT_HEADER_LENGTH };
 }
 
-/**
- * Each column's fit; when every column is short, the first takes the table's
- * spare width, so the figures keep their own widths at the end edge.
- */
 export function fitColumns(columns: readonly Parameters<typeof fitColumn>[0][]) {
   const fits = columns.map(fitColumn);
   if (fits.length > 1 && fits.every((fit) => fit.cells)) fits[0] = { cells: false, header: false };
   return fits;
 }
 
-/** A cell's text with each date or name kept on one line. */
 function CellText({ text }: Readonly<{ text: string }>) {
   const runs = wholeRuns(text);
   if (!runs.some((run) => run.whole)) return text;
@@ -116,13 +88,11 @@ function CellText({ text }: Readonly<{ text: string }>) {
   );
 }
 
-/** A row without its source column, the source kept to render under the first cell. */
 function foldSource(row: readonly string[], column: number) {
   if (column <= 0) return { cells: row, source: '' };
   return { cells: row.filter((_, index) => index !== column), source: row[column]?.trim() ?? '' };
 }
 
-/** Columns after the first with any figure keep their header on one line. */
 function numericColumns(rows: readonly (readonly string[])[], count: number) {
   return Array.from(
     { length: count },
@@ -147,8 +117,6 @@ function PostTable({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'tabl
   return (
     <div className="cl-prose-table">
       <table>
-        {/* A real `<caption>`: assistive technology announces the table's name
-            only when the text is the table's own caption element. */}
         {block.caption && <caption>{block.caption}</caption>}
         {headers.some((header) => header.trim()) && (
           <thead>
@@ -202,7 +170,6 @@ function PostTable({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'tabl
   );
 }
 
-/** A checklist: its title as an h3, then each item's title, badge and description. */
 function PostChecklist({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'checklist' }> }>) {
   return (
     <>
@@ -225,11 +192,6 @@ function PostChecklist({ block }: Readonly<{ block: Extract<BlogBlock, { type: '
   );
 }
 
-/**
- * A flow diagram, as a Prose ordered list: each step's title in `strong`, then
- * its description. The h3 is unconditional, so a diagram without a visible
- * title still sits one level under its section.
- */
 function PostDiagram({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'diagram' }> }>) {
   return (
     <>
@@ -245,7 +207,6 @@ function PostDiagram({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'di
   );
 }
 
-/** The post tones on the system's Callout; the accent is never a fill, so it is the neutral note. */
 const CALLOUT_TONE: Readonly<Record<'accent' | 'warning' | 'info', CalloutTone>> = {
   accent: 'neutral',
   warning: 'warning',
@@ -263,7 +224,6 @@ function RichParagraph({
     <p>
       {content.map((part, index) => {
         if (typeof part === 'string') {
-          // A citation joins the word before it, so its marker never starts a line alone.
           const next = content[index + 1];
           const joined =
             typeof next === 'object' &&
@@ -282,7 +242,6 @@ function RichParagraph({
             </a>
           );
         }
-        // An InlineCitation: the numbered marker points at the post's SourcesList.
         const sourceIndex = sources.findIndex((source) => source.id === part.sourceId);
         const source = sources[sourceIndex];
         if (!source) return null;
@@ -301,10 +260,6 @@ function RichParagraph({
   );
 }
 
-/**
- * One body block as Prose children: plain headings, paragraphs, lists and
- * framed tables that Prose styles, the system's Callout, and InlineCitations.
- */
 export function PostBlock({
   block,
   sources = [],
@@ -339,7 +294,6 @@ export function PostBlock({
   }
 }
 
-/** A post's whole body, keyed so repeated blocks never collide. */
 export function PostBody({
   blocks,
   sources,

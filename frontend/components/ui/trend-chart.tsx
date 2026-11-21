@@ -33,7 +33,6 @@ import type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/step-c
 
 type Line = { name: string; values: readonly (number | null)[]; tone: ChartTone };
 
-/** A line's position tone in the shared key and tooltip: the hue `chartStroke` plots it in. */
 const KEY_TONE: Record<ChartTone, SeriesTone> = {
   1: 'you',
   2: 'rival-1',
@@ -43,19 +42,6 @@ const KEY_TONE: Record<ChartTone, SeriesTone> = {
 };
 const defaultFormat = (value: number) => `${Math.round(value * 100) / 100}`;
 
-/**
- * TrendChart — up to four lines over time in plain SVG: the first (your
- * brand) in `data-1` at 2.75px, then `data-2`, `data-3`, and Other dashed in
- * `data-other`. A legend with each line's latest value, `chart-grid`
- * gridlines, and a crosshair with a tooltip card on hover or on focus with
- * the arrow keys. A visually hidden table carries every value.
- *
- * Width follows the container (the viewBox is measured pixels, so text stays
- * 12px); the height is a chart height role (`md`, 240, by default). A
- * missing value is a gap. A point not comparable with the one before it
- * (`breakBefore`) breaks the solid line; a faint dashed segment bridges the
- * break, so two runs either side of a method change still read as a line.
- */
 export function TrendChart({
   data,
   name,
@@ -71,30 +57,18 @@ export function TrendChart({
   eventsLabel,
   directLabels = false,
 }: Readonly<{
-  /** The first line, one entry per point; its labels and timestamps place every line. */
   data: readonly TrendPoint[];
-  /** The first line's name in the legend and table; defaults to `label`. */
   name?: string;
-  /** Up to three further lines on the same points, leader first. */
   series?: readonly TrendSeries[];
   events?: readonly TrendEvent[];
-  /** What the chart shows, e.g. "Mention rate over time". */
   label: string;
-  /** `sm` beside other content, `md` by default, `lg` for a page's primary chart. */
   height?: ChartHeight;
   yMin?: number;
   yMax?: number;
-  /** An axis tick: `42` as `42%`. */
   yFormat?: (value: number) => string;
-  /** A value in the legend, tooltip and table; defaults to `yFormat`. */
   format?: (value: number) => string;
   legend?: boolean;
-  /** The legend's name for the event markers, e.g. "Marked implemented". */
   eventsLabel?: string;
-  /**
-   * Name each line at its latest point, so lines whose inks sit close (the
-   * comparison greys) are told apart by name rather than by shade alone.
-   */
   directLabels?: boolean;
 }>) {
   const [plotRef, width] = useChartWidth<HTMLDivElement>();
@@ -149,8 +123,6 @@ export function TrendChart({
           }))}
         />
       ) : null}
-      {/* A focusable group: the arrow keys read the points one by one, which
-          no native element does (a <fieldset> is a form group). */}
       {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the plot is a keyboard-readable group */}
       <div // NOSONAR -- a keyboard-readable plot has no native element
         ref={plotRef}
@@ -311,9 +283,6 @@ function TrendPlot({
             strokeLinejoin="round"
             className={chartStroke(line.tone)}
           />
-          {/* Across a break the line goes on faint and dashed: the series
-              reads as one line, and the solid stroke never joins points
-              measured under different conditions. */}
           {connectors.map(([from, to]) => (
             <path
               key={`${from[0]}-${to[0]}`}
@@ -353,11 +322,6 @@ function TrendDot({ x, y, tone }: Readonly<{ x: number; y: number; tone: ChartTo
   );
 }
 
-/**
- * A method change (dashed `warning`, a dot at the top) and an event (dashed
- * `line-control`, a square on the axis) across the plot. An event is placed
- * on the time axis, so it is drawn only when every point is stamped.
- */
 function TrendMarkers({
   data,
   events,
@@ -403,7 +367,6 @@ function TrendMarkers({
   );
 }
 
-/** Events inside the plotted time span, at their place on the axis. */
 function placedEvents(
   data: readonly TrendPoint[],
   events: readonly TrendEvent[],

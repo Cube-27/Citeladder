@@ -10,13 +10,6 @@ export type RadioOption<T extends string> = {
   description?: ReactNode;
 };
 
-/**
- * The 16px radio: a 1px `control-line` circle; selected is a `primary` disc with
- * a `surface` centre (an inset 4px ring), so the mark never changes size. Its
- * target is 24×24 (an invisible inset), never under the minimum, and its
- * label row is the touch target, so the area does not grow for touch. Hover
- * darkens an empty circle's edge; a held press scales it to 95%.
- */
 const RADIO =
   'press [--press:0.95] focus-ring bg-panel border-rule enabled:data-[state=unchecked]:hover:border-control-line data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:ring-panel hit-area [--target-hit:var(--target-min)] size-4 shrink-0 rounded-full border ring-inset data-[state=checked]:ring-4 disabled:cursor-not-allowed';
 
@@ -25,14 +18,6 @@ const LIST_LAYOUT = {
   inline: 'flex flex-row flex-wrap gap-x-6 gap-y-2',
 } as const;
 
-/**
- * RadioGroup — one choice from two to five options. `list` (default) stacks
- * the options 12px apart; `inline` sets short options on one wrapping row,
- * 24 apart (a form's facet such as Consumers, Businesses, Both); `cards` lays them out as selectable slips
- * (`surface`, a hairline, the control radius, 16px padding) for choices that
- * need a sentence each, the selected slip on the `well` tint with its edge in
- * `ink`, so it never resizes. Arrow keys move and select (Radix).
- */
 export function RadioGroup<T extends string>({
   value,
   onValueChange,
@@ -48,7 +33,6 @@ export function RadioGroup<T extends string>({
   ariaLabel: string;
   className?: string;
   variant?: 'list' | 'inline' | 'cards';
-  /** Cards per row. */
   columns?: 1 | 2 | 3;
 }>) {
   return (
@@ -82,7 +66,6 @@ export function RadioGroup<T extends string>({
               option.disabled && 'cursor-not-allowed opacity-60',
             )}
           >
-            {/* The 16px circle centres on the 20px first line. */}
             <RadioGroupPrimitive.Item
               value={option.value}
               disabled={option.disabled}
@@ -96,7 +79,6 @@ export function RadioGroup<T extends string>({
   );
 }
 
-/** The option's label (and description), the text that names its radio. */
 function radioText<T extends string>(option: RadioOption<T>) {
   return (
     <span className="flex min-w-0 flex-1 flex-col">

@@ -10,7 +10,6 @@ import { startSignIn, completeSignIn } from '../src/auth/oauth.ts';
 import { createApp } from '../src/app.ts';
 import { authorizedWorkspaceIds } from '../src/mcp/data.ts';
 
-// Signs up reserved `example.test` fixtures; mail and signup notices still skip them.
 const config = signupTestConfig({
   PUBLIC_SIGNUP_ENABLED: 'true',
   RESEND_API_KEY: 'test-only-resend',
@@ -37,7 +36,6 @@ async function pending() {
     .where('email', '=', email)
     .executeTakeFirstOrThrow();
   users.push(user.id);
-  // Signing up creates nothing; onboarding creates the owned workspace and its trial.
   expect(
     await db.selectFrom('workspace_members').select('id').where('user_id', '=', user.id).execute(),
   ).toEqual([]);
@@ -46,10 +44,6 @@ async function pending() {
     .execute((trx) => createWorkspace(trx, user.id, 'Fixture workspace'));
   return { user, email, workspaceId: workspace.id };
 }
-/**
- * The link token of the challenge just issued to a fixture. Mail to a reserved
- * fixture address is refused, so nothing is mailed: the test sets the token.
- */
 async function issuedToken(userId: string, purpose: 'verification' | 'password_reset') {
   expect(mailed).toEqual([]);
   const token = randomUUID();
@@ -105,7 +99,6 @@ describe('verified self-serve lifecycle', () => {
       projectId: randomUUID(),
     };
     expect(await authorizedWorkspaceIds(db, principal)).toEqual([workspaceId]);
-    // Move the complete fixture cohort across its immutable seven-day boundary.
     const account = await db
       .selectFrom('billing_accounts')
       .select('id')

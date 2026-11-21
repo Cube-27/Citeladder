@@ -31,8 +31,6 @@ it('distinguishes empty comparisons from unfetched data and opens the saved www 
     />,
   );
   expect(screen.getByText('No results')).toBeInTheDocument();
-  // Rival's footprint and shared keywords were never fetched: one mark per cell. Other has
-  // nothing fetched at all: one mark spanning its four cells.
   expect(screen.getAllByText('Not fetched')).toHaveLength(4);
   const other = screen.getByRole('row', { name: /other/ });
   expect(

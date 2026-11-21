@@ -10,18 +10,10 @@ import {
 
 import type { NavItem } from './nav-items';
 
-/**
- * The count reads the Actions list, whose client and schemas (Actions,
- * Opportunities, Site Health) would otherwise ride in the boot download. It
- * arrives after the shell; until its read answers it renders nothing, which is
- * also what it renders while the code loads, and it sits in the row's fixed
- * count slot, so its arrival moves nothing.
- */
 const OpenActionCount = lazy(() =>
   import('./open-action-count').then(({ OpenActionCount }) => ({ default: OpenActionCount })),
 );
 
-/** One sidebar destination row. */
 export function NavLink({
   item,
   active,
@@ -49,8 +41,6 @@ export function NavLink({
           label={item.label}
           count={
             item.badge === 'open-actions' ? (
-              // Chrome: a count that cannot load or render is reported and
-              // leaves the row as it was; it never takes the shell down.
               <LazyIsland failed={null} label="open-action-count" defects="contain">
                 <OpenActionCount />
               </LazyIsland>

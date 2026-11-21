@@ -40,7 +40,6 @@ const metricCodec = stringUrlCodec(
 const rowsCodec = stringUrlCodec(DIMENSIONS, 'engine');
 const columnsCodec = stringUrlCodec(DIMENSIONS, 'brand');
 
-/** A hand-edited address can name one dimension twice; the grid needs two. */
 function distinctColumns(rows: MatrixDimension, columns: MatrixDimension): MatrixDimension {
   if (columns !== rows) return columns;
   return rows === 'brand' ? 'engine' : 'brand';
@@ -49,12 +48,6 @@ function distinctColumns(rows: MatrixDimension, columns: MatrixDimension): Matri
 const dimensionLabel = (dimension: MatrixDimension) =>
   MATRIX_DIMENSIONS.find((option) => option.value === dimension)?.label ?? dimension;
 
-/**
- * Insights → Performance matrix (W6): one metric across two of engine, topic,
- * market and brand, at most ten items an axis. A pair never asked reads "Not
- * run"; sentiment under the classified minimum "Too few"; a value that does
- * not apply the Absence dash. Only measured values take the heat tint.
- */
 export function PerformanceMatrix({
   query,
   selected,

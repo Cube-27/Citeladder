@@ -42,11 +42,6 @@ function StatusValue({
   );
 }
 
-/**
- * The Action's Details facts: Status, Impact, Scope, Source (with its crawl
- * for Site health) and Grouping. A placement names the page it is won on as
- * its source and has no scope or grouping, as the mockup's cited page.
- */
 export function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
   const timeZone = useDisplayTimeZone();
   const placement = action.target_kind === 'earned_page';

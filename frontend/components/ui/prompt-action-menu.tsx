@@ -5,12 +5,6 @@ import { IconButton } from '@/components/ui/button';
 import { Menu, MenuContent, MenuLinkItem, MenuTrigger } from '@/components/ui/menu';
 import { ProjectLink } from '@/components/ui/project-link';
 
-/**
- * A prompt input's action menu (the AI Elements PromptInput pattern): a "+"
- * icon button at the start of the composer's control row opening a menu whose
- * rows open one submenu each (`MenuSub`). The menu floats in a portal, so
- * opening it never moves the composer.
- */
 export function PromptActionMenu({
   label,
   open,
@@ -38,10 +32,6 @@ export function PromptActionMenu({
   );
 }
 
-/**
- * A row that goes to an app route: its label, truncating, then an optional
- * detail in the muted ink at the row's end.
- */
 export function PromptMenuLink({
   href,
   label,

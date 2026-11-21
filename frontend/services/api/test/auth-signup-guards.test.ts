@@ -7,7 +7,6 @@ import { inDisposableDomain } from '../src/auth/reserved-domains.ts';
 import { Fixtures, sessionToken, signupTestConfig, testDatabase } from './support.ts';
 
 const SITEVERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
-// A real (non-test) secret, so verification goes to the stubbed siteverify.
 const base = signupTestConfig({
   PUBLIC_SIGNUP_ENABLED: 'true',
   TURNSTILE_SECRET_KEY: 'recorded-turnstile-secret',
@@ -22,7 +21,6 @@ const prefix = `guards-${randomUUID()}`;
 const password = 'password123';
 const decision = { terms_revision: policy.auth.terms_revision, accept_terms: true };
 
-// What Cloudflare answers for each token the widget could have produced.
 const answers: Record<string, object> = {
   'solved-signup': { success: true, action: 'signup', hostname: 'app.example.test' },
   'solved-forgot': { success: true, action: 'forgot-password', hostname: 'app.example.test' },
@@ -194,7 +192,6 @@ describe('Turnstile on sign-up and email-link requests', () => {
       { ...base, auth: { ...base.auth, turnstile: { secret: '', testKeysAllowed: false } } },
       db,
     );
-    // Production never honours Cloudflare's always-pass test secret.
     const testSecretInProduction = createApp(
       {
         ...base,
@@ -271,7 +268,6 @@ describe('disposable email domains at sign-up', () => {
       details: { field: 'email' },
     });
     expect(await usersWith(email)).toEqual([]);
-    // Refused before verification, so the visitor's token is not spent.
     expect(verifications).toEqual([]);
   });
 

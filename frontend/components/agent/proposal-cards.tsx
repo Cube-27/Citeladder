@@ -17,7 +17,6 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 type Proposal = AgentMessage['proposals'][number];
 type ChatAction = AgentChatDetail['actions'][number];
 
-/** What a reply proposed, each as a card the person confirms; the Agent itself did nothing. */
 export function ProposalCards({
   workspaceId,
   proposals,
@@ -25,7 +24,6 @@ export function ProposalCards({
 }: Readonly<{
   workspaceId: string;
   proposals: readonly Proposal[];
-  /** The chat's Actions as they read now; a card renders from these without waiting. */
   actions: readonly ChatAction[];
 }>) {
   if (proposals.length === 0) return null;
@@ -57,12 +55,6 @@ export function ProposalCards({
 const PENDING: ReadonlySet<ChatAction['status']> = new Set(['open', 'in_progress']);
 const DECLARED: ReadonlySet<ChatAction['status']> = new Set(['done']);
 
-/**
- * "Mark … implemented?": the existing declaration dialog, opened with what the
- * person told the Agent. The card's shape comes from the chat's projection, so
- * it never grows once the Action loads; the loaded Action supplies the button
- * and, once declared anywhere, the done state.
- */
 function DeclarationProposal({
   workspaceId,
   proposal,
@@ -106,7 +98,6 @@ function DeclarationProposal({
   );
 }
 
-/** The declaration dialog, opened with the proposal; contextual links are declared on the Website page. */
 function DeclareButton({
   workspaceId,
   proposal,

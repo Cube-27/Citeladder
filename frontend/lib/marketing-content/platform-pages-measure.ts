@@ -1,6 +1,5 @@
 import { TRIAL_NOTE, type PlatformPage } from './platform-page-types';
 
-/** The overview and AI answer measurement: visibility and citations. */
 export const MEASURE_PAGES: readonly PlatformPage[] = [
   {
     path: '/platform',
@@ -287,7 +286,6 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
     ],
     closing: 'Get your AI visibility baseline',
-    // The AI-visibility hub: every page in the cluster links here, and here back to each.
     related: [
       '/llm-rank-tracker',
       '/track-brand-mentions-chatgpt',

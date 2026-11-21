@@ -30,21 +30,13 @@ import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
-/** A page detail's trail: Site health, then its Pages tab, where its rows live. */
 export const PAGE_DETAIL_TRAIL: readonly Crumb[] = [
   { label: 'Site health', href: '/site' },
   { label: 'Pages', href: '/site?tab=pages' },
 ];
 
-/** Queued is neither "running" nor "ready to ask again": it is its own state. */
 const rerunLabel = (pending: boolean) => (pending ? 'Re-auditing…' : 'Re-audit this page');
 
-/**
- * One page of a crawl, in the order a site owner reads it: how the page
- * scores, every issue on it worst first, each issue with its fix and the ways
- * to act on it, then — collapsed at the foot — the HTTP and link-graph
- * measurements only a developer reaches for.
- */
 export function UrlDetailView({
   detail,
   rerun,
@@ -52,14 +44,11 @@ export function UrlDetailView({
   children,
 }: Readonly<{
   detail: PageDetail;
-  /** Re-audits the page, for a role that may run one. */
   rerun?: RerunControl;
-  /** The page action that opens its resolved-issue history. */
   history?: ReactNode;
   children?: ReactNode;
 }>) {
   const title = pageDisplayTitle(detail.title, detail.display_url);
-  // The masthead's Ask agent opens seeded with this page.
   useAgentPanelSeed(pageHandoff(detail));
   return (
     <RecordPage
@@ -97,7 +86,6 @@ export function UrlDetailView({
   );
 }
 
-/** The whole page for the agent: its id and URL, never its evidence. */
 function pageHandoff(detail: PageDetail) {
   const count = detail.issues.filter((issue) => issue.finding_class === 'defect').length;
   return {
@@ -108,7 +96,6 @@ function pageHandoff(detail: PageDetail) {
   };
 }
 
-/** Its issues worst first; with none, readiness only once the audit finished. */
 function pagePrompt(detail: PageDetail, count: number): string {
   const url = detail.display_url;
   if (count > 0) {
@@ -120,11 +107,6 @@ function pagePrompt(detail: PageDetail, count: number): string {
   return `Review ${url} for search and answer-engine readiness and propose improvements.`;
 }
 
-/**
- * The record's identity, under the masthead that holds its title: its URL,
- * kind, audit date and, when it is not done, its status, then the page's
- * secondary actions. The masthead keeps the one primary action.
- */
 function PageIdentity({ detail, actions }: Readonly<{ detail: PageDetail; actions: ReactNode }>) {
   const timeZone = useDisplayTimeZone();
   const facts = [
@@ -173,7 +155,6 @@ function PageIdentity({ detail, actions }: Readonly<{ detail: PageDetail; action
   );
 }
 
-/** A URL that failed to fetch: the pages that link it, which is where the fix goes. */
 function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
   if (!isFetchFailure(detail.analysis_status) || !detail.linked_from.length) return null;
   return (
@@ -201,7 +182,6 @@ function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
   );
 }
 
-/** HTTP delivery and link-graph measurements, closed by default at the page's foot. */
 function TechnicalDetails({ detail }: Readonly<{ detail: PageDetail }>) {
   return (
     <Section className="min-w-0">
@@ -243,7 +223,6 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
       label: 'HTTP status',
       value: delivery.status_code === null ? null : `${delivery.status_code}`,
     },
-    // Null is "not known", never "no compression".
     { label: 'Compression', value: delivery.compression ?? null },
     { label: 'HTTP version', value: delivery.http_version ?? null },
     { label: 'Cache-Control', value: delivery.cache_control ?? null },

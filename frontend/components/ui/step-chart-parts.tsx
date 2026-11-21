@@ -3,11 +3,6 @@ import { createContext, useContext } from 'react';
 import type { TrendScale } from '@/components/ui/trend-geometry';
 import { cn } from '@/lib/utils';
 
-/**
- * Series ink by identity: you are the accent, rivals one to four take ink and
- * the cool hues, and a merged remainder (or a fifth rival) is `data-other`.
- * The accent is never a rival's colour.
- */
 export type SeriesTone = 'you' | 'rival-1' | 'rival-2' | 'rival-3' | 'rival-4' | 'other';
 
 export const SERIES_STROKE: Record<SeriesTone, string> = {
@@ -28,7 +23,6 @@ export const SERIES_FILL: Record<SeriesTone, string> = {
   other: 'fill-data-other bg-data-other',
 };
 
-/** A series' name in text: its own hue where that hue holds 4.5:1, else ink. */
 const SERIES_TEXT: Record<SeriesTone, string> = {
   you: 'fill-accent-text',
   'rival-1': 'fill-ink',
@@ -40,19 +34,12 @@ const SERIES_TEXT: Record<SeriesTone, string> = {
 
 const RIVALS = ['rival-1', 'rival-2', 'rival-3', 'rival-4'] as const;
 
-/**
- * Each rival's tone by who it is, for every chart on a page: the page lists
- * its rivals once (`seriesTones`) and a chart or bar under it colours a series
- * by its identity, so a rival keeps one colour across the page.
- */
 export const SeriesTonesContext = createContext<ReadonlyMap<string, SeriesTone> | null>(null);
 
-/** Rival tones in the page's order of rivals; a fifth and later are Other. */
 export function seriesTones(identities: readonly string[]): ReadonlyMap<string, SeriesTone> {
   return new Map(identities.map((identity, index) => [identity, RIVALS[index] ?? 'other']));
 }
 
-/** The tone of the line at `index`: the first is you unless the chart has no "you". */
 export function seriesTone(
   line: Readonly<{ other?: boolean }>,
   index: number,
@@ -63,11 +50,6 @@ export function seriesTone(
   return RIVALS[index] ?? 'rival-4';
 }
 
-/**
- * Tones for a chart's series: you first when `firstIsYou`, the merged
- * remainder Other, and every rival by its identity on the page
- * (`SeriesTonesContext`), else by its place in the chart.
- */
 export function useSeriesTones(
   lines: readonly Readonly<{ identity: string; other?: boolean }>[],
   firstIsYou: boolean,
@@ -79,12 +61,9 @@ export function useSeriesTones(
   });
 }
 
-/** Axis and label text inside a chart's SVG: `caption` in `ink-2`, tabular numerals. */
 export const AXIS_TEXT = 'fill-ink-2 type-caption tabular-nums';
 
-/** The vertical room one end label needs, so two labels never overprint. */
 const END_LABEL_GAP = 16;
-/** A caption glyph's average advance, the estimate label widths use. */
 export const LABEL_CHAR_WIDTH = 7.3;
 
 export type EndLabel = Readonly<{
@@ -95,11 +74,6 @@ export type EndLabel = Readonly<{
   y: number;
 }>;
 
-/**
- * Each line's label at the right end of the plot, at its latest value. When
- * two would sit closer than one line of text the chart shows a key instead,
- * so null means "use the key".
- */
 export function placeEndLabels(
   ends: readonly Omit<EndLabel, 'x'>[],
   right: number,
@@ -131,13 +105,8 @@ export function EndLabels({ labels }: Readonly<{ labels: readonly EndLabel[] }>)
   );
 }
 
-/** A run of missing periods, as the x span it covers. */
 export type GapBand = Readonly<{ from: number; to: number }>;
 
-/**
- * The missing periods of the primary series, each run as one band reaching
- * halfway to its measured neighbours. Nothing is interpolated across it.
- */
 export function gapBands(values: readonly (number | null)[], scale: TrendScale): GapBand[] {
   const bands: GapBand[] = [];
   let start: number | null = null;
@@ -157,7 +126,6 @@ export function gapBands(values: readonly (number | null)[], scale: TrendScale):
   return bands;
 }
 
-/** A missing period: a `well` band with its word when the band has room for it. */
 export function GapBands({
   bands,
   top,
@@ -200,7 +168,6 @@ export function GapBands({
   );
 }
 
-/** What an event marks: the prompt panel, an engine's model, or work that went live. */
 export type EventKind = 'panel' | 'model' | 'action';
 
 const EVENT_FILL: Record<EventKind, string> = {
@@ -211,7 +178,6 @@ const EVENT_FILL: Record<EventKind, string> = {
 
 type PlacedEvent = Readonly<{ key: string; label: string; x: number; kind?: EventKind }>;
 
-/** Events at one place on the axis share one marker; mixed kinds mark in ink. */
 function groupedEvents(events: readonly PlacedEvent[]) {
   const groups = new Map<number, PlacedEvent[]>();
   for (const event of events) groups.set(event.x, [...(groups.get(event.x) ?? []), event]);
@@ -228,15 +194,9 @@ function groupedEvents(events: readonly PlacedEvent[]) {
   });
 }
 
-/** A diamond centred on (x, y), half `r` across. */
 const diamond = (x: number, y: number, r: number) =>
   `M${x} ${y - r}l${r} ${r}-${r} ${r}-${r}-${r}z`;
 
-/**
- * An event: a dashed tick across the plot with a diamond at its top in its
- * kind's colour, a count where several share a run and, when room allows and
- * no legend lists them, its label.
- */
 export function EventTicks({
   events,
   top,
@@ -288,7 +248,6 @@ export function EventTicks({
   );
 }
 
-/** A chart's events in words under the plot, one "date · label" each with its diamond. */
 export function EventLegend({
   events,
   shown,
@@ -308,10 +267,6 @@ export function EventLegend({
   );
 }
 
-/**
- * The area under each run of your line, down to the plot's floor: the soft
- * accent fill that marks your series. A null ends a run.
- */
 export function areaPath(
   points: readonly (readonly [number, number] | null)[],
   floor: number,
@@ -332,7 +287,6 @@ export function areaPath(
     .join('');
 }
 
-/** Your series' fill: the accent at 16% under the line, falling to nothing at the floor. */
 export function YouFill({ id, d }: Readonly<{ id: string; d: string }>) {
   return (
     <>
@@ -347,15 +301,9 @@ export function YouFill({ id, d }: Readonly<{ id: string; d: string }>) {
   );
 }
 
-/**
- * A series' marker shape. Round for every line while end labels name them;
- * once a key replaces the labels each rival takes its own shape, so no series
- * is told apart by colour alone.
- */
 export const MARKER_SHAPES = ['circle', 'square', 'diamond', 'triangle'] as const;
 export type MarkerShape = (typeof MARKER_SHAPES)[number];
 
-/** One marker centred on (x, y), about 6px across. */
 export function MarkerMark({
   x,
   y,
@@ -399,7 +347,6 @@ export function MarkerMark({
   }
 }
 
-/** A line's markers, filled for you and hollow (the card's fill) for everyone else. */
 export function Markers({
   points,
   tone,
@@ -412,7 +359,6 @@ export function Markers({
   const className = cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-surface');
   return points.map((point, index) =>
     point ? (
-      // A marker's position is its identity on the line.
       <g key={`${index}-${point[0]}`} data-marker-shape={shape}>
         <MarkerMark x={point[0]} y={point[1]} shape={shape} className={className} />
       </g>

@@ -15,11 +15,6 @@ import { useLiveTurn, type LiveTurn } from '@/lib/agent/live-turns';
 import type { AgentChatDetail, AgentRun } from '@/lib/api/agent';
 import { Notice } from '@/components/ui/notice';
 
-/**
- * The running turn, or how an unanswered one ended. Its live events are
- * subscribed here, not in the conversation, so each streamed delta re-renders
- * only this turn, never the earlier messages.
- */
 export function LiveActivity({ detail }: Readonly<{ detail: AgentChatDetail }>) {
   const outcome = runOutcome(detail.latest_run);
   const live = useLiveTurn(outcome.kind === 'running' ? outcome.run.id : null);
@@ -28,7 +23,6 @@ export function LiveActivity({ detail }: Readonly<{ detail: AgentChatDetail }>) 
   switch (outcome.kind) {
     case 'running':
       return <RunningTurn run={outcome.run} queued={outcome.queued} live={live} />;
-    // Every ended turn now answers with its own reply; older ones may not have.
     case 'stopped_at_limit':
       return answered ? null : <Notice tone="warning">{runErrorCopy('stopped_at_limit')}</Notice>;
     case 'failed':
@@ -37,7 +31,6 @@ export function LiveActivity({ detail }: Readonly<{ detail: AgentChatDetail }>) 
       return null;
   }
 }
-/** A page chat's fetch: the first turn starts once the page is read. */
 function ReadingPage() {
   return (
     <Inline as="span" gap="compact" className={textRole('caption')}>
@@ -46,11 +39,6 @@ function ReadingPage() {
     </Inline>
   );
 }
-/**
- * The turn as it runs: its status line first, then what it has written. The
- * status line keeps one height from start to end and the written text only
- * grows at its end, so the streaming text never moves.
- */
 function RunningTurn({
   run,
   queued,
@@ -60,9 +48,6 @@ function RunningTurn({
     queued && !live?.step
       ? 'Waiting to start…'
       : (liveStepLabel(live) ?? activeStepLabel(currentAttempt(run)));
-  // The stream is the freshest record while it lasts; after it drops the run is
-  // polled. The longer record wins, so rows never vanish at the switch. Text
-  // deltas keep both inputs, so they rebuild no rows.
   const tools = live?.tools;
   const streamed = useMemo(() => activityRows((tools ?? []).map(callStep)), [tools]);
   const polled = useMemo(() => activityRows(currentAttempt(run).map(callStep)), [run]);
@@ -82,7 +67,6 @@ function RunningTurn({
     </AgentTurn>
   );
 }
-/** What the newest model call is doing: its running reads, else deciding. */
 function liveStepLabel(live: LiveTurn | undefined) {
   if (!live?.step) return null;
   const running = live.tools.filter(
@@ -100,7 +84,6 @@ function useElapsedSeconds(since: number) {
   }, []);
   return Math.max(0, Math.round((now - since) / 1000));
 }
-/** The progress of the run's current attempt; an earlier attempt's reads are not this turn's. */
 function currentAttempt({ progress, attempt_count }: AgentRun) {
   const attempt = attempt_count ?? progress.at(-1)?.run_attempt;
   return progress.filter((step) => step.run_attempt === attempt);

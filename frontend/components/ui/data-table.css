@@ -1,15 +1,7 @@
-/* DataTable's own geometry. Imported by DataTable, so it loads with the
-   screens that draw one, not on boot. Column widths and alignment are each
-   table's generated rules (`columnRules`); colours and focus stay in globals.css. */
-
 [data-data-table-frame] {
-  /* A flexible column never narrows past about 25 characters of row name;
-     below it the table scrolls with the identity column pinned. */
   --data-table-identity-min: 25ch;
 }
 
-/* The pinned block: the identity column, with the selection box before it
-   when there is one, stays in view while the table scrolls sideways. */
 [data-pinned] .table-frame tr > :nth-child(1),
 [data-pinned='2'] .table-frame tr > :nth-child(2) {
   position: sticky;

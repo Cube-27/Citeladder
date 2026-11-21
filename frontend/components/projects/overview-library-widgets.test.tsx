@@ -43,7 +43,6 @@ describe('Overview library widgets', () => {
   });
 
   it('says there is no run yet instead of loading perception forever', () => {
-    // The latest projection is `null` when the project has no measured run.
     reads.visibility = { data: null, isError: false };
     renderWithProviders(<PerceptionWidget project={project} />);
     const region = screen.getByRole('region', { name: 'Perception' });
@@ -152,7 +151,6 @@ describe('Overview library widgets', () => {
       data: {
         dimension: 'domain',
         comparison_status: 'comparable',
-        // Shares over different totals give raw float deltas.
         risers: [
           {
             key: 'review.example',

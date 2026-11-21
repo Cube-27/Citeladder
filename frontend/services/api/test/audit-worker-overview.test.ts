@@ -13,7 +13,6 @@ describe('leased Google AI Overview phases', () => {
   it('keeps a paid submission whose receipt failed to save for lease-expiry reconciliation', async () => {
     const t = await seed(true, [], 'google_ai_overview');
     let failNextTransaction = false;
-    // The receipt save loses its database connection; every other write goes through.
     const flaky = new Proxy(db, {
       get(target, property) {
         if (property === 'transaction' && failNextTransaction) {
@@ -89,7 +88,6 @@ describe('leased Google AI Overview phases', () => {
       provider_task_submitted_at: null,
       attempt_count: 0,
     });
-    // The rate limit blocked the account's pool for at most its cooldown.
     tick += 61000;
     await ready(t.task.id);
     await w.runOnce();
@@ -104,7 +102,6 @@ describe('leased Google AI Overview phases', () => {
   it('observes a Google AI Overview with one paid submission and a free retrieval', async () => {
     const t = await seed(true, [], 'google_ai_overview'),
       paths: string[] = [];
-    // The provider's per-second pool admits the retrieval once the clock moves on.
     let tick = Date.now();
     const clock = () => new Date(tick);
     const w = worker(
@@ -206,7 +203,6 @@ describe('leased Google AI Overview phases', () => {
       runtime,
       auditTestKey,
       {
-        // The first save loses its database connection inside the owned transaction.
         execution: async (...args) => {
           if (++saves === 1) throw new Error('Connection terminated unexpectedly');
           return deriveExecution(...args);

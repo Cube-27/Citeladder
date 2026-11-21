@@ -1,11 +1,6 @@
 import { PARENT_COMPANY, OPERATOR_LINE, type LegalDocument } from './legal';
 import { legalSections } from './legal-text';
 
-/**
- * CiteLadder Terms of Service. Wording follows the 24 September 2026 review
- * draft; clauses that still wait on an owner decision are left out rather
- * than published as a guess.
- */
 export const TERMS_OF_SERVICE: LegalDocument = {
   path: '/terms',
   metaTitle: 'Terms of Service · CiteLadder',

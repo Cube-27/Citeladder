@@ -57,7 +57,6 @@ describe('frozen deterministic execution scoring', () => {
       search_query_text_available: false,
       prompt_class: 'branded',
     });
-    // A blank answer names nothing either, as perception and the assessments read it.
     const blank = scoreExecution({
       config,
       answerText: ' \n ',
@@ -104,7 +103,6 @@ describe('frozen deterministic execution scoring', () => {
       brand_first_offset: 11,
     });
     expect(score('target Australia')).toMatchObject({ brand_mentioned: true });
-    // An audit frozen before policies counts every occurrence.
     expect(
       scoreExecution({
         config: scoringConfig({ brand_name: 'Target' }),
@@ -196,7 +194,6 @@ describe('frozen deterministic execution scoring', () => {
         citations: [],
       });
       const assessed = assessEntities(answer, config)[0]!.state !== 'absent';
-      // Brand detection and the assessment perception passages read must agree.
       expect(assessed).toBe(score.brand_mentioned);
       return score.brand_mentioned;
     };
@@ -209,9 +206,7 @@ describe('frozen deterministic execution scoring', () => {
         ]);
     expect(named('Target', 'Ads targeted at parents.')).toBe(false);
     expect(named('Target', 'Ads at Target for parents.')).toBe(true);
-    // A short part never splits off an "and": "Brandon" is not "Br and on".
     expect(named('Brandon', 'Br and on the menu.')).toBe(false);
-    // So an alias is suggested only for a domain spelling none of those forms reads.
     expect(
       aliasSuggestions({
         brandName: 'Best & Less',

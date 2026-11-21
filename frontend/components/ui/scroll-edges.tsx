@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'rea
 
 import { ChevronLeft, ChevronRight } from '@/lib/icons';
 
-/** Which sides of a sideways-scrolling region hide more content. */
 type ScrollEdges = Readonly<{ start: boolean; end: boolean }>;
 
 const NO_EDGES: ScrollEdges = { start: false, end: false };
@@ -16,11 +15,6 @@ function edgesOf(node: HTMLElement): ScrollEdges {
   return { start: scrolled > 1, end: scrolled < hidden - 1 };
 }
 
-/**
- * Whether the region `ref` points at can scroll sideways, and towards which
- * side, kept current on scroll and on any resize of the region or its
- * content. Both stay false while nothing overflows.
- */
 function useScrollEdges(ref: RefObject<HTMLElement | null>): ScrollEdges {
   const [edges, setEdges] = useState(NO_EDGES);
   useEffect(() => {
@@ -36,7 +30,6 @@ function useScrollEdges(ref: RefObject<HTMLElement | null>): ScrollEdges {
     node.addEventListener('scroll', update, { passive: true });
     const observer = new ResizeObserver(update);
     observer.observe(node);
-    // The content can grow (a page of longer rows) while the region keeps its size.
     if (node.firstElementChild) observer.observe(node.firstElementChild);
     return () => {
       node.removeEventListener('scroll', update);
@@ -46,7 +39,6 @@ function useScrollEdges(ref: RefObject<HTMLElement | null>): ScrollEdges {
   return edges;
 }
 
-/** The props the scrolling element takes: its cue hook and, while it scrolls, a name and a tab stop. */
 export type ScrollRegionProps = Readonly<{
   'data-scroll-content': '';
   tabIndex?: 0;
@@ -54,16 +46,8 @@ export type ScrollRegionProps = Readonly<{
   'aria-label'?: string;
 }>;
 
-/** A step is most of the visible width, so one column or tab stays in view for context. */
 const STEP_SHARE = 0.8;
 
-/**
- * One sideways-scrolling region's state: the ref for the scrolling element,
- * its props, which edges hide more, and the step. The fade is a mask on the
- * content (data-table.css); a tab row's steppers sit outside it, never over
- * the content. `start={false}` drops the leading fade where a pinned column
- * already marks that edge.
- */
 export function useScrollFrame({
   label,
   start = true,
@@ -94,14 +78,6 @@ export function useScrollFrame({
 
 export type ScrollFrameState = ReturnType<typeof useScrollFrame>;
 
-/**
- * ScrollFrame — a tab strip that scrolls sideways (`tabs.tsx`): as wide as
- * its tabs, the content fading at the edge it can scroll towards, with a
- * button outside the content at each edge that hides more, so the start
- * mirrors the end once scrolled. While it scrolls, a `label`led frame is a
- * named region with a tab stop, so the arrow keys scroll it; a frame whose
- * content takes focus itself (a tab list) passes no label.
- */
 export function ScrollFrame({
   label,
   children,
@@ -123,7 +99,6 @@ export function ScrollFrame({
   );
 }
 
-/** A pointer aid: the keyboard scrolls the focused frame, so a step is no tab stop. */
 function ScrollStep({ side, onStep }: Readonly<{ side: 'start' | 'end'; onStep: () => void }>) {
   const Glyph = side === 'start' ? ChevronLeft : ChevronRight;
   return (

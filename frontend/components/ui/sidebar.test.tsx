@@ -23,7 +23,6 @@ describe('SidebarScrollList', () => {
     const group = list.querySelector('nav')!.firstElementChild!;
     expect(list.dataset.fadeBottom).toBeUndefined();
 
-    // Within the 1px tolerance nothing is hidden.
     setHeights(list, { scroll: 401, client: 400 });
     act(() => emitResize(group));
     expect(list.dataset.fadeBottom).toBeUndefined();
@@ -58,14 +57,12 @@ describe('SidebarScrollList', () => {
         scrollTop = value;
       },
     });
-    // The list spans 0–400; the row sits inside it but under the 32px fade.
     scroller.getBoundingClientRect = () => DOMRect.fromRect({ y: 0, height: 400 });
     row.getBoundingClientRect = () => DOMRect.fromRect({ y: 352 - scrollTop, height: 32 });
 
     rerender(list('/performance'));
     expect(scrollTop).toBe(16);
 
-    // A list 60 high has no room for both fades: the row is centred, never pushed out.
     rerender(list('/projects'));
     scrollTop = 0;
     scroller.getBoundingClientRect = () => DOMRect.fromRect({ y: 0, height: 60 });

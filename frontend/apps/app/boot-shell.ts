@@ -1,12 +1,3 @@
-/**
- * The first paint before the bundle (STA-02), built from the route manifest:
- * index.html's `.boot-shell` gets the sidebar's rows at build, and
- * `/boot-title.js`, a same-origin classic script (the CSP allows no inline
- * script), shows the shell frame only on a shell path (a flow path keeps the
- * plain ground, as `FirstFrame` does), names the page header's section and
- * title and the document, shows the mode's rows and applies the stored
- * sidebar width.
- */
 import type * as Manifest from '../../lib/navigation/app-routes.ts';
 
 export type RouteManifest = Pick<
@@ -14,7 +5,6 @@ export type RouteManifest = Pick<
   'APP_ROUTES' | 'DASHBOARD_SIDEBAR_GROUPS' | 'navDestinations'
 >;
 
-/** Where index.html takes the sidebar's rows. */
 export const BOOT_SIDEBAR_MARKER = '<!-- boot-sidebar -->';
 export const BOOT_TITLE_FILE = 'boot-title.js';
 
@@ -23,12 +13,6 @@ const escapeHtml = (text: string) =>
 
 const row = (label: string) => `<span class="boot-row">${escapeHtml(label)}</span>`;
 
-/**
- * The labelled sidebar's static rows: the ident cell holding the switcher's
- * block, the mode switch, the Dashboard groups and the foot with the account's
- * block, at the live sidebar's places. No current mark: which row is current
- * is the bundle's to say.
- */
 export function bootSidebarHtml(manifest: RouteManifest): string {
   const groups = manifest.DASHBOARD_SIDEBAR_GROUPS.map(({ group, title }) => {
     const head = title ? `<span class="boot-group-title">${escapeHtml(title)}</span>` : '';
@@ -46,11 +30,6 @@ export function bootSidebarHtml(manifest: RouteManifest): string {
 
 const atOrBelow = (path: string, base: string) => path === base || path.startsWith(`${base}/`);
 
-/**
- * The page header's section for a route, as `pageSection` names it: the
- * Dashboard group listing the route (or its collection), the Agent, else the
- * workspace's own pages.
- */
 function routeSection(manifest: RouteManifest, route: RouteManifest['APP_ROUTES'][number]) {
   const path = route.collection ?? route.path;
   if (atOrBelow(path, '/agent')) return 'Agent';
@@ -62,11 +41,6 @@ function routeSection(manifest: RouteManifest, route: RouteManifest['APP_ROUTES'
   return group?.title ?? 'Workspace';
 }
 
-/**
- * `/boot-title.js`. It resolves the path as `resolveTitle` and `hasPageTitle`
- * do (the route, else the deepest parameter-free route above it). The storage
- * keys are lib/sidebar-width.ts's.
- */
 export function bootTitleScript(manifest: RouteManifest): string {
   const routes = manifest.APP_ROUTES.map((route) => [
     route.path,

@@ -1,11 +1,3 @@
-/**
- * Issue counts and ranked groups over the snapshot's evaluations, reached
- * through its analyses (each names its own evaluations) and the crawl's
- * site-level architecture evaluations. Those run after the snapshot, so its
- * rollups are recomputed once more when they land (`addArchitectureIssues`).
- * Every count is a SQL aggregate: a crawl of tens of thousands of pages holds
- * hundreds of thousands of issues, so no issue row is loaded (CO-7).
- */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -14,13 +6,6 @@ import { issueImpact, siteLevelScope } from './reads/rules.ts';
 import type { Crawl } from './site-task.ts';
 import { compareText } from '../text-order.ts';
 
-/**
- * The snapshot's issues with their evaluations' roles and scope. An issue is
- * written by the crawl whose analysis names its evaluation (`insertEvaluations`,
- * the architecture writer), so each is matched on `(crawl_id, evaluation_id)`:
- * the crawl is `site_issues`' partition key, and an evaluation id alone probed
- * every partition once per evaluation.
- */
 function snapshotIssueRows(crawl: Crawl, analysisIds: string[]) {
   return sql`select i.id, i.crawl_id, i.rule_id, i.finding_class, i.site_url_id, i.severity, i.category,
       e.scope, e.score_roles
@@ -57,7 +42,6 @@ type GroupRow = {
   urls: number;
 };
 
-/** The snapshot's issue rollups, matched once and aggregated in one statement. */
 export async function snapshotIssues(db: Database, crawl: Crawl, analysisIds: string[]) {
   const { rows } = await sql<{
     issues: number;
@@ -107,7 +91,6 @@ export async function snapshotIssues(db: Database, crawl: Crawl, analysisIds: st
         description: row.description,
         remediation: row.remediation,
         score_roles: (row.roles ?? []).toSorted(compareText),
-        // A site-level finding is one row against the homepage; its pages are its evidence.
         affected_pages: siteLevelScope(row.rule_id, row.evidence)?.affected ?? row.urls,
         eligibility_blocker: row.rule_id === 'technical.indexable',
         impact_band: impact.band,

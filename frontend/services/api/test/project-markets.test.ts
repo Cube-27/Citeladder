@@ -1,8 +1,3 @@
-/**
- * Measurement markets (F7) against the real PostgreSQL schema: the markets
- * owner and its plan limit, one audit per market at admission, the estimate,
- * schedules, and the visibility market filter with workspace isolation.
- */
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
@@ -50,7 +45,6 @@ async function withMarketSlots(tenant: Tenant, value: number) {
   await grant(db, await billingAccount(db, tenant.workspaceId), { key: 'market_slots', value });
 }
 
-/** A verified connection for each engine, so admission can route it. */
 async function connect(
   tenant: Tenant,
   engines: ('gemini' | 'chatgpt_search' | 'gemini_consumer')[],
@@ -440,7 +434,6 @@ describe('visibility by market', () => {
       country_code: 'ES',
       language_code: 'es',
     });
-    // Spain's run finished, but its metrics are not written yet.
     const spanishRun = await fixtures.audit(tenant, { completedAt: new Date() });
     await db
       .updateTable('audits')

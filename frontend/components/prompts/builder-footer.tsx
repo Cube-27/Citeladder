@@ -11,7 +11,6 @@ import { liveBuilderStep, type BuilderStep } from './builder-steps';
 import type { BusinessDraftState } from '@/components/knowledge-base/use-business-draft';
 import type { BuilderTopics } from './use-builder-topics';
 
-/** The footer's left end: Cancel, back to Prompts. */
 export function BuilderCancel() {
   return (
     <Button asChild variant="quiet">
@@ -23,10 +22,6 @@ export function BuilderCancel() {
   );
 }
 
-/**
- * The footer's right end: Back, then each step's way forward: save or confirm
- * before moving on, Generate, and at the end Track for the selected suggestions.
- */
 export function BuilderStepActions({
   step,
   setStep,
@@ -55,11 +50,8 @@ export function BuilderStepActions({
   const advance = async (save: () => Promise<unknown>, to: BuilderStep) => {
     try {
       await save();
-      // A person who moved to another step while it saved stays there.
       if (liveBuilderStep() === step) setStep(to);
-    } catch {
-      // The step shows the failure; the person stays to fix it.
-    }
+    } catch {}
   };
   switch (step) {
     case 'business':

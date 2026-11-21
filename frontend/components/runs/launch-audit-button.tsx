@@ -21,14 +21,8 @@ type LaunchRunProps = Omit<
 
 const PROMPTS_HREF = '/prompts';
 
-/**
- * Whether the active project can launch a run, read from its prompt sets: the
- * one rule Launch run and every "Add prompts first" gate share. A failed read
- * stays launchable so the dialog can name the failure.
- */
 export function useLaunchReadiness(projectId: string): LaunchReadiness {
   const { workspaceId } = useProjectScope();
-  // A failed read is the screen's to name and retry; mounting here must not refetch it.
   const setsQuery = useQuery({
     ...promptsQueries.sets({ workspaceId, projectId }),
     retryOnMount: false,
@@ -40,13 +34,6 @@ export function useLaunchReadiness(projectId: string): LaunchReadiness {
   );
 }
 
-/**
- * Launch run: opens the shared run configuration dialog and routes directly
- * to the new run. Its words and look are the `launchRun` preset on every page,
- * and whether it can launch is `launchReadiness`, so every entry agrees.
- * Held, it keeps focus and names why in a tooltip and its description.
- * A role that may not run audits is not offered it.
- */
 export function LaunchAuditButton(props: Readonly<LaunchRunProps>) {
   const canRun = useWorkspaceCapability('run');
   const project = useActiveProject();
@@ -55,10 +42,6 @@ export function LaunchAuditButton(props: Readonly<LaunchRunProps>) {
   return <LaunchAudit {...props} projectId={project.id} />;
 }
 
-/**
- * An empty state's next step toward a first run: "Add prompts" while no
- * active prompt exists (Launch run could not start), Launch run once one does.
- */
 export function FirstRunAction() {
   const project = useActiveProject();
   if (!project) return <LaunchAuditButton secondary />;

@@ -56,8 +56,6 @@ const DASHBOARD = siteHealthDashboardSchema.parse({
   quota: { used: 1, limit: 50 },
   root_errors: [],
 });
-/** A response held back so the read it races clearly answers first. */
-/** A response held until the test lets it go, so "answers last" is a fact, not a timing race. */
 function heldAnswer() {
   let release = () => {};
   const held = new Promise<void>((resolve) => {
@@ -65,7 +63,6 @@ function heldAnswer() {
   });
   return { held, release: () => release() };
 }
-// The Website page browser's first Monitored page, as the screen asks for it.
 const previewKey = siteHealthQueries.pages(PROJECT.workspaceId, CRAWL_ID, {
   limit: 10,
   monitored: true,
@@ -95,11 +92,6 @@ describe('prefetchRoute', () => {
     await vi.waitFor(() => expect(demandApi.getLatest).toHaveBeenCalledTimes(1));
   });
 
-  /**
-   * Search Demand renders a settled "no snapshot exists yet" alert from a 404.
-   * Re-driving that key would reset `error` → `pending`, so the alert would be
-   * replaced by the full-page skeleton for the length of the repeat request.
-   */
   it('warms the Website page preview under a cached dashboard’s crawl', async () => {
     client.setQueryData(siteHealthQueries.dashboard(PROJECT).queryKey, DASHBOARD);
     const asked: string[] = [];
@@ -115,8 +107,6 @@ describe('prefetchRoute', () => {
     );
     prefetchRoute(client, '/site', PROJECT);
 
-    // The page browser's first page names its default sort, so the warmed
-    // preview must too or it fills an entry the browser never reads.
     await vi.waitFor(() => expect(asked).toEqual(['pages ?limit=10&monitored=true&sort=status']));
   });
 
@@ -127,7 +117,6 @@ describe('prefetchRoute', () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT_ID}/site-health`, async () => {
         asked.push('dashboard');
-        // Held until the preview is filed: the preview must not wait for it.
         await dashboard.held;
         return HttpResponse.json(DASHBOARD);
       }),
@@ -153,7 +142,6 @@ describe('prefetchRoute', () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT_ID}/site-health`, () => {
         asked.push('dashboard');
-        // The dashboard fails, so every hover takes the cold path again.
         return HttpResponse.json({ error: { message: 'down' } }, { status: 500 });
       }),
       http.get(`/api/v1/projects/${PROJECT_ID}/site-health/pages`, async () => {
@@ -163,14 +151,12 @@ describe('prefetchRoute', () => {
       }),
     );
 
-    // Hover, focus, hover again while the first answer is still on its way.
     prefetchRoute(client, '/site', PROJECT);
     prefetchRoute(client, '/site', PROJECT);
     await vi.waitFor(() => expect(asked).toContain('latest pages'));
     prefetchRoute(client, '/site', PROJECT);
     latest.release();
     await vi.waitFor(() => expect(client.getQueryData(previewKey)).toEqual(page));
-    // And once more after it was filed: the fresh answer is reused.
     prefetchRoute(client, '/site', PROJECT);
     await new Promise((resolve) => {
       setTimeout(resolve, 0);
@@ -182,7 +168,6 @@ describe('prefetchRoute', () => {
   it('asks for a cold issue catalog once however often the reader hovers', async () => {
     const asked: string[] = [];
     mswServer.use(
-      // The dashboard fails, so every hover takes the cold path again.
       http.get(`/api/v1/projects/${PROJECT_ID}/site-health`, () =>
         HttpResponse.json({ error: { message: 'down' } }, { status: 500 }),
       ),
@@ -195,7 +180,6 @@ describe('prefetchRoute', () => {
     prefetchRoute(client, '/issues', PROJECT);
     prefetchRoute(client, '/issues', PROJECT);
     await vi.waitFor(() => expect(asked).toEqual(['latest issues']));
-    // A read that failed is not asked again from intent; the screen retries it.
     prefetchRoute(client, '/issues', PROJECT);
     await new Promise((resolve) => {
       setTimeout(resolve, 0);
@@ -268,7 +252,6 @@ describe('prefetchRoute', () => {
     const page = { items: [], next_cursor: null, summary };
     const worst = { items: [], next_cursor: null, summary: { ...summary, issue_count: 3 } };
     const asked: string[] = [];
-    // Held until the catalog is filed: the catalog must not wait for it.
     const dashboard = heldAnswer();
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT_ID}/site-health`, async () => {
@@ -290,11 +273,9 @@ describe('prefetchRoute', () => {
         .getQueryCache()
         .findAll({ queryKey: queryKeys.siteHealth.crawlIssues(CRAWL_ID) })
         .map((query) => query.state.data);
-      // Exactly the two, in either order.
       expect(filed).toHaveLength(2);
       expect(filed).toEqual(expect.arrayContaining([page, worst]));
     });
-    // The summary's worst issues, across every tab and both classes.
     expect(asked).toEqual(['?limit=3']);
     dashboard.release();
   });
@@ -309,7 +290,6 @@ describe('prefetchRoute', () => {
       'search_console',
     ] as const;
     mswServer.use(
-      // The command center never answers: everything else is asked beside it.
       ...pendingOverviewHandlers(PROJECT_ID, widgets, asked),
       recordedProjectRead(PROJECT_ID, 'visibility/prompts', 'prompts', asked, []),
       recordedProjectRead(PROJECT_ID, 'visibility/trends', 'trends', asked, []),
@@ -374,7 +354,6 @@ describe('prefetchRoute', () => {
   });
 
   describe('every sidebar destination', () => {
-    /** Each request path the warm sends, every answer a 404 the warm must survive. */
     function recordRequests() {
       const paths: string[] = [];
       const listener = ({ request }: { request: Request }) => {

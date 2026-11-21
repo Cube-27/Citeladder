@@ -55,7 +55,6 @@ it('prevents duplicate submissions, sends without optional company and announces
   await user.click(button);
   expect(button).toBeDisabled();
   expect(button).toHaveAccessibleName('Sending…');
-  // The idle label stays laid out (invisible) so the button keeps its width.
   expect(button).toHaveTextContent('Send message');
   fireEvent.submit(button.closest('form')!);
   expect(fetch).toHaveBeenCalledTimes(1);

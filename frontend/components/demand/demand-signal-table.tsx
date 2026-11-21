@@ -25,14 +25,6 @@ import {
 } from '@/lib/demand/signals';
 import { formatCount, formatMean, formatPercent } from '@/lib/format';
 
-/**
- * The row itself is the Inspect target, and the evidence drawer it opens
- * holds the hand-off (Open Action or Ask agent), so the row carries no
- * control column.
- * The rank is the signal's place in the whole snapshot, so it holds when a
- * filter hides the signals above it. At 982 the fit hides the rank, then the
- * clicks (the CTR and impressions still carry them).
- */
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'target', label: 'Query or page', kind: 'identity' },
   { key: 'signal', label: 'Signal', kind: 'status', width: 'category' },
@@ -44,31 +36,18 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'open', label: 'Inspect', kind: 'actions', width: 'index' },
 ];
 
-/** The table's columns, for the loading skeleton's shape. */
 export const SIGNAL_COLUMN_COUNT = COLUMNS.length;
 
-/**
- * A signal type as a `category` tag: a kind of finding, not a status or a
- * severity, so it has no glyph and no tone. Its meaning lives in the legend.
- */
 function SignalChip({ signalType }: Readonly<{ signalType: string }>) {
   return <Tag>{signalTypeMeta(signalType).label}</Tag>;
 }
 
-/**
- * Each signal type in the snapshot, explained once (plan §12), behind one
- * hint on the summary line so it is read before the table. It lists the
- * whole snapshot's types rather than the filtered ones, so choosing a filter
- * never changes it.
- */
 export function SignalLegend({
   signals,
   policy,
 }: Readonly<{ signals: readonly DemandSignal[]; policy: DemandDetectorPolicy }>) {
   const types = [...new Set(signals.map((signal) => signal.signal_type))];
   if (types.length === 0) return null;
-  // One line per type: joined into a sentence, each definition ran into the
-  // next type's label.
   return (
     <Inline as="span" gap="tight">
       Signal types
@@ -86,15 +65,6 @@ export function SignalLegend({
   );
 }
 
-/**
- * The signals, one flat row each in priority order, a page at a time. The
- * landing page rides under its query as a caption instead of a full-width
- * group row, so every row is a signal. Detail stays in the evidence drawer.
- *
- * The whole list is already in the persisted snapshot, so it pages on the
- * client. `filterKey` names the active filter: a new filter starts at page 1,
- * while a refetch of the same filter only clamps the page into range.
- */
 export function DemandSignalTable({
   rows,
   filterKey,
@@ -105,9 +75,7 @@ export function DemandSignalTable({
   rows: readonly RankedSignal[];
   filterKey: string;
   onInspect: (signal: DemandSignal) => void;
-  /** The caption under the title: the legend, caveats and detector coverage. */
   description: ReactNode;
-  /** Clears the tab and search when they hid every signal; the head stays. */
   onClearFilters: () => void;
 }>) {
   const { page, setPage, pageCount, from, to, pageSize, pageSizeControl } = useResizableTablePage(
@@ -116,8 +84,6 @@ export function DemandSignalTable({
   );
 
   const pageRows = rows.slice(from - 1, to);
-  // Paging never moves the layout: a short last page keeps a full page's
-  // height (a single page just ends).
   return (
     <DataTable
       title="Demand signals"
@@ -150,14 +116,11 @@ function SignalRow({
 }: Readonly<{ signal: DemandSignal; rank: number; onInspect: (signal: DemandSignal) => void }>) {
   const subject = signalSubject(signal);
   const inspect = () => onInspect(signal);
-  // A press that selected text is not a request to inspect.
   const inspectFromRow = () => {
     if (!window.getSelection()?.isCollapsed) return;
     inspect();
   };
   return (
-    // The row is the Inspect target: pressed, or Enter/Space while focused.
-    // Native row and cell semantics stay; its name says what it opens.
     <TableRow
       tabIndex={0}
       aria-label={`Inspect evidence for ${signalTarget(signal)}`}
@@ -171,8 +134,6 @@ function SignalRow({
       className="focus-ring cursor-pointer"
     >
       <TableCell>
-        {/* Always two lines, so every row is one height, and the second
-            always says whether the row is about a query or a page. */}
         <TableCellLines
           title
           primary={
@@ -223,7 +184,6 @@ function Position({ value }: Readonly<{ value: number | null }>) {
   return value === null ? <Absence state="not_measured" /> : formatMean(value);
 }
 
-/** The persisted CTR, else clicks over impressions; never a guessed zero. */
 function Ctr({ signal }: Readonly<{ signal: DemandSignal }>) {
   const persisted = numericMetric(signal, 'ctr');
   if (persisted !== null) return formatPercent(persisted);
