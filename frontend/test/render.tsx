@@ -148,7 +148,7 @@ export function testEntitlement(
   };
 }
 
-function seedEntitlement(
+export function seedEntitlement(
   queryClient: QueryClient,
   workspaceId: string | null,
   entitlement: TestEntitlement,

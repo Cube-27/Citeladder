@@ -9,10 +9,6 @@ import { renderWithProviders, testProjectSelection } from '@/test/render';
 import { WorkspacePanel } from './workspace-panel';
 
 vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: vi.fn() }));
-const plan = vi.hoisted(() => ({ team: true }));
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({ hasCapability: (key: string) => key === 'team_members' && plan.team }),
-}));
 
 const owner = testProjectSelection().activeWorkspace!;
 const admin = {
@@ -28,15 +24,15 @@ function member(id: string, email: string, role: string, isSelf = false): Worksp
 const SELF = member('44444444-4444-4444-8444-444444444444', 'me@example.test', 'owner', true);
 const ALEX = member('55555555-5555-4555-8555-555555555555', 'alex@example.test', 'member');
 
-function renderPanel(workspace = owner) {
+function renderPanel(workspace = owner, grants: readonly string[] = ['team_members']) {
   return renderWithProviders(<WorkspacePanel />, {
     projectSelection: { activeWorkspace: workspace, workspaces: [workspace] },
+    entitlement: { grants },
   });
 }
 
 describe('Workspace panel', () => {
   beforeEach(() => {
-    plan.team = true;
     vi.spyOn(workspacesApi, 'listMembers').mockResolvedValue([SELF, ALEX]);
     vi.spyOn(workspacesApi, 'listInvitations').mockResolvedValue([
       {
@@ -158,8 +154,7 @@ describe('Workspace panel', () => {
   });
 
   it('offers no invitations in a trial workspace and says why', async () => {
-    plan.team = false;
-    renderPanel();
+    renderPanel(owner, []);
     expect(await screen.findByText(ALEX.email)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Invite' })).toBeNull();
     expect(screen.getByText(/Inviting members needs a paid plan/u)).toBeVisible();
