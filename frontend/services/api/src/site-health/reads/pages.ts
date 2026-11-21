@@ -173,7 +173,7 @@ function deliveryFacts(facts: Record<string, unknown>, htmlBytes: number | null)
   const blocking = record(facts.blocking_resources);
   const value = <T>(key: string) => (delivery[key] ?? null) as T | null;
   const text = (key: string) =>
-    typeof delivery[key] === 'string' && delivery[key] !== '' ? (delivery[key] as string) : null;
+    typeof delivery[key] === 'string' && delivery[key] !== '' ? delivery[key] : null;
   return {
     field_cwv_available: false as const,
     status_code: value<number>('status_code'),

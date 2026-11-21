@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { sql } from 'kysely';
 import { crawlScheduleCadenceSchema } from '@citeladder/contracts/site-health';
 import { policy } from '../config.ts';
-import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
+import { settingValues, type SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
@@ -11,12 +11,7 @@ import { crawlRequest } from '../site-health/crawl-request.ts';
 import { claimDueCrawlSchedules, nextOccurrence } from '../site-health/schedules.ts';
 
 export function crawlSchedulerSettings(env: SettingSource = process.env) {
-  return Object.fromEntries(
-    Object.entries(policy.crawl_schedules.settings).map(([name, spec]) => [
-      name,
-      Number(resolveSettingSpec(spec, env)),
-    ]),
-  ) as Record<keyof typeof policy.crawl_schedules.settings, number>;
+  return settingValues(policy.crawl_schedules.settings, env);
 }
 
 const SKIPPED = new Set(['crawl_already_active', 'site_health_fetches_exhausted']);

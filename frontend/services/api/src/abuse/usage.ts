@@ -19,7 +19,7 @@ export function activeJobRetrySeconds(source: SettingSource = process.env): numb
     'active_job_retry_after_seconds',
     abuse.active_job_retry_after_seconds,
     source,
-  ) as number;
+  );
 }
 
 export type Budget = {

@@ -7,7 +7,7 @@ import { policy } from '../config.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { logicalEngines } from '../config/providers.ts';
 import type { Database } from '../db/database.ts';
-import { plainJson } from '../db/json.ts';
+import { isRecord, plainJson } from '../db/json.ts';
 import { resolutionOutcome } from '../routes/demand-contracts.ts';
 import { PAGE_STATUS_FILTERS } from '../site-health/reads/page-rows.ts';
 import { mcpPolicy } from './config.ts';
@@ -961,13 +961,12 @@ export const presentationTools: ReadonlySet<string> = new Set<ToolName>([
 const FORMATS = new Set(['uuid', 'date', 'date-time']);
 function compact(node: unknown): unknown {
   if (Array.isArray(node)) return node.map(compact);
-  if (node === null || typeof node !== 'object') return node;
-  const source = node as Record<string, unknown>;
+  if (!isRecord(node)) return node;
   const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(source)) {
+  for (const [key, value] of Object.entries(node)) {
     if (
       key === '$schema' ||
-      (key === 'pattern' && FORMATS.has(String(source.format))) ||
+      (key === 'pattern' && FORMATS.has(String(node.format))) ||
       (['minimum', 'maximum'].includes(key) && Math.abs(Number(value)) === Number.MAX_SAFE_INTEGER)
     )
       continue;

@@ -92,9 +92,24 @@ function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
   }
 }
 
+export type SettingValue<S extends SettingSpec> = S['default'] extends number
+  ? number
+  : S['default'] extends boolean
+    ? boolean
+    : S['default'] extends string
+      ? string
+      : unknown;
+
 function resolveFromEnv(name: string, spec: SettingSpec, env: Env): unknown {
   const raw = envValue(spec, env);
-  return raw === undefined ? spec.default : parseSetting(name, spec, raw);
+  const value = raw === undefined ? spec.default : parseSetting(name, spec, raw);
+  const expected = typeof spec.default;
+  if (
+    (expected === 'number' || expected === 'boolean' || expected === 'string') &&
+    typeof value !== expected
+  )
+    throw new ConfigError(`${name} must be a ${expected}`);
+  return value;
 }
 
 export class Settings {
@@ -108,6 +123,7 @@ export class Settings {
     this.#values = values;
   }
 
+  of<S extends SettingSpec>(spec: S): SettingValue<S>;
   of(spec: SettingSpec): unknown {
     if (!this.#values.has(spec)) {
       throw new ConfigError(`${spec.env[0] ?? 'setting'} is not a catalogued setting`);
@@ -118,10 +134,56 @@ export class Settings {
 
 export type SettingSource = Settings | Env;
 
+export function resolveSpec<S extends SettingSpec>(
+  name: string,
+  spec: S,
+  source: SettingSource,
+): SettingValue<S>;
 export function resolveSpec(name: string, spec: SettingSpec, source: SettingSource): unknown {
   return source instanceof Settings ? source.of(spec) : resolveFromEnv(name, spec, source);
 }
 
+export function resolveSettingSpec<S extends SettingSpec>(
+  spec: S,
+  source: SettingSource,
+): SettingValue<S>;
 export function resolveSettingSpec(spec: SettingSpec, source: SettingSource): unknown {
   return resolveSpec(spec.env[0] ?? 'setting', spec, source);
+}
+
+export function settingValues<T extends Record<string, SettingSpec>>(
+  specs: T,
+  source: SettingSource,
+): { [K in keyof T]: SettingValue<T[K]> };
+export function settingValues(
+  specs: Record<string, SettingSpec>,
+  source: SettingSource,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(specs).map(([name, spec]) => [name, resolveSpec(name, spec, source)]),
+  );
+}
+
+export function dateSetting(spec: SettingSpec, source: SettingSource): Date | null {
+  const value = resolveSettingSpec(spec, source);
+  if (value === null || value instanceof Date) return value;
+  throw new ConfigError(`${spec.env[0] ?? 'setting'} must be a timestamp`);
+}
+
+export function nullableTextSetting(spec: SettingSpec, source: SettingSource): string | null {
+  const value = resolveSettingSpec(spec, source);
+  if (value === null || typeof value === 'string') return value;
+  throw new ConfigError(`${spec.env[0] ?? 'setting'} must be text`);
+}
+
+export function choiceSetting<const T extends string>(
+  spec: SettingSpec & { default: string },
+  source: SettingSource,
+  choices: readonly T[],
+): T {
+  const value = resolveSettingSpec(spec, source);
+  const choice = choices.find((candidate) => candidate === value);
+  if (choice === undefined)
+    throw new ConfigError(`${spec.env[0] ?? 'setting'} must be one of ${choices.join(', ')}`);
+  return choice;
 }

@@ -20,6 +20,7 @@ import {
 import { referralEvidence, referralExtras, replaceReferralLandings } from './landing.ts';
 import { insightsRefresh } from '../config/ai-traffic.ts';
 import { enqueueCoalesced } from '../queue/enqueue.ts';
+import { isRecord } from '../db/json.ts';
 
 const { analytics, referrals } = policy;
 const BATCH_SIZE = 1000;
@@ -57,10 +58,7 @@ function refreshWindows(
 }
 
 function sessionCount(metrics: unknown): number {
-  const value =
-    metrics !== null && typeof metrics === 'object' && !Array.isArray(metrics)
-      ? (metrics as Record<string, unknown>).sessions
-      : undefined;
+  const value = isRecord(metrics) ? metrics.sessions : undefined;
   if (typeof value === 'boolean') return Number(value);
   return typeof value === 'number' ? Math.trunc(value) : 0;
 }

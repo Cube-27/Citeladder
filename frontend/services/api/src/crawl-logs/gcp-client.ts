@@ -64,9 +64,9 @@ function resourcePath(name: string) {
   if (!project || !subscription) throw new GcpError('invalid');
   return `projects/${encodeURIComponent(project)}/subscriptions/${encodeURIComponent(subscription)}`;
 }
-async function json(response: Response) {
+async function json(response: Response): Promise<unknown> {
   try {
-    return (await response.json()) as unknown;
+    return await response.json();
   } catch {
     throw new GcpError('unavailable');
   }

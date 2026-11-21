@@ -34,6 +34,7 @@ import {
 } from './catalog-sources.ts';
 import { categorySet, comparable, editHolds, importedBaseline } from './edits.ts';
 import { categoryKey } from './projection-facts.ts';
+import { widen } from '../widen.ts';
 
 type Outcome = CatalogImport['row_outcomes'][number];
 type ImportRow = Selectable<CommerceCsvImports>;
@@ -55,7 +56,7 @@ function editAware(
   if (applied.price === undefined) delete applied.price_max;
   const keys = categorySet(categories);
   if (!keys.length || editHolds(sources, 'categories', keys))
-    return { applied, added: [] as string[], replaces: false };
+    return { applied, added: widen<string[]>([]), replaces: false };
   const replaces = editedField(sources, 'categories');
   sources.categories = { ...provenance, keys };
   return { applied, added: [...categories], replaces };

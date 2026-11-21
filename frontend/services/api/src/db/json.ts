@@ -1,7 +1,8 @@
-export const record = (value: unknown): Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+export const record = (value: unknown): Record<string, unknown> => (isRecord(value) ? value : {});
 
 export const numberRecord = (value: unknown): Record<string, number> =>
   Object.fromEntries(
@@ -16,8 +17,7 @@ export const strings = (value: unknown): string[] =>
 export const plainJson = (value: unknown): unknown => JSON.parse(JSON.stringify(value)); // NOSONAR -- the JSON round-trip is the point; structuredClone keeps undefined and Dates
 
 export function jsonObject(value: unknown, column: string): Record<string, unknown> {
-  if (value !== null && typeof value === 'object' && !Array.isArray(value))
-    return value as Record<string, unknown>;
+  if (isRecord(value)) return value;
   throw new TypeError(`${column} is not a JSON object`);
 }
 

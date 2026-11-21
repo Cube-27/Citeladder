@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { record } from '../../db/json.ts';
 import { compareText } from '../../text-order.ts';
 import { uuidV5 } from '../../uuid-v5.ts';
+import { widen } from '../../widen.ts';
 
 const reads = policy.site_health.reads;
 const RULES = new Map(policy.site_health.rule_catalog.map((rule) => [rule.rule_id, rule]));
@@ -60,11 +61,11 @@ export function issueImpact(ruleId: string, findingClass: string, severity: stri
     const label = severity.replaceAll('_', ' ').replace(/\b\w/gu, (c) => c.toUpperCase());
     return { band: bands[severity] ?? 0, label };
   }
-  const pillar = (reads.aeo_check_pillar as Record<string, string>)[ruleId];
+  const pillar = widen<Record<string, string>>(reads.aeo_check_pillar)[ruleId];
   if (findingClass !== 'advisory' || !RULES.has(ruleId) || pillar === undefined)
     return { band: 0, label: 'Advisory' };
-  const weight = (reads.readiness_dimension_weights as Record<string, number>)[pillar]!;
-  const label = (reads.aeo_dimension_labels as Record<string, string>)[pillar]!;
+  const weight = widen<Record<string, number>>(reads.readiness_dimension_weights)[pillar]!;
+  const label = widen<Record<string, string>>(reads.aeo_dimension_labels)[pillar]!;
   return {
     band: Math.max(1, Math.round(weight * 10)),
     label: `${label} · ${Math.round(weight * 100)}%`,

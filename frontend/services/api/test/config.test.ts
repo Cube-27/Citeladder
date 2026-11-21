@@ -128,6 +128,12 @@ describe('loadConfig', () => {
     expect(() => resolveSettingSpec(spec, { BOUNDED: '672' })).toThrow(ConfigError);
   });
 
+  it('refuses a value whose type contradicts the type of its default', () => {
+    const spec = { env: ['MISTYPED'], type: 'str', default: 0 };
+    expect(resolveSettingSpec(spec, {})).toBe(0);
+    expect(() => resolveSettingSpec(spec, { MISTYPED: '5' })).toThrow('MISTYPED must be a number');
+  });
+
   it('enforces field bounds and literal values', () => {
     expect(() => loadConfig({ APP_ENV: 'test', DB_POOL_SIZE: '51' })).toThrow(ConfigError);
     expect(() => loadConfig({ APP_ENV: 'test', DB_POOL_SIZE: 'twenty' })).toThrow(ConfigError);

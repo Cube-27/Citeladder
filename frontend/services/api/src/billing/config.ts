@@ -3,7 +3,13 @@ import api from '../config/api.json' with { type: 'json' };
 import authRuntime from '../config/auth-runtime.json' with { type: 'json' };
 import { billing } from '../config/billing.ts';
 import { ConfigError } from '../config/config-error.ts';
-import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
+import {
+  choiceSetting,
+  dateSetting,
+  nullableTextSetting,
+  resolveSettingSpec,
+  type SettingSource,
+} from '../config/settings.ts';
 
 const policy = {
   billing,
@@ -36,51 +42,51 @@ export function billingSettings(env: SettingSource = process.env) {
   }
   if (!['http:', 'https:'].includes(contactUrl.protocol))
     throw new ConfigError('Billing contact URL must be an absolute HTTP(S) URL');
-  const sellerEmail = (get('seller_email') as string).trim();
+  const sellerEmail = get('seller_email').trim();
   if (sellerEmail && !/^[^@\s]+@[^@.\s]+(?:\.[^@.\s]+)+$/u.test(sellerEmail))
     throw new ConfigError('seller_email must be an email address');
-  const audience = (get('checkout_audience') as string).trim().toLowerCase();
+  const audience = get('checkout_audience').trim().toLowerCase();
   if (audience !== 'allow_list' && audience !== 'everyone')
     throw new ConfigError('checkout_audience must be allow_list or everyone');
-  const invoicePrefix = (get('invoice_prefix') as string).trim().toUpperCase();
+  const invoicePrefix = get('invoice_prefix').trim().toUpperCase();
   if (!/^[A-Z0-9]{1,3}$/u.test(invoicePrefix))
     throw new ConfigError('invoice_prefix must be 1-3 uppercase letters or digits');
   return {
-    enabled: get('checkout_enabled') as boolean,
+    enabled: get('checkout_enabled'),
     audience: audience satisfies 'allow_list' | 'everyone',
-    provider: get('checkout_provider') as string,
-    quoteSecret: get('quote_signing_secret') as string,
-    quoteMinutes: get('quote_validity_minutes') as number,
-    timeoutMs: (get('request_timeout_seconds') as number) * 1000,
-    cycles: get('subscription_total_cycles') as number,
-    minimumUpgrade: get('plan_change_minimum_charge_minor') as number,
-    webhookBytes: get('max_webhook_body_bytes') as number,
-    webhookLeaseSeconds: get('webhook_lease_seconds') as number,
-    webhookAttempts: get('webhook_max_attempts') as number,
-    leaseSeconds: get('reconciliation_lease_seconds') as number,
-    batchSize: get('reconciliation_batch_size') as number,
-    staleSeconds: get('reconciliation_stale_after_seconds') as number,
-    abandonSeconds: get('reconciliation_abandon_after_seconds') as number,
-    skewSeconds: get('reconciliation_clock_skew_seconds') as number,
-    cancellationLeadSeconds: get('cancellation_send_lead_seconds') as number,
-    attempts: get('reconciliation_max_attempts') as number,
-    backoffSeconds: get('reconciliation_backoff_base_seconds') as number,
-    listCount: get('reconciliation_list_count') as number,
-    maxPages: get('reconciliation_max_pages') as number,
+    provider: get('checkout_provider'),
+    quoteSecret: get('quote_signing_secret'),
+    quoteMinutes: get('quote_validity_minutes'),
+    timeoutMs: get('request_timeout_seconds') * 1000,
+    cycles: get('subscription_total_cycles'),
+    minimumUpgrade: get('plan_change_minimum_charge_minor'),
+    webhookBytes: get('max_webhook_body_bytes'),
+    webhookLeaseSeconds: get('webhook_lease_seconds'),
+    webhookAttempts: get('webhook_max_attempts'),
+    leaseSeconds: get('reconciliation_lease_seconds'),
+    batchSize: get('reconciliation_batch_size'),
+    staleSeconds: get('reconciliation_stale_after_seconds'),
+    abandonSeconds: get('reconciliation_abandon_after_seconds'),
+    skewSeconds: get('reconciliation_clock_skew_seconds'),
+    cancellationLeadSeconds: get('cancellation_send_lead_seconds'),
+    attempts: get('reconciliation_max_attempts'),
+    backoffSeconds: get('reconciliation_backoff_base_seconds'),
+    listCount: get('reconciliation_list_count'),
+    maxPages: get('reconciliation_max_pages'),
     contactUrl: contactUrl.href,
-    trialDays: get('trial_days') as number,
-    gstRate: get('india_gst_rate') as string | null,
+    trialDays: get('trial_days'),
+    gstRate: nullableTextSetting(specs.india_gst_rate, env),
     seller: {
-      legal_name: get('seller_legal_name') as string,
-      address: get('seller_legal_address') as string,
+      legal_name: get('seller_legal_name'),
+      address: get('seller_legal_address'),
       email: sellerEmail,
-      gstin: get('seller_gstin') as string,
-      state_code: get('seller_gst_state_code') as string,
-      state_name: get('seller_gst_state_name') as string,
-      sac: get('seller_sac') as string,
-      lut_reference: get('seller_lut_reference') as string,
+      gstin: get('seller_gstin'),
+      state_code: get('seller_gst_state_code'),
+      state_name: get('seller_gst_state_name'),
+      sac: get('seller_sac'),
+      lut_reference: get('seller_lut_reference'),
       invoice_prefix: invoicePrefix,
-      gst_approval_reference: get('india_gst_approval_reference') as string,
+      gst_approval_reference: get('india_gst_approval_reference'),
     },
   };
 }
@@ -89,11 +95,15 @@ export type BillingSettings = ReturnType<typeof billingSettings>;
 export function razorpaySettings(env: SettingSource = process.env) {
   const specs = policy.billing.razorpay_settings;
   const get = <K extends keyof typeof specs>(key: K) => resolveSettingSpec(specs[key], env);
-  const canonicalId = get('key_id') as string;
-  const canonicalSecret = get('key_secret') as string;
-  const aliasId = get('test_key_id_alias') as string;
-  const aliasSecret = get('test_key_secret_alias') as string;
-  const mode = get('mode') as 'disabled' | ProviderMode;
+  const canonicalId = get('key_id');
+  const canonicalSecret = get('key_secret');
+  const aliasId = get('test_key_id_alias');
+  const aliasSecret = get('test_key_secret_alias');
+  const mode: 'disabled' | ProviderMode = choiceSetting(specs.mode, env, [
+    'disabled',
+    'test',
+    'live',
+  ]);
   const conflicting =
     (canonicalId && aliasId && canonicalId !== aliasId) ||
     (canonicalSecret && aliasSecret && canonicalSecret !== aliasSecret) ||
@@ -102,18 +112,16 @@ export function razorpaySettings(env: SettingSource = process.env) {
     mode,
     keyId: canonicalId || aliasId,
     keySecret: canonicalSecret || aliasSecret,
-    webhookSecret: get('webhook_secret') as string,
-    previousSecret: get('webhook_previous_secret') as string,
-    previousStart: get('webhook_previous_secret_started_at') as Date | null,
-    previousEnd: get('webhook_previous_secret_expires_at') as Date | null,
-    origin: get('api_base_url') as string,
+    webhookSecret: get('webhook_secret'),
+    previousSecret: get('webhook_previous_secret'),
+    previousStart: dateSetting(specs.webhook_previous_secret_started_at, env),
+    previousEnd: dateSetting(specs.webhook_previous_secret_expires_at, env),
+    origin: get('api_base_url'),
     production: resolveSettingSpec(policy.settings.app_env, env) === 'production',
-    ready: mode === 'test' ? (get('test_ready') as boolean) : (get('live_ready') as boolean),
-    indiaReady: get('test_india_ready') as boolean,
+    ready: mode === 'test' ? get('test_ready') : get('live_ready'),
+    indiaReady: get('test_india_ready'),
     internationalReady:
-      mode === 'test'
-        ? (get('test_international_ready') as boolean)
-        : (get('international_ready') as boolean),
+      mode === 'test' ? get('test_international_ready') : get('international_ready'),
     conflicting: Boolean(conflicting),
   };
 }

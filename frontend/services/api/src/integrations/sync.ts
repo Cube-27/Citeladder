@@ -10,6 +10,7 @@ import { budget, spendBudget } from '../abuse/usage.ts';
 import { isoDateText } from '../db/timestamps.ts';
 import { addDays, reportingDay } from '../calendar-days.ts';
 import { selectedPartition } from './partitions.ts';
+import { widen } from '../widen.ts';
 
 const settings = integrationSettings();
 
@@ -395,7 +396,7 @@ async function backfillWindows(
   const candidates: Array<[string, string]> = [];
   if (prior.length) {
     for (const row of prior) {
-      const window = [isoDay(row.window_start), isoDay(row.window_end)] as [string, string];
+      const window = widen<[string, string]>([isoDay(row.window_start), isoDay(row.window_end)]);
       if (['failed', 'cancelled'].includes(row.status) && !alive.has(`${window[0]}:${window[1]}`))
         candidates.push(window);
     }

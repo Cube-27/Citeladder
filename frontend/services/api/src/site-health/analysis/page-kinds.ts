@@ -4,6 +4,7 @@ import { documentUrl, isHomepagePath, normalizedPath, routeSignal } from '../rou
 import { analysisPolicy, limits } from './policy.ts';
 import { observedQuestionCount } from './questions.ts';
 import { list, record, text, textList, type Facts } from './read-facts.ts';
+import { widen } from '../../widen.ts';
 
 const c = analysisPolicy.classification;
 const SIGNAL_TIERS: Record<string, string> = c.signal_tiers;
@@ -147,7 +148,7 @@ function documentationContext(url: URL, facts: Facts) {
     .filter((token) => TECHNICAL_TOKENS.has(token))
     .sort(compareText);
   const reasons: string[] = [];
-  if (levels.has(1) && [...levels].some((level) => (level as number) > 1) && technical.length)
+  if (levels.has(1) && [...levels].some((level) => level > 1) && technical.length)
     reasons.push(`technical:${technical.slice(0, 3).join(',')}`);
   const navigation = context.join(' ').toLowerCase();
   if (
@@ -208,7 +209,7 @@ function titleSuggestion(path: string, facts: Facts) {
     if (!best || phrase!.length > best.length)
       best = { length: phrase!.length, index, kind: kind!, phrase: phrase! };
   });
-  return best as { kind: string; phrase: string } | null;
+  return widen<{ kind: string; phrase: string } | null>(best);
 }
 
 function semanticSignals(url: URL, path: string, facts: Facts) {

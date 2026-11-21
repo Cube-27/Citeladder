@@ -7,7 +7,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
 import { metricSeriesPoints } from './metric-series.ts';
-import { record } from '../db/json.ts';
+import { record, strings } from '../db/json.ts';
 import { firstOf } from '../lists.ts';
 
 const analytics = policy.analytics;
@@ -192,10 +192,7 @@ function landingSummary(raw: unknown) {
     row.sessions += Number(r.sessions);
     row.key_events += Number(r.key_events);
     row.analytics_quality = [
-      ...new Set([
-        ...row.analytics_quality,
-        ...(Array.isArray(r.analytics_quality) ? (r.analytics_quality as string[]) : []),
-      ]),
+      ...new Set([...row.analytics_quality, ...strings(r.analytics_quality)]),
     ];
     groups.set(key, row);
   }

@@ -84,7 +84,7 @@ export async function ensureWorkspaceBilling(
       .limit(1)
       .executeTakeFirst();
     const from = earlier?.valid_from ?? locked.created_at;
-    const days = resolveSettingSpec(policy.billing.settings.trial_days, process.env) as number;
+    const days = resolveSettingSpec(policy.billing.settings.trial_days, process.env);
     const until = earlier?.valid_until ?? new Date(from.getTime() + days * 86400000);
     await issueBundle(db, {
       workspaceId,

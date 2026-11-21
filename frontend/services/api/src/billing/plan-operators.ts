@@ -121,10 +121,10 @@ export async function workspacePath(path: string, output = false) {
     throw new Error('path_outside_workspace');
   return actual;
 }
-export async function readOperatorJson(path: string) {
+export async function readOperatorJson(path: string): Promise<unknown> {
   const data = await readFile(await workspacePath(path));
   if (data.length > catalogAuthoring.maximumInputBytes) throw new Error('operator_input_too_large');
-  return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(data)) as unknown;
+  return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(data));
 }
 export async function writeBoundCatalog(path: string, payload: unknown) {
   await writeFile(

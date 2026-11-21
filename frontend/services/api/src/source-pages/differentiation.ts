@@ -11,6 +11,7 @@ import { fenceInspectionTask } from './task-fence.ts';
 import { compareText, scalarText } from '../text-order.ts';
 import { lexicalTokens, termCoverage } from '../analysis/lexical.ts';
 import { groupBy } from '../lists.ts';
+import { widen } from '../widen.ts';
 
 const p = policy.content_differentiation;
 const strings = (value: unknown): string[] =>
@@ -65,10 +66,10 @@ export function compareContent(
       snapshot_ids: [...new Set(snapshotIds)].sort(compareText),
       search_context: record(context),
     },
-    parity: [] as Entry[],
-    gaps: [] as Entry[],
-    unique_contributions: [] as Entry[],
-    limitations: [] as string[],
+    parity: widen<Entry[]>([]),
+    gaps: widen<Entry[]>([]),
+    unique_contributions: widen<Entry[]>([]),
+    limitations: widen<string[]>([]),
   };
   if (denominator < p.min_inspected_pages)
     base.limitations.push('Too few selected organic results had usable inspected evidence.');

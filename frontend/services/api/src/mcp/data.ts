@@ -185,7 +185,7 @@ export function decodeCursor(value: string, size: number): string[] {
       parts.some((part) => typeof part !== 'string')
     )
       throw new Error('cursor shape');
-    return parts as string[];
+    return parts;
   } catch {
     throw new McpInputError('cursor is invalid');
   }

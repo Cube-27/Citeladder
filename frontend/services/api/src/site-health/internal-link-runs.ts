@@ -21,6 +21,7 @@ import { linkCandidates, linkRequests } from './internal-link-candidates.ts';
 import { loadLinkPages, type LinkScope } from './internal-link-pages.ts';
 import { pageRerunSql } from './page-rerun.ts';
 import { currentSiteCrawlQuery } from './reads/crawl.ts';
+import { widen } from '../widen.ts';
 
 const { succeeded, failed, cancelled } = policy.task_queue.statuses;
 const terminalTaskStatuses = [succeeded, failed, cancelled];
@@ -81,7 +82,7 @@ export async function linkRun(db: Database, scope: LinkScope, id?: string) {
       state: internalLinkAnalysisStateSchema.parse(run.state),
       created_at: run.created_at.toISOString(),
     })),
-    analysis: null as InternalLinkAnalysis | null,
+    analysis: widen<InternalLinkAnalysis | null>(null),
     crawl_id: crawl?.id ?? null,
     availability: crawl ? ('ready' as const) : ('crawl_required' as const),
   };
