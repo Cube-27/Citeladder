@@ -58,7 +58,7 @@ function UserMenuContent({
             to={scopedNavigationDestination(href, scope, activeProjectId, activeWorkspaceId)}
             aria-current={href === currentHref ? 'page' : undefined}
           >
-            <Icon className="size-4 shrink-0" aria-hidden />
+            <Icon className="size-3.5 shrink-0" aria-hidden />
             <span>{label}</span>
           </Link>
         </MenuLinkItem>

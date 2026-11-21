@@ -73,7 +73,7 @@ export function FilterTrigger({
           </span>
         )}
         {/* It turns while the list is open (globals.css, every dropdown's chevron). */}
-        <ChevronDown className="text-ink-2 size-4 shrink-0" aria-hidden />
+        <ChevronDown className="text-ink-2 size-3.5 shrink-0" aria-hidden />
       </button>
     </Tooltip>
   );
@@ -112,7 +112,7 @@ function filterLead(filter: FilterDefinition): ReactNode {
   const marks = filter.icon === 'engines' ? engineStack(filter) : null;
   if (marks) return marks;
   const Glyph = GLYPHS[filter.icon];
-  return <Glyph className="size-4" aria-hidden />;
+  return <Glyph className="size-3.5" aria-hidden />;
 }
 
 /** One filter as its own chip in the row, opening its options. */

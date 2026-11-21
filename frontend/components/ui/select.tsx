@@ -103,7 +103,7 @@ export function Select<T extends string>({
           <SelectPrimitive.Value placeholder={placeholder} />
         </span>
         <SelectPrimitive.Icon asChild>
-          <ChevronDown className="text-ink-2 size-4 shrink-0" aria-hidden />
+          <ChevronDown className="text-ink-2 size-3.5 shrink-0" aria-hidden />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
@@ -117,7 +117,7 @@ export function Select<T extends string>({
           )}
         >
           <SelectPrimitive.ScrollUpButton className="text-ink-2 flex h-[var(--control-md)] items-center justify-center">
-            <ChevronUp className="size-4" aria-hidden />
+            <ChevronUp className="size-3.5" aria-hidden />
           </SelectPrimitive.ScrollUpButton>
           <SelectPrimitive.Viewport>
             {options.map((option, index) => (
@@ -144,13 +144,13 @@ export function Select<T extends string>({
                   </span>
                 ) : null}
                 <SelectPrimitive.ItemIndicator className="absolute right-2 inline-flex items-center">
-                  <Check className="size-4" aria-hidden />
+                  <Check className="size-3.5" aria-hidden />
                 </SelectPrimitive.ItemIndicator>
               </SelectPrimitive.Item>
             ))}
           </SelectPrimitive.Viewport>
           <SelectPrimitive.ScrollDownButton className="text-ink-2 flex h-[var(--control-md)] items-center justify-center">
-            <ChevronDown className="size-4" aria-hidden />
+            <ChevronDown className="size-3.5" aria-hidden />
           </SelectPrimitive.ScrollDownButton>
         </SelectPrimitive.Content>
       </SelectPrimitive.Portal>

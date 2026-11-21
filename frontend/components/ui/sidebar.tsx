@@ -205,7 +205,7 @@ export function SidebarNavGroup({
           <ChevronDown
             aria-hidden
             className={cn(
-              'size-4 shrink-0 transition-transform motion-reduce:transition-none',
+              'size-3.5 shrink-0 transition-transform motion-reduce:transition-none',
               !expanded && '-rotate-90',
             )}
           />
@@ -241,7 +241,7 @@ export function sidebarNavRowClasses(active: boolean, className?: string) {
   );
 }
 
-const ROW_ICON = 'size-4 shrink-0 in-data-[nav-drawer]:size-5';
+const ROW_ICON = 'size-3.5 shrink-0 in-data-[nav-drawer]:size-5';
 
 /**
  * A row's content: the icon, the label and, on a row that counts something
@@ -267,7 +267,7 @@ export function SidebarNavRowContent({
 }
 
 const RAIL_BUTTON = cn(
-  'focus-ring rounded-control relative flex size-[var(--rail-button)] shrink-0 items-center justify-center transition-colors [&_svg]:size-4',
+  'focus-ring rounded-control relative flex size-[var(--rail-button)] shrink-0 items-center justify-center transition-colors [&_svg]:size-3.5',
   'before:rounded-mark before:absolute before:inset-y-2.5 before:start-0 before:w-[var(--mark-width)]',
   'data-[state=open]:overlay-pressed',
 );
@@ -387,7 +387,7 @@ export function SidebarIdentButton({
           </>
         )}
       </span>
-      <ChevronsUpDown className="text-ink-2 labelled:block hidden size-4 shrink-0" aria-hidden />
+      <ChevronsUpDown className="text-ink-2 labelled:block hidden size-3.5 shrink-0" aria-hidden />
     </button>
   );
 }

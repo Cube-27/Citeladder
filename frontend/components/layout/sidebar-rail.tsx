@@ -92,9 +92,9 @@ export function RailGroupMenu({
       {items.map(({ icon: ItemIcon, ...item }) => (
         <MenuLinkItem key={item.href}>
           <Link to={item.href} aria-current={item.active ? 'page' : undefined}>
-            <ItemIcon className="text-ink-2 size-4 shrink-0" aria-hidden />
+            <ItemIcon className="text-ink-2 size-3.5 shrink-0" aria-hidden />
             <span className="min-w-0 flex-1 truncate">{item.label}</span>
-            {item.active ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
+            {item.active ? <Check className="text-accent size-3.5 shrink-0" aria-hidden /> : null}
           </Link>
         </MenuLinkItem>
       ))}

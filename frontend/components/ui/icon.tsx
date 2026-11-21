@@ -23,16 +23,15 @@ type GlyphProps = Readonly<{
 export type BrandGlyph = ComponentType<GlyphProps>;
 
 /**
- * Icon — a glyph at the product's one icon size, 16px.
+ * Icon — a glyph at the product's one icon size, 14px: beside 14px text its
+ * drawing stands about cap height, never taller than the text.
  *
- * Feature screens used to size their glyphs at 12, 14 and 16 beside
- * the same 14px text, so an arrow next to a caption looked different from the
- * same arrow next to a label. The atom has one form: the caller picks the
- * glyph and, through `className`, its ink — never its size. Decorative by
- * default; pass `label` when the glyph alone carries meaning. A brand glyph
- * takes the same 16px box; its fills are its own.
+ * The atom has one form: the caller picks the glyph and, through `className`,
+ * its ink — never its size. Decorative by default; pass `label` when the
+ * glyph alone carries meaning. A brand glyph takes the same box; its fills
+ * are its own.
  *
- * The glyph occupies one 20px body line (2 above and below), so in a row
+ * The glyph occupies one 20px body line (3 above and below), so in a row
  * aligned to the top it sits centred on the first line of text beside it
  * without a per-call nudge.
  */
@@ -44,7 +43,7 @@ export function Icon({
   return (
     <Glyph
       data-icon=""
-      className={cn('my-0.5 size-4 shrink-0', className)}
+      className={cn('my-0.75 size-3.5 shrink-0', className)}
       aria-hidden={label ? undefined : true}
       aria-label={label}
       role={label ? 'img' : undefined}

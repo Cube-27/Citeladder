@@ -293,7 +293,7 @@ export function CommandPalette({
               only and draws the ring when Tab returns to the field
               (globals.css, `palette-field`). */}
           <div className="palette-field border-rule text-ink-2 flex min-h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
-            <Search className="size-4 shrink-0" aria-hidden />
+            <Search className="size-3.5 shrink-0" aria-hidden />
             <input
               ref={inputRef}
               value={query}
@@ -369,7 +369,7 @@ export function CommandPalette({
                           )}
                         >
                           {Icon ? (
-                            <Icon className="text-ink-2 size-4 shrink-0" aria-hidden />
+                            <Icon className="text-ink-2 size-3.5 shrink-0" aria-hidden />
                           ) : (
                             <BrandMark
                               name={command.label}

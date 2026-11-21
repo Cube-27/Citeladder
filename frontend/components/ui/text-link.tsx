@@ -212,7 +212,7 @@ export function ArrowLink({
       </span>
       <ArrowRight
         aria-hidden
-        className="size-4 shrink-0 transition-transform motion-reduce:transition-none motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5"
+        className="size-3.5 shrink-0 transition-transform motion-reduce:transition-none motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5"
       />
     </>
   );
