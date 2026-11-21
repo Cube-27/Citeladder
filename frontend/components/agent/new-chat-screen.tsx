@@ -99,7 +99,7 @@ function NewChat({
 
   return (
     <ThreadPage>
-      <Stack gap="section" className="my-auto">
+      <Stack gap="section" className="max-w-thread mx-auto my-auto w-full">
         <h2 className={textRole('title', 'text-center')}>What can I help with?</h2>
         {unavailable ? (
           <Notice tone="negative">

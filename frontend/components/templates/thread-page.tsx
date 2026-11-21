@@ -31,7 +31,7 @@ export function NewChatLoading() {
       <SkeletonFrame
         label="Loading the Agent…"
         variant="new-chat"
-        className="my-auto flex flex-col gap-[var(--page-section-gap)]"
+        className="max-w-thread mx-auto my-auto flex w-full flex-col gap-[var(--page-section-gap)]"
       >
         <span className="flex h-7 items-center justify-center">
           <SkeletonBlock className="h-5 w-60 max-w-full" />
