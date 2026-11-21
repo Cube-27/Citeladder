@@ -26,7 +26,13 @@ const LEDGER_ROWS = '*:py-3 *:first:pt-0 *:last:pb-0';
 export function ProviderList({
   expandEngine = null,
   framed = false,
-}: Readonly<{ expandEngine?: LogicalEngine | null; framed?: boolean }>) {
+  compact = false,
+}: Readonly<{
+  expandEngine?: LogicalEngine | null;
+  framed?: boolean;
+  /** Names and actions only, for the launch dialog (owner, 2026-11-21). */
+  compact?: boolean;
+}>) {
   const catalogQuery = useQuery(providerQueries.catalog());
   const workspaceId = useActiveWorkspaceId();
   const connectionsQuery = useQuery({
@@ -71,6 +77,7 @@ export function ProviderList({
           group={group}
           connections={connections}
           defaultOpen={group.transport === expand}
+          compact={compact}
         />
       ))}
     </ul>

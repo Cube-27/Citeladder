@@ -33,7 +33,12 @@ const TRANSPORT_LOGOS: Partial<Record<ProviderGroup['transport'], string>> = {
 function StatusBadge({
   group,
   connection,
-}: Readonly<{ group: ProviderGroup; connection: ProviderConnection | undefined }>) {
+  compact,
+}: Readonly<{
+  group: ProviderGroup;
+  connection: ProviderConnection | undefined;
+  compact: boolean;
+}>) {
   if (group.engines.some((engine) => engine.state === 'connected')) {
     return (
       <StatusMark variant="status" value="success">
@@ -49,13 +54,14 @@ function StatusBadge({
     );
   }
   // A stored key nobody verified needs attention; no key is neutral (not started).
-  return isConfigured(connection) ? (
-    <StatusMark variant="status" value="warning">
-      Not verified
-    </StatusMark>
-  ) : (
-    <StatusMark>Not connected</StatusMark>
-  );
+  if (isConfigured(connection)) {
+    return (
+      <StatusMark variant="status" value="warning">
+        Not verified
+      </StatusMark>
+    );
+  }
+  return compact ? null : <StatusMark>Not connected</StatusMark>;
 }
 
 /** "ChatGPT API · gpt-6.1-terra" for an API; the bare surface name for a consumer app. */
@@ -125,10 +131,13 @@ export function ProviderRow({
   group,
   connections,
   defaultOpen = false,
+  compact = false,
 }: Readonly<{
   group: ProviderGroup;
   connections: ProviderConnection[];
   defaultOpen?: boolean;
+  /** Drops the engine summary and the neutral "Not connected" mark. */
+  compact?: boolean;
 }>) {
   // A credential is offered only to a role that manages credentials; the rest
   // read whether each provider works.
@@ -149,11 +158,13 @@ export function ProviderRow({
           />
           <div className="grid min-w-0">
             <h3 className={textRole('subheading')}>{group.label}</h3>
-            <p className={textRole('caption')}>{group.engines.map(engineSummary).join(' · ')}</p>
+            {compact ? null : (
+              <p className={textRole('caption')}>{group.engines.map(engineSummary).join(' · ')}</p>
+            )}
           </div>
         </Inline>
         <Inline>
-          <StatusBadge group={group} connection={state.connection} />
+          <StatusBadge group={group} connection={state.connection} compact={compact} />
           {canManage ? (
             <Button
               type="button"

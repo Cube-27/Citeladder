@@ -158,10 +158,8 @@ describe('Repetitions', () => {
       <RoutedLaunchDialog open onOpenChange={() => undefined} projectId={PROJECT_ID} />,
     );
 
-    expect(
-      await screen.findByText('How many times to run each prompt per engine (2–4).'),
-    ).toBeInTheDocument();
-    const field = screen.getByRole('spinbutton', { name: 'Repetitions' });
+    const field = await screen.findByRole('spinbutton', { name: 'Repetitions' });
+    await waitFor(() => expect(field).toHaveAttribute('max', '4'));
     fireEvent.change(field, { target: { value: '9' } });
     fireEvent.blur(field);
     expect(field).toHaveValue(4);
@@ -357,11 +355,10 @@ describe('Engine availability changes', () => {
     expect(
       await screen.findByRole('button', { name: 'ChatGPT Search, not connected' }),
     ).toHaveAttribute('aria-pressed', 'false');
-    // The disabled primary says why, beside it and as its description.
+    // The disabled primary names why as its description.
     const launch = screen.getByRole('button', { name: 'Launch run' });
     expect(launch).toBeDisabled();
     expect(launch).toHaveAccessibleDescription('Choose at least one engine to launch a run.');
-    expect(screen.getByText('Choose at least one engine to launch a run.')).toBeVisible();
   });
 });
 
