@@ -191,6 +191,14 @@ describe('observed surface parsing', () => {
     if (typeof read === 'string') throw new Error('Expected terminal answer');
     expect([read.search_used, read.citations, read.retrieved_sources]).toEqual([true, [], []]);
     expect(read.provider_metadata.search_results).toEqual([]);
+    const extra = { ...envelope('ours', page), version: '0.1', tasks_count: 1 };
+    const kept = parseScraper(extra, 'ours', 'chatgpt_search');
+    if (typeof kept === 'string') throw new Error('Expected terminal answer');
+    expect(JSON.stringify(kept.provider_metadata.raw_response)).toBe(JSON.stringify(extra));
+    const overview = { ...task(20000, []), version: '0.1' };
+    const absent = parseOverview(overview, 'ours');
+    if (typeof absent === 'string') throw new Error('Expected terminal result');
+    expect(JSON.stringify(absent.raw_payload)).toBe(JSON.stringify(overview.tasks[0]));
     expect(() => parseScraper(envelope(7, page), '7', 'chatgpt_search')).toThrow('parse_error');
     expect(() =>
       parseScraper(envelope('ours', { markdown: ' ', items: 'x' }), 'ours', 'chatgpt_search'),
