@@ -153,11 +153,11 @@ export function seedEntitlement(
   workspaceId: string | null,
   entitlement: TestEntitlement,
 ) {
-  if (workspaceId === null || entitlement.status === 'pending') return;
-  queryClient.setQueryData(
-    queryKeys.billing.workspaceEntitlement(workspaceId),
-    testEntitlement(workspaceId, entitlement),
-  );
+  if (workspaceId === null) return;
+  const queryKey = queryKeys.billing.workspaceEntitlement(workspaceId);
+  if (entitlement.status === 'pending')
+    void queryClient.prefetchQuery({ queryKey, queryFn: () => new Promise<never>(() => {}) });
+  else queryClient.setQueryData(queryKey, testEntitlement(workspaceId, entitlement));
   if (entitlement.usage === 'network') return;
   const usage: BillingUsage = {
     billing_account_id: '00000000-0000-4000-8000-0000000000b1',
