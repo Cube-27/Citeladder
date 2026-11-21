@@ -51,7 +51,7 @@ function isDirective({ kind, value }) {
   return DIRECTIVES.some((pattern) => pattern.test(text));
 }
 
-function scriptComments(source, label, offset = 0) {
+function scriptComments({ source, label, offset = 0 }) {
   const { comments, errors } = parseSync(label, source);
   if (errors.length) throw new Error(`${label}: could not parse — ${errors[0].message}`);
   const hashbang = source.startsWith('#!');
@@ -84,7 +84,7 @@ function cssComments(source, offset = 0) {
   return found;
 }
 
-function expressionEnd(source, open, label) {
+function expressionEnd({ source, open, label }) {
   for (let close = source.indexOf('}', open); close >= 0; close = source.indexOf('}', close + 1)) {
     if (!parseSync(`${label}.tsx`, `<>{${source.slice(open + 1, close)}}</>`).errors.length)
       return close;
@@ -99,7 +99,11 @@ function astroComments(source, label) {
   if (fence) {
     const close = source.indexOf('\n---', fence[0].length - 1);
     found.push(
-      ...scriptComments(source.slice(fence[0].length, close), `${label}.ts`, fence[0].length),
+      ...scriptComments({
+        source: source.slice(fence[0].length, close),
+        label: `${label}.ts`,
+        offset: fence[0].length,
+      }),
     );
     index = close + 4;
   }
@@ -117,14 +121,14 @@ function astroComments(source, label) {
       const body = source.slice(bodyStart, bodyEnd);
       found.push(
         ...(raw[1] === 'script'
-          ? scriptComments(body, `${label}.ts`, bodyStart)
+          ? scriptComments({ source: body, label: `${label}.ts`, offset: bodyStart })
           : cssComments(body, bodyStart)),
       );
       index = bodyEnd + 1;
     } else if (source[index] === '{') {
-      const close = expressionEnd(source, index, label);
+      const close = expressionEnd({ source, open: index, label });
       const wrapped = `<>{${source.slice(index + 1, close)}}</>`;
-      found.push(...scriptComments(wrapped, `${label}.tsx`, index - 2));
+      found.push(...scriptComments({ source: wrapped, label: `${label}.tsx`, offset: index - 2 }));
       index = close + 1;
     } else {
       index += 1;
@@ -137,7 +141,7 @@ function sourceComments(source, file) {
   const extension = path.posix.extname(file);
   if (extension === '.css') return cssComments(source);
   if (extension === '.astro') return astroComments(source, file);
-  return scriptComments(source, file);
+  return scriptComments({ source, label: file });
 }
 
 export function commentFindings(source, file) {
