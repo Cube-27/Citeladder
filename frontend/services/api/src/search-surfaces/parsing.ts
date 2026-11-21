@@ -105,9 +105,13 @@ const elementSchema = withRaw(
   }),
 );
 type OverviewElement = z.output<typeof elementSchema>;
+function optionalList(value: unknown): unknown[] | null {
+  if (value == null) return [];
+  return Array.isArray(value) ? value : null;
+}
 const blockSchema = z.object({
   type: kind,
-  items: lenient((value) => (value == null ? [] : Array.isArray(value) ? value : null)),
+  items: lenient(optionalList),
   markdown: lenient(scalarText),
   rank_absolute: lenient(integer),
   references: listOf(linkSchema),
@@ -116,9 +120,7 @@ type OverviewBlock = z.output<typeof blockSchema>;
 const pageSchema = lenient((value) =>
   isRecord(value) && Object.keys(value).length
     ? stamped({
-        items: lenient((items) =>
-          items != null && !Array.isArray(items) ? null : recordsOf(blockSchema, items),
-        ),
+        items: lenient((items) => optionalList(items) && recordsOf(blockSchema, items)),
       }).parse(value)
     : null,
 );
