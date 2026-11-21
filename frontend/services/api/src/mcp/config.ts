@@ -38,13 +38,13 @@ function assertEncryptionKey(config: ServiceConfig, encryptionKey: string) {
     );
 }
 export function loadMcpConfig(config: ServiceConfig, source: SettingSource = config.settings) {
-  const value = (name: keyof typeof policy.mcp.settings) =>
+  const value = <K extends keyof typeof policy.mcp.settings>(name: K) =>
     resolveSettingSpec(policy.mcp.settings[name], source);
   let browserOrigin = String(resolveSettingSpec(policy.settings.frontend_url, source)).replace(
     /\/$/u,
     '',
   );
-  const enabled = value('enabled') as boolean;
+  const enabled = value('enabled');
   const configured = config.auth.publicApiUrl.trim();
   let origin = configured.replace(/\/$/u, '');
   const allowedEmail = String(value('allowed_account_email')).trim().toLowerCase();
@@ -80,11 +80,11 @@ export function loadMcpConfig(config: ServiceConfig, source: SettingSource = con
     browserOrigin,
     allowedEmail,
     encryptionKey,
-    requestTtl: value('authorization_request_ttl_seconds') as number,
-    codeTtl: value('authorization_code_ttl_seconds') as number,
-    accessTtl: value('access_token_ttl_seconds') as number,
-    refreshTtl: value('refresh_token_ttl_seconds') as number,
-    unusedClientTtl: value('unused_client_ttl_seconds') as number,
+    requestTtl: value('authorization_request_ttl_seconds'),
+    codeTtl: value('authorization_code_ttl_seconds'),
+    accessTtl: value('access_token_ttl_seconds'),
+    refreshTtl: value('refresh_token_ttl_seconds'),
+    unusedClientTtl: value('unused_client_ttl_seconds'),
   };
 }
 export type McpConfig = ReturnType<typeof loadMcpConfig>;

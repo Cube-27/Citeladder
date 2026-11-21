@@ -32,8 +32,8 @@ function plannedPersona(refs: unknown[]): string {
   const audience = cell?.audience;
   return typeof audience === 'string' ? audience.trim().slice(0, P.persona_max_chars) : '';
 }
-const setting = (name: keyof typeof P.generation_settings) =>
-  resolveSettingSpec(P.generation_settings[name], process.env) as number;
+const setting = <K extends keyof typeof P.generation_settings>(name: K) =>
+  resolveSettingSpec(P.generation_settings[name], process.env);
 
 export const candidateReview = promptCandidateReviewRequestSchema;
 

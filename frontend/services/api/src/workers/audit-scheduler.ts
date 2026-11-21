@@ -4,7 +4,7 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { strings } from '../db/json.ts';
 import { policy } from '../config.ts';
-import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
+import { settingValues, type SettingSource } from '../config/settings.ts';
 import { createAuditsInTransaction } from '../audits/creation.ts';
 import { marketIds } from '../projects/markets.ts';
 import { auditInput } from '../audits/inputs.ts';
@@ -15,12 +15,7 @@ import { ApiError } from '../errors.ts';
 import { claimDueSchedules } from '../queue/audit-queue.ts';
 
 export function schedulerSettings(env: SettingSource = process.env) {
-  return Object.fromEntries(
-    Object.entries(policy.audit_schedules.settings).map(([name, spec]) => [
-      name,
-      Number(resolveSettingSpec(spec, env)),
-    ]),
-  ) as Record<keyof typeof policy.audit_schedules.settings, number>;
+  return settingValues(policy.audit_schedules.settings, env);
 }
 type ScheduleClaim = Awaited<ReturnType<typeof claimDueSchedules>>[number];
 const logger = getLogger('workers.audit_scheduler');

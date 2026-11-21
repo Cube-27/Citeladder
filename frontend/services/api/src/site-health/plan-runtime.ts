@@ -13,8 +13,8 @@ export function runtimeProjection(
 ) {
   const allowance = !state || state.error ? 0 : (state.values.get('monitored_urls') ?? 0);
   const cfg = policy.site_health_runtime;
-  const setting = (key: keyof typeof cfg.settings) =>
-    resolveSettingSpec(cfg.settings[key], process.env) as number;
+  const setting = <K extends keyof typeof cfg.settings>(key: K) =>
+    resolveSettingSpec(cfg.settings[key], process.env);
   const full = allowance > 0;
   return {
     discovery_mode: full ? cfg.full_mode : cfg.sample_mode,

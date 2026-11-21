@@ -36,14 +36,22 @@ const defaults = {
 const drainLockWaitMs = (handover: boolean) =>
   handover ? handoverLeadMs + runnerTailMs : defaults.drainLockWaitMs;
 
-const integer = (name: string, value: number, maximum: number): SettingSpec => ({
+const integer = (
+  name: string,
+  value: number,
+  maximum: number,
+): SettingSpec & { default: number } => ({
   env: [name],
   type: 'int',
   default: value,
   minimum: 1,
   maximum,
 });
-const text = (name: string): SettingSpec => ({ env: [name], type: 'str', default: '' });
+const text = (name: string): SettingSpec & { default: string } => ({
+  env: [name],
+  type: 'str',
+  default: '',
+});
 
 export const executionSpecs = {
   // Each successor execution costs a one-to-three-minute Cloud Run cold start.
@@ -64,7 +72,7 @@ export const executionSpecs = {
 };
 
 export function executionSettings(source: SettingSource) {
-  const setting = (name: keyof typeof executionSpecs) =>
+  const setting = <K extends keyof typeof executionSpecs>(name: K) =>
     resolveSpec(name, executionSpecs[name], source);
   const value = (name: keyof typeof executionSpecs) => String(setting(name));
   const env = {
@@ -103,17 +111,17 @@ export function executionSettings(source: SettingSource) {
   return {
     runnerJob,
     scheduledTick: invoker
-      ? { invoker, audience, budgetSeconds: setting('scheduler_budget_seconds') as number }
+      ? { invoker, audience, budgetSeconds: setting('scheduler_budget_seconds') }
       : null,
     protectOrigin,
     originToken,
     previousOriginToken,
     drainLockWaitMs: drainLockWaitMs(setting('handover') === true),
     drainLockPollMs: defaults.drainLockPollMs,
-    budgetSeconds: setting('budget_seconds') as number,
-    poolSize: setting('pool_size') as number,
-    wakeTimeoutMs: setting('wake_timeout_ms') as number,
-    wakeMinIntervalMs: setting('wake_min_interval_ms') as number,
+    budgetSeconds: setting('budget_seconds'),
+    poolSize: setting('pool_size'),
+    wakeTimeoutMs: setting('wake_timeout_ms'),
+    wakeMinIntervalMs: setting('wake_min_interval_ms'),
   };
 }
 

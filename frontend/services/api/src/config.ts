@@ -60,11 +60,15 @@ import {
 import { parseTrustedProxies, type TrustedProxies } from './auth/client-identity.ts';
 import { loadWorkerSettings } from './config/analytics.ts';
 import {
+  choiceSetting,
+  dateSetting,
   resolveSpec,
+  settingValues,
   Settings,
   type Env,
   type SettingSource,
   type SettingSpec,
+  type SettingValue,
 } from './config/settings.ts';
 
 export const policy = {
@@ -193,18 +197,18 @@ function resolveSettings(env: Env): Settings {
 }
 
 export function databaseSettings(source: SettingSource) {
-  const setting = (name: keyof typeof policy.settings) => resolveSetting(name, source);
+  const setting = <K extends keyof typeof policy.settings>(name: K) => resolveSetting(name, source);
   return {
-    poolSize: setting('db_pool_size') as number,
-    maxOverflow: setting('db_max_overflow') as number,
-    poolRecycleSeconds: setting('db_pool_recycle_seconds') as number,
-    poolTimeoutSeconds: setting('db_pool_timeout_seconds') as number,
-    connectTimeoutSeconds: setting('db_connect_timeout_seconds') as number,
-    commandTimeoutSeconds: setting('db_command_timeout_seconds') as number,
-    statementTimeoutMs: setting('db_statement_timeout_ms') as number,
-    lockTimeoutMs: setting('db_lock_timeout_ms') as number,
-    idleTransactionTimeoutMs: setting('db_idle_transaction_timeout_ms') as number,
-    sslMode: setting('db_ssl_mode') as 'disable' | 'require',
+    poolSize: setting('db_pool_size'),
+    maxOverflow: setting('db_max_overflow'),
+    poolRecycleSeconds: setting('db_pool_recycle_seconds'),
+    poolTimeoutSeconds: setting('db_pool_timeout_seconds'),
+    connectTimeoutSeconds: setting('db_connect_timeout_seconds'),
+    commandTimeoutSeconds: setting('db_command_timeout_seconds'),
+    statementTimeoutMs: setting('db_statement_timeout_ms'),
+    lockTimeoutMs: setting('db_lock_timeout_ms'),
+    idleTransactionTimeoutMs: setting('db_idle_transaction_timeout_ms'),
+    sslMode: choiceSetting(policy.settings.db_ssl_mode, source, ['disable', 'require']),
   };
 }
 
@@ -214,12 +218,15 @@ export function databaseSettings(source: SettingSource) {
  */
 export function migrationTimeouts(source: SettingSource) {
   return {
-    lockTimeoutMs: resolveSetting('migration_lock_timeout_ms', source) as number,
-    statementTimeoutMs: resolveSetting('migration_statement_timeout_ms', source) as number,
+    lockTimeoutMs: resolveSetting('migration_lock_timeout_ms', source),
+    statementTimeoutMs: resolveSetting('migration_statement_timeout_ms', source),
   };
 }
 
-function resolveSetting(name: keyof typeof policy.settings, source: SettingSource): unknown {
+function resolveSetting<K extends keyof typeof policy.settings>(
+  name: K,
+  source: SettingSource,
+): SettingValue<(typeof policy.settings)[K]> {
   return resolveSpec(name, policy.settings[name], source);
 }
 
@@ -461,54 +468,48 @@ export function assertDeployable(config: ServiceConfig, force = false): void {
 export function loadConfig(env: Env = process.env): ServiceConfig {
   const settings = resolveSettings(env);
   const appEnv = appEnvironment(settings);
-  const values = <K extends string>(specs: Record<K, SettingSpec>) =>
-    Object.fromEntries(
-      Object.entries<SettingSpec>(specs).map(([name, spec]) => [name, settings.of(spec)]),
-    ) as Record<K, unknown>;
-  validateSiteHealthSettings(values(siteHealth.settings));
-  validateJevSettings(values(jev));
+  validateSiteHealthSettings(settingValues(siteHealth.settings, settings));
+  validateJevSettings(settingValues(jev, settings));
   loadWorkerSettings(settings);
-  const setting = (name: keyof typeof policy.settings) => resolveSetting(name, settings);
+  const setting = <K extends keyof typeof policy.settings>(name: K) =>
+    resolveSetting(name, settings);
   const config: ServiceConfig = {
     settings,
     execution: executionSettings(settings),
     billing: billingSettings(settings),
     razorpay: razorpaySettings(settings),
-    appName: setting('app_name') as string,
+    appName: setting('app_name'),
     appEnv,
     // Every interface by default, as a bridged container needs; a host-network
     // local deployment pins loopback.
     host: String(settings.of(listenSpecs.host)).trim() || '0.0.0.0',
     port: parsePort(String(settings.of(listenSpecs.port))),
-    databaseUrl: setting('database_url') as string,
+    databaseUrl: setting('database_url'),
     database: databaseSettings(settings),
-    requestIdHeader: setting('request_id_header') as string,
+    requestIdHeader: setting('request_id_header'),
     session: {
-      secretKey: setting('jwt_secret_key') as string,
-      algorithm: setting('jwt_algorithm') as 'HS256',
-      cookieName: setting('session_cookie_name') as string,
-      expireSeconds: (setting('jwt_expire_hours') as number) * 3600,
+      secretKey: setting('jwt_secret_key'),
+      algorithm: choiceSetting(policy.settings.jwt_algorithm, settings, ['HS256']),
+      cookieName: setting('session_cookie_name'),
+      expireSeconds: setting('jwt_expire_hours') * 3600,
     },
     auth: {
-      publicSignup: setting('public_signup_enabled') as boolean,
-      mailKey: setting('resend_api_key') as string,
-      mailTimeoutMs: setting('auth_mail_timeout_ms') as number,
+      publicSignup: setting('public_signup_enabled'),
+      mailKey: setting('resend_api_key'),
+      mailTimeoutMs: setting('auth_mail_timeout_ms'),
       signupReservedDomains: policy.auth.mailbox.reserved_domains,
-      frontendUrl: setting('frontend_url') as string,
-      publicApiUrl: setting('public_api_url') as string,
-      publicWebsiteUrl: setting('public_website_url') as string,
-      apiKeyPepper: setting('api_key_pepper') as string,
-      trustedProxies: parseTrustedProxies(setting('trusted_proxy_cidrs') as string),
-      oauthSettings: values(policy.auth.oauth.settings) as Record<
-        string,
-        string | number | boolean
-      >,
-      limits: values(policy.abuse) as ServiceConfig['auth']['limits'],
-      turnstile: turnstileSettings(setting('turnstile_secret_key') as string, appEnv),
+      frontendUrl: setting('frontend_url'),
+      publicApiUrl: setting('public_api_url'),
+      publicWebsiteUrl: setting('public_website_url'),
+      apiKeyPepper: setting('api_key_pepper'),
+      trustedProxies: parseTrustedProxies(setting('trusted_proxy_cidrs')),
+      oauthSettings: settingValues(policy.auth.oauth.settings, settings),
+      limits: settingValues(policy.abuse, settings),
+      turnstile: turnstileSettings(setting('turnstile_secret_key'), appEnv),
     },
     demo: {
-      enabled: setting('demo_mode') as boolean,
-      expiresAt: setting('demo_expires_at') as Date | null,
+      enabled: setting('demo_mode'),
+      expiresAt: dateSetting(policy.settings.demo_expires_at, settings),
     },
     readinessTimeoutMs: policy.api.readiness_timeout_seconds * 1000,
   };
