@@ -60,6 +60,9 @@ sites are out of scope.
 - **AR-16 Shares as split bars.** Distribution shares and the intent mix are
   bars dragged in 5% steps that always total 100, not percentage fields.
   Owner, 2026-11-20.
+- **AR-17 No idle scroll.** A page whose content fits the panel shows no
+  scrollbar: pages end a gutter below their content, with no reserved end
+  space. Owner, 2026-11-21.
 
 ## Visual spec and standard layouts
 

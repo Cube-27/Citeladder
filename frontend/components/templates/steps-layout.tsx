@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 import { Pressable } from '@/components/ui/pressable';
 import { sidebarNavRowClasses } from '@/components/ui/sidebar';
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 export type StepItem<T extends string> = Readonly<{ value: T; label: string }>;
 
 /**
- * Steps: a task worked through in order, in a `fitted` shell page's body. The
+ * Steps: a task worked through in order, filling a shell page's body. The
  * steps run down a 224 column on the left (numbered, the current one on the
  * nav's current tile, completed ones ticked and clickable to go back to),
  * the current step's content beside them, and a raised action bar at the
@@ -39,11 +39,24 @@ export function StepsLayout<T extends string>({
   children: ReactNode;
 }>) {
   const index = steps.findIndex((step) => step.value === current);
+  const scroller = useRef<HTMLDivElement>(null);
+  // A lazy screen mounts after the route move focused the main panel, which
+  // does not scroll here: take that focus so keys and the scrollbar work.
+  useEffect(() => {
+    const active = document.activeElement;
+    if (active === document.body || active?.id === 'main')
+      scroller.current?.focus({ preventScroll: true });
+  }, []);
   return (
     <div className="flex h-[calc(100dvh-var(--route-chrome-height))] min-h-0 min-w-0 flex-col">
       {/* `relative` contains absolute descendants (`sr-only` text); without it they
           escape the clip, lengthen the panel and it scrolls the page header away. */}
-      <div className="desktop:flex-row relative flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--page-top-gap)] overflow-y-auto">
+      <div
+        ref={scroller}
+        tabIndex={-1}
+        data-page-scroller=""
+        className="desktop:flex-row relative flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--page-top-gap)] overflow-y-auto outline-none"
+      >
         <nav
           aria-label={label}
           className="desktop:sticky desktop:top-0 desktop:self-start flex w-56 shrink-0 flex-col"

@@ -54,7 +54,7 @@ export function ActionUrlScreen() {
     );
   else if (query.data) body = <UrlBody data={query.data} />;
   return (
-    <PageFrame title={path} trail={trail(from)} crumb={{ label: pathTail(path) }} fitted>
+    <PageFrame title={path} trail={trail(from)} crumb={{ label: pathTail(path) }}>
       <ReadingColumn>{body}</ReadingColumn>
       <UrlDock siteUrlId={siteUrlId} unreadable={query.isError} />
     </PageFrame>

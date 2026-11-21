@@ -6,7 +6,7 @@ import { textRole, type TextRole } from '@/components/ui/typography';
 /**
  * A record's reading page (the Actions v3 Action and URL pages): labelled
  * sections and a Details card across the route's narrow column, on the same
- * edge as the masthead's trail and the frame's h1. Its frame is `fitted`: the column holds the page's end space
+ * edge as the masthead's trail and the frame's h1. The column holds the page's end space
  * itself and is at least the window's height, so a dock after it stays at the
  * window's foot however short the page and however far it is scrolled.
  */

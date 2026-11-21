@@ -27,7 +27,7 @@ import { PromptBuilder } from './prompt-builder';
 export function PromptBuilderPage() {
   const canWrite = useWorkspaceCapability('write');
   return (
-    <PageFrame fitted>
+    <PageFrame>
       {canWrite ? (
         <BuilderForProject />
       ) : (
