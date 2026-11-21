@@ -53,35 +53,19 @@ export function PageFrame({
   const width = fill ? 'fill' : routeWidth(pathname);
   // A thread keeps its name and actions in the masthead; every other page heads its own column.
   const headed = head === 'page' || hasTrail;
-  const shell = useContext(ShellContext);
-  const navDrawer = shell?.navDrawer;
-  const searchParams = useSearchParams()[0];
   return (
     <PageEmptyOfferProvider>
       <div
         data-page-width={width}
         className={cn('flex min-w-0 flex-1 flex-col', PAGE_START[width])}
       >
-        <Masthead
+        <PageMasthead
+          pathname={pathname}
           title={resolved}
-          section={mastheadSection(
-            pageSection(pathname, searchParams),
-            parents[0]?.label ?? resolved,
-          )}
-          crumb={
-            hasTrail ? (
-              <LazyIsland failed={null} label="breadcrumb" defects="contain">
-                <Breadcrumb parts={[...parents, crumb ?? { label: resolved }]} />
-              </LazyIsland>
-            ) : null
-          }
-          lead={
-            navDrawer ? <NavMenuButton expanded={navDrawer.open} onOpen={navDrawer.onOpen} /> : null
-          }
-          search={shell?.searchTrigger}
+          parents={parents}
+          crumb={crumb}
           heading={!headed}
           actions={head === 'masthead' ? actions : undefined}
-          end={shell?.agentTrigger}
         />
         {headed ? (
           <PageHeading
@@ -104,6 +88,46 @@ export function PageFrame({
         </div>
       </div>
     </PageEmptyOfferProvider>
+  );
+}
+
+function PageMasthead({
+  pathname,
+  title,
+  parents,
+  crumb,
+  heading,
+  actions,
+}: Readonly<{
+  pathname: string;
+  title: string;
+  parents: readonly Crumb[];
+  crumb: PageFrameSlots['crumb'];
+  heading: boolean;
+  actions: ReactNode;
+}>) {
+  const shell = useContext(ShellContext);
+  const navDrawer = shell?.navDrawer;
+  const searchParams = useSearchParams()[0];
+  return (
+    <Masthead
+      title={title}
+      section={mastheadSection(pageSection(pathname, searchParams), parents[0]?.label ?? title)}
+      crumb={
+        parents.length > 0 ? (
+          <LazyIsland failed={null} label="breadcrumb" defects="contain">
+            <Breadcrumb parts={[...parents, crumb ?? { label: title }]} />
+          </LazyIsland>
+        ) : null
+      }
+      lead={
+        navDrawer ? <NavMenuButton expanded={navDrawer.open} onOpen={navDrawer.onOpen} /> : null
+      }
+      search={shell?.searchTrigger}
+      heading={heading}
+      actions={actions}
+      end={shell?.agentTrigger}
+    />
   );
 }
 
@@ -133,7 +157,7 @@ function PageHeading({
           className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2"
         >
           <MastheadPrimarySlot value={primarySlot}>
-            <MastheadOverflow>{actions}</MastheadOverflow>
+            <MastheadOverflow label="Page actions">{actions}</MastheadOverflow>
           </MastheadPrimarySlot>
           <span ref={setPrimarySlot} data-masthead-primary="" className="contents" />
         </div>

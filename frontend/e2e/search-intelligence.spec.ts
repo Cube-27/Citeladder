@@ -226,7 +226,7 @@ for (const viewport of [
       viewport.width,
     );
     if (viewport.width < 900) {
-      await page.getByRole('button', { name: 'More', exact: true }).click();
+      await page.getByRole('button', { name: 'Page actions', exact: true }).click();
       await page.getByRole('menuitem', { name: 'New analysis' }).click();
     } else {
       await page.getByRole('button', { name: 'New analysis' }).click();

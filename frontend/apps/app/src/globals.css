@@ -610,7 +610,7 @@
   --control-md: 32px;
   --control-lg: 40px;
   --control-coarse: 44px;
-  --target-hit: 40px;
+  --button-hit: 40px;
   --nav-row-height: 32px;
   --table-row-height: 44px;
 
@@ -1511,8 +1511,8 @@ a.focus-ring:active .type-caption {
 :root:not([data-public-surface]) [data-button-variant]::after {
   content: '';
   position: absolute;
-  inset-block: min(0px, calc((100% - var(--target-hit)) / 2));
-  inset-inline: min(0px, calc((100% - var(--target-hit)) / 2));
+  inset-block: min(0px, calc((100% - var(--button-hit)) / 2));
+  inset-inline: min(0px, calc((100% - var(--button-hit)) / 2));
 }
 
 :disabled:focus-visible,
