@@ -1,4 +1,4 @@
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { render, type RenderOptions } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
@@ -149,7 +149,7 @@ export function testEntitlement(
 }
 
 function seedEntitlement(
-  queryClient: ReturnType<typeof testQueryClient>,
+  queryClient: QueryClient,
   workspaceId: string | null,
   entitlement: TestEntitlement,
 ) {
@@ -171,12 +171,18 @@ function seedEntitlement(
 type ProvidersOptions = Omit<RenderOptions, 'wrapper'> & {
   projectSelection?: Partial<ProjectContextValue> | null;
   entitlement?: TestEntitlement;
+  queryClient?: QueryClient;
   initialEntries?: MemoryRouterProps['initialEntries'];
 };
 
 export function renderWithProviders(ui: ReactElement, options?: ProvidersOptions) {
-  const queryClient = testQueryClient();
-  const { projectSelection, entitlement, initialEntries, ...renderOptions } = options ?? {};
+  const {
+    projectSelection,
+    entitlement,
+    initialEntries,
+    queryClient = testQueryClient(),
+    ...renderOptions
+  } = options ?? {};
   const selection = projectSelection === null ? null : testProjectSelection(projectSelection);
   if (selection && entitlement)
     seedEntitlement(queryClient, selection.activeWorkspaceId, entitlement);

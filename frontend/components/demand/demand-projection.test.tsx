@@ -1,24 +1,18 @@
-import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import type { QueryClient } from '@tanstack/react-query';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { DemandDetectorState } from '@citeladder/contracts';
 import type { ReactNode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { ApiError } from '@/lib/api/errors';
 import { createAppQueryClient } from '@/lib/api/query-client';
 import { ActiveProjectScopeProvider } from '@/lib/project/active-project-scope';
 import { makeProject } from '@/test/fixtures/project';
-import { roles } from '@/services/api/src/config/workspaces.json';
+import { projectScope, renderWithProviders, type TestRole } from '@/test/render';
 
 import { ReportPage } from '@/components/templates/report-page';
 import { DemandActions, DemandPanel, demandControls, useDemand } from './demand-projection';
-
-function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
-  return <MemoryRouter initialEntries={['/search-intelligence']}>{children}</MemoryRouter>;
-}
 
 function signalTable() {
   return screen.getByRole('table');
@@ -43,30 +37,14 @@ function rankOf(row: HTMLElement) {
   return within(row).getAllByRole('cell').at(-2)!.textContent;
 }
 
-const project = vi.hoisted(() => ({
-  id: '11111111-1111-4111-8111-111111111111',
-  workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  capabilities: ['read', 'run', 'write'] as readonly string[],
-}));
+const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
+const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 vi.mock('@/components/integrations/data-source-setup', () => ({
   DataSourceSetup: ({ title, whenReady }: { title: string; whenReady?: ReactNode }) => (
     <section aria-label={title}>{whenReady}</section>
   ),
 }));
-vi.mock('@/lib/project/project-context', () => {
-  const context = () => ({
-    activeProject: { id: project.id, workspace_id: project.workspace_id },
-    activeProjectId: project.id,
-    isLoading: false,
-  });
-  return {
-    useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    useOptionalProjectContext: context,
-    useProjectContext: context,
-    useWorkspaceCapability: (capability: string) => project.capabilities.includes(capability),
-  };
-});
 
 function DemandTab() {
   const demand = useDemand();
@@ -77,10 +55,10 @@ function DemandTab() {
   );
 }
 
-function DemandRoute() {
+function DemandRoute({ projectId = PROJECT_ID }: Readonly<{ projectId?: string }>) {
   return (
     <ActiveProjectScopeProvider
-      project={makeProject({ id: project.id, workspace_id: project.workspace_id })}
+      project={makeProject({ id: projectId, workspace_id: WORKSPACE_ID })}
     >
       <DemandTab />
     </ActiveProjectScopeProvider>
@@ -204,23 +182,25 @@ const findLatentDemand = (text: string) =>
 describe('Demand tab', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/search-intelligence');
-    project.id = '11111111-1111-4111-8111-111111111111';
-    project.capabilities = roles.member;
     vi.mocked(demandApi.getLatest).mockResolvedValue(snapshot);
   });
 
   let client: QueryClient;
 
-  function renderProjection() {
+  function renderDemand(role: TestRole = 'member') {
+    return renderWithProviders(<DemandRoute />, {
+      queryClient: client,
+      initialEntries: ['/search-intelligence'],
+      projectSelection: projectScope(
+        makeProject({ id: PROJECT_ID, workspace_id: WORKSPACE_ID }),
+        role,
+      ),
+    });
+  }
+
+  function renderProjection(role: TestRole = 'member') {
     client = createAppQueryClient();
-    return render(
-      <QueryClientProvider client={client}>
-        <TooltipProvider>
-          <DemandRoute />
-        </TooltipProvider>
-      </QueryClientProvider>,
-      { wrapper: RouterTestWrapper },
-    );
+    return renderDemand(role);
   }
 
   it('renders the top-strip filters carrying counts, latent demand and a flat table without caption rows', async () => {
@@ -319,7 +299,7 @@ describe('Demand tab', () => {
       within(drawer)
         .getByRole('link', { name: 'Open the Action for ai marketing tools' })
         .getAttribute('href'),
-    ).toBe(`/actions/66666666-6666-4666-8666-666666666666?project=${project.id}`);
+    ).toBe(`/actions/66666666-6666-4666-8666-666666666666?project=${PROJECT_ID}`);
     await user.keyboard('{Escape}');
 
     await user.click(await findSignalRow('school fees'));
@@ -485,14 +465,7 @@ describe('Demand tab', () => {
     first.unmount();
     const readsBeforeRevisit = vi.mocked(demandApi.getLatest).mock.calls.length;
 
-    render(
-      <QueryClientProvider client={client}>
-        <TooltipProvider>
-          <DemandRoute />
-        </TooltipProvider>
-      </QueryClientProvider>,
-      { wrapper: RouterTestWrapper },
-    );
+    renderDemand();
     expect(screen.getByRole('region', { name: 'Connect Search Console' })).toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(vi.mocked(demandApi.getLatest).mock.calls).toHaveLength(readsBeforeRevisit);
@@ -562,7 +535,7 @@ describe('Demand tab', () => {
           window_start: '2026-07-01',
           window_end: '2026-07-07',
         },
-        { workspaceId: project.workspace_id },
+        { workspaceId: WORKSPACE_ID },
       );
     });
 
@@ -571,8 +544,7 @@ describe('Demand tab', () => {
   });
 
   it('shows a viewer the signals without offering a recompute', async () => {
-    project.capabilities = roles.viewer;
-    renderProjection();
+    renderProjection('viewer');
 
     expect(await findLatentDemand('350 impressions on non-branded signals')).toBeVisible();
     expect(screen.queryByRole('button', { name: /Recompute signals/i })).toBeNull();
@@ -583,14 +555,7 @@ describe('Demand tab', () => {
     expect(await screen.findByText('ai marketing tools')).toBeInTheDocument();
 
     vi.mocked(demandApi.getLatest).mockImplementation(() => new Promise(() => {}));
-    project.id = '99999999-9999-4999-8999-999999999999';
-    rerender(
-      <QueryClientProvider client={client}>
-        <TooltipProvider>
-          <DemandRoute />
-        </TooltipProvider>
-      </QueryClientProvider>,
-    );
+    rerender(<DemandRoute projectId="99999999-9999-4999-8999-999999999999" />);
 
     await waitFor(() => {
       expect(screen.getByRole('status')).toHaveAccessibleName('Loading search demand…');
