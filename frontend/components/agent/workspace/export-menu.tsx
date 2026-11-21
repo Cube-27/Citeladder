@@ -1,9 +1,8 @@
-import { ChevronDown } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
 import { useToast } from '@/components/ui/toast';
+import { ChevronDown } from '@/lib/icons';
 import { downloadPage, pageExport, type PageExportFormat } from '@/lib/agent/export';
 
 const COPIED: Readonly<Record<PageExportFormat, string>> = {

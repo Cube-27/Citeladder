@@ -1,9 +1,9 @@
 import * as PopoverPrimitive from '@radix-ui/react-popover';
-import { Info } from 'lucide-react';
 import { useId, useState, type ReactNode } from 'react';
 
 import { focusFromKeyboard } from '@/components/ui/input-modality';
 import { TOOLTIP_SHEET } from '@/components/ui/tooltip';
+import { Info } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**

@@ -1,10 +1,10 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Search, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Kbd } from '@/components/ui/kbd';
+import { Search, type IconGlyph } from '@/lib/icons';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useManagedPlan } from '@/lib/billing/entitlement-context';
 import {
@@ -25,7 +25,7 @@ type PaletteGroup = Readonly<{
   items: readonly Readonly<{
     label: string;
     href: string;
-    icon: LucideIcon;
+    icon: IconGlyph;
     scope: 'project' | 'workspace';
   }>[];
 }>;
@@ -54,7 +54,7 @@ type Command = {
   label: string;
   group: string;
   /** Nav destinations carry their canonical glyph; projects render a brand logo. */
-  icon?: LucideIcon;
+  icon?: IconGlyph;
   logoUrl?: string | null;
   websiteUrl?: string | null;
   hint?: string;

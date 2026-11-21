@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/react-query';
-import { Pencil, Sparkles, X } from 'lucide-react';
 import { useState, type FormEvent, type ReactNode } from 'react';
 
 import { JUMP_LINK } from '@/components/agent/jump-link';
@@ -11,6 +10,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { Textarea } from '@/components/ui/textarea';
 import { textRole } from '@/components/ui/typography';
 import { treeBranchClasses } from '@/components/ui/workspace';
+import { Pencil, Sparkles, X } from '@/lib/icons';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { replaceSection, splitSections, type OutputSection } from '@/lib/agent/sections';
 import {

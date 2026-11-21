@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { LogOut } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
+import { LogOut } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { restartAt } from '@/lib/auth/account-transition';
 import { workspacesApi } from '@/lib/api/workspaces';

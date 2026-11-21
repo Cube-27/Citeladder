@@ -1,9 +1,9 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import * as ToastPrimitive from '@radix-ui/react-toast';
-import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { AlertCircle, CheckCircle2, Info, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { POP_FACE } from '@/components/ui/slip';
 

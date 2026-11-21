@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { ChevronRight, type LucideIcon } from 'lucide-react';
 
 import { MastheadOverflow, MastheadPrimarySlot } from '@/components/ui/masthead-actions';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
+import { ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /** A masthead control that keeps its text label wherever it is drawn (search, "Ask agent"). */
@@ -13,7 +13,7 @@ export const MASTHEAD_LABELLED = 'shrink-0 justify-start';
  * Masthead: the page header of every shell page, 44 tall on the panel, sticky
  * with a `rule` under it across the whole panel. From the left, at the page's
  * own start (`--page-start`, so a narrow page's title lines up with its
- * body): the menu button below 900px (`lead`), the section's icon and name,
+ * body): the menu button below 900px (`lead`), the section's name,
  * then the page title (or a record page's trail, `crumb`), in `label` type;
  * at the right the page's secondary actions, its one primary action
  * (`actions`, the primary inside `MastheadPrimary`), then the search trigger
@@ -38,7 +38,7 @@ export function Masthead({
 }: Readonly<{
   title: string;
   /** The nav group the page sits in, drawn before the title from `rail`. */
-  section?: Readonly<{ title: string; icon: LucideIcon }> | null;
+  section?: Readonly<{ title: string }> | null;
   /** Before the title: the menu button. */
   lead?: ReactNode;
   /** A trail of where the page sits, drawn instead of the title; the page then carries its own h1. */
@@ -72,7 +72,6 @@ export function Masthead({
           <span
             className={textRole('body', 'text-ink-2 rail:flex hidden shrink-0 items-center gap-2')}
           >
-            <section.icon aria-hidden className="size-4" />
             {section.title}
             <ChevronRight aria-hidden className="size-3" />
           </span>

@@ -4,15 +4,13 @@ import { billingApi, type BillingInvoice } from '@/lib/api/billing';
 import { formatMoney } from '@/lib/billing/catalog';
 import { DisplayTime } from '@/components/ui/display-time';
 
-import { Download } from 'lucide-react';
-
 import { IconButton } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { SettingsGroup } from '@/components/ui/setting-row';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { ICONS } from '@/lib/icons';
+import { Download, ICONS } from '@/lib/icons';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { saveBlob } from '@/lib/download';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';

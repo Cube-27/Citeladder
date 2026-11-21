@@ -1,7 +1,7 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 
 import { Pressable } from '@/components/ui/pressable';
+import { ChevronLeft, ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**

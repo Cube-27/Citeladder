@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
 
 import type { FanoutQueryRow } from '@citeladder/contracts';
 import { BrandsNamed } from '@/components/prompts/prompt-past-answers';
@@ -10,6 +9,7 @@ import type { DataTableState } from '@/components/ui/data-table-body';
 import { Delta } from '@/components/ui/delta';
 import { readErrorProps } from '@/components/ui/notice';
 import { TableCell } from '@/components/ui/table';
+import { Search } from '@/lib/icons';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { percentText } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';

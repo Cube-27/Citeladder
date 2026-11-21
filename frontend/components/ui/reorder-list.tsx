@@ -1,4 +1,3 @@
-import { Ellipsis, GripVertical } from 'lucide-react';
 import { useState, type KeyboardEvent, type ReactNode } from 'react';
 
 import { IconButton } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { SLIP_FACE } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
+import { Ellipsis, GripVertical } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /** The drag type a row's position travels under; no other source sets it. */

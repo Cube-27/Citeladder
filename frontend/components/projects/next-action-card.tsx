@@ -1,4 +1,3 @@
-import { ArrowRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { ProjectLink } from '@/components/ui/project-link';
 
@@ -7,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
 import { textRole } from '@/components/ui/typography';
+import { ArrowRight } from '@/lib/icons';
 import { pluralCount } from '@/lib/format';
 import type { CommandCenter } from '@citeladder/contracts';
 import { StatusMark, type StatusTone } from '@/components/ui/status-mark';

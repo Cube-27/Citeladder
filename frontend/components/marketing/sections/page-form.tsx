@@ -1,5 +1,5 @@
 import type { FormEvent, ReactNode } from 'react';
-import { Lock } from 'lucide-react';
+import { Lock } from '@/lib/icons';
 
 import './page-form.css';
 

@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { ProjectLink } from '@/components/ui/project-link';
-import { ArrowUpRight, ShieldCheck, Split } from 'lucide-react';
 
 import { SignalInsight } from '@/components/demand/demand-signal-insight';
 import { ActionButton } from '@/components/ui/actions';
@@ -8,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { Absence } from '@/components/ui/absence';
 import type { DemandDetectorPolicy } from '@citeladder/contracts';
+import { ArrowUpRight, ShieldCheck, Split } from '@/lib/icons';
 import type { DemandSignal } from '@/lib/api/demand';
 import {
   competingPages,

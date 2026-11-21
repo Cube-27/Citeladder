@@ -1,6 +1,5 @@
 import { type ReactNode, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Inbox, Search } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
@@ -16,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
 import { StateBlock } from '@/components/ui/state-block';
 import { readErrorProps } from '@/components/ui/notice';
+import { ArrowRight, Inbox, Search } from '@/lib/icons';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { useProjectScope } from '@/lib/project/active-project-scope';

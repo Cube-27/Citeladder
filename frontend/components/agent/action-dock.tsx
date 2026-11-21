@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, RotateCcw, Sparkles, X, type LucideIcon } from 'lucide-react';
 
 import {
   ContextualLinkDeclarationRoute,
@@ -12,13 +11,14 @@ import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { DOCK_SLOT, PageDock } from '@/components/ui/selection-dock';
 import { useToast } from '@/components/ui/toast';
+import { Check, RotateCcw, Sparkles, X, type IconGlyph } from '@/lib/icons';
 import { actionsApi, actionsQueries, type ActionDetail } from '@/lib/api/actions';
 import { queryKeys } from '@/lib/api/query-keys';
 import { cn } from '@/lib/utils';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import type { ActionUserStatus } from '@citeladder/contracts/actions';
 
-type Decision = Readonly<{ label: string; icon: LucideIcon; to: ActionUserStatus }>;
+type Decision = Readonly<{ label: string; icon: IconGlyph; to: ActionUserStatus }>;
 const ACCEPT: Decision = { label: 'Accept', icon: Check, to: 'in_progress' };
 const DECLINE: Decision = { label: 'Decline', icon: X, to: 'dismissed' };
 const RESTORE: Decision = { label: 'Restore', icon: RotateCcw, to: 'open' };

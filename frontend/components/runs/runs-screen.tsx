@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Play } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { AuditSchedules } from '@/components/runs/audit-schedules';
@@ -12,6 +11,7 @@ import { RunsTable } from '@/components/runs/runs-table';
 import { ReportPage } from '@/components/templates/report-page';
 import { Spinner } from '@/components/ui/spinner';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
+import { Play } from '@/lib/icons';
 import { runsQueries } from '@/lib/api/runs';
 import type { Audit } from '@citeladder/contracts';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';

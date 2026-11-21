@@ -1,5 +1,3 @@
-import { ChevronDown, Pencil, Sparkles, Upload } from 'lucide-react';
-
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { ACTIONS } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
@@ -16,6 +14,7 @@ import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
 import { TabRow } from '@/components/ui/tabs';
 import type { PromptStatus } from '@citeladder/contracts';
+import { ChevronDown, Pencil, Sparkles, Upload } from '@/lib/icons';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import {
   buyerStageLabels,

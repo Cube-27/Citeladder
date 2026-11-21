@@ -1,5 +1,3 @@
-import { CheckCircle2, XCircle } from 'lucide-react';
-
 import { AnswerTranscript } from '@/components/runs/answer-transcript';
 import { BrandsRail, FanoutRail, LinksRail, SourcesRail } from '@/components/runs/answer-rail';
 import { EvidenceAds } from '@/components/runs/evidence-ads';
@@ -13,6 +11,7 @@ import { wellClasses } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
 import { SubsectionHeader } from '@/components/ui/workspace';
 import type { ExecutionEvidence } from '@citeladder/contracts';
+import { CheckCircle2, XCircle } from '@/lib/icons';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { answerBrands, answerLinks, answerSources } from '@/lib/runs/answer-transcript';
 

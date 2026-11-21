@@ -1,5 +1,4 @@
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
-import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Fragment, type ComponentProps, type ReactNode } from 'react';
 
 import { Absence } from '@/components/ui/absence';
@@ -13,6 +12,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { QuoteLink } from '@/components/visibility/visibility-perception';
+import { ChevronDown, ChevronRight } from '@/lib/icons';
 import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useEngineCatalog } from '@/lib/providers/engines';

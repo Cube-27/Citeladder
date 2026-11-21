@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/react-query';
-import { Check } from 'lucide-react';
 
 import type { Project } from '@citeladder/contracts';
 
@@ -10,6 +9,7 @@ import { Icon } from '@/components/ui/icon';
 import { Notice } from '@/components/ui/notice';
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { Tag } from '@/components/ui/tag';
+import { Check } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
 

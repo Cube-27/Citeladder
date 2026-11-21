@@ -1,4 +1,3 @@
-import { Sparkles, Undo2 } from 'lucide-react';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { isDeclarable, MarkImplementedButton } from '@/components/agent/action-declaration';
@@ -23,6 +22,7 @@ import {
   withQuotedReference,
   type SuggestionHighlight,
 } from '@/lib/agent/page-workspace';
+import { Sparkles, Undo2 } from '@/lib/icons';
 import { suggestionCategoryLabel } from '@/lib/agent/vocabulary';
 import type { ActionDetail } from '@/lib/api/actions';
 import type { AgentChatDetail, AgentOutput, AgentRevision, AgentSuggestion } from '@/lib/api/agent';

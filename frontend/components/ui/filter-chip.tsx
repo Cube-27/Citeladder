@@ -1,20 +1,11 @@
 import type { ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
-import {
-  Bot,
-  CalendarDays,
-  ChevronDown,
-  Folder,
-  Globe,
-  Tag,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
 
 import type { FilterDefinition, FilterIcon } from '@/components/ui/all-filters';
 import { focusFieldOnEntry, FilterOptions } from '@/components/ui/filter-options';
 import { TRIGGER_BOX } from '@/components/ui/input';
 import { Menu, MenuContent, MenuTrigger } from '@/components/ui/menu';
 import { Tooltip } from '@/components/ui/tooltip';
+import { Bot, CalendarDays, ChevronDown, Folder, Globe, Tag, X, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**
@@ -88,7 +79,7 @@ export function FilterTrigger({
   );
 }
 
-const GLYPHS: Record<FilterIcon, LucideIcon> = {
+const GLYPHS: Record<FilterIcon, IconGlyph> = {
   period: CalendarDays,
   engines: Bot,
   market: Globe,

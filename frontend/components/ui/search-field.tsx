@@ -1,5 +1,5 @@
 import { useEffect, useRef, type InputHTMLAttributes, type ReactNode } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X } from '@/lib/icons';
 
 import { Icon } from './icon';
 import { FieldEndButton, Input } from './input';

@@ -1,4 +1,3 @@
-import { ChevronDown, Plus, RotateCcw, Sparkles, Tags, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Tag } from '@/components/ui/tag';
+import { ChevronDown, Plus, RotateCcw, Sparkles, Tags, Trash2 } from '@/lib/icons';
 import { isImeComposing } from '@/lib/accessibility/ime';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { TopicRow } from '@/lib/prompts/builder-topics';

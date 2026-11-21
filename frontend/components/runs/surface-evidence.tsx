@@ -1,5 +1,3 @@
-import { Check, Link2, Minus, Users } from 'lucide-react';
-
 import { Tag } from '@/components/ui/tag';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -12,6 +10,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { MetaFooter, SubsectionHeader } from '@/components/ui/workspace';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import type { SearchSurfaceEvidence, SurfaceEntity } from '@citeladder/contracts';
+import { Check, Link2, Minus, Users } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { pluralCount } from '@/lib/format';
 import { StateBlock } from '@/components/ui/state-block';

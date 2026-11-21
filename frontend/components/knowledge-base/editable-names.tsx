@@ -1,6 +1,6 @@
-import { Pencil, Plus, Save, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 
+import { Pencil, Plus, Save, Trash2, X } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';

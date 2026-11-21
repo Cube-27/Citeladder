@@ -1,4 +1,3 @@
-import { CircleAlert, Info, TriangleAlert, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
@@ -6,6 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import { SLIP_FACE } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
 import { textRole } from '@/components/ui/typography';
+import { CircleAlert, Info, TriangleAlert, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 import { PageFrame } from './page-frame';
@@ -24,7 +24,7 @@ type NoticeTone = 'info' | 'warning' | 'negative' | 'loading';
 
 /** Each tone's glyph, its ink and the label's word. */
 const TONE: Readonly<
-  Record<Exclude<NoticeTone, 'loading'>, readonly [glyph: LucideIcon, ink: string, word: string]>
+  Record<Exclude<NoticeTone, 'loading'>, readonly [glyph: IconGlyph, ink: string, word: string]>
 > = {
   info: [Info, 'text-info', 'Notice'],
   warning: [TriangleAlert, 'text-warning', 'Warning'],
@@ -36,7 +36,7 @@ type NoticeContent = Readonly<{
   /** The notice's heading, in the `title` role outside the shell. */
   heading: string;
   /** A glyph for this notice in place of its tone's (not found: a search). */
-  icon?: LucideIcon;
+  icon?: IconGlyph;
   /** The card's label in place of the tone's word; `null` for none (not found). */
   label?: string | null;
   /** The sentence: what happened and, when the reader can fix it, the one next step. */

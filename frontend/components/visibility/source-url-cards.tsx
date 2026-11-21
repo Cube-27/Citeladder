@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { Bot } from 'lucide-react';
 import type { z } from 'zod';
 
 import { StatusMark } from '@/components/ui/status-mark';
@@ -10,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
+import { Bot } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { count } from '@/lib/visibility/sources';
 import { StateBlock } from '@/components/ui/state-block';

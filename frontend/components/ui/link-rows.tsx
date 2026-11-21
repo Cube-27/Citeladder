@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
 
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { ROWS_SHELL } from '@/components/ui/work-rows';
 import { textRole } from '@/components/ui/typography';
+import { ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**

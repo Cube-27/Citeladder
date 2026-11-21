@@ -8,16 +8,16 @@ import {
   type Ref,
   type RefObject,
 } from 'react';
+
+import { IconButton } from '@/components/ui/button';
+import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import {
   ChevronDown,
   ChevronsUpDown,
   PanelLeftClose,
   PanelLeftOpen,
-  type LucideIcon,
-} from 'lucide-react';
-
-import { IconButton } from '@/components/ui/button';
-import { isTextCut, Tooltip } from '@/components/ui/tooltip';
+  type IconGlyph,
+} from '@/lib/icons';
 import { setSidebarCollapsed, useSidebarCollapsed } from '@/lib/sidebar-width';
 import { cn } from '@/lib/utils';
 
@@ -252,7 +252,7 @@ export function SidebarNavRowContent({
   icon: Icon,
   label,
   count,
-}: Readonly<{ icon: LucideIcon; label: string; count?: ReactNode }>) {
+}: Readonly<{ icon: IconGlyph; label: string; count?: ReactNode }>) {
   return (
     <>
       <Icon className={ROW_ICON} aria-hidden />

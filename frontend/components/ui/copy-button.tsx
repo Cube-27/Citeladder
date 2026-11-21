@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy } from '@/lib/icons';
 
 import { Button } from './button';
 import { useToast } from './toast';

@@ -1,7 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { RefreshCw } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
@@ -12,6 +10,7 @@ import {
   type ProjectReadiness,
   type ProjectReadinessStage,
 } from '@/lib/api/performance';
+import { RefreshCw } from '@/lib/icons';
 import { pollReadiness } from '@/lib/performance/status';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { formatWindowDate } from '@/lib/format';

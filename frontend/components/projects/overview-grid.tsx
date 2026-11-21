@@ -1,10 +1,10 @@
-import { ArrowDown, ArrowUp, Maximize2, Minimize2, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { overviewWidgetTitles, type OverviewWidget } from '@citeladder/contracts/overview';
 import { AppGrid } from '@/components/ui/app-grid';
 import { IconButton } from '@/components/ui/button';
 import { FloatingToolbar } from '@/components/ui/workspace';
+import { ArrowDown, ArrowUp, Maximize2, Minimize2, X } from '@/lib/icons';
 import { moveWidget, overviewRows, removeWidget, toggleWidth } from '@/lib/overview/layout';
 
 /**

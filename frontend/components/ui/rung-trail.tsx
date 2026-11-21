@@ -1,10 +1,10 @@
-import { Check, ChevronRight, CircleHelp, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Icon } from '@/components/ui/icon';
 import { SLIP_FACE } from '@/components/ui/slip';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
+import { Check, ChevronRight, CircleHelp, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**

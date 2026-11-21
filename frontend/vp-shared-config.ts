@@ -100,8 +100,16 @@ export const lintConfig: OxlintConfig = {
     'typescript/prefer-as-const': 'error',
     'typescript/prefer-namespace-keyword': 'error',
     'typescript/triple-slash-reference': 'error',
+    'no-restricted-imports': [
+      'error',
+      { paths: [{ name: 'lucide-react', message: 'Import glyphs from @/lib/icons.' }] },
+    ],
   },
   overrides: [
+    {
+      files: ['**/lib/icons.ts'],
+      rules: { 'no-restricted-imports': 'off' },
+    },
     {
       files: ['**/*.{js,jsx,mjs,ts,tsx,mts,cts}'],
       rules: {

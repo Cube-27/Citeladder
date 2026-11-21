@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { ListChecks } from 'lucide-react';
+import { ListChecks } from '@/lib/icons';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 

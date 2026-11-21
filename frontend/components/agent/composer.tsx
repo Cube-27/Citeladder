@@ -1,7 +1,6 @@
-import { ArrowUp, RotateCcw, Square } from 'lucide-react';
-
 import { IconButton } from '@/components/ui/button';
 import { ComposerFrame, PastedTextChip, RemovableChip } from '@/components/ui/chat-dock';
+import { ArrowUp, RotateCcw, Square } from '@/lib/icons';
 import type { ContextChip } from '@/lib/agent/handoff';
 import { AGENT_COMPOSER_MAX_ROWS } from '@/lib/config/agent';
 

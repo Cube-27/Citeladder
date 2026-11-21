@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import {
   type ChecklistItem,
 } from '@/components/ui/checklist-field';
 import { Icon } from '@/components/ui/icon';
+import { Plus } from '@/lib/icons';
 import type { ReviewCompetitor, ReviewDomain } from '@/lib/onboarding/forms';
 
 function competitorUrl(competitor: ReviewCompetitor): string {

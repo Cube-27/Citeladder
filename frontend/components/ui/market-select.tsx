@@ -32,8 +32,8 @@ import {
   US,
   ZA,
 } from 'country-flag-icons/react/3x2';
-import { Globe } from 'lucide-react';
 
+import { Globe } from '@/lib/icons';
 import { Icon } from '@/components/ui/icon';
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import type { MarketOption } from '@citeladder/contracts/markets';

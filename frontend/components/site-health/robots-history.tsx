@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { robotsHistoryPageSchema } from '@citeladder/contracts/site-health';
 import type { z } from 'zod';
-import { FileText } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { choiceFilter } from '@/components/ui/all-filters';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
@@ -10,6 +9,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { LineDiff } from '@/components/ui/line-diff';
 import { TableCell, TableRow, TableTime } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
+import { FileText } from '@/lib/icons';
 import { diffLines } from '@/lib/agent/diff';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { useDisplayTimeZone } from '@/lib/display-timezone';

@@ -1,5 +1,4 @@
 import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { KeyRound } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { z } from 'zod';
@@ -31,6 +30,7 @@ import type {
   ApiKeyList,
   ApiKeyScope,
 } from '@citeladder/contracts/api-keys';
+import { KeyRound } from '@/lib/icons';
 import { apiKeyMutations, apiKeyQueries } from '@/lib/api/api-keys';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { endOfDayInZone, useDisplayTimeZone } from '@/lib/display-timezone';

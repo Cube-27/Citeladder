@@ -1,6 +1,6 @@
-import { Database } from 'lucide-react';
 import { Stack } from '@/components/ui/layout';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Database } from '@/lib/icons';
 import type {
   SearchIntelligenceDataset,
   SearchIntelligenceReadiness,

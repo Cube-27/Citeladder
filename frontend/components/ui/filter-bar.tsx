@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { X } from 'lucide-react';
 
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,7 @@ import {
   MenuRadioItem,
   MenuTrigger,
 } from '@/components/ui/menu';
+import { X } from '@/lib/icons';
 import { batchUrlWrites } from '@/lib/navigation/url-state';
 
 /**

@@ -1,9 +1,7 @@
-import { Info, type LucideIcon } from 'lucide-react';
-
 import { Badge } from '@/components/ui/badge';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { EngineMark } from '@/components/ui/engine-mark';
-import { ICONS } from '@/lib/icons';
+import { ICONS, Info, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 import {
@@ -17,7 +15,7 @@ import {
 import { Vignette, VignetteRows, fourRows } from './screen-vignette';
 
 /** A failed check's severity as the app's notice icons draw it: danger, warning, or muted info. */
-const SEVERITY_ICON: Readonly<Record<Severity, Readonly<{ icon: LucideIcon; tone: string }>>> = {
+const SEVERITY_ICON: Readonly<Record<Severity, Readonly<{ icon: IconGlyph; tone: string }>>> = {
   High: { icon: ICONS.danger, tone: 'text-negative' },
   Medium: { icon: ICONS.warning, tone: 'text-warning' },
   Low: { icon: Info, tone: 'text-ink-muted' },

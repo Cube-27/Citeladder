@@ -1,7 +1,7 @@
-import { ArrowRight, Download, TrendingUp } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
+import { ArrowRight, Download, TrendingUp } from '@/lib/icons';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { Button } from '@/components/ui/button';

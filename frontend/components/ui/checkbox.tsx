@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import * as CheckboxPrimitive from '@radix-ui/react-checkbox';
-import { Minus } from 'lucide-react';
 
+import { Minus } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 type VisibleCheckboxLabel = Exclude<ReactNode, null | undefined | boolean>;

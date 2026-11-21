@@ -1,4 +1,3 @@
-import { type LucideIcon } from 'lucide-react';
 import { useId, type ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
@@ -6,6 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { textRole } from '@/components/ui/typography';
+import type { IconGlyph } from '@/lib/icons';
 import { websiteHref } from '@/lib/config/app-link';
 import { cn } from '@/lib/utils';
 
@@ -111,7 +111,7 @@ function FlowHead({
   id: string;
   title: ReactNode;
   sub?: ReactNode;
-  icon?: LucideIcon;
+  icon?: IconGlyph;
   centered?: boolean;
 }>) {
   useDocumentTitle(typeof title === 'string' ? title : undefined);
@@ -144,7 +144,7 @@ export function FlowBlock({
   /** The heading's id; generated otherwise. */
   titleId?: string;
   sub?: ReactNode;
-  icon?: LucideIcon;
+  icon?: IconGlyph;
   /** Account access: the heading and its line centred over the form. */
   centered?: boolean;
   after?: ReactNode;

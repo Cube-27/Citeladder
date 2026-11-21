@@ -9,21 +9,20 @@ import {
   KeyRound,
   Layers,
   Link2,
-  type LucideIcon,
   MessageSquare,
   Search,
   Sparkles,
   Target,
   Users,
   Zap,
-} from 'lucide-react';
-
+  type IconGlyph,
+} from '@/lib/icons';
 /**
  * One glyph per navigation destination, the system's mega-menu set. Keyed by
  * href so the content module stays plain data and the menus and capability
  * cards agree on the same mark. Resources rows are text only and have none.
  */
-const NAV_ICONS: Readonly<Record<string, LucideIcon>> = {
+const NAV_ICONS: Readonly<Record<string, IconGlyph>> = {
   '/platform/ai-visibility': ChartColumn,
   '/platform/cited-sources': Link2,
   '/platform/ai-referral-analytics': Activity,

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { SearchX } from 'lucide-react';
 
 import { ProjectLink } from '@/components/ui/project-link';
 import { ActionButton } from '@/components/ui/actions';
@@ -12,6 +11,7 @@ import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { SearchField } from '@/components/ui/search-field';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
+import { SearchX } from '@/lib/icons';
 import { agentHandoffHref, type HandoffInput } from '@/lib/agent/handoff';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import {

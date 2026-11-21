@@ -1,4 +1,3 @@
-import { MessageSquare } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { BillingCountryInput } from '@/components/billing/billing-account-details';
@@ -13,6 +12,7 @@ import type {
   CredentialMode,
   SelfServePlanKey,
 } from '@/lib/api/billing';
+import { MessageSquare } from '@/lib/icons';
 import { newPlanCheckoutClosed } from '@/lib/billing/catalog';
 import type { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { websiteHref } from '@/lib/config/app-link';

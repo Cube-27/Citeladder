@@ -1,4 +1,3 @@
-import { Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -9,6 +8,7 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { CellMeter } from '@/components/ui/meter';
 import { Absence } from '@/components/ui/absence';
 import type { RankingRow } from '@citeladder/contracts';
+import { Users } from '@/lib/icons';
 import { SHARE_OF_VOICE_HINT, WIN_RATE_HINT } from '@/lib/config/visibility';
 import { percentText } from '@/lib/format';
 import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';

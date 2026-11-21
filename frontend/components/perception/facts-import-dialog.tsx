@@ -1,6 +1,5 @@
 import type { BrandFactImportResult } from '@citeladder/contracts/fact-checking';
 import { useMutation } from '@tanstack/react-query';
-import { Download } from 'lucide-react';
 import { useState } from 'react';
 
 import { Absence } from '@/components/ui/absence';
@@ -14,6 +13,7 @@ import { Notice } from '@/components/ui/notice';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { useToast } from '@/components/ui/toast';
+import { Download } from '@/lib/icons';
 import { humanizeApiError } from '@/lib/api/errors';
 import { projectMutations } from '@/lib/api/projects';
 import { downloadCsv } from '@/lib/csv/download';

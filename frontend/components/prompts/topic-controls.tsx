@@ -1,7 +1,7 @@
-import { Pencil, Plus, Settings2, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
+import { Pencil, Plus, Settings2, Trash2 } from '@/lib/icons';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';

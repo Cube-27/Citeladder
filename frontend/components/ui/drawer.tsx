@@ -1,9 +1,9 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { IconButton } from '@/components/ui/button';
 import { SCRIM, useReturnFocus } from '@/components/ui/dialog';
+import { X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { SHEET_FACE } from '@/components/ui/slip';
 

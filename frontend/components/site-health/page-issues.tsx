@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from 'react';
-import { ChevronDown } from 'lucide-react';
 
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { askAgentPrompt, buildFixPrompt } from '@/components/site-health/issue-detail-dialog';
@@ -19,6 +18,7 @@ import {
   severityRank,
 } from '@/lib/site-health/issues';
 import { StateBlock } from '@/components/ui/state-block';
+import { ChevronDown } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { SectionContent, TitledSection } from '@/components/ui/section';
 

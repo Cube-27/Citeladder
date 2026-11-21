@@ -1,4 +1,3 @@
-import { Check, ChevronDown } from 'lucide-react';
 import {
   useId,
   useState,
@@ -14,6 +13,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { ClampText } from '@/components/ui/clamp-text';
 import { pressableRowClasses } from '@/components/ui/open-row-skeleton';
 import { textRole } from '@/components/ui/typography';
+import { Check, ChevronDown } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 

@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import { Database, Unplug } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
 import { TextLink } from '@/components/ui/text-link';
+import { Database, Unplug } from '@/lib/icons';
 import type { CredentialMode } from '@/lib/api/billing';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice } from '@/components/ui/notice';

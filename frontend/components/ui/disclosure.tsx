@@ -1,4 +1,4 @@
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown } from '@/lib/icons';
 import type { ReactNode } from 'react';
 import { textRole } from './typography';
 

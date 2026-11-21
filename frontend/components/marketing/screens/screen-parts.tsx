@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button, type ButtonVariant } from '@/components/ui/button';
@@ -16,6 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ControlCount, TAB_TRACK, tabClasses } from '@/components/ui/tabs';
+import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 import { ENGINE_KEYS, ENGINE_NAMES, type Change } from './demo-data';
@@ -37,7 +37,7 @@ export function ScreenButton({
   icon,
   label,
   children,
-}: Readonly<{ variant?: ButtonVariant; icon?: LucideIcon; label?: string; children?: ReactNode }>) {
+}: Readonly<{ variant?: ButtonVariant; icon?: IconGlyph; label?: string; children?: ReactNode }>) {
   return (
     <Button asChild variant={variant}>
       <span aria-label={label}>

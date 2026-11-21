@@ -1,6 +1,6 @@
 import type { ComponentPropsWithoutRef, ComponentType } from 'react';
-import type { LucideIcon } from 'lucide-react';
 
+import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**
@@ -40,7 +40,7 @@ export function Icon({
   icon: Glyph,
   label,
   className,
-}: Readonly<{ icon: LucideIcon | BrandGlyph; label?: string; className?: string }>) {
+}: Readonly<{ icon: IconGlyph | BrandGlyph; label?: string; className?: string }>) {
   return (
     <Glyph
       data-icon=""

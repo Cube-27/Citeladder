@@ -1,4 +1,3 @@
-import { Check, ChevronLeft } from 'lucide-react';
 import { useId, type ComponentProps, type ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
@@ -10,6 +9,7 @@ import { RungTrail } from '@/components/ui/rung-trail';
 import { Tag } from '@/components/ui/tag';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { textRole } from '@/components/ui/typography';
+import { Check, ChevronLeft } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**

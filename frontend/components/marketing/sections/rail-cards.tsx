@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus } from '@/lib/icons';
 
 import { ButtonLink } from '../primitives/button';
 import { Eyebrow } from './site-parts';

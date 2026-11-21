@@ -1,5 +1,4 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button, IconButton } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
@@ -9,6 +8,7 @@ import {
   isTablePageSize,
   type TablePageSize,
 } from '@/lib/config/tables';
+import { ChevronLeft, ChevronRight } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
 import { useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { cn } from '@/lib/utils';

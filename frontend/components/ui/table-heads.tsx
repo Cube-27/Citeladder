@@ -1,8 +1,7 @@
-import { ArrowDown } from 'lucide-react';
-
 import { TableHead } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
+import { ArrowDown } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**

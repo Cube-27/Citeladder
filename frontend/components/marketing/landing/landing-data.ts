@@ -1,9 +1,9 @@
 /** Public copy for the landing page's integration field and FAQ. */
 
-import { Cloud } from 'lucide-react';
 import type { ComponentType, SVGProps } from 'react';
 
 import type { EngineKey } from '@/components/ui/engine-mark';
+import { Cloud } from '@/lib/icons';
 import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
 import { countWordCapitalized, projectCount } from '@/lib/marketing-content/count-words';
 

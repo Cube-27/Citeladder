@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Unplug } from 'lucide-react';
 
 import { ActionButton, ACTIONS } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { StateBlock } from '@/components/ui/state-block';
+import { Unplug } from '@/lib/icons';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { CrawlLogConnections } from './crawl-log-connections';
 

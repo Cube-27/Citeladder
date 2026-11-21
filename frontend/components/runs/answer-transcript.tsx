@@ -1,5 +1,3 @@
-import { UserRound } from 'lucide-react';
-
 import {
   AssistantMessage,
   ChatAvatar,
@@ -12,6 +10,7 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
 import { Icon } from '@/components/ui/icon';
 import { textRole } from '@/components/ui/typography';
+import { UserRound } from '@/lib/icons';
 import type { Highlight } from '@/lib/markdown/highlight';
 import { ContentMarkdown, type LinkChip, type PhraseChip } from '@/lib/markdown/markdown';
 import { useEngineCatalog } from '@/lib/providers/engines';

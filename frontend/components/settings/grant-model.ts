@@ -1,5 +1,4 @@
-import { BarChart3, Globe, Search, type LucideIcon } from 'lucide-react';
-
+import { BarChart3, Globe, Search, type IconGlyph } from '@/lib/icons';
 import type { IntegrationConnection, IntegrationProvider } from '@/lib/api/integrations';
 
 /**
@@ -34,7 +33,7 @@ export const GRANT_FAMILY: Record<IntegrationProvider, GrantFamily> = {
 /** Per-provider presentation, shared by Settings and the in-place setup. */
 export const PROVIDER_META: Record<
   IntegrationProvider,
-  { label: string; noun: string; console: string; Icon: LucideIcon }
+  { label: string; noun: string; console: string; Icon: IconGlyph }
 > = {
   gsc: {
     label: 'Google Search Console',

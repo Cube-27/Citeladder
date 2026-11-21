@@ -1,10 +1,9 @@
-import { SearchX } from 'lucide-react';
-
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { AppGrid } from '@/components/ui/app-grid';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { AreaChart } from '@/components/ui/area-chart';
 import { type TrendPoint } from '@/components/ui/series-data';
+import { SearchX } from '@/lib/icons';
 import type { AiReferrals } from '@/lib/api/ai-traffic';
 import {
   aiSourceLabel,

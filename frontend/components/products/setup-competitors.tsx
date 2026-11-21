@@ -1,11 +1,11 @@
 import { useMutation } from '@tanstack/react-query';
-import { Users } from 'lucide-react';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
 import { Stack } from '@/components/ui/layout';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { TextLink } from '@/components/ui/text-link';
+import { Users } from '@/lib/icons';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';

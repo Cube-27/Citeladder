@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MoreHorizontal, Pencil, PlugZap, Trash2 } from 'lucide-react';
 import { useEffect, useId, useState, type ReactNode } from 'react';
 
 import { BackfillHistory } from '@/components/settings/backfill-progress';
 import { PROVIDER_META, type GrantModel } from '@/components/settings/grant-model';
+import { MoreHorizontal, Pencil, PlugZap, Trash2 } from '@/lib/icons';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import {
   SelectedPropertyMark,

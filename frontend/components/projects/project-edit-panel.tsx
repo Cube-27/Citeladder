@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Plus, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
 import { ProjectMarkets } from './project-markets';
 import { textRole } from '@/components/ui/typography';
+import { Plus, X } from '@/lib/icons';
 import { projectMutations } from '@/lib/api/projects';
 import { brandDiscoveryQueries } from '@/lib/api/brand-discoveries';
 import type { Project } from '@citeladder/contracts';

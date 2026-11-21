@@ -1,5 +1,4 @@
 import { useId } from 'react';
-import { Check, Plus, X, type LucideIcon } from 'lucide-react';
 
 import { ProviderList } from '@/components/providers/provider-list';
 import { ACTIONS } from '@/components/ui/actions';
@@ -10,6 +9,7 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
+import { Check, Plus, X, type IconGlyph } from '@/lib/icons';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import type { LogicalEngine, Prompt, PromptSet } from '@citeladder/contracts';
 import type { ProjectMarket } from '@citeladder/contracts/markets';
@@ -235,7 +235,7 @@ function ChoiceChip({
 }: Readonly<{
   selected: boolean;
   onClick: () => void;
-  leading?: LucideIcon;
+  leading?: IconGlyph;
   children: React.ReactNode;
 }>) {
   const glyph = selected ? Check : leading;

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
 
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { treeBranchClasses } from '@/components/ui/workspace';
 import type { ArchitectureNode } from '@citeladder/contracts';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionContent, TitledSection } from '@/components/ui/section';
+import { ChevronDown } from '@/lib/icons';
 import { formatCount, readableUrl, sharedOrigin } from '@/lib/format';
 
 /**

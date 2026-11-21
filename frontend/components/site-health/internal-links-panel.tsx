@@ -2,7 +2,6 @@ import { Absence } from '@/components/ui/absence';
 import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
-import { PanelRightOpen } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -12,11 +11,11 @@ import { Stack } from '@/components/ui/layout';
 import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager';
 import { TableCell, TableCellLines, TableRow, UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
+import { ICONS, PanelRightOpen } from '@/lib/icons';
 import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
 import type { ActionStatus } from '@/lib/api/actions';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { formatCount, readableUrl } from '@/lib/format';
-import { ICONS } from '@/lib/icons';
 import { internalLinkStateNotice } from '@/lib/site-health/status';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { InternalLinkReview } from './internal-link-review';

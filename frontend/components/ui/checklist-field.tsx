@@ -1,10 +1,10 @@
-import { Pencil, X } from 'lucide-react';
 import { useId, useState, type ReactNode } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { Pencil, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**

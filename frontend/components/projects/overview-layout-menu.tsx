@@ -1,5 +1,3 @@
-import { LayoutGrid } from 'lucide-react';
-
 import {
   overviewWidgetTitles,
   type OverviewLayout,
@@ -15,6 +13,7 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from '@/components/ui/menu';
+import { LayoutGrid } from '@/lib/icons';
 import { addableWidgets, addWidget } from '@/lib/overview/layout';
 
 /**

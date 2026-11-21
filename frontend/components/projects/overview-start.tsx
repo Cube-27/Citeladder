@@ -1,5 +1,3 @@
-import { ArrowRight } from 'lucide-react';
-
 import type { CommandCenter } from '@citeladder/contracts';
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { ActionButton, ACTIONS } from '@/components/ui/actions';
@@ -9,6 +7,7 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { SetupSteps, type SetupStep } from '@/components/ui/rung-trail';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
+import { ArrowRight } from '@/lib/icons';
 import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 
 /** Whether a loop stage has evidence yet. */

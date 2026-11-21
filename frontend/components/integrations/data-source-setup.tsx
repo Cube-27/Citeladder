@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Plug, type LucideIcon } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 
@@ -24,6 +23,7 @@ import {
   refreshImportedReads,
   type IntegrationProvider,
 } from '@/lib/api/integrations';
+import { Plug, type IconGlyph } from '@/lib/icons';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -103,7 +103,7 @@ function RowFrame({
   action,
   children,
 }: Readonly<{
-  Icon: LucideIcon;
+  Icon: IconGlyph;
   title: string;
   status: ReactNode;
   action?: ReactNode;
@@ -311,7 +311,7 @@ function UnconnectedState({
   startConnect,
 }: Readonly<{
   heading: string;
-  icon?: LucideIcon;
+  icon?: IconGlyph;
   families: readonly GrantFamily[];
   canManage: boolean;
   startConnect: (family: GrantFamily) => void;
@@ -363,7 +363,7 @@ export function DataSourceSetup({
    * The page's own empty state while no source is connected at all: the first
    * family's Connect leads, a second family's is the quiet supporting action.
    */
-  unconnected?: Readonly<{ heading: string; icon?: LucideIcon }>;
+  unconnected?: Readonly<{ heading: string; icon?: IconGlyph }>;
 }>) {
   const { activeProject, activeWorkspaceId } = useProjectContext();
   const canManage = useWorkspaceCapability('manage_credentials');

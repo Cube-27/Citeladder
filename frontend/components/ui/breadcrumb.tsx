@@ -1,6 +1,6 @@
-import { ChevronRight } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
 
+import { ChevronRight } from '@/lib/icons';
 import { ProjectLink } from '@/components/ui/project-link';
 import { textRole } from '@/components/ui/typography';
 

@@ -1,5 +1,5 @@
-import { Download, Folder } from 'lucide-react';
 import { crawlerResourceClassSchema } from '@citeladder/contracts/site-health';
+import { Download, Folder } from '@/lib/icons';
 import { trafficStatusCode, type useTrafficData } from '@/lib/ai-traffic/use-traffic-data';
 import { words } from '@/lib/ai-traffic/vocabulary';
 import type { TrafficFilters } from '@/lib/api/ai-traffic';

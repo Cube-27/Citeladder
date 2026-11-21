@@ -1,8 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 
-import { X } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ChipInput } from '@/components/ui/chip-input';
@@ -12,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Textarea } from '@/components/ui/textarea';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
+import { X } from '@/lib/icons';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useWorkspaceCapability } from '@/lib/project/project-context';

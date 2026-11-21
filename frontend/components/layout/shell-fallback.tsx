@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
-import { MessagesSquare, type LucideIcon } from 'lucide-react';
 
 import { NoticeScreen } from '@/components/templates/notice-page';
 import { AppShellPlaceholder } from '@/components/ui/app-shell';
@@ -16,6 +15,7 @@ import {
   sidebarNavRowClasses,
   sidebarRailButtonClasses,
 } from '@/components/ui/sidebar';
+import { MessagesSquare, type IconGlyph } from '@/lib/icons';
 import { hasPageTitle, navigationMode } from '@/lib/navigation/app-routes';
 import { isGroupFolded } from '@/lib/navigation/sidebar-folds';
 import { useSidebarCollapsed } from '@/lib/sidebar-width';
@@ -101,7 +101,7 @@ function PlaceholderSidebar() {
   const current = (item: Pick<NavItem, 'href'>) => isNavItemActive(pathname, query, item);
   let nav: ReactNode;
   if (rail) {
-    type RailFace = Readonly<{ label: string; icon: LucideIcon }>;
+    type RailFace = Readonly<{ label: string; icon: IconGlyph }>;
     const buttons: readonly RailFace[] =
       mode === 'agent'
         ? [NEW_CHAT_ITEM, ...AGENT_NAV_ITEMS, { label: 'Chats', icon: MessagesSquare }]

@@ -1,6 +1,5 @@
 import { Fragment, useId, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, ListTree } from 'lucide-react';
 
 import { HierarchyCard } from '@/components/site-health/architecture-hierarchy';
 import { OrphanPageDrawer, orphanSegment } from '@/components/site-health/architecture-orphans';
@@ -19,6 +18,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { Absence, printed } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
+import { ChevronDown, ChevronRight, ListTree } from '@/lib/icons';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type {
   ArchitectureNode,

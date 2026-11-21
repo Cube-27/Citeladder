@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight } from '@/lib/icons';
 
 import './announcement-pill.css';
 

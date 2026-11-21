@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { UserPlus } from 'lucide-react';
 
 import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { SettingsGroup } from '@/components/ui/setting-row';
 import { TextLink } from '@/components/ui/text-link';
+import { UserPlus } from '@/lib/icons';
 import { PLANS_HREF } from '@/lib/billing/plan-limit';
 import { pluralCount } from '@/lib/format';
 import { SearchField } from '@/components/ui/search-field';

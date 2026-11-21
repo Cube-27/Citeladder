@@ -1,9 +1,9 @@
-import { Check } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 
 import { Pressable } from '@/components/ui/pressable';
 import { sidebarNavRowClasses } from '@/components/ui/sidebar';
 import { textRole } from '@/components/ui/typography';
+import { Check } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 export type StepItem<T extends string> = Readonly<{ value: T; label: string }>;

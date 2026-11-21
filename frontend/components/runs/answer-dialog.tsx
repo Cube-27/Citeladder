@@ -1,5 +1,4 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { Globe } from 'lucide-react';
 import { lazy, useEffect, type ReactNode } from 'react';
 
 import { ANSWER_FORMAT_LABELS } from '@/components/runs/answer-formats';
@@ -18,9 +17,9 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
 import type { ExecutionEvidence, ExecutionStatus } from '@citeladder/contracts';
+import { Globe, ICONS } from '@/lib/icons';
 import { runsQueries } from '@/lib/api/runs';
 import { formatCountry } from '@/lib/format';
-import { ICONS } from '@/lib/icons';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { promptHistoryHref } from '@/lib/prompts/history';
 import { useEngineCatalog } from '@/lib/providers/engines';

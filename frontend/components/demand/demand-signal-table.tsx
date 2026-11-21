@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
 
 import { ClampText } from '@/components/ui/clamp-text';
 import { Icon } from '@/components/ui/icon';
@@ -13,6 +12,7 @@ import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import type { DemandDetectorPolicy } from '@citeladder/contracts';
+import { ChevronRight } from '@/lib/icons';
 import type { DemandSignal } from '@/lib/api/demand';
 import {
   numericMetric,

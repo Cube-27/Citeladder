@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { ArrowRight } from 'lucide-react';
 
 import { EngineMark, type EngineKey } from '@/components/ui/engine-mark';
+import { ArrowRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 import './cards.css';

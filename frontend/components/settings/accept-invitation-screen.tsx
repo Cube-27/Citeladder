@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/react-query';
-import { Link2Off } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
@@ -10,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
 import { textRole } from '@/components/ui/typography';
+import { Link2Off } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { workspaceMutations } from '@/lib/api/workspaces';
 import { useSelectWorkspace } from '@/lib/navigation/project-destination';

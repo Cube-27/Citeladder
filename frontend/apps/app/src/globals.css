@@ -1128,6 +1128,10 @@ html:has([data-app-surface]) {
   &:has([data-page-band='action-bar']) {
     scroll-padding-bottom: calc(var(--filter-bar-height) + 2 * var(--content-gutter));
   }
+  /* A section rail stays put when a longer section brings the scrollbar in. */
+  &:has([data-section-rail]) {
+    scrollbar-gutter: stable;
+  }
 }
 
 /* Radix scroll locks add a scrollbar-width margin. The root's stable gutter

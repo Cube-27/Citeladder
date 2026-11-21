@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Check, Copy, Download } from 'lucide-react';
 
+import { Check, Copy, Download } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 

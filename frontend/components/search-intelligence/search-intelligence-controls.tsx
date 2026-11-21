@@ -1,5 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
-
+import { ArrowLeft } from '@/lib/icons';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { menuFieldKeys } from '@/components/ui/filter-options';
 import { Button } from '@/components/ui/button';

@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Sparkles } from 'lucide-react';
 import { useLocation, useParams } from 'react-router-dom';
 
 import { DetailsFacts, Labelled, ReadingColumn } from '@/components/ui/reading-page';
@@ -13,6 +12,7 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { PageDock } from '@/components/ui/selection-dock';
 import { StateBlock } from '@/components/ui/state-block';
 import { readErrorProps } from '@/components/ui/notice';
+import { Sparkles } from '@/lib/icons';
 import { fromActionSchema, listCrumbs, type FromAction } from '@/lib/agent/action-crumbs';
 import { actionTarget, pathTail } from '@/lib/agent/action-title';
 import { agentHandoffHref } from '@/lib/agent/handoff';

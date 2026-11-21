@@ -1,7 +1,5 @@
 import { useState } from 'react';
 
-import { X } from 'lucide-react';
-
 import { PlanCard, PlanCards } from '@/components/billing/plan-row';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -14,6 +12,7 @@ import type {
   CatalogPlan,
   SelfServePlanKey,
 } from '@/lib/api/billing';
+import { X } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   formatMoney,

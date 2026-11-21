@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { ArrowDown, ArrowUp } from 'lucide-react';
 
+import { ArrowDown, ArrowUp } from '@/lib/icons';
 import { Checkbox } from '@/components/ui/checkbox';
 import { HintedTableHead, SortableTableHead } from '@/components/ui/table-heads';
 import { TableHead, TableHeader, TableRow } from '@/components/ui/table';

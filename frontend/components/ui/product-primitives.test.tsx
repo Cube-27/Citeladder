@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Inbox } from 'lucide-react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
+import { Inbox } from '@/lib/icons';
 import { ApiError } from '@/lib/api/errors';
 
 import { Avatar } from './avatar';

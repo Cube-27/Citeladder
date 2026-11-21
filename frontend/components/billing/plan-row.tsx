@@ -1,4 +1,3 @@
-import { CreditCard } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import {
@@ -14,6 +13,7 @@ import {
   headlinePrice,
   type HeadlinePrice,
 } from '@/lib/billing/catalog';
+import { CreditCard } from '@/lib/icons';
 import { billingReasonMessage } from '@/lib/billing/reason-copy';
 import { websiteHref } from '@/lib/config/app-link';
 import { contactSalesHref } from '@/lib/config/contact-sales';

@@ -1,7 +1,6 @@
 import { useExecutionFilters } from '@/components/runs/executions-filters';
 import { StatusMark } from '@/components/ui/status-mark';
 import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager';
-import { FileSearch } from 'lucide-react';
 import { IconButton } from '@/components/ui/button';
 import { TitledSection } from '@/components/ui/section';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
@@ -9,8 +8,8 @@ import { Inline } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
+import { FileSearch, ICONS } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
-import { ICONS } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import type { Execution } from '@citeladder/contracts';
 import { EXECUTION_STATES, executionFailureReason, executionStatusLabel } from '@/lib/runs/status';

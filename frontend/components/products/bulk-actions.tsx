@@ -1,10 +1,9 @@
-import { X } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { COMMERCE_TARGETS_MAX } from '@citeladder/contracts/commerce-suite';
+import { X } from '@/lib/icons';
 import { humanizeApiError } from '@/lib/api/errors';
 import { Section } from '@/components/ui/section';
 

@@ -1,7 +1,7 @@
 import { lazy, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, type LucideIcon } from 'lucide-react';
 
+import { Check, type IconGlyph } from '@/lib/icons';
 import { LazyIsland } from '@/components/ui/lazy-island';
 import { Menu, MenuContent, MenuLabel, MenuLinkItem, MenuTrigger } from '@/components/ui/menu';
 import { SidebarRowTooltip, sidebarRailButtonClasses } from '@/components/ui/sidebar';
@@ -48,7 +48,7 @@ export function RailFlyout({
   icon: Icon,
   current,
   children,
-}: Readonly<{ label: string; icon: LucideIcon; current: boolean; children: ReactNode }>) {
+}: Readonly<{ label: string; icon: IconGlyph; current: boolean; children: ReactNode }>) {
   const [open, setOpen] = useState(false);
   return (
     // Not modal: a modal menu locks scrolling and pointer events until an outside click.
@@ -83,7 +83,7 @@ export function RailGroupMenu({
   items,
 }: Readonly<{
   label: string;
-  icon: LucideIcon;
+  icon: IconGlyph;
   current: boolean;
   items: readonly (NavItem & { active: boolean })[];
 }>) {

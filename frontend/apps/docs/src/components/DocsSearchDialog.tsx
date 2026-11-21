@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { FileText, Search } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/button';
 import { Kbd } from '@/components/ui/kbd';
+import { FileText, Search } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { groupResults, highlight, searchArticles, type SearchEntry } from '../lib/search';
 

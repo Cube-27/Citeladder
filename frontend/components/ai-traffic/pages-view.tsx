@@ -1,7 +1,6 @@
 import { Fragment, useState, type ReactNode } from 'react';
 import type { z } from 'zod';
 import type { aiTrafficPagesSchema } from '@citeladder/contracts/ai-traffic';
-import { SearchX } from 'lucide-react';
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { StatusMark } from '@/components/ui/status-mark';
@@ -9,6 +8,7 @@ import { TableCell, TableRow, TableTime, UrlText } from '@/components/ui/table';
 import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
+import { SearchX } from '@/lib/icons';
 import type { TrafficPagesSort } from '@/lib/config/crawl-logs';
 import { DisplayTime } from '@/components/ui/display-time';
 import { aiTrafficQueries, type TrafficTableScope } from '@/lib/api/ai-traffic';

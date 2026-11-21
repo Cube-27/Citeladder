@@ -6,7 +6,6 @@ import {
   type ReactNode,
   type Ref,
 } from 'react';
-import type { LucideIcon } from 'lucide-react';
 
 import { Slot } from '@radix-ui/react-slot';
 import { Icon } from '@/components/ui/icon';
@@ -14,6 +13,7 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
 
+import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**
@@ -194,7 +194,7 @@ export function Button(props: Readonly<ButtonProps>) {
 }
 
 type IconButtonProps = Omit<ButtonProps, 'variant' | 'children' | 'asChild' | 'aria-label'> & {
-  icon: LucideIcon;
+  icon: IconGlyph;
   /** The accessible name and the tooltip: what pressing it does. */
   label: string;
   /**

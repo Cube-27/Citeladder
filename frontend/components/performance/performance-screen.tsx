@@ -26,7 +26,7 @@ import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/comp
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatWindowDate, pluralCount } from '@/lib/format';
-import { ChartNoAxesColumn } from 'lucide-react';
+import { ChartNoAxesColumn } from '@/lib/icons';
 import { integrationsQueries } from '@/lib/api/integrations';
 import {
   performanceQueries,

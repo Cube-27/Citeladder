@@ -1,10 +1,10 @@
-import { Search } from 'lucide-react';
 import { useEffect, useState, useSyncExternalStore, type ComponentProps } from 'react';
 
 import { Button } from '@/components/ui/button';
 import type { CommandPalette, PaletteLaunch } from '@/components/ui/command-palette';
 import { Kbd } from '@/components/ui/kbd';
 import { MASTHEAD_LABELLED } from '@/components/ui/masthead';
+import { Search } from '@/lib/icons';
 import { reportClientError } from '@/lib/client-errors';
 import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
 import { cn } from '@/lib/utils';

@@ -1,4 +1,3 @@
-import { ClipboardList } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { Dialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Textarea } from '@/components/ui/textarea';
+import { ClipboardList } from '@/lib/icons';
 import { actionEvidence } from '@/lib/agent/evidence';
 import { developerTicket } from '@/lib/agent/handoff';
 import type { ActionDetail } from '@/lib/api/actions';

@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/react-query';
-import { ChevronDown, X } from 'lucide-react';
 import { useId, type ComponentProps } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/compo
 import { SelectionDock } from '@/components/ui/selection-dock';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
+import { ChevronDown, X } from '@/lib/icons';
 import { promptsMutations, type PromptBulkChange } from '@/lib/api/prompts';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';

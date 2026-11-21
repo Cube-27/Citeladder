@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
-import type { LucideIcon } from 'lucide-react';
 
 import { Icon } from '@/components/ui/icon';
+import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**
@@ -130,7 +130,7 @@ export function FieldEndButton({
   onClick,
   disabled,
 }: Readonly<{
-  icon: LucideIcon;
+  icon: IconGlyph;
   label: string;
   onClick: () => void;
   disabled?: boolean;

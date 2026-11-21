@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw } from 'lucide-react';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Absence } from '@/components/ui/absence';
@@ -9,6 +8,7 @@ import { Icon } from '@/components/ui/icon';
 import { TextLink } from '@/components/ui/text-link';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
+import { RefreshCw } from '@/lib/icons';
 import { followCatalogAnalysis } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
