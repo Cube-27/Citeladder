@@ -30,6 +30,7 @@ import { mergeRobotsHeader, robotsMeta } from './robots-directives.ts';
 import { elementRegion, nodeIsRendered, pageScope, regionNodeIsVisible } from './regions.ts';
 import { emptySourceSupport, sameSite, sourceSupportFacts } from './source-support.ts';
 import { structuredDataFacts as structuredData } from './structured-data.ts';
+import { widen } from '../../widen.ts';
 
 const f = analysisPolicy.facts;
 const HTML_TYPES = new Set(['text/html', 'application/xhtml+xml']);
@@ -419,18 +420,18 @@ function emptyFacts() {
     meta_description: '',
     robots: robotsMeta(document(Buffer.alloc(0))),
     canonical_url: '',
-    canonical_declarations: [] as string[],
-    open_graph: {} as Record<string, string>,
-    twitter: {} as Record<string, string>,
+    canonical_declarations: widen<string[]>([]),
+    open_graph: widen<Record<string, string>>({}),
+    twitter: widen<Record<string, string>>({}),
     headings: headingFacts(document(Buffer.alloc(0))),
-    freshness_context: { required: false, reasons: [] as string[] },
+    freshness_context: { required: false, reasons: widen<string[]>([]) },
     images: { count: 0, missing_alt: 0, decorative_alt: 0 },
     accessibility: accessibilityFacts(document(Buffer.alloc(0)), 0),
     mobile: { viewport: { declared: false, content: '' } },
     body: { text: '', word_count: 0, truncated: false },
-    cta_text: [] as string[],
-    form_fields: [] as string[],
-    link_context: [] as string[],
+    cta_text: widen<string[]>([]),
+    form_fields: widen<string[]>([]),
+    link_context: widen<string[]>([]),
     entity: emptyEntityFacts(),
     structured_data: structuredData(document(Buffer.alloc(0)), 0, ''),
     links: linksAndAssets(document(Buffer.alloc(0)), '', '', 0),
@@ -438,18 +439,18 @@ function emptyFacts() {
     author: '',
     dates: { published: '', modified: '' },
     authorship: emptyAuthorship(),
-    landmarks: { main: false, article: false, nav: false } as Record<string, boolean>,
+    landmarks: widen<Record<string, boolean>>({ main: false, article: false, nav: false }),
     ordered_list_steps: 0,
-    hreflang_alternates: [] as { hreflang: string; url: string }[],
+    hreflang_alternates: widen<{ hreflang: string; url: string }[]>([]),
     ...emptyContentFacts(),
     source_support: emptySourceSupport(),
     inline_script_chars: 0,
     client_redirect: {
       meta_refresh_url: '',
-      meta_refresh_seconds: null as number | null,
+      meta_refresh_seconds: widen<number | null>(null),
       script_navigates: false,
     },
-    contact_points: [] as { channel: string; value: string }[],
+    contact_points: widen<{ channel: string; value: string }[]>([]),
     commerce: emptyCommerceFacts() as ReturnType<typeof emptyCommerceFacts> & {
       visible_price_context?: string;
     },

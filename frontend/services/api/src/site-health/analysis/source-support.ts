@@ -10,6 +10,7 @@ import {
 import { stripLeading, stripTrailing } from '../../text-order.ts';
 import { analysisPolicy, limits, regionPolicy, squash } from './policy.ts';
 import { pageOwned, type PageScope } from './regions.ts';
+import { widen } from '../../widen.ts';
 
 const s = analysisPolicy.facts.source_support;
 const ATTRIBUTION = new RegExp(s.attribution_pattern, 'i');
@@ -23,8 +24,8 @@ export function emptySourceSupport() {
   return {
     primary_content_available: false,
     research_sensitive: false,
-    context_reasons: [] as string[],
-    attached_sources: [] as AttachedSource[],
+    context_reasons: widen<string[]>([]),
+    attached_sources: widen<AttachedSource[]>([]),
     ambiguous_source_count: 0,
     invalid_source_count: 0,
   };

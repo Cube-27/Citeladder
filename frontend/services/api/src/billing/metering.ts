@@ -24,6 +24,7 @@ import {
   type MeteredFeature,
   type TokenUsage,
 } from './ai-pricing.ts';
+import { widen } from '../widen.ts';
 
 const logger = getLogger('api.billing.metering');
 const AI_CREDITS = policy.entitlements.ai_credits;
@@ -63,7 +64,7 @@ function callRow(context: MeterContext, spec: CallSpec, at: Date) {
   return {
     id: randomUUID(),
     workspace_id: context.workspaceId,
-    billing_account_id: null as string | null,
+    billing_account_id: widen<string | null>(null),
     feature: context.feature,
     provider: spec.provider,
     model: spec.model.slice(0, 255),
@@ -76,10 +77,10 @@ function callRow(context: MeterContext, spec: CallSpec, at: Date) {
     // A hold its owner settles (a whole analysis, B41) is never swept as abandoned.
     owner_settled: false,
     ...tokens(null),
-    cost_microusd: null as number | null,
+    cost_microusd: widen<number | null>(null),
     error_code: '',
     created_at: at,
-    settled_at: null as Date | null,
+    settled_at: widen<Date | null>(null),
   };
 }
 

@@ -7,6 +7,7 @@ import { statusView } from '../opportunities/action-status.ts';
 import { authorize } from './access.ts';
 import { actionScopes } from './action-scopes.ts';
 import { agentPolicy, AgentError, type Scope, type Json } from './contracts.ts';
+import { widen } from '../widen.ts';
 
 const actionSchema = z
   .object({
@@ -145,7 +146,7 @@ function trimOccurrences(
   if (!Array.isArray(occurrences) || !sample || typeof sample !== 'object' || Array.isArray(sample))
     return;
   const selected = [...occurrences];
-  const suppliedSample = { ...sample } as Record<string, Json>;
+  const suppliedSample = widen<Record<string, Json>>({ ...sample });
   supplied.package.sections.issue_group = {
     ...group,
     occurrences: selected,

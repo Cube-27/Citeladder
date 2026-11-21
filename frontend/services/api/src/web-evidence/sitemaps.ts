@@ -1,6 +1,7 @@
 import { gunzipSync } from 'node:zlib';
 
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
+import { isRecord } from '../db/json.ts';
 
 export class SitemapParseError extends Error {}
 export class SitemapTooLargeError extends SitemapParseError {}
@@ -60,7 +61,7 @@ export function parseSitemap(body: Buffer, contentType: string, limits: SitemapL
   const document: Record<string, unknown> = parser.parse(text);
   const [rootName, root] = Object.entries(document).find(([key]) => !key.startsWith('?')) ?? [];
   const isIndex = rootName?.toLowerCase() === 'sitemapindex';
-  const children = root && typeof root === 'object' ? (root as Record<string, unknown>) : {};
+  const children = isRecord(root) ? root : {};
   const all = (entries: unknown) =>
     (Array.isArray(entries) ? entries : []).map(loc).filter(Boolean);
   const refs = all(children.sitemap);

@@ -33,6 +33,7 @@ import {
   type SiteTaskContext,
 } from './site-task.ts';
 import { canonicalIdentity } from './url-identity.ts';
+import { widen } from '../widen.ts';
 
 const crawlPolicy = policy.site_health.crawl;
 const INVENTORY_CHUNK = 1000;
@@ -96,7 +97,12 @@ async function siteEvidence(
   const robots = origin ? await ctx.fetcher.acquirer.robots(origin) : null;
   const observedAt = new Date().toISOString();
   const llmsUrl = origin ? `${origin}${crawlPolicy.llms_path}` : '';
-  const llms = { fetched: false, url: llmsUrl, status_code: null as number | null, present: false };
+  const llms = {
+    fetched: false,
+    url: llmsUrl,
+    status_code: widen<number | null>(null),
+    present: false,
+  };
   if (walks && llmsUrl && robots?.permits(llmsUrl) !== false) {
     const page = await wellKnown(ctx, llmsUrl, settings);
     if (page) {
@@ -117,7 +123,7 @@ async function siteEvidence(
         url: origin ? `${origin}${crawlPolicy.robots_path}` : '',
         status_code: robots?.status || null,
         catalog_version: policy.crawlers.catalog_version,
-        robots_snapshot_id: null as string | null,
+        robots_snapshot_id: widen<string | null>(null),
         bots: crawlerRootFacts(robots ?? robotsPolicy(origin, 0, ''), origin),
         sitemaps: (robots?.sitemaps ?? []).slice(0, crawlPolicy.max_declared_sitemaps),
       },

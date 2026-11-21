@@ -20,6 +20,7 @@ import {
   outsideContainers,
   type PageScope,
 } from './regions.ts';
+import { widen } from '../../widen.ts';
 
 const facts = analysisPolicy.facts;
 const tableBounds = policy.content_differentiation;
@@ -58,10 +59,10 @@ export function emptyContentFacts() {
       audience_or_outcome: '',
       next_action: '',
     },
-    primary_heading_outline: [] as { level: number; text: string }[],
-    primary_table_headers: [] as string[][],
-    primary_paragraph_word_counts: [] as number[],
-    question_answer_relationships: [] as ReturnType<typeof questionAnswerRelationships>,
+    primary_heading_outline: widen<{ level: number; text: string }[]>([]),
+    primary_table_headers: widen<string[][]>([]),
+    primary_paragraph_word_counts: widen<number[]>([]),
+    question_answer_relationships: widen<ReturnType<typeof questionAnswerRelationships>>([]),
   };
 }
 

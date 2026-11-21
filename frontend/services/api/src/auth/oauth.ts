@@ -213,7 +213,7 @@ async function providerJson(
     } finally {
       await reader.cancel();
     }
-    return JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown;
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
   } catch {
     // Provider bodies and URLs may carry credentials; failures are text-free.
     throw new SignInError('oauth_signin_failed');

@@ -7,6 +7,7 @@ import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import { FetchError, fetchWebsite, type FetchOptions, type WebsiteFetcher } from '../safe-fetch.ts';
 import { failureFacts, getLogger } from '../logging.ts';
+import { widen } from '../widen.ts';
 
 const logger = getLogger('web_evidence.acquisition');
 
@@ -194,7 +195,7 @@ export function robotsPolicy(
     body: fetched ? body : null,
     unavailable,
     transient: unavailable,
-    failure: null as string | null,
+    failure: widen<string | null>(null),
     restricted,
     readable,
     delay: seconds,

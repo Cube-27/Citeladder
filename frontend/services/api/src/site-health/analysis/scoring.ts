@@ -2,6 +2,7 @@ import { policy } from '../../config.ts';
 import { canonicalDeclarations, finalizeEvaluation } from './finalize.ts';
 import { analysisPolicy } from './policy.ts';
 import { membership, type RuleEvaluation } from './rules.ts';
+import { widen } from '../../widen.ts';
 
 const reads = policy.site_health.reads;
 const LABELS: Record<string, string> = reads.aeo_dimension_labels;
@@ -107,7 +108,7 @@ function pillar(key: string, rows: RuleEvaluation[]) {
       earned_points: 0,
       determinate_points: 0,
       expected_points: 0,
-      determinate_checkpoint_ids: [] as string[],
+      determinate_checkpoint_ids: widen<string[]>([]),
       reason: 'no_applicable_checks',
       unresolved_count: 0,
     };

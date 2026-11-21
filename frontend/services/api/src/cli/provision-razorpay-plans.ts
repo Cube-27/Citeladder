@@ -52,7 +52,7 @@ async function planRefs(values: Values): Promise<unknown> {
   if (inline !== undefined) {
     if (inline.length > catalogAuthoring.maximumInputBytes)
       throw new Error('operator_input_too_large');
-    return JSON.parse(inline) as unknown;
+    return JSON.parse(inline);
   }
   return readOperatorJson(required(values.plans, 'plans'));
 }

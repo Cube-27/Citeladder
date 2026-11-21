@@ -261,7 +261,7 @@ function registerAuthorizeRoute(app: Hono<AppEnv>, { config, db, mcp, resource }
     const q = url.searchParams;
     const transaction = mintToken();
     // Once the redirect is proven, errors go back to the client (RFC 6749 §4.1.2.1).
-    let callback = null as string | null;
+    let callback: string | null = null;
     try {
       if (
         Buffer.byteLength(url.search) > mcpPolicy.authorization_max_query_bytes ||

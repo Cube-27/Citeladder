@@ -23,6 +23,7 @@ import { researchThemes, themeCandidates } from './research-themes.ts';
 import type { ResolvedSite } from './site-resolution.ts';
 import { fetchWebsite, websiteIdentity, type WebsiteFetcher } from '../safe-fetch.ts';
 import type { Meter } from '../billing/metering.ts';
+import { widen } from '../widen.ts';
 
 const cfg = policy.discovery.constants;
 const logger = getLogger('app.projects.research');
@@ -340,7 +341,7 @@ export async function researchBrand(
     collectFirstParty(site, dependencies.fetcher ?? fetchWebsite),
     settings.keenable_api_key
       ? collectIdentityResearch(client, settings, input.brand_name, site.domain)
-      : Promise.resolve({ state: 'unavailable', items: [] as ResearchEvidence[] }),
+      : Promise.resolve({ state: 'unavailable', items: widen<ResearchEvidence[]>([]) }),
   ]);
   const items = [
     ...boundedEvidence(firstParty.items, settings.identity_first_party_evidence_max_chars),
