@@ -52,7 +52,7 @@ export function PerceptionScreen() {
         filters={ready && !probe ? <FilterBar filters={pageFilters} /> : undefined}
       >
         {probe ? null : <RunBanner queries={queries} />}
-        <TabPanel value={tab} className="focus-ring">
+        <TabPanel value={tab}>
           {probe ? (
             <PerceptionProbe view={probe} />
           ) : (

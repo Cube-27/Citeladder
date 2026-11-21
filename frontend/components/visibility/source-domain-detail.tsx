@@ -37,7 +37,7 @@ export function SourceDomainDetail({
         ariaLabel="Domain views"
         spaced
       >
-        <TabPanel value={active} className="focus-ring">
+        <TabPanel value={active}>
           {active === 'prompts' ? (
             <SourcePrompts filters={filters} queries={queries} domain={domain} />
           ) : (
