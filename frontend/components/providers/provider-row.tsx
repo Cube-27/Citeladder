@@ -1,3 +1,5 @@
+import { executionFailureReason } from '@/lib/runs/status';
+import { endSentence } from '@/lib/format';
 import { useId, useState } from 'react';
 
 import { StatusMark } from '@/components/ui/status-mark';
@@ -70,9 +72,10 @@ function LastFailure({ group }: Readonly<{ group: ProviderGroup }>) {
   if (!probe) return null;
   return (
     <p className="type-caption text-negative">
-      Last test failed
-      {probe.safe_reason ? `: ${probe.safe_reason}` : ''}
-      {probe.model ? ` (model ${probe.model})` : ''}.
+      Last test failed{probe.model ? ` (model ${probe.model})` : ''}.
+      {probe.safe_reason
+        ? ` ${endSentence(executionFailureReason(probe.safe_reason, probe.safe_reason))}`
+        : ''}
     </p>
   );
 }
