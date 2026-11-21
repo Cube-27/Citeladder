@@ -74,6 +74,9 @@ export function PageFrame({
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
   const searchParams = useSearchParams()[0];
+  const section = pageSection(pathname, searchParams);
+  // A section the title or trail already names ("Agent › Agent") says nothing.
+  const repeated = section.title === (parents[0]?.label ?? resolved);
   return (
     <PageEmptyOfferProvider>
       <div
@@ -82,7 +85,7 @@ export function PageFrame({
       >
         <Masthead
           title={resolved}
-          section={pageSection(pathname, searchParams)}
+          section={repeated ? null : section}
           crumb={
             hasTrail ? (
               <LazyIsland failed={null} label="breadcrumb" defects="contain">

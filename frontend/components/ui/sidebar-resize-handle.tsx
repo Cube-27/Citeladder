@@ -20,9 +20,9 @@ function currentBounds() {
  * 48px); a double-click restores the default for the window (224, or 200
  * below 1280px); Home takes the minimum (the compact 200) and End the maximum
  * (480px, never more than 40% of the window). At rest the sidebar's own rule
- * shows; the handle's hairline strengthens it on hover and takes the focus
- * colour while focused or dragging. The
- * shared interaction stops text selection mid-drag.
+ * shows and hover paints nothing (owner, 2026-11-21); the handle's hairline
+ * takes the ink while dragging. The shared interaction stops text selection
+ * mid-drag.
  */
 export function SidebarResizeHandle({ sidebarId }: Readonly<{ sidebarId: string }>) {
   const helpId = useId();
@@ -63,7 +63,7 @@ export function SidebarResizeHandle({ sidebarId }: Readonly<{ sidebarId: string 
     >
       <span
         aria-hidden
-        className="group-hover:bg-control-line group-data-[dragging]:bg-ink w-px bg-transparent transition-colors motion-reduce:transition-none"
+        className="group-data-[dragging]:bg-ink w-px bg-transparent transition-colors motion-reduce:transition-none"
       />
       <span id={helpId} className="sr-only">
         Click to step through preset widths, or use the left and right arrow keys to resize. Hold

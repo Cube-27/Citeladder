@@ -8,7 +8,7 @@ import { useManagedPlan } from '@/lib/billing/entitlement-context';
 import { runsMutations, runsQueries } from '@/lib/api/runs';
 import type { Audit, LogicalEngine, PromptSet } from '@citeladder/contracts';
 import { mainPromptSet } from '@/lib/prompts/prompt-sets';
-import { isConfigured, isVerified } from '@/lib/providers/catalog';
+import { isVerified } from '@/lib/providers/catalog';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
@@ -27,19 +27,13 @@ function availableEngines(
   connections: Awaited<ReturnType<typeof providersApi.listConnections>> | undefined,
 ) {
   const verified = new Set<LogicalEngine>();
-  const stored = new Set<LogicalEngine>();
   for (const connection of connections ?? []) {
-    if (!connection.active) continue;
-    if (!isConfigured(connection)) continue;
-    const target = isVerified(connection) ? verified : stored;
+    if (!connection.active || !isVerified(connection)) continue;
     for (const route of connection.routes ?? []) {
-      if (route.active !== false) target.add(route.logical_engine);
+      if (route.active !== false) verified.add(route.logical_engine);
     }
   }
-  return {
-    configuredEngines: order.filter((engine) => verified.has(engine)),
-    unverifiedEngines: order.filter((engine) => stored.has(engine) && !verified.has(engine)),
-  };
+  return order.filter((engine) => verified.has(engine));
 }
 
 /** The engines a launch can measure: the workspace's own routes, or all on a managed plan. */
@@ -50,16 +44,14 @@ function useLaunchEngines(open: boolean, workspaceId: string) {
     ...providerQueries.connections(workspaceId),
     enabled: open && !managed,
   });
-  const engines = useMemo(
+  const configuredEngines = useMemo(
     () =>
       // A managed plan measures every engine on the platform's keys (B32).
-      managed
-        ? { configuredEngines: [...catalog.order], unverifiedEngines: [] }
-        : availableEngines(catalog.order, connectionsQuery.data),
+      managed ? [...catalog.order] : availableEngines(catalog.order, connectionsQuery.data),
     [managed, catalog.order, connectionsQuery.data],
   );
   return {
-    ...engines,
+    configuredEngines,
     catalog,
     enginesReady: catalog.order.length > 0 && (managed || connectionsQuery.isSuccess),
   };
@@ -125,10 +117,7 @@ export function LaunchDialog({
     ...promptsQueries.sets({ workspaceId, projectId }),
     enabled: open,
   });
-  const { configuredEngines, unverifiedEngines, enginesReady, catalog } = useLaunchEngines(
-    open,
-    workspaceId,
-  );
+  const { configuredEngines, enginesReady, catalog } = useLaunchEngines(open, workspaceId);
   // One contract, derived from the same values the payload is built from:
   // `fixedPromptIds` wins in `buildLaunchPayload`, so it must also lock the
   // field and name the selection. Locking only on `fixedPromptSetId` left the
@@ -244,7 +233,6 @@ export function LaunchDialog({
       repetitionLimits={limits}
       promptSetsRead={promptSetsQuery}
       configuredEngines={configuredEngines}
-      unverifiedEngines={unverifiedEngines}
       promptSetId={promptSelection.effectivePromptSetId}
       setPromptSetId={(id) => {
         // A batch index means nothing against a different set's prompts.

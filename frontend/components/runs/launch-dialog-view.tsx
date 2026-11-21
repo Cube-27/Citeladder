@@ -126,11 +126,7 @@ function BatchField({
   if (batches.length < 2 && batchIndex === null) return null;
   const total = batches.reduce((count, batch) => count + batch.length, 0);
   return (
-    <Field
-      label="Prompts to run"
-      layout="row"
-      hint="Run the whole set, or one batch at a time to keep a run short and its cost predictable."
-    >
+    <Field label="Prompts to run" layout="row">
       {(props) => (
         <Select
           {...props}
@@ -159,7 +155,8 @@ function BatchField({
 export function InlineProviderSetup({
   connecting,
   onClose,
-}: Readonly<{ connecting: LogicalEngine | 'any'; onClose: () => void }>) {
+  compact = false,
+}: Readonly<{ connecting: LogicalEngine | 'any'; onClose: () => void; compact?: boolean }>) {
   const engine = connecting === 'any' ? null : connecting;
   return (
     <Stack as="section" gap="item" aria-label="Connect a provider" className={wellClasses()}>
@@ -168,7 +165,7 @@ export function InlineProviderSetup({
         <IconButton icon={X} label="Close provider setup" onClick={onClose} />
       </Inline>
       {/* Keyed by engine so clicking another engine opens its provider. */}
-      <ProviderList key={engine ?? 'any'} expandEngine={engine} />
+      <ProviderList key={engine ?? 'any'} expandEngine={engine} compact={compact} />
     </Stack>
   );
 }
@@ -247,7 +244,7 @@ function ChoiceChip({
   );
 }
 
-/** A disabled primary says why beside it: the one launch rule's reason. */
+/** A disabled primary names its reason to assistive tech only (owner, 2026-11-21: no helper text). */
 function LaunchFooter({
   blocker,
   pending,
@@ -263,7 +260,7 @@ function LaunchFooter({
   return (
     <>
       {blocker ? (
-        <span id={reasonId} className="type-caption me-auto">
+        <span id={reasonId} className="sr-only">
           {blocker}
         </span>
       ) : null}
@@ -293,15 +290,7 @@ function RepetitionsField({
   limits: RepetitionLimits | null;
 }>) {
   return (
-    <Field
-      label="Repetitions"
-      layout="row"
-      hint={
-        limits
-          ? `How many times to run each prompt per engine (${limits.audit_repetitions_min}–${limits.audit_repetitions_max}).`
-          : 'How many times to run each prompt per engine.'
-      }
-    >
+    <Field label="Repetitions" layout="row">
       {(props) => (
         <Input
           {...props}
@@ -349,7 +338,6 @@ export function LaunchDialogView({
   promptSets,
   promptSetsRead,
   configuredEngines,
-  unverifiedEngines,
   promptSetId,
   setPromptSetId,
   batches,
@@ -378,7 +366,6 @@ export function LaunchDialogView({
   promptSets: PromptSet[];
   promptSetsRead: PromptSetsRead;
   configuredEngines: LogicalEngine[];
-  unverifiedEngines: LogicalEngine[];
   promptSetId: string | null;
   setPromptSetId: (id: string) => void;
   batches: Prompt[][];
@@ -405,7 +392,6 @@ export function LaunchDialogView({
   blocker: string | null;
 }>) {
   const catalog = useEngineCatalog();
-  const noEngines = !configuredEngines.length;
   const selected = new Set(engines);
   return (
     <Dialog
@@ -439,23 +425,6 @@ export function LaunchDialogView({
           limits={repetitionLimits}
         />
         <ChoiceRow label="Engines">
-          {noEngines ? (
-            <Stack gap="item">
-              <p className="type-body text-ink-2">
-                {unverifiedEngines.length
-                  ? `A key is stored for ${unverifiedEngines.map(catalog.label).join(', ')}, but it has not passed a connection test yet. Test it to launch an audit with it.`
-                  : 'No configured engines. Connect a provider to launch an audit.'}
-              </p>
-              <div>
-                <Button
-                  variant="secondary"
-                  onClick={() => setConnecting(unverifiedEngines[0] ?? 'any')}
-                >
-                  {unverifiedEngines.length ? 'Test connection' : 'Connect a provider'}
-                </Button>
-              </div>
-            </Stack>
-          ) : null}
           {[true, false].map((consumer) => (
             <Stack key={String(consumer)} gap="item">
               <p className={textRole('captionStrong')}>
@@ -486,7 +455,11 @@ export function LaunchDialogView({
             </Stack>
           ))}
           {connecting ? (
-            <InlineProviderSetup connecting={connecting} onClose={() => setConnecting(null)} />
+            <InlineProviderSetup
+              connecting={connecting}
+              onClose={() => setConnecting(null)}
+              compact
+            />
           ) : null}
         </ChoiceRow>
         <MarketsField markets={markets} marketIds={marketIds} setMarketIds={setMarketIds} />

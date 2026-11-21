@@ -215,7 +215,13 @@ function ScheduleForm({
           </FormRow>
         ) : null}
         <FormRow label="Engines">
-          <Stack as="fieldset" aria-label="Engines" gap="item" className="grid-cols-2">
+          <Stack
+            as="fieldset"
+            aria-label="Engines"
+            gap="item"
+            // Columns as wide as their longest name, so "Google AI Overview" keeps one line.
+            className="grid-cols-[auto_auto] justify-start gap-x-4"
+          >
             {catalog.order.map((engine) => (
               <Checkbox
                 key={engine}
