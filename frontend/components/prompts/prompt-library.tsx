@@ -111,7 +111,7 @@ function FiguresFailure({ measurements }: Readonly<{ measurements: PromptMeasure
       kind="read"
       {...readErrorProps(measurements.read)}
       title="Couldn't load the prompts' latest figures"
-      fallback="The prompts are listed without their measured columns."
+      fallback="Couldn't load the prompts' latest figures"
     />
   );
 }

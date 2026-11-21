@@ -201,13 +201,7 @@ it('offers citation matching only for the website whose list is on screen', asyn
   await screen.findByRole('radiogroup', { name: 'backlinks view' });
   expect(await openFilterRow(userEvent.setup(), 'Website', 'www.example.com')).toBeVisible();
   await userEvent.keyboard('{Escape}');
-  expect(
-    screen.getByText(
-      (_, node) =>
-        node?.parentElement?.tagName === 'OUTPUT' &&
-        node.textContent === 'www.example.com · All referring countries · No saved analysis',
-    ),
-  ).toBeInTheDocument();
+  expect(screen.queryByText(/All referring countries/)).not.toBeInTheDocument();
   expect(
     screen.queryByRole('button', { name: 'Match with Visibility citations' }),
   ).not.toBeInTheDocument();

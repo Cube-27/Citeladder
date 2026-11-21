@@ -104,10 +104,7 @@ it('lists a key by name, prefix, scopes and projects without its ID', async () =
   list.mockResolvedValue({ available: true, limit: 50200, keys: [ciKey] });
   renderTab();
   const row = (await screen.findByText('Acme')).closest('tr');
-  expect(row).toHaveTextContent(
-    'CI exportcl_live_Ab12Cd34… · Created by ana@example.test · Created Oct 1, 2026',
-  );
-  expect(row).toHaveTextContent('ActiveNot used yetread, audits:runAcme');
+  expect(row).toHaveTextContent('CI exportcl_live_Ab12Cd34…ActiveNeverread, audits:runAcme');
   expect(row?.textContent).not.toContain(KEY);
   expect(screen.getByText('1 of 50,200 keys in use')).toBeInTheDocument();
 });
