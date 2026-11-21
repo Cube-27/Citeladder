@@ -74,9 +74,6 @@ export function PageFrame({
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
   const searchParams = useSearchParams()[0];
-  const section = pageSection(pathname, searchParams);
-  // A section the title or trail already names ("Agent › Agent") says nothing.
-  const repeated = section.title === (parents[0]?.label ?? resolved);
   return (
     <PageEmptyOfferProvider>
       <div
@@ -85,7 +82,10 @@ export function PageFrame({
       >
         <Masthead
           title={resolved}
-          section={repeated ? null : section}
+          section={mastheadSection(
+            pageSection(pathname, searchParams),
+            parents[0]?.label ?? resolved,
+          )}
           crumb={
             hasTrail ? (
               <LazyIsland failed={null} label="breadcrumb" defects="contain">
@@ -211,6 +211,11 @@ export function PageSections({
 }
 
 /** The route's title, announced by the shell when a page overrides it. */
+/** A section the title or trail already names ("Agent › Agent") says nothing. */
+function mastheadSection(section: Readonly<{ title: string }>, firstName: string) {
+  return section.title === firstName ? null : section;
+}
+
 function useRouteTitle(title: string | undefined, pathname: string) {
   const setTitle = useContext(PageTitleContext);
   useLayoutEffect(() => {
