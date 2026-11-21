@@ -13,7 +13,7 @@ import {
   type ChartHeight,
   type ChartTone,
 } from '@/components/ui/chart';
-import { ChartKey, ChartTable, ChartTipSheet } from '@/components/ui/chart-frame';
+import { ChartBreakNote, ChartKey, ChartTable, ChartTipSheet } from '@/components/ui/chart-frame';
 import type { SeriesTone } from '@/components/ui/step-chart-parts';
 import {
   breakConnectors,
@@ -167,6 +167,7 @@ export function TrendChart({
           />
         )}
       </div>
+      <ChartBreakNote data={data} lines={lines} />
       <ChartTable
         label={label}
         columns={data.map((point) => point.label)}

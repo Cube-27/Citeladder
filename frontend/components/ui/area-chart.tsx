@@ -20,7 +20,7 @@ import {
   type ChartRow,
 } from '@/components/ui/area-chart-data';
 import { CHART_HEIGHT_PX, useChartWidth, type ChartHeight } from '@/components/ui/chart';
-import { ChartFrame, ChartKey } from '@/components/ui/chart-frame';
+import { ChartBreakNote, ChartFrame, ChartKey } from '@/components/ui/chart-frame';
 import {
   AXIS_PROPS,
   ChartTooltipCard,
@@ -162,6 +162,7 @@ export function AreaChart({
           yFormat={yFormat}
           shown={shown}
         />
+        <ChartBreakNote data={data} lines={lines} />
         <EventLegend events={placed.map((event) => ({ ...event, x: 0 }))} shown={eventLegend} />
       </div>
       {table}
