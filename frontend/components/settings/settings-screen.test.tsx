@@ -209,6 +209,7 @@ describe('SettingsScreen', () => {
   });
 
   it('does not expose project deletion while self-serve billing is unavailable', () => {
+    window.history.replaceState(null, '', '/settings?tab=workspace');
     renderScreen();
 
     expect(screen.queryByRole('tab', { name: 'Danger zone' })).not.toBeInTheDocument();
@@ -219,6 +220,7 @@ describe('SettingsScreen', () => {
   it('hides project deletion from a role that may not delete, even on a plan that grants it', () => {
     entitlementState.canDeleteProject = true;
     entitlementState.roleMayDelete = false;
+    window.history.replaceState(null, '', '/settings?tab=workspace');
     renderScreen();
 
     expect(screen.queryByRole('button', { name: /delete project/i })).not.toBeInTheDocument();
@@ -227,6 +229,7 @@ describe('SettingsScreen', () => {
   it('lets an explicitly entitled development account delete its active project', async () => {
     entitlementState.canDeleteProject = true;
     const ue = userEvent.setup();
+    window.history.replaceState(null, '', '/settings?tab=workspace');
     renderScreen();
 
     await ue.click(screen.getByRole('button', { name: /delete project/i }));
@@ -240,6 +243,7 @@ describe('SettingsScreen', () => {
     entitlementState.canDeleteProject = true;
     listProjects.mockResolvedValue([nextProject]);
     const ue = userEvent.setup();
+    window.history.replaceState(null, '', '/settings?tab=workspace');
     renderScreen();
 
     await ue.click(screen.getByRole('button', { name: /delete project/i }));
@@ -249,7 +253,7 @@ describe('SettingsScreen', () => {
     await waitFor(() => expect(setActiveProjectId).toHaveBeenCalledWith(nextProject.id));
     await waitFor(() =>
       expect(window.location.pathname + window.location.search).toBe(
-        `/settings?project=${nextProject.id}`,
+        `/settings?tab=workspace&project=${nextProject.id}`,
       ),
     );
   });
