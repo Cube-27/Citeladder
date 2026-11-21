@@ -79,7 +79,6 @@
       "services/api/src/mcp/retrieval.ts::resolveSpecRecord": 14,
       "services/api/src/mcp/server.ts::callTool": 13,
       "services/api/src/mcp/server.ts::dispatchMethod": 14,
-      "services/api/src/mcp/tools.ts::compact": 13,
       "services/api/src/models/gateway.ts::openAICompletion::<anonymous>": 14,
       "services/api/src/models/openai-conversation.ts::line": 15,
       "services/api/src/opportunities/declarations.ts::declareAction::<anonymous>#2": 18,
