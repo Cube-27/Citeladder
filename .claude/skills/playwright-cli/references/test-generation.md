@@ -351,7 +351,7 @@ test.describe('Signing in and out', () => {
 Rules:
 
 - **One test per file.** File path, describe name, and test name come verbatim from the spec (minus the ordinal).
-- Prefix each numbered step with a `// N. <step text>` comment before its actions.
+- Wrap each numbered step's actions in `await test.step('N. <step text>', async () => { ... })`; tests carry no comments.
 - Use the describe group name verbatim from the spec (no `1.` ordinal).
 - Import the fixtures file if the project has one, otherwise `@playwright/test`.
   Resolve the path against THIS file's directory, not against the tests root:
@@ -436,7 +436,7 @@ Only after the user answers, either update the spec (intentional change) or file
 ### 3.5 Iteration and giving up
 
 - Fix failures one at a time; rerun after each.
-- If after thorough investigation you are confident the test is correct but the app is wrong *and* the user has confirmed it's a bug: mark the test `test.fixme(...)` with a comment pointing at the user's decision or issue link. Never silently skip.
+- If after thorough investigation you are confident the test is correct but the app is wrong *and* the user has confirmed it's a bug: mark the test `test.fixme(...)` with the user's decision or issue link in its title. Never silently skip.
 
 ---
 

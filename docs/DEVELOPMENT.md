@@ -268,14 +268,16 @@ component's subcomponents and hooks) into sibling modules in the same owner
 folder ([frontend](frontend-architecture.md), [backend](backend-architecture.md)).
 Update every importer; add no barrel files, re-export shims or aliases. Move the
 code unchanged, with no renames of exported symbols or behaviour changes, in its
-own commit when possible. Never shrink a file by deleting comments or
-compressing code, and never extend the ignore list or baseline to pass.
+own commit when possible. Never shrink a file by compressing code, and never
+extend the ignore list or baseline to pass.
 
 `pnpm check:policy` runs the design-system policy (no literal colours outside
 the token stylesheet, WCAG AA contrast of token pairs, Radix only inside
 `components/ui`, the app's Tailwind `@source` list) and the architecture guard,
 which also fails on any type-discipline finding
-(`frontend/scripts/type-discipline-checks.mjs`) and on any tracked font file.
+(`frontend/scripts/type-discipline-checks.mjs`) and on any tracked font file,
+and the comment check (`frontend/scripts/source-comments.mjs`), which fails on
+any source comment that is not a listed machine-read directive.
 
 ```bash
 # from frontend/; later arguments override the defaults
