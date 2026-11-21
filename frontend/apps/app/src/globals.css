@@ -1128,6 +1128,10 @@ html:has([data-app-surface]) {
   &:has([data-page-band='action-bar']) {
     scroll-padding-bottom: calc(var(--filter-bar-height) + 2 * var(--content-gutter));
   }
+  /* A section rail stays put when a longer section brings the scrollbar in. */
+  &:has([data-section-rail]) {
+    scrollbar-gutter: stable;
+  }
 }
 
 /* Radix scroll locks add a scrollbar-width margin. The root's stable gutter
@@ -1497,12 +1501,13 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--weight-regular);
   }
 
-  /* Lucide icons draw at 1.75, so a 16px glyph matches the label beside it.
-     The stroke scales with the box, so the app's 12-14px glyphs take 2. */
-  .lucide {
+  /* Glyphs (`data-glyph`, set by lib/icons) draw at 1.75, so a 16px glyph
+     matches the label beside it. The stroke scales with the box, so the app's
+     12-14px glyphs take 2. */
+  [data-glyph] {
     stroke-width: 1.75;
   }
-  :root:not([data-public-surface]) .lucide:is(.size-3, .size-3\.5) {
+  :root:not([data-public-surface]) [data-glyph]:is(.size-3, .size-3\.5) {
     stroke-width: 2;
   }
   /* ProductImage: in light a shot's white backdrop melts into its tile. */
@@ -2328,10 +2333,10 @@ label {
 
 /* A dropdown's chevron turns over while its list is open (not a disclosure's,
    which points by itself), on the same --motion-open as every chevron. */
-:is([aria-haspopup], [role='combobox']) .lucide-chevron-down {
+:is([aria-haspopup], [role='combobox']) [data-glyph='chevron-down'] {
   transition: rotate var(--motion-open) var(--ease-standard);
 }
-:root:not([data-public-surface]) :is([aria-haspopup], [role='combobox'])[aria-expanded='true'] .lucide-chevron-down {
+:root:not([data-public-surface]) :is([aria-haspopup], [role='combobox'])[aria-expanded='true'] [data-glyph='chevron-down'] {
   rotate: 180deg;
 }
 

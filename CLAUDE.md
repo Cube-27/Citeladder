@@ -131,10 +131,8 @@ running anything beyond focused tests (including `pnpm gate`), use the
   staging or production data.
 - Never reset, deploy, call live providers, activate payments or mutate external
   systems unless the task explicitly authorizes the operation.
-- Edit files with the Edit tool, not shell rewrites, heredocs or throwaway edit
-  scripts. Developer and agent workflow scripts are Node, run through pnpm; do
-  not add bash scripts for them. Stage explicit paths and preserve user-owned
-  changes.
+- Developer and agent workflow scripts are Node, run through pnpm; do not add
+  bash scripts for them. Stage explicit paths and preserve user-owned changes.
 
 ## Completion
 

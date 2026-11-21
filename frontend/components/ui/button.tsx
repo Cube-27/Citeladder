@@ -13,7 +13,7 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
 
-import type { IconGlyph } from '@/lib/icons';
+import { isIconGlyph, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**
@@ -159,9 +159,8 @@ const warnedQuiet = new Set<string>();
 function carriesIcon(children: ReactNode): boolean {
   return Children.toArray(children).some((child) => {
     if (!isValidElement<{ 'aria-hidden'?: unknown; children?: ReactNode }>(child)) return false;
-    if (child.type === Icon || child.type === 'svg' || child.props['aria-hidden']) return true;
-    // A lucide glyph is a forwardRef object with no children.
-    if (typeof child.type === 'object' && child.props.children === undefined) return true;
+    if (child.type === Icon || child.type === 'svg' || isIconGlyph(child.type)) return true;
+    if (child.props['aria-hidden']) return true;
     return typeof child.type !== 'string' || child.type === 'a'
       ? carriesIcon(child.props.children)
       : false;
