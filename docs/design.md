@@ -128,10 +128,8 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Body.** 24 side padding (16 below 760px), 20 above, 24 below: status line,
   then the metric strip, then sections 24 apart; a section's head sits 12
   above its body. Narrow pages centre the body in their column (AR-9; 1040:
-  Overview, Projects, Issues, Actions, page detail, Agent, Billing, Agent
-  context; 720: Settings, Pricing, Runs, and Agent context's tabs other than
-  Business map, on the 1040 column's left edge with `SettingsPage prose`, so
-  its header and tabs never move); the header and tab rules still
+  Overview, Projects, Issues, Actions, page detail, Agent, Settings, Agent
+  context; 720: Billing, Pricing, Runs); the header and tab rules still
   span the panel.
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
@@ -146,8 +144,12 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   figures; foot 40 with the count and an icon pager. The first column takes the spare width,
   the others hug their content (AR-4).
 - **Settings layout** (Settings, Agent context, Billing, Pricing): the
-  route's column (720; Billing 1040, AR-9) holds a stack of groups 32 apart,
-  with no rule between them; a tab panel stacks its groups the same way. A
+  route's column holds a stack of groups 32 apart, with no rule between
+  them. Settings and Agent context list their sections in a sticky 192 rail
+  of sidebar rows on the column's left (`TabRail`), never a tab strip; the
+  current section sits 24 beside it, at most 720 wide (Business map takes
+  the rest of the column), so the header and rail never move (AR-9). A
+  section stacks its groups the same way. A
   group (`SettingsGroup`) is a heading (16/24 at 500, a status 8 after it), an
   optional one-line 12px `ink-2` caption 4 below, the group's one action
   right-aligned on the heading's line (secondary), then 12 below its body.

@@ -80,6 +80,7 @@ function PasswordFields({ form }: Readonly<{ form: ReturnType<typeof usePassword
         <SettingField
           key={input.name}
           label={input.label}
+          inline="wide"
           required
           error={errors[input.name]?.message}
         >

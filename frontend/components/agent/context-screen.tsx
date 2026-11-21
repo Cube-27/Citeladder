@@ -16,7 +16,7 @@ import {
   type BrandProfileForm,
 } from '@/components/knowledge-base/use-brand-profile-form';
 import { SettingsPage } from '@/components/templates/settings-page';
-import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
+import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
 import { readErrorProps } from '@/components/ui/notice';
 import { projectQueries } from '@/lib/api/projects';
 import type { BrandProfile, Project } from '@citeladder/contracts';
@@ -67,10 +67,10 @@ function ContextWorkspace({
   const business = useBusinessDraft({ workspaceId, projectId: project.id });
 
   return (
-    <TabsRoot value={requestedTab} onValueChange={setTab}>
+    <TabsRoot value={requestedTab} onValueChange={setTab} orientation="vertical">
       <SettingsPage
-        prose={requestedTab !== 'map'}
-        tabs={<TabRow items={CONTEXT_TABS} ariaLabel="Context sections" />}
+        wide={requestedTab === 'map'}
+        rail={<TabRail items={CONTEXT_TABS} ariaLabel="Context sections" />}
       >
         <ContextPanels
           project={project}

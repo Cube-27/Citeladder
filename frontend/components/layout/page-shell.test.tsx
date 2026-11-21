@@ -199,7 +199,7 @@ describe('PageFrame', () => {
     };
     const report = <ReportPage>body</ReportPage>;
     expect([
-      widthAt('/settings', report),
+      widthAt('/billing', report),
       widthAt('/actions/a1', report),
       widthAt('/site', report),
       widthAt('/agent/chats/c1', <WorkbenchPage>body</WorkbenchPage>),

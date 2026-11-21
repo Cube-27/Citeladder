@@ -10,6 +10,7 @@ import {
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 
 import { ScrollFrame } from '@/components/ui/scroll-edges';
+import { sidebarNavRowClasses } from '@/components/ui/sidebar';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -165,11 +166,14 @@ export type TabsProps<T extends string> = TabStripProps<T> & {
 export function TabsRoot<T extends string>({
   value,
   onValueChange,
+  orientation,
   className,
   children,
 }: Readonly<{
   value: T;
   onValueChange: (value: T) => void;
+  /** `vertical` for a `TabRail`: Up and Down move between its rows. */
+  orientation?: 'vertical';
   className?: string;
   children: ReactNode;
 }>) {
@@ -178,6 +182,7 @@ export function TabsRoot<T extends string>({
       <TabsPrimitive.Root
         value={value}
         onValueChange={(next) => onValueChange(next as T)}
+        orientation={orientation}
         className={className}
       >
         {children}
@@ -198,6 +203,58 @@ export type TabRowProps<T extends string = string> = Readonly<
  */
 export function TabRow<T extends string>({ items, ariaLabel, onIntent }: TabRowProps<T>) {
   return <TabStrip kind="page" items={items} ariaLabel={ariaLabel} onIntent={onIntent} />;
+}
+
+/**
+ * TabRail — a page's sections as a list down its left, inside a vertical
+ * `TabsRoot`: rows on the sidebar's face, the current one on its tile, so
+ * the header above never moves when a section is wider than the rest.
+ */
+export function TabRail<T extends string>({ items, ariaLabel, onIntent }: TabRowProps<T>) {
+  const active = useContext(ActiveTabContext);
+  return (
+    <TabsPrimitive.List aria-label={ariaLabel} className="flex min-w-0 flex-col gap-0.5">
+      {items.map((item) => (
+        <TabsPrimitive.Trigger
+          key={item.value}
+          value={item.value}
+          disabled={item.disabled}
+          onMouseEnter={() => onIntent?.(item.value)}
+          onFocus={() => onIntent?.(item.value)}
+          onKeyDown={pageKeyScrollsPage}
+          className={sidebarNavRowClasses(item.value === active)}
+        >
+          <span className="truncate">{item.label}</span>
+          {item.count === undefined ? null : <ControlCount count={item.count} />}
+        </TabsPrimitive.Trigger>
+      ))}
+    </TabsPrimitive.List>
+  );
+}
+
+/** A `TabRail`'s rows while its page loads, `selected` current (else the first). */
+export function HeldTabRail({
+  labels,
+  selected,
+}: Readonly<{ labels: readonly string[]; selected?: string }>) {
+  const current = selected !== undefined && labels.includes(selected) ? selected : labels[0];
+  return (
+    <div
+      aria-hidden
+      data-held-tabs=""
+      className="pointer-events-none flex min-w-0 flex-col gap-0.5"
+    >
+      {labels.map((label) => (
+        <span
+          key={label}
+          data-selected={label === current || undefined}
+          className={sidebarNavRowClasses(label === current)}
+        >
+          <span className="truncate">{label}</span>
+        </span>
+      ))}
+    </div>
+  );
 }
 
 /**

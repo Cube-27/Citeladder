@@ -365,7 +365,7 @@ export const APP_ROUTES = [
     title: 'Context',
     screen: screens.context,
     // The Company facts form's five fields.
-    loading: cards([facts(5)], { tabs: held('tab', CONTEXT_TABS) }),
+    loading: cards([facts(5)], { rail: { ...held('tab', CONTEXT_TABS), wide: ['map'] } }),
     nav: [listed('Context', 'context', 'agent')],
   }),
   page({
@@ -455,14 +455,12 @@ export const APP_ROUTES = [
   // The workspace's own pages, inside the shell.
   page({
     path: '/settings',
-    width: 'compact',
+    width: 'narrow',
     title: 'Settings',
     scope: 'workspace',
     screen: screens.settings,
     // Account's Profile card: the identity row, then two facts.
-    loading: cards([facts(3)], {
-      tabs: held('tab', SETTINGS_TABS),
-    }),
+    loading: cards([facts(3)], { rail: held('tab', SETTINGS_TABS) }),
     nav: [
       {
         label: 'Integrations',
@@ -489,7 +487,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/billing',
-    width: 'narrow',
+    width: 'compact',
     title: 'Billing',
     scope: 'workspace',
     screen: screens.billing,
