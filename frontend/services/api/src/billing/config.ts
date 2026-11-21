@@ -9,7 +9,6 @@ import {
   nullableTextSetting,
   resolveSettingSpec,
   type SettingSource,
-  type SettingValue,
 } from '../config/settings.ts';
 
 const policy = {
@@ -34,8 +33,7 @@ export function catalogBootstrapSettings(env: SettingSource = process.env) {
 
 export function billingSettings(env: SettingSource = process.env) {
   const specs = policy.billing.settings;
-  const get = <K extends keyof typeof specs>(key: K): SettingValue<(typeof specs)[K]> =>
-    resolveSettingSpec(specs[key], env);
+  const get = <K extends keyof typeof specs>(key: K) => resolveSettingSpec(specs[key], env);
   let contactUrl: URL;
   try {
     contactUrl = new URL(String(get('contact_sales_url')));
@@ -96,8 +94,7 @@ export type BillingSettings = ReturnType<typeof billingSettings>;
 
 export function razorpaySettings(env: SettingSource = process.env) {
   const specs = policy.billing.razorpay_settings;
-  const get = <K extends keyof typeof specs>(key: K): SettingValue<(typeof specs)[K]> =>
-    resolveSettingSpec(specs[key], env);
+  const get = <K extends keyof typeof specs>(key: K) => resolveSettingSpec(specs[key], env);
   const canonicalId = get('key_id');
   const canonicalSecret = get('key_secret');
   const aliasId = get('test_key_id_alias');
