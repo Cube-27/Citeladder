@@ -131,7 +131,11 @@ export function DashboardActions({
 
 function FactSummary({ value }: Readonly<{ value: string }>) {
   if (!value.trim()) return <Absence state="not_set" />;
-  return <ClampText className={textRole('body')}>{value}</ClampText>;
+  return (
+    <ClampText lines={2} className={textRole('body', 'whitespace-normal')}>
+      {value}
+    </ClampText>
+  );
 }
 
 function PdfButton({

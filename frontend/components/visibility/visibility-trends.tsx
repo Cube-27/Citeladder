@@ -248,7 +248,7 @@ export function TrendSection({ query, keyed, ...chart }: TrendSectionProps) {
         kind="read"
         {...readErrorProps(query)}
         title="Couldn't load the history"
-        fallback="Check your connection and try again."
+        fallback="The request failed or timed out."
       />
     );
   if (!query.data.length)

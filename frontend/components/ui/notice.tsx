@@ -8,15 +8,31 @@ import { textRole } from '@/components/ui/typography';
 import { humanizeApiError } from '@/lib/api/errors';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { isPlanLimit, PLANS_HREF } from '@/lib/billing/plan-limit';
+import { CircleAlert, CircleCheck, Info, TriangleAlert, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 export type NoticeTone = 'info' | 'positive' | 'warning' | 'negative';
 
-const TONE: Record<NoticeTone, { dot: string; word: string }> = {
-  info: { dot: 'bg-info', word: 'Note' },
-  positive: { dot: 'bg-positive', word: 'Done' },
-  warning: { dot: 'bg-warning', word: 'Warning' },
-  negative: { dot: 'bg-negative', word: 'Error' },
+const TONE: Record<NoticeTone, { glyph: IconGlyph; ink: string; face: string; word: string }> = {
+  info: { glyph: Info, ink: 'text-info', face: 'bg-info-wash border-info/20', word: 'Note' },
+  positive: {
+    glyph: CircleCheck,
+    ink: 'text-positive',
+    face: 'bg-positive-wash border-positive/20',
+    word: 'Done',
+  },
+  warning: {
+    glyph: TriangleAlert,
+    ink: 'text-warning',
+    face: 'bg-warning-wash border-warning/25',
+    word: 'Warning',
+  },
+  negative: {
+    glyph: CircleAlert,
+    ink: 'text-negative',
+    face: 'bg-negative-wash border-negative/20',
+    word: 'Error',
+  },
 };
 
 type MessageNotice = Readonly<{
@@ -96,10 +112,15 @@ function MessageNoticeView({
     <Root
       role={urgent ? 'alert' : undefined}
       data-notice-tone={tone}
-      className={cn(textRole('body'), 'flex flex-wrap items-start gap-2', className)}
+      className={cn(
+        textRole('body'),
+        'rounded-control flex flex-wrap items-start gap-x-3 gap-y-2 border px-3 py-2.5',
+        style.face,
+        className,
+      )}
     >
-      <span aria-hidden className="inline-flex h-5 shrink-0 items-center">
-        <span className={cn('size-1.5 rounded-full', style.dot)} />
+      <span aria-hidden className={cn('inline-flex h-5 shrink-0 items-center', style.ink)}>
+        <style.glyph className="size-4" />
       </span>
       <div className="flex min-w-0 flex-[1_1_12rem] flex-col gap-1">
         {title != null ? (
@@ -113,7 +134,7 @@ function MessageNoticeView({
         {children != null ? <div>{children}</div> : null}
       </div>
       {action ? (
-        <div className="phone:ms-6 phone:basis-[calc(100%-1.5rem)] phone:justify-start ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2 self-center">
+        <div className="phone:ms-6 phone:basis-[calc(100%-1.5rem)] phone:justify-start [&_[data-button-variant=quiet]]:text-ink ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2 self-center">
           {action}
         </div>
       ) : null}

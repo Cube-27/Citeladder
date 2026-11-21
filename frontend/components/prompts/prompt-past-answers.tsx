@@ -155,7 +155,7 @@ function tableState(
       kind: 'error',
       ...readErrorProps(read),
       title: "Couldn't load past answers",
-      fallback: 'Check your connection and try again.',
+      fallback: 'The request failed or timed out.',
     };
   if (!page) return { kind: 'loading', label: 'Loading past answers…' };
   if (!page.items.length)

@@ -52,6 +52,7 @@
   --color-ink-hover: oklch(28.5% 0 0);
   --color-ink-secondary: oklch(43.9% 0 0);
   --color-ink-muted: var(--color-ink-secondary);
+  --color-ink-3: var(--color-ink-2);
   --color-on-ink: oklch(100% 0 0);
   --color-accent: oklch(63.4% 0.1973 37.5);
   --color-accent-ink: oklch(52.3% 0.1667 37.5);
@@ -219,6 +220,8 @@
 
   --container-site: 1320px;
   --container-app: 1440px;
+  --container-page: 1160px;
+  --container-measure: 800px;
   --container-answer: 1080px;
   --container-thread: 1040px;
   --container-prose: 720px;
@@ -544,6 +547,7 @@
   --color-control-edge: var(--color-rule);
   --color-ink: #1d1d1d;
   --color-ink-2: #5f636a;
+  --color-ink-3: #71717a;
   --color-ink-hover: oklch(32% 0.015 264);
   --color-on-ink: var(--color-panel);
   --color-accent: #e8501a;
@@ -603,15 +607,16 @@
   --shadow-sheet: 0 16px 40px oklch(21% 0.034 263 / 18%);
   --mark-width: 2px;
 
-  --control-md: 28px;
-  --control-lg: 44px;
+  --control-md: 32px;
+  --control-lg: 40px;
   --control-coarse: 44px;
-  --nav-row-height: 28px;
-  --table-row-height: 40px;
+  --button-hit: 40px;
+  --nav-row-height: 32px;
+  --table-row-height: 44px;
 
-  --masthead-height: 44px;
-  --page-tabs-height: 36px;
-  --filter-bar-height: 44px;
+  --masthead-height: 48px;
+  --page-tabs-height: 40px;
+  --filter-bar-height: 48px;
   --sidebar-width: 224px;
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
@@ -1496,9 +1501,18 @@ a.focus-ring:active .type-caption {
 
 :root:not([data-public-surface])
   [data-button-variant]:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
-  background-color: var(--color-raised);
-  border-color: var(--color-rule);
-  color: color-mix(in oklch, var(--color-ink-2) 60%, transparent);
+  background-color: var(--color-raised-2);
+  border-color: transparent;
+  color: color-mix(in oklch, var(--color-ink-2) 80%, transparent);
+  box-shadow: none;
+}
+
+/* Every app button answers a 40px target without growing its 32px face. */
+:root:not([data-public-surface]) [data-button-variant]::after {
+  content: '';
+  position: absolute;
+  inset-block: min(0px, calc((100% - var(--button-hit)) / 2));
+  inset-inline: min(0px, calc((100% - var(--button-hit)) / 2));
 }
 
 :disabled:focus-visible,

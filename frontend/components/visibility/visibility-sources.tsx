@@ -260,7 +260,7 @@ function tableState({
       kind: 'error',
       ...readErrorProps(query),
       title: "Couldn't load the sources",
-      fallback: 'Check your connection and try again.',
+      fallback: 'The request failed or timed out.',
     };
   }
   if (!query.data) return { kind: 'loading', label: 'Loading sources…' };

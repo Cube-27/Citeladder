@@ -45,7 +45,7 @@ export function Input({
         className={cn(
           'focus-input',
           FIELD_BOX,
-          'placeholder:text-ink-2 disabled:cursor-not-allowed disabled:opacity-60',
+          'placeholder:text-ink-3 disabled:cursor-not-allowed disabled:opacity-60',
           inputWidths[width],
           containerClassName,
           className,
@@ -74,7 +74,7 @@ export function Input({
       <input
         ref={ref}
         className={cn(
-          'placeholder:text-ink-2 type-body min-w-0 flex-1 self-stretch bg-transparent disabled:cursor-not-allowed',
+          'placeholder:text-ink-3 type-body min-w-0 flex-1 self-stretch bg-transparent disabled:cursor-not-allowed',
           className,
         )}
         {...props}

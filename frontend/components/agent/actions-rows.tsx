@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { Checkbox } from '@/components/ui/checkbox';
-import { ImpactBars } from '@/components/ui/impact-bars';
+import { StatusMark } from '@/components/ui/status-mark';
 import { WorkRow, WorkRows, WorkRowsMore } from '@/components/ui/work-rows';
 import { actionTarget } from '@/lib/agent/action-title';
 import { groupingParams, type GroupingRef, type TreeGrouping } from '@/lib/agent/action-tree';
@@ -38,11 +38,13 @@ export function sourceLabel(action: Pick<Action, 'families' | 'origin'>): string
   );
 }
 
-const IMPACT_LEVEL = { high: 3, medium: 2, low: 1 } as const;
-
 export function Impact({ band }: Readonly<{ band: Action['priority_band'] }>) {
   if (!band) return <span>Not scored</span>;
-  return <ImpactBars level={IMPACT_LEVEL[band]}>{IMPACT_LABEL[band]}</ImpactBars>;
+  return (
+    <StatusMark variant="priority" value={band}>
+      {IMPACT_LABEL[band]}
+    </StatusMark>
+  );
 }
 
 export function GroupingRows({

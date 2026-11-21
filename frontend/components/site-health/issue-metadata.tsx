@@ -13,7 +13,7 @@ export function IssueSeverityMark({
       {severityLabel(issue.severity)}
     </StatusMark>
   ) : (
-    <Tag>Advisory</Tag>
+    <StatusMark tone="info">Advisory</StatusMark>
   );
 }
 

@@ -11,7 +11,7 @@ import { FIELD_EDGE } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 const textareaClasses =
-  'text-ink placeholder:text-ink-2 type-body block w-full rounded-control border disabled:cursor-not-allowed disabled:opacity-60';
+  'text-ink placeholder:text-ink-3 type-body block w-full rounded-control border disabled:cursor-not-allowed disabled:opacity-60';
 
 const fieldClasses = cn(
   'focus-input min-h-[calc(var(--control-md)*2)] resize-y px-3 py-2 transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)]',

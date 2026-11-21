@@ -39,8 +39,8 @@ export function PerceptionProbe({ view }: Readonly<{ view: ProbeView }>) {
       <StateBlock
         kind="error"
         {...readErrorProps(status)}
-        title="Couldn't load the market probe"
-        fallback="Check your connection and try again."
+        title={view === 'objections' ? "Couldn't load objections" : "Couldn't load the market view"}
+        fallback="The request failed or timed out."
       />
     );
   const confirm = (next: ProbeIntent) => {
@@ -105,7 +105,7 @@ function ProbeRead<Value>({
         kind="error"
         {...readErrorProps(read)}
         title={title}
-        fallback="Check your connection and try again."
+        fallback="The request failed or timed out."
       />
     );
   return <ProbeEmpty status={status} onRun={onRun} />;

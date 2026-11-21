@@ -372,7 +372,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/runs',
-    width: 'compact',
+    width: 'narrow',
     title: 'Runs',
     screen: screens.runs,
     loading: cards([table(5)], {
@@ -499,6 +499,17 @@ export function routeLoading(pathname: string): RouteLoading {
 
 export function routeWidth(pathname: string): NonNullable<AppRouteRecord['width']> | 'full' {
   return sectionRoute(pathname)?.width ?? 'full';
+}
+
+/** The listed page a missing address most likely belongs to, when it is not Overview itself. */
+export function recoveryRoute(
+  pathname: string,
+): Readonly<{ title: string; path: string }> | undefined {
+  const route = sectionRoute(pathname);
+  const home = route?.collection ? findAppRoute(route.collection) : route;
+  if (!home?.shell || !home.title || home.path.includes(':')) return undefined;
+  if (home.path === pathname || home.path === HOME_PATH) return undefined;
+  return { title: home.title, path: home.path };
 }
 
 export function hasPageTitle(pathname: string): boolean {

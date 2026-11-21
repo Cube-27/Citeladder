@@ -80,7 +80,7 @@ export function Select<T extends string>({
         className={cn(
           'focus-input press',
           TRIGGER_BOX,
-          'data-[placeholder]:text-ink-2 flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-60',
+          'data-[placeholder]:text-ink-3 flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-60',
           className,
         )}
       >

@@ -2,6 +2,7 @@ import { useId, useRef, useState, type ReactNode } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
+import { ChevronDown } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 export type SearchableSelectOption = { value: string; label: string; detail?: string };
@@ -75,6 +76,10 @@ export function SearchableSelect({
 
   return (
     <div ref={containerRef} className="relative">
+      <ChevronDown
+        aria-hidden
+        className="text-ink-2 pointer-events-none absolute top-1/2 right-3 z-1 size-3.5 -translate-y-1/2"
+      />
       {renderLeading && selected ? (
         <span className="pointer-events-none absolute top-1/2 left-3 z-1 -translate-y-1/2">
           {renderLeading(selected)}
@@ -96,7 +101,7 @@ export function SearchableSelect({
         value={text}
         disabled={disabled}
         placeholder={placeholder}
-        className={cn(renderLeading && selected && 'pl-10')}
+        className={cn('pe-9', renderLeading && selected && 'pl-10')}
         onFocus={() => {
           setOpen(true);
           setQuery('');

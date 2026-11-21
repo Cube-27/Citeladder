@@ -30,7 +30,7 @@ function TopicsLoadNotice({ read }: Readonly<{ read: RetryableRead }>) {
       kind="read"
       {...readErrorProps(read)}
       title="Couldn't load topics"
-      fallback="Check your connection and try again."
+      fallback="The request failed or timed out."
     />
   );
 }

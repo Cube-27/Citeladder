@@ -334,7 +334,7 @@ export function PerformanceScreen() {
         <StateBlock
           kind="error"
           {...readErrorProps(dashboard)}
-          fallback="Couldn't load performance data. Check your connection and try again."
+          fallback="Couldn't load performance data. The request failed or timed out."
           title="Couldn't load performance data"
         />
       </ReportPage>

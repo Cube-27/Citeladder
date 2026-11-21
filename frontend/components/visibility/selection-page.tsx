@@ -52,7 +52,7 @@ export function SelectionPageStateBlock({
       kind="error"
       {...readErrorProps(queries.auditsQuery)}
       title="Couldn't load this project's runs"
-      fallback="Check your connection and try again."
+      fallback="The request failed or timed out."
     />
   );
 }
