@@ -92,28 +92,15 @@ export function RunActions({
         </Button>
       ) : null}
       {audit.failed_count > 0 && onRerunFailures ? (
-        <RerunFailed
-          primary={audit.status === 'failed'}
-          onRerun={onRerunFailures}
-          pending={rerunPending}
-        />
+        <MastheadPrimary>
+          <Button variant="primary" onClick={onRerunFailures} disabled={rerunPending}>
+            <Icon icon={RotateCcw} />
+            {rerunPending ? 'Creating repair…' : 'Rerun failed'}
+          </Button>
+        </MastheadPrimary>
       ) : null}
     </>
   );
-}
-
-function RerunFailed({
-  primary,
-  onRerun,
-  pending,
-}: Readonly<{ primary: boolean; onRerun: () => void; pending: boolean }>) {
-  const button = (
-    <Button variant={primary ? 'primary' : 'secondary'} onClick={onRerun} disabled={pending}>
-      <Icon icon={RotateCcw} />
-      {pending ? 'Creating repair…' : 'Rerun failed'}
-    </Button>
-  );
-  return primary ? <MastheadPrimary>{button}</MastheadPrimary> : button;
 }
 
 export function ProgressSkeleton() {
