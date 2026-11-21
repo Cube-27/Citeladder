@@ -10,8 +10,9 @@ import { cn } from '@/lib/utils';
 /**
  * TextLink — the text link, with the 2px focus ring.
  *
- * A sentence link is underlined at rest (`underline="always"`, the default),
- * so it never depends on colour alone. A table row title or a metric card's
+ * On the website a sentence link is underlined at rest (`underline="always"`,
+ * the default); in the app every link underlines only on hover and focus.
+ * A table row title or a metric card's
  * action label takes `underline="hover"`: `ink` text with no underline at
  * rest (its place names it as the way in), the 1px current-colour underline
  * appearing on hover and on keyboard focus. Text that is not a link is never
@@ -43,11 +44,17 @@ const TONE: Record<TextLinkTone, string> = {
   muted: 'text-ink-2 hover:text-ink',
 };
 
-// In the app the underline is the link's own ink at rest; the website keeps
-// its control-line underline that inks on hover.
+// The app draws no underline at rest, only on hover and focus (owner,
+// 2026-11-21); the website keeps its control-line underline that inks on hover.
+const APP_REST =
+  '[:root:not([data-public-surface])_&]:decoration-transparent [:root:not([data-public-surface])_&]:hover:decoration-current [:root:not([data-public-surface])_&]:focus-visible:decoration-current';
+
 const UNDERLINE = {
-  prose: 'decoration-current hover:decoration-2',
-  ink: 'decoration-control-line hover:decoration-current focus-visible:decoration-current [:root:not([data-public-surface])_&]:decoration-current',
+  prose: cn('decoration-current hover:decoration-2', APP_REST),
+  ink: cn(
+    'decoration-control-line hover:decoration-current focus-visible:decoration-current',
+    APP_REST,
+  ),
   // A row title: the underline is drawn clear at rest and inks on hover or focus.
   hover:
     'text-ink decoration-transparent hover:decoration-current focus-visible:decoration-current',
