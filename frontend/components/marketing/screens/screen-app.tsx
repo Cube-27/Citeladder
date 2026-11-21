@@ -126,7 +126,7 @@ function NavRow({
   const count = OPEN_COUNTS[label];
   return (
     <span className={cn('type-control cl-app-nav-row', active && 'is-active')}>
-      {Icon && <Icon className="cl-app-nav-icon size-4" aria-hidden />}
+      {Icon && <Icon className="cl-app-nav-icon size-3.5" aria-hidden />}
       <span className="cl-app-nav-label">{label}</span>
       {count !== undefined && <span className="cl-app-nav-count">{count}</span>}
     </span>
@@ -146,7 +146,7 @@ export function ScreenSidebar({
           <span className="cl-app-ident-text">
             <span className="type-control">Acme Analytics</span>
           </span>
-          <ChevronsUpDown className="text-ink-muted size-4" aria-hidden />
+          <ChevronsUpDown className="text-ink-muted size-3.5" aria-hidden />
         </span>
       </div>
       <div className="cl-app-side-controls">
@@ -212,7 +212,7 @@ export function ScreenMenuButton({ children }: Readonly<{ children: ReactNode }>
   return (
     <ScreenButton>
       {children}
-      <ChevronDown className="text-ink-muted size-4" aria-hidden />
+      <ChevronDown className="text-ink-muted size-3.5" aria-hidden />
     </ScreenButton>
   );
 }
