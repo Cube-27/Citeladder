@@ -104,16 +104,14 @@ export function PartDonut({
           </span>
         ) : null}
       </div>
-      <ul aria-hidden className="flex min-w-44 flex-1 flex-col gap-2">
+      <ul aria-hidden className="flex min-w-fit flex-1 flex-col gap-2">
         {rows.map((row) => (
           <li key={row.label} className={textRole('body', 'flex min-w-0 items-center gap-2')}>
             <span
               data-part={row.ink?.part ?? 'remainder'}
               className={cn('rounded-full size-2 shrink-0', row.ink?.fill ?? 'bg-well')}
             />
-            <span className="text-ink min-w-0 flex-1 truncate" title={row.label}>
-              {row.label}
-            </span>
+            <span className="text-ink flex-1 whitespace-nowrap">{row.label}</span>
             <span className="text-ink shrink-0 tabular-nums">{chartPercent(row.value, whole)}</span>
             <span className="text-ink-2 w-10 shrink-0 text-right tabular-nums">
               {format(row.value)}

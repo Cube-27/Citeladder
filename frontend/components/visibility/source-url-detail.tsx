@@ -95,6 +95,7 @@ function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) 
           name={host ?? url}
           websiteUrl={host ? `https://${host}` : null}
           placement="header"
+          entity="site"
         />
         <Stack gap="tight" className="min-w-0">
           <SectionTitle className="truncate">{title}</SectionTitle>

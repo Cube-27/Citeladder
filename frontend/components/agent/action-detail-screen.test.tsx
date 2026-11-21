@@ -412,10 +412,8 @@ describe('An Action page’s sections and hand-off', () => {
     expect(within(why).getByText('Pricing comparison')).toBeVisible();
     expect(within(why).getByText('Globex (globex.com) · 5 citations')).toBeVisible();
     expect(
-      within(screen.getByRole('region', { name: 'What to do' })).getByRole('checkbox', {
-        name: 'Cover the angle.',
-      }),
-    ).not.toBeChecked();
+      within(screen.getByRole('region', { name: 'What to do' })).getByText('Cover the angle.'),
+    ).toBeVisible();
     expect(chatOf(screen.getByRole('link', { name: 'Work with Agent' }))).toEqual({
       path: '/agent',
       action_id: ACTION,

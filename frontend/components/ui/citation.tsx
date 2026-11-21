@@ -30,7 +30,13 @@ export function Citation({
           {index}
         </span>
       )}
-      <BrandMark name={host} logoUrl={favicon} websiteUrl={`https://${host}`} placement="inline" />
+      <BrandMark
+        name={host}
+        logoUrl={favicon}
+        websiteUrl={`https://${host}`}
+        placement="inline"
+        entity="site"
+      />
       <span className="whitespace-nowrap">{host}</span>
       {title ? <span className="text-ink-muted min-w-0 truncate">{title}</span> : null}
     </>

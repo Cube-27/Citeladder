@@ -162,7 +162,7 @@ export function SettingsScreen() {
   return (
     <TabsRoot value={activeTab} onValueChange={setActiveTab} orientation="vertical">
       <SettingsPage rail={<TabRail items={tabs} ariaLabel="Settings sections" />}>
-        <TabPanel value="account" forceMount className="focus-ring data-[state=inactive]:hidden">
+        <TabPanel value="account" forceMount className="data-[state=inactive]:hidden">
           <SettingsGroup title="Profile">
             <SettingRows>
               <SettingRow label={user.email} action={<Avatar name={user.email} />} />
@@ -172,24 +172,24 @@ export function SettingsScreen() {
           </SettingsGroup>
           <TimeZoneSetting />
           <AccountSecurity />
+        </TabPanel>
+
+        <TabPanel value="workspace" forceMount className="data-[state=inactive]:hidden">
+          <WorkspacePanel />
           <ProjectDeletionControls />
         </TabPanel>
 
-        <TabPanel value="workspace" forceMount className="focus-ring data-[state=inactive]:hidden">
-          <WorkspacePanel />
-        </TabPanel>
-
-        <TabPanel value="providers" forceMount className="focus-ring data-[state=inactive]:hidden">
+        <TabPanel value="providers" forceMount className="data-[state=inactive]:hidden">
           <ProviderSettings />
         </TabPanel>
 
-        <TabPanel value="integrations" className="focus-ring">
+        <TabPanel value="integrations">
           <IntegrationSettings />
         </TabPanel>
-        <TabPanel value="connections" className="focus-ring">
+        <TabPanel value="connections">
           <McpConnections />
         </TabPanel>
-        <TabPanel value="api-keys" className="focus-ring">
+        <TabPanel value="api-keys">
           <ApiKeys />
         </TabPanel>
       </SettingsPage>

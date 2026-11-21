@@ -330,7 +330,9 @@ export function TabPanel({
       value={value}
       forceMount={forceMount}
       hidden={activeValue !== value}
-      className={cn('focus-ring', className)}
+      // Every panel holds its own controls; as a tab stop it drew the ring around the whole page.
+      tabIndex={-1}
+      className={cn('outline-none', className)}
     >
       {children}
     </TabsPrimitive.Content>

@@ -70,8 +70,8 @@ const FAILURE_REASONS: Record<string, string> = {
 };
 const GENERIC_FAILURE = 'The answer could not be collected. Try running it again.';
 
-export function executionFailureReason(errorCode: string): string {
-  return FAILURE_REASONS[errorCode] ?? GENERIC_FAILURE;
+export function executionFailureReason(errorCode: string, unknown = GENERIC_FAILURE): string {
+  return FAILURE_REASONS[errorCode] ?? unknown;
 }
 
 const SCHEDULE_PAUSE_REASONS: Record<string, string> = {

@@ -111,7 +111,10 @@ function FixFirst({
                 </span>
                 {fix && fix.fixed_url_count > 0 ? (
                   <span className={textRole('body', 'text-ink-2 shrink-0 tabular-nums')}>
-                    {fixedLabel(fix)}
+                    {fix.fixed_url_count >= fix.affected_url_count &&
+                    fix.verified_url_count < fix.affected_url_count
+                      ? 'Marked fixed, awaiting re-audit'
+                      : fixedLabel(fix)}
                   </span>
                 ) : null}
                 <span className="ms-auto flex shrink-0">

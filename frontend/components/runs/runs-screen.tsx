@@ -22,7 +22,7 @@ import { AUDIT_STATES, pollAudits } from '@/lib/runs/status';
 import { readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
-type StatusFilter = 'all' | 'completed' | 'running' | 'failed';
+type StatusFilter = 'all' | 'completed' | 'partial' | 'running' | 'failed';
 
 const STATUS_FILTERS: {
   id: StatusFilter;
@@ -36,14 +36,19 @@ const STATUS_FILTERS: {
     match: (audit) => audit.status === 'completed',
   },
   {
+    id: 'partial',
+    label: 'Partial',
+    match: (audit) => audit.status === 'partially_completed',
+  },
+  {
     id: 'running',
     label: 'Running',
     match: (audit) => AUDIT_STATES[audit.status].active,
   },
   {
     id: 'failed',
-    label: 'Failed',
-    match: (audit) => audit.status === 'failed',
+    label: 'Failed or cancelled',
+    match: (audit) => audit.status === 'failed' || audit.status === 'cancelled',
   },
 ];
 

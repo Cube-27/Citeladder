@@ -2,7 +2,8 @@ import { MARKET_LANGUAGES, marketLabel } from '@citeladder/contracts/markets';
 import type { ProbeMarketValue } from '@citeladder/contracts/probes';
 
 import { BrandRadar, rosterKey } from '@/components/perception/brand-radar';
-import { ProjectThemesPanel } from '@/components/knowledge-base/project-themes-panel';
+import { Button } from '@/components/ui/button';
+import { ProjectLink } from '@/components/ui/project-link';
 import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -14,15 +15,11 @@ import { SectionContent, TitledSection } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
-import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { marketSummary } from '@/lib/perception/probe';
 import { useWorkspaceCapability } from '@/lib/project/project-scope';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
-export function PerceptionMarket({
-  scope,
-  data,
-}: Readonly<{ scope: ProjectScope; data: ProbeMarketValue }>) {
+export function PerceptionMarket({ data }: Readonly<{ data: ProbeMarketValue }>) {
   const mayEdit = useWorkspaceCapability('write');
   return (
     <>
@@ -54,7 +51,17 @@ export function PerceptionMarket({
             )}
           </SectionContent>
         </TitledSection>
-        <TitledSection title="Brand shape" description="Position score per theme">
+        <TitledSection
+          title="Brand shape"
+          description="Position score per theme"
+          actions={
+            mayEdit ? (
+              <Button variant="secondary" asChild>
+                <ProjectLink href="/agent/context?tab=themes">Edit themes</ProjectLink>
+              </Button>
+            ) : undefined
+          }
+        >
           <SectionContent>
             <BrandRadar key={rosterKey(data.themes)} themes={data.themes} />
           </SectionContent>
@@ -62,11 +69,6 @@ export function PerceptionMarket({
       </AppGrid>
       <RankTable data={data} />
       <EngineTable data={data} />
-      <TitledSection title="Themes" description="Each probe asks which brands lead each theme.">
-        <SectionContent>
-          <ProjectThemesPanel scope={scope} mayEdit={mayEdit} />
-        </SectionContent>
-      </TitledSection>
     </>
   );
 }

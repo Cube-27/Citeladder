@@ -5,7 +5,7 @@ import { useParams } from 'react-router-dom';
 import { ActionDock } from '@/components/agent/action-dock';
 import { ActionFacts } from '@/components/agent/action-facts';
 import {
-  Checklist,
+  StepList,
   Labelled,
   Prose,
   READING_SECTION_TITLE,
@@ -108,7 +108,7 @@ function ActionPage({
         ) : null}
         {todo.length > 0 ? (
           <Labelled title="What to do">
-            <Checklist items={todo} />
+            <StepList items={todo} />
           </Labelled>
         ) : null}
         <ActionUrls

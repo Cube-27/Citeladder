@@ -2,7 +2,7 @@ import {
   absent,
   formatMean,
   formatPercent,
-  formatStripTimestamp,
+  formatDisplayTimestamp,
   type Formatted,
 } from '@/lib/format';
 import { AUDIT_STATES } from '@/lib/runs/status';
@@ -76,7 +76,7 @@ export function toRunOptions(
       id: audit.id,
       status: audit.status,
       completedAt: audit.completed_at,
-      label: formatStripTimestamp(audit.completed_at ?? audit.created_at, timeZone),
+      label: formatDisplayTimestamp(audit.completed_at ?? audit.created_at, timeZone),
     }));
 }
 

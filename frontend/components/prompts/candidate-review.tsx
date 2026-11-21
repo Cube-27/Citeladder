@@ -192,8 +192,8 @@ export function usePendingReview({
   };
 }
 
-export function PendingReviewNotice({ count }: Readonly<{ count: number }>) {
-  if (!count) return null;
+export function PendingReviewNotice({ count, shown }: Readonly<{ count: number; shown: boolean }>) {
+  if (!count || !shown) return null;
   return (
     <Notice tone="info">
       <Inline as="span" className="flex-wrap justify-between">

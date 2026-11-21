@@ -62,7 +62,7 @@ function VisibilityWorkspace({
         {queries.activeRun && state !== 'empty' ? (
           <ActiveRunBanner run={queries.activeRun} />
         ) : null}
-        <TabPanel value={filters.activeTab} className="focus-ring">
+        <TabPanel value={filters.activeTab}>
           {state ? (
             <SelectionPageStateBlock state={state} queries={queries} />
           ) : (

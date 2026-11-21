@@ -210,3 +210,30 @@ export function ChartTable({
     </div>
   );
 }
+
+export function breakNote(
+  data: readonly Readonly<{ breakBefore?: boolean }>[],
+  lines: readonly Readonly<{ values: readonly (number | null | undefined)[] }>[],
+): string | null {
+  const gap = lines.some((line) => {
+    const measured = line.values.map((value) => value !== null && value !== undefined);
+    return measured.slice(measured.indexOf(true), measured.lastIndexOf(true)).includes(false);
+  });
+  const restart = data.some((point, index) => index > 0 && point.breakBefore === true);
+  const parts = [
+    gap ? 'A gap is a period with no reading.' : null,
+    restart ? 'A line starts again where the measurement conditions changed.' : null,
+  ].filter((part) => part !== null);
+  return parts.length ? parts.join(' ') : null;
+}
+
+export function ChartBreakNote({
+  data,
+  lines,
+}: Readonly<{
+  data: Parameters<typeof breakNote>[0];
+  lines: Parameters<typeof breakNote>[1];
+}>) {
+  const note = breakNote(data, lines);
+  return note ? <p className={textRole('caption')}>{note}</p> : null;
+}
