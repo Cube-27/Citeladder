@@ -20,6 +20,11 @@ const MAILBOX_OPERATIONS = [
 ] as const;
 type MailboxOperation = (typeof MAILBOX_OPERATIONS)[number];
 
+function mailboxOperation(pathname: string): MailboxOperation {
+  const path = routePath(pathname).slice(1);
+  return isOneOf(MAILBOX_OPERATIONS, path) ? path : 'forgot-password';
+}
+
 const MAILBOX_TITLES: Record<MailboxOperation, string> = {
   'verify-email': 'Verify your email',
   'resend-verification': 'Resend verification email',
@@ -45,8 +50,7 @@ function mailboxFooter(operation: MailboxOperation, incomplete: boolean, returnT
 export default function MailboxScreen() {
   const location = useLocation();
   const queryReturnTo = useUrlParam('return_to');
-  const path = routePath(location.pathname).slice(1);
-  const operation = isOneOf(MAILBOX_OPERATIONS, path) ? path : 'forgot-password';
+  const operation = mailboxOperation(location.pathname);
   const confirmation = operation === 'verify-email' || operation === 'reset-password';
   const [secrets] = useState(() => {
     const fragment = new URLSearchParams(window.location.hash.slice(1));

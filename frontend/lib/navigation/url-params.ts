@@ -32,7 +32,7 @@ type UrlParamTypes = {
 export type UrlParamName = keyof UrlParamTypes;
 export type UrlParamValues = { readonly [N in UrlParamName]?: UrlParamTypes[N] };
 
-export const URL_PARAMS: { readonly [N in UrlParamName]: UrlCodec<UrlParamTypes[N]> } = {
+const URL_PARAMS: { readonly [N in UrlParamName]: UrlCodec<UrlParamTypes[N]> } = {
   analysis: optionalStringUrlCodec,
   connected: optionalStringUrlCodec,
   discovery: optionalStringUrlCodec,

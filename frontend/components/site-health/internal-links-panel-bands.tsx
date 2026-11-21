@@ -25,6 +25,12 @@ type Scope = Readonly<{ projectId: string; workspaceId: string }>;
 type LinkParam = 'analysis' | 'link' | 'links_q' | 'links_status';
 type LinkParams = Readonly<Record<LinkParam, string | null>>;
 type ParamChange = (key: LinkParam, value: string, history?: UrlHistory) => void;
+const CLEARED_BY: Readonly<Record<LinkParam, UrlParamValues>> = {
+  analysis: { link: null, links_page: null },
+  link: {},
+  links_q: { links_page: null },
+  links_status: { links_page: null },
+};
 export const isRunning = (state: InternalLinkAnalysis['state']) =>
   INTERNAL_LINK_STATES[state].active;
 
@@ -39,9 +45,7 @@ export function useLinkParams() {
   const update: ParamChange = (key, value, history = 'push') => {
     const changed: Partial<Record<LinkParam, string | null>> = {};
     changed[key] = value || null;
-    const cleared: UrlParamValues =
-      key === 'analysis' ? { link: null } : key === 'link' ? {} : { links_page: null };
-    setUrlParams({ ...changed, ...cleared }, history);
+    setUrlParams({ ...changed, ...CLEARED_BY[key] }, history);
   };
   return { params, update };
 }
