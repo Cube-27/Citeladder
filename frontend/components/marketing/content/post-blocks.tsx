@@ -260,6 +260,13 @@ function RichParagraph({
   );
 }
 
+function PostList({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'list' }> }>) {
+  const items = withOccurrenceKeys(block.items, (item) => item).map(({ key, value }) => (
+    <li key={key}>{value}</li>
+  ));
+  return block.ordered ? <ol>{items}</ol> : <ul>{items}</ul>;
+}
+
 export function PostBlock({
   block,
   sources = [],
@@ -269,12 +276,8 @@ export function PostBlock({
       return <h2 id={headingId(block.text)}>{block.text}</h2>;
     case 'subheading':
       return <h3 id={headingId(block.text)}>{block.text}</h3>;
-    case 'list': {
-      const items = withOccurrenceKeys(block.items, (item) => item).map(({ key, value }) => (
-        <li key={key}>{value}</li>
-      ));
-      return block.ordered ? <ol>{items}</ol> : <ul>{items}</ul>;
-    }
+    case 'list':
+      return <PostList block={block} />;
     case 'paragraph':
       return <p>{block.text}</p>;
     case 'richParagraph':

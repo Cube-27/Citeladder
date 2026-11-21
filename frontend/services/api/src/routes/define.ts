@@ -84,6 +84,22 @@ export type ProductRoute = {
   register: (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => void;
 };
 
+type ScalarOf<K> = Extract<ParamSpec['scalar'], { kind: K }>;
+
+function intSchema(scalar: ScalarOf<'int'>) {
+  let schema = z.int();
+  if (scalar.ge !== undefined) schema = schema.min(scalar.ge);
+  if (scalar.le !== undefined) schema = schema.max(scalar.le);
+  return schema;
+}
+
+function strSchema(scalar: ScalarOf<'str'>) {
+  let schema = z.string();
+  if (scalar.minLength !== undefined) schema = schema.min(scalar.minLength);
+  if (scalar.maxLength !== undefined) schema = schema.max(scalar.maxLength);
+  return schema;
+}
+
 function scalarSchema(spec: ParamSpec): z.ZodType {
   const { scalar } = spec;
   switch (scalar.kind) {
@@ -97,18 +113,10 @@ function scalarSchema(spec: ParamSpec): z.ZodType {
       return z.number();
     case 'bool':
       return z.boolean();
-    case 'int': {
-      let schema = z.int();
-      if (scalar.ge !== undefined) schema = schema.min(scalar.ge);
-      if (scalar.le !== undefined) schema = schema.max(scalar.le);
-      return schema;
-    }
-    case 'str': {
-      let schema = z.string();
-      if (scalar.minLength !== undefined) schema = schema.min(scalar.minLength);
-      if (scalar.maxLength !== undefined) schema = schema.max(scalar.maxLength);
-      return schema;
-    }
+    case 'int':
+      return intSchema(scalar);
+    case 'str':
+      return strSchema(scalar);
     case 'literal':
       return z.enum(scalar.values as [string, ...string[]]);
     default: {

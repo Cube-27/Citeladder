@@ -53,6 +53,9 @@ export const UUID_MESSAGE = 'Expected a UUID';
 
 const failure = (type: string, message: string): Outcome => ({ ok: false, type, message });
 
+const parsedOr = (value: unknown, type: string, message: string): Outcome =>
+  value === null ? failure(type, message) : { ok: true, value };
+
 function validateInt(scalar: Extract<Scalar, { kind: 'int' }>, raw: string): Outcome {
   const text = raw.trim();
   if (!/^[+-]?\d+$/u.test(text) || !Number.isSafeInteger(Number(text)))
@@ -100,22 +103,20 @@ function validateStr(scalar: Extract<Scalar, { kind: 'str' }>, raw: string): Out
 
 function validateScalar(scalar: Scalar, raw: string): Outcome {
   switch (scalar.kind) {
-    case 'uuid': {
-      const value = parseUuid(raw);
-      return value === null ? failure('uuid_parsing', UUID_MESSAGE) : { ok: true, value };
-    }
-    case 'date': {
-      const value = parseRequestDate(raw);
-      return value === null
-        ? failure('date_parsing', 'Expected a date in YYYY-MM-DD format')
-        : { ok: true, value };
-    }
-    case 'datetime': {
-      const value = parseDatetime(raw);
-      return value === null
-        ? failure('datetime_parsing', 'Expected an ISO 8601 date or datetime')
-        : { ok: true, value };
-    }
+    case 'uuid':
+      return parsedOr(parseUuid(raw), 'uuid_parsing', UUID_MESSAGE);
+    case 'date':
+      return parsedOr(
+        parseRequestDate(raw),
+        'date_parsing',
+        'Expected a date in YYYY-MM-DD format',
+      );
+    case 'datetime':
+      return parsedOr(
+        parseDatetime(raw),
+        'datetime_parsing',
+        'Expected an ISO 8601 date or datetime',
+      );
     case 'int':
       return validateInt(scalar, raw);
     case 'float':

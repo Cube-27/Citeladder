@@ -76,9 +76,10 @@ function parseDatetimeSetting(name: string, raw: string): Date | null {
 }
 
 function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
-  const type = settingTypeSchema.safeParse(spec.type);
-  if (!type.success) throw new ConfigError(`${name} has an unknown setting type ${spec.type}`);
-  switch (type.data) {
+  const parsed = settingTypeSchema.safeParse(spec.type);
+  if (!parsed.success) throw new ConfigError(`${name} has an unknown setting type ${spec.type}`);
+  const type = parsed.data;
+  switch (type) {
     case 'int':
       return parseInteger(name, raw, spec);
     case 'float':
@@ -96,7 +97,7 @@ function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
     case 'decimal':
       return raw;
     default: {
-      const unhandled: never = type.data;
+      const unhandled: never = type;
       return unhandled;
     }
   }
