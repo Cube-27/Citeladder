@@ -60,7 +60,7 @@ export function PageFrame({
     <PageEmptyOfferProvider>
       <div
         data-page-width={width}
-        className={cn('flex min-w-0 flex-1 flex-col', width !== 'fill' && CENTRED)}
+        className={cn('flex min-w-0 flex-1 flex-col', PAGE_START[width])}
       >
         <Masthead
           title={resolved}
@@ -170,10 +170,16 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
 
 type PageWidth = ReturnType<typeof routeWidth> | 'fill';
 
-// Every page starts on the same left edge: the app container centres once, and a
-// narrower page only shortens its measure from the right.
+// Every tier centres in the main panel, so the space left and right of the column is
+// equal; the masthead, heading and strips read the same --page-start as the body.
 const COLUMN_START = 'ms-[var(--page-start)] w-full';
-const CENTRED = '[--page-start:max(0px,calc((100cqw_-_var(--container-app))/2))]';
+
+const PAGE_START: Record<PageWidth, string | false> = {
+  fill: false,
+  full: '[--page-start:max(0px,calc((100cqw_-_var(--container-app))/2))]',
+  narrow: '[--page-start:max(0px,calc((100cqw_-_var(--container-page))/2))]',
+  compact: '[--page-start:max(0px,calc((100cqw_-_var(--container-measure))/2))]',
+};
 
 const PAGE_COLUMN: Record<PageWidth, string | false> = {
   fill: false,
