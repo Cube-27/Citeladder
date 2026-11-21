@@ -66,9 +66,9 @@ export function CopyButton({
       aria-label={iconOnly ? iconLabel : props['aria-label']}
     >
       {status === 'copied' ? (
-        <Check className="size-4" aria-hidden />
+        <Check className="size-3.5" aria-hidden />
       ) : (
-        <Copy className="size-4" aria-hidden />
+        <Copy className="size-3.5" aria-hidden />
       )}
       {iconOnly ? null : label}
     </Button>

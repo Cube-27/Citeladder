@@ -164,7 +164,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             >
               <div ref={measure(message.id)} className="flex items-start gap-3 py-3 ps-4 pe-3">
                 <span className={cn('inline-flex h-5 shrink-0 items-center', className)}>
-                  <Icon className="size-4" aria-hidden />
+                  <Icon className="size-3.5" aria-hidden />
                 </span>
                 <div className="min-w-0 flex-1">
                   <ToastPrimitive.Title className="text-body-sm text-ink font-medium">
@@ -188,7 +188,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                   className="focus-ring text-ink-2 not-disabled:hover:overlay-hover not-disabled:hover:text-ink rounded-control -m-1 grid size-[var(--control-md)] shrink-0 place-items-center"
                   aria-label="Dismiss notification"
                 >
-                  <X className="size-4" aria-hidden />
+                  <X className="size-3.5" aria-hidden />
                 </ToastPrimitive.Close>
               </div>
             </ToastPrimitive.Root>

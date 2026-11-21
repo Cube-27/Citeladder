@@ -129,7 +129,10 @@ export function MenuSubTrigger({
       {value ? (
         <span className="text-ink-2 ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
       ) : null}
-      <ChevronRight className={cn('text-ink-2 size-4 shrink-0', !value && 'ms-auto')} aria-hidden />
+      <ChevronRight
+        className={cn('text-ink-2 size-3.5 shrink-0', !value && 'ms-auto')}
+        aria-hidden
+      />
     </MenuPrimitive.SubTrigger>
   );
 }
@@ -216,7 +219,7 @@ function Lead({ children }: Readonly<{ children?: ReactNode }>) {
   return (
     <span
       data-menu-lead=""
-      className="text-ink-2 flex size-4 shrink-0 items-center justify-center [&_svg]:size-4"
+      className="text-ink-2 flex size-4 shrink-0 items-center justify-center [&_svg]:size-3.5"
     >
       {children}
     </span>
@@ -258,7 +261,7 @@ export function MenuItem({
         <span className="text-ink-2 ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
       ) : null}
       {shortcut ? <span className="type-code text-ink-2 ms-4">{shortcut}</span> : null}
-      {selected ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
+      {selected ? <Check className="text-accent size-3.5 shrink-0" aria-hidden /> : null}
     </MenuPrimitive.Item>
   );
 }
@@ -290,7 +293,7 @@ function Indicator() {
   return (
     <span data-menu-lead="" className="text-ink flex size-4 shrink-0 items-center justify-center">
       <MenuPrimitive.ItemIndicator>
-        <Check className="size-4" aria-hidden />
+        <Check className="size-3.5" aria-hidden />
       </MenuPrimitive.ItemIndicator>
     </span>
   );

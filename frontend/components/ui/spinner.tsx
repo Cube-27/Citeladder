@@ -35,7 +35,7 @@ export function Spinner({
       data-live-rung=""
       className={cn('inline-flex shrink-0 items-center gap-2 align-middle', className)}
     >
-      <span aria-hidden className="inline-grid size-4 shrink-0 place-items-center">
+      <span aria-hidden className="inline-grid size-3.5 shrink-0 place-items-center">
         <span className="animate-live-rung rounded-mark block h-3 w-1 bg-current" />
       </span>
       {label && showLabel ? <span className="type-body text-ink-2">{label}</span> : null}

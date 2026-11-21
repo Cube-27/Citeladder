@@ -78,7 +78,7 @@ export function DateField({
             disabled={disabled}
             className="focus-ring text-ink-2 enabled:hover:text-ink not-data-[state=open]:enabled:hover:overlay-hover data-[state=open]:overlay-pressed data-[state=open]:text-ink rounded-mark hit-area inline-flex size-[var(--target-min)] shrink-0 items-center justify-center transition-colors"
           >
-            <CalendarDays className="size-4" aria-hidden />
+            <CalendarDays className="size-3.5" aria-hidden />
           </button>
         </DropdownPrimitive.Trigger>
         <DropdownPrimitive.Portal>

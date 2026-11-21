@@ -207,7 +207,7 @@ function FigureLabel({ segment, subLine }: FigurePart) {
     // Below 768 a marker that does not fit beside the label goes under it,
     // so the label never wraps a word to a line.
     <dt className="type-caption text-ink-2 phone:flex-wrap phone:gap-y-1 flex min-w-0 items-center gap-2">
-      {Glyph ? <Glyph aria-hidden className="size-4 shrink-0" /> : null}
+      {Glyph ? <Glyph aria-hidden className="size-3.5 shrink-0" /> : null}
       {text}
       {segment.marker || hint ? (
         <span className={cn('flex shrink-0 items-center gap-2', pressableLayer(segment))}>

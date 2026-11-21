@@ -49,7 +49,7 @@ export function CommandPaletteTrigger({
       aria-keyshortcuts="Meta+K Control+K"
       className={cn('text-ink-2 text-left', MASTHEAD_LABELLED, className)}
     >
-      <Search className="text-ink-2 size-4 shrink-0" aria-hidden />
+      <Search className="text-ink-2 size-3.5 shrink-0" aria-hidden />
       {/* The visible word stays short beside the shortcut; the name says it all. */}
       <span className="min-w-0 truncate">Search</span>
       <Kbd className="shell:inline-flex hidden">{isMac ? '⌘K' : 'Ctrl K'}</Kbd>

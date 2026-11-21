@@ -121,7 +121,7 @@ export function Calendar({
           onClick={() => setMonth((current) => addMonths(current, -1))}
           className="enabled:hover:overlay-hover enabled:active:overlay-pressed rounded-control inline-flex size-[var(--control-md)] items-center justify-center"
         >
-          <ChevronLeft className="size-4" aria-hidden />
+          <ChevronLeft className="size-3.5" aria-hidden />
         </Pressable>
         {/* Announced on change so a screen reader hears the month it moved to. */}
         <span aria-live="polite" className="type-body">
@@ -133,7 +133,7 @@ export function Calendar({
           onClick={() => setMonth((current) => addMonths(current, 1))}
           className="enabled:hover:overlay-hover enabled:active:overlay-pressed rounded-control inline-flex size-[var(--control-md)] items-center justify-center"
         >
-          <ChevronRight className="size-4" aria-hidden />
+          <ChevronRight className="size-3.5" aria-hidden />
         </Pressable>
       </div>
       <table className="border-collapse">

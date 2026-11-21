@@ -28,7 +28,7 @@ export function Disclosure({
       >
         {title}
         {/* It turns on the panel's timing (ui-motion.css). */}
-        <ChevronDown className="size-4 shrink-0" aria-hidden />
+        <ChevronDown className="size-3.5 shrink-0" aria-hidden />
       </summary>
       <div className="grid min-w-0 gap-3 pt-3">{children}</div>
     </details>

@@ -112,7 +112,7 @@ export function DocsSearchDialog() {
         onClick={(event) => show(event.currentTarget)}
         className="focus-ring bg-surface text-ink-muted border-line hover:border-line-strong text-body-sm shadow-edge h-[var(--control-md)] items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
       >
-        <Search className="size-4 shrink-0" aria-hidden />
+        <Search className="size-3.5 shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate" aria-hidden>
           Search docs
         </span>
@@ -223,7 +223,7 @@ export function DocsSearchDialog() {
                         index === cursor && 'bg-surface-sunken',
                       )}
                     >
-                      <FileText className="text-ink-muted mt-0.5 size-4 shrink-0" aria-hidden />
+                      <FileText className="text-ink-muted mt-0.75 size-3.5 shrink-0" aria-hidden />
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="text-body-sm text-ink truncate font-medium">
                           <Marked text={result.title} query={query} />

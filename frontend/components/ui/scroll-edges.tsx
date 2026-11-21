@@ -187,7 +187,7 @@ function ScrollStep({
         className,
       )}
     >
-      <Glyph className="size-4" aria-hidden />
+      <Glyph className="size-3.5" aria-hidden />
     </button>
   );
 }

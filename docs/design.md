@@ -67,7 +67,9 @@ the job, never a size.
 - **Spacing:** 2, 4, 8, 12, 16, 24, 32, 48 only.
 - **Controls:** 28 high; 44 below 900px or under a coarse pointer, and on
   sign-in, account and setup pages (the website's height, `control-lg`).
-  Icons 16 in `ink-2`. Every target is at least 24×24.
+  Icons 14 in `ink-2` (Tabler, the `Icon` atom), centred on and no taller than
+  the 14px text beside them; empty-state tiles and website wells draw larger.
+  Every target is at least 24×24.
 - **Radii:** tag 4 (`rounded-mark`), control 6 (`rounded-control`), panel,
   table and strip 8 (`rounded-card`), overlay 12 (`rounded-overlay`); `full`
   only for avatars, dots and switch tracks.
@@ -118,7 +120,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   `panel` fill, the page's only scroller. Below 900 the panel fills the
   window and the header's menu button opens the sidebar in a drawer.
 - **Page header**, 44 high with a `rule`: the page title as a breadcrumb
-  (section icon, section › page; a record adds its collection, and its name
+  (section › page; a record adds its collection, and its name
   is the h1 above the strips), then secondary actions, at most one primary
   action, Search ⌘K and Ask agent at the right edge. The section is the nav
   group holding the current row, Agent, or Workspace; below 900 only the
@@ -205,7 +207,7 @@ One entry per family; wave 2 fills each from the layouts above.
   gap, never a zero. Series colours come from one map by identity
   (`SERIES_STROKE`, `SERIES_FILL`); position-coloured charts map onto it.
 - **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 28,
-  radius 6, flat; 16px icons in `ink-2` on a secondary. Secondary: `raised`
+  radius 6, flat; 14px icons in `ink-2` on a secondary. Secondary: `raised`
   with a `rule` edge, `raised-2` on hover, press or open. Quiet: transparent,
   `state-hover` fill. Primary: `ink` fill, `panel`-coloured text, at most one
   per view. Danger: secondary with negative text; filled only to confirm in a
@@ -213,7 +215,7 @@ One entry per family; wave 2 fills each from the layouts above.
   website keeps its layered `.face`.
 - **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 28, `rule`
   edge on `panel`, `control-line` on hover; focused, an accent edge and its
-  glow; invalid, a negative edge and a negative glow. 16px leading icon. Checkbox and radio
+  glow; invalid, a negative edge and a negative glow. 14px leading icon. Checkbox and radio
   take the same edge and an `ink` fill when on; the switch is an `ink` track
   when on. Several short values ([`ValuesInput`](../frontend/components/ui/chip-input.tsx))
   are 24-high tokens on `state-selected`, a suggestion dashed with one accept
@@ -234,7 +236,7 @@ One entry per family; wave 2 fills each from the layouts above.
   draft is dashed; Kbd and composer chips share the face. Status pill
   (`StatusMark`): 20 high, radius full, `rule` edge, the tone's 6px dot, 12px
   at 500 in `ink`; a live state draws the spinner and priority its bars.
-- **Navigation.** Sidebar rows: 16px icon, label, 8 apart, radius 6, `ink`
+- **Navigation.** Sidebar rows: 14px icon, label, 8 apart, radius 6, `ink`
   at rest and `state-hover` on hover; a group label folds its rows and a
   folded group still shows the current row. Collapsed (⌘\ or the toggle,
   remembered per browser) the sidebar is a 56 rail of 40 buttons, one per

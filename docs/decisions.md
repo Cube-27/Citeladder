@@ -289,6 +289,8 @@ how to add or change an entry.
 - **AR-16** Distribution shares and the intent mix are split bars in 5% steps
   totalling 100. **AR-17** A page whose content fits shows no scrollbar
   (2026-11-21).
+- **AR-18 Icons** are Tabler's. A glyph beside text is centred on it and draws
+  no taller than the text, so 14px beside the 14px body (2026-11-21).
 
 ## Audit remediation (owner 2026-11-12)
 
