@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useParams } from 'react-router-dom';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 import { makePrompt, makeSet, makeSetList } from '@/test/fixtures/prompts';
 import { makeProject } from '@/test/fixtures/project';
@@ -10,11 +10,6 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
 import { AnalyzePageDialog } from './analyze-page-dialog';
-
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useManagedPlan: () => false,
-  useEntitlement: () => ({ hasCapability: () => true }),
-}));
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const CRAWL = '99999999-9999-4999-8999-999999999999';
@@ -88,6 +83,7 @@ async function openDialog() {
     </Routes>,
     {
       initialEntries: ['/actions'],
+      entitlement: { grants: ['agent'] },
       projectSelection: {
         activeProjectId: PROJECT,
         activeProject: makeProject({ id: PROJECT }),

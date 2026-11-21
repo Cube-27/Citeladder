@@ -2,16 +2,11 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
 import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
-
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useManagedPlan: () => false,
-  useEntitlement: () => ({ hasCapability: () => true }),
-}));
 
 import { ChatScreen } from './chat-screen';
 import {
@@ -33,6 +28,7 @@ function renderChat() {
     </Routes>,
     {
       initialEntries: [`/agent/chats/${CHAT}`],
+      entitlement: { grants: ['agent'] },
       projectSelection: {
         activeProjectId: PROJECT,
         activeProject: makeProject({ id: PROJECT }),
