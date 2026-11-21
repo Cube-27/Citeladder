@@ -18,7 +18,7 @@ import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import {
   type Absent,
-  formatTableTimestamp,
+  formatDisplayTimestamp,
   isAbsent,
   readableUrl,
   urlCellText,
@@ -419,7 +419,7 @@ export function TableTime({
   // A date cut by a narrow column keeps its whole text in ClampText's tooltip.
   return (
     <ClampText className="tabular-nums">
-      <time dateTime={value}>{formatTableTimestamp(value, timeZone)}</time>
+      <time dateTime={value}>{formatDisplayTimestamp(value, timeZone)}</time>
     </ClampText>
   );
 }

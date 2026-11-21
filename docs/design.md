@@ -205,8 +205,9 @@ One entry per family; wave 2 fills each from the layouts above.
   footer 12 by 24 under a hairline.
 - **States.** Loading draws the final geometry (a table its head over block
   rows, a strip its cells). Empty and error sit quietly inside the frame of
-  the content they replace. A notice is a `rule`-edged strip with the
-  tone's 6px dot and the tone's word for screen readers, never a fill.
+  the content they replace. A notice is a line of text with no frame
+  (owner, 2026-11-21): the tone's 6px dot and the tone's word for screen
+  readers, never a fill.
 - **Charts.** Your series is the accent, drawn last; a missing period is a
   gap, never a zero. Series colours come from one map by identity
   (`SERIES_STROKE`, `SERIES_FILL`); position-coloured charts map onto it.

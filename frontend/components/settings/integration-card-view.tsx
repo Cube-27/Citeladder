@@ -21,8 +21,6 @@ import {
   SettingsGroup,
   settingRowsClasses,
 } from '@/components/ui/setting-row';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatTimeZoneNote } from '@/lib/format';
 import {
   integrationsApi,
   integrationsMutations,
@@ -208,8 +206,6 @@ function ConnectedCard({
 }: Readonly<{ workspaceId: string; family: GrantFamily; grant: GrantModel }>) {
   // Connecting and disconnecting are credential actions.
   const canManage = useWorkspaceCapability('manage_credentials');
-  const timeZone = useDisplayTimeZone();
-  const datesShown = grant.connections.some((connection) => connection.last_synced_at !== null);
   const actions = canManage ? (
     <>
       {grant.status === 'revoked' ? (
@@ -226,7 +222,6 @@ function ConnectedCard({
       <SettingsGroup
         title={<GrantTitle family={family} />}
         status={<GrantStatus family={family} grant={grant} />}
-        description={datesShown ? formatTimeZoneNote(timeZone) : undefined}
         action={actions}
       >
         <GrantAlert family={family} status={grant.status} />

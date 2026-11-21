@@ -79,7 +79,6 @@ const CONTROL_ROLES = [
   'input.height',
   'select.height',
   'segmented.height',
-  'scroll-step.height',
   'data-table-header.height',
 ] as const;
 /** The tab strip is one height, its tabs filling it. */
@@ -147,13 +146,6 @@ function measure({ route }: { route: string }) {
     // A checkbox is its own 16px box, and a column header's sort or hint
     // button is the header's label, measured as `data-table-header.height`.
     if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
-    // A wide table's pair of sideways steppers are 28px glyph buttons
-    // (`ScrollSteppers`, components/ui/scroll-edges.tsx), measured as
-    // `scroll-step.height`; a tab row's edge steppers are 28 controls.
-    if (element.matches('[data-scroll-steppers] > [data-scroll-step]')) {
-      add('scroll-step.height', element, element.getBoundingClientRect().height);
-      continue;
-    }
     // A work tree's level rows and a pressable figure's cell are whole-row
     // targets (components/ui/work-tree.tsx, figure-strip.tsx), measured as their own roles.
     if (element.matches('[data-tree-row]')) {
@@ -680,14 +672,13 @@ const ROUTE_GROUPS: Readonly<Record<string, readonly PageState[]>> = {
     },
     {
       // A measured prompt: the figure and mark columns' floors pass the 982
-      // column, so the table scrolls sideways behind its steppers.
+      // column, so the table scrolls sideways.
       route: '/prompts',
       label: '/prompts (measured)',
       stubs: [
         ['**/api/v1/prompt-sets?*', PROMPT_SETS],
         [/\/visibility\/prompts(\?.*)?$/, [PROMPT_METRIC]],
       ],
-      required: ['scroll-step.height'],
     },
   ],
   runs: [

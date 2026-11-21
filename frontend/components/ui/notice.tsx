@@ -121,9 +121,10 @@ function MessageNoticeView({
       data-notice-tone={tone}
       className={cn(
         textRole('body'),
-        // Actions that do not fit beside the text wrap under it, at the right;
-        // below 768 they sit under the message, on its left edge.
-        'border-rule bg-surface rounded-card flex flex-wrap items-start gap-2 border px-3 py-2',
+        // No frame (owner, 2026-11-21): the dot and the words carry it. Actions
+        // that do not fit beside the text wrap under it, at the right; below
+        // 768 they sit under the message, on its left edge.
+        'flex flex-wrap items-start gap-2',
         className,
       )}
     >

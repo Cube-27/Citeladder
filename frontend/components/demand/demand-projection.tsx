@@ -246,7 +246,7 @@ export function demandControls(demand: Demand): ReactNode {
         <Inline
           as="span"
           gap="status"
-          className="rail:flex-nowrap rail:whitespace-nowrap items-baseline whitespace-normal"
+          className="rail:flex-nowrap rail:whitespace-nowrap items-center whitespace-normal"
         >
           <span>
             <InlineFigure>{formatCount(snapshot.signals.length)}</InlineFigure>

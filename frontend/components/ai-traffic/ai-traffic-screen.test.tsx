@@ -521,7 +521,6 @@ describe('AI Traffic state and navigation', () => {
     expect(await screen.findByRole('heading', { name: 'Connect a traffic source' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Period:/ })).not.toBeInTheDocument();
-    expect(screen.queryByText(/^Times in /)).not.toBeInTheDocument();
   });
   it('persists tab selection, renders accessible activity and exports the selected filters', async () => {
     let exportStatus: string | null = null;
@@ -721,7 +720,9 @@ describe('AI Traffic state and navigation', () => {
       'Sources: Crawlers · Referrals · Visibility · Site health',
     );
     expect(record('Crawler requests')).toBeUndefined();
-    expect(record('First and last observations')).toBe('—None');
+    expect(
+      within(panel).getByRole('heading', { name: 'First and last observations' }).parentElement,
+    ).toHaveTextContent('First and last observations—None');
     mswServer.use(
       http.get(
         root + '/ai-traffic/pages/' + page.url_hash,
