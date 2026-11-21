@@ -213,10 +213,6 @@ export class SiteFixtures extends VisibilityFixtures {
       )
       .execute();
   }
-  /**
-   * A worker held to the seed's crawl. The local database is shared with other
-   * test runs, so an unscoped worker could claim and run their tasks.
-   */
   worker(seed: SiteSeed, options: Omit<SiteWorkerOptions, 'taskScope'> = {}) {
     return new SiteHealthWorker(this.siteDb, {
       ...options,

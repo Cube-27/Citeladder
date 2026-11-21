@@ -95,7 +95,7 @@ export async function provisionAccount(
     createdId = created.id;
     owned = [created];
   }
-  for (const workspace of owned) await ensureWorkspaceBilling(db, workspace.id, user, options); // NOSONAR -- One locked transaction: statements run in order.
+  for (const workspace of owned) await ensureWorkspaceBilling(db, workspace.id, user, options); // NOSONAR
   return createdId;
 }
 
@@ -118,7 +118,6 @@ export async function createWorkspace(trx: Database, userId: string, name: strin
   return workspaceView(workspace, 'owner');
 }
 
-/** Root lock orders membership/invitation writes and rechecks live authority. */
 export async function lockAuthorizedWorkspace(
   db: Database,
   workspaceId: string,

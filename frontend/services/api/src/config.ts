@@ -212,10 +212,6 @@ export function databaseSettings(source: SettingSource) {
   };
 }
 
-/**
- * Bounds on each migration statement: a lock wait that would queue the serving
- * revision's queries behind DDL fails fast, and no statement outlasts the job.
- */
 export function migrationTimeouts(source: SettingSource) {
   return {
     lockTimeoutMs: resolveSetting('migration_lock_timeout_ms', source),
@@ -273,11 +269,6 @@ export type ServiceConfig = {
     trustedProxies: TrustedProxies;
     oauthSettings: Record<string, string | number | boolean>;
     limits: Record<keyof typeof policy.abuse, number>;
-    /**
-     * Turnstile siteverify secret for sign-up and email-link requests. Empty
-     * outside development means unconfigured, and those requests fail closed;
-     * Cloudflare's test secrets are honoured only where `testKeysAllowed`.
-     */
     turnstile: { secret: string; testKeysAllowed: boolean };
     fetch?: typeof fetch;
   };
@@ -300,11 +291,6 @@ function isDevelopmentEnv(appEnv: AppEnv): boolean {
   return policy.development_env_names.includes(appEnv);
 }
 
-/**
- * The startup environment, or a refusal (AR-1): an unset APP_ENV must not fall
- * back to development, which would switch off every production assertion. The
- * setting itself already refuses an unknown or misspelled name.
- */
 function appEnvironment(settings: Settings): AppEnv {
   const appEnv = resolveSetting('app_env', settings);
   if (appEnv === 'development' || appEnv === 'test' || appEnv === 'production') return appEnv;
@@ -321,7 +307,6 @@ function turnstileSettings(configured: string, appEnv: AppEnv): ServiceConfig['a
   };
 }
 
-/** A Cloudflare test secret would accept the public dummy token: never outside development. */
 function turnstileProblems(config: ServiceConfig): string[] {
   const { secret, testKeysAllowed } = config.auth.turnstile;
   return !testKeysAllowed && turnstile.test_secrets.has(secret)
@@ -349,7 +334,6 @@ export function secretIsWeak(value: string): boolean {
 
 function productionFrontendUrl(value: string): boolean {
   try {
-    // Inspect the unnormalized path too: URL would collapse /private/.. to /.
     if (!/^https:\/\/[^/?#\\@]+\/?$/iu.test(value.trim())) return false;
     const url = new URL(value);
     let host = url.hostname;
@@ -397,9 +381,7 @@ function productionSecretProblems(config: ServiceConfig): string[] {
     const url = new URL(config.databaseUrl);
     password = decodeURIComponent(url.password);
     role = decodeURIComponent(url.username);
-  } catch {
-    /* Report without the URL. */
-  }
+  } catch {}
   if (role !== APP_DATABASE_ROLE)
     issues.push(
       `database_url must connect as the ${APP_DATABASE_ROLE} role, never the schema owner`,
@@ -480,8 +462,6 @@ export function loadConfig(env: Env = process.env): ServiceConfig {
     razorpay: razorpaySettings(settings),
     appName: setting('app_name'),
     appEnv,
-    // Every interface by default, as a bridged container needs; a host-network
-    // local deployment pins loopback.
     host: String(settings.of(listenSpecs.host)).trim() || '0.0.0.0',
     port: parsePort(String(settings.of(listenSpecs.port))),
     databaseUrl: setting('database_url'),

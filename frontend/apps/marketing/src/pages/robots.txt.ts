@@ -1,7 +1,5 @@
 import { absoluteUrl } from '@/lib/seo/site';
 
-// Retired app paths are not disallowed: the apex answers them with 404, and a
-// crawler has to fetch a URL to see that it is gone.
 const privatePaths = ['/api/'];
 const aiCrawlers = [
   'GPTBot',

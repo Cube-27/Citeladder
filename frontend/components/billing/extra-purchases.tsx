@@ -30,11 +30,6 @@ function gateReason(entry: Extra): string | null {
   return billingReasonMessage(entry.unavailable_reason);
 }
 
-/**
- * Buy. While the catalog gates it, it is `aria-disabled` rather than
- * disabled, so it stays focusable and its reason (said under the row's
- * controls) reaches a tooltip and `aria-describedby`.
- */
 function BuyButton({
   name,
   disabled,
@@ -76,8 +71,6 @@ function ExtraRow({
   disabled: boolean;
   onBuy: ExtraPurchase;
 }>) {
-  // Kept as typed text and clamped when read: clamping each keystroke turns
-  // clearing the field and typing 3 into "13", then the maximum.
   const [typed, setTyped] = useState(String(entry.quantity_min));
   const quantity = clampQuantity(Number(typed), entry);
   const purchasable = isPurchasable(entry);

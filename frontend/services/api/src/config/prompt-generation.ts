@@ -82,12 +82,6 @@ export const promptGeneration = {
     mean_words: widen<[number, number]>([6, 12]),
     shortfall_max: 0.1,
   },
-  /**
-   * Grounding in the project's own search data: persisted Search Console
-   * queries and published Search Intelligence keywords steer draft phrasing.
-   * Nothing is fetched for it, and impressions or search volume are only an
-   * ordering weight, never AI prompt volume.
-   */
   observed: {
     gsc_window_days: 90,
     gsc_min_impressions: 10,

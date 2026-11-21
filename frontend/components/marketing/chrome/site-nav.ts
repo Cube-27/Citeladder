@@ -1,13 +1,5 @@
-/**
- * The route a request pathname names. The site builds with
- * `build.format: 'file'`, so a prerendered page sees `/index.html` or
- * `/pricing.html` where the browser shows `/` and `/pricing`; every
- * current-page and homepage check compares against the route form.
- */
 export function routePath(pathname: string): string {
   let route = pathname.replace(/\.html$/, '').replace(/\/index$/, '');
-  // Trailing slashes are trimmed by scanning, not a `/+$` pattern, which
-  // backtracks on a long run of slashes.
   let end = route.length;
   while (end > 0 && route[end - 1] === '/') end -= 1;
   route = route.slice(0, end);

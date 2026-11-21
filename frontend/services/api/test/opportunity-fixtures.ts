@@ -178,42 +178,38 @@ export function seedOpportunityScenario(
       .execute();
     for (const [index, text] of texts.entries()) {
       const intent = index === 0 ? 'purchase' : 'discovery';
-      const promptId = await prompt(trx, setId, text); // NOSONAR -- One transaction: fixture statements run in order.
+      const promptId = await prompt(trx, setId, text); // NOSONAR
       promptIds.push(promptId);
-      await trx // NOSONAR -- One transaction: fixture statements run in order.
+      await trx // NOSONAR
         .updateTable('prompts')
         .set({ theme: 'crm', intent })
         .where('id', '=', promptId)
         .execute();
-      const execution =
-        await /* NOSONAR -- One transaction: fixture statements run in order. */ fixtures.execution(
-          seed,
-          {
-            auditId,
-            promptIndex: index,
-            promptText: text,
-            theme: 'crm',
-            engine: 'gemini',
-            transportModel: 'gemini-flash-latest',
-            transportProvider: 'google',
-            answerText: 'fixture answer',
-            analysis: {
-              competitorMentions: index === 0 ? ['Globex'] : [],
-              citations:
-                index === 0
-                  ? [{ url: 'https://globex.com/crm', title: 'Globex CRM', matched: 'Globex' }]
-                  : [{ url: 'https://acme.com/guide', title: 'Acme guide', isOwned: true }],
-            },
-          },
-        );
+      const execution = await /* NOSONAR */ fixtures.execution(seed, {
+        auditId,
+        promptIndex: index,
+        promptText: text,
+        theme: 'crm',
+        engine: 'gemini',
+        transportModel: 'gemini-flash-latest',
+        transportProvider: 'google',
+        answerText: 'fixture answer',
+        analysis: {
+          competitorMentions: index === 0 ? ['Globex'] : [],
+          citations:
+            index === 0
+              ? [{ url: 'https://globex.com/crm', title: 'Globex CRM', matched: 'Globex' }]
+              : [{ url: 'https://acme.com/guide', title: 'Acme guide', isOwned: true }],
+        },
+      });
       analysisIds.push(execution.analysisId!);
-      await trx // NOSONAR -- One transaction: fixture statements run in order.
+      await trx // NOSONAR
         .updateTable('audit_prompt_snapshots')
         .set({ prompt_id: promptId, intent })
         .where('audit_id', '=', auditId)
         .where('prompt_index', '=', index)
         .execute();
-      await trx // NOSONAR -- One transaction: fixture statements run in order.
+      await trx // NOSONAR
         .updateTable('response_analyses')
         .set({
           analyzer_version: 'b6-analysis-1',
@@ -221,7 +217,7 @@ export function seedOpportunityScenario(
         })
         .where('id', '=', execution.analysisId!)
         .execute();
-      await trx // NOSONAR -- One transaction: fixture statements run in order.
+      await trx // NOSONAR
         .updateTable('citations')
         .set({
           analyzer_version: 'b6-analysis-1',
@@ -230,7 +226,7 @@ export function seedOpportunityScenario(
         })
         .where('analysis_id', '=', execution.analysisId!)
         .execute();
-      await trx // NOSONAR -- One transaction: fixture statements run in order.
+      await trx // NOSONAR
         .updateTable('competitor_mentions')
         .set({ analyzer_version: 'b6-analysis-1' })
         .where('analysis_id', '=', execution.analysisId!)
@@ -373,7 +369,7 @@ export async function angleRun(
     const lineageId = angle.lineageId ?? randomUUID();
     lineages.push(lineageId);
     if (!angle.lineageId)
-      await db // NOSONAR -- Fixture rows insert in a fixed order.
+      await db // NOSONAR
         .insertInto('content_angle_lineages')
         .values({
           id: lineageId,
@@ -386,7 +382,7 @@ export async function angleRun(
         .execute();
     const angleId = randomUUID();
     const counts = angle.members.map((member) => member.citations ?? 2);
-    await db // NOSONAR -- Fixture rows insert in a fixed order.
+    await db // NOSONAR
       .insertInto('content_angles')
       .values({
         id: angleId,
@@ -403,7 +399,7 @@ export async function angleRun(
         created_at: now,
       })
       .execute();
-    await db // NOSONAR -- Fixture rows insert in a fixed order.
+    await db // NOSONAR
       .insertInto('content_angle_members')
       .values(
         angle.members.map((member, index) => ({
@@ -423,7 +419,7 @@ export async function angleRun(
         })),
       )
       .execute();
-    await db // NOSONAR -- Fixture rows insert in a fixed order.
+    await db // NOSONAR
       .insertInto('content_angle_owned_matches')
       .values({
         id: randomUUID(),

@@ -280,8 +280,6 @@ async function loadOutcomes(
     ])
     .where('workspace_id', '=', scope.workspaceId)
     .where('audit_id', 'in', auditIds)
-    // Scoped to the cohort these rows describe, so a comparison prompt never
-    // absorbs the core answers at the same index.
     .where('cohort', 'in', [...selectedCohorts(cohort)]);
   if (engine) answers = answers.where('logical_engine', '=', engine);
   let taskQuery = db
@@ -395,9 +393,6 @@ async function enrichOutcomes(
     item.avg_position = ranked.length
       ? round2(ranked.reduce((total, value) => total + value, 0) / ranked.length)
       : null;
-    // A cell is one (engine, model) pair, counted against that pair's tasks.
-    // A pair whose every task failed keeps its cell, so it reads as failed
-    // rather than vanishing.
     const routeKey = (row: { logical_engine: string; transport_model: string }) =>
       JSON.stringify([row.logical_engine, row.transport_model]);
     const cellsByRoute = groupBy(answered, routeKey);

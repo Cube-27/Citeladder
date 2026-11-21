@@ -4,7 +4,6 @@ import { ApiError, notFound } from '../errors.ts';
 import { labelEndedLaunch } from '../probes/launch-end.ts';
 import { auditPolicy } from './config.ts';
 
-/** Caller holds the audit row lock; status and its event commit together. */
 export async function transitionAudit(
   db: Database,
   workspaceId: string,

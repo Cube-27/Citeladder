@@ -105,8 +105,6 @@ export async function loadExecutionContext(
   } = {},
 ) {
   const { at = new Date(), env = process.env, access } = options;
-  // A cached check reads outside the transaction, so it must run before taking the
-  // transaction's connection: with a one-connection pool it would otherwise wait on itself.
   if (access) await access(claimed.workspace_id);
   return db.transaction().execute(async (trx) => {
     const locked = await ownedAuditTask(trx, claimed, owner);

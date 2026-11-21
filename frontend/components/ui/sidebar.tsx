@@ -68,7 +68,6 @@ function useScrollEnds(ref: RefObject<HTMLElement | null>): ScrollEnds {
     const node = ref.current;
     if (!node) return;
     const update = () => {
-      // A 1px tolerance: the rounded heights may differ by 1 with nothing hidden.
       const hidden = node.scrollHeight - node.clientHeight;
       const top = hidden > 1 && node.scrollTop > 1;
       const bottom = hidden > 1 && node.scrollTop < hidden - 1;

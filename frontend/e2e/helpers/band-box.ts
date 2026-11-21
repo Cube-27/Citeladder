@@ -2,9 +2,6 @@ import type { Locator } from '@playwright/test';
 
 export type Box = readonly number[] | null;
 
-// A fixed or bottom-pinned band is measured in viewport coordinates. A top-sticky band is
-// measured where it sits in flow, so pinning it by scrolling (a click's scroll-into-view)
-// is not a move, while anything that pushes it in flow still is.
 export async function bandBox(part: Locator): Promise<Box> {
   if (!(await part.boundingBox())) return null;
   return part.evaluate((node) => {

@@ -49,10 +49,8 @@ it('gives one mailbox one trial across address aliases', async () => {
   const name = `trial${randomUUID().slice(0, 8)}`;
   const first = await publicSignup(`${name.slice(0, 3)}.${name.slice(3)}+one@gmail.com`);
   await ageTrial(first.accountId);
-  // A tag, dots and the googlemail.com spelling all reach the same Gmail inbox.
   const alias = await publicSignup(`${name.toUpperCase()}+two@googlemail.com`);
   expect((await workspaceAccess(db, alias.workspaceId)).status).toBe('trial_expired');
-  // Any domain's tag is dropped, but outside Gmail a dot names another mailbox.
   await ageTrial((await publicSignup(`${name}+tag@example.test`)).accountId);
   const untagged = await publicSignup(`${name}@example.test`);
   expect((await workspaceAccess(db, untagged.workspaceId)).status).toBe('trial_expired');

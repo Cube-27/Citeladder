@@ -148,7 +148,6 @@ describe('probe admission', () => {
       quote.credits,
     ]);
     expect((await probeStatus(db, t, runtime)).quote.balance).toBe(quote.balance! - quote.credits);
-    // Managed, Brazil skips Gemini (no location control) and the Gemini app (no Portuguese).
     await managedPlan(db, t.workspaceId);
     const managed = (await probeStatus(db, t, runtime)).quote;
     expect(managed.answers).toBe((5 + 3) * perMarket);

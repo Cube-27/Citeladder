@@ -21,8 +21,6 @@ import { containsPattern } from '../db/like.ts';
 import { LISTED_ACTION } from '../opportunities/actions.ts';
 import { statusView } from '../opportunities/action-status.ts';
 
-// A tool call that authorizes several reads checks grant and membership once.
-// Only a principal minted for one call shares its check; any other is live.
 const perCall = new WeakMap<EvidencePrincipal, Promise<string[]> | null>();
 export function principalForCall(principal: EvidencePrincipal): EvidencePrincipal {
   const call = { ...principal };
@@ -82,7 +80,6 @@ export async function authorizeProject(
 ) {
   const id = parseUuid(projectId);
   if (!id) throw new McpInputError('project_id must be a UUID');
-  // A pinned caller learns no more about a sibling project than about a missing one.
   if ('kind' in principal && principal.projectId !== id)
     throw new McpInputError('Project was not found in this account');
   const workspaces = await authorizedWorkspaceIds(db, principal);
@@ -107,8 +104,6 @@ export async function writeActor(
       'This connection can only read. Reconnect CiteLadder and tick Allow changes to make changes.',
     );
   const project = await authorizeProject(db, principal, projectId);
-  // Shared until commit: a revocation, scope change or demotion waits for, or
-  // precedes, the change.
   const grant = await db
     .selectFrom('mcp_oauth_grants')
     .select('scopes')

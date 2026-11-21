@@ -2,8 +2,6 @@ import { record } from '../db/json.ts';
 import type { WebSource } from '../models/conversation.ts';
 import { agentPolicy } from './contracts.ts';
 
-// Linear: a label never spans another `[`, so no start position rescans the
-// same text, and `[^)]*` takes the URI and any padding before `)` in one pass.
 const LINKED_REF = /\[([^[\]\n]+)\]\(\s*citeladder:\/\/[^)]*\)/giu;
 const BARE_REF = /\(?citeladder:\/\/[^\s<>()[\]"']*[^\s<>()[\]"'.,;:!?]\)?/giu;
 const UUID_TEXT = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
@@ -61,10 +59,6 @@ export function readSources(refs: readonly { record_uri?: string | null }[]) {
   return refs.flatMap((ref) => (ref.record_uri ? [ref.record_uri] : []));
 }
 
-/**
- * Unique, in first-read order. Never truncated: derived work keeps its full
- * provenance, which the turn's read budget and the chat's turn limit bound.
- */
 export function uniqueSources(...groups: Iterable<string>[]) {
   return [...new Set(groups.flatMap((group) => [...group]))];
 }

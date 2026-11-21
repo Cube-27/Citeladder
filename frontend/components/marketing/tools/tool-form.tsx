@@ -6,10 +6,6 @@ import { Textarea } from '@/components/ui/textarea';
 
 import { ToolPanel } from '../sections/tool-panel';
 
-/**
- * One tool input. No `maxLength`: a browser would cut a long paste silently, so
- * the tool refuses over-limit input with its "Input exceeds" error instead.
- */
 export function ToolInput({
   label,
   value,
@@ -132,8 +128,6 @@ export function ToolForm({
               Load example
             </Button>
           </div>
-          {/* The visible status moves between the result well and the bar; this
-              one live region stays mounted, so every change is announced. */}
           <output className="sr-only">{status}</output>
           {error && (
             <p role="alert" className="text-negative">

@@ -179,7 +179,7 @@ export const integrationRoutes = [
       const queued = [];
       let syncing = 0;
       for (const target of targets) {
-        const run = await onDemandRun(db, workspaceId, target); // NOSONAR -- One enqueue per mapping keeps the request to one pool connection.
+        const run = await onDemandRun(db, workspaceId, target); // NOSONAR
         if (run === 'syncing') syncing++;
         else if (run) queued.push(run);
       }

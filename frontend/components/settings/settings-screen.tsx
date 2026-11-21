@@ -60,10 +60,6 @@ function ProjectDeletionControls() {
       onSuccess: (remaining, deletedId) => {
         const next = remaining.find((project) => project.id !== deletedId) ?? null;
         if (next) {
-          // Navigate, do not merely re-select: the deleted id may be the one in
-          // `?project=`, and leaving it there would resolve to a project that no
-          // longer exists and present as "that project is unavailable". Replace
-          // rather than push for the same reason — Back must not return to it.
           selectProject(next.id, { replace: true });
           setConfirmOpen(false);
         } else {
@@ -142,7 +138,7 @@ function ProjectDeletionControls() {
   );
 }
 
-// react-doctor-disable-next-line react-doctor/no-giant-component -- this owns tab focus; members, providers, and integrations are extracted.
+// react-doctor-disable-next-line react-doctor/no-giant-component
 export function SettingsScreen() {
   const user = useSessionUser();
   const timeZone = useDisplayTimeZone();

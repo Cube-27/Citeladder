@@ -28,11 +28,6 @@ const SOURCE_MEDIUM = referrals.datasets.source_medium_daily;
 
 type RefreshWindow = { start: string; end: string; granularity: string; presetDays: number | null };
 
-/**
- * The sync window, then the preset family, each at every granularity. The
- * family comes last so a window that is both keeps the preset marker a preset
- * read matches on.
- */
 function refreshWindows(
   windowStart: string,
   windowEnd: string,
@@ -205,7 +200,7 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
         analyzer_version: analytics.ai_referral_analyzer_version,
         formula_version: analytics.ai_referral_formula_version,
       };
-      await trx // NOSONAR -- One transaction: window snapshots write in order.
+      await trx // NOSONAR
         .insertInto('ai_referrals_snapshots')
         .values({
           id: randomUUID(),

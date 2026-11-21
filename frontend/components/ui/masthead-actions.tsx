@@ -78,9 +78,7 @@ export function MastheadOverflow({
   const [menus] = useState(() => new Map<string, ReactNode>());
   const rowSlot = useContext(MastheadPrimarySlot) ?? null;
   const fold = useFold({ group, rowSlot, foldedSlot });
-  // The always-folded box renders with the group's first children, so it is there once `group` is.
   const more = group?.querySelector(ALWAYS) ? 'always' : fold.more;
-  // A folded control's overlay returns focus here (`returnTargetFor` in dialog.tsx).
   const moreId = useId();
 
   return (

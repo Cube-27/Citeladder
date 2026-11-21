@@ -18,7 +18,6 @@ function advisoryLockKey(family: LockFamily, id: string): bigint {
   const input = new Uint8Array(20);
   new DataView(input.buffer).setUint32(0, family.namespace);
   input.set(uuidBytes(id), 4);
-  // BLAKE2b personalization is 16 bytes; a shorter `person` is zero-padded.
   const personalization = new Uint8Array(16);
   personalization.set(new TextEncoder().encode(family.person));
   const digest = blake2b(input, { dkLen: 8, personalization });

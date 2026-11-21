@@ -235,11 +235,6 @@ export function YouTag() {
   return <Tag className="text-ink font-medium">You</Tag>;
 }
 
-/**
- * Whether a click on a pressable row landed on the row itself rather than on
- * one of its controls (a link, a button, the select or actions cell). React
- * bubbles portal clicks (an open menu's items) through the row: those don't count.
- */
 export function isRowSurfaceClick(event: MouseEvent<HTMLTableRowElement>): boolean {
   const row = event.currentTarget;
   if (!(event.target instanceof Element) || !row.contains(event.target)) return false;
@@ -313,7 +308,7 @@ export function UrlText({ url, origin = null }: Readonly<{ url: string; origin?:
         ref={ref}
         data-url-text=""
         data-truncated={cut || undefined}
-        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a cut address is a tab stop so the whole of it (the tooltip) is reachable by keyboard.
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
         tabIndex={cut ? 0 : undefined}
         className="rounded-mark flex min-w-0 whitespace-nowrap"
       >

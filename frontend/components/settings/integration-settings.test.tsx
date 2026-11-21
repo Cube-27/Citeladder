@@ -22,8 +22,6 @@ import { roles } from '@/services/api/src/config/workspaces.json';
 
 let search = '';
 const replaceState = vi.spyOn(window.history, 'replaceState');
-// Connect/Reconnect hard-navigates to the OAuth start 302 endpoint through the
-// lib/navigate seam (jsdom can't stub Location#assign).
 vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: vi.fn() }));
 const assignMock = vi.mocked(hardNavigate);
 

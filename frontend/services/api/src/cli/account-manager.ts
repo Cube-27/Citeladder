@@ -41,7 +41,6 @@ async function manageChoice(db: Database, session: OperatorSession): Promise<boo
   const choice = await accountPrompt('Choice');
   if (choice === '0') return false;
   try {
-    // Recheck between choices; no transaction/locks remain open during prompts.
     const members = await manageAccount(db, session, { kind: 'list' });
     if (choice === '1') console.log(members);
     else {
@@ -85,11 +84,6 @@ else {
       await terminalPassword('Operator password'),
     );
     console.log(`Managing ${workspaceId} as ${actor}`);
-    while (
-      await /* NOSONAR -- Interactive menu: one operator choice at a time. */ manageChoice(
-        db,
-        session,
-      )
-    ) {}
+    while (await /* NOSONAR */ manageChoice(db, session)) {}
   });
 }

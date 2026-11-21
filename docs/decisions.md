@@ -46,6 +46,9 @@ how to add or change an entry.
   [frontend architecture](frontend-architecture.md) owns the matrix.
 - **Source files are limited by tokens (6,000), not lines**; the 500-line module
   rule is gone. Owner, 2026-11-13; [Development](DEVELOPMENT.md#source-file-size).
+- **Source code has no comments.** Names, types, tests and owner docs carry
+  the meaning; a check enforces it and allows only machine-read directives.
+  Owner, 2026-11-21 (#1136).
 - **Three design checks, no more.** No literal colours in app code, WCAG AA
   contrast of token pairs, and no Radix import outside `components/ui`; every
   other visual choice is the owner's, held by review. Owner, 2026-11-20

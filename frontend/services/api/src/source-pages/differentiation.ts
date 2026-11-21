@@ -321,7 +321,7 @@ export function refreshDifferentiation(
         report: JSON.stringify(report),
         created_at: new Date(),
       };
-      const latest = await trx // NOSONAR -- One transaction: reports insert in order.
+      const latest = await trx // NOSONAR
         .selectFrom('content_differentiation_reports')
         .select(['owned_site_url_id', sql<boolean>`report = ${values.report}::jsonb`.as('same')])
         .where('workspace_id', '=', scope.workspaceId)
@@ -331,7 +331,7 @@ export function refreshDifferentiation(
         .orderBy('id', 'desc')
         .executeTakeFirst();
       if (latest?.same && latest.owned_site_url_id === values.owned_site_url_id) continue;
-      await trx // NOSONAR -- One transaction: reports insert in order.
+      await trx // NOSONAR
         .insertInto('content_differentiation_reports')
         .values(values)
         .execute();

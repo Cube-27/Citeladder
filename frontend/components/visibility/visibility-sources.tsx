@@ -71,10 +71,6 @@ export function VisibilitySources({
     );
   }
   return (
-    // Deliberately NOT keyed on the tab. Remounting threw away the React Query
-    // observer along with the panel, so `retainPreviousDataForScope` had no
-    // previous data to hold and the table emptied to a skeleton on every
-    // switch. The panel resets its own local state instead.
     <SourcesPanel
       dimension={tab === 'domains' ? 'domain' : 'url'}
       readNotCited={tab === 'read-not-cited'}

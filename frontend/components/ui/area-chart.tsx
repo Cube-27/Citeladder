@@ -208,7 +208,7 @@ function AreaPlot({
   return (
     <div
       ref={plotRef}
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- no native element names a plot as one group
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="group"
       aria-label={`${label}. Focus the chart and use the arrow keys to read each point.`}
       className="w-full"

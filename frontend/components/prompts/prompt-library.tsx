@@ -70,7 +70,6 @@ function usePromptToggle(scope: ProjectScope) {
   const press = (prompt: Prompt) => {
     if (saving.has(prompt.id)) return;
     setSaving((current) => new Set(current).add(prompt.id));
-    // Per-call promise: mutate's own callbacks fire only for the latest of overlapping calls.
     void mutation
       .mutateAsync({ promptId: prompt.id, enabled: !prompt.enabled })
       .catch(() => undefined)
@@ -193,7 +192,7 @@ function libraryTabs(
   return hasPrompts ? <PromptStatusTabs counts={counts} /> : undefined;
 }
 
-// react-doctor-disable-next-line react-doctor/no-giant-component -- this component only orchestrates queries/mutations; toolbar, topic rail, table, empty state, and dialogs are extracted.
+// react-doctor-disable-next-line react-doctor/no-giant-component
 export function PromptLibrary() {
   const { workspaceId, projectId, project } = useProjectScope();
   const scope = { workspaceId, projectId };
@@ -231,7 +230,6 @@ export function PromptLibrary() {
   const measured = measurementsOf(measurements);
   const evidence = usePromptEvidence();
   const toast = useToast();
-  // Per-call promises, not mutate's callbacks: those fire only for the latest of overlapping calls.
   const failedTo = (action: string) => (error: unknown) =>
     toast.notify(`Couldn't ${action}`, mutationNoticeForError(error, { action }).message, {
       tone: 'negative',

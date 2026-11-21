@@ -37,8 +37,6 @@ export const manifestSchema = z.object({
   workflow: z.object({ id: z.string(), format_id: z.string().nullable() }).optional(),
 });
 export type Manifest = z.infer<typeof manifestSchema>;
-/** Evidence owners authorize all origin IDs and return bounded persisted blocks.
- * No default adapter: a missing dependency must refuse admission, not drop origins. */
 export type ContextReader = (
   db: Database,
   scope: Scope,
@@ -174,7 +172,6 @@ function trimIssueGroup(supplied: SuppliedManifest, manifest: Manifest, over: ()
 function dropSections(supplied: SuppliedManifest, over: () => boolean) {
   for (const key of Object.keys(supplied.package.sections).reverse()) {
     if (!over()) break;
-    // Selected upstream documents must remain exact, even when they cannot fit.
     if (key === 'upstream_revision') continue;
     delete supplied.package.sections[key];
     supplied.omissions.push(`package.sections.${key}`);
@@ -249,8 +246,6 @@ export function suppliedManifest(
     omissions,
   };
   const over = () => JSON.stringify(supplied).length > limit;
-  // Background loses its place before the evidence the user selected. JSONB
-  // key order is not selection priority.
   if (over() && Object.hasOwn(supplied.package.sections, 'related_site')) {
     delete supplied.package.sections.related_site;
     omissions.push('package.sections.related_site');
@@ -276,7 +271,6 @@ export function suppliedManifest(
   };
 }
 function contextCitations(manifest: Pick<Manifest, 'action' | 'mentions'>): Set<string> {
-  // Other context blocks are working context, not a record citation grant.
   return new Set(
     [manifest.action, ...manifest.mentions].flatMap((action) => {
       if (!action) return [];

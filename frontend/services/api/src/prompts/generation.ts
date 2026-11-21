@@ -383,7 +383,6 @@ export async function generatePrompts(
   idempotencyKey: string | null = null,
 ) {
   if (idempotencyKey) {
-    // Authorize the set before revealing whether the key was used.
     await scopedPromptSet(db, workspaceId, setId);
     const prior = await replay(db, workspaceId, setId, input, idempotencyKey);
     if (prior) return prior;

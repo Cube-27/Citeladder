@@ -44,11 +44,6 @@ export function ownerDatabaseUrl(): string {
   return url;
 }
 
-/**
- * Run fixture work as the schema owner. The code under test connects as the
- * application role, which cannot update or delete append-only evidence,
- * attempt and ledger rows; a test that arranges or removes them does it here.
- */
 export async function asOwner<T>(work: (owner: Database) => Promise<T>): Promise<T> {
   const owner = createDatabase(testConfig({ DATABASE_URL: ownerDatabaseUrl() }));
   try {
@@ -114,14 +109,14 @@ export class Fixtures {
           'commerce',
           'search_intelligence',
         ])
-          await grant(trx, account, { key, value: 1, sourceKind: 'override' }); // NOSONAR -- one transaction connection; grants serialize.
+          await grant(trx, account, { key, value: 1, sourceKind: 'override' }); // NOSONAR
         for (const [key, value] of [
           ['prompt_runs_per_period', 100_000],
           ['project_slots', 1_000],
           ['prompt_slots', 10_000],
           ['ai_credits', 1_000_000],
         ] as const)
-          await grant(trx, account, { key, value, sourceKind: 'override', fixtureDefault: true }); // NOSONAR -- one transaction connection; grants serialize.
+          await grant(trx, account, { key, value, sourceKind: 'override', fixtureDefault: true }); // NOSONAR
       }
       return workspaceId;
     };
@@ -187,7 +182,6 @@ export class Fixtures {
 
   async cleanup(): Promise<void> {
     if (this.workspaces.length) {
-      // The append-only ledger does not cascade; every audit holds prompt runs.
       const workspaces = this.workspaces;
       await asOwner((owner) =>
         owner.deleteFrom('consumable_ledger').where('workspace_id', 'in', workspaces).execute(),

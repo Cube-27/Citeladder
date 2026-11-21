@@ -58,7 +58,7 @@ export async function nextDueDelay(
   for (const lane of lanes) {
     if (!lane.nextDue) continue;
     try {
-      const due = await lane.nextDue(); // NOSONAR -- One probe at a time keeps the shared pool free.
+      const due = await lane.nextDue(); // NOSONAR
       if (due && (earliest === null || due.getTime() < earliest)) earliest = due.getTime();
     } catch (error) {
       getLogger('workers.runner').exception('runner_next_due_failed', error, { lane: lane.name });
@@ -134,7 +134,7 @@ class LaneTurns {
       this.#states.filter((s) => s !== state && s.phase !== 'failed' && s.lane.group === group);
     return async () => {
       for (const { lane } of peers()) {
-        const due = await lane.nextDue?.(); // NOSONAR -- One probe at a time keeps the shared pool free.
+        const due = await lane.nextDue?.(); // NOSONAR
         if (due && due.getTime() <= Date.now()) return true;
       }
       return false;
@@ -186,9 +186,9 @@ export async function drainLanes(lanes: readonly RunnerLane[], options: DrainOpt
   const remaining = () => options.deadline - now();
   for (;;) {
     turns.startReady();
-    if (turns.running.size) await turns.next(canAdmit(), pollMs, pause, options.signal); // NOSONAR -- Wait for the next lane or poll.
+    if (turns.running.size) await turns.next(canAdmit(), pollMs, pause, options.signal); // NOSONAR
     else if (!canAdmit() || !(await waitForDue(turns, remaining, pollMs, pause, options.signal)))
-      break; // NOSONAR -- Idle until deferred work is due.
+      break; // NOSONAR
   }
   if (turns.failures.length)
     throw new LaneFailures({
@@ -268,7 +268,7 @@ export function exclusiveDrain(
       await lock.connect();
       const until = Math.min(now() + waitMs, options.deadline);
       for (;;) {
-        const { rows } = await lock.query<{ locked: boolean }>( // NOSONAR -- Each attempt waits for the previous one.
+        const { rows } = await lock.query<{ locked: boolean }>( // NOSONAR
           'select pg_try_advisory_lock(hashtextextended($1, 0)) as locked',
           [DRAIN_LOCK],
         );
@@ -278,7 +278,7 @@ export function exclusiveDrain(
           return 0;
         }
         const pause = sleep(config.execution.drainLockPollMs, undefined, options);
-        await pause.catch(() => undefined); // NOSONAR -- Polling interval between attempts.
+        await pause.catch(() => undefined); // NOSONAR
       }
       try {
         return await drain();
@@ -309,9 +309,6 @@ async function untilAdmissionEnds<T>(
 export async function runnerOwners(db: Database, config: ServiceConfig) {
   const env = config.settings;
   const runtime = auditRuntime(env);
-  // Each lane's task slots leave one pooled connection free, so its cadence work
-  // (live score, catalog publication) never waits out the pool timeout behind
-  // them. Audit tasks hold no connection across provider calls.
   const slots = Math.max(1, config.execution.poolSize - 1);
   runtime.audits.worker_concurrency = Math.min(runtime.audits.worker_concurrency, slots);
   const projections = auditProjections(db);
@@ -451,7 +448,7 @@ export async function runPeriodic(
     if (options.signal.aborted || now() >= options.deadline) break;
     const started = performance.now();
     try {
-      await phase.run(canAdmit, YIELD); // NOSONAR -- Periodic phases share one admission budget and pool.
+      await phase.run(canAdmit, YIELD); // NOSONAR
       logger.info('tick_phase_completed', {
         phase: phase.name,
         duration_ms: Math.round(performance.now() - started),

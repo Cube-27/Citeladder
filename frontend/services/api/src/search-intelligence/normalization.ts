@@ -291,7 +291,6 @@ function normalizeRow(
     provider_row_key: '',
     ...values,
   };
-  // Missing row fields use null in the historical key, rather than the DB defaults.
   row.provider_row_key = createHash('sha256')
     .update(
       canonicalJson([

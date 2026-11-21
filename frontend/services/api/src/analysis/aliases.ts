@@ -10,14 +10,11 @@ export const DENSE_SCRIPT =
 const WORDS = new Intl.Segmenter(undefined, { granularity: 'word' });
 
 export function normalizeAlias(value: string): string {
-  return (
-    casefold(value.normalize('NFKC'))
-      .replaceAll('&', ' and ')
-      // Combining marks are part of a word (Thai and Devanagari vowel signs).
-      .replaceAll(/[^\p{L}\p{M}\p{N}_ ]/gu, ' ')
-      .trim()
-      .replaceAll(/\s+/gu, ' ')
-  );
+  return casefold(value.normalize('NFKC'))
+    .replaceAll('&', ' and ')
+    .replaceAll(/[^\p{L}\p{M}\p{N}_ ]/gu, ' ')
+    .trim()
+    .replaceAll(/\s+/gu, ' ');
 }
 
 export function aliasSpellings(alias: string): string[][] {

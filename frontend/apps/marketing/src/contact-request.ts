@@ -89,8 +89,6 @@ export async function handleContactRequest(
       return result(503, 'send_failed');
     }
     if (!(await limits.ip.limit({ key: ip })).success) return result(429, 'rate_limited');
-    // Verify before the shared burst limit, so unverified requests spend only
-    // their own address's allowance and cannot crowd out real enquiries.
     const verified = await verifyTurnstile({
       secret: challenge.secret,
       token,

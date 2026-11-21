@@ -2,7 +2,6 @@ import { getSecret } from 'astro:env/server';
 
 import type { ApexEnv } from './apex-route';
 
-/** Astro's Cloudflare adapter reads these values from the Worker bindings. */
 export function workerApexEnv(): ApexEnv {
   return {
     ORIGIN_UPSTREAM: getSecret('ORIGIN_UPSTREAM') ?? '',

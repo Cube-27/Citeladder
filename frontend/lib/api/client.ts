@@ -119,13 +119,13 @@ async function requestResponse(path: string, options: InternalRequestOptions) {
     try {
       const response = await fetchResponse(path, options, requestId);
       if (response.ok) return { response, requestId };
-      throw await apiErrorFrom(response, requestId); // NOSONAR -- Retry attempt: reads this response's error before deciding.
+      throw await apiErrorFrom(response, requestId); // NOSONAR
     } catch (error) {
       lastError = error;
       if (!shouldRetryRequest(error, attempt, maxAttempts, options)) {
         throw finalRequestError(error, requestId);
       }
-      await delay(API_RETRY_BACKOFF_MS * attempt, options.signal); // NOSONAR -- Backoff before the next retry.
+      await delay(API_RETRY_BACKOFF_MS * attempt, options.signal); // NOSONAR
     }
   }
 

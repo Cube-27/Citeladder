@@ -294,6 +294,7 @@ a fresh scope before work starts.
 | Internal links | A separate judgment-policy version, normalized recommendation rows and catalog-based product variants, only if real runs justify them. |
 | Funded billing | Managed AI checkout, funded prices and a scheduled-coverage reserve. Current payment launch scope is BYOK. |
 | Ask agent in the drawer | Ask agent on Dashboard screens opens the Agent drawer with a fresh draft instead of the full-page handoff, closing any open overlay first; pending an owner decision since 2026-11-12. |
+| Code-taste open items | From [#1136](https://github.com/Cube-27/Citeladder/issues/1136), to discuss with the owner (2026-11-21): the remaining `useEffect` hits that sync outside systems (leave them, wrapper hooks plus an import ban, or a count that only goes down), and rewriting `A & {...}` intersections as `interface extends` (the audit recommended dropping it). |
 | Engines multi-select | Pick several engines at once. Needs an engines list parameter on about 15 visibility and perception routes and a code-computed merge of per-engine aggregates: positions, sentiment and win rate are not count-additive. Owner undecided (2026-11-18). |
 
 ## Removed

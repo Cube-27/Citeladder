@@ -35,7 +35,6 @@ const logged: Database = new Kysely<DB>({
 
 afterAll(async () => {
   if (accounts.length) {
-    // The ledger is append-only for the application role.
     await asOwner((owner) =>
       owner.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute(),
     );
@@ -160,7 +159,6 @@ describe('Site Health lock order', () => {
     const worker = await db.startTransaction().execute();
     try {
       await lockRuntime(worker, seed.workspaceId);
-      // It writes a URL it found: the foreign key key-share locks the project row.
       await worker.insertInto('site_urls').values(foundUrl(seed, '/found')).execute();
       await expect(
         db

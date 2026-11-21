@@ -1,8 +1,3 @@
-/**
- * Resolve the server-only API origin shared by frontend runtimes.
- * Browser bundles must never import or expose this module through VITE_* or
- * NEXT_PUBLIC_* values.
- */
 const LOOPBACK_HOSTS: Record<string, true> = {
   localhost: true,
   '0.0.0.0': true,
@@ -43,7 +38,6 @@ function validateOriginShape(parsed: URL): void {
 }
 
 function isLoopbackHost(host: string): boolean {
-  // URL parsing canonicalizes alternate IPv4 spellings before this check.
   const [firstGroup = ''] = host.split(':');
   const linkLocalV6 = host.includes(':') && (Number.parseInt(firstGroup, 16) & 0xffc0) === 0xfe80;
   return (

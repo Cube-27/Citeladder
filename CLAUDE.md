@@ -72,8 +72,8 @@ loops unboundedly.
 - More than two parameters take one object argument, except on hot paths.
 - React effects only sync with outside systems. Derive values in render and act
   in event handlers.
-- Default to no comment. Write one only for a constraint, quirk or invariant the
-  code cannot show: one line where possible, four at most.
+- Source code has no comments: names, types and tests carry the meaning. The
+  comment check in `check:policy` enforces it; only machine-read directives pass.
 - Shipped code logs through the structured logger, never `console.log`.
 - If one of these rules conflicts with the task, say so and get the owner's
   sign-off before breaking it.
@@ -97,8 +97,8 @@ loops unboundedly.
   need no test.
 - Don't mock what you can run: persistence and concurrency use the real local
   PostgreSQL. No sleeps, polling loops, wall-clock assertions or per-test
-  timeouts; await the event or state. A `.skip` needs a reason and an issue link
-  on the line above.
+  timeouts; await the event or state. A `.skip` names its reason and issue link
+  in the test title.
 
 Run only the smallest relevant native tests; CI runs everything else. Before
 running anything beyond focused tests (including `pnpm gate`), use the
@@ -109,8 +109,8 @@ running anything beyond focused tests (including `pnpm gate`), use the
 - Most code changes need no doc change; agents read code.
 - Owner docs hold contracts, cross-component constraints, decisions and traps.
   They are not feature catalogues, field lists, file maps or PR summaries.
-- A reason the code cannot show goes in a short nearby comment, or in the owner
-  doc when it crosses boundaries. Link to the source; don't copy it.
+- A reason the code cannot show goes in the owner doc when it crosses
+  boundaries, otherwise in a test or a name. Link to the source; don't copy it.
 - Each instruction lives in one place. When a documented decision changes,
   rewrite or delete the old text; never append a correction. A new document
   needs a durable reason.

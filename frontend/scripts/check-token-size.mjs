@@ -2,7 +2,6 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
 export const POLICY_PATH = 'frontend/scripts/token-size-policy.json';
-// An absolute path, not PATH lookup: a PATH entry cannot substitute git (Sonar S4036).
 const GIT_EXECUTABLE = '/usr/bin/git';
 const REVISION = /^[0-9a-fA-F]{7,40}$|^HEAD$/u;
 
@@ -11,7 +10,7 @@ export const SPLIT_INSTRUCTIONS = [
   'Move each group into a sibling module in the same owner folder, named for what it holds.',
   'Update every importer to the new path. No barrel files, re-export shims or aliases.',
   'Move code unchanged: no renames of exported symbols and no behaviour change.',
-  'Do not shrink the file by deleting comments or compressing code, and do not add it to the ignore list or the baseline.',
+  'Do not shrink the file by compressing code, and do not add it to the ignore list or the baseline.',
   'Keep the split in its own commit when possible.',
   'Guidance: docs/DEVELOPMENT.md (Source file size); owner folders: docs/frontend-architecture.md, docs/backend-architecture.md.',
 ];

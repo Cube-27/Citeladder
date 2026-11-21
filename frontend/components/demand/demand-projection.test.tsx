@@ -43,8 +43,6 @@ function rankOf(row: HTMLElement) {
   return within(row).getAllByRole('cell').at(-2)!.textContent;
 }
 
-// Mutable so a test can switch projects mid-render; `vi.hoisted` keeps it
-// legal inside the hoisted mock factory.
 const project = vi.hoisted(() => ({
   id: '11111111-1111-4111-8111-111111111111',
   workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',

@@ -14,7 +14,7 @@ Owner decisions live only in these logs:
   commitments, subprocessors, company details.
 - A plan's owner-decisions section, for decisions scoped to that plan.
 
-Notes an agent wrote in a PR, plan or code comment are not owner decisions.
+Notes an agent wrote in a PR or plan are not owner decisions.
 The source of an entry is the owner and the date, never an agent's reading.
 
 ## Writing an entry

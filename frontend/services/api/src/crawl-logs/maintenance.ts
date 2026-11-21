@@ -28,7 +28,6 @@ export function botIpRangeRefresh(fetcher: WebsiteFetcher = fetchWebsite): Execu
       contentHash = hash('');
     const fetchedAt = new Date();
     try {
-      // Analytics running dispatch was committed by the owning worker before this I/O.
       const response = await fetcher(source, {
         maxBytes: crawlLogs.ip_range_max_bytes,
         maxDecodedBytes: crawlLogs.ip_range_max_bytes,
@@ -118,23 +117,21 @@ export async function abandonUploads(db: Database, workspaceId: string, now = ne
     .limit(crawlLogs.sweep_batch_size)
     .execute();
   for (const row of rows)
-    await /* NOSONAR -- One upload lock at a time keeps the shared pool free. */ db
-      .transaction()
-      .execute(async (trx) => {
-        const scope = { workspaceId, projectId: row.project_id };
-        await lockCrawlState(trx, scope);
-        const changed = await trx
-          .updateTable('crawl_log_uploads')
-          .set({ status: 'abandoned', updated_at: now })
-          .where('workspace_id', '=', workspaceId)
-          .where('project_id', '=', row.project_id)
-          .where('id', '=', row.id)
-          .where('status', '=', 'open')
-          .where('updated_at', '<', cutoff)
-          .returning('id')
-          .executeTakeFirst();
-        if (changed) await enqueueRollup(trx, scope, now);
-      });
+    await /* NOSONAR */ db.transaction().execute(async (trx) => {
+      const scope = { workspaceId, projectId: row.project_id };
+      await lockCrawlState(trx, scope);
+      const changed = await trx
+        .updateTable('crawl_log_uploads')
+        .set({ status: 'abandoned', updated_at: now })
+        .where('workspace_id', '=', workspaceId)
+        .where('project_id', '=', row.project_id)
+        .where('id', '=', row.id)
+        .where('status', '=', 'open')
+        .where('updated_at', '<', cutoff)
+        .returning('id')
+        .executeTakeFirst();
+      if (changed) await enqueueRollup(trx, scope, now);
+    });
   return rows.length;
 }
 export const crawlLogUploadAbandonSweep: Executor = async (task, { db, checkCancelled }) => {
@@ -158,7 +155,7 @@ async function refreshDailyInsights(db: Database, now: Date, canAdmit: () => boo
     limit ${crawlLogs.sweep_batch_size}`.execute(db);
   for (const scope of due.rows) {
     if (!canAdmit()) return false;
-    await db // NOSONAR -- One project at a time keeps each enqueue inside the tick's admission budget.
+    await db // NOSONAR
       .transaction()
       .execute((trx) => enqueueCoalesced(trx, { ...insightsRefresh, ...scope, now }));
   }
@@ -178,7 +175,7 @@ export async function crawlLogTick(
   if (system && crawlLogs.ingestion_enabled)
     for (const bot of crawlers.bots.filter((b) => b.verification.method === 'ip_ranges')) {
       if (!canAdmit()) return;
-      await /* NOSONAR -- Admission is checked before each enqueue. */ enqueueTask(db, {
+      await /* NOSONAR */ enqueueTask(db, {
         workspaceId: system.id,
         projectId: null,
         kind: 'bot_ip_range_refresh',
@@ -205,7 +202,6 @@ async function maintainWorkspace(
   now: Date,
   canAdmit: () => boolean,
 ) {
-  // A paused collection is not the sender's silence.
   if (crawlLogs.ingestion_enabled) {
     if (!canAdmit()) return false;
     await stallQuietSources(db, workspaceId, now);
@@ -213,7 +209,7 @@ async function maintainWorkspace(
   }
   for (const kind of ['bot_request_retention_sweep', 'crawl_log_upload_abandon_sweep']) {
     if (!canAdmit()) return false;
-    await /* NOSONAR -- Admission is checked before each enqueue. */ enqueueTask(db, {
+    await /* NOSONAR */ enqueueTask(db, {
       workspaceId,
       projectId: null,
       kind,

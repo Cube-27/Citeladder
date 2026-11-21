@@ -76,7 +76,7 @@ export function FigureStrip({
   return (
     <div ref={ref} data-figure-strip-frame="" className="grid min-w-0 gap-4">
       {lead ? <div data-figure-lead="">{lead}</div> : null}
-      <dl // NOSONAR -- a <fieldset> would add form-group semantics and its own border to a grid of figures
+      <dl // NOSONAR
         role={label ? 'group' : undefined}
         aria-label={label}
         data-testid={testId}
@@ -119,7 +119,6 @@ function FigureCell({
       data-label-lines={narrow && !segment.labelHidden ? 2 : undefined}
       data-pressable={pressable || undefined}
       data-selected={segment.selected || undefined}
-      // The cell's share of its row: `flex-basis` in globals.css reads `--row`.
       style={cssVars({ '--row': rowSize })}
       className={cn(
         'relative min-w-0',
@@ -203,7 +202,6 @@ function FigureValueLine({ segment, subLine }: FigurePart) {
 function FigureSub({ segment }: FigurePart) {
   return (
     <dd className="type-caption text-ink-2 min-w-0 truncate">
-      {/* A no-break space: a plain one collapses, and the line with it. */}
       {segment.sub && !segment.loading ? segment.sub : ' '}
     </dd>
   );

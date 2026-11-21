@@ -372,7 +372,6 @@ function productAnswerFacts(facts: Facts, contract: CompositeContract): CheckRes
 function offerValidity(value: string, auditTime: unknown) {
   const validUntil = /^\d{4}-\d{2}-\d{2}/u.exec(value)?.[0];
   const parsed = validUntil ? new Date(`${validUntil}T00:00:00Z`) : null;
-  // A real calendar date only: the parser would roll 2024-02-30 into March.
   if (!parsed || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== validUntil)
     return 'invalid_expiry';
   const observed = typeof auditTime === 'string' ? Date.parse(auditTime) : Number.NaN;

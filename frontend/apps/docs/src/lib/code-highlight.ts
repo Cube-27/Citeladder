@@ -16,8 +16,6 @@ const COMMENT: Record<CodeLanguage, string> = {
   javascript: String.raw`\/\/[^\n]*`,
   python: String.raw`#[^\n]*`,
 };
-// Shell single quotes have no escapes: an apostrophe is written '\'' and the
-// argument goes on. The other languages escape with a backslash.
 const SINGLE_QUOTED: Record<CodeLanguage, string> = {
   json: '(?!)',
   shell: String.raw`'[^']*'(?:\\''[^']*')*`,

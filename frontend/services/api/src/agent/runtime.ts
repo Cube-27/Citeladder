@@ -255,7 +255,6 @@ export class AgentRuntime {
       if (!response)
         return this.finish(lease, turn, model, state, UNFUNDED_REPLY, latest.summary, true);
       previousResponseId = response.response_id || previousResponseId;
-      // A discarded response's searches were still run and billed.
       state.searches += reportedSearches(response);
       if (response.stop === 'max_tokens') {
         effort = retryEffort(effort, ordinal, budget);
@@ -315,11 +314,6 @@ export class AgentRuntime {
     if (result.stop === 'refusal') throw new AgentError('model_refused');
     return result;
   }
-  /**
-   * One response's tool calls. Built-ins run first, in the order written, since
-   * they change the turn's state; reads then run concurrently, each recorded as
-   * its own attempt. Every call gets a result the model reads, in call order.
-   */
   private async runTools(
     lease: Lease,
     turn: Turn,
@@ -493,7 +487,7 @@ export class AgentRuntime {
       });
       for (const [number, document] of staged) {
         const saved = turn.documents.find(({ output }) => output.number === number);
-        await /* NOSONAR -- One transaction connection: outputs save in order. */ saveAgentOutput(
+        await /* NOSONAR */ saveAgentOutput(
           trx,
           chat,
           {

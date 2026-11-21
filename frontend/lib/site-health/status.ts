@@ -187,10 +187,6 @@ export function inventoryModeForPhase(
     case 'dashboard':
       return 'scored';
     case 'terminal':
-      // B3: a FAILED crawl's terminal view keeps the tabbed page browser so
-      // the Errors & Blocked tab stays reachable — it renders the root-failure
-      // block (root_errors) even though no page rows exist. Any other
-      // terminal shape (cancelled-with-nothing) lists nothing.
       return crawl?.status === 'failed' ? 'scored' : 'none';
     default:
       return 'none';

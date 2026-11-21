@@ -212,10 +212,6 @@ export const agentRoutes = [
       const run = await read();
       if (!run) throw notFound('Agent run');
       const { queue, runtime } = await agentBindings(db);
-      // The turn lives as long as this request: in-app navigation keeps the
-      // browser's stream open, and closing the browser or stopping this
-      // instance ends the turn as interrupted. Its frozen time limit ends it
-      // as turn_timeout; a budget the runtime cannot read fails on load.
       const limit = budgetSchema.safeParse(run.budget);
       const slot = interactiveSlots.acquire();
       const gone = new AbortController();

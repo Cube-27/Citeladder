@@ -55,7 +55,6 @@ export type Limitation =
 
 export type Anchor = {
   auditId: string;
-  /** UTC text with microseconds (`utcText`), so the anchor itself is never cut out. */
   windowStart: string;
   windowEnd: string;
 };
@@ -178,11 +177,6 @@ async function windowAuditIds(db: Database, scope: Scope, anchor: Anchor) {
   return rows.map((row) => row.id);
 }
 
-/**
- * The window's citations from answers to tracked prompts only (AS5): an answer
- * whose snapshot names no prompt, or whose prompt the library no longer has,
- * is not read, so every angle has at least one prompt.
- */
 function citationRows(db: Database, scope: Scope, auditIds: string[]) {
   return chunked(auditIds, (chunk) =>
     evidenceScope(db, windowSelection(scope, chunk))

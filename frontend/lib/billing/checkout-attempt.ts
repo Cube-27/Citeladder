@@ -22,22 +22,16 @@ export function checkoutAttempt(
       typeof raw.key === 'string'
     )
       return raw.key;
-  } catch {
-    /* Missing or unavailable storage leaves server idempotency authoritative. */
-  }
+  } catch {}
   const key = proposed ?? createIdempotencyKey();
   try {
     sessionStorage.setItem(storageKey, JSON.stringify({ fingerprint, key }));
-  } catch {
-    /* The controller retains the key in memory when storage is unavailable. */
-  }
+  } catch {}
   return key;
 }
 
 export function clearCheckoutAttempt(userId: string, workspaceId: string | null): void {
   try {
     sessionStorage.removeItem(bucket(userId, workspaceId));
-  } catch {
-    /* Storage is optional; server authorization remains authoritative. */
-  }
+  } catch {}
 }

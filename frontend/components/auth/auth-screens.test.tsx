@@ -327,7 +327,6 @@ describe('account entry', () => {
   });
 
   it.each([
-    // A 320px phone with 16px gutters leaves 288px: the flexible widget needs 300.
     [288, 'compact'],
     [300, 'flexible'],
   ])('asks for the widget size a %ipx slot fits: %s', async (width, size) => {

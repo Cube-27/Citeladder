@@ -326,10 +326,6 @@ function inlineScriptChars(root: HtmlNode) {
 
 const SCRIPT_NAVIGATION = /\blocation(?:\.href)?\s*=(?!=)|\blocation\.(?:replace|assign)\s*\(/u;
 
-/**
- * `delay; url=target` as browsers read it: a delay, then an optional target
- * (with or without `url=` and quotes). A bare delay only reloads the page.
- */
 function refreshTarget(content: string) {
   const separator = content.search(/[;,]/u);
   const seconds = Number.parseFloat(separator === -1 ? content : content.slice(0, separator));

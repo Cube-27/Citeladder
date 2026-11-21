@@ -57,9 +57,6 @@
   border-top: 1px solid var(--color-line);
 }
 
-/* A definite 300px slot: the widget container fills it, so the hook measures
-   300 and renders the 300 × 65 flexible widget, never the 150 × 140 compact one. */
-
 .cl-page-form-turnstile {
   display: flex;
   width: 300px;

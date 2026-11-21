@@ -98,9 +98,6 @@
   --color-warning-wash: var(--color-warning-soft);
   --color-info-wash: var(--color-info-soft);
   --color-chrome: var(--color-paper);
-  /* Data: you are the accent, rivals one to four in rank order (ink, then
-     cool hues only), a fifth and later are `data-other`. Charts read these
-     from script, so each must stay an emitted variable, never `inline`. */
   --color-data-you: var(--color-accent);
   --color-data-rival-1: var(--color-ink);
   --color-data-rival-2: oklch(52.3% 0.1 244);
@@ -421,8 +418,6 @@
   --text-data-sm--font-weight: 350;
 }
 
-/* Tailwind folds a theme shadow into its own variable at build time, which
-   would freeze the light value; these read the live token instead. */
 @utility shadow-edge {
   box-shadow: var(--shadow-edge);
 }
@@ -906,9 +901,6 @@ html:has([data-app-surface]) {
   }
 }
 
-/* Radix scroll locks add a scrollbar-width margin. The root's stable gutter
-   already reserves that space, so suppress the second compensation for menus,
-   selects, date pickers, and dialogs while retaining their scroll/focus lock. */
 @supports (scrollbar-gutter: stable) {
   html body[data-scroll-locked] {
     margin-right: 0 !important;
@@ -1507,7 +1499,6 @@ a.focus-ring:active .type-caption {
   box-shadow: none;
 }
 
-/* Every app button answers a 40px target without growing its 32px face. */
 :root:not([data-public-surface]) [data-button-variant]::after {
   content: '';
   position: absolute;
@@ -1545,15 +1536,12 @@ a.focus-ring:active .type-caption {
     border-color: Highlight;
   }
 
-  /* The selected overlay is a background image, which forced colours drop;
-     a selected row or option keeps an inner edge instead. */
   [class~='overlay-selected'],
   [class~='aria-selected:overlay-selected'][aria-selected='true'] {
     outline: 2px solid SelectedItem;
     outline-offset: -2px;
   }
 
-  /* The radio dot is a filled span, which otherwise collapses to Canvas. */
   [role='radio'][data-state='checked'] [data-state='checked'] > span {
     background-color: CanvasText;
     forced-color-adjust: none;
@@ -1565,9 +1553,6 @@ a.focus-ring:active .type-caption {
   color: var(--color-ink);
 }
 
-/* Browsers tint autofilled inputs with their own fill; keep the field surface.
-   The surface is an inset shadow over the UA's !important background, so a
-   focused field repeats its focus ring in the same declaration. */
 input:is(:autofill, :-webkit-autofill) {
   -webkit-text-fill-color: var(--color-ink);
   box-shadow: inset 0 0 0 100vmax var(--color-surface);
@@ -1594,7 +1579,6 @@ input:is(:autofill, :-webkit-autofill) {
   }
 }
 
-/* Box shadows disappear in forced colours; retain a system-colour boundary. */
 @media (forced-colors: active) {
   [data-button-variant='primary'],
   [data-button-variant='secondary'],
@@ -1661,7 +1645,6 @@ samp {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-/* Removes the 300ms tap delay without disabling pinch zoom. */
 a,
 button,
 [role="button"],
@@ -1964,7 +1947,6 @@ label {
   font-weight: var(--weight-regular);
 }
 
-/* Lifted surfaces: top-level cards, framed lists, tables and figure strips only (owner 2026-11-21). */
 :root:not([data-public-surface]):not([data-theme='dark']) {
   --lift-radius: 12px;
   --lift-border: rgb(0 0 0 / 7%);

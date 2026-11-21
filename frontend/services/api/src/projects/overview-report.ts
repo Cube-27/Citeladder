@@ -263,7 +263,7 @@ export async function overviewReport(db: Database, scope: ProjectScope) {
   const sections = { ...commandCenterSections, ...librarySections };
   for (const widget of layout.widgets) {
     try {
-      await sections[widget.key]?.(context); // NOSONAR -- Sections write to one PDF in layout order.
+      await sections[widget.key]?.(context); // NOSONAR
     } catch (error) {
       if (!(error instanceof AnalysisNotFoundError)) throw error;
       quiet(

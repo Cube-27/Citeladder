@@ -121,7 +121,6 @@ async function readCompletion(
   response: Response,
   onText?: (content: string) => void,
 ): Promise<Completion> {
-  // A provider may ignore the stream request; its JSON answer is read as usual.
   if (onText && response.ok && response.headers.get('content-type')?.includes('event-stream')) {
     try {
       return await streamedCompletion(response, onText);
@@ -217,7 +216,6 @@ export function gatewayCalls(complete: Complete) {
       return { ...result, content: unfenced(result.content) };
     },
     async structured<T>(system: string, user: string, schema: z.ZodType<T>, signal?: AbortSignal) {
-      // Callers' schemas may hold optional fields, which strict outputs refuse: the prompt carries them.
       const result = await complete(system, withSchema(user, z.toJSONSchema(schema)), signal);
       try {
         return {
@@ -284,13 +282,12 @@ function openAICompletion(
     let legacy = legacyCap;
     let strict = wantsStrict;
     let response = await send(legacy, strict);
-    // A destination may reject the newer cap name or strict schemas: ask again without each.
     for (let fallback = 0; fallback < 2 && [400, 422].includes(response.status); fallback++) {
       if (!legacy && (await errorExcerpt(response)).includes('max_completion_tokens'))
         legacy = true;
       else if (strict) strict = false;
       else break;
-      response = await send(legacy, strict); // NOSONAR -- Each fallback depends on the previous rejection.
+      response = await send(legacy, strict); // NOSONAR
     }
     if (response.ok) {
       legacyCap = legacy;

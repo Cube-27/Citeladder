@@ -32,9 +32,6 @@ export function settleResearchCharge(
       .where('dispatched_at', 'is not', null)
       .$narrowType<{ dispatched_at: NotNull }>()
       .execute();
-    // A request may still report its cost until its timeout has passed twice over,
-    // including one recovery marked uncertain while its sender may still be waiting
-    // (B41 bills that late receipt). A sender that saw its own connection fail waits for nothing.
     const settledBy = at.getTime() - 2 * si.provider_timeout_seconds * 1000;
     const awaited = (call: (typeof sent)[number]) =>
       call.status === 'dispatched' ||
@@ -82,7 +79,7 @@ export async function settleResearchCharges(db: Database, at = new Date(), canAd
     if (!canAdmit()) break;
     const key = { workspaceId: run.workspace_id, runId: run.id };
     try {
-      if (await settleResearchCharge(db, key, at)) settled++; // NOSONAR -- One run per transaction, each under its own lock.
+      if (await settleResearchCharge(db, key, at)) settled++; // NOSONAR
     } catch (error) {
       logger.exception('research_charge_settlement_failed', error, { run_id: run.id });
     }

@@ -1,8 +1,5 @@
 import type { SatteriResolvedOptions } from '@astrojs/markdown-satteri';
 
-// Sätteri's own plugin types, reached through the processor's options
-// (Astro does not re-export them): one plugin definition, its element visitor
-// and the hast element that visitor receives.
 type PluginDefinition = Exclude<
   SatteriResolvedOptions['hastPlugins'][number],
   ((...args: never[]) => unknown) | readonly unknown[] | null | undefined | false

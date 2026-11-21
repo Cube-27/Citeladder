@@ -239,10 +239,6 @@ function scrollParent(from: HTMLElement): Element {
   return document.scrollingElement ?? document.documentElement;
 }
 
-/**
- * PageUp and PageDown scroll the page by a viewport, as they do from the body;
- * Radix's roving focus would otherwise jump to the first or last tab.
- */
 function pageKeyScrollsPage(event: KeyboardEvent<HTMLElement>) {
   const direction = PAGE_KEY[event.key];
   if (direction === undefined) return;
@@ -330,7 +326,6 @@ export function TabPanel({
       value={value}
       forceMount={forceMount}
       hidden={activeValue !== value}
-      // Every panel holds its own controls; as a tab stop it drew the ring around the whole page.
       tabIndex={-1}
       className={cn('outline-none', className)}
     >
@@ -404,8 +399,6 @@ export function SegmentedControl<T extends string>({
           data-segmented-track=""
           className={cn(TAB_STRIP, 'border-rule rounded-control border p-px', className)}
         >
-          {/* A nested flex row, NOT `display: contents`: some browsers drop a
-          contents box from the accessibility tree, costing the group its name. */}
           <div
             id={id}
             role="radiogroup"
@@ -422,7 +415,7 @@ export function SegmentedControl<T extends string>({
                     buttonsRef.current[index] = node;
                   }}
                   type="button"
-                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Button-based radio keeps roving focus and the segment face.
+                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
                   role="radio"
                   aria-checked={selected}
                   disabled={disabled}

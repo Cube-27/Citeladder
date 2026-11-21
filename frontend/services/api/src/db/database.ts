@@ -8,23 +8,12 @@ import { observeConnection } from './committed-work.ts';
 
 export type Database = Kysely<DB>;
 
-/**
- * The least-privilege login the API, runner and operator jobs connect as. It
- * holds row access only, without UPDATE or DELETE on append-only evidence,
- * attempt and ledger tables (the baseline's role section). The schema owner connects only
- * to migrate, which also sets this role's password from `DATABASE_URL`.
- */
 export const APP_DATABASE_ROLE = 'citeladder_app';
 
 export function inTransaction<T>(db: Database, work: (trx: Database) => Promise<T>): Promise<T> {
   return db.isTransaction ? work(db) : db.transaction().execute(work);
 }
 
-/**
- * Logs the current database's on-disk size. The database lives on the VM's
- * boot disk, which has no guest disk metric, so this record is what the disk
- * usage alert reads (`infra/gcp/monitoring.tf`). Returns the size in bytes.
- */
 export async function observeDatabaseSize(db: Database): Promise<number> {
   const { rows } = await sql<{
     size_bytes: string;
@@ -44,14 +33,9 @@ export function poolOptions(config: DatabaseConfig, use: PoolUse = {}): pg.PoolC
   const db = config.database;
   return {
     connectionString: config.databaseUrl,
-    // A runner execution holds `RUNNER_DB_POOL_SIZE` connections. Every other
-    // process, the API that starts runner jobs included, holds its own
-    // pool_size + max_overflow.
     max:
       use.execution && config.execution ? config.execution.poolSize : db.poolSize + db.maxOverflow,
     maxLifetimeSeconds: db.poolRecycleSeconds,
-    // node-postgres applies one bound to both waiting for a pooled client and
-    // opening a new one, so the larger of the pool and connect timeouts applies.
     connectionTimeoutMillis: Math.max(db.poolTimeoutSeconds, db.connectTimeoutSeconds) * 1000,
     query_timeout: db.commandTimeoutSeconds * 1000,
     statement_timeout: db.statementTimeoutMs,
@@ -59,15 +43,12 @@ export function poolOptions(config: DatabaseConfig, use: PoolUse = {}): pg.PoolC
     keepAlive: true,
     idle_in_transaction_session_timeout: db.idleTransactionTimeoutMs,
     application_name: config.appName,
-    // `require` encrypts without verifying the certificate (libpq sslmode=require).
     ssl: db.sslMode === 'require' ? { rejectUnauthorized: false } : false,
   };
 }
 
 export function createDatabase(config: DatabaseConfig, use: PoolUse = {}): Database {
   const pool = new pg.Pool(poolOptions(config, use));
-  // An idle client that loses its connection (a database restart) is dropped
-  // by the pool; without a listener its 'error' event would crash the process.
   pool.on('error', (error) => getLogger('db').exception('database_idle_client_lost', error));
   return new Kysely<DB>({
     dialect: new PostgresDialect({

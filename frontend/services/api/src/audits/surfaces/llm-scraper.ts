@@ -8,7 +8,6 @@ import { readFrozenSearchRequest } from '../frozen-configuration.ts';
 import { persistExecutionSuccess, persistSurfaceFailure } from '../result-persistence.ts';
 import { frozenRequestSettings, observedAdapter, type ObservedSurface } from './dataforseo.ts';
 
-/** Scraper recovery always closes before the provider's 28-day task retention expires. */
 function recoveryDeadline(task: AuditTask): Date | null {
   if (!task.provider_task_submitted_at) return null;
   const hours = readFrozenSearchRequest(task.request_snapshot).recovery_deadline_hours;

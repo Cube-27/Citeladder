@@ -8,10 +8,6 @@ const wrangler = fileURLToPath(
   new URL('../node_modules/wrangler/bin/wrangler.js', import.meta.url),
 );
 const checkOutput = fileURLToPath(new URL('./check-marketing-worker-output.mjs', import.meta.url));
-// Its own output, not apps/marketing/dist: `wrangler dev` holds its local state
-// and served assets open under the config's directory, so sharing production's
-// dist made every `pnpm build` or quality check fail while the dev server ran
-// (Astro's rmdirSync `recursive` error on Node 26).
 const outDir = 'apps/marketing/.dev/dist';
 const env = {
   ...process.env,
@@ -85,7 +81,6 @@ worker.on('error', (error) => {
 worker.on('exit', (code) => {
   process.exitCode = code ?? 1;
 });
-// Let Wrangler shut down first, so the lock is released only once it exits.
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => worker.kill(signal));
 }

@@ -268,7 +268,8 @@ ceiling without a matching `SITE_HEALTH_SCALE_PAGES` run.
 ### Independent awaits run together
 
 **Rule:** Run independent awaits together. A loop that must stay sequential
-(shared transaction, lock order, rate limit, pool size) says why on the line.
+(shared transaction, lock order, rate limit, pool size) carries a bare
+`// NOSONAR`, and a test or the name of the step it runs shows why.
 **Why:** Sonar S9382 is the most common rule in the project's history: 209
 fixed and 23 open (for example `services/api/src/agent/suggest-edits.ts` and
 `page-documents/suggestion-actions.ts`). #464 had to annotate 204 loops after
@@ -326,13 +327,14 @@ page section. Find the PR that added it and whether its body cites the owner.
 **Rule:** A brief, plan item or PR that changes loading, first paint, auth
 transitions or value states names the PR that last set the behaviour and
 quotes its reason. If it contradicts that PR, the owner decides first
-(`record-owner-decision`). Keep the reason in the code or doc you change.
+(`record-owner-decision`). Keep the reason in a test or the owner doc you
+change; source code carries no comments.
 **Why:** Design-round briefs restated these rules without their history, and
 builders followed the briefs: OL-01 (#866) undid #524, DAT-01 and DAT-02
 (#874, #875) undid #112, and a fix plan offered "Unavailable" or "Not
 measured" when the dash was the earlier decision. #865 deleted the comment
 that explained `MISSING_MARK`, and #574 deleted #524's doc paragraph, so the
 next builder had no reason to keep either.
-**Check:** The diff removes a comment or doc paragraph that gives a reason,
+**Check:** The diff removes a test or doc paragraph that gives a reason,
 or a brief changes one of these areas without citing a PR. Run
 `git log -S '<symbol>'` on the owner.

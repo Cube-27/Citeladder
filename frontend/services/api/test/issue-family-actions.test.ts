@@ -120,7 +120,7 @@ async function familyProject(): Promise<{ seed: SiteSeed; pages: Page[] }> {
       .execute();
     const pages: Page[] = [];
     for (let index = 0; index < PAGES; index += 1) {
-      // NOSONAR -- One transaction: fixture statements run in order.
+      // NOSONAR
       const page = await readPage(trx, fixtures, seed, path(index), {
         outcome: 'missing',
         fetchedAt: crawled,
@@ -149,7 +149,7 @@ async function laterCrawl(
     const crawlId = await fixtures.sibling(seed, values);
     const later = { ...seed, crawlId };
     for (const [index, page] of pages.entries())
-      // NOSONAR -- One transaction: fixture statements run in order.
+      // NOSONAR
       await readPage(trx, fixtures, later, path(index), {
         outcome: outcomeAt(index),
         fetchedAt: new Date(),
@@ -480,7 +480,7 @@ describe('an issue family', () => {
         .execute();
       const pages: Page[] = [];
       for (const name of ['/orphan-a', '/orphan-b']) {
-        // NOSONAR -- One transaction: fixture statements run in order.
+        // NOSONAR
         const page = await fixtures.page(seed, name, { has_html: true }, { fetchedAt: crawled });
         pages.push({ id: page.id, url: `https://example.test${name}` });
       }

@@ -5,10 +5,6 @@ const dateParts = new Intl.DateTimeFormat('en-US', {
   timeZone: 'UTC',
 });
 
-/**
- * Every website date: `2026-11-07` (or a full timestamp) → `7 Nov 2026`.
- * Assembled from parts because en-GB spells September "Sept".
- */
 export function formatSiteDate(date: string): string {
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return date;

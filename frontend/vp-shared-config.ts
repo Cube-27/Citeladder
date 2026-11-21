@@ -1,7 +1,6 @@
 import type { OxlintConfig } from 'vite-plus/lint';
 import type { OxfmtConfig } from 'vite-plus/fmt';
 
-// Ratchet: this list only shrinks; never add a path to it.
 const apiTypeAssertionBaseline = [
   'services/api/src/agent/skills.ts',
   'services/api/src/agent/tool-adapters.ts',
@@ -317,8 +316,6 @@ export const fmtConfig: OxfmtConfig = {
     '**/pnpm-lock.yaml',
     '**/services/*/src/generated/**',
     '**/packages/*/src/generated/**',
-    // Re-wrapping this inflates it past the owner line budget that
-    // check-frontend-architecture.mjs enforces; kept hand-formatted.
     '**/apps/app/src/globals.css',
   ],
 };

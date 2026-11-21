@@ -38,8 +38,6 @@ export default defineConfig({
   build: { format: 'file' },
   trailingSlash: 'never',
   session: false,
-  // External webhook and MCP POSTs reach exact routes; the backend verifies
-  // signatures, OAuth transactions and CSRF at their owning endpoints.
   security: {
     checkOrigin: false,
     csp: marketingContentSecurityPolicy({
@@ -61,7 +59,6 @@ export default defineConfig({
     define: {
       ...publicDefines,
       'process.env.LOCAL_COMPOSE_BUILD': JSON.stringify(process.env.LOCAL_COMPOSE_BUILD ?? ''),
-      // Node's clock at build time; the workerd prerender clock reads the epoch.
       'process.env.PUBLIC_BUILD_YEAR': JSON.stringify(String(new Date().getFullYear())),
     },
     resolve: {

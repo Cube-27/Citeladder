@@ -131,7 +131,7 @@ export class AnalyticsWorker {
       kinds: this.#kinds(),
       scope: this.#scope,
     });
-    for (const row of rows) await this.#execute(row); // NOSONAR -- Leased tasks run one at a time to keep the shared pool free.
+    for (const row of rows) await this.#execute(row); // NOSONAR
     return rows.length;
   }
 

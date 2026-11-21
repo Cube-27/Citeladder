@@ -11,25 +11,16 @@ import { failureFacts, getLogger } from '../logging.ts';
 type RequestWork = { committed: boolean };
 const requests = new AsyncLocalStorage<RequestWork>();
 
-/** A request-bound worker consumes existing work; its lease/settlement writes
- * must not launch another runner. Creation already owns the recovery wake-up.
- */
 export function withoutWorkObservation<T>(run: () => Promise<T>): Promise<T> {
   return requests.exit(run);
 }
 
-/**
- * A request owns observation; workers and offline operators never start more jobs.
- * The wake starts after commit but never holds the response: a slow metadata
- * or Cloud Run call must not add latency to the request that committed work.
- */
 export function observeCommittedWork(run: () => Promise<void>, wake: () => Promise<unknown>) {
   const state: RequestWork = { committed: false };
   return requests.run(state, async () => {
     try {
       await run();
     } finally {
-      // Outside the request's context, so the wake's own queries are never observed.
       if (state.committed)
         void requests.exit(() =>
           wake().catch((error: unknown) =>
@@ -52,7 +43,6 @@ function targetTable(node: unknown): boolean {
   return false;
 }
 
-// A raw `sql` statement is one RawNode; its leading text names the written table.
 const RAW_WRITE = /^\s*(?:insert\s+into|update)\s+(?:"?public"?\.)?"?([a-z_]+)"?/iu;
 
 function writesWork(node: OperationNode): boolean {
@@ -152,7 +142,6 @@ export function observeConnection(connection: DatabaseConnection): void {
     try {
       result = await execute<R>(query, options);
     } catch (error) {
-      // PostgreSQL turns COMMIT into ROLLBACK in an aborted transaction.
       if (work.transaction) work.failed = true;
       throw error;
     }

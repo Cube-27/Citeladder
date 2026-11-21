@@ -807,8 +807,6 @@ it('refuses malformed and invalid registrations before spending, exempts preflig
       .filter((r) => r.status === 'rejected')
       .every((r) => r.reason instanceof ApiError && r.reason.status === 429),
   ).toBe(true);
-  // The route has no socket peer in Hono's request harness: all calls share
-  // the explicit unavailable identity, never a spoofed forwarded header.
   identities.push('unavailable');
   await db
     .deleteFrom('usage_windows')
@@ -927,7 +925,7 @@ it('keeps a registration flood from spending the authorization budget approved c
     `${site}:a:b:c:d`,
     `${site}::4`,
   ].entries())
-    outcomes.push(await authorize(flood[index % 2]!.client_id, visitor)); // NOSONAR -- Order decides which request the pool refuses.
+    outcomes.push(await authorize(flood[index % 2]!.client_id, visitor)); // NOSONAR
   expect(outcomes.map((url) => url.origin === browser || url.searchParams.get('error'))).toEqual([
     true,
     true,

@@ -22,8 +22,6 @@ export function organizationJsonLd(): JsonLdObject | null {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    // Google's organization-logo feature requires `logo` alongside `url`, and
-    // the `@id` gives every publisher reference below one entity to reconcile.
     '@id': new URL('#organization', url).toString(),
     name: SITE_NAME,
     description: SITE_TAGLINE,
@@ -278,7 +276,6 @@ export function breadcrumbJsonLd(
   };
 }
 
-/** Prevent a JSON value from terminating its containing script element. */
 export function serializeJsonLd(data: JsonLdObject): string {
   return JSON.stringify(data).replaceAll('<', String.raw`\u003c`);
 }

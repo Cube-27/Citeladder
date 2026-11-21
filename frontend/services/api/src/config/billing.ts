@@ -31,8 +31,6 @@ export const billing = {
       failed: c.payment_failed,
       cancelled: c.payment_failed,
       expired: c.payment_failed,
-      // A captured payment later refunded; its refund settles as its own record.
-      // An uncaptured auto-refund is not paid (see the Razorpay adapter).
       refunded: c.payment_paid,
     },
     razorpay_status_map: {

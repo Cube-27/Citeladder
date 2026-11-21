@@ -133,8 +133,6 @@ async function replayedPlanChange(db: Database, accountId: string, key: string, 
     )
       refuse('idempotency_key_reused');
     if (await refusedFromKey(db, accountId, key)) {
-      // The process died between the refusal and the record's delete; finish that
-      // delete so this retry re-requests the change, as a post-refusal retry does.
       await db.deleteFrom('idempotency_records').where('id', '=', replay.id).execute();
       return null;
     }

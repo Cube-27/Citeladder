@@ -16,11 +16,6 @@ function isoDate(raw: unknown): string | null {
 function values(row: Record<string, unknown>): unknown[] {
   return Array.isArray(row.keys) ? row.keys : [];
 }
-/**
- * Parse one provider page into metric rows. `invalid` counts rows that could not
- * be parsed; a valid row dated outside the window is dropped without counting,
- * because Bing always returns its whole history whatever window is requested.
- */
 export function normalizedRows(
   provider: string,
   dataset: string,

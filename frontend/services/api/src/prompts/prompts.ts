@@ -263,7 +263,6 @@ export async function createPrompts(
     const set = await scopedPromptSet(trx, scope.workspaceId, promptSetId, scope.projectId);
     await acquireProjectLock(trx, set.project_id);
     await acquirePromptSetLock(trx, set.id);
-    // Screened under the project lock, so the topic vocabulary cannot change before the insert.
     const screened = await screen(trx, set, inputs);
     for (const { problem } of screened)
       if (problem?.kind === 'binding') throw bindingError(problem.failure);

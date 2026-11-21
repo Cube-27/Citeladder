@@ -60,7 +60,6 @@ const root = '/api/v1/projects/{project_id}';
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid } as const;
 
-/** Logo reads authorize through the path: an `<img>` sends no workspace header. */
 function serveLogo(
   c: Context<AppEnv>,
   db: Database,

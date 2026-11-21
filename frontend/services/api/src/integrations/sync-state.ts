@@ -12,7 +12,6 @@ export type SyncIdentity = {
   property_ref: string;
 };
 
-/** Called inside the run transaction: connection before mapping matches mutation lock order. */
 export async function activeSyncTarget(db: Database, run: SyncIdentity) {
   const connection = await db
     .selectFrom('integration_connections')

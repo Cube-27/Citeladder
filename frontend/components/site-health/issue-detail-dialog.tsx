@@ -77,10 +77,6 @@ export function IssueDetailDrawer({
       title={issueTitle(issue)}
       footer={
         detail || canPrevious ? (
-          // The retained page keeps its `next_cursor` while the next one is in
-          // flight, so a second click would push the SAME cursor onto the
-          // stack and Previous would need two presses to undo one: `busy`
-          // holds both steps until the page lands.
           <Pager
             hideWhenSinglePage
             canPrev={canPrevious}
@@ -347,7 +343,6 @@ function DuplicateSetList({
             {set.pages.length < set.pageCount ? (
               <span className="type-caption">Including:</span>
             ) : null}
-            {/* Each page link is its own row, at least 24 high, so stacked targets never touch (WCAG 2.5.8). */}
             <Stack as="ul" gap="item">
               {set.pages.map((page) => (
                 <li key={page.siteUrlId} className="flex min-h-6 min-w-0 items-center">
@@ -402,7 +397,6 @@ function LinkTargetList({
               On {pageCountLabel(target.pageCount)}
               {hidden > 0 ? ', including:' : ':'}
             </span>
-            {/* Each page link is its own row, at least 24 high, so stacked targets never touch (WCAG 2.5.8). */}
             <Stack as="ul" gap="item">
               {target.pages.map((page) => (
                 <li key={page.siteUrlId} className="flex min-h-6 min-w-0 items-center">

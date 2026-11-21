@@ -239,7 +239,7 @@ export function SuggestionList({
   return (
     <ul
       id={id}
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- The popup uses ARIA options while focus remains in the editable combobox.
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role
       role="listbox"
       aria-label={label}
       hidden={!open}
@@ -254,13 +254,12 @@ export function SuggestionList({
           <button
             type="button"
             id={`${id}-${index}`}
-            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- ARIA listbox options keep focus on the editable field.
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
             role="option"
             tabIndex={-1}
             aria-selected={index === selected}
             data-active={index === selected}
             className={menuItemClasses({ className: 'grid h-auto w-full gap-0.5 py-2 text-left' })}
-            // Focus stays in the field; the choice commits on release (WCAG 2.5.2).
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => onPick(index)}
           >

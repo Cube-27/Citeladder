@@ -135,8 +135,6 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
                 className="cl-navbar-link focus-ring"
                 data-current={dropCurrent(path, drop) ? '' : undefined}
                 onPointerEnter={(event) => {
-                  // Only a mouse hover-opens (as in Radix), so only a mouse
-                  // arriving starts a new hover; a tap enters on every touch.
                   if (event.pointerType === 'mouse') pinned.current = null;
                   onItemEnter(event);
                 }}

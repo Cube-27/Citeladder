@@ -26,7 +26,6 @@ export async function sendAuthMail(
     return false;
   }
   const startedAt = performance.now();
-  // Class, code and status only: never provider bodies, addresses or bearer URLs.
   let failure: Record<string, string | number | null> = {};
   try {
     const response = await (config.auth.fetch ?? fetch)(cfg.endpoint, {

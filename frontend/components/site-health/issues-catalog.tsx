@@ -330,11 +330,6 @@ function ruleFilterTitle(rows: readonly SiteIssue[], ruleId: string): string {
   return row ? issueTitle(row) : 'one issue';
 }
 
-/**
- * The catalog's page controls. The cursor lives in the URL and the API pages
- * forward only, so the way back is the trail of cursors this view followed; a
- * deep-linked page has none and steps back to the first page.
- */
 function useCatalogPager(
   cursor: string | null,
   nextCursor: string | null,

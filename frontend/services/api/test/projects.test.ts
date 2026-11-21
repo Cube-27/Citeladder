@@ -772,7 +772,6 @@ describe('project owner', () => {
     const workspace = await trialWorkspace(31);
     const purge = await db.transaction().execute(async (holder) => {
       const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(holder);
-      // Lock DAG: a domain row first, then the account's capacity lock.
       await holder
         .selectFrom('brands')
         .select('id')

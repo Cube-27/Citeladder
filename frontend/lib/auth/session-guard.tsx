@@ -57,10 +57,6 @@ export function SessionGuard({
   } = useQuery({ ...authQueries.me(), enabled: !isRedirecting });
 
   const clearSession = useCallback(async () => {
-    // Once per document: a sign-out already leaving, or a burst of 401s, must
-    // not start a second navigation. The cache is dropped when the document
-    // is left, which removes the active `me` query; disabling it keeps the
-    // still-mounted guard from recreating it and asking again.
     if (redirectingRef.current || isDeparting(queryClient)) return;
     redirectingRef.current = true;
     setIsRedirecting(true);
@@ -77,9 +73,6 @@ export function SessionGuard({
     if (isError && httpErrorStatus(error) === 401) void clearSession();
   }, [isError, error, clearSession]);
 
-  // The shell may be restored from the back-forward cache, frozen as it was,
-  // so it asks `me` again: an ended session leads to sign-in, and another
-  // person's session reloads the page with nothing of the frozen account.
   const onRestore = useEffectEvent(async () => {
     const shown = user?.id;
     const { data } = await refetch();
@@ -101,10 +94,6 @@ export function SessionGuard({
 
   useEffect(() => {
     let disposed = false;
-    // React Query notifies subscribers synchronously, and some of those
-    // notifications land *during* a render (e.g. a query being observed for
-    // the first time). Effect Events may not be called while rendering, so
-    // hop to a microtask — by then the render has committed.
     const report = (cacheError: unknown) => {
       if (!cacheError) return;
       void Promise.resolve().then(() => {
@@ -134,7 +123,7 @@ export function SessionGuard({
     return <>{renderSessionFallback(fallback)}</>;
   }
 
-  // oxlint-disable-next-line react-hooks/refs -- `clearSession` reads the ref only when invoked.
+  // oxlint-disable-next-line react-hooks/refs
   if (!value) {
     if (isError && httpErrorStatus(error) !== 401) {
       const notice = (

@@ -221,23 +221,12 @@ export function refreshCrawlViews(client: QueryClient, crawlId: string) {
   ]);
 }
 
-/**
- * The project's crawl + phase projection, in every workspace and for every
- * selected crawl. The dashboard's own poll must not call this: it is the
- * trigger.
- */
 export const refreshSiteHealthDashboard = (client: QueryClient, projectId: string) =>
   client.invalidateQueries({ queryKey: queryKeys.siteHealth.resource(projectId, 'dashboard') });
 
 export const refreshMonitoredUrls = (client: QueryClient, projectId: string) =>
   client.invalidateQueries({ queryKey: queryKeys.siteHealth.resource(projectId, 'monitored') });
 
-/**
- * What a created crawl changes: the project's projection, and the monitored
- * set automatic admission adds the root to. Any in-flight dashboard read stops
- * first, so a pre-create answer cannot commit after creation and read as the
- * acknowledgement.
- */
 async function refreshWhenRerunLands(
   client: QueryClient,
   scope: ProjectScope,
@@ -258,7 +247,7 @@ async function refreshWhenRerunLands(
       ]);
       return;
     }
-    await /* NOSONAR -- Poll interval between rerun checks. */ new Promise<void>((resolve) => {
+    await /* NOSONAR */ new Promise<void>((resolve) => {
       setTimeout(resolve, RERUN_POLL_INTERVAL_MS);
     });
   }

@@ -113,7 +113,6 @@ export async function issueInvitationInTransaction(
     expires_at: new Date(now.getTime() + policy.workspaces.invitation_ttl_hours * 3_600_000),
     updated_at: now,
   };
-  // Reuse an expired slot because the partial unique index cannot use a clock.
   const expired = await trx
     .selectFrom('workspace_invitations')
     .select('id')
@@ -191,7 +190,6 @@ export function updateInvitation(
 export function acceptInvitation(db: Database, actorId: string, token: string) {
   return db.transaction().execute(async (trx) => {
     const hash = hashInvitationToken(token);
-    // Discover the root, then lock root before invitation to match all other writers.
     const found = await trx
       .selectFrom('workspace_invitations')
       .select('workspace_id')
@@ -228,9 +226,6 @@ export function acceptInvitation(db: Database, actorId: string, token: string) {
       user.email.trim().toLowerCase() !== invitation.email_normalized
     )
       refusal('invitation_invalid', 400);
-    // A link is only as good as its issuer's standing when it is used. The
-    // issuer's account row is held so an operator disable (which locks only that
-    // row) either commits first and refuses this accept, or waits for it.
     if (!invitation.accepted_at) {
       const issuer = invitation.invited_by_user_id;
       if (issuer === null) refusal('invitation_invalid', 400);

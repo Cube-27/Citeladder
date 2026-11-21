@@ -8,7 +8,6 @@ import { failureFacts, getLogger } from '../logging.ts';
 const tokenSchema = z.object({ access_token: z.string().min(1) });
 
 type StartMode = 'wake' | 'handover';
-// Needs run.jobs.runWithOverrides, which only the runner's own identity holds.
 const handoverBody = JSON.stringify({
   overrides: { containerOverrides: [{ env: [{ name: 'RUNNER_HANDOVER', value: 'true' }] }] },
 });
@@ -63,7 +62,6 @@ export function runnerStarter(
       if (!response.ok) throw new RunnerStartError('runner_start_rejected', response.status);
       return true;
     } catch (error) {
-      // Never disclose Google response bodies/tokens, or turn a committed write into an error.
       getLogger('workers.runner').warning('runner_start_failed', {
         ...failureFacts(error),
         status: error instanceof RunnerStartError ? error.status : null,

@@ -103,7 +103,6 @@ export async function readiness(
     .executeTakeFirst();
   if (project === undefined) throw notFound('Project');
   const [ownedDomains, competitors, account, latest, datasets] = await Promise.all([
-    // Project children carry no workspace column; the join scopes them.
     scope.workspace
       .selectFrom(db, 'projects')
       .innerJoin('owned_domains', 'owned_domains.project_id', 'projects.id')
@@ -257,7 +256,6 @@ export async function datasetPage(
     if (anchor === undefined) throw invalidCursor();
     const tie = sql<SqlBool>`${sql.ref('id')} > ${after}`;
     const beyond = request.direction === 'asc' ? sql`>` : sql`<`;
-    // Nulls sort last: after a null key only later nulls remain.
     query = query.where(
       anchor.value === null
         ? sql<SqlBool>`${key} is null and ${tie}`

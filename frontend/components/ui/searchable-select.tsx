@@ -87,7 +87,7 @@ export function SearchableSelect({
       ) : null}
       <Input
         id={id}
-        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- An editable ARIA combobox supports filtering where a native select cannot.
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
         role="combobox"
         aria-label={ariaLabel}
         aria-controls={listId}
@@ -141,7 +141,7 @@ export function SearchableSelect({
       {showList ? (
         <ul
           id={listId}
-          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- The popup uses ARIA options while focus remains in the editable combobox.
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role
           role="listbox"
           aria-label={ariaLabel}
           data-open="true"
@@ -154,10 +154,8 @@ export function SearchableSelect({
             <li key={option.value} role="none">
               <button
                 type="button"
-                // By position, not value: a value may hold characters that are
-                // not valid in an id reference (spaces, for one).
                 id={`${listId}-${index}`}
-                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- ARIA listbox options keep focus on the editable input.
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
                 role="option"
                 tabIndex={-1}
                 aria-selected={option.value === value}
@@ -168,7 +166,6 @@ export function SearchableSelect({
                     index === activeIndex && 'not-aria-selected:overlay-hover',
                   ),
                 })}
-                // Focus stays in the field; the choice commits on release (WCAG 2.5.2).
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => commit(option)}
                 onMouseEnter={() => setHighlight(index)}

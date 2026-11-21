@@ -76,18 +76,12 @@ export type BudgetSubject =
   | 'user'
   | 'integration_connection';
 
-/**
- * The IPv6 prefix a `client` budget counts as one visitor: one host normally
- * holds a whole /64, and a registration flood can spread across a /56. IPv4
- * addresses count as they are.
- */
 export const clientNetworkPrefixes = { client: 64, registration: 56 } as const;
 export type ClientNetworkScope = keyof typeof clientNetworkPrefixes;
 
 type BudgetValue = number | SettingSpec;
 
 type Budget = {
-  /** The persisted `usage_windows.operation`; renaming it resets live windows. */
   operation: string;
   subject: BudgetSubject;
   limit: BudgetValue;
@@ -181,9 +175,6 @@ export const budgets = {
     limit: abuse.login_email_limit,
     windowSeconds: abuse.login_window_seconds,
   },
-  // The challenge thresholds are read, never spent past: reaching one asks for
-  // Turnstile on the next sign-in instead of refusing it. The address threshold
-  // reads the address's failure window above.
   login_email_challenge: {
     operation: 'auth.login.email_failure',
     subject: 'email',

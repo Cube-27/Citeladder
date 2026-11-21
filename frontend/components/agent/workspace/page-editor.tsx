@@ -100,7 +100,6 @@ export function PageEditor({
         extensions: [
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
-          // Not markdown(): it bundles the HTML, CSS and JS grammars (~70 KB gzip) for inline HTML.
           markdownLanguage,
           Prec.high(keymap.of(markdownKeymap)),
           pasteURLAsLink,

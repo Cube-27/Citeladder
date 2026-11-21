@@ -88,8 +88,8 @@ export function RecordTag({
         </span>
       ) : (
         <span className="min-w-0 truncate">{label}</span>
-      )}
-      {/* Read as two words; flex layout drops the space visually. */} {status}
+      )}{' '}
+      {status}
       <ArrowRight className="size-3 shrink-0" aria-hidden />
     </ProjectLink>
   );

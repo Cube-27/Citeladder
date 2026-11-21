@@ -122,7 +122,6 @@ function requireRetryableConnection(
     throw new ModelError(timedOut ? 'timeout' : 'connection');
 }
 
-/** No provider body, credential, or customer text enters an error. */
 export async function postModel(
   url: string,
   apiKey: string,
@@ -148,8 +147,8 @@ export async function postModel(
     } catch (error) {
       requireRetryableConnection(error, policy, attempt + 1 === policy.attempts, signal);
     }
-    await response?.body?.cancel(); // NOSONAR -- Release this attempt's body before retrying.
-    await backoff(transport, retryDelay(response, attempt, policy), signal); // NOSONAR -- Retry backoff.
+    await response?.body?.cancel(); // NOSONAR
+    await backoff(transport, retryDelay(response, attempt, policy), signal); // NOSONAR
   }
   throw new ModelError('connection');
 }

@@ -99,8 +99,6 @@ async function readSelection(host: Host, input: AnalyticsSelection) {
 export function createController(host: Host) {
   let generation = 0;
   let projectRequest = 0;
-  // Initial hosts may send only a result. Subsequent results must belong to
-  // a tool-input generation, never to a local selection or disconnected view.
   let hostGeneration: number | null = 0;
   let requestedSelection: Partial<AnalyticsSelection> | null = null;
   let state: AppState = {
@@ -293,8 +291,6 @@ export function createController(host: Host) {
       hostGeneration = ++generation;
       requestedSelection = parsed.success ? parsed.data : null;
       if (parsed.success && !toolName && args.success && args.data.view === undefined) {
-        // toolInfo is optional. Project-only arguments are shared by Overview
-        // and Site Health; the authenticated result determines the actual view.
         const { view: _view, ...selection } = parsed.data;
         requestedSelection = selection;
       }

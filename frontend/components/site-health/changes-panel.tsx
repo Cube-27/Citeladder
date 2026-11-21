@@ -55,8 +55,6 @@ export function ChangesPanel({
   const { crawlAId, crawlBId, pairAvailable } = comparedPair(summary.data);
   const { page, table } = useCursorTableQuery({
     workspaceId,
-    // Rows carry over only within the same compared pair: a row of another
-    // pair would link to the wrong crawl's page.
     scopeId: [projectId, crawlAId ?? 'unselected-a', crawlBId ?? 'unselected-b'],
     scope: null,
     query: (request) => siteHealthQueries.changes(scope, { crawlAId, crawlBId, ...request }),

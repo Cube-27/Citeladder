@@ -28,8 +28,6 @@ function scopeOf(db: Database, selection: RunSelection) {
       observedAt.as('observed_at'),
       'snapshot.text as prompt_text',
       'snapshot.theme as theme',
-      // Coalesced to the frozen text: a deleted prompt's snapshot has a NULL
-      // id, and count(distinct) would skip it.
       sql`coalesce(snapshot.prompt_id::text, snapshot.text)`.as('prompt_key'),
     ])
     .as('scope');
@@ -139,12 +137,7 @@ async function brands(
 ): Promise<SourceUrlDetail['brands']> {
   const found: { kind: 'brand' | 'competitor'; name: string; responses: number }[] = [];
   for (const kind of ['brand', 'competitor'] as const) {
-    for (const row of await /* NOSONAR -- Detail reads run one at a time, like the rest of this read. */ mentionCounts(
-      db,
-      selection.workspaceId,
-      cited,
-      kind,
-    )) {
+    for (const row of await /* NOSONAR */ mentionCounts(db, selection.workspaceId, cited, kind)) {
       if (row.name) found.push({ kind, ...row });
     }
   }

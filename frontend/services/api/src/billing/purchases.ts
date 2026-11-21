@@ -173,7 +173,6 @@ export function createPending(
 }
 
 export async function dispatch(db: Database, pending: Pending, provider: BillingProvider) {
-  // The intent transaction has committed. Never retry uncertain creation here.
   try {
     const reference = await provider.create(pending);
     await db
@@ -184,8 +183,6 @@ export async function dispatch(db: Database, pending: Pending, provider: Billing
       .execute();
   } catch (error) {
     if (!(error instanceof ProviderError)) throw error;
-    // An uncertain failure leaves the committed intent pending: the client
-    // polls and recovery finds or abandons the provider record.
     if (!error.uncertain)
       await db
         .updateTable('pending_activations')

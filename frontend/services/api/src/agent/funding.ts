@@ -205,7 +205,6 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
     },
     settle: async (db, attempt, usage) => {
       const price = modelPrice(attempt.requested_model, platform.model);
-      // Internal cost is recorded whoever funds the call: an unmetered call still costs the platform.
       const cost = price && usage ? costMicrousd(price, usage) : null;
       if (attempt.funding_source !== 'platform')
         return { credits: 0, status: 'zero_debit', costMicrousd: cost };

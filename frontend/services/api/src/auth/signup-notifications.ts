@@ -62,10 +62,9 @@ export async function notifyVerifiedSignups(
   let sent = 0;
   for (const user of pending) {
     if (!canAdmit()) break;
-    // A refused send stays pending for the next tick; the key stops a duplicate.
-    const accepted = await sendAuthMail(config, notice(user)); // NOSONAR -- Sequential sends.
+    const accepted = await sendAuthMail(config, notice(user)); // NOSONAR
     if (!accepted) continue;
-    await recordSecurityEvent(db, NOTIFIED, user.id, null, user.id); // NOSONAR -- Marks this send.
+    await recordSecurityEvent(db, NOTIFIED, user.id, null, user.id); // NOSONAR
     sent += 1;
   }
   if (sent) getLogger('app.auth').info('auth.signup_notices_sent', { count: sent });

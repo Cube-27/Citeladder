@@ -79,7 +79,7 @@ export class IntegrationDispatcher {
       )
         continue;
       try {
-        await /* NOSONAR -- Admission is checked before each enqueue. */ enqueueSyncRun(this.#db, {
+        await /* NOSONAR */ enqueueSyncRun(this.#db, {
           workspaceId: target.workspace_id,
           connectionId: target.connection_id,
           mappingId: target.mapping_id,
@@ -97,7 +97,7 @@ export class IntegrationDispatcher {
     const grants = await pendingRevocations(this.#db, 20);
     for (const candidate of grants) {
       if (!canAdmit()) break;
-      await this.#revokeGrant(candidate.id, candidate.workspace_id); // NOSONAR -- Revocations finish sequentially before the next admission check.
+      await this.#revokeGrant(candidate.id, candidate.workspace_id); // NOSONAR
     }
   }
 

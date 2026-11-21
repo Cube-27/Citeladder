@@ -85,10 +85,6 @@ export function createIdempotencyKey(): string {
 }
 
 export const billingApi = {
-  // These endpoints are WORKSPACE-scoped on the server, so each one carries
-  // its workspace explicitly. Without it the transport falls back to the
-  // mutable active selection, and a call begun in one workspace could be
-  // answered for another after a switch.
   checkout: async (activationId: string, options?: ApiRequestOptions) =>
     strictValidate(
       subscriptionCheckoutSchema,

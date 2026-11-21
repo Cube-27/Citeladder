@@ -1193,7 +1193,6 @@ describe('unscored visibility checks', () => {
       sitemap_member: member,
       indexing_policy: policy,
     });
-    // Shopify lists every collection in its sitemap, including the ones it noindexes on purpose.
     expect(outcome(rule('technical.indexable', facts(true)))).toEqual([
       'not_applicable',
       'intentional_non_indexing',

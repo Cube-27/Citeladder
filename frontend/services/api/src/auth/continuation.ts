@@ -7,7 +7,6 @@ const key = (config: ServiceConfig) =>
   createHash('sha256').update(`auth-continuation:${config.session.secretKey}`).digest();
 export type LinkProof = { userId: string; version: number };
 
-/** Encrypted browser-only binding: invitation secrets never enter provider state. */
 export function sealContinuation(
   config: ServiceConfig,
   nonce: string,

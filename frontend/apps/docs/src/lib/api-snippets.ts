@@ -62,7 +62,6 @@ export function buildSnippets(operation: ApiOperation): Snippet[] {
   const method = operation.method;
 
   const verb = method === 'GET' ? '' : ` -X ${method}`;
-  // An apostrophe closes a single-quoted shell argument, so it is written as '\''.
   const shellBody = json && JSON.stringify(body).replaceAll("'", String.raw`'\''`);
   const curl = [
     `curl${verb} "${url}"`,

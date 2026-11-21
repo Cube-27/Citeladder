@@ -292,7 +292,6 @@ export async function searchDataset(
 
 export async function competitorsAndDomains({ db, scope }: ProjectRead) {
   const workspace = new WorkspaceScope(scope.workspaceId);
-  // Neither table carries a workspace; the owning project scopes them.
   const project = () =>
     workspace.selectFrom(db, 'projects').where('projects.id', '=', scope.projectId);
   const [owned, competitors] = await Promise.all([

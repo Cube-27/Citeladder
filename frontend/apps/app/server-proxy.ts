@@ -17,7 +17,6 @@ export function createServerProxy(
   return Object.fromEntries(
     TYPESCRIPT_INGRESS_PATHS.map((path) => [
       proxyKey(path),
-      // Consent checks it is served on the app origin, so it keeps the browser's Host.
       { target, changeOrigin: path !== MCP_CONSENT_PATH },
     ]),
   );

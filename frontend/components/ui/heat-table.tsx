@@ -65,7 +65,6 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
                     style={{ background: heat(cell.tint) }}
                   >
                     <span className={textRole('label', 'tabular-nums')}>{cell.text}</span>
-                    {/* Ink: ink-2 falls under 4.5:1 on the strongest tint in both themes. */}
                     <span className={textRole('caption', 'text-ink')}>{cell.detail}</span>
                   </div>
                 )}

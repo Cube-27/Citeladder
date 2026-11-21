@@ -68,19 +68,15 @@ export async function settlePromptRun(db: Database, task: AuditTask, success: bo
     auditId: task.audit_id,
   } as const;
   for (const capability of TASK_CAPABILITIES) {
-    const holds = await holdsOf(db, subject, capability); // NOSONAR -- Settled in order, below.
+    const holds = await holdsOf(db, subject, capability); // NOSONAR
     for (const reservationId of holds)
-      await /* NOSONAR -- Settlements share the transaction and its capacity lock, so they run in order. */ settle(
-        db,
-        {
-          workspaceId: task.workspace_id,
-          reservationId,
-          // Settling debits at most what is held, so success spends the whole hold.
-          spent: success ? Number.MAX_SAFE_INTEGER : 0,
-          attempt: 1,
-          dispatch: 'answer',
-          at,
-        },
-      );
+      await /* NOSONAR */ settle(db, {
+        workspaceId: task.workspace_id,
+        reservationId,
+        spent: success ? Number.MAX_SAFE_INTEGER : 0,
+        attempt: 1,
+        dispatch: 'answer',
+        at,
+      });
   }
 }

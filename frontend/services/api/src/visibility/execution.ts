@@ -199,8 +199,6 @@ export async function getExecutionEvidence(
       classification: citationClassificationSchema.parse(citation.classification),
     })),
     competitors_mentioned: competitorsMentioned(score),
-    // Null for an LLM execution, and for a search that produced no
-    // observation row: a gap in ours, not a measured absence.
     search_surface,
     perception,
     claims,

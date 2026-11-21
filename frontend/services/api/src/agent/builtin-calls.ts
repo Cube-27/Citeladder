@@ -17,11 +17,6 @@ import type { Turn } from './runtime.ts';
 import type { TurnState } from './turn-budget.ts';
 import { documentStep } from './turn-state.ts';
 
-/**
- * Runs one built-in call and records its step. Every built-in but
- * `propose_declaration` changes the turn's state before this returns, so
- * built-ins called in one response apply in the order written.
- */
 export function runBuiltin(
   db: Database,
   catalog: SkillCatalog,

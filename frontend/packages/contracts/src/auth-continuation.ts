@@ -4,7 +4,6 @@ function continuationParameter(pathname: string): string | undefined {
   return undefined;
 }
 
-/** Reconstruct an allowlisted app-relative destination; never forward opaque URLs. */
 export function safeAuthReturnPath(value: string | null | undefined): string | undefined {
   if (
     !value ||

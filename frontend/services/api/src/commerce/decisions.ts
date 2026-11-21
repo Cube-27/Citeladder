@@ -39,8 +39,6 @@ export function decideBuyerPrompt(
   approved: boolean,
 ) {
   return db.transaction().execute(async (trx) => {
-    // The prompt's own writer first (project lock, then the prompt row), then
-    // its Commerce target: creation uses the same parent-before-child order.
     const prompt = await trx
       .selectFrom('prompts as p')
       .innerJoin('prompt_sets as ps', 'ps.id', 'p.prompt_set_id')

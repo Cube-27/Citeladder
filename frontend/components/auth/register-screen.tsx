@@ -57,7 +57,6 @@ export function RegisterScreen({
         })
         .catch(terms.refreshOnRevisionChange),
     onSuccess: () => replace(withAuthReturnPath('/login?registered=1', returnTo)),
-    // The token is single-use, spent or not: a retry solves a fresh one.
     onSettled: () => verification.reset(),
   });
   const emailRefusal = mutation.isError ? signupEmailFieldError(mutation.error) : undefined;

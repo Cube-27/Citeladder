@@ -30,7 +30,6 @@ const TONE_FILL: Record<StatusTone, string> = {
   you: 'bg-accent-wash',
 };
 
-// Each tone has its own shape, so a status never rests on colour alone.
 const TONE_SHAPE: Record<StatusTone, ReactNode> = {
   neutral: <circle cx={6} cy={6} r={4.25} fill="none" stroke="currentColor" strokeWidth={1.5} />,
   positive: (
@@ -102,7 +101,6 @@ const runStatusMarks = {
   cancelled: mark('warning'),
 } as const satisfies Record<string, Mark>;
 
-// Severity and priority share one scale: three bars, with the tone repeating the level.
 const priorityMarks = {
   high: mark('negative', { bars: 3 }),
   medium: mark('warning', { bars: 2 }),

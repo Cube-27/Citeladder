@@ -19,7 +19,6 @@ import { useUrlSearch } from '@/lib/navigation/url-params';
 import { routeTrail } from '@/lib/navigation/route-trail';
 import { cn } from '@/lib/utils';
 
-// Only record pages draw a trail, so it stays out of the boot bundle; a route's loading frame fetches it first.
 const Breadcrumb = lazy(() =>
   import('@/components/ui/breadcrumb').then(({ Breadcrumb }) => ({ default: Breadcrumb })),
 );
@@ -52,7 +51,6 @@ export function PageFrame({
   const parents = trail ?? routeTrail(pathname);
   const hasTrail = parents.length > 0;
   const width = fill ? 'fill' : routeWidth(pathname);
-  // A thread keeps its name and actions in the masthead; every other page heads its own column.
   const headed = head === 'page' || hasTrail;
   return (
     <PageEmptyOfferProvider>
@@ -195,8 +193,6 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
 
 type PageWidth = ReturnType<typeof routeWidth> | 'fill';
 
-// Every tier centres in the main panel, so the space left and right of the column is
-// equal; the masthead, heading and strips read the same --page-start as the body.
 const COLUMN_START = 'ms-[var(--page-start)] w-full';
 
 const PAGE_START: Record<PageWidth, string | false> = {

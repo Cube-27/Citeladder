@@ -13,7 +13,6 @@ import { selectedPartition } from '../integrations/partitions.ts';
 
 const { referrals } = policy;
 const REFERRAL_DATASETS = Object.values(referrals.datasets).sort(compareText);
-// Rows per INSERT, well inside PostgreSQL's bind-parameter limit.
 const INSERT_CHUNK = 1000;
 
 export async function ownedArtifact(
@@ -92,7 +91,7 @@ export const ingestReferrals: Executor = async (task, { db, maxAttempts }) => {
       ];
     });
     for (let start = 0; start < events.length; start += INSERT_CHUNK) {
-      await trx // NOSONAR -- One transaction: bounded inserts run in order.
+      await trx // NOSONAR
         .insertInto('referral_events')
         .values(events.slice(start, start + INSERT_CHUNK))
         .onConflict((conflict) => conflict.columns(['import_id', 'content_hash']).doNothing())

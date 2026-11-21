@@ -36,8 +36,6 @@ import type { WorkflowCatalog } from './workflows.ts';
 import type { AgentAttachment } from '@citeladder/contracts/agent';
 
 export type FundingIdentity = Pick<Run, 'funding_source' | 'requested_model'>;
-/** Admission owns capability, funding selection and abuse capacity, in this transaction.
- * Required injection deliberately has no unmetered/platform fallback. */
 export type Admission = (db: Database, scope: Scope) => Promise<FundingIdentity>;
 type AttachChatAction = (trx: Database) => Promise<string>;
 const messageSchema = z.string().trim().min(1).max(agentPolicy.message_max_chars);
@@ -162,7 +160,6 @@ export class AgentStore {
   }
   private async lockWorkspace(trx: Database, scope: Scope) {
     await authorize(trx, scope);
-    // Serialize workspace keys before chat locks.
     await subjectXactLock(trx, `agent-enqueue:${scope.workspaceId}`);
   }
   async create(
@@ -483,7 +480,6 @@ export class AgentStore {
     });
   }
   private async createChat(db: Database, scope: Scope, input: TurnInput) {
-    // Work with Agent on a New Action accepts it (owner 2026-11-16).
     if (input.actionId) await acceptForAgent(db, scope, input.actionId, scope.userId);
     const now = new Date();
     return db

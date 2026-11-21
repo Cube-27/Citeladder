@@ -1,9 +1,3 @@
-/**
- * The hosted MCP endpoint and the AI assistants the connect strip opens.
- *
- * Every build links the production endpoint: assistants connect from their own
- * clouds, so a local or preview origin would never be reachable from them.
- */
 export const MCP_SERVER_URL = 'https://api.citeladder.com/mcp';
 
 const CONNECTOR_NAME = 'CiteLadder';
@@ -17,12 +11,6 @@ export type McpClientLink = Readonly<{
   handoff: 'prefilled' | 'paste';
 }>;
 
-/**
- * Checked against each vendor's documentation on 2026-10-09:
- * claude.com/docs/connectors (prefill parameters), developers.openai.com/apps-sdk
- * (ChatGPT plugins page), support.google.com/gemini/answer/17209137 (Connected
- * apps) and docs.x.ai/grok/connectors.
- */
 function clientLinks(serverUrl: string): readonly [McpClientLink, ...McpClientLink[]] {
   const claude = new URL('https://claude.ai/customize/connectors');
   claude.search = new URLSearchParams({

@@ -75,11 +75,6 @@ async function visibilityLeg(
     : empty(a.LEG_VISIBILITY_RUN);
 }
 
-/**
- * A synced window that starts after the declaration day is what a traffic
- * check reads. Search Console finalizes a day after a short lag, so
- * the first such window is due then; past it, a sync is what is missing.
- */
 export function searchConsoleState(
   declaredAt: Date,
   window: { start: string; end: string } | null,
@@ -143,9 +138,9 @@ export async function measurementLegs(
   ];
   const result: Leg[] = [];
   for (const leg of legs) {
-    if (leg === a.LEG_CRAWL) result.push(await crawlLeg(db, row, observations)); // NOSONAR -- At most three legs; the caller's connection may be a transaction.
-    else if (leg === a.LEG_VISIBILITY_RUN) result.push(await visibilityLeg(db, row, observations)); // NOSONAR -- At most three legs; the caller's connection may be a transaction.
-    else if (leg === a.LEG_SEARCH_CONSOLE_WINDOW) result.push(await searchLeg(db, row, now)); // NOSONAR -- At most three legs; the caller's connection may be a transaction.
+    if (leg === a.LEG_CRAWL) result.push(await crawlLeg(db, row, observations)); // NOSONAR
+    else if (leg === a.LEG_VISIBILITY_RUN) result.push(await visibilityLeg(db, row, observations)); // NOSONAR
+    else if (leg === a.LEG_SEARCH_CONSOLE_WINDOW) result.push(await searchLeg(db, row, now)); // NOSONAR
   }
   return result;
 }

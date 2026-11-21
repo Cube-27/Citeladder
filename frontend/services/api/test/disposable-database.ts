@@ -56,7 +56,6 @@ export function disposableDatabase() {
   afterAll(async () => {
     try {
       await db.destroy();
-      // Let closing pool connections finish; FORCE can race their socket shutdown.
       if (created) await connection.query(`DROP DATABASE "${name}"`);
     } finally {
       await connection.end();

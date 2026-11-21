@@ -17,8 +17,6 @@ export class WorkspaceScope {
     this.workspaceId = workspaceId;
   }
 
-  // Kysely cannot resolve its builder overloads for a generic table name, so
-  // the query widens to the table union once and narrows back.
   selectFrom<Table extends WorkspaceTable>(db: Database, table: Table) {
     const column = sql.ref(table + '.workspace_id');
     const query = db

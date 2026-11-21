@@ -1,6 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Search hydrates when the browser is idle; a click before then is not a search.
 async function openSearch(page: Page) {
   await page.waitForFunction(() => !document.querySelector('astro-island[ssr]'));
   await page.getByRole('button', { name: /Search docs/ }).click();
@@ -124,7 +123,6 @@ test('built docs enforce a script policy without breaking hydration', async ({ p
   await page.goto('/');
   await expect(page.locator('meta[http-equiv="content-security-policy"]')).toHaveCount(1);
   await openSearch(page);
-  // The search UI builds its input lazily after load; slow CI runners need longer.
   await expect(
     page.getByRole('dialog').getByRole('combobox', { name: 'Search terms' }),
   ).toBeFocused({ timeout: 15_000 });

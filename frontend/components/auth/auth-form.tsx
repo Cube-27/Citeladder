@@ -39,7 +39,6 @@ export function AuthEmailField({
           {...props}
           {...inputProps}
           type="email"
-          // `username`, not `email`: password managers pair it with the password.
           autoComplete="username"
           spellCheck={false}
           placeholder="Your email address"
@@ -121,7 +120,6 @@ function GoogleEntry({
       setNotice(googleStartNotice(err));
     } finally {
       setPending(false);
-      // The token is single-use, spent or not.
       if (signup) verification?.reset();
     }
   }
@@ -235,12 +233,6 @@ export function AuthFormShell({
   );
 }
 
-/**
- * The fields, the Turnstile slot (when challenged) and submit. A held or
- * pending form swallows submit until the gate opens or the attempt ends. The
- * submit is `aria-disabled`, never `disabled`, so it keeps keyboard focus
- * while the attempt is pending (WCAG 2.4.3).
- */
 function AuthEmailForm({
   consent,
   onSubmit,
@@ -272,8 +264,6 @@ function AuthEmailForm({
 
       {check && consent.terms?.signup ? <AuthSwitchOnly>{check}</AuthSwitchOnly> : check}
 
-      {/* Not `pending`: Button's pending sets `disabled`, which drops focus to
-          the document. The changed label says it is working. */}
       <AuthButton
         type="submit"
         variant="primary"

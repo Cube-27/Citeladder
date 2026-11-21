@@ -40,10 +40,6 @@ export function consentDocument(source: string) {
   };
 }
 
-/**
- * Where a decision hands the browser back: a page, not a redirect, because
- * `form-action` governs every redirect after the post. Its link repeats the target.
- */
 export async function callbackOf(response: Response) {
   expect(response.status).toBe(200);
   expect(response.headers.get('location')).toBeNull();

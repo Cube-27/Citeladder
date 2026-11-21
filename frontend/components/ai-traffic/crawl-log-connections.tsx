@@ -173,7 +173,6 @@ function Connections({
         {body}
       </Stack>
     );
-  // The body keeps its place in the tree, so an open setup dialog survives the read settling.
   return (
     <Section id="crawl-log-connections" aria-label="Crawl log connections">
       <ConnectionsHead empty={sources.data?.items.length === 0} connect={connect} />

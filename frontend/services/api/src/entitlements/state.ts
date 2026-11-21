@@ -23,8 +23,6 @@ export async function loadAccountState(
   at: Date,
   accountId?: string,
 ): Promise<AccountState | null> {
-  // A workspace has one billing account (unique index), so rows joined through
-  // the workspace are exactly that account's.
   const [account, grants, revocations, subscription] = await Promise.all([
     db
       .selectFrom('billing_accounts')

@@ -166,11 +166,6 @@ export function persistSurfaceExchange(
   });
 }
 
-/**
- * A submission the provider refused (a rate limit) created no task, so it may be sent again:
- * clear the intent and park for a fresh submit without spending an attempt. The cleared intent
- * puts the task back under the run cap, which bounds the retries.
- */
 export function releaseRefusedSubmission(
   db: Database,
   claimed: AuditTask,

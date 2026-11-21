@@ -152,7 +152,6 @@ describe('hosted MCP transport', () => {
         ),
       );
       expect(loaded.result.contents).toEqual([expect.objectContaining({ uri: appResource.uri })]);
-      // 2026-07-28 validators require CacheableResult on reads; 2025-11-25 has no such fields.
       expect([loaded.result.ttlMs, loaded.result.cacheScope]).toEqual(
         modern ? [3_600_000, 'public'] : [undefined, undefined],
       );

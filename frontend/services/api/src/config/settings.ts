@@ -66,8 +66,6 @@ function parseDatetimeSetting(name: string, raw: string): Date | null {
   if (!raw.trim()) return null;
   const parsed = parseDatetime(raw.trim());
   if (parsed === null) throw new ConfigError(`${name} must be a timestamp`);
-  // A naive timestamp is kept as "present but unusable"; demo access then
-  // fails closed exactly as `demo_access_expired` does for a naive value.
   if (parsed.offsetSeconds === null) return new Date(Number.NaN);
   return new Date(Number(epochMicros(parsed) / 1000n));
 }

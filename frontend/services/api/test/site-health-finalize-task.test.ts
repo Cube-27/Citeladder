@@ -200,9 +200,9 @@ describe('finalize task', () => {
   it('fails a crawl whose finalization fails three times, and keeps a cancelled crawl cancelled', async () => {
     const run = async (seed: SiteSeed) => {
       for (let attempt = 0; attempt < 3; attempt++) {
-        await retryNow(seed); // NOSONAR -- Attempts in order.
+        await retryNow(seed); // NOSONAR
         nextBatch.before = () => Promise.reject(new Error('batch write failed'));
-        await finalize(seed); // NOSONAR -- Attempts in order.
+        await finalize(seed); // NOSONAR
       }
       expect(await finalize(seed)).toBe(false);
       return finalizeTasks(seed);
@@ -249,7 +249,7 @@ describe('finalize task', () => {
 
   it('publishes a crawl stopped between finalize batches as cancelled, each page once', async () => {
     const seed = await fixtures.crawl('running');
-    for (const path of ['/', '/a', '/b']) await monitoredPage(seed, path); // NOSONAR -- Fixture rows in order.
+    for (const path of ['/', '/a', '/b']) await monitoredPage(seed, path); // NOSONAR
     const size = policy.site_health.crawl.finalize.batch_pages;
     policy.site_health.crawl.finalize.batch_pages = 1;
     try {
@@ -287,7 +287,7 @@ describe('finalize task', () => {
   it('publishes a crawl larger than one batch without any read holding more than one batch', async () => {
     const seed = await fixtures.crawl('running');
     const paths = ['/', '/a', '/b', '/c', '/d', '/e', '/f', '/g', '/h'];
-    for (const path of paths) await monitoredPage(seed, path); // NOSONAR -- Fixture rows in order.
+    for (const path of paths) await monitoredPage(seed, path); // NOSONAR
     const settings = policy.site_health.crawl.finalize;
     const sizes = { ...settings };
     Object.assign(settings, { batch_pages: 2, read_pages: 2, projection_pages: 2 });

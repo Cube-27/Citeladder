@@ -32,12 +32,6 @@ export function AuthForm({
   );
 }
 
-/**
- * The Cloudflare Turnstile slot: the flexible widget's 65px (the compact
- * widget's 140px on a slot narrower than 300px), reserved before the widget
- * loads and kept after it completes, so the submit never moves. A notice
- * shares the same cell when the widget cannot load.
- */
 export function AuthHumanCheck({
   widget: { container, size, failed },
 }: Readonly<{ widget: Pick<Turnstile, 'container' | 'size' | 'failed'> }>) {

@@ -11,9 +11,6 @@ const args = process.argv.slice(2).filter((arg) => arg !== '--');
 const types = args.includes('--types');
 const files = args.filter((arg) => arg !== '--types');
 
-// Always the local POSTGRES_* database: an inherited URL could name a shared or
-// remote one, and the suite writes and deletes rows. Code under test connects
-// as the application role; fixtures and schema tests use the owner.
 const local = localEnvironment({
   ...process.env,
   DATABASE_URL: undefined,
@@ -29,7 +26,7 @@ if (types) env.TYPES_DATABASE_URL = ownerUrl;
 else Object.assign(env, { API_TEST_DATABASE_URL: appUrl, API_TEST_OWNER_DATABASE_URL: ownerUrl });
 
 const gitArgs = ['-C', apiRoot, 'rev-parse', '--absolute-git-dir'];
-const gitDir = execFileSync('git', gitArgs, { encoding: 'utf8' }).trim(); // NOSONAR: trusted PATH.
+const gitDir = execFileSync('git', gitArgs, { encoding: 'utf8' }).trim(); // NOSONAR
 const log = join(gitDir, 'api-test.log');
 const command = types ? ['db:types'] : ['exec', 'vitest', 'run', ...files];
 const output = openSync(log, 'w');
@@ -40,7 +37,7 @@ try {
     env,
     stdio: ['ignore', output, output],
   } satisfies SpawnSyncOptions;
-  status = spawnSync('pnpm', command, options).status; // NOSONAR: trusted PATH.
+  status = spawnSync('pnpm', command, options).status; // NOSONAR
 } finally {
   closeSync(output);
 }

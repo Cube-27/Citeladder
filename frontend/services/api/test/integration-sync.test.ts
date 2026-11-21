@@ -22,7 +22,6 @@ const settings = integrationSettings({});
 let ownerId: string;
 const originalTimezone = process.env.TZ;
 beforeAll(async () => {
-  // PostgreSQL DATE must keep its calendar day even east of UTC.
   process.env.TZ = 'Asia/Kolkata';
   ownerId = await fixtures.user();
 });
@@ -249,7 +248,6 @@ describe('integration sync API and immutable windows', () => {
   });
   it('returns a 202 enqueue identity and freezes the default Pacific-day window without credentials', async () => {
     const target = await seedTarget();
-    // At 03:00 UTC, Search Console's Pacific day is still the previous one.
     const day = pinNextUtcHour(3);
     const before = day(-2);
     const enqueued = await enqueue(target);
@@ -415,7 +413,6 @@ describe('integration sync API and immutable windows', () => {
   });
 
   it('re-reads only the late-data days after coverage, even past a failed history gap', async () => {
-    // Bing finalizes on its UTC day; Search Console's finality bound is covered below.
     const target = await seedTarget('bing');
     const yesterday = pinNextUtcHour(12)(-1);
     const daysBefore = (days: number) =>

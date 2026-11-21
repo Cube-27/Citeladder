@@ -32,7 +32,6 @@ export function lockAuditEnqueue(db: Database, workspaceId: string) {
   return subjectXactLock(db, `audit-enqueue:${workspaceId}`);
 }
 
-/** Called under the workspace enqueue lock, before taking the account capacity lock. */
 export async function reserveAuditCapacity(
   db: Database,
   workspaceId: string,
@@ -114,7 +113,6 @@ export async function admitAudit(
     if (funded) throw unresolved(workspaceId);
     return null;
   }
-  // The account lock follows the workspace lock and serializes rate and budget admission.
   await capacityLock(db, account.id);
   const state = await accountState(db, workspaceId, account.id, at);
   if (state.error) throw unresolved(workspaceId, account.id);
@@ -126,9 +124,6 @@ export async function admitAudit(
   if (!funded) return null;
   const month = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), 1));
   const end = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1));
-  // Repricing appends a projection per pricing version: each execution counts its latest once.
-  // The cost rows alone decide, as internal_costs does, so a deleted project's spend still counts;
-  // the workspace's one account funds every platform-funded audit in it.
   const latest = db
     .selectFrom('execution_cost_projections as p')
     .select(

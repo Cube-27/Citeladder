@@ -26,7 +26,6 @@ function prefersMarkdown(accept: string | null): boolean {
   if (!accept) return false;
   const markdown = quality(accept, 'text/markdown');
   if (!markdown) return false;
-  // HTML inherits a wildcard's quality when it is not listed itself.
   const html = quality(accept, 'text/html') ?? quality(accept, 'text/*') ?? quality(accept, '*/*');
   return html === null || markdown > html;
 }

@@ -44,7 +44,6 @@ function create(path) {
 function held(path) {
   try {
     const owner = Number(readFileSync(path, 'utf8'));
-    // An empty file is a claim still being written, unless it was abandoned long ago.
     if (!owner) return Date.now() - statSync(path).mtimeMs < 60_000;
     return alive(owner);
   } catch (error) {

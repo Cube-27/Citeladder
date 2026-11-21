@@ -43,9 +43,6 @@ function NewChat({
   searchParams,
 }: Readonly<{ workspaceId: string; projectId: string; searchParams: URLSearchParams }>) {
   const handoff = useMemo(() => parseAgentHandoff(searchParams), [searchParams]);
-  // Undefined until typed: the composer shows the URL's prompt or, for an
-  // Action handoff, the Action's own message once it loads. The message is
-  // read, never carried in the URL, so history and logs keep only ids.
   const [typed, setTyped] = useState(handoff.prompt);
   const [context, setContext] = useState(handoff.context);
   const [skillId, setSkillId] = useState<string | null | undefined>(handoff.skillId ?? undefined);

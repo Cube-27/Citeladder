@@ -98,7 +98,6 @@ export type PlatformAction =
   | { kind: 'delete'; email: string };
 export type AccountRequest = { reason: string; key: string; at: Date; apply?: boolean };
 
-/** Platform identity administration is never conferred by a workspace Admin role. */
 export async function authenticatePlatformOperator(
   db: Database,
   email: string,
@@ -300,22 +299,16 @@ async function createAccounts(
   const shared = await resolveSharedWorkspace(db, action);
   const created = [];
   for (const email of emails) {
-    const user = await createIdentity(db, email, encoded); // NOSONAR -- One transaction: statements run in order.
+    const user = await createIdentity(db, email, encoded); // NOSONAR
     if (!user) throw new Error('user_already_exists');
-    const { personal, target } = await placeAccount(db, session.actorId, shared, user); // NOSONAR -- One transaction: statements run in order.
-    await recordSecurityEvent(db, 'account.create', session.actorId, target.workspaceId, user.id); // NOSONAR -- One transaction: statements run in order.
+    const { personal, target } = await placeAccount(db, session.actorId, shared, user); // NOSONAR
+    await recordSecurityEvent(db, 'account.create', session.actorId, target.workspaceId, user.id); // NOSONAR
     const access =
       personal && action.access
-        ? await /* NOSONAR -- One transaction: statements run in order. */ grantAccess(
-            db,
-            session,
-            personal,
-            action.access,
-            {
-              ...request,
-              key: `${request.key}:${user.id}`,
-            },
-          )
+        ? await /* NOSONAR */ grantAccess(db, session, personal, action.access, {
+            ...request,
+            key: `${request.key}:${user.id}`,
+          })
         : undefined;
     created.push({
       email,
@@ -381,7 +374,7 @@ async function lockMemberships(
       .execute();
   const memberships = await loadMemberships();
   for (const member of memberships)
-    await db // NOSONAR -- Row locks are taken in workspace order on one transaction.
+    await db // NOSONAR
       .selectFrom('workspaces')
       .select('id')
       .where('id', '=', member.workspace_id)
@@ -418,36 +411,28 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
   ]);
   for (const member of memberships) {
     if (member.role !== 'owner') continue;
-    const members = await db // NOSONAR -- One transaction: checks run in order and stop at the first refusal.
+    const members = await db // NOSONAR
       .selectFrom('workspace_members')
       .select('id')
       .where('workspace_id', '=', member.workspace_id)
       .execute();
     if (members.length !== 1) throw new Error('transfer_ownership_first');
-    await /* NOSONAR -- One transaction: checks run in order. */ requireUnused(
-      db,
-      'workspaces',
-      member.workspace_id,
-      [
-        'public.workspace_members.workspace_id',
-        'public.billing_accounts.workspace_id',
-        'public.workspace_site_health_runtime.workspace_id',
-      ],
-    );
-    const account = await db // NOSONAR -- Locks the billing row on one transaction.
+    await /* NOSONAR */ requireUnused(db, 'workspaces', member.workspace_id, [
+      'public.workspace_members.workspace_id',
+      'public.billing_accounts.workspace_id',
+      'public.workspace_site_health_runtime.workspace_id',
+    ]);
+    const account = await db // NOSONAR
       .selectFrom('billing_accounts')
       .select('id')
       .where('workspace_id', '=', member.workspace_id)
       .forUpdate()
       .executeTakeFirst();
     if (!account) continue;
-    await /* NOSONAR -- One transaction: checks run in order. */ requireUnused(
-      db,
-      'billing_accounts',
-      account.id,
-      ['public.account_grants.billing_account_id'],
-    );
-    const extra = await db // NOSONAR -- One transaction: checks run in order.
+    await /* NOSONAR */ requireUnused(db, 'billing_accounts', account.id, [
+      'public.account_grants.billing_account_id',
+    ]);
+    const extra = await db // NOSONAR
       .selectFrom('account_grants')
       .select('id')
       .where('billing_account_id', '=', account.id)
@@ -463,9 +448,9 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
   );
   for (const member of memberships) {
     if (member.role === 'owner')
-      await db.deleteFrom('workspaces').where('id', '=', member.workspace_id).execute(); // NOSONAR -- One transaction: statements run in order.
+      await db.deleteFrom('workspaces').where('id', '=', member.workspace_id).execute(); // NOSONAR
     else
-      await /* NOSONAR -- One transaction: statements run in order. */ recordSecurityEvent(
+      await /* NOSONAR */ recordSecurityEvent(
         db,
         'membership.remove',
         session.actorId,
@@ -610,7 +595,7 @@ export async function managePlatformAccounts(
     throw new Error('unknown_account_action');
   });
   if (request.apply === true)
-    for (const workspaceId of new Set(granted)) await refreshRuntime(db, workspaceId); // NOSONAR -- One workspace's runtime per transaction.
+    for (const workspaceId of new Set(granted)) await refreshRuntime(db, workspaceId); // NOSONAR
   getLogger('api.billing.operator').info('account.management', {
     actor_id: session.actorId,
     operation: action.kind,
@@ -700,10 +685,6 @@ export async function manageAccount(db: Database, session: OperatorSession, acti
         memberId: target.memberId,
         role: role!,
       });
-    // A password is global, so a workspace administrator may reset only a
-    // member whose whole account lives in this workspace: never the owner,
-    // themself, a platform identity, or anyone who belongs to another workspace.
-    // The role is read from the locked user row so a concurrent promotion waits.
     const user = await trx
       .selectFrom('users')
       .select(['hashed_password', 'role'])

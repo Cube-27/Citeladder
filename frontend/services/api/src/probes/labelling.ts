@@ -132,7 +132,7 @@ async function label(db: Database, gateway: ModelGateway, scope: Scope, launch: 
       };
       const accept = (value: z.infer<typeof knownForOutput>) =>
         mapKnownFor(value, known, { themes, maxItems: max });
-      labels.known.push(...(await ask(gateway, calls, request, accept))); // NOSONAR -- One call per market, in order.
+      labels.known.push(...(await ask(gateway, calls, request, accept))); // NOSONAR
     }
     if (objections.length) {
       const named = labels.objections.newGroups;
@@ -152,7 +152,7 @@ async function label(db: Database, gateway: ModelGateway, scope: Scope, launch: 
           maxNewGroups: probes.max_new_groups_per_probe,
           nameMaxChars: probes.group_name_max_chars,
         });
-      const mapped = await ask(gateway, calls, request, accept); // NOSONAR -- Each market sees the groups the earlier ones named.
+      const mapped = await ask(gateway, calls, request, accept); // NOSONAR
       labels.objections = {
         items: [...labels.objections.items, ...mapped.items],
         newGroups: mapped.newGroups,
@@ -174,7 +174,7 @@ async function label(db: Database, gateway: ModelGateway, scope: Scope, launch: 
     };
     const accept = (value: z.infer<typeof themeOutput>) =>
       mapThemeBrands(value, answers, { tracked: roster, maxItems: max });
-    const mapped = await ask(gateway, calls, request, accept); // NOSONAR -- One call per theme question, in order.
+    const mapped = await ask(gateway, calls, request, accept); // NOSONAR
     labels.themes.push(...mapped.map((item) => ({ ...item, themeId: asked.theme_id })));
   }
   return { labels, calls };

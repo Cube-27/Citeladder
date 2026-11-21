@@ -19,7 +19,6 @@ export function inspectMarkup(html: string, headers: string) {
   boundedText(headers);
   if (!html.trim() && !headers.trim())
     throw new Error('Paste HTML or response headers to inspect.');
-  // Template contents remain inert: no execution, image loads or insertion into the live page.
   const template = document.createElement('template');
   template.innerHTML = html;
   const root = template.content;

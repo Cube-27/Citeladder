@@ -224,7 +224,6 @@ describe('persisted billing documents', () => {
       );
       if (kind === 'export_receipt') expect(pages.join(' ')).toContain('LUT-fixture');
       if (kind === 'gst_tax_receipt') {
-        // 0.28 is not exact in binary floating point; the halved slab must print as 14.
         expect(pages.join(' ')).toContain('CGST (14%)');
         expect(pages.join(' ')).toContain('SGST (14%)');
       }

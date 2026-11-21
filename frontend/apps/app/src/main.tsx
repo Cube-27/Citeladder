@@ -14,7 +14,6 @@ import { installTrustedTypesPolicy } from '@/lib/trusted-types';
 import { appRoutes } from './router';
 
 function mountApp(): void {
-  // Before anything renders, so an error during the first paint is reported too.
   installClientErrorListeners();
   installTrustedTypesPolicy();
   installInteractionTiming();

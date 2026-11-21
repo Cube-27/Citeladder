@@ -171,7 +171,6 @@ function periodDate(value: string): string {
   return Number.isNaN(parsed.getTime()) ? value : date(parsed);
 }
 
-/** A persisted decimal rate as an exact percentage (`0.28`, 50n → `14`); floats would print `14.000000000000002`. */
 function percent(rate: string, multiplier: bigint): string {
   const [whole = '', fraction = ''] = rate.split('.');
   const digits = (BigInt(whole + fraction) * multiplier)

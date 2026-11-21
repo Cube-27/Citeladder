@@ -12,10 +12,6 @@ import { blockedBy, probePlan } from './plan.ts';
 import { probeSchedules } from './schedule.ts';
 const probes = policy.probes;
 
-/**
- * AI credits the account can spend now; null when no balance is readable. A
- * read, so it takes no capacity lock: admission re-checks under its own.
- */
 async function aiCreditBalance(db: Database, workspaceId: string, at: Date) {
   const state = await loadAccountState(db, workspaceId, at);
   if (!state || state.error) return null;

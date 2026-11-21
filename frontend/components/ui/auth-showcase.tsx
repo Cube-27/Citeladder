@@ -46,11 +46,6 @@ type Place = Readonly<
   Partial<Record<'top' | 'bottom' | 'left' | 'right', number>> & { width: number }
 >;
 
-/**
- * Each slide's window and floating card, placed in the shared stage. Inline
- * percentages, not utilities: these are per-picture data, and ten one-off
- * classes would cost every app page's eager CSS.
- */
 const PLACEMENT: Readonly<Record<SlideId, Readonly<{ main: Place; accent: Place }>>> = {
   mcp: { main: { top: 0, right: 0, width: 82 }, accent: { bottom: 0, left: 0, width: 88 } },
   search: { main: { top: 7, left: 0, width: 70 }, accent: { top: 45, right: 0, width: 40 } },
@@ -64,10 +59,6 @@ const ADVANCE_MS = 7000;
 
 const STAGE: CSSProperties = { aspectRatio: '5 / 3' };
 
-/*
- * Inline, like the placement: the filter and the slides' fade would each add
- * utilities no other app page uses to the eager CSS.
- */
 const MONO: CSSProperties = { filter: 'saturate(0)' };
 
 const THEMES = [
@@ -218,9 +209,6 @@ export function AuthShowcase() {
         {AUTH_SHOWCASE_SLIDES.map((slide, index) => {
           const current = index === active;
           return (
-            // A labelled section is a region: the APG carousel's named slide,
-            // announced with its "slide" role description. Visibility is
-            // discrete, so a hidden slide also leaves the tab order.
             <section
               key={slide.id}
               className={cn(

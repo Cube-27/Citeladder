@@ -13,7 +13,7 @@ const version = /GITLEAKS_VERSION:\s*([\d.]+)/u.exec(
 )?.[1];
 if (!version) throw new Error('GITLEAKS_VERSION is missing from ci.yml.');
 
-const docker = (args, options) => spawnSync('docker', args, options); // NOSONAR: trusted PATH.
+const docker = (args, options) => spawnSync('docker', args, options); // NOSONAR
 
 if (docker(['version'], { stdio: 'ignore' }).status !== 0) {
   process.stderr.write(

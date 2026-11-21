@@ -344,7 +344,6 @@ export async function grantMutation(
       .execute();
     return { revocation_ids: rows.map((row) => row.id) };
   });
-  // A committed grant change re-resolves the runtime in its own transaction; a preview rolled back.
   if (ctx.apply) await refreshRuntime(db, scope.workspaceId);
   return result;
 }

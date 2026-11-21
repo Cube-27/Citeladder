@@ -43,7 +43,6 @@ export async function registerUser(
   password: string,
   termsRevision: string,
 ): Promise<void> {
-  // Duplicate addresses pay the same hashing cost and receive the same response.
   const encoded = await hashPassword(password);
   const registeredId = await db.transaction().execute(async (trx) => {
     const user = await createIdentity(trx, email, encoded);
@@ -107,7 +106,6 @@ export async function authenticateUser(
   let authenticated;
   try {
     authenticated = await db.transaction().execute(async (trx) => {
-      // The password may have been reset while its expensive verification ran.
       const current = await trx
         .selectFrom('users')
         .selectAll()

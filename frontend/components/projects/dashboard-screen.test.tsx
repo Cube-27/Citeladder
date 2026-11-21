@@ -551,8 +551,6 @@ describe('DashboardScreen', () => {
     expect(screen.queryByRole('heading', { name: 'Movement' })).not.toBeInTheDocument();
   });
   it('keeps Layout and Export PDF behind Page actions at desktop width, Layout for editors only', async () => {
-    // jsdom loads no Tailwind, so the masthead's row is drawn as at desktop width;
-    // it has no `checkVisibility`, so it answers as a browser would here.
     Object.defineProperty(HTMLElement.prototype, 'checkVisibility', {
       configurable: true,
       value(this: HTMLElement) {

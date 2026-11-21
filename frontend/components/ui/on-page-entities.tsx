@@ -8,10 +8,6 @@ export function OnPageEntities({
   heading,
   entities,
 }: Readonly<{ heading: string; entities: readonly QuotedEntity[] }>) {
-  // Enforced here, not trusted from the caller. This component is where the
-  // promise is made — a heading saying these were found on the page, beside
-  // the line that proves each — so a name whose passages resolved to nothing
-  // is dropped rather than rendered as a bare, unevidenced claim.
   const quoted = entities.filter((entity) =>
     entity.passages.some((passage) => passage.trim().length > 0),
   );

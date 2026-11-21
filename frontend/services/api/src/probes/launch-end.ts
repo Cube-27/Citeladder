@@ -1,9 +1,3 @@
-/**
- * A probe launch is labelled once, when its last market run ends (AV-28): one
- * pass over every market's answers, so a first probe groups its objections
- * once, not once per market. Sibling runs ending together take the launch's
- * lock after their own audit row, so the last to end sees the others ended.
- */
 import { policy } from '../config.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';

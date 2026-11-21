@@ -3,7 +3,6 @@ import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, relative, resolve, isAbsolute } from 'node:path';
 import { brotliDecompressSync } from 'node:zlib';
 
-// An absolute path, not PATH lookup: a PATH entry cannot substitute gh (Sonar S4036).
 const GH_EXECUTABLE = '/usr/bin/gh';
 const frontendRoot = resolve(import.meta.dirname, '..');
 const configPath = join(frontendRoot, 'lib', 'config', 'brand-fonts.json');
@@ -41,7 +40,6 @@ function base128(bytes, offset) {
 }
 
 function woff2Tables(bytes) {
-  // The WOFF2 known-tag table, in specification order; 63 means an explicit tag.
   const KNOWN = [
     'cmap',
     'head',

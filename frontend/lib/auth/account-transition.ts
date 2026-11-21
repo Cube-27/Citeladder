@@ -13,11 +13,6 @@ export function isDeparting(queryClient: QueryClient): boolean {
   return departing.has(queryClient);
 }
 
-/**
- * Drop the in-memory cache when the document is actually left, and never show
- * a back-forward-cached copy of it again: a page restored from that cache
- * reloads, so the server decides what the next identity may see.
- */
 function discardWhenLeft(queryClient: QueryClient) {
   window.addEventListener('pagehide', () => queryClient.clear(), { once: true });
   window.addEventListener('pageshow', (event) => {
@@ -29,9 +24,7 @@ export async function restartAt(queryClient: QueryClient, path: string): Promise
   departing.add(queryClient);
   try {
     await queryClient.cancelQueries();
-  } catch {
-    // Cancellation is best-effort: a confirmed boundary must still navigate.
-  }
+  } catch {}
   clearActiveProjectSelection();
   discardWhenLeft(queryClient);
   hardNavigate(path);

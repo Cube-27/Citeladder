@@ -16,12 +16,6 @@ export const PENDING_PRICING_INTENT_KEY = 'citeladder.pendingPricingIntent.v1';
 
 export const PENDING_PRICING_INTENT_MAX_AGE_MS = 60 * 60 * 1000;
 
-/**
- * Usage-meter threshold bands. These apply ONLY to `limit_state: 'finite'`
- * rows with real numeric aggregates — an `unlimited` or `unknown` row has no
- * ratio and must never be coloured by one. A server-supplied status always
- * wins over these.
- */
 export const USAGE_METER_WARNING_RATIO = 0.8;
 export const USAGE_METER_CRITICAL_RATIO = 1;
 

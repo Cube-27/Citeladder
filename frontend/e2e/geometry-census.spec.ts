@@ -358,8 +358,6 @@ async function census(
   await page.setViewportSize({ width: WIDTHS[0], height: 900 });
   await page.goto(fixtureProjectPath(route));
   await expect(page.getByRole('heading', { level: 1 })).toBeAttached();
-  // Unstubbed reads answer 404, so a route that never idles is re-reading a
-  // failed read forever: a product bug to fix, never a timeout to raise.
   await page.waitForLoadState('networkidle');
   await prepare?.(page);
   const nextFrame = () =>

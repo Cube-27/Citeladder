@@ -97,14 +97,12 @@ export async function applyMigrations(
 ): Promise<string[]> {
   await client.query('begin');
   try {
-    // A concurrent apply waits on the advisory lock instead of failing; the
-    // migrations themselves then run under the session's migration bounds.
     await client.query('set local statement_timeout = 0; set local lock_timeout = 0');
     await client.query('select pg_advisory_xact_lock($1::bigint)', [LOCK_KEY.toString()]);
     const bounds = 'reset statement_timeout; reset lock_timeout';
     await client.query(bounds);
     const todo = await pending(client, migrations);
-    for (const migration of todo) await client.query(`${migration.sql}\n;${bounds}`); // NOSONAR -- files apply in order in one transaction.
+    for (const migration of todo) await client.query(`${migration.sql}\n;${bounds}`); // NOSONAR
     if (todo.length)
       await client.query(
         'insert into public.schema_migrations (version, checksum) select * from unnest($1::text[], $2::text[])',
@@ -118,12 +116,6 @@ export async function applyMigrations(
   }
 }
 
-/**
- * Site Health evidence partitions for this UTC month and the three ahead (the
- * baseline's `site_evidence_*` functions own the SQL), then statistics
- * for every partitioned parent, which autovacuum never analyzes. Returns the
- * months it skipped, whose rows stay in the default partition.
- */
 export async function ensureEvidencePartitions(client: pg.ClientBase): Promise<string[]> {
   const { rows } = await client.query<{ skipped: string[] }>(
     'select public.site_evidence_ensure_partitions() as skipped',
@@ -135,11 +127,6 @@ export async function ensureEvidencePartitions(client: pg.ClientBase): Promise<s
   return rows[0]?.skipped ?? [];
 }
 
-/**
- * PostgreSQL's SCRAM-SHA-256 verifier (RFC 7677 with PostgreSQL's 4096
- * iterations), so the role password never reaches the server or its logs in
- * plain text. Printable ASCII only: it is unchanged by SASLprep.
- */
 function scramVerifier(password: string): string {
   const salt = randomBytes(16);
   const iterations = 4096;

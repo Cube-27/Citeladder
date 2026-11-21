@@ -68,8 +68,6 @@ function cardFeatures(plan: CatalogPlan): string[] {
   });
 }
 
-// Checkout handoffs start a purchase on the app host, which crawlers may not
-// fetch; this page is the crawlable pricing URL.
 const CHECKOUT_REL = 'nofollow';
 
 function PlanAction({

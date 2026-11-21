@@ -13,7 +13,6 @@ const PARENT_KIND = 'referring_domains';
 const DERIVED_KIND = 'citation_matches';
 const ROW_KIND = 'citation_match';
 const PARSER_VERSION = 'citation-match-1';
-// A match row binds 13 parameters; 1,000 rows stay far below the 65,535 limit.
 const MATCH_INSERT_CHUNK = 1000;
 
 const sha256 = (text: string) => createHash('sha256').update(text).digest('hex');
@@ -53,7 +52,6 @@ export function deriveCitationMatches(
   auditIds: readonly string[],
 ) {
   return db.transaction().execute(async (trx) => {
-    // Locking the parent serializes concurrent derivations of it.
     const parent = await scope.workspace
       .selectFrom(trx, 'search_intelligence_datasets')
       .selectAll()
@@ -165,7 +163,7 @@ export function deriveCitationMatches(
       .returningAll()
       .executeTakeFirstOrThrow();
     for (const chunk of chunksOf(matches, MATCH_INSERT_CHUNK)) {
-      await trx // NOSONAR -- Sequential inserts share one transaction.
+      await trx // NOSONAR
         .insertInto('search_intelligence_rows')
         .values(
           chunk.map(({ citation, domain }) => ({

@@ -4,7 +4,6 @@ type ThemeRow = ProbeMarketValue['themes'][number];
 
 export function marketSummary(data: ProbeMarketValue) {
   const top = data.known_for.find((item) => item.theme_id !== null && item.score > 0);
-  // Ties put the brand first, so a led theme is one the brand tops having been named.
   const led = data.themes.filter(
     (row) => row.rank === 1 && row.leader.kind === 'brand' && row.leader.named,
   );
@@ -14,7 +13,6 @@ export function marketSummary(data: ProbeMarketValue) {
     (worst, row) => (worst === undefined || row.gap > worst.gap ? row : worst),
     undefined,
   );
-  // A rank is shown only where answers named the brand: an all-zero theme ranks everyone first.
   const topRow = data.themes.find(
     (row) =>
       row.theme_id === top?.theme_id &&
@@ -32,7 +30,6 @@ function headline(brand: string, top: string | undefined, best: ThemeRow | undef
 }
 
 export function objectionsSummary(data: ProbeObjectionsValue) {
-  // A late, rare objection can average to 0 and still be raised by an engine.
   const raised = data.groups.filter((group) => group.engines.length > 0);
   const [first] = raised;
   const widest = raised.reduce<(typeof raised)[number] | undefined>(

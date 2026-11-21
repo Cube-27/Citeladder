@@ -21,7 +21,6 @@ function shouldInvalidateCrawl(frame: RawSseFrame): boolean {
     const payload = crawlFrameSchema.safeParse(JSON.parse(frame.data));
     return !payload.success || !payload.data.event_type.endsWith('.progress');
   } catch {
-    // An unfamiliar frame is never data, but it may announce a lifecycle change.
     return true;
   }
 }

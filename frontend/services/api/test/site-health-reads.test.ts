@@ -1083,7 +1083,7 @@ describe('crawl events', () => {
     for (let index = 0; index < 4; index++) {
       const next = await get(seed, `/site-crawls/${seed.crawlId}/events?stream=true`);
       statuses.push(next.status);
-      await next.text(); // NOSONAR: each stream finishes before the next opens.
+      await next.text(); // NOSONAR
     }
     expect(statuses).toEqual([200, 200, 200, 200]);
   });

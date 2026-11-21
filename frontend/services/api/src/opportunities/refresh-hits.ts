@@ -310,7 +310,7 @@ async function alternativeHits(
   const results: DetectorHit[] = [];
   for (const snapshot of snapshots) {
     if (snapshot.target_kind !== 'category' || snapshot.product_visibility !== 0) continue;
-    const citations = await new WorkspaceScope(workspaceId) // NOSONAR -- One snapshot at a time bounds the pool.
+    const citations = await new WorkspaceScope(workspaceId) // NOSONAR
       .selectFrom(db, 'citations')
       .innerJoin('response_analyses', 'response_analyses.id', 'citations.analysis_id')
       .innerJoin('audit_tasks', 'audit_tasks.id', 'response_analyses.task_id')

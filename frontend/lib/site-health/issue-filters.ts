@@ -147,11 +147,6 @@ export function useIssueFilters() {
     [section, sort, query, severity, category, rule, siteUrlId, pageKind],
   );
 
-  /**
-   * Apply a filter change: back to page one, no selection, no occurrence
-   * stack. A deep link's one-rule filter (`rule=`, from an Overview row) ends
-   * with any other change: kept, it silently held every count at one issue.
-   */
   const updateFilters = useCallback(
     (change: Partial<IssueFilters>) => {
       const next = { ...filters, rule_id: '', ...change };

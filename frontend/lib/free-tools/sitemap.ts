@@ -11,7 +11,7 @@ function hasDeclarations(text: string) {
     else if (text.startsWith('<![CDATA[', start)) terminator = ']]>';
     if (terminator) {
       const end = text.indexOf(terminator, start + 4);
-      if (end < 0) return false; // The XML parser rejects the unterminated subtree.
+      if (end < 0) return false;
       offset = end + terminator.length;
     } else {
       if (/^<!(?:DOCTYPE|ENTITY)/i.test(text.slice(start, start + 9))) return true;

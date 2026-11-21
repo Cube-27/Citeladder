@@ -142,9 +142,6 @@ async function poll(
   try {
     settled = await surface.settle(deps, context, payload, taskId);
   } catch (error) {
-    // Parsing refuses a malformed payload with a ProviderError. Anything else
-    // failed saving the paid answer (database, derivation): the result stays
-    // retrievable for free, so poll again instead of writing the submission off.
     if (!(error instanceof ProviderError))
       logger.warning('surface_result_unsaved', { task_id: task.id, ...failureFacts(error) });
     await pollFailed(
@@ -197,7 +194,6 @@ async function submit(
 ) {
   const engine = observedEngine(context.task),
     c = searchPolicy.constants;
-  // The intent commits before any network I/O: a crash after it reconciles, never resubmits.
   const intent = await commitSubmissionIntent(deps.db, context, deps.owner, deps.now());
   if (!intent) return;
   if (!intent.fresh) {
@@ -208,7 +204,6 @@ async function submit(
   try {
     request = frozenSurfaceRequest(surface, context, intent.task.provider_submission_ref);
   } catch (error) {
-    // Nothing was sent; ending here keeps an unsendable request out of reconciliation.
     const safe = error instanceof ProviderError ? error : new ProviderError('client_error');
     await failObserved(surface, deps, intent.task, context, {
       code: 'provider_error',
@@ -239,8 +234,6 @@ async function submit(
       deps.now(),
     );
   } catch (error) {
-    // The paid task exists: lease expiry parks the row as submission_uncertain and
-    // reconciliation finds it by its tag, so the receipt is never written off.
     logger.warning('surface_submission_unsaved', {
       task_id: intent.task.id,
       provider_task_id: submission.taskId,
@@ -401,8 +394,6 @@ export function observedAdapter(surface: ObservedSurface): SurfaceAdapter {
       else await submit(surface, deps, context, client);
     },
     async fail(deps, task, context, failure) {
-      // An unexpected error (a failed save) may follow a paid submission this lease could not
-      // record. Lease expiry hands the row to recovery: reconcile or poll it, or retry it.
       if (failure.kind === 'internal') return;
       await failObserved(surface, deps, task, context, {
         code: failureCode(failure),

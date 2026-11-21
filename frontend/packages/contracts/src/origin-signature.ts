@@ -7,7 +7,6 @@ export type OriginSignedFacts = Readonly<{
   timestamp: number;
   method: string;
   publicHost: string;
-  /** Path plus query exactly as sent upstream, e.g. `/api/v1/projects?limit=5`. */
   target: string;
   clientIp: string;
 }>;
@@ -25,7 +24,6 @@ function payload(facts: OriginSignedFacts) {
   ].join('\n');
 }
 
-// One import per origin key (current and, during rotation, previous) per isolate.
 const importedKeys = new Map<string, Promise<CryptoKey>>();
 
 function hmacKey(key: string): Promise<CryptoKey> {

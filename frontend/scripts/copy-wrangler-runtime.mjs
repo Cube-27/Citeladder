@@ -8,8 +8,6 @@ const modules = path.resolve('node_modules');
 const store = path.join(modules, '.pnpm');
 const storeEntries = new Set();
 
-// pnpm keeps each package at .pnpm/<entry>/node_modules/<name>, beside links to
-// its own dependencies; following those links yields the complete closure.
 async function collect(packageDir) {
   const [entry] = path.relative(store, packageDir).split(path.sep);
   if (entry === '..') throw new Error(`${packageDir} is outside the pnpm store`);

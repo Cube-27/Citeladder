@@ -109,7 +109,6 @@ export function columnRules({
   const shownGutters = gutters(shown);
   const gutter = new Set(shown.filter((_, index) => shownGutters[index]));
   const share = `${(100 / Math.max(1, shown.filter(isFlexible).length)).toFixed(3)}%`;
-  // The select box column is exactly its width, so the pinned identity cell's offset matches it.
   const select = `width:${SELECT_WIDTH};min-width:${SELECT_WIDTH};padding-inline-end:8px`;
   const rules = selection ? [`${at(1)}{${select}}`] : [];
   columns.forEach((column, index) => {
@@ -124,7 +123,6 @@ export function columnRules({
         ? `width:${share};max-width:0;min-width:var(--data-table-identity-min);`
         : `width:1px;white-space:nowrap;min-width:${steps(role.steps)};`;
     rules.push(`${cell}{text-align:${kind.align};${size}${pad}}`);
-    // A clipped box has no minimum width, so beside a 100% column a hugging one fell to its floor.
     if (role.kind === 'steps')
       rules.push(
         `${cell} > :is(.truncate, :has(.truncate)){width:max-content;max-width:${HUG_CAP}}`,

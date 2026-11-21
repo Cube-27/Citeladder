@@ -142,21 +142,17 @@ async function validate(
         attempted.add(item.canonical!);
         const startedAt = performance.now();
         try {
-          const page =
-            await /* NOSONAR -- One page per pool consumer keeps acquisition concurrency bounded. */ acquirer.fetch(
-              item.canonical!,
-              {
-                maxBytes: setting('max_response_wire_bytes'),
-                maxDecodedBytes: setting('max_response_decoded_bytes'),
-                timeoutSeconds: p.verify_timeout_seconds,
-                redirects: setting('max_redirects'),
-                contentTypes: ['text/html'],
-                signal: AbortSignal.timeout(p.verify_timeout_seconds * 1000),
-                admit: (url) => {
-                  if (exclusion(url.href, '', owned)) throw new Error('Excluded destination');
-                },
-              },
-            );
+          const page = await /* NOSONAR */ acquirer.fetch(item.canonical!, {
+            maxBytes: setting('max_response_wire_bytes'),
+            maxDecodedBytes: setting('max_response_decoded_bytes'),
+            timeoutSeconds: p.verify_timeout_seconds,
+            redirects: setting('max_redirects'),
+            contentTypes: ['text/html'],
+            signal: AbortSignal.timeout(p.verify_timeout_seconds * 1000),
+            admit: (url) => {
+              if (exclusion(url.href, '', owned)) throw new Error('Excluded destination');
+            },
+          });
           if (verifyPage(page, kind, owned)) verified.add(item.canonical!);
         } catch (error) {
           logger.info('commerce_candidate_verify_failed', {

@@ -203,11 +203,6 @@ type RateScope = {
   cohort: string;
 };
 
-/**
- * Observations of the selection, with their analyses outer-joined: an inner
- * join would silently drop every observation CiteLadder failed to retrieve.
- * The cohort is read from the frozen prompt snapshot for the same reason.
- */
 function scopedObservations(db: Database, scope: RateScope) {
   let query = db
     .selectFrom('aio_observations as observation')

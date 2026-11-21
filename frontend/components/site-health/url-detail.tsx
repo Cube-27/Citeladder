@@ -32,7 +32,6 @@ const HISTORY_LIMIT = 25;
 export function PageDetailScreen() {
   const { crawlId, siteUrlId } = useParams<{ crawlId: string; siteUrlId: string }>();
   if (!crawlId || !siteUrlId) return null;
-  // Keyed, so a re-audit's navigation to its own crawl starts fresh and polls.
   return <UrlDetail key={`${crawlId}:${siteUrlId}`} crawlId={crawlId} siteUrlId={siteUrlId} />;
 }
 
@@ -44,9 +43,6 @@ export function UrlDetail({
   const router = useNavigate();
   const rerunRequested = useUrlParam('rerun');
   const [rerunPolling] = useState(() => rerunRequested);
-  // The cache can still hold the prior terminal snapshot immediately after a
-  // rerun succeeds. Polling must continue until the fresh queued/running state
-  // has been observed, rather than treating that stale terminal status as done.
   const hasObservedActiveRerunRef = useRef(false);
   const preActivePollCountRef = useRef(0);
   const [rerunError, setRerunError] = useState<string | null>(null);
@@ -160,7 +156,6 @@ type HistoryTarget = Readonly<{ workspaceId: string; crawlId: string; siteUrlId:
 
 function IssueHistoryButton(target: HistoryTarget) {
   const [open, setOpen] = useState(false);
-  // Read on first open, then kept so the drawer does not blank as it closes.
   const [requested, setRequested] = useState(false);
   return (
     <>

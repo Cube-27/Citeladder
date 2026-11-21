@@ -52,11 +52,6 @@ export type Funding = {
   refund: (db: Database, run: Run) => Promise<void>;
 };
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
-/**
- * A dispatch refused for funding before anything was reserved, recorded or
- * sent: the turn may still end with work it already staged (B60). A funding
- * failure later in a call (at settlement) is a plain `funding_unavailable`.
- */
 export class RefusedDispatch extends AgentError {
   constructor() {
     super('funding_unavailable');
@@ -156,7 +151,6 @@ export class ModelCalls {
       return attempt;
     });
   }
-  /** Receipt settlement outlives cancellation/lease loss; first settlement wins. */
   receipt(
     workspaceId: string,
     attemptId: string,
@@ -285,7 +279,6 @@ export class ModelCalls {
       throw new AgentError('provider_error');
     }
     await this.receipt(lease.workspaceId, attempt.id, result);
-    // A returned result never revives a cancelled/reclaimed run.
     await this.db.transaction().execute((trx) => lockRun(trx, lease));
     return result;
   }
@@ -305,7 +298,7 @@ export class ModelCalls {
         usage_complete: false,
         settled_at: new Date(),
       };
-      const settled = await this.funding.settle(db, updated, null); // NOSONAR -- Settlement and its attempt write share one ordered transaction.
+      const settled = await this.funding.settle(db, updated, null); // NOSONAR
       if (
         !Number.isSafeInteger(settled.credits) ||
         settled.credits < 0 ||
@@ -313,7 +306,7 @@ export class ModelCalls {
         (attempt.funding_source !== 'platform' && settled.credits !== 0)
       )
         throw new AgentError('funding_unavailable');
-      await db // NOSONAR -- The attempt write follows its settlement in the same transaction.
+      await db // NOSONAR
         .updateTable('agent_model_attempts')
         .set({
           outcome: updated.outcome,
@@ -356,7 +349,7 @@ export class ModelCalls {
         .forUpdate()
         .skipLocked()
         .execute();
-      for (const run of runs) await this.reconcile(trx, run); // NOSONAR -- One transaction connection: settlements run in order.
+      for (const run of runs) await this.reconcile(trx, run); // NOSONAR
       return runs.length;
     });
   }

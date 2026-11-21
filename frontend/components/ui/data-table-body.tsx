@@ -59,7 +59,7 @@ export function DataTableBody({
       <TableBody>{children}</TableBody>
       {rest > 0 ? (
         <TableBody>
-          <tr // NOSONAR -- blank space holding a reserved page's height; nothing in it is focusable
+          <tr // NOSONAR
             aria-hidden="true"
             data-table-spacer=""
             style={footprint(rest)}

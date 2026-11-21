@@ -191,10 +191,6 @@
   margin-inline: 0;
 }
 
-/* Zoom scales a length too, so the drawn height is the 460px card's less
-   the page's top and the foot's padding; a shorter card crops it at its
-   layer's foot. */
-
 .cl-railcard-page .cl-screen {
   height: calc((var(--cl-card-h) - 124px) / 0.7);
   zoom: 0.7;

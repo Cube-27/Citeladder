@@ -94,10 +94,6 @@ export function useChartWidth<T extends HTMLElement>(fallback = 640) {
 
 export type ChartHeight = 'sm' | 'md' | 'lg';
 
-/**
- * The roles in pixels, for a chart that draws its plot to a measured box. The
- * same values as the `--chart-height-*` tokens in `apps/app/src/globals.css`.
- */
 export const CHART_HEIGHT_PX = { sm: 160, md: 240, lg: 320 } as const satisfies Record<
   ChartHeight,
   number

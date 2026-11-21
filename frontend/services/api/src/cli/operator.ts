@@ -8,7 +8,6 @@ export function required(value: string | undefined, name: string): string {
   return value;
 }
 
-// Exact reviewed slugs only; never print arbitrary Error.message, Zod issues or DB diagnostics.
 const safeFailures = new Set([
   'catalog_idempotency_conflict',
   'catalog_idempotency_operation_conflict',
@@ -60,7 +59,6 @@ export function operatorDiagnostic(error: unknown): string {
   if (error instanceof PlatformAdminRequired) return 'active_admin_required';
   if (error instanceof ApiError) return error.code;
   if (error instanceof Error && safeFailures.has(error.message)) return error.message;
-  // A PostgreSQL SQLSTATE (28P01: password rejected) names the cause without any input.
   if (
     error instanceof Error &&
     'code' in error &&

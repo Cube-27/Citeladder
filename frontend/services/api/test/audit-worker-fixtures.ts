@@ -43,7 +43,6 @@ export function auditWorkerHarness() {
             .where('workspace_id', 'in', workspaces),
         )
         .execute();
-    // A DataForSEO login's quota pool outlives its connection; each seed has its own login.
     if (accountPools.length)
       await db
         .deleteFrom('provider_capacity_buckets')

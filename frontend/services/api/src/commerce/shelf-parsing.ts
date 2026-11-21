@@ -271,11 +271,6 @@ export function observedMerchant(span: string, resolved?: string) {
     return { url, domain: '' };
   }
 }
-/**
- * A resolved PDP becomes an AI-observed competitor only when the answer itself
- * carries that URL, the URL is not merely a citation, and it is not on the
- * business's own site. A URL the resolver supplied on its own is not evidence.
- */
 export function resolvedCompetitorUrl(
   url: string,
   evidence: { answer: string; citations: string[]; ownedHosts: string[] },

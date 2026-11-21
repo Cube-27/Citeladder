@@ -31,9 +31,6 @@ export const opportunities = {
   IMPLEMENTATION_VERIFIER_VERSION: 'implementation-verifier-1',
   IMPLEMENTATION_VERIFICATION_BATCH_MAX: 100,
   IMPLEMENTATION_VERIFICATION_HISTORY_MAX: 50,
-  // New evidence re-checks a declaration only this long after it went live;
-  // after that its last observation stands. Declarations may be backdated by
-  // at most the same span, and never placed in the future beyond the skew.
   VERIFICATION_WINDOW_DAYS: 30,
   CHECK_KIND_WINDOW_DAYS: { keyword_presence: 90 } satisfies Partial<
     Record<ExpectedCheck['kind'], number>

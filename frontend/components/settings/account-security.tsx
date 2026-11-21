@@ -141,7 +141,6 @@ function ConnectGoogle({
     return (
       <ActionButton action="connectGoogle" type="button" disabled={pending} onClick={onConnect} />
     );
-  // aria-disabled, not disabled: a disabled button takes no focus or hover, so its tooltip never opens.
   return (
     <>
       <Tooltip content={GOOGLE_REASON} describe={false}>

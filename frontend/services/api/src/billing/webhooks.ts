@@ -11,11 +11,6 @@ import { authenticateSignature, configured } from './razorpay.ts';
 
 const logger = getLogger('api.billing');
 
-/**
- * One ERROR record per webhook event that just entered quarantine: a
- * quarantined event needs an operator, and the monitoring alert matches this
- * event name (`infra/gcp/monitoring.tf`).
- */
 export function reportQuarantined(rows: readonly { id: string; error_code: string }[]): void {
   for (const row of rows)
     logger.error('billing.webhook_quarantined', {
@@ -42,7 +37,6 @@ const hash = (body: string | Uint8Array) => createHash('sha256').update(body).di
 async function boundedBody(c: Context<AppEnv>, limit: number) {
   const chunks: Uint8Array[] = [];
   let length = 0;
-  // Leaving the loop early cancels the stream.
   for await (const chunk of c.req.raw.body ?? []) {
     length += chunk.length;
     if (length > limit)
@@ -80,9 +74,6 @@ const PAYLOAD_KEYS: Record<string, string> = {
 function eventEntity(parsed: z.infer<typeof envelope>) {
   const subscriptionEvent = policy.billing.contracts.razorpay_event_types.includes(parsed.event);
   let payloadKey = subscriptionEvent ? 'subscription' : PAYLOAD_KEYS[parsed.event];
-  // A subscription charge carries its invoice; the subscription events settle it.
-  // A payment with neither (a payment link or QR code) is not a checkout of ours,
-  // and refusing it would make the provider disable the endpoint.
   const charge = parsed.payload.payment?.entity;
   if (payloadKey === 'payment' && (charge?.invoice_id || (charge && !charge.order_id)))
     payloadKey = undefined;

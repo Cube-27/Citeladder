@@ -21,8 +21,6 @@ export type VerificationSeed = {
 };
 
 export async function seedVerification(db: Database): Promise<VerificationSeed> {
-  // Relative to now, so the verification window always contains the seed;
-  // the text keeps microseconds a Date would truncate from the evidence key.
   const { rows } = await sql<{ at: string; day: string }>`
     select to_char(t at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as at,
       (t at time zone 'UTC')::date::text as day
@@ -178,9 +176,9 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
         target_label: name,
         status: 'implemented',
       });
-      await trx.insertInto('actions').values(action).execute(); // NOSONAR -- One transaction: fixture statements run in order.
+      await trx.insertInto('actions').values(action).execute(); // NOSONAR
       const id = randomUUID();
-      await trx // NOSONAR -- One transaction: fixture statements run in order.
+      await trx // NOSONAR
         .insertInto('opportunity_implementation_events')
         .values({
           ...scope,

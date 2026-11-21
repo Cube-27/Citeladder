@@ -140,7 +140,7 @@ async function replaceStats(
     'traffic_query_stats',
     'performance_dimension_stats',
   ] as const)
-    await db // NOSONAR -- Caller's transaction: statements run in order.
+    await db // NOSONAR
       .deleteFrom(table)
       .where('workspace_id', '=', task.workspace_id)
       .where('project_id', '=', projectId)
@@ -149,7 +149,7 @@ async function replaceStats(
   const size = p.TRAFFIC_METRIC_ROW_BATCH_SIZE;
   const ids = new Map<string, string>();
   for (let i = 0; i < projection.pages.length; i += size)
-    for (const r of await new WorkspaceScope(task.workspace_id) // NOSONAR -- Caller's transaction: statements run in order.
+    for (const r of await new WorkspaceScope(task.workspace_id) // NOSONAR
       .selectFrom(db, 'site_urls')
       .select(['id', 'url_hash'])
       .where('project_id', '=', projectId)
@@ -161,7 +161,7 @@ async function replaceStats(
       .execute())
       ids.set(r.url_hash, r.id);
   for (let i = 0; i < projection.pages.length; i += size)
-    await db // NOSONAR -- Caller's transaction: statements run in order.
+    await db // NOSONAR
       .insertInto('traffic_page_stats')
       .values(
         projection.pages.slice(i, i + size).map((r) => ({
@@ -173,7 +173,7 @@ async function replaceStats(
       )
       .execute();
   for (let i = 0; i < projection.queries.length; i += size)
-    await db // NOSONAR -- Caller's transaction: statements run in order.
+    await db // NOSONAR
       .insertInto('traffic_query_stats')
       .values(
         projection.queries
@@ -182,7 +182,7 @@ async function replaceStats(
       )
       .execute();
   for (let i = 0; i < projection.dimensions.length; i += size)
-    await db // NOSONAR -- Caller's transaction: statements run in order.
+    await db // NOSONAR
       .insertInto('performance_dimension_stats')
       .values(
         projection.dimensions.slice(i, i + size).map((r) => ({
@@ -281,8 +281,6 @@ function planTargets(input: {
     preset: number | null,
     verifies: boolean,
   ) => targets.push({ start, end, grain, preset, verifies });
-  // Demand always reads the policy window ending at the anchor; the trigger
-  // window only decides whether that window's evidence changed.
   const demandEnd = input.anchor ?? input.windowEnd;
   const demandWindow = [
     addDays(demandEnd, -(policy.demand.DEMAND_WINDOW_DAYS - 1)),
@@ -374,8 +372,6 @@ function executor(displayOnly: boolean): Executor {
       .where('project_id', '=', projectId)
       .where('dataset', 'in', p.TRAFFIC_CONSUMED_DATASETS)
       .executeTakeFirstOrThrow();
-    // Covered days are the days a sync actually imported between the first and
-    // last row, so a never-imported gap is not reported as coverage.
     const coverage = {
       earliest_date: extent.start,
       latest_date: extent.end,
@@ -390,19 +386,16 @@ function executor(displayOnly: boolean): Executor {
     };
     await checkCancelled('snapshot write');
     await db.transaction().execute(async (trx) => {
-      // One writer per project, like the Referrals and Demand refreshes.
       await subjectXactLock(trx, `traffic_snapshot:${projectId}`);
       const verifying: string[] = [];
       const allQuality: Record<string, Awaited<ReturnType<typeof partitionQuality>>> = {};
       const qualityScope = { workspaceId: task.workspace_id, projectId, ...textSpan(targets) };
-      // Quality is not applicable to a provider with no property mapped into
-      // the project: its datasets are omitted rather than reported unavailable.
       const mapped = await mappedProviders(trx, partitionScope);
       const datasets = p.TRAFFIC_PROJECTED_DATASETS.filter((dataset) =>
         mapped.has(datasetProvider(dataset)),
       );
       for (const dataset of datasets)
-        allQuality[dataset] = await partitionQuality(trx, qualityScope, dataset); // NOSONAR -- Reads share the snapshot transaction, so they run in order.
+        allQuality[dataset] = await partitionQuality(trx, qualityScope, dataset); // NOSONAR
       if ((await partitionEpoch(trx, partitionScope)) !== epoch)
         throw new Error('Integration partitions changed during Traffic projection; retry');
       for (const target of targets) {
@@ -414,7 +407,7 @@ function executor(displayOnly: boolean): Executor {
           target.builder.partitionQuality(dataset, quality[dataset]!);
         }
         const evidence = { ...coverage, analytics_quality: quality };
-        const snapshotId = await persist(trx, task, target, evidence, displayOnly); // NOSONAR -- Writes share the snapshot transaction, so they run in order.
+        const snapshotId = await persist(trx, task, target, evidence, displayOnly); // NOSONAR
         if (snapshotId && target.verifies) verifying.push(snapshotId);
       }
       await Promise.all(

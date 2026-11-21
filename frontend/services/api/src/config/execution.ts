@@ -18,9 +18,7 @@ export const runnerLanes = {
   idlePollMs: 5000,
 };
 
-/** About one Cloud Run cold start: a runner starts its successor this long before its deadline. */
 export const handoverLeadMs = 180_000;
-/** The job timeout's margin past the budget (run.tf), which bounds a predecessor's in-flight tail. */
 const runnerTailMs = 600_000;
 
 const defaults = {
@@ -28,11 +26,6 @@ const defaults = {
   drainLockPollMs: 250,
 };
 
-/**
- * How long a later execution waits for an active drain before leaving it the
- * work. A handover successor may arrive a whole lead early, then waits out the
- * predecessor's in-flight tail.
- */
 const drainLockWaitMs = (handover: boolean) =>
   handover ? handoverLeadMs + runnerTailMs : defaults.drainLockWaitMs;
 
@@ -54,7 +47,6 @@ const text = (name: string): SettingSpec & { default: string } => ({
 });
 
 export const executionSpecs = {
-  // Each successor execution costs a one-to-three-minute Cloud Run cold start.
   budget_seconds: integer('RUNNER_BUDGET_SECONDS', 600, 3600),
   pool_size: integer('RUNNER_DB_POOL_SIZE', 4, 4),
   wake_timeout_ms: integer('RUNNER_WAKE_TIMEOUT_MS', 5000, 30000),
@@ -66,7 +58,6 @@ export const executionSpecs = {
   scheduler_budget_seconds: integer('SCHEDULER_TICK_BUDGET_SECONDS', 20, 120),
   origin_token: text('CITELADDER_ORIGIN_TOKEN'),
   previous_origin_token: text('CITELADDER_ORIGIN_TOKEN_PREVIOUS'),
-  // Cloud Run sets these: K_SERVICE on a service, CLOUD_RUN_JOB on a job execution.
   cloud_run_service: text('K_SERVICE'),
   cloud_run_job: text('CLOUD_RUN_JOB'),
 };
@@ -99,8 +90,6 @@ export function executionSettings(source: SettingSource) {
     throw new ConfigError(
       'Origin tokens must contain at least 32 characters; rotation requires a current token',
     );
-  // A job execution (Cloud Run sets CLOUD_RUN_JOB) serves no HTTP; it holds the
-  // runner job only to start its own successor.
   const protectOrigin = !env.CLOUD_RUN_JOB && Boolean(env.K_SERVICE || runnerJob);
   if (protectOrigin && !originToken)
     throw new ConfigError('Cloud Run API requires CITELADDER_ORIGIN_TOKEN');
@@ -125,7 +114,6 @@ export function executionSettings(source: SettingSource) {
   };
 }
 
-// hashtextextended(DRAIN_LOCK, 0): one drain per database at a time.
 export const DRAIN_LOCK = 'citeladder-runner-drain';
 
 export const executionTables = new Set([

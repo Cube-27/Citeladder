@@ -200,10 +200,6 @@ const xml = new XMLParser({
   isArray: (name) => name === 'item' || name === 'entry' || name === 'product_type',
 });
 
-/**
- * An XML field's text. A repeated tag (an Atom entry's `<link href>` beside
- * its `g:link`, both `link` without their prefix) gives its first text.
- */
 const xmlText = (value: unknown): string =>
   Array.isArray(value) ? (value.map(text).find(Boolean) ?? '') : text(value);
 

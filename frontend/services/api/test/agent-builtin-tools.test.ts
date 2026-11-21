@@ -364,7 +364,6 @@ describe('Agent built-in tools', () => {
         })),
       ).toEqual([
         {
-          // The emoji before it is two UTF-16 code units.
           target: { kind: 'span', at: { start: 11, end: 27 }, exact: 'Sizes run small.' },
           replacement: 'Sizes run half a size small.',
           needsInput: null,

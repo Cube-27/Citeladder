@@ -159,11 +159,6 @@ const crawlFailureSummarySchema = responseObject({
   target_url: z.string(),
 });
 
-/**
- * How a crawl of the project's own site treats robots.txt exclusions. `ignore`
- * waives only the disallow rules; crawl delay, an unreadable or access-blocked
- * robots.txt, rate limits and suppression still apply.
- */
 export const crawlRobotsHandlingSchema = z.enum(['respect', 'ignore']);
 export type CrawlRobotsHandling = z.infer<typeof crawlRobotsHandlingSchema>;
 

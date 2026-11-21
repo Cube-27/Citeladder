@@ -130,9 +130,6 @@
   }
 }
 
-/* The H1 is the page's largest paint, so it never starts invisible: it only
-   settles, which keeps it a first-paint LCP candidate. */
-
 @keyframes mk-focus-in {
   from {
     transform: translateY(6px);
