@@ -83,7 +83,7 @@ export function RunActions({
       </Button>
       <Button variant="secondary" onClick={() => onExport('md')} disabled={exporting !== null}>
         <Icon icon={Download} />
-        {exporting === 'md' ? 'Exporting…' : 'Export MD'}
+        {exporting === 'md' ? 'Exporting…' : 'Export Markdown'}
       </Button>
       {onCancel && (cancelable || cancelPending) ? (
         <Button variant="danger" onClick={onCancel} disabled={cancelPending}>

@@ -367,8 +367,9 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
             </ChartFrame>
             {data.structure_depth.unmeasured_page_count > 0 ? (
               <p className="type-caption">
-                {formatCount(data.structure_depth.unmeasured_page_count)} pages crawled have no
-                measured depth.
+                {data.structure_depth.unmeasured_page_count === 1
+                  ? '1 crawled page has no measured depth.'
+                  : `${formatCount(data.structure_depth.unmeasured_page_count)} crawled pages have no measured depth.`}
               </p>
             ) : null}
           </Stack>

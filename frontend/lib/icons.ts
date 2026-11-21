@@ -60,6 +60,7 @@ export {
   IconChevronLeft as ChevronLeft,
   IconChevronRight as ChevronRight,
   IconChevronUp as ChevronUp,
+  IconChevronsLeft as ChevronsLeft,
   IconSelector as ChevronsUpDown,
   IconAlertCircle as CircleAlert,
   IconCircleCheck as CircleCheck,

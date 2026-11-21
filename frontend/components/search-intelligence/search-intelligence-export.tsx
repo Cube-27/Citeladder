@@ -79,7 +79,7 @@ export function SearchIntelligenceExport({
     <>
       <Button variant="quiet" disabled={exporting} onClick={() => void exportSaved()}>
         <Icon icon={Download} />
-        {exporting ? 'Exporting…' : 'Export saved CSV'}
+        {exporting ? 'Exporting…' : 'Export CSV'}
       </Button>
       {exportError ? <Notice tone="negative">{exportError}</Notice> : null}
     </>

@@ -58,7 +58,7 @@ export const ACTION_GROUPING_LABEL: Record<ActionGrouping, string> = {
 
 export const IMPACT_LABEL: Record<ActionPriorityBand, string> = {
   high: 'High',
-  medium: 'Moderate',
+  medium: 'Medium',
   low: 'Low',
 };
 
