@@ -11,14 +11,14 @@ export type RadioOption<T extends string> = {
 };
 
 /**
- * The 16px radio: a 1px `control-line` circle; selected is an `ink` disc with
+ * The 16px radio: a 1px `control-line` circle; selected is a `primary` disc with
  * a `surface` centre (an inset 4px ring), so the mark never changes size. Its
  * target is 24×24 (an invisible inset), never under the minimum, and its
  * label row is the touch target, so the area does not grow for touch. Hover
  * darkens an empty circle's edge; a held press scales it to 95%.
  */
 const RADIO =
-  'press [--press:0.95] focus-ring bg-panel border-rule enabled:data-[state=unchecked]:hover:border-control-line data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=checked]:ring-panel hit-area [--target-hit:var(--target-min)] size-4 shrink-0 rounded-full border ring-inset data-[state=checked]:ring-4 disabled:cursor-not-allowed';
+  'press [--press:0.95] focus-ring bg-panel border-rule enabled:data-[state=unchecked]:hover:border-control-line data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:ring-panel hit-area [--target-hit:var(--target-min)] size-4 shrink-0 rounded-full border ring-inset data-[state=checked]:ring-4 disabled:cursor-not-allowed';
 
 const LIST_LAYOUT = {
   list: 'flex flex-col gap-3',
@@ -116,7 +116,7 @@ function RadioCard<T extends string>({
     <label
       className={cn(
         'text-ink flex cursor-pointer items-start gap-2 rounded-control border p-4 transition-[background-color,border-color]',
-        selected ? 'bg-raised border-control-line' : 'bg-panel border-rule',
+        selected ? 'bg-panel overlay-selected border-control-line' : 'bg-panel border-rule',
         !selected && !option.disabled && 'hover:overlay-hover',
         option.disabled && 'cursor-not-allowed opacity-60',
       )}

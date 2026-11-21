@@ -148,6 +148,11 @@
   /* The website primary's edge, a step darker than its fill (owner, 2026-11-20). */
   --color-primary-edge: oklch(40.5% 0.135 37.5);
   --color-on-primary: oklch(100% 0 0);
+  /* The app's flat primary fill (owner, 2026-11-21): the accent replaces ink
+     on every action fill (primary button, checkbox, radio, switch, a picked
+     day, the setup stepper) in both themes. */
+  --color-primary: var(--color-primary-from);
+  --color-primary-hover: var(--color-primary-to);
   /* An off switch's thumb: the surface, except in the app's dark, where it is ink-2. */
   --color-thumb: var(--color-surface);
   --color-ink-2: var(--color-ink-secondary);
@@ -511,6 +516,7 @@
   --color-panel: #121213;
   --color-raised: #1a1a1b;
   --color-raised-2: #252526;
+  --color-well: var(--color-raised);
   --color-thumb: var(--color-ink-2);
   --color-rule: rgb(255 255 255 / 8%);
   --color-control-line: rgb(255 255 255 / 12%);
@@ -543,6 +549,39 @@
      lit top edge (inset: a child that fills the top would cover it). */
   --shadow-pop: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 4px 12px oklch(0% 0 0 / 30%);
   --shadow-sheet: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 16px 40px oklch(0% 0 0 / 45%);
+
+  /* Light text on a dark ground reads heavier, so every weight drops by 50
+     (owner, 2026-11-21). The type roles read --weight-*; the size utilities
+     the app uses read the rest. */
+  --weight-regular: 350;
+  --weight-medium: 450;
+  --font-weight-normal: 350;
+  --font-weight-medium: 450;
+  --text-display-lg--font-weight: 350;
+  --text-display-md--font-weight: 350;
+  --text-display-sm--font-weight: 450;
+  --text-page-title--font-weight: 450;
+  --text-title--font-weight: 350;
+  --text-title-sm--font-weight: 350;
+  --text-stat--font-weight: 450;
+  --text-lead--font-weight: 350;
+  --text-body-lg--font-weight: 350;
+  --text-body--font-weight: 350;
+  --text-body-sm--font-weight: 350;
+  --text-label--font-weight: 450;
+  --text-label-lg--font-weight: 450;
+  --text-heading--font-weight: 450;
+  --text-heading-lg--font-weight: 450;
+  --text-caption--font-weight: 350;
+  --text-eyebrow--font-weight: 450;
+  --text-data--font-weight: 350;
+  --text-code--font-weight: 350;
+  --text-display--font-weight: 450;
+  --text-subheading--font-weight: 450;
+  --text-prose--font-weight: 350;
+  --text-figure-xl--font-weight: 450;
+  --text-figure--font-weight: 450;
+  --text-data-sm--font-weight: 350;
 }
 
 /* Tailwind folds a theme shadow into its own variable at build time, which
@@ -672,8 +711,9 @@
 :root:not([data-public-surface]) {
   /* Inherited: no paragraph ends on a lone word; nowrap rows keep one line. */
   text-wrap: pretty;
-  /* A table's head band is `raised`, its body the panel. */
-  --table-head-ground: var(--color-well);
+  /* Everything on the panel is the panel's own colour (owner, 2026-11-21):
+     table heads, buttons, fields and menus; only hover and selected grey. */
+  --table-head-ground: var(--color-panel);
   --table-ground: var(--color-surface);
   /* The token table in docs/design.md. The older role names bind onto it:
      chrome is the ground, surface the panel, well the raised fill, rule the
@@ -682,9 +722,9 @@
   --color-chrome: var(--color-ground);
   --color-panel: #ffffff;
   --color-surface: var(--color-panel);
-  --color-raised: #f7f8f9;
+  --color-raised: var(--color-panel);
   --color-raised-2: #eef0f2;
-  --color-well: var(--color-raised);
+  --color-well: #f7f8f9;
   --color-rule: rgb(0 0 0 / 8%);
   --color-control-line: rgb(0 0 0 / 12%);
   /* Focus (AR-13): a 1px accent edge and a soft accent glow, both themes. */
@@ -1828,9 +1868,9 @@ a.focus-ring:active .type-caption {
    attributes are app-only; the disabled rule below outranks these, so a
    disabled button keeps the one disabled look. */
 [data-state-offer] [data-button-variant='secondary']:first-child {
-  border-color: var(--color-ink);
-  background-color: var(--color-ink);
-  color: var(--color-on-ink);
+  border-color: var(--color-primary);
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
 }
 [data-demoted] [data-button-variant] {
   border-color: var(--color-rule);
@@ -2346,7 +2386,7 @@ label {
   display: none;
 }
 
-/* Checkbox: the ink fill grows from 70% under the check (checkbox.tsx draws
+/* Checkbox: the primary fill grows from 70% under the check (checkbox.tsx draws
    the check). */
 .check-box::after {
   content: '';
@@ -2354,7 +2394,7 @@ label {
   inset: -1px;
   z-index: -1;
   border-radius: inherit;
-  background: var(--color-ink);
+  background: var(--color-primary);
   opacity: 0;
   scale: 0.7;
   transition:

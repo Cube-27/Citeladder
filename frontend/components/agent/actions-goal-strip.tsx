@@ -38,7 +38,8 @@ export function GoalStrip({
         const phrase = entry ? goalCountPhrase(goal, entry.count) : null;
         return {
           key: goal,
-          label,
+          // The goal leads its count's words: body in ink over their ink-2 caption.
+          label: <span className={textRole('body', 'text-ink')}>{label}</span>,
           loading: !failed && !goals,
           // The count is the figure; its words follow in the caption, cut before the count is.
           value: entry ? (
