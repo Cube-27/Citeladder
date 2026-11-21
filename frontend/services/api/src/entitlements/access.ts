@@ -156,7 +156,7 @@ export function cachedWorkspaceAccess(db: Database, ttlMs: number, now = () => p
     const cached = granted.get(workspaceId);
     if (cached && now() < cached.until) return cached.check;
     const check = requireWorkspaceAccess(db, workspaceId);
-    const entry = { until: now() + ttlMs, check: check as Promise<unknown> };
+    const entry = { until: now() + ttlMs, check: check };
     granted.set(workspaceId, entry);
     check.then(
       ({ expires_at: expiresAt }) => {

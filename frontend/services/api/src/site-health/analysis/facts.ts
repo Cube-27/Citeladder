@@ -451,9 +451,9 @@ function emptyFacts() {
       script_navigates: false,
     },
     contact_points: widen<{ channel: string; value: string }[]>([]),
-    commerce: emptyCommerceFacts() as ReturnType<typeof emptyCommerceFacts> & {
-      visible_price_context?: string;
-    },
+    commerce: widen<ReturnType<typeof emptyCommerceFacts> & { visible_price_context?: string }>(
+      emptyCommerceFacts(),
+    ),
   };
 }
 type DocumentFacts = ReturnType<typeof emptyFacts>;

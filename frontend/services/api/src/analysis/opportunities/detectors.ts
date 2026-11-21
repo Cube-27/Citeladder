@@ -14,11 +14,11 @@ import {
 import { summarizeSourcePattern } from './source-patterns.ts';
 import { compareText } from '../../text-order.ts';
 import { issueGroupId, ruleRemediation, ruleTitle } from '../../site-health/reads/rules.ts';
+import { widen } from '../../widen.ts';
 const p = policy.opportunity.opportunities;
-export const rules = p.OPPORTUNITY_RULES_BY_ID as Record<
-  string,
-  (typeof p.OPPORTUNITY_RULES_BY_ID)[keyof typeof p.OPPORTUNITY_RULES_BY_ID]
->;
+export const rules = widen<
+  Record<string, (typeof p.OPPORTUNITY_RULES_BY_ID)[keyof typeof p.OPPORTUNITY_RULES_BY_ID]>
+>(p.OPPORTUNITY_RULES_BY_ID);
 const sortedUnique = (values: string[]) => [...new Set(values)].sort(compareText);
 function gapHit(
   e: VisibilityEvidence,

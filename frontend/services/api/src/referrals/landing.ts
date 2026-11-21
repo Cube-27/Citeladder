@@ -59,7 +59,7 @@ export async function referralEvidence(db: Database, scope: PartitionScope) {
 type Evidence = Awaited<ReturnType<typeof referralEvidence>>;
 type EvidenceRow = Evidence['rows'][number];
 const count = (m: Record<string, unknown>, key: string) =>
-  typeof m[key] === 'number' && Number.isFinite(m[key]) ? (m[key] as number) : 0;
+  typeof m[key] === 'number' && Number.isFinite(m[key]) ? m[key] : 0;
 const aiSource = (evidence: Evidence, row: EvidenceRow, source = '', medium = '') =>
   evidence.classifications.aiSource(row.property_ref, row.day, source, medium);
 type Counts = { sessions: number; engaged_sessions: number; key_events: number };

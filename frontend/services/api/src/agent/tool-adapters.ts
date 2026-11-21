@@ -8,6 +8,7 @@ import { writeTools } from '../mcp/write-tools.ts';
 import { stoppableReads } from './async.ts';
 import { ToolRegistry, toolDefinitions, type ReadTool } from './tools.ts';
 import { agentPolicy, type Json, type Scope } from './contracts.ts';
+import { widen } from '../widen.ts';
 
 const reference = z.object({ id: z.string(), record_uri: z.string().nullish() }).catchall(z.json());
 const availability = z.enum([
@@ -88,10 +89,9 @@ export function sharedReads(db: Database): ReadTool[] {
   return Object.entries(definitions)
     .filter(([name]) => !NOT_FOR_AGENT.has(name))
     .map(([name, definition]) => {
-      const { project_id: _project, ...fields } = definition.schema.shape as Record<
-        string,
-        z.ZodType
-      >;
+      const { project_id: _project, ...fields } = widen<Record<string, z.ZodType>>(
+        definition.schema.shape,
+      );
       const page = agentPage(fields.limit);
       return {
         name,

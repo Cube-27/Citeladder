@@ -14,6 +14,7 @@ import {
 import { isNonEmpty, type NonEmpty } from '../lists.ts';
 import { bindingTokens, sharedTokens } from './binding.ts';
 import { seedQueries, type ObservedQuery } from './observed-queries.ts';
+import { widen } from '../widen.ts';
 
 const G = policy.prompts.generation;
 export const dimensions = ['attributes', 'situations', 'audiences'] as const;
@@ -80,7 +81,7 @@ export function geoTerms(context: PlanContext): string[] {
   const values = business(context);
   const market =
     typeof values.primary_market === 'string' ? values.primary_market.toUpperCase() : '';
-  const terms = (policy.discovery.constants.market_context_terms as Record<string, string[]>)[
+  const terms = widen<Record<string, string[]>>(policy.discovery.constants.market_context_terms)[
     market
   ];
   return [...new Set([...strings(values.service_areas), ...(terms ?? [])])].filter((term) =>

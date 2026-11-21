@@ -16,6 +16,7 @@ import {
   selectedRuns,
   type RunSelection,
 } from '../visibility/selection.ts';
+import { widen } from '../widen.ts';
 
 const p = policy.content_optimization;
 
@@ -152,9 +153,9 @@ function commonTitle(titles: string[]): string {
 }
 
 const isGapSource = (row: { classification: string; source_class: string | null }) =>
-  (p.gap_sources.classifications as readonly string[]).includes(row.classification) ||
+  widen<readonly string[]>(p.gap_sources.classifications).includes(row.classification) ||
   (row.source_class !== null &&
-    (p.gap_sources.source_classes as readonly string[]).includes(row.source_class));
+    widen<readonly string[]>(p.gap_sources.source_classes).includes(row.source_class));
 
 const windowSelection = (scope: Scope, auditIds: string[] | null): RunSelection => ({
   ...scope,

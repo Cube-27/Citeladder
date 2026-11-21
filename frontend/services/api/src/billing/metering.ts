@@ -390,7 +390,7 @@ export function meterFor(db: Database, workspaceId: string) {
             const result = await client.decide(state, questions, signal);
             return {
               value: result,
-              usage: (result.usage ?? null) as TokenUsage | null,
+              usage: result.usage ?? null,
             };
           },
         ),

@@ -204,7 +204,7 @@ export function defineRoute<
       if (activeProject && c.get('workspace').projectId === null) throw notFound('Project');
       if (route.permission) c.set('permission', route.permission);
       const params = validateParams(route.params, {
-        path: c.req.param() as Record<string, string>,
+        path: c.req.param(),
         search: new URL(c.req.url).search,
       });
       if (route.raw) return route.handle({ c, db, config }, params);

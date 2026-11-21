@@ -164,7 +164,7 @@ export async function issueBundle(
   if (
     !specs.length ||
     new Set(specs.map((spec) => spec.key)).size !== specs.length ||
-    !(policy.entitlements.grant_source_kinds as readonly string[]).includes(input.sourceKind)
+    !policy.entitlements.grant_source_kinds.includes(input.sourceKind)
   )
     invalidBundle();
   for (const spec of specs) {

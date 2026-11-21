@@ -123,7 +123,7 @@ function tokenCost(rows: AggregateExecution[], config: ScoringConfig) {
       key,
       sum(rows.map((row) => usageCount(row.usage[key]) ?? 0)),
     ]),
-  ) as Record<string, number>;
+  );
   const tokens = {
     input_tokens: totals.uncached_input_tokens! + totals.cached_input_tokens!,
     ...totals,
@@ -143,7 +143,7 @@ function tokenCost(rows: AggregateExecution[], config: ScoringConfig) {
   ] as const;
   const estimates = lines.map(([key, r]) => tokenLineEstimate(totals[key]!, r));
   const tokenEstimate = estimates.every((n) => n !== null)
-    ? sum(estimates as number[]) / (policy.costs.tokens_per_million * policy.costs.microusd_per_usd)
+    ? sum(estimates) / (policy.costs.tokens_per_million * policy.costs.microusd_per_usd)
     : null;
   const grounded = rows.filter((row) => row.score.search_used).length;
   const searchEstimate = searchFeeEstimate(grounded, pricing?.search_fee_microusd);

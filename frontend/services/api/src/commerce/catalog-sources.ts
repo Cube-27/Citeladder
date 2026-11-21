@@ -137,7 +137,7 @@ function delimitedRecords(content: string): { header: string[]; rows: Record<str
       skip_empty_lines: true,
       relax_column_count: true,
       max_record_size: policy.commerce.import_max_bytes,
-    }) as string[][];
+    });
   } catch {
     refuse(delimiter === '\t' ? 'Invalid tab-separated file' : 'Invalid comma-separated file');
   }

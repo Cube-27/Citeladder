@@ -28,7 +28,7 @@ const reads = policy.site_health.reads;
 const labels: Record<string, string> = reads.aeo_dimension_labels;
 const descriptions: Record<string, string> = reads.aeo_dimension_descriptions;
 const CONTENT_ADDRESSABLE = new Set(reads.content_addressable_check_ids);
-const list = (value: unknown) => (Array.isArray(value) ? (value as unknown[]) : []);
+const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 const OVERVIEW_UNAVAILABLE = 'Site Health Overview is not available';
 const NO_COMPARABLE = {
   added_page_kinds: [],

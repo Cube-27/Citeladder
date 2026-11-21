@@ -8,13 +8,7 @@ import { jsonObject, numberRecord } from '../db/json.ts';
 import { wireUtc, storedInstant, utcText, utcTextOf } from '../db/timestamps.ts';
 import { compareText } from '../text-order.ts';
 import { groupBy } from '../lists.ts';
-import {
-  cellPrompt,
-  compareCells,
-  loadComparisonCells,
-  sharesCellContext,
-  type ComparisonCell,
-} from './comparison.ts';
+import { cellPrompt, compareCells, loadComparisonCells, sharesCellContext } from './comparison.ts';
 import { brandWinCounts } from '../analysis/win-rate.ts';
 import {
   brandIdentities,
@@ -425,10 +419,7 @@ async function enrichOutcomes(
     if (runs && cells) {
       const identity = JSON.stringify([prompt.prompt_id ?? prompt.text, prompt.text]);
       const forPrompt = (auditId: string) =>
-        new Map([...cells.get(auditId)!].filter(([key]) => cellPrompt(key) === identity)) as Map<
-          string,
-          ComparisonCell
-        >;
+        new Map([...cells.get(auditId)!].filter(([key]) => cellPrompt(key) === identity));
       item.comparison = compareCells(forPrompt(audit.id), forPrompt(previous!.id), runs);
       item.comparison_status = item.comparison?.status ?? 'no_matching_observations';
       item.visibility_delta = item.comparison?.deltas.visibility ?? null;
@@ -472,7 +463,7 @@ function poolCounts(rows: readonly Counts[]): Counts {
   for (const field of COUNT_FIELDS) {
     const values = rows.map((row) => row[field]);
     pooled[field] = values.every((value) => value !== null && value !== undefined)
-      ? (values as number[]).reduce((total, value) => total + value, 0)
+      ? values.reduce((total, value) => total + value, 0)
       : null;
   }
   return pooled;
