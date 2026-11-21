@@ -212,7 +212,9 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
               { name: 'app-boot', tags: ['$initial'], priority: 20 },
               {
                 name: 'ui',
-                test: /\/components\/ui\//,
+                // The recharts wrappers stay out: in this group they pulled recharts into a chunk
+                // merged with small shared components, so billing and products loaded the charts.
+                test: /\/components\/ui\/(?!(?:area-chart|stacked-bar-chart|part-donut)\.tsx)/,
                 minShareCount: 2,
                 priority: 10,
                 entriesAware: true,
