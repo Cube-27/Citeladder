@@ -47,6 +47,5 @@ export function useCrawlEvents(
     reconnectMaxMs: SITE_HEALTH_STREAM_RECONNECT_MAX_MS,
     onFrame: shouldInvalidateCrawl,
     onInvalidate,
-    streamName: 'site-health',
   });
 }

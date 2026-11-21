@@ -54,6 +54,5 @@ export function useRunEvents(
     reconnectMaxMs: RUN_STREAM_RECONNECT_MAX_MS,
     onFrame,
     onInvalidate,
-    streamName: 'runs',
   });
 }

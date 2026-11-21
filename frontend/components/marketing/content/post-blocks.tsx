@@ -291,6 +291,10 @@ export function PostBlock({
           {block.text}
         </Callout>
       );
+    default: {
+      const unhandled: never = block;
+      return unhandled;
+    }
   }
 }
 

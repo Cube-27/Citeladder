@@ -53,8 +53,8 @@ describe('contact mail', () => {
         expect(await sendContactEmail(submission, 'test-only-key')).toBe(false);
       }
       expect(log.mock.calls.flat()).toEqual([
-        'Contact email delivery failed.',
-        'Contact email delivery failed.',
+        '{"level":"error","event":"contact_email_delivery_failed"}',
+        '{"level":"error","event":"contact_email_delivery_failed"}',
       ]);
     } finally {
       log.mockRestore();

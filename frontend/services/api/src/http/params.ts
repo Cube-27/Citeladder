@@ -128,6 +128,10 @@ function validateScalar(scalar: Scalar, raw: string): Outcome {
       return scalar.values.includes(raw)
         ? { ok: true, value: raw }
         : failure('literal_error', `Expected one of: ${scalar.values.join(', ')}`);
+    default: {
+      const unhandled: never = scalar;
+      return unhandled;
+    }
   }
 }
 

@@ -153,8 +153,15 @@ function datasetPayload(o: RequestOptions): Record<string, unknown> {
         date_to: o.dateTo,
         rank_scale: 'one_hundred',
       };
-    default:
+    case 'backlink_summary':
+    case 'referring_domains':
+    case 'destination_pages':
+    case 'backlinks':
       return backlinkPayload(o);
+    default: {
+      const unhandled: never = kind;
+      return unhandled;
+    }
   }
 }
 

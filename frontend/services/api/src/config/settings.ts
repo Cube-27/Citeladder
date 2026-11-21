@@ -1,18 +1,23 @@
+import { z } from 'zod';
 import { ConfigError } from './config-error.ts';
 import { epochMicros, parseDatetime } from '../http/datetimes.ts';
 
 export type Env = Readonly<Record<string, string | undefined>>;
 
-export type SettingSpec = {
-  env: string[];
-  type: string;
-  default: unknown;
-  values?: unknown[];
-  minimum?: number;
-  exclusive_minimum?: number;
-  maximum?: number;
-  exclusive_maximum?: number;
-};
+export const settingSpecSchema = z.object({
+  env: z.array(z.string()),
+  type: z.string(),
+  default: z.unknown(),
+  values: z.array(z.unknown()).optional(),
+  minimum: z.number().optional(),
+  exclusive_minimum: z.number().optional(),
+  maximum: z.number().optional(),
+  exclusive_maximum: z.number().optional(),
+});
+
+export type SettingSpec = z.infer<typeof settingSpecSchema>;
+
+const settingTypeSchema = z.enum(['int', 'float', 'bool', 'datetime', 'literal', 'str', 'decimal']);
 
 const TRUE_VALUES = new Set(['1', 'on', 't', 'true', 'y', 'yes']);
 const FALSE_VALUES = new Set(['0', 'off', 'f', 'false', 'n', 'no']);
@@ -71,7 +76,9 @@ function parseDatetimeSetting(name: string, raw: string): Date | null {
 }
 
 function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
-  switch (spec.type) {
+  const type = settingTypeSchema.safeParse(spec.type);
+  if (!type.success) throw new ConfigError(`${name} has an unknown setting type ${spec.type}`);
+  switch (type.data) {
     case 'int':
       return parseInteger(name, raw, spec);
     case 'float':
@@ -85,8 +92,13 @@ function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
         throw new ConfigError(`${name} must be one of ${spec.values?.join(', ')}`);
       }
       return raw;
-    default:
+    case 'str':
+    case 'decimal':
       return raw;
+    default: {
+      const unhandled: never = type.data;
+      return unhandled;
+    }
   }
 }
 

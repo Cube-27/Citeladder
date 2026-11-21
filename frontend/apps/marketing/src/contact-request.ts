@@ -6,6 +6,7 @@ import {
   type ContactSubmission,
 } from '@/lib/config/contact';
 import { verifyTurnstile } from './turnstile';
+import { logWorkerError } from '@/lib/server/worker-request-log';
 
 type SendContact = (submission: ContactSubmission) => Promise<boolean>;
 type ContactLimiter = { limit(input: { key: string }): Promise<{ success: boolean }> };
@@ -85,7 +86,7 @@ export async function handleContactRequest(
     if (!ip) return result(403, 'spam_rejected');
     if (!limits.ip || !limits.burst) return result(503, 'send_failed');
     if (!challenge.secret) {
-      console.error('Contact verification is not configured.');
+      logWorkerError('contact_verification_unconfigured');
       return result(503, 'send_failed');
     }
     if (!(await limits.ip.limit({ key: ip })).success) return result(429, 'rate_limited');
@@ -101,7 +102,7 @@ export async function handleContactRequest(
       return result(429, 'rate_limited');
     return (await send(submission)) ? result(200, 'success') : result(503, 'send_failed');
   } catch {
-    console.error('Contact email delivery failed.');
+    logWorkerError('contact_email_delivery_failed');
     return result(503, 'send_failed');
   }
 }

@@ -11,6 +11,10 @@ function requestLine(request: Request, started: number) {
   };
 }
 
+export function logWorkerError(event: string) {
+  console.error(JSON.stringify({ level: 'error', event }));
+}
+
 export function withRequestLog<Env>(handler: WorkerFetch<Env>): WorkerFetch<Env> {
   return async (request, env) => {
     const started = Date.now();

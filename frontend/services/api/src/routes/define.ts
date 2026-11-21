@@ -111,6 +111,10 @@ function scalarSchema(spec: ParamSpec): z.ZodType {
     }
     case 'literal':
       return z.enum(scalar.values as [string, ...string[]]);
+    default: {
+      const unhandled: never = scalar;
+      return unhandled;
+    }
   }
 }
 

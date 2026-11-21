@@ -11,7 +11,6 @@ const apiTypeAssertionBaseline = [
   'services/api/src/audits/freeze.ts',
   'services/api/src/audits/frozen-configuration.ts',
   'services/api/src/auth/client-identity.ts',
-  'services/api/src/auth/continuation.ts',
   'services/api/src/auth/oauth.ts',
   'services/api/src/billing/ai-pricing.ts',
   'services/api/src/billing/catalog-authoring.ts',
@@ -105,6 +104,14 @@ const BROWSER_FILES = [
   'packages/*/src/**',
   'packages/*/*.{ts,tsx}',
 ];
+const CONSOLE_FILES = [
+  '**/services/api/src/cli/**',
+  '**/services/api/scripts/**',
+  '**/scripts/**',
+  '**/*.config.{ts,mts,mjs,js}',
+  '**/lib/server/worker-request-log.ts',
+  '**/apps/docs/public/templates/**',
+];
 const TEST_FILES = ['**/*.{test,spec}.{ts,tsx}', 'test/**', 'e2e/**', '**/test/**'];
 
 export const lintConfig: OxlintConfig = {
@@ -136,6 +143,7 @@ export const lintConfig: OxlintConfig = {
   ],
   rules: {
     'no-array-constructor': 'error',
+    'no-console': 'error',
     'no-unused-expressions': 'warn',
     'no-unused-vars': [
       'error',
@@ -210,6 +218,10 @@ export const lintConfig: OxlintConfig = {
         '**/components/analytics/google-analytics.ts',
       ],
       rules: { 'typescript/consistent-type-assertions': 'off' },
+    },
+    {
+      files: [...CONSOLE_FILES, ...TEST_FILES],
+      rules: { 'no-console': 'off' },
     },
     {
       files: TEST_FILES,

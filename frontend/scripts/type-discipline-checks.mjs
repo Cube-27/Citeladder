@@ -37,6 +37,51 @@ function indexNonNull(node) {
   return false;
 }
 
+const DISCRIMINANTS = new Set(['kind', 'type', 'status', 'state', 'phase', 'mode', 'event_type']);
+
+const discriminantName = (node) =>
+  node?.type === 'Identifier' ? node.name : (propertyName(node) ?? '');
+
+function provesExhaustive(clause) {
+  let proven = false;
+  walk(clause.consequent, (node) => {
+    if (node.type === 'TSNeverKeyword') proven = true;
+    if (
+      node.type === 'CallExpression' &&
+      node.callee.type === 'Identifier' &&
+      node.callee.name === 'assertNever'
+    )
+      proven = true;
+  });
+  return proven;
+}
+
+function openSwitch(node) {
+  if (node.type !== 'SwitchStatement' || !DISCRIMINANTS.has(discriminantName(node.discriminant)))
+    return false;
+  const fallback = node.cases.find((clause) => clause.test === null);
+  return !fallback || !provesExhaustive(fallback);
+}
+
+export const isApiSource = (label) => label.startsWith('services/api/src/');
+
+export function nonNullCount(source, label) {
+  let count = 0;
+  walk(parseSource(source, label), (node) => {
+    if (node.type === 'TSNonNullExpression') count += 1;
+  });
+  return count;
+}
+
+export function nonNullRatchetFailures(counts, baseline) {
+  return Object.entries(counts)
+    .filter(([file, count]) => count > (baseline[file] ?? 0))
+    .map(
+      ([file, count]) =>
+        `${file}: ${count} non-null assertions, baseline ${baseline[file] ?? 0}; narrow the value instead of asserting it`,
+    );
+}
+
 const isValueChangeHandler = (node) =>
   node.type === 'JSXAttribute' &&
   node.name?.type === 'JSXIdentifier' &&
@@ -61,6 +106,12 @@ export function typeDisciplineFindings(source, label) {
         node,
         'index-non-null',
         'non-null assertion on an indexed element; make the list non-empty by construction',
+      );
+    if (openSwitch(node))
+      add(
+        node,
+        'exhaustive-switch',
+        'switch on a discriminant without a never arm; end it with a default that assigns to never',
       );
     if (!ownsRadixCast && isValueChangeHandler(node))
       walk(node.value, (inner) => {

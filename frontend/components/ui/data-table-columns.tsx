@@ -1,5 +1,3 @@
-import { useEffect } from 'react';
-
 import { ArrowDown, ArrowUp } from '@/lib/icons';
 import { Checkbox } from '@/components/ui/checkbox';
 import { HintedTableHead, SortableTableHead } from '@/components/ui/table-heads';
@@ -140,27 +138,6 @@ export function columnRules({
       rules.push(`${at(columns.indexOf(last) + offset)}{padding-inline-end:16px}`);
   }
   return rules.join('');
-}
-
-const warnedColumnSets = new Set<string>();
-
-export function useFlexibleColumnCheck({
-  columns,
-  title,
-  label,
-}: Readonly<{ columns: readonly DataTableColumn[]; title?: string; label?: string }>) {
-  useEffect(() => {
-    if (!import.meta.env?.DEV) return;
-    if (columns.some(isFlexible)) return;
-    const name = title ?? label ?? columns.map((column) => column.label).join(', ');
-    const widths = columns.map((column) => `${column.key}:${column.width}`).join(',');
-    const signature = `${name}|${widths}`;
-    if (warnedColumnSets.has(signature)) return;
-    warnedColumnSets.add(signature);
-    console.warn(
-      `DataTable "${name}" has no flexible column (width "flex"): its spare width spreads over its figures.`,
-    );
-  }, [columns, title, label]);
 }
 
 function steps(count: number) {

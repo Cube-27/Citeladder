@@ -74,21 +74,17 @@ export type ActivityRow = {
   state: ActivityState;
 };
 
+const CALL_STATES = new Map<string, ActivityState | null>([
+  ['started', 'running'],
+  ['completed', 'done'],
+  ['unavailable', 'unavailable'],
+  ['failed', 'failed'],
+  ['refused', null],
+]);
+
 function callState(status: string): ActivityState | null {
-  switch (status) {
-    case 'started':
-      return 'running';
-    case 'completed':
-      return 'done';
-    case 'unavailable':
-      return 'unavailable';
-    case 'failed':
-      return 'failed';
-    case 'refused':
-      return null;
-    default:
-      return 'unknown';
-  }
+  const state = CALL_STATES.get(status);
+  return state === undefined ? 'unknown' : state;
 }
 
 function callRow(

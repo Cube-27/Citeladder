@@ -211,24 +211,23 @@ const CONTEXT_PAGE_OMISSIONS = new Set([
   'background_candidate_limit',
 ]);
 
+const omissionSchema = z.object({ reason: z.string(), count: z.number().optional() });
+
 function modelSummary(summary: Record<string, Json>): Record<string, Json> {
   const supplied = { ...summary };
   for (const key of MANIFEST_ONLY_SUMMARY_KEYS) delete supplied[key];
-  const omissions = (Array.isArray(summary.omissions) ? summary.omissions : []).map(
-    (item): Record<string, Json> =>
-      item !== null && typeof item === 'object' && !Array.isArray(item) ? item : {},
-  );
+  const omissions = (Array.isArray(summary.omissions) ? summary.omissions : []).flatMap((item) => {
+    const omission = omissionSchema.safeParse(item);
+    return omission.success ? [omission.data] : [];
+  });
   const omitted = omissions.reduce<number>(
-    (total, row) =>
-      typeof row.reason === 'string' &&
-      CONTEXT_PAGE_OMISSIONS.has(row.reason) &&
-      typeof row.count === 'number'
-        ? total + row.count
-        : total,
+    (total, { reason, count }) =>
+      CONTEXT_PAGE_OMISSIONS.has(reason) && count !== undefined ? total + count : total,
     0,
   );
   if (omitted > 0) supplied.agent_context_pages_omitted = omitted;
-  if (omissions.some((row) => row.reason === 'no_usable_crawl')) supplied.crawl_unavailable = true;
+  if (omissions.some(({ reason }) => reason === 'no_usable_crawl'))
+    supplied.crawl_unavailable = true;
   return supplied;
 }
 

@@ -1,6 +1,4 @@
 import {
-  Children,
-  isValidElement,
   type ComponentPropsWithRef,
   type ComponentPropsWithoutRef,
   type ReactNode,
@@ -130,31 +128,7 @@ function NativeButton({
   );
 }
 
-const warnedQuiet = new Set<string>();
-
-function carriesIcon(children: ReactNode): boolean {
-  return Children.toArray(children).some((child) => {
-    if (!isValidElement<{ 'aria-hidden'?: unknown; children?: ReactNode }>(child)) return false;
-    if (child.type === Icon || child.type === 'svg' || child.props['aria-hidden']) return true;
-    if (typeof child.type === 'object' && child.props.children === undefined) return true;
-    return typeof child.type !== 'string' || child.type === 'a'
-      ? carriesIcon(child.props.children)
-      : false;
-  });
-}
-
-function checkQuietIcon({ variant, children }: Readonly<ButtonProps>) {
-  if (!import.meta.env?.DEV || variant !== 'quiet' || carriesIcon(children)) return;
-  const name = Children.toArray(children)
-    .filter((child) => typeof child === 'string')
-    .join(' ');
-  if (warnedQuiet.has(name)) return;
-  warnedQuiet.add(name);
-  console.warn(`Quiet button "${name}" has no icon: give it one, or make it secondary.`);
-}
-
 export function Button(props: Readonly<ButtonProps>) {
-  checkQuietIcon(props);
   return props.asChild ? <SlottedButton {...props} /> : <NativeButton {...props} />;
 }
 
