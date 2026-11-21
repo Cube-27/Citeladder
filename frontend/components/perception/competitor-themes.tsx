@@ -1,3 +1,4 @@
+import { StateBlock } from '@/components/ui/state-block';
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
 
 import { Absence } from '@/components/ui/absence';
@@ -33,6 +34,19 @@ export function CompetitorThemes({
       ...(index >= SHOWN_THEMES ? { priority: 'low' } : {}),
     })),
   ];
+  const measured = map.rows.some((row) => row.cells.some((cell) => cell.kind !== 'too_few'));
+  if (map.themes.length && !measured)
+    return (
+      <TitledSection title={TITLE}>
+        <SectionContent>
+          <StateBlock
+            kind="empty"
+            inline
+            message={`Shows from ${PERCEPTION_MIN_CLASSIFIED} classified mentions of a brand. No brand has that many in these answers.`}
+          />
+        </SectionContent>
+      </TitledSection>
+    );
   return (
     <TitledSection title={TITLE}>
       <SectionContent>
