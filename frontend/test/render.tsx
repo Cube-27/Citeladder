@@ -117,11 +117,16 @@ export type TestEntitlement = {
 
 export function testEntitlement(
   workspaceId: string,
-  { grants = [], projectSlots, managed = false, status = 'resolved' }: TestEntitlement = {},
+  {
+    grants = [],
+    projectSlots,
+    managed = false,
+    status = 'resolved',
+  }: Omit<TestEntitlement, 'status'> & { status?: WorkspaceEntitlement['status'] } = {},
 ): WorkspaceEntitlement {
   return {
     workspace_id: workspaceId,
-    status: status === 'pending' ? 'resolved' : status,
+    status,
     registry_revision: 'test-registry',
     entitlement_lifecycle_version: 1,
     valid_until: null,
@@ -157,7 +162,11 @@ export function seedEntitlement(
   const queryKey = queryKeys.billing.workspaceEntitlement(workspaceId);
   if (entitlement.status === 'pending')
     void queryClient.prefetchQuery({ queryKey, queryFn: () => new Promise<never>(() => {}) });
-  else queryClient.setQueryData(queryKey, testEntitlement(workspaceId, entitlement));
+  else
+    queryClient.setQueryData(
+      queryKey,
+      testEntitlement(workspaceId, { ...entitlement, status: entitlement.status }),
+    );
   if (entitlement.usage === 'network') return;
   const usage: BillingUsage = {
     billing_account_id: '00000000-0000-4000-8000-0000000000b1',
