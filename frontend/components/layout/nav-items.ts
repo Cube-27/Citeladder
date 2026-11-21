@@ -149,10 +149,10 @@ export function isNavItemActive(
 export function pageSection(
   pathname: string,
   searchParams: URLSearchParams,
-): Readonly<{ title: string; icon: IconGlyph }> {
-  if (isAgentPath(pathname)) return { title: 'Agent', icon: ICONS.agent };
+): Readonly<{ title: string }> {
+  if (isAgentPath(pathname)) return { title: 'Agent' };
   const group = DASHBOARD_GROUPS.find(({ items }) =>
     items.some((item) => isNavItemActive(pathname, searchParams, item)),
   );
-  return group ?? { title: 'Workspace', icon: ICONS.settings };
+  return { title: group?.title ?? 'Workspace' };
 }
