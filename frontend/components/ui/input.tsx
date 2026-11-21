@@ -45,7 +45,7 @@ export function Input({
         className={cn(
           'focus-input',
           FIELD_BOX,
-          'placeholder:text-ink-3 disabled:cursor-not-allowed disabled:opacity-60',
+          'placeholder:text-ink-3 disabled:cursor-not-allowed disabled:border-transparent disabled:bg-raised-2 disabled:text-ink-2',
           inputWidths[width],
           containerClassName,
           className,

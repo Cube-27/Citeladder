@@ -11,10 +11,10 @@ import { FIELD_EDGE } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 const textareaClasses =
-  'text-ink placeholder:text-ink-3 type-body block w-full rounded-control border disabled:cursor-not-allowed disabled:opacity-60';
+  'text-ink placeholder:text-ink-3 type-body block w-full rounded-control border disabled:cursor-not-allowed';
 
 const fieldClasses = cn(
-  'focus-input min-h-[calc(var(--control-md)*2)] resize-y px-3 py-2 transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)]',
+  'focus-input disabled:border-transparent disabled:bg-raised-2 disabled:text-ink-2 field-sizing-content min-h-[calc(var(--field-min-rows)*1lh+1rem+2px)] max-h-[calc(var(--field-max-rows)*1lh+1rem+2px)] resize-none px-3 py-2 transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)]',
   FIELD_EDGE,
 );
 
@@ -49,9 +49,10 @@ export function Textarea({
     },
     [ref],
   );
-  const growStyle: CSSProperties & Record<'--field-max-rows', number> = {
+  const growStyle: CSSProperties & Record<'--field-max-rows' | '--field-min-rows', number> = {
     ...style,
     '--field-max-rows': maxRows,
+    '--field-min-rows': rows,
   };
   const { value } = props;
   useLayoutEffect(() => {
@@ -64,7 +65,7 @@ export function Textarea({
     <textarea
       ref={setRef}
       rows={grows ? 1 : rows}
-      style={grows ? growStyle : style}
+      style={growStyle}
       className={cn(textareaClasses, grows ? composerClasses : fieldClasses, className)}
       {...props}
     />
