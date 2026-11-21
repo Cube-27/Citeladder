@@ -321,7 +321,7 @@ export const APP_ROUTES = [
     width: 'narrow',
     title: 'Context',
     screen: screens.context,
-    loading: cards([facts(5)], { rail: { ...held('tab', CONTEXT_TABS), wide: ['map'] } }),
+    loading: cards([facts(5)], { rail: held('tab', CONTEXT_TABS) }),
     nav: [listed('Context', 'context', 'agent')],
   }),
   page({
