@@ -66,6 +66,38 @@ finishes clears an edit typed after it).
 range, project or data it filters. Mutation state keyed by anything coarser
 than the item and the draft it saved.
 
+### A variant is a union, not optional fields that travel together
+
+**Rule:** [CLAUDE.md](../CLAUDE.md#code-taste) owns it: variants are
+discriminated unions on a literal `kind`.
+**Why:** The TypeScript audit on #1136 found about 12 shipped variants written
+as optional bags. `FetchOutcome` (`services/api/src/source-pages/persistence.ts`)
+puts `outcome: 'inspected' | 'blocked' | 'failed'` beside optional `finalUrl`,
+`status` and `reason`, so nothing ties `reason` to a failure. `SurfaceExchange`
+(`audits/surface-persistence.ts`) carries `raw`, `error` and `poll` as
+independent options. `HandoffInput` (`lib/agent/handoff.ts`) has 15 optional
+fields for handoffs that each name one subject. No lint can tell a bag of
+options from a union.
+**Check:** A new or widened type with two or more optional fields that are
+set together, or only for one value of a status or kind field. Code that
+tests one optional field to decide whether another is present.
+
+### Parsed data leaves the parser typed
+
+**Rule:** [CLAUDE.md](../CLAUDE.md#code-taste) owns parse-once. The value the
+entry function hands on has the schema's inferred type; `Record<string,
+unknown>` stays inside that function and never types a helper's parameter or
+a return value.
+**Why:** The #1136 audit counted 328 `Record<string, unknown>` in
+`services/api` production code. `search-surfaces/parsing.ts` (24) and
+`search-intelligence/normalization.ts` (17) pass raw provider objects through
+helper after helper (`observedAt`, `elements`, `fragments`), each probing
+fields with `typeof` again, so a provider shape change fails deep inside a
+helper instead of at the parse. A JSON column type (`db/json.ts`) is legitimate.
+**Check:** `Record<string, unknown>` in a parameter or return type outside
+the function that receives the payload, or a `typeof x.field ===` chain on a
+provider or API value that a schema could parse once.
+
 ## UI loading and first paint
 
 ### Flow routes never draw the app shell
@@ -338,3 +370,28 @@ next builder had no reason to keep either.
 **Check:** The diff removes a test or doc paragraph that gives a reason,
 or a brief changes one of these areas without citing a PR. Run
 `git log -S '<symbol>'` on the owner.
+
+## Tests
+
+### Tests mount the real providers; mocks stop at the app's edge
+
+**Rule:** [CLAUDE.md](../CLAUDE.md#testing) owns "don't mock what you can
+run". A browser test renders through `renderWithProviders`
+(`frontend/test/render.tsx`) with `projectSelection` (`selectionAs(role)`,
+`projectScope(project, role)`) and `entitlement`, and serves API reads with
+MSW. It never `vi.mock`s a module of ours that only reads context, query
+state or the API client. `vi.mock` is for what leaves the app: a hard
+navigation, a file download.
+**Why:** 36 tests mocked `project-context` (24) and `entitlement-context`
+(12), and the mocks drifted into states the providers cannot produce:
+`referrals-screen.test.tsx` gave a project in workspace `1111…` the active
+workspace `aaaa…`, `settings-screen.test.tsx` returned a project from
+`useProjectContext` and `null` from `useOptionalProjectContext`, and
+`dashboard-screen.test.tsx` stubbed `capabilityRemaining` beside a partial
+entitlement. Role checks were `useWorkspaceCapability: () => true` instead of
+a role's capabilities. The #1136 test-provider PR moved them all onto the
+real providers.
+**Check:** `vi.mock('@/lib/…')` or `vi.mock('@/components/…')` of a module
+that wraps React context, query state or `lib/api`; a hand-written hook or
+capability stub where a role from `services/api/src/config/workspaces.json`
+would do.
