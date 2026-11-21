@@ -127,6 +127,7 @@ const CONTRAST_PAIRS = [
   },
 ];
 
+/** @public */
 export function contrastRoles() {
   return {
     inks: [...new Set(CONTRAST_PAIRS.flatMap(({ inks }) => inks))],
@@ -248,6 +249,7 @@ function customProperties(body) {
   });
 }
 
+/** @public */
 export function paletteDeclarations(source, selector) {
   const rules = topLevelRules(source.replace(/\/\*[\s\S]*?\*\//g, ''));
   const declarations = (scope) =>
@@ -267,6 +269,7 @@ export function paletteDeclarations(source, selector) {
 
 const RELATIVE = /^oklch\(\s*from\s+var\((--[\w-]+)\)\s+l\s+c\s+h\s*(?:\/\s*([\d.]+)%\s*)?\)$/;
 
+/** @public */
 export function resolvePalette(source, selector) {
   const values = paletteDeclarations(source, selector);
   const resolve = (token, seen = new Set()) => {
@@ -308,6 +311,7 @@ function rowViolations(palette, scope, { inks, surfaces, over = [color('surface'
   );
 }
 
+/** @public */
 export function paletteViolations(source) {
   const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
   const violations = clean.includes(`${DARK} {`)

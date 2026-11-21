@@ -39,6 +39,7 @@ const DIRECTIVES = [
   /^prettier-ignore$/u,
   /^[#@]__PURE__$/u,
   /^@jsxImportSource [\w@/.-]+$/u,
+  /^@public$/u,
 ];
 
 export function isCommentChecked(file) {

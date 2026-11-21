@@ -25,8 +25,10 @@ test('keeps machine-read directives and rejects every other script comment', () 
     'const c = 1; // NOSONAR: trusted PATH.',
     "const d = '// a string, not a comment';",
     '// @ts-expect-error the type is wrong',
+    '/** @public */',
+    '/** @public imported by a fixture test */',
   ].join('\n');
-  assert.deepEqual(lines(source), [12, 13, 14, 15, 17]);
+  assert.deepEqual(lines(source), [12, 13, 14, 15, 17, 19]);
 });
 
 test('rejects a JSX comment but keeps a JSX directive', () => {
