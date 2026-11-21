@@ -119,10 +119,6 @@ export function useDemand() {
   const queryClient = useQueryClient();
   const latest = useQuery({
     ...demandQueries.latest({ workspaceId, projectId }),
-    // Deliberately NO `keepPreviousData`: the key's only variable is the
-    // project, so keeping previous data would render the PREVIOUS project's
-    // snapshot as a success (placeholder data is not `isLoading`) while
-    // recompute targets the CURRENT project id.
   });
   const [activeTab, setActiveTab] = useUrlState('view', DEMAND_TAB_CODEC, {
     clearKeys: ['signal'],
@@ -137,11 +133,6 @@ export function useDemand() {
     () => new Map(FILTER_TABS.map(({ tab }) => [tab, countByTab(signals ?? [], tab)] as const)),
     [signals],
   );
-  /**
-   * The API returns signals ordered by priority, so a signal's rank is its
-   * index in the FULL list. Pairing it here keeps the rank stable when a
-   * filter hides the signals above it.
-   */
   const filteredSignals = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return (signals ?? []).reduce<RankedSignal[]>((matches, signal, index) => {

@@ -100,7 +100,7 @@ async function attach(db: Database, scope: ProjectScope, target: Target, assetId
       )
       .execute();
   for (const id of target.competitorIds) {
-    const competitor = await db // NOSONAR -- One locked transaction: statements run in order.
+    const competitor = await db // NOSONAR
       .selectFrom('competitors')
       .select(['id', 'domains'])
       .where('id', '=', id)
@@ -114,7 +114,7 @@ async function attach(db: Database, scope: ProjectScope, target: Target, assetId
       )
     )
       continue;
-    await db // NOSONAR -- One locked transaction: statements run in order.
+    await db // NOSONAR
       .updateTable('competitors')
       .set({ logo_asset_id: assetId, updated_at: new Date() })
       .where('id', '=', id)
@@ -141,7 +141,6 @@ export async function refreshLogos(db: Database, scope: ProjectScope, fetcher = 
   function add(value: string, brandId: string | null, competitorId: string | null) {
     const domain = logoKey(value);
     if (!domain) return;
-    // Only the keyed host's own homepage decides the shared asset, never a requester's path.
     const target = targets.get(domain) ?? {
       domain,
       url: `https://${domain}/`,
@@ -169,7 +168,7 @@ export async function refreshLogos(db: Database, scope: ProjectScope, fetcher = 
     for (const target of targets.values()) {
       const asset = cached.find((item) => item.domain === target.domain);
       if (asset?.status === cfg.status_ready && asset.image_data) {
-        await attach(trx, scope, target, asset.id); // NOSONAR -- One locked transaction: statements run in order.
+        await attach(trx, scope, target, asset.id); // NOSONAR
         if (
           !asset.fetched_at ||
           now.getTime() - asset.fetched_at.getTime() >= cfg.success_cache_seconds * 1000
@@ -181,50 +180,43 @@ export async function refreshLogos(db: Database, scope: ProjectScope, fetcher = 
   const signal = AbortSignal.timeout(cfg.refresh_timeout_seconds * 1000);
   for (let offset = 0; offset < missing.length; offset += cfg.fetch_concurrency) {
     if (signal.aborted) break;
-    const outcomes =
-      await /* NOSONAR -- Batches cap fetch concurrency under one deadline. */ Promise.all(
-        missing
-          .slice(offset, offset + cfg.fetch_concurrency)
-          .map(async (target) => ({ target, logo: await fetchLogo(target.url, fetcher, signal) })),
-      );
-    await /* NOSONAR -- Persist each batch before fetching the next. */ db
-      .transaction()
-      .execute(async (trx) => {
-        await acquireProjectLock(trx, scope.projectId);
-        for (const { target, logo } of outcomes) {
-          // A miss under this request's own deadline says nothing about the host;
-          // it must not become a shared failure that blocks every tenant's retry.
-          if (!logo && signal.aborted) continue;
-          const at = new Date();
-          const values = {
-            status: logo ? cfg.status_ready : cfg.status_failed,
-            source_url: logo?.url ?? '',
-            content_type: logo?.contentType ?? '',
-            image_data: logo?.body ?? null,
-            byte_size: logo?.body.length ?? 0,
-            sha256: logo ? createHash('sha256').update(logo.body).digest('hex') : '',
-            fetched_at: at,
-            retry_after: logo ? null : new Date(at.getTime() + cfg.failure_cache_seconds * 1000),
-            updated_at: at,
-          };
-          await trx // NOSONAR -- One locked transaction: statements run in order.
-            .insertInto('brand_logo_assets')
-            .values({ id: randomUUID(), domain: target.domain, ...values, created_at: at })
-            .onConflict((conflict) => {
-              const update = conflict.column('domain').doUpdateSet(values);
-              return logo
-                ? update
-                : update.where('brand_logo_assets.status', '!=', cfg.status_ready);
-            })
-            .execute();
-          const asset = await trx // NOSONAR -- Reads the asset this transaction just wrote.
-            .selectFrom('brand_logo_assets')
-            .select(['id', 'status'])
-            .where('domain', '=', target.domain)
-            .executeTakeFirstOrThrow();
-          if (asset.status === cfg.status_ready) await attach(trx, scope, target, asset.id); // NOSONAR -- One locked transaction: statements run in order.
-        }
-      });
+    const outcomes = await /* NOSONAR */ Promise.all(
+      missing
+        .slice(offset, offset + cfg.fetch_concurrency)
+        .map(async (target) => ({ target, logo: await fetchLogo(target.url, fetcher, signal) })),
+    );
+    await /* NOSONAR */ db.transaction().execute(async (trx) => {
+      await acquireProjectLock(trx, scope.projectId);
+      for (const { target, logo } of outcomes) {
+        if (!logo && signal.aborted) continue;
+        const at = new Date();
+        const values = {
+          status: logo ? cfg.status_ready : cfg.status_failed,
+          source_url: logo?.url ?? '',
+          content_type: logo?.contentType ?? '',
+          image_data: logo?.body ?? null,
+          byte_size: logo?.body.length ?? 0,
+          sha256: logo ? createHash('sha256').update(logo.body).digest('hex') : '',
+          fetched_at: at,
+          retry_after: logo ? null : new Date(at.getTime() + cfg.failure_cache_seconds * 1000),
+          updated_at: at,
+        };
+        await trx // NOSONAR
+          .insertInto('brand_logo_assets')
+          .values({ id: randomUUID(), domain: target.domain, ...values, created_at: at })
+          .onConflict((conflict) => {
+            const update = conflict.column('domain').doUpdateSet(values);
+            return logo ? update : update.where('brand_logo_assets.status', '!=', cfg.status_ready);
+          })
+          .execute();
+        const asset = await trx // NOSONAR
+          .selectFrom('brand_logo_assets')
+          .select(['id', 'status'])
+          .where('domain', '=', target.domain)
+          .executeTakeFirstOrThrow();
+        if (asset.status === cfg.status_ready) await attach(trx, scope, target, asset.id); // NOSONAR
+      }
+    });
   }
   return readProject(db, scope);
 }

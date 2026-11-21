@@ -22,10 +22,6 @@ export async function verifyPassword(password: string, encoded: string | null): 
 
 let dummyHash: Promise<string> | undefined;
 
-/**
- * Verify, paying one Argon2 verification even without a usable account, so
- * login latency does not reveal whether an address is registered.
- */
 export async function verifyAccountPassword(
   password: string,
   encoded: string | null | undefined,

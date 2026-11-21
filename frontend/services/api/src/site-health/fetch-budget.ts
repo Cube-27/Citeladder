@@ -21,11 +21,6 @@ export const unresolvedEntitlement = () =>
     retryable: false,
   });
 
-/**
- * Capacity stays locked through the hold and the caller's admission commit.
- * A workspace holding the operator controls grant, a workspace without a
- * billing account and a plan without a fetch grant crawl unmetered.
- */
 export async function budgetedPageLimit(
   db: Database,
   workspaceId: string,

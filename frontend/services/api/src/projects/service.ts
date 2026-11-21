@@ -378,7 +378,7 @@ async function saveCollections(
     ['unintended_domains', input.unintended_domains],
   ] as const) {
     if (values !== undefined)
-      await saveDomainList(db, table, { workspaceId, projectId }, cleanList(values), now); // NOSONAR -- One transaction: statements run in order.
+      await saveDomainList(db, table, { workspaceId, projectId }, cleanList(values), now); // NOSONAR
   }
 }
 
@@ -407,7 +407,7 @@ async function saveDomainList(
     }
     kept.add(key);
     if (domain !== row.domain)
-      await db.updateTable(table).set({ domain }).where('id', '=', row.id).execute(); // NOSONAR -- One transaction: statements run in order.
+      await db.updateTable(table).set({ domain }).where('id', '=', row.id).execute(); // NOSONAR
   }
   if (removed.length)
     await db

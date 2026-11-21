@@ -98,7 +98,7 @@ export async function recoverDiscoveryLeases(db: Database, batchSize = queueReco
     });
     const cfg = policy.discovery.constants;
     for (const task of tasks.filter((row) => row.status === statuses.failed)) {
-      const parent = await trx // NOSONAR -- One transaction: row locks are taken in order.
+      const parent = await trx // NOSONAR
         .selectFrom('brand_discoveries as discovery')
         .innerJoin('brand_discovery_tasks as task', (join) =>
           join
@@ -116,7 +116,7 @@ export async function recoverDiscoveryLeases(db: Database, batchSize = queueReco
       )
         continue;
       const warnings = Array.isArray(parent.warnings) ? parent.warnings : [];
-      await trx // NOSONAR -- One transaction: statements run in order.
+      await trx // NOSONAR
         .updateTable('brand_discoveries')
         .set({
           status: cfg.discovery_status_failed,

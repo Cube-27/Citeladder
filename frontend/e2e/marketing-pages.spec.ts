@@ -8,10 +8,6 @@ import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { newestFirst } from '@/lib/marketing-content/blog-index';
 import { brandFontName } from '@/lib/fonts/brand-fonts';
 
-/**
- * Internal links answer 200. E2E runs the marketing Worker with no reachable
- * API, so /pricing takes its outage path: 503 and kept out of the index.
- */
 async function expectLinkServed(request: APIRequestContext, href: string, label = href) {
   const response = await request.get(href);
   if (href !== '/pricing') {
@@ -100,9 +96,6 @@ test.describe('marketing routes', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.getByRole('link', { name: 'Test your rules' }).click();
     await expect(page).toHaveURL(/\/tools\/ai-crawler-checker$/);
-    // Astro drops an island's `ssr` attribute when React starts hydrating,
-    // not when it finishes, so a click can still reach markup with no
-    // handler. Press until the example lands in the form: then it is live.
     await expect(async () => {
       await page.getByRole('button', { name: 'Load example' }).click();
       await expect(page.getByRole('textbox', { name: 'Page URL to test' })).toHaveValue(
@@ -162,9 +155,6 @@ test.describe('marketing routes', () => {
             (stylesheet) => stylesheet.sheet !== null,
           ),
         );
-        // WebKit's fonts.ready waits for document readiness, which the held
-        // module scripts prevent. Load the used faces without that dependency.
-        // Builds without the private font files settle on the fallback faces.
         await page.evaluate(
           (fonts) => Promise.allSettled(fonts.map((font) => document.fonts.load(font))),
           [
@@ -173,8 +163,6 @@ test.describe('marketing routes', () => {
             `400 44px "${brandFontName('display')}"`,
           ],
         );
-        // A loaded sheet can reach computed style only at the next rendering
-        // update; before it, getComputedStyle reports a state never painted.
         await page.evaluate(
           () =>
             new Promise((resolve) => {

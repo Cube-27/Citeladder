@@ -135,7 +135,7 @@ const SESSION_COOKIE = z.object({
 });
 
 function honoPath(path: string): string {
-  return path.replaceAll(/\{([^}]+)\}/gu, ':$1'); // NOSONAR -- input is a static OpenAPI route template, never request data
+  return path.replaceAll(/\{([^}]+)\}/gu, ':$1'); // NOSONAR
 }
 
 function methodNotAllowed(method: string): never {
@@ -320,11 +320,6 @@ function publicOperation(
   return { contract, register };
 }
 
-/**
- * A browser marks a request another origin started as `Sec-Fetch-Site:
- * cross-site` or `same-site`; the product's own pages are same-origin, and
- * server-to-server callers (webhooks, CLIs) send no such header.
- */
 const sameSiteWrite: MiddlewareHandler<AppEnv> = async (c, next) => {
   const site = c.req.header('sec-fetch-site');
   if (site === 'cross-site' || site === 'same-site')
@@ -435,9 +430,6 @@ export function registerMethodGuards(app: Hono<AppEnv>, routes: readonly Product
     })
     .sort((a, b) => a.parameters - b.parameters);
   app.use('*', async (c, next) => {
-    // A literal route such as /competitors/discoveries takes precedence over
-    // /competitors/{candidate_id}. Its GET must not inherit the latter's PATCH
-    // guard. Hono's implicit HEAD remains disallowed unless explicitly declared.
     const segments = c.req.path.split('/');
     const guard = guards.find(
       (entry) =>

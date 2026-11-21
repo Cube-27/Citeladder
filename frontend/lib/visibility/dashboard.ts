@@ -49,12 +49,6 @@ export function isDashboardStatus(status: AuditStatus): boolean {
   return DASHBOARD_STATUSES.has(status);
 }
 
-/**
- * Build the run-selector options from the project's audits: keep only
- * dashboard-ready runs, newest first (by completed-at, then created-at) —
- * mirroring the backend's default-run resolution so the first option is the
- * one the endpoint defaults to when `audit_id` is omitted.
- */
 export function toRunOptions(
   audits: ReadonlyArray<{
     id: string;

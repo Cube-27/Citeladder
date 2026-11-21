@@ -164,7 +164,7 @@ async function replaceCategories(
 ) {
   const byKey = new Map(names.map((name) => [categoryKey(name), name]));
   const ids: string[] = [];
-  for (const name of byKey.values()) ids.push((await categoryByName(db, scope, name)).id); // NOSONAR -- One edit transaction: statements run in order.
+  for (const name of byKey.values()) ids.push((await categoryByName(db, scope, name)).id); // NOSONAR
   let removal = db
     .deleteFrom('commerce_product_categories')
     .where('workspace_id', '=', scope.workspaceId)
@@ -172,7 +172,7 @@ async function replaceCategories(
     .where('product_id', '=', productId);
   if (ids.length) removal = removal.where('category_id', 'not in', ids);
   await removal.execute();
-  for (const id of ids) await addMembership(db, scope, productId, id, observationId); // NOSONAR -- One edit transaction: statements run in order.
+  for (const id of ids) await addMembership(db, scope, productId, id, observationId); // NOSONAR
 }
 
 async function catalogProduct(db: Database, scope: CommerceScope, product: { id: string }) {

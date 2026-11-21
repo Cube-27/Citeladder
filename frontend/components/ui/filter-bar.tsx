@@ -125,7 +125,6 @@ function Controls({
             </span>
           ) : null}
           {status === undefined ? null : (
-            // A block, not a flex row: `truncate` only cuts a block's own inline text.
             <output
               aria-live="polite"
               className="type-caption block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"

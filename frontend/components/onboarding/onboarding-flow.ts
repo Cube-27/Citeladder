@@ -135,17 +135,15 @@ export function useOnboardingFlow(transactionKey: string) {
   const orphanedCompletion = isOrphanedCompletion(initialDiscoveryId, discoveryState);
   useEffect(() => {
     if (!orphanedCompletion && !brand && discoveryState) {
-      // oxlint-disable-next-line react-hooks/set-state-in-effect -- hydrate the persisted draft once.
+      // oxlint-disable-next-line react-hooks/set-state-in-effect
       setBrand(persistedBrand(discoveryState.input_data));
     }
   }, [brand, discoveryState, orphanedCompletion]);
 
   useEffect(() => {
     if (!orphanedCompletion) return;
-    // Project deletion preserves discovery provenance by nulling project_id.
-    // A bookmarked completion URL must not resurrect that old transaction.
     if (initialDiscoveryId) clearReviewDraft(initialDiscoveryId);
-    // oxlint-disable-next-line react-hooks/set-state-in-effect -- discard the stale route-owned draft.
+    // oxlint-disable-next-line react-hooks/set-state-in-effect
     setResumeDiscoveryId(null);
     setBrand(null);
     setDomains([]);
@@ -165,7 +163,7 @@ export function useOnboardingFlow(transactionKey: string) {
   );
   useEffect(() => {
     if (discoveryState?.status !== 'ready') return;
-    // oxlint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
+    // oxlint-disable-next-line react-hooks/set-state-in-effect
     setDomains((current) =>
       current.length
         ? current
@@ -181,7 +179,7 @@ export function useOnboardingFlow(transactionKey: string) {
 
   useEffect(() => {
     if (discoveryState?.status !== 'ready' || maximumCompetitors === undefined) return;
-    // oxlint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
+    // oxlint-disable-next-line react-hooks/set-state-in-effect
     setCompetitors((current) =>
       current.length
         ? current
@@ -251,9 +249,6 @@ export function useOnboardingFlow(transactionKey: string) {
       if (activeWorkspaceId) refreshBrandLogos(queryClient, result.project_id, activeWorkspaceId);
       await openProject(result.project_id);
     },
-    // A request the browser abandoned may still have committed. Re-read the
-    // draft: if it now names its project, the effect below opens it, instead
-    // of leaving the reader on a review whose project already exists.
     onError: () => {
       if (discoveryState)
         void refreshBrandDiscovery(queryClient, activeWorkspaceId, discoveryState.id);
@@ -268,7 +263,7 @@ export function useOnboardingFlow(transactionKey: string) {
     const discoveryId = discoveryState?.id ?? resumeDiscoveryId;
     if (!discoveryId) return;
     if (resumeDiscoveryId !== discoveryId) {
-      // oxlint-disable-next-line react-hooks/set-state-in-effect -- mirror the persisted discovery id.
+      // oxlint-disable-next-line react-hooks/set-state-in-effect
       setResumeDiscoveryId(discoveryId);
     }
     const next = withUrlParams(searchParams, {

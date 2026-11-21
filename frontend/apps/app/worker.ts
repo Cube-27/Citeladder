@@ -21,8 +21,6 @@ import type { WorkerEnv as GeneratedEnv } from './worker-configuration';
 
 type WorkerEnv = GeneratedEnv & { LOCAL_WORKER_ORIGIN?: string };
 
-// Vite's build.assetsDir; unhashed public/ files (for example the theme
-// bootstrap) share the naming shape and must stay revalidated.
 const FINGERPRINTED_DIRECTORY = '/app-assets/';
 const FINGERPRINTED_EXTENSIONS = new Set(['js', 'css', 'woff', 'woff2', 'png', 'webp', 'svg']);
 

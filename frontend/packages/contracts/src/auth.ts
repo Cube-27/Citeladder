@@ -39,7 +39,6 @@ export const sessionUserSchema = responseObject({
 export const authResponseSchema = responseObject({ user: sessionUserSchema });
 export const registrationResponseSchema = responseObject({ message: z.string() });
 
-// The binding nonce travels only in an HttpOnly cookie.
 export const oauthStartResponseSchema = responseObject({
   authorize_url: z.string().min(1),
   state: z.string().min(1),
@@ -51,10 +50,6 @@ export const oauthProvidersResponseSchema = z.object({
   ),
 });
 
-// Backend `WorkspaceResponse` carries the caller's membership `role` and the
-// safe effective `capabilities` that role confers — capability names only,
-// never a billing profile or another member's identity. Controls may be
-// hidden from them; the server still enforces every denial itself.
 export const workspaceSchema = responseObject({
   id: uuid(),
   name: z.string(),
@@ -73,8 +68,6 @@ export const workspaceMemberSchema = responseObject({
   created_at: z.string(),
 });
 
-// A pending invitation. The acceptance token is never listed: only the issue
-// and resend responses carry it, once.
 export const workspaceInvitationSchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),

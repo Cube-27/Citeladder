@@ -1,4 +1,3 @@
-// The attribute is required where Node loads this module itself (Playwright).
 import config from '../config/brand-fonts.json' with { type: 'json' };
 
 type FontRole = keyof typeof config.faces;

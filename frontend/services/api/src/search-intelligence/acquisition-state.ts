@@ -60,7 +60,6 @@ export type PreparedResearch =
     };
 const terminal = new Set(['succeeded', 'failed', 'partial', 'cancelled', 'uncertain']);
 
-/** Root run lock precedes queue/call locks, matching cancellation's lock order. */
 export class AcquisitionState {
   readonly db: Database;
   readonly task: QueueTask;
@@ -339,7 +338,7 @@ export class AcquisitionState {
       }
       let saved = dataset.unique_rows_saved;
       for (let offset = 0; offset < normalized.rows.length; offset += si.page_size) {
-        const [inserted] = await trx // NOSONAR -- One transaction: pages insert in order.
+        const [inserted] = await trx // NOSONAR
           .insertInto('search_intelligence_rows')
           .values(
             newRows(normalized.rows.slice(offset, offset + si.page_size), dataset, call.id, at),

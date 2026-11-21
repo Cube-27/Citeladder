@@ -17,8 +17,6 @@ const TONE: Record<TextLinkTone, string> = {
   muted: 'text-ink-2 hover:text-ink',
 };
 
-// In the app a link in running text keeps a soft underline at rest: ink alone does not say "link".
-// In the app a link in running text keeps a soft underline at rest: ink alone does not say "link".
 const APP_REST =
   '[:root:not([data-public-surface])_&]:decoration-current/40 [:root:not([data-public-surface])_&]:hover:decoration-current [:root:not([data-public-surface])_&]:focus-visible:decoration-current';
 
@@ -81,10 +79,6 @@ type TextLinkProps = Readonly<
     }
 >;
 
-/**
- * The link's content with its glyphs, as a flat list of nodes, so that under
- * `asChild` the Radix `Slot` sees the `Slottable` among its direct children.
- */
 function withGlyphs(variant: TextLinkVariant, children: ReactNode): ReactNode[] {
   const label = <Slottable key="label">{children}</Slottable>;
   if (variant === 'external') {

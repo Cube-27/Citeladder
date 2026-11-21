@@ -36,7 +36,7 @@ async function registrationBody(request: Request): Promise<unknown> {
   if (reader) {
     try {
       for (;;) {
-        const next = await reader.read(); // NOSONAR -- A stream yields chunks in order; the size cap stops early.
+        const next = await reader.read(); // NOSONAR
         if (next.done) break;
         size += next.value.byteLength;
         if (size > limit) break;
@@ -56,11 +56,6 @@ async function registrationBody(request: Request): Promise<unknown> {
     throw new OAuthError('invalid_client_metadata', 'Registration body must be UTF-8 JSON');
   }
 }
-/**
- * The registered redirect a request names, or the only one when it names none.
- * A loopback redirect matches on any port (RFC 8252 §7.3): native apps bind a
- * free port per sign-in. The URI actually requested is the one bound.
- */
 function registeredRedirect(registered: string[], requested: string | null) {
   if (requested === null) {
     const [only, ...others] = registered;
@@ -260,7 +255,6 @@ function registerAuthorizeRoute(app: Hono<AppEnv>, { config, db, mcp, resource }
     const url = new URL(c.req.url);
     const q = url.searchParams;
     const transaction = mintToken();
-    // Once the redirect is proven, errors go back to the client (RFC 6749 §4.1.2.1).
     let callback: string | null = null;
     try {
       if (
@@ -302,8 +296,6 @@ function registerAuthorizeRoute(app: Hono<AppEnv>, { config, db, mcp, resource }
           .execute();
       });
     } catch (error) {
-      // Before the redirect is proven the person is told here (RFC 6749 §4.1.2.1).
-      // A page, not a 401: a Basic challenge would open the browser's password box.
       if (callback === null && error instanceof OAuthError) return c.text(error.message, 400);
       const code = authorizationErrorCode(error);
       if (callback === null || code === null) throw error;

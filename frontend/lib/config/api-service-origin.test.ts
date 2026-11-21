@@ -11,8 +11,6 @@ describe('resolveApiServiceOrigin', () => {
     expect(() => resolveApiServiceOrigin('http://[::1]:8100', true)).toThrow(/loopback host/i);
   });
 
-  // `URL` normalizes every one of these to `[::ffff:7f00:1]`, which is neither
-  // `::1` nor prefixed `127.` — the gap this suite exists to pin.
   it.each([
     'http://[::ffff:127.0.0.1]:8100',
     'http://[::ffff:7f00:1]:8100',

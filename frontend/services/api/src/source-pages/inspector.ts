@@ -118,7 +118,7 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
       let result: FetchedPage;
       const startedAt = performance.now();
       try {
-        result = await acquirer.fetch(token, options); // NOSONAR -- Each redirect fetch spends budget first and stops when it is exhausted.
+        result = await acquirer.fetch(token, options); // NOSONAR
       } catch (error) {
         logger.info('source_page_redirect_fetch_failed', {
           task_id: task.id,
@@ -129,8 +129,8 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
       }
       const identity = pageIdentity(result.url);
       if (!identity) continue;
-      await checkCancelled('citation resolution'); // NOSONAR -- Cancellation is checked between redirects.
-      await resolveCitation(db, scope, audit.id, token, result.url, task); // NOSONAR -- Resolved before the next redirect spends budget.
+      await checkCancelled('citation resolution'); // NOSONAR
+      await resolveCitation(db, scope, audit.id, token, result.url, task); // NOSONAR
       prefetched.set(identity.hash, result);
     }
     if (prefetched.size) {
@@ -145,8 +145,6 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
       result: FetchedPage | FetchOutcome,
     ) => {
       await checkCancelled('source-page publication');
-      // One page's failure must not discard its siblings' readings; its claim
-      // lease lapses and a later inspection retries it.
       try {
         const fetched = 'body' in result ? fetchedOutcome(url, result) : result;
         const extracted =
@@ -171,14 +169,14 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
       }
     };
     for (const [hash, result] of prefetched) {
-      const page = await db // NOSONAR -- One prefetched page at a time bounds the pool.
+      const page = await db // NOSONAR
         .selectFrom('source_pages')
         .select(['id', 'canonical_url'])
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .where('url_hash', '=', hash)
         .executeTakeFirst();
-      if (page) await persist(page.id, page.canonical_url, null, result); // NOSONAR -- One prefetched page at a time bounds the pool.
+      if (page) await persist(page.id, page.canonical_url, null, result); // NOSONAR
     }
     await checkCancelled('source-page admission');
     const claims = await claimPages(db, scope, new Date(), task);
@@ -187,14 +185,14 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
       Array.from({ length: Math.min(p.fetch_concurrency, claims.length) }, async () => {
         while (next < claims.length) {
           const claim = claims[next++]!;
-          await checkCancelled('source-page acquisition'); // NOSONAR -- Each worker is one bounded-concurrency lane.
+          await checkCancelled('source-page acquisition'); // NOSONAR
           let result: FetchedPage | FetchOutcome;
           try {
-            result = await acquirer.fetch(claim.url, options); // NOSONAR -- Each worker is one bounded-concurrency lane.
+            result = await acquirer.fetch(claim.url, options); // NOSONAR
           } catch (error) {
             result = failedOutcome(claim.url, error);
           }
-          await persist(claim.id, claim.url, claim.lease, result); // NOSONAR -- Each worker is one bounded-concurrency lane.
+          await persist(claim.id, claim.url, claim.lease, result); // NOSONAR
         }
       }),
     );

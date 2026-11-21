@@ -14,7 +14,7 @@ export const numberRecord = (value: unknown): Record<string, number> =>
 export const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 
-export const plainJson = (value: unknown): unknown => JSON.parse(JSON.stringify(value)); // NOSONAR -- the JSON round-trip is the point; structuredClone keeps undefined and Dates
+export const plainJson = (value: unknown): unknown => JSON.parse(JSON.stringify(value)); // NOSONAR
 
 export function jsonObject(value: unknown, column: string): Record<string, unknown> {
   if (isRecord(value)) return value;

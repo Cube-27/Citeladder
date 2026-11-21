@@ -54,14 +54,12 @@ export default function MailboxScreen() {
   const confirmation = operation === 'verify-email' || operation === 'reset-password';
   const [secrets] = useState(() => {
     const fragment = new URLSearchParams(window.location.hash.slice(1));
-    // Read only during initialization: StrictMode invokes this initializer twice.
     return {
       token: fragment.get('token') ?? '',
       returnTo: safeAuthReturnPath(fragment.get('return_to') ?? queryReturnTo),
     };
   });
   useLayoutEffect(() => {
-    // Remove the fragment before paint, after both StrictMode initializations.
     if (window.location.hash)
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
   }, []);

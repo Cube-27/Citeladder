@@ -136,7 +136,6 @@ export async function rerunIssueGroup(
   const group = await issueGroup(db, crawl, groupId);
   const rerun = await rerunTrackedPages(db, workspaceId, crawl.project_id, (tracked) => {
     const members = new Set(tracked);
-    // `tracked` is read under the control locks, so the set cannot change under the crawl.
     const pages = group.pages
       .filter((page) => page.rerunnable && members.has(page.site_url_id))
       .map((page) => page.site_url_id);

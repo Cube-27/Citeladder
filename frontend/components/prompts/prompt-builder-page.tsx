@@ -48,8 +48,6 @@ function BuilderForProject() {
     onAccepted: () => void navigate(projectHref(PROMPTS_HREF)),
   });
 
-  // A retry of the same request after a failure reuses its key, so a run the
-  // server already staged is replayed instead of drafted (and paid for) again.
   const generateKey = useRef<{ request: string; key: string } | null>(null);
   const generateMutation = useMutation(promptsMutations.generate(scope, ensurePromptSet));
   const isGenerating = useIsMutating({ mutationKey: queryKeys.prompts.generate(scope) }) > 0;

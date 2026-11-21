@@ -116,8 +116,6 @@ const TARGET_KIND_LABEL: Record<ActionTargetKind, string> = {
   issue_family: 'Issue across pages',
 };
 
-// Keyed by the contract's kinds, so a kind without a label fails the type check;
-// the contract is imported as a type only, keeping its schemas out of the eager bundle.
 const isTargetKind = (kind: unknown): kind is ActionTargetKind =>
   typeof kind === 'string' && Object.hasOwn(TARGET_KIND_LABEL, kind);
 

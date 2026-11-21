@@ -127,7 +127,7 @@ async function persistRules(
   for (const evaluation of evaluations) {
     const { rule } = evaluation;
     const now = new Date();
-    const row = await db // NOSONAR -- The issue below needs this evaluation's id; one rule at a time.
+    const row = await db // NOSONAR
       .insertInto('site_rule_evaluations')
       .values({
         id: timeOrderedId(),
@@ -160,7 +160,7 @@ async function persistRules(
       .returning('id')
       .executeTakeFirst();
     if (!row || evaluation.outcome !== 'missing' || rule.finding_class === 'diagnostic') continue;
-    await db // NOSONAR -- Written after its evaluation; one rule at a time.
+    await db // NOSONAR
       .insertInto('site_issues')
       .values({
         id: timeOrderedId(),
@@ -240,8 +240,6 @@ export async function persistArchitecture(db: Database, crawl: Crawl) {
     .executeTakeFirst();
   if (!row) return 0;
   await persistRules(db, crawl, row.id, root, pages, architectureRules(model, pages, coverage));
-  // The snapshot was published first (architecture reads its coverage); its
-  // issue counts now take in the site-level findings.
   await addArchitectureIssues(db, crawl);
   await persistIssueCatalog(db, crawl);
   await landIssueStates(db, crawl);

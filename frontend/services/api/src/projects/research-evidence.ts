@@ -316,12 +316,11 @@ export async function collectIdentityResearch(
   const pages: ResearchEvidence[] = [];
   const selected = searches.slice(0, settings.identity_fetch_max_pages);
   for (let offset = 0; offset < selected.length; offset += settings.keenable_concurrency) {
-    const fetched =
-      await /* NOSONAR -- Batches cap provider requests at the configured concurrency. */ Promise.allSettled(
-        selected
-          .slice(offset, offset + settings.keenable_concurrency)
-          .map((item) => client.page(item, normalizeDomain(item.source_url) === domain)),
-      );
+    const fetched = await /* NOSONAR */ Promise.allSettled(
+      selected
+        .slice(offset, offset + settings.keenable_concurrency)
+        .map((item) => client.page(item, normalizeDomain(item.source_url) === domain)),
+    );
     logRejected('brand_discovery.identity_fetch_failed', fetched);
     for (const result of fetched) if (result.status === 'fulfilled') pages.push(result.value);
   }

@@ -17,7 +17,6 @@ import { refreshRuntime } from '../site-health/plan-runtime.ts';
 
 export const claimRequest = noCardClaimRequestSchema;
 
-/** RFC 9562 v5 identity persists across catalog revisions and both stacks. */
 function campaignId(key: string) {
   return uuidV5('5f0ae2be-21f3-4c0b-a312-b1d946f32921', key);
 }
@@ -237,7 +236,6 @@ export async function claimOffer(
       renews: false,
     });
   });
-  // The grant committed under the capacity lock; the runtime follows in its own order.
   await refreshRuntime(db, workspaceId);
   return claimed;
 }

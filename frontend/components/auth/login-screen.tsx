@@ -70,7 +70,6 @@ export function LoginScreen({
       termsRevision: terms.revision,
       turnstileToken: verification.token(),
     });
-    // The token is single-use, spent or not: a retry solves a fresh one.
     verification.reset();
   };
   const failure = mutation.isError ? mutation.error : terms.error;

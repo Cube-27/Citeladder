@@ -72,7 +72,6 @@ async function admitBatch(
     );
   } catch (error) {
     if (!(error instanceof GcpError)) throw error;
-    // The batch is admitted under its idempotency key; Pub/Sub redelivers it to a later pull.
     logger.warning('crawl_log_pull_ack_failed', {
       source_id: source.id,
       phase: 'acknowledge',
@@ -126,7 +125,7 @@ export async function enqueueDuePulls(
       keyParts: [source.id, Math.floor(now.getTime() / interval)],
       maxAttempts: crawlLogs.task_max_attempts,
     };
-    await enqueueTask(db, task); // NOSONAR -- One source at a time keeps each enqueue inside the tick's admission budget.
+    await enqueueTask(db, task); // NOSONAR
   }
   return true;
 }
@@ -138,7 +137,6 @@ export function crawlLogPull(readerFor: () => PubSubReader | null = defaultPubSu
     const scope = { workspaceId: task.workspace_id, projectId: task.project_id };
     let source = await findLivePullSource(db, scope, sourceId);
     if (!source?.verified_at) return;
-    // Committed before any Google call: the tick schedules the next attempt from this time.
     const [, availability] = await Promise.all([
       touch(db, source, 'last_pull_at'),
       crawlLogAvailability(new WorkspaceEntitlements(db, task.workspace_id)),
@@ -147,7 +145,6 @@ export function crawlLogPull(readerFor: () => PubSubReader | null = defaultPubSu
     if (availability !== 'available') return;
     if (verificationDue(source, new Date())) {
       await checkCancelled('crawl-log-verify');
-      // An ownership check that could not run is not a pass: pull again once one does.
       const { failure } = await verifyPullSource(db, source, reader);
       if (failure === 'unavailable') return;
       source = await findLivePullSource(db, scope, sourceId);

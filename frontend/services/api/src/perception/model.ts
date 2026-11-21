@@ -7,8 +7,6 @@ import type { PerceptionPackage } from './passages.ts';
 export const LABELS = perceptionLabelSchema.options;
 export type Label = (typeof LABELS)[number];
 
-// Lenient on counts and themes: the deterministic validator truncates and
-// remaps them, so one extra aspect never discards a whole answer.
 export const perceptionOutputSchema = z.object({
   entities: z.array(
     z.object({
@@ -24,15 +22,10 @@ export const perceptionOutputSchema = z.object({
       ),
     }),
   ),
-  // Names only (AV-11); code verifies and dedupes them. Absent means the
-  // answer's untracked names are unknown, never that it named none.
   untracked_businesses: z.array(z.string()).optional(),
 });
 export type PerceptionOutput = z.infer<typeof perceptionOutputSchema>;
 
-// A fact-checked audit's output adds the brand's factual claims. A missing
-// list is unusable output, never zero claims; topic and count stay lenient for
-// the same reason as aspects.
 export const claimsOutputSchema = perceptionOutputSchema.extend({
   claims: z.array(
     z.object({
@@ -74,7 +67,6 @@ export function perceptionPrompt(
     '{max_aspects}': String(policy.max_aspects_per_entity),
     '{entities}': JSON.stringify(entities, null, 2),
   };
-  // One pass, so a slot-shaped string inside the answer is never re-substituted.
   const user = policy.user_template.replaceAll(
     /\{(?:prompt|language|themes|max_aspects|entities)\}/gu,
     (slot) => slots[slot]!,

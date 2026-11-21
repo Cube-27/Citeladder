@@ -31,14 +31,10 @@ async function databaseReachable(db: Database, timeoutMs: number): Promise<boole
     timer = setTimeout(() => reject(new Error('readiness probe timed out')), timeoutMs);
   });
   try {
-    // The server-side statement timeout ends the probe's own query at the same
-    // bound, so a timed-out probe never keeps its pooled connection busy.
     const probe = db.transaction().execute(async (trx) => {
       await sql`SELECT set_config('statement_timeout', ${String(timeoutMs)}, true)`.execute(trx);
       await sql`SELECT 1`.execute(trx);
     });
-    // A probe that loses the race still settles later; observe it so a late
-    // rejection is not an unhandled one.
     probe.catch(() => undefined);
     await Promise.race([probe, timeout]);
     return true;
@@ -57,9 +53,6 @@ export function createApp(
 ): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.use(requestId(config.requestIdHeader));
-  // JSON only: an event stream or a streamed export must reach the client
-  // chunk by chunk, which a compressor's buffering would hold back. The
-  // Cloud Run to Worker hop is metered egress, so the origin compresses.
   app.use(
     compress({
       threshold: policy.api.response_compression_min_bytes,
@@ -69,10 +62,7 @@ export function createApp(
   app.use(apiNoStore());
   app.use(conditionalReads());
   const startRunner = options.startRunner ?? runnerStarter(config, db);
-  // Before the origin token: its admission is Cloud Scheduler's Google ID token.
   registerScheduledTick(app, config, db, { startRunner, keys: options.schedulerKeys });
-  // Liveness, before the origin token too: Cloud Run's probe and the uptime
-  // check cannot sign. Dependency-free and byte-stable, so it reveals nothing.
   app.get('/health', (c) => c.json({ status: 'ok' }));
   app.use(originToken(config));
   app.use((_c, next) => observeCommittedWork(next, startRunner));

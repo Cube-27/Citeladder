@@ -178,7 +178,6 @@ function payment(data: unknown): PaymentEvidence | null {
   const statuses: Record<string, string> = policy.billing.contracts.razorpay_payment_status_map;
   if (!statuses[row.status]) throw new ProviderError(true, 'provider_invalid_response');
   if (statuses[row.status] !== 'paid') return null;
-  // An authorization that lapses uncaptured is auto-refunded: no funds moved.
   if (row.status === 'refunded' && !row.captured) return null;
   return {
     id: row.id,
@@ -332,8 +331,6 @@ export class RazorpayProvider implements BillingProvider {
         capture.currency !== order.currency)
     )
       throw new ProviderError(true, 'provider_amount_mismatch');
-    // Declined attempts never fail the order: the customer may retry on it.
-    // Only abandonment ends an unpaid order.
     return { kind: 'payment', payment: capture, reference: id, notes: notes.parse(order.notes) };
   }
 

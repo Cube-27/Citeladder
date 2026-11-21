@@ -135,11 +135,6 @@ function statusFilter(status: string | null | undefined) {
   return sql`and analysis_status = ${status}`;
 }
 
-/**
- * The latest audits join as one set: a lateral per inventory URL ran the view
- * once per page, past the read timeout on an inventory of tens of thousands
- * (CO-7). One page keeps the lateral.
- */
 function latestAuditsJoin(crawl: Crawl, siteUrlId?: string) {
   return siteUrlId
     ? sql`left join lateral (${pageAuditsSql(crawl, sql.ref('u.id'))}) latest on true`

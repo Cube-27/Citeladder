@@ -41,8 +41,6 @@ export const mcp = {
     unused_client_ttl_seconds: {
       env: ['MCP_UNUSED_CLIENT_TTL_SECONDS'],
       type: 'int',
-      // Assistants keep a registration indefinitely; ChatGPT never re-registers
-      // an app, and directory review can come weeks after submission.
       default: 2592000,
       minimum: 3600,
       maximum: 31536000,
@@ -58,16 +56,12 @@ export const mcp = {
     write_scope: 'citeladder:write',
     scopes_supported: ['citeladder:read', 'citeladder:write'],
     server_version: '2.0.0',
-    // 2026-07-28 CacheableResult hints. Catalogue documents are the same for
-    // every caller; the tool list follows the grant; project reads are live.
     result_cache: {
       catalogue: { ttlMs: 3_600_000, cacheScope: 'public' },
       grant: { ttlMs: 3_600_000, cacheScope: 'private' },
       project: { ttlMs: 0, cacheScope: 'private' },
     },
     documentation_url: 'https://docs.citeladder.com/mcp/',
-    // Fixed production pages, like documentation_url: consent links them from every
-    // environment, including local ones without a website origin.
     terms_url: 'https://citeladder.com/terms',
     privacy_url: 'https://citeladder.com/privacy',
     max_search_results: 20,
@@ -79,9 +73,6 @@ export const mcp = {
     max_link_pages: 10,
     named_link_page_neighbors: 3,
     rule_evidence_items: 3,
-    // Characters of crawled copy one page-text read returns (title, meta, headings,
-    // then body text in what is left), so the result fits one Agent tool result
-    // (tool_result_max_chars, 40 000) with its identity and references.
     page_text_max_chars: 36000,
     page_text_max_headings: 30,
     page_text_heading_chars: 200,
@@ -101,8 +92,6 @@ export const mcp = {
     max_client_name_length: 200,
     supported_grant_types: ['authorization_code', 'refresh_token'],
     unused_client_prune_batch: 100,
-    // Native apps call back on a private-use scheme (RFC 8252 §7.1): reverse-domain,
-    // or one of these editor schemes. Web schemes stay HTTPS-only.
     native_redirect_schemes: ['cursor', 'vscode', 'vscode-insiders', 'windsurf', 'zed'],
     refused_redirect_schemes: ['javascript', 'data', 'file', 'blob', 'about', 'ftp', 'ws', 'wss'],
     refresh_reuse_grace_seconds: 60,
@@ -113,7 +102,6 @@ export const mcp = {
     tool_call_user_limit: 600,
     write_call_grant_limit: 30,
     confirmation_ttl_seconds: 600,
-    // Consumed codes outlive every grant they minted, so a late replay still revokes.
     protocol_retention_seconds: 15552000,
   },
 };

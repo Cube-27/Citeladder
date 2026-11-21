@@ -86,11 +86,6 @@ const changePasswordSchema = passwordChangeRequestSchema.extend({
   password: passwordSchema,
 });
 
-/**
- * The mailbox request budget. A challenged request verifies its Turnstile
- * token after spending its own client's unit and before the address's, so an
- * unverified sender cannot use up someone else's mailbox allowance.
- */
 async function mailboxMeter(
   db: Database,
   c: Context,
@@ -183,8 +178,6 @@ export const authRoutes = [
         .selectAll()
         .where('id', '=', c.get('user').id)
         .executeTakeFirstOrThrow();
-      // A mistyped password inside a live session is a bad request, not a
-      // 401: the app reads any 401 as the session ending and signs out.
       if (!(await verifyBudgetedPassword(db, config, user, payload.password)))
         throw new ApiError(400, 'Current password is incorrect');
       const started = await startSignIn(config, 'google');
@@ -365,10 +358,6 @@ export const authRoutes = [
         email: payload.email,
         token: payload.turnstile_token,
       });
-      // Every attempt spends a unit before hashing, so concurrent guesses cannot
-      // outrun the budget; success hands its unit and earlier failures back. An
-      // exhausted address refuses even a correct password until its window
-      // passes or a password reset proves mailbox ownership.
       await spendBudget(db, budget('login_email_failure', config.settings), payload.email);
       const user = await authenticateUser(db, payload.email, payload.password);
       if (!user) {

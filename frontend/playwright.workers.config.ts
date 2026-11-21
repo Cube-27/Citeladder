@@ -22,10 +22,6 @@ export default defineConfig({
   outputDir: 'test-results/workers',
   use: { ignoreHTTPSErrors: true, trace: 'retain-on-failure' },
   webServer: [
-    // Both listen on plain HTTP: wrangler's local TLS listener stops answering after a
-    // burst of handshakes (the app's ~80-chunk first load; marketing's /pricing after
-    // Chromium's CertificateUnknown rejections), hanging page.goto. `--upstream-protocol
-    // https` still hands each Worker https:// URLs; production TLS ends at Cloudflare's edge.
     {
       command:
         'pnpm exec wrangler dev -c apps/app/wrangler.jsonc --local --ip 127.0.0.1 --port 8793 --local-upstream 127.0.0.1 --local-protocol http --upstream-protocol https --var PUBLIC_APP_HOST:127.0.0.1 --var ORIGIN_UPSTREAM:https://127.0.0.1:9443 --var ORIGIN_TOKEN:local-dev-only-token-32-characters',

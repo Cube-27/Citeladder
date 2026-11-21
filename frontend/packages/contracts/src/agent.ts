@@ -144,11 +144,6 @@ function attachmentSchema(text: z.ZodString) {
 export const agentAttachmentSchema = attachmentSchema(z.string());
 export type AgentAttachment = z.infer<typeof agentAttachmentSchema>;
 
-/**
- * What a reply proposed for the person to do; only their own click does it.
- * A declaration names the Action, the revision that shipped (null: done
- * outside CiteLadder) and what the person said about going live.
- */
 export const agentProposalSchema = z.discriminatedUnion('kind', [
   responseObject({
     kind: z.literal('declaration'),
@@ -273,7 +268,6 @@ export const agentRevisionsPageSchema = responseObject({
 });
 
 export const agentPageFieldSchema = agentPageFieldsSchema.keyof();
-/** A half-open range of the Markdown body in UTF-16 code units, as JavaScript and CodeMirror count. */
 const agentBodySpanSchema = responseObject({
   start: z.number().int().nonnegative(),
   end: z.number().int().nonnegative(),
@@ -452,7 +446,6 @@ export const agentContextRefsSchema = z.strictObject({
     .nullish(),
   action_url_ids: z.array(uuid()).min(1).max(50).nullish(),
   url_actions_reference: z.strictObject({ site_url_id: uuid() }).nullish(),
-  // One objection group from the Objections tab, with its cited sources (AV-37).
   objection_group_id: uuid().nullish(),
 });
 export type AgentContextRefs = z.input<typeof agentContextRefsSchema>;

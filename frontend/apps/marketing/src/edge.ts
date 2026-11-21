@@ -20,12 +20,6 @@ const RENAMED_PLATFORM_PAGES: Readonly<Record<string, string>> = {
   '/platform/content-briefs': '/platform/content-optimization',
 };
 
-/**
- * Everything the marketing Worker decides before Astro renders. The 404 page
- * is prerendered (so scanner traffic stays inside the free 10 ms CPU limit),
- * and Astro serves it without running middleware, so apex routing, redirects
- * and Markdown 404s live here instead.
- */
 export async function serveMarketingRequest(
   request: Request,
   env: ApexEnv,

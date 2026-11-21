@@ -1,8 +1,3 @@
-/**
- * Committed dispatches, JEV calls and lease-fenced outcomes. Every source
- * page's request goes out at once: JEV judgments are deliberately unthrottled
- * (docs/decisions.md), bounded by the page cap and the job deadline.
- */
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { z } from 'zod';
@@ -138,7 +133,7 @@ function prepare(db: Database, task: QueueTask, client: JevClient | null) {
         );
         continue;
       }
-      await trx // NOSONAR -- One transaction: dispatch events write in order.
+      await trx // NOSONAR
         .insertInto('site_internal_link_events')
         .values(
           open.map(({ id }) => ({
@@ -274,7 +269,7 @@ export function internalLinkJudge(
         buffer = [];
         if (written - published >= settings.publish_every) {
           published = written;
-          await publish(db, task, String(written)); // NOSONAR -- Progress publishes in order as outcomes land.
+          await publish(db, task, String(written)); // NOSONAR
         }
       }
       await publish(db, task, 'complete');

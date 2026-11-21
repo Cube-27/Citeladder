@@ -44,7 +44,6 @@ const crawlerAccess =
       catalog_version: robots.catalog_version,
       robots_snapshot_id: robots.robots_snapshot_id,
     };
-    // A missing robots.txt (RFC 9309: a 4xx other than 401/403) means "no rules": access is measured.
     const missing = robots.status === policy.site_health.crawl.robots_statuses.not_found;
     if (!robots.fetched && !missing)
       return ['not_applicable', { ...evidence, reason: 'robots_not_fetched' }];

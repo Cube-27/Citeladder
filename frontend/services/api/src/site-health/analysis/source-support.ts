@@ -33,7 +33,6 @@ export function emptySourceSupport() {
 type SourceSupport = ReturnType<typeof emptySourceSupport>;
 
 const normalHost = (host: string) => host.toLowerCase().replace(/\.$/u, '');
-// Private suffixes count: `a.github.io` and `b.github.io` are different sites.
 const registrable = (host: string) => getDomain(host, { allowPrivateDomains: true }) ?? host;
 export const sameSite = (host: string, base: string) =>
   host === base || (Boolean(base) && registrable(host) === registrable(base));

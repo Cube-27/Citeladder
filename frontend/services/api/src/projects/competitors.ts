@@ -214,7 +214,7 @@ export function saveCompetitorList(
       updated_at: now,
     });
     for (const [item, row] of claimed)
-      await trx.updateTable('competitors').set(fields(item)).where('id', '=', row.id).execute(); // NOSONAR -- One transaction connection: statements run in order.
+      await trx.updateTable('competitors').set(fields(item)).where('id', '=', row.id).execute(); // NOSONAR
     const added = items
       .filter((item) => !claimed.has(item))
       .map((item) => ({

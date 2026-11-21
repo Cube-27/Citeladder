@@ -370,7 +370,7 @@ function TopicRenameForm({
   return (
     <TreeItemForm nested={nested} onSubmit={() => void submit()}>
       <Input
-        // oxlint-disable-next-line jsx-a11y/no-autofocus -- Rename explicitly opens this field; focus follows the invoking action.
+        // oxlint-disable-next-line jsx-a11y/no-autofocus
         autoFocus
         value={draft}
         onChange={(event) => setDraft(event.target.value)}

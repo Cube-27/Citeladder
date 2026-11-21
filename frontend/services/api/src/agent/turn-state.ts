@@ -93,11 +93,9 @@ function searched(state: TurnState, ordinal: number, blocks: ConversationBlock[]
   }
 }
 export function accepted(state: TurnState, ordinal: number, response: ModelResult) {
-  // An empty assistant message would make every later replay of this chat invalid.
   const blocks = response.blocks.length ? response.blocks : [{ type: 'text', text: '(no answer)' }];
   state.messages.push({ role: 'assistant', content: blocks });
   state.steps.push({ kind: 'model', ordinal });
   searched(state, ordinal, blocks);
-  // A paused search loop continues from the unchanged response in the next call.
   state.waiting = response.stop === 'pause_turn' || hasPendingServerTool(blocks);
 }

@@ -85,11 +85,6 @@ export async function lastResponseId(db: Database, scope: Scope, runId: string) 
   return row?.response_id ?? null;
 }
 
-/**
- * What this turn replays. Anthropic bounds a long chat by server-side
- * compaction, so everything is kept; chat completions return no compaction or
- * reasoning blocks, so the oldest whole turns are dropped at turn start.
- */
 export function replayed(transcripts: StoredTranscript[], adapter: string, budget: Budget) {
   if (adapter === 'anthropic') return { kept: transcripts, dropped: 0 };
   const sizes = transcripts.map((item) => JSON.stringify(item.messages).length);
@@ -170,7 +165,6 @@ function suggestionLists(documents: readonly OpeningDocument[]): ConversationBlo
       : [],
   );
 }
-/** Each attachment is its own block, labelled as data so a paste never reads as the request. */
 function attachmentBlock(attachment: AgentAttachment, index: number): ConversationBlock {
   if (attachment.kind !== 'pasted_text') {
     const unknown: never = attachment.kind;

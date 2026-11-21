@@ -26,10 +26,10 @@ export function SidebarResizeHandle({ sidebarId }: Readonly<{ sidebarId: string 
     onBoundsChange: setBounds,
   });
   return (
-    <div // NOSONAR -- a focusable WAI-ARIA window splitter: pointer and arrow-key handlers resize it
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Native hr cannot expose a value or take keyboard focus for resizing.
+    <div // NOSONAR
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="separator"
-      tabIndex={0} // NOSONAR -- a focusable separator is interactive per the WAI-ARIA window splitter pattern
+      tabIndex={0} // NOSONAR
       aria-orientation="vertical"
       aria-label="Resize sidebar"
       aria-controls={sidebarId}

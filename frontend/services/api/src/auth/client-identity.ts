@@ -15,7 +15,6 @@ export function parseTrustedProxies(cidrs: string): TrustedProxies {
     .map((cidr) => ipaddr.parseCIDR(cidr));
 }
 
-/** Forwarding headers are authority only when the socket peer is trusted. */
 export function clientIdentity(
   peer: string,
   forwarded: string | undefined,
@@ -54,10 +53,8 @@ export function trustedClientNetwork(
 }
 
 export function trustedClientIdentity(c: Context<AppEnv>, config: ServiceConfig): string {
-  // Behind Cloud Run the socket peer is Google's front end; the admitted Worker names the visitor.
   const admitted = c.get('clientIp');
   if (admitted) return admitted;
-  // app.request fixtures have no socket; headers still cannot manufacture a peer.
   const socket = (c.env as { incoming?: unknown } | undefined)?.incoming;
   const peer = socket ? (getConnInfo(c).remote.address ?? 'unavailable') : 'unavailable';
   return clientIdentity(peer, c.req.header('x-forwarded-for'), config.auth.trustedProxies);

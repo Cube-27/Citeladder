@@ -49,7 +49,7 @@ async function insertOpportunities(
   createdAt: string,
 ) {
   for (let start = 0; start < rows.length; start += INSERT_BATCH) {
-    await trx // NOSONAR -- One transaction: batches run in order.
+    await trx // NOSONAR
       .insertInto('opportunities')
       .values(
         rows.slice(start, start + INSERT_BATCH).map((row) => ({
@@ -97,8 +97,6 @@ async function writeRefresh(
   const successors = new Map(
     rows.map((row) => [JSON.stringify([row.rule_id, row.target_key]), row.id]),
   );
-  // One microsecond database time for the whole refresh, so two refreshes in
-  // the same millisecond still order by created_at rather than by random id.
   const { rows: clock } = await sql<{
     now: string;
   }>`select clock_timestamp()::text as now`.execute(trx);

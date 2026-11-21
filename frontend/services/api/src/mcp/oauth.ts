@@ -259,7 +259,6 @@ export function completeConsent(
     if (!request) throw new ConsentExpiredError();
     const destination = new URL(request.redirect_uri);
     if (request.state) destination.searchParams.set('state', request.state);
-    // RFC 9207: the client can confirm which server answered.
     destination.searchParams.set('iss', mcp.origin);
     if (decision === null) destination.searchParams.set('error', 'access_denied');
     else {
@@ -269,15 +268,12 @@ export function completeConsent(
       const shareable = await consentWorkspaces(trx, userId);
       const needTerms = validateConsentSelection(unique, shareable, decision);
       for (const workspaceId of needTerms)
-        await /* NOSONAR -- One transaction: acceptances record in order. */ recordPolicyAcceptance(
-          trx,
-          {
-            workspaceId,
-            actorId: userId,
-            revision: policy.auth.terms_revision,
-            context: 'mcp_consent',
-          },
-        );
+        await /* NOSONAR */ recordPolicyAcceptance(trx, {
+          workspaceId,
+          actorId: userId,
+          revision: policy.auth.terms_revision,
+          context: 'mcp_consent',
+        });
       const changes =
         decision.allowChanges &&
         shareable.some((w) => w.canChange && unique.includes(w.id)) &&
@@ -304,7 +300,7 @@ export function completeConsent(
           created_at: new Date(),
         })
         .execute();
-      for (const id of unique) await recordSecurityEvent(trx, 'mcp.consent', userId, id); // NOSONAR -- One transaction: events record in order.
+      for (const id of unique) await recordSecurityEvent(trx, 'mcp.consent', userId, id); // NOSONAR
       destination.searchParams.set('code', code);
     }
     await trx
@@ -340,7 +336,6 @@ async function authorizationCodeGrant(
     .forUpdate()
     .executeTakeFirst();
   if (!row) {
-    // A consumed code presented again revokes what it minted (RFC 6749 §4.1.2).
     const minted = await trx
       .selectFrom('mcp_oauth_grants as g')
       .innerJoin('mcp_authorization_codes as code', 'code.id', 'g.authorization_code_id')
@@ -421,8 +416,6 @@ async function refreshTokenGrant(
     .forUpdate()
     .executeTakeFirst();
   if (!row) {
-    // A superseded token: a concurrent refresh inside the grace window is
-    // refused alone; a later replay means the token leaked, so the grant goes.
     const superseded = await trx
       .selectFrom('mcp_oauth_grants')
       .select(['id', 'user_id', 'refresh_rotated_at'])

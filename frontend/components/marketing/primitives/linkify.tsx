@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-const INLINE_TOKEN_RE = /https?:\/\/\S+|(?<![\w/])\/[a-z][a-z0-9-]*(?:\/[a-z0-9-]+)*/g; // NOSONAR -- each segment starts at a literal '/', which no class repeats, so matching is linear
+const INLINE_TOKEN_RE = /https?:\/\/\S+|(?<![\w/])\/[a-z][a-z0-9-]*(?:\/[a-z0-9-]+)*/g; // NOSONAR
 
 const TRAILING_PUNCT = new Set(['.', ',', ';', ':', '!', '?', ')']);
 

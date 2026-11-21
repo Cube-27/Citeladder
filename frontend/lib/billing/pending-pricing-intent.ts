@@ -27,7 +27,6 @@ const pendingPricingIntentSchema = z.object({
   billing_details: billingCustomerDetailsSchema.nullable(),
   idempotency_key: z.string().min(1),
   return_path: z.literal(PRICING_RETURN_PATH),
-  // zod 4 numbers reject Infinity and NaN.
   created_at_ms: z.number(),
 });
 export type PendingPricingIntentV1 = z.infer<typeof pendingPricingIntentSchema>;
@@ -55,9 +54,7 @@ function storage(): Storage | null {
 export function writePendingIntent(intent: PendingPricingIntentV1): void {
   try {
     storage()?.setItem(PENDING_PRICING_INTENT_KEY, JSON.stringify(intent));
-  } catch {
-    // A blocked store only means this tab cannot resume automatically.
-  }
+  } catch {}
 }
 
 export function readPendingIntent(now: number = Date.now()): PendingPricingIntentV1 | null {

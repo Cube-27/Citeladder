@@ -26,8 +26,6 @@ const HOVER_OVERLAY =
 const RAISED_FACE =
   'face bg-raised border border-rule not-disabled:hover:bg-raised-2 not-disabled:active:bg-raised-2 aria-pressed:bg-raised-2 data-[state=open]:bg-raised-2';
 
-// The app's one disabled look (raised fill, rule edge) is in globals.css,
-// after every variant. The website keeps its 45% disabled face.
 const BUTTON_BASE =
   'focus-ring press type-label relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-[var(--control-coarse)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
 
@@ -138,7 +136,6 @@ function carriesIcon(children: ReactNode): boolean {
   return Children.toArray(children).some((child) => {
     if (!isValidElement<{ 'aria-hidden'?: unknown; children?: ReactNode }>(child)) return false;
     if (child.type === Icon || child.type === 'svg' || child.props['aria-hidden']) return true;
-    // A library glyph is a forwardRef object with no children.
     if (typeof child.type === 'object' && child.props.children === undefined) return true;
     return typeof child.type !== 'string' || child.type === 'a'
       ? carriesIcon(child.props.children)
@@ -179,7 +176,6 @@ function IconLinkTarget({
 }: Readonly<
   Omit<ComponentPropsWithRef<'a'>, 'href' | 'aria-label'> & { href: string; label: string }
 >) {
-  // `//host/path` is protocol-relative: another site, not an app path.
   if (href.startsWith('/') && !href.startsWith('//')) {
     return (
       <ProjectLink {...props} href={href} aria-label={label}>

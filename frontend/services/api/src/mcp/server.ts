@@ -131,7 +131,6 @@ function unauthorized(c: McpContext, settings: McpSettings) {
   const rejected = c.req.header('authorization') ? ', error="invalid_token"' : '';
   c.header(
     'WWW-Authenticate',
-    // RFC 6750 §3: a presented but rejected token is invalid_token, prompting refresh.
     `Bearer resource_metadata="${settings.origin}/.well-known/oauth-protected-resource/mcp", scope="${mcpPolicy.scopes_supported.join(' ')}"${rejected}`,
   );
   return c.json(
@@ -172,7 +171,6 @@ async function readMessage(c: McpContext): Promise<RpcMessage | Response> {
   }
   return isRpcMessage(message) ? message : c.json(rpcError(null, -32600, 'Invalid request'), 400);
 }
-/** The 2026 protocol carries version, method and name in headers that must match the body. */
 function modernHeadersRefusal(
   c: McpContext,
   message: RpcMessage,
@@ -374,7 +372,6 @@ async function dispatchMethod(call: McpCall): Promise<MethodResult> {
       return c.json(rpcError(message.id, -32601, 'Method not found'), modern ? 404 : 200);
   }
 }
-/** 2026-07-28 requires `ttlMs` and `cacheScope` on these results (CacheableResult). */
 function cacheHint(method: string, params: Record<string, unknown>) {
   const { catalogue, grant, project } = mcpPolicy.result_cache;
   switch (method) {

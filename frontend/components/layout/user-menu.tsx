@@ -137,8 +137,6 @@ export function UserMenuController({ children }: Readonly<{ children: ReactNode 
     [],
   );
 
-  // useMutation returns a fresh object every render, so the context value is
-  // built from the three fields consumers read rather than the result itself.
   const { mutate: logoutMutate, isError: logoutIsError, isPending: logoutIsPending } = logout;
   const value = useMemo<UserMenuState>(
     () => ({

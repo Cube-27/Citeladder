@@ -202,9 +202,6 @@ export async function issueSummary(
   );
   for (const row of dimensions.rows) dimensionCounts[row.dimension] = row.count;
   const total = firstOf(totals.rows, 'the issue totals');
-  // A site-level finding is one row on the homepage that names a count and a
-  // sample of its pages, so the distinct pages it touches cannot be unioned
-  // exactly: the total is at least its largest group, never the homepage alone.
   const siteLevelAffected = Math.max(
     0,
     ...siteLevel.rows.map(

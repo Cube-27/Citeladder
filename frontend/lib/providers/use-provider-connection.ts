@@ -95,10 +95,6 @@ export function useProviderConnection({
             { transport_provider: transport, ...credentialPayload(), routes },
             { workspaceId },
           );
-      // The key IS stored at this point, so a probe fault is reported as a
-      // failed test rather than a failed save — telling the user their key
-      // did not save would be wrong, and would send them to rotate a key
-      // that is already there.
       let verified: ConnectionTestState;
       try {
         verified = await probe(saved.id);
@@ -120,8 +116,6 @@ export function useProviderConnection({
       if (!connection) throw new Error('Save a key before testing.');
       return probe(connection.id);
     },
-    // The probe denormalizes its outcome onto the connection, and that outcome
-    // is what gates launching and the status badge — so both reads are stale.
     onSuccess: () => refreshProviderReads(queryClient),
     onError: (error) => setTestResult({ status: 'failed', message: errorMessage(error) }),
   });

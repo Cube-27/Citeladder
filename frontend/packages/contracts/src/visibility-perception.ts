@@ -162,7 +162,6 @@ export const executionPerceptionSchema = responseObject({
       theme: z.string(),
       polarity: perceptionPolaritySchema,
       quote: z.string(),
-      // Code-point offsets into the answer text.
       start: z.number().int(),
       end: z.number().int(),
     }),

@@ -29,7 +29,6 @@ export function FilterTrigger({
 >) {
   const name = value === undefined ? label : `${label}: ${value}`;
   return (
-    // Always wrapped, so moving off the default keeps the same button (and its focus).
     <Tooltip content={name} describe={false}>
       <button
         ref={ref}

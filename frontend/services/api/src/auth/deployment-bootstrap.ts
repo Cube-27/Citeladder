@@ -61,7 +61,6 @@ export async function bootstrapDeployment(
         .returningAll()
         .executeTakeFirstOrThrow();
     }
-    // Workspace/account locks precede the identity row lock, as login/operator repair does.
     await provisionAccount(trx, user, { provisionAccess: !config.demo.enabled });
     const scope = await ownedWorkspaceAccount(trx, user.id);
     await lockAccount(trx, scope.workspaceId, scope.accountId);
@@ -121,9 +120,7 @@ export async function bootstrapDeployment(
     }
     return scope.workspaceId;
   });
-  // Grants committed under the capacity lock; the runtime follows in its own order.
   await refreshRuntime(db, workspaceId);
-  // Commit identity first. A catalog failure fails rollout and remains safely retryable.
   if (!config.demo.enabled) await initialize(db, env, email, catalog);
   return { skipped: false, catalog: !config.demo.enabled };
 }

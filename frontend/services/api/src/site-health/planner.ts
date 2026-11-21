@@ -38,11 +38,6 @@ import type { Crawl } from './site-task.ts';
 import { classifyUrlAdmission } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
 
-/**
- * Resolve the runtime admission holds against the account's grants now. It
- * takes the capacity and account locks, so the caller already holds the
- * runtime row and every other Site Health lock it needs.
- */
 export async function admissionRuntime(db: Database, held: Runtime) {
   const { state, runtime } = await resolveRuntime(db, held, new Date());
   if (state?.error) throw unresolvedEntitlement();
@@ -195,14 +190,11 @@ function insertCrawl(
   return db
     .insertInto('site_crawls')
     .values({
-      // Time-ordered: the crawl id is the month partition key of its evidence.
       id: timeOrderedId(),
       workspace_id: input.workspaceId,
       project_id: input.projectId,
       profile_id: input.profileId,
       root_url: input.root,
-      // Unread since the tracked set (SH-B6) made every crawl's order stable; the column is
-      // NOT NULL until a later release drops it (expand/contract).
       random_seed: '0',
       configuration: JSON.stringify(input.configuration),
       sample_mode: sample,
@@ -265,7 +257,6 @@ function refreshProfile(
       id: randomUUID(),
       workspace_id: workspaceId,
       project_id: projectId,
-      // Unused since SH-B13; the column is NOT NULL until a later release drops it (expand/contract).
       selection_version: 0,
       created_at: now,
       ...values,

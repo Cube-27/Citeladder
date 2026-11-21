@@ -15,7 +15,6 @@ const metadataSchema = z.object({
   client_name: z.string().max(mcpPolicy.max_client_name_length).optional(),
   grant_types: z.array(z.string()).default(['authorization_code', 'refresh_token']),
   response_types: z.array(z.string()).default(['code']),
-  // RFC 7591 §2: an omitted method is client_secret_basic.
   token_endpoint_auth_method: z
     .enum(['none', 'client_secret_post', 'client_secret_basic'])
     .default('client_secret_basic'),
@@ -65,10 +64,6 @@ function validateRegistration(input: unknown) {
 
 export type RegistrationAdmission = (trx: Database) => Promise<void>;
 
-/**
- * The registering network's burst and window budgets, then the global ceiling
- * last: a network over its own budget spends none of the global one.
- */
 export function admitRegistration(network: string, settings: SettingSource): RegistrationAdmission {
   return (trx) =>
     admitBudgets(trx, [
@@ -108,14 +103,9 @@ export function admitWriteCall(db: Database, grantId: string) {
 }
 
 async function admitBudgets(db: Database, budgets: readonly (readonly [Budget, string])[]) {
-  for (const [limit, subject] of budgets) await spendBudget(db, limit, subject); // NOSONAR -- A refused budget stops before the next is charged.
+  for (const [limit, subject] of budgets) await spendBudget(db, limit, subject); // NOSONAR
 }
 
-/**
- * Store a validated registration. Invalid metadata is refused before any
- * budget is spent; `admit` spends them last, in the same transaction, so a
- * refused or failed registration spends nothing.
- */
 export async function registerClient(
   db: Database,
   mcp: McpConfig,
@@ -127,7 +117,6 @@ export async function registerClient(
   const clientId = randomUUID();
   const secret = metadata.token_endpoint_auth_method === 'none' ? null : mintToken();
   await db.transaction().execute(async (trx) => {
-    // Lock candidates before deletion; FK checks serialize racing new flows.
     const criteria = sql<boolean>`NOT EXISTS (SELECT 1 FROM mcp_oauth_grants g WHERE g.client_id = mcp_oauth_clients.client_id) AND NOT EXISTS (SELECT 1 FROM mcp_authorization_requests r WHERE r.client_id = mcp_oauth_clients.client_id AND r.expires_at > now()) AND NOT EXISTS (SELECT 1 FROM mcp_authorization_codes c WHERE c.client_id = mcp_oauth_clients.client_id AND c.expires_at > now())`;
     const candidates = await trx
       .selectFrom('mcp_oauth_clients')
@@ -161,7 +150,6 @@ export async function registerClient(
         created_at: new Date(),
       })
       .execute();
-    // Last, so the global window's row lock is held only until commit.
     await admit(trx);
   });
   return {

@@ -10,7 +10,6 @@ export function AnnouncementPill({
 }: Readonly<{ href?: string; tag?: string; children: ReactNode }>) {
   const content = (
     <>
-      {/* The space keeps the tag and the message two words for screen readers. */}
       {tag && <span className="cl-announce-tag">{tag}</span>}{' '}
       <span className="cl-announce-text">{children}</span>
       {href && <ArrowRight aria-hidden className="size-3.5 shrink-0" />}

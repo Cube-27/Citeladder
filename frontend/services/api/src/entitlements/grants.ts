@@ -45,7 +45,6 @@ export type GrantSource =
   | { kind: 'intro'; introId: string }
   | { kind: 'public_signup' };
 
-/** The persisted `source_ref` of a grant source (formats are stored; never change them). */
 export function sourceRef(source: GrantSource): string {
   switch (source.kind) {
     case 'subscription':
@@ -115,7 +114,6 @@ export async function issueBundle(
   const ref = sourceRef(input.source);
   const reason = bundleReason(input.source, input.reason);
   await lockAccount(db, workspaceId, accountId);
-  // Existing period bundles retain their original writer's key and UUIDs.
   let priorQuery = db
     .selectFrom('account_grants')
     .selectAll()
@@ -160,7 +158,6 @@ export async function issueBundle(
     });
     return prior;
   }
-  // The resolver fails closed on an unknown source kind, so never write one.
   if (
     !specs.length ||
     new Set(specs.map((spec) => spec.key)).size !== specs.length ||

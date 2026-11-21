@@ -77,7 +77,6 @@ describe('Answer dialog', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Prompt #3' });
     expect(within(dialog).getAllByText(/Prompt #3/)).toHaveLength(1);
-    // The first import transforms the markdown renderer, so it gets a cold budget.
     const strong = await within(dialog).findByText('Acme Plumbing', {}, { timeout: 15_000 });
     expect(strong.tagName).toBe('STRONG');
     const list = within(dialog).getByText('Fast').closest('ul');

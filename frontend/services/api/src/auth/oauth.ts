@@ -65,7 +65,6 @@ export function providerConfigured(config: ServiceConfig, provider: OAuthProvide
   return config.auth.oauthSettings[`${provider}_enabled`] === true && Boolean(id && secret);
 }
 
-/** `url` without trailing slashes; a linear scan, not a backtracking regex. */
 export function withoutTrailingSlashes(url: string): string {
   let end = url.length;
   while (end > 0 && url[end - 1] === '/') end -= 1;
@@ -215,7 +214,6 @@ async function providerJson(
     }
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));
   } catch {
-    // Provider bodies and URLs may carry credentials; failures are text-free.
     throw new SignInError('oauth_signin_failed');
   }
 }
@@ -382,8 +380,6 @@ async function resolveAccount(
   proof?: LinkProof,
   decision?: OAuthTermsDecision,
 ) {
-  // Stable subject and normalized address serialize linking; every path takes
-  // "auth.email:" before "oauth:" so the two locks never invert.
   await subjectXactLock(db, `auth.email:${identity.email}`);
   await subjectXactLock(db, `oauth:${provider}:${identity.sub}`);
   const linked = await db

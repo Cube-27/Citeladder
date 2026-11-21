@@ -133,10 +133,6 @@ export type MembershipTarget =
   | { kind: 'workspace'; workspaceId: string; projectId: string | null }
   | { kind: 'earliest'; projectId: string | null };
 
-/**
- * The `X-Workspace-Id` the request sent: absent, or a UUID. Anything else,
- * including an empty value, is a 400, never a fallback to the default workspace.
- */
 function selectedWorkspace(c: Context<AppEnv>): string | null {
   const selected = c.req.header('x-workspace-id');
   if (selected === undefined) return null;
@@ -220,7 +216,6 @@ export function membershipQuery(db: Database, userId: string, target: Membership
     case 'workspace':
       return member.where('workspace_members.workspace_id', '=', target.workspaceId);
     case 'earliest':
-      // The membership ID breaks a timestamp tie, so the default never flips.
       return member
         .orderBy('workspace_members.created_at', 'asc')
         .orderBy('workspace_members.id', 'asc')

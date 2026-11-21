@@ -40,12 +40,6 @@ export function modelPrice(
   return model && model === gatewayModel ? models[pricing.gateway_default_price]! : null;
 }
 
-/**
- * Token counts as the gateway reports them. Input includes cached and
- * cache-written input; output includes thinking, which providers bill as
- * output (B53). A report without a cache-write count wrote none. One-hour
- * cache writes are the part of the writes billed at the one-hour rate.
- */
 export type TokenUsage = {
   input_tokens?: number | null;
   cached_input_tokens?: number | null;
@@ -132,10 +126,6 @@ export function requestInputBytes(system: string, user: string, schema?: unknown
   return bytes(system) + bytes(user) + (schema ? bytes(JSON.stringify(schema)) : 0);
 }
 
-/**
- * The most a call can cost: every input byte as an uncached token (a byte-level
- * tokenizer never emits more tokens than bytes) plus the full output cap.
- */
 export function reservationCredits(price: ModelPrice, inputBytes: number, maxOutputTokens: number) {
   return Math.max(
     1,

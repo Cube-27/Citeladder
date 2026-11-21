@@ -73,7 +73,6 @@ export function registerConsentRoutes(
     const redirect = new URL(row.redirect_uri);
     c.header('x-frame-options', 'DENY');
     c.header('content-security-policy', `${mcpPolicy.consent_csp}; form-action 'self'`);
-    // hono/html escapes every interpolated value; client metadata is untrusted.
     return c.html(
       consentPage({
         clientName: scalarText(record(row.client_metadata).client_name) || 'MCP client',

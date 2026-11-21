@@ -31,7 +31,6 @@ export function decodeKeysetCursor(
   scope: string,
   filters: Record<string, unknown>,
 ): string[] {
-  // Node's base64url decoder skips foreign characters; refuse them first.
   if (!/^[A-Za-z0-9_-]+$/u.test(cursor)) throw new InvalidCursorError('invalid cursor');
   let decoded: unknown;
   try {

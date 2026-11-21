@@ -78,7 +78,7 @@ async function failingPage(trx: Database, seed: SiteSeed, path: string, rules: r
       rule_version: 'v1',
       created_at: at,
     };
-    await trx // NOSONAR -- One transaction: fixture statements run in order.
+    await trx // NOSONAR
       .insertInto('site_rule_evaluations')
       .values({
         ...shared,
@@ -96,7 +96,7 @@ async function failingPage(trx: Database, seed: SiteSeed, path: string, rules: r
         readiness_weight: 0,
       })
       .execute();
-    await trx // NOSONAR -- One transaction: fixture statements run in order.
+    await trx // NOSONAR
       .insertInto('site_issues')
       .values({
         ...shared,
@@ -133,7 +133,7 @@ async function crawledProject() {
         ...(index < 2 ? [DIAGNOSTIC] : []),
         ...(index < 1 ? [UNKNOWN_SITE_LEVEL] : []),
       ];
-      // NOSONAR -- One transaction: fixture statements run in order.
+      // NOSONAR
       pages.push(await failingPage(trx, seed, `/p${String(index).padStart(2, '0')}`, rules));
     }
     return { seed, pages };

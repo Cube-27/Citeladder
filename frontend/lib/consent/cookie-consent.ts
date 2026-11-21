@@ -27,7 +27,6 @@ export function writeConsent(decision: ConsentDecision) {
     window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, decision);
     inMemoryDecision = null;
   } catch {
-    // A failed rejection must not leave an older acceptance for the next load.
     if (decision === 'rejected') {
       try {
         window.localStorage.removeItem(COOKIE_CONSENT_STORAGE_KEY);

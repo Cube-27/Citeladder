@@ -31,11 +31,6 @@ type SessionProfile = {
 
 export type SessionUser = { id: string; sessionVersion: number; profile: SessionProfile };
 
-/**
- * Verify a session token, or return null. jose enforces `exp` and `nbf`; an
- * `iat` in the future is refused here. Both allow for clock skew between API
- * instances.
- */
 async function decodeSessionToken(
   token: string,
   secretKey: string,

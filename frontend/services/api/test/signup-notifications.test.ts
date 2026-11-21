@@ -23,8 +23,6 @@ config.auth.fetch = async (_url, init) => {
   sent.push(JSON.parse(String(init?.body)));
   return new Response('{}', { status: 200 });
 };
-// Fixed in the past: a local runner ticking on the shared database looks only
-// at the last few days, so it never notifies these ordinary-domain fixtures.
 const now = new Date('2026-10-15T10:00:00Z');
 
 async function signup(verifiedAt: Date | null, domain = 'fixtures.citeladder.com') {

@@ -72,9 +72,6 @@ for (const file of ['apps', 'components', 'lib', 'packages', 'services'].flatMap
     failures.push(`${file}:${line}: ${message}`);
 }
 
-// Fonts come from the private Cube-27/cube27-fonts repo via `pnpm fonts:pull`:
-// some are licensed for self-hosting, not redistribution, and git's index is
-// what gets published.
 const tracked = execFileSync('/usr/bin/git', ['-C', root, 'ls-files', '--', ':(top)'], {
   encoding: 'utf8',
 }).split('\n');

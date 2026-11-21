@@ -94,8 +94,6 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
   const workspaceId = activeWorkspaceId;
   const enabled = workspaceId !== null;
 
-  // A token belongs to ONE workspace. Switching workspace must not leave the
-  // previous workspace's acceptance link on screen for the reader to copy.
   const [tokenWorkspaceId, setTokenWorkspaceId] = useState(workspaceId);
   if (tokenWorkspaceId !== workspaceId) {
     setTokenWorkspaceId(workspaceId);
@@ -138,7 +136,6 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
   const failure = mutations.find((mutation) => mutation.isError);
   const busy = invite.isPending || mutations.some((mutation) => mutation.isPending);
   const workspaceName = activeWorkspace?.name ?? 'this workspace';
-  // A second click lands before `busy` re-renders, so the guard is synchronous.
   const confirming = useRef(false);
   const confirmThen = (request: Confirmation, run: () => Promise<unknown>) =>
     setConfirm({

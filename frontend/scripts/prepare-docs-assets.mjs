@@ -6,7 +6,7 @@ const docsPublic = new URL('../apps/docs/public/', import.meta.url);
 await mkdir(docsPublic, { recursive: true });
 for (const name of ['citeladder-logo.svg', 'favicon.ico', 'theme-preference.js', 'fonts']) {
   try {
-    await cp(new URL(name, publicRoot), new URL(name, docsPublic), { recursive: true }); // NOSONAR -- Four small copies; a missing-fonts fallback is reported per item.
+    await cp(new URL(name, publicRoot), new URL(name, docsPublic), { recursive: true }); // NOSONAR
   } catch (error) {
     if (name !== 'fonts' || error.code !== 'ENOENT') throw error;
     process.stdout.write(

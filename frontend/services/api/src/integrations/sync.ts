@@ -30,12 +30,6 @@ function day(value: string): number {
 
 type PropertyZone = { provider: string; reporting_timezone: string | null };
 
-/**
- * The last day the property has finished, in its own reporting time zone:
- * GA4's recorded property zone, Search Console's Pacific day, Bing's UTC day.
- * A GA4 property whose zone is not yet known uses the latest zone on Earth,
- * so a sync never imports a day the property is still recording.
- */
 function propertyYesterday(property: PropertyZone, now = new Date()): string {
   const zones: Record<string, string> = integrationPolicy.reporting_time_zones;
   const timeZone = property.reporting_timezone ?? zones[property.provider] ?? 'UTC';
@@ -317,18 +311,15 @@ export async function enqueueHistoryBackfill(db: Database, input: BackfillInput)
   const candidates = await backfillWindows(db, input, days);
   for (const [windowStart, windowEnd] of candidates) {
     try {
-      await /* NOSONAR -- Windows commit in order with per-window conflict handling. */ enqueueSyncRun(
-        db,
-        {
-          workspaceId: input.workspaceId,
-          connectionId: input.connectionId,
-          mappingId: input.mappingId,
-          projectId: input.projectId,
-          windowStart,
-          windowEnd,
-          syncKind: 'backfill',
-        },
-      );
+      await /* NOSONAR */ enqueueSyncRun(db, {
+        workspaceId: input.workspaceId,
+        connectionId: input.connectionId,
+        mappingId: input.mappingId,
+        projectId: input.projectId,
+        windowStart,
+        windowEnd,
+        syncKind: 'backfill',
+      });
     } catch (error) {
       if (error instanceof ApiError && error.code === 'sync_active_window_conflict') continue;
       throw error;

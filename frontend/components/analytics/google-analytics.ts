@@ -1,9 +1,5 @@
 import { hasAnalyticsConsent, subscribeToConsent } from '@/lib/consent/cookie-consent';
 
-/**
- * `gtag.js` installs this pair on `window` as it boots. Both are optional here
- * because revocation can arrive before the lazily loaded tag has run at all.
- */
 type GtagWindow = Window & {
   dataLayer?: unknown[];
   gtag?: (...args: unknown[]) => void;
@@ -24,7 +20,6 @@ function clearAnalyticsCookies() {
   }
 }
 
-/** gtag commands are `arguments` objects; other tags may push plain arrays. */
 function isCommand(entry: unknown): entry is Record<number, unknown> & { length: number } {
   return Array.isArray(entry) || Object.prototype.toString.call(entry) === '[object Arguments]';
 }
@@ -44,10 +39,9 @@ function denyPendingAnalyticsDefaults(dataLayer: unknown[] | undefined) {
   }
 }
 
-/** Google's queue stub: gtag.js processes only `arguments` objects and ignores pushed arrays. */
 function gtagQueue(dataLayer: unknown[]): (...args: unknown[]) => void {
   return function gtag() {
-    // oxlint-disable-next-line prefer-rest-params -- gtag.js requires the arguments object.
+    // oxlint-disable-next-line prefer-rest-params
     dataLayer.push(arguments);
   };
 }
@@ -99,13 +93,11 @@ export function trackContactSubmitted() {
 
 function applyConsent(measurementId: string, allowed: boolean) {
   const withGtag = window as GtagWindow;
-  // Google's hard opt-out also stops cookieless measurement after withdrawal.
   Reflect.set(window, `ga-disable-${measurementId}`, !allowed);
   const existing = document.getElementById(SCRIPT_ID);
   if (!allowed) {
     clearAnalyticsCookies();
     if (!(existing instanceof HTMLScriptElement)) return;
-    // A pending tag must never replay an old granted default on load.
     if (existing.dataset.loaded !== 'true') {
       denyPendingAnalyticsDefaults(withGtag.dataLayer);
     }

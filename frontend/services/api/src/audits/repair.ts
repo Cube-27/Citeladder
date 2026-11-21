@@ -36,7 +36,6 @@ export function createRepairAudit(
 ) {
   return db.transaction().execute(async (trx) => {
     await requireWorkspaceAccess(trx, workspaceId);
-    // The same enqueue lock as a launch, taken before any audit row lock.
     await lockAuditEnqueue(trx, workspaceId);
     const parent = repairable(
       await trx
@@ -114,7 +113,6 @@ export function createRepairAudit(
       )
       .executeTakeFirst();
     if (overlapping) throw denied('A running repair already covers a selected task');
-    // Abuse controls only (active launches, daily task budget); a repair is not a manual run.
     await reserveAuditCapacity(trx, workspaceId, tasks.length, null, runtime, at);
     const id = randomUUID();
     await trx

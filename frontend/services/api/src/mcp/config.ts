@@ -8,11 +8,6 @@ import {
 import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 
 export const mcpPolicy = policy.mcp.constants;
-/**
- * The supported scopes a request names, in policy order, with read always
- * included; unknown extras such as `offline_access` narrow away (RFC 6749
- * §3.3). A request naming no scope may receive every supported one.
- */
 export const holdsWrite = (scopes: readonly string[]) => scopes.includes(mcpPolicy.write_scope);
 
 export function grantableScopes(requested: string | null | undefined): string[] {

@@ -213,7 +213,7 @@ describe("Site Health reads show each tracked page's latest audit", () => {
     const earlier = await crawlAt(seed, minutes(0));
     const tracked = [];
     for (let index = 0; index < PROBE_PAGES; index++)
-      tracked.push(await audit(earlier, `/p-${index}`, SITEMAP, 'missing')); // NOSONAR -- Fixture pages in order.
+      tracked.push(await audit(earlier, `/p-${index}`, SITEMAP, 'missing')); // NOSONAR
     await fixtures.monitor(
       seed,
       tracked.map((page) => page.id),

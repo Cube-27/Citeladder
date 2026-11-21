@@ -19,9 +19,6 @@ import { resolveCommandGroups } from '@/components/layout/nav-items';
 import { runsQueries } from '@/lib/api/runs';
 import { mswServer } from '@/test/msw-server';
 
-// Hoisted so the mock factories below — which vitest lifts above these
-// statements — can reference the state safely rather than relying on the
-// factories happening to run lazily.
 const { setActiveProjectId, projectContext } = vi.hoisted(() => {
   const setActiveProjectId = vi.fn();
   return {

@@ -52,11 +52,6 @@ const ONE_PENDING_ORDER = [
 const root = '/api/v1/billing';
 const params = { path: {}, query: {} } as const;
 const privateRoute = { family, capability: 'manage_billing', params } as const;
-/**
- * A workspace whose trial or plan ended keeps exactly the path to buying a plan:
- * the plans, its billing state, a new subscription and that checkout. Add-ons,
- * top-ups and plan changes need a live plan and stay behind access.
- */
 const purchaseRecovery = { ...privateRoute, recovery: true } as const;
 const activationParams = {
   path: { activation_id: { scalar: { kind: 'uuid' }, required: true } },
@@ -325,16 +320,11 @@ export const billingRoutes = [
         refuse('checkout_unavailable');
       verifyCallback(config.razorpay, pending.external_reference, input.fields);
       if (pending.status === 'activated') return activationResponse(pending);
-      // The callback authenticates only; recovery verifies captured funds. A
-      // payment completed after the quote expired is still the customer's money.
-      // An abandoned order with a signed payment reopens for one recovery probe.
       if (
         pending.status === 'failed' ||
         (pending.status === 'abandoned' && pending.activation_kind === 'base')
       )
         refuse('checkout_unavailable');
-      // Re-checked in the update: the sweep may abandon a base intent meanwhile.
-      // Clearing the lease voids any in-flight probe's stale unpaid reading.
       const now = new Date();
       try {
         const reopened = await db
@@ -358,9 +348,6 @@ export const billingRoutes = [
           .executeTakeFirst();
         return activationResponse(reopened ?? pending);
       } catch (error) {
-        // A newer order for the same add-on or upgrade is pending, so this one
-        // cannot reopen; it stays abandoned and the webhook's late-capture path
-        // settles its payment.
         if (!ONE_PENDING_ORDER.some((index) => isUniqueViolation(error, index))) throw error;
         return activationResponse(pending);
       }

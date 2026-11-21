@@ -74,7 +74,7 @@ async function referenceSnippets(
 ): Promise<IssueReferenceSnippet[]> {
   const snippets: IssueReferenceSnippet[] = [];
   for (const [ruleId, path] of Object.entries(SNIPPET_FACTS)) {
-    const row = await firstSnippetRow(db, crawl, { findingClass, ruleId, path }); // NOSONAR -- In order on the writer's connection.
+    const row = await firstSnippetRow(db, crawl, { findingClass, ruleId, path }); // NOSONAR
     const snippet = snippetSchema.safeParse(row?.snippet);
     if (!row || !snippet.success) continue;
     snippets.push({
@@ -94,9 +94,9 @@ async function computeIssueCatalog(db: Database, crawl: Crawl) {
   const classes = [];
   for (const findingClass of [...ISSUE_FINDING_CLASSES, null]) {
     const filters = unfilteredIssues(findingClass);
-    const items = await catalogItems(db, crawl, filters); // NOSONAR -- In order on one connection.
-    const summary = await issueSummary(db, crawl, filters); // NOSONAR -- In order on one connection.
-    const snippets = findingClass ? await referenceSnippets(db, crawl, findingClass) : []; // NOSONAR -- In order on one connection.
+    const items = await catalogItems(db, crawl, filters); // NOSONAR
+    const summary = await issueSummary(db, crawl, filters); // NOSONAR
+    const snippets = findingClass ? await referenceSnippets(db, crawl, findingClass) : []; // NOSONAR
     classes.push({ findingClass, items, summary, snippets });
   }
   return classes;
@@ -109,7 +109,7 @@ async function writeIssueCatalog(
 ) {
   const now = new Date();
   for (const { findingClass, items, summary, snippets } of classes) {
-    await db // NOSONAR -- In order on the writer's connection.
+    await db // NOSONAR
       .insertInto('site_issue_catalogs')
       .values({
         workspace_id: crawl.workspace_id,
@@ -153,7 +153,6 @@ export async function publishRunningIssues(
     .where('id', '=', task.crawl_id)
     .executeTakeFirst();
   if (!crawl || !isActiveCrawl(crawl.status)) return;
-  // One connection: the summary's parallel statements never crowd the runner's task slots.
   const classes = await db.connection().execute((conn) => computeIssueCatalog(conn, crawl));
   await db.transaction().execute(async (trx) => {
     const locked = await trx

@@ -23,8 +23,5 @@ function trustedScriptUrl(input: string): string | null {
 export function installTrustedTypesPolicy(): void {
   try {
     window.trustedTypes?.createPolicy('default', { createScriptURL: trustedScriptUrl });
-  } catch {
-    // An extension may have created the default policy first; reporting is
-    // never worth stopping the app from starting.
-  }
+  } catch {}
 }

@@ -177,14 +177,14 @@ export function DocsSearchDialog() {
           </div>
           <div
             id="docs-search-results"
-            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Guide results are an active-descendant popup of the search field; native select/datalist cannot hold grouped two-line links.
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
             role="listbox"
             aria-label="Matching guides"
           >
             {groups.map((group, groupIndex) => (
               <div
                 key={group.label}
-                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- A listbox may only own options and groups; fieldset is not a permitted child.
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
                 role="group"
                 aria-labelledby={`docs-search-group-${groupIndex}`}
                 className="mt-2"
@@ -202,7 +202,7 @@ export function DocsSearchDialog() {
                       key={result.href}
                       id={optionId(index)}
                       href={result.href}
-                      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Focus stays on the search field while these guide links are its active descendants.
+                      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
                       role="option"
                       tabIndex={-1}
                       aria-selected={index === cursor}

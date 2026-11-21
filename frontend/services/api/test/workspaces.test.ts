@@ -501,7 +501,6 @@ describe('membership continuity and transactional receipts', () => {
     const space = await fixtures.ownedWorkspace(spaceOwner);
     await fixtures.member(space, user, 'member');
     const constraint = `pr14_receipt_${randomUUID().replaceAll('-', '')}`;
-    // DDL is the schema owner's; the API under test connects as the application role.
     await asOwner((owner) =>
       sql`ALTER TABLE security_events ADD CONSTRAINT ${sql.id(constraint)} CHECK (workspace_id <> ${sql.lit(space)}::uuid OR event <> 'membership.role')`.execute(
         owner,

@@ -67,7 +67,6 @@ function validateInt(scalar: Extract<Scalar, { kind: 'int' }>, raw: string): Out
   return { ok: true, value };
 }
 
-// Decimal notation only: `Number` would also read hex, octal and binary literals.
 const DECIMAL = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/iu;
 
 function validateFloat(raw: string): Outcome {
@@ -89,7 +88,6 @@ function validateBool(raw: string): Outcome {
 }
 
 function validateStr(scalar: Extract<Scalar, { kind: 'str' }>, raw: string): Outcome {
-  // Lengths count code points, not UTF-16 units.
   const length = [...raw].length;
   if (scalar.minLength !== undefined && length < scalar.minLength) {
     return failure('string_too_short', `Must contain at least ${scalar.minLength} characters`);

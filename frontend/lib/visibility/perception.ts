@@ -197,7 +197,6 @@ export function breakdownRow(
   const counts = { classified: score.classified, mentions: coverage.mentions };
   if (!meetsMinimum(score.classified, minimum))
     return { kind: 'too_few', ...counts, needed: minimum };
-  // `mixed` counts in the denominator only, so the three shares need not sum to one.
   return {
     kind: 'value',
     ...counts,

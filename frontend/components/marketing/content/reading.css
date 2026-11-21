@@ -73,9 +73,6 @@
   overflow-x: auto;
   border-radius: var(--site-radius-card);
   overscroll-behavior-x: contain;
-  /* Set to auto, Chromium and Safari draw the `::-webkit-scrollbar` below,
-     which stays visible at rest even where scrollbars overlay; the global
-     quiet scrollbar would otherwise hide it until hover. */
   scrollbar-color: auto;
   scrollbar-width: auto;
   background:

@@ -32,7 +32,6 @@ const logger = getLogger('workers.integrations');
 const statuses = policy.task_queue.statuses;
 const templates = Object.values(integrationPolicy.datasets);
 const excluded = new Set(integrationPolicy.excluded_datasets);
-// 13 bound parameters a row stays well inside PostgreSQL's 65,535 limit.
 const METRIC_INSERT_BATCH = 2_000;
 const DEADLINE = Symbol('deadline');
 
@@ -142,8 +141,6 @@ export class IntegrationWorker {
         scope &&
         ((column) =>
           sql<boolean>`${column('workspace_id')} = ${scope.workspaceId} and ${column('id')} = ${scope.runId}`),
-      // The started event and the run's date bounds commit with the claim, so
-      // a failed read rolls the claim (and its attempt charge) back.
       onClaimed: async (trx, claimed) => {
         await startedEvents(trx, claimed);
         const [run] = claimed;
@@ -385,8 +382,6 @@ export class IntegrationWorker {
       valueDate(run.window_start),
       valueDate(run.window_end),
     );
-    // Rows the provider sent that never became a payload row (Bing parses before
-    // persisting) are invalid too; rows merely dated outside the window are not.
     const metadata = extractMetadata(
       page.payload,
       invalid > 0 || received !== page.rawRowCount,
@@ -436,7 +431,7 @@ export class IntegrationWorker {
         .execute();
       const createdAt = new Date();
       for (let index = 0; index < rows.length; index += METRIC_INSERT_BATCH) {
-        await trx // NOSONAR -- One page transaction: batches insert in order.
+        await trx // NOSONAR
           .insertInto('integration_metric_rows')
           .values(
             rows.slice(index, index + METRIC_INSERT_BATCH).map((row) => ({

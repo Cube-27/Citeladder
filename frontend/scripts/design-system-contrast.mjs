@@ -127,10 +127,6 @@ const CONTRAST_PAIRS = [
   },
 ];
 
-/**
- * Every ink and surface the matrix reads, so a fixture can bind a complete palette.
- * @public — imported by the scripts/ fixture tests.
- */
 export function contrastRoles() {
   return {
     inks: [...new Set(CONTRAST_PAIRS.flatMap(({ inks }) => inks))],
@@ -153,7 +149,6 @@ const fromLinear = (channel) =>
 const multiply = (matrix, vector) =>
   matrix.map((row) => row.reduce((sum, weight, index) => sum + weight * vector[index], 0));
 
-// CSS Color 4: OKLab to LMS, then LMS to linear sRGB.
 const OKLAB_TO_LMS = [
   [1, 0.3963377773761749, 0.2158037573099136],
   [1, -0.1055613458156586, -0.0638541728258133],
@@ -253,10 +248,6 @@ function customProperties(body) {
   });
 }
 
-/**
- * Every token's raw value a scope sees: `@theme`, `:root`, then each layer in order.
- * @public — imported by the scripts/ fixture tests.
- */
 export function paletteDeclarations(source, selector) {
   const rules = topLevelRules(source.replace(/\/\*[\s\S]*?\*\//g, ''));
   const declarations = (scope) =>
@@ -276,10 +267,6 @@ export function paletteDeclarations(source, selector) {
 
 const RELATIVE = /^oklch\(\s*from\s+var\((--[\w-]+)\)\s+l\s+c\s+h\s*(?:\/\s*([\d.]+)%\s*)?\)$/;
 
-/**
- * Every token a scope sees, with `var()` aliases and relative colours resolved.
- * @public — imported by the scripts/ fixture tests.
- */
 export function resolvePalette(source, selector) {
   const values = paletteDeclarations(source, selector);
   const resolve = (token, seen = new Set()) => {
@@ -321,10 +308,6 @@ function rowViolations(palette, scope, { inks, surfaces, over = [color('surface'
   );
 }
 
-/**
- * The whole matrix for a token stylesheet's text, in every scope.
- * @public — also imported by the scripts/ fixture tests.
- */
 export function paletteViolations(source) {
   const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
   const violations = clean.includes(`${DARK} {`)

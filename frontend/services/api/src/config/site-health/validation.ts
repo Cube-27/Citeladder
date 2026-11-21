@@ -91,11 +91,6 @@ export function validateSiteHealthCatalog(
   validateScoreMembership(rules, pillars);
 }
 
-/**
- * `score_roles` is the one source of score membership. An AEO-scored rule needs
- * exactly one pillar, and a scored rule must surface as an issue: no check may
- * move a score without a visible finding.
- */
 function validateScoreMembership(rules: readonly Rule[], pillars: Record<string, string>) {
   for (const rule of rules) {
     const roles = new Set(rule.score_roles);

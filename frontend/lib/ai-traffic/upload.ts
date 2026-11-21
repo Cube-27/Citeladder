@@ -183,8 +183,6 @@ export async function uploadCrawlFile(input: {
       batch: string[] = [],
       batchBytes = 0;
     const scan: Scan = { first: null, last: null, dates: new Set<string>() };
-    // Lines older than the admission window are neither sent nor counted in the scan span.
-    // The floor is fixed when the upload is created, so a resumed scan batches identically.
     const oldest = new Date(
       Date.parse(upload.created_at) - catalog.max_backdate_days * 86400000,
     ).toISOString();
@@ -220,11 +218,11 @@ export async function uploadCrawlFile(input: {
       batchBytes += wireSize;
       matched++;
     }
-    for (const line of sample) await consume(line); // NOSONAR -- Lines batch in file order; a full batch flushes before the next line.
+    for (const line of sample) await consume(line); // NOSONAR
     for (;;) {
       const next = await iterator.next();
       if (next.done) break;
-      await consume(next.value); // NOSONAR -- Streamed lines batch in order; a full batch flushes first.
+      await consume(next.value); // NOSONAR
     }
     if (!scan.first)
       throw new Error(`No log lines from the last ${catalog.max_backdate_days} days to upload`);

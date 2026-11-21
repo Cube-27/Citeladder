@@ -126,9 +126,9 @@ export class CrawlScheduler {
   async runOnce(at = this.now(), canAdmit: () => boolean = () => true) {
     let created = 0;
     for (let count = 0; count < this.settings.claim_batch_size && canAdmit(); count++) {
-      const [claim] = await this.claimDue(at, 1); // NOSONAR -- Lease one occurrence before checking the next admission.
+      const [claim] = await this.claimDue(at, 1); // NOSONAR
       if (!claim) break;
-      if (await this.planClaim(claim, this.now())) created++; // NOSONAR -- Finish the leased occurrence before claiming another.
+      if (await this.planClaim(claim, this.now())) created++; // NOSONAR
     }
     return created;
   }

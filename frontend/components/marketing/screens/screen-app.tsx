@@ -17,7 +17,6 @@ import {
 import { cn } from '@/lib/utils';
 
 import { ScreenButton, ScreenTabs } from './screen-parts';
-// The vignette sheet comes first: `.cl-app-page > .cl-vig` overrides `.cl-fcard .cl-vig`.
 import './screen-vignette.css';
 import './screen-app.css';
 

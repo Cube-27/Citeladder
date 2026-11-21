@@ -107,10 +107,6 @@ export class AuditScheduler {
         await sql`rollback to savepoint schedule_planning`.execute(trx);
         await sql`release savepoint schedule_planning`.execute(trx);
         if (error instanceof ApiError && error.isRetryable()) {
-          // A transient refusal (active-launch limit, daily task budget) is not the
-          // owner's to fix: try the same occurrence again without counting a failure.
-          // `next_run_at` stays the occurrence (it anchors the cadence); an ownerless
-          // lease until `Retry-After` keeps claims away until then.
           await trx
             .updateTable('audit_schedules')
             .set({
@@ -155,15 +151,15 @@ export class AuditScheduler {
     if (canAdmit) return this.planUntilBudget(at, canAdmit);
     const claims = await this.claimDue(at);
     let created = 0;
-    for (const claim of claims) if (await this.planClaim(claim, this.now())) created++; // NOSONAR -- Leased claims plan one at a time to keep the shared pool free.
+    for (const claim of claims) if (await this.planClaim(claim, this.now())) created++; // NOSONAR
     return created;
   }
   private async planUntilBudget(at: Date, canAdmit: () => boolean) {
     let created = 0;
     for (let count = 0; count < this.settings.claim_batch_size && canAdmit(); count++) {
-      const [claim] = await this.claimDue(at, 1); // NOSONAR -- Lease one occurrence before checking the next admission.
+      const [claim] = await this.claimDue(at, 1); // NOSONAR
       if (!claim) break;
-      if (await this.planClaim(claim, this.now())) created++; // NOSONAR -- Finish the leased occurrence before claiming another.
+      if (await this.planClaim(claim, this.now())) created++; // NOSONAR
     }
     return created;
   }

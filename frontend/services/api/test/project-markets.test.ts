@@ -322,7 +322,6 @@ describe('admission per market', () => {
       code: 'market_unsupported',
       details: { engine: 'chatgpt_search', country_code: 'JP', language_code: 'zh' },
     });
-    // Gemini's consumer surface lists no Portuguese.
     await expect(launch(['gemini_consumer'], brazil)).rejects.toMatchObject({
       status: 422,
       code: 'market_unsupported',

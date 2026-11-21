@@ -179,7 +179,6 @@ describe('committed API work at PostgreSQL', () => {
 
   it('does not mistake COMMIT in an aborted transaction for durable work', async () => {
     const wake = vi.fn(async () => {});
-    // PostgreSQL turns the COMMIT into ROLLBACK; the caller is told, and nothing wakes.
     await expect(
       observeCommittedWork(async () => {
         await db.transaction().execute(async (trx) => {

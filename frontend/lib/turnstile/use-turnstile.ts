@@ -2,7 +2,6 @@ import { useCallback, useRef, useState } from 'react';
 import { TURNSTILE_FLEXIBLE_MIN_WIDTH_PX, TURNSTILE_SCRIPT_URL } from '@/lib/config/turnstile';
 import { useTheme, type Theme } from '@/lib/theme/theme';
 
-/** Flexible fills its slot from 300px up, 65px tall; compact is 150px by 140px. */
 export type TurnstileSize = 'flexible' | 'compact';
 
 type TurnstileApi = {
@@ -60,8 +59,6 @@ export function useTurnstile(action: string) {
   const container = useCallback(
     (element: HTMLDivElement | null) => {
       if (!element) return;
-      // The container must fill its slot (`w-full`): an empty shrink-wrapped
-      // box measures 0px and would always pick the 150×140 compact widget.
       const fits = element.getBoundingClientRect().width >= TURNSTILE_FLEXIBLE_MIN_WIDTH_PX;
       const chosen: TurnstileSize = fits ? 'flexible' : 'compact';
       setSize(chosen);
@@ -78,7 +75,6 @@ export function useTurnstile(action: string) {
       loadTurnstile()
         .then((api) => {
           if (unmounted.signal.aborted) return;
-          // A widget error shows inside the widget, which retries by itself.
           const id = api.render(element, {
             sitekey,
             action,

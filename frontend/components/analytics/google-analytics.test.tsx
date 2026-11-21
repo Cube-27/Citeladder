@@ -9,10 +9,6 @@ import { mountCookieBannerFixture } from '@/test/cookie-banner-fixture';
 import { startGoogleAnalytics } from './google-analytics';
 import { ButtonLink, DemoButtonLink } from '../marketing/primitives/button';
 
-/**
- * The page's gtag commands as plain lists. gtag.js ignores pushed arrays, so
- * an array-shaped command is reported as such instead of matching.
- */
 function gtagCommands(): unknown[] {
   const dataLayer = (window as Window & { dataLayer?: unknown[] }).dataLayer ?? [];
   return dataLayer.map((entry) =>

@@ -165,7 +165,6 @@ export async function proposeDeclaration(
   if (problem) return { ok: false, text: problem };
   const shipped = shippedRevision(turn, state, document, actionId);
   if (!shipped.ok) return shipped;
-  // Checked after the last await: calls in one response run concurrently.
   if (state.proposals.some((proposal) => proposal.action_id === actionId))
     return {
       ok: false,

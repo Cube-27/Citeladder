@@ -431,13 +431,13 @@ export class VisibilityFixtures extends Fixtures {
     };
     const offsets = spec.mentionOffsets;
     for (const name of spec.brandMentions ?? []) {
-      await this.database // NOSONAR -- Fixture rows insert in a fixed order.
+      await this.database // NOSONAR
         .insertInto('brand_mentions')
         .values({ ...mention, id: randomUUID(), brand_name: name, first_offset: offsets?.[name] })
         .execute();
     }
     for (const name of spec.competitorMentions ?? []) {
-      await this.database // NOSONAR -- Fixture rows insert in a fixed order.
+      await this.database // NOSONAR
         .insertInto('competitor_mentions')
         .values({
           ...mention,
@@ -448,7 +448,7 @@ export class VisibilityFixtures extends Fixtures {
         .execute();
     }
     for (const [ordinal, citation] of citations.entries()) {
-      await this.database // NOSONAR -- Fixture rows insert in a fixed order.
+      await this.database // NOSONAR
         .insertInto('citations')
         .values({
           ...mention,
@@ -467,7 +467,7 @@ export class VisibilityFixtures extends Fixtures {
         .execute();
     }
     for (const [ordinal, source] of (spec.retrieved ?? []).entries()) {
-      await this.database // NOSONAR -- Fixture rows insert in a fixed order.
+      await this.database // NOSONAR
         .insertInto('retrieved_sources')
         .values({
           ...mention,
@@ -512,7 +512,7 @@ export class VisibilityFixtures extends Fixtures {
       })
       .execute();
     for (const [index, url] of (input.links ?? []).entries()) {
-      await this.database // NOSONAR -- Fixture rows insert in a fixed order.
+      await this.database // NOSONAR
         .insertInto('aio_entity_links')
         .values({
           id: randomUUID(),
@@ -695,10 +695,9 @@ export class VisibilityFixtures extends Fixtures {
   override async cleanup(): Promise<void> {
     const workspaces = this.tenants.map((tenant) => tenant.workspaceId);
     if (workspaces.length) {
-      // Observations and raw artifacts are append-only for the application role.
       await asOwner(async (owner) => {
         for (const table of TABLES_BY_WORKSPACE) {
-          await owner.deleteFrom(table).where('workspace_id', 'in', workspaces).execute(); // NOSONAR -- Child tables delete before their parents.
+          await owner.deleteFrom(table).where('workspace_id', 'in', workspaces).execute(); // NOSONAR
         }
         await owner
           .deleteFrom('raw_response_artifacts')

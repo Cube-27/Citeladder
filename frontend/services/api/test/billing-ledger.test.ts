@@ -191,7 +191,6 @@ describe('consumable hold module', () => {
     const t = await tenant(3);
     const subject = await t.task();
     const { reservationId } = await holdIn({ capability, subject, units: 3, at: t.at });
-    // The historical writer serializes these keys in this exact order.
     const historical = createHash('sha256')
       .update(
         `{"account_id":"${t.accountId}","audit_id":"${t.auditId}","capability_key":"${capability}","subject_kind":"audit","task_id":"${subject.id}","units":3}`,

@@ -187,25 +187,21 @@ export async function stubAuthedShell(
     route.fulfill({ json: providerCatalogFixture }),
   );
   for (const project of projects) {
-    await /* NOSONAR -- Stubs register in order; Playwright gives later routes precedence. */ page.route(
-      `**/api/v1/projects/${project.id}`,
-      (route) => route.fulfill({ json: project }),
+    await /* NOSONAR */ page.route(`**/api/v1/projects/${project.id}`, (route) =>
+      route.fulfill({ json: project }),
     );
   }
   await page.route('**/api/v1/billing/entitlement', (route) =>
     route.fulfill({ json: PERMITTED_ENTITLEMENT }),
   );
   for (const workspaceId of new Set(workspacesFor(projects).map((workspace) => workspace.id))) {
-    await /* NOSONAR -- Stubs register in order; Playwright gives later routes precedence. */ page.route(
-      `**/api/v1/workspaces/${workspaceId}/access`,
-      (route) => route.fulfill({ json: { status: 'active', expires_at: null } }),
+    await /* NOSONAR */ page.route(`**/api/v1/workspaces/${workspaceId}/access`, (route) =>
+      route.fulfill({ json: { status: 'active', expires_at: null } }),
     );
-    await /* NOSONAR -- Stubs register in order; Playwright gives later routes precedence. */ page.route(
-      `**/api/v1/workspaces/${workspaceId}/entitlements`,
-      (route) =>
-        route.fulfill({
-          json: permittedWorkspaceEntitlement(workspaceId, projects.length),
-        }),
+    await /* NOSONAR */ page.route(`**/api/v1/workspaces/${workspaceId}/entitlements`, (route) =>
+      route.fulfill({
+        json: permittedWorkspaceEntitlement(workspaceId, projects.length),
+      }),
     );
   }
   await page.route('**/api/v1/billing/usage', (route) =>
@@ -221,6 +217,6 @@ export async function stubAuthedShell(
     }),
   );
   for (const [pattern, body] of stubs) {
-    await page.route(pattern, (route) => route.fulfill({ json: body })); // NOSONAR -- Caller stubs register last so they take precedence over defaults.
+    await page.route(pattern, (route) => route.fulfill({ json: body })); // NOSONAR
   }
 }

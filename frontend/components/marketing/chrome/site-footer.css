@@ -12,9 +12,6 @@
   border-top: 1px solid var(--color-line);
 }
 
-/* A page that closes on the CTA band keeps one gap (the main column's foot)
-   between the band and the footer, with no hairline. `~`, not `+`: React
-   hoists the badges' image preloads between the main column and the footer. */
 .cl-site-main:has(section:last-child .cl-cta) ~ .cl-footer .cl-footer-top {
   padding-top: 0;
   border-top: 0;

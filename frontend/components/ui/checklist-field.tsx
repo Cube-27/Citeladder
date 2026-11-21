@@ -190,7 +190,7 @@ function EditRow<K extends string>({
       {editor.fields.map((field, index) => (
         <Input
           key={field.key}
-          // oxlint-disable-next-line jsx-a11y/no-autofocus -- Edit and Add explicitly reveal these fields.
+          // oxlint-disable-next-line jsx-a11y/no-autofocus
           autoFocus={index === 0}
           aria-label={field.label(item)}
           placeholder={field.placeholder}

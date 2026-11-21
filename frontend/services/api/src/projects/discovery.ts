@@ -106,8 +106,6 @@ export function createDiscovery(
   key: string,
 ) {
   return db.transaction().execute(async (trx) => {
-    // Locked before the replay lookup, so a concurrent retry of the same key
-    // sees the first request's row instead of spending a second admission.
     await subjectXactLock(trx, `brand-discovery-admission:${workspaceId}`);
     const existing = await trx
       .selectFrom('brand_discoveries')
@@ -317,9 +315,6 @@ export async function completeDiscovery(
     if (error instanceof ApiError) throw error;
     throw new ApiError(409, 'Confirmed domains must be public domains');
   }
-  // Competitors were found by discovery and reviewed by the reader; their
-  // websites are not fetched again here, so an unreachable site cannot block
-  // project creation. Domains are still validated as public domains above.
   return db.transaction().execute(async (trx) => {
     const row = await discoveryRow(trx, workspaceId, id, true);
     if (replay(row, key)) return completionView(row);

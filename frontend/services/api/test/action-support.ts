@@ -130,9 +130,9 @@ async function seed(db: Database, content: boolean): Promise<ActionSeed> {
         last_member_opportunity_ids: JSON.stringify(rows.map((row) => row.id)),
         opportunity_snapshot_id: snapshot.id,
       });
-      await trx.insertInto('actions').values(action).execute(); // NOSONAR -- One transaction: fixture statements run in order.
+      await trx.insertInto('actions').values(action).execute(); // NOSONAR
       for (const row of rows) {
-        await trx // NOSONAR -- One transaction: fixture statements run in order.
+        await trx // NOSONAR
           .updateTable('opportunities')
           .set({ action_id: action.id })
           .where('id', '=', row.id)

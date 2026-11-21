@@ -21,7 +21,6 @@ const entries = [
 ];
 
 beforeEach(() => {
-  // jsdom has no modal dialog; opening it only needs the `open` attribute.
   HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
     this.setAttribute('open', '');
   };

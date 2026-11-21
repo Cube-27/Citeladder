@@ -21,7 +21,6 @@ const commit = z
     JSON.parse(await fetchText(`https://api.github.com/repos/${REPOSITORY}/commits/main`)),
   ).sha;
 const source = `https://raw.githubusercontent.com/${REPOSITORY}/${commit}/${LIST_PATH}`;
-// Code-unit order, not locale order: the committed file sorts the same on every machine.
 const domains = [
   ...new Set(
     (await fetchText(source))

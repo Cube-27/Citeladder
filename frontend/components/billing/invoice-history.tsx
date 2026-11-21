@@ -76,9 +76,6 @@ export function InvoiceHistory({
   invoices: BillingInvoice[];
   read: InvoicesRead;
 }>) {
-  // The receipt belongs to a workspace, so the download names one: the
-  // endpoint is workspace-scoped and would otherwise fall back to whatever
-  // the ambient selection happened to be.
   const workspaceId = useActiveWorkspaceId();
   const [downloading, setDownloading] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState(false);

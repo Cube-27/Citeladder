@@ -23,7 +23,6 @@ function canonicalMailbox(email: RawBuilder<unknown>) {
   return sql<string>`(case when ${domain} = 'gmail.com' then replace(${local}, '.', '') else ${local} end || '@' || ${domain})`;
 }
 
-/** Caller owns commit; account row serializes both stacks' baseline issuance. */
 export async function ensureWorkspaceBilling(
   db: Database,
   workspaceId: string,
@@ -65,9 +64,6 @@ export async function ensureWorkspaceBilling(
       .where('source_ref', '=', sourceRef(PUBLIC_SIGNUP))
       .executeTakeFirst();
     if (existing) return;
-    // The trial starts when the person creates their workspace. One mailbox has
-    // one trial: a later workspace, or an account under an alias of the same
-    // mailbox, inherits the exact window of the first.
     const { mailbox } = await db
       .selectNoFrom(canonicalMailbox(sql.val(user.email)).as('mailbox'))
       .executeTakeFirstOrThrow();
@@ -143,8 +139,6 @@ export async function ensureWorkspaceBilling(
 export function fullAccessSpecs(allowance: number) {
   if (!Number.isSafeInteger(allowance) || allowance < 1)
     throw new Error('invalid_development_allowance');
-  // The checkout allow-list (B2) and operator controls (BL9) are explicit
-  // operator grants, never part of access.
   const explicit = new Set<string>([
     policy.entitlements.billing_checkout,
     policy.entitlements.operator_controls,
@@ -263,7 +257,6 @@ export async function provisionWorkspaceBilling(
     }
     return { workspace_id: workspaceId, account_id: account.id };
   });
-  // Grants committed under the capacity lock; the runtime follows in its own order.
   if (input.apply === true) await refreshRuntime(db, workspaceId);
   return provisioned;
 }

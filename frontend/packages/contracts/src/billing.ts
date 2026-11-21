@@ -3,10 +3,6 @@ import { z } from 'zod';
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 
-// ---------------------------------------------------------------------------
-// Billing responses never expose provider ids, provider plan ids, or secrets.
-// ---------------------------------------------------------------------------
-
 export const planCatalogKeySchema = z.enum(['tier_1', 'tier_2', 'tier_3', 'enterprise']);
 export type PlanCatalogKey = z.infer<typeof planCatalogKeySchema>;
 export const selfServePlanKeySchema = planCatalogKeySchema.exclude(['enterprise']);
@@ -48,11 +44,6 @@ const counterCapabilityTypeSchema = z.enum([
   'counter.consumable',
   'counter.rate',
 ]);
-/**
- * `limit_state` is the ONLY authority for what a null aggregate means: the
- * backend never uses null to mean both "unlimited" and "unresolved". The UI
- * must branch on this, never on nullability.
- */
 const limitStateSchema = z.enum(['finite', 'unlimited', 'unknown']);
 const activationKindSchema = z.enum(['base', 'addon', 'topup', 'upgrade']);
 const activationStatusSchema = z.enum(['pending', 'activated', 'failed', 'abandoned']);
@@ -261,11 +252,6 @@ const trialGrantSummarySchema = responseObject({
   exhausted: z.boolean(),
 });
 
-/**
- * The resolved account entitlement. There is deliberately no
- * `funded_execution_allowed` flag — funded admission is an enforcement-time
- * decision, so the UI must never present one.
- */
 export const billingEntitlementSchema = responseObject({
   billing_account_id: uuid(),
   status: entitlementStatusSchema,
@@ -366,9 +352,6 @@ export const providerConnectionStatesSchema = responseObject({
   providers: z.array(providerConnectionStateEntrySchema),
 });
 
-// The small PUBLIC checkout-init contract: the browser loads the adapter-named
-// SDK with `public_key` and `reference`. Only public initialization fields appear here:
-// never a secret, an amount, or a private price reference.
 export const subscriptionCheckoutSchema = responseObject({
   activation_id: uuid(),
   provider: z.string(),

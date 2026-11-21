@@ -24,8 +24,6 @@ const email = `${prefix}@example.test`;
 const password = 'password123';
 const createdUsers: string[] = [];
 const decision = { terms_revision: policy.auth.terms_revision, accept_terms: true };
-// Sign-up also carries a Turnstile token: the dummy one Cloudflare's always-pass
-// test secret accepts, which a test environment uses when none is configured.
 const signUp = { ...decision, turnstile_token: 'XXXX.DUMMY.TOKEN.XXXX' };
 let cookie: string;
 let userId: string;
@@ -473,7 +471,6 @@ describe('password auth routes', () => {
     const link = async (secret: string) =>
       (await call('/auth/link-google', { password: secret }, await sessionOf(linker, 0), limited))
         .status;
-    // A mistyped password is a 400: a 401 would sign the person out in the app.
     expect(await link('incorrect')).toBe(400);
     expect(await link('incorrect')).toBe(400);
     expect(await link(password)).toBe(429);

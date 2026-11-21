@@ -56,7 +56,6 @@ export async function billingAccountId(db: Database, workspaceId: string) {
   return row?.id;
 }
 
-/** The persisted audit ledger hashes compact JSON with sorted ASCII keys. */
 function auditFingerprint(value: Record<string, string | number>) {
   return digest(Object.fromEntries(Object.entries(value).sort(([a], [b]) => compareText(a, b))));
 }
@@ -118,8 +117,6 @@ function allocate(
 }
 
 type KeyedHold = Hold & { key: string };
-// Rows per batched ledger statement, well under PostgreSQL's bind-parameter limit;
-// chunks run in sequence because they share the caller's transaction.
 const CHUNK = 500;
 
 async function missingSubject(db: Database, subjects: readonly Subject[]) {
@@ -128,7 +125,7 @@ async function missingSubject(db: Database, subjects: readonly Subject[]) {
     const found = new Set<string>();
     for (const chunk of chunksOf(tasks, CHUNK)) {
       const ids = chunk.map((task) => task.id);
-      const rows = await db // NOSONAR -- chunks share the transaction and its lock.
+      const rows = await db // NOSONAR
         .selectFrom('audit_tasks')
         .select(['id', 'audit_id', 'workspace_id'])
         .where('id', 'in', ids)
@@ -139,14 +136,10 @@ async function missingSubject(db: Database, subjects: readonly Subject[]) {
       return true;
   }
   for (const subject of subjects)
-    if (subject.kind !== 'audit' && !(await verifySubject(db, subject))) return true; // NOSONAR -- Stops at the first unverifiable subject.
+    if (subject.kind !== 'audit' && !(await verifySubject(db, subject))) return true; // NOSONAR
   return false;
 }
 
-/**
- * Holds one request for the subject's workspace account. Callers pass their
- * transaction and commit the hold before network I/O.
- */
 export async function hold(
   db: Database,
   request: Hold & { capability: string; at: Date },
@@ -179,7 +172,6 @@ export async function holdAll(
   if (!accountId) throw new LedgerError('account_not_found');
   if (!isNonEmpty(keyed)) return { accountId, reservationIds: [] };
   await capacityLock(db, accountId);
-  // After the lock, so a project deleted under it is never reserved against.
   if (
     await missingSubject(
       db,
@@ -243,7 +235,7 @@ async function reserveFresh(
       rows.push(reservationRow(one, allocation, index, context));
   }
   for (const chunk of chunksOf(rows, CHUNK))
-    await db.insertInto('consumable_ledger').values(chunk).execute(); // NOSONAR -- chunks share the transaction and its lock.
+    await db.insertInto('consumable_ledger').values(chunk).execute(); // NOSONAR
   return ids;
 }
 
@@ -276,11 +268,6 @@ export async function grantBalances(
   );
 }
 
-/**
- * Units of a consumable capability the account can hold now, and how many
- * selected grants fund it. It takes the capacity lock a hold takes, so a
- * hold sized from it in the same transaction draws against exactly this.
- */
 export async function remaining(
   db: Database,
   request: { accountId: string; workspaceId: string; capability: string; at: Date },
@@ -329,7 +316,7 @@ async function priorHolds(
     holds.map((one) => one.key),
     CHUNK,
   ))
-    for (const row of await db // NOSONAR -- chunks share the transaction and its lock.
+    for (const row of await db // NOSONAR
       .selectFrom('consumable_ledger')
       .selectAll()
       .where('billing_account_id', '=', accountId)
@@ -344,7 +331,6 @@ async function priorHolds(
   return priors;
 }
 
-/** The capability's grants locked in UUID order and returned in draw (expiry) order. */
 async function lockedDrawOrder(
   db: Database,
   {
@@ -360,7 +346,6 @@ async function lockedDrawOrder(
       ?.type !== 'counter.consumable'
   )
     throw new LedgerError('capability_not_consumable');
-  // Lock UUID order, allocate expiry order.
   const grantIds = candidates.map((grant) => grant.id).sort((a, b) => a.localeCompare(b));
   if (grantIds.length)
     await db

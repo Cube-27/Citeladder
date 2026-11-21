@@ -70,7 +70,6 @@ function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
     if (!crawl) throw notFound('Crawl');
     if (isTerminal(crawl)) return;
     const now = new Date();
-    // In-flight page commits hold the crawl share-locked, so this count is final.
     const analyzed = await analyzedPageCount(trx, crawl);
     await trx
       .updateTable('site_crawls')
@@ -102,8 +101,6 @@ function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
         error_code: 'cancelled',
       })
       .where('workspace_id', '=', workspaceId)
-      // A row another transaction holds (a claim, a heartbeat) is skipped, not
-      // waited on: its worker cancels it on the stopped crawl and recounts.
       .where('id', 'in', (eb) =>
         eb
           .selectFrom('site_crawl_tasks')
@@ -116,7 +113,6 @@ function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
       )
       .execute();
     await persistTerminalCounters(trx, { ...crawl, status: 'cancelled' });
-    // Task mutation precedes capacity/account locks taken by reservation release.
     await settleCrawlFetches(trx, crawl);
     await recordCrawlEvent(trx, crawl, 'crawl.cancelled', 'crawl cancelled', {});
   });

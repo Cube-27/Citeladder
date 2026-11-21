@@ -45,7 +45,6 @@ export async function endInterrupted(
   run: Run,
   settleFailed: (db: Database, run: Run) => Promise<void>,
 ) {
-  // Ledger settlement and terminal writes share one ordered transaction.
   await settleFailed(db, run);
   await db
     .updateTable('agent_runs')
@@ -137,7 +136,7 @@ export class AgentQueue {
         .forUpdate()
         .skipLocked()
         .execute();
-      for (const run of rows) await endInterrupted(trx, run, settleFailed); // NOSONAR -- One transaction connection: the runs end in order.
+      for (const run of rows) await endInterrupted(trx, run, settleFailed); // NOSONAR
       return rows.length;
     });
   }

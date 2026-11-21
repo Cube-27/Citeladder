@@ -25,7 +25,7 @@ export function ProductFrame({
   return (
     <figure className={cn('cl-frame', `cl-frame--${fit}`, hero && 'cl-frame--hero')}>
       <div className="cl-frame-card">
-        <div // NOSONAR -- a live component screen shown as one picture, named by its label; <img> cannot hold it
+        <div // NOSONAR
           className="cl-frame-well"
           role={label ? 'img' : undefined}
           aria-label={label}

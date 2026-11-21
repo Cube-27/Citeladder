@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 
 const EMPTY_VALUE = '__citeladder_empty_value__';
 
-/** An empty value with no empty option shows the placeholder (Radix's `''`). */
 function shownValue(
   value: string | undefined,
   options: readonly { value: string }[],

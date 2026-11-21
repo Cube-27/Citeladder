@@ -110,7 +110,7 @@ export const preparedChanges = {
       switch (payload.kind) {
         case 'status': {
           for (const group of payload.groups)
-            await /* NOSONAR -- One transaction: groups apply in order. */ setPromptStatuses(
+            await /* NOSONAR */ setPromptStatuses(
               trx,
               actor,
               change.projectId,

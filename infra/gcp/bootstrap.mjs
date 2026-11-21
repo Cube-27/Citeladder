@@ -74,7 +74,7 @@ export function gcloud(args, mode) {
     quiet: 'pipe',
     run: 'inherit',
   }[mode];
-  const result = spawnSync('gcloud', args, { encoding: 'utf8', stdio }); // NOSONAR: the operator's gcloud from PATH.
+  const result = spawnSync('gcloud', args, { encoding: 'utf8', stdio }); // NOSONAR
   if (mode === 'exists') return result.status === 0;
   if (result.status !== 0) {
     if (mode === 'quiet' && result.stderr) process.stderr.write(result.stderr);
@@ -106,8 +106,8 @@ async function setProjectLabels({ id, run, fetch, wait }) {
     { method: 'PATCH', body: JSON.stringify({ labels }) },
   );
   for (let attempt = 0; !operation.done && attempt < 30; attempt++) {
-    await wait(1000); // NOSONAR -- polls one operation, once a second.
-    operation = await call(`${RESOURCE_MANAGER}/${operation.name}`, { method: 'GET' }); // NOSONAR -- as above.
+    await wait(1000); // NOSONAR
+    operation = await call(`${RESOURCE_MANAGER}/${operation.name}`, { method: 'GET' }); // NOSONAR
   }
   if (!operation.done)
     throw new BootstrapError(`Timed out while applying labels to project ${id}.`);
@@ -273,8 +273,6 @@ export async function bootstrap(
     'quiet',
   );
 
-  // The database VM's only project role, granted here because the deployer
-  // cannot edit project IAM. Terraform adopts the account (identity.tf).
   const dbAccount = `citeladder-db@${projectId}.iam.gserviceaccount.com`;
   if (!run(['iam', 'service-accounts', 'describe', dbAccount, project], 'exists')) {
     run(
@@ -408,8 +406,6 @@ if (import.meta.main) {
         region: { type: 'string', default: 'us-central1' },
         zone: { type: 'string', default: 'us-central1-a' },
         repository: { type: 'string', default: 'Cube-27/Citeladder' },
-        // GitHub's immutable repository ID: a deleted and re-created repository
-        // with the same name cannot inherit the trust.
         'repository-id': { type: 'string', default: '1353174067' },
         environment: { type: 'string', default: 'gcp-demo' },
       },

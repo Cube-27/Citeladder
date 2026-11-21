@@ -98,8 +98,6 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
   const projectId = detail.chat.project_id;
   const commands = useComposerCommands({ workspaceId, projectId });
   const mutation = useMutation(agentMutations.sendMessage({ workspaceId, projectId }));
-  // The composer as it is when a send is accepted, not as it was when sent:
-  // typing during the round trip must survive the acceptance.
   const composer = useRef({ draft, mentions: commands.mentions, pastes: commands.pastes.items });
   useEffect(() => {
     composer.current = { draft, mentions: commands.mentions, pastes: commands.pastes.items };

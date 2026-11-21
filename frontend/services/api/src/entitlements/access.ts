@@ -38,7 +38,6 @@ function accessOf(state: AccountState | null, at: Date): AccessResult {
   const selected = state.grants.filter((grant) =>
     state.selected.some((row) => row.id === grant.id),
   );
-  // New public accounts need explicit primary access; supplements cannot restore it.
   const authority =
     selected.find(
       (grant) =>
@@ -141,11 +140,6 @@ export function requireFlag(db: Database, workspaceId: string, key: GatedFlag): 
   return new WorkspaceEntitlements(db, workspaceId).requireFlag(key);
 }
 
-/**
- * Whether the workspace holds the non-public `operator_controls` grant (BL9):
- * the operator's own workspace, granted explicitly with `billing:admin grant`.
- * It never extends to another workspace and is never part of bootstrap access.
- */
 export function hasOperatorControls(db: Database, workspaceId: string): Promise<boolean> {
   return new WorkspaceEntitlements(db, workspaceId).grants(policy.entitlements.operator_controls);
 }

@@ -51,7 +51,7 @@ export function StackedBarChart({
       <div className="flex min-w-0 flex-col gap-4">
         <div
           ref={plotRef}
-          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- no native element names a plot as one group
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
           role="group"
           aria-label={`${label}. Focus the chart and use the arrow keys to read each bar.`}
           className="w-full"

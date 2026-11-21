@@ -44,9 +44,6 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
 
   const value = useMemo<EntitlementContextValue>(() => {
     const data = entitlementQuery.isError ? undefined : entitlementQuery.data;
-    // A cached payload survives the query being disabled, so a reader who has
-    // lost `manage_billing` would keep seeing the finances they may no longer
-    // read. Gate on the capability, not just on the fetch.
     const usage = canReadBilling && usageQuery.data?.status === 'resolved' ? usageQuery.data : null;
     if (data?.status !== 'resolved') {
       return {

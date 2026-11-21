@@ -59,12 +59,6 @@
   flex-direction: column;
 }
 
-/* The fit: this box is the query container and its screen scales to
-   min(1, container width / screen width). `tan(atan2(a, b))` is a / b as a
-   plain number (CSS cannot divide two lengths yet). A transform leaves
-   layout alone, so negative margins shrink the screen's layout box to its
-   scaled size and the well's height follows: no script, no layout shift. */
-
 .cl-frame--scale .cl-frame-screen {
   display: flex;
   justify-content: center;

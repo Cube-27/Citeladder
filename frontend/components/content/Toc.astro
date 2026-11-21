@@ -6,7 +6,6 @@ interface Props {
   title?: string;
 }
 const { items, title = 'On this page' } = Astro.props;
-// Word joiners (zero-width, no glyph) hold the hyphen to both its neighbours.
 const unbroken = (label: string) =>
   label.replace(/(?<=\p{L}|\p{N})-(?=\p{L}|\p{N})/gu, '\u2060-\u2060');
 ---

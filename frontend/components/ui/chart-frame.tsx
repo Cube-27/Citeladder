@@ -112,7 +112,6 @@ export function ChartKey({
   );
 }
 
-/** The tooltip's width (`w-54`), its gap from the crosshair and its least inset from the frame. */
 const TIP_WIDTH = 216;
 const TIP_GAP = 16;
 const TIP_INSET = 8;

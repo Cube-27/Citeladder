@@ -121,8 +121,6 @@ export function sharedReads(db: Database): ReadTool[] {
               maxChars,
             );
           let data = await dispatch();
-          // Let the existing owner construct a smaller page and its exact
-          // continuation cursor. Never discard rows behind a later cursor.
           const limitSchema = fields.limit;
           if (limitSchema && Array.isArray(data.items)) {
             let limit: number | null = data.items.length;
@@ -130,7 +128,7 @@ export function sharedReads(db: Database): ReadTool[] {
               limit = smallerLimit(limitSchema, limit);
               if (limit === null) break;
               input.limit = limit;
-              data = await dispatch(); // NOSONAR -- Each smaller page depends on the previous result's size.
+              data = await dispatch(); // NOSONAR
             }
           }
           const result = outcome(data);

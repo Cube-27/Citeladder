@@ -145,7 +145,6 @@ const EDIT_DESCRIPTION =
 const SUGGEST_DESCRIPTION =
   'Propose changes to a page document for the person to apply or dismiss, instead of changing it: each names old_string (exact text matching once), an SEO field, or neither for the whole page, with new_string, or needs_input when a fact is missing. All are staged or none are. They are saved together with your reply.';
 
-/** The model's full tool list: the reads plus the built-ins, sorted, so the cached prefix is stable. */
 export function agentToolList(
   registry: ToolRegistry,
   catalog: SkillCatalog,

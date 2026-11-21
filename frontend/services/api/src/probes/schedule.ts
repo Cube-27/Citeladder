@@ -23,8 +23,6 @@ export function setProbeSchedule(
   runtime: AuditRuntime = auditRuntime(),
 ) {
   return inTransaction(db, async (trx) => {
-    // The project row serializes schedule writes, so concurrent requests keep
-    // one schedule; NO KEY UPDATE leaves the scheduler's key-share lock free.
     await trx
       .selectFrom('projects')
       .select('id')
@@ -44,7 +42,7 @@ async function applySchedule(
 ) {
   const existing = await probeSchedules(db, scope).select('id').execute();
   if (input.cadence === null) {
-    for (const schedule of existing) await deleteSchedule(db, scope, schedule.id); // NOSONAR -- A project holds at most a few, removed in order.
+    for (const schedule of existing) await deleteSchedule(db, scope, schedule.id); // NOSONAR
     return;
   }
   const plan = runnable(await probePlan(db, scope, { runtime, at: new Date() }));

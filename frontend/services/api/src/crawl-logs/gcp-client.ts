@@ -8,10 +8,6 @@ export function crawlLogReaderEmail(env: SettingSource = process.env) {
   return String(resolveSettingSpec(policy.settings.crawl_log_reader_email, env)).trim();
 }
 
-/**
- * What a failed call means for the customer's subscription. Failures minting
- * CiteLadder's own token are `unavailable`: they never blame the customer.
- */
 export type GcpFailure = 'permission_denied' | 'not_found' | 'unavailable' | 'invalid';
 export class GcpError extends Error {
   readonly failure: GcpFailure;
@@ -52,7 +48,6 @@ const METADATA_TOKEN =
   'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token';
 const PUBSUB_SCOPE = 'https://www.googleapis.com/auth/pubsub';
 
-/** 401 rejects CiteLadder's own token, so only 403 means the customer withheld access. */
 function failureFor(status: number): GcpFailure {
   if (status === 403) return 'permission_denied';
   if (status === 404) return 'not_found';
@@ -82,10 +77,6 @@ export function pubSubReader(options: {
   const settings = crawlLogs.gcp_pull;
   let cached: { token: string; refreshAt: number } | null = null;
 
-  /**
-   * Every transport failure, a timeout included, is `unavailable`: only a
-   * completed empty pull may count as a drain.
-   */
   async function call(url: string, init: RequestInit, timeoutSeconds: number) {
     try {
       return await send(url, {
@@ -161,7 +152,6 @@ export function pubSubReader(options: {
   return {
     subscription: (name) => pubsub(subscriptionSchema, name, '', undefined),
     async pull(name, max) {
-      // Pub/Sub may hold a pull open while it waits for messages, hence the longer bound.
       const body = await pubsub(
         pullSchema,
         name,

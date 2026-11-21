@@ -33,7 +33,6 @@ async function withinBudget(spend: () => Promise<void>): Promise<boolean> {
   }
 }
 
-/** Uniform budgets run for absent and present addresses before lookup/provider work. */
 export async function requestChallenge(
   db: Database,
   config: ServiceConfig,
@@ -66,8 +65,6 @@ export async function requestChallenge(
     const now = new Date();
     if (current && now.getTime() - current.created_at.getTime() < cfg.cooldown_seconds * 1000)
       return null;
-    // The shared daily mail budget is spent only by mail that will be sent, so
-    // requests for unknown or ineligible addresses cannot exhaust it.
     const sendable = await withinBudget(() =>
       spendBudget(trx, budget('mail_global_daily'), GLOBAL_MAIL_SUBJECT),
     );
@@ -95,8 +92,6 @@ export async function requestChallenge(
     await recordSecurityEvent(trx, 'auth.challenge_issued', user.id);
     return { ...row, token };
   });
-  // Equalize the bounded provider budget for eligible and ineligible recipients.
-  // Keep delivery in the request: no plaintext queue or post-response CPU assumption.
   await Promise.all([
     deliverChallenge(config, issued, purpose, returnTo),
     delay(config.auth.mailKey ? config.auth.mailTimeoutMs : 0),
@@ -130,12 +125,6 @@ async function deliverChallenge(
   });
 }
 
-/**
- * Checks an account password against its address's failure budget, as sign-in
- * does: the attempt spends a unit before hashing, so concurrent guesses cannot
- * outrun the budget and an exhausted address refuses even the correct password
- * (429); a match hands its unit and earlier failures back.
- */
 export async function verifyBudgetedPassword(
   db: Database,
   config: ServiceConfig,
@@ -203,7 +192,6 @@ export async function consumeChallenge(
       current.hashed_password !== user.hashed_password
     )
       throw invalid();
-    // Recovery cannot activate a provider subject attached before mailbox proof.
     if (replacement && requiresEmailVerification(current))
       await trx.deleteFrom('user_identities').where('user_id', '=', current.id).execute();
     await trx

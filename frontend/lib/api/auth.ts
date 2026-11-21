@@ -144,7 +144,6 @@ export const authQueries = {
       queryKey: queryKeys.auth.me(),
       queryFn: ({ signal }) => authApi.me({ signal, timeoutMs: getBootstrapReadTimeoutMs() }),
     }),
-  /** The published Terms revision; it changes only with a deployment. */
   policies: () =>
     queryOptions({
       queryKey: queryKeys.auth.policies(),

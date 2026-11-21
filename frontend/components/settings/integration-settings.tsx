@@ -39,7 +39,6 @@ function groupIntoGrants(connections: IntegrationConnection[]): GrantModel[] {
   }
   const grants: GrantModel[] = [];
   for (const [grantId, grouped] of byGrant) {
-    // Sorted in place: the group is this function's own, and sorting keeps it non-empty.
     const sorted = grouped.sort((a, b) => PROVIDER_ORDER[a.provider] - PROVIDER_ORDER[b.provider]);
     const [first] = sorted;
     grants.push({
@@ -89,9 +88,6 @@ export function IntegrationSettings() {
   useEffect(() => {
     if (!hasCallbackParams) return;
     if (notice.connected) void refreshIntegrations(queryClient);
-    // Shallow URL cleanup, NOT a redirect: the params have already been captured
-    // into `notice`, so this only rewrites the address bar. A route navigation
-    // would re-render every mounted settings panel for nothing.
     window.history.replaceState(null, '', '/settings?tab=integrations');
   }, [hasCallbackParams, notice.connected, queryClient]);
 

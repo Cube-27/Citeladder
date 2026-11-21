@@ -283,9 +283,6 @@ export const siteHealthRoutes = [
     response: siteIssuesPageSchema,
     async handle({ c, db }, { path, query }) {
       const workspaceId = c.get('workspace').workspaceId;
-      // Read the status first: a crawl that was terminal before the page read
-      // has published its issues, so the page cannot hold pre-publication
-      // rows. One still running (or finalizing mid-read) is not revalidated.
       const settled = isTerminal(await loadCrawl(db, workspaceId, path.crawl_id));
       const page = await readIssues(db, workspaceId, path.crawl_id, query);
       return settled ? revalidatable(c, page) : page;

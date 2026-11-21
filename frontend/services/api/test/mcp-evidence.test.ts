@@ -307,7 +307,6 @@ it('pages prompts stably while context includes only active prompts and foreign 
   const set = await promptSet(db, tenant.projectId);
   const nets = await topic(db, tenant.projectId, 'Golf nets', 'Home practice');
   const kicking = await topic(db, tenant.projectId, 'Kicking nets');
-  // Distinct instants: same-millisecond fixtures would page in random-UUID order.
   const at = (offset: number) => new Date(Date.UTC(2026, 0, 1) + offset);
   const first = await prompt(db, set, 'Acme first', { createdAt: at(0), topicId: nets });
   const second = await prompt(db, set, 'Acme second', { createdAt: at(1) });

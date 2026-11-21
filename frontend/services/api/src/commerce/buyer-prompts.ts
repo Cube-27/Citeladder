@@ -278,11 +278,6 @@ async function commerceSet(trx: Database, scope: CommerceScope, now: Date) {
   );
 }
 
-/**
- * The target's Commerce topic, or null when a brand topic holds its name:
- * names are unique per project, and a Commerce prompt filed under a brand
- * topic would change that topic's brand metrics.
- */
 async function commerceTopic(
   trx: Database,
   scope: CommerceScope,
@@ -303,7 +298,6 @@ async function commerceTopic(
       .executeTakeFirst();
     return brand ? null : named.id;
   }
-  // Every topic writer holds the project lock, so the name is still free.
   const created = await trx
     .insertInto('topics')
     .values({
@@ -345,7 +339,6 @@ async function insertBatch(
       ...promptLabels(draft, themeName),
       intent: 'comparison',
       persona: draft.context,
-      // The comparison cohort is the shared branded one: its prompts stay out of organic metrics.
       cohort: draft.branded ? 'comparison' : 'commerce',
       enabled: false,
       generation_evidence: batch.evidence,
@@ -381,8 +374,7 @@ function persist(
 ) {
   return db.transaction().execute(async (trx) => {
     const contexts = [];
-    for (const batch of batches) contexts.push(await targetContext(trx, scope, batch.target)); // NOSONAR -- One transaction: statements run in order.
-    // The project lock first, as every prompt writer: the set and topics below are created under it.
+    for (const batch of batches) contexts.push(await targetContext(trx, scope, batch.target)); // NOSONAR
     await acquireProjectLock(trx, scope.projectId);
     const prior = keyed ? await replayGeneration(trx, scope, keyed.input, keyed.key) : null;
     if (prior) return prior;
@@ -395,18 +387,9 @@ function persist(
         .slice(0, policy.prompts.topic_name_max_chars)
         .trim();
       if (!name) throw unavailable();
-      const topic = await commerceTopic(trx, scope, name, now); // NOSONAR -- One transaction: statements run in order.
-      ids.push(
-        ...(await /* NOSONAR -- One transaction; ids keep generation order. */ insertBatch(
-          trx,
-          scope,
-          { set, topic, name },
-          batch,
-          now,
-        )),
-      );
+      const topic = await commerceTopic(trx, scope, name, now); // NOSONAR
+      ids.push(...(await /* NOSONAR */ insertBatch(trx, scope, { set, topic, name }, batch, now)));
     }
-    // Same-timestamp rows read back in random-id order; return generation order.
     const views = new Map((await buyerPrompts(trx, scope)).map((row) => [row.id, row]));
     return ids.flatMap((id) => views.get(id) ?? []);
   });
@@ -506,7 +489,7 @@ async function requestContexts(db: Database, scope: CommerceScope, input: Genera
   if (!input.hero && input.targets.some((target) => target.kind === 'product'))
     throw heroRequired();
   const contexts = [];
-  for (const target of input.targets) contexts.push(await targetContext(db, scope, target)); // NOSONAR -- The first unavailable target, in request order, is the error.
+  for (const target of input.targets) contexts.push(await targetContext(db, scope, target)); // NOSONAR
   return contexts;
 }
 
@@ -527,13 +510,10 @@ export async function generateBuyerPrompts(
   }: GenerateOptions = {},
 ) {
   const contexts = await requestContexts(db, scope, input);
-  // Targets are authorized before revealing whether the key was used.
   if (idempotencyKey) {
     const prior = await replayGeneration(db, scope, input, idempotencyKey);
     if (prior) return prior;
   }
-  // Skip already tracked texts so a repeat generation is not a 409; the
-  // unique normalized hash still guards writes that race this read.
   const tracked = await trackedHashes(db, scope);
   const gateway = meter.gateway(createGateway(gatewayFactory), 'commerce_buyer_prompts');
   await spendBudget(db, budget('agent_provider_call', process.env), scope.workspaceId, {

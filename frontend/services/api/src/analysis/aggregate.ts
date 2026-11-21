@@ -89,7 +89,6 @@ function citationAggregates(rows: AggregateExecution[]) {
       domains.set(domain, value);
     }
   }
-  // Stable insertion order resolves annotation-count ties, as Counter.most_common does.
   const top = [...domains].sort(([, a], [, b]) => b.annotations - a.annotations).slice(0, 25);
   const total = sum([...domains.values()].map((v) => v.annotations)),
     shown = sum(top.map(([, v]) => v.annotations));

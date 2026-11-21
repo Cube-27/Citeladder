@@ -6,11 +6,6 @@ import { workspaceAccount } from './purchases.ts';
 import { refuse } from './refusals.ts';
 import { configured } from './razorpay.ts';
 
-/**
- * When a held cancellation goes to the provider: the configured lead before
- * the period ends (B46). Razorpay cannot undo a cancellation it has received,
- * so until then the customer may resume.
- */
 export function cancellationSendAt(periodEnd: Date, config: ServiceConfig) {
   return new Date(periodEnd.getTime() - config.billing.cancellationLeadSeconds * 1000);
 }

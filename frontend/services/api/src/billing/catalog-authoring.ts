@@ -140,7 +140,6 @@ const authoringSchema = z.strictObject({
     .default(null),
 });
 export type AuthoredCatalog = z.infer<typeof authoringSchema>;
-/** Checksum over compact, key-sorted, ASCII-escaped catalog JSON. */
 export function catalogDigest(payload: AuthoredCatalog) {
   const keys = new Set<string>();
   JSON.stringify(payload, (key, value: unknown) => {
@@ -318,7 +317,6 @@ export function launchCatalog(options: {
     provider_price_ref: '',
   });
   const plans: unknown[] = cfg.plans.map((p) => {
-    // A paid primary bundle displaces the trial, so it must carry access itself.
     const bundle = [
       { key: 'workspace_access', value: 1 },
       { key: 'team_members', value: 1 },
@@ -401,8 +399,6 @@ export function launchCatalog(options: {
   const items = cfg.items.map((i) => {
     const terms = (minor: number, bundle: readonly { key: string; value: number }[]) => ({
       usd_minor: minor,
-      // India prices exist under the same GST condition as plans', so an item
-      // never reads available in a region that cannot quote it.
       regional_prices: {
         international: { currency: 'USD', amount_minor: minor, tax_behavior: 'inclusive' },
         ...(gst

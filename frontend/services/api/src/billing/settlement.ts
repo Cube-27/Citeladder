@@ -142,7 +142,6 @@ async function settlePack(
   );
   const specs = item?.modes.byok?.grants;
   if (!item || !specs?.length) refuse('grant_bundle_missing');
-  // The receipt stands whatever happens to the grant: money was collected.
   await recordPayment(db, pending, payment, quote, pending.tax_snapshot, null, item.name);
   if (
     !base?.current_period_start ||
@@ -204,8 +203,6 @@ export async function settlePending(
     .forUpdate()
     .executeTakeFirstOrThrow();
   const ref = verifiedReference(pending, mode, evidence);
-  // An order captured after its checkout was abandoned still settles: the
-  // customer paid. An abandoned subscription was cancelled at the provider.
   const late = pending.status === 'abandoned' && evidence.kind === 'payment' && evidence.payment;
   if (pending.status !== 'pending' && !late) return;
   if (providerFailed(evidence)) {
@@ -409,7 +406,6 @@ export async function settleSubscription(
     .forUpdate()
     .executeTakeFirstOrThrow();
   if (event.id !== sub.external_subscription_id) refuse('provider_reference_mismatch');
-  // bigint arrives as a string; a Unix-second version is a safe integer.
   if (event.version < Number(sub.provider_state_version)) return;
   if (!sub.is_current && sub.ended_at) return;
   const { terms, renewal, lapsed } = effectiveTerms(sub, event);
@@ -426,8 +422,6 @@ export async function settleSubscription(
       ended_at: endedAt,
       current_period_start: event.start,
       current_period_end: end,
-      // A committed cancellation intent survives evidence the provider has not
-      // caught up with; the subscription sweep retries the provider call.
       cancel_at_period_end:
         event.cancelAtEnd || terminalStates.has(event.status) || sub.cancel_at_period_end,
       ...followUps(sub, event, status, now),
@@ -463,7 +457,6 @@ async function settleUpgrade(
     .object({ subscription_id: z.uuid(), effective_at: z.string(), terms: frozenTermsSchema })
     .parse(pending.change_terms);
   const quote = resolvedQuoteSchema.parse(pending.quote);
-  // The receipt stands whatever happens to the grant: money was collected.
   await recordPayment(
     db,
     pending,

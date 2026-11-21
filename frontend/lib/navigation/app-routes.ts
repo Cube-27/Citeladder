@@ -199,8 +199,6 @@ export const APP_ROUTES = [
     }),
     nav: [listed('Keyword research', 'searchIntelligence', 'search')],
   }),
-  // Commerce: Shopping, then the Products table. Shopping is declared before
-  // `/products/:targetId`, which would otherwise match it.
   page({
     path: '/products/overview',
     title: 'Shopping',
@@ -334,7 +332,6 @@ export const APP_ROUTES = [
     }),
     nav: [listed('Prompts', 'prompts', 'tracking')],
   }),
-  // Before `/prompts/:promptId`, so `build` is never read as a prompt id.
   page({
     path: '/prompts/build',
     title: 'Prompt builder',
@@ -501,7 +498,6 @@ export function routeWidth(pathname: string): NonNullable<AppRouteRecord['width'
   return sectionRoute(pathname)?.width ?? 'full';
 }
 
-/** The listed page a missing address most likely belongs to, when it is not Overview itself. */
 export function recoveryRoute(
   pathname: string,
 ): Readonly<{ title: string; path: string }> | undefined {

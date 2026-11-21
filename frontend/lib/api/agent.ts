@@ -333,12 +333,6 @@ const refreshAgentChatLists = (client: QueryClient, projectId: string) =>
   client.invalidateQueries({ queryKey: queryKeys.agent.chatLists(projectId) });
 
 export const agentMutations = {
-  /**
-   * A new chat. The chat lists refresh in the background; the saved
-   * conversation is read before success resolves so the screen keeps its
-   * composer until the chat can render (prefetchQuery contains read failures,
-   * so an accepted send stays accepted).
-   */
   createChat: (workspaceId: string | null) =>
     mutationOptions({
       mutationFn: (vars: {

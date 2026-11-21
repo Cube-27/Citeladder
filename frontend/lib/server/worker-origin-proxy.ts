@@ -74,8 +74,6 @@ async function originRequest(
     const lower = name.toLowerCase();
     if (!HOP_HEADERS.has(lower) && !INTERNAL_HEADERS.has(lower)) headers.append(name, value);
   }
-  // Cloudflare sets CF-Connecting-IP on every Worker request; the API trusts it
-  // only inside a valid signature, so per-visitor rate limits survive.
   const clientIp = request.headers.get('cf-connecting-ip') ?? '';
   const timestamp = Math.floor(Date.now() / 1000);
   const signature = await signOriginRequest(config.originToken, {
@@ -108,9 +106,6 @@ function originResponse(upstreamResponse: Response): Response {
   for (const cookie of upstreamResponse.headers.getSetCookie()) {
     responseHeaders.append('Set-Cookie', cookie);
   }
-  // Only a response the browser revalidates on every use (a snapshot read or
-  // a logo, with its ETag) may be stored, so every use re-checks access; any
-  // other policy, a private max-age included, becomes no-store.
   const revalidated = upstreamResponse.headers.get('cache-control') === REVALIDATED;
   responseHeaders.set('Cache-Control', revalidated ? REVALIDATED : 'private, no-store');
   return new Response(

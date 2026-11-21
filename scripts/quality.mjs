@@ -41,7 +41,7 @@ for (const scope of requestedScopes) {
 }
 
 function git(arguments_, options = {}) {
-  return execFileSync('git', ['-C', repositoryRoot, ...arguments_], options); // NOSONAR: trusted PATH.
+  return execFileSync('git', ['-C', repositoryRoot, ...arguments_], options); // NOSONAR
 }
 
 const gitPaths = (arguments_) => listGitPaths(repositoryRoot, arguments_);

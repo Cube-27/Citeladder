@@ -51,10 +51,6 @@ export async function createAuditsInTransaction(
   at: Date,
 ): Promise<[string, ...string[]]> {
   const input = auditInput.parse(request);
-  // The project comes before the account capacity lock (the lock DAG). Each
-  // audit insert takes this key-share lock through its foreign key; taken
-  // there, after the capacity lock, it would wait on a project deletion that
-  // waits on the capacity lock this launch holds.
   await trx
     .selectFrom('projects')
     .select('id')
@@ -72,7 +68,7 @@ export async function createAuditsInTransaction(
   const create = (market: Market) =>
     createMarketAudit(trx, workspaceId, input, { market, launchId }, launch, runtime, at);
   const ids: [string, ...string[]] = [await create(first)];
-  for (const market of rest) ids.push(await create(market)); // NOSONAR -- One transaction: markets are created in order.
+  for (const market of rest) ids.push(await create(market)); // NOSONAR
   return ids;
 }
 
@@ -296,7 +292,7 @@ async function persistTasks(
       engine = snapshots.engines.get(slot.engine)!;
     const taskId = randomUUID();
     inserted.push({ taskId, slot, route, engine });
-    await db // NOSONAR -- One transaction: task inserts run in order.
+    await db // NOSONAR
       .insertInto('audit_tasks')
       .values({
         id: taskId,
@@ -367,14 +363,14 @@ async function persistTasks(
       reservationId: runs.reservationIds[index]!,
       ...funding[index]!,
     };
-    const binding = await bindTask(options, taskId, route, run); // NOSONAR -- One transaction: each binding reads and writes in order.
-    await db // NOSONAR -- One transaction: statements run in order.
+    const binding = await bindTask(options, taskId, route, run); // NOSONAR
+    await db // NOSONAR
       .updateTable('audit_tasks')
       .set({ status: 'queued', provider_route_snapshot: JSON.stringify(binding) })
       .where('workspace_id', '=', scope.workspaceId)
       .where('id', '=', taskId)
       .execute();
-    await db // NOSONAR -- One transaction: statements run in order.
+    await db // NOSONAR
       .updateTable('audit_engine_snapshots')
       .set({ connection_id: binding.connection_id, base_url: binding.base_url })
       .where('id', '=', engine.id)

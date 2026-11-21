@@ -90,7 +90,6 @@ export function searchPayload(engine: SearchEngine, input: SearchRequest) {
   const c = searchPolicy.constants;
   if (!input.provider_submission_ref || input.provider_submission_ref.length > c.tag_max_chars)
     throw new ProviderError('invalid_submission_ref');
-  // DataForSEO treats percent and plus characters as encoding syntax.
   const keyword = input.query.replaceAll('%', '%25').replaceAll('+', '%2B');
   const scraper = isScraperEngine(engine);
   const limit = scraper ? searchPolicy.scraper.keyword_max_chars : c.keyword_max_chars;

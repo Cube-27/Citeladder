@@ -69,8 +69,8 @@ async function writeCategories(
   write: { productId: string; observationId: string; added: string[]; replaces: boolean },
 ) {
   const ids: string[] = [];
-  for (const name of write.added) ids.push(await index.category(db, scope, name)); // NOSONAR -- Index creates missing categories on the import transaction.
-  for (const id of ids) await addMembership(db, scope, write.productId, id, write.observationId); // NOSONAR -- One import transaction: statements run in order.
+  for (const name of write.added) ids.push(await index.category(db, scope, name)); // NOSONAR
+  for (const id of ids) await addMembership(db, scope, write.productId, id, write.observationId); // NOSONAR
   if (!write.replaces) return;
   await db
     .deleteFrom('commerce_product_categories')
@@ -327,7 +327,7 @@ async function writeParents(
     const childId = written.get(node.key);
     const parentId = node.parent_key ? written.get(node.parent_key) : undefined;
     if (childId && parentId)
-      await setCategoryParent(db, scope, { childId, parentId, replace: true }); // NOSONAR -- One import transaction: statements run in order.
+      await setCategoryParent(db, scope, { childId, parentId, replace: true }); // NOSONAR
   }
 }
 
@@ -447,7 +447,7 @@ export function applyImport(
       outcomes.push(
         item.kind === 'rejected'
           ? rejected(item.row_number, 'invalid_row', item.detail)
-          : await importItem(trx, scope, run, item), // NOSONAR -- One transaction; rows share the product index in file order.
+          : await importItem(trx, scope, run, item), // NOSONAR
       );
     await writeParents(trx, scope, items, index.written());
     outcomes.sort(

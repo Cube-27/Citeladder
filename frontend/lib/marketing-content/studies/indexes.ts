@@ -1,4 +1,3 @@
-// Written by the study pipeline from reviewed API drafts; edit the drafts, not this file.
 import type { StudyIndex } from './index-types';
 
 export const STUDY_INDEXES = {

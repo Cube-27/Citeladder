@@ -1386,7 +1386,6 @@ describe('billing money and access owner', () => {
     await settle({ ...halted, version: 4 });
     let provider = { ...halted, version: 4 };
     const cancel = vi.fn(async (_reference: string, _atEnd: boolean) => {
-      // A version is the provider's Unix second: this one is past January 2038.
       provider = { ...halted, status: 'cancelled', version: 2_200_000_000 };
       throw new ProviderError(false, 'provider_rejected');
     });

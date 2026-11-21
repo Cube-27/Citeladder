@@ -37,13 +37,7 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   };
   const { isLoading: entitlementLoading, entitlement } = useEntitlement();
 
-  // A role that may not create a project is not offered the affordance. This
-  // reads the effective capability the backend published, not a role name, and
-  // the backend still enforces the denial itself.
   const mayCreate = activeWorkspace?.capabilities.includes('write') ?? false;
-  // The remaining allowance comes from the MEMBER-SAFE workspace projection,
-  // so a Member sees the same "workspace is full" state an Owner does without
-  // reading the workspace's private finances.
   const allowance = resolveAllowance(entitlement);
   const projectRequired = !isWorkspaceOnlyRoute(pathname);
   const state = resolveGate(status, {

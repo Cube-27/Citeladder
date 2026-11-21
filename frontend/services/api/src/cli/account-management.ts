@@ -49,7 +49,6 @@ async function selectWorkspace(db: Database, session: PlatformSession) {
   return { workspaceId: selected.id, accountId: selected.account_id };
 }
 
-/** A real calendar instant: `new Date` would roll 2026-02-30 over into March. */
 function calendarDate(value: string) {
   const parts = /^(\d{4})-(\d{2})-(\d{2})/u.exec(value);
   const date = new Date(value);
@@ -200,26 +199,26 @@ export function runPlatformAccountManager(actor: string) {
       if (choice === '0') break;
       try {
         if (choice === '1') {
-          display(await platformAccountInventory(db, session)); // NOSONAR -- Interactive menu: one operator choice at a time.
+          display(await platformAccountInventory(db, session)); // NOSONAR
           continue;
         }
-        const action = await collectPlatformAction(db, session, choice); // NOSONAR -- Prompts the operator for this choice.
+        const action = await collectPlatformAction(db, session, choice); // NOSONAR
         if (!action) {
           console.log('Choose 0-8. No changes.');
           continue;
         }
-        const reason = await accountPrompt('Reason'); // NOSONAR -- Operator answers before the preview runs.
+        const reason = await accountPrompt('Reason'); // NOSONAR
         const request = { reason, key: `account-manager:${randomUUID()}`, at: new Date() };
-        const preview = await managePlatformAccounts(db, session, action, request); // NOSONAR -- Preview precedes confirmation.
+        const preview = await managePlatformAccounts(db, session, action, request); // NOSONAR
         console.log('Preview only — no changes committed:');
         display(preview);
         const confirmation = action.kind === 'delete' ? `delete ${action.email}` : 'yes';
-        const confirmed = await accountPrompt(`Commit this operation (type ${confirmation})`); // NOSONAR -- Confirmation gates the commit.
+        const confirmed = await accountPrompt(`Commit this operation (type ${confirmation})`); // NOSONAR
         if (confirmed !== confirmation) {
           console.log('Cancelled. No changes.');
           continue;
         }
-        display(await managePlatformAccounts(db, session, action, { ...request, apply: true })); // NOSONAR -- Commits only after confirmation.
+        display(await managePlatformAccounts(db, session, action, { ...request, apply: true })); // NOSONAR
       } catch (error) {
         console.log(`No change: ${operatorDiagnostic(error)}`);
       }

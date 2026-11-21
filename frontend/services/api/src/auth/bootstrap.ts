@@ -78,7 +78,6 @@ export async function provisionDevelopmentLogin(db: Database, config: ServiceCon
     });
     return { email: user.email, workspace_id: scope.workspaceId, user_id: user.id };
   });
-  // Grants committed under the capacity lock; the runtime follows in its own order.
   await refreshRuntime(db, provisioned.workspace_id);
   return provisioned;
 }

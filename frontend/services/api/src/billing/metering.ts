@@ -74,7 +74,6 @@ function callRow(context: MeterContext, spec: CallSpec, at: Date) {
     reservation_id: null,
     reserved_credits: 0,
     credits: 0,
-    // A hold its owner settles (a whole analysis, B41) is never swept as abandoned.
     owner_settled: false,
     ...tokens(null),
     cost_microusd: widen<number | null>(null),
@@ -154,11 +153,6 @@ async function openHold(
   return id;
 }
 
-/**
- * Commits the hold and the call record before dispatch. A charged call must
- * bound its size: an unbounded hold would floor at one credit and cap the
- * charge there, so a feature switched to credits without bounds fails loudly.
- */
 function reserve(db: Database, context: MeterContext, spec: CallSpec) {
   if (spec.inputBytes === undefined || spec.maxOutputTokens === undefined)
     throw new Error(`Charged feature ${context.feature} must bound its call size`);
@@ -295,14 +289,9 @@ async function metered<T>(
   call: () => Promise<Outcome<T>>,
 ): Promise<T> {
   const charged = chargeMode(context.feature) === 'credits';
-  // The hold commits before network I/O, so it never shares the caller's transaction.
   if (charged && db.isTransaction)
     throw new Error('A charged platform call must not run in a transaction');
   const callId = charged ? await reserve(db, context, spec) : await assertSpendOpen(db, context);
-  // A failed settlement is retried once (settling is idempotent), because the
-  // abandoned-call sweep knows no outcome and charges the fallback even for a
-  // call that failed. A second failure never replaces the provider's outcome:
-  // the hold stays reserved for the sweep.
   const settleHeld = async (id: string, usage: TokenUsage | null, error: unknown) => {
     try {
       await settleCall(db, id, usage, error !== null, error).catch(() =>
@@ -369,7 +358,7 @@ export async function settleAbandonedCalls(db: Database, now = new Date(), limit
     .orderBy('created_at')
     .limit(limit)
     .execute();
-  for (const call of stale) await settleCall(db, call.id, null, false); // NOSONAR -- one bounded settle transaction at a time.
+  for (const call of stale) await settleCall(db, call.id, null, false); // NOSONAR
   return stale.length;
 }
 

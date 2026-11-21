@@ -39,7 +39,6 @@ async function cachedCatalog(
   }
 }
 
-/** The marketing catalog read has no browser cookies or workspace identity. */
 async function originCatalog(env: ApexEnv, country?: string): Promise<BillingCatalog | null> {
   try {
     const query = country ? `?country=${encodeURIComponent(country)}` : '';
@@ -77,7 +76,6 @@ export async function publicCatalog(
   const catalog = await originCatalog(env, country);
   if (!catalog) return cached?.catalog ?? null;
   edge.waitUntil(
-    // A failed write only means the next view reads the API again.
     edge.cache
       .put(
         key,

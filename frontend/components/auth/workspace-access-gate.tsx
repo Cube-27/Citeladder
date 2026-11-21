@@ -67,8 +67,6 @@ function useAccessLoss(workspaceId: string | null) {
         !['trial_expired', 'subscription_lapsed', 'access_unresolved'].includes(error.code ?? '')
       )
         return;
-      // The response may belong to a workspace the user just left. Re-resolve
-      // the current authority rather than copying that denial to another scope.
       void resetWorkspaceAccess(client, workspaceId);
     };
     const queries = client.getQueryCache().subscribe((event) => {
@@ -133,9 +131,6 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
     if (!access.data || allowed || recovery) return;
     dropProductReads(client);
   }, [allowed, access.data, client, recovery]);
-  // Hold rather than swap: a workspace switch keeps the shell mounted and its
-  // reads alive, and `HeldContent` keeps product content out until access
-  // answers. One shape for open and held, so neither remounts the tree.
   if (recovery || allowed || checking) {
     return <GateHold held={!recovery && !allowed}>{children}</GateHold>;
   }

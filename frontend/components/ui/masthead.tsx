@@ -22,7 +22,6 @@ export function Masthead({
   section?: Readonly<{ title: string }> | null;
   lead?: ReactNode;
   crumb?: ReactNode;
-  /** False when the page column carries the h1, so the masthead only names the place. */
   heading?: boolean;
   search?: ReactNode;
   actions?: ReactNode;
@@ -58,7 +57,6 @@ export function Masthead({
             <Name
               ref={heading}
               data-masthead-name=""
-              // Only a cut title takes focus, so a keyboard reader can open the tooltip holding the full name.
               tabIndex={cut ? 0 : undefined}
               className={textRole('label', cn('w-0 min-w-28 flex-1 truncate', cut && 'focus-ring'))}
             >
@@ -113,7 +111,6 @@ function useIsCut(ref: RefObject<HTMLElement | null>, text: string) {
     if (!node) return;
     const update = () => setCut(isTextCut(node));
     update();
-    // The title's box no longer resizes with its text, so a face that loads late is re-measured here.
     void document.fonts?.ready.then(update);
     const observer = new ResizeObserver(update);
     observer.observe(node);

@@ -27,7 +27,6 @@ import { openTargetChoice } from './target-adapter.ts';
 import { stepTarget } from './sources.ts';
 
 const iso = (date: Date | null) => date?.toISOString() ?? null;
-// First present reference wins; `action_id` can be attached after the chat started, so it ranks last.
 const ORIGIN_REFS: readonly [AgentChatOrigin, readonly string[]][] = [
   ['site_health', ['issue_group_reference', 'site_facts_reference', 'site_health_reference']],
   [
@@ -141,11 +140,6 @@ export async function progress(db: Database, run: Run) {
       ),
   ]);
 }
-/**
- * A chat in the workspace, with its project read from the chat itself. The
- * caller has authorized the workspace (the request's session read), so the
- * chat is read once and nothing re-checks the membership.
- */
 async function chatIn(db: Database, workspace: Pick<Scope, 'workspaceId'>, chatId: string) {
   const chat = await workspaceChat(db, workspace.workspaceId, chatId);
   return { chat, scope: { workspaceId: chat.workspace_id, projectId: chat.project_id } };

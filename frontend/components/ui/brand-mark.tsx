@@ -57,7 +57,6 @@ export function BrandMark({
         <span
           className={cn(
             'grid place-items-center font-medium uppercase',
-            // A site without a favicon is an outlined letter, a brand without a logo a filled one.
             entity === 'site'
               ? 'border-control-line text-ink-2 rounded-mark border'
               : 'bg-ink text-on-ink',

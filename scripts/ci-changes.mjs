@@ -97,10 +97,6 @@ export function matchesAny(path, patterns) {
   return patterns.some((pattern) => globRegex(pattern).test(path));
 }
 
-// Specs frontend/playwright.config.ts ignores because another config owns
-// them: docs.spec.ts runs in the docs job (`pnpm test:docs`) and
-// worker-csp.spec.ts under playwright.workers.config.ts. Passing one to the
-// app E2E job makes Playwright fail with "No tests found".
 const OTHER_CONFIG_SPECS = new Set(['e2e/docs.spec.ts', 'e2e/worker-csp.spec.ts']);
 
 const REPOSITORY_ROOT = new URL('../', import.meta.url);
@@ -330,8 +326,6 @@ export function selectDiff({
     const range = eventName === 'push' && usableBefore && beforeIsAncestor && previousRunTrusted;
     return { full: true, range: range ? `${beforeSha}..${headSha}` : null };
   }
-  // A force-push (rebase or amend) orphans the previous head, so its incremental
-  // diff is neither fetchable nor meaningful; revalidate the cumulative PR scope.
   if (action === 'synchronize' && usableBefore && previousRunTrusted && beforeIsAncestor) {
     return { full: false, range: `${beforeSha}..${headSha}` };
   }
@@ -384,7 +378,6 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
   const singlesByName = new Map(singles.map((job) => [job.name, job]));
   const settled = (job) =>
     job?.status === 'completed' && ['success', 'skipped'].includes(job.conclusion);
-  // The classifier and the aggregate always run, so only success vouches for them.
   const mustSucceed = ['Classify affected owners', compose ? 'Compose smoke result' : 'CI result'];
   return (
     singles.length === expectedNames.length &&
@@ -396,11 +389,6 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
   );
 }
 
-/**
- * True when the newest `main` push run of this workflow for the previous
- * commit completed successfully. That run was itself either a full validation
- * or an owner-free push vouched for the same way, so success is inductive.
- */
 export function previousMainRunPassed(runs, beforeSha) {
   if (!Array.isArray(runs)) return false;
   const previous = runs

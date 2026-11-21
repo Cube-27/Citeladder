@@ -113,7 +113,6 @@ describe('probe market coverage', () => {
     ).toEqual([
       [true, true],
       [true, true],
-      // The Gemini app has no Portuguese search; the Gemini API cannot leave the default market.
       [false, false],
       [false, true],
     ]);

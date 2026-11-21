@@ -30,11 +30,6 @@ export function runtimeProjection(
   };
 }
 
-/**
- * Lock the workspace's runtime row FOR UPDATE, first creating it with the
- * sample runtime when absent. It is the first Site Health lock after the
- * project, so the caller must not yet hold the capacity lock or a billing row.
- */
 export async function holdRuntime(db: Database, workspaceId: string) {
   const at = new Date();
   await db

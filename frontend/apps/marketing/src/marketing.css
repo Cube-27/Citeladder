@@ -1,6 +1,3 @@
-/* The imports come first: CSS drops an `@import` that follows another
-   at-rule, and putting the `@source` list above this one silently shipped a
-   stylesheet with no design system in it at all. */
 @import 'tailwindcss' source(none);
 @import '../../app/src/globals.css';
 

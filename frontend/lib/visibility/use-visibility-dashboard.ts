@@ -295,9 +295,6 @@ export function useVisibilityQueries(
     activeRunId,
     selectedRunIds,
   });
-  // A range that resolved to NO runs sends neither `audit_id` nor a usable
-  // `audit_ids`, so the request would read the project unscoped and answer a
-  // question nobody asked. An empty selection has empty evidence.
   const hasEvidenceScope = Boolean(activeRunId) && selectedRunIds?.length !== 0;
   const evidenceParams = evidenceSelectionParams(filters, activeRunId, selectedRunIds, engine);
   const evidenceOptions = {

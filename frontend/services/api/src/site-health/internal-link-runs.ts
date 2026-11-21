@@ -113,7 +113,6 @@ export async function admitLinkRun(
   input: { crawl_id: string; idempotency_key: string },
 ) {
   const id = await db.transaction().execute(async (trx) => {
-    // Serialize admission for this project, including concurrent idempotent requests.
     await trx
       .selectFrom('projects')
       .select('id')
@@ -141,8 +140,6 @@ export async function admitLinkRun(
       .where('state', 'in', ['queued', 'running'])
       .executeTakeFirst();
     if (active) throw new ApiError(409, 'An internal link analysis is already running');
-    // A cancelled run's worker can still settle in-flight judgments; the
-    // project's slot stays occupied until its judgment task is terminal.
     const settling = await trx
       .selectFrom('analytics_tasks')
       .select('id')

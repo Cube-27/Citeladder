@@ -77,8 +77,6 @@ export async function requireHumanVerification(
     throw unavailable();
   }
   if (!input.token || input.token.length > cfg.token_max_length) throw refused();
-  // Cloudflare documents a test secret's outcome, so development and tests
-  // need no network: the always-pass secret accepts only the dummy token.
   if (testOutcome) {
     if (testOutcome === 'pass' && input.token === cfg.test_token) return;
     throw refused();

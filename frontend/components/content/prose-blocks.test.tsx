@@ -1,5 +1,4 @@
 // @vitest-environment node
-// The Markdown build runs in Node; Sätteri's native reader rejects jsdom's ArrayBuffer.
 import { satteri } from '@astrojs/markdown-satteri';
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';

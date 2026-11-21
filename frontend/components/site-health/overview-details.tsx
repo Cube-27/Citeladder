@@ -240,10 +240,6 @@ function OpenIssuesTrendCard({
   );
 }
 
-/**
- * Change-summary labels are frozen into the snapshot at build time, so a
- * Presentation resolves change-summary labels from the stable metric key.
- */
 const CHANGE_METRIC_LABELS: Record<string, string> = {
   web_fundamentals_score: 'Web fundamentals',
   web_fundamentals_coverage: 'Web fundamentals coverage',
@@ -272,10 +268,6 @@ function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change
   );
 }
 
-/**
- * Every change-summary metric is a score or a coverage share, so a rise is an
- * improvement. Coverage is a 0–1 share; its change reads in percentage points.
- */
 function ChangeDelta({ metricKey, delta }: Readonly<{ metricKey: string; delta: number | null }>) {
   const coverage = metricKey.endsWith('_coverage');
   const scale = coverage ? 100 : 1;

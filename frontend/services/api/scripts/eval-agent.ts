@@ -108,7 +108,7 @@ async function live() {
     const write = (record: object) => appendFile(log, `${JSON.stringify({ label, ...record })}\n`);
     const context: CaseContext = { db, client, project, vars, write };
     for (const item of cases) {
-      if (!values.case || item.id.startsWith(values.case)) await runCase(context, item); // NOSONAR -- Cases drive one agent session and one log, one at a time.
+      if (!values.case || item.id.startsWith(values.case)) await runCase(context, item); // NOSONAR
     }
     console.log(`Recorded ${log}`);
   } finally {
@@ -241,7 +241,6 @@ async function session(
   password: string,
   workspaceId: string,
 ): Promise<Client> {
-  // Signing in is a Terms decision on the published revision, as on the form.
   const response = await fetch(`${api}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

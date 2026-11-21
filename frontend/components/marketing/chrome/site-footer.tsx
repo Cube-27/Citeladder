@@ -59,9 +59,6 @@ function SocialLinks() {
   );
 }
 
-// Stamped by the build. Pages prerender in workerd, where Date reads the Unix
-// epoch outside a request, so a module-level `new Date()` rendered "© 1970".
-// Tests run without the define and fall back to the local clock.
 const COPYRIGHT_YEAR = Number(process.env.PUBLIC_BUILD_YEAR) || new Date().getFullYear();
 
 function DirectoryBadges() {

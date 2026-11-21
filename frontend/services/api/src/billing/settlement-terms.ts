@@ -28,8 +28,6 @@ export const scheduledSchema = z.object({
   source: z.string(),
   terms: frozenTermsSchema,
 });
-// `unpaid` (halted at the provider) stays current, so it blocks a second base
-// subscription, until the sweep's cancellation is confirmed.
 export const STATUS = policy.billing.subscription_status;
 export const grantedStates = new Set<string>([STATUS.active, STATUS.cancel_scheduled]);
 export const terminalStates = new Set(policy.billing.contracts.terminal_subscription_statuses);

@@ -57,7 +57,6 @@ export function ActionDetailScreen() {
     return fallback(<StateBlock kind="loading" shape={{ kind: 'facts', rows: 5 }} />);
   if (query.data.project_id !== projectId)
     return fallback(<Notice tone="negative">This Action belongs to another project.</Notice>);
-  // Keyed so ticks and a decision's state never outlive their Action.
   return <ActionPage key={query.data.id} action={query.data} workspaceId={workspaceId} />;
 }
 

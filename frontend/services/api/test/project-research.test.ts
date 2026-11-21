@@ -145,7 +145,6 @@ it('preserves recorded research metadata and enforces a shared call budget befor
       },
     },
   ];
-  // Keenable answers 400 to a fetch parameter it does not document.
   const fetchParameters = new Set(['url', 'max_chars', 'live']);
   const transport = vi.fn<ResearchTransport>(async (target) => {
     const { pathname, searchParams } = new URL(String(target));

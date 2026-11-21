@@ -34,11 +34,6 @@ async function fromScheduler(
   }
 }
 
-/**
- * Registers the tick only when a scheduler identity is configured. It must be
- * registered before the origin-token middleware: Cloud Scheduler cannot sign
- * like the Workers, so the Google ID token is this route's admission.
- */
 export function registerScheduledTick(
   app: Hono<AppEnv>,
   config: ServiceConfig,

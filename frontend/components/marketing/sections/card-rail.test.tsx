@@ -26,7 +26,6 @@ function renderRail({ scrollWidth, clientWidth }: { scrollWidth: number; clientW
   const track = screen.getByRole('list', { name: 'modules' });
   Object.defineProperty(track, 'scrollWidth', { configurable: true, value: scrollWidth });
   Object.defineProperty(track, 'clientWidth', { configurable: true, value: clientWidth });
-  // jsdom lays nothing out and has no scrolling API on elements.
   track.scrollTo = () => {};
   track.scrollBy = () => {};
   for (const item of track.children) {

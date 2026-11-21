@@ -56,7 +56,6 @@ const runs = (scope: ReadScope, args: Selection): RunSelection => ({
   toAt: null,
 });
 
-/** A topic filter names one of this project's topics; an ID alone authorizes nothing. */
 async function requireTopic({ db, scope }: ProjectRead, topicId: string | null | undefined) {
   if (!topicId) return;
   const topic = await new WorkspaceScope(scope.workspaceId)
@@ -312,7 +311,6 @@ export async function oneRun(
   try {
     const selection = await scopedSelection(read.db, runs(read.scope, args));
     ran = true;
-    // An empty page would read as zero; a topic the run never asked is not measured.
     if (args.topic_id && selection.auditId) {
       const { workspaceId } = read.scope;
       await topicBlock(read.db, {

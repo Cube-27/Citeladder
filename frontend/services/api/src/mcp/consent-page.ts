@@ -5,12 +5,6 @@ import type { ConsentWorkspace } from './oauth.ts';
 
 type Html = HtmlEscapedString | Promise<HtmlEscapedString>;
 
-/**
- * The consent CSP loads nothing but inline style, so the design system's token
- * sheet and self-hosted faces cannot reach this page. These values mirror the
- * light tokens in `apps/app/src/globals.css` (named beside each) on the system
- * font stack; keep them in step when those tokens change.
- */
 const STYLE = `
 :root{color-scheme:light;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:20px;
 --paper:rgb(255 255 255);/* panel */--ground:rgb(244 245 244);/* background */--well:rgb(239 241 240);/* well */
@@ -249,12 +243,6 @@ export function consentPage(view: ConsentView) {
   );
 }
 
-/**
- * The hand-back to the client after a decision. Browsers apply `form-action` to
- * every redirect after a form post, so a 303 into a client whose callback hops
- * origins (or uses a native scheme) is silently blocked after the one-time
- * transaction is spent; a refresh is a fresh navigation.
- */
 export function consentReturn(destination: string) {
   const url = new URL(destination);
   const host = url.host || url.protocol.slice(0, -1);

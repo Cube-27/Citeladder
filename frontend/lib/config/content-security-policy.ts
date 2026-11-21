@@ -13,8 +13,6 @@ const DOCUMENT_DIRECTIVES = [
   "style-src 'self' 'unsafe-inline'",
 ];
 
-// Both deployed hosts inject the versioned Cloudflare Web Analytics beacon.
-// Permit only that script path (including its version suffix), not the CDN.
 const CLOUDFLARE_BEACON_SOURCES = [
   'https://static.cloudflareinsights.com/beacon.min.js',
   'https://static.cloudflareinsights.com/beacon.min.js/',
@@ -33,17 +31,12 @@ export const APP_CONTENT_SECURITY_POLICY = [
   `report-to ${REPORT_ENDPOINT}`,
 ].join('; ');
 
-// Trusted Types, reported and not enforced: the default policy
-// (lib/trusted-types.ts) passes the known script URLs, and every other
-// string reaching a DOM injection sink is reported until the sinks are known.
 export const APP_CONTENT_SECURITY_POLICY_REPORT_ONLY = [
   "require-trusted-types-for 'script'",
   'trusted-types default',
   `report-to ${REPORT_ENDPOINT}`,
 ].join('; ');
 
-// Script-free proxy/error HTML receives a policy too. Never replace a stricter
-// upstream policy (for example the backend's sandboxed logo response).
 export const FALLBACK_CONTENT_SECURITY_POLICY = [
   ...DOCUMENT_DIRECTIVES,
   "script-src 'none'",
@@ -62,9 +55,6 @@ const LAUNCH_BADGE_IMAGE_ORIGINS = ['https://www.codehype.ai', 'https://tools.la
 
 type AstroScriptHash = `sha256-${string}`;
 
-// Astro hashes only its compiled framework/inline scripts; `scriptHashes` adds
-// the build-time hashes of our own inline scripts (the speculation rules). No
-// runtime blanket hashing/noncing of HTML.
 function astroContentSecurityPolicy({
   scriptSources,
   scriptHashes,
@@ -99,10 +89,6 @@ function astroContentSecurityPolicy({
   };
 }
 
-// Server-rendered marketing emits the policy as a response header; prerendered
-// pages carry it as a <meta>, where browsers ignore (and log) frame-ancestors.
-// X-Frame-Options DENY denies framing on both: the generated _headers file for
-// assets, withSiteHeaders for Worker responses.
 export function marketingContentSecurityPolicy({
   analyticsEnabled,
   scriptHashes,
@@ -126,8 +112,6 @@ export function marketingContentSecurityPolicy({
   });
 }
 
-// Static docs receive the policy as a <meta> element, where browsers ignore
-// frame-ancestors; X-Frame-Options in the docs _headers file denies framing.
 export function docsContentSecurityPolicy(
   scriptHashes: readonly AstroScriptHash[],
 ): AstroContentSecurityPolicy {

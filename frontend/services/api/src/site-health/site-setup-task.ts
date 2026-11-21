@@ -81,7 +81,6 @@ async function wellKnown(ctx: SiteTaskContext, url: string, settings: Settings) 
       contentTypes: ['*'],
     });
   } catch (error) {
-    // Unfetched stays distinct from absent: the llms.txt fact records `fetched: false`.
     logFetchFailure(ctx, 'llms_txt', error, startedAt);
     return null;
   }
@@ -136,9 +135,6 @@ async function siteEvidence(
 type SiteFacts = Record<string, unknown>;
 
 async function observedIds(trx: Database, crawl: Crawl, hashes: string[]) {
-  // One single-table lateral per probe (LIMIT 1 keeps each from flattening), so
-  // no plan can drive from the crawl's observations: a new crawl has no
-  // statistics, and a join inside one lateral scanned them per hash (quadratic).
   const { rows } = await sql<{ url_hash: string; id: string }>`
     select u.url_hash, u.id
     from unnest(${hashes}::text[]) as h(url_hash)
@@ -160,7 +156,7 @@ async function observedIds(trx: Database, crawl: Crawl, hashes: string[]) {
 async function saveSitemapInventory(ctx: SiteTaskContext, claimed: SiteTask, listed: SitemapUrl[]) {
   for (let offset = 0; offset < listed.length; offset += INVENTORY_CHUNK) {
     const chunk = listed.slice(offset, offset + INVENTORY_CHUNK);
-    // NOSONAR: chunks commit in order, each under the task's lease.
+    // NOSONAR
     const committed = await commitTask(ctx, claimed, async (trx, lock) => {
       const { crawl } = await lock();
       if (crawl.discovery_status !== 'pending') return;
@@ -206,7 +202,7 @@ async function trackSitemapPages(ctx: SiteTaskContext, claimed: SiteTask, listed
   for (let offset = 0; offset < ordered.length; offset += INVENTORY_CHUNK) {
     const window = ordered.slice(offset, offset + INVENTORY_CHUNK);
     let full = false;
-    // NOSONAR: windows commit in order, each under the task's lease.
+    // NOSONAR
     const committed = await commitTask(ctx, claimed, async (trx, lock) => {
       const live = await loadScope(trx, claimed);
       if (live?.task.lease_owner !== ctx.owner) throw new Abandoned();
@@ -215,7 +211,6 @@ async function trackSitemapPages(ctx: SiteTaskContext, claimed: SiteTask, listed
         full = true;
         return;
       }
-      // Membership and task writes take the runtime lock first, in the Site Health lock order.
       await lockRuntime(trx, crawl.workspace_id);
       const { crawl: locked } = await lock();
       const joined = await fillTrackedSet(trx, locked, window);
@@ -292,7 +287,6 @@ async function persist(
     const live = await loadScope(trx, claimed);
     if (live?.task.lease_owner !== ctx.owner) throw new Abandoned();
     const { crawl } = live;
-    // Membership and task writes take the runtime lock first, in the Site Health lock order.
     if (!crawl.sample_mode) await lockRuntime(trx, crawl.workspace_id);
     const discovery = await discover(trx, crawl, walk);
     const locked = await lock();
@@ -324,8 +318,6 @@ async function persist(
       .updateTable('site_crawls')
       .set((eb) => ({
         site_facts: JSON.stringify({ ...facts, sitemap, robots: { ...robots, bots } }),
-        // The inventory's size, not a sum: a reconcile between the inventory
-        // chunks and this commit may already have counted these observations.
         admitted_url_count:
           discovery.discovered === undefined
             ? eb.ref('admitted_url_count')

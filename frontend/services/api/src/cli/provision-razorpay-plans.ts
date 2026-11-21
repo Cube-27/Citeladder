@@ -121,7 +121,6 @@ await operatorMain(async () => {
     );
     for (const { key } of entries) console.log(`verified ${saved.revision} ${key}`);
     if (operation !== 'bind') return;
-    // The file is written last, so a failed import can be retried as is.
     if (values.import) await importBound(db, values, payload);
     if (values.output) await writeBoundCatalog(values.output, payload);
   });

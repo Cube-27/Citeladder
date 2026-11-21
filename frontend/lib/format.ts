@@ -232,7 +232,6 @@ export function sharedOrigin(values: readonly string[]): string | null {
   return rest.every((origin) => origin === first) ? first : null;
 }
 
-/** ISO 3166-1 alpha-3 to alpha-2, each pair run together: Search Console reports alpha-3. */
 const ALPHA3_TO_ALPHA2 = new Map(
   `AFGAF ALAAX ALBAL DZADZ ASMAS ANDAD AGOAO AIAAI ATAAQ ATGAG ARGAR ARMAM ABWAW AUSAU AUTAT
   AZEAZ BHSBS BHRBH BGDBD BRBBB BLRBY BELBE BLZBZ BENBJ BMUBM BTNBT BOLBO BESBQ BIHBA BWABW

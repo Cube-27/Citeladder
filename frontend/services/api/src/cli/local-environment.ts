@@ -2,10 +2,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 
-/** `APP_DATABASE_ROLE` (db/database.ts); repeated so this host helper stays dependency-free. */
 const APP_DATABASE_ROLE = 'citeladder_app';
 
-/** Host tools share root .env -> process precedence; never print this object. */
 export function localEnvironment(env: NodeJS.ProcessEnv = process.env) {
   const values: Record<string, string | undefined> = {};
   if (!['1', 'true', 'yes', 'on'].includes(env.CITELADDER_DISABLE_DOTENV?.toLowerCase() ?? '')) {
@@ -19,8 +17,6 @@ export function localEnvironment(env: NodeJS.ProcessEnv = process.env) {
     const hostname = POSTGRES_HOST.includes(':') ? `[${POSTGRES_HOST}]` : POSTGRES_HOST;
     const url = (role: string) =>
       `postgresql://${encodeURIComponent(role)}:${encodeURIComponent(POSTGRES_PASSWORD)}@${hostname}:${POSTGRES_HOST_PORT}/${encodeURIComponent(POSTGRES_DB)}`;
-    // Locally the application role shares the owner's password; production
-    // generates an independent one.
     values.DATABASE_URL ??= url(APP_DATABASE_ROLE);
     values.MIGRATION_DATABASE_URL ??= url(POSTGRES_USER);
   }

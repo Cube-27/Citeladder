@@ -8,12 +8,6 @@ import { PageSection } from '../sections/page-section';
 import { CtaBand } from '../sections/steps-faq-cta';
 import { CatalogFrame } from '../screens/screen-catalog';
 
-/**
- * `/solutions`: one section per team, its copy beside the screen that team
- * reads first, alternating sides. The section ids (`agencies`, `in-house`,
- * `founders`, `commerce`, `pr`) are targets of the nav's Solutions menu and
- * the footer, so they are part of the route's contract.
- */
 export function SolutionsPage() {
   return (
     <>

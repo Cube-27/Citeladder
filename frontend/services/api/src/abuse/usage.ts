@@ -139,7 +139,6 @@ function throttled(subjectKind: BudgetSubject, operation: string, expires: Date,
   );
 }
 
-/** Autocommitted atomic counters, before hashing or provider I/O. */
 async function enforceSubjectRequest(
   db: Database,
   subjectKind: BudgetSubject,

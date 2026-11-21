@@ -25,7 +25,6 @@ const RULES = [
 const CATALOG = new Map(policy.site_health.rule_catalog.map((rule) => [rule.rule_id, rule]));
 
 const db = testDatabase();
-// Fixture work only: removing a tens-of-thousands-page workspace outlasts the service statement bound.
 const fixtureDb = testDatabase(
   testConfig({ DB_STATEMENT_TIMEOUT_MS: '300000', DB_COMMAND_TIMEOUT_SECONDS: '300' }),
 );
@@ -96,7 +95,7 @@ async function analyze(seed: SiteSeed, limit: number) {
     .execute();
   const now = new Date();
   for (let offset = 0; offset < tasks.length; offset += CHUNK)
-    await settleChunk({ seed, chunk: chunkOf(tasks, offset), now }); // NOSONAR -- Chunks write in order so the fixture's memory stays one chunk.
+    await settleChunk({ seed, chunk: chunkOf(tasks, offset), now }); // NOSONAR
   return tasks.length;
 }
 
@@ -252,7 +251,7 @@ async function settleChunk({
     )
     .execute();
   for (const page of chunk)
-    await db // NOSONAR -- One artifact per task, in order.
+    await db // NOSONAR
       .updateTable('site_crawl_tasks')
       .set({ result_artifact_id: page.artifactId })
       .where('workspace_id', '=', seed.workspaceId)

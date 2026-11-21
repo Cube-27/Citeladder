@@ -61,7 +61,6 @@ function notify() {
   for (const listener of listeners) listener();
 }
 
-/** Listeners hear once a frame however many events arrive; a hidden tab pauses frames, so a timeout backs them up. */
 function notifyNextFrame() {
   if (fallback !== undefined) return;
   frame = requestAnimationFrame(notify);

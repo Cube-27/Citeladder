@@ -57,11 +57,6 @@ function googlePayload(request: AnswerRequest): Record<string, unknown> {
     ...(request.retrieval_enabled ? { tools: [{ type: 'google_search' }] } : {}),
   };
 }
-/**
- * The route's frozen thinking mode and effort. Thinking tokens count against
- * `max_tokens`, so an answer-capture route turns thinking off in config rather
- * than raising the output budget.
- */
 function anthropicReasoning(request: AnswerRequest) {
   const effort = request.reasoning_effort;
   return {

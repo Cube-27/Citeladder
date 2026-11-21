@@ -88,8 +88,6 @@ function claimPending(
           eb('reconciliation_next_at', '<=', now),
         ]),
       )
-      // Past the abandon window an exhausted row still gets its final probe,
-      // so an unpaid checkout terminalizes instead of blocking new purchases.
       .where((eb) =>
         eb.or([
           eb('reconciliation_attempts', '<', config.billing.attempts),
@@ -177,7 +175,6 @@ async function pendingProbe(
       pending.created_at.getTime() <= now.getTime() - config.billing.abandonSeconds * 1000;
     if (abandoned && reference && pending.activation_kind === 'base') {
       if (!(await cancelAtProvider(provider, reference, false))) return pending.id;
-      // A refusal can mean the customer paid meanwhile: settle what the provider now reports.
       evidence = await provider.evidence(reference, true);
       abandoned = unpaid(evidence);
     }
@@ -229,10 +226,8 @@ async function pendingProbe(
         .execute();
       return owner;
     });
-    // Grants changed under the capacity lock; the runtime follows in its own order.
     if (settled) await refreshRuntime(db, settled);
   } catch (error) {
-    // Uncertain reads never prove nonpayment; the row stays pending for review.
     logger.warning('billing.pending_recovery_failed', {
       activation_id: pending.id,
       exception: String(error),
@@ -391,7 +386,6 @@ async function webhookProbe(
   } finally {
     await stopLease();
   }
-  // An unmatched refund can precede its payment; retry boundedly, then quarantine.
   const exhausted = await db
     .updateTable('billing_webhook_events')
     .set({
@@ -471,7 +465,6 @@ async function subscriptionProbe(
     await pushChange(db, sub.id, provider);
     let evidence = await provider.evidence(sub.external_subscription_id, true);
     const state = evidence.kind === 'base' ? evidence.subscription : null;
-    // Halted (retries exhausted) ends now, so it can never charge again unseen.
     const halted = state?.status === policy.billing.subscription_status.unpaid;
     const refunded =
       state !== null &&
@@ -484,7 +477,6 @@ async function subscriptionProbe(
       cancellationSendAt(sub.current_period_end, config) <= new Date();
     const unwanted =
       due && state?.status === policy.billing.subscription_status.active && !state.cancelAtEnd;
-    // Marked sent before the request, so a resume can never race it.
     const immediate = halted || refunded;
     const send = immediate || (unwanted && (await markCancellationSent(db, sub.id)));
     if (send) {

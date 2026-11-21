@@ -51,7 +51,6 @@ export const recomputeDemand: Executor = async (task, { db, maxAttempts, checkCa
   };
   await checkCancelled('demand projection');
   await db.transaction().execute(async (trx) => {
-    // Concurrent retries must publish one immutable snapshot, not fail a uniqueness race.
     await subjectXactLock(trx, `demand_snapshot:${scope.projectId}`);
     const query = await buildQueryEvidence(trx, scope);
     const traffic = await trafficSource(trx, scope);
@@ -155,7 +154,7 @@ export const recomputeDemand: Executor = async (task, { db, maxAttempts, checkCa
       .execute();
     const size = policy.traffic.TRAFFIC_METRIC_ROW_BATCH_SIZE;
     for (let i = 0; i < candidates.length; i += size)
-      await trx // NOSONAR -- One transaction: bounded inserts run in order.
+      await trx // NOSONAR
         .insertInto('demand_signals')
         .values(
           candidates.slice(i, i + size).map((c) => ({
