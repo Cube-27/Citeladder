@@ -22,6 +22,12 @@ PR: [invariant 10](../invariants.md#10-automation-stays-bounded) and
 Agent gains proposed changes; nothing executes without the person's click),
 [Agent](../agents.md) and [MCP](../mcp.md#changes).
 
+Every PR of this plan puts its schema change in one migration,
+`frontend/services/api/migrations/0002_agent_hero.sql`: the first to merge
+creates it and later PRs append to it, since nothing deploys until the plan is
+built, an exception to [invariant 17](../invariants.md#17-schema-changes-are-forward-migrations)
+(owner, 2026-11-22).
+
 What does not change: no change executes without a click by a member whose
 live role allows it; no model call or paid run happens inside a preview; a
 launched job is never awaited by a turn; no sub-agents, no server-continued
