@@ -178,6 +178,8 @@ export const importKinds = {
         content: payload.content,
         label: payload.filename,
       });
+      if (staged.result)
+        throw new ApiError(409, 'This exact file was already imported into the catalog');
       const result = await applyImport(trx, scope, staged.import_id, []);
       const written = result.row_outcomes.filter(
         (row) => row.status === 'created' || row.status === 'updated',

@@ -258,4 +258,8 @@ it('refuses a catalog import without commerce, then previews new and rejected pr
 
   await confirm(0);
   expect(await products()).toEqual([{ name: 'Road Runner' }, { name: 'Trail Runner' }]);
+  const again = await proposed(t.scope, [{ kind: 'import_catalog', payload }]);
+  expect(again.results).toEqual([
+    refusedNow('This exact file was already imported into the catalog'),
+  ]);
 });
