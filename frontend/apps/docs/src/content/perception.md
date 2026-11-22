@@ -12,31 +12,21 @@ updated: '2026-11-22'
 
 Every answer from a brand audit that names you or a competitor is read for sentiment, at no credit cost. Answers from audits run before this existed are not classified.
 
-The tab reads every completed brand run of the market in the selected period, the last 90 days unless you pick another. When that period holds no completed run, it shows the latest run instead, as **Latest run** under **Measurement**. A line under the heading says how many runs and answers naming you it covers. A period holding more than 100 runs is refused; pick a narrower one.
+The tab reads every completed brand run of the market in the selected period, the last 90 days unless you pick another. When that period holds no completed run, it shows the latest run instead, as **Latest run** under **Measurement**. A period holding more than 100 runs is refused; pick a narrower one.
 
 Each point an answer makes about a business is labelled with a short attribute in a buyer's words, such as "Slow refunds on annual plans", under a category. Your project's themes are the starting categories; when none fits, a new broad category is added to your themes, up to 20. Rename or delete themes in **Agent → Context → Themes**, and ask the Agent to merge two: it proposes the merge as a card you confirm, and a merge cannot be undone. Answers labelled before attributes existed keep only their category.
 
 When few answers describe you, a notice links to the Prompt builder to [add brand prompts](/prompts/#brand-prompts), questions that ask about your brand directly.
 
-The first card states how often answers say something negative about you and which themes draw more criticism than praise. Its figures are **Describing you** (classified mentions out of all mentions), **Positive**, **Negative** and **Recommended**, plus **Contradicted claims** for the pilot, which opens Fact-checking.
+- The figures are **Describing you** (classified mentions out of all mentions, with what is still pending or unclassified behind its info icon), **Positive answers** and **Negative answers**, plus **Contradicted claims** for the pilot, which opens Fact-checking.
+- Below 20 classified mentions a share shows as counts, such as "9 / 14", tagged **Small sample**; a category's share switches below 5 positive or negative points. With nothing classified a figure reads **Too few classified**, never a share. Mentions still being classified, low-confidence labels and mentions left unclassified are counted separately and never treated as zero.
+- The ranked list shows the categories answers raise most against you, or switch to **Most positive** for the ones they praise.
+- **Sentiment** splits classified mentions into negative, mixed, positive and neutral.
+- **Net sentiment** runs from −100 to +100: positive mentions minus negative mentions, divided by every classified mention; mixed mentions count in the denominator only. Its trend appears once your period holds two runs, and a break in the line means the runs cannot be compared directly.
 
-- **Net sentiment** runs from −100 to +100: positive mentions minus negative mentions, divided by every classified mention. Mixed mentions count in the denominator only.
-- **Coverage** always sits beside it as "N of M mentions classified". Mentions still being classified, mentions the classifier could not judge, low-confidence labels and mentions left unclassified (for example when the platform limit is reached) are counted separately and never treated as zero.
-- The headline on criticism and each point of the trend need at least 20 classified mentions. Below that, **Positive**, **Negative**, **Recommended**, **How AI judges you** and breakdown rows still show their share with its counts, marked **small sample**; a theme's share is marked so below 5 positive or negative mentions. With nothing classified a figure reads **Too few classified**, never a share.
-- **How AI describes you** groups what answers praised or criticised (pricing, support, reliability and so on) into themes; switch between most negative and most positive.
-- **How AI judges you** splits classified mentions into positive, neutral, negative and mixed.
-- **Net sentiment over time** follows the score across the runs in your period. A break in the line means the runs cannot be compared directly.
-- **You and competitors** compares sentiment across the brands you track.
-- **Criticism in answers** lists the negative points about you, quoted exactly as the answer put them. Select a quote or its prompt to open the full answer over the page; open it in a new tab to go to the run instead.
-- **Recommended** is the share of answers naming you that explicitly recommend you near your first mention. It reads English phrasing only.
-
-The breakdown card splits sentiment **By theme** (open a theme for its quotes, each led by its attribute, with engine and prompt), **By topic**, **By engine**, **By prompt** and **By source**. By source lists domains cited in answers that criticised you. They appeared alongside the criticism; the view does not show that they caused it.
+Below them, switch the breakdown **By attribute**, **By topic**, **By engine** or **By source**; only views with data are offered. By attribute lists each category with its negative and positive points, the share that is negative and a bar comparing the two. Search it, keep only negative or positive points, and sort by any column. Open a category for its quotes, each with its attribute, tone, engine and prompt. Select a quote or its prompt to open the full answer over the page, with the answer's attributes listed beside it; open it in a new tab to go to the run instead. By source lists domains cited in answers that criticised you. They appeared alongside the criticism; the view does not show that they caused it.
 
 When nothing is classified yet the page says so: answers are still being classified, perception is unavailable (with the reason), or no answer in the selection named you. A change in how perception is classified starts a new comparison series, so points from before and after it are not compared directly.
-
-## Compare themes with competitors
-
-**How AI describes competitors** shows the theme most associated with you and your largest gap to the leading brand, then a map of brands by theme: each cell is the share of that brand's mentions that raise the theme. Quotes are kept for your brand only.
 
 ## Read the Market and Objections tabs
 

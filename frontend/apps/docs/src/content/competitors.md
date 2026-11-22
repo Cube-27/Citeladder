@@ -26,5 +26,3 @@ Open a competitor's row to see its own page:
 **Suggested competitors** lists businesses your answers point to that you do not track yet. A suggestion comes from a domain cited in answers or from a business name answers repeat; a name is suggested once it appears in at least three prompts across at least two engines in one audit. **Found by** reads **Cited domain** or **Named in answers**, and **Seen in** and **Engines** say how often. Names are found from the next audit after this was added; earlier audits are not re-read.
 
 Suggestions never join your competitors until you choose **Accept**. **Reject** removes a suggestion, and later audits never suggest that domain or name again. Each suggestion is listed once, from its latest audit.
-
-To see how answers describe each competitor's themes against yours, open the competitor theme map on [Perception](/perception/#compare-themes-with-competitors).

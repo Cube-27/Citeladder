@@ -2,7 +2,11 @@ import { AnswerTranscript } from '@/components/runs/answer-transcript';
 import { BrandsRail, FanoutRail, LinksRail, SourcesRail } from '@/components/runs/answer-rail';
 import { EvidenceAds } from '@/components/runs/evidence-ads';
 import { claimHighlights, EvidenceClaims } from '@/components/runs/evidence-claims';
-import { EvidencePerception, perceptionHighlights } from '@/components/runs/evidence-perception';
+import {
+  AttributesRail,
+  EvidencePerception,
+  perceptionHighlights,
+} from '@/components/runs/evidence-perception';
 import { SurfaceEvidence } from '@/components/runs/surface-evidence';
 import { AnswerLayout } from '@/components/ui/answer-chat';
 import { Icon } from '@/components/ui/icon';
@@ -113,7 +117,13 @@ export function AnswerEvidence({
   evidence,
   promptText,
   promptId,
-}: Readonly<{ evidence: ExecutionEvidence; promptText: string | null; promptId?: string }>) {
+  attributes = false,
+}: Readonly<{
+  evidence: ExecutionEvidence;
+  promptText: string | null;
+  promptId?: string;
+  attributes?: boolean;
+}>) {
   const { project } = useProjectScope();
   const brands = answerBrands(evidence, project);
   const sources = answerSources(evidence.citations);
@@ -123,6 +133,7 @@ export function AnswerEvidence({
       rail={
         <>
           <BrandsRail brands={brands} />
+          {attributes ? <AttributesRail perception={evidence.perception} /> : null}
           <SourcesRail sources={sources} />
           <LinksRail
             links={answerLinks(evidence.answer_text, project)}

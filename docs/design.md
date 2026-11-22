@@ -41,8 +41,9 @@ Older role names bind onto the table so call sites keep working: `chrome` is
 `panel`. Status colours (`positive`, `negative`, `warning`, `info` and their
 `-wash` fills), `accent-text`, `accent-wash` and the data series keep their
 values in `globals.css`. A status colour appears only beside a glyph and a
-word, never as a large fill; the one exception is a Site health page score,
-printed in `negative` below 50 and `warning` below 80 (owner, 2026-11-22). The light surfaces are blue-tinted neutrals (owner, 2026-11-22) stepping darker in this order: `panel`, `page`,
+word, never as a large fill. Two exceptions (owner, 2026-11-22): a Site health
+page score, printed in `negative` below 50 and `warning` below 80, and
+Perception › Brand's sentiment donut and attribute bars (AR-19). The light surfaces are blue-tinted neutrals (owner, 2026-11-22) stepping darker in this order: `panel`, `page`,
 `raised-2`, `ground`, the table tray; the dark ones are pure neutral greys with no blue. A table's rows and inputs are `panel` in both themes. Data: `data-you` is the accent, `data-rival-1`
 to `-4` ink then cool hues in rank order, `data-other` the grouped rest.
 
@@ -151,7 +152,8 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   page-wide toolbar is the strip under the tabs, with no rule.
 - **Metric strip:** one `panel` strip with no edge or
   shadow, radius 6, cells divided by hairlines, cell padding 10 by 16, 12px label over the value. Never cards;
-  no meters, rings or bars inside a cell (AR-3).
+  no meters, rings or bars inside a cell (AR-3). The one table with a bar in a
+  cell is Perception › Brand's attributes table (AR-19).
 - **Table** (the HeroUI table, owner 2026-11-22): a tray (`#dde3ea` in
   light, `#262626` in dark), radius 6, no edge, 4 padding at the sides and
   foot; head 36 on the tray, 12px at 500, a 16-high `rule` tick between

@@ -34,14 +34,14 @@ const coverage = {
 };
 
 const quote = {
-  text: 'support is slow',
-  theme: 'Support',
-  attribute: { kind: 'labelled' as const, name: 'Slow support' },
+  text: 'sizes run small',
+  theme: 'Sizing',
+  attribute: { kind: 'labelled' as const, name: 'Runs small' },
   polarity: 'negative' as const,
   entity: 'Acme',
   is_brand: true,
   logical_engine: 'chatgpt',
-  prompt: 'best tools?',
+  prompt: 'best kids pyjamas?',
   run_id: RUN,
   execution_id: EXECUTION,
   observed_at: '2026-10-01T00:00:00Z',
@@ -49,8 +49,27 @@ const quote = {
   template_version: 't1',
 };
 
-function response(overrides: Partial<PerceptionResponse> = {}): PerceptionResponse {
-  const brand = {
+const categories = [
+  {
+    category: 'Low prices',
+    mentions: 6,
+    negative: 0,
+    positive: 6,
+    attributes: [],
+  },
+  {
+    category: 'Sizing',
+    mentions: 3,
+    negative: 2,
+    positive: 1,
+    attributes: [{ attribute: 'Runs small', negative: 2, positive: 0, quotes: [quote] }],
+  },
+];
+
+type Entity = PerceptionResponse['entities'][number];
+
+function brand(overrides: Partial<Entity> = {}): Entity {
+  return {
     name: 'Acme',
     is_brand: true,
     logo_url: null,
@@ -58,31 +77,23 @@ function response(overrides: Partial<PerceptionResponse> = {}): PerceptionRespon
     score: score(),
     coverage,
     theme_mentions: [],
-    categories: [],
+    categories,
+    ...overrides,
   };
+}
+
+function response(overrides: Partial<PerceptionResponse> = {}): PerceptionResponse {
   return {
     state: 'value',
     reason: null,
     source_audit_ids: [RUN],
-    brand,
+    brand: brand(),
     coverage,
-    entities: [
-      brand,
-      {
-        name: 'Rival',
-        is_brand: false,
-        logo_url: null,
-        website_url: null,
-        score: score({ classified: 0, positive: 0, negative: 0, net_sentiment: null }),
-        coverage: { ...coverage, mentions: 2, classified: 0 },
-        theme_mentions: [],
-        categories: [],
-      },
-    ],
+    entities: [brand()],
     engines: [],
     topics: [],
     prompts: [],
-    themes: [{ theme: 'Ease of use', positive: 2, negative: 1, quotes: [quote] }],
+    themes: [],
     negative_quotes: [quote],
     drivers: [{ domain: 'reviews.example', answers: 1, example_url: null }],
     recommended: {
@@ -97,62 +108,115 @@ function response(overrides: Partial<PerceptionResponse> = {}): PerceptionRespon
   };
 }
 
+const figures = () => within(screen.getByLabelText('Brand perception'));
+
 describe('Perception view', () => {
-  it('shows a small sample with its counts and label, an empty one as before and a full one plainly', () => {
-    const brandWith = (s: PerceptionScore) => ({
-      name: 'Acme',
-      is_brand: true,
-      logo_url: null,
-      website_url: null,
-      score: s,
-      coverage,
-      theme_mentions: [],
-      categories: [],
-    });
+  it('shows shares as counts with a small-sample tag below the sample size and as percentages from it', () => {
     const { unmount } = render(<PerceptionView data={response()} />);
-    expect(screen.queryByRole('heading', { name: /^AI says/u })).toBeNull();
-    expect(screen.getAllByRole('heading', { name: 'How AI describes you' })).toHaveLength(1);
-    expect(screen.getByText('1 run · 5 answers naming you')).toBeVisible();
-    const lede = within(screen.getByLabelText('Brand perception'));
-    expect(lede.getByText('75.0%')).toBeVisible();
-    const basis = (description: string) => screen.getByRole('button', { description });
-    expect(basis('3 of 4 classified mentions · small sample')).toHaveAccessibleName(/^Basis of /);
-    expect(screen.getByText('4 classified · small sample')).toBeVisible();
+    expect(figures().getByText('3 / 4')).toBeVisible();
+    expect(figures().getByText('1 / 4')).toBeVisible();
+    expect(figures().getAllByText('Small sample')).toHaveLength(2);
+    expect(figures().getByText('4 / 6')).toBeVisible();
     unmount();
 
-    const empty = score({
-      positive: 0,
-      negative: 0,
-      classified: 0,
-      positive_share: null,
-      negative_share: null,
-      net_sentiment: null,
-    });
-    const none = render(
+    const enough = score({ positive: 15, negative: 5, classified: 20 });
+    render(<PerceptionView data={response({ brand: brand({ score: enough }) })} />);
+    expect(figures().getByText('75.0%')).toBeVisible();
+    expect(figures().getByText('25.0%')).toBeVisible();
+    expect(figures().queryByText('Small sample')).toBeNull();
+  });
+
+  it('ranks attributes by the chosen side and opens a category to its quotes', () => {
+    render(<PerceptionView data={response()} />);
+    const ranks = within(screen.getByRole('region', { name: 'Ranked attributes' }));
+    expect(ranks.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Sizing2']);
+    fireEvent.click(ranks.getByRole('radio', { name: 'Most positive' }));
+    expect(ranks.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Low prices6',
+      'Sizing1',
+    ]);
+
+    expect(screen.queryByRole('link', { name: '“sizes run small”' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Sizing' }));
+    expect(screen.getByRole('link', { name: '“sizes run small”' })).toHaveAttribute(
+      'href',
+      expect.stringContaining(`/runs/${RUN}?execution=${EXECUTION}`),
+    );
+    expect(screen.getByRole('link', { name: 'best kids pyjamas?' })).toBeVisible();
+  });
+
+  it('hides empty blocks and the trend until two runs, keeping the breakdown views with data', () => {
+    const { unmount } = render(
       <PerceptionView
         data={response({
-          brand: brandWith(empty),
-          recommended: { ...response().recommended, mentioned: 0, recommended: 0 },
+          brand: brand({
+            categories: [],
+            score: score({ classified: 0, positive: 0, negative: 0 }),
+          }),
+          drivers: [],
         })}
       />,
     );
-    const emptyLede = within(screen.getByLabelText('Brand perception'));
-    expect(emptyLede.getAllByText('Too few classified')).toHaveLength(2);
-    expect(emptyLede.getByText('Too few answers')).toBeVisible();
-    expect(emptyLede.queryByText(/%/u)).toBeNull();
-    expect(screen.getByText('No classified mentions of you.')).toBeVisible();
-    none.unmount();
+    expect(screen.queryByRole('region', { name: 'Ranked attributes' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Sentiment' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Breakdown' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Net sentiment' })).toBeNull();
+    unmount();
 
-    const enough = score({ positive: 15, negative: 5, classified: 20, negative_share: 0.25 });
-    render(<PerceptionView data={response({ brand: brandWith(enough) })} />);
-    expect(
-      screen.getByRole('heading', {
-        name: 'AI says something negative about you in 25% of classified mentions',
-      }),
-    ).toBeVisible();
-    expect(within(screen.getByLabelText('Brand perception')).getByText('75.0%')).toBeVisible();
-    expect(basis('15 of 20 classified mentions')).toHaveAccessibleName(/^Basis of /);
-    expect(screen.queryByText(/^\d+ classified · small sample$/u)).toBeNull();
+    const point = {
+      audit_id: RUN,
+      completed_at: '2026-10-01T00:00:00Z',
+      score: score(),
+      mentions: 4,
+      extractor_version: 'x1',
+      template_version: 't1',
+      metrics_version: 'm1',
+      comparable: true,
+    };
+    const later = {
+      ...point,
+      audit_id: '33333333-3333-4333-8333-333333333333',
+      completed_at: '2026-10-08T00:00:00Z',
+    };
+    render(<PerceptionView data={response({ trend: [point, later] })} />);
+    expect(screen.getByRole('region', { name: 'Sentiment' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Net sentiment' })).toBeVisible();
+    const views = within(screen.getByRole('radiogroup', { name: 'Break perception down' }));
+    expect(views.getAllByRole('radio').map((radio) => radio.textContent)).toEqual([
+      'By attribute',
+      'By source',
+    ]);
+    fireEvent.click(views.getByRole('radio', { name: 'By source' }));
+    expect(screen.getByText('reviews.example')).toBeVisible();
+  });
+
+  it('switches breakdown shares to counts below the sample size', () => {
+    const row = (key: string, s: PerceptionScore) => ({
+      key,
+      label: key,
+      score: s,
+      coverage: { ...coverage, mentions: s.classified + 2, classified: s.classified },
+    });
+    render(
+      <PerceptionView
+        data={response({
+          topics: [
+            row(
+              'Payroll',
+              score({ positive: 12, neutral: 4, negative: 3, mixed: 1, classified: 20 }),
+            ),
+            row('Invoicing', score({ positive: 2, negative: 1, classified: 3 })),
+          ],
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole('radio', { name: 'By topic' }));
+    const payroll = screen.getByRole('row', { name: /Payroll/u });
+    expect(within(payroll).getByText('60.0%')).toBeVisible();
+    expect(within(payroll).queryByText('Small sample')).toBeNull();
+    const invoicing = screen.getByRole('row', { name: /Invoicing/u });
+    expect(within(invoicing).getByText('2 / 3')).toBeVisible();
+    expect(within(invoicing).getByText('Small sample')).toBeVisible();
   });
 
   it('links to brand prompts only while too few answers describe the brand', () => {
@@ -164,107 +228,6 @@ describe('Perception view', () => {
     unmount();
     render(<PerceptionView data={response({ coverage: { ...coverage, classified: 20 } })} />);
     expect(screen.queryByRole('link', { name: 'add brand prompts' })).toBeNull();
-  });
-
-  it('shows the classified coverage and opens a theme to its quotes', () => {
-    render(<PerceptionView data={response()} />);
-    expect(within(screen.getByLabelText('Brand perception')).getByText('4 / 6')).toBeVisible();
-    expect(
-      screen.getByRole('button', {
-        description: '1 pending · 1 unavailable (platform limit reached)',
-      }),
-    ).toHaveAccessibleName(/^Basis of /);
-    expect(screen.getAllByRole('link', { name: '“support is slow”' })).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Ease of use' }));
-    const links = screen.getAllByRole('link', { name: '“support is slow”' });
-    expect(links).toHaveLength(2);
-    expect(links[1]).toHaveAttribute(
-      'href',
-      expect.stringContaining(`/runs/${RUN}?execution=${EXECUTION}`),
-    );
-    expect(screen.getByText('0 of 2')).toBeVisible();
-    fireEvent.click(screen.getByRole('radio', { name: 'By source' }));
-    expect(screen.getByText('reviews.example')).toBeVisible();
-  });
-
-  it('shows breakdown shares with a small-sample label below the minimum and none at zero', () => {
-    const row = (key: string, s: PerceptionScore, mentions: number) => ({
-      key,
-      label: key,
-      score: s,
-      coverage: { ...coverage, mentions, classified: s.classified },
-    });
-    render(
-      <PerceptionView
-        data={response({
-          topics: [
-            row(
-              'Payroll',
-              score({ positive: 12, neutral: 4, negative: 3, mixed: 1, classified: 20 }),
-              24,
-            ),
-            row('Invoicing', score({ positive: 2, negative: 1, classified: 3 }), 10),
-            row('Billing', score({ positive: 0, negative: 0, classified: 0 }), 2),
-          ],
-        })}
-      />,
-    );
-    fireEvent.click(screen.getByRole('radio', { name: 'By topic' }));
-    const payroll = screen.getByRole('row', { name: /Payroll/u });
-    expect(within(payroll).getByText('20 of 24')).toBeVisible();
-    expect(within(payroll).getByText('60.0%')).toBeVisible();
-    const invoicing = screen.getByRole('row', { name: /Invoicing/u });
-    expect(within(invoicing).getByText('small sample')).toBeVisible();
-    expect(within(invoicing).getByText('66.7%')).toBeVisible();
-    expect(within(payroll).queryByText('small sample')).toBeNull();
-    const billing = screen.getByRole('row', { name: /Billing/u });
-    expect(within(billing).getByText('No classified mentions')).toBeVisible();
-    expect(within(billing).queryByText(/%/u)).toBeNull();
-  });
-
-  it('states the recommended count briefly, naming advice against only when it occurred', () => {
-    const { unmount } = render(<PerceptionView data={response()} />);
-    const basis = (description: string) => screen.getByRole('button', { description });
-    expect(
-      basis('2 of 5 answers naming you; 1 advised against · small sample'),
-    ).toHaveAccessibleName(/^Basis of /);
-    unmount();
-
-    render(
-      <PerceptionView
-        data={response({
-          recommended: {
-            mentioned: 4,
-            recommended: 0,
-            recommended_against: 0,
-            rate: 0,
-            limitation: 'English phrasing only.',
-          },
-        })}
-      />,
-    );
-    expect(basis('0 of 4 answers naming you · small sample')).toHaveAccessibleName(/^Basis of /);
-  });
-
-  it('marks the classified counts unavailable when the brand has no score, never 0 of 0', () => {
-    const { unmount } = render(<PerceptionView data={response()} />);
-    expect(
-      screen.getByRole('button', { description: '3 of 4 classified mentions · small sample' }),
-    ).toHaveAccessibleName(/^Basis of /);
-    unmount();
-
-    render(<PerceptionView data={response({ brand: null })} />);
-    expect(screen.queryByText(/of \d+ classified mentions/u)).toBeNull();
-    expect(screen.queryByText(/0 of 0/u)).toBeNull();
-  });
-
-  it('says in one line that no source was cited alongside criticism', () => {
-    render(<PerceptionView data={response({ drivers: [] })} />);
-    fireEvent.click(screen.getByRole('radio', { name: 'By source' }));
-    expect(screen.getByText('No sources cited alongside criticism.')).toBeVisible();
-    expect(
-      screen.queryByRole('heading', { name: 'No sources cited alongside criticism.' }),
-    ).toBeNull();
   });
 
   it.each([
