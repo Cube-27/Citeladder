@@ -680,7 +680,9 @@ project edit panel. `always` counts every whole-word occurrence; under
 `context_window_tokens` of it, and an occurrence inside an exclusion phrase never
 counts. A name that is one common word (`common_noun_names`, the generator's
 common words or binding stopwords) defaults to `context_required`, seeded from
-category terms and offerings; only rules a person changed are saved. Admission
+category terms, offerings and the project's other tracked names that are not
+common words (a rival named beside it marks a brand comparison); only rules a
+person changed are saved. Admission
 freezes the effective rules into the audit configuration, analysis reads that
 frozen copy, and the comparison key includes it. One
 [matcher](../frontend/services/api/src/analysis/aliases.ts) serves scoring, entity
