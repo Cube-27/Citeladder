@@ -35,6 +35,7 @@ import { changeIdleChat } from '../agent/outputs.ts';
 import { DEFAULT_CHOICE } from '../agent/model-choice.ts';
 import { chooseOutputTarget } from '../agent/target-adapter.ts';
 import { readChat, listChats, listRevisions, runView, revisionView } from '../agent/reads.ts';
+import { currentInstructions } from '../agent/instructions.ts';
 import { agentProposalRoutes } from './agent-proposals.ts';
 import { defineGetRoute, definePostRoute, definePutRoute, defineDeleteRoute } from './define.ts';
 
@@ -550,21 +551,7 @@ export const agentRoutes = [
     path: '/api/v1/projects/{project_id}/agent/instructions',
     params: { path: projectPath, query: {} },
     response: agentInstructionsSchema,
-    async handle({ db, c }, { path }) {
-      const value = scope(c, path.project_id);
-      const row = await db
-        .selectFrom('agent_instruction_revisions')
-        .selectAll()
-        .where('workspace_id', '=', value.workspaceId)
-        .where('project_id', '=', value.projectId)
-        .orderBy('revision', 'desc')
-        .executeTakeFirst();
-      return {
-        revision: row?.revision ?? null,
-        text: row?.text ?? '',
-        created_at: row?.created_at.toISOString() ?? null,
-      };
-    },
+    handle: ({ db, c }, { path }) => currentInstructions(db, scope(c, path.project_id)),
   }),
   definePutRoute({
     ...projectFamily,
