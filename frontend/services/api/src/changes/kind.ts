@@ -6,7 +6,7 @@ import type { Database } from '../db/database.ts';
 import { operatorTransaction } from '../db/operator-transaction.ts';
 
 export type PreparedChange = Readonly<{ id: string; projectId: string }>;
-export type ChangeResult = Readonly<{ summary: string }> & Record<string, unknown>;
+type ChangeResult = Readonly<{ summary: string }> & Record<string, unknown>;
 export const changePreviewSchema = z.strictObject({
   title: z.string(),
   rows: z.array(z.strictObject({ label: z.string(), value: z.string() })),

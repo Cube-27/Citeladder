@@ -16,7 +16,7 @@ import type { TurnState } from './turn-budget.ts';
 
 export const PROPOSE_CHANGE = 'propose_change';
 
-export const AGENT_CHANGE_KINDS = [
+const AGENT_CHANGE_KINDS = [
   'add_prompts',
   'update_prompts',
   'update_prompt_text',
@@ -36,7 +36,7 @@ export function isAgentChangeKind(kind: string): kind is AgentChangeKind {
   return AGENT_CHANGE_KINDS.some((known) => known === kind);
 }
 
-export const storedProposalSchema = z.discriminatedUnion('kind', [
+const storedProposalSchema = z.discriminatedUnion('kind', [
   agentDeclarationProposalSchema,
   z.strictObject({
     kind: z.literal('change'),
@@ -80,26 +80,33 @@ const schemaNode: z.ZodType<SchemaNode> = z.lazy(() =>
   }),
 );
 
+function arrayShape(node: SchemaNode) {
+  const item = node.items ? shape(node.items) : 'any';
+  return item.includes('|') ? `(${item})[]` : `${item}[]`;
+}
+
+function objectShape(node: SchemaNode) {
+  const required = new Set(node.required ?? []);
+  const fields = Object.entries(node.properties ?? {}).map(
+    ([name, child]) => `${name}${required.has(name) ? '' : '?'}: ${shape(child)}`,
+  );
+  return `{${fields.join(', ')}}`;
+}
+
+function scalarShape(type: string | undefined, format: string | undefined) {
+  if (type !== 'string' || !format) return type ?? 'any';
+  return format;
+}
+
 function shape(node: SchemaNode): string {
   const options = node.anyOf ?? node.oneOf;
   if (options) return options.map(shape).join(' | ');
   if (node.const !== undefined) return JSON.stringify(node.const);
   if (node.enum) return node.enum.map((value) => JSON.stringify(value)).join('|');
   const type = Array.isArray(node.type) ? node.type.join('|') : node.type;
-  if (type === 'array') {
-    const item = node.items ? shape(node.items) : 'any';
-    return item.includes('|') ? `(${item})[]` : `${item}[]`;
-  }
-  if (type === 'object') {
-    const required = new Set(node.required ?? []);
-    const fields = Object.entries(node.properties ?? {}).map(
-      ([name, child]) => `${name}${required.has(name) ? '' : '?'}: ${shape(child)}`,
-    );
-    return `{${fields.join(', ')}}`;
-  }
-  if (type === 'string' && node.format === 'uuid') return 'uuid';
-  if (type === 'string' && node.format) return node.format;
-  return type ?? 'any';
+  if (type === 'array') return arrayShape(node);
+  if (type === 'object') return objectShape(node);
+  return scalarShape(type, node.format);
 }
 
 function payloadShape(kind: AgentChangeKind) {

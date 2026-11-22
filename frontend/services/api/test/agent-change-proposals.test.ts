@@ -25,13 +25,15 @@ async function tenant() {
   return { ...t, scope };
 }
 
-async function proposed(scope: Scope, calls: { kind: string; payload: Json }[]) {
+async function proposed(scope: Scope, calls: { kind: string; payload: Json }[], together = false) {
   const { run, lease } = await fixtures.claimed(scope, { message: 'Please make this change.' });
   await fixtures
     .runtime(
       scope,
       scripted([
-        calls.map((call, index) => toolUse('propose_change', call, `call_${index}`)),
+        ...(together
+          ? [calls.map((call, index) => toolUse('propose_change', call, `call_${index}`))]
+          : calls.map((call, index) => [toolUse('propose_change', call, `call_${index}`)])),
         [text('Confirm it below.')],
       ]),
     )
@@ -185,6 +187,7 @@ it('stages at most the per-turn bound of proposals when the model proposes them 
   const { proposals } = await proposed(
     t.scope,
     names.map((name) => ({ kind: 'create_topic', payload: { name } })),
+    true,
   );
   expect(proposals).toHaveLength(5);
 });

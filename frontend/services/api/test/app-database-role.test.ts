@@ -13,6 +13,7 @@ afterAll(() => db.destroy());
 
 const APPEND_ONLY = [
   'account_grants',
+  'agent_proposal_outcomes',
   'agent_tool_attempts',
   'aio_observations',
   'answer_ad_observations',
