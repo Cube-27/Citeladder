@@ -184,7 +184,13 @@ export function IconButton({
       </IconLinkTarget>
     </Button>
   ) : (
-    <Button {...props} variant={variant} className={classes} aria-label={label}>
+    <Button
+      {...props}
+      variant={variant}
+      className={classes}
+      aria-label={label}
+      pendingLabel={<span className="sr-only">{props.pendingLabel ?? label}</span>}
+    >
       <Icon icon={icon} />
     </Button>
   );
