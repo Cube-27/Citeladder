@@ -5,8 +5,9 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 ## Active
 
-- [Agent as the app's hero](agent-hero.md): steps 1 to 5a are assigned (owner,
-  2026-11-22); step 5b onward waits for local testing and the owner's go.
+- [Agent as the app's hero](agent-hero.md): steps 1 to 5a are merged and not
+  deployed; step 5b onward waits for local testing and the owner's go (owner,
+  2026-11-22).
 
 The app redesign, audit remediation, both Site Health crawl plans and AI
 visibility gaps were retired on 21 November 2026; their owner decisions that

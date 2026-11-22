@@ -1,8 +1,8 @@
 # Agent as the app's hero
 
-Status: **steps 1 to 5a assigned by the owner, 2026-11-22**, built and merged
-through builders and reviewers. Step 5b onward is tested locally first and
-merged only on the owner's go. The owner's decisions are in
+Status: **steps 1 to 5a are merged (2026-11-22)**; nothing of this plan is
+deployed. Step 5b onward is tested locally first and merged only on the
+owner's go. The owner's decisions are in
 [decisions](../decisions.md#agent-mcp-and-public-api) and
 [B75](../billing-decisions.md#agent-charging); this plan holds the scope, the
 order and what is still open.
@@ -40,11 +40,11 @@ prepare tool and `confirm_change`, with no prompt delete
 
 | Step | Scope | Merge |
 |---|---|---|
-| 1 | Model and effort picker: Haiku 5.5, Sonnet 5.5, Opus 5.5 at low, medium or high, per chat; price rows per model; picker shown disabled without the entitlement | assigned |
-| 2 | Action harness: the Agent proposes a change, the dry run previews it, the card's click executes it once as the clicking member with a security event. First kinds are the ones MCP already has | assigned |
-| 3 | The remaining project-data and analysis actions, deletes included, and file attachments the Agent converts into an import (prompts, brand facts, product catalog) | assigned |
-| 4 | Inline views: the app's existing charts and tables placed in the thread from a stored selection, read on render, each with an Open in app link | assigned |
-| 5a | Skill quality pass and simple skills for features that have none | assigned |
+| 1 | Model and effort picker: Haiku 5.5, Sonnet 5.5, Opus 5.5 at low, medium or high, per chat; price rows per model; picker shown disabled without the entitlement | merged |
+| 2 | Action harness: the Agent proposes a change, the dry run previews it, the card's click executes it once as the clicking member with a security event. First kinds are the ones MCP already has | merged |
+| 3 | The remaining project-data and analysis actions, deletes included, and file attachments the Agent converts into an import (prompts, brand facts, product catalog) | merged |
+| 4 | Inline views: the app's existing charts and tables placed in the thread from a stored selection, read on render, each with an Open in app link | merged |
+| 5a | Skill quality pass and simple skills for features that have none | merged |
 | 5b | Skills that act and cross-feature playbooks | local testing, then the owner's go |
 | 6 | Integrations connected from the chat; curated outside connectors (Slack, Jira or Linear, Notion, Google Drive and Docs, WordPress), read and write behind a card | local testing, then the owner's go |
 | 7 | Sign-in lands on the Agent | last, after testing |
@@ -62,3 +62,10 @@ prepare tool and `confirm_change`, with no prompt delete
 - **Outside connectors that publish** (step 6) change the Agent's "never
   publishes or mutates externally" rule; the scope of each connector's writes
   is decided when step 6 is planned.
+- **Left out of steps 1 to 5a.** Run and crawl file exports have no direct
+  link from a read (their routes take the workspace from a header); the probe
+  quote (credits, blocked reason) is not in `read_perception`; the Site Health
+  change views read the latest crawl pair only; onboarding has no change kind.
+- **Before the first deploy**: the production `DEFAULT_AGENT_MODEL` must be a
+  priced model key, since unpriced models no longer fall back to a default
+  price.
