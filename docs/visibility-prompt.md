@@ -671,13 +671,29 @@ platform-funded through the default Agent gateway (`DEFAULT_AGENT_*`); it draws 
 customer credits. Policy, caps, the project-theme limits and the templates live in
 [`config/perception.json`](../frontend/services/api/src/config/perception.json).
 
-- **Themes.** Each project classifies against its own themes
-  ([`project_themes`](../frontend/services/api/src/projects/themes.ts)), saved by
-  onboarding research and edited in Context › Themes, plus the configured
-  fallback `Other`; there is no global list (AV-27, AV-39). Zero themes is valid
-  and classifies everything to `Other`. Aspects store the theme's id, so reads
-  show a renamed theme's current name on past answers and a deleted theme's
-  aspects as `Other`.
+- **Categories.** Each aspect carries a category and a short attribute in plain
+  buyer words (AV-39). Categories are the project's
+  [`project_themes`](../frontend/services/api/src/projects/themes.ts): onboarding
+  research and Context › Themes seed them, the model is shown them on every call
+  and reuses one whose name matches apart from case, spacing and punctuation, and
+  a name it coins is saved with source `model`
+  ([categories](../frontend/services/api/src/perception/categories.ts)) under a
+  per-project advisory lock, up to the configured per-project cap; past the cap,
+  or for a name that is too long, names a business or holds markup, the aspect
+  files under the fallback `Other`. Probe questions ask only about research and
+  user themes, so a coined category never adds probe spend. Aspects store the
+  theme's id, so a rename shows on past answers, a merge rewrites past aspects and
+  probe answer items to the kept theme in one transaction, and a deleted theme's
+  aspects read as `Other`. Aspects are derived labels, not raw evidence, so a
+  merge may move them. A merge and the labeller's save hold the same per-project
+  lock, so no label is saved pointing at a merged theme; one chosen before the
+  merge files under `Other` (`category_removed`). Merging a person's theme into a
+  model one makes the kept theme theirs, so probes keep asking about it. A probe
+  asked about the merged theme keeps that question, so its Market row drops out
+  and the kept theme's row reflects it from the next probe, as after a delete. An
+  aspect stored before attributes existed has no attribute key and reads
+  `not_labelled`; one the model gave no usable attribute stores null and reads
+  `not_found`.
 
 - **Trigger.** At the end of the analysis transaction, an answer whose entity
   assessments name the brand or a competitor enqueues one `answer_perception`
@@ -693,7 +709,8 @@ customer credits. Policy, caps, the project-theme limits and the templates live 
   one is `unavailable / model_changed`; a task that exhausts its attempts is
   compensated as `unavailable / task_failed`. None of these fails the audit.
   The model receives, per business (brand first, competitors by first mention,
-  bounded), every sentence naming it plus one either side; offsets are code
+  bounded), every sentence naming it plus one either side, the brand with a
+  larger character budget than each competitor; offsets are code
   points, like the entity assessment. An unparseable output is retried once,
   then recorded as `invalid_output`; a provider fault is `model_error`. The
   outcome, usage and input hash land in `answer_perceptions` with one
@@ -701,8 +718,8 @@ customer credits. Policy, caps, the project-theme limits and the templates live 
   transaction, unique on `(analysis_id, extractor_version)`.
 - **Validation.** Deterministic: an unknown entity is dropped; a quote must be
   found in that business's own passages after whitespace normalisation, else it
-  is dropped; a theme that names none of the project's themes (case and spacing
-  aside) becomes `Other`; a label below
+  is dropped; a refused category name becomes `Other` and an attribute over the
+  configured words or characters becomes null; a label below
   `min_confidence` is stored but excluded from aggregates. A business the model
   was sent but left out keeps its row flagged `model_omitted` and reads as
   `unavailable / model_omitted`, never as a `not_assessable` judgement. Drops
@@ -713,7 +730,8 @@ customer credits. Policy, caps, the project-theme limits and the templates live 
   confidence are counted separately and never read as zero. Theme counts are
   served for every named business: per theme, the classified mentions raising
   it, which Brand → Perception shows as each brand's share of its own classified
-  mentions, too few below the configured minimum (AV-6). The theme list,
+  mentions, too few below the configured minimum (AV-6); per category, its
+  counts and its most raised attributes, with a few quotes for the brand only. The theme list,
   negative quotes and the domains cited alongside criticism (never called a
   cause) stay brand-only, and the app shows no competitor quote; the
   recommended rate comes from the deterministic first-mention

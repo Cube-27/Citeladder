@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { sql } from 'kysely';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
@@ -7,6 +9,7 @@ import { auditRuntime } from '../src/audits/config.ts';
 import { settlePromptRun } from '../src/audits/prompt-runs.ts';
 import { createRepairAudit } from '../src/audits/repair.ts';
 import { policy } from '../src/config.ts';
+import { mergeCategories } from '../src/perception/category-merge.ts';
 import { enqueueProbeLabelling } from '../src/probes/launch-end.ts';
 import { probeMarket } from '../src/probes/market.ts';
 import { mergeGroups, renameGroup } from '../src/probes/objection-groups.ts';
@@ -336,7 +339,7 @@ describe('probe labelling and reads', () => {
     expect(labellings).toEqual([{ outcome: 'labelled' }, { outcome: 'labelled' }]);
   });
 
-  it('merges and renames groups inside their project only', async () => {
+  it('merges and renames groups and themes inside their project only', async () => {
     const owner = await probeTenant();
     const other = await probeTenant();
     const [auditId] = await launch(owner.t);
@@ -369,6 +372,46 @@ describe('probe labelling and reads', () => {
     if (objections.state !== 'value') throw new Error('expected a labelled probe');
     expect(objections.groups.map(({ name, score }) => [name, score])).toEqual([
       ['Too expensive', 100],
+    ]);
+
+    const sibling = { ...owner.t, projectId: await fixtures.project(owner.t.workspaceId) };
+    const elsewhere = await createTheme(db, sibling, { name: 'Fit' });
+    const modelFit = randomUUID();
+    await db
+      .insertInto('project_themes')
+      .values({
+        id: modelFit,
+        workspace_id: owner.t.workspaceId,
+        project_id: owner.t.projectId,
+        name: 'Fit',
+        position: 1,
+        source: 'model',
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .execute();
+    const filed = (themeId: string) =>
+      db
+        .selectFrom('probe_answer_items')
+        .select(({ fn }) => fn.countAll<string>().as('n'))
+        .where('workspace_id', '=', owner.t.workspaceId)
+        .where('theme_id', '=', themeId)
+        .executeTakeFirstOrThrow()
+        .then((row) => Number(row.n));
+    const comfort = await filed(owner.themeId);
+    await expect(
+      mergeCategories(db, { ...owner.t, themeId: owner.themeId, intoId: elsewhere.id }),
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(
+      mergeCategories(db, { ...owner.t, themeId: owner.themeId, intoId: owner.themeId }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(
+      await mergeCategories(db, { ...owner.t, themeId: owner.themeId, intoId: modelFit }),
+    ).toEqual({ id: modelFit, name: 'Fit', source: 'user' });
+    expect([comfort > 0, await filed(owner.themeId), await filed(modelFit)]).toEqual([
+      true,
+      0,
+      comfort,
     ]);
   });
 

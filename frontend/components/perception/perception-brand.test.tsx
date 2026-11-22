@@ -36,6 +36,7 @@ const coverage = {
 const quote = {
   text: 'support is slow',
   theme: 'Support',
+  attribute: { kind: 'labelled' as const, name: 'Slow support' },
   polarity: 'negative' as const,
   entity: 'Acme',
   is_brand: true,
@@ -57,6 +58,7 @@ function response(overrides: Partial<PerceptionResponse> = {}): PerceptionRespon
     score: score(),
     coverage,
     theme_mentions: [],
+    categories: [],
   };
   return {
     state: 'value',
@@ -74,6 +76,7 @@ function response(overrides: Partial<PerceptionResponse> = {}): PerceptionRespon
         score: score({ classified: 0, positive: 0, negative: 0, net_sentiment: null }),
         coverage: { ...coverage, mentions: 2, classified: 0 },
         theme_mentions: [],
+        categories: [],
       },
     ],
     engines: [],
@@ -104,6 +107,7 @@ describe('Perception view', () => {
       score: s,
       coverage,
       theme_mentions: [],
+      categories: [],
     });
     const { unmount } = render(<PerceptionView data={response()} />);
     expect(screen.queryByRole('heading', { name: /^AI says/u })).toBeNull();

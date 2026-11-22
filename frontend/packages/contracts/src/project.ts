@@ -85,7 +85,7 @@ export const topicSchema = responseObject({
 export const projectThemeSchema = responseObject({
   id: uuid(),
   name: z.string(),
-  source: z.enum(['research', 'user']),
+  source: z.enum(['research', 'user', 'model']),
 });
 
 export const promptCandidateSchema = responseObject({

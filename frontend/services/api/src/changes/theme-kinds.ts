@@ -7,6 +7,7 @@ import {
   renameTheme,
   themeRequest,
 } from '../projects/themes.ts';
+import { mergeCategories } from '../perception/category-merge.ts';
 import {
   changeKind,
   countOf,
@@ -23,6 +24,18 @@ async function themeName(context: PreviewContext, id: string) {
   const theme = (await listThemes(context.db, context)).find((row) => row.id === id);
   if (!theme) throw notFound('Theme');
   return theme.name;
+}
+
+function probeAnswersIn(context: PreviewContext, themeId: string) {
+  return countOf(
+    context.db
+      .selectFrom('probe_answer_items')
+      .select(ROW_COUNT)
+      .where('workspace_id', '=', context.workspaceId)
+      .where('project_id', '=', context.projectId)
+      .where('theme_id', '=', themeId)
+      .executeTakeFirst(),
+  );
 }
 
 export const themeKinds = {
@@ -71,6 +84,37 @@ export const themeKinds = {
       };
     },
   }),
+  merge_themes: changeKind({
+    permission: MEMBER_WRITE,
+    purpose:
+      'merge one perception theme into another; its labelled answers and probe answers move and it is deleted',
+    payload: z.strictObject({ theme_id: z.uuid(), into_id: z.uuid() }),
+    async execute(trx, _config, actor, change, payload) {
+      const kept = await mergeCategories(trx, {
+        workspaceId: actor.workspaceId,
+        projectId: change.projectId,
+        themeId: payload.theme_id,
+        intoId: payload.into_id,
+      });
+      return { summary: `Merged into “${kept.name}”.` };
+    },
+    async preview(context, payload) {
+      return {
+        title: 'Merge themes',
+        rows: [
+          { label: 'Merge', value: await themeName(context, payload.theme_id) },
+          { label: 'Into', value: await themeName(context, payload.into_id) },
+          {
+            label: 'Probe answers moved',
+            value: String(await probeAnswersIn(context, payload.theme_id)),
+          },
+          PERMANENT,
+        ],
+        spend: null,
+        opens: PERCEPTION,
+      };
+    },
+  }),
   delete_theme: changeKind({
     permission: MEMBER_WRITE,
     purpose: 'delete a perception theme; probe answers filed under it are left without a theme',
@@ -84,20 +128,14 @@ export const themeKinds = {
       return { summary: 'Deleted the theme.' };
     },
     async preview(context, payload) {
-      const answers = await countOf(
-        context.db
-          .selectFrom('probe_answer_items')
-          .select(ROW_COUNT)
-          .where('workspace_id', '=', context.workspaceId)
-          .where('project_id', '=', context.projectId)
-          .where('theme_id', '=', payload.theme_id)
-          .executeTakeFirst(),
-      );
       return {
         title: 'Delete a theme',
         rows: [
           { label: 'Theme', value: await themeName(context, payload.theme_id) },
-          { label: 'Probe answers left without a theme', value: String(answers) },
+          {
+            label: 'Probe answers left without a theme',
+            value: String(await probeAnswersIn(context, payload.theme_id)),
+          },
           PERMANENT,
         ],
         spend: null,

@@ -418,7 +418,8 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     });
   });
   it('keeps a document already written when a later call is refused, and charges for it', async () => {
-    const { scope, accountId, grantId } = await tenant(8);
+    const balance = 12;
+    const { scope, accountId, grantId } = await tenant(balance);
     const { run: saved, lease } = await run(scope, 'plan');
     const responses = [
       result(save('The finished plan.'), {
@@ -453,7 +454,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     expect(revision.body).toBe('The finished plan.');
     expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
       reserved: 0,
-      consumed: 8,
+      consumed: balance,
     });
   });
   async function closedAfter(first: Response, skillId?: string) {

@@ -146,6 +146,16 @@ const DELETES: [TabledKind, string, { label: string; value: string }[]][] = [
     ],
   ],
   [
+    'merge_themes',
+    'Merge themes',
+    [
+      { label: 'Merge', value: 'Comfort' },
+      { label: 'Into', value: 'Fit' },
+      { label: 'Probe answers moved', value: '0' },
+      UNDO,
+    ],
+  ],
+  [
     'delete_theme',
     'Delete a theme',
     [

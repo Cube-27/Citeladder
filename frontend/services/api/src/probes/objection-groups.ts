@@ -50,6 +50,19 @@ export async function saveAnswerItems(db: Database, rows: Insertable<ProbeAnswer
   if (rows.length) await db.insertInto('probe_answer_items').values(rows).execute();
 }
 
+export async function moveThemeAnswers(
+  db: Database,
+  scope: Scope & { themeId: string; intoId: string },
+) {
+  await db
+    .updateTable('probe_answer_items')
+    .set({ theme_id: scope.intoId })
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('theme_id', '=', scope.themeId)
+    .execute();
+}
+
 export async function renameGroup(
   db: Database,
   scope: Scope & { groupId: string },

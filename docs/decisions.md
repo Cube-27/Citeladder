@@ -422,8 +422,10 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
   reads the whole answer.
 - **AV-27** Onboarding saves 5 to 8 buyer-facing themes (never company facts),
   hidden during onboarding; users edit them freely; probe answers map onto
-  them. **AV-39** Perception › Brand classifies against these themes plus
-  `Other`, from the next audit, with no backfill.
+  them. **AV-39** Perception › Brand labels each point with an open,
+  buyer-worded attribute under editable categories rather than only fixed
+  themes plus `Other`; this matters more than the Brand page's layout (owner,
+  2026-11-22).
 - **AV-28** The first probe groups objections by meaning; later probes map onto
   them and add only genuinely new groups; users rename, merge or delete.
 - **AV-29 to AV-35 Probes:** one run asks market and objection questions, three
