@@ -14,6 +14,7 @@ import { productMetrics } from '../commerce/products.ts';
 import { catalog } from '../commerce/reads.ts';
 import { readiness, datasetPage, listRuns } from '../search-intelligence/reads.ts';
 import { mcpPolicy } from './config.ts';
+import { shoppingTotals } from './views-work.ts';
 import { appLink } from './links.ts';
 import { decodeCursor, encodeCursor, pagination, reference, unavailable } from './data.ts';
 import { McpInputError, type Evidence, type ProjectRead } from './types.ts';
@@ -93,8 +94,9 @@ export async function differentiationRead({ db, scope }: ProjectRead): Promise<E
 }
 
 export async function shelfRead(
-  { db, scope }: ProjectRead,
+  read: ProjectRead,
   args: Page & {
+    view?: 'products' | 'overview';
     holder_id?: string | null;
     source?: 'catalog' | 'all' | null;
     category_id?: string | null;
@@ -106,6 +108,8 @@ export async function shelfRead(
     throw new McpInputError(
       `window_days is one of ${policy.commerce.products.window_days.join(', ')}`,
     );
+  const { db, scope } = read;
+  if (args.view === 'overview') return shoppingTotals(read, { ...args, window_days: windowDays });
   const executions = { windowDays, engine: null, promptSet: null };
   if (args.holder_id)
     return { state: 'available', ...(await productDetail(db, scope, args.holder_id, executions)) };

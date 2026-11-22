@@ -186,6 +186,23 @@ export function decodeCursor(value: string, size: number): string[] {
     throw new McpInputError('cursor is invalid');
   }
 }
+export function cursorOffset(cursor: string | null | undefined, selection: readonly string[]) {
+  if (!cursor) return 0;
+  const parts = decodeCursor(cursor, selection.length + 1);
+  const offset = Number(parts.at(-1));
+  if (selection.some((part, index) => parts[index] !== part) || !Number.isSafeInteger(offset))
+    throw new McpInputError('cursor belongs to another selection');
+  return Math.max(0, offset);
+}
+export function offsetPage<T>(
+  rows: readonly T[],
+  page: { offset: number; limit: number; selection: readonly string[] },
+) {
+  const items = rows.slice(page.offset, page.offset + page.limit);
+  const end = page.offset + page.limit;
+  const next = rows.length > end ? encodeCursor(...page.selection, end) : null;
+  return { items, pagination: pagination(items, next) };
+}
 export const reference = (kind: RecordKindName, id: string) => ({
   kind,
   id,

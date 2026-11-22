@@ -698,8 +698,8 @@ export class SiteFixtures extends VisibilityFixtures {
         positioning: '',
         target_audience: '',
         products_services: '[]',
-        sources: '[]',
-        source_artifact_ids: '[]',
+        sources: '{}',
+        source_artifact_ids: '{}',
         created_at: now,
         updated_at: now,
       })
