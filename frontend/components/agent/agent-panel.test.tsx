@@ -17,6 +17,7 @@ import { expectThreadFollowsLatest } from '@/test/chat-follow';
 
 import { AgentPanel } from './agent-panel';
 import { AgentPanelTrigger } from './agent-panel-host';
+import { AGENT_MODELS, CHAT_MODEL } from '@/test/agent-chat-fixture';
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const CHAT = '22222222-2222-4222-8222-222222222222';
@@ -50,6 +51,7 @@ const DETAIL = {
     running: false,
   },
   pinned_skill_id: null,
+  model: CHAT_MODEL,
   context: {},
   messages: [
     {
@@ -141,6 +143,7 @@ afterAll(() => mswServer.close());
 
 const EMPTY_CATALOG = {
   skills: [],
+  models: AGENT_MODELS,
   limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
 };
 

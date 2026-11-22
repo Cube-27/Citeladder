@@ -355,6 +355,8 @@ export const agentMutations = {
         skillId?: string | null;
         mentions?: string[];
         attachments?: AgentAttachment[];
+        model?: string;
+        reasoning_effort?: AgentMessageRequest['reasoning_effort'];
         idempotencyKey: string;
       }) =>
         agentApi.sendMessage(
@@ -364,6 +366,8 @@ export const agentMutations = {
             skill_id: vars.skillId,
             mentions: vars.mentions,
             attachments: vars.attachments,
+            model: vars.model,
+            reasoning_effort: vars.reasoning_effort,
           },
           vars.idempotencyKey,
           { workspaceId: scope.workspaceId },

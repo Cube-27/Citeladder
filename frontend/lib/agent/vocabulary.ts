@@ -299,7 +299,8 @@ const RUN_ERROR_COPY: Record<string, string> = {
   stopped_at_limit:
     'The agent stopped at its step limit before finishing. Nothing was saved; ask again with a narrower request.',
   access_revoked: 'You no longer have permission to run the agent in this workspace.',
-  model_changed: 'The agent model changed after this request was queued. Send it again.',
+  model_unavailable:
+    "This chat's model is no longer offered. Start a new chat to use another model.",
   skills_changed: 'The agent was updated after this request was queued. Send it again.',
   output_conflict:
     'The output changed while the agent was working, so its revision was not saved. Ask again to revise the latest version.',

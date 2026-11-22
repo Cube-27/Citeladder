@@ -34,9 +34,16 @@ import { requestedPageUrl } from './page-url.ts';
 import { fetchesPage } from './skills.ts';
 import type { WorkflowCatalog } from './workflows.ts';
 import type { AgentAttachment } from '@citeladder/contracts/agent';
+import { agentReasoningEffortSchema } from '@citeladder/contracts/agent';
+import {
+  newChatChoice,
+  turnChoice,
+  type ModelChoice,
+  type RequestedChoice,
+} from './model-choice.ts';
 
 export type FundingIdentity = Pick<Run, 'funding_source' | 'requested_model'>;
-export type Admission = (db: Database, scope: Scope) => Promise<FundingIdentity>;
+export type Admission = (db: Database, scope: Scope, model: string) => Promise<FundingIdentity>;
 type AttachChatAction = (trx: Database) => Promise<string>;
 const messageSchema = z.string().trim().min(1).max(agentPolicy.message_max_chars);
 export type TurnInput = {
@@ -49,6 +56,7 @@ export type TurnInput = {
   refs?: Record<string, Json>;
   mentionIds?: string[];
   attachments?: AgentAttachment[];
+  choice?: RequestedChoice;
 };
 
 async function requireNoActiveRun(db: Database, chat: Chat) {
@@ -67,7 +75,11 @@ export async function requireIdle(db: Database, chat: Chat) {
     throw new AgentError('agent_run_active');
 }
 
+function choiceIdentity(choice: RequestedChoice = {}) {
+  return { model: choice.model ?? null, effort: choice.effort ?? null };
+}
 function requestIdentity(scope: Scope, input: TurnInput) {
+  const choice = choiceIdentity(input.choice);
   if (input.chatId)
     return {
       op: 'send_message',
@@ -77,6 +89,7 @@ function requestIdentity(scope: Scope, input: TurnInput) {
       workflow: input.workflowId ?? null,
       mentions: input.mentionIds ?? [],
       attachments: input.attachments ?? [],
+      ...choice,
     };
   return {
     op: 'create_chat',
@@ -88,6 +101,7 @@ function requestIdentity(scope: Scope, input: TurnInput) {
     context: input.refs ?? {},
     mentions: input.mentionIds ?? [],
     attachments: input.attachments ?? [],
+    ...choice,
   };
 }
 async function replayedRun(db: Database, scope: Scope, key: string, hash: string) {
@@ -194,7 +208,8 @@ export class AgentStore {
       if (chat.archived_at) throw notFound('Chat');
       await requireIdle(trx, chat);
       if (chat.turn_count >= agentPolicy.chat_turn_limit) throw new AgentError('agent_turn_limit');
-      const funding = await this.dependencies.admission(trx, scope);
+      const choice = await turnChoice(trx, scope, chat, input.choice ?? {});
+      const funding = await this.dependencies.admission(trx, scope, choice.model);
       z.enum(['platform', 'development']).parse(funding.funding_source);
       const refs = z
         .record(z.string(), z.json())
@@ -231,6 +246,7 @@ export class AgentStore {
         skill,
         workflow,
         manifest,
+        choice,
         pinnedSkillId: input.skillId === undefined ? chat.pinned_skill_id : input.skillId,
       });
     });
@@ -247,6 +263,7 @@ export class AgentStore {
       skill: Awaited<ReturnType<AgentStore['turnSkill']>>;
       workflow: Workflow | undefined;
       manifest: Manifest;
+      choice: ModelChoice;
       pinnedSkillId: string | null;
     },
   ) {
@@ -271,7 +288,7 @@ export class AgentStore {
             ? { workflow: { id: workflow.id, format_id: workflow.format_id ?? null } }
             : {}),
         },
-        budget: admittedBudget(this.dependencies.timeoutSeconds),
+        budget: admittedBudget(this.dependencies.timeoutSeconds, turn.choice.effort),
         runtime_version: agentPolicy.runtime_version,
         protocol_version: agentPolicy.protocol_version,
         registry_version: this.dependencies.registryVersion,
@@ -305,6 +322,8 @@ export class AgentStore {
       .set({
         turn_count: chat.turn_count + 1,
         pinned_skill_id: turn.pinnedSkillId,
+        model: turn.choice.model,
+        reasoning_effort: turn.choice.effort,
         last_activity_at: now,
         updated_at: now,
       })
@@ -368,7 +387,8 @@ export class AgentStore {
         url: await this.requestedPage(trx, scope, input),
         actionId: input.actionId ?? null,
       });
-      const funding = await this.dependencies.admission(trx, scope);
+      const choice = newChatChoice(input.choice ?? {});
+      const funding = await this.dependencies.admission(trx, scope, choice.model);
       const refs = { ...input.refs, target_url: page.url };
       const manifest = await buildManifest(
         trx,
@@ -460,6 +480,10 @@ export class AgentStore {
       key: pageTurnKey(fetch.taskId),
       hash: payload.request_fingerprint,
       funding: { funding_source: payload.funding_source, requested_model: payload.requested_model },
+      choice: {
+        model: chat.model,
+        effort: agentReasoningEffortSchema.parse(chat.reasoning_effort),
+      },
       skill: this.turnSkill(chat, workflow?.skill_id ?? null, manifest.action?.skill_id ?? null),
       workflow,
       manifest,
@@ -482,6 +506,7 @@ export class AgentStore {
   private async createChat(db: Database, scope: Scope, input: TurnInput) {
     if (input.actionId) await acceptForAgent(db, scope, input.actionId, scope.userId);
     const now = new Date();
+    const choice = newChatChoice(input.choice ?? {});
     return db
       .insertInto('agent_chats')
       .values({
@@ -493,6 +518,8 @@ export class AgentStore {
         action_id: input.actionId ?? null,
         context_refs: input.refs ?? {},
         pinned_skill_id: input.skillId ?? null,
+        model: choice.model,
+        reasoning_effort: choice.effort,
         turn_count: 0,
         created_at: now,
         updated_at: now,

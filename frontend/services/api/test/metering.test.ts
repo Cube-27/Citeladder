@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
@@ -18,12 +18,15 @@ import {
 
 const db = testDatabase();
 const fixtures = new VisibilityFixtures(db);
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 afterAll(async () => {
   await fixtures.cleanup();
   await db.destroy();
 });
 
-function gateway(reply: () => Response | Promise<Response>) {
+function gateway(reply: () => Response | Promise<Response>, model = 'claude-haiku-5-5') {
   const fetch = vi.fn<typeof globalThis.fetch>(async () => reply());
   return {
     fetch,
@@ -32,7 +35,7 @@ function gateway(reply: () => Response | Promise<Response>) {
         ...gatewaySettings({}),
         apiKey: 'fixture-key',
         baseUrl: 'https://model.test/v1',
-        model: 'claude-haiku-5-5',
+        model,
         maxOutputTokens: 100_000,
         attempts: 1,
       },
@@ -72,7 +75,7 @@ const calls = (workspaceId: string) =>
 
 describe('platform AI metering', () => {
   it('prices tokens at the serving model with the markup, in whole credits rounded up', () => {
-    const haiku = modelPrice('claude-haiku-5-5', '')!;
+    const haiku = modelPrice('claude-haiku-5-5')!;
     expect(chargeCredits(haiku, { input_tokens: 10_000, output_tokens: 2_000 })).toBe(3);
     expect(chargeCredits(haiku, { input_tokens: 10, output_tokens: null })).toBeNull();
     expect(
@@ -117,8 +120,13 @@ describe('platform AI metering', () => {
     ).toBeNull();
     expect(cachedReservationCredits(haiku, 1_000_000, 0)).toBe(260);
     expect(reservationCredits(haiku, 1_000_000, 0)).toBe(130);
-    expect(modelPrice('unpriced-model', 'gateway-model')).toBeNull();
-    expect(modelPrice('gateway-model', 'gateway-model')).toEqual(haiku);
+    const usage = { input_tokens: 1_000, output_tokens: 1_000 };
+    expect(
+      ['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5'].map((model) =>
+        chargeCredits(modelPrice(model)!, usage),
+      ),
+    ).toEqual([1, 16, 32]);
+    expect(modelPrice('unpriced-model')).toBeNull();
   });
 
   it('refuses a model, JEV or research call made outside a metering scope', async () => {
@@ -167,6 +175,21 @@ describe('platform AI metering', () => {
       meterFor(db, t.workspaceId).gateway(raw, 'prompt_generation').complete('system', 'user'),
     ).rejects.toMatchObject({ status: 403, code: 'ai_credits_exhausted' });
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses a charged call to a model without its own price row, even the gateway default', async () => {
+    vi.stubEnv('DEFAULT_AGENT_MODEL', 'unpriced-gateway-model');
+    const t = await fixtures.tenant();
+    await credited(t, 100);
+    const { gateway: raw, fetch } = gateway(
+      answer('{}', { prompt_tokens: 1, completion_tokens: 1 }),
+      'unpriced-gateway-model',
+    );
+    await expect(
+      meterFor(db, t.workspaceId).gateway(raw, 'prompt_generation').complete('system', 'user'),
+    ).rejects.toMatchObject({ status: 503, code: 'ai_pricing_unavailable' });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(await spent(t.workspaceId)).toEqual({ held: 0, debited: 0 });
   });
 
   it('charges a paid but unparseable answer its tokens, and a failure with no usage nothing', async () => {

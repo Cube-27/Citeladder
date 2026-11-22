@@ -43,6 +43,8 @@ async function chat(owner: SiteSeed) {
       title: 'Isolation',
       context_refs: {},
       turn_count: 0,
+      model: 'claude-haiku-5-5',
+      reasoning_effort: 'medium',
       last_activity_at: now(),
       created_at: now(),
       updated_at: now(),

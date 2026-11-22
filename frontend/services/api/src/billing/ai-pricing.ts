@@ -1,6 +1,5 @@
 import { policy } from '../config.ts';
 import { ConfigError } from '../config/config-error.ts';
-import { gatewaySettings } from '../models/gateway.ts';
 
 const pricing = policy.billing.ai_credits;
 const rates = policy.costs.platform;
@@ -31,13 +30,9 @@ export function chargeMode(feature: MeteredFeature): ChargeMode {
   return pricing.features[feature] as ChargeMode;
 }
 
-export function modelPrice(
-  model: string,
-  gatewayModel = gatewaySettings().model,
-): ModelPrice | null {
+export function modelPrice(model: string): ModelPrice | null {
   const models: Record<string, ModelPrice> = rates.models;
-  if (Object.hasOwn(models, model)) return models[model]!;
-  return model && model === gatewayModel ? models[pricing.gateway_default_price]! : null;
+  return Object.hasOwn(models, model) ? models[model]! : null;
 }
 
 export type TokenUsage = {

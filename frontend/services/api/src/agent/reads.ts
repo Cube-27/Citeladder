@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { sql } from 'kysely';
+import { modelLocked } from './model-choice.ts';
 import {
   agentChatDetailSchema,
   agentChatSummarySchema,
@@ -183,7 +184,7 @@ export async function readChat(
   chatId: string,
 ) {
   const { chat, scope } = await chatIn(db, workspace, chatId);
-  const [messages, run, documents] = await Promise.all([
+  const [messages, run, documents, locked] = await Promise.all([
     db
       .selectFrom('agent_messages')
       .selectAll()
@@ -201,6 +202,7 @@ export async function readChat(
       .limit(1)
       .executeTakeFirst(),
     chatDocuments(db, chat),
+    modelLocked(db, scope, chat.id),
   ]);
   const generated = documents.length
     ? await db
@@ -263,6 +265,7 @@ export async function readChat(
       run ? active.includes(run.status) : false,
     ),
     pinned_skill_id: chat.pinned_skill_id,
+    model: { id: chat.model, reasoning_effort: chat.reasoning_effort, locked },
     context: {
       refs: jsonObject(chat.context_refs, 'agent_chats.context_refs'),
       instructions: manifest?.instructions ? { revision: manifest.instructions.revision } : null,

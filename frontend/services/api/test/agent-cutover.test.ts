@@ -217,7 +217,13 @@ describe('served Agent cutover on PostgreSQL', () => {
     const response = await app.request('/api/v1/agent/skills', { headers });
     expect(response.status).toBe(200);
     const body = z.record(z.string(), z.unknown()).parse(await response.json());
-    expect(Object.keys(body).sort()).toEqual(['limits', 'output_kinds', 'skills', 'workflows']);
+    expect(Object.keys(body).sort()).toEqual([
+      'limits',
+      'models',
+      'output_kinds',
+      'skills',
+      'workflows',
+    ]);
     const raw = z
       .object({
         skills: z.array(z.record(z.string(), z.unknown())),

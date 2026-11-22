@@ -97,6 +97,7 @@ export function ReplyComposer({
       placeholder={placeholder}
       commands={turn.commands}
       skill={skill}
+      model={turn.model}
     />
   );
 }

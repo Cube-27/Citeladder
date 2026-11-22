@@ -115,8 +115,8 @@ const RECOVERY: Record<string, string> = {
     'CiteLadder was updated while this request was waiting. Nothing was saved; send it again.',
   funding_unavailable:
     'This workspace has no AI credits available right now. Nothing was saved. To get more, email [contact@citeladder.com](mailto:contact@citeladder.com).',
-  model_changed:
-    'The AI model changed while this request was waiting. Nothing was saved; send it again.',
+  model_unavailable:
+    "This chat's model is no longer offered. Nothing was saved; start a new chat to use another model.",
   capability_unavailable: 'Your plan does not include the agent. Nothing was saved.',
   provider_error:
     'The AI model did not respond after several attempts. Nothing was saved; try again in a moment.',

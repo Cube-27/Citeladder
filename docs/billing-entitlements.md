@@ -237,8 +237,11 @@ at the serving model's [token price](../frontend/services/api/src/config/costs.j
 with the markup, in whole credits rounded up, then settles once to the reported
 tokens. Unreadable usage settles at a fixed fallback no larger than the hold; a
 failed call that reports no usage is not charged; a hold a crash left open
-settles at the fallback in the billing lane. A model with no configured price is
-refused, except the platform gateway model, priced at the default rate. Answer
+settles at the fallback in the billing lane. Each model is priced at its own
+row, and a charged call to a model without one is refused before any call, the
+platform gateway model included. The Agent's model choice (B75) rides the `agent` flag: a
+workspace that may run the Agent may pick any offered model and effort, so the
+trial, which has no Agent (B61), sees the picker disabled. Answer
 perception, fact verification and the Commerce shelf are recorded as included in
 the run; the JEV judge, Tavily and Keenable are recorded and not charged. Every
 call is recorded in `platform_calls`. The gateway, JEV, Tavily and Keenable

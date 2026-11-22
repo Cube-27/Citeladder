@@ -130,7 +130,7 @@ already expired settles like recovery, with the refund. Credit holds must never
 refuse work the balance can actually pay for (hold sizing is in
 [Agent](agents.md#worker-and-funding)).
 
-**B75 — Owner, 2026-11-22 (not built).** Every paid plan picks the Agent's model
+**B75 — Owner, 2026-11-22.** Every paid plan picks the Agent's model
 among Haiku 5.5, Sonnet 5.5 and Opus 5.5 at low, medium or high effort, each
 metered at its own token price (B53). The trial sees the picker disabled.
 

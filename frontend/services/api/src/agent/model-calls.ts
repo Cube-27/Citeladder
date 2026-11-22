@@ -76,7 +76,7 @@ export class ModelCalls {
       const budget = budgetSchema.parse(run.budget);
       if (!Number.isInteger(ordinal) || ordinal < 1 || ordinal > budget.max_model_calls)
         throw new AgentError('stopped_at_limit');
-      if (run.requested_model !== model.model) throw new AgentError('model_changed');
+      if (run.requested_model !== model.model) throw new AgentError('model_unavailable');
       const existing = await trx
         .selectFrom('agent_model_attempts')
         .select('id')

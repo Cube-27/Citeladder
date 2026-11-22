@@ -13,7 +13,7 @@ import { renderWithProviders } from '@/test/render';
 
 import { NewChatScreen } from './new-chat-screen';
 import { ChatScreen } from './chat-screen';
-import { detail, revision, REV1 } from '@/test/agent-chat-fixture';
+import { detail, revision, REV1, AGENT_MODELS } from '@/test/agent-chat-fixture';
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const CHAT = '22222222-2222-4222-8222-222222222222';
@@ -76,6 +76,7 @@ const WORKFLOW_CATALOG = {
   skills: [GROWTH_SKILL],
   workflows: [{ id: 'linkedin_post', label: 'LinkedIn post' }],
   output_kinds: [],
+  models: AGENT_MODELS,
   limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
 };
 
@@ -87,6 +88,7 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
     http.get('/api/v1/agent/skills', () =>
       HttpResponse.json({
         skills: [GROWTH_SKILL],
+        models: AGENT_MODELS,
         limits: {
           mentions_max: 5,
           attachments_max: 3,
@@ -312,6 +314,29 @@ describe('NewChatScreen', () => {
 
     expect(await screen.findByText(/plan does not include the agent/i)).toBeVisible();
     expect(screen.getByLabelText('Message the agent')).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Model: Haiku 5.5' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Effort: Medium' })).toBeDisabled();
+  });
+
+  it('sends the model and effort picked in the composer', async () => {
+    const bodies = captureChats();
+    const user = userEvent.setup();
+    renderNewChat('?prompt=Plan+the+quarter');
+    await user.click(await screen.findByRole('button', { name: 'Model: Haiku 5.5' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Opus 5.5' }));
+    await user.click(screen.getByRole('button', { name: 'Effort: Medium' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'High' }));
+    expect(screen.getByRole('button', { name: 'Model: Opus 5.5' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeVisible();
+    expect(bodies).toEqual([
+      {
+        message: 'Plan the quarter',
+        context: {},
+        model: 'claude-opus-5-5',
+        reasoning_effort: 'high',
+      },
+    ]);
   });
 
   it('picks a skill with / and mentions an Action with @', async () => {
@@ -379,6 +404,7 @@ describe('NewChatScreen', () => {
       http.get('/api/v1/agent/skills', () =>
         HttpResponse.json({
           skills: [GROWTH_SKILL],
+          models: AGENT_MODELS,
           limits: {
             mentions_max: 1,
             attachments_max: 3,
@@ -665,7 +691,7 @@ describe('NewChatScreen', () => {
     ]);
   });
 
-  it('briefs on the top open Actions with the growth plan skill', async () => {
+  it('briefs on the top open Actions with the growth plan skill and the picked model', async () => {
     const bodies = captureChats([
       actionItem(PRICING, 'Pricing page'),
       actionItem(BLOG, 'Blog hub'),
@@ -675,11 +701,17 @@ describe('NewChatScreen', () => {
 
     const briefing = await screen.findByRole('region', { name: 'What should I work on?' });
     expect(await within(briefing).findByText(/top 2 open Actions/)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Model: Haiku 5.5' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Opus 5.5' }));
     await user.click(within(briefing).getByRole('button', { name: 'Brief me' }));
 
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
     expect(bodies).toEqual([
-      expect.objectContaining({ skill_id: 'growth_plan', mentions: [PRICING, BLOG] }),
+      expect.objectContaining({
+        skill_id: 'growth_plan',
+        mentions: [PRICING, BLOG],
+        model: 'claude-opus-5-5',
+      }),
     ]);
   });
 });

@@ -112,8 +112,10 @@ export interface AgentChats {
   created_by_user_id: string | null;
   id: string;
   last_activity_at: Timestamp;
+  model: string;
   pinned_skill_id: string | null;
   project_id: string;
+  reasoning_effort: string;
   title: string;
   turn_count: number;
   updated_at: Timestamp;

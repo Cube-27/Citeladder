@@ -2,15 +2,19 @@ import { policy } from '../config.ts';
 import { createModelGateway, type GatewaySettings } from '../models/gateway.ts';
 import { defaultTransport, type Transport } from '../models/http.ts';
 import { runMetered } from '../models/meter-scope.ts';
-import { AgentError, type Run } from './contracts.ts';
+import type { Run } from './contracts.ts';
 import type { AgentModel } from './model-calls.ts';
+import { requireOffered } from './model-choice.ts';
 
 export function agentModels(platform: GatewaySettings, transport: Transport = defaultTransport) {
   return (run: Run): Promise<AgentModel> =>
     Promise.resolve().then(() => {
-      if (run.requested_model !== platform.model) throw new AgentError('model_changed');
       const gateway = createModelGateway(
-        { ...platform, attempts: policy.agent.provider_max_attempts },
+        {
+          ...platform,
+          model: requireOffered(run.requested_model),
+          attempts: policy.agent.provider_max_attempts,
+        },
         transport,
       );
       return {

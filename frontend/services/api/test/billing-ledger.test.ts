@@ -82,6 +82,8 @@ describe('consumable hold module', () => {
         pinned_skill_id: null,
         title: 'Ledger fixture',
         turn_count: 1,
+        model: 'claude-haiku-5-5',
+        reasoning_effort: 'medium',
         updated_at: t.at,
       })
       .execute();
