@@ -77,11 +77,7 @@ export function PageFrame({
         {tabs || filters ? <PageStrips tabs={tabs} filters={filters} /> : null}
         <div
           data-page-body=""
-          className={cn(
-            'flex min-w-0 flex-1 flex-col pt-[var(--page-pad-block)]',
-            PAGE_COLUMN[width],
-            'pb-6',
-          )}
+          className={cn('flex min-w-0 flex-1 flex-col pt-3', PAGE_COLUMN[width], 'pb-6')}
         >
           {children}
         </div>
@@ -172,7 +168,7 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
     <div
       ref={strips}
       data-page-strips=""
-      className="bg-panel z-sticky sticky top-[var(--masthead-block-size,var(--masthead-height))] -mx-[var(--page-pad-inline)] flex min-w-0 flex-col"
+      className="bg-panel z-sticky sticky top-[var(--masthead-block-size,var(--masthead-height))] -mx-[var(--page-pad-inline)] flex min-w-0 flex-col gap-3"
     >
       {tabs ? (
         <div data-page-band="tabs" className={cn(STRIP, 'h-[var(--page-tabs-height)] items-end')}>
@@ -180,10 +176,7 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
         </div>
       ) : null}
       {filters ? (
-        <div
-          data-page-band="filters"
-          className={cn(STRIP, 'min-h-[var(--filter-bar-height)] items-center py-2')}
-        >
+        <div data-page-band="filters" className={cn(STRIP, 'items-center')}>
           {filters}
         </div>
       ) : null}

@@ -133,7 +133,9 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   baseline that runs only between the page paddings; the current tab is
   framed in `rule` on three sides with a 6 radius on top and opens onto
   the content below. It is the only horizontal line a page draws.
-- **Body.** 24 side padding (16 below 760px), 20 above, 24 below: status line,
+- **Body.** 24 side padding (16 below 760px), 24 below; the title, tab
+  strip, toolbar and content sit 12 apart, the same gap as a table's
+  toolbar above its table (owner, 2026-11-22): status line,
   then the metric strip, then sections 24 apart with no rule between them;
   a section's head sits 12 above its body. Links carry no underline at rest,
   only on hover and focus. Narrow pages centre the body in their column (AR-9; 1040:
@@ -141,8 +143,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   context; 720: Billing, Pricing, Runs).
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
-  page-wide toolbar is the strip under the tabs, 8 above and below its
-  controls, with no rule.
+  page-wide toolbar is the strip under the tabs, with no rule.
 - **Metric strip:** one `rule`-framed strip, radius 8, cells divided by
   hairlines, cell padding 10 by 16, 12px label over the value. Never cards;
   no meters, rings or bars inside a cell (AR-3).

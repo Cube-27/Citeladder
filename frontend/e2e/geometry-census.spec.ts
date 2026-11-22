@@ -200,8 +200,7 @@ function measure({ route }: { route: string }) {
     }
   };
   bandGap('[data-masthead]', 'band.gap');
-  bandGap('[data-page-band="tabs"]', 'band.gap');
-  bandGap('[data-page-band="filters"]', 'band.gap');
+  bandGap('[data-page-band="tabs"]', 'strip.gap');
   for (const body of all('[data-page-body]'))
     add('body.top-gap', body, px(getComputedStyle(body).paddingTop));
   for (const band of all('[data-page-band="tabs"]')) {
