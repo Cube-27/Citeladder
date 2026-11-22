@@ -80,7 +80,7 @@
 .cl-screen-tabs {
   --scroll-shade-ground: var(--color-surface);
 
-  box-shadow: inset 0 0 0 1px var(--color-line);
+  background: var(--color-state-hover);
 }
 
 .cl-screen-col--xs {

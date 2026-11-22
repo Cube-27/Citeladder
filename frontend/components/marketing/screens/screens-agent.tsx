@@ -1,5 +1,4 @@
 import { Badge } from '@/components/ui/badge';
-import { BrandMark } from '@/components/ui/brand-mark';
 import { Citation } from '@/components/ui/citation';
 import { pluralCount } from '@/lib/format';
 
@@ -123,7 +122,6 @@ export function ScreenCommerce() {
         label="Products recommended in 48 answers"
         rows={fourRows(SHELF, (entry) => ({
           key: entry.product,
-          lead: <BrandMark name={entry.brand} />,
           label: entry.product,
           secondary: entry.own ? `${entry.domain} · You` : entry.domain,
           extra: <span className="cl-vig-muted">{`Best #${entry.best}`}</span>,

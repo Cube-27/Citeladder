@@ -101,7 +101,7 @@ export function DocsSearchDialog() {
         aria-haspopup="dialog"
         aria-keyshortcuts="Control+K Meta+K"
         onClick={(event) => show(event.currentTarget)}
-        className="focus-ring bg-surface text-ink-muted border-line hover:border-line-strong text-body-sm shadow-edge h-[var(--control-md)] items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
+        className="focus-ring bg-surface text-ink-muted border-line hover:border-line-strong text-body-sm h-[var(--control-md)] items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
       >
         <Search className="size-3.5 shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate" aria-hidden>

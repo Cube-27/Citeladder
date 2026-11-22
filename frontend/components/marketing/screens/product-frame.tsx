@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 import './product-frame.css';
-import './screen-metal.css';
 
 export type FrameFit = 'fluid' | 'scale';
 

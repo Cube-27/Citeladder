@@ -22,7 +22,16 @@
   position: relative;
   isolation: isolate;
   border-radius: var(--site-radius-stage);
+  background: var(--color-site-shot-pad, transparent);
   box-shadow: none;
+}
+
+.cl-frame-card:has(.cl-screen--app) {
+  background: none;
+}
+
+[class]:is(.cl-fcard, .cl-railcard):has(.cl-frame) {
+  --cl-tint: var(--color-site-shot-well, var(--tint-neutral));
 }
 
 .cl-frame-well {
@@ -133,8 +142,7 @@
 .cl-frame-card > .cl-frame-well > .cl-frame-screen {
   overflow: hidden;
   border-radius: var(--site-radius-inner);
-  background: var(--color-surface);
-  box-shadow: 0 0 0 1px var(--color-line);
+  background: var(--color-site-screen, var(--color-surface));
 }
 
 @media (max-width: 767px) {

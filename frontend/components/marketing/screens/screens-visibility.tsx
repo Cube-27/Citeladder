@@ -1,5 +1,4 @@
 import { Badge } from '@/components/ui/badge';
-import { BrandMark } from '@/components/ui/brand-mark';
 import { Card } from '@/components/ui/card';
 import { chartPercent } from '@/components/ui/chart';
 import { Citation } from '@/components/ui/citation';
@@ -136,7 +135,6 @@ export function ScreenSources() {
           CITED_DOMAINS.filter((domain) => domain.other !== true),
           (domain) => ({
             key: domain.label,
-            lead: <BrandMark name={domain.label} />,
             label: domain.label,
             secondary: `${domain.own ? 'Your site · ' : ''}${chartPercent(domain.value, CITATIONS)} of citations`,
             extra: <VignetteBar share={domain.value / TOP_CITED} />,

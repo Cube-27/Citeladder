@@ -259,7 +259,7 @@ function DataTableFoot({
   return (
     <div
       data-data-table-foot=""
-      className="border-rule flex min-h-10 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t px-4 py-1"
+      className="flex min-h-10 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-1"
     >
       {footer ? (
         <div className="type-caption grid min-w-0 content-center gap-1">{footer}</div>

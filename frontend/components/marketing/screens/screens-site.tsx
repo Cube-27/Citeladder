@@ -1,5 +1,4 @@
 import { Badge } from '@/components/ui/badge';
-import { BrandMark } from '@/components/ui/brand-mark';
 import { EngineMark } from '@/components/ui/engine-mark';
 import { ICONS, Info, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -92,7 +91,7 @@ export function ScreenIntegrations() {
         label="Data sources"
         rows={fourRows(INTEGRATIONS, (row) => ({
           key: row.name,
-          lead: row.google ? <EngineMark engine="google" /> : <BrandMark name={row.name} />,
+          lead: row.google ? <EngineMark engine="google" /> : undefined,
           label: row.name,
           secondary: row.detail,
           value: row.connected ? (

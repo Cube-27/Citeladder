@@ -181,7 +181,7 @@ describe('Citation', () => {
     );
     const link = screen.getByRole('link', { name: /example\.com/ });
     expect(link).toHaveAttribute('href', 'https://www.example.com/shoes');
-    expect(link).toHaveTextContent('2Eexample.comBest running shoes');
+    expect(link).toHaveTextContent('2example.comBest running shoes');
   });
 });
 

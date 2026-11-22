@@ -26,10 +26,9 @@ held by review.
 | `page`           | `#111111`                | `#f0f4f9`          | the inset content panel's paper      |
 | `panel`          | `#1b1b1b`                | `#ffffff`          | surfaces on the paper, inputs        |
 | `raised`         | `#232323`                | `#ffffff`          | secondary buttons, menus             |
-| `card`           | `#1b1b1b`                | `#ffffff`          | top-level cards and the metric strip |
-| `raised-2`       | `#2e2e2e`                | `#e9eef6`          | hover on raised, avatar              |
+| `raised-2`       | `#2e2e2e`                | `#e9eef6`          | hover and press fill, disabled field |
 | `state-hover`    | `rgb(255 255 255 / 4%)`  | `rgb(0 0 0 / 3%)`  | row and quiet-control hover          |
-| `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | selected segment, dark current row   |
+| `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | tags, keyboard hints, value tokens   |
 | `rule`           | `rgb(255 255 255 / 11%)` | `rgb(0 0 0 / 11%)` | every hairline (the spec's `line`)   |
 | `control-line`   | `rgb(255 255 255 / 22%)` | `rgb(0 0 0 / 22%)` | checkbox and radio edge, draft edge  |
 | `ink`            | `#ececec`                | `#1d1d1d`          | text                                 |
@@ -44,15 +43,15 @@ Older role names bind onto the table so call sites keep working: `chrome` is
 values in `globals.css`. A status colour appears only beside a glyph and a
 word, never as a large fill; the one exception is a Site health page score,
 printed in `negative` below 50 and `warning` below 80 (owner, 2026-11-22). The light surfaces are blue-tinted neutrals (owner, 2026-11-22) stepping darker in this order: `panel`, `page`,
-`raised-2`, `ground`, the table tray; the dark ones are pure neutral greys with no blue. In dark a table's rows and inputs are the `card` fill. Data: `data-you` is the accent, `data-rival-1`
+`raised-2`, `ground`, the table tray; the dark ones are pure neutral greys with no blue. A table's rows and inputs are `panel` in both themes. Data: `data-you` is the accent, `data-rival-1`
 to `-4` ink then cool hues in rank order, `data-other` the grouped rest.
 
 ## Type
 
-Sans (Spline Sans) for words and numbers alike, numbers in its tabular
+Sans (Google Sans) for words and numbers alike, numbers in its tabular
 figures (dates, counts, prices, URLs too). Mono (Geist Mono) only for literal
-code: API keys, code blocks, raw IDs and keyboard hints. Weights 400 and 500 only; the app's dark draws every weight 50 lighter
-(350 and 450: light text on dark reads heavier). Emphasis is 500, never
+code: API keys, code blocks, raw IDs and keyboard hints. Weights 400 and 500 only; the app's dark asks for every weight 50 lighter
+(350 and 450: light text on dark reads heavier), but the sans face starts at 400, so regular sans text is 400 in both themes and only 450 and the mono and display faces draw lighter. Emphasis is 500, never
 colour. Sizes are rem so they follow the reader's text size.
 
 | Role            | Size / line | Weight                  |
@@ -70,7 +69,7 @@ the job, never a size.
 ## Spacing, size and shape
 
 - **Spacing:** 2, 4, 8, 12, 16, 24, 32, 48 only.
-- **Controls:** 28 high; 44 below 900px or under a coarse pointer, and on
+- **Controls:** 32 high; 44 below 900px or under a coarse pointer, and on
   sign-in, account and setup pages (the website's height, `control-lg`).
   Icons 14 in `ink-2` (Tabler, the `Icon` atom), centred on and no taller than
   the 14px text beside them; empty-state tiles and website wells draw larger.
@@ -91,7 +90,7 @@ the job, never a size.
   Not run yet, Not set, Not connected, Unavailable, Not applicable, Too few,
   None, owned by `availabilityLabels` in `lib/format.ts`) is its tooltip and
   accessible name.
-- A real zero is a printed `0` in full ink, never greyed.
+- A real zero is a printed `0` in full ink, never greyed; the one exception is a zero issue count in the Site health pages table, printed in `ink-2` (owner, 2026-11-22).
 
 **The accent means "you, here".** It marks you (your brand's row, series and
 the word "You") and here (the current nav item and step, as a 2px mark
@@ -118,7 +117,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 
 - **Shell.** Sidebar 224 on `ground` (200 below 1280), 8 padding: header row
   as tall as the page header (workspace switcher, settings icon), the
-  Dashboard | Agent segmented control, 28-high nav rows (current row on a
+  Dashboard | Agent segmented control, 32-high nav rows (current row on a
   `#d3e3fd` pill in light, `rgb(255 255 255 / 11%)` in dark, with a 2px accent
   mark), 12px group labels, foot with Integrations (the collapse toggle at
   its end) and the account (AR-8). The main column is the inset panel: 8 from the window
@@ -126,7 +125,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   `page` fill, the page's only scroller. Scrollbars are the browser's thin
   bar, shown on hover. Dragging the sidebar's edge draws no line. Below 900 the panel fills the
   window and the header's menu button opens the sidebar in a drawer.
-- **Page header**, 44 high, on `page` with a `rule` hairline under it across
+- **Page header**, 48 high, on `page` with a `rule` hairline under it across
   the panel, its two ends padded 24 from the panel edges on every page
   whatever the page width (owner, 2026-11-22): the page title as a breadcrumb
   (section › page; a record adds its collection, and its name
@@ -150,7 +149,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
   page-wide toolbar is the strip under the tabs, with no rule.
-- **Metric strip:** one `panel` strip (`card` in dark) with no edge or
+- **Metric strip:** one `panel` strip with no edge or
   shadow, radius 6, cells divided by hairlines, cell padding 10 by 16, 12px label over the value. Never cards;
   no meters, rings or bars inside a cell (AR-3).
 - **Table** (the HeroUI table, owner 2026-11-22): a tray (`#dde3ea` in
@@ -208,7 +207,7 @@ One entry per family; wave 2 fills each from the layouts above.
   below) and one surface (`SLIP_FACE`: radius 6, `panel`). Surfaces carry
   no outer edge and no shadow (owner, 2026-11-22): on the `page` paper every
   surface (strips, setting rows, cards, charts, a table's body on its tray)
-  is `panel` in light and `card` in dark, and so are the controls on it;
+  is `panel`, and so are the controls on it;
   hairlines stay only inside a surface. An input inside a surface takes
   `well`. Only hover and selected fills, insets for quoted or raw material,
   and overlays take another fill.
@@ -227,14 +226,14 @@ One entry per family; wave 2 fills each from the layouts above.
   included. Your series is the accent, drawn last; a missing period is a
   gap, never a zero. Series colours come from one map by identity
   (`SERIES_STROKE`, `SERIES_FILL`); position-coloured charts map onto it.
-- **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 28,
+- **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 32,
   radius 6, flat; 14px icons in `ink-2` on a secondary. Secondary: `raised`
   with no edge, `raised-2` on hover, press or open. Quiet: transparent,
   `state-hover` fill. Primary: `primary` fill (the deep accent),
   white text, at most one per view. Danger: secondary with negative text; filled only to confirm in a
   dialog (`danger-confirm`). One disabled look for every variant. The
   website keeps its layered `.face`.
-- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 28, `panel`
+- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 32, `panel`
   with no edge at rest; focused, an accent edge and its
   glow; invalid, a negative edge and a negative glow. 14px leading icon. Checkbox and radio
   are `panel` with a `control-line` edge, the one edged control, and a `primary` fill when on; the switch is a `primary`
@@ -253,7 +252,7 @@ One entry per family; wave 2 fills each from the layouts above.
   Tabs are folder tabs padded 16, the current one `ink` on `page` in a `rule` frame
   open at the bottom, the rest `ink-2`.
   Segmented control (and the sidebar's Dashboard | Agent): a `state-hover`
-  tray one control high with no edge, 24-high segments, the selected one a
+  tray one control high with no edge, 28-high segments, the selected one a
   `raised` pill with the card shadow.
 - **Tags and status.** Tag: 20 high, radius 4, `state-selected` fill, no edge, 12px `ink-2`; a
   draft is dashed; Kbd and composer chips share the face. Status

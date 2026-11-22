@@ -264,7 +264,7 @@ how to add or change an entry.
 
 - **AR-1 Look:** blue-tinted neutrals in light and pure neutral greys in dark, Google Sans as the sans face, an inset content panel on tinted paper, white
   surfaces and controls with no outer border or shadow, corners at the button
-  radius, compact controls (2026-11-22). **AR-2 Text:** body and labels 14px, captions 12px, controls 28px.
+  radius, compact controls (2026-11-22). **AR-2 Text:** body and labels 14px, captions 12px, controls 32px and the page header 48px (owner, 2026-11-22).
 - **AR-3 Metrics** sit in one strip with hairline dividers, never cards, with no
   meters, rings or bars in a cell. **AR-4 Tables:** the first column takes the
   spare width and the others hug their content.

@@ -8,7 +8,6 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { mutedWhenMissing, TableCell, TableRow, TableTime, UrlText } from '@/components/ui/table';
 import { sharedOrigin } from '@/lib/format';
-import { cn } from '@/lib/utils';
 import { Absence, printed } from '@/components/ui/absence';
 import { TextLink } from '@/components/ui/text-link';
 import type { PagesSort } from '@/lib/api/site-health';
@@ -150,10 +149,7 @@ export function PagesTable({
             <TableCell className="whitespace-nowrap">
               <PageKindBadge pageKind={page.page_kind} />
             </TableCell>
-            <TableCell
-              numeric
-              className={cn('tabular-nums', page.issue_count === 0 && 'text-ink-2')}
-            >
+            <TableCell numeric className={page.issue_count === 0 ? 'text-ink-2' : undefined}>
               {formatIssueCount(page.issue_count)}
             </TableCell>
             <TableCell numeric className={mutedWhenMissing(page.web_fundamentals_score)}>
