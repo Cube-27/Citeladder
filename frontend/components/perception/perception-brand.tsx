@@ -8,6 +8,7 @@ import { Stack } from '@/components/ui/layout';
 import { Meter } from '@/components/ui/meter';
 import { PartDonut } from '@/components/ui/part-donut';
 import { Section, SectionContent, SectionStack, TitledSection } from '@/components/ui/section';
+import { slipClasses } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { AreaChart } from '@/components/ui/area-chart';
@@ -133,7 +134,7 @@ function ThemeList({ themes }: Readonly<{ themes: PerceptionResponse['themes'] }
         />
       }
     >
-      <SectionContent>
+      <SectionContent className={slipClasses()}>
         {ranked.length ? (
           <Stack as="ul">
             {ranked.map((theme) => (

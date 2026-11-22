@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type {
   PerceptionCoverage,
   PerceptionQuote,
@@ -18,6 +19,7 @@ import { coverageLine, stateCopy } from '@/lib/visibility/perception';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionContent, TitledSection } from '@/components/ui/section';
+import { slipClasses } from '@/components/ui/slip';
 
 export function PerceptionState({
   state,
@@ -93,21 +95,63 @@ export function QuoteLink({ quote }: Readonly<{ quote: PerceptionQuote }>) {
   );
 }
 
+const SCROLL_REGION = { role: 'region', tabIndex: 0 } as const;
+
+function useOverflowsY(node: HTMLElement | null) {
+  const [overflows, setOverflows] = useState(false);
+  useEffect(() => {
+    if (!node) return;
+    const observer = new ResizeObserver(() =>
+      setOverflows(node.scrollHeight - node.clientHeight > 1),
+    );
+    observer.observe(node);
+    if (node.firstElementChild) observer.observe(node.firstElementChild);
+    return () => observer.disconnect();
+  }, [node]);
+  return overflows;
+}
+
 export function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] }>) {
   const { label: engineLabel } = useEngineCatalog();
+  const title = 'Criticism in answers';
+  const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
+  const scrolls = useOverflowsY(scroller) && quotes.length > 0;
   return (
-    <TitledSection title="Criticism in answers">
-      <SectionContent>
-        {!quotes.length ? (
+    <TitledSection
+      title={title}
+      actions={
+        quotes.length ? (
+          <span className={textRole('body', 'text-ink-2')}>
+            {quotes.length === 1 ? '1 quote' : `${quotes.length} quotes`}
+          </span>
+        ) : undefined
+      }
+    >
+      {!quotes.length ? (
+        <SectionContent className={slipClasses()}>
           <StateBlock
             kind="empty"
             inline
             message="No negative points about you in these answers."
           />
-        ) : (
-          <Stack as="ul">
+        </SectionContent>
+      ) : (
+        <div
+          ref={setScroller}
+          {...(scrolls ? SCROLL_REGION : {})}
+          aria-label={scrolls ? title : undefined}
+          className={slipClasses(
+            'column-wide:max-h-120 column-wide:overflow-y-auto overscroll-contain py-0',
+          )}
+        >
+          <ul className="divide-rule divide-y">
             {quotes.map((quote) => (
-              <Stack as="li" gap="tight" key={`${quote.execution_id}:${quote.text}`}>
+              <Stack
+                as="li"
+                gap="tight"
+                className="py-3"
+                key={`${quote.execution_id}:${quote.text}`}
+              >
                 <QuoteLink quote={quote} />
                 <Inline as="span" className={textRole('caption', 'text-ink-2 flex-wrap')}>
                   <StatusMark variant="sentiment" value="negative">
@@ -117,9 +161,9 @@ export function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] 
                 </Inline>
               </Stack>
             ))}
-          </Stack>
-        )}
-      </SectionContent>
+          </ul>
+        </div>
+      )}
     </TitledSection>
   );
 }
