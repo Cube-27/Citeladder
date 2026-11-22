@@ -59,6 +59,8 @@ export type AgentPageFetchDone = Extract<
 >;
 export type SuggestionChange = 'apply' | 'dismiss' | 'revert';
 type SuggestionRef = { chatId: string; outputId: string; suggestionId: string };
+type ProposalRef = { chatId: string; messageId: string; index: number };
+type ProposalDecision = 'confirm' | 'dismiss';
 const outputPath = (document: { chatId: string; outputId: string }) =>
   `/agent/chats/${document.chatId}/outputs/${document.outputId}`;
 
@@ -235,6 +237,20 @@ const agentApi = {
       agentChatDetailSchema,
       await apiClient.post(`${outputPath(document)}/target`, input, options),
       'agent.chooseOutputTarget',
+    ),
+  decideProposal: async (
+    ref: ProposalRef,
+    decision: ProposalDecision,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      agentChatDetailSchema,
+      await apiClient.post(
+        `/agent/chats/${ref.chatId}/messages/${ref.messageId}/proposals/${ref.index}/${decision}`,
+        {},
+        options,
+      ),
+      'agent.decideProposal',
     ),
   instructions: async (projectId: string, options?: ApiRequestOptions) =>
     strictValidate(
@@ -421,6 +437,16 @@ export const agentMutations = {
       onError: (_error, vars, _context, { client }) => void refreshAgentChat(client, vars.chatId),
       onSettled: (_result, _error, _vars, _context, { client }) =>
         client.invalidateQueries({ queryKey: queryKeys.actions.all }),
+    }),
+  decideProposal: (workspaceId: string | null) =>
+    mutationOptions({
+      mutationFn: (vars: ProposalRef & { decision: ProposalDecision }) =>
+        agentApi.decideProposal(vars, vars.decision, { workspaceId }),
+      onSuccess: (detail, vars, _result, { client }) => {
+        client.setQueryData(queryKeys.agent.chat(workspaceId, vars.chatId), detail);
+        if (vars.decision === 'confirm') void client.invalidateQueries();
+      },
+      onError: (_error, vars, _context, { client }) => void refreshAgentChat(client, vars.chatId),
     }),
   changeSuggestion: (workspaceId: string | null) =>
     mutationOptions({

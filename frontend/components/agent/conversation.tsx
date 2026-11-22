@@ -98,6 +98,8 @@ export function Conversation({
                   <>
                     <ProposalCards
                       workspaceId={workspaceId}
+                      chatId={detail.chat.id}
+                      messageId={item.message.id}
                       proposals={item.message.proposals}
                       actions={detail.actions}
                     />
