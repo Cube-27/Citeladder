@@ -22,12 +22,12 @@ held by review.
 
 | Token            | Dark                     | Light              | Use                                  |
 | ---------------- | ------------------------ | ------------------ | ------------------------------------ |
-| `ground`         | `#0a0a0c`                | `#e9e9ed`          | window and sidebar                   |
-| `page`           | `#101011`                | `#f4f4f6`          | the inset content panel's paper      |
-| `panel`          | `#151516`                | `#ffffff`          | surfaces on the paper, inputs        |
-| `raised`         | `#1e1e1f`                | `#ffffff`          | secondary buttons, menus             |
-| `card`           | `#1b1b1c`                | `#ffffff`          | top-level cards and the metric strip |
-| `raised-2`       | `#2b2b2c`                | `#eeeef1`          | hover on raised, avatar              |
+| `ground`         | `#0a0a0a`                | `#e4eaf2`          | window and sidebar                   |
+| `page`           | `#111111`                | `#f0f4f9`          | the inset content panel's paper      |
+| `panel`          | `#1b1b1b`                | `#ffffff`          | surfaces on the paper, inputs        |
+| `raised`         | `#232323`                | `#ffffff`          | secondary buttons, menus             |
+| `card`           | `#1b1b1b`                | `#ffffff`          | top-level cards and the metric strip |
+| `raised-2`       | `#2e2e2e`                | `#e9eef6`          | hover on raised, avatar              |
 | `state-hover`    | `rgb(255 255 255 / 4%)`  | `rgb(0 0 0 / 3%)`  | row and quiet-control hover          |
 | `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | selected segment, dark current row   |
 | `rule`           | `rgb(255 255 255 / 11%)` | `rgb(0 0 0 / 11%)` | every hairline (the spec's `line`)   |
@@ -38,14 +38,13 @@ held by review.
 | `primary`        | deep accent              | deep accent        | every action fill, white text        |
 
 Older role names bind onto the table so call sites keep working: `chrome` is
-`ground`, `surface` is `panel`, `well` is the `page` grey in light (`raised` in
-dark), the table tray is `#e4e4e8` in light (`raised` in dark), `chart-grid` is `rule`, `state-pressed` is `state-selected`, `on-ink` is
+`ground`, `surface` is `panel`, `well` is the `page` fill, the table tray is `#dde3ea` in light and `#262626` in dark, `chart-grid` is `rule`, `state-pressed` is `state-selected`, `on-ink` is
 `panel`. Status colours (`positive`, `negative`, `warning`, `info` and their
 `-wash` fills), `accent-text`, `accent-wash` and the data series keep their
 values in `globals.css`. A status colour appears only beside a glyph and a
 word, never as a large fill; the one exception is a Site health page score,
-printed in `negative` below 50 and `warning` below 80 (owner, 2026-11-22). The light greys share one hue and step darker in this order: `panel`, `page`,
-`raised-2`, `ground`, the table tray, the current nav row. Data: `data-you` is the accent, `data-rival-1`
+printed in `negative` below 50 and `warning` below 80 (owner, 2026-11-22). The light surfaces are blue-tinted neutrals (owner, 2026-11-22) stepping darker in this order: `panel`, `page`,
+`raised-2`, `ground`, the table tray; the dark ones are pure neutral greys with no blue. In dark a table's rows and inputs are the `card` fill. Data: `data-you` is the accent, `data-rival-1`
 to `-4` ink then cool hues in rank order, `data-other` the grouped rest.
 
 ## Type
@@ -120,7 +119,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Shell.** Sidebar 224 on `ground` (200 below 1280), 8 padding: header row
   as tall as the page header (workspace switcher, settings icon), the
   Dashboard | Agent segmented control, 28-high nav rows (current row on a
-  `#d9d9de` pill in light, `rgb(255 255 255 / 11%)` in dark, with a 2px accent
+  `#d3e3fd` pill in light, `rgb(255 255 255 / 11%)` in dark, with a 2px accent
   mark), 12px group labels, foot with Integrations (the collapse toggle at
   its end) and the account (AR-8). The main column is the inset panel: 8 from the window
   edges (none on the sidebar side), a `rule` edge at half strength, radius 6,
@@ -154,8 +153,8 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Metric strip:** one `panel` strip (`card` in dark) with no edge or
   shadow, radius 6, cells divided by hairlines, cell padding 10 by 16, 12px label over the value. Never cards;
   no meters, rings or bars inside a cell (AR-3).
-- **Table** (the HeroUI table, owner 2026-11-22): a tray (`#e4e4e8` in
-  light, `raised` in dark), radius 6, no edge, 4 padding at the sides and
+- **Table** (the HeroUI table, owner 2026-11-22): a tray (`#dde3ea` in
+  light, `#262626` in dark), radius 6, no edge, 4 padding at the sides and
   foot; head 36 on the tray, 12px at 500, a 16-high `rule` tick between
   columns; the body a `panel` card, radius 4, cells padded 16; rows
   44, one line each, hairline dividers, `state-hover` fill; secondary text

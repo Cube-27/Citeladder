@@ -262,7 +262,7 @@ how to add or change an entry.
 
 [Design](design.md) holds the values; these are the rules behind them.
 
-- **AR-1 Look:** quiet greys, an inset content panel on tinted paper, white
+- **AR-1 Look:** blue-tinted neutrals in light and pure neutral greys in dark, Google Sans as the sans face, an inset content panel on tinted paper, white
   surfaces and controls with no outer border or shadow, corners at the button
   radius, compact controls (2026-11-22). **AR-2 Text:** body and labels 14px, captions 12px, controls 28px.
 - **AR-3 Metrics** sit in one strip with hairline dividers, never cards, with no
