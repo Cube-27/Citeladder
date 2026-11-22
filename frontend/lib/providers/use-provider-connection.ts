@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { providersApi, refreshProviderReads } from '@/lib/api/providers';
 import { humanizeApiError } from '@/lib/api/errors';
+import { executionFailureReason } from '@/lib/runs/status';
 import type { ProviderConnection } from '@citeladder/contracts';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import {
@@ -62,8 +63,11 @@ export function useProviderConnection({
     const result = await providersApi.testConnection(connectionId, { workspaceId });
     const state: ConnectionTestState =
       result.status === 'ok'
-        ? { status: 'ok', message: `Connection succeeded (${result.transport_model || 'model'}).` }
-        : { status: 'failed', message: result.detail || 'Connection failed.' };
+        ? { status: 'ok', message: 'Connection succeeded.' }
+        : {
+            status: 'failed',
+            message: executionFailureReason(result.error_code, 'Connection failed.'),
+          };
     setTestResult(state);
     return state;
   };
@@ -120,7 +124,21 @@ export function useProviderConnection({
     onError: (error) => setTestResult({ status: 'failed', message: errorMessage(error) }),
   });
 
-  const busy = saveMutation.isPending || testMutation.isPending;
+  const removeMutation = useMutation({
+    onMutate: () => setTestResult(null),
+    mutationFn: async () => {
+      if (!connection) throw new Error('No saved key to remove.');
+      await providersApi.deleteConnection(connection.id, { workspaceId });
+    },
+    onSuccess: async () => {
+      clearCredentialInput();
+      await refreshProviderReads(queryClient);
+      onSaved?.();
+    },
+    onError: (error) => setTestResult({ status: 'failed', message: errorMessage(error) }),
+  });
+
+  const busy = saveMutation.isPending || testMutation.isPending || removeMutation.isPending;
 
   return {
     transport,
@@ -138,6 +156,7 @@ export function useProviderConnection({
     testResult,
     saveMutation,
     testMutation,
+    removeMutation,
     busy,
   };
 }
