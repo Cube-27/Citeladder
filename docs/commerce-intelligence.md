@@ -436,7 +436,8 @@ reads the same metric over the answers completed after go-live
 No route reads one target's snapshot. The MCP and Agent tool `read_ai_shelf`
 returns the Products read's per-product metrics (with
 the categories and their counts), or, given a `holder_id`, the product detail
-read.
+read; its setup views return the catalog, competitor candidates, buyer prompts
+and running discoveries with their ids.
 
 ## Entry points and lifecycle
 

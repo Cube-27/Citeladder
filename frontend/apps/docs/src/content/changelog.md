@@ -3,10 +3,16 @@ title: 'Changelog'
 description: 'Product changes and what they mean for your workflow.'
 group: 'Updates'
 order: 400
-updated: '2026-11-18'
+updated: '2026-11-22'
 ---
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
+
+## November 22, 2026: Setup records readable over MCP and in the Agent
+
+Existing MCP reads gain views, with no new tool: every Site Health issue of a crawl and the crawl schedule (`read_site_health`), audit runs with their status and failed answers, and audit schedules (`read_visibility_overview`), prompt sets, empty ones included, and suggested prompts awaiting review (`read_prompt_portfolio`), internal-link analyses (`read_site_links`), the market probe and its objection groups (`read_perception`), the product catalog, competitor candidates, buyer prompts and running competitor searches (`read_ai_shelf`), and keyword research runs, including those awaiting confirmation (`read_search_intelligence`). The in-app Agent reads the same views, so it can propose a change to one of these records from any chat.
+
+**For your team:** see the [MCP tool reference](/mcp/tools/).
 
 ## November 18, 2026: Bulk prompt changes in the API and MCP
 

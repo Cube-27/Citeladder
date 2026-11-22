@@ -98,7 +98,7 @@ export const promptSetKinds = {
   }),
   rename_prompt_set: changeKind({
     permission: MEMBER_WRITE,
-    purpose: 'rename a prompt set or change its description',
+    purpose: 'rename a prompt set or change its description (read_prompt_portfolio view sets)',
     payload: z.strictObject({ prompt_set_id: z.uuid(), ...promptSetUpdate.shape }),
     async execute(trx, _config, actor, change, { prompt_set_id: setId, ...update }) {
       await scopedPromptSet(trx, actor.workspaceId, setId, change.projectId);
@@ -126,7 +126,7 @@ export const promptSetKinds = {
   delete_prompt_set: changeKind({
     permission: MEMBER_WRITE,
     purpose:
-      'delete a prompt set with its prompts, pending suggestions and audit schedules; earlier answers stay',
+      'delete a prompt set with its prompts, pending suggestions and audit schedules; earlier answers stay (read_prompt_portfolio view sets)',
     payload: z.strictObject({ prompt_set_id: z.uuid() }),
     async execute(trx, _config, actor, change, payload) {
       await scopedPromptSet(trx, actor.workspaceId, payload.prompt_set_id, change.projectId);
@@ -186,7 +186,8 @@ export const promptSetKinds = {
   }),
   review_prompt_candidates: changeKind({
     permission: PROMPTS_WRITE,
-    purpose: 'track (accept_ids) or reject (reject_ids) suggested prompts waiting for review',
+    purpose:
+      'track (accept_ids) or reject (reject_ids) suggested prompts waiting for review (read_prompt_portfolio view candidates)',
     payload: z.strictObject({ prompt_set_id: z.uuid(), ...candidateReview.shape }),
     async execute(trx, _config, actor, change, { prompt_set_id: setId, ...review }) {
       const reviewed = await reviewCandidates(trx, actor, change.projectId, setId, review);

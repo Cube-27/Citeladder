@@ -128,7 +128,8 @@ export const auditKinds = {
   }),
   cancel_audit: changeKind({
     permission: AUDITS_CANCEL,
-    purpose: 'stop a queued or running audit; answers so far are kept',
+    purpose:
+      'stop a queued or running audit; answers so far are kept (read_visibility_overview view runs)',
     payload: z.strictObject({ audit_id: z.uuid() }),
     async execute(trx, _config, actor, change, payload) {
       await cancelAudit(trx, actor, change.projectId, payload.audit_id);
@@ -185,7 +186,7 @@ export const auditKinds = {
   rerun_audit_failures: changeKind({
     permission: MEMBER_RUN,
     purpose:
-      'run the failed answers of a finished audit again with the provider keys they used, as a new repair audit',
+      'run the failed answers of a finished audit again with the provider keys they used, as a new repair audit (read_visibility_overview view runs)',
     payload: z.strictObject({ audit_id: z.uuid(), filter: repairInput.default({}) }),
     async execute(trx, config, actor, change, payload) {
       const scope = { workspaceId: actor.workspaceId, projectId: change.projectId };
@@ -219,7 +220,8 @@ export const auditKinds = {
   }),
   update_audit_schedule: changeKind({
     permission: SCHEDULES_WRITE,
-    purpose: 'change an audit schedule (cadence, engines, markets, timing) or pause it (enabled)',
+    purpose:
+      'change an audit schedule (cadence, engines, markets, timing) or pause it (enabled) (read_visibility_overview view schedules)',
     payload: z.strictObject({ schedule_id: z.uuid(), changes: scheduleUpdate }),
     async execute(trx, _config, actor, change, payload) {
       const schedule = await updateSchedule(
@@ -250,7 +252,8 @@ export const auditKinds = {
   }),
   delete_audit_schedule: changeKind({
     permission: SCHEDULES_WRITE,
-    purpose: 'delete an audit schedule; audits it already ran stay',
+    purpose:
+      'delete an audit schedule; audits it already ran stay (read_visibility_overview view schedules)',
     payload: z.strictObject({ schedule_id: z.uuid() }),
     async execute(trx, _config, actor, change, payload) {
       await deleteSchedule(trx, actor, change.projectId, payload.schedule_id);

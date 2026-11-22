@@ -150,16 +150,21 @@ export async function readiness(
   };
 }
 
-export async function listRuns(db: Database, scope: Scope, offset: number, limit: number) {
-  const runs = await scope.workspace
+export async function listRuns(
+  db: Database,
+  scope: Scope,
+  page: { offset: number; limit: number; awaitingConfirmation: boolean },
+) {
+  let query = scope.workspace
     .selectFrom(db, 'search_intelligence_runs')
     .selectAll()
-    .where('project_id', '=', scope.projectId)
-    .where('confirmed_at', 'is not', null)
+    .where('project_id', '=', scope.projectId);
+  if (!page.awaitingConfirmation) query = query.where('confirmed_at', 'is not', null);
+  const runs = await query
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
-    .offset(offset)
-    .limit(limit)
+    .offset(page.offset)
+    .limit(page.limit)
     .execute();
   return runs.map(runView);
 }
