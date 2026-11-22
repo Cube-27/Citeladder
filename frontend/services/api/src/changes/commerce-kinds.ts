@@ -95,7 +95,10 @@ export const commerceKinds = {
       const names = await targetNames(context, payload.targets);
       return {
         title: `Discover competitors for ${plural(payload.targets.length, 'target')}`,
-        rows: names.map((name, index) => ({ label: payload.targets[index]!.kind, value: name })),
+        rows: payload.targets.map((target, index) => ({
+          label: target.kind,
+          value: names[index] ?? '',
+        })),
         spend: `${plural(payload.targets.length, 'competitor discovery', 'competitor discoveries')} from the day's allowance, plus AI credits for each search`,
         opens: PRODUCTS,
       };
@@ -172,7 +175,7 @@ export const commerceKinds = {
             label: field.replaceAll('_', ' '),
             value:
               field === 'categories'
-                ? `Now ${shown(value)}`
+                ? `Replaced by ${shown(value)}`
                 : `${shown(current[field])} → ${shown(value)}`,
           })),
         ],

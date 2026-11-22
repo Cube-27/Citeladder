@@ -76,6 +76,10 @@ const promptEdit = z
     topic_id: z.uuid().nullable().optional(),
   })
   .refine(
+    (edit) => [edit.text, edit.intent, edit.buyer_stage, edit.persona].every((v) => v !== null),
+    { message: 'Leave a field out to keep it; only topic_id takes null' },
+  )
+  .refine(
     ({ prompt_id: _id, ...edit }) => Object.values(edit).some((value) => value !== undefined),
     {
       message: 'An edit changes at least one field',

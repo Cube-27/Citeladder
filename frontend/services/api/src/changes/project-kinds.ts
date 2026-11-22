@@ -80,7 +80,10 @@ export const projectKinds = {
           ...replaced('Unintended domain', unintended),
           ...replaced(
             'Entity matching',
-            entities?.map((entity) => entity.name),
+            entities?.map(
+              (entity) =>
+                `${entity.name} (${entity.mode}; context ${entity.context_terms.join(', ') || 'none'}; excluding ${entity.exclusion_phrases.join(', ') || 'none'})`,
+            ),
           ),
         ],
         spend: null,

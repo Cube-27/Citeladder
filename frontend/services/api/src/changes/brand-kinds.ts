@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { jsonObject } from '../db/json.ts';
-import { notFound } from '../errors.ts';
+import { ApiError, notFound } from '../errors.ts';
 import {
   newestOverrides,
   overrideVerdict,
@@ -97,6 +97,15 @@ const factChange = z.strictObject({
 
 const offeringNames = (offerings: readonly { offering: string }[]) =>
   offerings.map((offering) => offering.offering).join(', ') || 'none';
+const values = (entries: readonly { value: string }[]) =>
+  entries.map((entry) => entry.value).join(', ') || 'none';
+const offeringDetail = (offering: z.output<typeof businessMapUpdate>['offerings'][number]) =>
+  [
+    `attributes ${values(offering.attributes)}`,
+    `situations ${values(offering.situations)}`,
+    `audiences ${values(offering.audiences)}`,
+    `exclusions ${offering.exclusions.map((pair) => `${pair.first} / ${pair.second}`).join(', ') || 'none'}`,
+  ].join('; ');
 
 export const brandKinds = {
   update_brand_profile: changeKind({
@@ -109,7 +118,8 @@ export const brandKinds = {
     },
     async preview(context, payload) {
       const current = await currentProfile(context);
-      const fields = Object.entries(payload).filter(([, value]) => value !== undefined);
+      const fields = Object.entries(payload).filter(([, value]) => value != null);
+      if (!fields.length) throw new ApiError(422, 'An edit changes at least one field');
       return {
         title: `Change ${plural(fields.length, 'brand profile field')}`,
         rows: fields.map(([field, value]) => ({
@@ -142,7 +152,12 @@ export const brandKinds = {
         title: 'Replace the business map',
         rows: [
           { label: 'Offerings now', value: offeringNames(now.offerings) },
-          { label: 'Offerings after', value: offeringNames(payload.offerings) },
+          ...(payload.offerings.length
+            ? payload.offerings.map((offering) => ({
+                label: offering.offering,
+                value: offeringDetail(offering),
+              }))
+            : [{ label: 'Offerings after', value: 'None: all are removed' }]),
         ],
         spend: null,
         opens: CONTEXT,
