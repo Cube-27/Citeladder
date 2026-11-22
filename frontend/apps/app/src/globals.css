@@ -758,6 +758,7 @@
   --color-site-rule-to: oklch(63.4% 0.1973 37.5 / 55%);
   --color-site-well: oklch(97% 0 0);
   --color-site-screen: var(--color-surface);
+  --color-site-shot-well: #e9eef6;
   --color-site-well-edge: oklch(25% 0 0 / 0%);
   --color-site-vignette: oklch(72.3% 0.18 42.6 / 10%);
   --color-site-hero-base: oklch(100% 0 0);
@@ -811,6 +812,7 @@
   --color-site-rule-to: oklch(70.3% 0.194 39.3 / 55%);
   --color-site-well: oklch(21.2% 0 0);
   --color-site-screen: oklch(24.5% 0 0);
+  --color-site-shot-well: var(--color-site-well);
   --color-site-well-edge: oklch(100% 0 0 / 0%);
   --color-site-vignette: oklch(70.3% 0.194 39.3 / 10%);
   --color-site-hero-base: oklch(11.6% 0.0023 17);

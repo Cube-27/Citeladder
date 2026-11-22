@@ -25,6 +25,10 @@
   box-shadow: none;
 }
 
+[class]:is(.cl-fcard, .cl-railcard):has(.cl-frame) {
+  --cl-tint: var(--color-site-shot-well, var(--tint-neutral));
+}
+
 .cl-frame-well {
   display: flex;
   flex: 1;
