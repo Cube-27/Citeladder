@@ -34,7 +34,10 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 
 type KeyAccess = 'read' | 'write';
 
-const ALL_SCOPES: readonly ApiKeyScope[] = apiKeyScopeSchema.options;
+const SCOPES_FOR = {
+  read: ['read'],
+  write: apiKeyScopeSchema.options,
+} as const satisfies Record<KeyAccess, readonly ApiKeyScope[]>;
 
 function expiryOptions(today: string) {
   return [
@@ -52,15 +55,132 @@ function expiryOptions(today: string) {
   ];
 }
 
-function useToggleSet<T>() {
-  const [set, setSet] = useState<ReadonlySet<T>>(new Set());
-  const toggle = (value: T, on: boolean) => {
-    const next = new Set(set);
-    if (on) next.add(value);
-    else next.delete(value);
-    setSet(next);
+type ProjectChoice = ReadonlySet<string> | null;
+
+function ProjectsField({
+  value,
+  onChange,
+}: Readonly<{ value: ProjectChoice; onChange: (choice: ProjectChoice) => void }>) {
+  const { projects } = useProjectContext();
+  const toggle = (chosen: ReadonlySet<string>, id: string, on: boolean) => {
+    const next = new Set(chosen);
+    if (on) next.add(id);
+    else next.delete(id);
+    onChange(next);
   };
-  return { set, toggle, clear: () => setSet(new Set()) };
+  return (
+    <Stack as="fieldset" gap="tight">
+      <legend className={textRole('label')}>Projects</legend>
+      <RadioGroup
+        ariaLabel="Projects the key can reach"
+        value={value === null ? 'all' : 'chosen'}
+        onValueChange={(mode) => onChange(mode === 'all' ? null : new Set())}
+        options={[
+          { value: 'all', label: 'All projects' },
+          { value: 'chosen', label: 'Chosen projects' },
+        ]}
+      />
+      {value === null
+        ? null
+        : projects.map((project) => (
+            <Checkbox
+              key={project.id}
+              label={project.name}
+              checked={value.has(project.id)}
+              onCheckedChange={(on) => toggle(value, project.id, on === true)}
+            />
+          ))}
+    </Stack>
+  );
+}
+
+function CreatedKey({ secret }: Readonly<{ secret: string }>) {
+  return (
+    <Stack gap="compact">
+      <Notice tone="warning">Shown once.</Notice>
+      <code className="type-code break-all">{secret}</code>
+      <div>
+        <CopyButton value={secret}>Copy key</CopyButton>
+      </div>
+    </Stack>
+  );
+}
+
+function AccessField({
+  value,
+  onChange,
+  mayWrite,
+}: Readonly<{ value: KeyAccess; onChange: (access: KeyAccess) => void; mayWrite: boolean }>) {
+  const write = mayWrite
+    ? { value: 'write' as const, label: 'Read and write' }
+    : {
+        value: 'write' as const,
+        label: 'Read and write',
+        disabled: true,
+        description: 'Capped at your role.',
+      };
+  return (
+    <Stack as="fieldset" gap="tight">
+      <legend className={textRole('label')}>Access</legend>
+      <RadioGroup
+        ariaLabel="What the key can do"
+        value={value}
+        onValueChange={onChange}
+        options={[{ value: 'read', label: 'Read' }, write]}
+      />
+    </Stack>
+  );
+}
+
+function ExpiryFields({
+  today,
+  timeZone,
+  choice,
+  onChoice,
+  customDay,
+  onCustomDay,
+  error,
+}: Readonly<{
+  today: string;
+  timeZone: string;
+  choice: ExpiryChoice;
+  onChoice: (choice: ExpiryChoice) => void;
+  customDay: string;
+  onCustomDay: (day: string) => void;
+  error: string | undefined;
+}>) {
+  return (
+    <>
+      <Field label="Expires" hint={`Ends at midnight, ${timeZone}`}>
+        {(props) => (
+          <Select
+            id={props.id}
+            aria-describedby={props['aria-describedby']}
+            ariaLabel="Expires"
+            className="w-full"
+            value={choice}
+            onValueChange={onChoice}
+            options={expiryOptions(today)}
+          />
+        )}
+      </Field>
+      {choice === 'custom' ? (
+        <Field label="Expiry date" error={customDay === '' ? undefined : error}>
+          {(props) => (
+            <DateField
+              id={props.id}
+              aria-describedby={props['aria-describedby']}
+              aria-invalid={props['aria-invalid']}
+              ariaLabel="Expiry date"
+              min={today}
+              value={customDay}
+              onChange={onCustomDay}
+            />
+          )}
+        </Field>
+      ) : null}
+    </>
+  );
 }
 
 export function CreateKeyDialog({
@@ -68,12 +188,10 @@ export function CreateKeyDialog({
   workspaceId,
   onClose,
 }: Readonly<{ openedAt: Date | null; workspaceId: string; onClose: () => void }>) {
-  const { projects } = useProjectContext();
   const mayWrite = useWorkspaceCapability('write');
   const [name, setName] = useState('');
   const [access, setAccess] = useState<KeyAccess>('read');
-  const [projectMode, setProjectMode] = useState<'all' | 'chosen'>('all');
-  const chosen = useToggleSet<string>();
+  const [projectIds, setProjectIds] = useState<ProjectChoice>(null);
   const [expiryChoice, setExpiryChoice] = useState<ExpiryChoice>(DEFAULT_EXPIRY);
   const [customDay, setCustomDay] = useState('');
   const [created, setCreated] = useState<ApiKeyCreated | null>(null);
@@ -81,18 +199,14 @@ export function CreateKeyDialog({
   const timeZone = useDisplayTimeZone();
   const today = dayInZone(openedAt ?? new Date(0), timeZone);
   const expiry = resolveExpiry({ choice: expiryChoice, customDay, today, timeZone });
-  const expiryError = expiry.kind === 'invalid' && customDay !== '' ? expiry.message : undefined;
-  const ready =
-    name.trim() !== '' &&
-    (projectMode === 'all' || chosen.set.size > 0) &&
-    expiry.kind !== 'invalid';
+  const ready = name.trim() !== '' && projectIds?.size !== 0 && expiry.kind !== 'invalid';
   const createKey = () => {
     if (expiry.kind === 'invalid') return;
     create.mutate(
       {
         name,
-        scopes: access === 'write' && mayWrite ? [...ALL_SCOPES] : ['read'],
-        project_ids: projectMode === 'all' ? null : [...chosen.set],
+        scopes: [...SCOPES_FOR[access]],
+        project_ids: projectIds && [...projectIds],
         expires_at: expiry.kind === 'at' ? expiry.expiresAt : null,
       },
       { onSuccess: setCreated },
@@ -101,8 +215,7 @@ export function CreateKeyDialog({
   const close = () => {
     setName('');
     setAccess('read');
-    setProjectMode('all');
-    chosen.clear();
+    setProjectIds(null);
     setExpiryChoice(DEFAULT_EXPIRY);
     setCustomDay('');
     setCreated(null);
@@ -135,13 +248,7 @@ export function CreateKeyDialog({
       }
     >
       {created ? (
-        <Stack gap="compact">
-          <Notice tone="warning">Shown once.</Notice>
-          <code className="type-code break-all">{created.secret}</code>
-          <div>
-            <CopyButton value={created.secret}>Copy key</CopyButton>
-          </div>
-        </Stack>
+        <CreatedKey secret={created.secret} />
       ) : (
         <Stack gap="compact">
           <Field label="Name" required>
@@ -154,73 +261,17 @@ export function CreateKeyDialog({
               />
             )}
           </Field>
-          <Stack as="fieldset" gap="tight">
-            <legend className={textRole('label')}>Access</legend>
-            <RadioGroup
-              ariaLabel="What the key can do"
-              value={access}
-              onValueChange={setAccess}
-              options={[
-                { value: 'read', label: 'Read' },
-                {
-                  value: 'write',
-                  label: 'Read and write',
-                  disabled: !mayWrite,
-                  description: mayWrite ? undefined : 'Capped at your role.',
-                },
-              ]}
-            />
-          </Stack>
-          <Stack as="fieldset" gap="tight">
-            <legend className={textRole('label')}>Projects</legend>
-            <RadioGroup
-              ariaLabel="Projects the key can reach"
-              value={projectMode}
-              onValueChange={setProjectMode}
-              options={[
-                { value: 'all', label: 'All projects' },
-                { value: 'chosen', label: 'Chosen projects' },
-              ]}
-            />
-            {projectMode === 'chosen'
-              ? projects.map((project) => (
-                  <Checkbox
-                    key={project.id}
-                    label={project.name}
-                    checked={chosen.set.has(project.id)}
-                    onCheckedChange={(on) => chosen.toggle(project.id, on === true)}
-                  />
-                ))
-              : null}
-          </Stack>
-          <Field label="Expires" hint={`Ends at midnight, ${timeZone}`}>
-            {(props) => (
-              <Select
-                id={props.id}
-                aria-describedby={props['aria-describedby']}
-                ariaLabel="Expires"
-                className="w-full"
-                value={expiryChoice}
-                onValueChange={setExpiryChoice}
-                options={expiryOptions(today)}
-              />
-            )}
-          </Field>
-          {expiryChoice === 'custom' ? (
-            <Field label="Expiry date" error={expiryError}>
-              {(props) => (
-                <DateField
-                  id={props.id}
-                  aria-describedby={props['aria-describedby']}
-                  aria-invalid={props['aria-invalid']}
-                  ariaLabel="Expiry date"
-                  min={today}
-                  value={customDay}
-                  onChange={setCustomDay}
-                />
-              )}
-            </Field>
-          ) : null}
+          <AccessField value={access} onChange={setAccess} mayWrite={mayWrite} />
+          <ProjectsField value={projectIds} onChange={setProjectIds} />
+          <ExpiryFields
+            today={today}
+            timeZone={timeZone}
+            choice={expiryChoice}
+            onChoice={setExpiryChoice}
+            customDay={customDay}
+            onCustomDay={setCustomDay}
+            error={expiry.kind === 'invalid' ? expiry.message : undefined}
+          />
           {create.isError ? (
             <Notice
               kind="mutation"
