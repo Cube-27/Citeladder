@@ -39,6 +39,7 @@ export function planBrandSlots(
     const plan = plans[(index + Math.floor(index / angles.length)) % plans.length];
     if (!angle || !plan) return [];
     const options = plan.options.filter(claimable);
+    if (angle.facet && !isNonEmpty(options)) return [];
     const facet = angle.facet && isNonEmpty(options) ? nextFacet(plan, options) : null;
     if (facet) plan.usage.set(facetKey(facet), (plan.usage.get(facetKey(facet)) ?? 0) + 1);
     const need: Record<string, string> = { offering: plan.offering, angle: angle.key };

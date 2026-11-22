@@ -268,7 +268,7 @@ it('caps drafts at 16 words and drops near duplicates across topics, pending and
   ]);
 });
 
-it('drops a brand draft that rewords a tracked prompt, whatever its angle', () => {
+it('plans no need angle without a confirmed facet and drops a brand draft that rewords a tracked prompt', () => {
   const tracked = {
     ...context,
     prompts: [
@@ -282,6 +282,15 @@ it('drops a brand draft that rewords a tracked prompt, whatever its angle', () =
   } as unknown as GenerationContext;
   const slots = planBrandSlots(tracked, generationInput.parse({ mode: 'brand', count: 3 }), []);
   const slot = (angle: string) => slots.find((row) => row.buyer_need.angle === angle)!.slot_id;
+  expect(new Set(slots.map((row) => row.buyer_need.angle))).toEqual(
+    new Set([
+      'pros_and_cons',
+      'compare_with_competitor',
+      'reasons_not_to_choose',
+      'worth_the_price',
+      'reviews',
+    ]),
+  );
   const texts = [
     ['worth_the_price', 'Are Red Dress maxi dresses worth the price?'],
     ['reviews', 'What do reviews say about Red Dress maxi dresses?'],
