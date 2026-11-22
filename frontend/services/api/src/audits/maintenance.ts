@@ -105,7 +105,6 @@ export async function cancelAudit(
     if (!audit) throw notFound('Audit');
     if (!auditPolicy.constants.audit_active_statuses.includes(audit.status))
       throw new ApiError(409, 'Only active audits can be cancelled');
-    await transitionAudit(trx, workspaceId, auditId, 'cancelled', at, 'audit cancelled');
     const tasks = await trx
       .updateTable('audit_tasks')
       .set({
@@ -123,6 +122,15 @@ export async function cancelAudit(
       .returningAll()
       .execute();
     for (const task of tasks) await settlePromptRun(trx, task, false, at); // NOSONAR
+    const answered = await trx
+      .selectFrom('audit_tasks')
+      .select('id')
+      .where('workspace_id', '=', workspaceId)
+      .where('audit_id', '=', auditId)
+      .where('status', '=', 'succeeded')
+      .executeTakeFirst();
+    if (answered) return { auditId, finalize: true };
+    await transitionAudit(trx, workspaceId, auditId, 'cancelled', at, 'audit cancelled');
     await trx
       .updateTable('audits')
       .set({ completed_at: at })
@@ -137,7 +145,7 @@ export async function cancelAudit(
       { status: 'cancelled' },
       at,
     );
-    return auditId;
+    return { auditId, finalize: false };
   });
 }
 

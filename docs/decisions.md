@@ -440,3 +440,7 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
 - **AV-36** No objection detail page and no "Draft rebuttal". **AV-37** An
   objection's Ask agent opens Agent chat, which lists its sources and suggests
   edits, outreach or advice, never acting on its own.
+- **AV-40** A run's answered prompts reach the dashboards even when the run is
+  cancelled or an engine fails. An engine whose key is out of credit stops with
+  that error rather than retrying, and probes get no cancel control (owner,
+  2026-11-22).

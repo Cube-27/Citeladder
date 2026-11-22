@@ -496,6 +496,9 @@ prompt slots); it does not authorize execution or establish measured cost.
 Manual HTTP launch uses customer credentials; funded admission is reserved for
 trusted billing/trial callers. Cancelled funded runs release unused task credits
 but retain their admission quote against the monthly funded cost ceiling.
+Cancelling stops the open tasks; a run with any answer then finalizes as
+`partially_completed`, because dashboards read only `completed` and
+`partially_completed` runs. Only a run with no answer ends `cancelled`.
 
 The [audit worker](../frontend/services/api/src/audits/worker.ts) claims PostgreSQL
 tasks with leases, heartbeats them and holds provider capacity; one
@@ -505,7 +508,10 @@ phase, recovery deadline, capacity pool and persistence. Each phase commits befo
 and records immutable response artifacts,
 attempts and citation evidence. Cancellation, retries and reconciliation use
 the existing audit/task state owners; failed answers remain failures, not
-negative brand observations. An API exchange with no answer text fails its
+negative brand observations. A provider reply saying the key is out of credit
+(`out_of_credit` in provider config) fails as `provider_account_unavailable`
+without retry and pauses the connection, so the run's remaining tasks for that
+engine fail without calling it. An API exchange with no answer text fails its
 attempt in the shared [answer execution](../frontend/services/api/src/answer-engines/execute.ts)
 for every engine: `truncated_before_answer` (budget spent before any text) and
 `empty_answer` retry under the transient policy, `content_filter` does not, and
