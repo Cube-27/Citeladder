@@ -688,9 +688,12 @@ customer credits. Policy, caps, the project-theme limits and the templates live 
   merge may move them. A merge and the labeller's save hold the same per-project
   lock, so no label is saved pointing at a merged theme; one chosen before the
   merge files under `Other` (`category_removed`). Merging a person's theme into a
-  model one makes the kept theme theirs, so probes keep asking about it. An aspect
-  stored before attributes existed has no attribute key and reads `not_labelled`;
-  one the model gave no usable attribute stores null and reads `not_found`.
+  model one makes the kept theme theirs, so probes keep asking about it. A probe
+  asked about the merged theme keeps that question, so its Market row drops out
+  and the kept theme's row reflects it from the next probe, as after a delete. An
+  aspect stored before attributes existed has no attribute key and reads
+  `not_labelled`; one the model gave no usable attribute stores null and reads
+  `not_found`.
 
 - **Trigger.** At the end of the analysis transaction, an answer whose entity
   assessments name the brand or a competitor enqueues one `answer_perception`

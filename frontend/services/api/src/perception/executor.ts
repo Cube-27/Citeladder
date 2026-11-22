@@ -123,6 +123,13 @@ function persist({
 }) {
   return async (db: Database) => {
     const id = randomUUID();
+    const settled = await db
+      .selectFrom('answer_perceptions')
+      .select('id')
+      .where('analysis_id', '=', subject.analysis_id)
+      .where('extractor_version', '=', versions.extractor_version)
+      .executeTakeFirst();
+    if (settled) return;
     const entities = outcome.outcome === 'classified' ? outcome.entities : [];
     const ids = entities.some((entity) => entity.aspects.length)
       ? await saveModelCategories(db, {
