@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 
-import { BrandMark } from '@/components/ui/brand-mark';
 import { Button, type ButtonVariant } from '@/components/ui/button';
 import { Card, CardEyebrow, CardHeader } from '@/components/ui/card';
 import { Delta } from '@/components/ui/delta';
@@ -72,7 +71,6 @@ export function ScreenEngineMarks({ on }: Readonly<{ on: readonly EngineKey[] }>
 export function ScreenSite({ label, mono = false }: Readonly<{ label: string; mono?: boolean }>) {
   return (
     <span className="cl-screen-site">
-      <BrandMark name={label} placement="inline" />
       <span className={cn('cl-screen-site-text', mono && 'cl-screen-mono')}>{label}</span>
     </span>
   );

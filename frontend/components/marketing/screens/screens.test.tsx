@@ -59,10 +59,10 @@ describe('screens', () => {
     render(<ScreenSources />);
 
     expect(rowsOf('Citations by domain this week')).toEqual([
-      'Aacme.comYour site · 20.3% of citations212',
-      'Gg2.com16.1% of citations168',
-      'Nnorthwind.io13.5% of citations141',
-      'Rreddit.com11.3% of citations118',
+      'acme.comYour site · 20.3% of citations212',
+      'g2.com16.1% of citations168',
+      'northwind.io13.5% of citations141',
+      'reddit.com11.3% of citations118',
     ]);
     expect(screen.getByText('1,046 citations this week')).toBeVisible();
   });
