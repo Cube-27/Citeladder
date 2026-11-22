@@ -4,7 +4,7 @@ import type { AccuracyResponse } from '@citeladder/contracts/fact-checking';
 
 import { PerceptionView } from '@/components/perception/perception-brand';
 import { PerceptionFactChecking } from '@/components/perception/perception-factcheck';
-import { PerceptionProbe } from '@/components/perception/perception-probe';
+import { PerceptionProbe, useProbeControls } from '@/components/perception/perception-probe';
 import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar } from '@/components/ui/filter-bar';
 import type { FigureSegment } from '@/components/ui/figure-strip';
@@ -39,6 +39,7 @@ export function PerceptionScreen() {
   const filters = useVisibilityFilters();
   const queries = useVisibilityQueries(filters, 'perception');
   const { pilot, tab, setTab, items, probe } = usePerceptionTab();
+  const probeControls = useProbeControls(probe);
   const accuracy = useAccuracy({ filters, queries, pilot });
   const factViews = useFactViews({ filters, queries, accuracy, open: tab === 'fact-checking' });
   const pageFilters = usePageFilters(filters, queries);
@@ -49,12 +50,13 @@ export function PerceptionScreen() {
     <TabsRoot value={tab} onValueChange={setTab}>
       <ReportPage
         tabs={<TabRow items={items} ariaLabel="Perception views" />}
+        actions={probeControls.actions}
         filters={ready && !probe ? <FilterBar filters={pageFilters} /> : undefined}
       >
         {probe ? null : <RunBanner queries={queries} />}
         <TabPanel value={tab}>
           {probe ? (
-            <PerceptionProbe view={probe} />
+            <PerceptionProbe view={probe} controls={probeControls} />
           ) : (
             <SelectionTab
               ready={ready}
@@ -69,6 +71,7 @@ export function PerceptionScreen() {
             />
           )}
         </TabPanel>
+        {probeControls.dialog}
       </ReportPage>
     </TabsRoot>
   );

@@ -413,6 +413,8 @@ describe('probe labelling and reads', () => {
         of: 2,
         leader: { kind: 'competitor', id: rivalId, name: 'Rival Shoes', score: 97, named: true },
         gap: 37,
+        sources: 0,
+        pages: [],
       },
     ]);
     expect([market.known_for_answers, market.language_code]).toEqual([3, 'en']);
@@ -623,7 +625,7 @@ describe('probe labelling and reads', () => {
     );
   });
 
-  it("seeds an Agent chat with one objection and its answers' cited sources, in its workspace only", async () => {
+  it("lists the pages cited per Market theme and seeds an Agent chat with one objection's cited sources, in its workspace only", async () => {
     const owner = await probeTenant();
     const other = await probeTenant();
     const [auditId] = await launch(owner.t);
@@ -645,6 +647,28 @@ describe('probe labelling and reads', () => {
         'chatgpt',
         'test',
       );
+    const market = await probeMarket(db, owner.t);
+    expect(
+      market.state === 'value'
+        ? market.themes.map(({ theme, sources, pages }) => ({ theme, sources, pages }))
+        : null,
+    ).toEqual([
+      {
+        theme: 'Comfort',
+        sources: 1,
+        pages: [
+          {
+            url: 'https://reviews.test/acme',
+            title: 'Acme review',
+            domain: 'reviews.test',
+            classification: 'third_party',
+            page_format: null,
+            standing: null,
+            citations: 3,
+          },
+        ],
+      },
+    ]);
     const fit = await db
       .selectFrom('probe_objection_groups')
       .select('id')

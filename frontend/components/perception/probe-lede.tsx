@@ -10,11 +10,13 @@ export function ProbeLede({
   headline,
   label,
   segments,
+  textValues = false,
 }: Readonly<{
   createdAt: string;
   headline: string;
   label: string;
   segments: readonly FigureSegment[];
+  textValues?: boolean;
 }>) {
   const timeZone = useDisplayTimeZone();
   return (
@@ -25,7 +27,7 @@ export function ProbeLede({
             From the market probe · {formatDisplayDate(createdAt, timeZone)}
           </p>
           <h2 className={textRole('heading')}>{headline}</h2>
-          <FigureStrip label={label} segments={segments} subLine />
+          <FigureStrip label={label} segments={segments} subLine textValues={textValues} />
         </Stack>
       </SectionContent>
     </Section>

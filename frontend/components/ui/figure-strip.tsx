@@ -63,6 +63,7 @@ export function FigureStrip({
   lead,
   subLine = false,
   twoLineLabels = false,
+  textValues = false,
 }: Readonly<{
   segments: readonly FigureSegment[];
   label?: string;
@@ -70,6 +71,7 @@ export function FigureStrip({
   lead?: ReactNode;
   subLine?: boolean;
   twoLineLabels?: boolean;
+  textValues?: boolean;
 }>) {
   const { ref, width } = useStripWidth<HTMLDivElement>();
   const cells = figureRowCells({ count: segments.length, width });
@@ -90,6 +92,7 @@ export function FigureStrip({
               key={segment.key}
               segment={segment}
               subLine={subLine}
+              textValues={textValues}
               rowSize={size}
               narrow={twoLineLabels || cellWidth(width, size) < FIGURE_MIN_WIDTH}
             />
@@ -103,11 +106,13 @@ export function FigureStrip({
 function FigureCell({
   segment,
   subLine,
+  textValues,
   rowSize,
   narrow,
 }: Readonly<{
   segment: FigureSegment;
   subLine: boolean;
+  textValues: boolean;
   rowSize: number;
   narrow: boolean;
 }>) {
@@ -126,7 +131,7 @@ function FigureCell({
       )}
     >
       <FigureLabel segment={segment} subLine={subLine} />
-      <FigureValueLine segment={segment} subLine={subLine} />
+      <FigureValueLine segment={segment} subLine={subLine} textValues={textValues} />
       {subLine ? <FigureSub segment={segment} /> : null}
       {pressable ? (
         <button
@@ -141,7 +146,7 @@ function FigureCell({
   );
 }
 
-type FigurePart = Readonly<{ segment: FigureSegment; subLine?: boolean }>;
+type FigurePart = Readonly<{ segment: FigureSegment; subLine?: boolean; textValues?: boolean }>;
 
 function Block({ className }: Readonly<{ className: string }>) {
   return <span aria-hidden data-figure-block="" className={cn('bg-well block', className)} />;
@@ -184,11 +189,11 @@ function pressableLayer(segment: FigureSegment) {
   return segment.onSelect ? 'relative z-10' : undefined;
 }
 
-function FigureValueLine({ segment, subLine }: FigurePart) {
+function FigureValueLine({ segment, subLine, textValues }: FigurePart) {
   const delta = segment.loading || !reportsChange(segment.delta) ? null : segment.delta;
   return (
     <dd data-figure-value="" className="flex min-w-0 items-baseline gap-2 whitespace-nowrap">
-      <FigureValue segment={segment} />
+      <FigureValue segment={segment} textValues={textValues} />
       {delta ? <span className="type-caption-strong shrink-0">{delta}</span> : null}
       {segment.labelHidden && !segment.loading ? (
         <span className="ms-auto shrink-0 self-center">
@@ -214,9 +219,8 @@ function reportsChange(delta: ReactNode): boolean {
   return true;
 }
 
-const VALUE_TEXT = textRole('figure');
-
-function FigureValue({ segment }: FigurePart) {
+function FigureValue({ segment, textValues }: FigurePart) {
+  const valueText = textRole(textValues ? 'heading' : 'figure');
   if (segment.loading)
     return (
       <span className="flex items-center self-center">
@@ -229,11 +233,11 @@ function FigureValue({ segment }: FigurePart) {
   if (isAbsent(value)) return <Absence state={value.absent} label={segment.missingLabel} />;
   if (typeof value === 'string' || typeof value === 'number')
     return (
-      <span className={cn(VALUE_TEXT, 'min-w-0 truncate')} title={String(value)}>
+      <span className={cn(valueText, 'min-w-0 truncate')} title={String(value)}>
         {String(value)}
       </span>
     );
-  return <div className={cn(VALUE_TEXT, 'flex min-w-0 items-center gap-2')}>{value}</div>;
+  return <div className={cn(valueText, 'flex min-w-0 items-center gap-2')}>{value}</div>;
 }
 
 function FigureHint({ segment, subLine }: FigurePart) {

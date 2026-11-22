@@ -3,11 +3,10 @@ import { useIsFetching, useMutation } from '@tanstack/react-query';
 import type { ProbeRun, ProbeStatus } from '@citeladder/contracts/probes';
 
 import { Button } from '@/components/ui/button';
-import { Inline, Stack } from '@/components/ui/layout';
-import { Notice } from '@/components/ui/notice';
-import { Section } from '@/components/ui/section';
+import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { StateBlock } from '@/components/ui/state-block';
+import { useToast } from '@/components/ui/toast';
 import { textRole } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { probeBusy, probeMutations } from '@/lib/api/probes';
@@ -30,16 +29,15 @@ function cadenceOf(schedule: ProbeStatus['schedule']): Cadence {
   return schedule.cadence === 'daily' || schedule.cadence === 'weekly' ? schedule.cadence : 'off';
 }
 
-function lastRun(run: ProbeRun | null, date: (iso: string) => string): string {
-  if (!run) return 'Not run yet';
-  const scope = `${pluralCount(run.engines.length, 'engine')} · ${pluralCount(run.markets.length, 'market')}`;
+function pendingRun(run: ProbeRun | null, date: (iso: string) => string): string | null {
+  if (!run) return null;
   switch (run.state) {
     case 'running':
-      return `Running · ${scope}`;
+      return `Probe running · ${pluralCount(run.engines.length, 'engine')} · ${pluralCount(run.markets.length, 'market')}`;
     case 'labelling':
       return `Labelling ${pluralCount(run.answers, 'answer')}`;
     case 'ready':
-      return `Last run ${date(run.created_at)} · ${scope} · ${pluralCount(run.answers, 'answer')}`;
+      return null;
     case 'failed':
       return `Last probe failed · ${date(run.created_at)}`;
     case 'unavailable':
@@ -51,7 +49,7 @@ function lastRun(run: ProbeRun | null, date: (iso: string) => string): string {
   }
 }
 
-export function ProbeBar({
+export function ProbeActions({
   scope,
   status,
   onRun,
@@ -63,47 +61,44 @@ export function ProbeBar({
   onSchedule: (cadence: 'daily' | 'weekly') => void;
 }>) {
   const timeZone = useDisplayTimeZone();
+  const { notify } = useToast();
   const mayRun = useWorkspaceCapability('run');
   const mayWrite = useWorkspaceCapability('write');
   const schedule = useMutation(probeMutations.schedule(scope));
   const refreshing = useIsFetching({ queryKey: queryKeys.projects.probes(scope) }) > 0;
+  const pending = pendingRun(status.latest, (iso) => formatDisplayDate(iso, timeZone));
   return (
-    <Section variant="framed">
-      <Stack gap="item">
-        <Inline className="flex-wrap justify-between">
-          <Stack gap="tight">
-            <p className={textRole('label')}>Market probe</p>
-            <p className={textRole('caption', 'text-ink-2')}>
-              {lastRun(status.latest, (iso) => formatDisplayDate(iso, timeZone))}
-            </p>
-          </Stack>
-          <Inline>
-            <Select<Cadence>
-              ariaLabel="Probe schedule"
-              value={cadenceOf(status.schedule)}
-              options={CADENCES}
-              disabled={!mayWrite || schedule.isPending}
-              onValueChange={(cadence) =>
-                cadence === 'off' ? schedule.mutate({ cadence: null }) : onSchedule(cadence)
-              }
-            />
-            <Button
-              variant="primary"
-              disabled={!mayRun || refreshing || probeBusy(status)}
-              onClick={onRun}
-            >
-              Run probe
-            </Button>
-          </Inline>
-        </Inline>
-        {schedule.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(schedule.error, { action: 'save the schedule' })}
-          />
-        ) : null}
-      </Stack>
-    </Section>
+    <Inline className="flex-wrap justify-end">
+      {pending ? <span className={textRole('caption', 'text-ink-2')}>{pending}</span> : null}
+      <Select<Cadence>
+        ariaLabel="Probe schedule"
+        value={cadenceOf(status.schedule)}
+        options={CADENCES}
+        disabled={!mayWrite || schedule.isPending}
+        onValueChange={(cadence) =>
+          cadence === 'off'
+            ? schedule.mutate(
+                { cadence: null },
+                {
+                  onError: (error) =>
+                    notify(
+                      "Couldn't save the schedule",
+                      mutationNoticeForError(error, { action: 'save the schedule' }).message,
+                      { tone: 'negative' },
+                    ),
+                },
+              )
+            : onSchedule(cadence)
+        }
+      />
+      <Button
+        variant="primary"
+        disabled={!mayRun || refreshing || probeBusy(status)}
+        onClick={onRun}
+      >
+        Run probe
+      </Button>
+    </Inline>
   );
 }
 

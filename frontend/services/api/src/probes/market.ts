@@ -6,6 +6,7 @@ import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
 import { probeAnswers, type ProbeAnswer } from './answers.ts';
 import type { TrackedName } from './label-model.ts';
 import { labelledLaunches } from './launches.ts';
+import { citedPages } from './pages.ts';
 import { probeSubject } from './questions.ts';
 import { distinctPlaces, firstPlaces, positionScores, rankOf, scoreOf } from './scores.ts';
 
@@ -78,10 +79,11 @@ function themeRow(answers: readonly ProbeAnswer[], roster: readonly TrackedName[
   };
 }
 
+const asksTheme = (answer: ProbeAnswer, themeId: string) =>
+  answer.question.question === 'theme' && answer.question.theme_id === themeId;
+
 const themeAnswers = (answers: readonly ProbeAnswer[], themeId: string) =>
-  answers.filter(
-    (answer) => answer.question.question === 'theme' && answer.question.theme_id === themeId,
-  );
+  answers.filter((answer) => asksTheme(answer, themeId));
 
 export function rankInTopTheme(
   own: readonly ProbeAnswer[],
@@ -110,10 +112,22 @@ export async function probeMarket(db: Database, scope: Scope): Promise<ProbeMark
     probeSubject(db, scope),
   ]);
   const { themes } = subject;
+  const pagesOf = await citedPages(
+    db,
+    scope,
+    answers.filter((answer) => answer.question.question === 'theme'),
+  );
   const rows = themes.flatMap((theme) => {
     const asked = themeAnswers(answers, theme.id);
     if (!asked.length) return [];
-    return [{ theme_id: theme.id, theme: theme.name, ...themeRow(asked, latest.roster) }];
+    return [
+      {
+        theme_id: theme.id,
+        theme: theme.name,
+        ...themeRow(asked, latest.roster),
+        ...pagesOf((answer) => asksTheme(answer, theme.id)),
+      },
+    ];
   });
   const engines = latest.basis.engines.map((engine) => {
     const own = answers.filter((answer) => answer.engine === engine);

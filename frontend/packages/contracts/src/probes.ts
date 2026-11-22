@@ -70,6 +70,17 @@ const entitySchema = z.object({
   name: z.string(),
 });
 
+const probePageSchema = z.object({
+  url: z.string(),
+  title: z.string(),
+  domain: z.string(),
+  classification: citationClassificationSchema,
+  page_format: z.string().nullable(),
+  standing: pageStandingSchema.nullable(),
+  citations: z.int().positive(),
+});
+export type ProbePage = z.infer<typeof probePageSchema>;
+
 const scoredEntitySchema = entitySchema.extend({ score, named: z.boolean() });
 
 export const probeMarketSchema = z.discriminatedUnion('state', [
@@ -91,6 +102,8 @@ export const probeMarketSchema = z.discriminatedUnion('state', [
         of: z.int().positive(),
         leader: scoredEntitySchema,
         gap: z.int().nonnegative(),
+        sources: z.int().nonnegative(),
+        pages: z.array(probePageSchema),
       }),
     ),
     engines: z.array(
@@ -128,17 +141,7 @@ export const probeObjectionsSchema = z.discriminatedUnion('state', [
         engines: z.array(logicalEngineSchema),
         history: z.array(score.nullable()),
         sources: z.int().nonnegative().nullable(),
-        pages: z.array(
-          z.object({
-            url: z.string(),
-            title: z.string(),
-            domain: z.string(),
-            classification: citationClassificationSchema,
-            page_format: z.string().nullable(),
-            standing: pageStandingSchema.nullable(),
-            citations: z.int().positive(),
-          }),
-        ),
+        pages: z.array(probePageSchema),
       }),
     ),
   }),

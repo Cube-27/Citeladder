@@ -4,15 +4,12 @@ import { Fragment, type ComponentProps, type ReactNode } from 'react';
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { useShownSpan } from '@/components/ui/data-table-fit';
-import { Icon } from '@/components/ui/icon';
-import { Inline } from '@/components/ui/layout';
 import { CellMeter } from '@/components/ui/meter';
-import { Pressable } from '@/components/ui/pressable';
+import { ExpandToggle } from '@/components/perception/probe-sources';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { QuoteLink } from '@/components/visibility/visibility-perception';
-import { ChevronDown, ChevronRight } from '@/lib/icons';
 import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useEngineCatalog } from '@/lib/providers/engines';
@@ -101,16 +98,12 @@ function ThemeTable({
           <Fragment key={theme.theme}>
             <TableRow>
               <TableCell>
-                <Pressable
-                  aria-expanded={expanded}
-                  onClick={() => setOpen(expanded ? null : theme.theme)}
-                  className="w-auto"
+                <ExpandToggle
+                  open={expanded}
+                  onToggle={() => setOpen(expanded ? null : theme.theme)}
                 >
-                  <Inline as="span">
-                    <Icon icon={expanded ? ChevronDown : ChevronRight} className="text-ink-2" />
-                    {theme.theme}
-                  </Inline>
-                </Pressable>
+                  {theme.theme}
+                </ExpandToggle>
               </TableCell>
               <TableCell numeric>{theme.negative}</TableCell>
               <TableCell numeric>{theme.positive}</TableCell>
