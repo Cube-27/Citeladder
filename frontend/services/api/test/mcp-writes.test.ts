@@ -265,6 +265,7 @@ it('keys a confirmed generation run by its confirmation, so a retry replays inst
 
 it('runs a live confirmation with no pooled connection held, once under concurrent confirms, leaves it unconsumed when the role is lost during the run, and replays it after its claim lapses', async () => {
   const tenant = await auditTenant(db, fixtures);
+  await topic(db, tenant.projectId, 'Road running');
   const principal = await connection(tenant);
   const narrow = singleConnectionDatabase();
   const { keys, gate, next } = gatedGeneration();

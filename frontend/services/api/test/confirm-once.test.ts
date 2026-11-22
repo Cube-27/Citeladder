@@ -8,7 +8,9 @@ afterAll(() => db.destroy());
 
 it('renews a live claim while its owner outlasts the claim window, so a later confirm is still refused instead of running the owner again', async () => {
   vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
-  onTestFinished(() => vi.useRealTimers());
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
   const lapsed = new Date(Date.now() - (claimSeconds() + 60) * 1000);
   const claims: Date[] = [];
   const renewed = Promise.withResolvers<void>();
