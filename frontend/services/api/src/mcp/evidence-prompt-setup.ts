@@ -44,29 +44,36 @@ async function projectSetIds({ db, scope }: ProjectRead, selected: string | null
 
 export async function promptCandidates(
   read: ProjectRead,
-  args: Page & { prompt_set_id?: string | null },
+  args: Page & { prompt_set_id?: string | null; cohort?: string | null },
 ): Promise<Evidence> {
   const setIds = await projectSetIds(read, args.prompt_set_id);
   const staged = await Promise.all(
     setIds.map((id) => listCandidates(read.db, read.scope.workspaceId, id)),
   );
   const page = pageOf(
-    staged.flat().map((candidate) => ({
-      id: candidate.id,
-      prompt_set_id: candidate.prompt_set_id,
-      topic_id: candidate.topic_id,
-      text: candidate.text,
-      intent: candidate.intent,
-      buyer_stage: candidate.buyer_stage,
-      cohort: candidate.cohort,
-      quality_status: candidate.quality_status,
-      quality_flags: candidate.quality_flags,
-      expires_at: candidate.expires_at,
-    })),
+    staged
+      .flat()
+      .filter((candidate) => !args.cohort || candidate.cohort === args.cohort)
+      .map((candidate) => ({
+        id: candidate.id,
+        prompt_set_id: candidate.prompt_set_id,
+        topic_id: candidate.topic_id,
+        text: candidate.text,
+        intent: candidate.intent,
+        buyer_stage: candidate.buyer_stage,
+        cohort: candidate.cohort,
+        quality_status: candidate.quality_status,
+        quality_flags: candidate.quality_flags,
+        expires_at: candidate.expires_at,
+      })),
     args,
     {
       endpoint: 'mcp_prompt_candidates',
-      filters: { project_id: read.scope.projectId, prompt_set_id: args.prompt_set_id ?? null },
+      filters: {
+        project_id: read.scope.projectId,
+        prompt_set_id: args.prompt_set_id ?? null,
+        cohort: args.cohort ?? null,
+      },
     },
   );
   return {

@@ -247,6 +247,17 @@ it('tells no crawl, link analysis or probe apart from an empty list', async () =
     'read_prompt_portfolio:candidates:[]',
   ]);
   expect((await views(seed))[0]).toBe('read_site_health:issues:[]');
+  const candidates = await table.review_prompt_candidates.arrange();
+  const cohort = async (value: string) =>
+    idsOf(
+      await read(candidates.scope, 'read_prompt_portfolio', { view: 'candidates', cohort: value }),
+      'items',
+      'id',
+    );
+  expect([await cohort('core'), await cohort('comparison')]).toEqual([
+    candidates.payload.accept_ids,
+    [],
+  ]);
   const listed = await read(empty, 'read_prompt_portfolio', { view: 'sets' });
   expect(rowsOf(listed, 'items').map((set) => set.prompt_count)).toEqual([0, 1]);
 });
