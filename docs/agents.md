@@ -362,12 +362,20 @@ never awaited, and its card links to where it shows. A delete's card names what
 it deletes and what goes with it (counts read in the dry run's transaction) and
 says it cannot be undone.
 
-A kind whose owner calls a model or fetches outside CiteLadder (prompt
-generation, logo refresh) is **live**: its dry run runs the kind's check, never
-the owner. At the click it runs outside the decision transaction, because a
+A kind whose owner calls a model or fetches outside CiteLadder (prompt and
+buyer-prompt generation, logo refresh, a Keyword research quote that confirms
+competitor sites) is **live**: its dry run runs the kind's check, never the
+owner's outside call (the quote's check runs the owner with the site fetch left
+out). At the click it runs outside the decision transaction, because a
 charged model call must not hold one, under a session advisory try-lock on the
 proposal: a second click while it runs gets 409 `agent_proposal_running`, and
 the decision is recorded only after the owner succeeds.
+
+A company fact the Agent proposes comes only from what the person said or
+attached; it is created as a draft, as the screen's create makes it, and no
+kind confirms a fact (owner, 2026-11-22). Settings, billing, members, keys,
+integration credentials and mappings, crawl-log sources and the `/run`
+execution nudges have no kind.
 
 Only the person's click executes it:
 `POST /api/v1/agent/chats/{chat}/messages/{message}/proposals/{index}/confirm`
