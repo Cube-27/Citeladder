@@ -34,6 +34,21 @@ function OpensLink({ opens }: Readonly<{ opens: ChangeProposal['opens'] }>) {
   );
 }
 
+function Refusal({
+  error,
+  refusal,
+}: Readonly<{ error: Error | null; refusal: ChangeProposal['refusal'] }>) {
+  if (error)
+    return (
+      <Notice
+        kind="mutation"
+        notice={mutationNoticeForError(error, { action: 'make this change' })}
+      />
+    );
+  if (!refusal) return null;
+  return <p className={textRole('caption')}>The last confirm was refused: {refusal}</p>;
+}
+
 export function ChangeProposalCard({
   workspaceId,
   chatId,
@@ -122,15 +137,7 @@ export function ChangeProposalCard({
         >
           {shown}
           {mayWrite ? null : <p className={textRole('caption')}>Editors only.</p>}
-          {decide.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(decide.error, { action: 'make this change' })}
-            />
-          ) : null}
-          {!decide.isError && proposal.refusal ? (
-            <p className={textRole('caption')}>The last confirm was refused: {proposal.refusal}</p>
-          ) : null}
+          <Refusal error={decide.error} refusal={proposal.refusal} />
         </DraftSheet>
       );
     default: {

@@ -13,7 +13,7 @@ import { researchKinds } from './research-kinds.ts';
 import { siteHealthKinds } from './site-health-kinds.ts';
 import { themeKinds } from './theme-kinds.ts';
 
-export const changeAreas = {
+const changeAreas = {
   'Prompts and topics': { ...promptKinds, ...promptSetKinds },
   'Project, markets and competitors': projectKinds,
   'Audits and probes': { ...auditKinds, ...probeKinds },
