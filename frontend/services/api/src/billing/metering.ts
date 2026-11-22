@@ -325,6 +325,17 @@ function featureOutputCap(feature: MeteredFeature) {
   return caps[feature]!;
 }
 
+export function gatewayHold(
+  gateway: Readonly<{ model: string; maxOutputTokens: number }>,
+  feature: MeteredFeature,
+  request: Readonly<{ system: string; user: string }>,
+) {
+  const price = modelPrice(gateway.model);
+  if (!price) return null;
+  const cap = callOutputCap(gateway.maxOutputTokens, featureOutputCap(feature));
+  return reservationCredits(price, requestInputBytes(request.system, request.user), cap);
+}
+
 function meteredGateway(db: Database, gateway: ModelGateway, context: MeterContext) {
   const cap = callOutputCap(gateway.maxOutputTokens, featureOutputCap(context.feature));
   const complete: Complete = (system, user, signal, onText, schema, maxOutputTokens) => {

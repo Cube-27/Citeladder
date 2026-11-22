@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import { useRef } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { DraftSheet } from '@/components/ui/draft-sheet';
@@ -49,14 +50,20 @@ export function ChangeProposalCard({
   const gone = decide.isError && httpErrorStatus(decide.error) === 404;
   const outcome = gone ? 'unavailable' : proposal.outcome;
   const shown = <FactList facts={facts(proposal)} layout="columns" />;
+  const sheet = useRef<HTMLElement>(null);
   const submit = (decision: 'confirm' | 'dismiss') =>
-    decide.mutate({ chatId, messageId, index: proposal.index, decision });
+    decide.mutate(
+      { chatId, messageId, index: proposal.index, decision },
+      { onSuccess: () => sheet.current?.focus() },
+    );
   const pending = (decision: 'confirm' | 'dismiss') =>
     decide.isPending && decide.variables?.decision === decision;
   switch (outcome) {
     case 'executed':
       return (
         <DraftSheet
+          ref={sheet}
+          tabIndex={-1}
           title={proposal.title}
           state="accepted"
           marker="Done"
@@ -66,12 +73,22 @@ export function ChangeProposalCard({
         </DraftSheet>
       );
     case 'dismissed':
-      return <DraftSheet title={proposal.title} state="declined" />;
+      return <DraftSheet ref={sheet} tabIndex={-1} title={proposal.title} state="declined" />;
     case 'unavailable':
-      return <DraftSheet title={proposal.title} state="declined" marker="No longer available" />;
+      return (
+        <DraftSheet
+          ref={sheet}
+          tabIndex={-1}
+          title={proposal.title}
+          state="declined"
+          marker="No longer available"
+        />
+      );
     case 'open':
       return (
         <DraftSheet
+          ref={sheet}
+          tabIndex={-1}
           title={proposal.title}
           state="draft"
           marker="Proposed change"
@@ -107,6 +124,9 @@ export function ChangeProposalCard({
               kind="mutation"
               notice={mutationNoticeForError(decide.error, { action: 'make this change' })}
             />
+          ) : null}
+          {!decide.isError && proposal.refusal ? (
+            <p className={textRole('caption')}>The last confirm was refused: {proposal.refusal}</p>
           ) : null}
         </DraftSheet>
       );

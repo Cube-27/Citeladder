@@ -123,8 +123,10 @@ describe('Agent bindings to the evidence and Action owners', () => {
     const actions = described.find((text) =>
       text.startsWith('List the work CiteLadder recommends'),
     );
-    expect(actions).toMatch(/Pass action_id for one Action in full: [^.]+\.$/u);
-    expect(sharedTools.definitions.read_actions.description).toContain('update_action_status');
+    expect(actions).toMatch(
+      /Pass action_id for one Action in full: [^.]+\. The update_action_status change kind accepts, declines or restores one\.$/u,
+    );
+    expect(sharedTools.definitions.read_actions.description).toContain('declare_implemented');
     const plugin = new URL('../../../../plugins/citeladder/skills/', import.meta.url);
     const pluginNamed = new Set(
       (

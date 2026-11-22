@@ -60,7 +60,7 @@ export function ModelPicker({
         shown={modelLabel}
         options={state.options.map(({ id, label }) => ({ value: id, label }))}
         onSelect={state.onModel}
-        disabled={disabled || state.locked}
+        disabled={disabled}
         locked={state.locked}
       />
       <ChoiceMenu
@@ -93,13 +93,23 @@ function ChoiceMenu<Value extends string>({
   disabled: boolean;
   locked: boolean;
 }>) {
-  const name = locked ? `${label}: ${shown ?? ''}, set for this chat` : `${label}: ${shown ?? ''}`;
+  if (locked)
+    return (
+      <Button
+        variant="quiet"
+        aria-label={`${label}: ${shown ?? ''}, set for this chat`}
+        aria-disabled
+      >
+        {shown ?? label}
+        <Icon icon={Lock} className="opacity-80" />
+      </Button>
+    );
+  const name = `${label}: ${shown ?? ''}`;
   return (
     <Menu>
       <MenuTrigger asChild>
         <Button variant="quiet" aria-label={name} disabled={disabled || options.length === 0}>
           {shown ?? label}
-          {locked ? <Icon icon={Lock} className="opacity-80" /> : null}
         </Button>
       </MenuTrigger>
       <MenuContent align="start" side="top">

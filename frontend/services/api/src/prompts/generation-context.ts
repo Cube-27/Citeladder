@@ -30,6 +30,7 @@ const businessMap = z.object({ offerings: z.array(offeringMapSchema).default([])
 export const offeringMaps = (business: Record<string, unknown>): OfferingMap[] =>
   businessMap.parse(business.business_map ?? {}).offerings;
 
+export const OFFERING_NEEDED = 'Add at least one offering before generating prompts';
 const topicColumns = ['id', 'name', 'description', 'parent_id'] as const;
 const promptColumns = ['id', 'topic_id', 'text', 'normalized_text_hash'] as const;
 const candidateColumns = ['text', 'normalized_text_hash', 'disposition', 'jev_decision'] as const;
@@ -99,8 +100,7 @@ export async function recoverTopics(
 ) {
   const input = await recoveryInput(db, scope.workspaceId, scope.setId);
   if (!input) return null;
-  if (!input.offerings.length)
-    throw generationInvalid('Add at least one offering before generating prompts');
+  if (!input.offerings.length) throw generationInvalid(OFFERING_NEEDED);
   const gateway = model.gateway();
   await model.reserve();
   const proposal = await proposeTopics(input, gateway, model.deadline);

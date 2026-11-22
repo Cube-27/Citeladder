@@ -325,7 +325,7 @@ it('returns a kind’s payload shape on demand and with a malformed payload, pro
   expect(state).toEqual({ proposals: [], steps: [] });
 });
 
-it('never runs a model-calling change in its preview, refuses a second click while the first runs, and replays a run whose decision was lost', async () => {
+it('refuses at proposal what the owner would refuse, never runs a model-calling change in its preview, refuses a second click while the first runs, and replays a run whose decision was lost', async () => {
   const t = await tenant();
   const runs = () =>
     db
@@ -333,9 +333,19 @@ it('never runs a model-calling change in its preview, refuses a second click whi
       .select('id')
       .where('prompt_set_id', '=', t.setId)
       .execute();
-  const { chatId, messageId, proposals } = await proposed(t.scope, [
-    { kind: 'generate_prompts', payload: { prompt_set_id: t.setId, request: { count: 3 } } },
-  ]);
+  const generate = {
+    kind: 'generate_prompts',
+    payload: { prompt_set_id: t.setId, request: { count: 3 } },
+  };
+  const state = { proposals: [], steps: [] };
+  expect(await proposeChange(db, config, { scope: t.scope, state }, generate)).toEqual({
+    ok: false,
+    text: 'This change would be refused now: Add at least one offering before generating prompts. Correct it, or tell the person why it cannot be made.',
+  });
+  expect(state).toEqual({ proposals: [], steps: [] });
+  const road = await topic(db, t.projectId, 'Road');
+  const { chatId, messageId, proposals } = await proposed(t.scope, [generate]);
+  await db.deleteFrom('topics').where('id', '=', road).execute();
   expect(proposals).toMatchObject([
     { title: 'Suggest 3 prompts', spend: 'AI credits for up to 3 model calls', outcome: 'open' },
   ]);

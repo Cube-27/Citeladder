@@ -444,7 +444,11 @@ export const agentMutations = {
         agentApi.decideProposal(vars, vars.decision, { workspaceId }),
       onSuccess: (detail, vars, _result, { client }) => {
         client.setQueryData(queryKeys.agent.chat(workspaceId, vars.chatId), detail);
-        if (vars.decision === 'confirm') void client.invalidateQueries();
+        const projectId = detail.chat.project_id;
+        if (vars.decision === 'confirm')
+          void client.invalidateQueries({
+            predicate: (query) => query.queryKey.includes(projectId),
+          });
       },
       onError: (_error, vars, _context, { client }) => void refreshAgentChat(client, vars.chatId),
     }),

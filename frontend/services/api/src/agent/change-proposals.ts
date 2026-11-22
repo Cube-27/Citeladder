@@ -4,7 +4,13 @@ import { agentDeclarationProposalSchema, type AgentProposal } from '@citeladder/
 import type { Actor } from '../auth/actor.ts';
 import { findWorkspaceMember } from '../auth/workspace.ts';
 import { changePreviewSchema, type ChangePreview } from '../changes/kind.ts';
-import { changeAreas, changeKinds, type ChangeKind } from '../changes/kinds.ts';
+import {
+  CHANGE_KINDS,
+  changeKinds,
+  kindLines,
+  memberOf,
+  type ChangeKind,
+} from '../changes/kinds.ts';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -17,88 +23,13 @@ import type { TurnState } from './turn-budget.ts';
 
 export const PROPOSE_CHANGE = 'propose_change';
 
-export const AGENT_CHANGE_KINDS = [
-  'add_prompts',
-  'update_prompts',
-  'update_prompt_text',
-  'create_topic',
-  'rename_topic',
-  'confirm_topics',
-  'delete_topic',
-  'create_prompt_set',
-  'rename_prompt_set',
-  'delete_prompt_set',
-  'delete_prompts',
-  'review_prompt_candidates',
-  'generate_prompts',
-  'update_project',
-  'add_competitor',
-  'review_competitor_suggestion',
-  'update_competitor',
-  'remove_competitor',
-  'add_market',
-  'remove_market',
-  'refresh_logos',
-  'launch_audit',
-  'cancel_audit',
-  'schedule',
-  'rerun_audit_failures',
-  'update_audit_schedule',
-  'delete_audit_schedule',
-  'run_probe',
-  'set_probe_schedule',
-  'rename_objection_group',
-  'merge_objection_groups',
-  'delete_objection_group',
-  'start_crawl',
-  'cancel_crawl',
-  'set_crawl_schedule',
-  'rerun_page',
-  'mark_issue_group_fixed',
-  'rerun_issue_group',
-  'start_link_analysis',
-  'cancel_link_analysis',
-  'update_action_status',
-  'update_actions_status',
-  'analyze_page',
-  'reorder_opportunities',
-  'create_keyword_review',
-  'confirm_keyword_run',
-  'cancel_keyword_run',
-  'save_keyword_preferences',
-  'derive_citation_matches',
-  'recompute_demand',
-  'override_query_classification',
-  'sync_performance',
-  'sync_integration',
-  'request_performance_range',
-  'discover_commerce_competitors',
-  'generate_buyer_prompts',
-  'add_buyer_prompt',
-  'edit_product',
-  'set_product_lifecycle',
-  'decide_competitor_candidate',
-  'decide_buyer_prompt',
-  'update_brand_profile',
-  'update_business_map',
-  'create_brand_fact',
-  'update_brand_fact',
-  'override_claim_verdict',
-  'create_theme',
-  'rename_theme',
-  'delete_theme',
-  'start_brand_discovery',
-  'rerun_brand_discovery',
-  'complete_brand_discovery',
-  'import_prompts',
-  'import_brand_facts',
-  'import_catalog',
-] as const satisfies readonly ChangeKind[];
-export type AgentChangeKind = (typeof AGENT_CHANGE_KINDS)[number];
-
-export function isAgentChangeKind(kind: string): kind is AgentChangeKind {
-  return AGENT_CHANGE_KINDS.some((known) => known === kind);
-}
+const NOT_PROPOSED = ['declare_implemented'] as const satisfies readonly ChangeKind[];
+export type AgentChangeKind = Exclude<ChangeKind, (typeof NOT_PROPOSED)[number]>;
+const notProposed = memberOf(NOT_PROPOSED);
+export const AGENT_CHANGE_KINDS = CHANGE_KINDS.filter(
+  (kind): kind is AgentChangeKind => !notProposed(kind),
+);
+export const isAgentChangeKind = memberOf(AGENT_CHANGE_KINDS);
 
 const storedProposalSchema = z.discriminatedUnion('kind', [
   agentDeclarationProposalSchema,
@@ -122,15 +53,10 @@ export const proposeChangeArguments = z.strictObject({
     ),
 });
 
-function areaLine([area, kinds]: [string, Record<string, { purpose: string }>]) {
-  const listed = Object.entries(kinds).filter(([kind]) => isAgentChangeKind(kind));
-  return [`${area}:`, ...listed.map(([kind, entry]) => `- ${kind}: ${entry.purpose}`)];
-}
-
 export const PROPOSE_CHANGE_DESCRIPTION = [
   'Propose one change to the project’s data for the person to confirm: the app shows it as a card under your reply, and only their click makes it, as them. Propose only what the person asked for or agreed to; use ids from your reads. A paid change spends nothing until the click. Each call is checked as a dry run: a refusal tells you what to correct. To learn a kind’s payload shape, call with the kind alone; a payload that does not fit is refused with the shape.',
   'Kinds, by area:',
-  ...Object.entries(changeAreas).flatMap(areaLine),
+  ...kindLines(isAgentChangeKind),
 ].join('\n');
 
 export async function memberActor(
@@ -234,19 +160,22 @@ export async function proposeChange(
   };
 }
 
-type Outcome = { proposal_index: number; state: string };
+type Outcome = { proposal_index: number; state: string; reason: string | null };
 
 export function proposalViews(stored: unknown, outcomes: readonly Outcome[]): AgentProposal[] {
   const decided = new Map<number, 'executed' | 'dismissed'>();
+  const refused = new Map<number, string>();
   for (const row of outcomes)
     if (row.state === 'executed' || row.state === 'dismissed')
       decided.set(row.proposal_index, row.state);
+    else if (row.state === 'refused' && row.reason) refused.set(row.proposal_index, row.reason);
   return storedProposals.parse(stored).map((proposal, index): AgentProposal => {
     if (proposal.kind === 'declaration') return proposal;
     const { title, rows, spend, opens } = proposal.preview;
     const outcome = isAgentChangeKind(proposal.change)
       ? (decided.get(index) ?? 'open')
       : 'unavailable';
-    return { kind: 'change', index, title, rows, spend, opens, outcome };
+    const refusal = outcome === 'open' ? (refused.get(index) ?? null) : null;
+    return { kind: 'change', index, title, rows, spend, opens, outcome, refusal };
   });
 }

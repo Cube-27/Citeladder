@@ -173,6 +173,7 @@ export const agentProposalSchema = z.discriminatedUnion('kind', [
     spend: z.string().nullable(),
     opens: responseObject({ label: z.string(), path: z.string() }).nullable(),
     outcome: z.enum(['open', 'executed', 'dismissed', 'unavailable']),
+    refusal: z.string().nullable().default(null),
   }),
 ]);
 export type AgentProposal = z.infer<typeof agentProposalSchema>;

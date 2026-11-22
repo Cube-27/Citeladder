@@ -17,7 +17,9 @@ import { createJevClient, type JevClient } from '../models/jev.ts';
 import {
   generationContext,
   offeringMaps,
+  OFFERING_NEEDED,
   recoverTopics,
+  topicProposalInput,
   type GenerationContext,
   type OfferingMap,
   type TopicRecovery,
@@ -364,14 +366,27 @@ async function replay(
   });
 }
 
-async function requireCompetitor(db: Database, workspaceId: string, setId: string) {
+export async function generationPreconditions(
+  db: Database,
+  workspaceId: string,
+  setId: string,
+  input: GenerationInput,
+) {
+  validateRequest(input);
   const set = await scopedPromptSet(db, workspaceId, setId);
-  const competitor = await db
-    .selectFrom('competitors')
-    .select('id')
-    .where('project_id', '=', set.project_id)
-    .executeTakeFirst();
-  if (!competitor) throw generationInvalid('Add a competitor before generating comparison prompts');
+  if (cohortShares(input).comparison > 0) {
+    const competitor = await db
+      .selectFrom('competitors')
+      .select('id')
+      .where('project_id', '=', set.project_id)
+      .executeTakeFirst();
+    if (!competitor)
+      throw generationInvalid('Add a competitor before generating comparison prompts');
+  }
+  if (wantedTopics(input).length) return;
+  const recovery = await topicProposalInput(db, { workspaceId, projectId: set.project_id });
+  if (!recovery.existing.length && !recovery.offerings.length)
+    throw generationInvalid(OFFERING_NEEDED);
 }
 
 export async function generatePrompts(
@@ -387,8 +402,7 @@ export async function generatePrompts(
     const prior = await replay(db, workspaceId, setId, input, idempotencyKey);
     if (prior) return prior;
   }
-  validateRequest(input);
-  if (cohortShares(input).comparison > 0) await requireCompetitor(db, workspaceId, setId);
+  await generationPreconditions(db, workspaceId, setId, input);
   const meter = (dependencies.meter ?? meterFor)(db, workspaceId);
   let metered: ModelGateway | undefined;
   const gatewayFor = () => {

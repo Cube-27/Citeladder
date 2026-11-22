@@ -1,4 +1,4 @@
-import { changeAreas, type ChangeKind } from '../changes/kinds.ts';
+import { kindLines, memberOf, type ChangeKind } from '../changes/kinds.ts';
 
 export const MCP_CHANGE_KINDS = [
   'add_prompts',
@@ -35,18 +35,10 @@ export const MCP_CHANGE_KINDS = [
 ] as const satisfies readonly ChangeKind[];
 export type McpChangeKind = (typeof MCP_CHANGE_KINDS)[number];
 
-export function isMcpChangeKind(kind: string): kind is McpChangeKind {
-  return MCP_CHANGE_KINDS.some((offered) => offered === kind);
-}
-
-function areaLines([area, kinds]: [string, Record<string, { purpose: string }>]) {
-  const offered = Object.entries(kinds).filter(([kind]) => isMcpChangeKind(kind));
-  if (!offered.length) return [];
-  return [`${area}:`, ...offered.map(([kind, entry]) => `- ${kind}: ${entry.purpose}`)];
-}
+export const isMcpChangeKind = memberOf(MCP_CHANGE_KINDS);
 
 export const PREPARE_CHANGE_DESCRIPTION = [
   'Checks one change to a project as a dry run and returns a preview of it, without ids, and a confirmation_token. Nothing is saved, held, spent, fetched or sent to a model here; confirm_change with the token makes the change once the user has agreed to the preview. Ids come from the read tools. With a kind and no payload it returns that kind’s payload shape; a payload that does not fit is refused with the shape.',
   'Kinds, by area:',
-  ...Object.entries(changeAreas).flatMap(areaLines),
+  ...kindLines(isMcpChangeKind),
 ].join('\n');

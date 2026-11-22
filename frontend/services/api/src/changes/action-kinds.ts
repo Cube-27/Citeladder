@@ -165,7 +165,7 @@ export const actionKinds = {
           { label: 'Prompts', value: String(payload.prompt_ids.length) },
         ],
         spend: 'Agent usage for the analysis, as for a chat message',
-        opens: ACTIONS,
+        opens: { label: 'Open the Agent', path: '/agent' },
       };
     },
   }),

@@ -48,3 +48,24 @@ export const changeKinds = {
 };
 
 export type ChangeKind = keyof typeof changeKinds;
+
+export const CHANGE_KINDS = Object.keys(changeKinds).filter((kind): kind is ChangeKind =>
+  Object.hasOwn(changeKinds, kind),
+);
+
+export function memberOf<K extends string>(list: readonly K[]) {
+  return (kind: string): kind is K => list.some((listed) => listed === kind);
+}
+
+function areaLines(
+  [area, kinds]: [string, Record<string, { purpose: string }>],
+  offered: (kind: string) => boolean,
+) {
+  const listed = Object.entries(kinds).filter(([kind]) => offered(kind));
+  if (!listed.length) return [];
+  return [`${area}:`, ...listed.map(([kind, entry]) => `- ${kind}: ${entry.purpose}`)];
+}
+
+export function kindLines(offered: (kind: string) => boolean) {
+  return Object.entries(changeAreas).flatMap((area) => areaLines(area, offered));
+}
