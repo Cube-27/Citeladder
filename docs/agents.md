@@ -561,7 +561,10 @@ plain text) picked with Attach files or dropped on the composer becomes a named
 file attachment, read in the browser as strict UTF-8; spreadsheets, PDFs and
 documents are refused there with a message to save as CSV or paste the text.
 Bounds are in `agent-runtime.json` and listed in the skill catalog's `limits`;
-the per-attachment bound fits the largest owner import (500 prompts). The model
+the per-attachment bound fits the largest owner import (500 prompts), and
+`attachments_total_max_chars` bounds a message's attachments together so its
+opening call stays below the long-context tier (see Memory). The composer
+refuses an attachment past it when added, and the API refuses the message. The model
 receives each attachment as its own block labelled as data, not instructions,
 and turns one into an import only through an import change kind built from the
 owner's row schema; the operating contract keeps an import to what the file

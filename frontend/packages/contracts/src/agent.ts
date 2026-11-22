@@ -153,6 +153,8 @@ function attachmentSchema(text: z.ZodString) {
 }
 export const agentAttachmentSchema = attachmentSchema(z.string());
 export type AgentAttachment = z.infer<typeof agentAttachmentSchema>;
+export const attachedChars = (items: readonly Pick<AgentAttachment, 'text'>[]) =>
+  items.reduce((sum, item) => sum + item.text.length, 0);
 
 export const agentDeclarationProposalSchema = responseObject({
   kind: z.literal('declaration'),
@@ -428,6 +430,7 @@ export const agentSkillCatalogSchema = responseObject({
     mentions_max: z.number().int(),
     attachments_max: z.number().int(),
     attachment_max_chars: z.number().int(),
+    attachments_total_max_chars: z.number().int(),
   }),
 });
 
@@ -489,6 +492,7 @@ export function agentRequestSchemas(bounds: {
   mentions_max: number;
   attachments_max: number;
   attachment_max_chars: number;
+  attachments_total_max_chars: number;
   output_title_max_chars: number;
   output_body_max_chars: number;
   instructions_max_chars: number;
@@ -506,6 +510,10 @@ export function agentRequestSchemas(bounds: {
   const attachments = z
     .array(attachmentSchema(z.string().min(1).max(bounds.attachment_max_chars)))
     .max(bounds.attachments_max)
+    .refine(
+      (items) => attachedChars(items) <= bounds.attachments_total_max_chars,
+      `Attachments hold up to ${bounds.attachments_total_max_chars} characters together`,
+    )
     .default([]);
   return {
     create: z.strictObject({

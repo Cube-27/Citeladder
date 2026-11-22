@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { AgentAttachment } from '@citeladder/contracts/agent';
+import { attachedChars, type AgentAttachment } from '@citeladder/contracts/agent';
 
 import type { ComposerCommands, ComposerPastes } from '@/components/agent/command-menu';
 import { useToast } from '@/components/ui/toast';
@@ -76,6 +76,7 @@ export function useComposerCommands({
     pendingReads.current = Math.max(0, pendingReads.current + change);
     setReading(pendingReads.current);
   };
+  const heldChars = () => attachedChars(latestPastes.current.map((paste) => paste.attachment));
   const dropReads = () => {
     readGeneration.current += 1;
     settleRead(-pendingReads.current);
@@ -223,9 +224,11 @@ export function useComposerCommands({
           limits != null &&
           text.length >= AGENT_PASTE_ATTACHMENT_MIN_CHARS &&
           text.length <= limits.attachment_max_chars &&
+          heldChars() + text.length <= limits.attachments_total_max_chars &&
           pastes.length + pendingReads.current < limits.attachments_max;
         if (fits) {
           const paste = keyed({ kind: 'pasted_text', text });
+          latestPastes.current = [...latestPastes.current, paste];
           setPastes((current) => [...current, paste]);
         }
         return fits;
@@ -249,7 +252,15 @@ export function useComposerCommands({
               toast.notify(`Couldn't attach ${file.name}`, read.message);
               return;
             }
+            if (heldChars() + read.attachment.text.length > limits.attachments_total_max_chars) {
+              toast.notify(
+                `Couldn't attach ${file.name}`,
+                `Attachments in one message hold up to ${limits.attachments_total_max_chars.toLocaleString('en-US')} characters together. Remove one or attach part of the file.`,
+              );
+              return;
+            }
             const paste = keyed(read.attachment);
+            latestPastes.current = [...latestPastes.current, paste];
             setPastes((current) => [...current, paste]);
           });
       },

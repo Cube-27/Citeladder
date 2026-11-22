@@ -170,6 +170,12 @@ describe('served Agent cutover on PostgreSQL', () => {
     expect(await refused({ ...file, text: 'x'.repeat(agentPolicy.attachment_max_chars + 1) })).toBe(
       422,
     );
+    expect(
+      await refused({
+        ...file,
+        text: 'x'.repeat(agentPolicy.attachments_total_max_chars - pasted.length + 1),
+      }),
+    ).toBe(422);
     expect(await refused({ ...file, name: ' ' })).toBe(422);
     expect(await refused({ kind: 'file', text: file.text })).toBe(422);
     const { accepted, response } = await startTurn(scope.projectId, keyed, body(pasted));

@@ -144,7 +144,12 @@ afterAll(() => mswServer.close());
 const EMPTY_CATALOG = {
   skills: [],
   models: AGENT_MODELS,
-  limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
+  limits: {
+    mentions_max: 5,
+    attachments_max: 3,
+    attachment_max_chars: 40000,
+    attachments_total_max_chars: 40000,
+  },
 };
 
 describe('AgentPanel', () => {

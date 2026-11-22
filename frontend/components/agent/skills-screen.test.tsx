@@ -31,7 +31,12 @@ const CATALOG = {
   workflows: [],
   output_kinds: [{ kind: 'linkedin_post', label: 'LinkedIn post', refinements: [], next: [] }],
   models: AGENT_MODELS,
-  limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
+  limits: {
+    mentions_max: 5,
+    attachments_max: 3,
+    attachment_max_chars: 40000,
+    attachments_total_max_chars: 40000,
+  },
 };
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));

@@ -77,7 +77,12 @@ const WORKFLOW_CATALOG = {
   workflows: [{ id: 'linkedin_post', label: 'LinkedIn post' }],
   output_kinds: [],
   models: AGENT_MODELS,
-  limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
+  limits: {
+    mentions_max: 5,
+    attachments_max: 3,
+    attachment_max_chars: 40000,
+    attachments_total_max_chars: 40000,
+  },
 };
 
 function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
@@ -93,6 +98,7 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
           mentions_max: 5,
           attachments_max: 3,
           attachment_max_chars: 40000,
+          attachments_total_max_chars: 40000,
         },
       }),
     ),
@@ -398,12 +404,26 @@ describe('NewChatScreen', () => {
     ]);
   });
 
-  it('attaches text files from the picker and by drop, refuses a spreadsheet, and sends them as named files', async () => {
+  it('attaches text files from the picker and by drop up to the total bound, refuses a spreadsheet, and sends them as named files', async () => {
     const bodies = captureChats();
-    const user = userEvent.setup({ applyAccept: false });
-    const { container } = renderNewChat('');
     const prompts = 'prompt,topic\nWhich shoes grip in mud?,Trail';
     const facts = 'topic,statement\npricing,Plans start at 10 dollars';
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () =>
+        HttpResponse.json({
+          skills: [GROWTH_SKILL],
+          models: AGENT_MODELS,
+          limits: {
+            mentions_max: 5,
+            attachments_max: 3,
+            attachment_max_chars: 40000,
+            attachments_total_max_chars: prompts.length + facts.length,
+          },
+        }),
+      ),
+    );
+    const user = userEvent.setup({ applyAccept: false });
+    const { container } = renderNewChat('');
     const message = await screen.findByLabelText('Message the agent');
     const picker = container.querySelector('input[type="file"]');
     if (!(picker instanceof HTMLInputElement)) throw new Error('No file picker');
@@ -420,7 +440,9 @@ describe('NewChatScreen', () => {
     const viewer = await screen.findByRole('dialog', { name: 'facts.tsv' });
     expect(within(viewer).getByText(/^topic,statement/).textContent).toBe(facts);
     await user.click(within(viewer).getByRole('button', { name: 'Close dialog' }));
+    await user.upload(picker, new File(['x'], 'extra.txt'));
     expect(screen.queryByRole('button', { name: /catalog\.xlsx/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /extra\.txt/ })).not.toBeInTheDocument();
     await user.type(message, 'import these{Enter}');
 
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
@@ -447,6 +469,7 @@ describe('NewChatScreen', () => {
             mentions_max: 1,
             attachments_max: 3,
             attachment_max_chars: 40000,
+            attachments_total_max_chars: 40000,
           },
         }),
       ),
