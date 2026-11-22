@@ -18,7 +18,7 @@
     "objection": "Why might someone not choose {brand}?",
     "theme": "Which {category} brands in {country} are best known for {theme}?"
   },
-  "max_answer_chars": 6000,
+  "max_answer_chars": 24000,
   "max_items_per_answer": 10,
   "max_new_groups_per_probe": 12,
   "group_name_max_chars": 120,

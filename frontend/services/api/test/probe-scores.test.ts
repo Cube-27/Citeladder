@@ -5,6 +5,7 @@ import { taskFunding } from '../src/audits/prompt-runs.ts';
 import { policy } from '../src/config.ts';
 import {
   covering,
+  knownForRequest,
   mapKnownFor,
   mapObjections,
   mapThemeBrands,
@@ -162,6 +163,18 @@ describe('probe questions and funding', () => {
 });
 
 describe('labelling output mapping', () => {
+  it('sends the labeller every word of a 3,000-word answer', () => {
+    const text = `${Array.from({ length: 430 }, (_, n) => `Point ${n} weighs fit, value and comfort.`).join(' ')} Acme ends the answer.`;
+    const request = knownForRequest(policy.probes, {
+      brand: 'Acme',
+      fallback: 'Other',
+      themes: [],
+      answers: [{ taskId: 'task-1', text }],
+    });
+    expect(text.split(' ').length).toBeGreaterThan(2_990);
+    expect(request.endsWith(`Answer 1:\n${text}`)).toBe(true);
+  });
+
   it("maps known-for points onto the project's themes, case and spacing aside, else Other", () => {
     const themes = [{ id: 'theme-comfort', name: 'All-day  Comfort' }];
     const items = mapKnownFor(

@@ -69,7 +69,7 @@ describe('audit admission freeze', () => {
       repetitions: 2,
       measurement_policy: { retrieval_enabled: true, repetitions: 2 },
       anthropic_max_uses: providers.anthropicMaxUses,
-      openai_max_tool_calls: 1,
+      openai_max_tool_calls: providers.openaiMaxToolCalls,
       prompt_selection: 'set',
     });
     expect(plan.systemInstruction).not.toContain('Acme');

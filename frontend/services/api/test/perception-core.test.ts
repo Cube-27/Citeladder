@@ -118,6 +118,22 @@ describe('perception passages', () => {
     expect(brand!.spans).toEqual([{ start: 35, end: 47, text: 'xxxxx Acme i' }]);
   });
 
+  it('passes a whole 3,000-word answer and its last mention under the configured budget', () => {
+    const filler = Array.from(
+      { length: 430 },
+      (_, n) => `Point ${n} weighs fit, value and comfort.`,
+    ).join(' ');
+    const answer = `${filler} Rival is cheaper. Acme is great.`;
+    const configured = { ...plain, answer, policy: policy.perception };
+    const length = Array.from(answer).length;
+    const [named] = entityPassages({ ...configured, promptNamesBrand: true });
+    const [brand, rival] = entityPassages(configured);
+    expect(answer.split(' ').length).toBeGreaterThan(2_990);
+    expect(named!.spans).toEqual([{ start: 0, end: length, text: answer }]);
+    expect(brand!.spans.map((span) => span.text.endsWith('Acme is great.'))).toEqual([true]);
+    expect(rival!.spans.map((span) => span.text.endsWith('Acme is great.'))).toEqual([true]);
+  });
+
   it('hashes equal packages equally whatever their key order', () => {
     const pkg = pkgFor('Acme is great.');
     const reordered = {

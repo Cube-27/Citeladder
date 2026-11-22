@@ -36,8 +36,8 @@
     }
   },
   "estimate_search_calls": {
-    "chatgpt": 1,
-    "claude": 3,
+    "chatgpt": 2,
+    "claude": 2,
     "gemini": 1
   },
   "unverified_pricing": {
