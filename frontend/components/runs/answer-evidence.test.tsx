@@ -186,7 +186,7 @@ describe('Answer transcript', () => {
     expect(link).toHaveAttribute('data-source-chip', 'plumb.example');
     const sources = screen.getByRole('list', { name: 'Sources' });
     expect(within(sources).getAllByRole('listitem')).toHaveLength(2);
-    expect(within(sources).getByText('Cited 2 times')).toBeVisible();
+    expect(within(sources).getByText('(2)')).toBeVisible();
     expect(within(sources).getAllByText('You')).toHaveLength(1);
 
     const searches = await screen.findByRole('list', { name: 'Searches the engine ran' });
@@ -212,8 +212,8 @@ describe('Answer transcript', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual([
-      'Rrival.exampleLinked 2 timeshttps://rival.example/a (opens in a new tab)',
-      'Aacme.exampleYouLinked oncehttps://www.acme.example/plans (opens in a new tab)',
+      'Rrival.example(2)https://rival.example/a (opens in a new tab)',
+      'Aacme.exampleYou(1)https://www.acme.example/plans (opens in a new tab)',
     ]);
     unmount();
 

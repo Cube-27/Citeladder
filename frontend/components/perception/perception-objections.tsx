@@ -10,7 +10,7 @@ import { ProbeLede } from '@/components/perception/probe-lede';
 import { ExpandToggle, SourcePagesRow } from '@/components/perception/probe-sources';
 import type { FigureSegment } from '@/components/ui/figure-strip';
 import { ProjectLink } from '@/components/ui/project-link';
-import { TitledSection } from '@/components/ui/section';
+import { SectionStack, TitledSection } from '@/components/ui/section';
 import { Sparkline } from '@/components/ui/sparkline';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { agentHandoffHref } from '@/lib/agent/handoff';
@@ -28,11 +28,11 @@ export function PerceptionObjections({
   data,
 }: Readonly<{ scope: ProjectScope; data: ProbeObjectionsValue }>) {
   return (
-    <>
+    <SectionStack>
       <Lede data={data} />
       <ObjectionTable scope={scope} data={data} />
       <ObjectionSources groups={data.groups} />
-    </>
+    </SectionStack>
   );
 }
 

@@ -15,7 +15,7 @@ import { ThemeComparison } from '@/components/perception/theme-comparison';
 import type { FigureSegment } from '@/components/ui/figure-strip';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Meter } from '@/components/ui/meter';
-import { SectionContent, TitledSection } from '@/components/ui/section';
+import { SectionContent, SectionStack, TitledSection } from '@/components/ui/section';
 import { slipClasses } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
 import { TableCell, TableRow, YouTag } from '@/components/ui/table';
@@ -27,7 +27,7 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 export function PerceptionMarket({ data }: Readonly<{ data: ProbeMarketValue }>) {
   const mayEdit = useWorkspaceCapability('write');
   return (
-    <>
+    <SectionStack>
       <Lede data={data} />
       <AppGrid layout="halves">
         <TitledSection
@@ -77,7 +77,7 @@ export function PerceptionMarket({ data }: Readonly<{ data: ProbeMarketValue }>)
       <RankTable data={data} />
       <ThemeComparison themes={data.themes} />
       <EngineTable data={data} />
-    </>
+    </SectionStack>
   );
 }
 
