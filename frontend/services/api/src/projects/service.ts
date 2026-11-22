@@ -16,7 +16,7 @@ import {
   storedEntityMatching,
 } from '../analysis/entity-matching.ts';
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { jsonObject, strings } from '../db/json.ts';
 import { admit, overLimitPromptIds } from '../entitlements/occupancy.ts';
 import { WorkspaceEntitlements, requireFlag } from '../entitlements/access.ts';
@@ -498,7 +498,7 @@ export async function updateProject(
   input: ProjectUpdate,
 ) {
   const scope = { workspaceId: actor.workspaceId, projectId };
-  await db.transaction().execute(async (trx) => {
+  await inTransaction(db, async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
     const row = await projectRow(trx, scope);
     const brand = await trx

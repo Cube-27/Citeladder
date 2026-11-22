@@ -2,7 +2,7 @@ import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { createHash, randomUUID } from 'node:crypto';
 
 import { normalizeDomain } from '../analysis/domains.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { chunksOf } from '../lists.ts';
 import { compareText } from '../text-order.ts';
@@ -51,7 +51,7 @@ export function deriveCitationMatches(
   parentDatasetId: string,
   auditIds: readonly string[],
 ) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     const parent = await scope.workspace
       .selectFrom(trx, 'search_intelligence_datasets')
       .selectAll()

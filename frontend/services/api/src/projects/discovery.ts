@@ -12,7 +12,7 @@ import { policy } from '../config.ts';
 import { resolveSettingSpec } from '../config/settings.ts';
 import promptLibrary from '../config/prompt-library.json' with { type: 'json' };
 import { subjectXactLock } from '../db/advisory-lock.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { BrandDiscoveries } from '../generated/db-schema.ts';
@@ -105,7 +105,7 @@ export function createDiscovery(
   input: DiscoveryInput,
   key: string,
 ) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await subjectXactLock(trx, `brand-discovery-admission:${workspaceId}`);
     const existing = await trx
       .selectFrom('brand_discoveries')
@@ -315,7 +315,7 @@ export async function completeDiscovery(
     if (error instanceof ApiError) throw error;
     throw new ApiError(409, 'Confirmed domains must be public domains');
   }
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     const row = await discoveryRow(trx, workspaceId, id, true);
     if (replay(row, key)) return completionView(row);
     if (row.status !== cfg.discovery_status_ready)

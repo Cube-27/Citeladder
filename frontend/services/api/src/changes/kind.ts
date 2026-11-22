@@ -32,6 +32,7 @@ type Execute<S extends z.ZodType, P extends Permission, R extends ChangeResult> 
 
 type Check<S extends z.ZodType, P extends Permission> = (
   trx: Database,
+  config: ServiceConfig,
   actor: Authorized<P>,
   change: PreparedChange,
   payload: z.output<S>,
@@ -96,7 +97,7 @@ export function changeKind<
           return rehearsal;
         };
         const shown = await entry.preview({ ...context, db: trx }, payload, rehearse);
-        if (entry.live) await entry.live(trx, authorized, change, payload);
+        if (entry.live) await entry.live(trx, context.config, authorized, change, payload);
         else await rehearse();
         return shown;
       });

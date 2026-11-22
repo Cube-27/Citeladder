@@ -1,6 +1,6 @@
 import type { NotNull } from 'kysely';
 import { settleProviderCredits } from '../billing/metering.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
 import { si, usdUnits } from './requests.ts';
 
@@ -14,7 +14,7 @@ export function settleResearchCharge(
   run: { workspaceId: string; runId: string },
   at = new Date(),
 ) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     const locked = await trx
       .selectFrom('search_intelligence_runs')
       .selectAll()

@@ -6,7 +6,7 @@ import type { Selectable, Updateable } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import type { CommerceProducts } from '../generated/db-schema.ts';
@@ -198,7 +198,7 @@ function currentValue(product: Selectable<CommerceProducts>, field: ScalarField)
 }
 
 export function editProduct(db: Database, scope: CommerceScope, id: string, edit: ProductEdit) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     const product = await lockedProduct(trx, scope, id);
     const values = columnValues(edit);
     await refuseIdentityConflict(trx, scope, product.id, values);
@@ -244,7 +244,7 @@ export function setProductLifecycle(
   id: string,
   state: CommerceLifecycleState,
 ) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     const product = await lockedProduct(trx, scope, id);
     if (product.lifecycle_state === state) return catalogProduct(trx, scope, product);
     const observationId = await appendObservation(trx, scope, product.id, {

@@ -224,7 +224,7 @@ export const promptSetKinds = {
     purpose:
       'have CiteLadder suggest new prompts for a prompt set; spends AI credits when confirmed, and the suggestions wait for review',
     payload: z.strictObject({ prompt_set_id: z.uuid(), request: generationInput }),
-    async live(trx, actor, change, payload) {
+    async live(trx, _config, actor, change, payload) {
       await scopedPromptSet(trx, actor.workspaceId, payload.prompt_set_id, change.projectId);
       const topics = await listTopics(trx, {
         workspaceId: actor.workspaceId,

@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { budget, spendBudget } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
 import { commerceBuyerPromptSystem } from '../config/commerce.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { meterFor, type Meter } from '../billing/metering.ts';
 import { record, strings } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
@@ -372,7 +372,7 @@ function persist(
   batches: Batch[],
   keyed: { key: string; input: GenerateInput } | null = null,
 ) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     const contexts = [];
     for (const batch of batches) contexts.push(await targetContext(trx, scope, batch.target)); // NOSONAR
     await acquireProjectLock(trx, scope.projectId);
@@ -485,7 +485,7 @@ async function askModel(
   }
 }
 
-async function requestContexts(db: Database, scope: CommerceScope, input: GenerateInput) {
+export async function requestContexts(db: Database, scope: CommerceScope, input: GenerateInput) {
   if (!input.hero && input.targets.some((target) => target.kind === 'product'))
     throw heroRequired();
   const contexts = [];

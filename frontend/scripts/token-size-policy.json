@@ -30,7 +30,6 @@
     { "glob": "frontend/services/api/src/mcp/write-tools.ts", "reason": "MCP write-tool registry" }
   ],
   "baseline": {
-    "frontend/services/api/src/routes/integrations.ts": 6358,
     "frontend/services/api/src/workspaces/account-manager.ts": 6292
   }
 }

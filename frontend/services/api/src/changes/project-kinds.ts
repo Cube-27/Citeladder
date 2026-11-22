@@ -13,7 +13,8 @@ import {
 import { competitorCreate, competitorUpdate, listCompetitors } from '../projects/competitors.ts';
 import { refreshProjectLogos } from '../projects/logo-refresh.ts';
 import { addMarket, deleteMarket, listMarkets } from '../projects/markets.ts';
-import { readProject } from '../projects/service.ts';
+import { projectUpdate } from '../projects/inputs.ts';
+import { readProject, updateProject } from '../projects/service.ts';
 import {
   changeKind,
   countOf,
@@ -36,7 +37,60 @@ const replaced = (label: string, values: readonly string[] | undefined) => {
   return values.length ? rowsOf(label, values) : [{ label, value: 'None: all are removed' }];
 };
 
+const projectEdit = projectUpdate
+  .omit({ competitors: true })
+  .refine((edit) => Object.values(edit).some((value) => value !== undefined), {
+    message: 'An edit changes at least one field',
+  });
+
+const shown = (value: unknown) =>
+  value === null || value === undefined || value === '' ? 'empty' : String(value);
+
 export const projectKinds = {
+  update_project: changeKind({
+    permission: COMPETITORS_WRITE,
+    purpose:
+      'edit the project details of its edit panel; lists are replaced whole, competitors use the competitor kinds',
+    payload: projectEdit,
+    async execute(trx, _config, actor, change, payload) {
+      const project = await updateProject(trx, actor, change.projectId, payload);
+      return { summary: `Updated the project ${project.name}.` };
+    },
+    async preview(context, payload) {
+      const row = await context.db
+        .selectFrom('projects')
+        .selectAll()
+        .where('workspace_id', '=', context.workspaceId)
+        .where('id', '=', context.projectId)
+        .executeTakeFirstOrThrow();
+      const current: Record<string, unknown> = row;
+      const { brand, owned_domains: owned, unintended_domains: unintended, ...details } = payload;
+      const { entity_matching: entities, ...scalars } = details;
+      return {
+        title: 'Change the project details',
+        rows: [
+          ...Object.entries(scalars)
+            .filter(([, value]) => value !== undefined)
+            .map(([field, value]) => ({
+              label: field.replaceAll('_', ' '),
+              value: `${shown(current[field])} → ${shown(value)}`,
+            })),
+          ...replaced('Also called', brand?.aliases),
+          ...replaced('Owned domain', owned),
+          ...replaced('Unintended domain', unintended),
+          ...replaced(
+            'Entity matching',
+            entities?.map(
+              (entity) =>
+                `${entity.name} (${entity.mode}; context ${entity.context_terms.join(', ') || 'none'}; excluding ${entity.exclusion_phrases.join(', ') || 'none'})`,
+            ),
+          ),
+        ],
+        spend: null,
+        opens: null,
+      };
+    },
+  }),
   add_competitor: changeKind({
     permission: COMPETITORS_WRITE,
     purpose: 'track one more competitor',
@@ -205,7 +259,7 @@ export const projectKinds = {
     permission: MEMBER_WRITE,
     purpose: "fetch the brand's and competitors' logos again from their websites",
     payload: z.strictObject({}),
-    async live(trx, actor, change) {
+    async live(trx, _config, actor, change) {
       await readProject(trx, { workspaceId: actor.workspaceId, projectId: change.projectId });
     },
     async execute(db, config, actor, change) {

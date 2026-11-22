@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { resolveAccountEntitlement } from '../entitlements/state.ts';
 import { codes, integrationPolicy, integrationSettings } from './config.ts';
@@ -63,7 +63,7 @@ function windowFor(
 }
 
 export function enqueueSyncRun(db: Database, input: SyncInput) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     const workspace = await trx
       .selectFrom('workspaces')
       .select('id')

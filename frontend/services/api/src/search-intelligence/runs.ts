@@ -2,7 +2,7 @@ import { asApiErrorCode, type ApiErrorCode } from '@citeladder/contracts/error-c
 
 import { policy } from '../config.ts';
 import { holdProviderCredits } from '../billing/metering.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { jsonObjects } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { enqueueTask, taskKey } from '../queue/enqueue.ts';
@@ -97,7 +97,7 @@ async function enqueueAcquisition(trx: Database, scope: Scope, runId: string): P
 }
 
 export function confirmRun(db: Database, scope: Scope, runId: string) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await scope.workspace
       .selectFrom(trx, 'projects')
       .select('id')
@@ -129,7 +129,7 @@ export function confirmRun(db: Database, scope: Scope, runId: string) {
 }
 
 export async function cancelRun(db: Database, scope: Scope, runId: string) {
-  const view = await db.transaction().execute(async (trx) => {
+  const view = await inTransaction(db, async (trx) => {
     const run = await lockRun(trx, scope, runId);
     if (run === undefined) throw notFound('Run');
     if (FINISHED_RUN_STATUSES.has(run.status)) return runView(run);

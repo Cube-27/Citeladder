@@ -5,7 +5,8 @@ import type { Actor } from '../src/auth/actor.ts';
 import { changeKinds } from '../src/changes/kinds.ts';
 import { kindCases, type KindScope, type TabledKind } from './change-kind-cases.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
-import { testConfig, testDatabase } from './support.ts';
+import { billingAccount } from './prompt-fixtures.ts';
+import { asOwner, testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
 const db = testDatabase(config);
@@ -141,6 +142,15 @@ const DELETES: [TabledKind, string, { label: string; value: string }[]][] = [
       UNDO,
     ],
   ],
+  [
+    'delete_theme',
+    'Delete a theme',
+    [
+      { label: 'Theme', value: 'Comfort' },
+      { label: 'Probe answers left without a theme', value: '0' },
+      UNDO,
+    ],
+  ],
 ];
 
 it.each(DELETES)(
@@ -192,6 +202,33 @@ const METERED: [TabledKind, string, Spend | null][] = [
     { holds: {}, budgets: { 'internal_links.analysis': 1 } },
   ],
   ['analyze_page', 'Agent usage for the analysis, as for a chat message', nothing],
+  ['confirm_keyword_run', '5 AI credits', { holds: { ai_credits: 5 }, budgets: {} }],
+  ['generate_buyer_prompts', 'AI credits for up to 1 model call', null],
+  [
+    'discover_commerce_competitors',
+    "1 competitor discovery from the day's allowance, plus AI credits for each search",
+    { holds: {}, budgets: { 'commerce.competitor_discovery': 1 } },
+  ],
+  [
+    'start_brand_discovery',
+    "One of the day's brand discoveries; its research spends AI credits as it runs",
+    { holds: {}, budgets: { 'brand_discovery.create': 1 } },
+  ],
+  [
+    'rerun_brand_discovery',
+    "One of the day's brand discoveries; its research spends AI credits as it runs",
+    { holds: {}, budgets: { 'brand_discovery.create': 1 } },
+  ],
+  [
+    'sync_performance',
+    "1 on-demand sync from the workspace's sync allowance",
+    { holds: {}, budgets: { 'integrations.sync.on_demand': 1 } },
+  ],
+  [
+    'sync_integration',
+    "1 on-demand sync from the workspace's sync allowance",
+    { holds: {}, budgets: { 'integrations.sync.on_demand': 1 } },
+  ],
 ];
 
 it.each(METERED)(
@@ -268,4 +305,44 @@ it('rerun_audit_failures quotes no spend once the failed answers are already que
       changeKinds.rerun_audit_failures.confirm(trx, config, owner(scope), change(), payload),
     );
   expect((await stage()).preview.spend).toBe('Nothing new: these answers are already queued');
+});
+
+it('refuses a commerce or fact-checking change without its plan feature, with a reason the Agent can relay', async () => {
+  const refusal = async (kind: TabledKind, feature: string) => {
+    const arranged = await table[kind].arrange();
+    const { scope } = arranged;
+    const account = await billingAccount(db, scope.workspaceId);
+    await asOwner((owner) =>
+      owner
+        .deleteFrom('account_grants')
+        .where('billing_account_id', '=', account)
+        .where('key', '=', feature)
+        .execute(),
+    );
+    const context = { db, config, workspaceId: scope.workspaceId, projectId: scope.projectId };
+    const change = { id: randomUUID(), projectId: scope.projectId };
+    return changeKinds[kind].stage(context, owner(scope), change, arranged.payload).then(
+      () => null,
+      (error: { status: number; message: string }) => [error.status, error.message],
+    );
+  };
+  expect(await refusal('edit_product', 'commerce')).toEqual([
+    403,
+    'Commerce is not included in your plan',
+  ]);
+  expect(await refusal('create_brand_fact', 'fact_checking')).toEqual([
+    409,
+    "Fact-checking is not included in this workspace's plan",
+  ]);
+});
+
+it('override_claim_verdict shows the claim, the model verdict, the current one and the new one', async () => {
+  const { preview } = await staged('override_claim_verdict');
+  expect(preview.rows).toEqual([
+    { label: 'Claim', value: 'Acme Pro costs $49 per month.' },
+    { label: 'Model verdict', value: 'contradicted' },
+    { label: 'Now', value: 'contradicted' },
+    { label: 'After', value: 'supported' },
+    { label: 'Note', value: 'Checked the pricing page' },
+  ]);
 });

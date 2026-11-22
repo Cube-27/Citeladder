@@ -110,7 +110,7 @@ export function createBrandFact(
   userId: string,
   input: z.output<typeof brandFactCreate>,
 ): Promise<BrandFact> {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
     await requireFlag(trx, scope.workspaceId, 'fact_checking');
     const { count } = await trx
@@ -233,7 +233,7 @@ export function updateBrandFact(
   factId: string,
   input: z.output<typeof brandFactUpdate>,
 ): Promise<BrandFact> {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
     await requireFlag(trx, scope.workspaceId, 'fact_checking');
     const current = await trx
