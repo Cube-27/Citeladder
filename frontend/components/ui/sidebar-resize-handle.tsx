@@ -46,12 +46,8 @@ export function SidebarResizeHandle({ sidebarId }: Readonly<{ sidebarId: string 
       onClick={resize.onClick}
       onDoubleClick={resize.onDoubleClick}
       onKeyDown={resize.onKeyDown}
-      className="focus-ring group rail:flex absolute inset-y-0 end-0 hidden w-6 translate-x-1/2 cursor-col-resize touch-none justify-center"
+      className="focus-ring rail:block absolute inset-y-0 end-0 hidden w-6 translate-x-1/2 cursor-col-resize touch-none"
     >
-      <span
-        aria-hidden
-        className="group-data-[dragging]:bg-ink w-px bg-transparent transition-colors motion-reduce:transition-none"
-      />
       <span id={helpId} className="sr-only">
         Click to step through preset widths, or use the left and right arrow keys to resize. Hold
         Shift for larger steps. A double-click restores the default width.

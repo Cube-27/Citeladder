@@ -95,7 +95,7 @@ export function ChecklistField<K extends string>({
       {items.length === 0 ? (
         <p className="text-body-sm text-ink-2">{empty}</p>
       ) : (
-        <ul className="bg-surface border-rule divide-rule rounded-control divide-y border">
+        <ul className="bg-surface divide-rule rounded-control divide-y border border-transparent">
           {items.map((item) =>
             editor && item.id === editingId ? (
               <EditRow

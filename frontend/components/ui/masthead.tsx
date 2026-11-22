@@ -40,7 +40,7 @@ export function Masthead({
     <header
       data-masthead=""
       ref={header}
-      className="bg-panel z-sticky rail:h-[var(--masthead-height)] sticky top-0 -mx-[var(--page-pad-inline)] flex min-h-[var(--masthead-height)] min-w-0 items-center gap-2 ps-[calc(var(--page-pad-inline)+var(--page-start,0px))] pe-[var(--page-pad-inline)]"
+      className="bg-page border-rule z-sticky rail:h-[var(--masthead-height)] sticky top-0 -mx-[var(--page-pad-inline)] flex min-h-[var(--masthead-height)] min-w-0 items-center gap-2 border-b ps-[calc(var(--page-pad-inline)+var(--page-start,0px))] pe-[var(--page-pad-inline)]"
     >
       <div data-masthead-title="" className="rail:min-w-0 me-2 flex flex-1 items-center gap-2">
         {lead}
