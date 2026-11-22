@@ -339,8 +339,11 @@ description, so the cached tool prefix stays one tool.
 
 A call is checked against the kind's schema, the person's live role and the
 kind's permission, then run as a **dry run** (every check and write of the
-command, rolled back, with the preview read in the same transaction). A bad call
-or a refusal returns a correctable error; nothing is staged. A staged proposal
+command, rolled back, with the preview read in the same transaction). A kind
+whose preview needs the command's outcome (the imports) reads its own rehearsal,
+so the card states what the owner will import, skip or reject. A bad call
+or a refusal (a flag the plan lacks included) returns a correctable error;
+nothing is staged. A staged proposal
 holds the exact payload and the preview without IDs, is bounded per turn by
 `max_proposals_per_turn` (declarations count too) and commits with the reply in
 `agent_messages.proposals`. Model prose never reaches the card: the title is a
@@ -553,9 +556,19 @@ sends it. The workspace loads as its own chunk, only for a page chat.
 Agent mode holds New chat, Skills, Context and the chat history under
 `/agent`; Actions (`/actions`, `/actions/{id}`) is the one list of the
 project's work ([Opportunities](opportunities.md)). A long paste becomes a
-"Pasted text" attachment (bounds in `agent-runtime.json`, listed in the skill
-catalog's `limits`); the model receives each as its own block labelled as data,
-not instructions. A pasted link to an Action in the same project becomes a
+"Pasted text" attachment, and a text file (CSV, TSV, JSON, NDJSON, Markdown,
+plain text) picked with Attach files or dropped on the composer becomes a named
+file attachment, read in the browser as strict UTF-8; spreadsheets, PDFs and
+documents are refused there with a message to save as CSV or paste the text.
+Bounds are in `agent-runtime.json` and listed in the skill catalog's `limits`;
+the per-attachment bound fits the largest owner import (500 prompts), and
+`attachments_total_max_chars` bounds a message's attachments together so its
+opening call stays below the long-context tier (see Memory). The composer
+refuses an attachment past it when added, and the API refuses the message. The model
+receives each attachment as its own block labelled as data, not instructions,
+and turns one into an import only through an import change kind built from the
+owner's row schema; the operating contract keeps an import to what the file
+holds. A pasted link to an Action in the same project becomes a
 mention; another project's link stays text.
 
 An Action's page also hands work to a developer outside CiteLadder:

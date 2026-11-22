@@ -286,6 +286,7 @@ export const agentRoutes = [
           mentions_max: agentPolicy.mentions_max,
           attachments_max: agentPolicy.attachments_max,
           attachment_max_chars: agentPolicy.attachment_max_chars,
+          attachments_total_max_chars: agentPolicy.attachments_total_max_chars,
         },
       };
     },

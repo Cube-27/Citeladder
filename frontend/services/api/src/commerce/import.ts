@@ -7,7 +7,7 @@ import {
 import type { Selectable, Updateable } from 'kysely';
 
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { jsonObject, jsonObjects } from '../db/json.ts';
 import type { CommerceCsvImports, CommerceProducts } from '../generated/db-schema.ts';
 import {
@@ -382,7 +382,7 @@ type CatalogSource = {
 export async function stageImport(db: Database, scope: CommerceScope, source: CatalogSource) {
   const items = catalogItems(source.format, source.content);
   const hash = createHash('sha256').update(`${source.format}\n${source.content}`).digest('hex');
-  const row = await db.transaction().execute(async (trx) => {
+  const row = await inTransaction(db, async (trx) => {
     await lockCatalog(trx, scope);
     const prior = await trx
       .selectFrom('commerce_csv_imports')
@@ -426,7 +426,7 @@ export function applyImport(
   importId: string,
   excluded: readonly string[],
 ) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await lockCatalog(trx, scope);
     const row = await trx
       .selectFrom('commerce_csv_imports')

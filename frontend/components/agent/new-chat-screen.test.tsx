@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useParams } from 'react-router-dom';
@@ -77,7 +77,12 @@ const WORKFLOW_CATALOG = {
   workflows: [{ id: 'linkedin_post', label: 'LinkedIn post' }],
   output_kinds: [],
   models: AGENT_MODELS,
-  limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
+  limits: {
+    mentions_max: 5,
+    attachments_max: 3,
+    attachment_max_chars: 40000,
+    attachments_total_max_chars: 40000,
+  },
 };
 
 function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
@@ -93,6 +98,7 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
           mentions_max: 5,
           attachments_max: 3,
           attachment_max_chars: 40000,
+          attachments_total_max_chars: 40000,
         },
       }),
     ),
@@ -398,6 +404,60 @@ describe('NewChatScreen', () => {
     ]);
   });
 
+  it('attaches text files from the picker and by drop up to the total bound, refuses a spreadsheet, and sends them as named files', async () => {
+    const bodies = captureChats();
+    const prompts = 'prompt,topic\nWhich shoes grip in mud?,Trail';
+    const facts = 'topic,statement\npricing,Plans start at 10 dollars';
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () =>
+        HttpResponse.json({
+          skills: [GROWTH_SKILL],
+          models: AGENT_MODELS,
+          limits: {
+            mentions_max: 5,
+            attachments_max: 3,
+            attachment_max_chars: 40000,
+            attachments_total_max_chars: prompts.length + facts.length,
+          },
+        }),
+      ),
+    );
+    const user = userEvent.setup({ applyAccept: false });
+    const { container } = renderNewChat('');
+    const message = await screen.findByLabelText('Message the agent');
+    const picker = container.querySelector('input[type="file"]');
+    if (!(picker instanceof HTMLInputElement)) throw new Error('No file picker');
+    await user.upload(picker, [
+      new File([prompts], 'prompts.csv'),
+      new File(['PK'], 'catalog.xlsx'),
+    ]);
+    const form = message.closest('form');
+    if (!form) throw new Error('No composer form');
+    fireEvent.drop(form, {
+      dataTransfer: { types: ['Files'], files: [new File([facts], 'facts.tsv')] },
+    });
+    await user.click(await screen.findByRole('button', { name: 'View facts.tsv, 2 lines' }));
+    const viewer = await screen.findByRole('dialog', { name: 'facts.tsv' });
+    expect(within(viewer).getByText(/^topic,statement/).textContent).toBe(facts);
+    await user.click(within(viewer).getByRole('button', { name: 'Close dialog' }));
+    await user.upload(picker, new File(['x'], 'extra.txt'));
+    expect(screen.queryByRole('button', { name: /catalog\.xlsx/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /extra\.txt/ })).not.toBeInTheDocument();
+    await user.type(message, 'import these{Enter}');
+
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([
+      {
+        message: 'import these',
+        context: {},
+        attachments: [
+          { kind: 'file', name: 'prompts.csv', text: prompts },
+          { kind: 'file', name: 'facts.tsv', text: facts },
+        ],
+      },
+    ]);
+  });
+
   it('offers no further mention once the catalog-listed bound is reached', async () => {
     captureChats([actionItem(PRICING, 'Pricing page'), actionItem(BLOG, 'Blog hub')]);
     mswServer.use(
@@ -409,6 +469,7 @@ describe('NewChatScreen', () => {
             mentions_max: 1,
             attachments_max: 3,
             attachment_max_chars: 40000,
+            attachments_total_max_chars: 40000,
           },
         }),
       ),
@@ -468,7 +529,7 @@ describe('NewChatScreen', () => {
     ]);
   });
 
-  it('resolves Action links at send once, and leaves one from another project as written', async () => {
+  it('resolves Action links at send once, leaves one from another project as written, and holds the send for a file picked meanwhile', async () => {
     const bodies = captureChats();
     serveAction();
     let release!: () => void;
@@ -492,15 +553,33 @@ describe('NewChatScreen', () => {
     );
     const own = `${window.location.origin}/actions/${PRICING}`;
     const foreign = `${window.location.origin}/actions/${BLOG}`;
-    const user = userEvent.setup();
-    renderNewChat(`?prompt=${encodeURIComponent(`Compare ${own} with ${foreign}`)}`);
+    const notes = 'topic\nPricing';
+    let finishRead!: () => void;
+    const file = new File([notes], 'notes.csv');
+    Object.defineProperty(file, 'arrayBuffer', {
+      value: () =>
+        new Promise<ArrayBuffer>((resolve) => {
+          finishRead = () => resolve(new TextEncoder().encode(notes).buffer);
+        }),
+    });
+    const user = userEvent.setup({ applyAccept: false });
+    const { container } = renderNewChat(
+      `?prompt=${encodeURIComponent(`Compare ${own} with ${foreign}`)}`,
+    );
 
     const message = await screen.findByDisplayValue(`Compare ${own} with ${foreign}`);
     await user.type(message, '{Enter}');
     await user.type(message, '{Enter}');
+    const picker = container.querySelector('input[type="file"]');
+    if (!(picker instanceof HTMLInputElement)) throw new Error('No file picker');
+    await user.upload(picker, file);
     release();
     await waitFor(() => expect(message).toHaveValue(`Compare @Pricing page with ${foreign}`));
     expect(screen.getByRole('button', { name: 'Remove @Pricing page' })).toBeVisible();
+    expect(bodies).toEqual([]);
+    act(() => finishRead());
+    await screen.findByRole('button', { name: 'View notes.csv, 2 lines' });
+    await user.type(message, '{Enter}');
     create();
 
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
@@ -508,6 +587,7 @@ describe('NewChatScreen', () => {
       expect.objectContaining({
         message: `Compare @Pricing page with ${foreign}`,
         mentions: [PRICING],
+        attachments: [{ kind: 'file', name: 'notes.csv', text: notes }],
       }),
     ]);
   });

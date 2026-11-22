@@ -292,6 +292,7 @@ function MessageBubble({
                   <PastedTextChip
                     key={index} // NOSONAR
                     text={attachment.text}
+                    name={attachment.kind === 'file' ? attachment.name : undefined}
                   />
                 ))}
               </Inline>

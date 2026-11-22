@@ -205,5 +205,10 @@ export const skills = {
     },
   ],
   models: AGENT_MODELS,
-  limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
+  limits: {
+    mentions_max: 5,
+    attachments_max: 3,
+    attachment_max_chars: 40000,
+    attachments_total_max_chars: 40000,
+  },
 };

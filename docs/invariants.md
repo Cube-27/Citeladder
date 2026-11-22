@@ -178,7 +178,9 @@ truth or authorization.
 
 Generative paths constrain factual claims to the context actually supplied. A
 provider does not choose its citations: the sources shown are the records the
-run actually read, and generated content never becomes a fact automatically.
+run actually read, and generated content never becomes a fact automatically:
+an Agent import carries only what the person's file holds, and imported brand
+facts land as drafts.
 Each Agent run freezes one versioned context manifest before its first model
 call; crawl text stays untrusted observation, and one shared operating contract
 forbids invented company, product, customer, price, policy, statistic and

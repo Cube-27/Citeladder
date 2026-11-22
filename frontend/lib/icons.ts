@@ -121,6 +121,7 @@ export {
   IconLayoutSidebarLeftExpand as PanelLeftOpen,
   IconLayoutSidebarRightExpand as PanelRightOpen,
   IconLayout as PanelsTopLeft,
+  IconPaperclip as Paperclip,
   IconPlayerPause as Pause,
   IconWriting as PenLine,
   IconPencil as Pencil,

@@ -284,6 +284,50 @@ describe('ChatScreen', () => {
     expect(screen.getByLabelText('Reply to the agent')).toHaveValue('');
   });
 
+  it('keeps a file still being read when the message sent before it is accepted', async () => {
+    let accept = () => {};
+    const accepted = new Promise<void>((resolve) => {
+      accept = resolve;
+    });
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json(detail(revision(REV1, 1, 'agent', 'Body.'))),
+      ),
+      http.post(`/api/v1/agent/chats/${CHAT}/messages`, async () => {
+        await accepted;
+        return HttpResponse.json(
+          {
+            chat_id: CHAT,
+            run: { ...detail(revision(REV1, 1, 'agent', '')).latest_run, status: 'queued' },
+          },
+          { status: 202 },
+        );
+      }),
+    );
+    let finishRead = () => {};
+    const bytes = new TextEncoder().encode('prompt\nWhich shoes grip in mud?');
+    const late = new File([bytes], 'late.csv');
+    Object.defineProperty(late, 'arrayBuffer', {
+      value: () =>
+        new Promise<ArrayBuffer>((resolve) => {
+          finishRead = () => resolve(bytes.buffer);
+        }),
+    });
+    const user = userEvent.setup({ applyAccept: false });
+    const { container } = renderChat();
+    const reply = await screen.findByLabelText('Reply to the agent');
+    await user.type(reply, 'Shorten it{Enter}');
+    const picker = container.querySelector('input[type="file"]');
+    if (!(picker instanceof HTMLInputElement)) throw new Error('No file picker');
+    await user.upload(picker, late);
+    accept();
+    await vi.waitFor(() => expect(reply).toHaveValue(''));
+    act(() => finishRead());
+
+    expect(await screen.findByRole('button', { name: 'View late.csv, 2 lines' })).toBeVisible();
+  });
+
   it('retries a failed send with the same idempotency key', async () => {
     const keys: (string | null)[] = [];
     mswServer.use(

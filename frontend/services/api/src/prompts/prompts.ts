@@ -478,7 +478,7 @@ export async function importPrompts(
   entitlements = new WorkspaceEntitlements(db, scope.workspaceId),
 ): Promise<PromptSetView> {
   const { workspaceId } = scope;
-  await db.transaction().execute(async (trx) => {
+  await inTransaction(db, async (trx) => {
     const set = await scopedPromptSet(trx, workspaceId, promptSetId, scope.projectId);
     await acquireProjectLock(trx, set.project_id);
     await acquirePromptSetLock(trx, set.id);

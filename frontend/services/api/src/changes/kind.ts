@@ -21,13 +21,13 @@ export type PreviewContext = Readonly<{
   projectId: string;
 }>;
 
-type Execute<S extends z.ZodType, P extends Permission> = (
+type Execute<S extends z.ZodType, P extends Permission, R extends ChangeResult> = (
   trx: Database,
   config: ServiceConfig,
   actor: Authorized<P>,
   change: PreparedChange,
   payload: z.output<S>,
-) => Promise<ChangeResult>;
+) => Promise<R>;
 
 type Draft<S extends z.ZodType, D extends z.ZodType> = Readonly<{
   schema: D;
@@ -37,13 +37,18 @@ type Draft<S extends z.ZodType, D extends z.ZodType> = Readonly<{
 export function changeKind<
   S extends z.ZodType,
   P extends Permission,
+  R extends ChangeResult,
   D extends z.ZodType = S,
 >(entry: {
   permission: P;
   payload: S;
   purpose: string;
-  execute: Execute<S, P>;
-  preview: (context: PreviewContext, payload: z.output<S>) => Promise<ChangePreview>;
+  execute: Execute<S, P, R>;
+  preview: (
+    context: PreviewContext,
+    payload: z.output<S>,
+    rehearse: () => Promise<R>,
+  ) => Promise<ChangePreview>;
   draft?: Draft<S, D>;
 }) {
   return {
@@ -74,8 +79,11 @@ export function changeKind<
         : proposed;
       const payload = entry.payload.parse(input);
       const preview = await operatorTransaction(context.db, false, async (trx) => {
-        const shown = await entry.preview({ ...context, db: trx }, payload);
-        await entry.execute(trx, context.config, authorized, change, payload);
+        let rehearsal: Promise<R> | undefined;
+        const rehearse = () =>
+          (rehearsal ??= entry.execute(trx, context.config, authorized, change, payload));
+        const shown = await entry.preview({ ...context, db: trx }, payload, rehearse);
+        await rehearse();
         return shown;
       });
       return { payload, preview };
