@@ -36,6 +36,7 @@
   "max_proposals_per_turn": 5,
   "proposal_news_max": 10,
   "proposal_refusal_max_chars": 300,
+  "live_change_claim_seconds": 1800,
   "proposal_preview_rows_max": 20,
   "proposal_preview_value_max_chars": 500,
   "instructions_max_chars": 4000,

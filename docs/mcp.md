@@ -237,11 +237,19 @@ kind's `execute` with the stored payload in the same transaction, marks the
 token consumed and records an `mcp.write.<kind>` security event targeting the
 project. A refused or failed change commits nothing and leaves the token usable
 until expiry; a changed world returns the owner's normal error. A live kind
-(prompt generation) cannot hold a transaction across its model call: it runs
-under a session advisory try-lock on the confirmation (a second confirm while it
-runs is refused) with the confirmation's id as the owner's idempotency key, and
-the token is consumed after the owner succeeds, so a retried confirm replays the
-persisted run instead of spending a second one.
+(prompt generation) cannot hold a transaction or a connection across its model
+call. It goes through the Agent's confirm-once claim
+([Agent](agents.md#proposed-changes)): a short transaction stamps
+`claimed_at` on the confirmation (a second confirm while the claim stands is
+refused) and extends its expiry past the claim, so a crashed confirm can still
+be replayed; releasing the claim restores the issued expiry. The owner runs with the
+confirmation's id as its idempotency key, and the token is consumed after the
+owner succeeds, so a retried confirm replays the persisted run instead of
+spending a second one. The role is checked again when the token is consumed: a
+member demoted or removed, or a grant revoked, during the run gets a refusal,
+the token stays unconsumed, and because the owner's run and its spend stand,
+an `mcp.write.<kind>.unauthorized` security event records the execution and the
+connection's member instead of `mcp.write.<kind>`.
 
 `preview_topics` stays a tool because it is not a change: it spends one model
 call through the Prompt builder's owner and saves nothing, and its result feeds

@@ -41,7 +41,9 @@ type SecurityEvent =
   | 'mcp.token_reuse'
   | 'mcp.workspace_revoke'
   | `mcp.write.${McpChangeKind}`
-  | `agent.change.${AgentChangeKind}`;
+  | `mcp.write.${McpChangeKind}.unauthorized`
+  | `agent.change.${AgentChangeKind}`
+  | `agent.change.${AgentChangeKind}.unauthorized`;
 
 export async function recordSecurityEvent(
   db: Database,

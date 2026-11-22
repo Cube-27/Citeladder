@@ -372,10 +372,26 @@ competitor sites) is **live**: its dry run runs the kind's check, never the
 owner's outside call (the quote's check runs the owner with the site fetch left
 out). The check calls the preconditions the owner exports and runs itself
 (prompt generation's `generationPreconditions`), so no card is proposed that
-the click would refuse for a reason known before the call. At the click it runs outside the decision transaction, because a
-charged model call must not hold one, under a session advisory try-lock on the
-proposal: a second click while it runs gets 409 `agent_proposal_running`, and
-the decision is recorded only after the owner succeeds.
+the click would refuse for a reason known before the call. At the click it runs outside any transaction and holds no pooled
+connection, because a charged model call must not hold either. One confirm-once
+helper ([`confirm-once.ts`](../frontend/services/api/src/changes/confirm-once.ts))
+serves the card and MCP's `confirm_change`: a short transaction under a
+try-lock on the proposal appends a `claimed` outcome row, the owner runs with
+the deterministic proposal id as its idempotency key, and a second transaction
+records the decision. A second click while the claim stands gets 409
+`agent_proposal_running`. A failed run appends a `released` row (or the
+`refused` row). The attempt renews its claim every third of
+`live_change_claim_seconds` while the owner runs, because an owner's key is
+checked only before it spends, so two concurrent runs would both spend; only a
+claim left by a crash lapses, and the next click after that replays the persisted run through its idempotency key without
+spending again (a logo refresh takes no key and spends its budget again). A
+failed attempt releases its claim only while it still owns it. The member's role
+is checked again in the record transaction: a member removed or downgraded
+during the run gets 403, and the run and its spend stand: instead of the
+decision, a `refused` row saying so and an `agent.change.<kind>.unauthorized`
+security event naming the clicker are written together, so the execution is
+never unrecorded. The card stays open, and a member who may make it can confirm
+it, which replays the same run where the owner takes the key.
 
 A company fact the Agent proposes comes only from what the person said or
 attached; it is created as a draft, as the screen's create makes it, and no

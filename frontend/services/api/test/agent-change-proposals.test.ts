@@ -4,11 +4,13 @@ import { sql } from 'kysely';
 import { proposeChange } from '../src/agent/change-proposals.ts';
 import { decideProposal, proposalChangeId } from '../src/agent/proposal-outcomes.ts';
 import { readChat } from '../src/agent/reads.ts';
-import type { Json, Scope } from '../src/agent/contracts.ts';
+import { agentPolicy, type Json, type Scope } from '../src/agent/contracts.ts';
+import { subjectXactLock } from '../src/db/advisory-lock.ts';
 import { ApiError } from '../src/errors.ts';
 import { AgentFixtures, scripted, text, toolUse } from './agent-support.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { promptSet, topic } from './prompt-fixtures.ts';
+import { gatedGeneration, singleConnectionDatabase } from './live-owner.ts';
 import { testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
@@ -328,62 +330,163 @@ it('returns a kind’s payload shape on demand and with a malformed payload, pro
   expect(state).toEqual({ proposals: [], steps: [] });
 });
 
-it('refuses at proposal what the owner would refuse, never runs a model-calling change in its preview, refuses a second click while the first runs, and replays a run whose decision was lost', async () => {
-  const t = await tenant();
+async function liveCard(t: Awaited<ReturnType<typeof tenant>>) {
+  const card = (count: number) => ({
+    kind: 'generate_prompts',
+    payload: { prompt_set_id: t.setId, request: { count } },
+  });
+  const road = await topic(db, t.projectId, 'Road');
+  const { chatId, messageId, proposals } = await proposed(t.scope, [card(3), card(4)]);
+  const at = (index: number) => ({ chatId, messageId, index });
   const runs = () =>
     db
       .selectFrom('prompt_generation_runs')
       .select('id')
       .where('prompt_set_id', '=', t.setId)
+      .orderBy('created_at')
       .execute();
-  const generate = {
-    kind: 'generate_prompts',
-    payload: { prompt_set_id: t.setId, request: { count: 3 } },
+  const generated = async (index: number) => {
+    const id = randomUUID();
+    await db
+      .insertInto('prompt_generation_runs')
+      .values({
+        id,
+        workspace_id: t.scope.workspaceId,
+        project_id: t.scope.projectId,
+        prompt_set_id: t.setId,
+        generator_version: '1',
+        request: JSON.stringify({
+          count: index + 3,
+          idempotency_key: proposalChangeId(at(index)),
+        }),
+        provenance: JSON.stringify({ candidates_generated: 0 }),
+        created_at: new Date(),
+      })
+      .execute();
+    return id;
   };
+  return { chatId, proposals, at, runs, generated, road };
+}
+
+it('refuses at proposal what the owner would refuse, never runs a model-calling change in its preview, refuses a confirm while a claim stands, and replays a run whose decision was lost after its claim lapsed', async () => {
+  const t = await tenant();
   const state = { proposals: [], steps: [] };
-  expect(await proposeChange(db, config, { scope: t.scope, state }, generate)).toEqual({
+  expect(
+    await proposeChange(
+      db,
+      config,
+      { scope: t.scope, state },
+      { kind: 'generate_prompts', payload: { prompt_set_id: t.setId, request: { count: 3 } } },
+    ),
+  ).toEqual({
     ok: false,
     text: 'This change would be refused now: Add at least one offering before generating prompts. Correct it, or tell the person why it cannot be made.',
   });
   expect(state).toEqual({ proposals: [], steps: [] });
-  const road = await topic(db, t.projectId, 'Road');
-  const { chatId, messageId, proposals } = await proposed(t.scope, [generate]);
+  const { chatId, proposals, at, runs, generated, road } = await liveCard(t);
   await db.deleteFrom('topics').where('id', '=', road).execute();
   expect(proposals).toMatchObject([
     { title: 'Suggest 3 prompts', spend: 'AI credits for up to 3 model calls', outcome: 'open' },
+    { title: 'Suggest 4 prompts', outcome: 'open' },
   ]);
   expect(await runs()).toEqual([]);
 
-  const ref = { chatId, messageId, index: 0 };
-  const confirm = () => decideProposal(db, config, { scope: t.scope, ref, decision: 'confirm' });
-  const key = `agent-proposal:${messageId}:0`;
-  const held = await db.connection().execute(async (connection) => {
-    await sql`select pg_advisory_lock(hashtextextended(${key}, 0))`.execute(connection);
-    try {
-      return await refusal(confirm());
-    } finally {
-      await sql`select pg_advisory_unlock(hashtextextended(${key}, 0))`.execute(connection);
-    }
+  const confirm = (index: number) =>
+    decideProposal(db, config, { scope: t.scope, ref: at(index), decision: 'confirm' });
+  const claimed = (index: number, ageSeconds: number) =>
+    db
+      .insertInto('agent_proposal_outcomes')
+      .values({
+        id: randomUUID(),
+        workspace_id: t.workspaceId,
+        project_id: t.projectId,
+        chat_id: chatId,
+        message_id: at(index).messageId,
+        proposal_index: index,
+        user_id: t.userId,
+        state: 'claimed',
+        created_at: sql`clock_timestamp() - make_interval(secs => ${ageSeconds})`,
+      })
+      .execute();
+  await db.transaction().execute(async (trx) => {
+    await subjectXactLock(trx, `agent-proposal:${at(0).messageId}:0`);
+    expect(await refusal(confirm(0))).toBe('This change is already being made.');
   });
-  expect(held).toBe('This change is already being made.');
-  expect(await refusal(confirm())).toBe('Add at least one offering before generating prompts');
-  expect(await outcome(t.scope, chatId)).toMatchObject([{ outcome: 'open' }]);
+  expect(await refusal(confirm(0))).toBe('Add at least one offering before generating prompts');
+  expect(await outcome(t.scope, chatId)).toMatchObject([
+    { outcome: 'open', refusal: 'Add at least one offering before generating prompts' },
+    { outcome: 'open', refusal: null },
+  ]);
+  await claimed(0, 0);
+  expect(await refusal(confirm(0))).toBe('This change is already being made.');
+  expect(await outcome(t.scope, chatId)).toMatchObject([
+    { outcome: 'open', refusal: null },
+    { outcome: 'open', refusal: null },
+  ]);
 
-  const lost = randomUUID();
-  await db
-    .insertInto('prompt_generation_runs')
-    .values({
-      id: lost,
-      workspace_id: t.scope.workspaceId,
-      project_id: t.scope.projectId,
-      prompt_set_id: t.setId,
-      generator_version: '1',
-      request: JSON.stringify({ count: 3, idempotency_key: proposalChangeId(ref) }),
-      provenance: JSON.stringify({ candidates_generated: 0 }),
-      created_at: new Date(),
-    })
-    .execute();
-  await confirm();
+  await claimed(1, agentPolicy.live_change_claim_seconds + 60);
+  const lost = await generated(1);
+  await confirm(1);
   expect(await runs()).toEqual([{ id: lost }]);
-  expect(await outcome(t.scope, chatId)).toMatchObject([{ outcome: 'executed' }]);
+  expect(await outcome(t.scope, chatId)).toMatchObject([
+    { outcome: 'open' },
+    { outcome: 'executed' },
+  ]);
+});
+
+it('runs a confirmed model-calling change with no pooled connection held, once under concurrent confirms, and records it only while the member may still make it', async () => {
+  const t = await tenant();
+  const narrow = singleConnectionDatabase();
+  const { chatId, at, runs, generated } = await liveCard(t);
+  const { keys, gate, next } = gatedGeneration();
+  const decide = (scope: Pick<Scope, 'workspaceId' | 'userId'>, index: number) =>
+    decideProposal(narrow, config, { scope, ref: at(index), decision: 'confirm' });
+  const agentEvents = (userId: string) =>
+    db
+      .selectFrom('security_events')
+      .select('event')
+      .where('actor_id', '=', userId)
+      .where('event', 'like', 'agent.change.%')
+      .execute();
+
+  const first = await generated(0);
+  const running = decide(t.scope, 0);
+  await gate.started.promise;
+  expect(await refusal(decide(t.scope, 0))).toBe('This change is already being made.');
+  gate.finish.resolve();
+  await running;
+  expect(keys).toEqual([proposalChangeId(at(0))]);
+
+  const colleague = { workspaceId: t.workspaceId, userId: await fixtures.user() };
+  await fixtures.member(t.workspaceId, colleague.userId, 'admin');
+  const second = await generated(1);
+  next();
+  const removed = decide(colleague, 1);
+  await gate.started.promise;
+  await db
+    .deleteFrom('workspace_members')
+    .where('user_id', '=', colleague.userId)
+    .where('workspace_id', '=', t.workspaceId)
+    .execute();
+  gate.finish.resolve();
+  expect(await refusal(removed)).toMatch(/^The change was made, but the member's role no longer/u);
+  expect(await outcome(t.scope, chatId)).toMatchObject([
+    { outcome: 'executed' },
+    { outcome: 'open' },
+  ]);
+  expect(await agentEvents(colleague.userId)).toEqual([
+    { event: 'agent.change.generate_prompts.unauthorized' },
+  ]);
+
+  await decide(t.scope, 1);
+  expect(keys).toEqual([proposalChangeId(at(0)), proposalChangeId(at(1)), proposalChangeId(at(1))]);
+  expect(await runs()).toEqual([{ id: first }, { id: second }]);
+  expect(await outcome(t.scope, chatId)).toMatchObject([
+    { outcome: 'executed' },
+    { outcome: 'executed' },
+  ]);
+  expect(await agentEvents(t.userId)).toEqual([
+    { event: 'agent.change.generate_prompts' },
+    { event: 'agent.change.generate_prompts' },
+  ]);
 });

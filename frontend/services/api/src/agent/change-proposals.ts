@@ -169,6 +169,7 @@ export function proposalViews(stored: unknown, outcomes: readonly Outcome[]): Ag
     if (row.state === 'executed' || row.state === 'dismissed')
       decided.set(row.proposal_index, row.state);
     else if (row.state === 'refused' && row.reason) refused.set(row.proposal_index, row.reason);
+    else refused.delete(row.proposal_index);
   return storedProposals.parse(stored).map((proposal, index): AgentProposal => {
     if (proposal.kind === 'declaration') return proposal;
     const { title, rows, spend, opens } = proposal.preview;
