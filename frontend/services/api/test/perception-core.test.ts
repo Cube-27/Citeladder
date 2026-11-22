@@ -146,6 +146,24 @@ describe('perception passages', () => {
     expect(brand!.cut_chars).toBe(0);
   });
 
+  it('sends a 920-word brand-named markdown answer whole under the configured brand budget', () => {
+    const answer = Array.from(
+      { length: 92 },
+      (_, n) => `- **Option ${n}** suits Acme runners wanting comfort and value.`,
+    ).join('\n');
+    const [named] = entityPassages({
+      ...plain,
+      answer,
+      policy: policy.perception,
+      promptNamesBrand: true,
+    });
+    expect(answer.split(/\s+/u).length).toBe(920);
+    expect(named).toMatchObject({
+      spans: [{ start: 0, end: Array.from(answer).length, text: answer }],
+      cut_chars: 0,
+    });
+  });
+
   it('hashes equal packages equally whatever their key order', () => {
     const pkg = pkgFor('Acme is great.');
     const reordered = {
