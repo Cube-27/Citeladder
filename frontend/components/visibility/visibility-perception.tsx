@@ -5,13 +5,13 @@ import type {
   PerceptionResponse,
 } from '@citeladder/contracts/visibility-perception';
 
+import { AnswerLink } from '@/components/runs/answer-link';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow, YouTag } from '@/components/ui/table';
-import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { MessageSquareQuote } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
@@ -88,11 +88,7 @@ const ENTITY_COLUMNS: readonly DataTableColumn[] = [
 ];
 
 export function QuoteLink({ quote }: Readonly<{ quote: PerceptionQuote }>) {
-  return (
-    <TextLink href={`/runs/${quote.run_id}?execution=${quote.execution_id}`}>
-      “{quote.text}”
-    </TextLink>
-  );
+  return <AnswerLink answer={quote}>“{quote.text}”</AnswerLink>;
 }
 
 const SCROLL_REGION = { role: 'region', tabIndex: 0 } as const;
@@ -157,7 +153,10 @@ export function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] 
                   <StatusMark variant="sentiment" value="negative">
                     {quote.theme}
                   </StatusMark>
-                  {engineLabel(quote.logical_engine)} · {quote.prompt}
+                  {engineLabel(quote.logical_engine)} ·{' '}
+                  <AnswerLink answer={quote} text="inherit" tone="muted">
+                    {quote.prompt}
+                  </AnswerLink>
                 </Inline>
               </Stack>
             ))}

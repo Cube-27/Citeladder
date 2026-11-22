@@ -1,10 +1,11 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { AnswerDialog, type EvidenceSubject } from '@/components/runs/answer-dialog';
+import type { EvidenceSubject } from '@/components/runs/answer-dialog';
+import { useAnswerDialog } from '@/components/runs/answer-link';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
 import { TitledSection } from '@/components/ui/section';
@@ -59,7 +60,7 @@ export function SourcePrompts({
     enabled: Boolean(queries.activeRunId && (domain || url)),
   });
 
-  const [opened, setOpened] = useState<EvidenceSubject | null>(null);
+  const answerDialog = useAnswerDialog();
 
   return (
     <>
@@ -72,17 +73,11 @@ export function SourcePrompts({
           footer={query.data?.truncated ? `Newest ${EVIDENCE_LIMIT} shown` : null}
         >
           {(query.data?.items ?? []).map((item) => (
-            <PromptRow key={item.analysis_id} item={item} onOpenAnswer={setOpened} />
+            <PromptRow key={item.analysis_id} item={item} onOpenAnswer={answerDialog.open} />
           ))}
         </DataTable>
       </TitledSection>
-      <AnswerDialog
-        execution={opened}
-        open={opened !== null}
-        onOpenChange={(next) => {
-          if (!next) setOpened(null);
-        }}
-      />
+      {answerDialog.dialog}
     </>
   );
 }
