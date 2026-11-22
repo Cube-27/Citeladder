@@ -22,7 +22,12 @@
   position: relative;
   isolation: isolate;
   border-radius: var(--site-radius-stage);
+  background: var(--color-site-shot-pad, transparent);
   box-shadow: none;
+}
+
+.cl-frame-card:has(.cl-screen--app) {
+  background: none;
 }
 
 [class]:is(.cl-fcard, .cl-railcard):has(.cl-frame) {
