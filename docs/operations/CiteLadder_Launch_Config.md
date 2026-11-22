@@ -234,7 +234,7 @@ ai_credits:                    # B12, B23, B31, B35
   internal_cost_basis: provider_published_rates     # B53; plan prices and credit amounts may change
   customer_sees: credits_only                   # conversion stays internal (B23)
   agent_model: platform_gateway_only            # no customer model route (B19)
-  agent_sonnet_5_5: [tier_2, tier_3]            # B54; not yet built; not trial or Starter
+  agent_model_choice: [tier_1, tier_2, tier_3]  # B75; not yet built; Haiku, Sonnet and Opus 5.5 on every paid plan, not trial
   hold_before_call_and_settle_once: true
   model_without_configured_price: refused
   recorded_not_charged: [jev_judge, tavily, keenable]   # B13
@@ -438,7 +438,7 @@ to fix, not a reason to edit this card.
 |---|---|---:|---:|---:|---:|---|
 | Claude Haiku 5.5 (prompt ≤100K) | Agent default, gateway calls (prompt generation, research, commerce) | 0.10 | 0.125 | 0.01 | 0.50 | 1-hour cache write 0.20 |
 | Claude Haiku 5.5 (prompt >100K) | — (the Agent stays below this tier) | 0.50 | 0.625 | 0.05 | 2.50 | 5× the lower tier |
-| Claude Sonnet 5.5 | Claude answer engine (`claude-sonnet-5-5`); Agent option on Growth and Scale (B54) | 2.00 | 2.50 | 0.10 | 10.00 | 1-hour cache write 4.00; one rate across the full context |
+| Claude Sonnet 5.5 | Claude answer engine (`claude-sonnet-5-5`); Agent option on every paid plan (B75) | 2.00 | 2.50 | 0.10 | 10.00 | 1-hour cache write 4.00; one rate across the full context |
 | OpenAI gpt-6.1-terra (≤272K input) | ChatGPT answer engine | 1.00 | — | 0.05 | 5.00 | Automatic caching |
 | OpenAI gpt-6.1-terra (>272K input) | — | 2.00 | — | 0.10 | 7.50 | Higher rate applies to the whole request |
 | Google gemini-3.6-flash | Gemini answer engine | 0.75 | — | 0.075 | 3.75 | Through 2026-12-31; 1.50 / 0.15 / 7.50 from 2027-01-01. Output includes thinking. Cache storage 0.50 per million tokens per hour (1.00 from 2027) |
