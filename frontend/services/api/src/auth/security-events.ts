@@ -16,6 +16,7 @@ type SecurityEvent =
   | 'acquisition.control'
   | 'api_key.create'
   | 'api_key.revoke'
+  | 'api_key.delete'
   | 'api_key.rejected_revoked'
   | 'api_key.rejected_expired'
   | 'policy.enterprise_reference'

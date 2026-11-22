@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vite-plus/test';
 
@@ -8,6 +8,7 @@ import type { McpConnection } from '@citeladder/contracts/mcp';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const GRANT = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const OTHER_GRANT = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 
 const { list, revoke } = vi.hoisted(() => ({
   list: vi.fn<(workspaceId?: string) => Promise<McpConnection[]>>(),
@@ -40,64 +41,55 @@ beforeEach(() => {
   revoke.mockReset().mockResolvedValue(undefined);
 });
 
-it('leads with the connect strip and shows only the lists that hold rows', async () => {
+it('leads with the connect strip and shows one empty connections box', async () => {
   list.mockResolvedValue([]);
   renderTab('admin');
   expect(screen.getByRole('link', { name: 'Connect to Claude' })).toBeInTheDocument();
   expect(await screen.findByRole('heading', { name: 'No connections yet' })).toBeVisible();
-  await waitFor(() => expect(list.mock.calls.map(([id]) => id)).toContain(WORKSPACE));
-  expect(screen.getByRole('heading', { name: 'Your connections' })).toBeVisible();
-  expect(
-    screen.queryByRole('heading', { name: 'Connections that can read this workspace' }),
-  ).toBeNull();
+  expect(list.mock.calls.map(([id]) => id)).toEqual([undefined, WORKSPACE]);
+  expect(screen.getAllByRole('heading', { name: 'Connections' })).toHaveLength(1);
 });
 
-it('describes a connection by name and revokes it only after confirmation', async () => {
+it('lays a connection out in columns and revokes it only after confirmation', async () => {
   const user = userEvent.setup();
-  list.mockResolvedValueOnce([claude]).mockResolvedValue([]);
+  list.mockResolvedValue([claude]);
   renderTab();
-  const row = (await screen.findByText('Reads Acme, Beta.')).closest('tr');
-  expect(row).toHaveTextContent('Claude · name not verified');
-  expect(row).toHaveTextContent('Connected Oct 1, 2026 · Not used yet');
+  const row = (await screen.findByText(/name not verified/u)).closest('tr');
+  expect(row).toHaveTextContent(
+    'Claude · name not verified' + 'Read' + 'Oct 1, 2026' + 'Not used yet',
+  );
   expect(row?.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
+  expect(list.mock.calls.map(([id]) => id)).toEqual([undefined]);
 
-  await user.click(within(row!).getByRole('button', { name: 'Revoke' }));
+  await user.click(within(row!).getByRole('button', { name: 'Revoke Claude' }));
   const dialog = screen.getByRole('dialog', { name: 'Revoke Claude?' });
   expect(revoke).not.toHaveBeenCalled();
   await user.click(within(dialog).getByRole('button', { name: 'Revoke' }));
   expect(revoke).toHaveBeenCalledWith(GRANT, undefined);
-  await waitFor(() => expect(screen.queryByText('Reads Acme, Beta.')).not.toBeInTheDocument());
 });
 
-it("shows an Owner/Admin who connected and removes only this workspace's access", async () => {
+it("shows an Owner/Admin their own and members' connections once, each with its own action", async () => {
   const user = userEvent.setup();
+  const anas = {
+    ...claude,
+    id: OTHER_GRANT,
+    workspaces: [{ id: WORKSPACE, name: 'Acme' }],
+    user_email: 'ana@example.test',
+    access: 'read_and_change' as const,
+  };
   list.mockImplementation(async (workspaceId) =>
-    workspaceId
-      ? [
-          {
-            ...claude,
-            workspaces: [{ id: WORKSPACE, name: 'Acme' }],
-            user_email: 'ana@example.test',
-            access: 'read_and_change',
-            last_used_at: '2026-10-08T09:30:00Z',
-          },
-        ]
-      : [],
+    workspaceId ? [{ ...claude, user_email: 'me@example.test' }, anas] : [claude],
   );
   renderTab('owner');
-  const heading = await screen.findByRole('heading', {
-    name: 'Connections that can read this workspace',
-  });
-  const section = heading.closest('section')!;
-  await within(section).findByRole('button', { name: 'Remove workspace access' });
-  expect(section).toHaveTextContent('Reads and changes Acme.');
-  expect(section).toHaveTextContent('Connected by ana@example.test');
-  expect(section).toHaveTextContent('Last used');
-  expect(section).not.toHaveTextContent('Not used yet');
+  const member = (await screen.findByText('ana@example.test')).closest('tr')!;
+  expect(member).toHaveTextContent('Read and write');
+  expect(screen.getAllByRole('row')).toHaveLength(3);
+  expect(screen.queryByText('me@example.test')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Revoke Claude' })).toBeInTheDocument();
 
-  await user.click(within(section).getByRole('button', { name: 'Remove workspace access' }));
+  await user.click(within(member).getByRole('button', { name: /Remove/u }));
   await user.click(
     within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove access' }),
   );
-  expect(revoke).toHaveBeenCalledWith(GRANT, WORKSPACE);
+  expect(revoke).toHaveBeenCalledWith(OTHER_GRANT, WORKSPACE);
 });

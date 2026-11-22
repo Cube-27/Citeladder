@@ -1,33 +1,23 @@
 import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { z } from 'zod';
 
-import { ActionButton } from '@/components/ui/actions';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { CreateKeyDialog } from '@/components/settings/api-key-dialog';
+import { Button, IconButton } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
-import { DateField } from '@/components/ui/date-field';
-import { ConfirmDialog, Dialog } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import { RadioGroup } from '@/components/ui/radio-group';
+import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { textRole } from '@/components/ui/typography';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
-import type {
-  ApiKey,
-  ApiKeyCreated,
-  ApiKeyList,
-  ApiKeyScope,
-} from '@citeladder/contracts/api-keys';
-import { KeyRound } from '@/lib/icons';
+import type { ApiKey, ApiKeyList } from '@citeladder/contracts/api-keys';
+import { KeyRound, MoreHorizontal, Trash2, XCircle } from '@/lib/icons';
 import { apiKeyMutations, apiKeyQueries } from '@/lib/api/api-keys';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { endOfDayInZone, useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatCount } from '@/lib/format';
 import { API_HOST_ORIGIN } from '@/lib/config/api-host';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
@@ -39,15 +29,6 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { TextLink } from '@/components/ui/text-link';
 
 const API_BASE_URL = `${API_HOST_ORIGIN}/v1`;
-
-const SCOPES: readonly { value: ApiKeyScope; label: string }[] = [
-  { value: 'read', label: 'Read reports and settings' },
-  { value: 'prompts:write', label: 'Edit prompts and topics, run prompt generation' },
-  { value: 'competitors:write', label: 'Edit tracked competitors' },
-  { value: 'audits:run', label: 'Launch and cancel audits' },
-  { value: 'schedules:write', label: 'Edit audit schedules' },
-  { value: 'actions:write', label: 'Update actions and record implementations' },
-];
 
 function KeyStateMark({ state }: Readonly<{ state: ApiKey['state'] }>) {
   switch (state) {
@@ -72,20 +53,45 @@ function KeyStateMark({ state }: Readonly<{ state: ApiKey['state'] }>) {
   }
 }
 
+type KeyRequest = { kind: 'revoke' | 'delete'; key: ApiKey };
+
+function KeyMenu({
+  apiKey,
+  onRequest,
+}: Readonly<{ apiKey: ApiKey; onRequest: (kind: KeyRequest['kind']) => void }>) {
+  return (
+    <Menu>
+      <MenuTrigger asChild>
+        <IconButton icon={MoreHorizontal} label={`${apiKey.name} actions`} />
+      </MenuTrigger>
+      <MenuContent align="end">
+        {apiKey.state === 'active' ? (
+          <MenuItem icon={<Icon icon={XCircle} />} onSelect={() => onRequest('revoke')}>
+            Revoke
+          </MenuItem>
+        ) : null}
+        <MenuItem icon={<Icon icon={Trash2} />} danger onSelect={() => onRequest('delete')}>
+          Delete
+        </MenuItem>
+      </MenuContent>
+    </Menu>
+  );
+}
+
 function KeyRow({
   apiKey,
   projectNames,
-  onRevoke,
+  onRequest,
 }: Readonly<{
   apiKey: ApiKey;
   projectNames: ReadonlyMap<string, string>;
-  onRevoke: () => void;
+  onRequest: (kind: KeyRequest['kind']) => void;
 }>) {
   const projects =
     apiKey.project_ids === null
       ? 'All projects'
       : apiKey.project_ids.map((id) => projectNames.get(id) ?? 'A deleted project').join(', ');
-  const access = apiKey.scopes.join(', ');
+  const writes = apiKey.scopes.some((scope) => scope !== 'read');
   return (
     <TableRow>
       <TableCell>
@@ -95,34 +101,32 @@ function KeyRow({
         </div>
       </TableCell>
       <TableCell>
-        <div className="grid min-w-0 justify-items-start">
-          <KeyStateMark state={apiKey.state} />
-          {apiKey.expires_at && apiKey.state === 'active' ? (
-            <span className={textRole('caption')}>
-              Expires <DisplayTime value={apiKey.expires_at} dateOnly />
-            </span>
-          ) : null}
-        </div>
-      </TableCell>
-      <TableCell>
-        {apiKey.last_used_at ? (
-          <DisplayTime value={apiKey.last_used_at} dateOnly />
-        ) : (
-          <span className="text-ink-2">Never</span>
-        )}
+        <KeyStateMark state={apiKey.state} />
       </TableCell>
       <TableCell>
         <div className="grid min-w-0">
-          <ClampText tooltip={access}>{access}</ClampText>
+          <span>{writes ? 'Read and write' : 'Read'}</span>
           <ClampText tooltip={projects} className={textRole('caption')}>
             {projects}
           </ClampText>
         </div>
       </TableCell>
+      <TableCell>
+        {apiKey.expires_at ? (
+          <DisplayTime value={apiKey.expires_at} dateOnly />
+        ) : (
+          <span className="text-ink-2">Never</span>
+        )}
+      </TableCell>
+      <TableCell>
+        {apiKey.last_used_at ? (
+          <DisplayTime value={apiKey.last_used_at} dateOnly />
+        ) : (
+          <span className="text-ink-2">Not used yet</span>
+        )}
+      </TableCell>
       <TableActionsCell>
-        {apiKey.state === 'active' ? (
-          <ActionButton action="revoke" aria-label={`Revoke ${apiKey.name}`} onClick={onRevoke} />
-        ) : null}
+        <KeyMenu apiKey={apiKey} onRequest={onRequest} />
       </TableActionsCell>
     </TableRow>
   );
@@ -131,160 +135,11 @@ function KeyRow({
 const KEY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'key', label: 'Key', kind: 'identity' },
   { key: 'status', label: 'Status', kind: 'status', width: 'status' },
-  { key: 'used', label: 'Last used', kind: 'date', width: 'date' },
-  { key: 'scopes', label: 'Access', kind: 'text', width: 'name' },
-  { key: 'revoke', label: 'Actions', kind: 'actions', width: 'action', hideLabel: true },
+  { key: 'access', label: 'Actions', kind: 'text', width: 'name' },
+  { key: 'expires', label: 'Expires', kind: 'date', width: 'date' },
+  { key: 'used', label: 'Last used', kind: 'date', width: 'date', priority: 'low' },
+  { key: 'menu', label: 'Key actions', kind: 'actions', width: 'control', hideLabel: true },
 ];
-
-function CreateKeyDialog({
-  open,
-  workspaceId,
-  onClose,
-}: Readonly<{ open: boolean; workspaceId: string; onClose: () => void }>) {
-  const { projects } = useProjectContext();
-  const [name, setName] = useState('');
-  const [scopes, setScopes] = useState<ReadonlySet<ApiKeyScope>>(new Set(['read']));
-  const [projectMode, setProjectMode] = useState<'all' | 'chosen'>('all');
-  const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
-  const [expiresOn, setExpiresOn] = useState('');
-  const [created, setCreated] = useState<ApiKeyCreated | null>(null);
-  const create = useMutation(apiKeyMutations.create(workspaceId));
-  const timeZone = useDisplayTimeZone();
-  const createKey = () =>
-    create.mutate(
-      {
-        name,
-        scopes: [...scopes],
-        project_ids: projectMode === 'all' ? null : [...chosen],
-        expires_at: expiresOn ? endOfDayInZone(expiresOn, timeZone) : null,
-      },
-      { onSuccess: setCreated },
-    );
-  const toggle = <T,>(set: ReadonlySet<T>, value: T, on: boolean) => {
-    const next = new Set(set);
-    if (on) next.add(value);
-    else next.delete(value);
-    return next;
-  };
-  const close = () => {
-    setName('');
-    setScopes(new Set(['read']));
-    setProjectMode('all');
-    setChosen(new Set());
-    setExpiresOn('');
-    setCreated(null);
-    create.reset();
-    onClose();
-  };
-  const expiryValid = expiresOn === '' || z.iso.date().safeParse(expiresOn).success;
-  const ready = name.trim() !== '' && (projectMode === 'all' || chosen.size > 0) && expiryValid;
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) close();
-      }}
-      title={created ? 'Copy your API key' : 'Create an API key'}
-      footer={
-        created ? (
-          <Button variant="primary" onClick={close}>
-            Done
-          </Button>
-        ) : (
-          <Button
-            variant="primary"
-            pending={create.isPending}
-            disabled={!ready}
-            onClick={createKey}
-          >
-            Create key
-          </Button>
-        )
-      }
-    >
-      {created ? (
-        <Stack gap="compact">
-          <Notice tone="warning">Shown once.</Notice>
-          <code className="type-code break-all">{created.secret}</code>
-          <div>
-            <CopyButton value={created.secret}>Copy key</CopyButton>
-          </div>
-        </Stack>
-      ) : (
-        <Stack gap="compact">
-          <Field label="Name" required>
-            {(props) => (
-              <Input
-                {...props}
-                value={name}
-                maxLength={80}
-                onChange={(event) => setName(event.target.value)}
-              />
-            )}
-          </Field>
-          <Stack as="fieldset" gap="tight">
-            <legend className={textRole('body', 'text-ink-2')}>What the key can do</legend>
-            {SCOPES.map((scope) => (
-              <Checkbox
-                key={scope.value}
-                label={scope.label}
-                checked={scope.value === 'read' || scopes.has(scope.value)}
-                disabled={scope.value === 'read'}
-                onCheckedChange={(on) => setScopes(toggle(scopes, scope.value, on === true))}
-              />
-            ))}
-            <p className={textRole('caption')}>Capped at your role.</p>
-          </Stack>
-          <RadioGroup
-            ariaLabel="Projects the key can reach"
-            value={projectMode}
-            onValueChange={setProjectMode}
-            options={[
-              { value: 'all', label: 'All projects' },
-              { value: 'chosen', label: 'Chosen projects' },
-            ]}
-          />
-          {projectMode === 'chosen' ? (
-            <Stack as="fieldset" gap="tight">
-              <legend className={textRole('body', 'text-ink-2')}>Projects</legend>
-              {projects.map((project) => (
-                <Checkbox
-                  key={project.id}
-                  label={project.name}
-                  checked={chosen.has(project.id)}
-                  onCheckedChange={(on) => setChosen(toggle(chosen, project.id, on === true))}
-                />
-              ))}
-            </Stack>
-          ) : null}
-          <Field
-            label="Expires"
-            hint={`Optional. Ends at midnight, ${timeZone}`}
-            error={expiryValid ? undefined : 'Enter a date as YYYY-MM-DD.'}
-          >
-            {(props) => (
-              <DateField
-                id={props.id}
-                aria-describedby={props['aria-describedby']}
-                aria-invalid={props['aria-invalid']}
-                ariaLabel="Expiry date"
-                value={expiresOn}
-                onChange={setExpiresOn}
-              />
-            )}
-          </Field>
-          {create.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(create.error, { action: 'create the API key' })}
-            />
-          ) : null}
-        </Stack>
-      )}
-    </Dialog>
-  );
-}
 
 const liveKeys = (keys: readonly ApiKey[]) => keys.filter((key) => key.state === 'active').length;
 
@@ -311,16 +166,16 @@ function ApiKeysBody({
   query,
   workspaceId,
   projectNames,
-  onRevoke,
+  onRequest,
 }: Readonly<{
   query: UseQueryResult<ApiKeyList>;
   workspaceId: string;
   projectNames: ReadonlyMap<string, string>;
-  onRevoke: (key: ApiKey) => void;
+  onRequest: (request: KeyRequest) => void;
 }>) {
   if (query.isPending)
     return (
-      <StateBlock kind="loading" label="Loading API keys…" shape={{ kind: 'table', columns: 5 }} />
+      <StateBlock kind="loading" label="Loading API keys…" shape={{ kind: 'table', columns: 6 }} />
     );
   if (query.isError)
     return (
@@ -352,7 +207,7 @@ function ApiKeysBody({
               key={key.id}
               apiKey={key}
               projectNames={projectNames}
-              onRevoke={() => onRevoke(key)}
+              onRequest={(kind) => onRequest({ kind, key })}
             />
           ))}
         </DataTable>
@@ -361,13 +216,27 @@ function ApiKeysBody({
   );
 }
 
+const REQUEST_COPY = {
+  revoke: { verb: 'Revoke', action: 'revoke the API key' },
+  delete: { verb: 'Delete', action: 'delete the API key' },
+} as const satisfies Record<KeyRequest['kind'], { verb: string; action: string }>;
+
+function requestBody(request: KeyRequest): string {
+  if (request.kind === 'revoke') return 'Cannot be undone.';
+  return request.key.state === 'active'
+    ? 'Stops the key working and removes it from this list. Cannot be undone.'
+    : 'Removes the key from this list. Cannot be undone.';
+}
+
 export function ApiKeys() {
   const { activeWorkspaceId, projects } = useProjectContext();
   const workspaceId = activeWorkspaceId ?? '';
-  const [creating, setCreating] = useState(false);
-  const [pending, setPending] = useState<ApiKey | null>(null);
+  const [creatingAt, setCreatingAt] = useState<Date | null>(null);
+  const [pending, setPending] = useState<KeyRequest | null>(null);
   const query = useQuery({ ...apiKeyQueries.list(workspaceId), enabled: workspaceId !== '' });
   const revoke = useMutation(apiKeyMutations.revoke(workspaceId));
+  const remove = useMutation(apiKeyMutations.remove(workspaceId));
+  const mutation = pending?.kind === 'delete' ? remove : revoke;
   const projectNames = new Map(projects.map((project) => [project.id, project.name]));
 
   return (
@@ -387,39 +256,46 @@ export function ApiKeys() {
             />
           </>
         }
-        action={<KeysHeadActions list={query.data} onCreate={() => setCreating(true)} />}
+        action={<KeysHeadActions list={query.data} onCreate={() => setCreatingAt(new Date())} />}
       >
         <ApiKeysBody
           query={query}
           workspaceId={workspaceId}
           projectNames={projectNames}
-          onRevoke={(key) => {
+          onRequest={(request) => {
             revoke.reset();
-            setPending(key);
+            remove.reset();
+            setPending(request);
           }}
         />
       </SettingsGroup>
       <CreateKeyDialog
-        open={creating}
+        openedAt={creatingAt}
         workspaceId={workspaceId}
-        onClose={() => setCreating(false)}
+        onClose={() => setCreatingAt(null)}
       />
       <ConfirmDialog
-        pending={revoke.isPending}
+        pending={mutation.isPending}
         onCancel={() => setPending(null)}
         request={
           pending && {
-            title: `Revoke ${pending.name}?`,
-            confirmLabel: 'Revoke',
+            title: `${REQUEST_COPY[pending.kind].verb} ${pending.key.name}?`,
+            confirmLabel: REQUEST_COPY[pending.kind].verb,
             destructive: true,
-            onConfirm: () => revoke.mutate(pending.id, { onSuccess: () => setPending(null) }),
+            onConfirm: () => {
+              const done = { onSuccess: () => setPending(null) };
+              if (pending.kind === 'delete') remove.mutate(pending.key.id, done);
+              else revoke.mutate(pending.key.id, done);
+            },
             body: (
               <Stack gap="compact">
-                <p>Cannot be undone.</p>
-                {revoke.isError ? (
+                <p>{requestBody(pending)}</p>
+                {mutation.isError ? (
                   <Notice
                     kind="mutation"
-                    notice={mutationNoticeForError(revoke.error, { action: 'revoke the API key' })}
+                    notice={mutationNoticeForError(mutation.error, {
+                      action: REQUEST_COPY[pending.kind].action,
+                    })}
                   />
                 ) : null}
               </Stack>

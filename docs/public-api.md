@@ -37,7 +37,10 @@ once on creation. Only its HMAC-SHA256 under `API_KEY_PEPPER` is stored; a
 request is matched by prefix and compared in constant time.
 
 Scopes are `read` (always granted), `prompts:write`, `competitors:write`,
-`audits:run`, `schedules:write` and `actions:write`. A scope never widens the
+`audits:run`, `schedules:write` and `actions:write`. The settings dialog offers
+a read key or a read and write key (every write scope) and an expiry preset
+(default 30 days) ending at midnight in the display time zone; the route still
+takes any scope set and an optional expiry. A scope never widens the
 creator's role: a key's effective permission is its scopes intersected with
 the creator's current role, so a demotion narrows it at once. Removing the
 creator from the workspace (by an admin, leaving, or account deletion) revokes
@@ -50,8 +53,11 @@ paid plan grants `api_access` and ten keys; the public trial grants neither
 ([Billing and entitlements](billing-entitlements.md)). Creation also locks the
 creator's user row and rechecks the session version the request signed in
 with, so a password reset or change that commits first refuses it (401
-`Session no longer valid`) instead of leaving a key its revocation missed. Security events record
-`api_key.create`, `api_key.revoke`, and at most one `api_key.rejected_revoked`
+`Session no longer valid`) instead of leaving a key its revocation missed. Deleting a key
+(`DELETE /api/v1/api-keys/{key_id}`) removes its row for good, recording
+`api_key.revoke` first when it was still live; its security events stay.
+Security events record `api_key.create`, `api_key.revoke`, `api_key.delete`,
+and at most one `api_key.rejected_revoked`
 or `api_key.rejected_expired` per key per hour. `last_used_at` is stamped at
 most every five minutes.
 
