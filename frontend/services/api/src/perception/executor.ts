@@ -232,7 +232,7 @@ function persist({
   };
 }
 
-function passagesCut(pkg: PerceptionPackage) {
+function passagesCut(pkg: PerceptionPackage): Record<string, number> {
   const cut = pkg.entities.reduce((sum, entity) => sum + entity.cut_chars, 0);
   return cut ? { passage_chars_cut: cut } : {};
 }
