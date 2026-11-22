@@ -306,35 +306,42 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       },
     ]);
   });
-  it('shrinks a call the balance covers only in part to the output it can pay for (B60)', async () => {
-    const { scope, accountId, grantId } = await tenant(5);
-    const { run: saved, lease } = await run(scope);
-    const sent: unknown[] = [];
-    const io = {
-      fetch: vi.fn<typeof fetch>(async (_url, init) => {
-        sent.push(JSON.parse(String(init?.body)).max_completion_tokens);
-        return Response.json({
-          choices: [{ message: { content: 'Answer' }, finish_reason: 'stop' }],
-          usage: { prompt_tokens: 20, completion_tokens: 10 },
-        });
-      }),
-      sleep: vi.fn(async () => {}),
-    };
-    const calls = new ModelCalls(db, agentFunding(settings, platform));
-    await calls.call(lease, 1, await agentModels(platform, io)(saved), request);
-    expect(sent).toEqual([7652]);
-    expect(
-      await db
-        .selectFrom('agent_model_attempts')
-        .select(['reserved_credits', 'max_output_tokens'])
-        .where('run_id', '=', saved.id)
-        .executeTakeFirst(),
-    ).toEqual({ reserved_credits: '5', max_output_tokens: 7652 });
-    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
-      reserved: 0,
-      consumed: 1,
-    });
-  });
+  it.each([
+    { choice: undefined, cap: 16_384, credits: 5, shrunk: 7652 },
+    { choice: { model: 'claude-opus-5-5' }, cap: 64_000, credits: 1_000, shrunk: 38_421 },
+  ])(
+    'shrinks a call the balance covers only in part to the output it can pay for (B60) %#',
+    async ({ choice, cap, credits, shrunk }) => {
+      const { scope, accountId, grantId } = await tenant(credits);
+      const { run: saved, lease } = await run(scope, undefined, choice);
+      const capped = { ...platform, maxOutputTokens: cap };
+      const sent: unknown[] = [];
+      const io = {
+        fetch: vi.fn<typeof fetch>(async (_url, init) => {
+          sent.push(JSON.parse(String(init?.body)).max_completion_tokens);
+          return Response.json({
+            choices: [{ message: { content: 'Answer' }, finish_reason: 'stop' }],
+            usage: { prompt_tokens: 20, completion_tokens: 10 },
+          });
+        }),
+        sleep: vi.fn(async () => {}),
+      };
+      const calls = new ModelCalls(db, agentFunding(settings, capped));
+      await calls.call(lease, 1, await agentModels(capped, io)(saved), request);
+      expect(sent).toEqual([shrunk]);
+      expect(
+        await db
+          .selectFrom('agent_model_attempts')
+          .select(['reserved_credits', 'max_output_tokens'])
+          .where('run_id', '=', saved.id)
+          .executeTakeFirst(),
+      ).toEqual({ reserved_credits: String(credits), max_output_tokens: shrunk });
+      expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
+        reserved: 0,
+        consumed: 1,
+      });
+    },
+  );
   it('refuses a call below a minimum reply, counting only its own workspace’s credits', async () => {
     await tenant(1_000);
     const { scope } = await tenant(2);

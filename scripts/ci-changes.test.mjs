@@ -261,6 +261,7 @@ test('a fixture or helper change selects every spec that imports it', () => {
   assert.deepEqual(selectE2EFiles(['frontend/e2e/helpers/app-fixture.ts']), fixtureUsers);
   assert.deepEqual(selectE2EFiles(['frontend/test/fixtures/project.ts']), fixtureUsers);
   assert.deepEqual(selectE2EFiles(['frontend/test/agent-chat-fixture.ts']), [
+    'e2e/action-loop.spec.ts',
     'e2e/agent-conversation.spec.ts',
     'e2e/page-workspace.spec.ts',
   ]);

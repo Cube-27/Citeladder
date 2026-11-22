@@ -318,7 +318,7 @@ describe('NewChatScreen', () => {
     expect(screen.getByRole('button', { name: 'Effort: Medium effort' })).toBeDisabled();
   });
 
-  it('sends the model and effort picked in the composer, and only the defaults otherwise', async () => {
+  it('sends the model and effort picked in the composer', async () => {
     const bodies = captureChats();
     const user = userEvent.setup();
     renderNewChat('?prompt=Plan+the+quarter');
