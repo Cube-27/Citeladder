@@ -1,6 +1,6 @@
 {
   "repository": "Cube-27/cube27-fonts",
-  "revision": "e080f046e23e07455a20917303230e3531683dba",
+  "revision": "48855e374e28d6b2bd2ba909496b3f126a99bd62",
   "faces": {
     "display": {
       "family": "Stack Sans Notch",
@@ -15,14 +15,14 @@
       }
     },
     "sans": {
-      "family": "Geist",
-      "file": "Geist-Variable.woff2",
+      "family": "Google Sans",
+      "file": "GoogleSans-Variable.woff2",
       "preload": ["app", "public", "docs"],
-      "weights": "300 600",
+      "weights": "400 600",
       "fallback": {
-        "sizeAdjust": "102.12%",
-        "ascentOverride": "98.41%",
-        "descentOverride": "28.89%",
+        "sizeAdjust": "98.27%",
+        "ascentOverride": "98.3%",
+        "descentOverride": "29.1%",
         "lineGapOverride": "0%"
       }
     },
