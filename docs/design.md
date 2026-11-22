@@ -91,7 +91,7 @@ the job, never a size.
 - A real zero is a printed `0` in full ink, never greyed.
 
 **The accent means "you, here".** It marks you (your brand's row, series and
-the word "You") and here (the current nav item, tab and step, as a 2px mark
+the word "You") and here (the current nav item and step, as a 2px mark
 with `aria-current` or `aria-selected`), the live rung, and where keyboard
 and input focus is (AR-13). Never an action, status, link or decoration.
 
@@ -122,25 +122,28 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   edges (none on the sidebar side), `rule` edge, radius 8,
   `panel` fill, the page's only scroller. Below 900 the panel fills the
   window and the header's menu button opens the sidebar in a drawer.
-- **Page header**, 44 high with a `rule`: the page title as a breadcrumb
+- **Page header**, 44 high, no rule under it (owner, 2026-11-22: no
+  panel-wide divider lines): the page title as a breadcrumb
   (section › page; a record adds its collection, and its name
   is the h1 above the strips), then secondary actions, at most one primary
   action, Search ⌘K and Ask agent at the right edge. The section is the nav
   group holding the current row, Agent, or Workspace; below 900 only the
   page shows.
-- **Tab strip**, 36 high with a `rule`; tabs 20 apart, the current one
-  underlined in accent.
-- **Body.** 24 side padding (16 below 760px), 20 above, 24 below: status line,
+- **Tab strip** (owner, 2026-11-22), 40 high: folder tabs on a `rule`
+  baseline that runs only between the page paddings; the current tab is
+  framed in `rule` on three sides with a 6 radius on top and opens onto
+  the content below. It is the only horizontal line a page draws.
+- **Body.** 24 side padding (16 below 760px), 24 below; the title, tab
+  strip, toolbar and content sit 12 apart, the same gap as a table's
+  toolbar above its table (owner, 2026-11-22): status line,
   then the metric strip, then sections 24 apart with no rule between them;
   a section's head sits 12 above its body. Links carry no underline at rest,
   only on hover and focus. Narrow pages centre the body in their column (AR-9; 1040:
   Overview, Projects, Issues, Actions, page detail, Agent, Settings, Agent
-  context; 720: Billing, Pricing, Runs); the header and tab rules still
-  span the panel.
+  context; 720: Billing, Pricing, Runs).
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
-  page-wide toolbar is the strip under the tabs, 8 above and below its
-  controls, with a `rule` across the panel.
+  page-wide toolbar is the strip under the tabs, with no rule.
 - **Metric strip:** one `rule`-framed strip, radius 8, cells divided by
   hairlines, cell padding 10 by 16, 12px label over the value. Never cards;
   no meters, rings or bars inside a cell (AR-3).
@@ -237,7 +240,8 @@ One entry per family; wave 2 fills each from the layouts above.
   tooltips are `raised` with a `rule` edge, radius 8, 28-high rows on
   `state-hover`.
 - **Tabs and segmented control** ([`tabs.tsx`](../frontend/components/ui/tabs.tsx)).
-  Tabs are text, 20 apart, the current one `ink` over a 2px accent underline.
+  Tabs are folder tabs padded 16, the current one `ink` in a `rule` frame
+  open at the bottom, the rest `ink-2`.
   Segmented control: `rule` frame one control high, 2px inset, 24-high
   segments, the selected one on `state-selected`.
 - **Tags and status.** Tag: 20 high, radius 4, `rule` edge, 12px `ink-2`; a

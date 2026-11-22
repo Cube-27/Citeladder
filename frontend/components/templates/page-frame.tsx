@@ -13,6 +13,7 @@ import {
   MastheadPrimarySlot,
   PageEmptyOfferProvider,
 } from '@/components/ui/masthead-actions';
+import { TAB_BASELINE } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
 import { useUrlSearch } from '@/lib/navigation/url-params';
@@ -32,8 +33,7 @@ export type PageFrameSlots = Readonly<{
   filters?: ReactNode;
 }>;
 
-const STRIP =
-  'border-rule flex min-w-0 border-b px-[calc(var(--page-pad-inline)+var(--page-start,0px))]';
+const STRIP = 'flex min-w-0 px-[calc(var(--page-pad-inline)+var(--page-start,0px))]';
 
 export function PageFrame({
   title,
@@ -77,11 +77,7 @@ export function PageFrame({
         {tabs || filters ? <PageStrips tabs={tabs} filters={filters} /> : null}
         <div
           data-page-body=""
-          className={cn(
-            'flex min-w-0 flex-1 flex-col pt-[var(--page-pad-block)]',
-            PAGE_COLUMN[width],
-            'pb-6',
-          )}
+          className={cn('flex min-w-0 flex-1 flex-col pt-3', PAGE_COLUMN[width], 'pb-6')}
         >
           {children}
         </div>
@@ -172,18 +168,15 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
     <div
       ref={strips}
       data-page-strips=""
-      className="bg-panel z-sticky sticky top-[var(--masthead-block-size,var(--masthead-height))] -mx-[var(--page-pad-inline)] flex min-w-0 flex-col"
+      className="bg-panel z-sticky sticky top-[var(--masthead-block-size,var(--masthead-height))] -mx-[var(--page-pad-inline)] flex min-w-0 flex-col gap-3"
     >
       {tabs ? (
         <div data-page-band="tabs" className={cn(STRIP, 'h-[var(--page-tabs-height)] items-end')}>
-          {tabs}
+          <div className={cn('flex min-w-0 flex-1 items-end', TAB_BASELINE)}>{tabs}</div>
         </div>
       ) : null}
       {filters ? (
-        <div
-          data-page-band="filters"
-          className={cn(STRIP, 'min-h-[var(--filter-bar-height)] items-center py-2')}
-        >
+        <div data-page-band="filters" className={cn(STRIP, 'items-center')}>
           {filters}
         </div>
       ) : null}
