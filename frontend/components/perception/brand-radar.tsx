@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { ProbeMarketValue } from '@citeladder/contracts/probes';
 
 import { Button } from '@/components/ui/button';
-import { CHART_AXIS_TEXT, chartFill, chartStroke, type ChartTone } from '@/components/ui/chart';
+import { chartFill, chartStroke, type ChartTone } from '@/components/ui/chart';
 import { ChartTable } from '@/components/ui/chart-frame';
 import { Inline, Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
@@ -15,12 +15,14 @@ type Entity = Themes[number]['entities'][number];
 const CX = 200;
 const CY = 150;
 const RADIUS = 105;
-const LABEL_RADIUS = 1.22;
+const LABEL_RADIUS = 1.1;
+const LABEL_SIZE = 7;
+const LABEL_BASELINE = 2.5;
 const RINGS = [25, 50, 75, 100];
 const RIVAL_TONES = [2, 3, 4] as const satisfies readonly ChartTone[];
 const BRAND_TONE: ChartTone = 1;
 
-const keyOf = (entity: Pick<Entity, 'kind' | 'id' | 'name'>) =>
+export const entityKey = (entity: Pick<Entity, 'kind' | 'id' | 'name'>) =>
   `${entity.kind}:${entity.id ?? entity.name}`;
 
 function point(index: number, count: number, value: number) {
@@ -29,7 +31,12 @@ function point(index: number, count: number, value: number) {
   return [CX + Math.cos(angle) * reach, CY + Math.sin(angle) * reach] as const;
 }
 
-export const rosterKey = (themes: Themes) => (themes[0]?.entities ?? []).map(keyOf).join('|');
+function anchorOf(x: number) {
+  if (Math.abs(x - CX) < 1) return 'middle';
+  return x > CX ? 'start' : 'end';
+}
+
+export const rosterKey = (themes: Themes) => (themes[0]?.entities ?? []).map(entityKey).join('|');
 
 const polygon = (values: readonly number[]) =>
   values.map((value, index) => point(index, values.length, value).join(',')).join(' ');
@@ -38,16 +45,18 @@ export function BrandRadar({ themes }: Readonly<{ themes: Themes }>) {
   const roster = themes[0]?.entities ?? [];
   const rivals = roster.filter((entity) => entity.kind === 'competitor');
   const [shown, setShown] = useState<readonly string[]>(() =>
-    rivals.slice(0, 2).map((entity) => keyOf(entity)),
+    rivals.slice(0, 2).map((entity) => entityKey(entity)),
   );
   const [showBrand, setShowBrand] = useState(true);
   if (themes.length < 3)
     return <StateBlock kind="empty" inline message="Needs three themes or more." />;
   const scores = (entity: Entity) =>
-    themes.map((row) => row.entities.find((item) => keyOf(item) === keyOf(entity))?.score ?? 0);
+    themes.map(
+      (row) => row.entities.find((item) => entityKey(item) === entityKey(entity))?.score ?? 0,
+    );
   const drawn = [
     ...rivals.flatMap((entity) => {
-      const slot = shown.indexOf(keyOf(entity));
+      const slot = shown.indexOf(entityKey(entity));
       const tone = RIVAL_TONES[slot];
       return tone === undefined ? [] : [{ entity, tone, brand: false }];
     }),
@@ -57,11 +66,11 @@ export function BrandRadar({ themes }: Readonly<{ themes: Themes }>) {
   ];
   const toggle = (entity: Entity) => {
     if (entity.kind === 'brand') return setShowBrand((on) => !on);
-    const key = keyOf(entity);
+    const key = entityKey(entity);
     setShown((keys) => (keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]));
   };
   const toneOf = (entity: Entity) =>
-    entity.kind === 'brand' ? BRAND_TONE : RIVAL_TONES[shown.indexOf(keyOf(entity))];
+    entity.kind === 'brand' ? BRAND_TONE : RIVAL_TONES[shown.indexOf(entityKey(entity))];
   return (
     <Stack gap="item">
       <ChartTable
@@ -87,7 +96,13 @@ export function BrandRadar({ themes }: Readonly<{ themes: Themes }>) {
           return (
             <g key={row.theme_id}>
               <line x1={CX} y1={CY} x2={x} y2={y} className="stroke-rule" />
-              <text x={lx} y={ly + 4} textAnchor="middle" className={CHART_AXIS_TEXT}>
+              <text
+                x={lx}
+                y={ly + LABEL_BASELINE}
+                textAnchor={anchorOf(lx)}
+                fontSize={LABEL_SIZE}
+                className="fill-ink-2"
+              >
                 {row.theme}
               </text>
             </g>
@@ -95,7 +110,7 @@ export function BrandRadar({ themes }: Readonly<{ themes: Themes }>) {
         })}
         {drawn.map(({ entity, tone, brand }) => (
           <polygon
-            key={keyOf(entity)}
+            key={entityKey(entity)}
             points={polygon(scores(entity))}
             className={cn(chartStroke(tone), chartFill(tone))}
             fillOpacity={brand ? 0.28 : 0.12}
@@ -109,7 +124,7 @@ export function BrandRadar({ themes }: Readonly<{ themes: Themes }>) {
           const on = entity.kind === 'brand' ? showBrand : tone !== undefined;
           return (
             <Button
-              key={keyOf(entity)}
+              key={entityKey(entity)}
               variant="quiet"
               aria-pressed={on}
               disabled={!on && entity.kind === 'competitor' && shown.length >= RIVAL_TONES.length}

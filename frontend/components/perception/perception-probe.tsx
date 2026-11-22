@@ -5,22 +5,57 @@ import type { ProbeStatus } from '@citeladder/contracts/probes';
 
 import { PerceptionMarket } from '@/components/perception/perception-market';
 import { PerceptionObjections } from '@/components/perception/perception-objections';
-import { ProbeBar, ProbeEmpty } from '@/components/perception/probe-bar';
+import { ProbeActions, ProbeEmpty } from '@/components/perception/probe-actions';
 import { ProbeDialog, type ProbeIntent } from '@/components/perception/probe-dialog';
 import { readErrorProps } from '@/components/ui/notice';
-import { SectionStack } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { probeBasis, probeQueries, refreshProbeStatus } from '@/lib/api/probes';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
 type ProbeView = 'market' | 'objections';
 
-export function PerceptionProbe({ view }: Readonly<{ view: ProbeView }>) {
+export function useProbeControls(view: ProbeView | null) {
   const { workspaceId, projectId } = useProjectScope();
   const scope = { workspaceId, projectId };
   const client = useQueryClient();
-  const status = useQuery(probeQueries.status(scope));
+  const status = useQuery({ ...probeQueries.status(scope), enabled: view !== null });
   const [intent, setIntent] = useState<ProbeIntent | null>(null);
+  const confirm = (next: ProbeIntent) => {
+    refreshProbeStatus(client, scope);
+    setIntent(next);
+  };
+  const onRun = () => confirm({ kind: 'run' });
+  const ready = view !== null && status.isSuccess;
+  return {
+    scope,
+    status,
+    onRun,
+    actions: ready ? (
+      <ProbeActions
+        scope={scope}
+        status={status.data}
+        onRun={onRun}
+        onSchedule={(cadence) => confirm({ kind: 'schedule', cadence })}
+      />
+    ) : undefined,
+    dialog: ready ? (
+      <ProbeDialog
+        scope={scope}
+        quote={status.data.quote}
+        intent={intent}
+        onClose={() => setIntent(null)}
+      />
+    ) : null,
+  };
+}
+
+export type ProbeControls = ReturnType<typeof useProbeControls>;
+
+export function PerceptionProbe({
+  view,
+  controls,
+}: Readonly<{ view: ProbeView; controls: ProbeControls }>) {
+  const { scope, status, onRun } = controls;
   const basis = probeBasis(status.data);
   const market = useQuery({
     ...probeQueries.market(scope, basis),
@@ -43,43 +78,22 @@ export function PerceptionProbe({ view }: Readonly<{ view: ProbeView }>) {
         fallback="The request failed or timed out."
       />
     );
-  const confirm = (next: ProbeIntent) => {
-    refreshProbeStatus(client, scope);
-    setIntent(next);
-  };
-  const onRun = () => confirm({ kind: 'run' });
-  return (
-    <SectionStack>
-      <ProbeBar
-        scope={scope}
-        status={status.data}
-        onRun={onRun}
-        onSchedule={(cadence) => confirm({ kind: 'schedule', cadence })}
-      />
-      {view === 'market' ? (
-        <ProbeRead
-          read={market}
-          title="Couldn't load Market"
-          status={status.data}
-          onRun={onRun}
-          render={(data) => <PerceptionMarket data={data} />}
-        />
-      ) : (
-        <ProbeRead
-          read={objections}
-          title="Couldn't load objections"
-          status={status.data}
-          onRun={onRun}
-          render={(data) => <PerceptionObjections scope={scope} data={data} />}
-        />
-      )}
-      <ProbeDialog
-        scope={scope}
-        quote={status.data.quote}
-        intent={intent}
-        onClose={() => setIntent(null)}
-      />
-    </SectionStack>
+  return view === 'market' ? (
+    <ProbeRead
+      read={market}
+      title="Couldn't load Market"
+      status={status.data}
+      onRun={onRun}
+      render={(data) => <PerceptionMarket data={data} />}
+    />
+  ) : (
+    <ProbeRead
+      read={objections}
+      title="Couldn't load objections"
+      status={status.data}
+      onRun={onRun}
+      render={(data) => <PerceptionObjections scope={scope} data={data} />}
+    />
   );
 }
 

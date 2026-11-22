@@ -40,6 +40,8 @@ function theme(
       ? { ...brand, score: own, named: ownNamed }
       : { ...rival, score: other, named: other > 0 },
     gap: ownFirst ? 0 : other - own,
+    sources: 0,
+    pages: [],
   };
 }
 
