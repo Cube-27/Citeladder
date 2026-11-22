@@ -95,14 +95,17 @@ function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }
   );
 }
 
+const SURFACE_ABSENCE: Partial<Record<string, string>> = {
+  google_ai_overview: 'No AI Overview was shown for this search.',
+  google_ai_mode: 'No AI Mode answer was shown for this search.',
+};
+
 function transcriptBody(evidence: ExecutionEvidence) {
   const text = evidence.answer_text.trim();
   if (text) return { kind: 'markdown', text } as const;
-  if (
-    evidence.logical_engine === 'google_ai_overview' &&
-    evidence.search_surface_outcome === 'no_ai_overview'
-  )
-    return { kind: 'note', text: 'No AI Overview was shown for this search.' } as const;
+  const absence = SURFACE_ABSENCE[evidence.logical_engine];
+  if (absence && evidence.search_surface_outcome === 'no_ai_overview')
+    return { kind: 'note', text: absence } as const;
   return { kind: 'note', text: 'No answer text was captured for this execution.' } as const;
 }
 
@@ -144,7 +147,9 @@ export function AnswerEvidence({
           <EvidencePerception perception={evidence.perception} />
           <EvidenceClaims claims={evidence.claims} />
           <EvidenceAds ads={evidence.ads} />
-          {evidence.search_surface ? <SurfaceEvidence evidence={evidence.search_surface} /> : null}
+          {evidence.search_surface ? (
+            <SurfaceEvidence evidence={evidence.search_surface} engine={evidence.logical_engine} />
+          ) : null}
           <EvidenceOutcomes evidence={evidence} />
         </>
       }

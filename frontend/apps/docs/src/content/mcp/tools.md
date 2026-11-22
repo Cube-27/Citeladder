@@ -17,7 +17,7 @@ Start with project discovery, inspect available evidence, then ask for the concr
 | Which project, Action or prompt mentions this?  | `search`, then `fetch`                                         |
 | What did an AI audit observe?                   | `read_visibility_overview`, then `read_visibility_results`     |
 | How does each topic perform?                    | `read_visibility_overview` with `view` `topics` or `matrix`    |
-| How often do AI Overviews show and cite us?     | `read_visibility_overview` with `view` `surface`               |
+| How often do AI Overviews and AI Mode cite us?  | `read_visibility_overview` with `view` `surface`               |
 | How does each market compare?                   | `read_visibility_overview` with `view` `markets`               |
 | Which prompts do we win or lose?                | `read_prompt_metrics`, then `view` `history` or `answers`      |
 | What did engines search for while answering?    | `read_query_fanouts`                                           |

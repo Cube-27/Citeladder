@@ -3,7 +3,7 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { ProviderError } from '../providers/errors.ts';
 import { type OverviewResult, overviewAnswer } from '../search-surfaces/parsing.ts';
-import { searchPolicy } from '../search-surfaces/dataforseo.ts';
+import { searchPolicy, serpEngine } from '../search-surfaces/dataforseo.ts';
 import { ownedAuditTask, parkAuditTask, type AuditTask } from '../queue/audit-queue.ts';
 import {
   persistSurfaceFailure,
@@ -72,7 +72,7 @@ export function persistOverviewObservation(
     db,
     task,
     owner,
-    overviewAnswer(result),
+    overviewAnswer(serpEngine(task.logical_engine), result),
     async (trx, current, audit, artifactId) => {
       await appendObservation(trx, current, result, at);
       await derive(trx, current, audit, artifactId);

@@ -9,6 +9,7 @@ export const logicalEngineSchema = z.enum([
   'gemini',
   'claude',
   'google_ai_overview',
+  'google_ai_mode',
   'chatgpt_search',
   'gemini_consumer',
 ]);

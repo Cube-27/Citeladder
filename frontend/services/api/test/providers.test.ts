@@ -311,6 +311,7 @@ describe('provider credential custody', () => {
       ['gemini', 'Gemini API', 'llm'],
       ['claude', 'Claude API', 'llm'],
       ['google_ai_overview', 'Google AI Overview', 'search_ai'],
+      ['google_ai_mode', 'Google AI Mode', 'search_ai'],
     ]);
   });
   it('enforces credential administration at the HTTP boundary', async () => {

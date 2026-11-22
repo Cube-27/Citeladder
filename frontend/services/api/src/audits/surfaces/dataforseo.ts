@@ -77,8 +77,6 @@ export function frozenSurfaceRequest(
     location_code: frozenField(frozen.location_code, 'location_code'),
     language_code: frozenField(frozen.language_code, 'language_code'),
     device: frozenField(frozen.device, 'device'),
-    depth: searchPolicy.constants.default_depth,
-    load_async_ai_overview: searchPolicy.constants.load_async_ai_overview,
     timeout_seconds: frozenField(frozen.timeout_seconds, 'timeout_seconds'),
     provider_submission_ref: submissionRef,
     request_settings: surface.requestSettings(frozen),

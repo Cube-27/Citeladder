@@ -201,6 +201,7 @@ type RateScope = {
   auditId: string | null;
   auditIds: string[] | null;
   cohort: string;
+  logicalEngine: string;
 };
 
 function scopedObservations(db: Database, scope: RateScope) {
@@ -215,6 +216,7 @@ function scopedObservations(db: Database, scope: RateScope) {
     )
     .leftJoin('response_analyses as ra', 'ra.task_id', 'observation.task_id')
     .where('observation.workspace_id', '=', scope.workspaceId)
+    .where('task.logical_engine', '=', scope.logicalEngine)
     .where('audit.project_id', '=', scope.projectId)
     .where('snapshot.cohort', 'in', [...selectedCohorts(scope.cohort)]);
   if (scope.auditIds?.length) query = query.where('observation.audit_id', 'in', scope.auditIds);
@@ -242,10 +244,7 @@ export type SurfaceRatesResponse = {
 
 const NO_RATE: AioRate = { numerator: 0, denominator: 0, denominator_kind: '', value: null };
 
-export async function surfaceRates(
-  db: Database,
-  scope: RateScope & { logicalEngine: string },
-): Promise<SurfaceRatesResponse> {
+export async function surfaceRates(db: Database, scope: RateScope): Promise<SurfaceRatesResponse> {
   if (!isLogicalEngine(scope.logicalEngine)) throw unknownEngine(scope.logicalEngine);
   if (surfaceKindOf(scope.logicalEngine) !== 'search_ai') {
     return {

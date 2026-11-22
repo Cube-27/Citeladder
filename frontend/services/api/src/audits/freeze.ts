@@ -257,8 +257,6 @@ function validateSearchRequests(
       location_code: project.serp_location_code,
       language_code: project.serp_language_code || searchPolicy.constants.default_language_code,
       device: project.serp_device as 'desktop' | 'mobile',
-      depth: searchPolicy.constants.default_depth,
-      load_async_ai_overview: searchPolicy.constants.load_async_ai_overview,
       timeout_seconds: settings.audit_timeout_seconds,
       provider_submission_ref: 'admission-validation',
       request_settings: {},

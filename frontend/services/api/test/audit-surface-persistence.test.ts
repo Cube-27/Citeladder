@@ -104,6 +104,7 @@ async function paidSubmission(t: Awaited<ReturnType<typeof seed>>) {
 }
 function unusableOverview() {
   const result = parseOverview(
+    'google_ai_overview',
     {
       status_code: 20000,
       tasks: [{ id: 'provider-id', status_code: 20000, result: [{ items: { unexpected: true } }] }],
@@ -130,6 +131,7 @@ describe('durable surface evidence', () => {
     });
     await releaseToWorker(t.task.id);
     const result = parseOverview(
+      'google_ai_overview',
       {
         status_code: 20000,
         tasks: [

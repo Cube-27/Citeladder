@@ -49,7 +49,7 @@ describe('ProviderSettings', () => {
 
     const dataforseo = await row('DataForSEO');
     expect(
-      dataforseo.getByText('ChatGPT Search · Gemini · Google AI Overview'),
+      dataforseo.getByText('ChatGPT Search · Gemini · Google AI Overview · Google AI Mode'),
     ).toBeInTheDocument();
     expect((await row('OpenAI')).getByText(`ChatGPT API · ${CHATGPT_MODEL}`)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Google' })).toBeInTheDocument();
@@ -112,7 +112,7 @@ describe('ProviderSettings', () => {
         transport_provider: 'dataforseo',
         api_login: 'team@example.com',
         api_password: 'secret',
-        routes: ['chatgpt_search', 'gemini_consumer', 'google_ai_overview'].map(
+        routes: ['chatgpt_search', 'gemini_consumer', 'google_ai_overview', 'google_ai_mode'].map(
           (logical_engine) => ({ logical_engine, is_default: false }),
         ),
       }),

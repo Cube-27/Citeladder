@@ -59,7 +59,7 @@ export function auditWorkerHarness() {
   async function seed(
     surface = false,
     extraPrompts: string[] = [],
-    observed: 'chatgpt_search' | 'google_ai_overview' = 'chatgpt_search',
+    observed: 'chatgpt_search' | 'google_ai_overview' | 'google_ai_mode' = 'chatgpt_search',
   ) {
     const t = await auditTenant(db, fixtures);
     workspaces.push(t.workspaceId);
@@ -130,8 +130,11 @@ export function auditWorkerHarness() {
       { owner: 'worker', taskScope: scope, send, env: {}, ...(now ? { now } : {}) },
     );
   }
-  async function submittedOverview(pollCount: number) {
-    const t = await seed(true, [], 'google_ai_overview');
+  async function submittedOverview(
+    pollCount: number,
+    engine: 'google_ai_overview' | 'google_ai_mode' = 'google_ai_overview',
+  ) {
+    const t = await seed(true, [], engine);
     const connectionId = record(t.task.provider_route_snapshot).connection_id as string;
     const { credential_revision } = await db
       .selectFrom('provider_connections')
