@@ -218,6 +218,17 @@ describe('provider credential custody', () => {
     expect(result).toMatchObject({ status: 'failed', error_code: 'auth_failure' });
     expect(calls).toBe(0);
   });
+  it.each([
+    { code: 'insufficient_quota', expected: 'provider_account_unavailable' },
+    { code: 'rate_limit_exceeded', expected: 'rate_limit' },
+  ])('classifies a 429 $code test reply as $expected', async ({ code, expected }) => {
+    const row = await create();
+    const result = await probeConnection(db, workspace, row.id, key, settings, async () => ({
+      status: 429,
+      body: { error: { type: code, code, message: 'Quota or rate limit.' } },
+    }));
+    expect(result).toMatchObject({ status: 'failed', error_code: expected });
+  });
   it('DataForSEO tests only credential liveness and honors body-level auth failures', async () => {
     const row = await create({
       transport_provider: 'dataforseo',
