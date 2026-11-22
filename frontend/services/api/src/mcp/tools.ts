@@ -20,6 +20,7 @@ import {
 import {
   actionsRead,
   demandSnapshot,
+  researchRuns,
   differentiationRead,
   integrationStatus,
   promptPortfolio,
@@ -42,6 +43,11 @@ import {
 import { competitorsRead } from './evidence-competitors.ts';
 import { promptMetricsRead, queryFanoutsRead } from './evidence-prompts.ts';
 import { crawlability, pageText, siteLinks, sitePages, siteSnapshot } from './evidence-site.ts';
+import { crawlSchedule, linkAnalyses, siteIssueGroups } from './evidence-site-controls.ts';
+import { auditRun, auditRuns, auditSchedules } from './evidence-runs.ts';
+import { promptCandidates, promptSets } from './evidence-prompt-setup.ts';
+import { objectionGroups, probeRead } from './evidence-probes.ts';
+import { commerceSetup } from './evidence-commerce.ts';
 import {
   aiTrafficInsights,
   aiTrafficPages,
@@ -239,7 +245,7 @@ export const definitions = {
   read_visibility_overview: projectTool({
     title: 'Read AI visibility',
     description:
-      "Read the headline AI visibility of one run: how often answers mention the brand and cite its site, the visibility score, rankings of the brand against each competitor (mention rate, citation rate, share of voice, average position among the brands an answer named, win rate and net sentiment), a breakdown per engine with its win rate, and the run's status and answer counts. Win rate is how often a brand was named first among the answers naming any tracked brand; null win_rate or sentiment means unavailable or not applicable, never zero, and sentiment always comes with its classified count. It defaults to the latest completed run in the default market; pass baseline_id to compare two runs. view topics returns visibility, share of voice, position, rank and win rate per project topic; view matrix pairs engines, topics, markets and brands from each market's latest run, where not_run cells are unmeasured, never zero. Pass topic_id to read one topic. Each market is measured separately: pass market_id for another market, and never pool markets. unavailable no_completed_run means no run has finished yet; metrics_pending means the latest run has finished but its results are still being written, so try again later rather than report that nothing was measured; topic_not_measured means the run asked no prompt in that topic. Use read_visibility_trends for change over time, read_prompt_metrics for which prompts are won or lost, read_competitors for one competitor in depth, read_visibility_results for the answers themselves, and read_visibility_sources for what was cited.",
+      "Read the headline AI visibility of one run: how often answers mention the brand and cite its site, the visibility score, rankings of the brand against each competitor (mention rate, citation rate, share of voice, average position among the brands an answer named, win rate and net sentiment), a breakdown per engine with its win rate, and the run's status and answer counts. Win rate is how often a brand was named first among the answers naming any tracked brand; null win_rate or sentiment means unavailable or not applicable, never zero, and sentiment always comes with its classified count. It defaults to the latest completed run in the default market; pass baseline_id to compare two runs. view topics returns visibility, share of voice, position, rank and win rate per project topic; view matrix pairs engines, topics, markets and brands from each market's latest run, where not_run cells are unmeasured, never zero. Pass topic_id to read one topic. Each market is measured separately: pass market_id for another market, and never pool markets. unavailable no_completed_run means no run has finished yet; metrics_pending means the latest run has finished but its results are still being written, so try again later rather than report that nothing was measured; topic_not_measured means the run asked no prompt in that topic. Use read_visibility_trends for change over time, read_prompt_metrics for which prompts are won or lost, read_competitors for one competitor in depth, read_visibility_results for the answers themselves, and read_visibility_sources for what was cited. view runs lists every audit with status and progress, newest first; view run with audit_id adds its failed answers; view schedules lists audit schedules with their ids.",
     schema: z.strictObject({
       ...project,
       market_id,
@@ -251,13 +257,25 @@ export const definitions = {
       cohort,
       topic_id,
       view: z
-        .enum(['summary', 'topics', 'matrix'])
+        .enum(['summary', 'topics', 'matrix', 'runs', 'run', 'schedules'])
         .default('summary')
         .describe(
-          'summary is the run (the default); topics is one row per topic; matrix is the engine, topic, market and brand grids.',
+          'summary is the run (the default); topics is one row per topic; matrix is the engine, topic, market and brand grids; runs, run and schedules are paged.',
         ),
+      ...page,
     }),
-    read: visibilityOverview,
+    read: (read, args) => {
+      switch (args.view) {
+        case 'runs':
+          return auditRuns(read, args);
+        case 'run':
+          return auditRun(read, args);
+        case 'schedules':
+          return auditSchedules(read, args);
+        default:
+          return visibilityOverview(read, { ...args, view: args.view });
+      }
+    },
   }),
   read_visibility_trends: projectTool({
     title: 'Read visibility trends',
@@ -297,7 +315,7 @@ export const definitions = {
   read_perception: projectTool({
     title: 'Read answer perception',
     description:
-      "Read how AI answers portray the brand and competitors in the latest or a chosen run: net sentiment (-100 to +100) per brand, engine, topic and prompt, each with its coverage; praise and criticism by theme; per brand, competitors included, how many classified mentions raised each theme (theme_mentions, counts only: quotes are the brand's own); how often answers recommend or advise against the brand; and the sources cited alongside criticism. The summary view returns all of that; the quotes view lists the verified quotes behind it, paged (50 by default, pass next_cursor). The response is always available: read perception_state, where pending, unavailable or no_mentions means there is no value, never zero. Always state the coverage. Sources are cited alongside criticism, never its cause. Use read_fact_checks for whether answers are factually right, and read_visibility_overview for how often the brand is mentioned at all.",
+      "Read how AI answers portray the brand and competitors in the latest or a chosen run: net sentiment (-100 to +100) per brand, engine, topic and prompt, each with its coverage; praise and criticism by theme; per brand, competitors included, how many classified mentions raised each theme (theme_mentions, counts only: quotes are the brand's own); how often answers recommend or advise against the brand; and the sources cited alongside criticism. The summary view returns all of that; the quotes view lists the verified quotes behind it, paged (50 by default, pass next_cursor). The response is always available: read perception_state, where pending, unavailable or no_mentions means there is no value, never zero. Always state the coverage. Sources are cited alongside criticism, never its cause. Use read_fact_checks for whether answers are factually right, and read_visibility_overview for how often the brand is mentioned at all. view probe is the market probe: its latest launch, schedule and how engines describe the category; view objections lists the probe's objection groups with their ids, paged.",
     schema: z.strictObject({
       ...project,
       market_id,
@@ -305,10 +323,10 @@ export const definitions = {
       engine,
       cohort,
       view: z
-        .enum(['summary', 'quotes'])
+        .enum(['summary', 'quotes', 'probe', 'objections'])
         .default('summary')
         .describe(
-          'summary is sentiment and themes per brand; quotes lists the verified quotes, paged.',
+          'summary is sentiment and themes per brand; quotes lists the verified quotes, paged; probe and objections read the market probe.',
         ),
       entity: optional(
         z
@@ -335,7 +353,16 @@ export const definitions = {
       ),
       ...page,
     }),
-    read: perceptionRead,
+    read: (read, args) => {
+      switch (args.view) {
+        case 'probe':
+          return probeRead(read);
+        case 'objections':
+          return objectionGroups(read, args);
+        default:
+          return perceptionRead(read, { ...args, view: args.view });
+      }
+    },
   }),
   read_fact_checks: projectTool({
     title: 'Read fact checks',
@@ -449,7 +476,7 @@ export const definitions = {
   read_prompt_portfolio: projectTool({
     title: 'Read prompts',
     description:
-      'List the prompts the project tracks, so you know what is measured before reading results or changing prompts. Each row has the prompt id, text, topic, intent, buyer stage, cohort (core prompts are scored; comparison prompts name a competitor and are reported separately), status and whether audits measure it now, plus its prompt set and topic_id. topics lists every project topic (id, name, description), including topics with no prompts yet; topics_truncated says the list is partial. Rows come oldest first, in pages; pass next_cursor for more. To find one prompt by its wording use search; to see what engines answered for a prompt use read_visibility_results with its prompt_id. Prompt ids feed update_prompt_text, prepare_update_prompts and prepare_launch_audit.',
+      'List the prompts the project tracks, so you know what is measured before reading results or changing prompts. Each row has the prompt id, text, topic, intent, buyer stage, cohort (core prompts are scored; comparison prompts name a competitor and are reported separately), status and whether audits measure it now, plus its prompt set and topic_id. topics lists every project topic (id, name, description), including topics with no prompts yet; topics_truncated says the list is partial. Rows come oldest first, in pages; pass next_cursor for more. To find one prompt by its wording use search; to see what engines answered for a prompt use read_visibility_results with its prompt_id. Prompt ids feed update_prompt_text, prepare_update_prompts and prepare_launch_audit. view sets lists every prompt set, empty ones included; view candidates lists suggested prompts waiting for review, with their ids.',
     schema: z.strictObject({
       ...project,
       prompt_set_id: optional(
@@ -457,6 +484,10 @@ export const definitions = {
           'A prompt set id from an earlier row of this tool; omit for every set in the project.',
         ),
       ),
+      view: z
+        .enum(['prompts', 'sets', 'candidates'])
+        .default('prompts')
+        .describe('prompts (the default), sets or candidates; each is paged.'),
       cohort: optional(
         z
           .enum(['core', 'comparison'])
@@ -472,7 +503,16 @@ export const definitions = {
         ),
       ...page,
     }),
-    read: promptPortfolio,
+    read: (read, args) => {
+      switch (args.view) {
+        case 'sets':
+          return promptSets(read, args);
+        case 'candidates':
+          return promptCandidates(read, args);
+        default:
+          return promptPortfolio(read, args);
+      }
+    },
   }),
   read_prompt_metrics: projectTool({
     title: 'Read prompt metrics',
@@ -593,9 +633,13 @@ export const definitions = {
   }),
   read_ai_shelf: projectTool({
     title: 'Read the AI Shelf',
-    description: `Read how AI answers recommend products for an ecommerce project, per product over a window of days. Without holder_id it returns the categories with product counts and one page of products, most visible first: for each, its holder_id, kind (owned, approved_competitor or ai_observed_competitor), visibility (share of the answers in scope that named it), appearances, win rate (share of its ordered appearances at rank 1), mean position, the median mentioned price beside the catalog price, and the merchant domains answers send shoppers to; executions is the number of answers in scope. source all adds competitors to your catalog; category_id narrows to one category; pass next_cursor for more. With holder_id it returns that product's page: the same metrics, its description and image, the products competing in the same answers, merchants, cited sources, fan-out queries, per-prompt metrics, the answers it appeared in (won, lost or unranked, with rank) and its open Actions. A null metric is unavailable (no answer in scope, or no ordered appearance), never zero. unavailable no_product_catalog means the project has no product catalog, which is normal for non-ecommerce brands; use read_visibility_overview for brand mentions instead.`,
+    description: `Read how AI answers recommend products for an ecommerce project, per product over a window of days. Without holder_id it returns the categories with product counts and one page of products, most visible first: for each, its holder_id, kind (owned, approved_competitor or ai_observed_competitor), visibility (share of the answers in scope that named it), appearances, win rate (share of its ordered appearances at rank 1), mean position, the median mentioned price beside the catalog price, and the merchant domains answers send shoppers to; executions is the number of answers in scope. source all adds competitors to your catalog; category_id narrows to one category; pass next_cursor for more. With holder_id it returns that product's page: the same metrics, its description and image, the products competing in the same answers, merchants, cited sources, fan-out queries, per-prompt metrics, the answers it appeared in (won, lost or unranked, with rank) and its open Actions. A null metric is unavailable (no answer in scope, or no ordered appearance), never zero. unavailable no_product_catalog means the project has no product catalog, which is normal for non-ecommerce brands; use read_visibility_overview for brand mentions instead. view catalog lists your products with their ids; competitor_candidates, buyer_prompts and discoveries (competitor searches still running) list the commerce setup with ids, each paged.`,
     schema: z.strictObject({
       ...project,
+      view: z
+        .enum(['products', 'catalog', 'competitor_candidates', 'buyer_prompts', 'discoveries'])
+        .default('products')
+        .describe('products is visibility per product (the default); the others are setup.'),
       holder_id: optional(
         uuid.describe('A holder_id from a previous product list, to read that product in full.'),
       ),
@@ -619,13 +663,33 @@ export const definitions = {
       ),
       ...page,
     }),
-    read: shelfRead,
+    read: (read, args) =>
+      args.view === 'products'
+        ? shelfRead(read, args)
+        : commerceSetup(read, { ...args, view: args.view }),
   }),
   read_site_health: projectTool({
     title: 'Read Site Health',
-    description: `Read the Site Health summary of the latest crawl, or a chosen snapshot: the web fundamentals and AI-readiness scores with their measurement state, how many pages were selected and analyzed, and the top ${policy.site_health.reads.snapshot_top_issues} issues, each with its rule_id, severity, description, remediation and how many pages it affects. unavailable no_site_snapshot means no crawl was analyzed yet; this tool never starts one. Use read_site_pages with a rule_id to list the affected pages and read_ai_crawlability for robots access. Use render_site_health to show the user the interactive view.`,
-    schema: z.strictObject({ ...project, snapshot_id }),
-    read: siteSnapshot,
+    description: `Read the Site Health summary of the latest crawl, or a chosen snapshot: the web fundamentals and AI-readiness scores with their measurement state, how many pages were selected and analyzed, and the top ${policy.site_health.reads.snapshot_top_issues} issues, each with its rule_id, severity, description, remediation and how many pages it affects. unavailable no_site_snapshot means no crawl was analyzed yet; this tool never starts one. Use read_site_pages with a rule_id to list the affected pages and read_ai_crawlability for robots access. Use render_site_health to show the user the interactive view. view issues lists every issue group of the crawl with its group_id, paged; view schedule is the recurring crawl.`,
+    schema: z.strictObject({
+      ...project,
+      snapshot_id,
+      view: z
+        .enum(['summary', 'issues', 'schedule'])
+        .default('summary')
+        .describe('summary (the default), issues or schedule.'),
+      ...page,
+    }),
+    read: (read, args) => {
+      switch (args.view) {
+        case 'issues':
+          return siteIssueGroups(read, args);
+        case 'schedule':
+          return crawlSchedule(read);
+        default:
+          return siteSnapshot(read, args);
+      }
+    },
   }),
   read_site_pages: projectTool({
     title: 'Read site pages',
@@ -687,7 +751,7 @@ export const definitions = {
   read_site_links: projectTool({
     title: 'Read internal links',
     description:
-      'Read the internal links of crawled pages: per page, inbound and outbound link counts (overall and in main content) and nofollow inbound links, click depth from the home page, a bounded sample of the pages linking to it and linked from it with their anchors, and anchor diagnostics. Use it to find orphaned or buried pages. Pass up to 10 site_url_ids from read_site_pages to read those pages in one call (with smaller neighbor samples and anchor diagnostics counted by kind); missing_site_url_ids lists any without link metrics in this crawl (for example a page that was not analyzed). Otherwise rows come in pages; pass next_cursor for more. unavailable no_site_crawl means no crawl exists. Use read_site_pages for page scores and issues.',
+      'Read the internal links of crawled pages: per page, inbound and outbound link counts (overall and in main content) and nofollow inbound links, click depth from the home page, a bounded sample of the pages linking to it and linked from it with their anchors, and anchor diagnostics. Use it to find orphaned or buried pages. Pass up to 10 site_url_ids from read_site_pages to read those pages in one call (with smaller neighbor samples and anchor diagnostics counted by kind); missing_site_url_ids lists any without link metrics in this crawl (for example a page that was not analyzed). Otherwise rows come in pages; pass next_cursor for more. unavailable no_site_crawl means no crawl exists. Use read_site_pages for page scores and issues. view analyses gives the internal-link analyses with their ids and state, latest first.',
     schema: z.strictObject({
       ...project,
       crawl_id,
@@ -700,9 +764,13 @@ export const definitions = {
             'Page ids (site_url_id) from read_site_pages; omit to page through every page.',
           ),
       ),
+      view: z
+        .enum(['pages', 'analyses'])
+        .default('pages')
+        .describe('pages (the default) or analyses.'),
       ...page,
     }),
-    read: siteLinks,
+    read: (read, args) => (args.view === 'analyses' ? linkAnalyses(read) : siteLinks(read, args)),
   }),
   read_ai_crawlability: projectTool({
     title: 'Read AI crawler access',
@@ -882,9 +950,17 @@ export const definitions = {
   read_search_intelligence: projectTool({
     title: 'Read keyword and backlink research',
     description:
-      "List the keyword, competitor and backlink research datasets saved for this project, and whether the research provider is connected. Each dataset has its id, kind, target domain, market (location and language), status and whether its totals are aggregates rather than individual links, plus the project's owned targets, tracked competitors and latest research run. It lists datasets only: pass a dataset id to read_search_dataset for its rows. unavailable with no datasets means no research was run yet; this tool never starts research, which happens in CiteLadder. For the project's own Search Console queries use read_query_evidence instead.",
-    schema: z.strictObject(project),
-    read: searchIntelligence,
+      "List the keyword, competitor and backlink research datasets saved for this project, and whether the research provider is connected. Each dataset has its id, kind, target domain, market (location and language), status and whether its totals are aggregates rather than individual links, plus the project's owned targets, tracked competitors and latest research run. Pass a dataset id to read_search_dataset for its rows. unavailable with no datasets means no research was run yet; this tool never starts research, which happens in CiteLadder. For the project's own Search Console queries use read_query_evidence instead. view runs lists research runs with status, newest first, including runs awaiting confirmation.",
+    schema: z.strictObject({
+      ...project,
+      view: z
+        .enum(['datasets', 'runs'])
+        .default('datasets')
+        .describe('datasets (the default) or runs, paged.'),
+      ...page,
+    }),
+    read: (read, args) =>
+      args.view === 'runs' ? researchRuns(read, args) : searchIntelligence(read),
   }),
   read_search_dataset: projectTool({
     title: 'Read a research dataset',

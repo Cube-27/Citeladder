@@ -40,13 +40,8 @@ async function probeQuote(db: Database, scope: Scope, runtime: AuditRuntime): Pr
   };
 }
 
-export async function probeStatus(
-  db: Database,
-  scope: Scope,
-  runtime: AuditRuntime,
-): Promise<ProbeStatus> {
-  const [quote, [latest], schedule] = await Promise.all([
-    probeQuote(db, scope, runtime),
+export async function probeRuns(db: Database, scope: Scope): Promise<Omit<ProbeStatus, 'quote'>> {
+  const [[latest], schedule] = await Promise.all([
     probeLaunches(db, scope, { limit: 1 }),
     probeSchedules(db, scope)
       .select(['id', 'cadence', 'enabled', 'next_run_at'])
@@ -55,7 +50,6 @@ export async function probeStatus(
       .executeTakeFirst(),
   ]);
   return {
-    quote,
     latest: latest?.run ?? null,
     schedule: schedule
       ? {
@@ -66,4 +60,13 @@ export async function probeStatus(
         }
       : null,
   };
+}
+
+export async function probeStatus(
+  db: Database,
+  scope: Scope,
+  runtime: AuditRuntime,
+): Promise<ProbeStatus> {
+  const [quote, runs] = await Promise.all([probeQuote(db, scope, runtime), probeRuns(db, scope)]);
+  return { quote, ...runs };
 }

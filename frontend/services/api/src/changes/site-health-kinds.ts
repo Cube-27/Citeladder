@@ -192,7 +192,8 @@ export const siteHealthKinds = {
   }),
   mark_issue_group_fixed: changeKind({
     permission: MEMBER_WRITE,
-    purpose: 'mark every page of one Site Health issue as fixed; the next crawl verifies it',
+    purpose:
+      'mark every page of one Site Health issue as fixed; the next crawl verifies it (read_site_health view issues)',
     payload: crawlGroup,
     async execute(trx, _config, actor, change, payload) {
       await projectCrawl(trx, changeScope(actor.workspaceId, change), payload.crawl_id);
@@ -218,7 +219,8 @@ export const siteHealthKinds = {
   }),
   rerun_issue_group: changeKind({
     permission: MEMBER_RUN,
-    purpose: 'analyze again the tracked pages of one Site Health issue',
+    purpose:
+      'analyze again the tracked pages of one Site Health issue (read_site_health view issues)',
     payload: crawlGroup,
     async execute(trx, _config, actor, change, payload) {
       await projectCrawl(trx, changeScope(actor.workspaceId, change), payload.crawl_id);
@@ -267,7 +269,7 @@ export const siteHealthKinds = {
   }),
   cancel_link_analysis: changeKind({
     permission: MEMBER_RUN,
-    purpose: 'stop a queued or running internal-link analysis',
+    purpose: 'stop a queued or running internal-link analysis (read_site_links view analyses)',
     payload: z.strictObject({ analysis_id: z.uuid() }),
     async execute(trx, _config, actor, change, payload) {
       await cancelLinkRun(trx, changeScope(actor.workspaceId, change), payload.analysis_id);

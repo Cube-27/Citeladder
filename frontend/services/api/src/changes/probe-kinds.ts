@@ -129,7 +129,7 @@ export const probeKinds = {
   }),
   rename_objection_group: changeKind({
     permission: MEMBER_WRITE,
-    purpose: 'rename a probe objection group',
+    purpose: 'rename a probe objection group (read_perception view objections)',
     payload: z.strictObject({ group_id: z.uuid(), ...groupRequest.shape }),
     async execute(trx, _config, actor, change, { group_id: groupId, ...input }) {
       const group = await renameGroup(
@@ -153,7 +153,8 @@ export const probeKinds = {
   }),
   merge_objection_groups: changeKind({
     permission: MEMBER_WRITE,
-    purpose: 'merge one objection group into another; its answers move and it is deleted',
+    purpose:
+      'merge one objection group into another; its answers move and it is deleted (read_perception view objections)',
     payload: z.strictObject({ group_id: z.uuid(), into_id: z.uuid() }),
     async execute(trx, _config, actor, change, payload) {
       const kept = await mergeGroups(trx, {
@@ -181,7 +182,8 @@ export const probeKinds = {
   }),
   delete_objection_group: changeKind({
     permission: MEMBER_WRITE,
-    purpose: 'delete an objection group with the probe answers filed under it',
+    purpose:
+      'delete an objection group with the probe answers filed under it (read_perception view objections)',
     payload: z.strictObject({ group_id: z.uuid() }),
     async execute(trx, _config, actor, change, payload) {
       await deleteGroup(trx, {

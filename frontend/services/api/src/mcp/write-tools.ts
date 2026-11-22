@@ -412,7 +412,7 @@ const writeDefinitions = {
     schema: z.strictObject({
       ...project,
       audit_id: uuid.describe(
-        'A queued or running audit id (audit_id) that read_visibility_overview or confirm_change returned.',
+        'A queued or running audit id (audit_id) from read_visibility_overview view runs.',
       ),
     }),
     annotations: hints(true, false),

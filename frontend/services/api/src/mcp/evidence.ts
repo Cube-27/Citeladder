@@ -12,7 +12,7 @@ import { listDifferentiationReports } from '../source-pages/differentiation-read
 import { productDetail } from '../commerce/product-detail.ts';
 import { productMetrics } from '../commerce/products.ts';
 import { catalog } from '../commerce/reads.ts';
-import { readiness, datasetPage } from '../search-intelligence/reads.ts';
+import { readiness, datasetPage, listRuns } from '../search-intelligence/reads.ts';
 import { mcpPolicy } from './config.ts';
 import { appLink } from './links.ts';
 import { decodeCursor, encodeCursor, pagination, reference, unavailable } from './data.ts';
@@ -255,6 +255,47 @@ export async function searchIntelligence({ db, scope }: ProjectRead): Promise<Ev
     latest_run: result.latest_run,
     datasets,
     artifact_refs: datasets.map((row) => reference('search_dataset', row.id)),
+  };
+}
+
+export async function researchRuns({ db, scope }: ProjectRead, args: Page): Promise<Evidence> {
+  let offset = 0;
+  if (args.cursor) {
+    const [key, at] = decodeCursor(args.cursor, 2);
+    offset = Number(at);
+    if (key !== 'research_runs' || !Number.isSafeInteger(offset) || offset < 0)
+      throw new McpInputError('cursor is invalid');
+  }
+  const count = args.limit ?? mcpPolicy.default_list_limit;
+  const runs = await listRuns(
+    db,
+    { workspace: new WorkspaceScope(scope.workspaceId), projectId: scope.projectId },
+    { offset, limit: count + 1, awaitingConfirmation: true },
+  );
+  const items = runs.slice(0, count).map((run) => ({
+    id: run.id,
+    status: run.status,
+    awaiting_confirmation: run.status === 'reviewed' && run.confirmed_at === null,
+    action: run.action,
+    estimated_credits: run.estimated_credits,
+    charged_credits: run.charged_credits,
+    planned_calls: run.planned_calls,
+    completed_calls: run.completed_calls,
+    error_code: run.error_code,
+    expires_at: run.expires_at,
+    confirmed_at: run.confirmed_at,
+    cancelled_at: run.cancelled_at,
+    completed_at: run.completed_at,
+    created_at: run.created_at,
+  }));
+  return {
+    state: 'available',
+    view: 'runs',
+    items,
+    pagination: pagination(
+      items,
+      runs.length > count ? encodeCursor('research_runs', offset + count) : null,
+    ),
   };
 }
 

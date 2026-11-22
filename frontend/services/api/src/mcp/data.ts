@@ -20,6 +20,7 @@ import { appLink, recordPath } from './links.ts';
 import { containsPattern } from '../db/like.ts';
 import { LISTED_ACTION } from '../opportunities/actions.ts';
 import { statusView } from '../opportunities/action-status.ts';
+import { pageAfter, type PageScope } from '../public-api/pagination.ts';
 
 const perCall = new WeakMap<EvidencePrincipal, Promise<string[]> | null>();
 export function principalForCall(principal: EvidencePrincipal): EvidencePrincipal {
@@ -205,6 +206,18 @@ export const pagination = (
   next_cursor: cursor,
   total_count: total,
 });
+export function pageOf<Item extends { id: string }>(
+  items: readonly Item[],
+  args: { cursor?: string | null; limit?: number | null },
+  scope: PageScope,
+) {
+  const page = pageAfter(
+    items,
+    { cursor: args.cursor ?? null, limit: args.limit ?? mcpPolicy.default_list_limit },
+    scope,
+  );
+  return { items: page.items, pagination: pagination(page.items, page.next_cursor, items.length) };
+}
 export async function listAccountProjects(
   db: Database,
   principal: EvidencePrincipal,
