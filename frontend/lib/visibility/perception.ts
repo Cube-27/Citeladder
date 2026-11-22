@@ -99,6 +99,12 @@ const REASON_COPY: Record<NonNullable<PerceptionResponse['reason']>, string> = {
     'The classifier model changed after these runs started, so they were not classified.',
 };
 
+export function describesTooFew(data: Pick<PerceptionResponse, 'state' | 'reason' | 'coverage'>) {
+  if (data.state === 'pending') return false;
+  if (data.state === 'unavailable') return data.reason === 'not_assessable';
+  return data.coverage.classified < PERCEPTION_MIN_CLASSIFIED;
+}
+
 export function stateCopy(
   state: Exclude<PerceptionResponse['state'], 'value'>,
   reason: PerceptionResponse['reason'],
