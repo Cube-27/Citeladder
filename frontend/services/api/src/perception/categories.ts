@@ -59,7 +59,7 @@ async function projectThemes(db: Database, scope: { workspaceId: string; project
     .execute();
 }
 
-export async function saveModelCategories(
+async function saveModelCategories(
   db: Database,
   input: {
     workspaceId: string;
@@ -87,11 +87,11 @@ export async function saveModelCategories(
   return categoryIds(await projectThemes(db, input));
 }
 
-export function newCategoryNames(aspects: readonly ExtractedAspect[]) {
+function newCategoryNames(aspects: readonly ExtractedAspect[]) {
   return aspects.flatMap(({ category }) => (category.kind === 'new' ? [category.name] : []));
 }
 
-export function storedAspects(
+function storedAspects(
   aspects: readonly ExtractedAspect[],
   ids: ReadonlyMap<string, string>,
 ): { aspects: VerifiedAspect[]; capped: number; removed: number } {
