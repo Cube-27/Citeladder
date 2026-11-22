@@ -124,7 +124,10 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
         const submittedPastes = variables.attachments ?? [];
         const unchangedPastes =
           pastes.length === submittedPastes.length &&
-          pastes.every((paste, index) => paste.text === submittedPastes[index]?.text);
+          pastes.every(
+            (paste, index) =>
+              JSON.stringify(paste.attachment) === JSON.stringify(submittedPastes[index]),
+          );
         if (current.trim() === variables.message && unchangedMentions && unchangedPastes) {
           setDraft('');
           commands.clear();

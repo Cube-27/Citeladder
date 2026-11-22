@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useParams } from 'react-router-dom';
@@ -394,6 +394,44 @@ describe('NewChatScreen', () => {
         message: 'Short summarize this',
         context: {},
         attachments: [{ kind: 'pasted_text', text: brief }],
+      },
+    ]);
+  });
+
+  it('attaches text files from the picker and by drop, refuses a spreadsheet, and sends them as named files', async () => {
+    const bodies = captureChats();
+    const user = userEvent.setup({ applyAccept: false });
+    const { container } = renderNewChat('');
+    const prompts = 'prompt,topic\nWhich shoes grip in mud?,Trail';
+    const facts = 'topic,statement\npricing,Plans start at 10 dollars';
+    const message = await screen.findByLabelText('Message the agent');
+    const picker = container.querySelector('input[type="file"]');
+    if (!(picker instanceof HTMLInputElement)) throw new Error('No file picker');
+    await user.upload(picker, [
+      new File([prompts], 'prompts.csv'),
+      new File(['PK'], 'catalog.xlsx'),
+    ]);
+    const form = message.closest('form');
+    if (!form) throw new Error('No composer form');
+    fireEvent.drop(form, {
+      dataTransfer: { types: ['Files'], files: [new File([facts], 'facts.tsv')] },
+    });
+    await user.click(await screen.findByRole('button', { name: 'View facts.tsv, 2 lines' }));
+    const viewer = await screen.findByRole('dialog', { name: 'facts.tsv' });
+    expect(within(viewer).getByText(/^topic,statement/).textContent).toBe(facts);
+    await user.click(within(viewer).getByRole('button', { name: 'Close dialog' }));
+    expect(screen.queryByRole('button', { name: /catalog\.xlsx/ })).not.toBeInTheDocument();
+    await user.type(message, 'import these{Enter}');
+
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([
+      {
+        message: 'import these',
+        context: {},
+        attachments: [
+          { kind: 'file', name: 'prompts.csv', text: prompts },
+          { kind: 'file', name: 'facts.tsv', text: facts },
+        ],
       },
     ]);
   });

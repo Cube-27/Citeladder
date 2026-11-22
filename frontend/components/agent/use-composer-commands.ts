@@ -1,7 +1,11 @@
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { ComposerCommands, ComposerPastes, PastedText } from '@/components/agent/command-menu';
+import type { AgentAttachment } from '@citeladder/contracts/agent';
+
+import type { ComposerCommands, ComposerPastes } from '@/components/agent/command-menu';
+import { useToast } from '@/components/ui/toast';
+import { readAttachmentFile } from '@/lib/agent/attachment-file';
 import {
   actionLinks,
   matchOptions,
@@ -21,7 +25,7 @@ import { useDebounced } from '@/lib/use-debounced';
 
 const ACTION = 'action:';
 
-type Prepared = { message: string; mentions: string[]; attachments: PastedText[] };
+type Prepared = { message: string; mentions: string[]; attachments: AgentAttachment[] };
 
 type Draft = Readonly<{ message: string; edit: (change: (current: string) => string) => void }>;
 
@@ -42,7 +46,7 @@ export function useComposerCommands({
 }>): ComposerCommands & {
   pastes: ComposerPastes;
   clear: () => void;
-  restore: (saved: { mentions: readonly Mention[]; pastes: readonly PastedText[] }) => void;
+  restore: (saved: { mentions: readonly Mention[]; pastes: readonly AgentAttachment[] }) => void;
   prepare: (draft: Draft, send: (prepared: Prepared) => void) => void;
   resolving: boolean;
   menu: ComposerMenuState;
@@ -52,7 +56,11 @@ export function useComposerCommands({
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [pastes, setPastes] = useState<ComposerPastes['items'][number][]>([]);
   const pasteCount = useRef(0);
-  const keyed = (text: string) => ({ key: `paste-${++pasteCount.current}`, text });
+  const keyed = (attachment: AgentAttachment) => ({
+    key: `paste-${++pasteCount.current}`,
+    attachment,
+  });
+  const toast = useToast();
   const latestMentions = useRef(mentions);
   const latestPastes = useRef(pastes);
   useEffect(() => {
@@ -142,7 +150,7 @@ export function useComposerCommands({
         send({
           message: text,
           mentions: latestMentions.current.map((mention) => mention.id),
-          attachments: pasteAttachments(latestPastes.current),
+          attachments: latestPastes.current.map((paste) => paste.attachment),
         });
       if (!actionLinks(message, { origin: window.location.origin, projectId }).length) {
         finish(message);
@@ -206,10 +214,30 @@ export function useComposerCommands({
           text.length <= limits.attachment_max_chars &&
           pastes.length < limits.attachments_max;
         if (fits) {
-          const paste = keyed(text);
+          const paste = keyed({ kind: 'pasted_text', text });
           setPastes((current) => [...current, paste]);
         }
         return fits;
+      },
+      attach: (files) => {
+        if (!limits) return;
+        const room = limits.attachments_max - latestPastes.current.length;
+        if (files.length > room)
+          toast.notify(
+            `Up to ${limits.attachments_max} attachments per message`,
+            room > 0 ? `Only the first ${room} were added.` : 'Remove one to add another.',
+          );
+        for (const file of files.slice(0, Math.max(0, room)))
+          void readAttachmentFile(file, limits.attachment_max_chars).then((read) => {
+            if (read.kind === 'refused') {
+              toast.notify(`Couldn't attach ${file.name}`, read.message);
+              return;
+            }
+            const paste = keyed(read.attachment);
+            setPastes((current) =>
+              current.length < limits.attachments_max ? [...current, paste] : current,
+            );
+          });
       },
       remove: (key) => setPastes((current) => current.filter((paste) => paste.key !== key)),
     },
@@ -219,12 +247,8 @@ export function useComposerCommands({
     },
     restore: (saved) => {
       setMentions([...saved.mentions]);
-      setPastes(saved.pastes.map(({ text }) => keyed(text)));
+      setPastes(saved.pastes.map(keyed));
     },
   };
 }
 export type ComposerState = ReturnType<typeof useComposerCommands>;
-
-function pasteAttachments(pastes: ComposerPastes['items']): PastedText[] {
-  return pastes.map(({ text }) => ({ kind: 'pasted_text', text }));
-}

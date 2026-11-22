@@ -33,11 +33,11 @@ export type ComposerCommands = {
 };
 
 export type ComposerPastes = {
-  items: readonly { key: string; text: string }[];
+  items: readonly { key: string; attachment: AgentAttachment }[];
   add: (text: string) => boolean;
+  attach: (files: readonly File[]) => void;
   remove: (key: string) => void;
 };
-export type PastedText = Extract<AgentAttachment, { kind: 'pasted_text' }>;
 
 const MENU_LABEL = { '/': 'Skills', '@': 'Actions to mention' } as const;
 const MOVES: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
