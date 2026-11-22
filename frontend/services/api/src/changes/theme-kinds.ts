@@ -87,7 +87,7 @@ export const themeKinds = {
   merge_themes: changeKind({
     permission: MEMBER_WRITE,
     purpose:
-      'merge one perception theme into another; its labelled answers and probe answers move and it is deleted; probe Market rows show the kept theme from the next probe',
+      'merge one perception theme into another; its labelled answers and probe answers move and it is deleted',
     payload: z.strictObject({ theme_id: z.uuid(), into_id: z.uuid() }),
     async execute(trx, _config, actor, change, payload) {
       const kept = await mergeCategories(trx, {

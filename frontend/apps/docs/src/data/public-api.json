@@ -4854,6 +4854,47 @@
         ],
         "additionalProperties": false
       },
+      "PerceptionAttribute": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "labelled"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": ["kind", "name"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "not_found"
+              }
+            },
+            "required": ["kind"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "not_labelled"
+              }
+            },
+            "required": ["kind"],
+            "additionalProperties": false
+          }
+        ],
+        "description": "What the answer says about the business in plain buyer words. not_found: labelled, but the model gave no usable attribute. not_labelled: labelled before attributes existed; only its category is known."
+      },
       "PerceptionBreakdown": {
         "type": "object",
         "properties": {
@@ -4987,6 +5028,66 @@
               "additionalProperties": false
             },
             "description": "Per theme, the classified mentions raising it at least once."
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "mentions": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Classified mentions raising the category at least once."
+                },
+                "positive": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "negative": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "attributes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "attribute": {
+                        "type": "string"
+                      },
+                      "positive": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "negative": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "quotes": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/PerceptionQuote"
+                        },
+                        "description": "A few of the answers' own words; the brand's only, empty for a competitor."
+                      }
+                    },
+                    "required": ["attribute", "positive", "negative", "quotes"],
+                    "additionalProperties": false
+                  },
+                  "description": "The most raised attributes, labelled ones only."
+                }
+              },
+              "required": ["category", "mentions", "positive", "negative", "attributes"],
+              "additionalProperties": false
+            }
           }
         },
         "required": [
@@ -4996,7 +5097,8 @@
           "website_url",
           "score",
           "coverage",
-          "theme_mentions"
+          "theme_mentions",
+          "categories"
         ],
         "additionalProperties": false
       },
@@ -5008,6 +5110,9 @@
           },
           "theme": {
             "type": "string"
+          },
+          "attribute": {
+            "$ref": "#/components/schemas/PerceptionAttribute"
           },
           "polarity": {
             "type": "string",
@@ -5048,6 +5153,7 @@
         "required": [
           "text",
           "theme",
+          "attribute",
           "polarity",
           "entity",
           "is_brand",
@@ -12305,6 +12411,15 @@
                           "theme": null,
                           "mentions": null
                         }
+                      ],
+                      "categories": [
+                        {
+                          "category": null,
+                          "mentions": null,
+                          "positive": null,
+                          "negative": null,
+                          "attributes": null
+                        }
                       ]
                     }
                   ],
@@ -12389,6 +12504,7 @@
                         {
                           "text": null,
                           "theme": null,
+                          "attribute": null,
                           "polarity": null,
                           "entity": null,
                           "is_brand": null,
@@ -12407,6 +12523,7 @@
                     {
                       "text": "Example text",
                       "theme": "Example theme",
+                      "attribute": null,
                       "polarity": "positive",
                       "entity": "Example entity",
                       "is_brand": true,

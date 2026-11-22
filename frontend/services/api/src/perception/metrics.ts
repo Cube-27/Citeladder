@@ -395,18 +395,17 @@ function tally(said: readonly Said[], limits: CategoryLimits) {
   const recent = [...said].sort((a, b) => compareText(b.answer.observedAt, a.answer.observedAt));
   for (const { answer, mention } of recent) {
     if (mention.status.kind !== 'classified') continue;
-    for (const theme of new Set(mention.aspects.map((aspect) => aspect.theme))) {
-      const row = categories.get(theme) ?? {
+    const raised = new Set<string>();
+    for (const aspect of mention.aspects) {
+      const row = categories.get(aspect.theme) ?? {
         mentions: 0,
         positive: 0,
         negative: 0,
         attributes: new Map<string, Attribute>(),
       };
-      row.mentions++;
-      categories.set(theme, row);
-    }
-    for (const aspect of mention.aspects) {
-      const row = categories.get(aspect.theme)!;
+      categories.set(aspect.theme, row);
+      if (!raised.has(aspect.theme)) row.mentions++;
+      raised.add(aspect.theme);
       row[aspect.polarity]++;
       if (aspect.attribute.kind !== 'labelled') continue;
       const key = categoryKey(aspect.attribute.name);

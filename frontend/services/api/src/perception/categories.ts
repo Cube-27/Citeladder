@@ -2,7 +2,7 @@ import { countedMatches } from '../analysis/entity-assessment.ts';
 import type { PerceptionPolicy } from '../config/perception.ts';
 import type { Database } from '../db/database.ts';
 import { cleanName, lockThemes, nameKey, saveModelThemes } from '../projects/themes.ts';
-import type { ExtractedAspect, VerifiedAspect } from './validate.ts';
+import type { DropReason, EntitySentiment, ExtractedAspect, VerifiedAspect } from './validate.ts';
 
 export type CategoryChoice =
   | { kind: 'theme'; theme_id: string }
@@ -119,4 +119,34 @@ export function storedAspects(
     }
   });
   return { aspects: stored, capped, removed };
+}
+
+export async function categorised(
+  db: Database,
+  input: {
+    workspaceId: string;
+    projectId: string;
+    entities: readonly EntitySentiment[];
+    drops: Partial<Record<DropReason, number>>;
+    policy: Pick<PerceptionPolicy, 'project_themes'>;
+  },
+) {
+  const { entities } = input;
+  const ids = entities.some((entity) => entity.aspects.length)
+    ? await saveModelCategories(db, {
+        ...input,
+        names: entities.flatMap((entity) => newCategoryNames(entity.aspects)),
+      })
+    : new Map<string, string>();
+  const stored = entities.map((entity) => ({ entity, ...storedAspects(entity.aspects, ids) }));
+  const capped = stored.reduce((sum, row) => sum + row.capped, 0);
+  const removed = stored.reduce((sum, row) => sum + row.removed, 0);
+  return {
+    stored,
+    drops: {
+      ...input.drops,
+      ...(capped ? { category_limit: capped } : {}),
+      ...(removed ? { category_removed: removed } : {}),
+    },
+  };
 }

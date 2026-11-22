@@ -31,7 +31,7 @@ import {
 import { entityPassages, packageHash, type PerceptionPackage } from './passages.ts';
 import { untrackedNames, type UntrackedName } from './untracked-names.ts';
 import { listThemes } from '../projects/themes.ts';
-import { newCategoryNames, saveModelCategories, storedAspects } from './categories.ts';
+import { categorised } from './categories.ts';
 import { trackedEntities } from '../analysis/entity-assessment.ts';
 import { refreshNamedCandidates } from '../analysis/observed-names.ts';
 import {
@@ -130,26 +130,16 @@ function persist({
       .where('extractor_version', '=', versions.extractor_version)
       .executeTakeFirst();
     if (settled) return;
-    const entities = outcome.outcome === 'classified' ? outcome.entities : [];
-    const ids = entities.some((entity) => entity.aspects.length)
-      ? await saveModelCategories(db, {
-          workspaceId: task.workspace_id,
-          projectId,
-          names: entities.flatMap((entity) => newCategoryNames(entity.aspects)),
-          policy: settings,
-        })
-      : new Map<string, string>();
-    const stored = entities.map((entity) => ({ entity, ...storedAspects(entity.aspects, ids) }));
-    const capped = stored.reduce((sum, row) => sum + row.capped, 0);
-    const removed = stored.reduce((sum, row) => sum + row.removed, 0);
-    const drops =
+    const labelled =
       outcome.outcome === 'classified'
-        ? {
-            ...outcome.drops,
-            ...(capped ? { category_limit: capped } : {}),
-            ...(removed ? { category_removed: removed } : {}),
-          }
-        : {};
+        ? await categorised(db, {
+            workspaceId: task.workspace_id,
+            projectId,
+            entities: outcome.entities,
+            drops: outcome.drops,
+            policy: settings,
+          })
+        : { stored: [], drops: {} };
     const inserted = await db
       .insertInto('answer_perceptions')
       .values({
@@ -162,17 +152,17 @@ function persist({
         artifact_id: subject.artifact_id,
         extractor_version: versions.extractor_version,
         template_version: versions.template_version,
-        ...outcomeColumns(outcome, drops, call),
+        ...outcomeColumns(outcome, labelled.drops, call),
       })
       .onConflict((conflict) => conflict.columns(['analysis_id', 'extractor_version']).doNothing())
       .returning('id')
       .executeTakeFirst();
     if (!inserted || outcome.outcome !== 'classified') return;
-    if (stored.length)
+    if (labelled.stored.length)
       await db
         .insertInto('entity_sentiments')
         .values(
-          stored.map(({ entity, aspects }) => ({
+          labelled.stored.map(({ entity, aspects }) => ({
             id: randomUUID(),
             workspace_id: task.workspace_id,
             perception_id: id,
