@@ -31,7 +31,7 @@
   "message_max_chars": 50000,
   "mentions_max": 5,
   "attachments_max": 3,
-  "attachment_max_chars": 40000,
+  "attachment_max_chars": 150000,
   "max_proposals_per_turn": 5,
   "proposal_news_max": 10,
   "proposal_refusal_max_chars": 300,

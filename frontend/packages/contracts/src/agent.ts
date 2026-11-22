@@ -140,8 +140,16 @@ export const agentStepSchema = z.discriminatedUnion('kind', [
 ]);
 export type AgentStep = z.infer<typeof agentStepSchema>;
 
+export const AGENT_ATTACHMENT_NAME_MAX_CHARS = 255;
 function attachmentSchema(text: z.ZodString) {
-  return z.discriminatedUnion('kind', [z.strictObject({ kind: z.literal('pasted_text'), text })]);
+  return z.discriminatedUnion('kind', [
+    z.strictObject({ kind: z.literal('pasted_text'), text }),
+    z.strictObject({
+      kind: z.literal('file'),
+      name: z.string().trim().min(1).max(AGENT_ATTACHMENT_NAME_MAX_CHARS),
+      text,
+    }),
+  ]);
 }
 export const agentAttachmentSchema = attachmentSchema(z.string());
 export type AgentAttachment = z.infer<typeof agentAttachmentSchema>;
