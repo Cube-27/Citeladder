@@ -205,7 +205,7 @@ export const projectKinds = {
     permission: MEMBER_WRITE,
     purpose: "fetch the brand's and competitors' logos again from their websites",
     payload: z.strictObject({}),
-    async live(trx, actor, change) {
+    async live(trx, _config, actor, change) {
       await readProject(trx, { workspaceId: actor.workspaceId, projectId: change.projectId });
     },
     async execute(db, config, actor, change) {

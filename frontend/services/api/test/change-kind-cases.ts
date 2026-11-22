@@ -11,6 +11,7 @@ import { listGroups, saveGroups } from '../src/probes/objection-groups.ts';
 import { addMarket } from '../src/projects/markets.ts';
 import { createTheme } from '../src/projects/themes.ts';
 import { auditTenant } from './audit-fixtures.ts';
+import { dataCases } from './change-kind-data-cases.ts';
 import { siteAndActionCases } from './change-kind-site-cases.ts';
 import { billingAccount, candidate, generationRun, grant, topic } from './prompt-fixtures.ts';
 import type { SiteFixtures } from './site-health-fixtures.ts';
@@ -122,6 +123,7 @@ export function kindCases(db: Database, fixtures: SiteFixtures) {
 
   const table: Record<TabledKind, KindRow> = {
     ...siteAndActionCases(db, fixtures),
+    ...dataCases(db, fixtures),
     add_prompts: {
       foreign: 404,
       async arrange() {

@@ -11,7 +11,7 @@ import { verdictOverrideRequestSchema } from '@citeladder/contracts/project-requ
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { chunked } from '../lists.ts';
 import { requireFlag } from '../entitlements/access.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -71,7 +71,7 @@ export function overrideVerdict(
   },
 ): Promise<VerdictOverride> {
   const { scope } = input;
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await requireFlag(trx, scope.workspaceId, 'fact_checking');
     const row = await trx
       .selectFrom('claim_verdicts as cv')
