@@ -12,7 +12,7 @@ export function isForbidden(error: unknown): boolean {
   return httpErrorStatus(error) === 403;
 }
 
-export function isGone(error: unknown): boolean {
+function isGone(error: unknown): boolean {
   return isForbidden(error) || httpErrorStatus(error) === 404;
 }
 

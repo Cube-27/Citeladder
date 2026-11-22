@@ -51,24 +51,14 @@ export const SHOW_VIEW_DESCRIPTION =
 const DEFAULT_RANGE = '90d';
 
 function selection(input: z.infer<typeof showViewArguments>) {
-  const scope = { market_id: input.market_id ?? null, topic_id: input.topic_id ?? null };
-  switch (input.kind) {
-    case 'visibility_trend':
-      return { kind: input.kind, ...scope, range: input.range ?? DEFAULT_RANGE };
-    case 'visibility_ranking':
-    case 'visibility_sources':
-      return { kind: input.kind, ...scope };
-    case 'site_health_summary':
-      return { kind: input.kind, crawl_id: input.crawl_id ?? null };
-    case 'ai_traffic_overview':
-      return { kind: input.kind, range: input.range ?? DEFAULT_RANGE };
-    case 'keyword_research_rows':
-      return { kind: input.kind, dataset_id: input.dataset_id };
-    default: {
-      const exhaustive: never = input.kind;
-      return exhaustive;
-    }
-  }
+  return {
+    kind: input.kind,
+    market_id: input.market_id ?? null,
+    topic_id: input.topic_id ?? null,
+    range: input.range ?? DEFAULT_RANGE,
+    crawl_id: input.crawl_id ?? null,
+    dataset_id: input.dataset_id,
+  };
 }
 
 const sameView = (left: AgentView, right: AgentView) =>

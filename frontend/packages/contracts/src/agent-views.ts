@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const uuid = () => z.uuid();
 
-export const AGENT_VIEW_TRAFFIC_RANGES = ['30d', '90d', '1y'] as const;
+const AGENT_VIEW_TRAFFIC_RANGES = ['30d', '90d', '1y'] as const;
 export const AGENT_VIEW_VISIBILITY_RANGES = [...AGENT_VIEW_TRAFFIC_RANGES, 'all'] as const;
 
 const visibilityScope = {
@@ -23,4 +23,3 @@ export const agentViewSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('keyword_research_rows'), dataset_id: uuid() }),
 ]);
 export type AgentView = z.infer<typeof agentViewSchema>;
-export type AgentViewKind = AgentView['kind'];
