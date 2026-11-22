@@ -90,7 +90,7 @@ function ShotPicture({
             loading="lazy"
             decoding="async"
             fetchPriority={upcoming ? 'low' : 'auto'}
-            className="border-rule rounded-card block h-auto w-full border"
+            className="rounded-card block h-auto w-full"
             style={MONO}
           />
         </picture>
@@ -201,7 +201,7 @@ export function AuthShowcase() {
   return (
     <aside
       ref={root}
-      className="desktop:grid bg-well border-rule sticky top-0 hidden h-dvh min-h-0 content-center gap-[var(--page-top-gap)] overflow-hidden border-s px-[var(--content-gutter)]"
+      className="desktop:grid bg-page rounded-card sticky top-2 my-2 me-2 hidden h-[calc(100dvh-1rem)] min-h-0 content-center gap-[var(--page-top-gap)] overflow-hidden px-[var(--content-gutter)]"
       aria-label="CiteLadder features"
       aria-roledescription="carousel"
     >
