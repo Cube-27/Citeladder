@@ -2,10 +2,12 @@
 -- it to an empty database in one transaction and records its SHA-256 in
 -- schema_migrations; later changes are numbered forward migrations from 0002.
 --
--- Checkpoint of 2026-11-19: the former 0001-0049 chain (folded 2026-11-17) and
--- 0002_ai_visibility_gaps, folded into one strict file before an owner-run
--- reset (docs/decisions.md). Their rationale stays in git history. Sections run by area: each table with its keys and indexes, then
--- views, every foreign key, and last the application role with its grants.
+-- Checkpoint of 2026-11-22: the former 0001-0049 chain (folded 2026-11-17),
+-- 0002_ai_visibility_gaps (folded 2026-11-19), 0002_agent_hero and
+-- 0003_perception_categories, folded into one strict file before an owner-run
+-- reset (docs/decisions.md). Their rationale stays in git history. Sections run
+-- by area: each table with its keys and indexes, then views, every foreign key,
+-- and last the application role with its grants.
 
 -- ==========================================================================
 -- Functions
@@ -1735,7 +1737,7 @@ CREATE TABLE public.project_themes (
     source character varying(16) NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    CONSTRAINT ck_project_themes_source CHECK ((source IN ('research', 'user')))
+    CONSTRAINT ck_project_themes_source CHECK ((source IN ('research', 'user', 'model')))
 );
 
 ALTER TABLE ONLY public.project_themes
@@ -2007,6 +2009,8 @@ CREATE INDEX ix_answer_perceptions_audit_id ON public.answer_perceptions USING b
 CREATE INDEX ix_answer_perceptions_task_id ON public.answer_perceptions USING btree (task_id);
 
 CREATE INDEX ix_answer_perceptions_workspace_id_created_at ON public.answer_perceptions USING btree (workspace_id, created_at);
+
+CREATE INDEX ix_answer_perceptions_workspace_id_project_id ON public.answer_perceptions USING btree (workspace_id, project_id);
 
 -- The untracked business names each answer's perception returned, verified
 -- against its passages: raw observations, append-only.
@@ -5928,7 +5932,10 @@ CREATE TABLE public.agent_chats (
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     workspace_id uuid NOT NULL,
-    project_id uuid NOT NULL
+    project_id uuid NOT NULL,
+    model character varying(64) NOT NULL,
+    reasoning_effort character varying(16) NOT NULL,
+    CONSTRAINT ck_agent_chats_reasoning_effort CHECK ((reasoning_effort IN ('low', 'medium', 'high')))
 );
 
 ALTER TABLE ONLY public.agent_chats
@@ -5976,7 +5983,8 @@ CREATE TABLE public.agent_messages (
     project_id uuid NOT NULL,
     web_sources jsonb DEFAULT '[]'::jsonb NOT NULL,
     attachments jsonb DEFAULT '[]'::jsonb NOT NULL,
-    proposals jsonb DEFAULT '[]'::jsonb NOT NULL
+    proposals jsonb DEFAULT '[]'::jsonb NOT NULL,
+    views jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 
 ALTER TABLE ONLY public.agent_messages
@@ -6202,6 +6210,44 @@ CREATE INDEX ix_agent_outputs_project_id ON public.agent_outputs USING btree (pr
 
 CREATE INDEX ix_agent_outputs_snapshot_id ON public.agent_outputs USING btree (snapshot_id) WHERE (snapshot_id IS NOT NULL);
 
+-- What happened to a change the Agent proposed. A decision (executed or
+-- dismissed) is one row per proposal (message and index), written once, so a
+-- card executes at most once. Most kinds write it in the change's transaction,
+-- before the change runs, so a failed change leaves no decision. A live kind
+-- (its owner calls a model or fetches a site) appends a claimed row in a short
+-- transaction, runs the owner with no transaction open, and writes the decision
+-- after the owner succeeds; a failed run appends a released row, and a claim
+-- left by a crash lapses after live_change_claim_seconds so the next confirm
+-- replays the run under the same idempotency key. A refused confirm leaves the
+-- card open and appends a refused row with the owner's reason, which the
+-- Agent's next turn reads. The proposal itself stays in agent_messages.proposals.
+CREATE TABLE public.agent_proposal_outcomes (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    chat_id uuid NOT NULL,
+    message_id uuid NOT NULL,
+    proposal_index integer NOT NULL,
+    state character varying(16) NOT NULL,
+    reason character varying(500),
+    user_id uuid,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_agent_proposal_outcome_state CHECK (state IN ('executed', 'dismissed', 'refused', 'claimed', 'released')),
+    CONSTRAINT ck_agent_proposal_outcome_reason CHECK ((state = 'refused') = (reason IS NOT NULL)),
+    CONSTRAINT ck_agent_proposal_outcome_index CHECK (proposal_index >= 0)
+);
+
+ALTER TABLE ONLY public.agent_proposal_outcomes
+    ADD CONSTRAINT agent_proposal_outcomes_pkey PRIMARY KEY (id);
+
+CREATE UNIQUE INDEX uq_agent_proposal_outcome ON public.agent_proposal_outcomes USING btree (message_id, proposal_index) WHERE ((state)::text IN ('executed', 'dismissed'));
+
+CREATE INDEX ix_agent_proposal_outcomes_chat_id ON public.agent_proposal_outcomes USING btree (chat_id, created_at);
+
+CREATE INDEX ix_agent_proposal_outcomes_project_id ON public.agent_proposal_outcomes USING btree (workspace_id, project_id);
+
+CREATE INDEX ix_agent_proposal_outcomes_user_id ON public.agent_proposal_outcomes USING btree (user_id) WHERE (user_id IS NOT NULL);
+
 CREATE TABLE public.agent_run_transcripts (
     id uuid NOT NULL,
     workspace_id uuid NOT NULL,
@@ -6366,6 +6412,11 @@ CREATE INDEX ix_mcp_authorization_requests_expires_at ON public.mcp_authorizatio
 
 CREATE UNIQUE INDEX ix_mcp_authorization_requests_transaction_hash ON public.mcp_authorization_requests USING btree (transaction_hash);
 
+-- MCP offers a curated list of change kinds that grows in code
+-- (MCP_CHANGE_KINDS); prepare and confirm both check the kind against it.
+-- claimed_at is when a confirm of a live kind claimed the confirmation; a claim
+-- older than live_change_claim_seconds lapses, so a confirm after a crash
+-- replays the run.
 CREATE TABLE public.mcp_confirmations (
     id uuid NOT NULL,
     workspace_id uuid NOT NULL,
@@ -6379,7 +6430,7 @@ CREATE TABLE public.mcp_confirmations (
     expires_at timestamp with time zone NOT NULL,
     consumed_at timestamp with time zone,
     created_at timestamp with time zone NOT NULL,
-    CONSTRAINT ck_mcp_confirmations_kind CHECK (((kind)::text = ANY (ARRAY[('add_prompts'::character varying)::text, ('update_prompts'::character varying)::text, ('launch_audit'::character varying)::text, ('schedule'::character varying)::text, ('declare_implemented'::character varying)::text])))
+    claimed_at timestamp with time zone
 );
 
 ALTER TABLE ONLY public.mcp_confirmations
@@ -8133,6 +8184,21 @@ ALTER TABLE ONLY public.agent_outputs
 ALTER TABLE ONLY public.agent_outputs
     ADD CONSTRAINT agent_outputs_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.agent_chats(id) ON DELETE CASCADE;
 
+ALTER TABLE ONLY public.agent_proposal_outcomes
+    ADD CONSTRAINT agent_proposal_outcomes_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.agent_chats(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.agent_proposal_outcomes
+    ADD CONSTRAINT agent_proposal_outcomes_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.agent_messages(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.agent_proposal_outcomes
+    ADD CONSTRAINT agent_proposal_outcomes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.agent_proposal_outcomes
+    ADD CONSTRAINT agent_proposal_outcomes_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.agent_proposal_outcomes
+    ADD CONSTRAINT agent_proposal_outcomes_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
+
 ALTER TABLE ONLY public.agent_outputs
     ADD CONSTRAINT agent_outputs_snapshot_fkey FOREIGN KEY (workspace_id, snapshot_id) REFERENCES public.page_snapshots(workspace_id, id) ON DELETE CASCADE;
 
@@ -8246,6 +8312,7 @@ REVOKE UPDATE, DELETE ON
     public.billing_catalog_imports,
     public.provider_attempts,
     public.agent_tool_attempts,
+    public.agent_proposal_outcomes,
     public.search_intelligence_dispatch_attempts,
     public.commerce_competitor_attempts,
     public.site_fetch_attempts,

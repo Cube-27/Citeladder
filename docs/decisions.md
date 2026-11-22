@@ -13,17 +13,14 @@ how to add or change an entry.
 - **Schema changes are forward migrations.** From `0002_<name>.sql` on, never a
   reset or an edited applied file; [invariant 17](invariants.md#17-schema-changes-are-forward-migrations)
   has the mechanics; production is never reset for a schema change. Owner,
-  2026-11-04. Two owner-authorized exceptions refolded the baseline in place,
-  each deployed only after the owner's own reset of every database: 0001–0049
-  into `0001_baseline.sql` (owner, 2026-11-17), and `0002_ai_visibility_gaps`
-  into a strict `0001_baseline.sql` with its existing-data branches removed
-  (owner, 2026-11-19). Forward migrations from `0002` apply again after each.
-  A third is open: while the owner keeps a single baseline, schema changes
-  (the AI visibility gaps plan's and Site Health's alike) edit
-  `0001_baseline.sql` in place and CI builds the database (owner, 2026-11-20);
-  it ends when the owner names the next forward migration, after which edits to
-  the baseline stop again.
-  A reset is owner-run, never agent-run.
+  2026-11-04. While there are no customers the owner may authorize a baseline
+  refold, deployed only after the owner's own reset of every database. Three
+  refolded `0001_baseline.sql` in place: 0001–0049 (owner, 2026-11-17),
+  `0002_ai_visibility_gaps` with its existing-data branches removed (owner,
+  2026-11-19), and the Agent-plan and perception changes of November 2026,
+  `0002_agent_hero` and `0003_perception_categories`, because they change every
+  feature (owner, 2026-11-22). Forward migrations from `0002` apply again after
+  each. A reset is owner-run, never agent-run.
 - **An app route change deletes the old route.** The signed-in app keeps no
   redirect, alias, tab-key remap or URL rewrite for a renamed or removed path or
   tab: an unknown path gets the not-found page, an unknown tab the page's
