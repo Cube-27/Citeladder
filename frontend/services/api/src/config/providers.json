@@ -5,6 +5,10 @@
     "secret_pattern": "sk-|secret|password"
   },
   "scraper_reconciliation_capacity_engine": "llm_scraper_reconciliation",
+  "out_of_credit": {
+    "statuses": [400, 402, 429],
+    "markers": ["insufficient_quota", "billing_error", "credit balance is too low"]
+  },
   "errors": {
     "timeout": "timeout",
     "connection": "connection",

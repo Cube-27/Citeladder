@@ -7,6 +7,28 @@ import { answerRequestSchema, type Answer, type AnswerRequest } from './contract
 import { ProviderError } from '../providers/errors.ts';
 import { parseAnswer } from './parse.ts';
 import { boundedJson } from '../providers/response.ts';
+import { policy } from '../config.ts';
+
+const providerErrorBody = z.object({
+  error: z.object({
+    type: z.string().catch(''),
+    code: z.string().nullish().catch(null),
+    message: z.string().catch(''),
+  }),
+});
+
+async function outOfCredit(response: Response, settings: ProviderSettings, signal: AbortSignal) {
+  const { statuses, markers } = providerPolicy.out_of_credit;
+  if (!statuses.includes(response.status)) {
+    await response.body?.cancel();
+    return false;
+  }
+  const payload = await boundedJson(response, settings.maxResponseBytes, signal).catch(() => null);
+  const error = providerErrorBody.safeParse(payload).data?.error;
+  if (!error) return false;
+  const text = `${error.type} ${error.code ?? ''} ${error.message}`.toLowerCase();
+  return markers.some((marker) => text.includes(marker));
+}
 
 export function answerPayload(request: AnswerRequest): Record<string, unknown> {
   answerRequestSchema.parse(request);
@@ -141,7 +163,8 @@ export async function executeAnswer(
     throw new ProviderError(signal.aborted ? 'timeout' : 'connection', true);
   }
   if (!response.ok) {
-    await response.body?.cancel();
+    if (await outOfCredit(response, settings, signal))
+      throw new ProviderError(policy.dataforseo.constants.error_account_unavailable);
     throw new ProviderError(
       providerErrorCode(response.status),
       transientStatus(response.status),
