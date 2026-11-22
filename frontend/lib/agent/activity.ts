@@ -28,6 +28,7 @@ const TOOL_ACTIVITY: Record<string, { verb: Verb; noun: string }> = {
   suggest_edits: { verb: VERB.suggest, noun: 'changes' },
   propose_declaration: { verb: VERB.suggest, noun: 'marking an Action implemented' },
   show_view: { verb: VERB.show, noun: 'a chart or table' },
+  propose_change: { verb: VERB.suggest, noun: 'a change' },
   web_search: { verb: VERB.search, noun: 'the web' },
   search: { verb: VERB.search, noun: 'CiteLadder' },
   fetch: { verb: VERB.read, noun: 'a record' },
@@ -144,6 +145,8 @@ export function activityRows(steps: readonly AgentStep[]): ActivityRow[] {
           status: 'completed',
           target: step.label,
         });
+      case 'change':
+        return callRow(key, { tool: 'propose_change', status: 'completed', target: step.label });
       case 'document':
         return [
           {

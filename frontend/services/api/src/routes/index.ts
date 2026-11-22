@@ -30,10 +30,12 @@ import { auditScheduleRoutes } from './audit-schedules.ts';
 import { auditRoutes } from './audits.ts';
 import { providerRoutes } from './providers.ts';
 import { agentRoutes } from './agent.ts';
+import { agentProposalRoutes } from './agent-proposals.ts';
 import { clientErrorRoutes } from './client-errors.ts';
 
 export const ROUTE_MODULES: Readonly<Record<string, readonly ProductRoute[]>> = {
   'routes/agent.ts': agentRoutes,
+  'routes/agent-proposals.ts': agentProposalRoutes,
   'routes/providers.ts': providerRoutes,
   'routes/mcp-connections.ts': MCP_CONNECTION_ROUTES,
   'routes/api-keys.ts': API_KEY_ROUTES,

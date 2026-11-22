@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 import type { Actor } from '../auth/actor.ts';
 import { authorize, type Authorized, type Permission } from '../commands/permission.ts';
 import type { ServiceConfig } from '../config.ts';
@@ -7,12 +7,13 @@ import { operatorTransaction } from '../db/operator-transaction.ts';
 
 export type PreparedChange = Readonly<{ id: string; projectId: string }>;
 export type ChangeResult = Readonly<{ summary: string }> & Record<string, unknown>;
-export type ChangePreview = Readonly<{
-  title: string;
-  rows: readonly Readonly<{ label: string; value: string }>[];
-  spend: string | null;
-  opens: Readonly<{ label: string; path: string }> | null;
-}>;
+export const changePreviewSchema = z.strictObject({
+  title: z.string(),
+  rows: z.array(z.strictObject({ label: z.string(), value: z.string() })),
+  spend: z.string().nullable(),
+  opens: z.strictObject({ label: z.string(), path: z.string() }).nullable(),
+});
+export type ChangePreview = z.infer<typeof changePreviewSchema>;
 export type PreviewContext = Readonly<{
   db: Database;
   config: ServiceConfig;

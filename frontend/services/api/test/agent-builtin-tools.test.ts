@@ -633,7 +633,7 @@ describe('propose_declaration on PostgreSQL', () => {
     expect((await propose(seen(scope, links.id), links.id)).text).toMatch(/Internal links/u);
     expect(state.proposals).toEqual([]);
     expect(await propose(seen(stranger, foreign.id), foreign.id)).toMatchObject({ ok: true });
-    expect(state.proposals.map((proposal) => proposal.action_id)).toEqual([foreign.id]);
+    expect(state.proposals).toMatchObject([{ kind: 'declaration', action_id: foreign.id }]);
   });
 
   it('commits a mentioned Action’s proposal on the reply, once, and declares nothing', async () => {

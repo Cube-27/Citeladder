@@ -1,3 +1,4 @@
+import type { ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { ToolCall } from '../models/conversation.ts';
 import { authorize } from './access.ts';
@@ -12,17 +13,22 @@ import {
   type BuiltinOutcome,
 } from './builtin-tools.ts';
 import type { SkillCatalog } from './contracts.ts';
+import { proposeChange, PROPOSE_CHANGE } from './change-proposals.ts';
 import { knownActions, proposeDeclaration, PROPOSE_DECLARATION } from './proposals.ts';
 import type { Turn } from './runtime.ts';
 import type { TurnState } from './turn-budget.ts';
 import { documentStep } from './turn-state.ts';
 import { showView, SHOW_VIEW } from './views.ts';
 
-export function runBuiltin(
+export async function runBuiltin(
   db: Database,
-  catalog: SkillCatalog,
+  { catalog, config }: { catalog: SkillCatalog; config: () => ServiceConfig },
   { turn, state, call }: { turn: Turn; state: TurnState; call: ToolCall },
 ): Promise<BuiltinOutcome> {
+  if (call.name === PROPOSE_CHANGE) {
+    await authorize(db, turn.scope);
+    return proposeChange(db, config(), { scope: turn.scope, state }, call.input);
+  }
   if (call.name === PROPOSE_DECLARATION)
     return db.transaction().execute(async (trx) => {
       await authorize(trx, turn.scope);

@@ -1,4 +1,4 @@
-import { agentProposalSchema, type AgentProposal } from '@citeladder/contracts/agent';
+import { agentDeclarationProposalSchema } from '@citeladder/contracts/agent';
 import { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -6,7 +6,7 @@ import { argumentProblem } from '../mcp/tools.ts';
 import { declarableMembers } from '../opportunities/actions.ts';
 import { ruleCheckKind } from '../opportunities/checks/registry.ts';
 import type { BuiltinOutcome } from './builtin-tools.ts';
-import type { Scope } from './contracts.ts';
+import { agentPolicy, type Scope } from './contracts.ts';
 import type { ChatDocument } from './outputs.ts';
 import { stepText } from './sources.ts';
 import type { TurnState } from './turn-budget.ts';
@@ -153,6 +153,11 @@ export async function proposeDeclaration(
     ok: false,
     text: 'Propose a declaration only for the chat’s Action, one the person mentioned, or one a read returned this turn. Read the Action first.',
   };
+  if (state.proposals.length >= agentPolicy.max_proposals_per_turn)
+    return {
+      ok: false,
+      text: `At most ${agentPolicy.max_proposals_per_turn} changes can be proposed in one turn. Reply now; the person can ask for more.`,
+    };
   if (!turn.known.has(actionId)) return unseen;
   const checked = await eligibility(db, turn.scope, actionId);
   if (checked.kind === 'unknown') return unseen;
@@ -165,12 +170,16 @@ export async function proposeDeclaration(
   if (problem) return { ok: false, text: problem };
   const shipped = shippedRevision(turn, state, document, actionId);
   if (!shipped.ok) return shipped;
-  if (state.proposals.some((proposal) => proposal.action_id === actionId))
+  if (
+    state.proposals.some(
+      (proposal) => proposal.kind === 'declaration' && proposal.action_id === actionId,
+    )
+  )
     return {
       ok: false,
       text: 'This Action’s declaration is already proposed in this turn. Reply now.',
     };
-  const proposal: AgentProposal = agentProposalSchema.parse({
+  const proposal = agentDeclarationProposalSchema.parse({
     kind: 'declaration',
     action_id: actionId,
     revision: shipped.revision,

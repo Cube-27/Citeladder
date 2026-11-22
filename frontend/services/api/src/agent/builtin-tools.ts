@@ -11,6 +11,11 @@ import {
   type SkillCatalog,
 } from './contracts.ts';
 import {
+  PROPOSE_CHANGE,
+  PROPOSE_CHANGE_DESCRIPTION,
+  proposeChangeArguments,
+} from './change-proposals.ts';
+import {
   PROPOSE_DECLARATION,
   PROPOSE_DESCRIPTION,
   proposeDeclarationArguments,
@@ -158,6 +163,11 @@ export function agentToolList(
     { name: EDIT_DOCUMENT, description: EDIT_DESCRIPTION, arguments: edit },
     { name: SUGGEST_EDITS, description: SUGGEST_DESCRIPTION, arguments: suggest },
     {
+      name: PROPOSE_CHANGE,
+      description: PROPOSE_CHANGE_DESCRIPTION,
+      arguments: proposeChangeArguments,
+    },
+    {
       name: PROPOSE_DECLARATION,
       description: PROPOSE_DESCRIPTION,
       arguments: proposeDeclarationArguments,
@@ -172,6 +182,7 @@ const BUILTINS: ReadonlySet<string> = new Set([
   SAVE_DOCUMENT,
   EDIT_DOCUMENT,
   SUGGEST_EDITS,
+  PROPOSE_CHANGE,
   PROPOSE_DECLARATION,
   SHOW_VIEW,
 ]);
