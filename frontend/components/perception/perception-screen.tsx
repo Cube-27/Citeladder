@@ -50,7 +50,7 @@ export function PerceptionScreen() {
     <TabsRoot value={tab} onValueChange={setTab}>
       <ReportPage
         tabs={<TabRow items={items} ariaLabel="Perception views" />}
-        actions={probeControls.actions}
+        actions={probeControls.actions ?? null}
         filters={ready && !probe ? <FilterBar filters={pageFilters} /> : undefined}
       >
         {probe ? null : <RunBanner queries={queries} />}

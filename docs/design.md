@@ -22,10 +22,10 @@ held by review.
 
 | Token            | Dark                     | Light              | Use                                  |
 | ---------------- | ------------------------ | ------------------ | ------------------------------------ |
-| `ground`         | `#09090a`                | `#f2f2f4`          | window and sidebar                   |
-| `panel`          | `#121213`                | `#ffffff`          | the inset content panel              |
-| `raised`         | `#1a1a1b`                | `#ffffff`          | secondary buttons, menus             |
-| `raised-2`       | `#252526`                | `#eef0f2`          | hover on raised, avatar              |
+| `ground`         | `#080809`                | `#f2f2f4`          | window and sidebar                   |
+| `panel`          | `#0f0f10`                | `#ffffff`          | the inset content panel              |
+| `raised`         | `#161617`                | `#ffffff`          | secondary buttons, menus             |
+| `raised-2`       | `#1f1f20`                | `#eef0f2`          | hover on raised, avatar              |
 | `state-hover`    | `rgb(255 255 255 / 4%)`  | `rgb(0 0 0 / 3%)`  | row and quiet-control hover          |
 | `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | selected segment, dark current row   |
 | `rule`           | `rgb(255 255 255 / 8%)`  | `rgb(0 0 0 / 8%)`  | every hairline (the spec's `line`)   |
@@ -144,8 +144,11 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Metric strip:** one `rule`-framed strip, radius 8, cells divided by
   hairlines, cell padding 10 by 16, 12px label over the value. Never cards;
   no meters, rings or bars inside a cell (AR-3).
-- **Table:** `rule` frame, radius 8; head 32 on `panel`, 12px at 500; rows
-  40, one line each, hairline dividers, `state-hover` fill; secondary text
+- **Table** (the HeroUI table, owner 2026-11-22): a `well` tray, radius 12,
+  no edge, 4 padding at the sides and foot; head 36 on the tray, 12px at
+  500, a 16-high `rule` tick between columns; the body a `panel` card,
+  radius 8, cells padded 16; rows
+  44, one line each, hairline dividers, `state-hover` fill; secondary text
   inline after the primary in `ink-2`; numbers right-aligned in tabular
   figures; foot 40 with the count and an icon pager. The first column takes the spare width,
   the others hug their content (AR-4).
@@ -196,8 +199,8 @@ One entry per family; wave 2 fills each from the layouts above.
   below) and one framed surface (`SLIP_FACE`: `rule` edge, radius 8,
   `panel`). A framed thing inside a container drops its own edge. Inside the
   panel every framed surface (tables, strips, setting rows, cards, charts)
-  is `panel` in both themes, and so are the controls and table heads on it
-  in light; only hover and selected fills, insets for quoted or raw material, and overlays take another fill.
+  is `panel` in both themes (a table is a `panel` body on its `well` tray),
+  and so are the controls on it in light; only hover and selected fills, insets for quoted or raw material, and overlays take another fill.
 - **Lists and rows.** A list row matches a table row: 40 high, hairlines
   between rows, `state-hover` when it opens something.
 - **Overlays** (dialogs, drawers, command palette). `panel` with a `rule`

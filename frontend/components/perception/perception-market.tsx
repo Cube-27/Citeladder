@@ -16,6 +16,7 @@ import type { FigureSegment } from '@/components/ui/figure-strip';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Meter } from '@/components/ui/meter';
 import { SectionContent, TitledSection } from '@/components/ui/section';
+import { slipClasses } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
 import { TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
@@ -30,11 +31,11 @@ export function PerceptionMarket({ data }: Readonly<{ data: ProbeMarketValue }>)
       <Lede data={data} />
       <AppGrid layout="halves">
         <TitledSection
-          variant="framed"
+          className="flex flex-col"
           title={`How AI describes ${data.brand}`}
           description="Raised most, and earliest"
         >
-          <SectionContent>
+          <SectionContent className={slipClasses('flex-1')}>
             {data.known_for.length ? (
               <Stack gap="compact">
                 {data.known_for.map((item) => (
@@ -57,7 +58,7 @@ export function PerceptionMarket({ data }: Readonly<{ data: ProbeMarketValue }>)
           </SectionContent>
         </TitledSection>
         <TitledSection
-          variant="framed"
+          className="flex flex-col"
           title="Brand shape"
           description="Position score per theme"
           actions={
@@ -68,7 +69,7 @@ export function PerceptionMarket({ data }: Readonly<{ data: ProbeMarketValue }>)
             ) : undefined
           }
         >
-          <SectionContent>
+          <SectionContent className={slipClasses('flex-1')}>
             <BrandRadar key={rosterKey(data.themes)} themes={data.themes} />
           </SectionContent>
         </TitledSection>

@@ -353,10 +353,10 @@
 }
 
 :root[data-theme='dark']:not([data-public-surface]) {
-  --color-ground: #09090a;
-  --color-panel: #121213;
-  --color-raised: #1a1a1b;
-  --color-raised-2: #252526;
+  --color-ground: #080809;
+  --color-panel: #0f0f10;
+  --color-raised: #161617;
+  --color-raised-2: #1f1f20;
   --color-well: var(--color-raised);
   --color-thumb: var(--color-ink-2);
   --color-rule: rgb(255 255 255 / 8%);
@@ -523,7 +523,7 @@
 
 :root:not([data-public-surface]) {
   text-wrap: pretty;
-  --table-head-ground: var(--color-panel);
+  --table-head-ground: var(--color-well);
   --table-ground: var(--color-surface);
   --color-ground: #f2f2f4;
   --color-chrome: var(--color-ground);
@@ -1661,23 +1661,40 @@ label {
 }
 
 :root:not([data-public-surface]) :is([data-data-table-frame], .table-frame:not([data-data-table] *)) {
-  border: 1px solid var(--color-rule);
-  border-radius: var(--radius-card);
-  background: var(--table-ground);
+  border: 0;
+  border-radius: var(--radius-overlay);
+  background: var(--table-head-ground);
+  padding: 0 4px 4px;
   overflow: clip;
 }
 :root:not([data-public-surface]) .table-frame {
+  --table-cell-padding-x: 16px;
   --table-cell-padding-y: 4px;
-  border-radius: 0;
 }
-:root:not([data-public-surface]) [data-data-table-frame] .table-frame,
-:root:not([data-public-surface])
-  :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
-  [data-data-table-frame] {
+:root:not([data-public-surface]) [data-data-table-frame] .table-frame {
   border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+:root:not([data-public-surface]) [data-data-table-foot] {
+  border-top: 0;
+}
+:root:not([data-public-surface]) .table-frame tbody {
+  clip-path: inset(0 round var(--radius-card));
+}
+:root:not([data-public-surface]) .table-frame thead th + th::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 50%;
+  width: 1px;
+  height: 16px;
+  translate: 0 -50%;
+  background: var(--color-rule);
+  pointer-events: none;
 }
 :root:not([data-public-surface]) .table-frame thead th {
-  height: 32px;
+  height: 36px;
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
   font-weight: var(--weight-medium);
@@ -1685,7 +1702,6 @@ label {
   text-transform: none;
   color: var(--color-ink-2);
   background: var(--table-head-ground);
-  box-shadow: inset 0 -1px 0 var(--color-rule);
 }
 :root:not([data-public-surface]) .table-frame tbody > tr > * {
   background-color: var(--table-ground);
@@ -1702,12 +1718,6 @@ label {
 }
 :root:not([data-public-surface]) .table-frame td.tabular-nums {
   font-variant-numeric: tabular-nums;
-}
-:root:not([data-public-surface]) .table-frame tr > :first-child {
-  padding-inline-start: 16px;
-}
-:root:not([data-public-surface]) .table-frame tr > :last-child {
-  padding-inline-end: 16px;
 }
 
 :is([data-pinned='1'] tr > :first-child, [data-pinned='2'] tr > :nth-child(2)) {
@@ -1957,8 +1967,6 @@ label {
     .surface-card,
     .surface-slip,
     .surface-lift,
-    [data-data-table-frame],
-    .table-frame:not([data-data-table] *),
     [data-figure-strip]
   ):not(
     :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], [data-figure-strip]) *

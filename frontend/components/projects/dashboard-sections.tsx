@@ -250,7 +250,12 @@ function ownedCitationSegment({ track }: Pick<CommandCenter, 'track'>): FigureSe
 
 export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <WidgetFrame id="movement" title="Movement" fill={data.movements.length ? 'chart' : 'list'}>
+    <WidgetFrame
+      id="movement"
+      title="Movement"
+      fill={data.movements.length ? 'chart' : 'list'}
+      card={data.movements.length > 0}
+    >
       {data.movements.length ? (
         <MovementChart movements={data.movements} />
       ) : (
