@@ -230,7 +230,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can it take actions on my behalf?',
-        a: 'No. It has no write tools. It cannot publish, send messages, activate prompts, start crawls, buy data or change your site.',
+        a: 'Only when you confirm. It proposes changes to your project, such as activating prompts, starting a crawl or buying data, and nothing happens until you confirm. It cannot publish, send messages or change your site.',
       },
       {
         q: 'Is the Agent in the free trial?',

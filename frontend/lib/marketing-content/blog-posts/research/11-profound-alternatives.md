@@ -118,7 +118,7 @@ CiteLadder tracks what ChatGPT, Claude, Gemini, Google AI Overviews and Google A
 
 **Where it fits:** teams that want the evidence behind every score, want to read the method rather than trust a description of it, and want site diagnostics and actions in the same workflow. It also exposes read and change tools over MCP, so an assistant can query results and propose changes that you confirm.
 
-**Where it does not fit:** CiteLadder covers four engines. If your contract requires Perplexity, Copilot, Google AI Mode, DeepSeek or Grok, Profound Enterprise or one of the tools above covers more. CiteLadder also does not advertise SOC 2, SSO or HIPAA; if those are procurement requirements, raise them before a pilot. The [enterprise AEO](/enterprise) page describes what the hosted service does provide for a security review.
+**Where it does not fit:** CiteLadder covers five engines. If your contract requires Perplexity, Copilot, DeepSeek or Grok, Profound Enterprise or one of the tools above covers more. CiteLadder also does not advertise SOC 2, SSO or HIPAA; if those are procurement requirements, raise them before a pilot. The [enterprise AEO](/enterprise) page describes what the hosted service does provide for a security review.
 
 ## Which alternative for which reason
 
