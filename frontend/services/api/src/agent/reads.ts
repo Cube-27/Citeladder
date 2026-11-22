@@ -26,6 +26,7 @@ import { pageFetchView } from '../page-documents/reads.ts';
 import { statusView } from '../opportunities/action-status.ts';
 import { openTargetChoice } from './target-adapter.ts';
 import { stepTarget } from './sources.ts';
+import { proposalViews } from './change-proposals.ts';
 
 const iso = (date: Date | null) => date?.toISOString() ?? null;
 const ORIGIN_REFS: readonly [AgentChatOrigin, readonly string[]][] = [
@@ -164,7 +165,8 @@ async function referencedActions(
       if (id) ids.add(id);
     }
     for (const mention of message.mentions) if (mention.kind === 'action') ids.add(mention.id);
-    for (const proposal of message.proposals) ids.add(proposal.action_id);
+    for (const proposal of message.proposals)
+      if (proposal.kind === 'declaration') ids.add(proposal.action_id);
   }
   if (!ids.size) return [];
   const rows = await db
@@ -184,7 +186,7 @@ export async function readChat(
   chatId: string,
 ) {
   const { chat, scope } = await chatIn(db, workspace, chatId);
-  const [messages, run, documents, locked] = await Promise.all([
+  const [messages, run, documents, locked, outcomes] = await Promise.all([
     db
       .selectFrom('agent_messages')
       .selectAll()
@@ -203,6 +205,12 @@ export async function readChat(
       .executeTakeFirst(),
     chatDocuments(db, chat),
     modelLocked(db, scope, chat.id),
+    db
+      .selectFrom('agent_proposal_outcomes')
+      .select(['message_id', 'proposal_index', 'state'])
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('chat_id', '=', chat.id)
+      .execute(),
   ]);
   const generated = documents.length
     ? await db
@@ -255,6 +263,10 @@ export async function readChat(
       evidence_refs: revisionRefs(message.evidence_refs),
       web_sources: revisionWebSources(message.web_sources),
       steps: messageSteps(message.steps),
+      proposals: proposalViews(
+        message.proposals,
+        outcomes.filter((outcome) => outcome.message_id === message.id),
+      ),
     }),
   );
   return agentChatDetailSchema.parse({

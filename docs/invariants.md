@@ -161,7 +161,11 @@ the matching scope and its Owner or Admin creator's current role allows it
 ([Public API](public-api.md)). A write through MCP is one when the grant holds
 `citeladder:write`, the member's live role allows it, and the change is a
 bounded direct edit or was confirmed through `confirm_change` against its
-preview; the in-app Agent stays read-only ([MCP](mcp.md#changes)).
+preview ([MCP](mcp.md#changes)). An in-app Agent change is one only when the
+member clicks Confirm on the card for that proposal: it executes once, as the
+clicking member, against their live role and the kind's permission
+([Agent](agents.md#proposed-changes)). No preview makes a model call or spends
+a paid run.
 
 ## 11. Context is selected and inspectable
 
@@ -190,9 +194,14 @@ content (such as `FAQPage`), markup is generated from reviewed visible content.
 The Agent uses the shared registered read tools on a server-pinned project and
 config-owned budgets frozen per run (model calls, tool calls, parallel reads,
 result size, time). Every call is authorized as the chat member, bounded,
-versioned, and idempotent where required. The Agent has no write tool,
-arbitrary SQL, unrestricted URL access, provider impersonation, private data
-store, autonomous recursion, or unapproved external mutation. Its one reach
+versioned, and idempotent where required. The Agent changes project data only
+by proposing: a proposal is a dry run with a server-built preview that commits
+with the reply, and nothing executes until the person clicks its card; the
+runtime never confirms, never awaits a job it proposed and never continues a
+turn on its own. Billing, plan, members, API keys, credentials and settings are
+never proposed. The Agent has no direct write tool, arbitrary SQL, unrestricted
+URL access, provider impersonation, private data store, autonomous recursion,
+or unapproved external mutation. Its one reach
 outside CiteLadder data is the provider's hosted web search, within a
 config-owned per-turn budget that each call's funding hold covers; the Agent
 never fetches, submits to or changes a page it found. Persisted run transcripts

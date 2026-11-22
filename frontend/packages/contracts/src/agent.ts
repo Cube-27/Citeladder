@@ -121,6 +121,7 @@ export const agentStepSchema = z.discriminatedUnion('kind', [
   }),
   responseObject({ kind: z.literal('suggestion') }),
   responseObject({ kind: z.literal('proposal'), label: z.string() }),
+  responseObject({ kind: z.literal('change'), label: z.string() }),
   responseObject({
     kind: z.literal('tool'),
     ordinal: z.number().int(),
@@ -145,13 +146,23 @@ function attachmentSchema(text: z.ZodString) {
 export const agentAttachmentSchema = attachmentSchema(z.string());
 export type AgentAttachment = z.infer<typeof agentAttachmentSchema>;
 
+export const agentDeclarationProposalSchema = responseObject({
+  kind: z.literal('declaration'),
+  action_id: uuid(),
+  revision: responseObject({ id: uuid(), number: z.number().int() }).nullable(),
+  go_live_day: z.iso.date().nullable(),
+  deployment_reference: z.string().nullable(),
+});
 export const agentProposalSchema = z.discriminatedUnion('kind', [
+  agentDeclarationProposalSchema,
   responseObject({
-    kind: z.literal('declaration'),
-    action_id: uuid(),
-    revision: responseObject({ id: uuid(), number: z.number().int() }).nullable(),
-    go_live_day: z.iso.date().nullable(),
-    deployment_reference: z.string().nullable(),
+    kind: z.literal('change'),
+    index: z.number().int().nonnegative(),
+    title: z.string(),
+    rows: z.array(responseObject({ label: z.string(), value: z.string() })),
+    spend: z.string().nullable(),
+    opens: responseObject({ label: z.string(), path: z.string() }).nullable(),
+    outcome: z.enum(['open', 'executed', 'dismissed', 'unavailable']),
   }),
 ]);
 export type AgentProposal = z.infer<typeof agentProposalSchema>;

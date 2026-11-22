@@ -315,7 +315,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
   const analytics = new AnalyticsWorker(db, loadWorkerSettings(env));
   const discovery = new DiscoveryWorker(db, { env });
   const integration = new IntegrationWorker(db, undefined, integrationSettings(env));
-  const agent = new AgentWorker(db, await createAgentBindings(db, env));
+  const agent = new AgentWorker(db, await createAgentBindings(db, env, config));
   const audit = new AuditWorker(
     db,
     runtime,

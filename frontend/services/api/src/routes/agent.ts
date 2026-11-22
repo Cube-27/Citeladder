@@ -35,6 +35,7 @@ import { changeIdleChat } from '../agent/outputs.ts';
 import { DEFAULT_CHOICE } from '../agent/model-choice.ts';
 import { chooseOutputTarget } from '../agent/target-adapter.ts';
 import { readChat, listChats, listRevisions, runView, revisionView } from '../agent/reads.ts';
+import { agentProposalRoutes } from './agent-proposals.ts';
 import { defineGetRoute, definePostRoute, definePutRoute, defineDeleteRoute } from './define.ts';
 
 const family = 'agent',
@@ -580,4 +581,5 @@ export const agentRoutes = [
       return { revision: row.revision, text: row.text, created_at: row.created_at.toISOString() };
     },
   }),
+  ...agentProposalRoutes,
 ];

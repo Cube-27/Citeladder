@@ -109,7 +109,7 @@ crawl writers lock it `FOR NO KEY UPDATE`. An analyze task commit writes no
 crawl column and takes it `FOR SHARE` in the same place, so commits share it
 while Stop and the reconcile wait for them. A path that inserts project rows after the capacity lock (an audit
 launch) takes the project's key-share lock before the capacity lock. Cancellation remains `audit -> task
-mutation -> reservation release`. A run ending takes its probe launch's advisory
+mutation -> reservation release`. An Agent proposal confirm takes `membership (share) -> proposal outcome insert` (which key-shares the project, chat and message) before the change kind's own prefix, so the outcome row adds no lock after a billing row. A run ending takes its probe launch's advisory
 lock after its own audit row; nothing takes it before an audit row
 (`probes/launch-end.ts`). A transaction that has acquired the account
 capacity or any billing row must not acquire project, prompt, runtime, audit, or

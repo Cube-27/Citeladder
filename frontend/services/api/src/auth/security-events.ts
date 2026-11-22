@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Database } from '../db/database.ts';
+import type { AgentChangeKind } from '../agent/change-proposals.ts';
 import type { McpWriteKind } from '../mcp/write-tools.ts';
 
 type SecurityEvent =
@@ -38,7 +39,8 @@ type SecurityEvent =
   | 'mcp.revoke'
   | 'mcp.token_reuse'
   | 'mcp.workspace_revoke'
-  | `mcp.write.${McpWriteKind}`;
+  | `mcp.write.${McpWriteKind}`
+  | `agent.change.${AgentChangeKind}`;
 
 export async function recordSecurityEvent(
   db: Database,

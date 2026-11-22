@@ -277,6 +277,19 @@ export interface AgentOutputSuggestions {
   workspace_id: string;
 }
 
+export interface AgentProposalOutcomes {
+  chat_id: string;
+  created_at: Timestamp;
+  id: string;
+  message_id: string;
+  project_id: string;
+  proposal_index: number;
+  reason: string | null;
+  state: string;
+  user_id: string | null;
+  workspace_id: string;
+}
+
 export interface AgentRuns {
   attempt_count: number;
   available_at: Timestamp;
@@ -3772,6 +3785,7 @@ export interface DB {
   agent_output_suggestion_events: AgentOutputSuggestionEvents;
   agent_output_suggestions: AgentOutputSuggestions;
   agent_outputs: AgentOutputs;
+  agent_proposal_outcomes: AgentProposalOutcomes;
   agent_run_transcripts: AgentRunTranscripts;
   agent_runs: AgentRuns;
   agent_tool_attempts: AgentToolAttempts;
