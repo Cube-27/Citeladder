@@ -104,7 +104,7 @@ export function stateCopy(
     case 'unavailable':
       return {
         heading: 'Perception unavailable',
-        description: sentenceCase(UNAVAILABLE_SHORT[reason ?? 'not_assessable']),
+        description: reason ? sentenceCase(UNAVAILABLE_SHORT[reason]) : null,
       };
     default: {
       const _exhaustive: never = state;

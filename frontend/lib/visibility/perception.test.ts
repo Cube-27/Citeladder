@@ -273,5 +273,9 @@ describe('perception display', () => {
 
   it('names an unavailable read by its reason in a short label', () => {
     expect(stateCopy('unavailable', 'platform_cap').description).toBe('Platform limit reached');
+    expect(stateCopy('unavailable', null)).toEqual({
+      heading: 'Perception unavailable',
+      description: null,
+    });
   });
 });

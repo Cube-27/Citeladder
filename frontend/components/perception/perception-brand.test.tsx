@@ -173,7 +173,12 @@ describe('Perception view', () => {
       metrics_version: 'm1',
       comparable: true,
     };
-    render(<PerceptionView data={response({ trend: [point, point] })} />);
+    const later = {
+      ...point,
+      audit_id: '33333333-3333-4333-8333-333333333333',
+      completed_at: '2026-10-08T00:00:00Z',
+    };
+    render(<PerceptionView data={response({ trend: [point, later] })} />);
     expect(screen.getByRole('region', { name: 'Sentiment' })).toBeVisible();
     expect(screen.getByRole('region', { name: 'Net sentiment' })).toBeVisible();
     const views = within(screen.getByRole('radiogroup', { name: 'Break perception down' }));
