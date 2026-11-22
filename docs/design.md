@@ -22,16 +22,16 @@ held by review.
 
 | Token            | Dark                     | Light              | Use                                  |
 | ---------------- | ------------------------ | ------------------ | ------------------------------------ |
-| `ground`         | `#080809`                | `#f2f2f4`          | window and sidebar                   |
-| `panel`          | `#0f0f10`                | `#ffffff`          | the inset content panel              |
-| `raised`         | `#161617`                | `#ffffff`          | secondary buttons, menus             |
-| `raised-2`       | `#1f1f20`                | `#eef0f2`          | hover on raised, avatar              |
+| `ground`         | `#0a0a0c`                | `#f2f2f4`          | window and sidebar                   |
+| `panel`          | `#151516`                | `#ffffff`          | the inset content panel              |
+| `raised`         | `#1e1e1f`                | `#ffffff`          | secondary buttons, menus             |
+| `raised-2`       | `#2b2b2c`                | `#eef0f2`          | hover on raised, avatar              |
 | `state-hover`    | `rgb(255 255 255 / 4%)`  | `rgb(0 0 0 / 3%)`  | row and quiet-control hover          |
 | `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | selected segment, dark current row   |
 | `rule`           | `rgb(255 255 255 / 8%)`  | `rgb(0 0 0 / 8%)`  | every hairline (the spec's `line`)   |
 | `control-line`   | `rgb(255 255 255 / 12%)` | `rgb(0 0 0 / 12%)` | hovered field edge (`line-strong`)   |
 | `ink`            | `#ececec`                | `#1d1d1d`          | text                                 |
-| `ink-2`          | `#929293`                | `#5f636a`          | secondary text, icons                |
+| `ink-2`          | `#979798`                | `#5f636a`          | secondary text, icons                |
 | `accent`         | `#ff6a33`                | `#e8501a`          | "you, here" and focus                |
 | `primary`        | deep accent              | deep accent        | every action fill, white text        |
 
