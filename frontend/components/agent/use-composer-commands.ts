@@ -175,7 +175,7 @@ export function useComposerCommands({
           const text = applyLinks(message, resolved);
           if (text !== message)
             edit((current) => (current.trim() === message.trim() ? text : current));
-          finish(text);
+          if (pendingReads.current === 0) finish(text);
         })
         .finally(() => {
           resolvingRef.current = false;

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useParams } from 'react-router-dom';
@@ -529,7 +529,7 @@ describe('NewChatScreen', () => {
     ]);
   });
 
-  it('resolves Action links at send once, and leaves one from another project as written', async () => {
+  it('resolves Action links at send once, leaves one from another project as written, and holds the send for a file picked meanwhile', async () => {
     const bodies = captureChats();
     serveAction();
     let release!: () => void;
@@ -553,15 +553,33 @@ describe('NewChatScreen', () => {
     );
     const own = `${window.location.origin}/actions/${PRICING}`;
     const foreign = `${window.location.origin}/actions/${BLOG}`;
-    const user = userEvent.setup();
-    renderNewChat(`?prompt=${encodeURIComponent(`Compare ${own} with ${foreign}`)}`);
+    const notes = 'topic\nPricing';
+    let finishRead!: () => void;
+    const file = new File([notes], 'notes.csv');
+    Object.defineProperty(file, 'arrayBuffer', {
+      value: () =>
+        new Promise<ArrayBuffer>((resolve) => {
+          finishRead = () => resolve(new TextEncoder().encode(notes).buffer);
+        }),
+    });
+    const user = userEvent.setup({ applyAccept: false });
+    const { container } = renderNewChat(
+      `?prompt=${encodeURIComponent(`Compare ${own} with ${foreign}`)}`,
+    );
 
     const message = await screen.findByDisplayValue(`Compare ${own} with ${foreign}`);
     await user.type(message, '{Enter}');
     await user.type(message, '{Enter}');
+    const picker = container.querySelector('input[type="file"]');
+    if (!(picker instanceof HTMLInputElement)) throw new Error('No file picker');
+    await user.upload(picker, file);
     release();
     await waitFor(() => expect(message).toHaveValue(`Compare @Pricing page with ${foreign}`));
     expect(screen.getByRole('button', { name: 'Remove @Pricing page' })).toBeVisible();
+    expect(bodies).toEqual([]);
+    act(() => finishRead());
+    await screen.findByRole('button', { name: 'View notes.csv, 2 lines' });
+    await user.type(message, '{Enter}');
     create();
 
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
@@ -569,6 +587,7 @@ describe('NewChatScreen', () => {
       expect.objectContaining({
         message: `Compare @Pricing page with ${foreign}`,
         mentions: [PRICING],
+        attachments: [{ kind: 'file', name: 'notes.csv', text: notes }],
       }),
     ]);
   });
