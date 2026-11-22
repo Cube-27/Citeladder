@@ -1,6 +1,7 @@
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
 import { Fragment, type ComponentProps, type ReactNode } from 'react';
 
+import { AnswerLink } from '@/components/runs/answer-link';
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { useShownSpan } from '@/components/ui/data-table-fit';
@@ -152,7 +153,11 @@ function QuoteRow({
         </StatusMark>
       </TableCell>
       <TableCell>{engine}</TableCell>
-      <TableCell>{quote.prompt}</TableCell>
+      <TableCell>
+        <AnswerLink answer={quote} underline="hover">
+          {quote.prompt}
+        </AnswerLink>
+      </TableCell>
     </TableRow>
   );
 }
