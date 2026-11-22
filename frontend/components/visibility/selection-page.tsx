@@ -85,7 +85,7 @@ export function useSelectionPageFilters({
     onChangeGranularity: filters.setGranularity,
     cohort: filters.cohort,
     onChangeCohort: filters.setCohort,
-    selectionMode: filters.selectionMode,
+    selectionMode: queries.selectionMode,
     outcome: filters.outcome,
     onChangeOutcome: filters.setOutcome,
     markets: queries.markets,

@@ -11,11 +11,16 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { QuoteLink } from '@/components/visibility/visibility-perception';
-import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import { formatPercent, percentText } from '@/lib/format';
-import { breakdownRow, formatNet, themeNegativeShare } from '@/lib/visibility/perception';
+import { formatPercent } from '@/lib/format';
+import {
+  breakdownRow,
+  formatNet,
+  SMALL_SAMPLE,
+  sampleNote,
+  themeNegativeShare,
+} from '@/lib/visibility/perception';
 
 type View = 'theme' | 'topic' | 'engine' | 'prompt' | 'source';
 type Segment = Exclude<View, 'theme' | 'source'>;
@@ -94,7 +99,6 @@ function ThemeTable({
       {themes.map((theme) => {
         const expanded = open === theme.theme;
         const share = themeNegativeShare(theme);
-        const shown = share === null ? null : percentText(share);
         return (
           <Fragment key={theme.theme}>
             <TableRow>
@@ -108,14 +112,25 @@ function ThemeTable({
               </TableCell>
               <TableCell numeric>{theme.negative}</TableCell>
               <TableCell numeric>{theme.positive}</TableCell>
-              <TableCell numeric>{shown ?? <Absence state="too_few" />}</TableCell>
+              <TableCell numeric>
+                {share.kind === 'empty' ? (
+                  <Absence />
+                ) : (
+                  <>
+                    {share.text}
+                    {share.small ? (
+                      <span className="text-ink-2 block">{sampleNote(share, 'judging')}</span>
+                    ) : null}
+                  </>
+                )}
+              </TableCell>
               <TableCell>
-                {share === null ? null : (
+                {share.kind === 'empty' ? null : (
                   <CellMeter
                     label={`${theme.theme}: negative share`}
-                    value={share * 100}
+                    value={share.share * 100}
                     max={100}
-                    valueText={shown ?? ''}
+                    valueText={share.text}
                     tone="negative"
                   />
                 )}
@@ -194,16 +209,19 @@ function SegmentTable({
       state={rows.length ? undefined : noneHere('No answers in this selection named you.')}
     >
       {rows.map((row) => {
-        const cells = breakdownRow(row, PERCEPTION_MIN_CLASSIFIED);
+        const cells = breakdownRow(row);
         return (
           <TableRow key={row.key}>
             <TableCell>{name(row)}</TableCell>
             <TableCell numeric>
               {cells.classified} of {cells.mentions}
+              {cells.kind === 'value' && cells.small ? (
+                <span className="text-ink-2 block">{SMALL_SAMPLE}</span>
+              ) : null}
             </TableCell>
-            {cells.kind === 'too_few' ? (
+            {cells.kind === 'empty' ? (
               <TableCell numeric colSpan={4} className="text-ink-2">
-                Too few classified ({cells.classified} of the {cells.needed} needed)
+                No classified mentions
               </TableCell>
             ) : (
               <>

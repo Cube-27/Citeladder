@@ -19,16 +19,18 @@ import {
   PerceptionState,
 } from '@/components/visibility/visibility-perception';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate } from '@/lib/format';
+import { availabilityLabel, formatDisplayDate } from '@/lib/format';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
   coverageExtras,
   formatNet,
-  gatedFigure,
   negativeHeadline,
-  shareReading,
   rankThemes,
+  sampleNote,
+  sampleShare,
   sentimentTrend,
+  SMALL_SAMPLE,
+  type SampleShare,
 } from '@/lib/visibility/perception';
 
 const THEME_LIST_LIMIT = 8;
@@ -67,13 +69,17 @@ function Lede({
   const { recommended, coverage } = data;
   const share = (key: 'positive' | 'negative', label: string): FigureSegment =>
     score
-      ? {
+      ? sampleFigure({
           key,
           label,
-          ...gatedFigure(shareReading(score[`${key}_share`], score.classified)),
-          sub: `${score[key]} of ${score.classified} classified mentions`,
-        }
+          reading: sampleShare({ count: score[key], basis: score.classified }),
+          noun: 'classified mentions',
+          missing: 'classified',
+        })
       : { key, label, value: null, missingState: 'unavailable' };
+  const against = recommended.recommended_against
+    ? `; ${recommended.recommended_against} advised against`
+    : '';
   const segments: FigureSegment[] = [
     {
       key: 'describing',
@@ -83,16 +89,13 @@ function Lede({
     },
     share('positive', 'Positive'),
     share('negative', 'Negative'),
-    {
+    sampleFigure({
       key: 'recommended',
       label: 'Recommended',
-      ...gatedFigure(shareReading(recommended.rate, recommended.mentioned), 'answers'),
-      sub:
-        `${recommended.recommended} of ${recommended.mentioned} answers naming you` +
-        (recommended.recommended_against
-          ? `; ${recommended.recommended_against} advised against`
-          : ''),
-    },
+      reading: sampleShare({ count: recommended.recommended, basis: recommended.mentioned }),
+      noun: `answers naming you${against}`,
+      missing: 'answers',
+    }),
   ];
   return (
     <Section>
@@ -101,6 +104,7 @@ function Lede({
           <h2 className={textRole('heading')}>
             {negativeHeadline(score) ?? 'How AI describes you'}
           </h2>
+          <p className={textRole('body', 'text-ink-2')}>{coverageWords(data)}</p>
           <FigureStrip
             label="Brand perception"
             segments={factFigure ? [...segments, factFigure] : segments}
@@ -109,6 +113,30 @@ function Lede({
       </SectionContent>
     </Section>
   );
+}
+
+function coverageWords(data: PerceptionResponse): string {
+  const runs = data.source_audit_ids.length;
+  const answers = data.recommended.mentioned;
+  return `${runs} ${runs === 1 ? 'run' : 'runs'} · ${answers} ${answers === 1 ? 'answer' : 'answers'} naming you`;
+}
+
+function sampleFigure({
+  key,
+  label,
+  reading,
+  noun,
+  missing,
+}: Readonly<{
+  key: string;
+  label: string;
+  reading: SampleShare;
+  noun: string;
+  missing: string;
+}>): FigureSegment {
+  if (reading.kind === 'empty')
+    return { key, label, value: null, missingLabel: `${availabilityLabel('too_few')} ${missing}` };
+  return { key, label, value: reading.text, sub: sampleNote(reading, noun) };
 }
 
 type ThemeOrder = 'negative' | 'positive';
@@ -171,15 +199,22 @@ function SentimentParts({
 }: Readonly<{ score: PerceptionResponse['entities'][number]['score'] | undefined }>) {
   if (!score?.classified)
     return <StateBlock kind="empty" inline message="No classified mentions of you." />;
-  const reading = shareReading(score.positive_share, score.classified);
-  if (reading.kind === 'too_few')
-    return (
-      <StateBlock
-        kind="empty"
-        inline
-        message={`Too few classified (${reading.basis} of the ${reading.minimum} needed).`}
-      />
-    );
+  const reading = sampleShare({ count: score.positive, basis: score.classified });
+  return (
+    <Stack gap="item">
+      <SentimentDonut score={score} />
+      {reading.kind === 'value' && reading.small ? (
+        <p className={textRole('body', 'text-ink-2')}>
+          {`${score.classified} classified · ${SMALL_SAMPLE}`}
+        </p>
+      ) : null}
+    </Stack>
+  );
+}
+
+function SentimentDonut({
+  score,
+}: Readonly<{ score: PerceptionResponse['entities'][number]['score'] }>) {
   return (
     <PartDonut
       label="Sentiment of classified mentions"

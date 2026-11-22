@@ -1,5 +1,5 @@
 import type { NetSentiment } from '@citeladder/contracts';
-import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
+import { PERCEPTION_MIN_CLASSIFIED, PERCEPTION_MIN_THEME_JUDGING } from '@/lib/config/visibility';
 import { availabilityLabel, percentText } from '@/lib/format';
 import type {
   PerceptionCoverage,
@@ -156,12 +156,33 @@ export function rankThemes(
     .slice(0, limit);
 }
 
+export const SMALL_SAMPLE = 'small sample';
+
+export type SampleShare =
+  | { kind: 'empty' }
+  | { kind: 'value'; share: number; text: string; count: number; basis: number; small: boolean };
+
+export function sampleShare({
+  count,
+  basis,
+  minimum = PERCEPTION_MIN_CLASSIFIED,
+}: Readonly<{ count: number; basis: number; minimum?: number }>): SampleShare {
+  if (basis <= 0) return { kind: 'empty' };
+  const share = count / basis;
+  return { kind: 'value', share, text: percentText(share), count, basis, small: basis < minimum };
+}
+
+export function sampleNote(reading: SampleShare, noun: string): string | undefined {
+  if (reading.kind === 'empty') return undefined;
+  const counts = `${reading.count} of ${reading.basis} ${noun}`;
+  return reading.small ? `${counts} · ${SMALL_SAMPLE}` : counts;
+}
+
 export function themeNegativeShare(
   theme: Pick<Theme, 'negative' | 'positive'>,
-  minimum = PERCEPTION_MIN_CLASSIFIED,
-): number | null {
-  const polar = theme.negative + theme.positive;
-  return meetsMinimum(polar, minimum) ? theme.negative / polar : null;
+  minimum = PERCEPTION_MIN_THEME_JUDGING,
+): SampleShare {
+  return sampleShare({ count: theme.negative, basis: theme.negative + theme.positive, minimum });
 }
 
 export function sentimentTrend(
@@ -178,11 +199,12 @@ export function sentimentTrend(
 }
 
 export type BreakdownRow =
-  | { kind: 'too_few'; classified: number; mentions: number; needed: number }
+  | { kind: 'empty'; classified: number; mentions: number }
   | {
       kind: 'value';
       classified: number;
       mentions: number;
+      small: boolean;
       positive: number;
       neutral: number;
       negative: number;
@@ -191,15 +213,15 @@ export type BreakdownRow =
 
 export function breakdownRow(
   row: PerceptionResponse['topics'][number],
-  minimum: number,
+  minimum = PERCEPTION_MIN_CLASSIFIED,
 ): BreakdownRow {
   const { score, coverage } = row;
   const counts = { classified: score.classified, mentions: coverage.mentions };
-  if (!meetsMinimum(score.classified, minimum))
-    return { kind: 'too_few', ...counts, needed: minimum };
+  if (score.classified <= 0) return { kind: 'empty', ...counts };
   return {
     kind: 'value',
     ...counts,
+    small: score.classified < minimum,
     positive: score.positive / score.classified,
     neutral: score.neutral / score.classified,
     negative: score.negative / score.classified,
