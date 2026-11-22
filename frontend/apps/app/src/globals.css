@@ -362,7 +362,7 @@
   --color-rule: rgb(255 255 255 / 8%);
   --color-control-line: rgb(255 255 255 / 12%);
   --color-ink: #ececec;
-  --color-ink-2: #979798;
+  --color-ink-2: #a8a8aa;
   --color-ink-hover: oklch(85% 0 0);
   --color-accent: #ff6a33;
   --color-accent-text: oklch(75.3% 0.155 41.6);
@@ -541,7 +541,7 @@
   --field-focus-edge: var(--color-focus);
   --color-control-edge: var(--color-rule);
   --color-ink: #1d1d1d;
-  --color-ink-2: #5f636a;
+  --color-ink-2: #54585f;
   --color-ink-3: #71717a;
   --color-ink-hover: oklch(32% 0.015 264);
   --color-on-ink: var(--color-panel);

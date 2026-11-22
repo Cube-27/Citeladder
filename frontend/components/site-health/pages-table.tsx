@@ -8,6 +8,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { mutedWhenMissing, TableCell, TableRow, TableTime, UrlText } from '@/components/ui/table';
 import { sharedOrigin } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { Absence, printed } from '@/components/ui/absence';
 import { TextLink } from '@/components/ui/text-link';
 import type { PagesSort } from '@/lib/api/site-health';
@@ -24,6 +25,7 @@ import {
   statusLabel,
 } from '@/lib/site-health/status';
 import { useProjectHref } from '@/lib/navigation/project-destination';
+import { scoreBand, type ScoreBand } from '@/lib/score-band';
 
 function LinkedFromLine({ page }: Readonly<{ page: PageSummary }>) {
   const [first, ...rest] = page.linked_from;
@@ -148,7 +150,10 @@ export function PagesTable({
             <TableCell className="whitespace-nowrap">
               <PageKindBadge pageKind={page.page_kind} />
             </TableCell>
-            <TableCell numeric className="tabular-nums">
+            <TableCell
+              numeric
+              className={cn('tabular-nums', page.issue_count === 0 && 'text-ink-2')}
+            >
               {formatIssueCount(page.issue_count)}
             </TableCell>
             <TableCell numeric className={mutedWhenMissing(page.web_fundamentals_score)}>
@@ -175,8 +180,14 @@ export function PagesTable({
 
 function MeasurementValue({ score, state }: Readonly<{ score: number | null; state: string }>) {
   if (score === null) return measurementStateValue(state);
-  return printed(formatScore(score));
+  return <span className={SCORE_TONE[scoreBand(score)]}>{printed(formatScore(score))}</span>;
 }
+
+const SCORE_TONE = {
+  low: 'text-negative font-medium',
+  mid: 'text-warning font-medium',
+  high: undefined,
+} satisfies Record<ScoreBand, string | undefined>;
 
 function measurementStateValue(state: string) {
   if (state === 'limited_evidence') return 'Limited evidence';

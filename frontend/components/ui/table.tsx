@@ -329,7 +329,7 @@ export function TableTime({
   const timeZone = useDisplayTimeZone();
   if (!value) return fallback;
   return (
-    <ClampText className="tabular-nums">
+    <ClampText className="text-ink-2 tabular-nums">
       <time dateTime={value}>{formatDisplayTimestamp(value, timeZone)}</time>
     </ClampText>
   );
