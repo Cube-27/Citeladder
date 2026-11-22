@@ -16,6 +16,7 @@ import { getVisibilityTopics } from '../visibility/topics.ts';
 import { getVisibilityEvidence } from '../visibility/evidence.ts';
 import { getVisibilitySources } from '../visibility/sources.ts';
 import { getSourceUrlDetail } from '../visibility/source-url.ts';
+import { probeCitedPage } from '../probes/cited-page.ts';
 import { getVisibilityTrends } from '../visibility/trends.ts';
 import { getPerception, getPerceptionQuotes } from '../visibility/perception.ts';
 import { factCheckingEnabled } from '../projects/brand-facts.ts';
@@ -407,8 +408,10 @@ export async function sourceUrl(
   args: Selection & { url: string },
 ): Promise<Evidence> {
   const detail = await getSourceUrlDetail(db, runs(scope, args), args.url);
-  if (!detail.retrievals) return { ...unavailable('url_not_cited_in_selection'), url: args.url };
-  return { state: 'available', ...detail };
+  if (detail.retrievals) return { state: 'available', ...detail };
+  const probed = await probeCitedPage(db, scope, { url: args.url, engine: args.engine ?? null });
+  if (probed) return { state: 'available', ...probed };
+  return { ...unavailable('url_not_cited_in_selection'), url: args.url };
 }
 
 function validateSelection(selection: AnalyticsSelection) {
