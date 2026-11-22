@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import { auditPolicy } from '../audits/config.ts';
 import type { Database } from '../db/database.ts';
+import { providerMetadataWithoutRawBody } from '../db/json.ts';
 import { enqueueDerivedOpportunityRefresh } from '../opportunities/enqueue.ts';
 import { payloadString, taskProject, type Executor } from '../queue/executor.ts';
 import { loadRevision, recordCatalogRevision, revisionShelf } from './catalog-revisions.ts';
@@ -30,7 +31,7 @@ function pendingAnswers(db: Database, scope: CommerceScope, revisionId: string, 
       't.prompt_snapshot_id',
       'r.id as artifact_id',
       'r.answer_text',
-      'r.provider_metadata',
+      providerMetadataWithoutRawBody('r.provider_metadata'),
       'r.citations',
       'r.created_at',
     ])

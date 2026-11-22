@@ -232,6 +232,11 @@ function persist({
   };
 }
 
+function passagesCut(pkg: PerceptionPackage) {
+  const cut = pkg.entities.reduce((sum, entity) => sum + entity.cut_chars, 0);
+  return cut ? { passage_chars_cut: cut } : {};
+}
+
 function classify(
   gateway: ModelGateway,
   input: {
@@ -260,7 +265,12 @@ function classify(
       entities: validated.entities,
       claims: claims.claims,
       names: names.names ?? [],
-      drops: { ...validated.drops, ...claims.drops, ...names.drops },
+      drops: {
+        ...validated.drops,
+        ...claims.drops,
+        ...names.drops,
+        ...passagesCut(pkg),
+      },
     };
   };
   if (!claimsRequest)

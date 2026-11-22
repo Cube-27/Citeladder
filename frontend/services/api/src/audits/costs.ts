@@ -148,8 +148,17 @@ export async function appendCostProjection(
   const artifact = await db
     .selectFrom('raw_response_artifacts as r')
     .innerJoin('audits as a', 'a.id', 'r.audit_id')
-    .selectAll('r')
-    .select('a.funded_budget_period_start')
+    .select([
+      'r.id',
+      'r.workspace_id',
+      'r.audit_id',
+      'r.task_id',
+      'r.logical_engine',
+      'r.transport_provider',
+      'r.transport_model',
+      'r.usage',
+      'a.funded_budget_period_start',
+    ])
     .where('a.workspace_id', '=', workspaceId)
     .where('r.id', '=', artifactId)
     .forUpdate('r')

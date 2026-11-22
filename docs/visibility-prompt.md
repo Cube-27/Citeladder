@@ -743,7 +743,8 @@ customer credits. Policy, caps, the project-theme limits and the templates live 
   The model receives, per business (brand first, competitors by first mention,
   bounded), every sentence naming it plus one either side, the brand with a
   larger character budget than each competitor; offsets are code
-  points, like the entity assessment. An unparseable output is retried once,
+  points, like the entity assessment. Characters the passage budget leaves out
+  are counted in `drop_counts.passage_chars_cut`, never cut silently. An unparseable output is retried once,
   then recorded as `invalid_output`; a provider fault is `model_error`. The
   outcome, usage and input hash land in `answer_perceptions` with one
   `entity_sentiments` row per business sent, in the lease-fenced terminal

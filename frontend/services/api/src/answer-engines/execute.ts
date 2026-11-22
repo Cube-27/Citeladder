@@ -49,7 +49,7 @@ function googlePayload(request: AnswerRequest): Record<string, unknown> {
     model: request.transport_model,
     input: request.prompt,
     store: false,
-    system_instruction: request.system_instruction,
+    ...(request.system_instruction ? { system_instruction: request.system_instruction } : {}),
     max_output_tokens: request.max_output_tokens,
     ...(['minimal', 'low'].includes(request.reasoning_effort)
       ? { generation_config: { thinking_level: request.reasoning_effort } }

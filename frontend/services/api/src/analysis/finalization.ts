@@ -82,7 +82,7 @@ export async function deriveRunMetrics(
   const artifacts = await trx
     .selectFrom('raw_response_artifacts as r')
     .innerJoin('audits as a', 'a.id', 'r.audit_id')
-    .selectAll('r')
+    .select(['r.id', 'r.task_id', 'r.usage'])
     .where('a.workspace_id', '=', workspaceId)
     .where('r.audit_id', '=', auditId)
     .execute();

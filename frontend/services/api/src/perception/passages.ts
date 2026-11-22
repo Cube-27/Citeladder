@@ -12,6 +12,7 @@ export type EntityPassages = {
   name: string;
   kind: 'brand' | 'competitor';
   spans: Span[];
+  cut_chars: number;
 };
 
 export type PerceptionPackage = {
@@ -138,9 +139,11 @@ export function entityPassages(input: {
       entity.kind === 'brand'
         ? policy.max_passage_chars_per_brand
         : policy.max_passage_chars_per_entity;
+    let windowChars = 0;
     const spans: Span[] = [];
     for (const window of fixed ?? windows(occurrences, ranges)) {
-      if (budget <= 0) break;
+      windowChars += points(window.end) - points(window.start);
+      if (budget <= 0) continue;
       const mention = occurrences.find((offset) => offset >= window.start) ?? window.start;
       const { start, end } = clip(
         points(window.start),
@@ -157,6 +160,7 @@ export function entityPassages(input: {
       name: entity.name,
       kind: entity.kind === 'brand' ? 'brand' : 'competitor',
       spans,
+      cut_chars: windowChars - spans.reduce((sum, span) => sum + span.end - span.start, 0),
     };
   });
 }
