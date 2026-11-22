@@ -528,14 +528,14 @@
   text-wrap: pretty;
   --table-head-ground: var(--color-well);
   --table-ground: var(--color-surface);
-  --color-ground: #eeeef1;
+  --color-ground: #e9e9ed;
   --color-chrome: var(--color-ground);
   --color-panel: #ffffff;
   --color-surface: var(--color-panel);
   --color-raised: var(--color-panel);
-  --color-raised-2: #eef0f2;
-  --color-well: #f3f4f6;
-  --color-page: #f4f4f7;
+  --color-raised-2: #eeeef1;
+  --color-well: #f4f4f6;
+  --color-page: #f4f4f6;
   --color-rule: rgb(0 0 0 / 11%);
   --color-control-line: rgb(0 0 0 / 22%);
   --color-focus: var(--color-accent);
@@ -562,7 +562,7 @@
   --color-data-rival-2: oklch(53.2% 0.1214 251.5);
   --color-data-rival-3: oklch(43.6% 0.176 291.5);
   --color-data-rival-4: oklch(54.3% 0.0889 188.8);
-  --color-data-other: oklch(63% 0.0193 264.4);
+  --color-data-other: oklch(61% 0.0193 264.4);
   --color-state-hover: rgb(0 0 0 / 3%);
   --color-state-selected: rgb(0 0 0 / 6%);
   --color-state-pressed: var(--color-state-selected);
@@ -619,7 +619,7 @@
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
-  --nav-current-fill: #dcdce1;
+  --nav-current-fill: #d9d9de;
   --panel-inset: 0px;
   --route-chrome-height: calc(
     2 * var(--panel-inset) + var(--masthead-block-size, var(--masthead-height)) +
@@ -1965,7 +1965,7 @@ label {
   --lift-radius: var(--radius-card);
   --lift-border: transparent;
   --lift-shadow: none;
-  --table-head-ground: #e6e6e9;
+  --table-head-ground: #e4e4e8;
 }
 :root:not([data-public-surface]) [data-chart-frame]:not([data-chart-frame='auto']) {
   border-color: transparent;
@@ -2016,18 +2016,26 @@ label {
 }
 :root:not([data-public-surface])
   :is([data-state-frame], [data-state-block-inline]):not(
-    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table], [data-data-table-frame], .table-frame, [data-figure-strip]) *
+    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip]) *
   ) {
   border-radius: var(--lift-radius, var(--radius-card));
   background-color: var(--card-ground, var(--color-surface));
 }
 :root:not([data-public-surface])
   [data-state-block-inline]:not(
-    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table], [data-data-table-frame], .table-frame, [data-figure-strip]) *
+    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip]) *
   ) {
   padding: 12px 16px;
 }
 :root:not([data-public-surface]) :is(a, button, [role='link']):not(:hover, :focus-visible),
 :root:not([data-public-surface]) :is(a, button, [role='link']):not(:hover, :focus-visible) * {
   text-decoration-color: transparent;
+}
+:root:not([data-public-surface])
+  [data-chart-frame='auto']:not(
+    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog']) *
+  ) {
+  border-radius: var(--radius-card);
+  padding: 12px 16px;
+  background-color: var(--card-ground, var(--color-surface));
 }

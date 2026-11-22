@@ -22,12 +22,12 @@ held by review.
 
 | Token            | Dark                     | Light              | Use                                  |
 | ---------------- | ------------------------ | ------------------ | ------------------------------------ |
-| `ground`         | `#0a0a0c`                | `#eeeef1`          | window and sidebar                   |
-| `page`           | `#101011`                | `#f4f4f7`          | the inset content panel's paper      |
+| `ground`         | `#0a0a0c`                | `#e9e9ed`          | window and sidebar                   |
+| `page`           | `#101011`                | `#f4f4f6`          | the inset content panel's paper      |
 | `panel`          | `#151516`                | `#ffffff`          | surfaces on the paper, inputs        |
 | `raised`         | `#1e1e1f`                | `#ffffff`          | secondary buttons, menus             |
 | `card`           | `#1b1b1c`                | `#ffffff`          | top-level cards and the metric strip |
-| `raised-2`       | `#2b2b2c`                | `#eef0f2`          | hover on raised, avatar              |
+| `raised-2`       | `#2b2b2c`                | `#eeeef1`          | hover on raised, avatar              |
 | `state-hover`    | `rgb(255 255 255 / 4%)`  | `rgb(0 0 0 / 3%)`  | row and quiet-control hover          |
 | `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | selected segment, dark current row   |
 | `rule`           | `rgb(255 255 255 / 11%)` | `rgb(0 0 0 / 11%)` | every hairline (the spec's `line`)   |
@@ -38,13 +38,14 @@ held by review.
 | `primary`        | deep accent              | deep accent        | every action fill, white text        |
 
 Older role names bind onto the table so call sites keep working: `chrome` is
-`ground`, `surface` is `panel`, `well` is `#f3f4f6` in light (`raised` in
-dark), the table tray is `#e6e6e9` in light (`raised` in dark), `chart-grid` is `rule`, `state-pressed` is `state-selected`, `on-ink` is
+`ground`, `surface` is `panel`, `well` is the `page` grey in light (`raised` in
+dark), the table tray is `#e4e4e8` in light (`raised` in dark), `chart-grid` is `rule`, `state-pressed` is `state-selected`, `on-ink` is
 `panel`. Status colours (`positive`, `negative`, `warning`, `info` and their
 `-wash` fills), `accent-text`, `accent-wash` and the data series keep their
 values in `globals.css`. A status colour appears only beside a glyph and a
 word, never as a large fill; the one exception is a Site health page score,
-printed in `negative` below 50 and `warning` below 80 (owner, 2026-11-22). Data: `data-you` is the accent, `data-rival-1`
+printed in `negative` below 50 and `warning` below 80 (owner, 2026-11-22). The light greys share one hue and step darker in this order: `panel`, `page`,
+`raised-2`, `ground`, the table tray, the current nav row. Data: `data-you` is the accent, `data-rival-1`
 to `-4` ink then cool hues in rank order, `data-other` the grouped rest.
 
 ## Type
@@ -119,7 +120,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Shell.** Sidebar 224 on `ground` (200 below 1280), 8 padding: header row
   as tall as the page header (workspace switcher, settings icon), the
   Dashboard | Agent segmented control, 28-high nav rows (current row on a
-  `#dcdce1` pill in light, `rgb(255 255 255 / 11%)` in dark, with a 2px accent
+  `#d9d9de` pill in light, `rgb(255 255 255 / 11%)` in dark, with a 2px accent
   mark), 12px group labels, foot with Integrations (the collapse toggle at
   its end) and the account (AR-8). The main column is the inset panel: 8 from the window
   edges (none on the sidebar side), a `rule` edge at half strength, radius 6,
@@ -127,7 +128,8 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   bar, shown on hover. Dragging the sidebar's edge draws no line. Below 900 the panel fills the
   window and the header's menu button opens the sidebar in a drawer.
 - **Page header**, 44 high, on `page` with a `rule` hairline under it across
-  the panel (owner, 2026-11-22): the page title as a breadcrumb
+  the panel, its two ends padded 24 from the panel edges on every page
+  whatever the page width (owner, 2026-11-22): the page title as a breadcrumb
   (section › page; a record adds its collection, and its name
   is the h1 above the strips), then secondary actions, at most one primary
   action, Search ⌘K and Ask agent at the right edge. The section is the nav
@@ -152,7 +154,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Metric strip:** one `panel` strip (`card` in dark) with no edge or
   shadow, radius 6, cells divided by hairlines, cell padding 10 by 16, 12px label over the value. Never cards;
   no meters, rings or bars inside a cell (AR-3).
-- **Table** (the HeroUI table, owner 2026-11-22): a tray (`#e6e6e9` in
+- **Table** (the HeroUI table, owner 2026-11-22): a tray (`#e4e4e8` in
   light, `raised` in dark), radius 6, no edge, 4 padding at the sides and
   foot; head 36 on the tray, 12px at 500, a 16-high `rule` tick between
   columns; the body a `panel` card, radius 4, cells padded 16; rows
@@ -218,11 +220,12 @@ One entry per family; wave 2 fills each from the layouts above.
   footer 12 by 24 under a hairline.
 - **States.** Loading draws the final geometry (a table its head over block
   rows, a strip its cells). Empty and error sit quietly inside the frame of
-  the content they replace; an empty state directly on the paper is drawn as
-  a card. A notice is a line of text with no frame
+  the content they replace; an empty state directly on the paper, an empty
+  table included, is drawn as a card. A notice is a line of text with no frame
   (owner, 2026-11-21): the tone's 6px dot and the tone's word for screen
   readers, never a fill.
-- **Charts.** Your series is the accent, drawn last; a missing period is a
+- **Charts.** A chart on the paper is a `panel` card, a one-period list
+  included. Your series is the accent, drawn last; a missing period is a
   gap, never a zero. Series colours come from one map by identity
   (`SERIES_STROKE`, `SERIES_FILL`); position-coloured charts map onto it.
 - **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 28,
