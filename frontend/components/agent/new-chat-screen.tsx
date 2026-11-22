@@ -6,6 +6,7 @@ import { AgentFailureNotice } from '@/components/agent/agent-failure-notice';
 import { BriefingCard } from '@/components/agent/briefing-card';
 import { Composer } from '@/components/agent/composer';
 import { useSkillChoice } from '@/components/agent/skill-picker';
+import { useModelPicker } from '@/components/agent/model-picker';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { useCreateChat } from '@/components/agent/use-chat-turns';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
@@ -57,6 +58,7 @@ function NewChat({
   );
   const failure = create.failure;
   const commands = useComposerCommands({ workspaceId, projectId });
+  const model = useModelPicker();
   const { actionId, action, message, attachment, unavailable } = useAttachedAction(
     workspaceId,
     handoff.actionId,
@@ -87,6 +89,7 @@ function NewChat({
       (prepared) =>
         create.start({
           ...prepared,
+          choice: model.request,
           skillId: pinnedId ? undefined : skillId,
           workflowId: pinnedId,
           actionId,
@@ -126,6 +129,7 @@ function NewChat({
             placeholder="Ask a question or describe the work"
             attachment={attachment}
             skill={skill}
+            model={model.picker}
             scope={handoffScope.facts}
             chips={contextChips(sent, handoffScope.labels)}
             commands={commands}

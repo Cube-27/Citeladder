@@ -523,6 +523,33 @@ describe('ChatScreen', () => {
     expect(screen.getByLabelText('Reply to the agent')).toHaveValue('Make it shorter');
   });
 
+  it('locks the model once the chat has replied and sends a changed effort with the reply', async () => {
+    const current = {
+      ...detail(revision(REV1, 1, 'agent', 'Body.')),
+      model: { id: 'claude-sonnet-5-5', reasoning_effort: 'low', locked: true },
+    };
+    const sends: unknown[] = [];
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(current)),
+      http.post(`/api/v1/agent/chats/${CHAT}/messages`, async ({ request }) => {
+        sends.push(await request.json());
+        return HttpResponse.json({ chat_id: CHAT, run: current.latest_run }, { status: 202 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderChat();
+    expect(
+      await screen.findByRole('button', { name: 'Model: Sonnet 5.5, set for this chat' }),
+    ).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Effort: Low effort' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'High effort' }));
+    await user.type(screen.getByLabelText('Reply to the agent'), 'Go deeper{Enter}');
+    await vi.waitFor(() =>
+      expect(sends).toEqual([{ message: 'Go deeper', reasoning_effort: 'high' }]),
+    );
+  });
+
   it('shows the skill inherited from the chat until it is removed for Automatic', async () => {
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),

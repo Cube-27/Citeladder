@@ -8,6 +8,19 @@ import type {
   ActionTreeGroupBy,
 } from '@citeladder/contracts/actions';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
+import { agentReasoningEffortSchema, type AgentReasoningEffort } from '@citeladder/contracts/agent';
+
+export const AGENT_REASONING_EFFORTS = agentReasoningEffortSchema.options;
+
+const REASONING_EFFORT_LABEL: Record<AgentReasoningEffort, string> = {
+  low: 'Low effort',
+  medium: 'Medium effort',
+  high: 'High effort',
+};
+
+export function reasoningEffortLabel(effort: AgentReasoningEffort) {
+  return REASONING_EFFORT_LABEL[effort];
+}
 
 export const ACTION_GOAL_LABEL: Record<ActionGoal, string> = {
   read_site: 'Let AI read your site',
@@ -299,7 +312,8 @@ const RUN_ERROR_COPY: Record<string, string> = {
   stopped_at_limit:
     'The agent stopped at its step limit before finishing. Nothing was saved; ask again with a narrower request.',
   access_revoked: 'You no longer have permission to run the agent in this workspace.',
-  model_changed: 'The agent model changed after this request was queued. Send it again.',
+  model_unavailable:
+    "This chat's model is no longer offered. Start a new chat to use another model.",
   skills_changed: 'The agent was updated after this request was queued. Send it again.',
   output_conflict:
     'The output changed while the agent was working, so its revision was not saved. Ask again to revise the latest version.',

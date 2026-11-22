@@ -6,6 +6,7 @@ import { AGENT_COMPOSER_MAX_ROWS } from '@/lib/config/agent';
 
 import { CommandField } from './command-menu';
 import { ComposerMenu } from './composer-menu';
+import { ModelPicker, type ModelPickerState } from './model-picker';
 import type { SkillChoice } from './skill-picker';
 import type { ComposerState } from './use-composer-commands';
 
@@ -24,6 +25,7 @@ export function Composer({
   attachment,
   scope,
   skill,
+  model,
   commands,
   onStop,
   stopping = false,
@@ -43,6 +45,7 @@ export function Composer({
   attachment?: Readonly<{ label: string; onRemove: () => void }>;
   scope?: readonly string[];
   skill: SkillChoice;
+  model?: ModelPickerState;
   commands: ComposerState;
   onStop?: () => void;
   stopping?: boolean;
@@ -84,12 +87,15 @@ export function Composer({
         </>
       }
       tools={
-        <ComposerMenu
-          menu={commands.menu}
-          scope={commands.scope}
-          skill={skill}
-          disabled={menuDisabled}
-        />
+        <>
+          <ComposerMenu
+            menu={commands.menu}
+            scope={commands.scope}
+            skill={skill}
+            disabled={menuDisabled}
+          />
+          {model ? <ModelPicker state={model} disabled={menuDisabled} /> : null}
+        </>
       }
       submit={
         <SubmitControl

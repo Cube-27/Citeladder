@@ -1,5 +1,20 @@
 import type { AgentMessage, AgentOutput } from '@/lib/api/agent';
 
+export const AGENT_MODELS = {
+  options: [
+    { id: 'claude-haiku-5-5', label: 'Haiku 5.5' },
+    { id: 'claude-sonnet-5-5', label: 'Sonnet 5.5' },
+    { id: 'claude-opus-5-5', label: 'Opus 5.5' },
+  ],
+  default_model: 'claude-haiku-5-5',
+  default_reasoning_effort: 'medium',
+} as const;
+export const CHAT_MODEL = {
+  id: 'claude-haiku-5-5',
+  reasoning_effort: 'medium',
+  locked: false,
+} as const;
+
 export const PROJECT = '11111111-1111-4111-8111-111111111111';
 export const CHAT = '22222222-2222-4222-8222-222222222222';
 export const OUTPUT = '33333333-3333-4333-8333-333333333333';
@@ -52,6 +67,7 @@ export function detail(latest: ReturnType<typeof revision>, run: DetailRun = DEF
       running: false,
     },
     pinned_skill_id: null,
+    model: CHAT_MODEL,
     context: {},
     messages: [
       {
@@ -188,5 +204,6 @@ export const skills = {
       next: [{ workflow_id: 'internal_links', prompt: 'Plan internal links that support' }],
     },
   ],
+  models: AGENT_MODELS,
   limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
 };

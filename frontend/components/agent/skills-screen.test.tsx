@@ -7,6 +7,7 @@ import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
 import { SkillsScreen } from './skills-screen';
+import { AGENT_MODELS } from '@/test/agent-chat-fixture';
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 
@@ -29,6 +30,7 @@ const CATALOG = {
   ],
   workflows: [],
   output_kinds: [{ kind: 'linkedin_post', label: 'LinkedIn post', refinements: [], next: [] }],
+  models: AGENT_MODELS,
   limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
 };
 

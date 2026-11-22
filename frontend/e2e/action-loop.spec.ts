@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
+import { AGENT_MODELS } from '../test/agent-chat-fixture';
 
 const PROJECT = FIXTURE_PROJECT.id;
 const OPPORTUNITY = '22222222-2222-4222-8222-222222222222';
@@ -162,6 +163,7 @@ test('declaring an Action implemented shows comparable verification', async ({ p
     route.fulfill({
       json: {
         skills: [],
+        models: AGENT_MODELS,
         limits: {
           mentions_max: 5,
           attachments_max: 3,
@@ -260,6 +262,7 @@ test('Action filters restore through URL history and reload', async ({ page }) =
     route.fulfill({
       json: {
         skills: [],
+        models: AGENT_MODELS,
         limits: {
           mentions_max: 5,
           attachments_max: 3,
