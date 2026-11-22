@@ -7,9 +7,17 @@ import { PerceptionMarket } from '@/components/perception/perception-market';
 import { PerceptionObjections } from '@/components/perception/perception-objections';
 import { ProbeActions, ProbeEmpty } from '@/components/perception/probe-actions';
 import { ProbeDialog, type ProbeIntent } from '@/components/perception/probe-dialog';
+import { ProbeOutcome, ProbeProgress } from '@/components/perception/probe-progress';
+import { Stack } from '@/components/ui/layout';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { probeBasis, probeQueries, refreshProbeStatus, type ProbeView } from '@/lib/api/probes';
+import {
+  probeBasis,
+  probeBusy,
+  probeQueries,
+  refreshProbeStatus,
+  type ProbeView,
+} from '@/lib/api/probes';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
 const hasPages = (row: { pages: readonly unknown[] }) => row.pages.length > 0;
@@ -86,22 +94,30 @@ export function PerceptionProbe({
         fallback="The request failed or timed out."
       />
     );
-  return view === 'market' ? (
-    <ProbeRead
-      read={market}
-      title="Couldn't load Market"
-      status={status.data}
-      onRun={onRun}
-      render={(data) => <PerceptionMarket data={data} />}
-    />
-  ) : (
-    <ProbeRead
-      read={objections}
-      title="Couldn't load objections"
-      status={status.data}
-      onRun={onRun}
-      render={(data) => <PerceptionObjections scope={scope} data={data} />}
-    />
+  const read =
+    view === 'market' ? (
+      <ProbeRead
+        read={market}
+        title="Couldn't load Market"
+        status={status.data}
+        onRun={onRun}
+        render={(data) => <PerceptionMarket data={data} />}
+      />
+    ) : (
+      <ProbeRead
+        read={objections}
+        title="Couldn't load objections"
+        status={status.data}
+        onRun={onRun}
+        render={(data) => <PerceptionObjections scope={scope} data={data} />}
+      />
+    );
+  const latest = status.data.latest;
+  return (
+    <Stack gap="workspace">
+      {latest ? <ProbeProgress run={latest} /> : null}
+      {read}
+    </Stack>
   );
 }
 
@@ -118,7 +134,13 @@ function ProbeRead<Value>({
   onRun: () => void;
   render: (data: { state: 'value' } & Value) => ReactNode;
 }>) {
-  if (read.isSuccess && read.data.state === 'value') return render(read.data);
+  if (read.isSuccess && read.data.state === 'value')
+    return (
+      <Stack gap="workspace">
+        <ProbeOutcome run={status.latest} />
+        {render(read.data)}
+      </Stack>
+    );
   if (read.isPending)
     return <StateBlock kind="loading" label="Loading…" shape={{ kind: 'figures' }} />;
   if (read.isError)
@@ -130,5 +152,5 @@ function ProbeRead<Value>({
         fallback="The request failed or timed out."
       />
     );
-  return <ProbeEmpty status={status} onRun={onRun} />;
+  return probeBusy(status) ? null : <ProbeEmpty status={status} onRun={onRun} />;
 }
