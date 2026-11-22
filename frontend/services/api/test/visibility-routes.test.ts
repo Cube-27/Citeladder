@@ -243,21 +243,28 @@ describe('GET /projects/{project_id}/visibility/surface-rates', () => {
     tenant = await fixtures.tenant();
   });
 
-  it('excludes failed retrievals from every denominator', async () => {
+  it('excludes failed retrievals from every denominator and keeps each engine apart', async () => {
     const auditId = await fixtures.audit(tenant, { configuration: CONFIGURATION });
-    const observed = (promptIndex: number, observation: object, analysis: object | null = {}) =>
-      fixtures.execution(tenant, {
-        auditId,
-        engine: 'google_ai_overview',
-        promptIndex,
-        analysis,
-        observation,
-      });
-    await observed(0, {});
-    await observed(1, { outcome: 'no_ai_overview', aioPresent: false });
-    await observed(2, { outcome: 'execution_failure', aioPresent: null }, null);
+    const observed = (
+      engine: string,
+      promptIndex: number,
+      observation: object,
+      analysis: object | null = {},
+    ) => fixtures.execution(tenant, { auditId, engine, promptIndex, analysis, observation });
+    await observed('google_ai_overview', 0, {});
+    await observed('google_ai_overview', 1, { outcome: 'no_ai_overview', aioPresent: false });
+    await observed(
+      'google_ai_overview',
+      2,
+      { outcome: 'execution_failure', aioPresent: null },
+      null,
+    );
+    await observed('google_ai_mode', 0, {});
+    await observed('google_ai_mode', 1, {});
+    await observed('google_ai_mode', 2, {});
 
     const { status, body } = await rates(tenant, { audit_id: auditId });
+    const mode = await rates(tenant, { audit_id: auditId, engine: 'google_ai_mode' });
 
     expect(status).toBe(200);
     expect(body).toMatchObject({ successful: 2, with_overview: 1, excluded: 1 });
@@ -266,6 +273,12 @@ describe('GET /projects/{project_id}/visibility/surface-rates', () => {
       denominator: 2,
       denominator_kind: 'successful_observations',
       value: 0.5,
+    });
+    expect(mode.body).toMatchObject({
+      logical_engine: 'google_ai_mode',
+      successful: 3,
+      with_overview: 3,
+      excluded: 0,
     });
   });
 

@@ -59,6 +59,22 @@ describe('DataForSEO paid submission boundary', () => {
       taskId: 'paid-task',
       chargeMicrousd: 1200,
     });
+    const urls: string[] = [];
+    const paths = client(async (url) => {
+      urls.push(String(url));
+      return Response.json({ status_code: 20000, tasks: [{ status_code: 20000, result: [] }] });
+    });
+    await paths.retrieve('google_ai_overview', 'paid-task');
+    await paths.reconcilePage(
+      'google_ai_mode',
+      new Date('2026-01-01T00:00:00Z'),
+      new Date('2026-01-01T01:00:00Z'),
+      0,
+    );
+    expect(urls).toEqual([
+      'https://api.dataforseo.com/v3/serp/google/organic/task_get/advanced/paid-task',
+      'https://api.dataforseo.com/v3/serp/id_list',
+    ]);
   });
   it('submits Google AI Mode to its own SERP path without the organic depth settings', async () => {
     const c = client(async (url, options) => {

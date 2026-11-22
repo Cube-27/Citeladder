@@ -147,7 +147,9 @@ export function AnswerEvidence({
           <EvidencePerception perception={evidence.perception} />
           <EvidenceClaims claims={evidence.claims} />
           <EvidenceAds ads={evidence.ads} />
-          {evidence.search_surface ? <SurfaceEvidence evidence={evidence.search_surface} /> : null}
+          {evidence.search_surface ? (
+            <SurfaceEvidence evidence={evidence.search_surface} engine={evidence.logical_engine} />
+          ) : null}
           <EvidenceOutcomes evidence={evidence} />
         </>
       }

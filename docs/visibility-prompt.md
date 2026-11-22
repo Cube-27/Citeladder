@@ -595,9 +595,10 @@ internal costs count the paid request.
 Google AI Mode is a second SERP surface beside AI Overview. Its DataForSEO
 product, accepted answer element types, skipped paid element types and absence
 status codes live under `serp` in `dataforseo.json`. AI Mode returns its answer
-as the same `ai_overview` block, so both surfaces share the observation outcomes
-(`ai_overview_present`, `no_ai_overview`) and are told apart by logical engine.
-A task with no AI Mode answer (40102) is absence, not a provider error, and
+as the same `ai_overview` block. Both surfaces share the observation outcomes
+(`ai_overview_present`, `no_ai_overview`), so every read of those outcomes
+filters on the logical engine. A configured absence status (40102, not yet
+confirmed against the live endpoint) is absence, not a provider error, and
 `ai_overview_paid` placements are never answer text or citations.
 
 Scraper citations use root and nested sources, canonicalized and deduplicated.
