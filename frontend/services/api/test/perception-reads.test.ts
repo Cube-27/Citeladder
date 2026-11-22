@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
+import { policy } from '../src/config.ts';
 import { perceivedAnswers, sentimentsOf } from '../src/visibility/perception.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
@@ -651,6 +652,29 @@ describe('GET /visibility/perception', () => {
       first,
       second,
     ]);
+  });
+
+  it('asks for a narrower period when the window holds more runs than one read covers', async () => {
+    const owner = await fixtures.tenant();
+    const cap = policy.visibility.selection_max_runs;
+    const day = (offset: number) => new Date(Date.UTC(2026, 4, 1) + offset * 3_600_000);
+    await Promise.all(
+      Array.from({ length: cap + 1 }, (_, index) =>
+        fixtures.audit(owner, { completedAt: day(index), configuration: CONFIGURATION }),
+      ),
+    );
+    const path = `/api/v1/projects/${owner.projectId}/visibility/perception`;
+
+    const [over, within] = await Promise.all([
+      get(owner, path, { from: day(0).toISOString(), to: day(cap).toISOString() }),
+      get(owner, path, { from: day(1).toISOString(), to: day(cap).toISOString() }),
+    ]);
+
+    expect([over.status, (over.body.error as { message: string }).message]).toEqual([
+      422,
+      `Select a narrower period: at most ${cap} runs per selection`,
+    ]);
+    expect(within.status).toBe(200);
   });
 
   it('is not found from another workspace', async () => {

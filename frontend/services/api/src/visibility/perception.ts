@@ -39,6 +39,7 @@ import {
   observedAt,
   perceptionCohorts,
   selectedRuns,
+  TrendQueryError,
   type RunSelection,
 } from './selection.ts';
 
@@ -265,8 +266,12 @@ async function windowSelection(db: Database, selection: RunSelection): Promise<R
     .select('audit.id')
     .orderBy(observedAt, 'desc')
     .orderBy('audit.id', 'desc')
-    .limit(policy.visibility.selection_max_runs)
+    .limit(policy.visibility.selection_max_runs + 1)
     .execute();
+  if (runs.length > policy.visibility.selection_max_runs)
+    throw new TrendQueryError(
+      `Select a narrower period: at most ${policy.visibility.selection_max_runs} runs per selection`,
+    );
   return { ...scoped, auditIds: runs.map((run) => run.id) };
 }
 

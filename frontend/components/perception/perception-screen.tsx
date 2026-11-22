@@ -175,7 +175,7 @@ function usePageFilters(filters: Filters, queries: Queries) {
     onChangeGranularity: filters.setGranularity,
     cohort: filters.cohort,
     onChangeCohort: filters.setCohort,
-    selectionMode: filters.selectionMode,
+    selectionMode: queries.selectionMode,
     markets: queries.markets,
     market: filters.market,
     onChangeMarket: filters.setMarket,
