@@ -241,8 +241,18 @@ export const promptSetKinds = {
         payload.request,
         { idempotencyKey: change.id },
       );
+      const topics = new Map(result.topics.map((topic) => [topic.id, topic.name]));
       return {
         summary: `Suggested ${plural(result.candidates.length, 'prompt')} for review.`,
+        requested_count: result.requested_count,
+        suggestions: result.candidates.map((candidate) => ({
+          text: candidate.text,
+          topic: candidate.topic_id ? (topics.get(candidate.topic_id) ?? null) : null,
+          cohort: candidate.cohort,
+        })),
+        admission_drops: result.admission_drops,
+        quality_rejected: result.quality_rejected,
+        shortfall_reason: result.shortfall_reason,
       };
     },
     async preview(context, payload) {

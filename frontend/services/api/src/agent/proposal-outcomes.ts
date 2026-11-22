@@ -5,9 +5,9 @@ import type { ChangePreview } from '../changes/kind.ts';
 import { changeKinds } from '../changes/kinds.ts';
 import { authorize } from '../commands/permission.ts';
 import type { ServiceConfig } from '../config.ts';
+import { whileTryLocked } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
-import { sql } from 'kysely';
 import {
   isAgentChangeKind,
   memberActor,
@@ -164,21 +164,14 @@ async function decideLive(db: Database, config: ServiceConfig, input: DecisionIn
   });
 }
 
-async function decideWhileHeld(db: Database, config: ServiceConfig, input: DecisionInput) {
-  const key = `agent-proposal:${input.ref.messageId}:${input.ref.index}`;
-  await db.connection().execute(async (connection) => {
-    const { rows } = await sql<{
-      locked: boolean;
-    }>`select pg_try_advisory_lock(hashtextextended(${key}, 0)) as locked`.execute(connection);
-    if (!rows[0]?.locked)
-      throw new ApiError(409, 'This change is already being made.', {
+function decideWhileHeld(db: Database, config: ServiceConfig, input: DecisionInput) {
+  return whileTryLocked(db, {
+    subject: `agent-proposal:${input.ref.messageId}:${input.ref.index}`,
+    busy: () =>
+      new ApiError(409, 'This change is already being made.', {
         code: asApiErrorCode('agent_proposal_running'),
-      });
-    try {
-      await decideLive(db, config, input);
-    } finally {
-      await sql`select pg_advisory_unlock(hashtextextended(${key}, 0))`.execute(connection);
-    }
+      }),
+    run: () => decideLive(db, config, input),
   });
 }
 
