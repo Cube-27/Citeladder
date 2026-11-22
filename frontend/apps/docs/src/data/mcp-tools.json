@@ -93,7 +93,7 @@
     {
       "name": "read_actions",
       "title": "Read Actions",
-      "description": "List the work CiteLadder recommends to improve visibility, highest priority first. Statuses: open (New), in_progress (accepted), done (declared implemented; its measurement is measuring or verified) and dismissed (Declined). By default it lists only open and in-progress Actions; pass status any to list every status, and query to find Actions whose title contains that text. Each item has its id, target (page, prompt or source), status, measurement, priority score, approach and link, and status_counts counts every status. Items come in pages; pass next_cursor for more. Pass site_url_id for the Actions on one page, or group_by for the grouped tree (the count and top items per group). Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to accept, decline or restore one, and prepare_declare_implemented when its work is done.",
+      "description": "List the work CiteLadder recommends to improve visibility, highest priority first. Statuses: open (New), in_progress (accepted), done (declared implemented; its measurement is measuring or verified) and dismissed (Declined). By default it lists only open and in-progress Actions; pass status any to list every status, and query to find Actions whose title contains that text. Each item has its id, target (page, prompt or source), status, measurement, priority score, approach and link, and status_counts counts every status. Items come in pages; pass next_cursor for more. Pass site_url_id for the Actions on one page, or group_by for the grouped tree (the count and top items per group). Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use prepare_change with kind update_action_status to accept, decline or restore one, and declare_implemented when its work is done.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1012,7 +1012,7 @@
     {
       "name": "read_prompt_portfolio",
       "title": "Read prompts",
-      "description": "List the prompts the project tracks, so you know what is measured before reading results or changing prompts. Each row has the prompt id, text, topic, intent, buyer stage, cohort (core prompts are scored; comparison prompts name a competitor and are reported separately), status and whether audits measure it now, plus its prompt set and topic_id. topics lists every project topic (id, name, description), including topics with no prompts yet; topics_truncated says the list is partial. Rows come oldest first, in pages; pass next_cursor for more. To find one prompt by its wording use search; to see what engines answered for a prompt use read_visibility_results with its prompt_id. Prompt ids feed update_prompt_text, prepare_update_prompts and prepare_launch_audit. view sets lists every prompt set, empty ones included; view candidates lists suggested prompts waiting for review, with their ids.",
+      "description": "List the prompts the project tracks, so you know what is measured before reading results or changing prompts. Each row has the prompt id, text, topic, intent, buyer stage, cohort (core prompts are scored; comparison prompts name a competitor and are reported separately), status and whether audits measure it now, plus its prompt set and topic_id. topics lists every project topic (id, name, description), including topics with no prompts yet; topics_truncated says the list is partial. Rows come oldest first, in pages; pass next_cursor for more. To find one prompt by its wording use search; to see what engines answered for a prompt use read_visibility_results with its prompt_id. Prompt ids feed the update_prompt_text, update_prompts and launch_audit kinds of prepare_change. view sets lists every prompt set, empty ones included; view candidates lists suggested prompts waiting for review, with their ids.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1987,72 +1987,6 @@
       "access": "read"
     },
     {
-      "name": "add_competitor",
-      "title": "Add a competitor",
-      "description": "Track one more competitor, so visibility reads rank its mentions and citations in AI answers beside your brand. Runs at once; refused if the project already tracks that name or has reached its competitor limit. get_project_business_context lists the competitors tracked now.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255,
-            "description": "The brand name as buyers write it."
-          },
-          "aliases": {
-            "default": [],
-            "description": "Other names AI answers use for the brand, such as a short form or old name.",
-            "maxItems": 50,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "maxLength": 255
-            }
-          },
-          "domains": {
-            "default": [],
-            "description": "The brand's own domains, such as example.com, so its cited pages are attributed to it.",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "maxLength": 255
-            }
-          },
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          }
-        },
-        "required": ["name", "project_id"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "cancel_audit",
-      "title": "Cancel an audit",
-      "description": "Stop a queued or running audit, after the user agrees, such as one launched by mistake or on the wrong engines. Runs at once and cannot be undone; answers recorded so far are kept, and no further prompt runs are spent on it. To launch a corrected audit use prepare_launch_audit. Refused if the audit is not in this project or has already finished.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "audit_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A queued or running audit id (audit_id) from read_visibility_overview view runs."
-          }
-        },
-        "required": ["project_id", "audit_id"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
       "name": "confirm_change",
       "title": "Confirm a prepared change",
       "description": "Make a change a prepare tool previewed. Call only after the user explicitly agreed to that preview in this conversation. A token works once, for ten minutes.",
@@ -2072,9 +2006,9 @@
       "access": "write"
     },
     {
-      "name": "confirm_topics",
-      "title": "Confirm topics",
-      "description": "Save the topic plan the user agreed to after preview_topics, in one change: create the topics they kept or added (each with the offerings preview_topics listed for it, or none), rename and delete existing ones. A deleted topic's prompts stay tracked without a topic. Runs at once and returns the project's topics with their ids for generate_prompts; refused if a named topic is not in this project or two topics would share a name.",
+      "name": "prepare_change",
+      "title": "Prepare a change",
+      "description": "Preview one change to a project for the user to agree to: every check the change makes runs as a dry run and nothing is saved, held, spent, fetched or sent to a model. Returns a preview without ids and a confirmation_token; show the preview, and call confirm_change only after the user explicitly agrees. A delete or a paid run needs that yes each time. Use ids from the reads. Call with the kind alone to get its payload shape; a payload that does not fit is refused with the shape.\nKinds, by area:\nPrompts and topics:\n- add_prompts: track new prompts, active at once\n- update_prompts: activate or archive tracked prompts (status), or file them under one topic (topic; topic_id null for none)\n- update_prompt_text: edit one tracked prompt's text, intent, buyer stage, persona or topic; earlier results keep the old values\n- create_topic: add a topic, a named group of tracked prompts\n- rename_topic: rename one topic; its prompts and results stay under it\n- confirm_topics: save a topic plan in one change: create, rename and delete topics (a deleted topic's prompts stay tracked without a topic)\n- generate_prompts: have CiteLadder suggest new prompts for a prompt set; spends AI credits when confirmed, and the suggestions wait for review\n- delete_topic: delete a topic; its prompts stay tracked without a topic\nProject, markets and competitors:\n- add_competitor: track one more competitor\n- review_competitor_suggestion: accept (track it) or reject (hide it) one competitor suggestion\n- remove_competitor: stop tracking a competitor; earlier answers keep their text\n- add_market: add a market (country and language) that audits can run in\nAudits and probes:\n- launch_audit: launch an audit of a prompt set or chosen prompts on given engines; spends prompt runs when confirmed\n- cancel_audit: stop a queued or running audit; answers so far are kept (read_visibility_overview view runs)\n- schedule: create a recurring audit schedule for a prompt set\n- rerun_audit_failures: run the failed answers of a finished audit again with the provider keys they used, as a new repair audit (read_visibility_overview view runs)\n- run_probe: run a market probe once in every market; spends AI credits when confirmed\nSite Health:\n- start_crawl: crawl the project's website now; robots 'ignore' crawls pages robots.txt disallows and records the person's decision\n- cancel_crawl: stop a running crawl; pages analyzed so far are kept\n- rerun_page: fetch and analyze one tracked page again\n- start_link_analysis: suggest internal links between a crawl's pages; uses one of the day's analyses\nActions:\n- update_action_status: accept an Action (in_progress), decline it (dismissed) or restore a declined one (open)\n- declare_implemented: declare that the work of an open Action is done\n- analyze_page: start an Agent analysis of one content page against chosen prompts of one topic, in a new chat\nImports:\n- import_prompts: import prompts the person gave in a file or pasted text into a prompt set; rows already tracked are skipped\n- import_brand_facts: import company facts for fact checking from what the person gave; they land as drafts the person reviews, and duplicates are skipped\n- import_catalog: import products into the catalog from a CSV you write in the catalog template columns (title, brand, description, price, currency, link, image_link, category, sku, gtin; title and brand required), or a Merchant Center feed the person gave as is",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -2083,527 +2017,978 @@
             "format": "uuid",
             "description": "A project id that list_projects returned."
           },
-          "create": {
-            "default": [],
-            "description": "Topics to create: name, and offerings as preview_topics listed them (the project's saved offerings).",
-            "maxItems": 50,
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 255
-                },
-                "offerings": {
-                  "default": [],
-                  "maxItems": 50,
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 255
-                  }
-                }
-              },
-              "required": ["name"]
-            }
-          },
-          "rename": {
-            "default": [],
-            "description": "Existing topics to rename: id from existing_topics, and the new name.",
-            "maxItems": 50,
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "name": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 255
-                }
-              },
-              "required": ["id", "name"]
-            }
-          },
-          "delete": {
-            "default": [],
-            "description": "Ids of existing topics to delete.",
-            "maxItems": 50,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        },
-        "required": ["project_id"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "create_topic",
-      "title": "Create a topic",
-      "description": "Add a topic, a named group of tracked prompts (for example \"Pricing\" or \"Integrations\") that visibility is broken down by. Runs at once and returns the topic id; pass it as topic_id to prepare_add_prompts to file new prompts under it. Topic names are unique in a project, ignoring case.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
+          "kind": {
             "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
+            "enum": [
+              "add_prompts",
+              "update_prompts",
+              "update_prompt_text",
+              "create_topic",
+              "rename_topic",
+              "confirm_topics",
+              "generate_prompts",
+              "import_prompts",
+              "add_competitor",
+              "review_competitor_suggestion",
+              "add_market",
+              "launch_audit",
+              "cancel_audit",
+              "rerun_audit_failures",
+              "schedule",
+              "run_probe",
+              "start_crawl",
+              "cancel_crawl",
+              "rerun_page",
+              "start_link_analysis",
+              "update_action_status",
+              "declare_implemented",
+              "analyze_page",
+              "import_brand_facts",
+              "import_catalog",
+              "remove_competitor",
+              "delete_topic"
+            ],
+            "description": "The kind of change, from the list above."
           },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255,
-            "description": "The topic name, unique in the project."
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 1024,
-            "description": "What prompts under this topic ask about; optional."
-          }
-        },
-        "required": ["project_id", "name"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "delete_topic",
-      "title": "Delete a topic",
-      "description": "Delete one topic by name, after the user agrees, when the grouping itself is no longer wanted. Its prompts are kept, still tracked, without a topic, and its subtopics become top-level; recorded answers are kept. Runs at once and cannot be undone. To fix only the name use rename_topic; to stop measuring the prompts use prepare_update_prompts.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255,
-            "description": "The topic name, ignoring case."
-          }
-        },
-        "required": ["project_id", "name"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "generate_prompts",
-      "title": "Generate prompts",
-      "description": "Run CiteLadder's prompt generator for the project, as the Prompt builder's Generate step does, once the user agreed to the run. The suggestions are staged for review and never tracked: only the user's Accept in CiteLadder's Prompt builder review (review_url) activates them. Spends AI credits, so call it once per agreed run: choose a new run_key for each agreed run and resend the same run_key on a retry, which returns the staged result instead of running again. distribution sets the branded and competitor-alternative shares, intent mix and personas; seed_source and seed_query_ids come from read_seed_queries; run_context is a note for this run only. A shortfall is reported with its reasons, never filled.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "prompt_set_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A prompt set id from read_prompt_portfolio; omit when the project has only one prompt set."
-          },
-          "run_key": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "description": "A key you choose once for this agreed run, such as a new random UUID. Resend it unchanged on a retry; a new run needs a new key."
-          },
-          "count": {
-            "default": 10,
-            "description": "How many suggestions to stage; omit for the default.",
-            "type": "integer",
-            "minimum": 1
-          },
-          "topic_ids": {
-            "default": [],
-            "description": "Topic ids from confirm_topics or read_prompt_portfolio to cover; omit for every topic.",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "run_context": {
-            "description": "A short note for this run only, such as a season or offering to focus on; never saved as a business fact.",
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 280
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "distribution": {
-            "description": "Shares of the run (0–1): branded_share names the brand, comparison_share asks for alternatives to a competitor, the rest is unbranded. intent_mix weights informational, commercial and transactional questions; personas are buyers to balance across. Omit for an unbranded run.",
+          "payload": {
+            "description": "The change in its kind’s shape. Omit it to get the shape; nothing is prepared.",
             "anyOf": [
               {
                 "type": "object",
                 "properties": {
-                  "branded_share": {
-                    "default": 0,
-                    "type": "number",
-                    "minimum": 0,
-                    "maximum": 1
+                  "prompt_set_id": {
+                    "type": "string",
+                    "format": "uuid"
                   },
-                  "comparison_share": {
-                    "default": 0,
-                    "type": "number",
-                    "minimum": 0,
-                    "maximum": 1
-                  },
-                  "intent_mix": {
+                  "prompts": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "theme": {
+                          "default": "",
+                          "type": "string",
+                          "maxLength": 255
+                        },
+                        "intent": {
+                          "default": "",
+                          "type": "string",
+                          "maxLength": 64
+                        },
+                        "buyer_stage": {
+                          "default": "",
+                          "type": "string",
+                          "enum": ["", "awareness", "consideration", "decision", "implementation"]
+                        },
+                        "persona": {
+                          "default": "",
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "cohort": {
+                          "type": "string",
+                          "enum": ["core", "brand_diagnostic", "comparison", "commerce"]
+                        },
+                        "enabled": {
+                          "default": true,
+                          "type": "boolean"
+                        },
+                        "topic_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "required": ["text"],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": ["prompt_set_id", "prompts"],
+                "additionalProperties": false
+              },
+              {
+                "oneOf": [
+                  {
                     "type": "object",
                     "properties": {
-                      "informational": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 100
+                      "kind": {
+                        "type": "string",
+                        "const": "status"
                       },
-                      "commercial": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 100
+                      "status": {
+                        "type": "string",
+                        "enum": ["active", "archived"]
                       },
-                      "transactional": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 100
+                      "groups": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "prompt_set_id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "prompt_ids": {
+                              "minItems": 1,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            }
+                          },
+                          "required": ["prompt_set_id", "prompt_ids"],
+                          "additionalProperties": false
+                        }
                       }
                     },
-                    "required": ["informational", "commercial", "transactional"]
+                    "required": ["kind", "status", "groups"],
+                    "additionalProperties": false
                   },
-                  "personas": {
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "topic"
+                      },
+                      "topic_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "prompt_ids": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      }
+                    },
+                    "required": ["kind", "topic_id", "prompt_ids"],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "prompt_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "intent": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "buyer_stage": {
+                    "type": "string",
+                    "enum": ["", "awareness", "consideration", "decision", "implementation"]
+                  },
+                  "persona": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "topic_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": ["prompt_id"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 1024
+                  }
+                },
+                "required": ["name"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "topic_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                },
+                "required": ["topic_id", "name"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "create": {
                     "default": [],
-                    "maxItems": 8,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "offerings": {
+                          "default": [],
+                          "maxItems": 50,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255
+                          }
+                        }
+                      },
+                      "required": ["name"]
+                    }
+                  },
+                  "rename": {
+                    "default": [],
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        }
+                      },
+                      "required": ["id", "name"]
+                    }
+                  },
+                  "delete": {
+                    "default": [],
+                    "maxItems": 50,
                     "type": "array",
                     "items": {
                       "type": "string",
-                      "minLength": 1,
-                      "maxLength": 120
+                      "format": "uuid"
                     }
                   }
                 }
               },
               {
-                "type": "null"
-              }
-            ]
-          },
-          "seed_source": {
-            "description": "The search data that may steer wording: search_console, search_intelligence or none; omit to read every source.",
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["search_console", "search_intelligence", "none"]
+                "type": "object",
+                "properties": {
+                  "prompt_set_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "request": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "default": 10,
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "topic_ids": {
+                        "default": [],
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "topic_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "cohort": {
+                        "default": "core",
+                        "type": "string",
+                        "enum": ["core", "brand_diagnostic", "comparison"]
+                      },
+                      "run_context": {
+                        "type": "string",
+                        "maxLength": 280
+                      },
+                      "distribution": {
+                        "type": "object",
+                        "properties": {
+                          "branded_share": {
+                            "default": 0,
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          },
+                          "comparison_share": {
+                            "default": 0,
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          },
+                          "intent_mix": {
+                            "type": "object",
+                            "properties": {
+                              "informational": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "commercial": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "transactional": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100
+                              }
+                            },
+                            "required": ["informational", "commercial", "transactional"]
+                          },
+                          "personas": {
+                            "default": [],
+                            "maxItems": 8,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 120
+                            }
+                          }
+                        }
+                      },
+                      "seed_source": {
+                        "type": "string",
+                        "enum": ["search_console", "search_intelligence", "none"]
+                      },
+                      "seed_query_ids": {
+                        "default": [],
+                        "maxItems": 200,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      }
+                    }
+                  }
+                },
+                "required": ["prompt_set_id", "request"],
+                "additionalProperties": false
               },
               {
-                "type": "null"
-              }
-            ]
-          },
-          "seed_query_ids": {
-            "default": [],
-            "description": "The read_seed_queries ids the user kept for that source; omit for all of them.",
-            "maxItems": 200,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        },
-        "required": ["project_id", "run_key"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "prepare_add_prompts",
-      "title": "Prepare to add prompts",
-      "description": "Preview adding 1–50 prompts to a prompt set: which can be added, which are dropped and why, and prompt slots after. Nothing changes until the user agrees and you call confirm_change; confirmed prompts are measured from the next audit.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "prompt_set_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A prompt set id from read_prompt_portfolio; omit when the project has only one prompt set."
-          },
-          "prompts": {
-            "minItems": 1,
-            "maxItems": 50,
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "text": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 300,
-                  "description": "A short question a buyer would ask an AI assistant, answerable by naming a business."
+                "type": "object",
+                "properties": {
+                  "prompt_set_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "prompts": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "maxLength": 300
+                        },
+                        "theme": {
+                          "default": "",
+                          "type": "string",
+                          "maxLength": 255
+                        },
+                        "intent": {
+                          "default": "",
+                          "type": "string",
+                          "maxLength": 64
+                        },
+                        "buyer_stage": {
+                          "default": "",
+                          "type": "string",
+                          "enum": ["", "awareness", "consideration", "decision", "implementation"]
+                        },
+                        "persona": {
+                          "default": "",
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "cohort": {
+                          "type": "string",
+                          "enum": ["core", "brand_diagnostic", "comparison", "commerce"]
+                        },
+                        "enabled": {
+                          "default": true,
+                          "type": "boolean"
+                        },
+                        "topic": {
+                          "default": "",
+                          "type": "string",
+                          "maxLength": 255
+                        }
+                      },
+                      "required": ["text"],
+                      "additionalProperties": false
+                    }
+                  }
                 },
-                "topic_id": {
-                  "type": "string",
-                  "format": "uuid",
-                  "description": "A topic id from read_prompt_portfolio topics or create_topic; omit for none."
-                },
-                "intent": {
-                  "type": "string",
-                  "maxLength": 64,
-                  "description": "What the buyer is trying to do, in a few words; optional."
-                },
-                "cohort": {
-                  "type": "string",
-                  "enum": ["core", "brand_diagnostic", "comparison", "commerce"],
-                  "description": "core prompts are scored; comparison prompts name competitors and are reported separately. Omit it to file the prompt as CiteLadder does: one naming the brand files under comparison when it also names a competitor, otherwise brand_diagnostic, and any other prompt under core."
-                }
-              },
-              "required": ["text"],
-              "additionalProperties": false
-            },
-            "description": "The prompts to add, each a short buyer question."
-          }
-        },
-        "required": ["project_id", "prompts"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "prepare_declare_implemented",
-      "title": "Prepare to declare an Action implemented",
-      "description": "Preview declaring that the work of an open Action is done, so CiteLadder checks later evidence against it. Nothing changes until the user agrees and you call confirm_change.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "action_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "An open Action id from read_actions."
-          },
-          "declared_implemented_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "When the work went live; omit for now. Evidence after it is checked."
-          }
-        },
-        "required": ["project_id", "action_id"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "prepare_launch_audit",
-      "title": "Prepare to launch an audit",
-      "description": "Preview launching an audit of a prompt set (or chosen prompts) on the given engines, with the prompt runs it can spend and its maximum provider attempts. Pass market_ids (from the project context; null is the default market) to run one audit per market. Pass max_attempts to cap the attempts. Nothing runs until the user agrees and you call confirm_change.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "prompt_set_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A prompt set id from read_prompt_portfolio; omit when the project has only one prompt set."
-          },
-          "prompt_ids": {
-            "maxItems": 500,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Prompt ids from read_prompt_portfolio to audit only those; omit for every active prompt in the set."
-          },
-          "engines": {
-            "minItems": 1,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "chatgpt",
-                "gemini",
-                "claude",
-                "google_ai_overview",
-                "chatgpt_search",
-                "gemini_consumer"
-              ]
-            },
-            "description": "The AI engines to ask; at least one."
-          },
-          "repetitions": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10,
-            "description": "How many times each prompt is asked per engine; omit for the project default."
-          },
-          "market_ids": {
-            "minItems": 1,
-            "maxItems": 11,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Market ids from get_project_business_context; null is the default market. Omit for the default market only."
-          },
-          "max_attempts": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "The most provider attempts the user accepts; omit to use the estimate. The launch is refused if it needs more."
-          }
-        },
-        "required": ["project_id", "engines"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "prepare_schedule",
-      "title": "Prepare an audit schedule",
-      "description": "Preview a recurring audit schedule for a prompt set. Pass market_ids (from the project context; null is the default market) to run one audit per market. Each recorded answer spends one prompt run. Nothing changes until the user agrees and you call confirm_change.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "prompt_set_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A prompt set id from read_prompt_portfolio; omit when the project has only one prompt set."
-          },
-          "cadence": {
-            "type": "string",
-            "enum": ["one_time", "every_n_minutes", "hourly", "daily", "weekly"],
-            "description": "How often the audit runs."
-          },
-          "engines": {
-            "minItems": 1,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "chatgpt",
-                "gemini",
-                "claude",
-                "google_ai_overview",
-                "chatgpt_search",
-                "gemini_consumer"
-              ]
-            },
-            "description": "The AI engines to ask; at least one."
-          },
-          "timezone": {
-            "type": "string",
-            "maxLength": 64,
-            "description": "An IANA timezone such as Europe/London; omit for the default."
-          },
-          "repetitions": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10,
-            "description": "How many times each prompt is asked per engine; omit for the project default."
-          },
-          "interval_minutes": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "description": "Minutes between runs; only for cadence every_n_minutes."
-          },
-          "next_run_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "When the first run starts; omit to start right away."
-          },
-          "market_ids": {
-            "minItems": 1,
-            "maxItems": 11,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Market ids from get_project_business_context; null is the default market. Omit for the default market only."
-          }
-        },
-        "required": ["project_id", "cadence", "engines"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "prepare_update_prompts",
-      "title": "Prepare a prompt change",
-      "description": "Preview one change to tracked prompts: activate them so audits measure them, archive them so future audits stop measuring them (past results stay), or assign_topic to file them under one topic (topic_id null takes them out of every topic; past runs keep the topic they had). Every prompt id must be in the project or nothing changes; prompts already in that state are skipped. Activation and refiling are refused when a prompt does not fit its topic or the plan has no prompt slots. Nothing changes until the user agrees and you call confirm_change. Prompts cannot be deleted here; the user deletes them in CiteLadder.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "change": {
-            "type": "string",
-            "enum": ["activate", "archive", "assign_topic"],
-            "description": "activate, archive, or assign_topic (needs topic_id)."
-          },
-          "prompt_ids": {
-            "minItems": 1,
-            "maxItems": 500,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Prompt ids from read_prompt_portfolio or read_prompt_metrics."
-          },
-          "topic_id": {
-            "description": "With assign_topic: a topic id from read_prompt_portfolio topics or create_topic, or null to take the prompts out of every topic.",
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
+                "required": ["prompt_set_id", "prompts"],
+                "additionalProperties": false
               },
               {
-                "type": "null"
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "aliases": {
+                    "default": [],
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 255
+                    }
+                  },
+                  "domains": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 255
+                    }
+                  }
+                },
+                "required": ["name"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "suggestion_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "decision": {
+                    "type": "string",
+                    "enum": ["accept", "reject"]
+                  }
+                },
+                "required": ["suggestion_id", "decision"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "country_code": {
+                    "type": "string"
+                  },
+                  "language_code": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 64
+                  }
+                },
+                "required": ["country_code", "language_code"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "request": {
+                    "type": "object",
+                    "properties": {
+                      "prompt_set_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "prompt_ids": {
+                        "default": [],
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "engines": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "chatgpt",
+                            "gemini",
+                            "claude",
+                            "google_ai_overview",
+                            "chatgpt_search",
+                            "gemini_consumer"
+                          ]
+                        }
+                      },
+                      "repetitions": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10
+                      },
+                      "market_ids": {
+                        "default": [null],
+                        "minItems": 1,
+                        "maxItems": 11,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "benchmark_mode": {
+                        "type": "string",
+                        "enum": ["consumer_like", "controlled_localized", "forced_grounded"]
+                      },
+                      "audit_scope": {
+                        "default": "brand",
+                        "type": "string",
+                        "enum": ["brand", "commerce"]
+                      },
+                      "random_seed": {
+                        "type": ["string", "null"]
+                      }
+                    },
+                    "required": ["engines"]
+                  }
+                },
+                "required": ["request"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "audit_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": ["audit_id"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "audit_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "filter": {
+                    "default": {},
+                    "type": "object",
+                    "properties": {
+                      "provider": {
+                        "type": ["string", "null"]
+                      },
+                      "engine": {
+                        "type": ["string", "null"]
+                      },
+                      "prompt_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "task_ids": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      }
+                    }
+                  }
+                },
+                "required": ["audit_id"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "schedule": {
+                    "type": "object",
+                    "properties": {
+                      "prompt_set_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "audit_scope": {
+                        "default": "brand",
+                        "type": "string",
+                        "enum": ["brand", "commerce"]
+                      },
+                      "cadence": {
+                        "type": "string",
+                        "enum": ["one_time", "every_n_minutes", "hourly", "daily", "weekly"]
+                      },
+                      "interval_minutes": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 2147483647
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "timezone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "engines": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "chatgpt",
+                            "gemini",
+                            "claude",
+                            "google_ai_overview",
+                            "chatgpt_search",
+                            "gemini_consumer"
+                          ]
+                        }
+                      },
+                      "market_ids": {
+                        "default": [null],
+                        "minItems": 1,
+                        "maxItems": 11,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "repetitions": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 10
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "benchmark_mode": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": ["consumer_like", "controlled_localized", "forced_grounded"]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "enabled": {
+                        "default": true,
+                        "type": "boolean"
+                      },
+                      "next_run_at": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": ["prompt_set_id", "cadence", "engines"]
+                  }
+                },
+                "required": ["schedule"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "robots": {
+                    "type": "string",
+                    "enum": ["respect", "ignore"]
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "crawl_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": ["crawl_id"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "crawl_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "site_url_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": ["crawl_id", "site_url_id"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "crawl_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": ["crawl_id"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": ["open", "in_progress", "dismissed"]
+                  }
+                },
+                "required": ["action_id", "status"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "declaration": {
+                    "type": "object",
+                    "properties": {
+                      "recommendation_ids": {
+                        "default": [],
+                        "maxItems": 100,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "output_revision_id": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "declared_implemented_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "deployment_reference": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 500,
+                            "pattern": "^\\P{Cc}*$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": ["declared_implemented_at"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["action_id", "declaration"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "site_url_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "topic_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "prompt_ids": {
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                },
+                "required": ["site_url_id", "topic_id", "prompt_ids"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "rows": {
+                    "minItems": 1,
+                    "maxItems": 150,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "topic": {
+                          "type": "string"
+                        },
+                        "statement": {
+                          "type": "string"
+                        },
+                        "source_url": {
+                          "type": ["string", "null"]
+                        }
+                      },
+                      "required": ["topic", "statement", "source_url"]
+                    }
+                  }
+                },
+                "required": ["rows"]
+              },
+              {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string",
+                        "const": "csv"
+                      },
+                      "content": {
+                        "type": "string"
+                      },
+                      "filename": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      }
+                    },
+                    "required": ["source", "content", "filename"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string",
+                        "const": "merchant_center"
+                      },
+                      "content": {
+                        "type": "string"
+                      },
+                      "filename": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      }
+                    },
+                    "required": ["source", "content", "filename"],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "competitor_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": ["competitor_id"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "topic_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": ["topic_id"],
+                "additionalProperties": false
               }
             ]
           }
         },
-        "required": ["project_id", "change", "prompt_ids"],
+        "required": ["project_id", "kind"],
         "additionalProperties": false
       },
       "access": "write"
@@ -2622,144 +3007,6 @@
           }
         },
         "required": ["project_id"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "remove_competitor",
-      "title": "Stop tracking a competitor",
-      "description": "Stop tracking one competitor by name, as get_project_business_context lists it, so visibility reads no longer rank it. Recorded answers are kept. Runs at once and cannot be undone; add_competitor tracks it again but its aliases and domains must be given again.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255,
-            "description": "The tracked competitor name, ignoring case."
-          }
-        },
-        "required": ["project_id", "name"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "rename_topic",
-      "title": "Rename a topic",
-      "description": "Rename one topic, after the user agrees. Its prompts and past results stay under it, so prefer this to delete_topic and create_topic when only the name is wrong. Runs at once and returns the new name; refused if another topic in the project already has the name, or if topic_id is not in this project.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "topic_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A topic id from read_prompt_portfolio topics or create_topic."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255,
-            "description": "The new name, unique in the project."
-          }
-        },
-        "required": ["project_id", "topic_id", "name"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "review_competitor_suggestion",
-      "title": "Accept or reject a competitor suggestion",
-      "description": "Decide one competitor suggestion that read_competitors view suggestions listed, after the user chose: accept tracks it as a competitor (its domain, or the name answers used), reject hides it from later suggestions. Runs at once and records who decided. Refused if the suggestion is not in this project, if the project has reached its competitor limit, or if it was already decided the other way; remove_competitor undoes an accept.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "suggestion_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A suggestion id from read_competitors view suggestions."
-          },
-          "decision": {
-            "type": "string",
-            "enum": ["accept", "reject"],
-            "description": "accept tracks it; reject hides it."
-          }
-        },
-        "required": ["project_id", "suggestion_id", "decision"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "update_action_status",
-      "title": "Update an Action status",
-      "description": "Accept one Action the user will work on, decline one they do not want, or restore a declined one to New. Runs at once; an in-progress Action can be declined but not moved back to New, and a done one cannot change. To record that the work was done, use prepare_declare_implemented instead.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "action_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "An Action id from read_actions."
-          },
-          "status": {
-            "type": "string",
-            "enum": ["open", "in_progress", "dismissed"],
-            "description": "in_progress accepts the Action; dismissed declines it; open restores a declined one."
-          }
-        },
-        "required": ["project_id", "action_id", "status"],
-        "additionalProperties": false
-      },
-      "access": "write"
-    },
-    {
-      "name": "update_prompt_text",
-      "title": "Edit a prompt",
-      "description": "Replace the wording of one tracked prompt, after the user agrees, such as to fix a typo or make it read like a buyer's question. Runs at once and returns the new wording; earlier measurements keep the old wording, so results before and after the edit may not compare. To stop measuring a prompt or refile it under a topic use prepare_update_prompts, and to add new ones prepare_add_prompts. Refused if prompt_id is not in this project.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A project id that list_projects returned."
-          },
-          "prompt_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "A prompt id from read_prompt_portfolio."
-          },
-          "text": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300,
-            "description": "The new wording: a short question a buyer would ask an AI assistant."
-          }
-        },
-        "required": ["project_id", "prompt_id", "text"],
         "additionalProperties": false
       },
       "access": "write"

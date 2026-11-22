@@ -197,60 +197,65 @@ string and fragment, as the Site tools' do.
 
 ## Changes
 
-The [write catalogue](../frontend/services/api/src/mcp/write-tools.ts) is listed
-in `tools/list`, and callable, only for a grant holding `citeladder:write`;
-a read-only grant gets "Unknown tool". Every write tool takes `project_id`:
+MCP is for analysis and writing, so it offers a curated subset of the change
+table it shares with the Agent ([`changes/kinds.ts`](../frontend/services/api/src/changes/kinds.ts),
+[Agent](agents.md#proposed-changes)): the kinds in
+[`MCP_CHANGE_KINDS`](../frontend/services/api/src/mcp/change-kinds.ts), typed
+against that table ([decisions](decisions.md#agent-mcp-and-public-api)). A kind
+the Agent gains is not on MCP until it is added to that list. The
+[write catalogue](../frontend/services/api/src/mcp/write-tools.ts) is three
+tools, listed in `tools/list` and callable only for a grant holding
+`citeladder:write` (a read-only grant gets "Unknown tool"): `prepare_change`,
+`confirm_change` and `preview_topics`.
+
+`prepare_change` takes `project_id`, a kind and its payload; its description
+lists the kinds by area and purpose, and its listed input schema is the union of
+the offered kinds' payload shapes. The call is parsed against the kind's own
+schema (the advertised union is never the parser, because a union would coerce a
+payload into the first branch it fits), and a call that names a kind with no
+payload returns the kind's shape and prepares nothing.
 [`writeActor`](../frontend/services/api/src/mcp/data.ts) authorizes the project
 through the live grant and membership, holds the grant row (still unrevoked and
-holding write) and the membership row shared until commit, and loads the
-member's live role, which
-the command checks (a Viewer is refused; a demotion applies to the next call).
-A record named by ID must belong to that project.
+holding write) and the membership row shared, and loads the member's live role,
+which the kind's permission checks (a Viewer is refused; a demotion applies to
+the next call). The MCP actor carries every scope, so a kind whose permission
+names no API-key scope is allowed to an MCP grant and still refused to API keys.
+The kind then stages exactly as an Agent proposal does: a **dry run** of its
+`execute` over the operator rollback transaction (every check, admission and
+write rolled back), or, for a live kind, only its check. Nothing is saved, held,
+spent, fetched or sent to a model. The exact payload goes into
+`mcp_confirmations` behind a single-use 43-character base62 token (HMAC-stored,
+ten minutes, bound to the grant), and the call returns the kind's preview
+(title, rows, spend, an app link; no IDs) plus the token. A delete's preview
+names what goes with it and that it cannot be undone; a paid kind's names its
+spend.
 
-Write tools come in three kinds: direct (one call, one transaction with its
-security event), Prompt builder runs (metered, with no dry run) and prepared
-changes that only `confirm_change` executes.
+[`confirm_change`](../frontend/services/api/src/mcp/confirmations.ts) locks the
+row, refuses a used, expired or other-connection token or a kind no longer on
+the list, reauthorizes through `writeActor` and the kind's permission, runs the
+kind's `execute` with the stored payload in the same transaction, marks the
+token consumed and records an `mcp.write.<kind>` security event targeting the
+project. A refused or failed change commits nothing and leaves the token usable
+until expiry; a changed world returns the owner's normal error. A live kind
+(prompt generation) cannot hold a transaction across its model call: it runs
+under a session advisory try-lock on the confirmation (a second confirm while it
+runs is refused) with the confirmation's id as the owner's idempotency key, and
+the token is consumed after the owner succeeds, so a retried confirm replays the
+persisted run instead of spending a second one.
 
-The Prompt builder tools call the same command owners as the builder's routes
-(`commands/prompts.ts`), with the same `run` capability, metering, AI-credit
-holds and owner errors. A model call cannot be rehearsed inside a rolled-back
-transaction, so they are not prepared: the server instructions and the
-`prompt-discovery` plugin skill require the user's yes before each, and
-`generate_prompts` activates nothing (only Track in the Prompt builder does).
-Its required `run_key` is the generation owner's idempotency key: a retry with the same key
-and request replays the persisted run instead of spending a second one, and the
-same key for a different request is refused.
+`preview_topics` stays a tool because it is not a change: it spends one model
+call through the Prompt builder's owner and saves nothing, and its result feeds
+the `confirm_topics` kind.
 
-Prepared kinds, and every direct tool except the two deletes, are entries in
-the change table MCP shares with the Agent
-([`changes/kinds.ts`](../frontend/services/api/src/changes/kinds.ts),
-[Agent](agents.md#proposed-changes)): the permission its command needs, its
-payload schema and one `execute`. A direct tool runs its kind's `execute` at
-once; the table also holds kinds only the Agent proposes, which no MCP tool
-names. `confirm_change` accepts only the five prepared kinds listed in
-[`confirmations.ts`](../frontend/services/api/src/mcp/confirmations.ts). A prepare tool runs the kind's `execute` as a **dry run** (`rehearse`,
-over the operator rollback transaction): every check, admission and write the
-command makes, rolled back. It then stores the exact
-payload in `mcp_confirmations` behind a single-use 43-character base62 token
-(HMAC-stored, ten minutes, bound to the grant) and returns a preview without
-IDs plus the token. [`confirm_change`](../frontend/services/api/src/mcp/confirmations.ts)
-locks the row, refuses a used, expired or other-connection token, reauthorizes
-through `writeActor` and the kind's permission, runs the same `execute` with the
-stored payload inside the same transaction, marks the token consumed and records
-the security event.
-Owners join that outer transaction, so a refused or failed change commits
-nothing and leaves the token usable until expiry; a changed world (occupancy
-now full, a larger estimate) returns the command's normal error. Prompts added
-this way are active immediately. Each executed change records an
-`mcp.write.<kind>` security event targeting the project.
-
-Write calls spend the normal tool budgets plus a per-grant write budget. Tool
-annotations live in `write-tools.ts`; only `confirm_change` carries
-`openWorldHint: true`, because a confirmed audit launch asks external AI
-engines. The server instructions require the user's yes before any change tool, and for a prepare
-tool its preview shown and `confirm_change` only after the user agrees to it. MCP elicitation is not offered: the transport is
-stateless HTTP and cannot hold a server-to-client request, so every client uses
-the token path.
+Write calls spend the normal tool budgets plus a per-grant write budget.
+Annotations are true to behaviour: `prepare_change` stores a token and changes no
+project data or anything outside (not destructive, not open-world), and
+`confirm_change` is the only tool that deletes, spends or reaches outside
+(`destructiveHint` and `openWorldHint` true). The server instructions require
+the preview shown and the user's yes before `confirm_change`, each time for a
+delete or a paid run. MCP elicitation is not offered: the transport is stateless
+HTTP and cannot hold a server-to-client request, so every client uses the token
+path.
 
 ## Errors and limits
 

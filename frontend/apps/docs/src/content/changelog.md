@@ -8,6 +8,12 @@ updated: '2026-11-22'
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## November 22, 2026: MCP changes go through one preview tool
+
+An assistant connected over MCP with **Allow changes** now makes every change with two tools: `prepare_change` previews a change and saves nothing, and `confirm_change` makes it after you agree. The separate change tools (`prepare_add_prompts`, `create_topic`, `generate_prompts` and the others) are gone. MCP now also offers importing prompts, brand facts and the product catalog, adding a market, re-running an audit's failures, running a probe, starting or cancelling a crawl, re-running a page, starting an internal-link analysis and analyzing a page. Deleting prompts and prompt sets stays in CiteLadder.
+
+**For your team:** reconnect your assistant so it picks up the new tool list; see the [MCP tool reference](/mcp/tools/#make-changes).
+
 ## November 22, 2026: Setup records readable over MCP and in the Agent
 
 Existing MCP reads gain views, with no new tool: every Site Health issue of a crawl and the crawl schedule (`read_site_health`), audit runs with their status and failed answers, and audit schedules (`read_visibility_overview`), prompt sets, empty ones included, and suggested prompts awaiting review (`read_prompt_portfolio`), internal-link analyses (`read_site_links`), the market probe and its objection groups (`read_perception`), the product catalog, competitor candidates, buyer prompts and running competitor searches (`read_ai_shelf`), and keyword research runs, including those awaiting confirmation (`read_search_intelligence`). The in-app Agent reads the same views, so it can propose a change to one of these records from any chat.

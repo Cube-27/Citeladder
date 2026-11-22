@@ -335,7 +335,8 @@ calls; where the route gates on a capability alone, the kind carries a member
 grant with no scope, which API keys cannot hold. An owner a kind calls takes the
 caller's transaction (`inTransaction`), so the dry run can roll it back. Adding a
 kind is one entry in its area's file plus its name in the Agent's list
-([`change-proposals.ts`](../frontend/services/api/src/agent/change-proposals.ts)).
+([`change-proposals.ts`](../frontend/services/api/src/agent/change-proposals.ts)),
+and in MCP's curated list only if MCP should offer it ([MCP](mcp.md#changes)).
 The model gets one built-in, `propose_change` (kind and payload). Its
 description lists each kind's name and purpose by area and no payload shapes, so
 the cached prefix stays small; a kind's shape, printed from its schema, comes

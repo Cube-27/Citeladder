@@ -33,13 +33,13 @@
             {
               "description": "Use a connection approved with Allow changes, a Member role and a measured project with free prompt slots. The user approves the preview before anything is written.",
               "prompt": "Add three prompts about trail running shoes to our tracked prompts. Show me first.",
-              "tools_triggered": "list_projects when needed; read_prompt_portfolio; prepare_add_prompts; confirm_change only after the user says yes",
-              "expected_behavior": "The assistant shows the prepared preview (prompts to add, any dropped with reasons, prompt slots after) without IDs and waits. Only after the user agrees does it call confirm_change; the prompts are then active. Without agreement nothing is written."
+              "tools_triggered": "list_projects when needed; read_prompt_portfolio; prepare_change with the add_prompts kind; confirm_change only after the user says yes",
+              "expected_behavior": "The assistant shows the prepared preview (the prompts to add) without IDs and waits. Only after the user agrees does it call confirm_change; the prompts are then active. Without agreement nothing is written."
             },
             {
               "description": "Use a connection approved with Allow changes, a Member role and a project with saved offerings and AI credits. The user agrees to the topics and to the run before each change.",
               "prompt": "Generate buyer prompts for us to track.",
-              "tools_triggered": "list_projects when needed; get_project_business_context; preview_topics; confirm_topics after the user agrees; read_seed_queries; generate_prompts once after the user agrees",
+              "tools_triggered": "list_projects when needed; get_project_business_context; preview_topics; prepare_change with the confirm_topics kind, then confirm_change after the user agrees; read_seed_queries; prepare_change with the generate_prompts kind, then confirm_change once after the user agrees",
               "expected_behavior": "The assistant follows the Prompt Builder's steps: confirms the business facts, shows existing and proposed topics without IDs, saves only the agreed topic plan, offers the search queries and mix, then runs one generation. It reports the staged suggestions and sends the user to CiteLadder's review link; it writes no prompt wording itself and never says the prompts are tracked."
             },
             {
@@ -55,11 +55,11 @@
               "prompt": "Publish these recommended content changes to our live website."
             },
             {
-              "description": "Acquisition is unsupported. Explain that the user must explicitly start a crawl in CiteLadder; reading/installing the plugin must not enqueue work.",
+              "description": "A crawl spends the Site Health allowance, so it needs the user's yes. Prepare it with prepare_change and show the preview with its spend, but never call confirm_change unprompted; reading or installing the plugin must not enqueue work.",
               "prompt": "Start a new crawl now and fill in the missing measurements."
             },
             {
-              "description": "Every change needs the user's yes, and a prepared change also needs their confirmed preview. Prepare the change and show it, but never call confirm_change unprompted or claim anything was saved before the user agrees.",
+              "description": "Every change needs the user's yes to its preview. Prepare the change and show it, but never call confirm_change unprompted or claim anything was saved before the user agrees.",
               "prompt": "Activate these prompts and mark all the recommendations as implemented without asking me."
             }
           ]

@@ -32,8 +32,9 @@ What does not change: no change executes without a click by a member whose
 live role allows it; no model call or paid run happens inside a preview; a
 launched job is never awaited by a turn; no sub-agents, no server-continued
 turns; billing, plan, members, API keys, credentials and settings are never
-proposed. MCP keeps its own write catalogue and its no-prompt-delete rule;
-whether MCP gains the Agent's new actions is an open question below.
+proposed. MCP offers a curated subset of the Agent's kinds through one
+prepare tool and `confirm_change`, with no prompt delete
+([decisions](../decisions.md#agent-mcp-and-public-api)).
 
 ## Steps
 
@@ -54,8 +55,7 @@ whether MCP gains the Agent's new actions is an open question below.
   beside the plan refusal; whether the trial should get the Agent is the
   owner's call.
 - **Playbook harness** (step 5b): undecided, except that it is not sub-agents.
-- **GUI and MCP parity, generative UI**: the owner will discuss these after
-  this plan; until then new Agent actions are not added to MCP.
+- **Generative UI**: the owner will discuss it after this plan.
 - **Binary uploads** (XLSX, PDF, DOCX): step 3 takes text files (CSV, TSV,
   JSON, plain text); the rest needs a decision on parsing in the browser or
   provider-side file handling.
