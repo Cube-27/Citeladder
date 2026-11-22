@@ -10,6 +10,7 @@ import { Inline } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableCellLines, TableRow, UrlText } from '@/components/ui/table';
+import { TextLink } from '@/components/ui/text-link';
 import { ChevronDown, ChevronRight } from '@/lib/icons';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 import { standingLabel } from '@/lib/visibility/source-pages';
@@ -58,7 +59,11 @@ export function SourcePagesRow({
             <TableRow key={page.url}>
               <TableCell>
                 <TableCellLines
-                  primary={page.title || page.domain}
+                  primary={
+                    <TextLink variant="external" href={page.url} text="inherit">
+                      {page.title || page.domain}
+                    </TextLink>
+                  }
                   secondary={<UrlText url={page.url} />}
                   secondaryTooltip={page.url}
                 />
