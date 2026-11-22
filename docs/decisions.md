@@ -155,10 +155,13 @@ how to add or change an entry.
 - **Scoped API keys are explicit user decisions.** `api_access` is a paid-plan
   capability; Owner or Admin creates a key, its scopes intersect its creator's
   live role, removing the creator revokes it ([invariant 10](invariants.md#10-automation-stays-bounded)).
-  Public reads: answers only. Public writes: bulk prompt changes only (status,
-  topic, delete over a selection). No brand-fact scope; verdict overrides stay in
-  the app. v1 keeps its conventions (no RFC 9457, no offset paging). Owner,
-  2026-10-10 (D4.1–D4.3) and 2026-11-18.
+  A key is a read key or a read and write key (every write scope); expiry is a
+  preset (1, 7, 30 or 90 days, default 30), a custom date from today on, or
+  never; a key can be revoked or deleted. Public reads: answers only. Public
+  writes: bulk prompt changes only (status, topic, delete over a selection). No
+  brand-fact scope; verdict overrides stay in the app. v1 keeps its conventions
+  (no RFC 9457, no offset paging). Owner, 2026-10-10 (D4.1–D4.3), 2026-11-18
+  and 2026-11-22.
 - **MCP writes are confirmed user decisions.** Only with **Allow changes** ticked
   at consent (default off, adds `citeladder:write`); larger changes go through
   `confirm_change` after a previewed dry run. Prompts added over MCP are active

@@ -1,9 +1,4 @@
-import {
-  useMutation,
-  useQuery,
-  type UseMutationResult,
-  type UseQueryResult,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { ConnectStrip } from '@/components/mcp/connect-strip';
@@ -24,46 +19,69 @@ import { mcpConnectionMutations, mcpConnectionQueries } from '@/lib/api/mcp-conn
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 
+type ConnectionEntry =
+  | { kind: 'own'; connection: McpConnection }
+  | { kind: 'member'; connection: McpConnection; workspaceId: string };
+
+function connectionDetail(entry: ConnectionEntry): string | null {
+  if (entry.kind === 'member') return entry.connection.user_email;
+  return entry.connection.requires_consent ? 'Reconnect to choose workspaces' : null;
+}
+
+function revokeTitle(entry: ConnectionEntry | null): string {
+  if (entry === null) return '';
+  const name = entry.connection.client_name;
+  if (entry.kind === 'own') return `Revoke ${name}?`;
+  return `Remove ${name}'s access to this workspace for ${entry.connection.user_email ?? 'this member'}?`;
+}
+
 function ConnectionRow({
-  connection,
-  adminView,
+  entry,
   onRevoke,
-}: Readonly<{ connection: McpConnection; adminView: boolean; onRevoke: () => void }>) {
-  const workspaces = connection.workspaces.map((workspace) => workspace.name).join(', ');
-  const verb = connection.access === 'read_and_change' ? 'Reads and changes' : 'Reads';
+}: Readonly<{ entry: ConnectionEntry; onRevoke: () => void }>) {
+  const { connection } = entry;
+  const detail = connectionDetail(entry);
   return (
     <TableRow>
       <TableCell>
         <div className="grid min-w-0">
-          <p className={textRole('body')}>
+          <ClampText tooltip={connection.client_name}>
             {connection.client_name}{' '}
             <span className={textRole('caption')}>· name not verified</span>
-          </p>
-          <ClampText className={textRole('body', 'text-ink-2')}>
-            {connection.requires_consent
-              ? 'Reconnect to choose workspaces.'
-              : `${verb} ${workspaces || 'no workspace you can still access'}.`}
           </ClampText>
-          <p className={textRole('caption', 'truncate')}>
-            {adminView && connection.user_email ? `Connected by ${connection.user_email} · ` : null}
-            Connected <DisplayTime value={connection.created_at} dateOnly /> ·{' '}
-            {connection.last_used_at ? (
-              <>
-                Last used <DisplayTime value={connection.last_used_at} />
-              </>
-            ) : (
-              'Not used yet'
-            )}
-          </p>
+          {detail ? (
+            <ClampText tooltip={detail} className={textRole('caption')}>
+              {detail}
+            </ClampText>
+          ) : null}
         </div>
       </TableCell>
+      <TableCell>{connection.access === 'read_and_change' ? 'Read and write' : 'Read'}</TableCell>
+      <TableCell>
+        <DisplayTime value={connection.created_at} dateOnly />
+      </TableCell>
+      <TableCell>
+        {connection.last_used_at ? (
+          <DisplayTime value={connection.last_used_at} dateOnly />
+        ) : (
+          <span className="text-ink-2">Not used yet</span>
+        )}
+      </TableCell>
       <TableActionsCell>
-        {adminView ? (
-          <Button variant="danger" onClick={onRevoke}>
-            Remove workspace access
+        {entry.kind === 'member' ? (
+          <Button
+            variant="danger"
+            aria-label={`Remove ${connection.client_name}'s access for ${connection.user_email ?? 'this member'}`}
+            onClick={onRevoke}
+          >
+            Remove access
           </Button>
         ) : (
-          <ActionButton action="revoke" onClick={onRevoke} />
+          <ActionButton
+            action="revoke"
+            aria-label={`Revoke ${connection.client_name}`}
+            onClick={onRevoke}
+          />
         )}
       </TableActionsCell>
     </TableRow>
@@ -72,91 +90,102 @@ function ConnectionRow({
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'connection', label: 'Connection', kind: 'identity' },
-  { key: 'actions', label: 'Actions', kind: 'actions', width: 'name', hideLabel: true },
+  { key: 'access', label: 'Actions', kind: 'text', width: 'category' },
+  { key: 'connected', label: 'Connected', kind: 'date', priority: 'low' },
+  { key: 'used', label: 'Last used', kind: 'date' },
+  { key: 'manage', label: 'Manage', kind: 'actions', width: 'button', hideLabel: true },
 ];
 
 function connectionsState(
-  query: UseQueryResult<McpConnection[]>,
-  adminView: boolean,
+  queries: readonly UseQueryResult<McpConnection[]>[],
 ): DataTableState | undefined {
-  if (query.isPending) return { kind: 'loading', label: 'Loading connections…' };
-  if (query.isError)
+  const failed = queries.find((query) => query.isError);
+  if (failed)
     return {
       kind: 'error',
-      title: adminView
-        ? "Couldn't load this workspace's connections"
-        : "Couldn't load your connections",
-      ...readErrorProps(query),
+      title: "Couldn't load connections",
+      ...readErrorProps(failed),
       fallback: 'Connections could not be loaded.',
     };
+  if (queries.some((query) => query.isPending))
+    return { kind: 'loading', label: 'Loading connections…' };
   return undefined;
 }
 
-function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
-  const adminView = workspaceId !== undefined;
-  const [pending, setPending] = useState<McpConnection | null>(null);
-  const query = useQuery(mcpConnectionQueries.list(workspaceId));
-  const revoke = useMutation(mcpConnectionMutations.revoke(workspaceId));
-  const title = adminView ? 'Connections that can read this workspace' : 'Your connections';
-  const empty = query.isSuccess && query.data.length === 0;
-  if (adminView && (query.isPending || empty)) return null;
+function connectionEntries(
+  own: readonly McpConnection[],
+  workspace: { id: string; connections: readonly McpConnection[] } | null,
+): ConnectionEntry[] {
+  const mine = new Set(own.map((connection) => connection.id));
+  const entries: ConnectionEntry[] = own.map((connection) => ({ kind: 'own', connection }));
+  if (workspace === null) return entries;
+  for (const connection of workspace.connections)
+    if (!mine.has(connection.id))
+      entries.push({ kind: 'member', connection, workspaceId: workspace.id });
+  return entries;
+}
+
+function ConnectionList({ workspaceId }: Readonly<{ workspaceId: string | null }>) {
+  const [pending, setPending] = useState<ConnectionEntry | null>(null);
+  const ownQuery = useQuery(mcpConnectionQueries.list());
+  const workspaceQuery = useQuery({
+    ...mcpConnectionQueries.list(workspaceId ?? undefined),
+    enabled: workspaceId !== null,
+  });
+  const queries = workspaceId === null ? [ownQuery] : [ownQuery, workspaceQuery];
+  const state = connectionsState(queries);
+  const entries = connectionEntries(
+    ownQuery.data ?? [],
+    workspaceId === null ? null : { id: workspaceId, connections: workspaceQuery.data ?? [] },
+  );
+  const title = 'Connections';
   return (
     <SettingsGroup title={title} region={false}>
-      {empty ? (
+      {state === undefined && entries.length === 0 ? (
         <StateBlock kind="empty" icon={ICONS.agent} heading="No connections yet" />
       ) : (
-        <DataTable label={title} columns={COLUMNS} state={connectionsState(query, adminView)}>
-          {query.data?.map((connection) => (
+        <DataTable label={title} columns={COLUMNS} state={state}>
+          {entries.map((entry) => (
             <ConnectionRow
-              key={connection.id}
-              connection={connection}
-              adminView={adminView}
-              onRevoke={() => {
-                revoke.reset();
-                setPending(connection);
-              }}
+              key={`${entry.kind}:${entry.connection.id}`}
+              entry={entry}
+              onRevoke={() => setPending(entry)}
             />
           ))}
         </DataTable>
       )}
-      <RevokeDialog
-        adminView={adminView}
-        pending={pending}
-        revoke={revoke}
-        onClose={() => setPending(null)}
-      />
+      <RevokeDialog pending={pending} onClose={() => setPending(null)} />
     </SettingsGroup>
   );
 }
 
 function RevokeDialog({
-  adminView,
   pending,
-  revoke,
   onClose,
-}: Readonly<{
-  adminView: boolean;
-  pending: McpConnection | null;
-  revoke: UseMutationResult<void, Error, string>;
-  onClose: () => void;
-}>) {
-  const name = pending?.client_name ?? 'this connection';
+}: Readonly<{ pending: ConnectionEntry | null; onClose: () => void }>) {
+  const workspaceId = pending?.kind === 'member' ? pending.workspaceId : undefined;
+  const revoke = useMutation(mcpConnectionMutations.revoke(workspaceId));
+  const member = pending?.kind === 'member';
+  const close = () => {
+    revoke.reset();
+    onClose();
+  };
   return (
     <Dialog
       open={pending !== null}
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open) close();
       }}
-      title={adminView ? `Remove ${name}'s access to this workspace?` : `Revoke ${name}?`}
+      title={revokeTitle(pending)}
       footer={
         <Button
           variant="danger"
           pending={revoke.isPending}
           onClick={() => {
-            if (pending) revoke.mutate(pending.id, { onSuccess: onClose });
+            if (pending) revoke.mutate(pending.connection.id, { onSuccess: close });
           }}
         >
-          {adminView ? 'Remove access' : 'Revoke'}
+          {member ? 'Remove access' : 'Revoke'}
         </Button>
       }
     >
@@ -173,6 +202,7 @@ function RevokeDialog({
 export function McpConnections() {
   const { activeWorkspaceId } = useProjectContext();
   const mayManage = useWorkspaceCapability('manage_members');
+  const workspaceId = mayManage && activeWorkspaceId ? activeWorkspaceId : null;
   return (
     <>
       <SettingsGroup title="Connect an AI assistant">
@@ -180,10 +210,7 @@ export function McpConnections() {
           <ConnectStrip surface="app" />
         </SettingRows>
       </SettingsGroup>
-      <ConnectionList />
-      {mayManage && activeWorkspaceId ? (
-        <ConnectionList key={activeWorkspaceId} workspaceId={activeWorkspaceId} />
-      ) : null}
+      <ConnectionList key={workspaceId ?? 'own'} workspaceId={workspaceId} />
     </>
   );
 }
