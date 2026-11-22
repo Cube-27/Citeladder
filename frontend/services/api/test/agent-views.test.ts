@@ -1,8 +1,10 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { readChat } from '../src/agent/reads.ts';
 import type { TurnState } from '../src/agent/turn-budget.ts';
 import { showView } from '../src/agent/views.ts';
 import { AgentFixtures, scripted, text, toolUse } from './agent-support.ts';
+import { topic } from './prompt-fixtures.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
 import { testDatabase } from './support.ts';
 
@@ -78,6 +80,47 @@ describe('show_view on PostgreSQL', () => {
       text: expect.stringMatching(/^Placed/u),
     });
     expect(state.views).toEqual([{ kind: 'site_health_summary', crawl_id: null }]);
+  });
+
+  it('accepts only a market and topic of the chat’s own project', async () => {
+    const own = await fixtures.scope();
+    const stranger = await fixtures.scope();
+    const market = async (scope: typeof own) => {
+      const id = randomUUID();
+      await db
+        .insertInto('project_markets')
+        .values({
+          id,
+          workspace_id: scope.workspaceId,
+          project_id: scope.projectId,
+          label: 'United Kingdom',
+          country_code: 'GB',
+          language_code: 'en',
+          created_at: new Date(),
+        })
+        .execute();
+      return id;
+    };
+    const [ownMarket, strangerMarket, ownTopic, strangerTopic] = await Promise.all([
+      market(own),
+      market(stranger),
+      topic(db, own.projectId, 'Pricing'),
+      topic(db, stranger.projectId, 'Pricing'),
+    ]);
+    const state: Pick<TurnState, 'views'> = { views: [] };
+    const show = (market_id: string, topic_id: string) =>
+      showView(db, own, state, { kind: 'visibility_ranking', market_id, topic_id });
+    expect(
+      [
+        await show(strangerMarket, ownTopic),
+        await show(ownMarket, strangerTopic),
+        await show(ownMarket, ownTopic),
+      ].map((outcome) => outcome.text),
+    ).toEqual([
+      'market_id is not a market of this project. Omit it for the project’s default market.',
+      'topic_id is not a topic of this project. Omit it for every topic.',
+      'unavailable: not_measured. Nothing was placed; say the data is not available yet, never that it is zero or empty.',
+    ]);
   });
 
   it('corrects a selection the kind cannot take', async () => {
