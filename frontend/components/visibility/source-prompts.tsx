@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
+import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
 import { Icon } from '@/components/ui/icon';
 import type { EvidenceSubject } from '@/components/runs/answer-dialog';
 import { useAnswerDialog } from '@/components/runs/answer-link';
@@ -35,13 +36,11 @@ const MAX_CHIPS = 3;
 export function SourcePrompts({
   filters,
   queries,
-  domain,
   url,
 }: Readonly<{
   filters: SourceFilters;
   queries: SourceQueries;
-  domain?: string | null;
-  url?: string | null;
+  url: string;
 }>) {
   const params = {
     audit_id: queries.selectedRunIds ? undefined : (queries.activeRunId ?? undefined),
@@ -49,15 +48,14 @@ export function SourcePrompts({
     engine: filters.engine === 'all' ? undefined : filters.engine,
     topic: queries.topic,
     cohort: filters.cohort,
-    domain: domain ?? undefined,
-    url: url ?? undefined,
+    url,
   };
   const query = useQuery({
     ...visibilityQueries.evidence(
       { workspaceId: queries.workspaceId, projectId: queries.projectId },
       params,
     ),
-    enabled: Boolean(queries.activeRunId && (domain || url)),
+    enabled: Boolean(queries.activeRunId),
   });
 
   const answerDialog = useAnswerDialog();
@@ -112,6 +110,11 @@ function promptsState(
   };
 }
 
+function EngineLogo({ engine }: Readonly<{ engine: string }>) {
+  const key = engineMarkKey(engine);
+  return key ? <EngineMark engine={key} className="shrink-0" /> : null;
+}
+
 function PromptRow({
   item,
   onOpenAnswer,
@@ -124,7 +127,7 @@ function PromptRow({
     <TableRow>
       <TableCell>
         <Inline as="span">
-          <BrandMark name={engines.label(item.logical_engine)} />
+          <EngineLogo engine={item.logical_engine} />
           <TableCellLines
             primary={item.prompt_text || 'Untitled prompt'}
             secondary={

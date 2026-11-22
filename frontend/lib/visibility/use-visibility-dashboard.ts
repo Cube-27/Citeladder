@@ -61,9 +61,7 @@ const sourceKeys = [
   'source_type',
   'source_standing',
   'source_pick',
-  'source_domain',
   'source_url',
-  'source_view',
 ];
 const engineCodec = stringUrlCodec(['all', ...logicalEngineSchema.options], 'all');
 const rangeCodec = stringUrlCodec<TrendRange>(['all', '30d', '90d', '1y'], DEFAULT_TREND_RANGE);
