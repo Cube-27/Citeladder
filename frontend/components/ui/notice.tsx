@@ -13,24 +13,21 @@ import { cn } from '@/lib/utils';
 
 export type NoticeTone = 'info' | 'positive' | 'warning' | 'negative';
 
-const TONE: Record<NoticeTone, { glyph: IconGlyph; ink: string; face: string; word: string }> = {
-  info: { glyph: Info, ink: 'text-info', face: 'bg-info-wash border-info/20', word: 'Note' },
+const TONE: Record<NoticeTone, { glyph: IconGlyph; ink: string; word: string }> = {
+  info: { glyph: Info, ink: 'text-info', word: 'Note' },
   positive: {
     glyph: CircleCheck,
     ink: 'text-positive',
-    face: 'bg-positive-wash border-positive/20',
     word: 'Done',
   },
   warning: {
     glyph: TriangleAlert,
     ink: 'text-warning',
-    face: 'bg-warning-wash border-warning/25',
     word: 'Warning',
   },
   negative: {
     glyph: CircleAlert,
     ink: 'text-negative',
-    face: 'bg-negative-wash border-negative/20',
     word: 'Error',
   },
 };
@@ -114,15 +111,15 @@ function MessageNoticeView({
       data-notice-tone={tone}
       className={cn(
         textRole('body'),
-        'rounded-control flex flex-wrap items-start gap-x-3 gap-y-2 border px-3 py-2.5',
-        style.face,
+        'flex flex-wrap gap-2',
+        action && title == null ? 'items-center' : 'items-start',
         className,
       )}
     >
       <span aria-hidden className={cn('inline-flex h-5 shrink-0 items-center', style.ink)}>
         <style.glyph className="size-4" />
       </span>
-      <div className="flex min-w-0 flex-[1_1_12rem] flex-col gap-1">
+      <div className="flex min-w-0 flex-col gap-1">
         {title != null ? (
           <p className="type-emphasis">
             {word}
@@ -134,7 +131,7 @@ function MessageNoticeView({
         {children != null ? <div>{children}</div> : null}
       </div>
       {action ? (
-        <div className="phone:ms-6 phone:basis-[calc(100%-1.5rem)] phone:justify-start [&_[data-button-variant=quiet]]:text-ink ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2 self-center">
+        <div className="phone:ms-6 phone:basis-[calc(100%-1.5rem)] phone:justify-start [&_[data-button-variant=quiet]]:text-ink ms-2 flex max-w-full shrink-0 flex-wrap items-center gap-2 self-center">
           {action}
         </div>
       ) : null}
