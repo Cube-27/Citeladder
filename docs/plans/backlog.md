@@ -279,8 +279,7 @@ a fresh scope before work starts.
 
 | Area | What it would add |
 |---|---|
-| Agent model and reasoning picker | Native runtime PR 2: a Haiku/Sonnet and reasoning-level picker, with a Sonnet price row and public copy. |
-| Agent runtime extensions | Native runtime PR 3: web search and fetch, actions that run after the user confirms, turns that continue on the server after the browser closes (durable execution, today deliberately tied to the request), scheduled follow-ups and optional cross-chat memory. Each changes an accepted rule (invariants §10 and §13), so the owner chooses between Managed Agents and the native runtime first. |
+| Agent runtime extensions | Web fetch, turns that continue on the server after the browser closes (durable execution, today deliberately tied to the request; the [Agent plan](agent-hero.md) keeps launch, end and resume on return), scheduled follow-ups and optional cross-chat memory. Each changes an accepted rule (invariants §10 and §13), so the owner chooses between Managed Agents and the native runtime first. |
 | Agent memory promotion | Reviewed Save to Context with expected-base revision, idempotency and source-message provenance. Preferences use instruction revisions; company facts use the reviewed brand-profile owner. |
 | Agent plan execution | Durable user-approved steps and child-chat links, fresh authorization and funding, and retry semantics; no autonomous execution chain. |
 | Agent skill policy | Server-enforced per-project skill enablement and order, and a frozen run policy. User-authored skills stay out of scope. |

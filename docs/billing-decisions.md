@@ -95,10 +95,6 @@ includes AI credits; changing plan prices or credit amounts never changes the
 internal cost calculation. Verified rates are in the
 [provider rate card](operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost).
 
-**B54 — Owner, 2026-10-12 (not built).** Claude Sonnet 5.5 is offered in the
-Agent on Growth and Scale, not on the free trial or Starter. It lives in plan
-configuration and may change.
-
 **B55 — Owner, 2026-10-12.** Add-on and top-up prices, quantities and purchase
 frequency, and plan allowances (prompt runs, AI credits), are set after testing,
 sized from internal cost (B53). Until then documentation states only what each
@@ -133,6 +129,10 @@ written (B60), or when the browser closes the turn after a document streamed
 already expired settles like recovery, with the refund. Credit holds must never
 refuse work the balance can actually pay for (hold sizing is in
 [Agent](agents.md#worker-and-funding)).
+
+**B75 — Owner, 2026-11-22 (not built).** Every paid plan picks the Agent's model
+among Haiku 5.5, Sonnet 5.5 and Opus 5.5 at low, medium or high effort, each
+metered at its own token price (B53). The trial sees the picker disabled.
 
 ## Subscriptions and refunds
 

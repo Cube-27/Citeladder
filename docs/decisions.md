@@ -109,6 +109,29 @@ how to add or change an entry.
   platform gateway (Anthropic and OpenAI-compatible); default model Claude Haiku
   5.5 at medium effort; reads in one response run together; earlier turns replay
   append-only so the prompt cache and thinking carry. Owner A1–A3, 2026-10-12.
+- **The Agent drives the app.** A person can do their project's data and
+  analysis work from the chat without visiting the screens: the Agent may make
+  every project-data and analysis change a button makes, deletes included, each
+  as a previewed card that only the person's click executes. Billing, plan,
+  members, API keys and settings stay button-only. A long job is launched, the
+  turn ends and the person resumes on return; no sub-agents. Sign-in lands on
+  Overview until the Agent is tested; landing on the Agent is the last step.
+  Owner, 2026-11-18 and 2026-11-22 ([plan](plans/agent-hero.md)).
+- **Agent model picker: Claude only.** Haiku 5.5, Sonnet 5.5 and Opus 5.5 at
+  low, medium or high effort, chosen per chat
+  ([B75](billing-decisions.md#agent-charging)). The OpenAI-compatible route
+  stays in code and is not offered. Owner, 2026-11-22.
+- **Agent uploads, inline views and connectors.** An uploaded file is chat
+  material the Agent can convert into a CiteLadder import format and save
+  through a card. The Agent shows the app's existing charts and tables in the
+  thread from persisted reads. Integrations are connected from the chat, and a
+  curated list of outside connectors (Slack, Jira or Linear, Notion, Google
+  Drive and Docs, WordPress) is read and written behind a card. Owner,
+  2026-11-22.
+- **Agent skills.** Existing skills get a quality pass and simple skills are
+  added for features that have none. Skills that act and cross-feature
+  playbooks come after, tested locally before merge; how the harness runs a
+  playbook is undecided. Owner, 2026-11-22.
 - **The Agent behaves like a normal Claude chat.** One draft state (no
   outline-first phase; an outline only on request), revision by exact edits,
   generous limits so long work finishes, a failed turn that saved nothing is not
@@ -141,8 +164,8 @@ how to add or change an entry.
   `confirm_change` after a previewed dry run. Prompts added over MCP are active
   at once; competitor suggestions are accepted or rejected directly; bulk
   activate, archive and assign-topic is one prepared change; **no prompt delete
-  over MCP**; the in-app Agent stays read-only. Owner, 2026-10-10 (D4.2, D4.4)
-  and 2026-11-18 ([MCP](mcp.md#changes)).
+  over MCP**. Owner, 2026-10-10 (D4.2, D4.4) and 2026-11-18
+  ([MCP](mcp.md#changes)).
 - **MCP reads grow by views first.** MCP and the Agent share one read catalogue
   in the Agent's cached prefix, so new reads are views or parameters on existing
   tools before new tools. Tool descriptions, links, docs site and changelog are
