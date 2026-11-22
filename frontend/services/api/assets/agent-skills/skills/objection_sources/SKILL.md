@@ -3,7 +3,7 @@ id: objection_sources
 label: Answer an objection
 group: visibility
 order: 14
-version: 1
+version: 2
 output_kind: earned_brief
 description: Work on one objection AI answers raise about the brand, one source at a time. List its cited sources, let the person pick, read each chosen page and suggest own-page edits, author outreach or advice. Never acts without the person's choice.
 ---
@@ -13,7 +13,7 @@ description: Work on one objection AI answers raise about the brand, one source 
 ## Where the data is
 
 - The `objection` context section: the objection's name, position score (100 means always raised first), the engines raising it, the probe date and the pages the answers cited (`pages`, most cited first; `sources` counts them all, and is null when the latest probe did not raise the objection). A page classified `owned` is on the project's own site.
-- `read_page_text` for the project's own pages; `read_source_url` for a cited page, and web search when it refuses one.
+- `read_page_text` for the project's own pages. `read_source_url` reads every page in `pages`: pass its `url` exactly as listed, query string included. A page only the probe cited comes back with `cited_by` `market_probe`: what CiteLadder read on it and how many probe answers cited it, never brand-run counts. Use web search only when `read_source_url` refuses a page.
 
 ## Steps
 

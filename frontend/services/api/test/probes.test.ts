@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
 import { readAgentContext } from '../src/agent/context-adapter.ts';
+import { sourceUrl } from '../src/mcp/evidence-analytics.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { createAudits } from '../src/audits/creation.ts';
 import { auditInput } from '../src/audits/inputs.ts';
@@ -625,12 +626,14 @@ describe('probe labelling and reads', () => {
     );
   });
 
-  it("lists the pages cited per Market theme and seeds an Agent chat with one objection's cited sources, in its workspace only", async () => {
+  it("lists the pages cited per Market theme, seeds an Agent chat with one objection's cited sources and reads each by its listed URL, in its workspace only", async () => {
     const owner = await probeTenant();
     const other = await probeTenant();
     const [auditId] = await launch(owner.t);
     await answered(owner.t, auditId);
     await label(owner.t, labeller(first));
+    const listed = 'https://reviews.test/acme?utm_source=openai';
+    await fixtures.sourcePage(owner.t, { urlHash: 'acme-review', url: listed });
     const tasks = await db
       .selectFrom('audit_tasks')
       .select('id')
@@ -641,7 +644,7 @@ describe('probe labelling and reads', () => {
         owner.t,
         {
           auditId,
-          analysis: { citations: [{ url: 'https://reviews.test/acme', title: 'Acme review' }] },
+          analysis: { citations: [{ url: listed, title: 'Acme review', urlHash: 'acme-review' }] },
         },
         task.id,
         'chatgpt',
@@ -658,12 +661,12 @@ describe('probe labelling and reads', () => {
         sources: 1,
         pages: [
           {
-            url: 'https://reviews.test/acme',
+            url: listed,
             title: 'Acme review',
             domain: 'reviews.test',
             classification: 'third_party',
-            page_format: null,
-            standing: null,
+            page_format: 'article',
+            standing: 'not_read',
             citations: 3,
           },
         ],
@@ -688,7 +691,7 @@ describe('probe labelling and reads', () => {
       sources: 1,
       pages: [
         {
-          url: 'https://reviews.test/acme',
+          url: listed,
           title: 'Acme review',
           classification: 'third_party',
           citations: 2,
@@ -698,5 +701,23 @@ describe('probe labelling and reads', () => {
     await expect(
       readAgentContext(db, other.t, { objection_group_id: fit.id }, 'Help me answer it'),
     ).rejects.toMatchObject({ code: 'agent_context_unavailable' });
+    const read = (t: Tenant, url: string) =>
+      sourceUrl(
+        { db, scope: { workspaceId: t.workspaceId, projectId: t.projectId }, origin: '' },
+        { url, cohort: 'core' },
+      );
+    const cited = await read(owner.t, listed);
+    expect(cited).toMatchObject({
+      state: 'available',
+      url: listed,
+      title: 'Acme review',
+      cited_by: 'market_probe',
+      probe: { answers: 9, engines: [{ logical_engine: 'chatgpt', answers: 9 }] },
+      page: { state: 'inspected', page_format: 'article' },
+    });
+    expect(cited).not.toHaveProperty('retrievals');
+    const refused = { state: 'unavailable', reason: 'url_not_cited_in_selection' };
+    expect(await read(owner.t, 'https://reviews.test/acme')).toMatchObject(refused);
+    expect(await read(other.t, listed)).toMatchObject(refused);
   });
 });
