@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { policy } from '../src/config.ts';
 import type { JevClient } from '../src/models/jev.ts';
+import { promptCandidates } from '../src/mcp/evidence-prompt-setup.ts';
 import { reviewCandidates } from '../src/prompts/candidates.ts';
 import { generationInput } from '../src/prompts/generation-input.ts';
 import { generatePrompts } from '../src/prompts/generation.ts';
@@ -182,6 +183,15 @@ describe('brand prompt generation at the PostgreSQL boundary', () => {
       offerings: ['Trail running shoes'],
     });
     expect(requests[0]?.system).toContain('size up one business before buying from it');
+
+    const read = {
+      db,
+      scope: { workspaceId: tenant.workspaceId, projectId: tenant.projectId },
+      origin: 'https://app.test',
+    };
+    const listed = async (intent: string) =>
+      ((await promptCandidates(read, { intent })).items as unknown[]).length;
+    expect([await listed('evaluation'), await listed('discovery')]).toEqual([6, 0]);
 
     const account = await billingAccount(db, tenant.workspaceId);
     await grant(db, account, { value: 2 });

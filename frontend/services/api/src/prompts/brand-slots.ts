@@ -11,6 +11,7 @@ import {
   planners,
   topicWeights,
   type CellReviewState,
+  type Facet,
   type PlanContext,
   type Slot,
 } from './generation-plan.ts';
@@ -18,6 +19,35 @@ import {
 const B = policy.prompts.brand;
 
 export const isBrandSlot = (slot: Pick<Slot, 'buyer_need'>) => 'angle' in slot.buyer_need;
+
+type Planner = ReturnType<typeof planners>[number];
+
+function claimFacet(plan: Planner, wanted: boolean): Facet | null | undefined {
+  if (!wanted) return null;
+  const options = plan.options.filter(claimable);
+  if (!isNonEmpty(options)) return undefined;
+  const facet = nextFacet(plan, options);
+  plan.usage.set(facetKey(facet), (plan.usage.get(facetKey(facet)) ?? 0) + 1);
+  return facet;
+}
+
+function brandNeed({
+  offering,
+  angle,
+  facet,
+  competitor,
+}: {
+  offering: string;
+  angle: string;
+  facet: Facet | null;
+  competitor: string | undefined;
+}) {
+  const need: Record<string, string> = { offering, angle };
+  const facetName = facet ? facets[facet.dimension] : undefined;
+  if (facet && facetName) need[facetName] = facet.value;
+  if (competitor) need.competitor = competitor;
+  return need;
+}
 
 export function planBrandSlots(
   context: PlanContext & { context: { competitors: readonly { name: string }[] } },
@@ -38,16 +68,11 @@ export function planBrandSlots(
     const angle = angles[index % angles.length];
     const plan = plans[(index + Math.floor(index / angles.length)) % plans.length];
     if (!angle || !plan) return [];
-    const options = plan.options.filter(claimable);
-    if (angle.facet && !isNonEmpty(options)) return [];
-    const facet = angle.facet && isNonEmpty(options) ? nextFacet(plan, options) : null;
-    if (facet) plan.usage.set(facetKey(facet), (plan.usage.get(facetKey(facet)) ?? 0) + 1);
-    const need: Record<string, string> = { offering: plan.offering, angle: angle.key };
-    const facetName = facet ? facets[facet.dimension] : undefined;
-    if (facet && facetName) need[facetName] = facet.value;
+    const facet = claimFacet(plan, angle.facet);
+    if (facet === undefined) return [];
     const competitor =
       angle.cohort === 'comparison' ? competitors[compared++ % competitors.length] : undefined;
-    if (competitor) need.competitor = competitor;
+    const need = brandNeed({ offering: plan.offering, angle: angle.key, facet, competitor });
     const reviewState: CellReviewState = facet?.source ?? 'not_applicable';
     return [
       {

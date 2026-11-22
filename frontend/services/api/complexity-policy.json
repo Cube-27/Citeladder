@@ -70,7 +70,6 @@
       "services/api/src/mcp/evidence-analytics.ts::validateSelection": 24,
       "services/api/src/mcp/evidence-site.ts::sitePages": 17,
       "services/api/src/mcp/evidence-traffic.ts::performanceRead": 16,
-      "services/api/src/mcp/evidence.ts::promptPortfolio": 14,
       "services/api/src/mcp/oauth-routes.ts::authenticatedClient": 16,
       "services/api/src/mcp/oauth.ts::authorizationCodeGrant": 18,
       "services/api/src/mcp/oauth.ts::refreshTokenGrant": 15,

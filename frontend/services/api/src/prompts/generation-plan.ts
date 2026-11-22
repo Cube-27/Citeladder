@@ -39,7 +39,7 @@ type Grounding = Pick<
   ObservedQuery,
   'id' | 'source' | 'text' | 'classifier_version' | 'override_id'
 >;
-export type FacetSource = 'confirmed' | 'suggested' | 'requested';
+type FacetSource = 'confirmed' | 'suggested' | 'requested';
 export type Facet = { dimension: number; value: string; source: FacetSource };
 export type CellReviewState = FacetSource | 'not_applicable';
 export type PlanContext = Pick<GenerationContext, 'selected' | 'topics' | 'maps' | 'observed'> & {

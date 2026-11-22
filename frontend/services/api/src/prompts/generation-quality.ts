@@ -29,6 +29,9 @@ export const noulQuestions = (cohort: unknown, claims = cohort === 'brand_diagno
   ...(claims ? Q.brand_noul_questions : {}),
 });
 
+const decisionQuestions = ({ cohort = 'core', claims }: Record<string, unknown>) =>
+  noulQuestions(cohort, typeof claims === 'boolean' ? claims : undefined);
+
 export function applyQualityPolicy(decision: Record<string, unknown>) {
   const thresholds = {
     flag_below: Number(setting('flag_below')),
@@ -46,9 +49,7 @@ export function applyQualityPolicy(decision: Record<string, unknown>) {
     throw new Error('Invalid JEV thresholds');
   const answers = record(decision.answers),
     duplicate = record(decision.duplicate_of);
-  const cohort = decision.cohort ?? 'core';
-  const claims = typeof decision.claims === 'boolean' ? decision.claims : undefined;
-  const values = Object.keys(noulQuestions(cohort, claims)).map((key) => {
+  const values = Object.keys(decisionQuestions(decision)).map((key) => {
     const core = Object.hasOwn(Q.core_noul_questions, key);
     return {
       key,
