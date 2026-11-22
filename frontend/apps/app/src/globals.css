@@ -359,8 +359,10 @@
   --color-raised-2: #2b2b2c;
   --color-well: var(--color-raised);
   --color-thumb: var(--color-ink-2);
-  --color-rule: rgb(255 255 255 / 8%);
-  --color-control-line: rgb(255 255 255 / 12%);
+  --color-rule: rgb(255 255 255 / 11%);
+  --color-control-edge: rgb(255 255 255 / 15%);
+  --color-control-line: rgb(255 255 255 / 22%);
+  --card-ground: #1b1b1c;
   --color-ink: #ececec;
   --color-ink-2: #a8a8aa;
   --color-ink-hover: oklch(85% 0 0);
@@ -381,7 +383,7 @@
   --color-data-other: oklch(65% 0 0);
   --color-state-hover: rgb(255 255 255 / 4%);
   --color-state-selected: rgb(255 255 255 / 7%);
-  --nav-current-fill: var(--color-state-selected);
+  --nav-current-fill: rgb(255 255 255 / 11%);
   --color-scrim: oklch(0% 0 0 / 60%);
   --shadow-card: none;
   --shadow-pop: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 4px 12px oklch(0% 0 0 / 30%);
@@ -525,21 +527,21 @@
   text-wrap: pretty;
   --table-head-ground: var(--color-well);
   --table-ground: var(--color-surface);
-  --color-ground: #f2f2f4;
+  --color-ground: #eeeef1;
   --color-chrome: var(--color-ground);
   --color-panel: #ffffff;
   --color-surface: var(--color-panel);
   --color-raised: var(--color-panel);
   --color-raised-2: #eef0f2;
-  --color-well: #f7f8f9;
-  --color-rule: rgb(0 0 0 / 8%);
-  --color-control-line: rgb(0 0 0 / 12%);
+  --color-well: #f3f4f6;
+  --color-rule: rgb(0 0 0 / 11%);
+  --color-control-line: rgb(0 0 0 / 22%);
   --color-focus: var(--color-accent);
   --focus-width: 1px;
   --focus-offset: 0px;
   --focus-glow: color-mix(in srgb, var(--color-focus) 24%, transparent);
   --field-focus-edge: var(--color-focus);
-  --color-control-edge: var(--color-rule);
+  --color-control-edge: rgb(0 0 0 / 15%);
   --color-ink: #1d1d1d;
   --color-ink-2: #54585f;
   --color-ink-3: #71717a;
@@ -616,7 +618,7 @@
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
-  --nav-current-fill: #e7e7ea;
+  --nav-current-fill: #dcdce1;
   --panel-inset: 0px;
   --route-chrome-height: calc(
     2 * var(--panel-inset) + var(--masthead-block-size, var(--masthead-height)) +
@@ -1959,7 +1961,7 @@ label {
 
 :root:not([data-public-surface]):not([data-theme='dark']) {
   --lift-radius: 12px;
-  --lift-border: rgb(0 0 0 / 7%);
+  --lift-border: var(--color-rule);
   --lift-shadow: 0 1px 2px rgb(0 0 0 / 5%), 0 2px 8px rgb(0 0 0 / 4%);
 }
 :root:not([data-public-surface]):not([data-theme='dark'])
@@ -1975,4 +1977,15 @@ label {
   border-radius: var(--lift-radius);
   background-color: var(--color-surface);
   box-shadow: var(--lift-shadow);
+}
+:root[data-theme='dark']:not([data-public-surface])
+  :is(
+    .surface-card,
+    .surface-slip,
+    .surface-lift,
+    [data-figure-strip]
+  ):not(
+    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], [data-figure-strip]) *
+  ) {
+  background-color: var(--card-ground);
 }

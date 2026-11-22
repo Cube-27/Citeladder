@@ -22,27 +22,29 @@ held by review.
 
 | Token            | Dark                     | Light              | Use                                  |
 | ---------------- | ------------------------ | ------------------ | ------------------------------------ |
-| `ground`         | `#0a0a0c`                | `#f2f2f4`          | window and sidebar                   |
+| `ground`         | `#0a0a0c`                | `#eeeef1`          | window and sidebar                   |
 | `panel`          | `#151516`                | `#ffffff`          | the inset content panel              |
 | `raised`         | `#1e1e1f`                | `#ffffff`          | secondary buttons, menus             |
+| `card`           | `#1b1b1c`                | `#ffffff`          | top-level cards and the metric strip |
 | `raised-2`       | `#2b2b2c`                | `#eef0f2`          | hover on raised, avatar              |
 | `state-hover`    | `rgb(255 255 255 / 4%)`  | `rgb(0 0 0 / 3%)`  | row and quiet-control hover          |
 | `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | selected segment, dark current row   |
-| `rule`           | `rgb(255 255 255 / 8%)`  | `rgb(0 0 0 / 8%)`  | every hairline (the spec's `line`)   |
-| `control-line`   | `rgb(255 255 255 / 12%)` | `rgb(0 0 0 / 12%)` | hovered field edge (`line-strong`)   |
+| `rule`           | `rgb(255 255 255 / 11%)` | `rgb(0 0 0 / 11%)` | every hairline (the spec's `line`)   |
+| `control-edge`   | `rgb(255 255 255 / 15%)` | `rgb(0 0 0 / 15%)` | button, input and trigger edge       |
+| `control-line`   | `rgb(255 255 255 / 22%)` | `rgb(0 0 0 / 22%)` | hovered field edge (`line-strong`)   |
 | `ink`            | `#ececec`                | `#1d1d1d`          | text                                 |
-| `ink-2`          | `#979798`                | `#5f636a`          | secondary text, icons                |
+| `ink-2`          | `#a8a8aa`                | `#54585f`          | secondary text, icons                |
 | `accent`         | `#ff6a33`                | `#e8501a`          | "you, here" and focus                |
 | `primary`        | deep accent              | deep accent        | every action fill, white text        |
 
 Older role names bind onto the table so call sites keep working: `chrome` is
-`ground`, `surface` is `panel`, `well` is `#f7f8f9` in light (`raised` in
-dark), `control-edge` and
-`chart-grid` are `rule`, `state-pressed` is `state-selected`, `on-ink` is
+`ground`, `surface` is `panel`, `well` is `#f3f4f6` in light (`raised` in
+dark), `chart-grid` is `rule`, `state-pressed` is `state-selected`, `on-ink` is
 `panel`. Status colours (`positive`, `negative`, `warning`, `info` and their
 `-wash` fills), `accent-text`, `accent-wash` and the data series keep their
 values in `globals.css`. A status colour appears only beside a glyph and a
-word, never as a large fill. Data: `data-you` is the accent, `data-rival-1`
+word, never as a large fill; the one exception is a Site health page score,
+printed in `negative` below 50 and `warning` below 80 (owner, 2026-11-22). Data: `data-you` is the accent, `data-rival-1`
 to `-4` ink then cool hues in rank order, `data-other` the grouped rest.
 
 ## Type
@@ -116,7 +118,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Shell.** Sidebar 224 on `ground` (200 below 1280), 8 padding: header row
   as tall as the page header (workspace switcher, settings icon), the
   Dashboard | Agent segmented control, 28-high nav rows (current row on a
-  `#e7e7ea` pill in light, `state-selected` in dark, with a 2px accent
+  `#dcdce1` pill in light, `rgb(255 255 255 / 11%)` in dark, with a 2px accent
   mark), 12px group labels, foot with Integrations (the collapse toggle at
   its end) and the account (AR-8). The main column is the inset panel: 8 from the window
   edges (none on the sidebar side), `rule` edge, radius 8,
@@ -131,8 +133,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   page shows.
 - **Tab strip** (owner, 2026-11-22), 40 high: folder tabs on a `rule`
   baseline that runs only between the page paddings; the current tab is
-  framed in `rule` on three sides with a 6 radius on top and opens onto
-  the content below. It is the only horizontal line a page draws.
+  framed in `rule` on three sides with a 6 radius on top, filled `well`. It is the only horizontal line a page draws.
 - **Body.** 24 side padding (16 below 760px), 24 below; the title, tab
   strip, toolbar and content sit 12 apart, the same gap as a table's
   toolbar above its table (owner, 2026-11-22): status line,
@@ -219,12 +220,12 @@ One entry per family; wave 2 fills each from the layouts above.
   (`SERIES_STROKE`, `SERIES_FILL`); position-coloured charts map onto it.
 - **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 28,
   radius 6, flat; 14px icons in `ink-2` on a secondary. Secondary: `raised`
-  with a `rule` edge, `raised-2` on hover, press or open. Quiet: transparent,
+  with a `control-edge` edge, `raised-2` on hover, press or open. Quiet: transparent,
   `state-hover` fill. Primary: `primary` fill (the deep accent),
   white text, at most one per view. Danger: secondary with negative text; filled only to confirm in a
   dialog (`danger-confirm`). One disabled look for every variant. The
   website keeps its layered `.face`.
-- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 28, `rule`
+- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 28, `control-edge`
   edge on `panel`, `control-line` on hover; focused, an accent edge and its
   glow; invalid, a negative edge and a negative glow. 14px leading icon. Checkbox and radio
   take the same edge and a `primary` fill when on; the switch is a `primary`
@@ -240,7 +241,7 @@ One entry per family; wave 2 fills each from the layouts above.
   tooltips are `raised` with a `rule` edge, radius 8, 28-high rows on
   `state-hover`.
 - **Tabs and segmented control** ([`tabs.tsx`](../frontend/components/ui/tabs.tsx)).
-  Tabs are folder tabs padded 16, the current one `ink` in a `rule` frame
+  Tabs are folder tabs padded 16, the current one `ink` on `well` in a `rule` frame
   open at the bottom, the rest `ink-2`.
   Segmented control: `rule` frame one control high, 2px inset, 24-high
   segments, the selected one on `state-selected`.

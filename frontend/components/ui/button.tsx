@@ -22,7 +22,7 @@ const HOVER_OVERLAY =
   'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed not-disabled:active:overlay-pressed';
 
 const RAISED_FACE =
-  'face bg-raised border border-rule not-disabled:hover:bg-raised-2 not-disabled:active:bg-raised-2 aria-pressed:bg-raised-2 data-[state=open]:bg-raised-2';
+  'face bg-raised border border-control-edge not-disabled:hover:bg-raised-2 not-disabled:active:bg-raised-2 aria-pressed:bg-raised-2 data-[state=open]:bg-raised-2';
 
 const BUTTON_BASE =
   'focus-ring press type-label relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-[var(--control-coarse)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
