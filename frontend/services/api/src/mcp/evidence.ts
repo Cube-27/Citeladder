@@ -14,7 +14,7 @@ import { productMetrics } from '../commerce/products.ts';
 import { catalog } from '../commerce/reads.ts';
 import { readiness, datasetPage, listRuns } from '../search-intelligence/reads.ts';
 import { mcpPolicy } from './config.ts';
-import { shoppingTotals } from './views-work.ts';
+import { noCatalog, shoppingTotals } from './views-work.ts';
 import { appLink } from './links.ts';
 import { decodeCursor, encodeCursor, pagination, reference, unavailable } from './data.ts';
 import { McpInputError, type Evidence, type ProjectRead } from './types.ts';
@@ -115,7 +115,7 @@ export async function shelfRead(
     return { state: 'available', ...(await productDetail(db, scope, args.holder_id, executions)) };
   const { product_total, categories, projection } = await catalog(db, scope);
   if (projection.applicability !== 'applicable' && !product_total)
-    return unavailable('no_product_catalog');
+    return noCatalog(projection.applicability);
   const products = await productMetrics(db, scope, {
     ...executions,
     source: args.source ?? 'catalog',

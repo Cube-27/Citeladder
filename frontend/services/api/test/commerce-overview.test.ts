@@ -305,6 +305,7 @@ describe('Shopping overview read', () => {
     expect(await shelf(bare)).toEqual({
       state: 'unavailable',
       reason: 'no_product_catalog',
+      business_applicability: 'unknown',
       artifact_refs: [],
     });
     await importCatalog(db, { workspaceId: bare.workspaceId, projectId: bare.projectId }, CATALOG);

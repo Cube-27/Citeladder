@@ -122,7 +122,12 @@ export async function sourceSeries(
   } catch (error) {
     return notYetMeasured(error, Boolean(args.audit_id));
   }
-  if (!found.buckets.length) return unavailable('no_completed_run');
+  if (!found.buckets.length)
+    return unavailable(
+      args.topic_id || args.engine || args.audit_id
+        ? 'no_answers_in_selection'
+        : 'no_completed_run',
+    );
   const key = ['series', args.level, args.granularity, args.domain ?? ''];
   const newest = found.buckets.map((at, index) => ({ at, index })).toReversed();
   const { items, pagination } = offsetPage(newest, {

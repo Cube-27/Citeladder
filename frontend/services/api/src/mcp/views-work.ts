@@ -77,13 +77,18 @@ export async function actionGroups(
   };
 }
 
+export const noCatalog = (applicability: string): Evidence => ({
+  ...unavailable('no_product_catalog'),
+  business_applicability: applicability,
+});
+
 export async function shoppingTotals(
   read: ProjectRead,
   args: { category_id?: string | null; window_days: number },
 ): Promise<Evidence> {
   const { product_total, categories, projection } = await catalog(read.db, read.scope);
   if (projection.applicability !== 'applicable' && !product_total)
-    return unavailable('no_product_catalog');
+    return noCatalog(projection.applicability);
   if (args.category_id && !categories.some((category) => category.id === args.category_id))
     throw new McpInputError('category_id is not a category of this project');
   const overview = await shoppingOverview(read.db, read.scope, {

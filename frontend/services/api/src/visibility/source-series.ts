@@ -31,7 +31,8 @@ function assembleSeries(
     limit: number;
   },
 ): SourceSeriesResponse {
-  const buckets = [...input.totals.keys()].sort(compareText);
+  const ordered = [...input.totals].sort(([left], [right]) => compareText(left, right));
+  const buckets = ordered.map(([at]) => at);
   const ranked = new Map<string, number>();
   for (const row of rows) ranked.set(row.key, (ranked.get(row.key) ?? 0) + row.citations);
   const leading = [...ranked.entries()]
@@ -44,7 +45,7 @@ function assembleSeries(
     dimension: input.dimension,
     granularity: input.granularity,
     buckets,
-    bucket_responses: buckets.map((at) => input.totals.get(at)!),
+    bucket_responses: ordered.map(([, responses]) => responses),
     series: leading.map((key) => ({
       key,
       citations: ranked.get(key)!,

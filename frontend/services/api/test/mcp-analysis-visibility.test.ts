@@ -78,6 +78,10 @@ it('charts citation share over runs, keeping a source absent from a bucket a rea
     artifact_refs: [],
   });
   const february = await measuredRun(tenant, '2026-02-01T00:00:00Z', metrics(2));
+  expect(await series({ audit_id: february })).toMatchObject({
+    state: 'unavailable',
+    reason: 'no_answers_in_selection',
+  });
   await fixtures.execution(tenant, { auditId: february, analysis: { citations: [] } });
   expect(await series()).toMatchObject({
     state: 'available',
