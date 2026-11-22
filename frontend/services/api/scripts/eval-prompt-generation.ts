@@ -6,6 +6,7 @@ import { policy } from '../src/config.ts';
 import { gitDirectory } from './git-directory.ts';
 import { createModelGateway } from '../src/models/gateway.ts';
 import { generateDrafts } from '../src/prompts/generation-drafts.ts';
+import { promptGenerationModeSchema } from '@citeladder/contracts/prompt-requests';
 import { generationInput, generationSetting } from '../src/prompts/generation-input.ts';
 import {
   observedLikeness,
@@ -25,10 +26,13 @@ const { values } = parseArgs({
     count: { type: 'string', default: '20' },
     fixture: { type: 'string' },
     grounding: { type: 'string', default: 'both' },
+    mode: { type: 'string', default: 'market' },
   },
 });
 if (!values.live)
   throw new Error('Calibration calls the configured model provider; pass --live to run it');
+const mode = promptGenerationModeSchema.parse(values.mode);
+const brand = mode === 'brand';
 const count = Number(values.count);
 if (!Number.isInteger(count) || count < 1 || count > generationSetting('max_count'))
   throw new Error(`--count must be an integer from 1 to ${generationSetting('max_count')}`);
@@ -38,19 +42,35 @@ const modes = new Map([
   ['both', [false, true]],
 ]).get(values.grounding ?? '');
 if (!modes) throw new Error('--grounding must be off, on or both');
+if (brand && count > policy.prompts.brand.max_per_run)
+  throw new Error(`--mode brand takes --count up to ${policy.prompts.brand.max_per_run}`);
 const gateway = createModelGateway();
 const log = join(gitDirectory(process.cwd()), 'prompt-generation-eval.log');
 const run = new Date().toISOString();
+
+function brandFailures(
+  selected: readonly { slot: { buyer_need: Record<string, string> } }[],
+  competitors: number,
+) {
+  const angles = new Set(selected.map((draft) => draft.slot.buyer_need.angle));
+  const planned = policy.prompts.brand.angles.filter(
+    (angle) => competitors || angle.cohort !== 'comparison',
+  ).length;
+  return [
+    ...(selected.length < count ? ['shortfall'] : []),
+    ...(count >= planned && angles.size < planned ? ['angles_missing'] : []),
+  ];
+}
 
 async function evaluate(fixture: (typeof generationFixtures)[number], grounded: boolean) {
   const started = performance.now();
   const output = await generateDrafts(
     fixtureContext(fixture, [], { grounded }),
-    generationInput.parse({ count }),
+    generationInput.parse({ count, mode }),
     gateway,
     AbortSignal.timeout(generationSetting('generation_deadline_seconds') * 1000),
   );
-  const selected = selectDrafts(output.drafts, count);
+  const selected = selectDrafts(output.drafts, count, { balanceStages: !brand });
   const metrics = setMetrics({
     texts: selected.map((draft) => draft.text),
     stages: selected.map((draft) => draft.buyer_stage),
@@ -79,10 +99,12 @@ async function evaluate(fixture: (typeof generationFixtures)[number], grounded: 
     stop: output.stop,
     admission_drops: output.drops,
     metrics,
-    failures: thresholdFailures(metrics, {
-      market_scope: String(fixture.business_context.market_scope),
-      requested: count,
-    }),
+    failures: brand
+      ? brandFailures(selected, fixture.competitors.length)
+      : thresholdFailures(metrics, {
+          market_scope: String(fixture.business_context.market_scope),
+          requested: count,
+        }),
     models: output.models,
     responses: selected.map((draft) => ({
       buyer_need: draft.slot.buyer_need,
@@ -98,7 +120,7 @@ async function evaluate(fixture: (typeof generationFixtures)[number], grounded: 
 const records = await Promise.all(
   generationFixtures
     .filter((item) => !values.fixture || item.name === values.fixture)
-    .flatMap((item) => modes.map((grounded) => evaluate(item, grounded))),
+    .flatMap((item) => (brand ? [false] : modes).map((grounded) => evaluate(item, grounded))),
 );
 await appendFile(log, records.map((record) => `${JSON.stringify(record)}\n`).join(''));
 for (const { fixture, grounded, metrics, failures, observed_likeness } of records) {

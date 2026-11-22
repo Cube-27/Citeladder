@@ -3,7 +3,7 @@ id: brand_perception
 label: Brand perception
 group: visibility
 order: 17
-version: 1
+version: 2
 output_kind: diagnosis
 description: Review how AI answers describe the brand: tone, praise and criticism by theme, advice against it and, where fact checking is on, the facts they get wrong.
 ---
@@ -25,6 +25,7 @@ What AI answers say about the brand, where they are negative or wrong, and the n
 - Tone and accuracy are different: a negative answer can be correct and a positive one wrong.
 - Compare a theme with competitors' before calling it a weakness, and weigh it by how many mentions raise it, not by the sharpest quote.
 - One move per problem: correct an owned page, ask a third-party source to correct or update, or advise on a cause outside the site (pricing, reviews, a missing feature).
+- When few answers describe the brand, say so before reading themes, and suggest brand prompts in the Prompt builder: questions that ask about the brand directly (would you recommend it, pros and cons, worth the price, reviews, against a tracked competitor). They spend AI credits on every run.
 
 ## Deliver
 

@@ -6468,7 +6468,7 @@
       },
       "PromptIntent": {
         "type": "string",
-        "enum": ["", "discovery", "comparison", "purchase", "service", "local"]
+        "enum": ["", "discovery", "comparison", "purchase", "service", "local", "evaluation"]
       },
       "PromptIntentDetail": {
         "type": "string",
@@ -16892,6 +16892,11 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "mode": {
+                    "default": "market",
+                    "type": "string",
+                    "enum": ["market", "brand"]
                   },
                   "cohort": {
                     "default": "core",

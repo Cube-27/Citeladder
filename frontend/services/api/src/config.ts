@@ -46,6 +46,7 @@ import { projectReads } from './config/projects.ts';
 import { agentSkills } from './config/agent-skills.ts';
 import { mcp } from './config/mcp.ts';
 import { promptGeneration } from './config/prompt-generation.ts';
+import { brandPrompts } from './config/brand-prompts.ts';
 import { brandLogos } from './config/brand-logos.ts';
 import { internalLinks } from './config/internal-links.ts';
 import { perception } from './config/perception.ts';
@@ -150,6 +151,7 @@ export const policy = {
   prompts: {
     ...promptLibrary.prompts,
     generation: promptGeneration,
+    brand: brandPrompts,
     candidate: {
       ...promptLibrary.prompts.candidate,
       quality_gates_reported: qualityGatesReported,

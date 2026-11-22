@@ -314,7 +314,7 @@ export const gatedOut = (draft: Draft) =>
   draft.decision?.mode === 'gate' && draft.decision.verdict === 'fail';
 
 export function cohortQuotas(
-  input: Pick<GenerationInput, 'count' | 'cohort' | 'distribution'>,
+  input: Pick<GenerationInput, 'count' | 'mode' | 'cohort' | 'distribution'>,
 ): Record<GenerationCohort, number> {
   const shares = cohortShares(input);
   const exact = generationCohorts.map((cohort) => ({
@@ -337,9 +337,10 @@ export function cohortQuotas(
 
 export function selectRun(
   drafts: Draft[],
-  input: Pick<GenerationInput, 'count' | 'cohort' | 'distribution'>,
+  input: Pick<GenerationInput, 'count' | 'mode' | 'cohort' | 'distribution'>,
   topicWeights: ReadonlyMap<string, number> = new Map(),
 ): Draft[] {
+  if (input.mode === 'brand') return selectDrafts(drafts, input.count, { topicWeights });
   const quotas = cohortQuotas(input);
   return generationCohorts
     .flatMap((cohort) =>

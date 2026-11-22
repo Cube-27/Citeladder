@@ -25,18 +25,14 @@ import {
   type OfferingMap,
   type TopicRecovery,
 } from './generation-context.ts';
+import { countDrop, generateDrafts, type Draft, type Drops } from './generation-drafts.ts';
+import { brandPromptRoom, requireBrandPromptRoom } from './brand-quota.ts';
 import {
-  countDrop,
   draftCallLimit,
-  generateDrafts,
-  type Draft,
-  type Drops,
-} from './generation-drafts.ts';
-import {
-  cohortShares,
   generationInput,
   generationInvalid,
   generationSetting,
+  needsCompetitor,
   requestKey,
   validateRequest,
   validateSelection,
@@ -229,13 +225,19 @@ function stage(
       });
       return false;
     });
-    const selected = selectRun(eligible, input, topicWeights(context)),
+    const ranked = selectRun(eligible, input, topicWeights(context));
+    const room =
+      input.mode === 'brand'
+        ? await brandPromptRoom(trx, { workspaceId, projectId: set.project_id })
+        : ranked.length;
+    const selected = ranked.slice(0, room),
       rejected = eligible.filter(gatedOut),
       geo = geoTerms(context);
     const evidence = {
       generator_version: policy.prompts.generation.version,
       buyer_query_policy_version: policy.prompts.generation.policy_version,
       requested_count: input.count,
+      mode: input.mode,
       requested_topic_ids: wantedTopics(input),
       cohort: input.cohort,
       run_context: input.run_context || null,
@@ -376,7 +378,9 @@ export async function generationPreconditions(
 ) {
   validateRequest(input);
   const set = await scopedPromptSet(db, workspaceId, setId);
-  if (cohortShares(input).comparison > 0) {
+  if (input.mode === 'brand')
+    await requireBrandPromptRoom(db, { workspaceId, projectId: set.project_id }, input.count);
+  if (needsCompetitor(input)) {
     const competitor = await db
       .selectFrom('competitors')
       .select('id')
@@ -433,7 +437,7 @@ export async function generatePrompts(
           },
         );
     const context = await generationContext(db, workspaceId, setId, input);
-    if (cohortShares(input).comparison > 0 && !context.context.competitors.length)
+    if (needsCompetitor(input) && !context.context.competitors.length)
       throw generationInvalid('Add a competitor before generating comparison prompts');
     const gateway = gatewayFor();
     await spendBudget(db, budget('agent_provider_call', process.env), workspaceId, {

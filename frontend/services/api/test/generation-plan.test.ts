@@ -2,14 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
 import type { GenerationContext } from '../src/prompts/generation-context.ts';
-import {
-  admitDrafts,
-  draftCallLimit,
-  planBatches,
-  type Draft,
-} from '../src/prompts/generation-drafts.ts';
+import { admitDrafts, planBatches, type Draft } from '../src/prompts/generation-drafts.ts';
 import { selectRun } from '../src/prompts/generation-quality.ts';
-import { generationInput, validateSelection } from '../src/prompts/generation-input.ts';
+import {
+  draftCallLimit,
+  generationInput,
+  validateSelection,
+} from '../src/prompts/generation-input.ts';
 import {
   observedLikeness,
   setMetrics,

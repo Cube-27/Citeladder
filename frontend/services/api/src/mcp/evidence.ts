@@ -144,6 +144,7 @@ export async function promptPortfolio(
   args: Page & {
     prompt_set_id?: string | null;
     cohort?: string | null;
+    intent?: string | null;
     active_only?: boolean;
   },
 ): Promise<Evidence> {
@@ -175,9 +176,11 @@ export async function promptPortfolio(
   if (args.active_only)
     query = query.where('p.enabled', '=', true).where('p.status', '=', 'active');
   if (args.cohort) query = query.where('p.cohort', '=', args.cohort);
+  if (args.intent) query = query.where('p.intent', '=', args.intent);
   const filters = JSON.stringify([
     args.prompt_set_id ?? null,
     args.cohort ?? null,
+    args.intent ?? null,
     !!args.active_only,
   ]);
   if (args.cursor) {

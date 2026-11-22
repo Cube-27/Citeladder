@@ -1,3 +1,4 @@
+import { brandPrompts } from './brand-prompts.ts';
 import { widen } from '../widen.ts';
 export const promptGeneration = {
   version: 'prompt-gen-v1',
@@ -348,14 +349,18 @@ const groundingRule =
 export function generationSystemPrompt({
   businessModel,
   cohort,
+  mode = 'market',
   grounded = false,
   runContext = false,
 }: {
   businessModel: string;
   cohort: keyof typeof cohortRules;
+  mode?: 'market' | 'brand';
   grounded?: boolean;
   runContext?: boolean;
 }): string {
+  if (mode === 'brand')
+    return [brandPrompts.system, ...(runContext ? [runContextRule] : [])].join('\n');
   const base = template.replace('{example}', () => examples[businessModel] ?? fallbackExample);
   if (!Object.hasOwn(cohortRules, cohort)) throw new TypeError(`Unknown prompt cohort: ${cohort}`);
   return [

@@ -12,9 +12,13 @@ import {
 import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { promptBulkDelete } from '../prompts/bulk.ts';
 import { candidateReview } from '../prompts/candidates.ts';
-import { draftCallLimit } from '../prompts/generation-drafts.ts';
 import { generationPreconditions } from '../prompts/generation.ts';
-import { generationInput, validateSelection } from '../prompts/generation-input.ts';
+import {
+  draftCallLimit,
+  generationInput,
+  validateSelection,
+  type GenerationInput,
+} from '../prompts/generation-input.ts';
 import {
   createPromptSet,
   deletePromptSet,
@@ -71,6 +75,11 @@ function setCounts(context: PreviewContext, setId: string) {
         .executeTakeFirst(),
     ),
   ]);
+}
+
+function cohortLabel(request: GenerationInput) {
+  if (request.mode === 'brand') return 'brand prompts';
+  return request.distribution ? 'mixed' : request.cohort;
 }
 
 export const promptSetKinds = {
@@ -223,7 +232,7 @@ export const promptSetKinds = {
   generate_prompts: changeKind({
     permission: PROMPTS_RUN,
     purpose:
-      'have CiteLadder suggest new prompts for a prompt set; spends AI credits when confirmed, and the suggestions wait for review',
+      'have CiteLadder suggest new prompts for a prompt set; mode brand suggests prompts that ask about the brand directly. Spends AI credits when confirmed, and the suggestions wait for review',
     payload: z.strictObject({ prompt_set_id: z.uuid(), request: generationInput }),
     async live(trx, _config, actor, change, payload) {
       await scopedPromptSet(trx, actor.workspaceId, payload.prompt_set_id, change.projectId);
@@ -263,7 +272,7 @@ export const promptSetKinds = {
         title: `Suggest ${plural(request.count, 'prompt')}`,
         rows: [
           { label: 'Prompt set', value: await promptSetName(context, payload.prompt_set_id) },
-          { label: 'Cohort', value: request.distribution ? 'mixed' : request.cohort },
+          { label: 'Cohort', value: cohortLabel(request) },
         ],
         spend: `AI credits for up to ${plural(draftCallLimit(request) + policy.prompts.generation.map_calls, 'model call')}`,
         opens: { label: 'Open Prompts', path: '/prompts' },

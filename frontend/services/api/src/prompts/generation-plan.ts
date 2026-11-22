@@ -18,7 +18,7 @@ import { widen } from '../widen.ts';
 
 const G = policy.prompts.generation;
 export const dimensions = ['attributes', 'situations', 'audiences'] as const;
-const facets = ['attribute', 'situation_or_constraint', 'audience'] as const;
+export const facets = ['attribute', 'situation_or_constraint', 'audience'] as const;
 const PERSONA = dimensions.indexOf('audiences');
 
 export type Slot = {
@@ -39,10 +39,10 @@ type Grounding = Pick<
   ObservedQuery,
   'id' | 'source' | 'text' | 'classifier_version' | 'override_id'
 >;
-type FacetSource = 'confirmed' | 'suggested' | 'requested';
-type Facet = { dimension: number; value: string; source: FacetSource };
-type CellReviewState = FacetSource | 'not_applicable';
-type PlanContext = Pick<GenerationContext, 'selected' | 'topics' | 'maps' | 'observed'> & {
+export type FacetSource = 'confirmed' | 'suggested' | 'requested';
+export type Facet = { dimension: number; value: string; source: FacetSource };
+export type CellReviewState = FacetSource | 'not_applicable';
+export type PlanContext = Pick<GenerationContext, 'selected' | 'topics' | 'maps' | 'observed'> & {
   context: Pick<GenerationContext['context'], 'business_context'>;
 };
 
@@ -156,7 +156,7 @@ function topicMaps(
   return { maps: [], offering: topic.name };
 }
 
-function planners(
+export function planners(
   context: PlanContext,
   suggestions: OfferingMap[],
   input: GenerationInput,
@@ -201,9 +201,9 @@ function planners(
   });
 }
 
-const facetKey = (facet: Facet) => `${facet.dimension}:${facet.value}`;
+export const facetKey = (facet: Facet) => `${facet.dimension}:${facet.value}`;
 
-function nextFacet(plan: Planner, options: NonEmpty<Facet>): Facet {
+export function nextFacet(plan: Planner, options: NonEmpty<Facet>): Facet {
   const used = (key: string) => plan.usage.get(key) ?? 0;
   const compare = (a: Facet, b: Facet) =>
     used(facetKey(a)) - used(facetKey(b)) ||
@@ -263,7 +263,8 @@ function groundingFor(
     }));
 }
 
-const claimable = (facet: Facet) => facet.dimension !== ATTRIBUTE || facet.source === 'confirmed';
+export const claimable = (facet: Facet) =>
+  facet.dimension !== ATTRIBUTE || facet.source === 'confirmed';
 
 export function planSlots(
   context: PlanContext,

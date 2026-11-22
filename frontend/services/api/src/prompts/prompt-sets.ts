@@ -15,7 +15,7 @@ import { notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
 import type { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { overLimitPromptIds } from '../entitlements/occupancy.ts';
-import { generationSetting } from './generation-input.ts';
+import { draftCallLimit, generationSetting } from './generation-input.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
 import { promptSetView, WITHIN_LIMIT, type PromptSetRow, type PromptSetView } from './views.ts';
 
@@ -104,6 +104,14 @@ export function promptFormLimits(): PromptFormLimits {
   const generation = policy.prompts.generation;
   return {
     generation_count_max: generationSetting('max_count'),
+    brand_prompts_max: policy.prompts.brand.max_per_run,
+    brand_generation_calls:
+      draftCallLimit({
+        count: policy.prompts.brand.max_per_run,
+        mode: 'brand',
+        cohort: 'core',
+        distribution: null,
+      }) + generation.map_calls,
     import_rows_max: policy.prompts.import_max_rows,
     bulk_prompts_max: policy.prompts.bulk_prompts_max,
     persona_max_chars: policy.prompts.persona_max_chars,
