@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
-import { MeasurementContext } from '@/components/runs/measurement-context';
 import { CircleStop, Download, RotateCcw } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { marketLabel } from '@citeladder/contracts/markets';
@@ -125,7 +124,6 @@ function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: bo
         {AUDIT_STATES[audit.status].label}
       </StatusMark>
       <Tag>{marketLabel(audit.market)}</Tag>
-      <MeasurementContext provenance={audit.model_provenance} />
       {audit.not_applicable_engines.length ? (
         <Tag>
           Not available in this market: {audit.not_applicable_engines.map(engines.label).join(', ')}

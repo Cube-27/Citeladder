@@ -6,7 +6,7 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
+import { TableCell, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
 import { Bot } from '@/lib/icons';
@@ -58,6 +58,16 @@ function SectionBody({
   return <StateBlock kind="empty" inline message={empty} />;
 }
 
+function retrievalsByEngine(engines: UrlDetail['engines']) {
+  const totals = new Map<string, number>();
+  for (const row of engines) {
+    totals.set(row.logical_engine, (totals.get(row.logical_engine) ?? 0) + row.retrievals);
+  }
+  return [...totals]
+    .map(([logical_engine, retrievals]) => ({ logical_engine, retrievals }))
+    .sort((left, right) => right.retrievals - left.retrievals);
+}
+
 export function EnginesCard({
   engines,
   loading,
@@ -68,7 +78,7 @@ export function EnginesCard({
   errored?: boolean;
 }>) {
   const catalog = useEngineCatalog();
-  const rows = errored ? [] : (engines ?? []);
+  const rows = errored ? [] : retrievalsByEngine(engines ?? []);
   let state: DataTableState | undefined;
   if (!errored && loading) state = { kind: 'loading', label: 'Loading retrievals…' };
   else if (!errored && engines?.length === 0) {
@@ -83,13 +93,8 @@ export function EnginesCard({
     <TitledSection title="Retrievals by AI model">
       <DataTable label="Retrievals by AI model" columns={ENGINE_COLUMNS} state={state}>
         {rows.map((row) => (
-          <TableRow key={`${row.logical_engine}:${row.transport_model ?? ''}`}>
-            <TableCell>
-              <TableCellLines
-                primary={catalog.label(row.logical_engine)}
-                secondary={catalog.modelLabel(row.logical_engine, row.transport_model)}
-              />
-            </TableCell>
+          <TableRow key={row.logical_engine}>
+            <TableCell>{catalog.label(row.logical_engine)}</TableCell>
             <TableCell numeric>{count(row.retrievals) ?? <Absence />}</TableCell>
           </TableRow>
         ))}
