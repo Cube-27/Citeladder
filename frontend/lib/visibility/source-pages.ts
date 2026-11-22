@@ -35,7 +35,7 @@ export function pageRows(entities: readonly PageEntity[] | undefined, read: bool
   const all = entities ?? [];
   const brand = read ? all.filter((entity) => entity.entity_kind === 'brand') : [];
   const competitors = all.filter(
-    (entity) => entity.entity_kind !== 'brand' && entity.presence === 'present',
+    (entity) => entity.entity_kind !== 'brand' && entity.presence !== 'not_detected',
   );
   return [...brand, ...competitors];
 }

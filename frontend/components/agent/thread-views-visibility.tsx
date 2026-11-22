@@ -156,7 +156,7 @@ function SourceRows({
       onOpenDomain={(domain) =>
         void navigate(
           projectHref(
-            `/visibility?${new URLSearchParams({ tab: 'domains', source_domain: domain }).toString()}`,
+            `/visibility?${new URLSearchParams({ tab: 'urls', source_pick: domain }).toString()}`,
             scope.projectId,
           ),
         )

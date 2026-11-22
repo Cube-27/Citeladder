@@ -36,13 +36,11 @@ const MAX_CHIPS = 3;
 export function SourcePrompts({
   filters,
   queries,
-  domain,
   url,
 }: Readonly<{
   filters: SourceFilters;
   queries: SourceQueries;
-  domain?: string | null;
-  url?: string | null;
+  url: string;
 }>) {
   const params = {
     audit_id: queries.selectedRunIds ? undefined : (queries.activeRunId ?? undefined),
@@ -50,15 +48,14 @@ export function SourcePrompts({
     engine: filters.engine === 'all' ? undefined : filters.engine,
     topic: queries.topic,
     cohort: filters.cohort,
-    domain: domain ?? undefined,
-    url: url ?? undefined,
+    url,
   };
   const query = useQuery({
     ...visibilityQueries.evidence(
       { workspaceId: queries.workspaceId, projectId: queries.projectId },
       params,
     ),
-    enabled: Boolean(queries.activeRunId && (domain || url)),
+    enabled: Boolean(queries.activeRunId),
   });
 
   const answerDialog = useAnswerDialog();
