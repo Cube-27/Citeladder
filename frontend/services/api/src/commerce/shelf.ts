@@ -5,7 +5,7 @@ import type { SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import type { Audits, CommerceRecommendationObservations } from '../generated/db-schema.ts';
 import { parseShoppingResults, type ShoppingResult } from '../search-surfaces/scraper-parsing.ts';
-import { record, strings } from '../db/json.ts';
+import { providerMetadataWithoutRawBody, record, strings } from '../db/json.ts';
 import type { AuditTask } from '../queue/audit-queue.ts';
 import type { DeriveExecution, ExecutionResult } from '../audits/result-persistence.ts';
 import { deriveExecution } from '../audits/derivation.ts';
@@ -572,7 +572,12 @@ export async function prepareShelfExecution(
     }
     const artifact = await trx
       .selectFrom('raw_response_artifacts')
-      .select(['answer_text', 'citations', 'provider_metadata', 'created_at'])
+      .select([
+        'answer_text',
+        'citations',
+        providerMetadataWithoutRawBody('provider_metadata'),
+        'created_at',
+      ])
       .where('id', '=', artifactId)
       .where('audit_id', '=', audit.id)
       .where('task_id', '=', task.id)

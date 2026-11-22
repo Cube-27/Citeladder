@@ -23,6 +23,7 @@ export function providerSettings(env: SettingSource = process.env) {
     openaiMaxToolCalls: Number(resolveSettingSpec(spec.openai_max_tool_calls, env)),
     keyGraceDays: Number(resolveSettingSpec(spec.byok_key_grace_days, env)),
     maxResponseBytes: Number(resolveSettingSpec(spec.max_response_bytes, env)),
+    answerRawBodyMaxBytes: Number(resolveSettingSpec(spec.answer_raw_body_max_bytes, env)),
     dataforseoTimeout: Number(
       resolveSettingSpec(providerPolicy.dataforseo.test_timeout_seconds, env),
     ),

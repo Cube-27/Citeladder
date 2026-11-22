@@ -6,7 +6,7 @@
   "min_confidence": 0.6,
   "max_entities": 8,
   "max_passage_chars_per_entity": 1200,
-  "max_passage_chars_per_brand": 2400,
+  "max_passage_chars_per_brand": 6000,
   "max_aspects_per_entity": 5,
   "max_aspects_per_brand": 8,
   "max_quotes_per_theme": 3,

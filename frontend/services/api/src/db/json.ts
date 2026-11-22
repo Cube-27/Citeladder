@@ -1,3 +1,6 @@
+import { sql } from 'kysely';
+import type { Json } from '../generated/db-schema.ts';
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -25,3 +28,6 @@ export function jsonObjects(value: unknown, column: string): Record<string, unkn
   if (!Array.isArray(value)) throw new TypeError(`${column} is not a JSON array`);
   return value.map((item) => jsonObject(item, `${column} item`));
 }
+
+export const providerMetadataWithoutRawBody = (column: string) =>
+  sql<Json | null>`${sql.ref(column)} - 'raw_body'`.as('provider_metadata');

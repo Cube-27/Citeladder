@@ -351,6 +351,18 @@ describe('perception executor', () => {
     });
   });
 
+  it('records the passage characters the budget cut beside the drops', async () => {
+    const auditId = await fixtures.audit(tenant, { configuration });
+    await analysed(tenant, auditId, ANSWER);
+    await drain(tenant, fakeGateway([goodOutput]).factory, {
+      ...policy.perception,
+      max_passage_chars_per_entity: 20,
+      max_passage_chars_per_brand: 20,
+    });
+    const [perception] = await perceptions(tenant.workspaceId);
+    expect(perception?.drop_counts).toMatchObject({ passage_chars_cut: 66 });
+  });
+
   it('settles as unavailable when no gateway model is configured', async () => {
     const auditId = await fixtures.audit(tenant, { configuration });
     await analysed(tenant, auditId, ANSWER);

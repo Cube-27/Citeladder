@@ -514,7 +514,12 @@ cancelled or paused (Claude `pause_turn`; a Gemini interaction still in
 progress or awaiting continuation) fails as `answer_unfinished` under the
 transient policy, whatever text it carries; a Gemini `completed` interaction
 without text is still `empty_answer`. Non-empty text cut off by the budget is still an
-observation and keeps its `length` finish reason. A Claude answer is the text
+observation and keeps its `length` finish reason. A successful API exchange
+keeps its parsed response body as evidence on the artifact's
+`provider_metadata.raw_body` (`stored`, or `over_bound` with its size when it
+passes `answer_raw_body_max_bytes`), never on the task row. Nothing derives a
+metric from it, and it is deliberately not the scraper `raw_response` that the
+ads, answer-format and Commerce parsers read. A Claude answer is the text
 after its last web search, joined exactly as written: the search preamble is
 not answer text, and a sentence split across citation blocks stays one sentence. All engines share the frozen
 `audit_max_output_tokens`; Anthropic thinking counts against it, so the
@@ -738,7 +743,8 @@ customer credits. Policy, caps, the project-theme limits and the templates live 
   The model receives, per business (brand first, competitors by first mention,
   bounded), every sentence naming it plus one either side, the brand with a
   larger character budget than each competitor; offsets are code
-  points, like the entity assessment. An unparseable output is retried once,
+  points, like the entity assessment. Characters the passage budget leaves out
+  are counted in `drop_counts.passage_chars_cut`, never cut silently. An unparseable output is retried once,
   then recorded as `invalid_output`; a provider fault is `model_error`. The
   outcome, usage and input hash land in `answer_perceptions` with one
   `entity_sentiments` row per business sent, in the lease-fenced terminal

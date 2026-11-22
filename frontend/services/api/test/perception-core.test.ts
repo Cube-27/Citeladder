@@ -59,12 +59,14 @@ describe('perception passages', () => {
         spans: [
           { start: 63, end: 118, text: 'Filler three. Acme is great. Acme support is slow. End.' },
         ],
+        cut_chars: 0,
       },
       {
         entity_id: 'competitor:rival',
         name: 'Rival',
         kind: 'competitor',
         spans: [{ start: 12, end: 50, text: 'Then more. Rival is cheap. Filler one.' }],
+        cut_chars: 0,
       },
     ]);
   });
@@ -82,7 +84,7 @@ describe('perception passages', () => {
     });
   });
 
-  it('caps the brand and each competitor passage at their own budgets in code points', () => {
+  it('caps the brand and each competitor passage at their own budgets in code points and records the cut', () => {
     const policy = {
       max_entities: 8,
       max_passage_chars_per_entity: 7,
@@ -90,8 +92,11 @@ describe('perception passages', () => {
     };
     const [brand] = entityPassages({ ...plain, answer: `Acme ${'x'.repeat(50)}.`, policy });
     const [rival] = entityPassages({ ...plain, answer: `Rival ${'y'.repeat(50)}.`, policy });
-    expect(brand!.spans).toEqual([{ start: 0, end: 10, text: 'Acme xxxxx' }]);
-    expect(rival!.spans).toEqual([{ start: 0, end: 7, text: 'Rival y' }]);
+    expect(brand).toMatchObject({
+      spans: [{ start: 0, end: 10, text: 'Acme xxxxx' }],
+      cut_chars: 46,
+    });
+    expect(rival).toMatchObject({ spans: [{ start: 0, end: 7, text: 'Rival y' }], cut_chars: 50 });
   });
 
   it('reads the whole answer as the brand passage when the prompt names the brand', () => {
@@ -115,7 +120,48 @@ describe('perception passages', () => {
       answer,
       policy: { ...limits, max_passage_chars_per_brand: 12 },
     });
-    expect(brand!.spans).toEqual([{ start: 35, end: 47, text: 'xxxxx Acme i' }]);
+    expect(brand).toMatchObject({
+      spans: [{ start: 35, end: 47, text: 'xxxxx Acme i' }],
+      cut_chars: 43,
+    });
+  });
+
+  it('cuts a 3,000-word brand-named answer to the configured budget and records the cut', () => {
+    const filler = Array.from(
+      { length: 430 },
+      (_, n) => `Point ${n} weighs fit, value and comfort.`,
+    ).join(' ');
+    const answer = `${filler} Rival is cheaper. Acme is great.`;
+    const configured = { ...plain, answer, policy: policy.perception };
+    const length = Array.from(answer).length;
+    const budget = policy.perception.max_passage_chars_per_brand;
+    const [named] = entityPassages({ ...configured, promptNamesBrand: true });
+    const [brand] = entityPassages(configured);
+    expect(answer.split(' ').length).toBeGreaterThan(2_990);
+    expect(named).toMatchObject({
+      spans: [{ start: 0, end: budget, text: answer.slice(0, budget) }],
+      cut_chars: length - budget,
+    });
+    expect(brand!.spans.map((span) => span.text.endsWith('Acme is great.'))).toEqual([true]);
+    expect(brand!.cut_chars).toBe(0);
+  });
+
+  it('sends a 920-word brand-named markdown answer whole under the configured brand budget', () => {
+    const answer = Array.from(
+      { length: 92 },
+      (_, n) => `- **Option ${n}** suits Acme runners wanting comfort and value.`,
+    ).join('\n');
+    const [named] = entityPassages({
+      ...plain,
+      answer,
+      policy: policy.perception,
+      promptNamesBrand: true,
+    });
+    expect(answer.split(/\s+/u).length).toBe(920);
+    expect(named).toMatchObject({
+      spans: [{ start: 0, end: Array.from(answer).length, text: answer }],
+      cut_chars: 0,
+    });
   });
 
   it('hashes equal packages equally whatever their key order', () => {

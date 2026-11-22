@@ -393,6 +393,21 @@ describe('frozen answer-engine execution', () => {
     });
   });
 
+  it('sends an empty system instruction as no instruction on every engine', () => {
+    const engines = ['chatgpt', 'claude', 'gemini'] as const;
+    const instruction = (text: string) =>
+      engines.map((engine) => {
+        const body = answerPayload({ ...request(engine), system_instruction: text });
+        return [body.instructions, body.system, body.system_instruction];
+      });
+    expect(instruction('')).toEqual(engines.map(() => [undefined, undefined, undefined]));
+    expect(instruction('Be brief.')).toEqual([
+      ['Be brief.', undefined, undefined],
+      [undefined, 'Be brief.', undefined],
+      [undefined, undefined, 'Be brief.'],
+    ]);
+  });
+
   it('keeps Google redirect identity and counts calls even without usable queries', () => {
     const result = parseAnswer(
       {

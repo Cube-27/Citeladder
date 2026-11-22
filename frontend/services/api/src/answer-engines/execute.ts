@@ -49,7 +49,7 @@ function googlePayload(request: AnswerRequest): Record<string, unknown> {
     model: request.transport_model,
     input: request.prompt,
     store: false,
-    system_instruction: request.system_instruction,
+    ...(request.system_instruction ? { system_instruction: request.system_instruction } : {}),
     max_output_tokens: request.max_output_tokens,
     ...(['minimal', 'low'].includes(request.reasoning_effort)
       ? { generation_config: { thinking_level: request.reasoning_effort } }
@@ -161,9 +161,21 @@ export async function executeAnswer(
   } catch {
     throw new ProviderError('parse_error');
   }
-  return answered(answer);
+  return answered({
+    ...answer,
+    provider_metadata: {
+      ...answer.provider_metadata,
+      raw_body: rawBody(payload, settings.answerRawBodyMaxBytes),
+    },
+  });
 }
 
+function rawBody(payload: unknown, limitBytes: number) {
+  const bytes = Buffer.byteLength(JSON.stringify(payload));
+  return bytes > limitBytes
+    ? { kind: 'over_bound' as const, bytes, limit_bytes: limitBytes }
+    : { kind: 'stored' as const, bytes, body: payload };
+}
 const UNFINISHED = new Set<Answer['finish_reason']>(['error', 'cancelled', 'paused']);
 function answered(answer: Answer): Answer {
   if (UNFINISHED.has(answer.finish_reason)) throw new ProviderError('answer_unfinished', true);

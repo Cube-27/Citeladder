@@ -171,12 +171,12 @@
     "anthropic_max_uses": {
       "env": ["PROVIDER_ANTHROPIC_MAX_USES"],
       "type": "int",
-      "default": 5
+      "default": 2
     },
     "openai_max_tool_calls": {
       "env": ["PROVIDER_OPENAI_MAX_TOOL_CALLS"],
       "type": "int",
-      "default": 1,
+      "default": 2,
       "minimum": 0
     },
     "byok_key_grace_days": {
@@ -188,6 +188,12 @@
       "env": ["PROVIDER_MAX_RESPONSE_BYTES"],
       "type": "int",
       "default": 8388608,
+      "exclusive_minimum": 0
+    },
+    "answer_raw_body_max_bytes": {
+      "env": ["PROVIDER_ANSWER_RAW_BODY_MAX_BYTES"],
+      "type": "int",
+      "default": 524288,
       "exclusive_minimum": 0
     }
   },
