@@ -130,12 +130,17 @@ function MessageNoticeView({
         )}
         {children != null ? <div>{children}</div> : null}
       </div>
-      {action ? (
-        <div className="phone:ms-6 phone:basis-[calc(100%-1.5rem)] phone:justify-start [&_[data-button-variant=quiet]]:text-ink ms-2 flex max-w-full shrink-0 flex-wrap items-center gap-2 self-center">
-          {action}
-        </div>
-      ) : null}
+      <NoticeAction>{action}</NoticeAction>
     </Root>
+  );
+}
+
+function NoticeAction({ children }: Readonly<{ children: ReactNode }>) {
+  if (!children) return null;
+  return (
+    <div className="phone:ms-6 phone:basis-[calc(100%-1.5rem)] phone:justify-start [&_[data-button-variant=quiet]]:text-ink ms-2 flex max-w-full shrink-0 flex-wrap items-center gap-2 self-center">
+      {children}
+    </div>
   );
 }
 
