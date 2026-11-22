@@ -182,7 +182,9 @@ owner reaches the app, the Agent and MCP together. Enumerated arguments are enum
 Results carry IDs because the model needs them for its next call. The server
 instructions tell clients never to show IDs or `citeladder://` references to
 the user and to name the page, prompt, competitor or Action instead. Links point
-to the app screen that shows the record. One
+to the app screen that shows the record. A file the app exports (the overview
+report PDF, a CSV) is returned only as a link to its project-scoped download,
+which the signed-in browser opens; MCP never returns the file. One
 [record-kind table](../frontend/packages/contracts/src/record-kinds.ts) owns the
 allowlisted kinds, their labels and screens; MCP links and the browser's
 evidence links both read it.

@@ -93,7 +93,7 @@
     {
       "name": "read_actions",
       "title": "Read Actions",
-      "description": "List the work CiteLadder recommends to improve visibility, highest priority first. Statuses: open (New), in_progress (accepted), done (declared implemented; its measurement is measuring or verified) and dismissed (Declined). By default it lists only open and in-progress Actions; pass status any to list every status, and query to find Actions whose title contains that text. Each item has its id, target (page, prompt or source), status, measurement, priority score, approach and link, and status_counts counts every status. Items come in pages; pass next_cursor for more. Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to accept, decline or restore one, and prepare_declare_implemented when its work is done.",
+      "description": "List the work CiteLadder recommends to improve visibility, highest priority first. Statuses: open (New), in_progress (accepted), done (declared implemented; its measurement is measuring or verified) and dismissed (Declined). By default it lists only open and in-progress Actions; pass status any to list every status, and query to find Actions whose title contains that text. Each item has its id, target (page, prompt or source), status, measurement, priority score, approach and link, and status_counts counts every status. Items come in pages; pass next_cursor for more. Pass site_url_id for the Actions on one page, or group_by for the grouped tree (the count and top items per group). Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to accept, decline or restore one, and prepare_declare_implemented when its work is done.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -117,6 +117,16 @@
             "minLength": 1,
             "maxLength": 200,
             "description": "Keep only Actions whose title contains this text (case-insensitive). Combine with status any to search every status."
+          },
+          "site_url_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A page id (site_url_id) from read_site_pages."
+          },
+          "group_by": {
+            "type": "string",
+            "enum": ["goal", "what_to_do", "impact", "ownership", "topic"],
+            "description": "Group the Actions this way."
           },
           "cursor": {
             "type": "string",
@@ -193,7 +203,7 @@
     {
       "name": "read_ai_crawlability",
       "title": "Read AI crawler access",
-      "description": "Read whether the site's robots.txt lets each AI crawler in, for the latest or a chosen crawl: whether robots.txt was fetched (and its status), the sitemaps it lists, and per crawler (such as GPTBot or ClaudeBot) its operator, purpose, the matching rule, root access and how many sampled URLs it may not fetch. This is permission, not observed visits: use read_crawl_logs for crawlers that actually came. unavailable no_site_crawl means no crawl exists; robots_not_observed means the crawl could not read robots.txt.",
+      "description": "Read whether the site's robots.txt lets each AI crawler in, for the latest or a chosen crawl: whether robots.txt was fetched (and its status), the sitemaps it lists, and per crawler (such as GPTBot or ClaudeBot) its operator, purpose, the matching rule, root access and how many sampled URLs it may not fetch. This is permission, not observed visits: use read_crawl_logs for crawlers that actually came. unavailable no_site_crawl means no crawl exists; robots_not_observed means the crawl could not read robots.txt. view history lists robots.txt as each crawl saw it, newest first.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -206,6 +216,21 @@
             "type": "string",
             "format": "uuid",
             "description": "A crawl id that read_site_health returned; omit for the latest crawl."
+          },
+          "view": {
+            "default": "current",
+            "type": "string",
+            "enum": ["current", "history"]
+          },
+          "cursor": {
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id"],
@@ -249,7 +274,7 @@
     {
       "name": "read_ai_shelf",
       "title": "Read the AI Shelf",
-      "description": "Read how AI answers recommend products for an ecommerce project, per product over a window of days. Without holder_id it returns the categories with product counts and one page of products, most visible first: for each, its holder_id, kind (owned, approved_competitor or ai_observed_competitor), visibility (share of the answers in scope that named it), appearances, win rate (share of its ordered appearances at rank 1), mean position, the median mentioned price beside the catalog price, and the merchant domains answers send shoppers to; executions is the number of answers in scope. source all adds competitors to your catalog; category_id narrows to one category; pass next_cursor for more. With holder_id it returns that product's page: the same metrics, its description and image, the products competing in the same answers, merchants, cited sources, fan-out queries, per-prompt metrics, the answers it appeared in (won, lost or unranked, with rank) and its open Actions. A null metric is unavailable (no answer in scope, or no ordered appearance), never zero. unavailable no_product_catalog means the project has no product catalog, which is normal for non-ecommerce brands; use read_visibility_overview for brand mentions instead. view catalog lists your products with their ids; competitor_candidates, buyer_prompts and discoveries (competitor searches still running) list the commerce setup with ids, each paged.",
+      "description": "Read how AI answers recommend products for an ecommerce project, per product over a window of days. Without holder_id it returns the categories with product counts and one page of products, most visible first: for each, its holder_id, kind (owned, approved_competitor or ai_observed_competitor), visibility (share of the answers in scope that named it), appearances, win rate (share of its ordered appearances at rank 1), mean position, the median mentioned price beside the catalog price, and the merchant domains answers send shoppers to; executions is the number of answers in scope. source all adds competitors to your catalog; category_id narrows to one category; pass next_cursor for more. With holder_id it returns that product's page: the same metrics, its description and image, the products competing in the same answers, merchants, cited sources, fan-out queries, per-prompt metrics, the answers it appeared in (won, lost or unranked, with rank) and its open Actions. A null metric is unavailable (no answer in scope, or no ordered appearance), never zero. view overview is the shopping totals: shelf slots, share of shelf per brand, most and least visible products, merchants and fan-out. unavailable no_product_catalog means the project has no product catalog, which is normal for non-ecommerce brands; use read_visibility_overview for brand mentions instead. view catalog lists your products with their ids; competitor_candidates, buyer_prompts and discoveries (competitor searches still running) list the commerce setup with ids, each paged.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -260,9 +285,16 @@
           },
           "view": {
             "default": "products",
-            "description": "products is visibility per product (the default); the others are setup.",
+            "description": "products is visibility per product (the default); overview is the totals; the others are setup.",
             "type": "string",
-            "enum": ["products", "catalog", "competitor_candidates", "buyer_prompts", "discoveries"]
+            "enum": [
+              "products",
+              "overview",
+              "catalog",
+              "competitor_candidates",
+              "buyer_prompts",
+              "discoveries"
+            ]
           },
           "holder_id": {
             "type": "string",
@@ -1254,7 +1286,7 @@
     {
       "name": "read_site_health",
       "title": "Read Site Health",
-      "description": "Read the Site Health summary of the latest crawl, or a chosen snapshot: the web fundamentals and AI-readiness scores with their measurement state, how many pages were selected and analyzed, and the top 10 issues, each with its rule_id, severity, description, remediation and how many pages it affects. unavailable no_site_snapshot means no crawl was analyzed yet; this tool never starts one. Use read_site_pages with a rule_id to list the affected pages and read_ai_crawlability for robots access. Use render_site_health to show the user the interactive view. view issues lists every issue group of the crawl with its group_id, paged; view schedule is the recurring crawl.",
+      "description": "Read the Site Health summary of the latest crawl, or a chosen snapshot: the web fundamentals and AI-readiness scores with their measurement state, how many pages were selected and analyzed, and the top 10 issues, each with its rule_id, severity, description, remediation and how many pages it affects. unavailable no_site_snapshot means no crawl was analyzed yet; this tool never starts one. view changes summarizes what changed between the last two crawls and change_list lists each change; aeo_readiness breaks the AI-readiness score down per dimension and check; architecture is page types, depth, orphans and the page tree. Use read_site_pages with a rule_id to list the affected pages and read_ai_crawlability for robots access. Use render_site_health to show the user the interactive view. view issues lists every issue group of the crawl with its group_id, paged; view schedule is the recurring crawl.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1270,9 +1302,16 @@
           },
           "view": {
             "default": "summary",
-            "description": "summary (the default), issues or schedule.",
             "type": "string",
-            "enum": ["summary", "issues", "schedule"]
+            "enum": [
+              "summary",
+              "issues",
+              "schedule",
+              "changes",
+              "change_list",
+              "aeo_readiness",
+              "architecture"
+            ]
           },
           "cursor": {
             "type": "string",
@@ -1342,7 +1381,7 @@
     {
       "name": "read_site_pages",
       "title": "Read site pages",
-      "description": "Pages from a crawl, paged: URL, title, page type, status, scores, issue count and the rule ids of each page's issues by finding class. Pass url to find a page by its address, rule_id (from read_site_health top_issues or an issue group) to list exactly the pages affected by that issue, each with rule_evidence: what that check found on that page (a site-level architecture issue is recorded once on the home page, and its rule_evidence names the affected pages), and, when the crawl kept one, a reference_snippet: redacted markup of the failing element and its label context from one affected page (text and attribute values replaced by [text] and [redacted]), to write an exact fix; filter by page_kind or status to find pages by type or status. This returns metadata, not page copy: use read_page_text for a page's words. read_site_health gives the totals.",
+      "description": "Pages from a crawl, paged: URL, title, page type, status, scores, issue count and the rule ids of each page's issues by finding class. Pass url to find a page by its address, rule_id (from read_site_health top_issues or an issue group) to list exactly the pages affected by that issue, each with rule_evidence: what that check found on that page (a site-level architecture issue is recorded once on the home page, and its rule_evidence names the affected pages), and, when the crawl kept one, a reference_snippet: redacted markup of the failing element and its label context from one affected page (text and attribute values replaced by [text] and [redacted]), to write an exact fix; filter by page_kind or status to find pages by type or status. This returns metadata, not page copy: use read_page_text for a page's words. view issue_history with site_url_id lists the issues that page has resolved. read_site_health gives the totals.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1408,6 +1447,16 @@
               "error_or_blocked"
             ],
             "description": "Keep only pages in this state."
+          },
+          "view": {
+            "default": "pages",
+            "type": "string",
+            "enum": ["pages", "issue_history"]
+          },
+          "site_url_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "With view issue_history: a page id from this tool."
           },
           "cursor": {
             "type": "string",
@@ -1480,7 +1529,7 @@
     {
       "name": "read_visibility_overview",
       "title": "Read AI visibility",
-      "description": "Read the headline AI visibility of one run: how often answers mention the brand and cite its site, the visibility score, rankings of the brand against each competitor (mention rate, citation rate, share of voice, average position among the brands an answer named, win rate and net sentiment), a breakdown per engine with its win rate, and the run's status and answer counts. Win rate is how often a brand was named first among the answers naming any tracked brand; null win_rate or sentiment means unavailable or not applicable, never zero, and sentiment always comes with its classified count. It defaults to the latest completed run in the default market; pass baseline_id to compare two runs. view topics returns visibility, share of voice, position, rank and win rate per project topic; view matrix pairs engines, topics, markets and brands from each market's latest run, where not_run cells are unmeasured, never zero. Pass topic_id to read one topic. Each market is measured separately: pass market_id for another market, and never pool markets. unavailable no_completed_run means no run has finished yet; metrics_pending means the latest run has finished but its results are still being written, so try again later rather than report that nothing was measured; topic_not_measured means the run asked no prompt in that topic. Use read_visibility_trends for change over time, read_prompt_metrics for which prompts are won or lost, read_competitors for one competitor in depth, read_visibility_results for the answers themselves, and read_visibility_sources for what was cited. view runs lists every audit with status and progress, newest first; view run with audit_id adds its failed answers; view schedules lists audit schedules with their ids.",
+      "description": "Read the headline AI visibility of one run: how often answers mention the brand and cite its site, the visibility score, rankings of the brand against each competitor (mention rate, citation rate, share of voice, average position among the brands an answer named, win rate and net sentiment), a breakdown per engine with its win rate, and the run's status and answer counts. Win rate is how often a brand was named first among the answers naming any tracked brand; null win_rate or sentiment means unavailable or not applicable, never zero, and sentiment always comes with its classified count. It defaults to the latest completed run in the default market; pass baseline_id to compare two runs. view topics returns visibility, share of voice, position, rank and win rate per project topic; view matrix pairs engines, topics, markets and brands from each market's latest run, where not_run cells are unmeasured, never zero. view surface is AI Overview rates per search engine (trigger, brand and owned citation, each with its denominator); view markets is every market's latest headline. Pass topic_id to read one topic. Each market is measured separately: pass market_id for another market, and never pool markets. unavailable no_completed_run means no run has finished yet; metrics_pending means the latest run has finished but its results are still being written, so try again later rather than report that nothing was measured; topic_not_measured means the run asked no prompt in that topic. Use read_visibility_trends for change over time, read_prompt_metrics for which prompts are won or lost, read_competitors for one competitor in depth, read_visibility_results for the answers themselves, and read_visibility_sources for what was cited. view runs lists every audit with status and progress, newest first; view run with audit_id adds its failed answers; view schedules lists audit schedules with their ids.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1529,9 +1578,18 @@
           },
           "view": {
             "default": "summary",
-            "description": "summary is the run (the default); topics is one row per topic; matrix is the engine, topic, market and brand grids; runs, run and schedules are paged.",
+            "description": "summary is the run (the default); topics is one row per topic; matrix is the engine, topic, market and brand grids; surface is AI Overview rates; markets lists every market; runs, run and schedules are paged.",
             "type": "string",
-            "enum": ["summary", "topics", "matrix", "runs", "run", "schedules"]
+            "enum": [
+              "summary",
+              "topics",
+              "matrix",
+              "surface",
+              "markets",
+              "runs",
+              "run",
+              "schedules"
+            ]
           },
           "cursor": {
             "type": "string",
@@ -1629,7 +1687,7 @@
     {
       "name": "read_visibility_sources",
       "title": "Read cited sources",
-      "description": "Rank the domains or pages AI answers cited in one run, to find the sources worth earning a place on. Each row has how many answers and prompts cited it, its citation share and rate, ownership (yours, a competitor's or third party) and category; page rows also list up to 3 brands named on the page and whether there is an Action for it. It defaults to the latest run; unavailable no_completed_run means none has finished. Rows come in pages; pass next_cursor for more. level domain lists publishers; level url, or passing domain, lists pages. Pass topic_id for the sources of one topic's answers. Use read_source_url for one page in depth, and read_visibility_results for the answers that cite it.",
+      "description": "Rank the domains or pages AI answers cited in one run, to find the sources worth earning a place on. Each row has how many answers and prompts cited it, its citation share and rate, ownership (yours, a competitor's or third party) and category; page rows also list up to 3 brands named on the page and whether there is an Action for it. It defaults to the latest run; unavailable no_completed_run means none has finished. Rows come in pages; pass next_cursor for more. level domain lists publishers; level url, or passing domain, lists pages. Pass topic_id for the sources of one topic's answers. view near_misses lists your pages engines read but did not cite; movers, the sources whose citation share rose or fell against the comparable earlier run; series, citation share over time across runs (pass domain for one source). Use read_source_url for one page in depth, and read_visibility_results for the answers that cite it.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1682,6 +1740,17 @@
             "minLength": 1,
             "maxLength": 253,
             "description": "A cited domain such as example.com; with level url, lists its pages."
+          },
+          "view": {
+            "default": "ranking",
+            "type": "string",
+            "enum": ["ranking", "near_misses", "movers", "series"]
+          },
+          "granularity": {
+            "default": "week",
+            "description": "With view series: the length of each point.",
+            "type": "string",
+            "enum": ["day", "week", "month"]
           },
           "cursor": {
             "type": "string",

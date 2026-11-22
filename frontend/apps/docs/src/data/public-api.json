@@ -9713,6 +9713,18 @@
           "measured_at": {
             "type": ["string", "null"]
           },
+          "responses": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "mention_rate": {
             "type": ["number", "null"]
           },
@@ -9744,6 +9756,7 @@
           "state",
           "audit_id",
           "measured_at",
+          "responses",
           "mention_rate",
           "share_of_voice",
           "sentiment",
@@ -14579,6 +14592,7 @@
                       "state": "measured",
                       "audit_id": null,
                       "measured_at": null,
+                      "responses": null,
                       "mention_rate": null,
                       "share_of_voice": null,
                       "sentiment": null,

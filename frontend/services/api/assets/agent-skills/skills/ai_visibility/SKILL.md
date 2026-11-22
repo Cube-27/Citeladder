@@ -3,7 +3,7 @@ id: ai_visibility
 label: AI visibility diagnosis
 group: visibility
 order: 8
-version: 4
+version: 5
 output_kind: diagnosis
 description: Diagnose why AI answers leave the brand out, cite it weakly or recommend others, from CiteLadder prompts, answers and cited sources, and choose owned, earned, technical or prompt work.
 ---
@@ -17,7 +17,7 @@ Find where buyer questions fail to produce a useful mention of the brand, and pi
 ## Where the data is
 
 - `read_visibility_overview` (`view: topics` per topic), then `read_prompt_metrics` for the prompts won and lost.
-- `read_visibility_results` for what the answers said, and `read_visibility_sources` for what they cite.
+- `read_visibility_results` for what the answers said, and `read_visibility_sources` for what they cite (`view: near_misses` for your pages engines read but did not cite).
 - As the question needs: `read_competitors` (one competitor in focus), `read_query_fanouts` (what engines searched while answering), `read_content_differentiation` (an owned page against the pages that win).
 
 ## What good looks like
