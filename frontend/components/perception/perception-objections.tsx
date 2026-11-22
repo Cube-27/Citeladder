@@ -31,7 +31,6 @@ export function PerceptionObjections({
     <SectionStack>
       <Lede data={data} />
       <ObjectionTable scope={scope} data={data} />
-      <ObjectionSources groups={data.groups} />
     </SectionStack>
   );
 }
@@ -82,6 +81,7 @@ function ObjectionTable({
   data,
 }: Readonly<{ scope: ProjectScope; data: ProbeObjectionsValue }>) {
   const mayEdit = useWorkspaceCapability('write');
+  const [open, setOpen] = useState<string | null>(null);
   return (
     <TitledSection
       title={`Why buyers might not choose ${data.brand}`}
@@ -96,82 +96,7 @@ function ObjectionTable({
             : { kind: 'empty', inline: true, message: 'No objections raised.' }
         }
       >
-        {data.groups.map((group) => (
-          <TableRow key={group.id}>
-            <TableCell>{group.name}</TableCell>
-            <TableCell numeric>{group.score ?? <Absence label="No answers" />}</TableCell>
-            <TableCell numeric>
-              {data.answered_by.length ? (
-                `${group.engines.length} of ${data.answered_by.length}`
-              ) : (
-                <Absence label="No answers" />
-              )}
-            </TableCell>
-            <TableCell>
-              {group.history.length > 1 ? (
-                <Sparkline
-                  values={group.history}
-                  label={`${group.name}: position score over the last ${group.history.length} probes, oldest first: ${group.history.map((value) => value ?? 'no answers').join(', ')}`}
-                />
-              ) : (
-                <Absence state="not_run" label="No previous probe" />
-              )}
-            </TableCell>
-            <TableCell numeric>
-              <Sources sources={group.sources} />
-            </TableCell>
-            <TableActionsCell>
-              <ProjectLink
-                href={agentHandoffHref({
-                  objectionGroupId: group.id,
-                  skillId: OBJECTION_SKILL,
-                  prompt: `Help me answer the objection "${group.name}".`,
-                })}
-                aria-label={`Ask agent about ${group.name}`}
-                className={buttonClasses('quiet')}
-              >
-                Ask agent
-              </ProjectLink>
-              {mayEdit ? (
-                <ObjectionActions
-                  scope={scope}
-                  group={group}
-                  others={data.groups.filter((other) => other.id !== group.id)}
-                />
-              ) : null}
-            </TableActionsCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
-  );
-}
-
-function Sources({ sources }: Readonly<{ sources: Group['sources'] }>) {
-  if (sources === null) return <Absence state="not_applicable" label="Not raised" />;
-  return sources || <Absence state="none" label="No sources" />;
-}
-
-const SOURCE_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'objection', label: 'Objection' },
-  { key: 'pages', label: 'Pages', kind: 'number', width: 'shortMetric' },
-  { key: 'score', label: 'Score', kind: 'number', width: 'shortMetric' },
-];
-
-function ObjectionSources({ groups }: Readonly<{ groups: readonly Group[] }>) {
-  const [open, setOpen] = useState<string | null>(null);
-  const cited = groups.filter((group) => group.pages.length > 0);
-  return (
-    <TitledSection
-      title="Sources behind the objections"
-      description="Pages engines cited while raising each objection"
-    >
-      <DataTable
-        label="Sources behind the objections"
-        columns={SOURCE_COLUMNS}
-        state={cited.length ? undefined : { kind: 'empty', inline: true, message: 'No sources.' }}
-      >
-        {cited.map((group) => {
+        {data.groups.map((group) => {
           const expanded = open === group.id;
           return (
             <Fragment key={group.id}>
@@ -184,14 +109,53 @@ function ObjectionSources({ groups }: Readonly<{ groups: readonly Group[] }>) {
                     {group.name}
                   </ExpandToggle>
                 </TableCell>
-                <TableCell numeric>{group.sources ?? group.pages.length}</TableCell>
                 <TableCell numeric>{group.score ?? <Absence label="No answers" />}</TableCell>
+                <TableCell numeric>
+                  {data.answered_by.length ? (
+                    `${group.engines.length} of ${data.answered_by.length}`
+                  ) : (
+                    <Absence label="No answers" />
+                  )}
+                </TableCell>
+                <TableCell>
+                  {group.history.length > 1 ? (
+                    <Sparkline
+                      values={group.history}
+                      label={`${group.name}: position score over the last ${group.history.length} probes, oldest first: ${group.history.map((value) => value ?? 'no answers').join(', ')}`}
+                    />
+                  ) : (
+                    <Absence state="not_run" label="No previous probe" />
+                  )}
+                </TableCell>
+                <TableCell numeric>
+                  <Sources sources={group.sources} />
+                </TableCell>
+                <TableActionsCell>
+                  <ProjectLink
+                    href={agentHandoffHref({
+                      objectionGroupId: group.id,
+                      skillId: OBJECTION_SKILL,
+                      prompt: `Help me answer the objection "${group.name}".`,
+                    })}
+                    aria-label={`Ask agent about ${group.name}`}
+                    className={buttonClasses('quiet')}
+                  >
+                    Ask agent
+                  </ProjectLink>
+                  {mayEdit ? (
+                    <ObjectionActions
+                      scope={scope}
+                      group={group}
+                      others={data.groups.filter((other) => other.id !== group.id)}
+                    />
+                  ) : null}
+                </TableActionsCell>
               </TableRow>
               {expanded ? (
                 <SourcePagesRow
                   label={`Sources behind ${group.name}`}
                   pages={group.pages}
-                  columns={SOURCE_COLUMNS}
+                  columns={COLUMNS}
                 />
               ) : null}
             </Fragment>
@@ -200,4 +164,9 @@ function ObjectionSources({ groups }: Readonly<{ groups: readonly Group[] }>) {
       </DataTable>
     </TitledSection>
   );
+}
+
+function Sources({ sources }: Readonly<{ sources: Group['sources'] }>) {
+  if (sources === null) return <Absence state="not_applicable" label="Not raised" />;
+  return sources || <Absence state="none" label="No sources" />;
 }
