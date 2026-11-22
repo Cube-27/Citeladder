@@ -82,7 +82,7 @@ export const commerceKinds = {
   discover_commerce_competitors: changeKind({
     permission: MEMBER_RUN,
     purpose:
-      "search for competing products for chosen products or categories; uses the day's competitor discoveries and spends AI credits as each search runs",
+      'search for competing products of chosen products or categories; uses daily discoveries and AI credits as each runs',
     payload: discoveryInput,
     async execute(trx, _config, actor, change, payload) {
       const scope = await commerceScope(trx, actor.workspaceId, change);
@@ -104,7 +104,7 @@ export const commerceKinds = {
   generate_buyer_prompts: changeKind({
     permission: MEMBER_RUN,
     purpose:
-      'have CiteLadder write buyer prompts for chosen categories or hero products (hero true for products); spends AI credits when confirmed, and the prompts wait for approval',
+      'have CiteLadder write buyer prompts for categories or hero products; spends AI credits when confirmed, then they wait for approval',
     payload: buyerGenerateInput,
     async live(trx, _config, actor, change, payload) {
       await requestContexts(trx, await commerceScope(trx, actor.workspaceId, change), payload);

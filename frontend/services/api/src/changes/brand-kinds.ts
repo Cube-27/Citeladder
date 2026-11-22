@@ -101,8 +101,7 @@ const offeringNames = (offerings: readonly { offering: string }[]) =>
 export const brandKinds = {
   update_brand_profile: changeKind({
     permission: MEMBER_WRITE,
-    purpose:
-      'change brand profile fields (description, positioning, products, audience, category, buyer type, market scope, business model, context lists) to what the person said; fields left out stay',
+    purpose: 'change brand profile fields to what the person said; fields left out stay',
     payload: brandProfileUpdate,
     async execute(trx, _config, actor, change, payload) {
       await updateBrandProfile(trx, scopeOf(actor.workspaceId, change), actor.userId, payload);
@@ -124,8 +123,7 @@ export const brandKinds = {
   }),
   update_business_map: changeKind({
     permission: MEMBER_WRITE,
-    purpose:
-      'replace the business map: each offering with its attributes, situations, audiences and exclusions; send the whole map, offerings left out are removed',
+    purpose: 'replace the whole business map; offerings left out are removed',
     payload: businessMapUpdate,
     async execute(trx, _config, actor, change, payload) {
       const map = await updateBusinessMap(

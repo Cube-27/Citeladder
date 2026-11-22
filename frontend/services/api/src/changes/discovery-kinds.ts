@@ -27,7 +27,7 @@ export const discoveryKinds = {
   start_brand_discovery: changeKind({
     permission: MEMBER_RUN,
     purpose:
-      "research a brand from its website to set up a new project: profile, domains, competitors and topics; uses one of the day's brand discoveries",
+      "research a brand from its website to set up a new project; uses one of the day's brand discoveries",
     payload: discoveryCreate,
     async execute(trx, _config, actor, change, payload) {
       const discovery = await createDiscovery(trx, actor.workspaceId, payload, change.id);

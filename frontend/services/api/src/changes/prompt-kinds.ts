@@ -214,7 +214,7 @@ export const promptKinds = {
   update_prompt_text: changeKind({
     permission: PROMPTS_WRITE,
     purpose:
-      'edit one tracked prompt as the prompt form does: its text, intent, buyer stage, persona or topic (topic_id null files it under no topic); earlier results keep the old values',
+      "edit one tracked prompt's text, intent, buyer stage, persona or topic; earlier results keep the old values",
     payload: promptEdit,
     async execute(trx, _config, actor, change, { prompt_id: promptId, ...edit }) {
       const prompt = await updatePrompt(trx, actor, change.projectId, promptId, edit);

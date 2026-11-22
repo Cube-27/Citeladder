@@ -62,8 +62,7 @@ const started = (run: { created_at: Date }) => ({
 export const researchKinds = {
   create_keyword_review: changeKind({
     permission: MEMBER_RUN,
-    purpose:
-      'quote a Keyword research run for chosen datasets; spends nothing, and the run starts only when the person confirms it with confirm_keyword_run',
+    purpose: 'quote a Keyword research run; spends nothing, and only confirm_keyword_run starts it',
     payload: reviewBody,
     async live(trx, config, actor, change, payload) {
       await requireFlag(trx, actor.workspaceId, 'search_intelligence');

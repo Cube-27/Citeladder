@@ -50,7 +50,7 @@ export const projectKinds = {
   update_project: changeKind({
     permission: COMPETITORS_WRITE,
     purpose:
-      'change the project details the edit panel holds: name, brand name, website, industry, market, language, aliases (brand.aliases), owned and unintended domains, entity matching, default repetitions, benchmark mode; lists are replaced whole, competitors use the competitor kinds',
+      'edit the project details of its edit panel; lists are replaced whole, competitors use the competitor kinds',
     payload: projectEdit,
     async execute(trx, _config, actor, change, payload) {
       const project = await updateProject(trx, actor, change.projectId, payload);

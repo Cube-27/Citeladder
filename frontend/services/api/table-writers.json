@@ -121,7 +121,7 @@
       "src/prompts/topics.ts"
     ],
     "brand_research_snapshots": ["src/workers/discovery-worker.ts"],
-    "branded_query_overrides": ["src/routes/demand.ts"],
+    "branded_query_overrides": ["src/demand/classification.ts"],
     "brands": ["src/projects/logo-refresh.ts", "src/projects/service.ts"],
     "citations": ["src/analysis/execution.ts", "src/source-pages/sync.ts"],
     "claim_verdict_overrides": ["src/perception/verdict-overrides.ts"],
