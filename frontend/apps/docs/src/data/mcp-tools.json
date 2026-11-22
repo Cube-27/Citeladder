@@ -174,7 +174,8 @@
               "chatgpt",
               "gemini",
               "claude",
-              "google_ai_overview"
+              "google_ai_overview",
+              "google_ai_mode"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -514,7 +515,8 @@
               "chatgpt",
               "gemini",
               "claude",
-              "google_ai_overview"
+              "google_ai_overview",
+              "google_ai_mode"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -675,7 +677,8 @@
               "chatgpt",
               "gemini",
               "claude",
-              "google_ai_overview"
+              "google_ai_overview",
+              "google_ai_mode"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -808,7 +811,8 @@
               "chatgpt",
               "gemini",
               "claude",
-              "google_ai_overview"
+              "google_ai_overview",
+              "google_ai_mode"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -983,7 +987,8 @@
               "chatgpt",
               "gemini",
               "claude",
-              "google_ai_overview"
+              "google_ai_overview",
+              "google_ai_mode"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -1145,7 +1150,8 @@
               "chatgpt",
               "gemini",
               "claude",
-              "google_ai_overview"
+              "google_ai_overview",
+              "google_ai_mode"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -1515,7 +1521,8 @@
               "chatgpt",
               "gemini",
               "claude",
-              "google_ai_overview"
+              "google_ai_overview",
+              "google_ai_mode"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -1566,7 +1573,8 @@
               "chatgpt",
               "gemini",
               "claude",
-              "google_ai_overview"
+              "google_ai_overview",
+              "google_ai_mode"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -1583,7 +1591,7 @@
           },
           "view": {
             "default": "summary",
-            "description": "summary is the run (the default); topics is one row per topic; matrix is the engine, topic, market and brand grids; surface is AI Overview rates; markets lists every market; runs, run and schedules are paged.",
+            "description": "summary is the run (the default); topics is one row per topic; matrix is the engine, topic, market and brand grids; surface is Google AI Overview and AI Mode rates; markets lists every market; runs, run and schedules are paged.",
             "type": "string",
             "enum": [
               "summary",
@@ -1642,7 +1650,8 @@
               "chatgpt",
               "gemini",
               "claude",
-              "google_ai_overview"
+              "google_ai_overview",
+              "google_ai_mode"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -1719,7 +1728,8 @@
               "chatgpt",
               "gemini",
               "claude",
-              "google_ai_overview"
+              "google_ai_overview",
+              "google_ai_mode"
             ],
             "description": "Read one engine only; omit for every engine."
           },
@@ -1813,7 +1823,8 @@
               "chatgpt",
               "gemini",
               "claude",
-              "google_ai_overview"
+              "google_ai_overview",
+              "google_ai_mode"
             ],
             "description": "Read one engine only; omit for every engine."
           },

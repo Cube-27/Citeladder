@@ -54,7 +54,7 @@ export const visibilityTools = {
         .enum(['summary', 'topics', 'matrix', 'surface', 'markets', 'runs', 'run', 'schedules'])
         .default('summary')
         .describe(
-          'summary is the run (the default); topics is one row per topic; matrix is the engine, topic, market and brand grids; surface is AI Overview rates; markets lists every market; runs, run and schedules are paged.',
+          'summary is the run (the default); topics is one row per topic; matrix is the engine, topic, market and brand grids; surface is Google AI Overview and AI Mode rates; markets lists every market; runs, run and schedules are paged.',
         ),
       ...page,
     }),

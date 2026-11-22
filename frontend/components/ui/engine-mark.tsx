@@ -19,7 +19,7 @@ export function engineMarkKey(engine: string): EngineKey | null {
   if (engine.startsWith('chatgpt')) return 'chatgpt';
   if (engine.startsWith('gemini')) return 'gemini';
   if (engine === 'claude') return 'claude';
-  if (engine === 'google_ai_overview') return 'google';
+  if (engine === 'google_ai_overview' || engine === 'google_ai_mode') return 'google';
   return null;
 }
 
