@@ -6,11 +6,13 @@ import { AppGrid } from '@/components/ui/app-grid';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { Stack } from '@/components/ui/layout';
 import { Meter } from '@/components/ui/meter';
+import { Notice } from '@/components/ui/notice';
 import { PartDonut } from '@/components/ui/part-donut';
 import { Section, SectionContent, SectionStack, TitledSection } from '@/components/ui/section';
 import { slipClasses } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
+import { TextLink } from '@/components/ui/text-link';
 import { AreaChart } from '@/components/ui/area-chart';
 import { textRole } from '@/components/ui/typography';
 import {
@@ -21,8 +23,10 @@ import {
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { availabilityLabel, formatDisplayDate } from '@/lib/format';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+import { BRAND_PROMPTS_HREF } from '@/lib/prompts/routes';
 import {
   coverageExtras,
+  describesTooFew,
   formatNet,
   negativeHeadline,
   rankThemes,
@@ -39,10 +43,23 @@ export function PerceptionView({
   data,
   factFigure,
 }: Readonly<{ data: PerceptionResponse; factFigure?: FigureSegment }>) {
-  if (data.state !== 'value')
-    return <PerceptionState state={data.state} reason={data.reason} coverage={data.coverage} />;
+  const nudge = describesTooFew(data) ? <BrandPromptsNudge /> : null;
+  if (data.state !== 'value') {
+    const state = (
+      <PerceptionState state={data.state} reason={data.reason} coverage={data.coverage} />
+    );
+    return nudge ? (
+      <SectionStack>
+        {nudge}
+        {state}
+      </SectionStack>
+    ) : (
+      state
+    );
+  }
   return (
     <SectionStack>
+      {nudge}
       <Lede data={data} factFigure={factFigure} />
       <AppGrid layout="main-aside">
         <ThemeList themes={data.themes} />
@@ -58,6 +75,14 @@ export function PerceptionView({
         <CompetitorThemes entities={data.entities} />
       ) : null}
     </SectionStack>
+  );
+}
+
+function BrandPromptsNudge() {
+  return (
+    <Notice tone="info">
+      Few answers describe you: <TextLink href={BRAND_PROMPTS_HREF}>add brand prompts</TextLink>
+    </Notice>
   );
 }
 

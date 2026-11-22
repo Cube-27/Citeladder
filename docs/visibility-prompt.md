@@ -188,6 +188,28 @@ note for this run only, sent as reference data and never a business fact.
 `seed_query_ids` restrict which persisted searches ground slots; omitted, every
 source grounds. They are part of the idempotency request and frozen in run provenance.
 
+A request with `mode: brand` plans **brand prompts**: questions that ask about
+the brand directly, so every run returns answers that describe it. Each cell
+takes one angle from `config/brand-prompts.ts` (recommended for one confirmed
+need, pros and cons, reasons not to choose it, worth the price, reviews, and a
+comparison naming one tracked competitor, planned only when the project has
+one) over the selected topics and their offerings, under a drafting instruction
+of its own that asks and never states a fact about the brand. A diagnostic
+angle is a `brand_diagnostic` cell and the comparison a `comparison` cell, so
+admission, the judge, staging and review are the market run's; every brand cell,
+comparison included, is judged for grounded claims, and selection spreads
+angles instead of applying cohort quotas.
+Brand drafts carry the `evaluation` intent, which the Prompts filter and
+`read_prompt_portfolio` select on. Between drafts of one run the near-duplicate
+check counts the angle as a token, so two angles on one offering are not
+duplicates; against tracked and pending prompts it compares the text alone. A brand
+request takes no cohort, distribution or seeds and asks for at most
+`max_per_run`; it is refused before provider I/O when tracked plus pending
+evaluation prompts would pass `max_per_project`, and staging trims to the room
+left under the project lock. Metering, budgets and prompt-slot occupancy are
+the market run's. Accepted, they are ordinary prompts in their cohorts, so
+audits and perception labelling read them unchanged.
+
 Draft batches receive a narrow brief (category, category terms, offerings,
 business model, buyer type, market scope, language and country, with their
 review provenance, plus any `run_context`), the batch's cells and tracked texts
@@ -263,7 +285,8 @@ drafts, bare meaning no facet besides offering and market) for
 admitted and selected drafts, measured by
 [generation metrics](../frontend/services/api/src/prompts/generation-metrics.ts),
 which also scores calibration sets (`pnpm prompts:eval --live` is the
-operator-only live run, never in CI). `candidates_generated` counts what passed
+operator-only live run, never in CI; `--mode brand` scores brand prompts for
+shortfall and angle coverage). `candidates_generated` counts what passed
 admission and is never a market size. Every dropped row is counted under the
 first admission rule it broke (`admission_drops`, also frozen in run
 provenance), and the Prompt Builder and agent handoff show that breakdown.
@@ -374,7 +397,11 @@ Generate pending, so it is never paid for twice.
    step 1, and the search source (each source
    with persisted data, or none) with its seed queries grouped by topic and
    untickable. Edits not yet saved or confirmed are named as unused by this run.
-   Generate sends every field for all topics.
+   Generate sends every field for all topics. A **What to generate** choice
+   above them switches to brand prompts (`?generate=brand`): a count up to
+   `brand_prompts_max` and its spend (`brand_generation_calls`) replace the
+   splits, personas and search data. The Perception Brand tab links there while
+   fewer than the classified minimum of answers describe the brand.
 4. **Review**: the candidate review with a coverage line per topic and per
    segment (cohort) against the request, on target, short or empty, counting
    what this session drafted. "Generate more" on a short or empty line reuses

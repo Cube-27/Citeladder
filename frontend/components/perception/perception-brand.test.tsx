@@ -155,6 +155,17 @@ describe('Perception view', () => {
     expect(screen.queryByText(/^\d+ classified · small sample$/u)).toBeNull();
   });
 
+  it('links to brand prompts only while too few answers describe the brand', () => {
+    const { unmount } = render(<PerceptionView data={response()} />);
+    expect(screen.getByRole('link', { name: 'add brand prompts' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/prompts/build?step=distribution&generate=brand'),
+    );
+    unmount();
+    render(<PerceptionView data={response({ coverage: { ...coverage, classified: 20 } })} />);
+    expect(screen.queryByRole('link', { name: 'add brand prompts' })).toBeNull();
+  });
+
   it('shows the classified coverage and opens a theme to its quotes', () => {
     render(<PerceptionView data={response()} />);
     expect(within(screen.getByLabelText('Brand perception')).getByText('4 / 6')).toBeVisible();

@@ -326,6 +326,9 @@ it('pages prompts stably while context includes only active prompts and foreign 
     })
     .where('id', '=', second)
     .execute();
+  await db.updateTable('prompts').set({ intent: 'evaluation' }).where('id', '=', second).execute();
+  const evaluations = await read('read_prompt_portfolio', { intent: 'evaluation' });
+  expect((evaluations.items as { id: string }[]).map((row) => row.id)).toEqual([second]);
   const page = await read('read_prompt_portfolio', { limit: 1 });
   expect(page.items).toEqual([
     expect.objectContaining({ id: first, grounded: false, topic_id: nets, topic: 'Golf nets' }),

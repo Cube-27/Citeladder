@@ -12,14 +12,19 @@ import type {
 import { useUrlState } from '@/lib/navigation/url-state';
 import { personaChoices } from '@/lib/prompts/builder-business';
 import { defaultRunSettings, runRequest, type RunSettings } from '@/lib/prompts/builder-run';
-import { BUILDER_STEP_PARAM } from '@/lib/prompts/routes';
+import { BUILDER_MODE_PARAM, BUILDER_STEP_PARAM } from '@/lib/prompts/routes';
 import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 
 import { BuilderBusinessStep } from './builder-business-step';
 import { BuilderDistributionStep } from './builder-distribution-step';
 import { BuilderCancel, BuilderStepActions } from './builder-footer';
 import { BuilderReviewStep, RunCoverage } from './builder-review-step';
-import { BUILDER_STEPS, builderStepCodec, liveBuilderStep } from './builder-steps';
+import {
+  BUILDER_STEPS,
+  builderModeCodec,
+  builderStepCodec,
+  liveBuilderStep,
+} from './builder-steps';
 import { BuilderTopicsStep } from './builder-topics-step';
 import { CandidateReviewPanel, useCandidateSelection } from './candidate-review';
 import { GenerateErrorAlert, GenerateResultAlert } from './generation-alerts';
@@ -53,6 +58,7 @@ export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
     props;
   const scope = { workspaceId, projectId };
   const [step, setStep] = useUrlState(BUILDER_STEP_PARAM, builderStepCodec);
+  const [mode, setMode] = useUrlState(BUILDER_MODE_PARAM, builderModeCodec, { history: 'replace' });
   const business = useBusinessDraft({ projectId, workspaceId });
   const seedsQuery = useQuery(topicsQueries.seedQueries(scope));
   const topicStep = useBuilderTopics({ scope, topics });
@@ -60,6 +66,7 @@ export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
   const settings = edited ?? defaultRunSettings();
   const personas = business.draft ? personaChoices(business.draft) : [];
   const built = runRequest(settings, {
+    mode,
     seeds: seedsQuery.data ?? null,
     hasCompetitors,
     personaChoices: personas,
@@ -107,6 +114,8 @@ export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
       case 'distribution':
         return (
           <BuilderDistributionStep
+            mode={mode}
+            onModeChange={setMode}
             settings={settings}
             onChange={setEdited}
             limits={limits}

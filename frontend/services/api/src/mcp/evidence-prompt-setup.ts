@@ -44,7 +44,7 @@ async function projectSetIds({ db, scope }: ProjectRead, selected: string | null
 
 export async function promptCandidates(
   read: ProjectRead,
-  args: Page & { prompt_set_id?: string | null; cohort?: string | null },
+  args: Page & { prompt_set_id?: string | null; cohort?: string | null; intent?: string | null },
 ): Promise<Evidence> {
   const setIds = await projectSetIds(read, args.prompt_set_id);
   const staged = await Promise.all(
@@ -54,6 +54,7 @@ export async function promptCandidates(
     staged
       .flat()
       .filter((candidate) => !args.cohort || candidate.cohort === args.cohort)
+      .filter((candidate) => !args.intent || candidate.intent === args.intent)
       .map((candidate) => ({
         id: candidate.id,
         prompt_set_id: candidate.prompt_set_id,
@@ -73,6 +74,7 @@ export async function promptCandidates(
         project_id: read.scope.projectId,
         prompt_set_id: args.prompt_set_id ?? null,
         cohort: args.cohort ?? null,
+        intent: args.intent ?? null,
       },
     },
   );

@@ -139,11 +139,19 @@ export function integrationStatus({ db, scope }: ProjectRead): Promise<Evidence>
   return readProjectReadiness(db, scope);
 }
 
+function portfolioCursor(cursor: string, filters: string) {
+  const [key, at, id] = decodeCursor(cursor, 3);
+  if (key !== filters || !at || Number.isNaN(Date.parse(at)) || !parseUuid(id))
+    throw new McpInputError('cursor is invalid for this selection');
+  return { at, id };
+}
+
 export async function promptPortfolio(
   { db, scope }: ProjectRead,
   args: Page & {
     prompt_set_id?: string | null;
     cohort?: string | null;
+    intent?: string | null;
     active_only?: boolean;
   },
 ): Promise<Evidence> {
@@ -175,15 +183,15 @@ export async function promptPortfolio(
   if (args.active_only)
     query = query.where('p.enabled', '=', true).where('p.status', '=', 'active');
   if (args.cohort) query = query.where('p.cohort', '=', args.cohort);
+  if (args.intent) query = query.where('p.intent', '=', args.intent);
   const filters = JSON.stringify([
     args.prompt_set_id ?? null,
     args.cohort ?? null,
+    args.intent ?? null,
     !!args.active_only,
   ]);
   if (args.cursor) {
-    const [key, at, id] = decodeCursor(args.cursor, 3);
-    if (key !== filters || !at || Number.isNaN(Date.parse(at)) || !parseUuid(id))
-      throw new McpInputError('cursor is invalid for this selection');
+    const { at, id } = portfolioCursor(args.cursor, filters);
     query = query.where(sql<boolean>`(p.created_at,p.id) > (${at}::timestamptz,${id}::uuid)`);
   }
   const count = args.limit ?? mcpPolicy.default_list_limit;

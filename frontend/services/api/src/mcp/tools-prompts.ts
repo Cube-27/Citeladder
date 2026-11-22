@@ -53,6 +53,11 @@ export const promptTools = {
             'Keep only scored or only comparison prompts; combines with the other filters.',
           ),
       ),
+      intent: optional(
+        z
+          .enum(policy.prompts.intents)
+          .describe('Keep only prompts with this intent; evaluation marks brand prompts.'),
+      ),
       active_only: z
         .boolean()
         .default(false)
