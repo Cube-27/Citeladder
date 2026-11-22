@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
+import { policy } from '../src/config.ts';
+import type { JevClient } from '../src/models/jev.ts';
 import { reviewCandidates } from '../src/prompts/candidates.ts';
 import { generationInput } from '../src/prompts/generation-input.ts';
 import { generatePrompts } from '../src/prompts/generation.ts';
@@ -104,7 +107,17 @@ afterAll(async () => {
   await db.destroy();
 });
 
+const judgedState = z.object({ candidate: z.object({ question: z.string() }) });
 const brandRequest = (count: number) => generationInput.parse({ mode: 'brand', count });
+const pendingTexts = async () =>
+  (
+    await db
+      .selectFrom('prompt_candidates')
+      .select('text')
+      .where('prompt_set_id', '=', setId)
+      .where('disposition', '=', 'pending')
+      .execute()
+  ).map((row) => row.text);
 
 describe('brand prompt generation at the PostgreSQL boundary', () => {
   it('stages evaluation candidates grounded in offerings and tracked competitors, counted against prompt slots on accept', async () => {
@@ -240,5 +253,88 @@ describe('brand prompt generation at the PostgreSQL boundary', () => {
     expect(deps.io.fetch).not.toHaveBeenCalled();
     await generatePrompts(db, tenant.workspaceId, setId, brandRequest(4), deps);
     expect(deps.io.fetch).toHaveBeenCalled();
+  });
+
+  it('gates a brand draft that states a fact about the brand, comparisons included', async () => {
+    await fixtures.competitor(tenant.projectId, { name: 'Strider' });
+    const STATED = /cheaper|so slow/;
+    const judged: { question: string; claims: boolean }[] = [];
+    const judge: JevClient = {
+      model: 'jev-test',
+      decide: async (state, questions) => {
+        const question = judgedState.parse(state).candidate.question;
+        judged.push({ question, claims: 'grounded_claims' in questions });
+        const answers = Object.fromEntries(
+          Object.keys(questions)
+            .filter((key) => (questions[key] as { type: string }).type === 'noul')
+            .map((key) => [
+              key,
+              { noul: key === 'grounded_claims' && STATED.test(question) ? 0.05 : 0.9 },
+            ]),
+        );
+        return { model: 'jev-test', answers };
+      },
+    };
+    const leading = (slot: DraftRequest['slots'][number]) => {
+      const need = slot.buyer_need as Record<string, string>;
+      if (need.competitor)
+        return {
+          text: `Why is Acme cheaper than ${need.competitor} running shoes ${slot.slot_id}style`,
+          prompt_intent: 'compare',
+        };
+      if (need.angle === 'reasons_not_to_choose')
+        return {
+          text: `Why are Acme running shoes so slow to dry ${slot.slot_id}style`,
+          prompt_intent: 'validate',
+        };
+      return write(slot);
+    };
+    await generatePrompts(db, tenant.workspaceId, setId, brandRequest(6), {
+      ...echoDependencies({ write: leading }),
+      judge: () => judge,
+    });
+    const staged = await pendingTexts();
+    expect({
+      staged: staged.length,
+      stated: staged.filter((text) => STATED.test(text)),
+      comparisonsJudgedForClaims: judged
+        .filter(({ question }) => question.includes('Strider'))
+        .every(({ claims }) => claims),
+      judgedStated: judged
+        .filter(({ question }) => STATED.test(question))
+        .map(({ question }) => question.split(' ')[3])
+        .toSorted(),
+    }).toEqual({
+      staged: 4,
+      stated: [],
+      comparisonsJudgedForClaims: true,
+      judgedStated: ['cheaper', 'running'],
+    });
+  });
+
+  it('holds the per-project cap when two brand requests race for the last room', async () => {
+    const filled = await Promise.all(
+      Array.from({ length: policy.prompts.brand.max_per_project - 4 }, (_, index) =>
+        prompt(db, setId, `Acme question ${index}`),
+      ),
+    );
+    await db
+      .updateTable('prompts')
+      .set({ intent: 'evaluation' })
+      .where('id', 'in', filled)
+      .execute();
+    await Promise.all([
+      generatePrompts(db, tenant.workspaceId, setId, brandRequest(4), echoDependencies({ write })),
+      generatePrompts(
+        db,
+        tenant.workspaceId,
+        setId,
+        brandRequest(4),
+        echoDependencies({
+          write: (slot) => ({ ...write(slot), text: `${write(slot).text} again` }),
+        }),
+      ),
+    ]);
+    expect(await pendingTexts()).toHaveLength(4);
   });
 });

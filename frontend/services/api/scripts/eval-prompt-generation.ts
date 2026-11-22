@@ -5,6 +5,7 @@ import { parseArgs } from 'node:util';
 import { policy } from '../src/config.ts';
 import { gitDirectory } from './git-directory.ts';
 import { createModelGateway } from '../src/models/gateway.ts';
+import { runMetered } from '../src/models/meter-scope.ts';
 import { generateDrafts } from '../src/prompts/generation-drafts.ts';
 import { promptGenerationModeSchema } from '@citeladder/contracts/prompt-requests';
 import { generationInput, generationSetting } from '../src/prompts/generation-input.ts';
@@ -64,11 +65,15 @@ function brandFailures(
 
 async function evaluate(fixture: (typeof generationFixtures)[number], grounded: boolean) {
   const started = performance.now();
-  const output = await generateDrafts(
-    fixtureContext(fixture, [], { grounded }),
-    generationInput.parse({ count, mode }),
-    gateway,
-    AbortSignal.timeout(generationSetting('generation_deadline_seconds') * 1000),
+  const output = await runMetered(
+    { workspaceId: 'calibration', feature: 'prompt_generation' },
+    () =>
+      generateDrafts(
+        fixtureContext(fixture, [], { grounded }),
+        generationInput.parse({ count, mode }),
+        gateway,
+        AbortSignal.timeout(generationSetting('generation_deadline_seconds') * 1000),
+      ),
   );
   const selected = selectDrafts(output.drafts, count, { balanceStages: !brand });
   const metrics = setMetrics({

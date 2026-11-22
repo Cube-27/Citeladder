@@ -128,10 +128,8 @@ export function admitDrafts(
     ...pending.map((row) => row.normalized_text_hash),
     ...prior.map((row) => row.hash),
   ]);
-  const near = [
-    ...[...context.prompts, ...pending].map((row) => promptTokens(row.text)),
-    ...prior.map((row) => draftTokens(row.text, row.slot)),
-  ];
+  const known = [...context.prompts, ...pending].map((row) => promptTokens(row.text));
+  const near = prior.map((row) => draftTokens(row.text, row.slot));
   const usedSlots = new Set(prior.map((row) => row.slot.slot_id));
   const observed = new Set([
     ...context.context.demand_signals.flatMap((row) =>
@@ -204,8 +202,12 @@ export function admitDrafts(
     if (!slot.buyer_need.market && namesPlace(text, geo)) return 'location_unplanned';
     const identity = cohortReason(row, slot.cohort, text);
     if (identity) return identity;
-    const tokens = draftTokens(text, slot);
-    return near.some((other) => nearDuplicate(tokens, other)) ? 'near_duplicate' : null;
+    const plain = promptTokens(text),
+      tokens = draftTokens(text, slot);
+    return known.some((other) => nearDuplicate(plain, other)) ||
+      near.some((other) => nearDuplicate(tokens, other))
+      ? 'near_duplicate'
+      : null;
   };
   const admitted: Draft[] = [];
   const drops: Drops = {};

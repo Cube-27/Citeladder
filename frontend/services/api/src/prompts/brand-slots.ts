@@ -66,7 +66,7 @@ export function planBrandSlots(
           review_state: reviewState,
           evidence_type: 'hypothesis',
         },
-        ...(angle.cohort === 'brand_diagnostic' ? { grounded_attributes: plan.claims } : {}),
+        grounded_attributes: plan.claims,
       },
     ];
   });

@@ -195,12 +195,14 @@ need, pros and cons, reasons not to choose it, worth the price, reviews, and a
 comparison naming one tracked competitor, planned only when the project has
 one) over the selected topics and their offerings, under a drafting instruction
 of its own that asks and never states a fact about the brand. A diagnostic
-angle is a `brand_diagnostic` cell (judged for grounded claims) and the
-comparison a `comparison` cell, so admission, the judge, staging and review are
-the market run's; selection spreads angles instead of applying cohort quotas.
+angle is a `brand_diagnostic` cell and the comparison a `comparison` cell, so
+admission, the judge, staging and review are the market run's; every brand cell,
+comparison included, is judged for grounded claims, and selection spreads
+angles instead of applying cohort quotas.
 Brand drafts carry the `evaluation` intent, which the Prompts filter and
-`read_prompt_portfolio` select on, and their near-duplicate check counts the
-angle as a token, so two angles on one offering are not duplicates. A brand
+`read_prompt_portfolio` select on. Between drafts of one run the near-duplicate
+check counts the angle as a token, so two angles on one offering are not
+duplicates; against tracked and pending prompts it compares the text alone. A brand
 request takes no cohort, distribution or seeds and asks for at most
 `max_per_run`; it is refused before provider I/O when tracked plus pending
 evaluation prompts would pass `max_per_project`, and staging trims to the room
