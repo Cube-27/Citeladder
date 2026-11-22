@@ -4,15 +4,22 @@ import type { ServiceConfig } from '../config.ts';
 import { base62, base62Length, fingerprint } from '../crypto-text.ts';
 import type { Database } from '../db/database.ts';
 import { mcpPolicy } from './config.ts';
-import {
-  isConfirmedKind,
-  preparedChanges,
-  type ConfirmedKind,
-  type PreparedChange,
-} from './confirmed-changes.ts';
+import type { PreparedChange } from '../changes/kind.ts';
+import { changeKinds, type ChangeKind } from '../changes/kinds.ts';
 import { writeActor } from './data.ts';
 import { tokenHash } from './oauth.ts';
 import { McpInputError, type McpPrincipal } from './types.ts';
+
+const CONFIRMED_KINDS = [
+  'add_prompts',
+  'update_prompts',
+  'launch_audit',
+  'schedule',
+  'declare_implemented',
+] as const satisfies readonly ChangeKind[];
+export type ConfirmedKind = (typeof CONFIRMED_KINDS)[number];
+const isConfirmedKind = (kind: string): kind is ConfirmedKind =>
+  CONFIRMED_KINDS.some((confirmed) => confirmed === kind);
 
 const tokenHmac = (config: ServiceConfig, token: string) =>
   tokenHash(config, `mcp-confirmation:${token}`);
@@ -79,7 +86,7 @@ export function confirmChange(
     if (!isConfirmedKind(kind)) throw new Error(`A stored MCP confirmation has no kind ${kind}`);
     const actor = await writeActor(trx, principal, row.project_id);
     const change = { id: row.id, projectId: row.project_id };
-    const result = await preparedChanges[kind].confirm(trx, config, actor, change, row.payload);
+    const result = await changeKinds[kind].confirm(trx, config, actor, change, row.payload);
     await trx
       .updateTable('mcp_confirmations')
       .set({ consumed_at: new Date() })
