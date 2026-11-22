@@ -104,7 +104,11 @@ function oneLanguage(markets: readonly { language_code: string }[]) {
   return others.length ? '' : language;
 }
 
-export async function probeMarket(db: Database, scope: Scope): Promise<ProbeMarket> {
+export async function probeMarket(
+  db: Database,
+  scope: Scope,
+  pageLimit = policy.probes.max_sources_per_group,
+): Promise<ProbeMarket> {
   const [latest] = await labelledLaunches(db, scope, 1);
   if (!latest) return { state: 'none' };
   const [answers, subject] = await Promise.all([
@@ -125,7 +129,7 @@ export async function probeMarket(db: Database, scope: Scope): Promise<ProbeMark
         theme_id: theme.id,
         theme: theme.name,
         ...themeRow(asked, latest.roster),
-        ...pagesOf((answer) => asksTheme(answer, theme.id)),
+        ...pagesOf((answer) => asksTheme(answer, theme.id), pageLimit),
       },
     ];
   });

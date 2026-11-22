@@ -151,12 +151,20 @@ export const visibilityTools = {
       ),
       ...page,
     }),
-    read: (read, args) => {
+    read: async (read, args) => {
       switch (args.view) {
         case 'probe':
-          return probeRead(read);
+          return withCsvExport(read, await probeRead(read), {
+            path: '/probes/market/export',
+            args,
+            params: [],
+          });
         case 'objections':
-          return objectionGroups(read, args);
+          return withCsvExport(read, await objectionGroups(read, args), {
+            path: '/probes/objections/export',
+            args,
+            params: [],
+          });
         default:
           return perceptionRead(read, { ...args, view: args.view });
       }

@@ -24,6 +24,7 @@ const schema = z.strictObject({
   task_max_attempts: positive,
   history_probes: positive,
   max_sources_per_group: positive,
+  export_max_rows: positive,
   known_for_template: template,
   objection_template: template,
   theme_template: template,

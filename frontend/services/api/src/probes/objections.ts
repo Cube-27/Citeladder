@@ -28,7 +28,11 @@ function groupScores(answers: readonly ProbeAnswer[]) {
   };
 }
 
-export async function probeObjections(db: Database, scope: Scope): Promise<ProbeObjections> {
+export async function probeObjections(
+  db: Database,
+  scope: Scope,
+  pageLimit = probes.max_sources_per_group,
+): Promise<ProbeObjections> {
   const launches = await labelledLaunches(db, scope, probes.history_probes);
   const latest = launches[0];
   if (!latest) return { state: 'none' };
@@ -55,7 +59,10 @@ export async function probeObjections(db: Database, scope: Scope): Promise<Probe
       engines: logicalEngines.filter((engine) => raising.has(engine)),
       history: series,
       ...(raising.size
-        ? pagesOf((answer) => answer.items.some((item) => item.objection_group_id === group.id))
+        ? pagesOf(
+            (answer) => answer.items.some((item) => item.objection_group_id === group.id),
+            pageLimit,
+          )
         : { sources: null, pages: [] }),
     };
   });

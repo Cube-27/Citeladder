@@ -13,6 +13,13 @@ import { z } from 'zod';
 import { auditRuntime } from '../audits/config.ts';
 import { readAudits } from '../audits/reads.ts';
 import { readBody } from '../http/body.ts';
+import { csvDownload } from '../http/table-export.ts';
+import {
+  OBJECTION_EXPORT_COLUMNS,
+  objectionExportRows,
+  THEME_EXPORT_COLUMNS,
+  themeExportRows,
+} from '../probes/export.ts';
 import { probeMarket } from '../probes/market.ts';
 import { deleteGroup, groupRequest, mergeGroups, renameGroup } from '../probes/objection-groups.ts';
 import { probeObjections } from '../probes/objections.ts';
@@ -32,6 +39,13 @@ const activeProject = { family: 'probes', authorize: 'active-project' } as const
 const root = '/api/v1/projects/{project_id}/probes';
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid } as const;
+const exportRead = {
+  family: 'probes',
+  authorize: 'project',
+  params: { path: projectPath, query: {} },
+  raw: true,
+  response: z.string().meta({ format: 'binary' }),
+} as const;
 const groupPath = { ...projectPath, group_id: uuid } as const;
 
 export const probeRoutes = [
@@ -81,11 +95,27 @@ export const probeRoutes = [
     handle: ({ c, db }, { path }) => probeMarket(db, projectScopeOf(c, path.project_id)),
   }),
   defineGetRoute({
+    ...exportRead,
+    path: `${root}/market/export`,
+    async handle({ c, db }, { path }) {
+      const rows = await themeExportRows(db, projectScopeOf(c, path.project_id));
+      return csvDownload('market-theme-sources.csv', THEME_EXPORT_COLUMNS, [rows]);
+    },
+  }),
+  defineGetRoute({
     ...activeProject,
     path: `${root}/objections`,
     params: { path: projectPath, query: {} },
     response: probeObjectionsSchema,
     handle: ({ c, db }, { path }) => probeObjections(db, projectScopeOf(c, path.project_id)),
+  }),
+  defineGetRoute({
+    ...exportRead,
+    path: `${root}/objections/export`,
+    async handle({ c, db }, { path }) {
+      const rows = await objectionExportRows(db, projectScopeOf(c, path.project_id));
+      return csvDownload('objection-sources.csv', OBJECTION_EXPORT_COLUMNS, [rows]);
+    },
   }),
   definePatchRoute({
     ...activeProject,

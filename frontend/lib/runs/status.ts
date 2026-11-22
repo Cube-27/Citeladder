@@ -117,18 +117,3 @@ export function runTitle(
   const kind = audit.parent_audit_id ? `${scope} repair run` : `${scope} ${noun}`;
   return `${kind} · ${formatDisplayDate(audit.created_at, timeZone)}`;
 }
-
-export function classificationLabel(classification: CitationClassification): string {
-  switch (classification) {
-    case 'owned':
-      return 'Owned';
-    case 'unintended':
-      return 'Owned (unintended)';
-    case 'competitor':
-      return 'Competitor';
-    case 'third_party':
-      return 'Third-party';
-    default:
-      return classification satisfies never;
-  }
-}

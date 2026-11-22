@@ -13,12 +13,21 @@ import {
 } from '@citeladder/contracts/probes';
 import { strictValidate } from '@citeladder/contracts/validation';
 
+import { saveBlob } from '@/lib/download';
+
 import { apiClient, type ApiRequestOptions } from './client';
 import { startInteractiveWork } from './interactive-work';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 
 const root = (projectId: string) => `/projects/${projectId}/probes`;
+
+export type ProbeView = 'market' | 'objections';
+
+const EXPORT_FILES = {
+  market: 'market-theme-sources.csv',
+  objections: 'objection-sources.csv',
+} as const satisfies Record<ProbeView, string>;
 
 const probesApi = {
   status: async (projectId: string, options?: ApiRequestOptions) =>
@@ -79,6 +88,8 @@ const probesApi = {
     ),
   removeGroup: (projectId: string, groupId: string, options?: ApiRequestOptions) =>
     apiClient.delete<void>(`${root(projectId)}/objection-groups/${groupId}`, options),
+  exportSources: (projectId: string, view: ProbeView, options?: ApiRequestOptions) =>
+    apiClient.getBlob(`${root(projectId)}/${view}/export`, options),
 };
 
 const scoped = (scope: ProjectScope) => ({ workspaceId: scope.workspaceId });
@@ -114,6 +125,14 @@ export function refreshProbeStatus(client: QueryClient, scope: ProjectScope) {
 }
 
 export const probeMutations = {
+  exportSources: (scope: ProjectScope, view: ProbeView) =>
+    mutationOptions({
+      mutationFn: async () =>
+        saveBlob(
+          await probesApi.exportSources(scope.projectId, view, scoped(scope)),
+          EXPORT_FILES[view],
+        ),
+    }),
   run: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: (fingerprint: string) =>
