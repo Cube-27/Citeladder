@@ -83,6 +83,7 @@ export function AreaChart({
   eventLegend = false,
   you = true,
   lonePoint = 'list',
+  breakNote = 'caption',
 }: Readonly<{
   data: readonly TrendPoint[];
   name?: string;
@@ -100,6 +101,7 @@ export function AreaChart({
   eventLegend?: boolean;
   you?: boolean;
   lonePoint?: 'list' | 'plot';
+  breakNote?: 'caption' | 'hint';
 }>) {
   const plotted = plottedLines({ data, name: name ?? label, mark, series });
   const tones = useSeriesTones(plotted, you);
@@ -162,7 +164,7 @@ export function AreaChart({
           yFormat={yFormat}
           shown={shown}
         />
-        <ChartBreakNote data={data} lines={lines} />
+        <ChartBreakNote data={data} lines={lines} placement={breakNote} />
         <EventLegend events={placed.map((event) => ({ ...event, x: 0 }))} shown={eventLegend} />
       </div>
       {table}

@@ -9,6 +9,7 @@ import {
   type SeriesTone,
 } from '@/components/ui/step-chart-parts';
 import { SHEET_FACE } from '@/components/ui/slip';
+import { InfoHint } from '@/components/ui/info-hint';
 import { textRole } from '@/components/ui/typography';
 import { ABSENCE_MARK, type Formatted, isAbsent } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -229,10 +230,19 @@ export function breakNote(
 export function ChartBreakNote({
   data,
   lines,
+  placement = 'caption',
 }: Readonly<{
   data: Parameters<typeof breakNote>[0];
   lines: Parameters<typeof breakNote>[1];
+  placement?: 'caption' | 'hint';
 }>) {
   const note = breakNote(data, lines);
-  return note ? <p className={textRole('caption')}>{note}</p> : null;
+  if (!note) return null;
+  if (placement === 'hint')
+    return (
+      <span className="self-start">
+        <InfoHint label="About breaks in the line">{note}</InfoHint>
+      </span>
+    );
+  return <p className={textRole('caption')}>{note}</p>;
 }

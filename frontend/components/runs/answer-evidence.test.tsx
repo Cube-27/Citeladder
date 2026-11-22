@@ -125,9 +125,13 @@ function serveSearches(searches: Searches | null) {
   );
 }
 
-function renderAnswer(subject: Partial<ExecutionEvidence>) {
+function renderAnswer(subject: Partial<ExecutionEvidence>, attributes = false) {
   return renderWithProviders(
-    <AnswerEvidence evidence={{ ...evidence, ...subject }} promptText="best plumber" />,
+    <AnswerEvidence
+      evidence={{ ...evidence, ...subject }}
+      promptText="best plumber"
+      attributes={attributes}
+    />,
     { projectSelection: { activeProject: project } },
   );
 }
@@ -285,8 +289,8 @@ describe('Brand match evidence', () => {
 });
 
 describe('Answer perception evidence', () => {
-  it('labels each named business and marks its verified quotes in the answer', () => {
-    renderAnswer({
+  it('labels each named business, marks its verified quotes and lists attributes only when asked', () => {
+    const subject: Partial<ExecutionEvidence> = {
       answer_text: 'Acme support is slow. Rival is fine.',
       perception: [
         {
@@ -321,11 +325,17 @@ describe('Answer perception evidence', () => {
           aspects: [],
         },
       ],
-    });
+    };
+    const { unmount } = renderAnswer(subject);
+    expect(screen.queryByRole('list', { name: 'Attributes' })).toBeNull();
     expect(screen.getByText('Negative')).toBeVisible();
     expect(screen.getByText('Classifying…')).toBeVisible();
     expect(screen.getByText('Support (negative): “support is slow”')).toBeVisible();
     expect(document.querySelector('mark')?.textContent).toBe('support is slow');
+    unmount();
+    renderAnswer(subject, true);
+    const listed = screen.getByRole('list', { name: 'Attributes' });
+    expect(listed.textContent).toBe('Slow supportNegative');
   });
 });
 

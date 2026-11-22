@@ -321,6 +321,12 @@ how to add or change an entry.
   (2026-11-21).
 - **AR-18 Icons** are Tabler's. A glyph beside text is centred on it and draws
   no taller than the text, so 14px beside the 14px body (2026-11-21).
+- **AR-19 Perception › Brand** follows Peec's Brand view: figures, ranked
+  attributes beside a sentiment donut, then an attributes table whose rows open
+  to quotes. No sentence on it except quotes from answers; labels are one to
+  three words and help sits behind an info icon. Its table may hold a
+  negative-vs-positive bar, and its donut and bars may fill with status colours
+  (2026-11-22).
 
 ## Audit remediation (owner 2026-11-12)
 

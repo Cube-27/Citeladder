@@ -8,7 +8,7 @@ import {
   type TextLinkUnderline,
 } from '@/components/ui/text-link';
 
-export function useAnswerDialog(): Readonly<{
+export function useAnswerDialog(attributes = false): Readonly<{
   open: (subject: EvidenceSubject) => void;
   dialog: ReactNode;
 }> {
@@ -20,7 +20,12 @@ export function useAnswerDialog(): Readonly<{
       setOpened(true);
     },
     dialog: subject ? (
-      <AnswerDialog execution={subject} open={opened} onOpenChange={setOpened} />
+      <AnswerDialog
+        execution={subject}
+        open={opened}
+        onOpenChange={setOpened}
+        attributes={attributes}
+      />
     ) : null,
   };
 }
@@ -41,15 +46,17 @@ export function AnswerLink({
   text,
   tone,
   underline,
+  attributes = false,
   children,
 }: Readonly<{
   answer: Readonly<{ run_id: string; execution_id: string; prompt: string }>;
   text?: TextLinkText;
   tone?: TextLinkTone;
   underline?: TextLinkUnderline;
+  attributes?: boolean;
   children: ReactNode;
 }>) {
-  const { open, dialog } = useAnswerDialog();
+  const { open, dialog } = useAnswerDialog(attributes);
   return (
     <>
       <TextLink
