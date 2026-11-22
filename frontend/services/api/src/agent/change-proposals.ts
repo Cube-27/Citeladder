@@ -5,7 +5,7 @@ import type { Actor } from '../auth/actor.ts';
 import { findWorkspaceMember } from '../auth/workspace.ts';
 import { changePreviewSchema, type ChangePreview } from '../changes/kind.ts';
 import { changeKinds, type ChangeKind } from '../changes/kinds.ts';
-import type { ServiceConfig } from '../config.ts';
+import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { argumentProblem } from '../mcp/tools.ts';
@@ -29,6 +29,9 @@ const AGENT_CHANGE_KINDS = [
   'launch_audit',
   'cancel_audit',
   'schedule',
+  'import_prompts',
+  'import_brand_facts',
+  'import_catalog',
 ] as const satisfies readonly ChangeKind[];
 export type AgentChangeKind = (typeof AGENT_CHANGE_KINDS)[number];
 
@@ -166,7 +169,7 @@ function bounded(preview: ChangePreview): ChangePreview {
 
 function refusal(error: unknown): BuiltinOutcome {
   if (error instanceof z.ZodError) return { ok: false, text: argumentProblem(error) };
-  if (error instanceof ApiError && error.status === 403)
+  if (error instanceof ApiError && error.code === policy.workspaces.forbidden_code)
     return {
       ok: false,
       text: 'The person’s role cannot make this change. Tell them instead of proposing it.',
