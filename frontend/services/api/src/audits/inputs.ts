@@ -33,6 +33,5 @@ export const auditLaunchInput = auditFields
   .refine(selectedPrompts, 'Select a prompt set or prompt IDs');
 export const auditLaunchDraft = auditFields
   .omit({ project_id: true })
-  .extend({ max_attempts: z.int().min(1).nullish() })
   .refine(selectedPrompts, 'Select a prompt set or prompt IDs');
 export type AuditInput = z.output<typeof auditInput>;

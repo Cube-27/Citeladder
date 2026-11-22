@@ -8,7 +8,7 @@ import { createSchedule, SCHEDULES_WRITE } from '../commands/schedules.ts';
 import { changeKind, plural, type PreviewContext } from './kind.ts';
 import { promptSetName } from './prompt-kinds.ts';
 
-type LaunchRequest = Omit<z.output<typeof auditLaunchDraft>, 'max_attempts'>;
+type LaunchRequest = z.output<typeof auditLaunchDraft>;
 
 function estimate(context: PreviewContext, request: LaunchRequest) {
   return estimateAudit(
@@ -35,11 +35,8 @@ export const auditKinds = {
     draft: {
       schema: z.strictObject({ request: auditLaunchDraft }),
       async complete(context, draft) {
-        const { max_attempts: ceiling, ...request } = draft.request;
-        const estimated = await estimate(context, request);
-        return {
-          request: { ...request, max_attempts: ceiling ?? estimated.maximum_attempt_count },
-        };
+        const estimated = await estimate(context, draft.request);
+        return { request: { ...draft.request, max_attempts: estimated.maximum_attempt_count } };
       },
     },
     async execute(trx, config, actor, change, payload) {

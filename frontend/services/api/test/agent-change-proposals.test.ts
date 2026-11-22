@@ -144,7 +144,7 @@ it('returns the owner’s error when the world changed and leaves the card confi
   expect(await outcome(t.scope, chatId)).toMatchObject([{ outcome: 'executed' }]);
 });
 
-it('previews a paid launch with its spend and holds nothing until the click', async () => {
+it('previews a paid launch with its spend from the estimate, never the model’s ceiling, and holds nothing until the click', async () => {
   const t = await tenant();
   const ledger = () =>
     db
@@ -158,7 +158,7 @@ it('previews a paid launch with its spend and holds nothing until the click', as
   const { chatId, messageId, proposals } = await proposed(t.scope, [
     {
       kind: 'launch_audit',
-      payload: { request: { prompt_set_id: t.setId, engines: ['chatgpt'] } },
+      payload: { request: { prompt_set_id: t.setId, engines: ['chatgpt'], max_attempts: 500 } },
     },
   ]);
   expect(proposals).toMatchObject([
@@ -177,6 +177,16 @@ it('previews a paid launch with its spend and holds nothing until the click', as
     decision: 'confirm',
   });
   expect(await audits()).toEqual([{ status: 'queued' }]);
+});
+
+it('stages at most the per-turn bound of proposals when the model proposes them in parallel', async () => {
+  const t = await tenant();
+  const names = ['Trail', 'Road', 'Hills', 'Track', 'Beach', 'Snow'];
+  const { proposals } = await proposed(
+    t.scope,
+    names.map((name) => ({ kind: 'create_topic', payload: { name } })),
+  );
+  expect(proposals).toHaveLength(5);
 });
 
 it('dismisses a card without changing anything and refuses to execute it afterwards', async () => {

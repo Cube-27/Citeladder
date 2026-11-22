@@ -194,6 +194,8 @@ export async function proposeChange(
   } catch (error) {
     return refusal(error);
   }
+  const filled = proposalLimit(state);
+  if (filled) return filled;
   state.proposals.push({
     kind: 'change',
     change: kind,

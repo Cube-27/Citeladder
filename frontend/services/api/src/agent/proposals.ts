@@ -184,6 +184,8 @@ export async function proposeDeclaration(
     go_live_day: day ?? null,
     deployment_reference: reference?.trim() || null,
   });
+  const filled = proposalLimit(state);
+  if (filled) return filled;
   state.proposals.push(proposal);
   state.steps.push({ kind: 'proposal', label: stepText(checked.label) });
   return {

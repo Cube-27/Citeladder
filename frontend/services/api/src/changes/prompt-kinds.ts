@@ -10,7 +10,7 @@ import {
   updatePrompt,
   updateTopic,
 } from '../commands/prompts.ts';
-import { promptInput, scopedPrompts } from '../prompts/prompts.ts';
+import { promptBatch, promptInput, scopedPrompts } from '../prompts/prompts.ts';
 import { listTopics, topicConfirm, topicCreate } from '../prompts/topics.ts';
 import { changeKind, plural, quoted, rowsOf, type PreviewContext } from './kind.ts';
 
@@ -43,7 +43,7 @@ export const promptKinds = {
   add_prompts: changeKind({
     permission: PROMPTS_WRITE,
     purpose: 'track new prompts, active at once',
-    payload: z.strictObject({ prompt_set_id: z.uuid(), prompts: z.array(promptInput).min(1) }),
+    payload: z.strictObject({ prompt_set_id: z.uuid(), prompts: promptBatch.shape.prompts }),
     async execute(trx, _config, actor, change, payload) {
       const created = await createPrompts(
         trx,
@@ -65,10 +65,9 @@ export const promptKinds = {
           { label: 'Prompt set', value: await promptSetName(context, payload.prompt_set_id) },
           ...payload.prompts.map((prompt) => {
             const topic = prompt.topic_id ? topics.get(prompt.topic_id) : undefined;
-            return {
-              label: 'Prompt',
-              value: topic ? `${prompt.text} (topic: ${topic})` : prompt.text,
-            };
+            const notes = [topic && `topic: ${topic}`, prompt.cohort && `cohort: ${prompt.cohort}`];
+            const noted = notes.filter(Boolean).join('; ');
+            return { label: 'Prompt', value: noted ? `${prompt.text} (${noted})` : prompt.text };
           }),
         ],
         spend: null,
