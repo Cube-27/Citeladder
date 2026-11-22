@@ -9,6 +9,7 @@ import { CellMeter } from '@/components/ui/meter';
 import { ExpandToggle } from '@/components/perception/probe-sources';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
+import { textRole } from '@/components/ui/typography';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { QuoteLink } from '@/components/visibility/visibility-perception';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
@@ -160,6 +161,9 @@ function QuoteRow({
   return (
     <TableRow>
       <TableCell nested colSpan={span}>
+        {quote.attribute.kind === 'labelled' ? (
+          <span className={textRole('emphasis')}>{quote.attribute.name} </span>
+        ) : null}
         <QuoteLink quote={quote} />
       </TableCell>
       <TableCell>

@@ -37,6 +37,7 @@ function entity(
       unavailable: [],
     },
     theme_mentions: Object.entries(themes).map(([theme, mentions]) => ({ theme, mentions })),
+    categories: [],
   };
 }
 
