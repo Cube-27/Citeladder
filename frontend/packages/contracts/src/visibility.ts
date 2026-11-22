@@ -482,6 +482,7 @@ export const visibilityMarketRowSchema = responseObject({
   state: z.enum(['measured', 'no_run', 'metrics_pending']),
   audit_id: uuid().nullable(),
   measured_at: z.string().nullable(),
+  responses: z.number().int().nullable(),
   mention_rate: z.number().nullable(),
   share_of_voice: z.number().nullable(),
   sentiment: netSentimentSchema.nullable(),

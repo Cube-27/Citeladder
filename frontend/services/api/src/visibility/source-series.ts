@@ -16,6 +16,7 @@ export type SourceSeriesResponse = {
   dimension: SourceDimension;
   granularity: string;
   buckets: string[];
+  bucket_responses: number[];
   series: SourceSeries[];
 };
 
@@ -43,6 +44,7 @@ function assembleSeries(
     dimension: input.dimension,
     granularity: input.granularity,
     buckets,
+    bucket_responses: buckets.map((at) => input.totals.get(at)!),
     series: leading.map((key) => ({
       key,
       citations: ranked.get(key)!,
@@ -81,7 +83,7 @@ export async function getSourceSeries(
     .groupBy('scope.bucket')
     .execute();
   const empty = { dimension: options.dimension, granularity: options.granularity };
-  if (totalRows.length === 0) return { ...empty, buckets: [], series: [] };
+  if (totalRows.length === 0) return { ...empty, buckets: [], bucket_responses: [], series: [] };
   const pages = options.dimension === 'url' || Boolean(options.domain);
   const key = options.dimension === 'url' ? 'citation.url' : 'citation.domain';
   let counted = db

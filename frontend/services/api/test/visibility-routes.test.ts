@@ -441,6 +441,7 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       dimension: 'domain',
       granularity: 'day',
       buckets: ['2026-02-01T00:00:00Z'],
+      bucket_responses: [2],
       series: [
         {
           key: 'example.com',
@@ -463,6 +464,7 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       { query: { granularity: 'month', limit: '1' } },
     );
     expect(body.buckets).toEqual(['2026-02-01T00:00:00Z', '2026-03-01T00:00:00Z']);
+    expect(body.bucket_responses).toEqual([2, 1]);
     expect(body.series).toEqual([
       {
         key: 'example.com',
@@ -717,7 +719,13 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       outsider,
       `/api/v1/projects/${outsider.projectId}/visibility/sources/series`,
     );
-    expect(own.body).toEqual({ dimension: 'domain', granularity: 'day', buckets: [], series: [] });
+    expect(own.body).toEqual({
+      dimension: 'domain',
+      granularity: 'day',
+      buckets: [],
+      bucket_responses: [],
+      series: [],
+    });
     const foreign = await get(
       outsider,
       `/api/v1/projects/${tenant.projectId}/visibility/sources/url`,

@@ -129,6 +129,7 @@ export const visibilitySourceSeriesSchema = responseObject({
   dimension: z.enum(['domain', 'url']),
   granularity: z.string(),
   buckets: z.array(z.string()),
+  bucket_responses: z.array(z.number().int()),
   series: z.array(
     responseObject({
       key: z.string(),
@@ -170,6 +171,8 @@ const sourceMoverSchema = responseObject({
 export const visibilitySourceMoversSchema = responseObject({
   dimension: z.enum(['domain', 'url']),
   comparison_status: z.string(),
+  current_citations: z.number().int().nullable(),
+  previous_citations: z.number().int().nullable(),
   risers: z.array(sourceMoverSchema),
   fallers: z.array(sourceMoverSchema),
 });

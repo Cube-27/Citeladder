@@ -1000,6 +1000,8 @@ describe('GET /visibility/sources', () => {
     expect(body).toEqual({
       dimension: 'domain',
       comparison_status: 'comparable',
+      current_citations: 4,
+      previous_citations: 4,
       risers: [{ key: 'rising.example', current_share: 0.5, previous_share: 0, delta: 50 }],
       fallers: [
         { key: 'falling.example', current_share: 0.25, previous_share: 0.5, delta: -25 },
@@ -1008,7 +1010,11 @@ describe('GET /visibility/sources', () => {
     });
 
     const unpaired = await get(tenant, route(tenant, '/sources/movers'), { audit_ids: [current] });
-    expect(unpaired.body).toMatchObject({ comparison_status: 'no_baseline', risers: [] });
+    expect(unpaired.body).toMatchObject({
+      comparison_status: 'no_baseline',
+      current_citations: null,
+      risers: [],
+    });
   });
 
   it("ranks movers against a baseline in the runs' own, non-default market", async () => {
@@ -1025,6 +1031,8 @@ describe('GET /visibility/sources', () => {
     expect(body).toEqual({
       dimension: 'domain',
       comparison_status: 'comparable',
+      current_citations: 1,
+      previous_citations: 1,
       risers: [{ key: 'rising.example', current_share: 1, previous_share: 0, delta: 100 }],
       fallers: [{ key: 'falling.example', current_share: 0, previous_share: 1, delta: -100 }],
     });
