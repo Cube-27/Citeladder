@@ -21,6 +21,7 @@ afterAll(async () => {
 async function tenant() {
   const t = await auditTenant(db, fixtures);
   const scope: Scope = { workspaceId: t.workspaceId, projectId: t.projectId, userId: t.userId };
+  fixtures.scopes.push(scope);
   return { ...t, scope };
 }
 
