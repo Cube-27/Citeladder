@@ -12,8 +12,8 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableCellLines, TableRow, UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { ChevronDown, ChevronRight } from '@/lib/icons';
-import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
-import { standingLabel } from '@/lib/visibility/source-pages';
+import { classificationLabel, standingLabel } from '@citeladder/contracts/page-labels';
+import { classificationBadgeValue } from '@/lib/runs/status';
 import { typeLabel } from '@/lib/visibility/sources';
 
 export function ExpandToggle({

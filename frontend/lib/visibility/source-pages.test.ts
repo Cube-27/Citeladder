@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { absenceBasis, presenceLabel, standingLabel } from './source-pages';
+import { standingLabel } from '@citeladder/contracts/page-labels';
+
+import { absenceBasis, presenceLabel } from './source-pages';
 
 describe('cited-page vocabulary', () => {
   it('never renders an unread page as an absence', () => {

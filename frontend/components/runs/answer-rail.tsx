@@ -23,7 +23,8 @@ import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { EVIDENCE_LIMIT } from '@/lib/config/operational';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import type { AnswerBrand, AnswerLink, AnswerSource } from '@/lib/runs/answer-transcript';
-import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
+import { classificationLabel } from '@citeladder/contracts/page-labels';
+import { classificationBadgeValue } from '@/lib/runs/status';
 
 export function BrandsRail({ brands }: Readonly<{ brands: readonly AnswerBrand[] }>) {
   return (

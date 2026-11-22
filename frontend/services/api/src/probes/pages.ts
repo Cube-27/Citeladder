@@ -26,7 +26,7 @@ export async function citedPages(db: Database, scope: Scope, asked: readonly Pro
   const byTask = Map.groupBy(rows, (row) => row.task_id);
   const hashes = [...new Set(rows.flatMap((row) => (row.url_hash ? [row.url_hash] : [])))];
   const known = hashes.length ? await pageStandings(db, scope, hashes) : undefined;
-  return (cites: (answer: ProbeAnswer) => boolean) => {
+  return (cites: (answer: ProbeAnswer) => boolean, limit = policy.probes.max_sources_per_group) => {
     const pages = new Map<string, ProbePage>();
     for (const answer of asked)
       if (cites(answer))
@@ -47,6 +47,6 @@ export async function citedPages(db: Database, scope: Scope, asked: readonly Pro
     const sorted = [...pages.values()].sort(
       (a, b) => b.citations - a.citations || a.url.localeCompare(b.url),
     );
-    return { sources: sorted.length, pages: sorted.slice(0, policy.probes.max_sources_per_group) };
+    return { sources: sorted.length, pages: sorted.slice(0, limit) };
   };
 }

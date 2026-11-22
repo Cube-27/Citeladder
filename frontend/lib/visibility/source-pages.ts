@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { pageEntitySchema } from '@citeladder/contracts/source-pages';
-import type { pageStandingSchema } from '@citeladder/contracts/visibility-evidence';
+import type { PageStanding } from '@citeladder/contracts/page-labels';
 import { formatCount } from '@/lib/format';
 import { sinceLabel } from '@/lib/visibility/sources';
 
@@ -46,8 +46,6 @@ export function absenceBasis(
   return method ? `Searched ${read} for ${method}.` : `Searched ${read}; ${fallback}.`;
 }
 
-export type PageStanding = z.infer<typeof pageStandingSchema> | 'untracked';
-
 const UNREAD_REASONS: Partial<Record<PageStanding, string>> = {
   blocked: 'Publisher blocks automated access',
   unreadable: 'Last read failed',
@@ -57,23 +55,6 @@ const UNREAD_REASONS: Partial<Record<PageStanding, string>> = {
 
 export function unreadReason(standing: PageStanding): string | undefined {
   return UNREAD_REASONS[standing];
-}
-
-const STANDING_LABELS: Record<PageStanding, string> = {
-  untracked: 'Not tracked',
-  yours: 'Your page',
-  competitor: "Competitor's page",
-  blocked: 'Blocked',
-  unreadable: 'Read failed',
-  not_read: 'Not read',
-  gap: 'Gap',
-  listed: 'Listed',
-  read: 'Read',
-  not_assessable: 'Not assessable',
-};
-
-export function standingLabel(standing: PageStanding | null): string {
-  return STANDING_LABELS[standing ?? 'untracked'];
 }
 
 export type PageEntity = z.infer<typeof pageEntitySchema>;

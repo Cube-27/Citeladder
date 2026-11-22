@@ -14,7 +14,8 @@ import {
   readingSentence,
   unreadReason,
 } from '@/lib/visibility/source-pages';
-import { pageFormatBasis, urlTypeLabel } from '@/lib/visibility/vocabulary';
+import { urlTypeLabel } from '@citeladder/contracts/page-labels';
+import { pageFormatBasis } from '@/lib/visibility/vocabulary';
 import { SectionContent, TitledSection } from '@/components/ui/section';
 
 type Page = z.infer<typeof visibilitySourceUrlSchema>['page'];

@@ -9,16 +9,30 @@ import { ProbeActions, ProbeEmpty } from '@/components/perception/probe-actions'
 import { ProbeDialog, type ProbeIntent } from '@/components/perception/probe-dialog';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { probeBasis, probeQueries, refreshProbeStatus } from '@/lib/api/probes';
+import { probeBasis, probeQueries, refreshProbeStatus, type ProbeView } from '@/lib/api/probes';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
-type ProbeView = 'market' | 'objections';
+const hasPages = (row: { pages: readonly unknown[] }) => row.pages.length > 0;
 
 export function useProbeControls(view: ProbeView | null) {
   const { workspaceId, projectId } = useProjectScope();
   const scope = { workspaceId, projectId };
   const client = useQueryClient();
   const status = useQuery({ ...probeQueries.status(scope), enabled: view !== null });
+  const basis = probeBasis(status.data);
+  const market = useQuery({
+    ...probeQueries.market(scope, basis),
+    enabled: status.isSuccess && view === 'market',
+  });
+  const objections = useQuery({
+    ...probeQueries.objections(scope, basis),
+    enabled: status.isSuccess && view === 'objections',
+  });
+  const exportable =
+    (view === 'market' && market.data?.state === 'value' && market.data.themes.some(hasPages)) ||
+    (view === 'objections' &&
+      objections.data?.state === 'value' &&
+      objections.data.groups.some(hasPages));
   const [intent, setIntent] = useState<ProbeIntent | null>(null);
   const confirm = (next: ProbeIntent) => {
     refreshProbeStatus(client, scope);
@@ -29,6 +43,8 @@ export function useProbeControls(view: ProbeView | null) {
   return {
     scope,
     status,
+    market,
+    objections,
     onRun,
     actions: ready ? (
       <ProbeActions
@@ -36,6 +52,7 @@ export function useProbeControls(view: ProbeView | null) {
         status={status.data}
         onRun={onRun}
         onSchedule={(cadence) => confirm({ kind: 'schedule', cadence })}
+        exportView={exportable ? view : null}
       />
     ) : undefined,
     dialog: ready ? (
@@ -55,16 +72,7 @@ export function PerceptionProbe({
   view,
   controls,
 }: Readonly<{ view: ProbeView; controls: ProbeControls }>) {
-  const { scope, status, onRun } = controls;
-  const basis = probeBasis(status.data);
-  const market = useQuery({
-    ...probeQueries.market(scope, basis),
-    enabled: status.isSuccess && view === 'market',
-  });
-  const objections = useQuery({
-    ...probeQueries.objections(scope, basis),
-    enabled: status.isSuccess && view === 'objections',
-  });
+  const { scope, status, market, objections, onRun } = controls;
   if (status.isPending)
     return (
       <StateBlock kind="loading" label="Loading the market probe…" shape={{ kind: 'figures' }} />

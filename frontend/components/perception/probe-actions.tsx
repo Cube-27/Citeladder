@@ -3,17 +3,20 @@ import { useIsFetching, useMutation } from '@tanstack/react-query';
 import type { ProbeRun, ProbeStatus } from '@citeladder/contracts/probes';
 
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { StateBlock } from '@/components/ui/state-block';
 import { useToast } from '@/components/ui/toast';
 import { textRole } from '@/components/ui/typography';
+import { humanizeApiError } from '@/lib/api/errors';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { probeBusy, probeMutations } from '@/lib/api/probes';
+import { probeBusy, probeMutations, type ProbeView } from '@/lib/api/probes';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate, pluralCount } from '@/lib/format';
+import { Download } from '@/lib/icons';
 import { useWorkspaceCapability } from '@/lib/project/project-scope';
 
 type Cadence = 'off' | 'daily' | 'weekly';
@@ -54,11 +57,13 @@ export function ProbeActions({
   status,
   onRun,
   onSchedule,
+  exportView,
 }: Readonly<{
   scope: ProjectScope;
   status: ProbeStatus;
   onRun: () => void;
   onSchedule: (cadence: 'daily' | 'weekly') => void;
+  exportView: ProbeView | null;
 }>) {
   const timeZone = useDisplayTimeZone();
   const { notify } = useToast();
@@ -98,7 +103,34 @@ export function ProbeActions({
       >
         Run probe
       </Button>
+      {exportView ? <ProbeExport scope={scope} view={exportView} /> : null}
     </Inline>
+  );
+}
+
+const EXPORTS = {
+  market: { label: 'Export themes CSV', failure: "Couldn't export the themes" },
+  objections: { label: 'Export objections CSV', failure: "Couldn't export the objections" },
+} as const satisfies Record<ProbeView, { label: string; failure: string }>;
+
+function ProbeExport({ scope, view }: Readonly<{ scope: ProjectScope; view: ProbeView }>) {
+  const { notify } = useToast();
+  const exporting = useMutation(probeMutations.exportSources(scope, view));
+  const { label, failure } = EXPORTS[view];
+  return (
+    <Button
+      variant="secondary"
+      pending={exporting.isPending}
+      onClick={() =>
+        exporting.mutate(undefined, {
+          onError: (error) =>
+            notify(failure, humanizeApiError(error).message, { tone: 'negative' }),
+        })
+      }
+    >
+      <Icon icon={Download} />
+      {label}
+    </Button>
   );
 }
 
