@@ -780,6 +780,28 @@
   --color-site-band-line: oklch(17.8% 0 0 / 80%);
 }
 
+.cl-screen--app {
+  --color-ground: #e4eaf2;
+  --color-chrome: var(--color-ground);
+  --color-page: #f0f4f9;
+  --color-surface: #ffffff;
+  --color-panel: #ffffff;
+  --color-raised: #ffffff;
+  --color-raised-2: #e9eef6;
+  --color-well: var(--color-page);
+  --screen-nav-current: #d3e3fd;
+}
+
+:root[data-theme='dark'] .cl-screen--app {
+  --color-ground: #0a0a0a;
+  --color-page: #111111;
+  --color-surface: #1b1b1b;
+  --color-panel: #1b1b1b;
+  --color-raised: #232323;
+  --color-raised-2: #2e2e2e;
+  --screen-nav-current: rgb(255 255 255 / 11%);
+}
+
 :root[data-marketing-surface][data-theme='dark'] {
   --color-site-page: oklch(18.3% 0.0026 67.7);
   --color-paper: oklch(18.3% 0.0026 67.7);
