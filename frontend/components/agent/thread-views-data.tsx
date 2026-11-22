@@ -49,9 +49,10 @@ export function AiTrafficView({
   const sources = useCrawlSources(scope.projectId, scope.workspaceId);
   const ga4 = useSourceStep(scope.workspaceId, scope.projectId, 'ga4');
   const crawlAvailable = sources.data ? crawlLogsAvailable(sources.data) : true;
+  const read = { ...query, isPending: query.isPending || sources.isPending };
   return (
     <ViewFrame title="AI traffic" href={agentViewHref(view)}>
-      <ViewRead query={query} subject="AI traffic" shape={{ kind: 'figures' }}>
+      <ViewRead query={read} subject="AI traffic" shape={{ kind: 'figures' }}>
         {(data) => (
           <Stack gap="workspace" className="min-w-0">
             <OverviewFigures
