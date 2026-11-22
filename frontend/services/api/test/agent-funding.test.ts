@@ -34,7 +34,7 @@ const platform = {
   maxOutputTokens: 16_384,
 };
 const HOLD = 11;
-const OPUS_HOLD = 0;
+const OPUS_HOLD = 428;
 const settings = agentSettings({});
 describe('Agent funding through the production ledger and shared pricing', () => {
   const db = testDatabase();
