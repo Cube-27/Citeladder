@@ -180,7 +180,9 @@ export function PagesTable({
 
 function MeasurementValue({ score, state }: Readonly<{ score: number | null; state: string }>) {
   if (score === null) return measurementStateValue(state);
-  return <span className={SCORE_TONE[scoreBand(score)]}>{printed(formatScore(score))}</span>;
+  return (
+    <span className={SCORE_TONE[scoreBand(Math.round(score))]}>{printed(formatScore(score))}</span>
+  );
 }
 
 const SCORE_TONE = {

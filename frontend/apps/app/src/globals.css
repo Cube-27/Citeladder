@@ -383,7 +383,7 @@
   --color-data-other: oklch(65% 0 0);
   --color-state-hover: rgb(255 255 255 / 4%);
   --color-state-selected: rgb(255 255 255 / 7%);
-  --nav-current-fill: var(--color-state-selected);
+  --nav-current-fill: rgb(255 255 255 / 11%);
   --color-scrim: oklch(0% 0 0 / 60%);
   --shadow-card: none;
   --shadow-pop: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 4px 12px oklch(0% 0 0 / 30%);
@@ -618,7 +618,7 @@
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
-  --nav-current-fill: #e7e7ea;
+  --nav-current-fill: #dcdce1;
   --panel-inset: 0px;
   --route-chrome-height: calc(
     2 * var(--panel-inset) + var(--masthead-block-size, var(--masthead-height)) +

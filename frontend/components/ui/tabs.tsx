@@ -45,7 +45,7 @@ function useRevealSelected(selected: string | null) {
 const TAB_KIND = {
   tab: {
     base: 'rounded-t-control min-h-[var(--control-md)] self-stretch border border-transparent px-4',
-    current: 'border-rule bg-surface border-b-transparent',
+    current: 'border-rule bg-well border-b-transparent',
   },
   segment: {
     base: 'rounded-mark min-h-[calc(var(--control-md)_-_4px)] px-3',
