@@ -68,7 +68,7 @@ export function openDomainUrls(domain: string) {
   });
 }
 
-export function SourcesPanel({
+function SourcesPanel({
   dimension,
   filters,
   queries,
