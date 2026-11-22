@@ -31,6 +31,7 @@ export const AGENT_CHANGE_KINDS = [
   'delete_prompts',
   'review_prompt_candidates',
   'generate_prompts',
+  'update_project',
   'add_competitor',
   'review_competitor_suggestion',
   'update_competitor',

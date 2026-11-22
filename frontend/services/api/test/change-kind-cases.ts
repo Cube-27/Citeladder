@@ -168,15 +168,55 @@ export function kindCases(db: Database, fixtures: SiteFixtures) {
       foreign: 404,
       async arrange() {
         const t = await tenant();
+        const topicId = await topic(db, t.projectId, 'Road');
         return {
           scope: t,
-          payload: { prompt_id: t.promptId, text: 'Which running shoes last longest on roads?' },
+          payload: {
+            prompt_id: t.promptId,
+            text: 'Which running shoes last longest on roads?',
+            buyer_stage: 'consideration',
+            persona: 'Marathon runner',
+            topic_id: topicId,
+          },
           observe: () =>
-            one(db.selectFrom('prompts').select('text').where('id', '=', t.promptId)).then(
-              (row) => row?.text,
-            ),
-          before: 'Which running shoes suit road use?',
-          after: 'Which running shoes last longest on roads?',
+            one(
+              db
+                .selectFrom('prompts')
+                .select(['text', 'buyer_stage', 'persona', 'topic_id'])
+                .where('id', '=', t.promptId),
+            ).then((row) => row && { ...row, topic_id: row.topic_id === topicId }),
+          before: {
+            text: 'Which running shoes suit road use?',
+            buyer_stage: '',
+            persona: '',
+            topic_id: false,
+          },
+          after: {
+            text: 'Which running shoes last longest on roads?',
+            buyer_stage: 'consideration',
+            persona: 'Marathon runner',
+            topic_id: true,
+          },
+        };
+      },
+    },
+    update_project: {
+      foreign: 'none',
+      async arrange() {
+        const t = await tenant();
+        const details = () =>
+          one(
+            db
+              .selectFrom('projects')
+              .select(['brand_name', 'default_repetitions'])
+              .where('id', '=', t.projectId),
+          );
+        return {
+          scope: t,
+          payload: { brand_name: 'Acme Trail', default_repetitions: 2 },
+          observe: details,
+          before: await details(),
+          after: { brand_name: 'Acme Trail', default_repetitions: 2 },
         };
       },
     },

@@ -10,7 +10,8 @@ import {
   updatePrompt,
   updateTopic,
 } from '../commands/prompts.ts';
-import { promptBatch, promptInput, scopedPrompts } from '../prompts/prompts.ts';
+import { promptBatch, promptUpdate, scopedPrompts } from '../prompts/prompts.ts';
+import { notFound } from '../errors.ts';
 import { listTopics, topicConfirm, topicCreate } from '../prompts/topics.ts';
 import {
   changeKind,
@@ -35,6 +36,25 @@ async function promptTexts(context: PreviewContext, ids: readonly string[]) {
   return rows.map((row) => row.text);
 }
 
+async function editedPrompt(context: PreviewContext, promptId: string) {
+  const prompt = await context.db
+    .selectFrom('prompts')
+    .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
+    .select([
+      'prompts.text',
+      'prompts.intent',
+      'prompts.buyer_stage',
+      'prompts.persona',
+      'prompts.topic_id',
+    ])
+    .where('prompts.workspace_id', '=', context.workspaceId)
+    .where('prompt_sets.project_id', '=', context.projectId)
+    .where('prompts.id', '=', promptId)
+    .executeTakeFirst();
+  if (!prompt) throw notFound('Prompt');
+  return prompt;
+}
+
 export async function promptSetName(context: PreviewContext, setId: string) {
   const set = await context.db
     .selectFrom('prompt_sets')
@@ -47,6 +67,20 @@ export async function promptSetName(context: PreviewContext, setId: string) {
 }
 
 const topicName = topicCreate.shape.name;
+const shown = (value: unknown) =>
+  value === null || value === undefined || value === '' ? 'empty' : String(value);
+const promptEdit = z
+  .strictObject({
+    prompt_id: z.uuid(),
+    ...promptUpdate.pick({ text: true, intent: true, buyer_stage: true, persona: true }).shape,
+    topic_id: z.uuid().nullable().optional(),
+  })
+  .refine(
+    ({ prompt_id: _id, ...edit }) => Object.values(edit).some((value) => value !== undefined),
+    {
+      message: 'An edit changes at least one field',
+    },
+  );
 
 export function promptsUnder(context: PreviewContext, topicIds: readonly string[]) {
   return countOf(
@@ -179,21 +213,31 @@ export const promptKinds = {
   }),
   update_prompt_text: changeKind({
     permission: PROMPTS_WRITE,
-    purpose: 'reword one tracked prompt; earlier results keep the old wording',
-    payload: z.strictObject({ prompt_id: z.uuid(), text: promptInput.shape.text }),
-    async execute(trx, _config, actor, change, payload) {
-      const prompt = await updatePrompt(trx, actor, change.projectId, payload.prompt_id, {
-        text: payload.text,
-      });
-      return { summary: `The prompt now reads "${prompt.text}".` };
+    purpose:
+      'edit one tracked prompt as the prompt form does: its text, intent, buyer stage, persona or topic (topic_id null files it under no topic); earlier results keep the old values',
+    payload: promptEdit,
+    async execute(trx, _config, actor, change, { prompt_id: promptId, ...edit }) {
+      const prompt = await updatePrompt(trx, actor, change.projectId, promptId, edit);
+      return { summary: `Updated the prompt "${prompt.text}".` };
     },
-    async preview(context, payload) {
-      const [before = ''] = await promptTexts(context, [payload.prompt_id]);
+    async preview(context, { prompt_id: promptId, ...edit }) {
+      const now = await editedPrompt(context, promptId);
+      const current: Record<string, unknown> = now;
+      const names = await topicNames(context);
+      const named = (field: string, value: unknown) =>
+        field === 'topic_id'
+          ? typeof value === 'string'
+            ? (names.get(value) ?? '')
+            : 'no topic'
+          : value;
       return {
-        title: 'Reword a prompt',
+        title: edit.text ? 'Reword a prompt' : 'Edit a prompt',
         rows: [
-          { label: 'Now', value: before },
-          { label: 'After', value: payload.text },
+          ...(edit.text ? [] : [{ label: 'Prompt', value: now.text }]),
+          ...Object.entries(edit).map(([field, value]) => ({
+            label: field === 'topic_id' ? 'Topic' : field.replaceAll('_', ' '),
+            value: `${shown(named(field, current[field]))} → ${shown(named(field, value))}`,
+          })),
         ],
         spend: null,
         opens: null,
