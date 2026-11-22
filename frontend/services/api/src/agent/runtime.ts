@@ -482,6 +482,7 @@ export class AgentRuntime {
         webSources: web,
         steps,
         proposals: state.proposals,
+        views: state.views,
         skillId: skill?.id,
         skillSource: source,
       });

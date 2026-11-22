@@ -16,6 +16,7 @@ import { knownActions, proposeDeclaration, PROPOSE_DECLARATION } from './proposa
 import type { Turn } from './runtime.ts';
 import type { TurnState } from './turn-budget.ts';
 import { documentStep } from './turn-state.ts';
+import { showView, SHOW_VIEW } from './views.ts';
 
 export function runBuiltin(
   db: Database,
@@ -32,6 +33,8 @@ export function runBuiltin(
       };
       return proposeDeclaration(trx, proposal, state, call.input);
     });
+  if (call.name === SHOW_VIEW)
+    return authorize(db, turn.scope).then(() => showView(db, turn.scope, state, call.input));
   if (call.name === LOAD_SKILL) {
     const before = state.skill;
     const outcome = loadSkill(catalog, state, call.input, turn.budget);

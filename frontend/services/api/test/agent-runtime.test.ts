@@ -410,6 +410,7 @@ describe('Agent runtime on PostgreSQL', () => {
       'propose_declaration',
       'read_evidence',
       'save_document',
+      'show_view',
       'suggest_edits',
     ]);
   });
