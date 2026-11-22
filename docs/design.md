@@ -69,7 +69,7 @@ the job, never a size.
 ## Spacing, size and shape
 
 - **Spacing:** 2, 4, 8, 12, 16, 24, 32, 48 only.
-- **Controls:** 28 high; 44 below 900px or under a coarse pointer, and on
+- **Controls:** 32 high; 44 below 900px or under a coarse pointer, and on
   sign-in, account and setup pages (the website's height, `control-lg`).
   Icons 14 in `ink-2` (Tabler, the `Icon` atom), centred on and no taller than
   the 14px text beside them; empty-state tiles and website wells draw larger.
@@ -117,7 +117,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 
 - **Shell.** Sidebar 224 on `ground` (200 below 1280), 8 padding: header row
   as tall as the page header (workspace switcher, settings icon), the
-  Dashboard | Agent segmented control, 28-high nav rows (current row on a
+  Dashboard | Agent segmented control, 32-high nav rows (current row on a
   `#d3e3fd` pill in light, `rgb(255 255 255 / 11%)` in dark, with a 2px accent
   mark), 12px group labels, foot with Integrations (the collapse toggle at
   its end) and the account (AR-8). The main column is the inset panel: 8 from the window
@@ -125,7 +125,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   `page` fill, the page's only scroller. Scrollbars are the browser's thin
   bar, shown on hover. Dragging the sidebar's edge draws no line. Below 900 the panel fills the
   window and the header's menu button opens the sidebar in a drawer.
-- **Page header**, 44 high, on `page` with a `rule` hairline under it across
+- **Page header**, 48 high, on `page` with a `rule` hairline under it across
   the panel, its two ends padded 24 from the panel edges on every page
   whatever the page width (owner, 2026-11-22): the page title as a breadcrumb
   (section › page; a record adds its collection, and its name
@@ -226,14 +226,14 @@ One entry per family; wave 2 fills each from the layouts above.
   included. Your series is the accent, drawn last; a missing period is a
   gap, never a zero. Series colours come from one map by identity
   (`SERIES_STROKE`, `SERIES_FILL`); position-coloured charts map onto it.
-- **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 28,
+- **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 32,
   radius 6, flat; 14px icons in `ink-2` on a secondary. Secondary: `raised`
   with no edge, `raised-2` on hover, press or open. Quiet: transparent,
   `state-hover` fill. Primary: `primary` fill (the deep accent),
   white text, at most one per view. Danger: secondary with negative text; filled only to confirm in a
   dialog (`danger-confirm`). One disabled look for every variant. The
   website keeps its layered `.face`.
-- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 28, `panel`
+- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 32, `panel`
   with no edge at rest; focused, an accent edge and its
   glow; invalid, a negative edge and a negative glow. 14px leading icon. Checkbox and radio
   are `panel` with a `control-line` edge, the one edged control, and a `primary` fill when on; the switch is a `primary`
@@ -252,7 +252,7 @@ One entry per family; wave 2 fills each from the layouts above.
   Tabs are folder tabs padded 16, the current one `ink` on `page` in a `rule` frame
   open at the bottom, the rest `ink-2`.
   Segmented control (and the sidebar's Dashboard | Agent): a `state-hover`
-  tray one control high with no edge, 24-high segments, the selected one a
+  tray one control high with no edge, 28-high segments, the selected one a
   `raised` pill with the card shadow.
 - **Tags and status.** Tag: 20 high, radius 4, `state-selected` fill, no edge, 12px `ink-2`; a
   draft is dashed; Kbd and composer chips share the face. Status

@@ -26,7 +26,7 @@ export function AuthForm({
   children,
 }: Readonly<{ onSubmit: NonNullable<ComponentProps<'form'>['onSubmit']>; children: ReactNode }>) {
   return (
-    <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form noValidate onSubmit={onSubmit} data-auth-form="" className="flex flex-col gap-4">
       {children}
     </form>
   );

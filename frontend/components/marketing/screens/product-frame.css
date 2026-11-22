@@ -133,8 +133,7 @@
 .cl-frame-card > .cl-frame-well > .cl-frame-screen {
   overflow: hidden;
   border-radius: var(--site-radius-inner);
-  background: var(--color-surface);
-  box-shadow: 0 0 0 1px var(--color-line);
+  background: var(--color-site-screen, var(--color-surface));
 }
 
 @media (max-width: 767px) {

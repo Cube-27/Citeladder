@@ -15,7 +15,7 @@
 
 .cl-fcard .cl-vig {
   border-radius: var(--site-radius-inner);
-  background: var(--color-surface);
+  background: var(--color-site-screen, var(--color-surface));
 }
 
 .cl-vig p {
@@ -58,7 +58,7 @@
 }
 
 .cl-vig .cl-vig-sentiment {
-  border: 1px solid var(--color-line-control);
+  background: var(--color-state-selected);
   color: var(--color-ink);
 }
 
@@ -303,9 +303,8 @@
   align-self: flex-end;
   max-width: 85%;
   padding: 8px 12px;
-  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
-  background: var(--color-paper);
+  background: var(--color-surface-sunken);
   color: var(--color-ink);
 }
 
@@ -315,6 +314,6 @@
   align-items: center;
   gap: 8px 12px;
   padding: 8px 12px;
-  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
 }
