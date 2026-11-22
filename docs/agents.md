@@ -4,13 +4,16 @@
 
 The Agent is CiteLadder's one in-app assistant runtime. A user asks a question,
 picks a skill or picks up an Action; the Agent reads persisted CiteLadder
-data and either answers or writes a deliverable the user refines.
+data and either answers, writes a deliverable the user refines, or proposes a
+change to the project's data that the user confirms on a card.
 
 It owns chats, runs, model and tool attempts, outputs and their revisions. It
 does not own business evidence, Actions or measurement and has no second
-knowledge store. It cannot publish, contact third parties, activate prompts,
-run crawls or paid pulls, change a customer site, declare implementation or
-claim an improvement without new measured evidence. Its one reach beyond
+knowledge store. It cannot publish, contact third parties, run crawls, change a
+customer site or claim an improvement without new measured evidence, and it
+changes project data only through [proposed changes](#proposed-changes) the
+person confirms; billing, plan, members, API keys, credentials and settings stay
+button-only. Its one reach beyond
 CiteLadder data is the model provider's hosted [web search](#web-search),
 bounded per turn; it never fetches, submits to or changes a page it finds.
 
@@ -137,7 +140,7 @@ calls none. Its final text is the reply.
   compacted again.
   Chat completions return no compaction, so the oldest whole turns are dropped at
   turn start beyond `replay_max_chars`.
-- **Tools.** The model has the [read tools](#read-tools) and six built-ins
+- **Tools.** The model has the [read tools](#read-tools) and seven built-ins
   ([`builtin-tools.ts`](../frontend/services/api/src/agent/builtin-tools.ts)).
   `load_skill` returns a methodology and its saving rules; a turn may switch
   methodology at any time. `save_document` stages a whole deliverable after a
@@ -160,7 +163,10 @@ calls none. Its final text is the reply.
   turn that staged only suggestions can still end on them (B60, B69).
   `propose_declaration` stages a declaration proposal, committed on the reply
   (`agent_messages.proposals`), only for an Action that is attached, mentioned
-  or returned by a read this turn and that the declaration API would accept now.
+  or returned by a read this turn and that the declaration API would accept now;
+  its card keeps the declaration dialog, so the Agent's declare-implemented is
+  this proposal rather than a change kind. `propose_change` stages one
+  [proposed change](#proposed-changes).
   `show_view` places one of the app's charts or tables under the reply
   (`agent_messages.views`, beside `proposals`): a view kind and its selection
   (market, topic, window, crawl or dataset), never data. The server checks the
@@ -305,8 +311,9 @@ A paged read whose `limit` takes any size returns the Agent `read_default_limit`
 (20) rows when the model names none and accepts at most `read_max_limit` (50),
 so a representative sample comes first and more is one cursor away; MCP
 clients keep the catalogue's own page sizes, and fixed-size or self-defaulting
-limits are unchanged. No tool writes: the MCP write catalogue and `confirm_change` are not Agent
-tools, and the Agent stays read-only.
+limits are unchanged. No read tool writes: the MCP write catalogue and
+`confirm_change` are not Agent tools; changes go through
+[proposed changes](#proposed-changes).
 
 Each tool attempt is recorded in `agent_tool_attempts`. `unavailable` is distinct from a successful empty or zero read and from failure
 or refusal. Oversized results keep whole JSON fields in an incomplete envelope
@@ -316,6 +323,45 @@ ask their owner for a smaller page and its exact cursor.
 Content differentiation reports compare an owned page with inspected organic
 results for one prompt, each figure with its inspected-page denominator; they
 never create Citation rows or affect Visibility scoring.
+
+## Proposed changes
+
+One table of change kinds
+([`changes/kinds.ts`](../frontend/services/api/src/changes/kinds.ts)) is the single
+owner for the Agent and [MCP](mcp.md#changes): each kind holds its permission,
+payload schema, one `execute` over the command owner, and a preview the server
+builds from the validated payload. Adding a kind is one entry there plus its
+name in the Agent's list
+([`change-proposals.ts`](../frontend/services/api/src/agent/change-proposals.ts)).
+The model gets one built-in, `propose_change` (kind and payload); the kinds,
+what each does and their payload shapes (printed from the schemas) are its
+description, so the cached tool prefix stays one tool.
+
+A call is checked against the kind's schema, the person's live role and the
+kind's permission, then run as a **dry run** (every check and write of the
+command, rolled back, with the preview read in the same transaction). A bad call
+or a refusal returns a correctable error; nothing is staged. A staged proposal
+holds the exact payload and the preview without IDs, is bounded per turn by
+`max_proposals_per_turn` (declarations count too) and commits with the reply in
+`agent_messages.proposals`. Model prose never reaches the card: the title and
+rows come from the server's preview, so page text, a paste or a web result
+cannot dress a card as something else. A paid kind (an audit launch) shows its
+spend from the estimate and holds nothing until the click; a launched job is
+never awaited, and its card links to where it shows.
+
+Only the person's click executes it:
+`POST /api/v1/agent/chats/{chat}/messages/{message}/proposals/{index}/confirm`
+(or `/dismiss`) takes no payload from the browser
+([`proposal-outcomes.ts`](../frontend/services/api/src/agent/proposal-outcomes.ts)).
+In one transaction it holds the member row shared, inserts the outcome row in
+`agent_proposal_outcomes` (unique per message and index, written once, before
+the change so its locks come first), runs the kind's `execute` as the clicking
+member against their live role and the kind's permission, and records an
+`agent.change.<kind>` security event. A concurrent or repeated click gets 409;
+a Viewer gets 403 and another workspace 404. A changed world returns the
+owner's normal error, rolls the outcome row back and leaves the card
+confirmable. The card shows open (Confirm and Dismiss, or "Editors only"),
+executed, dismissed, or no longer available when its kind is gone.
 
 ## Skills and workflows
 

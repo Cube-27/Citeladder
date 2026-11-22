@@ -219,11 +219,13 @@ Its required `run_key` is the generation owner's idempotency key: a retry with t
 and request replays the persisted run instead of spending a second one, and the
 same key for a different request is refused.
 
-Each prepared kind is one entry in
-[`confirmed-changes.ts`](../frontend/services/api/src/mcp/confirmed-changes.ts):
-the permission its command needs, its payload schema and one `execute`; the
-kind list, `McpWriteKind` and the `mcp.write.<kind>` events derive from that
-table. A prepare tool runs the kind's `execute` as a **dry run** (`rehearse`,
+Prepared kinds, and every direct tool except the two deletes, are entries in
+the change table MCP shares with the Agent
+([`changes/kinds.ts`](../frontend/services/api/src/changes/kinds.ts),
+[Agent](agents.md#proposed-changes)): the permission its command needs, its
+payload schema and one `execute`. A direct tool runs its kind's `execute` at
+once; `confirm_change` accepts only the five prepared kinds listed in
+[`confirmations.ts`](../frontend/services/api/src/mcp/confirmations.ts). A prepare tool runs the kind's `execute` as a **dry run** (`rehearse`,
 over the operator rollback transaction): every check, admission and write the
 command makes, rolled back. It then stores the exact
 payload in `mcp_confirmations` behind a single-use 43-character base62 token
