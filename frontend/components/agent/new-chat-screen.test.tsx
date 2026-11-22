@@ -691,7 +691,7 @@ describe('NewChatScreen', () => {
     ]);
   });
 
-  it('briefs on the top open Actions with the growth plan skill', async () => {
+  it('briefs on the top open Actions with the growth plan skill and the picked model', async () => {
     const bodies = captureChats([
       actionItem(PRICING, 'Pricing page'),
       actionItem(BLOG, 'Blog hub'),
@@ -701,11 +701,17 @@ describe('NewChatScreen', () => {
 
     const briefing = await screen.findByRole('region', { name: 'What should I work on?' });
     expect(await within(briefing).findByText(/top 2 open Actions/)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Model: Haiku 5.5' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Opus 5.5' }));
     await user.click(within(briefing).getByRole('button', { name: 'Brief me' }));
 
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
     expect(bodies).toEqual([
-      expect.objectContaining({ skill_id: 'growth_plan', mentions: [PRICING, BLOG] }),
+      expect.objectContaining({
+        skill_id: 'growth_plan',
+        mentions: [PRICING, BLOG],
+        model: 'claude-opus-5-5',
+      }),
     ]);
   });
 });

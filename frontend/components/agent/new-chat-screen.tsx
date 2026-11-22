@@ -143,7 +143,7 @@ function NewChat({
           <BriefingCard
             workspaceId={workspaceId}
             projectId={projectId}
-            onStart={create.start}
+            onStart={(input) => create.start({ ...input, choice: model.request })}
             pending={pending}
             disabled={!access.canSend}
           />
