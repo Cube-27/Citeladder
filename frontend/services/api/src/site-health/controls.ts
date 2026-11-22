@@ -1,6 +1,6 @@
 import { setTimeout } from 'node:timers/promises';
 import { sql } from 'kysely';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { isRetryableContention } from '../db/errors.ts';
 import { policy } from '../config.ts';
 import { notFound } from '../errors.ts';
@@ -59,7 +59,7 @@ export async function listCrawls(
 }
 
 function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     const crawl = await trx
       .selectFrom('site_crawls')
       .selectAll()
@@ -132,6 +132,7 @@ async function cancelWithRetry(
     await cancelOnce(db, workspaceId, crawlId);
   } catch (error) {
     if (
+      db.isTransaction ||
       attempt >= policy.site_health.crawl.cancel_db_conflict_retries ||
       !isRetryableContention(error)
     )

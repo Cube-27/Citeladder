@@ -12,7 +12,16 @@ import {
 } from '../commands/prompts.ts';
 import { promptBatch, promptInput, scopedPrompts } from '../prompts/prompts.ts';
 import { listTopics, topicConfirm, topicCreate } from '../prompts/topics.ts';
-import { changeKind, plural, quoted, rowsOf, type PreviewContext } from './kind.ts';
+import {
+  changeKind,
+  countOf,
+  PERMANENT,
+  plural,
+  quoted,
+  ROW_COUNT,
+  rowsOf,
+  type PreviewContext,
+} from './kind.ts';
 
 const scopeOf = ({ workspaceId, projectId }: PreviewContext) => ({ workspaceId, projectId });
 
@@ -38,6 +47,18 @@ export async function promptSetName(context: PreviewContext, setId: string) {
 }
 
 const topicName = topicCreate.shape.name;
+
+export function promptsUnder(context: PreviewContext, topicIds: readonly string[]) {
+  return countOf(
+    context.db
+      .selectFrom('prompts')
+      .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
+      .select(ROW_COUNT)
+      .where('prompt_sets.workspace_id', '=', context.workspaceId)
+      .where('prompts.topic_id', 'in', topicIds)
+      .executeTakeFirst(),
+  );
+}
 
 export const promptKinds = {
   add_prompts: changeKind({
@@ -252,6 +273,15 @@ export const promptKinds = {
             payload.rename.map((topic) => `${named(topic.id)} → ${topic.name}`),
           ),
           ...rowsOf('Delete', payload.delete.map(named)),
+          ...(payload.delete.length
+            ? [
+                {
+                  label: 'Prompts left without a topic',
+                  value: String(await promptsUnder(context, payload.delete)),
+                },
+                PERMANENT,
+              ]
+            : []),
         ],
         spend: null,
         opens: null,

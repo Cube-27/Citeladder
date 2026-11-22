@@ -3,7 +3,7 @@ import { sql } from 'kysely';
 import { z } from 'zod';
 import { fingerprint } from '../crypto-text.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import { jsonObject } from '../db/json.ts';
 import { acceptForAgent } from '../opportunities/action-decisions.ts';
@@ -376,7 +376,7 @@ export class AgentStore {
   ) {
     const admitted = this.admitted(scope, raw, chosen);
     const { hash } = admitted;
-    return this.db.transaction().execute(async (trx) => {
+    return inTransaction(this.db, async (trx) => {
       await this.lockWorkspace(trx, scope);
       const replay = await replayedRun(trx, scope, admitted.input.key, hash);
       if (replay) return { chatId: replay.chat_id, run: replay };

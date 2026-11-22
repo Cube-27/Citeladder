@@ -224,7 +224,8 @@ the change table MCP shares with the Agent
 ([`changes/kinds.ts`](../frontend/services/api/src/changes/kinds.ts),
 [Agent](agents.md#proposed-changes)): the permission its command needs, its
 payload schema and one `execute`. A direct tool runs its kind's `execute` at
-once; `confirm_change` accepts only the five prepared kinds listed in
+once; the table also holds kinds only the Agent proposes, which no MCP tool
+names. `confirm_change` accepts only the five prepared kinds listed in
 [`confirmations.ts`](../frontend/services/api/src/mcp/confirmations.ts). A prepare tool runs the kind's `execute` as a **dry run** (`rehearse`,
 over the operator rollback transaction): every check, admission and write the
 command makes, rolled back. It then stores the exact

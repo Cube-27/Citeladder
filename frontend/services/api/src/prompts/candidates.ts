@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import { policy } from '../config.ts';
 import { resolveSettingSpec } from '../config/settings.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import type { RecordScope } from '../db/workspace-scope.ts';
 import { jsonObject, record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
@@ -173,7 +173,7 @@ export function reviewCandidates(
 ): Promise<CandidateReview> {
   validateIds(input.accept_ids, input.reject_ids);
   const { workspaceId } = scope;
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     const set = await scopedPromptSet(trx, workspaceId, promptSetId, scope.projectId);
     await acquireProjectLock(trx, set.project_id);
     await acquirePromptSetLock(trx, set.id);

@@ -9,7 +9,7 @@ import {
 
 import { budget, spendBudget } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
@@ -112,7 +112,7 @@ export async function admitLinkRun(
   actorId: string,
   input: { crawl_id: string; idempotency_key: string },
 ) {
-  const id = await db.transaction().execute(async (trx) => {
+  const id = await inTransaction(db, async (trx) => {
     await trx
       .selectFrom('projects')
       .select('id')

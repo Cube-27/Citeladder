@@ -1,37 +1,40 @@
+import { sql } from 'kysely';
 import { z } from 'zod';
-import {
-  actionDeclarationRequestSchema,
-  actionUserStatusSchema,
-} from '@citeladder/contracts/actions';
+import { projectMarketCreateSchema } from '@citeladder/contracts/markets';
 import { suggestionRows } from '../analysis/observed-competitors.ts';
-import { ACTIONS_WRITE, declareAction, setActionStatus } from '../commands/actions.ts';
 import {
   acceptSuggestion,
   addCompetitor,
   COMPETITORS_WRITE,
   rejectSuggestion,
+  removeCompetitor,
+  updateCompetitor,
 } from '../commands/competitors.ts';
-import { competitorCreate } from '../projects/competitors.ts';
-import { changeKind, rowsOf, type PreviewContext } from './kind.ts';
+import { competitorCreate, competitorUpdate, listCompetitors } from '../projects/competitors.ts';
+import { refreshProjectLogos } from '../projects/logo-refresh.ts';
+import { addMarket, deleteMarket, listMarkets } from '../projects/markets.ts';
+import { readProject } from '../projects/service.ts';
+import {
+  changeKind,
+  countOf,
+  MEMBER_WRITE,
+  PERMANENT,
+  ROW_COUNT,
+  rowsOf,
+  type PreviewContext,
+} from './kind.ts';
 
-async function actionLabel(context: PreviewContext, actionId: string) {
-  const action = await context.db
-    .selectFrom('actions')
-    .select('target_label')
-    .where('workspace_id', '=', context.workspaceId)
-    .where('project_id', '=', context.projectId)
-    .where('id', '=', actionId)
-    .executeTakeFirst();
-  return action?.target_label || 'the Action';
+const scopeOf = ({ workspaceId, projectId }: PreviewContext) => ({ workspaceId, projectId });
+
+async function competitorName(context: PreviewContext, competitorId: string) {
+  const competitors = await listCompetitors(context.db, scopeOf(context));
+  return competitors.find((row) => row.id === competitorId)?.name ?? '';
 }
 
-const STATUS_VERBS = {
-  in_progress: 'Accept',
-  dismissed: 'Decline',
-  open: 'Restore',
-} as const satisfies Record<z.infer<typeof actionUserStatusSchema>, string>;
-
-const declarationKey = (changeId: string) => `mcp:${changeId}`;
+const replaced = (label: string, values: readonly string[] | undefined) => {
+  if (values === undefined) return [];
+  return values.length ? rowsOf(label, values) : [{ label, value: 'None: all are removed' }];
+};
 
 export const projectKinds = {
   add_competitor: changeKind({
@@ -94,58 +97,131 @@ export const projectKinds = {
       };
     },
   }),
-  update_action_status: changeKind({
-    permission: ACTIONS_WRITE,
-    purpose:
-      'accept an Action (in_progress), decline it (dismissed) or restore a declined one (open)',
-    payload: z.strictObject({ action_id: z.uuid(), status: actionUserStatusSchema }),
-    async execute(trx, _config, actor, change, payload) {
-      await setActionStatus(trx, actor, change.projectId, payload.action_id, payload.status);
-      return { summary: `The Action is now ${payload.status}.` };
+  update_competitor: changeKind({
+    permission: COMPETITORS_WRITE,
+    purpose: 'rename a tracked competitor or replace its aliases or domains',
+    payload: z.strictObject({ competitor_id: z.uuid(), ...competitorUpdate.shape }),
+    async execute(trx, _config, actor, change, { competitor_id: id, ...update }) {
+      const competitor = await updateCompetitor(trx, actor, change.projectId, id, update);
+      return { summary: `Updated the competitor ${competitor.name}.` };
     },
     async preview(context, payload) {
       return {
-        title: `${STATUS_VERBS[payload.status]} an Action`,
-        rows: [{ label: 'Action', value: await actionLabel(context, payload.action_id) }],
+        title: 'Update a competitor',
+        rows: [
+          { label: 'Competitor', value: await competitorName(context, payload.competitor_id) },
+          ...rowsOf('Name', payload.name ? [payload.name] : []),
+          ...replaced('Also called', payload.aliases),
+          ...replaced('Domain', payload.domains),
+        ],
         spend: null,
         opens: null,
       };
     },
   }),
-  declare_implemented: changeKind({
-    permission: ACTIONS_WRITE,
-    purpose: 'declare that the work of an open Action is done',
-    payload: z.strictObject({
-      action_id: z.uuid(),
-      declaration: actionDeclarationRequestSchema,
-    }),
+  remove_competitor: changeKind({
+    permission: COMPETITORS_WRITE,
+    purpose: 'stop tracking a competitor; earlier answers keep their text',
+    payload: z.strictObject({ competitor_id: z.uuid() }),
     async execute(trx, _config, actor, change, payload) {
-      const { declaration } = await declareAction(
-        trx,
-        actor,
-        change.projectId,
-        payload.action_id,
-        payload.declaration,
-        { idempotencyKey: declarationKey(change.id) },
-      );
-      return {
-        summary: 'Action declared implemented. CiteLadder checks later evidence against it.',
-        declaration: { id: declaration.id },
-      };
+      await removeCompetitor(trx, actor, change.projectId, payload.competitor_id);
+      return { summary: 'The competitor is no longer tracked.' };
     },
     async preview(context, payload) {
       return {
-        title: 'Mark an Action implemented',
+        title: 'Stop tracking a competitor',
         rows: [
-          { label: 'Action', value: await actionLabel(context, payload.action_id) },
-          {
-            label: 'Live since',
-            value: payload.declaration.declared_implemented_at.slice(0, 10),
-          },
+          { label: 'Competitor', value: await competitorName(context, payload.competitor_id) },
+          PERMANENT,
         ],
         spend: null,
         opens: null,
       };
+    },
+  }),
+  add_market: changeKind({
+    permission: MEMBER_WRITE,
+    purpose: 'add a market (country and language) that audits can run in',
+    payload: projectMarketCreateSchema,
+    async execute(trx, _config, actor, change, payload) {
+      await addMarket(
+        trx,
+        { workspaceId: actor.workspaceId, projectId: change.projectId },
+        payload,
+      );
+      return { summary: `Added the market ${payload.country_code}-${payload.language_code}.` };
+    },
+    preview(_context, payload) {
+      return Promise.resolve({
+        title: 'Add a market',
+        rows: [
+          { label: 'Country', value: payload.country_code },
+          { label: 'Language', value: payload.language_code },
+          ...rowsOf('Label', payload.label ? [payload.label] : []),
+        ],
+        spend: null,
+        opens: null,
+      });
+    },
+  }),
+  remove_market: changeKind({
+    permission: MEMBER_WRITE,
+    purpose: 'remove an added market; schedules drop it and earlier audits stay',
+    payload: z.strictObject({ market_id: z.uuid() }),
+    async execute(trx, _config, actor, change, payload) {
+      await deleteMarket(
+        trx,
+        { workspaceId: actor.workspaceId, projectId: change.projectId },
+        payload.market_id,
+      );
+      return { summary: 'Removed the market.' };
+    },
+    async preview(context, payload) {
+      const market = (await listMarkets(context.db, scopeOf(context))).find(
+        (row) => row.id === payload.market_id,
+      );
+      const schedules = await countOf(
+        context.db
+          .selectFrom('audit_schedules')
+          .select(ROW_COUNT)
+          .where('workspace_id', '=', context.workspaceId)
+          .where('project_id', '=', context.projectId)
+          .where(sql<boolean>`market_ids @> jsonb_build_array(${payload.market_id}::text)`)
+          .executeTakeFirst(),
+      );
+      return {
+        title: 'Remove a market',
+        rows: [
+          { label: 'Market', value: market?.label ?? '' },
+          { label: 'Audit schedules that drop it', value: String(schedules) },
+          PERMANENT,
+        ],
+        spend: null,
+        opens: null,
+      };
+    },
+  }),
+  refresh_logos: changeKind({
+    permission: MEMBER_WRITE,
+    purpose: "fetch the brand's and competitors' logos again from their websites",
+    payload: z.strictObject({}),
+    async live(trx, actor, change) {
+      await readProject(trx, { workspaceId: actor.workspaceId, projectId: change.projectId });
+    },
+    async execute(db, config, actor, change) {
+      await refreshProjectLogos(db, config.settings, {
+        workspaceId: actor.workspaceId,
+        projectId: change.projectId,
+      });
+      return { summary: 'Refreshed the logos.' };
+    },
+    preview() {
+      return Promise.resolve({
+        title: 'Refresh logos',
+        rows: [{ label: 'From', value: 'The brand and competitor websites' }],
+        spend: "One of the day's logo refreshes",
+        opens: null,
+      });
     },
   }),
 };

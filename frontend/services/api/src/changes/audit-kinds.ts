@@ -2,13 +2,50 @@ import { z } from 'zod';
 import { auditRuntime } from '../audits/config.ts';
 import { estimateAudit } from '../audits/estimate.ts';
 import { auditLaunchDraft, auditLaunchInput } from '../audits/inputs.ts';
-import { scheduleCreate } from '../audits/schedule-inputs.ts';
+import { createRepairAudit, repairInput } from '../audits/repair.ts';
+import { scheduleCreate, scheduleUpdate } from '../audits/schedule-inputs.ts';
+import { readSchedule } from '../audits/schedules.ts';
 import { AUDITS_CANCEL, AUDITS_RUN, cancelAudit, launchAudit } from '../commands/audits.ts';
-import { createSchedule, SCHEDULES_WRITE } from '../commands/schedules.ts';
-import { changeKind, plural, type PreviewContext } from './kind.ts';
+import {
+  createSchedule,
+  deleteSchedule,
+  SCHEDULES_WRITE,
+  updateSchedule,
+} from '../commands/schedules.ts';
+import { notFound } from '../errors.ts';
+import {
+  changeKind,
+  countOf,
+  heldUnits,
+  MEMBER_RUN,
+  PERMANENT,
+  plural,
+  ROW_COUNT,
+  type PreviewContext,
+} from './kind.ts';
 import { promptSetName } from './prompt-kinds.ts';
 
 type LaunchRequest = z.output<typeof auditLaunchDraft>;
+const RUNS = { label: 'Open Runs', path: '/runs' };
+
+async function projectAudit(
+  db: PreviewContext['db'],
+  scope: Omit<PreviewContext, 'db' | 'config'>,
+  auditId: string,
+) {
+  const audit = await db
+    .selectFrom('audits')
+    .select(['id', 'created_at', 'status'])
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', auditId)
+    .executeTakeFirst();
+  if (!audit) throw notFound('Audit');
+  return audit;
+}
+
+const scheduleOf = (context: PreviewContext, id: string) =>
+  readSchedule(context.db, { workspaceId: context.workspaceId, projectId: context.projectId }, id);
 
 function estimate(context: PreviewContext, request: LaunchRequest) {
   return estimateAudit(
@@ -24,6 +61,25 @@ function estimate(context: PreviewContext, request: LaunchRequest) {
     },
     auditRuntime(context.config.settings),
   );
+}
+
+async function repairSpend(
+  context: PreviewContext,
+  rehearsed: { audit: { id: string; created: boolean } },
+) {
+  if (!rehearsed.audit.created) return 'Nothing new: these answers are already queued';
+  const tasks = await context.db
+    .selectFrom('audit_tasks')
+    .select('id')
+    .where('workspace_id', '=', context.workspaceId)
+    .where('audit_id', '=', rehearsed.audit.id)
+    .execute();
+  const runs = await heldUnits(context.db, {
+    workspaceId: context.workspaceId,
+    kind: 'audit',
+    ids: tasks.map((task) => task.id),
+  });
+  return `${plural(runs, 'prompt run')} for ${plural(tasks.length, 'answer')}, with your own provider keys`;
 }
 
 export const auditKinds = {
@@ -66,7 +122,7 @@ export const auditKinds = {
           { label: 'Answers', value: String(estimated.execution_count) },
         ],
         spend: `Up to ${plural(estimated.execution_count, 'prompt run')}, in at most ${plural(payload.request.max_attempts, 'provider attempt')}`,
-        opens: { label: 'Open Runs', path: '/runs' },
+        opens: RUNS,
       };
     },
   }),
@@ -95,7 +151,7 @@ export const auditKinds = {
             ]
           : [],
         spend: null,
-        opens: { label: 'Open Runs', path: '/runs' },
+        opens: RUNS,
       };
     },
   }),
@@ -122,6 +178,103 @@ export const auditKinds = {
           { label: 'First run', value: schedule.next_run_at ?? 'Right away' },
         ],
         spend: 'Each scheduled run spends one prompt run per recorded answer',
+        opens: null,
+      };
+    },
+  }),
+  rerun_audit_failures: changeKind({
+    permission: MEMBER_RUN,
+    purpose:
+      'run the failed answers of a finished audit again with the provider keys they used, as a new repair audit',
+    payload: z.strictObject({ audit_id: z.uuid(), filter: repairInput.default({}) }),
+    async execute(trx, config, actor, change, payload) {
+      const scope = { workspaceId: actor.workspaceId, projectId: change.projectId };
+      await projectAudit(trx, scope, payload.audit_id);
+      const repair = await createRepairAudit(
+        trx,
+        actor.workspaceId,
+        payload.audit_id,
+        payload.filter,
+        auditRuntime(config.settings),
+      );
+      return {
+        summary: repair.created
+          ? 'Queued the failed answers to run again.'
+          : 'These failed answers are already queued to run again.',
+        audit: { id: repair.auditId, created: repair.created },
+      };
+    },
+    async preview(context, payload, rehearse) {
+      const audit = await projectAudit(context.db, context, payload.audit_id);
+      return {
+        title: 'Run failed answers again',
+        rows: [
+          { label: 'Audit started', value: audit.created_at.toISOString().slice(0, 16) },
+          { label: 'Status', value: audit.status },
+        ],
+        spend: await repairSpend(context, await rehearse()),
+        opens: RUNS,
+      };
+    },
+  }),
+  update_audit_schedule: changeKind({
+    permission: SCHEDULES_WRITE,
+    purpose: 'change an audit schedule (cadence, engines, markets, timing) or pause it (enabled)',
+    payload: z.strictObject({ schedule_id: z.uuid(), changes: scheduleUpdate }),
+    async execute(trx, _config, actor, change, payload) {
+      const schedule = await updateSchedule(
+        trx,
+        actor,
+        change.projectId,
+        payload.schedule_id,
+        payload.changes,
+      );
+      return { summary: `The ${schedule.cadence} audit schedule is updated.` };
+    },
+    async preview(context, payload) {
+      const schedule = await scheduleOf(context, payload.schedule_id);
+      return {
+        title: 'Change an audit schedule',
+        rows: [
+          { label: 'Prompt set', value: await promptSetName(context, schedule.prompt_set_id) },
+          { label: 'Now', value: schedule.cadence.replaceAll('_', ' ') },
+          ...Object.entries(payload.changes).map(([field, value]) => ({
+            label: field.replaceAll('_', ' '),
+            value: JSON.stringify(value),
+          })),
+        ],
+        spend: null,
+        opens: null,
+      };
+    },
+  }),
+  delete_audit_schedule: changeKind({
+    permission: SCHEDULES_WRITE,
+    purpose: 'delete an audit schedule; audits it already ran stay',
+    payload: z.strictObject({ schedule_id: z.uuid() }),
+    async execute(trx, _config, actor, change, payload) {
+      await deleteSchedule(trx, actor, change.projectId, payload.schedule_id);
+      return { summary: 'Deleted the audit schedule.' };
+    },
+    async preview(context, payload) {
+      const schedule = await scheduleOf(context, payload.schedule_id);
+      const ran = await countOf(
+        context.db
+          .selectFrom('audits')
+          .select(ROW_COUNT)
+          .where('workspace_id', '=', context.workspaceId)
+          .where('schedule_id', '=', schedule.id)
+          .executeTakeFirst(),
+      );
+      return {
+        title: 'Delete an audit schedule',
+        rows: [
+          { label: 'Prompt set', value: await promptSetName(context, schedule.prompt_set_id) },
+          { label: 'Cadence', value: schedule.cadence.replaceAll('_', ' ') },
+          { label: 'Audits it ran', value: `${ran}, kept` },
+          PERMANENT,
+        ],
+        spend: null,
         opens: null,
       };
     },

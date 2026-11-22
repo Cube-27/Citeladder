@@ -8,7 +8,7 @@ import {
 import { sql } from 'kysely';
 import type { z } from 'zod';
 
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { isUniqueViolation } from '../db/errors.ts';
 import { admit } from '../entitlements/occupancy.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -56,7 +56,7 @@ export function addMarket(
   scope: ProjectScope,
   input: z.output<typeof projectMarketCreateSchema>,
 ) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
     const fallback = await projectDefault(trx, scope);
     if (
@@ -92,7 +92,7 @@ export function addMarket(
 }
 
 export function deleteMarket(db: Database, scope: ProjectScope, marketId: string): Promise<void> {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
     const deleted = await trx
       .deleteFrom('project_markets')

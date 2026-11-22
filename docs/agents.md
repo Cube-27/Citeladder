@@ -330,18 +330,23 @@ One table of change kinds
 ([`changes/kinds.ts`](../frontend/services/api/src/changes/kinds.ts)) is the single
 owner for the Agent and [MCP](mcp.md#changes): each kind holds its permission,
 payload schema, one `execute` over the command owner, and a preview the server
-builds from the validated payload. Adding a kind is one entry there plus its
-name in the Agent's list
+builds from the validated payload. Each kind calls the owner function its route
+calls; where the route gates on a capability alone, the kind carries a member
+grant with no scope, which API keys cannot hold. An owner a kind calls takes the
+caller's transaction (`inTransaction`), so the dry run can roll it back. Adding a
+kind is one entry in its area's file plus its name in the Agent's list
 ([`change-proposals.ts`](../frontend/services/api/src/agent/change-proposals.ts)).
-The model gets one built-in, `propose_change` (kind and payload); the kinds,
-what each does and their payload shapes (printed from the schemas) are its
-description, so the cached tool prefix stays one tool.
+The model gets one built-in, `propose_change` (kind and payload). Its
+description lists each kind's name and purpose by area and no payload shapes, so
+the cached prefix stays small; a kind's shape, printed from its schema, comes
+back on demand: from a call that names the kind without a payload (nothing is
+proposed), or with the refusal of a payload that does not fit.
 
 A call is checked against the kind's schema, the person's live role and the
 kind's permission, then run as a **dry run** (every check and write of the
 command, rolled back, with the preview read in the same transaction). A kind
-whose preview needs the command's outcome (the imports) reads its own rehearsal,
-so the card states what the owner will import, skip or reject. A bad call
+whose preview needs the command's outcome reads its own rehearsal, so the card
+states what the owner will import, skip or reject, or what its dry run held. A bad call
 or a refusal (a flag the plan lacks included) returns a correctable error;
 nothing is staged. A staged proposal
 holds the exact payload and the preview without IDs, is bounded per turn by
@@ -350,9 +355,19 @@ holds the exact payload and the preview without IDs, is bounded per turn by
 server template with counts only, and every name or text the model, a page or
 a person supplied is a row value, clipped and bounded by
 `proposal_preview_rows_max` and `proposal_preview_value_max_chars`, so page
-text, a paste or a web result cannot dress a card as something else. A paid kind (an audit launch) shows its
-spend from the estimate and holds nothing until the click; a launched job is
-never awaited, and its card links to where it shows.
+text, a paste or a web result cannot dress a card as something else. A paid or
+allowance-spending kind shows its spend, from the estimate or from what its own
+dry run held, and holds nothing until the click; a launched job is
+never awaited, and its card links to where it shows. A delete's card names what
+it deletes and what goes with it (counts read in the dry run's transaction) and
+says it cannot be undone.
+
+A kind whose owner calls a model or fetches outside CiteLadder (prompt
+generation, logo refresh) is **live**: its dry run runs the kind's check, never
+the owner. At the click it runs outside the decision transaction, because a
+charged model call must not hold one, under a session advisory try-lock on the
+proposal: a second click while it runs gets 409 `agent_proposal_running`, and
+the decision is recorded only after the owner succeeds.
 
 Only the person's click executes it:
 `POST /api/v1/agent/chats/{chat}/messages/{message}/proposals/{index}/confirm`
