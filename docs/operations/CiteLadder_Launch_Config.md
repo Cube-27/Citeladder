@@ -234,7 +234,7 @@ ai_credits:                    # B12, B23, B31, B35
   internal_cost_basis: provider_published_rates     # B53; plan prices and credit amounts may change
   customer_sees: credits_only                   # conversion stays internal (B23)
   agent_model: platform_gateway_only            # no customer model route (B19)
-  agent_model_choice: [tier_1, tier_2, tier_3]  # B75; not yet built; Haiku, Sonnet and Opus 5.5 on every paid plan, not trial
+  agent_model_choice: [tier_1, tier_2, tier_3]  # B75; rides the agent flag; Haiku, Sonnet and Opus 5.5 on every paid plan, not trial
   hold_before_call_and_settle_once: true
   model_without_configured_price: refused
   recorded_not_charged: [jev_judge, tavily, keenable]   # B13
