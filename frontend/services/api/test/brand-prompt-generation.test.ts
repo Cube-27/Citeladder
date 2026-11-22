@@ -214,6 +214,15 @@ describe('brand prompt generation at the PostgreSQL boundary', () => {
     await expect(
       generatePrompts(db, tenant.workspaceId, setId, brandRequest(11), deps),
     ).rejects.toMatchObject({ status: 422 });
+    await expect(
+      generatePrompts(
+        db,
+        tenant.workspaceId,
+        setId,
+        generationInput.parse({ mode: 'brand', count: 2, seed_source: 'search_console' }),
+        deps,
+      ),
+    ).rejects.toMatchObject({ status: 422 });
     const filled = await Promise.all(
       Array.from({ length: 26 }, (_, index) => prompt(db, setId, `Acme question ${index}`)),
     );

@@ -114,9 +114,14 @@ export function validateRequest(input: GenerationInput) {
 function validateBrandRequest(input: GenerationInput) {
   if (input.count > B.max_per_run)
     throw generationInvalid(`Brand prompts are suggested at most ${B.max_per_run} at a time`);
-  if (input.distribution || input.cohort !== 'core')
+  if (
+    input.distribution ||
+    input.cohort !== 'core' ||
+    input.seed_source ||
+    input.seed_query_ids.length
+  )
     throw generationInvalid(
-      'Brand prompts plan their own questions; send no cohort or distribution',
+      'Brand prompts plan their own questions; send no cohort, distribution or search data',
     );
 }
 
