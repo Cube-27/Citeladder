@@ -127,7 +127,7 @@ export function ComposerFrame({
         </ul>
       ) : null}
       {field}
-      <div className="flex min-h-[var(--control-md)] flex-wrap items-center gap-2">
+      <div className="flex min-h-[var(--control-md)] flex-wrap items-start gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">{tools}</div>
         <div className="ms-auto shrink-0">{submit}</div>
       </div>

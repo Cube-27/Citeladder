@@ -115,7 +115,7 @@ it('previews a prompt import with its skips without writing, refuses another wor
   const otherProjectSet = await promptSet(db, await fixtures.project(t.workspaceId));
   const grip = 'Which trail running shoes grip best in mud?';
   const light = 'Which running shoes are lightest for racing?';
-  const rows = [
+  const rows: Json[] = [
     { text: grip, topic: 'Trail' },
     { text: 'Which running shoes suit road use?' },
     { text: light, persona: 'Racer' },
