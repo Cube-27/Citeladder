@@ -1,7 +1,7 @@
 import { createHash, randomUUID, randomBytes } from 'node:crypto';
 import { auditRepairRequestSchema } from '@citeladder/contracts/audit-requests';
 import type { z } from 'zod';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { auditPolicy, type AuditRuntime } from './config.ts';
@@ -34,7 +34,7 @@ export function createRepairAudit(
   runtime: AuditRuntime,
   at = new Date(),
 ) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await requireWorkspaceAccess(trx, workspaceId);
     await lockAuditEnqueue(trx, workspaceId);
     const parent = repairable(

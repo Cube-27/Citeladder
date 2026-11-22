@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, expect, it } from 'vitest';
-import { decideProposal } from '../src/agent/proposal-outcomes.ts';
+import { sql } from 'kysely';
+import { proposeChange } from '../src/agent/change-proposals.ts';
+import { decideProposal, proposalChangeId } from '../src/agent/proposal-outcomes.ts';
 import { readChat } from '../src/agent/reads.ts';
 import type { Json, Scope } from '../src/agent/contracts.ts';
 import { ApiError } from '../src/errors.ts';
@@ -306,4 +308,69 @@ it('tells each later turn what happened to its cards once, by their card, and re
   ]);
   const [, before = [], after = []] = requests;
   expect(after.slice(0, before.length)).toEqual(before);
+});
+
+it('returns a kind’s payload shape on demand and with a malformed payload, proposing nothing', async () => {
+  const t = await tenant();
+  const state = { proposals: [], steps: [] };
+  const propose = (input: unknown) => proposeChange(db, config, { scope: t.scope, state }, input);
+  expect(await propose({ kind: 'delete_topic' })).toEqual({
+    ok: true,
+    text: 'Nothing proposed. The delete_topic payload is {topic_id: uuid}',
+  });
+  expect(await propose({ kind: 'delete_topic', payload: { topic: 'Trail' } })).toEqual({
+    ok: false,
+    text: 'Invalid arguments: topic_id: Invalid input: expected string, received undefined; arguments: Unrecognized key: "topic". The delete_topic payload is {topic_id: uuid}',
+  });
+  expect(state).toEqual({ proposals: [], steps: [] });
+});
+
+it('never runs a model-calling change in its preview, refuses a second click while the first runs, and replays a run whose decision was lost', async () => {
+  const t = await tenant();
+  const runs = () =>
+    db
+      .selectFrom('prompt_generation_runs')
+      .select('id')
+      .where('prompt_set_id', '=', t.setId)
+      .execute();
+  const { chatId, messageId, proposals } = await proposed(t.scope, [
+    { kind: 'generate_prompts', payload: { prompt_set_id: t.setId, request: { count: 3 } } },
+  ]);
+  expect(proposals).toMatchObject([
+    { title: 'Suggest 3 prompts', spend: 'AI credits for up to 3 model calls', outcome: 'open' },
+  ]);
+  expect(await runs()).toEqual([]);
+
+  const ref = { chatId, messageId, index: 0 };
+  const confirm = () => decideProposal(db, config, { scope: t.scope, ref, decision: 'confirm' });
+  const key = `agent-proposal:${messageId}:0`;
+  const held = await db.connection().execute(async (connection) => {
+    await sql`select pg_advisory_lock(hashtextextended(${key}, 0))`.execute(connection);
+    try {
+      return await refusal(confirm());
+    } finally {
+      await sql`select pg_advisory_unlock(hashtextextended(${key}, 0))`.execute(connection);
+    }
+  });
+  expect(held).toBe('This change is already being made.');
+  expect(await refusal(confirm())).toBe('Add at least one offering before generating prompts');
+  expect(await outcome(t.scope, chatId)).toMatchObject([{ outcome: 'open' }]);
+
+  const lost = randomUUID();
+  await db
+    .insertInto('prompt_generation_runs')
+    .values({
+      id: lost,
+      workspace_id: t.scope.workspaceId,
+      project_id: t.scope.projectId,
+      prompt_set_id: t.setId,
+      generator_version: '1',
+      request: JSON.stringify({ count: 3, idempotency_key: proposalChangeId(ref) }),
+      provenance: JSON.stringify({ candidates_generated: 0 }),
+      created_at: new Date(),
+    })
+    .execute();
+  await confirm();
+  expect(await runs()).toEqual([{ id: lost }]);
+  expect(await outcome(t.scope, chatId)).toMatchObject([{ outcome: 'executed' }]);
 });

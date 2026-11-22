@@ -4,31 +4,63 @@ import { agentDeclarationProposalSchema, type AgentProposal } from '@citeladder/
 import type { Actor } from '../auth/actor.ts';
 import { findWorkspaceMember } from '../auth/workspace.ts';
 import { changePreviewSchema, type ChangePreview } from '../changes/kind.ts';
-import { changeKinds, type ChangeKind } from '../changes/kinds.ts';
+import { changeAreas, changeKinds, type ChangeKind } from '../changes/kinds.ts';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { argumentProblem } from '../mcp/tools.ts';
 import type { BuiltinOutcome } from './builtin-tools.ts';
+import { payloadShape } from './payload-shape.ts';
 import { agentPolicy, type Scope } from './contracts.ts';
 import { stepText } from './sources.ts';
 import type { TurnState } from './turn-budget.ts';
 
 export const PROPOSE_CHANGE = 'propose_change';
 
-const AGENT_CHANGE_KINDS = [
+export const AGENT_CHANGE_KINDS = [
   'add_prompts',
   'update_prompts',
   'update_prompt_text',
   'create_topic',
   'rename_topic',
   'confirm_topics',
+  'delete_topic',
+  'create_prompt_set',
+  'rename_prompt_set',
+  'delete_prompt_set',
+  'delete_prompts',
+  'review_prompt_candidates',
+  'generate_prompts',
   'add_competitor',
   'review_competitor_suggestion',
-  'update_action_status',
+  'update_competitor',
+  'remove_competitor',
+  'add_market',
+  'remove_market',
+  'refresh_logos',
   'launch_audit',
   'cancel_audit',
   'schedule',
+  'rerun_audit_failures',
+  'update_audit_schedule',
+  'delete_audit_schedule',
+  'run_probe',
+  'set_probe_schedule',
+  'rename_objection_group',
+  'merge_objection_groups',
+  'delete_objection_group',
+  'start_crawl',
+  'cancel_crawl',
+  'set_crawl_schedule',
+  'rerun_page',
+  'mark_issue_group_fixed',
+  'rerun_issue_group',
+  'start_link_analysis',
+  'cancel_link_analysis',
+  'update_action_status',
+  'update_actions_status',
+  'analyze_page',
+  'reorder_opportunities',
   'import_prompts',
   'import_brand_facts',
   'import_catalog',
@@ -55,79 +87,21 @@ export const proposeChangeArguments = z.strictObject({
   kind: z.enum(AGENT_CHANGE_KINDS).describe('The kind of change, from the list above.'),
   payload: z
     .record(z.string(), z.json())
-    .describe('The change itself, in the shape listed for its kind.'),
+    .optional()
+    .describe(
+      'The change itself, in its kind’s shape. Omit it to get the shape; nothing is proposed.',
+    ),
 });
 
-type SchemaNode = {
-  type?: string | string[] | undefined;
-  format?: string | undefined;
-  const?: unknown;
-  enum?: unknown[] | undefined;
-  items?: SchemaNode | undefined;
-  anyOf?: SchemaNode[] | undefined;
-  oneOf?: SchemaNode[] | undefined;
-  properties?: Record<string, SchemaNode> | undefined;
-  required?: string[] | undefined;
-};
-const schemaNode: z.ZodType<SchemaNode> = z.lazy(() =>
-  z.object({
-    type: z.union([z.string(), z.array(z.string())]).optional(),
-    format: z.string().optional(),
-    const: z.unknown().optional(),
-    enum: z.array(z.unknown()).optional(),
-    items: schemaNode.optional(),
-    anyOf: z.array(schemaNode).optional(),
-    oneOf: z.array(schemaNode).optional(),
-    properties: z.record(z.string(), schemaNode).optional(),
-    required: z.array(z.string()).optional(),
-  }),
-);
-
-function arrayShape(node: SchemaNode) {
-  const item = node.items ? shape(node.items) : 'any';
-  return item.includes('|') ? `(${item})[]` : `${item}[]`;
-}
-
-function objectShape(node: SchemaNode) {
-  const required = new Set(node.required ?? []);
-  const fields = Object.entries(node.properties ?? {}).map(
-    ([name, child]) => `${name}${required.has(name) ? '' : '?'}: ${shape(child)}`,
-  );
-  return `{${fields.join(', ')}}`;
-}
-
-function scalarShape(type: string | undefined, format: string | undefined) {
-  if (type !== 'string' || !format) return type ?? 'any';
-  return format;
-}
-
-function shape(node: SchemaNode): string {
-  const options = node.anyOf ?? node.oneOf;
-  if (options) return options.map(shape).join(' | ');
-  if (node.const !== undefined) return JSON.stringify(node.const);
-  if (node.enum) return node.enum.map((value) => JSON.stringify(value)).join('|');
-  const type = Array.isArray(node.type) ? node.type.join('|') : node.type;
-  if (type === 'array') return arrayShape(node);
-  if (type === 'object') return objectShape(node);
-  return scalarShape(type, node.format);
-}
-
-function payloadShape(kind: AgentChangeKind) {
-  const schema = z.toJSONSchema(changeKinds[kind].proposal, {
-    io: 'input',
-    unrepresentable: 'any',
-  });
-  return shape(schemaNode.parse(schema));
-}
-
-function kindLine(kind: AgentChangeKind) {
-  return `- ${kind}: ${changeKinds[kind].purpose}. payload ${payloadShape(kind)}`;
+function areaLine([area, kinds]: [string, Record<string, { purpose: string }>]) {
+  const listed = Object.entries(kinds).filter(([kind]) => isAgentChangeKind(kind));
+  return [`${area}:`, ...listed.map(([kind, entry]) => `- ${kind}: ${entry.purpose}`)];
 }
 
 export const PROPOSE_CHANGE_DESCRIPTION = [
-  'Propose one change to the project’s data for the person to confirm: the app shows it as a card under your reply, and only their click makes it, as them. Propose only what the person asked for or agreed to; use ids from your reads. A paid change spends nothing until the click. Each call is checked as a dry run: a refusal tells you what to correct.',
-  'Kinds:',
-  ...AGENT_CHANGE_KINDS.map(kindLine),
+  'Propose one change to the project’s data for the person to confirm: the app shows it as a card under your reply, and only their click makes it, as them. Propose only what the person asked for or agreed to; use ids from your reads. A paid change spends nothing until the click. Each call is checked as a dry run: a refusal tells you what to correct. To learn a kind’s payload shape, call with the kind alone; a payload that does not fit is refused with the shape.',
+  'Kinds, by area:',
+  ...Object.entries(changeAreas).flatMap(areaLine),
 ].join('\n');
 
 export async function memberActor(
@@ -190,12 +164,21 @@ export async function proposeChange(
 ): Promise<BuiltinOutcome> {
   const parsed = proposeChangeArguments.safeParse(input);
   if (!parsed.success) return { ok: false, text: argumentProblem(parsed.error) };
-  const full = proposalLimit(state);
-  if (full) return full;
   const { kind, payload: proposed } = parsed.data;
   const entry = changeKinds[kind];
+  if (proposed === undefined)
+    return {
+      ok: true,
+      text: `Nothing proposed. The ${kind} payload is ${payloadShape(entry.proposal)}`,
+    };
+  const full = proposalLimit(state);
+  if (full) return full;
   const checked = entry.proposal.safeParse(proposed);
-  if (!checked.success) return { ok: false, text: argumentProblem(checked.error) };
+  if (!checked.success)
+    return {
+      ok: false,
+      text: `${argumentProblem(checked.error)}. The ${kind} payload is ${payloadShape(entry.proposal)}`,
+    };
   const context = { db, config, workspaceId: scope.workspaceId, projectId: scope.projectId };
   const change = { id: randomUUID(), projectId: scope.projectId };
   let staged;

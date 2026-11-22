@@ -143,7 +143,7 @@ export function updateCompetitor(
   competitorId: string,
   input: z.output<typeof competitorUpdate>,
 ): Promise<Competitor> {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await lockProject(trx, scope);
     const rows = await competitorsOf(trx, scope);
     const current = rows.find((row) => row.id === competitorId);

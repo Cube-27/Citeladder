@@ -2,23 +2,19 @@ import { z } from 'zod';
 import { catalogImportRequestSchema } from '@citeladder/contracts/commerce-requests';
 import { applyImport, stageImport } from '../commerce/import.ts';
 import { importPrompts, PROMPTS_WRITE } from '../commands/prompts.ts';
-import { permission } from '../commands/permission.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { requireFlag } from '../entitlements/access.ts';
 import { ApiError } from '../errors.ts';
 import { brandFactImport, importBrandFacts } from '../projects/brand-facts.ts';
 import { promptImport } from '../prompts/prompts.ts';
-import { changeKind, plural, rowsOf } from './kind.ts';
+import { changeKind, MEMBER_RUN, MEMBER_WRITE, plural, rowsOf } from './kind.ts';
 import { promptSetName } from './prompt-kinds.ts';
 
 type Scope = Readonly<{ workspaceId: string; projectId: string }>;
 
 const EXAMPLES = 3;
 const NOTES = 5;
-
-const FACTS_WRITE = permission({ capability: 'write' });
-const CATALOG_RUN = permission({ capability: 'run' });
 
 const promptsPayload = z.strictObject({
   prompt_set_id: z.uuid(),
@@ -124,7 +120,7 @@ export const importKinds = {
     },
   }),
   import_brand_facts: changeKind({
-    permission: FACTS_WRITE,
+    permission: MEMBER_WRITE,
     purpose:
       'import company facts for fact checking from what the person gave; they land as drafts the person reviews, and duplicates are skipped',
     payload: brandFactImport,
@@ -166,7 +162,7 @@ export const importKinds = {
     },
   }),
   import_catalog: changeKind({
-    permission: CATALOG_RUN,
+    permission: MEMBER_RUN,
     purpose:
       'import products into the catalog from a CSV you write in the catalog template columns (title, brand, description, price, currency, link, image_link, category, sku, gtin; title and brand required), or a Merchant Center feed the person gave as is',
     payload: catalogPayload,

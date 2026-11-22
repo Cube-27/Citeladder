@@ -10,7 +10,7 @@ import { z } from 'zod';
 import type { PromptFormLimits } from '@citeladder/contracts/project';
 
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
 import type { WorkspaceEntitlements } from '../entitlements/access.ts';
@@ -171,7 +171,7 @@ export async function deletePromptSet(
   workspaceId: string,
   promptSetId: string,
 ): Promise<void> {
-  await db.transaction().execute(async (trx) => {
+  await inTransaction(db, async (trx) => {
     const set = await scopedPromptSet(trx, workspaceId, promptSetId);
     await acquireProjectLock(trx, set.project_id);
     await acquirePromptSetLock(trx, set.id);
