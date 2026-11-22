@@ -45,6 +45,8 @@ const probeRunSchema = z.object({
   engines: z.array(logicalEngineSchema),
   markets: z.array(auditMarketSchema),
   answers: z.int().nonnegative(),
+  planned: z.int().nonnegative(),
+  failed: z.int().nonnegative(),
 });
 export type ProbeRun = z.infer<typeof probeRunSchema>;
 
@@ -62,7 +64,7 @@ export const probeStatusSchema = z.object({
 });
 export type ProbeStatus = z.infer<typeof probeStatusSchema>;
 
-const probeBasisSchema = probeRunSchema.omit({ state: true });
+const probeBasisSchema = probeRunSchema.omit({ state: true, planned: true, failed: true });
 
 const entitySchema = z.object({
   kind: z.enum(['brand', 'competitor']),

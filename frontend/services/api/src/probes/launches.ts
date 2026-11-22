@@ -44,7 +44,9 @@ function launchRows(db: Database, scope: Scope, limit: number, labelled: boolean
       'a.launch_id',
       'a.status',
       'a.created_at',
+      'a.requested_count',
       'a.completed_count',
+      'a.failed_count',
       'a.configuration',
       'a.market_id',
       'l.outcome',
@@ -88,6 +90,8 @@ function launch(launchId: string, audits: readonly LaunchRow[]) {
     state: launchState(audits),
     created_at: createdAt,
     ...basis(audits),
+    planned: audits.reduce((sum, audit) => sum + audit.requested_count, 0),
+    failed: audits.reduce((sum, audit) => sum + audit.failed_count, 0),
   };
   const answered = audits.filter((audit) => ANSWERED_STATUSES.includes(audit.status));
   const oldest = answered.at(-1);

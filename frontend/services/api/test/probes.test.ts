@@ -378,6 +378,17 @@ describe('probe labelling and reads', () => {
     await addMarket(db, t, { country_code: 'BR', language_code: 'pt', label: '' });
     const { quote } = await probeStatus(db, t, runtime);
     const [usId, brId] = await runProbe(db, t, { fingerprint: quote.fingerprint }, runtime);
+    const progress = async () => {
+      const run = (await probeStatus(db, t, runtime)).latest!;
+      return [run.state, run.answers, run.failed, run.planned];
+    };
+    expect(await progress()).toEqual(['running', 0, 0, 18]);
+    await db
+      .updateTable('audits')
+      .set({ failed_count: 2 })
+      .where('workspace_id', '=', t.workspaceId)
+      .where('id', '=', brId!)
+      .execute();
     const queued = () =>
       db
         .selectFrom('analytics_tasks')
@@ -387,8 +398,10 @@ describe('probe labelling and reads', () => {
         .execute();
     await answered(t, usId!);
     expect(await queued()).toEqual([]);
+    expect(await progress()).toEqual(['running', 9, 2, 18]);
     await ended(t, brId!, 'cancelled');
     expect(await queued()).toEqual([{ payload: { launch_id: await launchOf(usId!) } }]);
+    expect(await progress()).toEqual(['labelling', 9, 2, 18]);
     const sent: string[] = [];
     await label(
       t,
@@ -397,6 +410,7 @@ describe('probe labelling and reads', () => {
       }),
     );
     expect(sent.filter((body) => body.includes('not choose'))).toHaveLength(1);
+    expect(await progress()).toEqual(['ready', 9, 2, 18]);
     const market = await probeMarket(db, t);
     if (market.state !== 'value') throw new Error('expected a labelled probe');
     expect(market.probe.markets.map((row) => row.country_code)).toEqual(['US']);

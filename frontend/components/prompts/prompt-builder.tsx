@@ -31,6 +31,7 @@ import { useBuilderTopics, type BuilderTopics } from './use-builder-topics';
 import { StepsLayout } from '@/components/templates/steps-layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
+import { WorkProgress } from '@/components/ui/work-progress';
 
 type PromptBuilderProps = {
   projectId: string;
@@ -81,9 +82,10 @@ export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
   const runNotices = (
     <>
       {isGenerating ? (
-        <Notice tone="info">
-          Writing and quality-checking questions can take a minute or two. Keep this page open.
-        </Notice>
+        <WorkProgress
+          label="Generation progress"
+          narration="Writing and quality-checking questions. This can take a minute or two; keep this page open."
+        />
       ) : null}
       {generateError ? <GenerateErrorAlert error={generateError} /> : null}
     </>
