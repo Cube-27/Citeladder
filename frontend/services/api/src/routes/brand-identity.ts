@@ -38,10 +38,10 @@ import {
   createTheme,
   deleteTheme,
   listThemes,
-  mergeThemes,
   renameTheme,
   themeRequest,
 } from '../projects/themes.ts';
+import { mergeCategories } from '../perception/category-merge.ts';
 import { acceptSuggestion, COMPETITORS_WRITE, rejectSuggestion } from '../commands/competitors.ts';
 import { routeActor } from '../commands/permission.ts';
 import { listSuggestions } from '../projects/competitor-suggestions.ts';
@@ -204,7 +204,7 @@ export const brandIdentityRoutes = [
     response: projectThemeSchema,
     async handle({ c, db }, { path }) {
       const { into_id: intoId } = await readBody(c, projectThemeMergeRequestSchema);
-      return mergeThemes(db, {
+      return mergeCategories(db, {
         ...projectScopeOf(c, path.project_id),
         themeId: path.theme_id,
         intoId,

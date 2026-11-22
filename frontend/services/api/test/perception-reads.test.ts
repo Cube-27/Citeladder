@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
-import { mergeThemes } from '../src/projects/themes.ts';
+import { mergeCategories } from '../src/perception/category-merge.ts';
 import { perceivedAnswers, sentimentsOf } from '../src/visibility/perception.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
@@ -445,14 +445,14 @@ describe('GET /visibility/perception', () => {
       ],
     });
     await expect(
-      mergeThemes(db, {
+      mergeCategories(db, {
         workspaceId: stranger.workspaceId,
         projectId: stranger.projectId,
         themeId: returns,
         intoId: theirs,
       }),
     ).rejects.toThrow('Theme not found');
-    await mergeThemes(db, {
+    await mergeCategories(db, {
       workspaceId: owner.workspaceId,
       projectId: owner.projectId,
       themeId: returns,

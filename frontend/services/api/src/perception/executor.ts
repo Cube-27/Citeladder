@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import { sql } from 'kysely';
+
 import { cohortNamesBrand, scoringConfig } from '../analysis/scoring.ts';
 import { policy } from '../config.ts';
 import { meterFor } from '../billing/metering.ts';
@@ -122,17 +124,24 @@ function persist({
   return async (db: Database) => {
     const id = randomUUID();
     const entities = outcome.outcome === 'classified' ? outcome.entities : [];
-    const ids = await saveModelCategories(db, {
-      workspaceId: task.workspace_id,
-      projectId,
-      names: entities.flatMap((entity) => newCategoryNames(entity.aspects)),
-      policy: settings,
-    });
+    const ids = entities.some((entity) => entity.aspects.length)
+      ? await saveModelCategories(db, {
+          workspaceId: task.workspace_id,
+          projectId,
+          names: entities.flatMap((entity) => newCategoryNames(entity.aspects)),
+          policy: settings,
+        })
+      : new Map<string, string>();
     const stored = entities.map((entity) => ({ entity, ...storedAspects(entity.aspects, ids) }));
     const capped = stored.reduce((sum, row) => sum + row.capped, 0);
+    const removed = stored.reduce((sum, row) => sum + row.removed, 0);
     const drops =
       outcome.outcome === 'classified'
-        ? { ...outcome.drops, ...(capped ? { category_limit: capped } : {}) }
+        ? {
+            ...outcome.drops,
+            ...(capped ? { category_limit: capped } : {}),
+            ...(removed ? { category_removed: removed } : {}),
+          }
         : {};
     const inserted = await db
       .insertInto('answer_perceptions')
@@ -330,6 +339,27 @@ export function answerPerception(
     });
     return settle(outcome, call);
   };
+}
+
+export async function moveAspectsTheme(
+  db: Database,
+  scope: { workspaceId: string; projectId: string; themeId: string; intoId: string },
+) {
+  await sql`
+    update entity_sentiments as es
+    set aspects = (
+      select jsonb_agg(
+        case when aspect->>'theme_id' = ${scope.themeId}
+          then jsonb_set(aspect, '{theme_id}', to_jsonb(${scope.intoId}::text))
+          else aspect end
+        order by position)
+      from jsonb_array_elements(es.aspects) with ordinality as item(aspect, position))
+    from answer_perceptions as perception
+    where perception.id = es.perception_id
+      and perception.workspace_id = es.workspace_id
+      and perception.workspace_id = ${scope.workspaceId}
+      and perception.project_id = ${scope.projectId}
+      and es.aspects @> ${JSON.stringify([{ theme_id: scope.themeId }])}::jsonb`.execute(db);
 }
 
 export async function compensatePerception(db: Database, task: QueueTask) {

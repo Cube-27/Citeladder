@@ -158,7 +158,7 @@ describe('perception passages', () => {
 describe('perception validation', () => {
   const pkg = pkgFor('Acme is great value.  Rival   support is slow.');
 
-  it('keeps verified quotes with their attribute, reuses a category by name, names a new one and refuses a business name or a long name', () => {
+  it('keeps verified quotes with their attribute, reuses a category by name, names a new one and refuses a business name, a long name or markup', () => {
     const result = validateOutput(
       pkg,
       {
@@ -187,6 +187,12 @@ describe('perception validation', () => {
                 quote: 'Acme is great',
               },
               { category: 'Other', attribute: '', polarity: 'positive', quote: 'Acme is great' },
+              {
+                category: '<b>Fees</b>',
+                attribute: 'Hidden\u0007 fees',
+                polarity: 'negative',
+                quote: 'great value',
+              },
             ],
           },
           {
@@ -215,8 +221,8 @@ describe('perception validation', () => {
     );
     expect(result.drops).toEqual({
       quote_not_found: 1,
-      category_invalid: 2,
-      attribute_invalid: 2,
+      category_invalid: 3,
+      attribute_invalid: 3,
       unknown_entity: 1,
     });
     expect(result.entities.map((e) => [e.entity_id, e.label, e.low_confidence, e.aspects])).toEqual(
@@ -249,6 +255,14 @@ describe('perception validation', () => {
               quote: 'Acme is great',
               start: 0,
               end: 13,
+            },
+            {
+              category: { kind: 'other' },
+              attribute: null,
+              polarity: 'negative',
+              quote: 'great value',
+              start: 8,
+              end: 19,
             },
           ],
         ],
@@ -501,7 +515,7 @@ describe('perception metrics', () => {
           brand([
             said(
               'Refunds',
-              { kind: 'labelled', name: 'slow refunds' },
+              { kind: 'labelled', name: 'slow refunds.' },
               'negative',
               'newer refund quote',
             ),
@@ -535,10 +549,10 @@ describe('perception metrics', () => {
             negative: 3,
             attributes: [
               {
-                attribute: 'slow refunds',
+                attribute: 'slow refunds.',
                 positive: 0,
                 negative: 2,
-                quotes: [['newer refund quote', { kind: 'labelled', name: 'slow refunds' }]],
+                quotes: [['newer refund quote', { kind: 'labelled', name: 'slow refunds.' }]],
               },
               {
                 attribute: 'Clear policy',

@@ -35,6 +35,7 @@ export type DropReason =
   | 'aspect_limit'
   | 'category_invalid'
   | 'category_limit'
+  | 'category_removed'
   | 'attribute_invalid'
   | 'claim_no_brand'
   | 'claim_quote_not_found'

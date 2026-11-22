@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { perceptionLabelSchema } from '@citeladder/contracts/visibility-perception';
 
 import { compareText } from '../text-order.ts';
+import { categoryKey } from './categories.ts';
 import { isNamed } from './passages.ts';
 import type { VerifiedAspect } from './validate.ts';
 
@@ -408,7 +409,7 @@ function tally(said: readonly Said[], limits: CategoryLimits) {
       const row = categories.get(aspect.theme)!;
       row[aspect.polarity]++;
       if (aspect.attribute.kind !== 'labelled') continue;
-      const key = aspect.attribute.name.toLowerCase();
+      const key = categoryKey(aspect.attribute.name);
       const attribute = row.attributes.get(key) ?? {
         attribute: aspect.attribute.name,
         positive: 0,

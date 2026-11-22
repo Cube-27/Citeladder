@@ -671,22 +671,26 @@ platform-funded through the default Agent gateway (`DEFAULT_AGENT_*`); it draws 
 customer credits. Policy, caps, the project-theme limits and the templates live in
 [`config/perception.json`](../frontend/services/api/src/config/perception.json).
 
-- **Categories.** Each aspect carries a category and a short attribute in
-  plain buyer words (AV-39). Categories are the project's
+- **Categories.** Each aspect carries a category and a short attribute in plain
+  buyer words (AV-39). Categories are the project's
   [`project_themes`](../frontend/services/api/src/projects/themes.ts): onboarding
   research and Context › Themes seed them, the model is shown them on every call
   and reuses one whose name matches apart from case, spacing and punctuation, and
   a name it coins is saved with source `model`
   ([categories](../frontend/services/api/src/perception/categories.ts)) under a
   per-project advisory lock, up to the configured per-project cap; past the cap,
-  or for a name that is too long or names a business, the aspect files under the
-  fallback `Other`. Probe questions ask only about research and user themes, so
-  a coined category never adds probe spend. Aspects store the theme's id, so a
-  rename shows on past answers, a merge rewrites past aspects and probe answer
-  items to the kept theme in one transaction, and a deleted theme's aspects read
-  as `Other`. An aspect stored before attributes existed has no attribute key
-  and reads `not_labelled`; one the model gave no usable attribute stores null
-  and reads `not_found`.
+  or for a name that is too long, names a business or holds markup, the aspect
+  files under the fallback `Other`. Probe questions ask only about research and
+  user themes, so a coined category never adds probe spend. Aspects store the
+  theme's id, so a rename shows on past answers, a merge rewrites past aspects and
+  probe answer items to the kept theme in one transaction, and a deleted theme's
+  aspects read as `Other`. Aspects are derived labels, not raw evidence, so a
+  merge may move them. A merge and the labeller's save hold the same per-project
+  lock, so no label is saved pointing at a merged theme; one chosen before the
+  merge files under `Other` (`category_removed`). Merging a person's theme into a
+  model one makes the kept theme theirs, so probes keep asking about it. An aspect
+  stored before attributes existed has no attribute key and reads `not_labelled`;
+  one the model gave no usable attribute stores null and reads `not_found`.
 
 - **Trigger.** At the end of the analysis transaction, an answer whose entity
   assessments name the brand or a competitor enqueues one `answer_perception`

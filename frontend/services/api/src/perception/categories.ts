@@ -1,12 +1,7 @@
-import { randomUUID } from 'node:crypto';
-
-import { sql } from 'kysely';
-
 import { countedMatches } from '../analysis/entity-assessment.ts';
 import type { PerceptionPolicy } from '../config/perception.ts';
-import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
-import { cleanName, nameKey } from '../projects/themes.ts';
+import { cleanName, lockThemes, nameKey, saveModelThemes } from '../projects/themes.ts';
 import type { ExtractedAspect, VerifiedAspect } from './validate.ts';
 
 export type CategoryChoice =
@@ -18,6 +13,7 @@ type Names = { policy: Pick<PerceptionPolicy, 'project_themes'>; businesses: rea
 type ThemeName = { id: string; name: string };
 
 const words = (name: string) => name.split(' ').filter(Boolean).length;
+const PLAIN = /^[\p{L}\p{N}][\p{L}\p{M}\p{N} '’&+\-/,.]*$/u;
 
 export const categoryKey = (name: string) => nameKey(name).replaceAll(/[^\p{L}\p{N}]+/gu, '');
 
@@ -37,7 +33,7 @@ export function chooseCategory(
   const id = existing.get(key);
   if (id !== undefined) return { kind: 'theme', theme_id: id };
   const valid =
-    key !== '' &&
+    PLAIN.test(name) &&
     words(name) <= limits.model_name_max_words &&
     Array.from(name).length <= limits.name_max_chars &&
     countedMatches(names.businesses, name).length === 0;
@@ -49,7 +45,7 @@ export function cleanAttribute(
   policy: Pick<PerceptionPolicy, 'attribute_max_words' | 'attribute_max_chars'>,
 ): string | null {
   const attribute = cleanName(raw);
-  if (!categoryKey(attribute)) return null;
+  if (!PLAIN.test(attribute)) return null;
   if (words(attribute) > policy.attribute_max_words) return null;
   return Array.from(attribute).length > policy.attribute_max_chars ? null : attribute;
 }
@@ -72,8 +68,7 @@ export async function saveModelCategories(
     policy: Pick<PerceptionPolicy, 'project_themes'>;
   },
 ): Promise<ReadonlyMap<string, string>> {
-  if (!input.names.length) return new Map();
-  await subjectXactLock(db, `perception-categories:${input.projectId}`);
+  await lockThemes(db, input.projectId);
   const themes = await projectThemes(db, input);
   const known = categoryIds(themes);
   const room = Math.max(
@@ -87,26 +82,8 @@ export async function saveModelCategories(
         .map((name) => [categoryKey(name), name]),
     ).values(),
   ].slice(0, room);
-  if (fresh.length) {
-    const now = new Date();
-    const next = sql<number>`(select coalesce(max(position) + 1, 0) from project_themes where workspace_id = ${input.workspaceId} and project_id = ${input.projectId})`;
-    await db
-      .insertInto('project_themes')
-      .values(
-        fresh.map((name, index) => ({
-          id: randomUUID(),
-          workspace_id: input.workspaceId,
-          project_id: input.projectId,
-          name,
-          position: sql<number>`${next} + ${index}`,
-          source: 'model',
-          created_at: now,
-          updated_at: now,
-        })),
-      )
-      .onConflict((conflict) => conflict.doNothing())
-      .execute();
-  }
+  if (!fresh.length) return known;
+  await saveModelThemes(db, input, fresh);
   return categoryIds(await projectThemes(db, input));
 }
 
@@ -117,12 +94,17 @@ export function newCategoryNames(aspects: readonly ExtractedAspect[]) {
 export function storedAspects(
   aspects: readonly ExtractedAspect[],
   ids: ReadonlyMap<string, string>,
-): { aspects: VerifiedAspect[]; capped: number } {
+): { aspects: VerifiedAspect[]; capped: number; removed: number } {
   let capped = 0;
+  let removed = 0;
+  const live = new Set(ids.values());
   const stored = aspects.map(({ category, ...aspect }): VerifiedAspect => {
     switch (category.kind) {
-      case 'theme':
-        return { ...aspect, theme_id: category.theme_id };
+      case 'theme': {
+        if (live.has(category.theme_id)) return { ...aspect, theme_id: category.theme_id };
+        removed++;
+        return { ...aspect, theme_id: null };
+      }
       case 'other':
         return { ...aspect, theme_id: null };
       case 'new': {
@@ -136,5 +118,5 @@ export function storedAspects(
       }
     }
   });
-  return { aspects: stored, capped };
+  return { aspects: stored, capped, removed };
 }

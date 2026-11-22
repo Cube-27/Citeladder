@@ -6,6 +6,7 @@ import { sql, type Kysely } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 import { inTransaction, type Database } from '../db/database.ts';
 import { isUniqueViolation } from '../db/errors.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -64,12 +65,19 @@ export async function listThemes(db: Kysely<DB>, scope: ProjectScope): Promise<P
   return rows.map(view);
 }
 
+export const lockThemes = (db: Database, projectId: string) =>
+  subjectXactLock(db, `project-themes:${projectId}`);
+
+export type ThemeMerge = ProjectScope & { themeId: string; intoId: string };
+
 export async function mergeThemes(
   db: Database,
-  scope: ProjectScope & { themeId: string; intoId: string },
+  scope: ThemeMerge,
+  moveLabels: (trx: Database) => Promise<void>,
 ) {
   if (scope.themeId === scope.intoId) throw new ApiError(400, 'Choose another theme to merge into');
   return inTransaction(db, async (trx) => {
+    await lockThemes(trx, scope.projectId);
     const themes = await trx
       .selectFrom('project_themes')
       .select(COLUMNS)
@@ -80,36 +88,47 @@ export async function mergeThemes(
       .forUpdate()
       .execute();
     const kept = themes.find((theme) => theme.id === scope.intoId);
-    if (themes.length !== 2 || !kept) throw notFound('Theme');
-    await sql`
-      update entity_sentiments as es
-      set aspects = (
-        select jsonb_agg(
-          case when aspect->>'theme_id' = ${scope.themeId}
-            then jsonb_set(aspect, '{theme_id}', to_jsonb(${scope.intoId}::text))
-            else aspect end
-          order by position)
-        from jsonb_array_elements(es.aspects) with ordinality as item(aspect, position))
-      from answer_perceptions as perception
-      where perception.id = es.perception_id
-        and perception.workspace_id = es.workspace_id
-        and perception.workspace_id = ${scope.workspaceId}
-        and perception.project_id = ${scope.projectId}
-        and es.aspects @> ${JSON.stringify([{ theme_id: scope.themeId }])}::jsonb`.execute(trx);
-    await trx
-      .updateTable('probe_answer_items')
-      .set({ theme_id: scope.intoId })
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .where('theme_id', '=', scope.themeId)
-      .execute();
+    const merged = themes.find((theme) => theme.id === scope.themeId);
+    if (!kept || !merged) throw notFound('Theme');
+    await moveLabels(trx);
     await trx
       .deleteFrom('project_themes')
       .where('id', '=', scope.themeId)
       .where('workspace_id', '=', scope.workspaceId)
       .execute();
-    return view(kept);
+    if (kept.source !== 'model' || merged.source === 'model') return view(kept);
+    return view(
+      await trx
+        .updateTable('project_themes')
+        .set({ source: merged.source, updated_at: new Date() })
+        .where('id', '=', scope.intoId)
+        .where('workspace_id', '=', scope.workspaceId)
+        .returning(COLUMNS)
+        .executeTakeFirstOrThrow(),
+    );
   });
+}
+
+export async function saveModelThemes(db: Database, scope: ProjectScope, names: readonly string[]) {
+  if (!names.length) return;
+  const now = new Date();
+  const next = sql<number>`(select coalesce(max(position) + 1, 0) from project_themes where workspace_id = ${scope.workspaceId} and project_id = ${scope.projectId})`;
+  await db
+    .insertInto('project_themes')
+    .values(
+      names.map((name, index) => ({
+        id: randomUUID(),
+        workspace_id: scope.workspaceId,
+        project_id: scope.projectId,
+        name,
+        position: sql<number>`${next} + ${index}`,
+        source: 'model',
+        created_at: now,
+        updated_at: now,
+      })),
+    )
+    .onConflict((conflict) => conflict.doNothing())
+    .execute();
 }
 
 export function createTheme(db: Database, scope: ProjectScope, input: ThemeRequest) {
