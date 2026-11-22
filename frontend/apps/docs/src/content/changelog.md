@@ -10,7 +10,7 @@ These notes describe implemented changes in the codebase. Dates are the recorded
 
 ## November 22, 2026: MCP changes go through one preview tool
 
-An assistant connected over MCP with **Allow changes** now makes every change with two tools: `prepare_change` previews a change and saves nothing, and `confirm_change` makes it after you agree. The separate change tools (`prepare_add_prompts`, `create_topic`, `generate_prompts` and the others) are gone. MCP now also offers importing prompts, brand facts and the product catalog, adding a market, re-running an audit's failures, running a probe, starting or cancelling a crawl, re-running a page, starting an internal-link analysis and analyzing a page. Deleting prompts and prompt sets stays in CiteLadder.
+An assistant connected over MCP with **Allow changes** now makes every change with two tools: `prepare_change` previews a change and saves nothing, and `confirm_change` makes it after you agree. The separate change tools (`prepare_add_prompts`, `create_topic`, `generate_prompts` and the others) are gone. MCP now also offers importing prompts, brand facts and the product catalog, adding a market, re-running an audit's failures, running a probe, starting or cancelling a crawl, re-running a page, starting an internal-link analysis, analyzing a page, quoting and starting a Keyword research run, recomputing demand and syncing performance data. Deleting prompts and prompt sets stays in CiteLadder.
 
 **For your team:** reconnect your assistant so it picks up the new tool list; see the [MCP tool reference](/mcp/tools/#make-changes).
 

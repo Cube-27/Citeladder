@@ -26,6 +26,10 @@ export const MCP_CHANGE_KINDS = [
   'analyze_page',
   'import_brand_facts',
   'import_catalog',
+  'create_keyword_review',
+  'confirm_keyword_run',
+  'recompute_demand',
+  'sync_performance',
   'remove_competitor',
   'delete_topic',
 ] as const satisfies readonly ChangeKind[];
