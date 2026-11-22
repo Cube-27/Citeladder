@@ -74,6 +74,17 @@ function selection(input: z.infer<typeof showViewArguments>) {
 const sameView = (left: AgentView, right: AgentView) =>
   JSON.stringify(left) === JSON.stringify(right);
 
+function placementRefusal(state: Pick<TurnState, 'views'>, view: AgentView) {
+  if (state.views.some((placed) => sameView(placed, view)))
+    return { ok: false, text: 'This view is already placed under your reply.' };
+  if (state.views.length >= agentPolicy.max_views_per_turn)
+    return {
+      ok: false,
+      text: `At most ${agentPolicy.max_views_per_turn} views go under one reply. Answer with the ones placed.`,
+    };
+  return null;
+}
+
 export async function showView(
   db: Database,
   scope: Scope,
@@ -84,13 +95,8 @@ export async function showView(
   if (!parsed.success) return { ok: false, text: argumentProblem(parsed.error) };
   const view = agentViewSchema.safeParse(selection(parsed.data));
   if (!view.success) return { ok: false, text: argumentProblem(view.error) };
-  if (state.views.some((placed) => sameView(placed, view.data)))
-    return { ok: false, text: 'This view is already placed under your reply.' };
-  if (state.views.length >= agentPolicy.max_views_per_turn)
-    return {
-      ok: false,
-      text: `At most ${agentPolicy.max_views_per_turn} views go under one reply. Answer with the ones placed.`,
-    };
+  const refusal = placementRefusal(state, view.data);
+  if (refusal) return refusal;
   const read = await readView(db, scope, view.data);
   switch (read.kind) {
     case 'invalid':
@@ -100,12 +106,15 @@ export async function showView(
         ok: true,
         text: `unavailable: ${read.reason}. Nothing was placed; say the data is not available yet, never that it is zero or empty.`,
       };
-    case 'available':
+    case 'available': {
+      const raced = placementRefusal(state, view.data);
+      if (raced) return raced;
       state.views.push(view.data);
       return {
         ok: true,
         text: 'Placed: the view shows under your reply with an Open in app link. State the finding in words; do not describe the chart.',
       };
+    }
     default: {
       const exhaustive: never = read;
       return exhaustive;
