@@ -165,14 +165,17 @@ export const commerceKinds = {
       const row = await product(context, payload.product_id);
       const current: Record<string, unknown> = row;
       return {
-        title: `Edit the product “${row.name}”`,
-        rows: Object.entries(payload.edit).map(([field, value]) => ({
-          label: field.replaceAll('_', ' '),
-          value:
-            field === 'categories'
-              ? `Now ${shown(value)}`
-              : `${shown(current[field])} → ${shown(value)}`,
-        })),
+        title: 'Edit a product',
+        rows: [
+          { label: 'Product', value: row.name },
+          ...Object.entries(payload.edit).map(([field, value]) => ({
+            label: field.replaceAll('_', ' '),
+            value:
+              field === 'categories'
+                ? `Now ${shown(value)}`
+                : `${shown(current[field])} → ${shown(value)}`,
+          })),
+        ],
         spend: null,
         opens: null,
       };

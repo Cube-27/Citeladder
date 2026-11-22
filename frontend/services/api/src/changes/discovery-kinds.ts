@@ -38,8 +38,9 @@ export const discoveryKinds = {
     },
     preview(_context, payload) {
       return Promise.resolve({
-        title: `Discover the brand ${payload.brand_name}`,
+        title: 'Discover a brand',
         rows: [
+          { label: 'Brand', value: payload.brand_name },
           { label: 'Website', value: payload.website_url },
           { label: 'Market', value: `${payload.primary_market} · ${payload.language_code}` },
         ],
@@ -68,8 +69,9 @@ export const discoveryKinds = {
     async preview(context, payload) {
       const found = await discovered(context, payload.discovery_id);
       return {
-        title: `Discover the brand ${found.brand} again`,
+        title: 'Discover a brand again',
         rows: [
+          { label: 'Brand', value: found.brand },
           { label: 'Website', value: found.website },
           { label: 'Last run', value: found.status },
         ],
@@ -101,8 +103,9 @@ export const discoveryKinds = {
       const found = await discovered(context, payload.discovery_id);
       const { completion } = payload;
       return {
-        title: `Create the project ${completion.name ?? found.brand}`,
+        title: 'Create a project from a brand discovery',
         rows: [
+          { label: 'Project', value: completion.name ?? found.brand },
           { label: 'Domains', value: completion.domains.join(', ') },
           {
             label: 'Competitors',
