@@ -33,6 +33,27 @@ export async function advisoryXactLock(
   await sql`select pg_advisory_xact_lock(${key}::bigint)`.execute(db);
 }
 
+export function whileTryLocked<T>(
+  db: Database,
+  input: Readonly<{ subject: string; busy: () => Error; run: () => Promise<T> }>,
+): Promise<T> {
+  return db.connection().execute(async (connection) => {
+    const { rows } = await sql<{
+      locked: boolean;
+    }>`select pg_try_advisory_lock(hashtextextended(${input.subject}, 0)) as locked`.execute(
+      connection,
+    );
+    if (!rows[0]?.locked) throw input.busy();
+    try {
+      return await input.run();
+    } finally {
+      await sql`select pg_advisory_unlock(hashtextextended(${input.subject}, 0))`.execute(
+        connection,
+      );
+    }
+  });
+}
+
 export async function subjectXactLock(db: Database, subject: string): Promise<void> {
   const key = createHash('sha256').update(subject).digest().readBigInt64BE(0).toString();
   await sql`select pg_advisory_xact_lock(${key}::bigint)`.execute(db);

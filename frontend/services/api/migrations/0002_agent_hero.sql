@@ -51,3 +51,7 @@ CREATE INDEX ix_agent_proposal_outcomes_project_id ON public.agent_proposal_outc
 CREATE INDEX ix_agent_proposal_outcomes_user_id ON public.agent_proposal_outcomes USING btree (user_id) WHERE (user_id IS NOT NULL);
 
 REVOKE UPDATE, DELETE ON public.agent_proposal_outcomes FROM citeladder_app;
+
+-- MCP offers a curated list of change kinds that grows in code
+-- (MCP_CHANGE_KINDS); prepare and confirm both check the kind against it.
+ALTER TABLE public.mcp_confirmations DROP CONSTRAINT ck_mcp_confirmations_kind;

@@ -194,11 +194,19 @@ describe('hosted MCP transport', () => {
       tokenHash: 'hash',
       canWrite: true,
     });
-    const hints = Object.fromEntries((await list()).map((tool) => [tool.name, tool.annotations]));
-    expect(hints.prepare_update_prompts).toEqual({
+    const listed = await list();
+    const readNames = new Set(readOnly.map((tool) => tool.name));
+    expect(listed.filter((tool) => !readNames.has(tool.name)).map((tool) => tool.name)).toEqual([
+      'preview_topics',
+      'prepare_change',
+      'confirm_change',
+    ]);
+    expect(listed).toHaveLength(42);
+    const hints = Object.fromEntries(listed.map((tool) => [tool.name, tool.annotations]));
+    expect(hints.prepare_change).toEqual({
       readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: true,
+      destructiveHint: false,
+      idempotentHint: false,
       openWorldHint: false,
     });
     expect(hints.confirm_change).toEqual({
@@ -207,8 +215,6 @@ describe('hosted MCP transport', () => {
       idempotentHint: false,
       openWorldHint: true,
     });
-    expect(hints.create_topic).toMatchObject({ readOnlyHint: false, destructiveHint: false });
-    expect(hints.cancel_audit).toMatchObject({ readOnlyHint: false, destructiveHint: true });
   });
   it('refuses a change over its budget as a tool error with the retry time', async () => {
     vi.mocked(authenticateMcp).mockResolvedValue({

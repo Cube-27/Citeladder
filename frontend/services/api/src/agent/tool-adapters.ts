@@ -4,6 +4,7 @@ import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { definitions, dispatchTool, presentationTools } from '../mcp/tools.ts';
 import { parseRecordId } from '../mcp/retrieval.ts';
+import { MCP_CHANGE_KINDS } from '../mcp/change-kinds.ts';
 import { writeTools } from '../mcp/write-tools.ts';
 import { stoppableReads } from './async.ts';
 import { ToolRegistry, toolDefinitions, type ReadTool } from './tools.ts';
@@ -73,6 +74,7 @@ const NOT_FOR_AGENT = new Set(['list_projects', ...presentationTools]);
 const MISSING_TOOLS: ReadonlySet<string> = new Set([
   ...NOT_FOR_AGENT,
   ...writeTools.map((tool) => tool.name),
+  ...MCP_CHANGE_KINDS,
 ]);
 function agentDescription(description: string) {
   return description

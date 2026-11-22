@@ -3,10 +3,12 @@ name: prompt-discovery
 description: Generate the buyer prompts an authorized CiteLadder project tracks by following its Prompt builder's steps (business facts, topics, mix and search data), then hand the suggestions to the user's review in CiteLadder. Requires a connected CiteLadder account approved with Allow changes.
 ---
 
-Follow CiteLadder's Prompt builder steps with its tools. CiteLadder writes
-every prompt; you never write prompt wording yourself or add prompts with
-`prepare_add_prompts`. Generated prompts are suggestions: only the user's
-Accept in CiteLadder tracks them.
+Follow CiteLadder's Prompt builder steps with its tools. Every change goes
+through `prepare_change`, which saves nothing and returns a preview, then
+`confirm_change` once the user agrees to that preview. CiteLadder writes every
+prompt; you never write prompt wording yourself or prepare the `add_prompts`
+kind. Generated prompts are suggestions: only the user's Accept in CiteLadder
+tracks them.
 
 ## 1. About the business
 
@@ -20,8 +22,9 @@ Accept in CiteLadder tracks them.
    changes are made in CiteLadder's Prompt builder; give the user the app link.
 4. If no offering is saved, topics and prompts cannot be proposed yet: ask the
    user to add what they sell in the Prompt builder, and stop.
-5. If the project has several prompt sets, page `read_prompt_portfolio`, ask
-   which set by name, and pass its `prompt_set_id` to `generate_prompts`.
+5. Call `read_prompt_portfolio` for the project's prompt sets. If it has
+   several, ask which set by name. Use that set's `prompt_set_id` for the
+   `generate_prompts` kind.
 
 ## 2. Topics
 
@@ -29,8 +32,9 @@ Accept in CiteLadder tracks them.
    many more there are. A topic is a category a buyer asks about ("golf nets"),
    never a product line, model, size or the brand.
 2. Let the user keep, rename, delete or add topics. Once they agree to the
-   final list, call `confirm_topics` once with exactly that plan. If they keep
-   the existing topics unchanged, skip it.
+   final list, call `prepare_change` with the `confirm_topics` kind and
+   exactly that plan, show its preview, and call `confirm_change` once they
+   agree. If they keep the existing topics unchanged, skip it.
 
 ## 3. Mix and search data
 
@@ -47,13 +51,14 @@ Accept in CiteLadder tracks them.
 
 ## 4. Generate and review
 
-1. Summarize the run (number, topics, mix, search data, any note) and wait for
-   the user's yes. Then call `generate_prompts` once, with a new random
-   `run_key`. Each run spends AI credits: never repeat a call that returned,
-   and resend the same `run_key` if you must retry one that failed to reply.
+1. Call `prepare_change` with the `generate_prompts` kind for the agreed run
+   (number, topics, mix, search data, any note). Show its preview, including
+   the AI credits it may spend, and wait for the user's yes. Then call
+   `confirm_change` once. A token runs at most one generation: if a confirm
+   fails to reply, resending the same token never spends a second run.
 2. Report how many suggestions were staged, a few of them as written, and any
-   shortfall or dropped reasons in plain words. Send the user to the returned
-   review link to accept or reject them. Never say the prompts are tracked.
+   shortfall or dropped reasons in plain words. Send the user to the preview's
+   link to review them in CiteLadder. Never say the prompts are tracked.
 
 ## Rules
 

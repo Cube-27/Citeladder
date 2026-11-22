@@ -228,31 +228,6 @@ async function screen<T extends { text: string; topic_id?: string | null }>(
   });
 }
 
-export async function screenPrompts(
-  db: Database,
-  scope: RecordScope,
-  promptSetId: string,
-  inputs: readonly z.infer<typeof promptInput>[],
-) {
-  const set = await scopedPromptSet(db, scope.workspaceId, promptSetId, scope.projectId);
-  const screened = await screen(db, set, inputs);
-  return {
-    admitted: screened.flatMap((item) => (item.problem === null ? [item.input] : [])),
-    dropped: screened.flatMap(({ input, problem }) =>
-      problem === null
-        ? []
-        : [
-            {
-              text: input.text,
-              ...(problem.kind === 'binding'
-                ? BINDING_FAILURES[problem.failure]
-                : { code: 'duplicate', message: DUPLICATE }),
-            },
-          ],
-    ),
-  };
-}
-
 export async function createPrompts(
   db: Database,
   scope: RecordScope,

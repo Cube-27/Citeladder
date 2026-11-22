@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { z } from 'zod';
 import * as sharedTools from '../src/mcp/tools.ts';
+import { isMcpChangeKind } from '../src/mcp/change-kinds.ts';
 import { writeTools } from '../src/mcp/write-tools.ts';
 import { AgentFixtures, reply, save, scripted, toolUse, type Response } from './agent-support.ts';
 import { testDatabase } from './support.ts';
@@ -133,14 +134,21 @@ describe('Agent bindings to the evidence and Action owners', () => {
           ),
         )
       ).flatMap((body) =>
-        [...body.matchAll(/`((?:read|list|get|render|open)_[a-z_]+|search|fetch)`/gu)].map(
-          (match) => match[1]!,
-        ),
+        [
+          ...body.matchAll(
+            /`((?:read|list|get|render|open|prepare|confirm|preview)_[a-z_]+|search|fetch)`/gu,
+          ),
+        ].map((match) => match[1]!),
       ),
     );
     expect(pluginNamed.size).toBeGreaterThan(0);
     expect(
-      [...pluginNamed].filter((name) => !Object.hasOwn(sharedTools.definitions, name)),
+      [...pluginNamed].filter(
+        (name) =>
+          !Object.hasOwn(sharedTools.definitions, name) &&
+          !writeTools.some((tool) => tool.name === name) &&
+          !isMcpChangeKind(name),
+      ),
     ).toEqual([]);
   });
   it('stops issuing a shared read’s queries once its signal aborts', async () => {

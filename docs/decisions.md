@@ -162,12 +162,15 @@ how to add or change an entry.
   brand-fact scope; verdict overrides stay in the app. v1 keeps its conventions
   (no RFC 9457, no offset paging). Owner, 2026-10-10 (D4.1–D4.3), 2026-11-18
   and 2026-11-22.
-- **MCP writes are confirmed user decisions.** Only with **Allow changes** ticked
-  at consent (default off, adds `citeladder:write`); larger changes go through
-  `confirm_change` after a previewed dry run. Prompts added over MCP are active
-  at once; competitor suggestions are accepted or rejected directly; bulk
-  activate, archive and assign-topic is one prepared change; **no prompt delete
-  over MCP**. Owner, 2026-10-10 (D4.2, D4.4) and 2026-11-18
+- **MCP is for analysis and writing, with a curated set of changes.** Fewer
+  than 60 tools in total, the fewer the better; MCP has no clients to keep
+  compatible, so tools may be renamed, merged or removed. Changes need **Allow
+  changes** at consent (default off, adds `citeladder:write`) and all go through
+  one prepare tool and `confirm_change` after a previewed dry run. MCP offers
+  only the changes a person needs while analysing, not every kind the Agent
+  has: most Action and destructive kinds stay off, the only deletes are
+  removing a competitor and deleting a topic, and **no prompt or prompt-set
+  delete over MCP**. Owner, 2026-10-10 (D4.2, D4.4) and 2026-11-22
   ([MCP](mcp.md#changes)).
 - **MCP reads grow by views first.** MCP and the Agent share one read catalogue
   in the Agent's cached prefix, so new reads are views or parameters on existing

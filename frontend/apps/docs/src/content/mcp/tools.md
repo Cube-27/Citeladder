@@ -60,11 +60,21 @@ Clients that support MCP prompts list `business_health_review`, which starts a g
 
 ## Make changes
 
-A connection approved with **Allow changes** also lists change tools, marked **Changes** in the catalog below. `create_topic`, `rename_topic`, `delete_topic`, `confirm_topics`, `update_prompt_text`, `add_competitor`, `remove_competitor`, `review_competitor_suggestion`, `update_action_status` and `cancel_audit` run when called. `prepare_add_prompts`, `prepare_update_prompts`, `prepare_launch_audit`, `prepare_schedule` and `prepare_declare_implemented` return a preview and a confirmation token; nothing changes until the assistant calls `confirm_change` with that token after you agree.
+A connection approved with **Allow changes** also lists three change tools, marked **Changes** in the catalog below. Every change goes through `prepare_change`: the assistant names a kind of change and its details, and CiteLadder checks it, saves nothing and returns a preview with a confirmation token. Nothing changes until the assistant calls `confirm_change` with that token after you agree. A token works once, for ten minutes. A preview shows what a delete removes and what a paid run can spend; nothing is spent before you confirm.
 
-`review_competitor_suggestion` accepts or rejects one suggestion that `read_competitors` lists with `view: suggestions`. `prepare_update_prompts` activates, archives or files a selection of prompts under one topic as a single change; every prompt must be in the project, or nothing changes. Prompts cannot be deleted over MCP: delete them in CiteLadder.
+MCP offers the changes that help while analysing and writing:
 
-To generate prompts, the assistant follows the Prompt builder's steps: it checks your business facts with `get_project_business_context`, proposes topics with `preview_topics` and saves the ones you agree to with `confirm_topics`, offers your search data with `read_seed_queries`, then runs `generate_prompts` once you agree to the run. Topic previews and generation spend AI credits. Generated prompts wait in the Prompt builder's **Review** step, which the assistant links to; only the ones you track there are measured.
+- **Prompts and topics:** add prompts, activate, archive or file prompts under a topic, reword a prompt, create and rename a topic, save a topic plan, generate prompts and import prompts.
+- **Competitors and markets:** add a competitor, accept or reject a competitor suggestion, add a market.
+- **Measurement:** launch or cancel an audit, re-run an audit's failed answers, create an audit schedule, run a probe.
+- **Site Health:** start or cancel a crawl, re-run a page, start an internal-link analysis.
+- **Actions:** set an Action's status, declare an Action implemented, analyze a page.
+- **Data in:** import brand facts and the product catalog.
+- **Deletes:** stop tracking a competitor and delete a topic.
+
+Everything else, including deleting prompts or prompt sets, is done in CiteLadder.
+
+To generate prompts, the assistant follows the Prompt builder's steps: it checks your business facts with `get_project_business_context`, proposes topics with `preview_topics` and saves the plan you agree to, offers your search data with `read_seed_queries`, then prepares one generation run for you to confirm. Topic previews and generation spend AI credits. Generated prompts wait for your review in CiteLadder; only the ones you track there are measured.
 
 ## Read records and windows precisely
 
