@@ -3,7 +3,7 @@ title: 'Prompts and topics'
 description: 'Track questions that represent real buying decisions, and keep their purpose clear.'
 group: 'Measure and understand'
 order: 100
-updated: '2026-11-18'
+updated: '2026-11-22'
 ---
 
 A prompt is a question you want to investigate in AI search. Topics organize related questions; the prompt's cohort preserves what kind of question it is.
@@ -26,10 +26,16 @@ Open **Prompts** and choose **Add prompts → Prompt builder** (**Write a prompt
 
 1. **About your business.** Check what you sell, who buys each offering, the situations and attributes that shape the choice, buyer roles, category terms, jobs to be done and your business model. Service areas appear for local and regional businesses. **Anything else for this run** steers this run only, without changing saved facts.
 2. **Topics.** Keep, rename or remove your topics, or add your own. **Suggest topics** proposes buyer-facing categories from your saved offerings, without your brand or product-line names; each suggestion uses AI credits. **Confirm topics** saves the whole plan at once.
-3. **Distribution.** Choose the number of prompts, the branded share (20% by default), the share of competitor-alternative questions (available once you track a competitor), the intent mix (25/50/25 by default), the personas to balance across, and whether to use your search data. Each search the run would use is listed by topic, and you can untick any of them.
+3. **Distribution.** **What to generate** picks **Buyer questions** or **Brand prompts** (see below). For buyer questions, choose the number of prompts, the branded share (20% by default), the share of competitor-alternative questions (available once you track a competitor), the intent mix (25/50/25 by default), the personas to balance across, and whether to use your search data. Each search the run would use is listed by topic, and you can untick any of them.
 4. **Review.** Select the suggestions worth tracking and choose **Track N prompts**, or **Reject selected** for the rest. A coverage line for each topic and each part of the mix shows whether it is on target, short or empty; **More** on a short or empty line generates again for just that topic or share.
 
 Suggestions are short questions about one need each, planned across awareness, consideration and decision. Questions that join two alternatives, run past 16 words or closely repeat another prompt are dropped before you see them, and a branded question may only describe you with attributes you confirmed.
+
+While the builder suggests topics or writes questions, it shows what it is doing; writing can take a minute or two, so keep the page open.
+
+### Brand prompts
+
+**Brand prompts** ask about your business directly, so more answers describe you on [Perception](/perception/). Choose up to 10 per run; a project holds at most 30, tracked and waiting for review together. Each one asks one thing about an offering from your topics: whether it is recommended for a need you confirmed, its pros and cons, reasons not to choose it, whether it is worth the price, what reviews say, or how it compares with a competitor you track. A question never states a fact about you, and one that does is dropped. Brand prompts carry the intent **Brand evaluation** in the Prompts filters.
 
 The in-app Agent's prompt discovery skill writes a prompt plan following the same steps and links to the builder; it never writes or activates prompts. An assistant connected over [MCP](/mcp/tools/#make-changes) can run the same steps with your agreement.
 

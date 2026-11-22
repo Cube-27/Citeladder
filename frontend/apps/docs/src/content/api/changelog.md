@@ -3,10 +3,19 @@ title: 'API changelog'
 description: 'Additions and changes to the REST API within v1.'
 group: 'API'
 order: 356
-updated: '2026-11-18'
+updated: '2026-11-22'
 ---
 
 Additions and changes within `v1`. Existing fields keep their meaning; new fields and operations are added without a new version.
+
+## November 22, 2026: Google AI Mode, brand prompts and perception attributes
+
+- `google_ai_mode` is a new engine value in [Launch an audit](/api/endpoints/audits/launch-an-audit/), [Estimate an audit](/api/endpoints/audits/estimate-an-audit/) and audit schedules, and appears in visibility results for runs that measured it.
+- [Generate prompts](/api/endpoints/prompts/generate-prompts/) takes `mode`: `market` (the default, unchanged) or `brand`, which writes up to 10 questions about the business itself. A project holds at most 30 brand prompts, tracked and pending together; a request over that is refused with 422 before anything is spent. Brand prompts carry the new intent value `evaluation`.
+- [Get answer perception](/api/endpoints/visibility/get-answer-perception/): each quote has an `attribute`, the point in a buyer's words (`labelled` with its `name`, `not_found`, or `not_labelled` for answers labelled before attributes existed), and each entity has `categories` with their mentions, positive and negative counts and most raised attributes.
+- [List visibility markets](/api/endpoints/visibility/list-visibility-markets/): each market has `responses`, the answers its mention rate is counted over.
+
+Answers from engines reached through a provider API are now collected without a length instruction and can be longer; runs collected before and after this change are not compared directly.
 
 ## November 18, 2026: Bulk prompt changes
 

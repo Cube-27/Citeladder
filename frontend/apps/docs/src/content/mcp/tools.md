@@ -64,7 +64,7 @@ A connection approved with **Allow changes** also lists three change tools, mark
 
 MCP offers the changes that help while analysing and writing:
 
-- **Prompts and topics:** add prompts, activate, archive or file prompts under a topic, reword a prompt, create and rename a topic, save a topic plan, generate prompts and import prompts.
+- **Prompts and topics:** add prompts, activate, archive or file prompts under a topic, reword a prompt, create and rename a topic, save a topic plan, generate buyer questions or [brand prompts](/prompts/#brand-prompts) and import prompts.
 - **Competitors and markets:** add a competitor, accept or reject a competitor suggestion, add a market.
 - **Measurement:** launch or cancel an audit, re-run an audit's failed answers, create an audit schedule, run a probe.
 - **Site Health:** start or cancel a crawl, re-run a page, start an internal-link analysis.

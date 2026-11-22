@@ -8,6 +8,38 @@ updated: '2026-11-22'
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## November 22, 2026: Google AI Mode as an engine
+
+**Google AI Mode** is a new engine beside ChatGPT, Claude, Gemini and Google AI Overviews, read from Google's results the way AI Overviews are, in the same countries and in the same languages except Portuguese. The audit launcher selects it with the other engines, so a new run asks one more engine unless you untick it; the estimate shows the difference before you confirm. Existing schedules keep their engines. Insights shows AI Mode's own rates when you narrow the surface to it, and engine filters, breakdowns, exports, the API and MCP list it.
+
+**For your team:** tick Google AI Mode in your schedules if you want it measured on a cadence.
+
+[Audits and runs](/runs/)
+
+## November 22, 2026: Answers collected the way a person gets them
+
+ChatGPT, Claude and Gemini reached through their APIs no longer get an instruction on answer length or style, may write longer answers, and ChatGPT and Claude can search the web up to twice for each answer. The engine's full response is stored as evidence. Answers are now longer and closer to what a person sees, so a project's first run after this change starts a new comparison series: Insights breaks the trend line there and shows no change against earlier runs. The price of a run is unchanged.
+
+**For your team:** read mention rate and position against runs collected after this change, not before it.
+
+## November 22, 2026: Perception over a period, buyer-worded points and brand prompts
+
+**Perception → Brand** now reads every completed brand run in a period, the last 90 days by default, instead of one run, and says how many runs and answers it covers. Below 20 classified mentions, **Positive**, **Negative**, **Recommended**, **How AI judges you** and the breakdowns now show their share with its counts and **small sample** instead of hiding it. Each point an answer makes about you is labelled with a short attribute in a buyer's words, shown before the quote in **Breakdown by theme**, under categories that start from your themes; you can rename or delete them in **Agent → Context**, and the Agent can merge two. Selecting a quote or prompt on Perception and Fact-checking opens the answer over the page.
+
+The Prompt builder can write **Brand prompts**, up to 10 questions that ask about your business directly, such as its pros and cons or whether it is worth the price; the Brand tab links to it when few answers describe you. **Market** and **Objections** show each step while a probe runs, and **Export themes CSV** and **Export objections CSV** list every page cited behind them, including pages CiteLadder could not read. Keyword research and the Prompt builder show progress while they work.
+
+**For your team:** add brand prompts if the Brand tab says few answers describe you, and export a probe's cited pages to check the blocked ones by hand.
+
+[Perception](/perception/) · [Brand prompts](/prompts/#brand-prompts)
+
+## November 22, 2026: The Agent proposes changes as cards, and API keys by access
+
+The Agent can now propose changes to your project as a card under its reply: prompts, topics, competitors, markets, audits and schedules, crawls, probes, keyword research runs, connected data, products, brand details and Actions. The card shows what will change and what it can spend, and nothing happens until you choose **Confirm**. **Attach files** lets it turn a CSV or text file into an import of prompts, brand facts or products. A reply can show the app's own charts and tables, and you pick the model and effort for each chat.
+
+**Settings → API keys** creates a **Read** or **Read and write** key with an expiry of 1, 7, 30 or 90 days, a custom date or never, and a key can be deleted. **Settings → MCP connections** shows your connections, and for Owners and Admins other members' connections to the workspace, in one table.
+
+**For your team:** see [Know the boundary](/agent/#know-the-boundary) and [API authentication](/api/authentication/).
+
 ## November 22, 2026: MCP changes go through one preview tool
 
 An assistant connected over MCP with **Allow changes** now makes every change with two tools: `prepare_change` previews a change and saves nothing, and `confirm_change` makes it after you agree. The separate change tools (`prepare_add_prompts`, `create_topic`, `generate_prompts` and the others) are gone. MCP now also offers importing prompts, brand facts and the product catalog, adding a market, re-running an audit's failures, running a probe, starting or cancelling a crawl, re-running a page, starting an internal-link analysis, analyzing a page, quoting and starting a Keyword research run, recomputing demand and syncing performance data. Deleting prompts and prompt sets stays in CiteLadder.
