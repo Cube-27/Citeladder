@@ -40,7 +40,11 @@ function pageRows(score: string | number, pages: readonly ProbePage[]): PageRow[
 }
 
 function bounded<Row>(rows: Row[]): Row[] {
-  assertExportBound(rows.length, policy.probes.export_max_rows);
+  assertExportBound(
+    rows.length,
+    policy.probes.export_max_rows,
+    'this probe cites more pages than one file holds; open them from the tab',
+  );
   return rows;
 }
 
