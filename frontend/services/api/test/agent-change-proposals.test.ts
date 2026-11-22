@@ -75,7 +75,7 @@ async function setRole(scope: Scope, role: string) {
 it('stages a dry-run proposal that commits with the reply, then executes once for a member of its workspace', async () => {
   const t = await tenant();
   const stranger = await tenant();
-  const added = 'Which trail shoes grip best?';
+  const added = 'Which running shoes grip trails best?';
   const { chatId, messageId, proposals } = await proposed(t.scope, [
     { kind: 'add_prompts', payload: { prompt_set_id: t.setId, prompts: [] } },
     { kind: 'add_prompts', payload: { prompt_set_id: t.setId, prompts: [{ text: added }] } },
@@ -151,7 +151,7 @@ it('previews a paid launch with its spend and holds nothing until the click', as
   expect(proposals).toMatchObject([
     {
       title: 'Launch an audit',
-      spend: expect.stringMatching(/^Up to 1 prompt run, in at most \d+ provider attempts?$/u),
+      spend: 'Up to 3 prompt runs, in at most 9 provider attempts',
       opens: { label: 'Open Runs', path: '/runs' },
     },
   ]);

@@ -124,7 +124,7 @@ function refusal(error: unknown): BuiltinOutcome {
   if (error instanceof ApiError && error.status >= 400 && error.status < 500)
     return {
       ok: false,
-      text: `This change would be refused now: ${error.message}. Correct it, or tell the person why it cannot be made.`,
+      text: `This change would be refused now: ${error.message.replace(/\.$/u, '')}. Correct it, or tell the person why it cannot be made.`,
     };
   throw error;
 }
