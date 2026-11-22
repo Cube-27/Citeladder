@@ -104,7 +104,10 @@ export function entityPassages(input: {
   answer: string;
   languageCode: string;
   config: ScoringConfig;
-  policy: Pick<PerceptionPolicy, 'max_entities' | 'max_passage_chars_per_entity'>;
+  policy: Pick<
+    PerceptionPolicy,
+    'max_entities' | 'max_passage_chars_per_entity' | 'max_passage_chars_per_brand'
+  >;
   promptNamesBrand: boolean;
 }): EntityPassages[] {
   const { answer, policy } = input;
@@ -131,7 +134,10 @@ export function entityPassages(input: {
   ];
   const selected = [...brand, ...competitors].slice(0, policy.max_entities);
   return selected.map(({ entity, occurrences, windows: fixed }) => {
-    let budget = policy.max_passage_chars_per_entity;
+    let budget =
+      entity.kind === 'brand'
+        ? policy.max_passage_chars_per_brand
+        : policy.max_passage_chars_per_entity;
     const spans: Span[] = [];
     for (const window of fixed ?? windows(occurrences, ranges)) {
       if (budget <= 0) break;

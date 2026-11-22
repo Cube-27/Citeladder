@@ -33,10 +33,12 @@ import {
   updateBrandFact,
 } from '../projects/brand-facts.ts';
 import { businessMapUpdate, readBusinessMap, updateBusinessMap } from '../projects/business-map.ts';
+import { projectThemeMergeRequestSchema } from '@citeladder/contracts/project-requests';
 import {
   createTheme,
   deleteTheme,
   listThemes,
+  mergeThemes,
   renameTheme,
   themeRequest,
 } from '../projects/themes.ts';
@@ -191,6 +193,22 @@ export const brandIdentityRoutes = [
         { ...projectScopeOf(c, path.project_id), themeId: path.theme_id },
         input,
       );
+    },
+  }),
+  definePostRoute({
+    ...activeProject,
+    path: `${root}/themes/{theme_id}/merge`,
+    capability: 'write',
+    params: { path: { ...projectPath, theme_id: uuid }, query: {} },
+    body: projectThemeMergeRequestSchema,
+    response: projectThemeSchema,
+    async handle({ c, db }, { path }) {
+      const { into_id: intoId } = await readBody(c, projectThemeMergeRequestSchema);
+      return mergeThemes(db, {
+        ...projectScopeOf(c, path.project_id),
+        themeId: path.theme_id,
+        intoId,
+      });
     },
   }),
   defineDeleteRoute({

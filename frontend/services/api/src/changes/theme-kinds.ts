@@ -4,6 +4,7 @@ import {
   createTheme,
   deleteTheme,
   listThemes,
+  mergeThemes,
   renameTheme,
   themeRequest,
 } from '../projects/themes.ts';
@@ -65,6 +66,33 @@ export const themeKinds = {
         rows: [
           { label: 'Now', value: await themeName(context, payload.theme_id) },
           { label: 'After', value: payload.name },
+        ],
+        spend: null,
+        opens: PERCEPTION,
+      };
+    },
+  }),
+  merge_themes: changeKind({
+    permission: MEMBER_WRITE,
+    purpose:
+      'merge one perception theme into another; its labelled answers and probe answers move and it is deleted',
+    payload: z.strictObject({ theme_id: z.uuid(), into_id: z.uuid() }),
+    async execute(trx, _config, actor, change, payload) {
+      const kept = await mergeThemes(trx, {
+        workspaceId: actor.workspaceId,
+        projectId: change.projectId,
+        themeId: payload.theme_id,
+        intoId: payload.into_id,
+      });
+      return { summary: `Merged into “${kept.name}”.` };
+    },
+    async preview(context, payload) {
+      return {
+        title: 'Merge themes',
+        rows: [
+          { label: 'Merge', value: await themeName(context, payload.theme_id) },
+          { label: 'Into', value: await themeName(context, payload.into_id) },
+          PERMANENT,
         ],
         spend: null,
         opens: PERCEPTION,

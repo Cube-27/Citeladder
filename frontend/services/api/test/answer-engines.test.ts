@@ -615,7 +615,11 @@ describe('frozen answer-engine execution', () => {
       answer: result.answer_text,
       languageCode: 'en',
       config: scoringConfig({ brand_name: 'Acme Running' }),
-      policy: { max_entities: 5, max_passage_chars_per_entity: 600 },
+      policy: {
+        max_entities: 5,
+        max_passage_chars_per_entity: 600,
+        max_passage_chars_per_brand: 600,
+      },
       promptNamesBrand: false,
     });
     expect(brand?.spans.map((span) => span.text)).toEqual([

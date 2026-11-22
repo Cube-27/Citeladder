@@ -101,7 +101,7 @@ export async function probeSubject(
   return {
     brand: project.brand ?? project.brand_name,
     category: probeCategory(project.business_context, project.industry),
-    themes: await listThemes(db, scope),
+    themes: (await listThemes(db, scope)).filter((theme) => theme.source !== 'model'),
   };
 }
 

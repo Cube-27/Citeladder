@@ -6,7 +6,7 @@ import { sql, type Kysely } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { isUniqueViolation } from '../db/errors.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
@@ -34,7 +34,11 @@ type ThemeRequest = z.infer<typeof themeRequest>;
 const COLUMNS = ['id', 'name', 'source'] as const;
 
 function view(row: { id: string; name: string; source: string }): ProjectTheme {
-  return { id: row.id, name: row.name, source: z.enum(['research', 'user']).parse(row.source) };
+  return {
+    id: row.id,
+    name: row.name,
+    source: z.enum(['research', 'user', 'model']).parse(row.source),
+  };
 }
 
 async function writing<T>(write: () => Promise<T>): Promise<T> {
@@ -58,6 +62,54 @@ export async function listThemes(db: Kysely<DB>, scope: ProjectScope): Promise<P
     .orderBy('id')
     .execute();
   return rows.map(view);
+}
+
+export async function mergeThemes(
+  db: Database,
+  scope: ProjectScope & { themeId: string; intoId: string },
+) {
+  if (scope.themeId === scope.intoId) throw new ApiError(400, 'Choose another theme to merge into');
+  return inTransaction(db, async (trx) => {
+    const themes = await trx
+      .selectFrom('project_themes')
+      .select(COLUMNS)
+      .where('id', 'in', [scope.themeId, scope.intoId])
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .orderBy('id')
+      .forUpdate()
+      .execute();
+    const kept = themes.find((theme) => theme.id === scope.intoId);
+    if (themes.length !== 2 || !kept) throw notFound('Theme');
+    await sql`
+      update entity_sentiments as es
+      set aspects = (
+        select jsonb_agg(
+          case when aspect->>'theme_id' = ${scope.themeId}
+            then jsonb_set(aspect, '{theme_id}', to_jsonb(${scope.intoId}::text))
+            else aspect end
+          order by position)
+        from jsonb_array_elements(es.aspects) with ordinality as item(aspect, position))
+      from answer_perceptions as perception
+      where perception.id = es.perception_id
+        and perception.workspace_id = es.workspace_id
+        and perception.workspace_id = ${scope.workspaceId}
+        and perception.project_id = ${scope.projectId}
+        and es.aspects @> ${JSON.stringify([{ theme_id: scope.themeId }])}::jsonb`.execute(trx);
+    await trx
+      .updateTable('probe_answer_items')
+      .set({ theme_id: scope.intoId })
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('theme_id', '=', scope.themeId)
+      .execute();
+    await trx
+      .deleteFrom('project_themes')
+      .where('id', '=', scope.themeId)
+      .where('workspace_id', '=', scope.workspaceId)
+      .execute();
+    return view(kept);
+  });
 }
 
 export function createTheme(db: Database, scope: ProjectScope, input: ThemeRequest) {

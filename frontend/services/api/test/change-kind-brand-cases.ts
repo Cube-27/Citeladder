@@ -18,6 +18,7 @@ type BrandKind = Extract<
   | 'override_claim_verdict'
   | 'create_theme'
   | 'rename_theme'
+  | 'merge_themes'
   | 'delete_theme'
   | 'start_brand_discovery'
   | 'rerun_brand_discovery'
@@ -313,6 +314,21 @@ export function brandCases(db: Database, fixtures: SiteFixtures): Record<BrandKi
           observe: () => themeNames(t),
           before: ['Comfort'],
           after: ['Grip'],
+        };
+      },
+    },
+    merge_themes: {
+      foreign: 404,
+      async arrange() {
+        const t = await tenant();
+        const theme = await createTheme(db, t, { name: 'Comfort' });
+        const into = await createTheme(db, t, { name: 'Fit' });
+        return {
+          scope: t,
+          payload: { theme_id: theme.id, into_id: into.id },
+          observe: () => themeNames(t),
+          before: ['Comfort', 'Fit'],
+          after: ['Fit'],
         };
       },
     },

@@ -29,6 +29,7 @@ import {
 import { entityPassages, packageHash, type PerceptionPackage } from './passages.ts';
 import { untrackedNames, type UntrackedName } from './untracked-names.ts';
 import { listThemes } from '../projects/themes.ts';
+import { newCategoryNames, saveModelCategories, storedAspects } from './categories.ts';
 import { trackedEntities } from '../analysis/entity-assessment.ts';
 import { refreshNamedCandidates } from '../analysis/observed-names.ts';
 import {
@@ -99,17 +100,40 @@ function needsVerification(claims: readonly VerifiedClaim[], factCheck: FrozenFa
   return claims.some((claim) => !claim.low_confidence && topics.has(claim.topic));
 }
 
-function persist(
-  task: QueueTask,
-  projectId: string,
-  subject: Subject,
-  versions: { extractor_version: string; template_version: string },
-  outcome: Outcome,
-  call: ModelCall | null,
-  factCheck: FrozenFactCheck | null,
-) {
+function persist({
+  task,
+  projectId,
+  subject,
+  versions,
+  outcome,
+  call,
+  factCheck,
+  settings,
+}: {
+  task: QueueTask;
+  projectId: string;
+  subject: Subject;
+  versions: { extractor_version: string; template_version: string };
+  outcome: Outcome;
+  call: ModelCall | null;
+  factCheck: FrozenFactCheck | null;
+  settings: Pick<PerceptionPolicy, 'project_themes'>;
+}) {
   return async (db: Database) => {
     const id = randomUUID();
+    const entities = outcome.outcome === 'classified' ? outcome.entities : [];
+    const ids = await saveModelCategories(db, {
+      workspaceId: task.workspace_id,
+      projectId,
+      names: entities.flatMap((entity) => newCategoryNames(entity.aspects)),
+      policy: settings,
+    });
+    const stored = entities.map((entity) => ({ entity, ...storedAspects(entity.aspects, ids) }));
+    const capped = stored.reduce((sum, row) => sum + row.capped, 0);
+    const drops =
+      outcome.outcome === 'classified'
+        ? { ...outcome.drops, ...(capped ? { category_limit: capped } : {}) }
+        : {};
     const inserted = await db
       .insertInto('answer_perceptions')
       .values({
@@ -122,17 +146,17 @@ function persist(
         artifact_id: subject.artifact_id,
         extractor_version: versions.extractor_version,
         template_version: versions.template_version,
-        ...outcomeColumns(outcome, outcome.outcome === 'classified' ? outcome.drops : {}, call),
+        ...outcomeColumns(outcome, drops, call),
       })
       .onConflict((conflict) => conflict.columns(['analysis_id', 'extractor_version']).doNothing())
       .returning('id')
       .executeTakeFirst();
     if (!inserted || outcome.outcome !== 'classified') return;
-    if (outcome.entities.length)
+    if (stored.length)
       await db
         .insertInto('entity_sentiments')
         .values(
-          outcome.entities.map((entity) => ({
+          stored.map(({ entity, aspects }) => ({
             id: randomUUID(),
             workspace_id: task.workspace_id,
             perception_id: id,
@@ -144,7 +168,7 @@ function persist(
             low_confidence: entity.low_confidence,
             model_omitted: entity.model_omitted,
             passage_spans: JSON.stringify(entity.passage_spans),
-            aspects: JSON.stringify(entity.aspects),
+            aspects: JSON.stringify(aspects),
           })),
         )
         .execute();
@@ -254,7 +278,16 @@ export function answerPerception(
     const factCheck = frozenFactCheck(subject.configuration);
     const settle = (outcome: Outcome, call: ModelCall | null = null) => ({
       error: null,
-      persist: persist(task, projectId, subject, versions, outcome, call, factCheck),
+      persist: persist({
+        task,
+        projectId,
+        subject,
+        versions,
+        outcome,
+        call,
+        factCheck,
+        settings,
+      }),
     });
     const capped = await overCap(db, 'answer_perceptions', {
       workspaceId: task.workspace_id,
@@ -304,13 +337,14 @@ export async function compensatePerception(db: Database, task: QueueTask) {
   const subject = await loadSubject(db, task, projectId);
   const versions = frozenPerceptionVersions(subject.configuration);
   if (!versions) return;
-  await persist(
+  await persist({
     task,
     projectId,
     subject,
     versions,
-    { outcome: 'unavailable', reason: 'task_failed' },
-    null,
-    null,
-  )(db);
+    outcome: { outcome: 'unavailable', reason: 'task_failed' },
+    call: null,
+    factCheck: null,
+    settings: policy.perception,
+  })(db);
 }

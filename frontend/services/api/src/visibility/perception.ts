@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   perceptionLabelSchema,
   type ExecutionPerception,
+  type PerceptionAttribute,
   type PerceptionResponse,
 } from '@citeladder/contracts/visibility-perception';
 
@@ -60,6 +61,7 @@ const aspectsSchema = z
   .array(
     z.object({
       theme_id: z.string().nullable().catch(null),
+      attribute: z.string().nullable().optional(),
       polarity: z.enum(['positive', 'negative']),
       quote: z.string(),
       start: z.number().int(),
@@ -91,14 +93,20 @@ async function themeNames(db: Database, workspaceId: string, projectIds: readonl
   return new Map(rows.map((row) => [row.id, row.name]));
 }
 
+function attributeOf(attribute: string | null | undefined): PerceptionAttribute {
+  if (attribute === undefined) return { kind: 'not_labelled' };
+  return attribute === null ? { kind: 'not_found' } : { kind: 'labelled', name: attribute };
+}
+
 function entityRow(row: unknown, names: ReadonlyMap<string, string>): EntityRow {
   const entity = entityRowSchema.parse(row);
   const fallback = policy.perception.project_themes.fallback;
   return {
     ...entity,
-    aspects: aspectsSchema.parse(entity.aspects).map(({ theme_id, ...aspect }) => ({
+    aspects: aspectsSchema.parse(entity.aspects).map(({ theme_id, attribute, ...aspect }) => ({
       ...aspect,
       theme: (theme_id === null ? undefined : names.get(theme_id)) ?? fallback,
+      attribute: attributeOf(attribute),
     })),
   };
 }
@@ -314,7 +322,7 @@ export async function groupedSentiments(
 }
 
 export function sentimentsOf(answers: readonly PerceptionAnswer[]) {
-  return entityScores(answers).map(({ name, is_brand, score, coverage }) => ({
+  return entityScores(answers, policy.perception).map(({ name, is_brand, score, coverage }) => ({
     name,
     is_brand,
     sentiment: {

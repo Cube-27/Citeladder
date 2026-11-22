@@ -15,7 +15,8 @@ export const perceptionOutputSchema = z.object({
       confidence: z.number().min(0).max(1),
       aspects: z.array(
         z.object({
-          theme: z.string(),
+          category: z.string(),
+          attribute: z.string(),
           polarity: z.enum(['positive', 'negative']),
           quote: z.string(),
         }),
@@ -48,7 +49,11 @@ export function perceptionPrompt(
   pkg: PerceptionPackage,
   policy: Pick<
     PerceptionPolicy,
-    'system_template' | 'user_template' | 'project_themes' | 'max_aspects_per_entity'
+    | 'system_template'
+    | 'user_template'
+    | 'project_themes'
+    | 'max_aspects_per_entity'
+    | 'max_aspects_per_brand'
   >,
   claims: ClaimsRequest | null = null,
 ) {
@@ -61,14 +66,15 @@ export function perceptionPrompt(
   const slots: Record<string, string> = {
     '{prompt}': pkg.prompt,
     '{language}': pkg.language || 'unknown',
-    '{themes}': [...pkg.themes.map((theme) => theme.name), policy.project_themes.fallback].join(
+    '{categories}': [...pkg.themes.map((theme) => theme.name), policy.project_themes.fallback].join(
       ', ',
     ),
+    '{max_brand_aspects}': String(policy.max_aspects_per_brand),
     '{max_aspects}': String(policy.max_aspects_per_entity),
     '{entities}': JSON.stringify(entities, null, 2),
   };
   const user = policy.user_template.replaceAll(
-    /\{(?:prompt|language|themes|max_aspects|entities)\}/gu,
+    /\{(?:prompt|language|categories|max_brand_aspects|max_aspects|entities)\}/gu,
     (slot) => slots[slot]!,
   );
   if (!claims) return { system: policy.system_template, user };
