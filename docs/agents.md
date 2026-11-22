@@ -276,9 +276,10 @@ before I wrote a summary." and ends succeeded, charged
 ([B58](billing-decisions.md#agent-charging)), unless that would
 leave its transcript ending on unanswered tool or search calls. Stop on a turn
 whose lease already lapsed (its instance died) ends it the way lane recovery
-does, `interrupted` and refunded (B58), instead of `cancelled`. At admission a
-changed platform model is HTTP 409 `agent_model_unavailable`, distinct from
-402 `agent_funding_unavailable` (no AI credits to hold).
+does, `interrupted` and refunded (B58), instead of `cancelled`. A model that is
+not (or no longer) offered is HTTP 409 `agent_model_unavailable` at admission
+and before every call, distinct from 402 `agent_funding_unavailable` (no AI
+credits to hold).
 
 A recovery reply records no steps, evidence, web pages or document, while every
 reply the model wrote records at least its model call; the thread relies on
@@ -381,12 +382,33 @@ add workflow entries and, for a new output kind, its `kinds` presentation. No
 browser change is needed. Validate with the
 [skill loader tests](../frontend/services/api/test/agent-skills.test.ts).
 
+## Model and effort
+
+A chat holds its model and reasoning effort, chosen in the composer on New chat
+and in a chat ([decisions](decisions.md#agent-mcp-and-public-api); [B75](billing-decisions.md#agent-charging)).
+The offered Claude models, their labels and the default (Haiku 5.5 at medium)
+are `models`, `default_model` and `reasoning_effort` in the
+[runtime config](../frontend/services/api/src/config/agent-runtime.json); each
+offered model must have its own [price row](../frontend/services/api/src/config/costs.json)
+or the API refuses to start. A message that names neither keeps the chat's
+pin; admission freezes the model on the run (`requested_model`) and the effort
+in its budget, and the gateway is built with that model for the run, so the
+platform default and every other model consumer are untouched. Effort can
+change on any message. The model can change only until the chat has a stored
+transcript: Anthropic accepts thinking and compaction blocks replayed to
+another model but may drop that reasoning or fail the kept thinking, and replay
+stays byte-identical, so afterwards a different model is 409
+`agent_model_locked` and the picker shows the model locked. Sonnet 5.5 and Opus
+5.5 have no long-context price tier, so the one compaction trigger stays below
+Haiku 5.5's. The OpenAI-compatible route stays in code and is not offered.
+
 ## Streaming and the chat
 
 The platform model streams. `DEFAULT_AGENT_BASE_URL` alone chooses the API, so
 switching provider or model is configuration (`DEFAULT_AGENT_BASE_URL`,
 `DEFAULT_AGENT_MODEL`, `DEFAULT_AGENT_API_KEY`) for every platform model
-consumer, not only the Agent:
+consumer. The Agent alone takes its model per run instead of
+`DEFAULT_AGENT_MODEL` (see [Model and effort](#model-and-effort)):
 
 - `api.anthropic.com` uses the native Messages API through the official SDK
   ([`anthropic.ts`](../frontend/services/api/src/models/anthropic.ts)), with
