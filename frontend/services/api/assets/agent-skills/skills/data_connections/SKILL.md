@@ -16,7 +16,7 @@ What CiteLadder can and cannot answer for this project now, and the few connecti
 
 ## Where the data is
 
-- `read_integration_status`: each connection (Search Console, GA4, server logs), its import stage and the date data runs through.
+- `read_integration_status`: each connection (Search Console, GA4, server logs) with its last sync, the overall import stage and the date data is imported through.
 - `get_project_business_context`: one overview with the state of every area, including visibility runs, Site Health, crawler access and logs, and keyword research.
 
 ## What good looks like
