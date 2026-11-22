@@ -12,7 +12,7 @@ import {
 
 type PerceptionFilters = Pick<SourceFilters, 'engine' | 'cohort'> & { market: string | null };
 
-export function perceptionParams(filters: PerceptionFilters, queries: SourceQueries) {
+function perceptionParams(filters: PerceptionFilters, queries: SourceQueries) {
   const { audit_ids: _pooled, ...run } = selectionParams(filters, queries);
   return queries.selectedPeriod
     ? { ...run, market: filters.market ?? undefined, ...queries.selectedPeriod }

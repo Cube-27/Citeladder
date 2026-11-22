@@ -46,17 +46,18 @@ describe('useVisibilityFilters', () => {
 });
 
 describe('measuredSelection', () => {
-  it('falls back to the latest run only when an unchosen default range holds no run', () => {
+  it('falls back to a run when an unchosen default range holds none or a run is named', () => {
     const from = '2026-08-24T00:00:00.000Z';
     const before = [{ completedAt: '2026-08-01T09:00:00Z' }];
     const inside = [...before, { completedAt: '2026-11-01T09:00:00Z' }];
     const cases = [
-      { chosen: null, fallback: 'range', runs: undefined },
-      { chosen: null, fallback: 'range', runs: inside },
-      { chosen: null, fallback: 'range', runs: before },
-      { chosen: null, fallback: 'range', runs: [{ completedAt: null }] },
-      { chosen: 'range', fallback: 'range', runs: before },
-      { chosen: null, fallback: 'run', runs: inside },
+      { chosen: null, namedRun: false, fallback: 'range', runs: undefined },
+      { chosen: null, namedRun: false, fallback: 'range', runs: inside },
+      { chosen: null, namedRun: false, fallback: 'range', runs: before },
+      { chosen: null, namedRun: false, fallback: 'range', runs: [{ completedAt: null }] },
+      { chosen: 'range', namedRun: false, fallback: 'range', runs: before },
+      { chosen: null, namedRun: true, fallback: 'range', runs: inside },
+      { chosen: null, namedRun: false, fallback: 'run', runs: inside },
     ] as const;
     expect(cases.map((input) => measuredSelection({ ...input, from, to: undefined }))).toEqual([
       'range',
@@ -64,6 +65,7 @@ describe('measuredSelection', () => {
       'run',
       'run',
       'range',
+      'run',
       'run',
     ]);
   });

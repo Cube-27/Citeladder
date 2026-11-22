@@ -108,18 +108,21 @@ export function visibilityEvidenceHref(
 
 export function measuredSelection({
   chosen,
+  namedRun,
   fallback,
   runs,
   from,
   to,
 }: Readonly<{
   chosen: SelectionMode | null;
+  namedRun: boolean;
   fallback: SelectionMode;
   runs: readonly Pick<RunOption, 'completedAt'>[] | undefined;
   from: string | undefined;
   to: string | undefined;
 }>): SelectionMode {
   if (chosen !== null) return chosen;
+  if (namedRun) return 'run';
   if (fallback === 'run' || runs === undefined) return fallback;
   const start = from === undefined ? -Infinity : Date.parse(from);
   const end = to === undefined ? Infinity : Date.parse(to);
@@ -293,6 +296,7 @@ export function useVisibilityQueries(
   );
   const selectionMode = measuredSelection({
     chosen: filters.chosenSelection,
+    namedRun: filters.selectedRunId !== null,
     fallback: filters.defaultSelection,
     runs: auditsQuery.isSuccess ? runOptions : undefined,
     from,
