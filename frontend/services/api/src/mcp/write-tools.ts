@@ -26,7 +26,6 @@ type Definition<S extends z.ZodObject> = {
   title: string;
   description: string;
   schema: S;
-  listed?: z.ZodObject;
   annotations: Annotations;
   run: (context: Context, args: z.output<S>) => Promise<Evidence>;
 };
@@ -41,12 +40,6 @@ const uuid = z.uuid();
 const project = {
   project_id: uuid.describe('A project id that list_projects returned.'),
 };
-const prepareFields = {
-  ...project,
-  kind: z.enum(MCP_CHANGE_KINDS).describe('The kind of change, from the list above.'),
-};
-const PAYLOAD_DESCRIPTION =
-  'The change in its kind’s shape. Omit it to get the shape; nothing is prepared.';
 const kindPayload = z.record(z.string(), z.json());
 
 async function prepareChange(
@@ -121,13 +114,12 @@ const writeDefinitions = {
   prepare_change: tool({
     title: 'Prepare a change',
     description: PREPARE_CHANGE_DESCRIPTION,
-    schema: z.strictObject({ ...prepareFields, payload: kindPayload.optional() }),
-    listed: z.strictObject({
-      ...prepareFields,
-      payload: z
-        .union(MCP_CHANGE_KINDS.map((kind) => changeKinds[kind].proposal))
+    schema: z.strictObject({
+      ...project,
+      kind: z.enum(MCP_CHANGE_KINDS).describe('The kind of change, from the list above.'),
+      payload: kindPayload
         .optional()
-        .describe(PAYLOAD_DESCRIPTION),
+        .describe('The change in its kind’s shape. Omit it to get the shape; nothing is prepared.'),
     }),
     annotations: hints(false, false),
     run: prepareChange,
@@ -162,7 +154,7 @@ export const writeTools = Object.entries(writeDefinitions).map(([name, definitio
   name,
   title: definition.title,
   description: definition.description,
-  inputSchema: inputSchema(definition.listed ?? definition.schema),
+  inputSchema: inputSchema(definition.schema),
   annotations: definition.annotations,
 }));
 export function isWriteTool(name: string): name is WriteToolName {

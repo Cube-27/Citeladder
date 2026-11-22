@@ -104,11 +104,21 @@ it('runs a token confirmed twice at once exactly one time', async () => {
   ]);
 });
 
-it('refuses a confirmation after expiry, revocation, demotion or from another connection', async () => {
+it('refuses a confirmation of a kind no longer offered, or after expiry, revocation, demotion or from another connection', async () => {
   const tenant = await auditTenant(db, fixtures);
   const principal = await connection(tenant);
   const confirmAs = (as: McpPrincipal, prepared: Record<string, unknown>) =>
     failure(confirm(as, prepared));
+
+  const dropped = await addPrompt(principal, tenant);
+  await db
+    .updateTable('mcp_confirmations')
+    .set({ kind: 'delete_prompts' })
+    .where('grant_id', '=', principal.grantId)
+    .execute();
+  expect(await confirmAs(principal, dropped)).toBe(
+    'This kind of change is no longer offered here. Make it in CiteLadder.',
+  );
 
   const expired = await addPrompt(principal, tenant);
   await db

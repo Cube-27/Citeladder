@@ -209,11 +209,11 @@ tools, listed in `tools/list` and callable only for a grant holding
 `confirm_change` and `preview_topics`.
 
 `prepare_change` takes `project_id`, a kind and its payload; its description
-lists the kinds by area and purpose, and its listed input schema is the union of
-the offered kinds' payload shapes. The call is parsed against the kind's own
-schema (the advertised union is never the parser, because a union would coerce a
-payload into the first branch it fits), and a call that names a kind with no
-payload returns the kind's shape and prepares nothing.
+lists the kinds by area and purpose, and its input schema lists the payload as
+a free object: clients load the tool list every session, and a union of every
+kind's shape would triple its size. A call that names a kind with no payload
+returns the kind's shape and prepares nothing, and the payload is parsed against
+the kind's own schema, whose problem comes back with the shape.
 [`writeActor`](../frontend/services/api/src/mcp/data.ts) authorizes the project
 through the live grant and membership, holds the grant row (still unrevoked and
 holding write) and the membership row shared, and loads the member's live role,
