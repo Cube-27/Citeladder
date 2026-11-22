@@ -136,7 +136,13 @@ describe('GET /executions/{execution_id}', () => {
 
   it('is not found from another workspace, and unauthenticated is 401', async () => {
     const auditId = await fixtures.audit(tenant);
-    const { taskId } = await fixtures.execution(tenant, { auditId });
+    const { taskId } = await fixtures.execution(tenant, {
+      auditId,
+      engine: 'google_ai_mode',
+      observation: {},
+    });
+    const own = await get(tenant, `/api/v1/executions/${taskId}`);
+    expect([own.status, own.body.logical_engine]).toEqual([200, 'google_ai_mode']);
 
     const foreign = await get(outsider, `/api/v1/executions/${taskId}`);
     expect(foreign.status).toBe(404);

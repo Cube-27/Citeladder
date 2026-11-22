@@ -50,6 +50,14 @@
       "max_concurrency": 2
     },
     {
+      "logical_engine": "google_ai_mode",
+      "transport_provider": "dataforseo",
+      "capacity": 1.0,
+      "refill_tokens_per_second": 1.0,
+      "max_cooldown_seconds": 60.0,
+      "max_concurrency": 2
+    },
+    {
       "logical_engine": "chatgpt_search",
       "transport_provider": "dataforseo",
       "capacity": 1.0,
@@ -265,6 +273,18 @@
       "surface_kind": "search_ai",
       "market_support": "dataforseo_location"
     },
+    "google_ai_mode": {
+      "logical_engine": "google_ai_mode",
+      "transport_provider": "dataforseo",
+      "transport_model": "google-ai-mode-serp",
+      "retrieval_enabled": null,
+      "reasoning_effort": null,
+      "anthropic_thinking": null,
+      "reasoning_pinnable": null,
+      "representative_status": "unverified",
+      "surface_kind": "search_ai",
+      "market_support": "dataforseo_location"
+    },
     "chatgpt_search": {
       "logical_engine": "chatgpt_search",
       "transport_provider": "dataforseo",
@@ -343,6 +363,15 @@
       "unavailable_reason": null,
       "adapter_shipped": true,
       "grant_key": "provider.google_ai_overview",
+      "issuable": false
+    },
+    {
+      "key": "google_ai_mode",
+      "label": "Google AI Mode",
+      "availability": "available",
+      "unavailable_reason": null,
+      "adapter_shipped": true,
+      "grant_key": "provider.google_ai_mode",
       "issuable": false
     },
     {

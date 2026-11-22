@@ -5,7 +5,7 @@ import type { ExecutionResult } from '../audits/result-persistence.ts';
 import { providerPolicy } from '../providers/config.ts';
 import { classifySourceOrigin } from '../analysis/opportunities/source-patterns.ts';
 import { lenient, list, listOf, nested, recordsOf, withRaw } from '../lenient-fields.ts';
-import { searchPolicy } from './dataforseo.ts';
+import { searchPolicy, type SerpEngine } from './dataforseo.ts';
 import {
   domain,
   emptyUsage,
@@ -68,12 +68,6 @@ function emptyOverview(
     observed_at: null,
   };
 }
-const OVERVIEW_ELEMENT_TYPES: ReadonlySet<string> = new Set([
-  'ai_overview_element',
-  'ai_overview_expanded_element',
-  'ai_overview_table_element',
-  'ai_overview_video_element',
-]);
 const linkSchema = z.object({
   url: lenient((value) => scalarText(value).trim()),
   domain: lenient(scalarText),
@@ -125,12 +119,15 @@ const pageSchema = lenient((value) =>
     : null,
 );
 const withComponents = (element: OverviewElement) => [element, ...element.components];
-function elements(block: OverviewBlock): [number, OverviewElement][] {
+function elements(engine: SerpEngine, block: OverviewBlock): [number, OverviewElement][] {
   if (block.items === null) throw new Error('Invalid overview elements');
+  const answerTypes: readonly string[] = searchPolicy.serp.answer_element_types[engine];
+  const skippedTypes: readonly string[] = searchPolicy.serp.skipped_element_types[engine];
   const result: [number, OverviewElement][] = [];
   function descend(value: unknown, index: number, depth: number) {
     const node = elementSchema.parse(value);
-    if (depth > 128 || !OVERVIEW_ELEMENT_TYPES.has(node.type))
+    if (skippedTypes.includes(node.type)) return;
+    if (depth > 128 || !answerTypes.includes(node.type))
       throw new Error('Unknown overview element');
     result.push([index, node]);
     for (const child of node.items.children) descend(child, index, depth + 1);
@@ -153,8 +150,9 @@ function fragments(element: OverviewElement) {
 type Envelope = z.output<typeof envelopeSchema>;
 type OverviewTask = Envelope['tasks'][number];
 type OverviewPage = NonNullable<z.output<typeof pageSchema>>;
-type ResolvedTask = { task: OverviewTask; status: number; page: OverviewPage };
+type ResolvedTask = { task: OverviewTask; status: number; page: OverviewPage | null };
 function resolveOverviewTask(
+  engine: SerpEngine,
   envelope: Envelope,
   expectedId: string,
 ): ResolvedTask | { early: OverviewResult | 'still_pending' } {
@@ -173,6 +171,8 @@ function resolveOverviewTask(
   const status = task.status_code;
   if (pending(status)) return { early: 'still_pending' };
   if (status === null) return { early: emptyOverview(s.outcome_parser_error, task.raw) };
+  const absentCodes: readonly number[] = searchPolicy.serp.absent_status_codes[engine];
+  if (absentCodes.includes(status)) return { task, status, page: null };
   if (status !== c.status_ok)
     return { early: emptyOverview(s.outcome_provider_error, task.raw, status) };
   const page = pageSchema.parse(task.result[0]);
@@ -219,14 +219,15 @@ function overviewReferences(block: OverviewBlock, walked: [number, OverviewEleme
   return references;
 }
 export function parseOverview(
+  engine: SerpEngine,
   payload: unknown,
   expectedId: string,
 ): OverviewResult | 'still_pending' {
   const s = searchPolicy.surface;
-  const resolved = resolveOverviewTask(envelopeSchema.parse(payload), expectedId);
+  const resolved = resolveOverviewTask(engine, envelopeSchema.parse(payload), expectedId);
   if ('early' in resolved) return resolved.early;
   const { task, status, page } = resolved;
-  const block = (page.items ?? []).find((item) => item.type === 'ai_overview');
+  const block = (page?.items ?? []).find((item) => item.type === 'ai_overview');
   const base = {
     ...emptyOverview(
       block ? s.outcome_ai_overview_present : s.outcome_no_ai_overview,
@@ -234,12 +235,12 @@ export function parseOverview(
       status,
     ),
     aio_present: Boolean(block),
-    observed_at: page.observed_at ?? task.observed_at,
+    observed_at: page?.observed_at ?? task.observed_at,
     provider_cost_microusd: task.cost,
   };
   if (!block) return base;
   try {
-    const walked = elements(block),
+    const walked = elements(engine, block),
       { parts, links } = overviewContent(walked);
     const references = overviewReferences(block, walked);
     return {
@@ -259,10 +260,10 @@ export function parseOverview(
     );
   }
 }
-export function overviewAnswer(result: OverviewResult): ExecutionResult {
-  const route = providerPolicy.routes.google_ai_overview;
+export function overviewAnswer(engine: SerpEngine, result: OverviewResult): ExecutionResult {
+  const route = providerPolicy.routes[engine];
   return {
-    logical_engine: 'google_ai_overview',
+    logical_engine: engine,
     transport_provider: 'dataforseo',
     transport_model: route.transport_model,
     answer_text: result.answer_text,

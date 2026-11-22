@@ -13,8 +13,6 @@ const request: SearchRequest = {
   location_code: 2840,
   language_code: 'en',
   device: 'desktop',
-  depth: 10,
-  load_async_ai_overview: true,
   timeout_seconds: 1,
   provider_submission_ref: 'audit:task:engine',
   request_settings: { force_web_search: true, priority: 1 },
@@ -60,6 +58,38 @@ describe('DataForSEO paid submission boundary', () => {
     expect(await c.submit('google_ai_overview', request)).toMatchObject({
       taskId: 'paid-task',
       chargeMicrousd: 1200,
+    });
+  });
+  it('submits Google AI Mode to its own SERP path without the organic depth settings', async () => {
+    const c = client(async (url, options) => {
+      expect(url).toBe('https://api.dataforseo.com/v3/serp/google/ai_mode/task_post');
+      expect(JSON.parse(String(options?.body))).toEqual([
+        {
+          keyword: 'C%2B%2B choices at 50%25 off?',
+          tag: request.provider_submission_ref,
+          location_code: 2840,
+          language_code: 'en',
+          device: 'desktop',
+          os: 'windows',
+        },
+      ]);
+      return Response.json({
+        status_code: 20000,
+        tasks: [{ id: 'mode-task', status_code: 20100, cost: 0.0012 }],
+      });
+    });
+    expect(await c.submit('google_ai_mode', request)).toMatchObject({
+      taskId: 'mode-task',
+      chargeMicrousd: 1200,
+    });
+    const retrieved = client(async (url) => {
+      expect(url).toBe(
+        'https://api.dataforseo.com/v3/serp/google/ai_mode/task_get/advanced/mode-task',
+      );
+      return Response.json({ status_code: 20000, tasks: [] });
+    });
+    expect(await retrieved.retrieve('google_ai_mode', 'mode-task')).toMatchObject({
+      status_code: 20000,
     });
   });
   it('keeps accepted submissions without IDs and ambiguous transport failures uncertain, with no retries', async () => {
