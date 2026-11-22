@@ -5,6 +5,8 @@ import {
   formatNet,
   negativeHeadline,
   rankThemes,
+  sampleNote,
+  sampleShare,
   sentimentFigureValue,
   sentimentReading,
   sentimentTrend,
@@ -70,7 +72,7 @@ describe('perception derivations', () => {
     ]);
   });
 
-  it('shows a breakdown share only from the minimum classified count', () => {
+  it('shows a breakdown share, marking a sample below the minimum as small', () => {
     const row = (s: ReturnType<typeof score>, mentions: number) => ({
       key: 'k',
       label: 'K',
@@ -81,21 +83,40 @@ describe('perception derivations', () => {
       kind: 'value',
       classified: 20,
       mentions: 30,
+      small: false,
       positive: 0.6,
       neutral: 0.2,
       negative: 0.15,
       net: 45,
     });
-    expect(breakdownRow(row(score(10, 5, 4), 25), 20)).toEqual({
-      kind: 'too_few',
+    expect(breakdownRow(row(score(10, 5, 4), 25), 20)).toMatchObject({
+      kind: 'value',
       classified: 19,
-      mentions: 25,
-      needed: 20,
+      small: true,
     });
-    expect(breakdownRow(row(score(0, 0, 0), 4), 0).kind).toBe('too_few');
-    expect(themeNegativeShare(theme('price', 15, 5), 20)).toBe(0.25);
-    expect(themeNegativeShare(theme('price', 1, 0), 20)).toBeNull();
-    expect(themeNegativeShare(theme('price', 0, 0), 0)).toBeNull();
+    expect(breakdownRow(row(score(0, 0, 0), 4), 20)).toEqual({
+      kind: 'empty',
+      classified: 0,
+      mentions: 4,
+    });
+    expect(
+      [theme('price', 3, 1), theme('price', 3, 2), theme('price', 0, 0)].map((item) =>
+        themeNegativeShare(item),
+      ),
+    ).toEqual([
+      { kind: 'value', share: 0.25, text: '25.0%', count: 1, basis: 4, small: true },
+      { kind: 'value', share: 0.4, text: '40.0%', count: 2, basis: 5, small: false },
+      { kind: 'empty' },
+    ]);
+  });
+
+  it('tells a small sample apart from an empty and a full one at the minimum', () => {
+    const readings = [0, 19, 20].map((basis) => sampleShare({ count: 0, basis, minimum: 20 }));
+    expect(readings.map((reading) => sampleNote(reading, 'classified'))).toEqual([
+      undefined,
+      '0 of 19 classified · small sample',
+      '0 of 20 classified',
+    ]);
   });
 
   it('reads a net sentiment from the minimum classified count, keeping too few apart from zero', () => {

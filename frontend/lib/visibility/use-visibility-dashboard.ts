@@ -30,7 +30,12 @@ import {
   useUrlState,
 } from '@/lib/navigation/url-state';
 import { logicalEngineSchema } from '@citeladder/contracts/providers';
-import { rangeToFrom, type TrendGranularity, type TrendRange } from '@/lib/visibility/trends';
+import {
+  DEFAULT_TREND_RANGE,
+  rangeToFrom,
+  type TrendGranularity,
+  type TrendRange,
+} from '@/lib/visibility/trends';
 
 export { EVIDENCE_LIMIT } from '@/lib/config/operational';
 
@@ -59,7 +64,11 @@ const sourceKeys = [
   'source_view',
 ];
 const engineCodec = stringUrlCodec(['all', ...logicalEngineSchema.options], 'all');
-const rangeCodec = stringUrlCodec<TrendRange>(['all', '30d', '90d', '1y'], '90d');
+const rangeCodec = stringUrlCodec<TrendRange>(['all', '30d', '90d', '1y'], DEFAULT_TREND_RANGE);
+const selectionCodecs = {
+  run: stringUrlCodec(['run', 'range'] as const, 'run'),
+  range: stringUrlCodec(['run', 'range'] as const, 'range'),
+};
 const granularityCodec = stringUrlCodec<TrendGranularity>(['run', 'day', 'week', 'month'], 'run');
 
 function selectPeriod(value: TrendRange) {
@@ -94,7 +103,9 @@ export function visibilityEvidenceHref(
   return `/visibility?${params.toString()}`;
 }
 
-export function useVisibilityFilters() {
+export function useVisibilityFilters({
+  defaultSelection = 'run',
+}: { defaultSelection?: keyof typeof selectionCodecs } = {}) {
   const [activeTab, selectTab] = useUrlState('tab', tabCodec, { clearKeys: sourceKeys });
   const [selectedRunId, setSelectedRunId] = useUrlState('run', optionalStringUrlCodec, {
     clearKeys: pageKeys,
@@ -108,10 +119,7 @@ export function useVisibilityFilters() {
   const [range] = useUrlState('range', rangeCodec);
   const [fromAt] = useUrlState('from', optionalStringUrlCodec);
   const [toAt] = useUrlState('to', optionalStringUrlCodec);
-  const [selectionMode] = useUrlState(
-    'selection',
-    stringUrlCodec(['run', 'range'] as const, 'run'),
-  );
+  const [selectionMode] = useUrlState('selection', selectionCodecs[defaultSelection]);
   const [configuration, setConfiguration] = useUrlState('configuration', optionalStringUrlCodec, {
     clearKeys: pageKeys,
   });

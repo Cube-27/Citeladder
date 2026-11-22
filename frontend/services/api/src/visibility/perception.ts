@@ -38,6 +38,7 @@ import {
   evidenceScope,
   observedAt,
   perceptionCohorts,
+  selectedRuns,
   type RunSelection,
 } from './selection.ts';
 
@@ -257,11 +258,23 @@ async function selectionAnswers(
   };
 }
 
+async function windowSelection(db: Database, selection: RunSelection): Promise<RunSelection> {
+  const scoped = await scopedSelection(db, selection);
+  if (scoped.auditId !== null || scoped.auditIds?.length) return scoped;
+  const runs = await selectedRuns(db, scoped)
+    .select('audit.id')
+    .orderBy(observedAt, 'desc')
+    .orderBy('audit.id', 'desc')
+    .limit(policy.visibility.selection_max_runs)
+    .execute();
+  return { ...scoped, auditIds: runs.map((run) => run.id) };
+}
+
 export async function getPerception(
   db: Database,
   selection: RunSelection,
 ): Promise<PerceptionResponse> {
-  const scoped = await scopedSelection(db, selection);
+  const scoped = await windowSelection(db, selection);
   const [{ answers, auditIds }, period] = await Promise.all([
     selectionAnswers(db, scoped, { citations: true, brandQuestions: true }),
     periodTrendSelection(db, scoped),
@@ -379,7 +392,7 @@ export async function getPerceptionQuotes(
     polarity: filters.polarity,
   };
   const after = filters.cursor ? cursorPosition(filters.cursor, fingerprint) : null;
-  const { answers } = await selectionAnswers(db, selection, {
+  const { answers } = await selectionAnswers(db, await windowSelection(db, selection), {
     citations: false,
     brandQuestions: true,
   });

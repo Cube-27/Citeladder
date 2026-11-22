@@ -95,38 +95,60 @@ function response(overrides: Partial<PerceptionResponse> = {}): PerceptionRespon
 }
 
 describe('Perception view', () => {
-  it('heads with the negative share only from the classified minimum', () => {
+  it('shows a small sample with its counts and label, an empty one as before and a full one plainly', () => {
+    const brandWith = (s: PerceptionScore) => ({
+      name: 'Acme',
+      is_brand: true,
+      logo_url: null,
+      website_url: null,
+      score: s,
+      coverage,
+      theme_mentions: [],
+    });
     const { unmount } = render(<PerceptionView data={response()} />);
     expect(screen.queryByRole('heading', { name: /^AI says/u })).toBeNull();
     expect(screen.getAllByRole('heading', { name: 'How AI describes you' })).toHaveLength(1);
+    expect(screen.getByText('From 1 run: 5 answers named you.')).toBeVisible();
     const lede = within(screen.getByLabelText('Brand perception'));
-    expect(lede.getAllByText('Too few classified')).toHaveLength(2);
-    expect(lede.getByText('Too few answers')).toBeVisible();
-    expect(lede.queryByText(/%/u)).toBeNull();
+    expect(lede.getByText('75.0%')).toBeVisible();
+    const basis = (description: string) => screen.getByRole('button', { description });
+    expect(basis('3 of 4 classified mentions · small sample')).toHaveAccessibleName(/^Basis of /);
+    expect(screen.getByText('4 classified mentions · small sample')).toBeVisible();
     unmount();
 
-    const enough = score({ positive: 15, negative: 5, classified: 20, negative_share: 0.25 });
-    render(
+    const empty = score({
+      positive: 0,
+      negative: 0,
+      classified: 0,
+      positive_share: null,
+      negative_share: null,
+      net_sentiment: null,
+    });
+    const none = render(
       <PerceptionView
         data={response({
-          brand: {
-            name: 'Acme',
-            is_brand: true,
-            logo_url: null,
-            website_url: null,
-            score: enough,
-            coverage,
-            theme_mentions: [],
-          },
+          brand: brandWith(empty),
+          recommended: { ...response().recommended, mentioned: 0, recommended: 0 },
         })}
       />,
     );
+    const emptyLede = within(screen.getByLabelText('Brand perception'));
+    expect(emptyLede.getAllByText('Too few classified')).toHaveLength(2);
+    expect(emptyLede.getByText('Too few answers')).toBeVisible();
+    expect(emptyLede.queryByText(/%/u)).toBeNull();
+    expect(screen.getByText('No classified mentions of you.')).toBeVisible();
+    none.unmount();
+
+    const enough = score({ positive: 15, negative: 5, classified: 20, negative_share: 0.25 });
+    render(<PerceptionView data={response({ brand: brandWith(enough) })} />);
     expect(
       screen.getByRole('heading', {
         name: 'AI says something negative about you in 25% of classified mentions',
       }),
     ).toBeVisible();
     expect(within(screen.getByLabelText('Brand perception')).getByText('75.0%')).toBeVisible();
+    expect(basis('15 of 20 classified mentions')).toHaveAccessibleName(/^Basis of /);
+    expect(screen.queryByText(/classified mentions · small sample/u)).toBeNull();
   });
 
   it('shows the classified coverage and opens a theme to its quotes', () => {
@@ -150,7 +172,7 @@ describe('Perception view', () => {
     expect(screen.getByText('reviews.example')).toBeVisible();
   });
 
-  it('shows breakdown shares only from the minimum classified count', () => {
+  it('shows breakdown shares with a small-sample label below the minimum and none at zero', () => {
     const row = (key: string, s: PerceptionScore, mentions: number) => ({
       key,
       label: key,
@@ -166,7 +188,8 @@ describe('Perception view', () => {
               score({ positive: 12, neutral: 4, negative: 3, mixed: 1, classified: 20 }),
               24,
             ),
-            row('Invoicing', score({ classified: 3 }), 10),
+            row('Invoicing', score({ positive: 2, negative: 1, classified: 3 }), 10),
+            row('Billing', score({ positive: 0, negative: 0, classified: 0 }), 2),
           ],
         })}
       />,
@@ -176,16 +199,20 @@ describe('Perception view', () => {
     expect(within(payroll).getByText('20 of 24')).toBeVisible();
     expect(within(payroll).getByText('60.0%')).toBeVisible();
     const invoicing = screen.getByRole('row', { name: /Invoicing/u });
-    expect(within(invoicing).getByText('Too few classified (3 of the 20 needed)')).toBeVisible();
-    expect(within(invoicing).queryByText(/%|^\+?\d+$/u)).toBeNull();
+    expect(within(invoicing).getByText('small sample')).toBeVisible();
+    expect(within(invoicing).getByText('66.7%')).toBeVisible();
+    expect(within(payroll).queryByText('small sample')).toBeNull();
+    const billing = screen.getByRole('row', { name: /Billing/u });
+    expect(within(billing).getByText('No classified mentions')).toBeVisible();
+    expect(within(billing).queryByText(/%/u)).toBeNull();
   });
 
   it('states the recommended count briefly, naming advice against only when it occurred', () => {
     const { unmount } = render(<PerceptionView data={response()} />);
     const basis = (description: string) => screen.getByRole('button', { description });
-    expect(basis('2 of 5 answers naming you; 1 advised against')).toHaveAccessibleName(
-      /^Basis of /,
-    );
+    expect(
+      basis('2 of 5 answers naming you; 1 advised against · small sample'),
+    ).toHaveAccessibleName(/^Basis of /);
     unmount();
 
     render(
@@ -201,13 +228,13 @@ describe('Perception view', () => {
         })}
       />,
     );
-    expect(basis('0 of 4 answers naming you')).toHaveAccessibleName(/^Basis of /);
+    expect(basis('0 of 4 answers naming you · small sample')).toHaveAccessibleName(/^Basis of /);
   });
 
   it('marks the classified counts unavailable when the brand has no score, never 0 of 0', () => {
     const { unmount } = render(<PerceptionView data={response()} />);
     expect(
-      screen.getByRole('button', { description: '3 of 4 classified mentions' }),
+      screen.getByRole('button', { description: '3 of 4 classified mentions · small sample' }),
     ).toHaveAccessibleName(/^Basis of /);
     unmount();
 

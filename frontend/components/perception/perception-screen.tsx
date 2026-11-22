@@ -36,7 +36,7 @@ type Filters = ReturnType<typeof useVisibilityFilters>;
 type Queries = ReturnType<typeof useVisibilityQueries>;
 
 export function PerceptionScreen() {
-  const filters = useVisibilityFilters();
+  const filters = useVisibilityFilters({ defaultSelection: 'range' });
   const queries = useVisibilityQueries(filters, 'perception');
   const { pilot, tab, setTab, items, probe } = usePerceptionTab();
   const probeControls = useProbeControls(probe);
