@@ -7,6 +7,7 @@ import { JUMP_LINK } from '@/components/agent/jump-link';
 import { LiveActivity } from '@/components/agent/live-activity';
 import { ProposalCards } from '@/components/agent/proposal-cards';
 import { skillLabel } from '@/components/agent/skill-picker';
+import { ThreadViews } from '@/components/agent/thread-views';
 import { threadItems } from '@/components/agent/thread-items';
 import { TurnFailure } from '@/components/agent/turn-failure';
 import { turnParts } from '@/components/agent/turn-parts';
@@ -99,6 +100,10 @@ export function Conversation({
                       workspaceId={workspaceId}
                       proposals={item.message.proposals}
                       actions={detail.actions}
+                    />
+                    <ThreadViews
+                      scope={{ workspaceId, projectId: detail.chat.project_id }}
+                      views={item.message.views}
                     />
                     {documents(byMessage.get(item.message.id))}
                   </>

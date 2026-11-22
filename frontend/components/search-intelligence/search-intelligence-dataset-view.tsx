@@ -160,7 +160,7 @@ function rowsHandoff(
   };
 }
 
-function EvidenceDrawer({
+export function EvidenceDrawer({
   selected,
   onClose,
 }: Readonly<{ selected: SearchIntelligenceRow | null; onClose: () => void }>) {

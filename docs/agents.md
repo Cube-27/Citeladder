@@ -137,7 +137,7 @@ calls none. Its final text is the reply.
   compacted again.
   Chat completions return no compaction, so the oldest whole turns are dropped at
   turn start beyond `replay_max_chars`.
-- **Tools.** The model has the [read tools](#read-tools) and five built-ins
+- **Tools.** The model has the [read tools](#read-tools) and six built-ins
   ([`builtin-tools.ts`](../frontend/services/api/src/agent/builtin-tools.ts)).
   `load_skill` returns a methodology and its saving rules; a turn may switch
   methodology at any time. `save_document` stages a whole deliverable after a
@@ -161,6 +161,14 @@ calls none. Its final text is the reply.
   `propose_declaration` stages a declaration proposal, committed on the reply
   (`agent_messages.proposals`), only for an Action that is attached, mentioned
   or returned by a read this turn and that the declaration API would accept now.
+  `show_view` places one of the app's charts or tables under the reply
+  (`agent_messages.views`, beside `proposals`): a view kind and its selection
+  (market, topic, window, crawl or dataset), never data. The server checks the
+  selection against the chat's project with the same owner read the screen
+  uses ([`view-reads.ts`](../frontend/services/api/src/agent/view-reads.ts)): a
+  record from another project is a correctable error, a read with nothing to
+  show answers `unavailable` and places nothing, and at most
+  `max_views_per_turn` views go under one reply.
   Questions need no methodology. The skill is
   taken, in order, from the user's pick or workflow, the chat's pin, the
   attached Action's diagnosis, and otherwise the model's `load_skill`; a pinned
@@ -442,6 +450,11 @@ one function ([`activity.ts`](../frontend/lib/agent/activity.ts)) so the text
 stays put when the saved reply replaces the live one; a read's detail is its
 `target`, scrubbed of record references and UUIDs, never an ID, enum or budget.
 A saved reply's web sources are listed apart from its cited CiteLadder records.
+A reply's views ([`thread-views.tsx`](../frontend/components/agent/thread-views.tsx))
+render the screen's own component from its persisted read when the thread
+opens, so they are always current, each with an **Open in app** link built from
+the app's routes; a view whose record is gone or that the member can no longer
+read shows as unavailable.
 A link in a reply or document opens directly only to the project's site or
 owned domains, the turn's or revision's web sources, or CiteLadder itself; any
 other link, and every `mailto:`, first opens a "You're leaving CiteLadder"

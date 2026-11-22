@@ -238,7 +238,7 @@ function useGapOnly(dimension: 'domain' | 'url', readNotCited: boolean) {
   return dimension === 'url' && !readNotCited && standing === 'gap';
 }
 
-function tableState({
+export function tableState({
   query,
   rows,
   narrowed,

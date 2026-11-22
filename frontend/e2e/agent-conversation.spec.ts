@@ -64,6 +64,7 @@ function chatDetail(): AgentChatDetail {
       mentions: [],
       attachments: [],
       proposals: [],
+      views: [],
       created_at: NOW,
     })),
     latest_run: {
