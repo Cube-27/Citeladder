@@ -234,7 +234,10 @@ export function useComposerCommands({
         return fits;
       },
       attach: (files) => {
-        if (!limits) return;
+        if (!limits) {
+          toast.notify("Couldn't attach files yet", 'Try again in a moment.');
+          return;
+        }
         const room = limits.attachments_max - latestPastes.current.length - pendingReads.current;
         if (files.length > room)
           toast.notify(
@@ -267,7 +270,6 @@ export function useComposerCommands({
       remove: (key) => setPastes((current) => current.filter((paste) => paste.key !== key)),
     },
     clear: () => {
-      dropReads();
       setMentions([]);
       setPastes([]);
     },
