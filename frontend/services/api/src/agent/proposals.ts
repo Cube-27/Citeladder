@@ -6,7 +6,8 @@ import { argumentProblem } from '../mcp/tools.ts';
 import { declarableMembers } from '../opportunities/actions.ts';
 import { ruleCheckKind } from '../opportunities/checks/registry.ts';
 import type { BuiltinOutcome } from './builtin-tools.ts';
-import { agentPolicy, type Scope } from './contracts.ts';
+import type { Scope } from './contracts.ts';
+import { proposalLimit } from './change-proposals.ts';
 import type { ChatDocument } from './outputs.ts';
 import { stepText } from './sources.ts';
 import type { TurnState } from './turn-budget.ts';
@@ -153,11 +154,8 @@ export async function proposeDeclaration(
     ok: false,
     text: 'Propose a declaration only for the chat’s Action, one the person mentioned, or one a read returned this turn. Read the Action first.',
   };
-  if (state.proposals.length >= agentPolicy.max_proposals_per_turn)
-    return {
-      ok: false,
-      text: `At most ${agentPolicy.max_proposals_per_turn} changes can be proposed in one turn. Reply now; the person can ask for more.`,
-    };
+  const full = proposalLimit(state);
+  if (full) return full;
   if (!turn.known.has(actionId)) return unseen;
   const checked = await eligibility(db, turn.scope, actionId);
   if (checked.kind === 'unknown') return unseen;

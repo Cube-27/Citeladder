@@ -114,6 +114,14 @@ export async function memberActor(
   };
 }
 
+export function proposalLimit(state: Pick<TurnState, 'proposals'>): BuiltinOutcome | null {
+  if (state.proposals.length < agentPolicy.max_proposals_per_turn) return null;
+  return {
+    ok: false,
+    text: `At most ${agentPolicy.max_proposals_per_turn} changes can be proposed in one turn. Reply now; the person can ask for more.`,
+  };
+}
+
 function refusal(error: unknown): BuiltinOutcome {
   if (error instanceof z.ZodError) return { ok: false, text: argumentProblem(error) };
   if (error instanceof ApiError && error.status === 403)
@@ -137,11 +145,8 @@ export async function proposeChange(
 ): Promise<BuiltinOutcome> {
   const parsed = proposeChangeArguments.safeParse(input);
   if (!parsed.success) return { ok: false, text: argumentProblem(parsed.error) };
-  if (state.proposals.length >= agentPolicy.max_proposals_per_turn)
-    return {
-      ok: false,
-      text: `At most ${agentPolicy.max_proposals_per_turn} changes can be proposed in one turn. Reply now; the person can ask for more.`,
-    };
+  const full = proposalLimit(state);
+  if (full) return full;
   const { kind, payload: proposed } = parsed.data;
   const entry = changeKinds[kind];
   const checked = entry.proposal.safeParse(proposed);
