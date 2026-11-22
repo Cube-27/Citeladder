@@ -108,12 +108,12 @@ describe('Perception view', () => {
     const { unmount } = render(<PerceptionView data={response()} />);
     expect(screen.queryByRole('heading', { name: /^AI says/u })).toBeNull();
     expect(screen.getAllByRole('heading', { name: 'How AI describes you' })).toHaveLength(1);
-    expect(screen.getByText('From 1 run: 5 answers named you.')).toBeVisible();
+    expect(screen.getByText('1 run · 5 answers naming you')).toBeVisible();
     const lede = within(screen.getByLabelText('Brand perception'));
     expect(lede.getByText('75.0%')).toBeVisible();
     const basis = (description: string) => screen.getByRole('button', { description });
     expect(basis('3 of 4 classified mentions · small sample')).toHaveAccessibleName(/^Basis of /);
-    expect(screen.getByText('4 classified mentions · small sample')).toBeVisible();
+    expect(screen.getByText('4 classified · small sample')).toBeVisible();
     unmount();
 
     const empty = score({
@@ -148,7 +148,7 @@ describe('Perception view', () => {
     ).toBeVisible();
     expect(within(screen.getByLabelText('Brand perception')).getByText('75.0%')).toBeVisible();
     expect(basis('15 of 20 classified mentions')).toHaveAccessibleName(/^Basis of /);
-    expect(screen.queryByText(/classified mentions · small sample/u)).toBeNull();
+    expect(screen.queryByText(/^\d+ classified · small sample$/u)).toBeNull();
   });
 
   it('shows the classified coverage and opens a theme to its quotes', () => {

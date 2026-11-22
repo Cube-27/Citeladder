@@ -118,7 +118,7 @@ function Lede({
 function coverageWords(data: PerceptionResponse): string {
   const runs = data.source_audit_ids.length;
   const answers = data.recommended.mentioned;
-  return `From ${runs} ${runs === 1 ? 'run' : 'runs'}: ${answers} ${answers === 1 ? 'answer' : 'answers'} named you.`;
+  return `${runs} ${runs === 1 ? 'run' : 'runs'} · ${answers} ${answers === 1 ? 'answer' : 'answers'} naming you`;
 }
 
 function sampleFigure({
@@ -205,7 +205,7 @@ function SentimentParts({
       <SentimentDonut score={score} />
       {reading.kind === 'value' && reading.small ? (
         <p className={textRole('body', 'text-ink-2')}>
-          {`${score.classified} classified mentions · ${SMALL_SAMPLE}`}
+          {`${score.classified} classified · ${SMALL_SAMPLE}`}
         </p>
       ) : null}
     </Stack>
