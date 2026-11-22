@@ -181,6 +181,7 @@ export function openingMessage(input: {
   context: string;
   documents: readonly OpeningDocument[];
   pinned: { skill: Skill; text: string } | null;
+  proposals: string | null;
   request: { text: string; attachments: readonly AgentAttachment[] };
 }) {
   const hash = contextHash(input.context);
@@ -210,6 +211,7 @@ export function openingMessage(input: {
   blocks.push(...suggestionLists(input.documents));
   if (input.pinned && !input.kept.some((item) => item.skillId === input.pinned?.skill.id))
     blocks.push({ type: 'text', text: input.pinned.text });
+  if (input.proposals) blocks.push({ type: 'text', text: input.proposals });
   blocks.push(
     ...input.request.attachments.map((attachment, index) => attachmentBlock(attachment, index)),
     { type: 'text', text: input.request.text },

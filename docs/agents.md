@@ -343,9 +343,11 @@ command, rolled back, with the preview read in the same transaction). A bad call
 or a refusal returns a correctable error; nothing is staged. A staged proposal
 holds the exact payload and the preview without IDs, is bounded per turn by
 `max_proposals_per_turn` (declarations count too) and commits with the reply in
-`agent_messages.proposals`. Model prose never reaches the card: the title and
-rows come from the server's preview, so page text, a paste or a web result
-cannot dress a card as something else. A paid kind (an audit launch) shows its
+`agent_messages.proposals`. Model prose never reaches the card: the title is a
+server template with counts only, and every name or text the model, a page or
+a person supplied is a row value, clipped and bounded by
+`proposal_preview_rows_max` and `proposal_preview_value_max_chars`, so page
+text, a paste or a web result cannot dress a card as something else. A paid kind (an audit launch) shows its
 spend from the estimate and holds nothing until the click; a launched job is
 never awaited, and its card links to where it shows.
 
@@ -354,14 +356,22 @@ Only the person's click executes it:
 (or `/dismiss`) takes no payload from the browser
 ([`proposal-outcomes.ts`](../frontend/services/api/src/agent/proposal-outcomes.ts)).
 In one transaction it holds the member row shared, inserts the outcome row in
-`agent_proposal_outcomes` (unique per message and index, written once, before
-the change so its locks come first), runs the kind's `execute` as the clicking
+`agent_proposal_outcomes` (one decision per message and index, written once,
+before the change so its locks come first), runs the kind's `execute` as the clicking
 member against their live role and the kind's permission, and records an
 `agent.change.<kind>` security event. A concurrent or repeated click gets 409;
 a Viewer gets 403 and another workspace 404. A changed world returns the
-owner's normal error, rolls the outcome row back and leaves the card
-confirmable. The card shows open (Confirm and Dismiss, or "Editors only"),
+owner's normal error, rolls the decision back, leaves the card confirmable
+and appends a `refused` row with that reason. The card shows open (Confirm and Dismiss, or "Editors only"),
 executed, dismissed, or no longer available when its kind is gone.
+
+The Agent learns what happened in its next turn's opening message, never the
+cached prefix: each earlier card whose proposal or outcome is newer than the
+previous turn is listed by its title and first row (no IDs) as confirmed,
+dismissed, refused with the owner's reason, or still open, at most
+`proposal_news_max` of them
+([`proposalNews`](../frontend/services/api/src/agent/proposal-outcomes.ts)). The
+block is stored in that turn's transcript, so replayed history never changes.
 
 ## Skills and workflows
 

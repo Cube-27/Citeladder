@@ -11,9 +11,11 @@ ALTER TABLE public.agent_chats
 ALTER TABLE public.agent_chats
     ADD CONSTRAINT ck_agent_chats_reasoning_effort CHECK ((reasoning_effort IN ('low', 'medium', 'high')));
 
--- The outcome of a person's decision on a change the Agent proposed: one row
--- per proposal (message and index), written once and before the change runs,
--- so a card executes at most once and a failed change leaves no row. The
+-- What happened to a change the Agent proposed. A decision (executed or
+-- dismissed) is one row per proposal (message and index), written once and
+-- before the change runs, so a card executes at most once and a failed change
+-- leaves no decision. A refused confirm leaves the card open and appends a
+-- refused row with the owner's reason, which the Agent's next turn reads. The
 -- proposal itself stays in agent_messages.proposals.
 CREATE TABLE public.agent_proposal_outcomes (
     id uuid NOT NULL,
@@ -23,11 +25,12 @@ CREATE TABLE public.agent_proposal_outcomes (
     message_id uuid NOT NULL,
     proposal_index integer NOT NULL,
     state character varying(16) NOT NULL,
+    reason character varying(500),
     user_id uuid,
     created_at timestamp with time zone NOT NULL,
     CONSTRAINT agent_proposal_outcomes_pkey PRIMARY KEY (id),
-    CONSTRAINT uq_agent_proposal_outcome UNIQUE (message_id, proposal_index),
-    CONSTRAINT ck_agent_proposal_outcome_state CHECK (state IN ('executed', 'dismissed')),
+    CONSTRAINT ck_agent_proposal_outcome_state CHECK (state IN ('executed', 'dismissed', 'refused')),
+    CONSTRAINT ck_agent_proposal_outcome_reason CHECK ((state = 'refused') = (reason IS NOT NULL)),
     CONSTRAINT ck_agent_proposal_outcome_index CHECK (proposal_index >= 0),
     CONSTRAINT agent_proposal_outcomes_message_id_fkey FOREIGN KEY (message_id)
         REFERENCES public.agent_messages(id) ON DELETE CASCADE,
@@ -42,7 +45,8 @@ CREATE TABLE public.agent_proposal_outcomes (
         REFERENCES public.users(id) ON DELETE SET NULL
 );
 
-CREATE INDEX ix_agent_proposal_outcomes_chat_id ON public.agent_proposal_outcomes USING btree (chat_id);
+CREATE UNIQUE INDEX uq_agent_proposal_outcome ON public.agent_proposal_outcomes USING btree (message_id, proposal_index) WHERE ((state)::text <> 'refused'::text);
+CREATE INDEX ix_agent_proposal_outcomes_chat_id ON public.agent_proposal_outcomes USING btree (chat_id, created_at);
 CREATE INDEX ix_agent_proposal_outcomes_project_id ON public.agent_proposal_outcomes USING btree (workspace_id, project_id);
 CREATE INDEX ix_agent_proposal_outcomes_user_id ON public.agent_proposal_outcomes USING btree (user_id) WHERE (user_id IS NOT NULL);
 

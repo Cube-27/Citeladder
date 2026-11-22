@@ -284,6 +284,7 @@ export interface AgentProposalOutcomes {
   message_id: string;
   project_id: string;
   proposal_index: number;
+  reason: string | null;
   state: string;
   user_id: string | null;
   workspace_id: string;

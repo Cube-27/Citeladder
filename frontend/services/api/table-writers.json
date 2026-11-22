@@ -18,6 +18,7 @@
     "agent_output_suggestion_events": ["src/page-documents/suggestions.ts"],
     "agent_output_suggestions": ["src/page-documents/suggestions.ts"],
     "agent_outputs": ["src/agent/outputs.ts", "src/agent/target-adapter.ts"],
+    "agent_proposal_outcomes": ["src/agent/proposal-outcomes.ts"],
     "agent_run_transcripts": ["src/agent/transcript.ts"],
     "agent_runs": [
       "src/agent/model-calls.ts",

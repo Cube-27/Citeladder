@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { agentDeclarationProposalSchema, type AgentProposal } from '@citeladder/contracts/agent';
 import type { Actor } from '../auth/actor.ts';
 import { findWorkspaceMember } from '../auth/workspace.ts';
-import { changePreviewSchema } from '../changes/kind.ts';
+import { changePreviewSchema, type ChangePreview } from '../changes/kind.ts';
 import { changeKinds, type ChangeKind } from '../changes/kinds.ts';
 import type { ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -56,16 +56,29 @@ export const proposeChangeArguments = z.strictObject({
 });
 
 type SchemaNode = {
-  type?: string | string[];
-  format?: string;
+  type?: string | string[] | undefined;
+  format?: string | undefined;
   const?: unknown;
-  enum?: unknown[];
-  items?: SchemaNode;
-  anyOf?: SchemaNode[];
-  oneOf?: SchemaNode[];
-  properties?: Record<string, SchemaNode>;
-  required?: string[];
+  enum?: unknown[] | undefined;
+  items?: SchemaNode | undefined;
+  anyOf?: SchemaNode[] | undefined;
+  oneOf?: SchemaNode[] | undefined;
+  properties?: Record<string, SchemaNode> | undefined;
+  required?: string[] | undefined;
 };
+const schemaNode: z.ZodType<SchemaNode> = z.lazy(() =>
+  z.object({
+    type: z.union([z.string(), z.array(z.string())]).optional(),
+    format: z.string().optional(),
+    const: z.unknown().optional(),
+    enum: z.array(z.unknown()).optional(),
+    items: schemaNode.optional(),
+    anyOf: z.array(schemaNode).optional(),
+    oneOf: z.array(schemaNode).optional(),
+    properties: z.record(z.string(), schemaNode).optional(),
+    required: z.array(z.string()).optional(),
+  }),
+);
 
 function shape(node: SchemaNode): string {
   const options = node.anyOf ?? node.oneOf;
@@ -73,7 +86,10 @@ function shape(node: SchemaNode): string {
   if (node.const !== undefined) return JSON.stringify(node.const);
   if (node.enum) return node.enum.map((value) => JSON.stringify(value)).join('|');
   const type = Array.isArray(node.type) ? node.type.join('|') : node.type;
-  if (type === 'array') return `${node.items ? shape(node.items) : 'any'}[]`;
+  if (type === 'array') {
+    const item = node.items ? shape(node.items) : 'any';
+    return item.includes('|') ? `(${item})[]` : `${item}[]`;
+  }
   if (type === 'object') {
     const required = new Set(node.required ?? []);
     const fields = Object.entries(node.properties ?? {}).map(
@@ -86,10 +102,16 @@ function shape(node: SchemaNode): string {
   return type ?? 'any';
 }
 
+function payloadShape(kind: AgentChangeKind) {
+  const schema = z.toJSONSchema(changeKinds[kind].proposal, {
+    io: 'input',
+    unrepresentable: 'any',
+  });
+  return shape(schemaNode.parse(schema));
+}
+
 function kindLine(kind: AgentChangeKind) {
-  const entry = changeKinds[kind];
-  const schema = z.toJSONSchema(entry.proposal, { io: 'input', unrepresentable: 'any' });
-  return `- ${kind}: ${entry.purpose}. payload ${shape(schema as SchemaNode)}`;
+  return `- ${kind}: ${changeKinds[kind].purpose}. payload ${payloadShape(kind)}`;
 }
 
 export const PROPOSE_CHANGE_DESCRIPTION = [
@@ -119,6 +141,19 @@ export function proposalLimit(state: Pick<TurnState, 'proposals'>): BuiltinOutco
   return {
     ok: false,
     text: `At most ${agentPolicy.max_proposals_per_turn} changes can be proposed in one turn. Reply now; the person can ask for more.`,
+  };
+}
+
+function bounded(preview: ChangePreview): ChangePreview {
+  const rowsMax = agentPolicy.proposal_preview_rows_max;
+  const chars = agentPolicy.proposal_preview_value_max_chars;
+  const clip = (text: string) => (text.length > chars ? `${text.slice(0, chars - 1)}…` : text);
+  const rows = preview.rows.map((row) => ({ label: row.label, value: clip(row.value) }));
+  if (rows.length <= rowsMax) return { ...preview, rows };
+  const hidden = rows.length - rowsMax + 1;
+  return {
+    ...preview,
+    rows: [...rows.slice(0, rowsMax - 1), { label: 'More', value: `${hidden} more` }],
   };
 }
 
@@ -163,7 +198,7 @@ export async function proposeChange(
     kind: 'change',
     change: kind,
     payload: z.json().parse(staged.payload),
-    preview: staged.preview,
+    preview: bounded(staged.preview),
   });
   state.steps.push({ kind: 'change', label: stepText(staged.preview.title) });
   const job = staged.preview.opens
@@ -178,14 +213,16 @@ export async function proposeChange(
 type Outcome = { proposal_index: number; state: string };
 
 export function proposalViews(stored: unknown, outcomes: readonly Outcome[]): AgentProposal[] {
-  const decided = new Map(outcomes.map((row) => [row.proposal_index, row.state]));
+  const decided = new Map<number, 'executed' | 'dismissed'>();
+  for (const row of outcomes)
+    if (row.state === 'executed' || row.state === 'dismissed')
+      decided.set(row.proposal_index, row.state);
   return storedProposals.parse(stored).map((proposal, index): AgentProposal => {
     if (proposal.kind === 'declaration') return proposal;
     const { title, rows, spend, opens } = proposal.preview;
-    const state = decided.get(index);
-    let outcome: Extract<AgentProposal, { kind: 'change' }>['outcome'] = 'open';
-    if (!isAgentChangeKind(proposal.change)) outcome = 'unavailable';
-    else if (state === 'executed' || state === 'dismissed') outcome = state;
+    const outcome = isAgentChangeKind(proposal.change)
+      ? (decided.get(index) ?? 'open')
+      : 'unavailable';
     return { kind: 'change', index, title, rows, spend, opens, outcome };
   });
 }

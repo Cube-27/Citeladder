@@ -60,11 +60,17 @@ export const promptKinds = {
     async preview(context, payload) {
       const topics = await topicNames(context);
       return {
-        title: `Add ${plural(payload.prompts.length, 'prompt')} to “${await promptSetName(context, payload.prompt_set_id)}”`,
-        rows: payload.prompts.map((prompt) => ({
-          label: (prompt.topic_id && topics.get(prompt.topic_id)) || 'Prompt',
-          value: prompt.text,
-        })),
+        title: `Add ${plural(payload.prompts.length, 'prompt')}`,
+        rows: [
+          { label: 'Prompt set', value: await promptSetName(context, payload.prompt_set_id) },
+          ...payload.prompts.map((prompt) => {
+            const topic = prompt.topic_id ? topics.get(prompt.topic_id) : undefined;
+            return {
+              label: 'Prompt',
+              value: topic ? `${prompt.text} (topic: ${topic})` : prompt.text,
+            };
+          }),
+        ],
         spend: null,
         opens: null,
       };
@@ -135,10 +141,11 @@ export const promptKinds = {
         case 'topic': {
           const texts = await promptTexts(context, payload.prompt_ids);
           const name = payload.topic_id ? (await topicNames(context)).get(payload.topic_id) : null;
-          const where = name ? `under “${name}”` : 'out of every topic';
           return {
-            title: `File ${plural(texts.length, 'prompt')} ${where}`,
-            rows: rowsOf('Prompt', texts),
+            title: name
+              ? `File ${plural(texts.length, 'prompt')} under a topic`
+              : `File ${plural(texts.length, 'prompt')} out of every topic`,
+            rows: [...(name ? [{ label: 'Topic', value: name }] : []), ...rowsOf('Prompt', texts)],
             spend: null,
             opens: null,
           };
@@ -186,8 +193,11 @@ export const promptKinds = {
     },
     preview(_context, payload) {
       return Promise.resolve({
-        title: `Create the topic “${payload.name}”`,
-        rows: payload.description ? [{ label: 'Description', value: payload.description }] : [],
+        title: 'Create a topic',
+        rows: [
+          { label: 'Name', value: payload.name },
+          ...rowsOf('Description', payload.description ? [payload.description] : []),
+        ],
         spend: null,
         opens: null,
       });

@@ -44,8 +44,12 @@ export const projectKinds = {
     },
     preview(_context, payload) {
       return Promise.resolve({
-        title: `Track “${payload.name}” as a competitor`,
-        rows: [...rowsOf('Also called', payload.aliases), ...rowsOf('Domain', payload.domains)],
+        title: 'Track a competitor',
+        rows: [
+          { label: 'Name', value: payload.name },
+          ...rowsOf('Also called', payload.aliases),
+          ...rowsOf('Domain', payload.domains),
+        ],
         spend: null,
         opens: null,
       });
@@ -82,9 +86,9 @@ export const projectKinds = {
       return {
         title:
           payload.decision === 'accept'
-            ? `Track the suggested competitor “${name}”`
-            : `Hide the competitor suggestion “${name}”`,
-        rows: [],
+            ? 'Track a suggested competitor'
+            : 'Hide a competitor suggestion',
+        rows: [{ label: 'Competitor', value: name }],
         spend: null,
         opens: null,
       };
@@ -101,8 +105,8 @@ export const projectKinds = {
     },
     async preview(context, payload) {
       return {
-        title: `${STATUS_VERBS[payload.status]} the Action “${await actionLabel(context, payload.action_id)}”`,
-        rows: [],
+        title: `${STATUS_VERBS[payload.status]} an Action`,
+        rows: [{ label: 'Action', value: await actionLabel(context, payload.action_id) }],
         spend: null,
         opens: null,
       };
@@ -131,8 +135,9 @@ export const projectKinds = {
     },
     async preview(context, payload) {
       return {
-        title: `Mark the Action “${await actionLabel(context, payload.action_id)}” implemented`,
+        title: 'Mark an Action implemented',
         rows: [
+          { label: 'Action', value: await actionLabel(context, payload.action_id) },
           {
             label: 'Live since',
             value: payload.declaration.declared_implemented_at.slice(0, 10),

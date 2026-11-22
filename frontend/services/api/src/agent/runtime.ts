@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { proposalNews } from './proposal-outcomes.ts';
 import type { ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { accessGranted, workspaceAccess } from '../entitlements/access.ts';
@@ -153,6 +154,7 @@ export class AgentRuntime {
         rules: offeredRuleIds({ sections: manifest.package.sections, action: manifest.action }),
         context: suppliedManifest(manifest, budget.context_package_max_chars),
         transcripts: await chatTranscripts(trx, scope, chat.id),
+        proposalNews: await proposalNews(trx, scope, run),
         budget,
       };
     });
@@ -213,6 +215,7 @@ export class AgentRuntime {
             text: methodology(state.skill, state, budget),
           }
         : null,
+      proposals: turn.proposalNews,
       request: turn.request,
     });
     state.messages.push(opening.message);
