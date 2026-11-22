@@ -592,6 +592,14 @@ keeps a failure artifact carrying the reported charge and its cost projection,
 on the scraper and Google AI Overview surfaces alike, so the funded budget and
 internal costs count the paid request.
 
+Google AI Mode is a second SERP surface beside AI Overview. Its DataForSEO
+product, accepted answer element types, skipped paid element types and absence
+status codes live under `serp` in `dataforseo.json`. AI Mode returns its answer
+as the same `ai_overview` block, so both surfaces share the observation outcomes
+(`ai_overview_present`, `no_ai_overview`) and are told apart by logical engine.
+A task with no AI Mode answer (40102) is absence, not a provider error, and
+`ai_overview_paid` placements are never answer text or citations.
+
 Scraper citations use root and nested sources, canonicalized and deduplicated.
 Ad items (`chat_gpt_ad`) are skipped by the source walker and the answer-text
 fallback, so a paid placement is never a citation or answer text; see
