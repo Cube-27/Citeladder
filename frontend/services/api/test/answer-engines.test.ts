@@ -548,6 +548,64 @@ describe('frozen answer-engine execution', () => {
     ).rejects.toMatchObject({ code: 'server_error', retryable: true });
   });
 
+  it.each([
+    {
+      name: 'an OpenAI exhausted quota',
+      engine: 'chatgpt' as const,
+      status: 429,
+      error: {
+        message: 'You exceeded your current quota.',
+        type: 'insufficient_quota',
+        code: 'insufficient_quota',
+      },
+      expected: { code: 'provider_account_unavailable', retryable: false },
+    },
+    {
+      name: 'an Anthropic low credit balance',
+      engine: 'claude' as const,
+      status: 400,
+      error: {
+        type: 'invalid_request_error',
+        message: 'Your credit balance is too low to access the Anthropic API.',
+      },
+      expected: { code: 'provider_account_unavailable', retryable: false },
+    },
+    {
+      name: 'an Anthropic billing error',
+      engine: 'claude' as const,
+      status: 402,
+      error: { type: 'billing_error', message: 'Billing issue.' },
+      expected: { code: 'provider_account_unavailable', retryable: false },
+    },
+    {
+      name: 'an OpenAI request rate limit',
+      engine: 'chatgpt' as const,
+      status: 429,
+      error: {
+        message: 'Rate limit reached for requests.',
+        type: 'requests',
+        code: 'rate_limit_exceeded',
+      },
+      expected: { code: 'rate_limit', retryable: true },
+    },
+    {
+      name: 'an invalid request',
+      engine: 'claude' as const,
+      status: 400,
+      error: { type: 'invalid_request_error', message: 'max_tokens is too large.' },
+      expected: { code: 'client_error', retryable: false },
+    },
+  ])('maps $name to a $expected.code error', async ({ engine, status, error, expected }) => {
+    await expect(
+      executeAnswer(
+        request(engine),
+        { secret: 'test-secret', base_url: '' },
+        providerSettings({}),
+        async () => Response.json({ type: 'error', error }, { status }),
+      ),
+    ).rejects.toMatchObject(expected);
+  });
+
   it('cancels an oversized successful response and reports only the safe parser error', async () => {
     let cancelled = false;
     const response = new Response(
