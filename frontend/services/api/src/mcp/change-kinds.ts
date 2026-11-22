@@ -42,7 +42,7 @@ function areaLines([area, kinds]: [string, Record<string, { purpose: string }>])
 }
 
 export const PREPARE_CHANGE_DESCRIPTION = [
-  'Preview one change to a project for the user to agree to: every check the change makes runs as a dry run and nothing is saved, held, spent, fetched or sent to a model. Returns a preview without ids and a confirmation_token; show the preview, and call confirm_change only after the user explicitly agrees. A delete or a paid run needs that yes each time. Use ids from the reads. Call with the kind alone to get its payload shape; a payload that does not fit is refused with the shape.',
+  'Checks one change to a project as a dry run and returns a preview of it, without ids, and a confirmation_token. Nothing is saved, held, spent, fetched or sent to a model here; confirm_change with the token makes the change once the user has agreed to the preview. Ids come from the read tools. With a kind and no payload it returns that kind’s payload shape; a payload that does not fit is refused with the shape.',
   'Kinds, by area:',
   ...Object.entries(changeAreas).flatMap(areaLines),
 ].join('\n');

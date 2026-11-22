@@ -114,7 +114,7 @@ const writeDefinitions = {
         proposed_topics: preview.topics,
         more: preview.overflow,
         instruction:
-          'Show the user the topic names without ids. Nothing is saved until confirm_topics.',
+          'Show the user the topic names without ids. Nothing is saved until a confirm_topics change is confirmed.',
       };
     },
   }),
