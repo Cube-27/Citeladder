@@ -30,6 +30,7 @@ const businessMap = z.object({ offerings: z.array(offeringMapSchema).default([])
 export const offeringMaps = (business: Record<string, unknown>): OfferingMap[] =>
   businessMap.parse(business.business_map ?? {}).offerings;
 
+export const TOPIC_NEEDED = 'Add a topic before generating prompts';
 export const OFFERING_NEEDED = 'Add at least one offering before generating prompts';
 const topicColumns = ['id', 'name', 'description', 'parent_id'] as const;
 const promptColumns = ['id', 'topic_id', 'text', 'normalized_text_hash'] as const;
@@ -288,7 +289,7 @@ export function generationContext(
       .orderBy('id')
       .execute();
     validateSelection(input, topics);
-    if (!topics.length) throw generationInvalid('Add a topic before generating prompts');
+    if (!topics.length) throw generationInvalid(TOPIC_NEEDED);
     const offerings = strings(profile?.products_services);
     const wanted = wantedTopics(input);
     const selected = wanted.length

@@ -348,6 +348,15 @@ const refreshPageDocument = (client: QueryClient, chatId: string) =>
 const refreshAgentChatLists = (client: QueryClient, projectId: string) =>
   client.invalidateQueries({ queryKey: queryKeys.agent.chatLists(projectId) });
 
+const RECORD_KEYED: ReadonlySet<string> = new Set([
+  'actions',
+  'runs',
+  'site-health',
+  'integrations',
+  'brand-discovery',
+  'billing',
+]);
+
 export const agentMutations = {
   createChat: (workspaceId: string | null) =>
     mutationOptions({
@@ -447,7 +456,8 @@ export const agentMutations = {
         const projectId = detail.chat.project_id;
         if (vars.decision === 'confirm')
           void client.invalidateQueries({
-            predicate: (query) => query.queryKey.includes(projectId),
+            predicate: ({ queryKey }) =>
+              queryKey.includes(projectId) || RECORD_KEYED.has(String(queryKey[0])),
           });
       },
       onError: (_error, vars, _context, { client }) => void refreshAgentChat(client, vars.chatId),

@@ -51,6 +51,9 @@ export function ChangeProposalCard({
   const outcome = gone ? 'unavailable' : proposal.outcome;
   const shown = <FactList facts={facts(proposal)} layout="columns" />;
   const sheet = useRef<HTMLElement>(null);
+  const hold = (node: HTMLElement | null) => {
+    sheet.current = node;
+  };
   const submit = (decision: 'confirm' | 'dismiss') =>
     decide.mutate(
       { chatId, messageId, index: proposal.index, decision },
@@ -62,7 +65,7 @@ export function ChangeProposalCard({
     case 'executed':
       return (
         <DraftSheet
-          ref={sheet}
+          ref={hold}
           tabIndex={-1}
           title={proposal.title}
           state="accepted"
@@ -73,11 +76,11 @@ export function ChangeProposalCard({
         </DraftSheet>
       );
     case 'dismissed':
-      return <DraftSheet ref={sheet} tabIndex={-1} title={proposal.title} state="declined" />;
+      return <DraftSheet ref={hold} tabIndex={-1} title={proposal.title} state="declined" />;
     case 'unavailable':
       return (
         <DraftSheet
-          ref={sheet}
+          ref={hold}
           tabIndex={-1}
           title={proposal.title}
           state="declined"
@@ -87,7 +90,7 @@ export function ChangeProposalCard({
     case 'open':
       return (
         <DraftSheet
-          ref={sheet}
+          ref={hold}
           tabIndex={-1}
           title={proposal.title}
           state="draft"

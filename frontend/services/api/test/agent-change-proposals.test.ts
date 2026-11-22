@@ -97,6 +97,7 @@ it('stages a dry-run proposal that commits with the reply, then executes once fo
       spend: null,
       opens: null,
       outcome: 'open',
+      refusal: null,
     },
   ]);
   expect(await promptTexts(t.setId)).toEqual(['Which running shoes suit road use?']);
@@ -142,10 +143,12 @@ it('returns the owner’s error when the world changed and leaves the card confi
   const ref = { chatId, messageId, index: 0 };
   const confirm = () => decideProposal(db, config, { scope: t.scope, ref, decision: 'confirm' });
   expect(await status(confirm())).toBe(409);
-  expect(await outcome(t.scope, chatId)).toMatchObject([{ outcome: 'open' }]);
+  expect(await outcome(t.scope, chatId)).toMatchObject([
+    { outcome: 'open', refusal: 'A topic with this name already exists in the project' },
+  ]);
   await db.deleteFrom('topics').where('id', '=', clash).execute();
   expect(await status(confirm())).toBe(200);
-  expect(await outcome(t.scope, chatId)).toMatchObject([{ outcome: 'executed' }]);
+  expect(await outcome(t.scope, chatId)).toMatchObject([{ outcome: 'executed', refusal: null }]);
 });
 
 it('previews a paid launch with its spend from the estimate, never the model’s ceiling, and holds nothing until the click', async () => {

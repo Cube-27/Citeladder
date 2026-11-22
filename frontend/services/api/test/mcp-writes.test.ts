@@ -204,19 +204,21 @@ it('refuses topic previews and generation runs the owner refuses, before any mod
       }),
     ),
   ).toBe('Prompt set not found');
-  const comparison = await prepare(principal, tenant, 'generate_prompts', {
-    prompt_set_id: tenant.setId,
-    request: { distribution: { comparison_share: 0.2 } },
-  });
-  expect(await failure(confirm(principal, comparison))).toBe(
-    'Add a competitor before generating comparison prompts',
-  );
+  expect(
+    await failure(
+      prepare(principal, tenant, 'generate_prompts', {
+        prompt_set_id: tenant.setId,
+        request: { distribution: { comparison_share: 0.2 } },
+      }),
+    ),
+  ).toBe('Add a competitor before generating comparison prompts');
   expect(await generationRuns(tenant)).toEqual([]);
 });
 
 it('keys a confirmed generation run by its confirmation, so a retry replays instead of generating again', async () => {
   const tenant = await auditTenant(db, fixtures);
   const principal = await connection(tenant);
+  await topic(db, tenant.projectId, 'Road running');
   const prepared = await prepare(principal, tenant, 'generate_prompts', {
     prompt_set_id: tenant.setId,
     request: { count: 10 },

@@ -18,6 +18,7 @@ import {
   generationContext,
   offeringMaps,
   OFFERING_NEEDED,
+  TOPIC_NEEDED,
   recoverTopics,
   topicProposalInput,
   type GenerationContext,
@@ -48,6 +49,7 @@ import { dimensions, geoTerms, topicWeights } from './generation-plan.ts';
 import { cohortQuotas, gatedOut, judgeDrafts, selectRun } from './generation-quality.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
 import { observedRef } from './observed-queries.ts';
+import { brandTopics } from './brand-topics.ts';
 import { scopedPromptSet } from './prompt-sets.ts';
 import { meterFor, type Meter } from '../billing/metering.ts';
 import { listTopics } from './topics.ts';
@@ -384,9 +386,14 @@ export async function generationPreconditions(
       throw generationInvalid('Add a competitor before generating comparison prompts');
   }
   if (wantedTopics(input).length) return;
-  const recovery = await topicProposalInput(db, { workspaceId, projectId: set.project_id });
-  if (!recovery.existing.length && !recovery.offerings.length)
-    throw generationInvalid(OFFERING_NEEDED);
+  const scope = { workspaceId, projectId: set.project_id };
+  const recovery = await topicProposalInput(db, scope);
+  if (!recovery.existing.length) {
+    if (!recovery.offerings.length) throw generationInvalid(OFFERING_NEEDED);
+    return;
+  }
+  const topic = await brandTopics(db, scope).select('topics.id').executeTakeFirst();
+  if (!topic) throw generationInvalid(TOPIC_NEEDED);
 }
 
 export async function generatePrompts(

@@ -1,4 +1,4 @@
-import type { ReactNode, Ref } from 'react';
+import type { ReactNode, RefCallback } from 'react';
 
 import { Inline, Stack } from './layout';
 import { Tag as DraftTag } from './tag';
@@ -55,7 +55,7 @@ export function DraftSheet({
   actions?: ReactNode;
   as?: 'section' | 'li' | 'div';
   id?: string;
-  ref?: Ref<HTMLElement>;
+  ref?: RefCallback<HTMLElement>;
   tabIndex?: -1;
   className?: string;
   children?: ReactNode;
