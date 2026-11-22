@@ -69,6 +69,17 @@ export function useComposerCommands({
   }, [mentions, pastes]);
   const [resolving, setResolving] = useState(false);
   const resolvingRef = useRef(false);
+  const [reading, setReading] = useState(0);
+  const pendingReads = useRef(0);
+  const readGeneration = useRef(0);
+  const settleRead = (change: number) => {
+    pendingReads.current = Math.max(0, pendingReads.current + change);
+    setReading(pendingReads.current);
+  };
+  const dropReads = () => {
+    readGeneration.current += 1;
+    settleRead(-pendingReads.current);
+  };
   const [menuOpen, setMenuOpen] = useState(false);
   const [skillsOnly, setSkillsOnly] = useState(false);
   const removeCommand = useRef<(() => void) | null>(null);
@@ -145,7 +156,7 @@ export function useComposerCommands({
       });
     },
     prepare: ({ message, edit }, send) => {
-      if (resolvingRef.current) return;
+      if (resolvingRef.current || pendingReads.current > 0) return;
       const finish = (text: string) =>
         send({
           message: text,
@@ -170,7 +181,7 @@ export function useComposerCommands({
           setResolving(false);
         });
     },
-    resolving,
+    resolving: resolving || reading > 0,
     mentions,
     openSkillPicker: (remove, focus) => {
       removeCommand.current = remove;
@@ -212,7 +223,7 @@ export function useComposerCommands({
           limits != null &&
           text.length >= AGENT_PASTE_ATTACHMENT_MIN_CHARS &&
           text.length <= limits.attachment_max_chars &&
-          pastes.length < limits.attachments_max;
+          pastes.length + pendingReads.current < limits.attachments_max;
         if (fits) {
           const paste = keyed({ kind: 'pasted_text', text });
           setPastes((current) => [...current, paste]);
@@ -221,31 +232,36 @@ export function useComposerCommands({
       },
       attach: (files) => {
         if (!limits) return;
-        const room = limits.attachments_max - latestPastes.current.length;
+        const room = limits.attachments_max - latestPastes.current.length - pendingReads.current;
         if (files.length > room)
           toast.notify(
             `Up to ${limits.attachments_max} attachments per message`,
             room > 0 ? `Only the first ${room} were added.` : 'Remove one to add another.',
           );
-        for (const file of files.slice(0, Math.max(0, room)))
+        const taken = files.slice(0, Math.max(0, room));
+        const generation = readGeneration.current;
+        settleRead(taken.length);
+        for (const file of taken)
           void readAttachmentFile(file, limits.attachment_max_chars).then((read) => {
+            if (generation !== readGeneration.current) return;
+            settleRead(-1);
             if (read.kind === 'refused') {
               toast.notify(`Couldn't attach ${file.name}`, read.message);
               return;
             }
             const paste = keyed(read.attachment);
-            setPastes((current) =>
-              current.length < limits.attachments_max ? [...current, paste] : current,
-            );
+            setPastes((current) => [...current, paste]);
           });
       },
       remove: (key) => setPastes((current) => current.filter((paste) => paste.key !== key)),
     },
     clear: () => {
+      dropReads();
       setMentions([]);
       setPastes([]);
     },
     restore: (saved) => {
+      dropReads();
       setMentions([...saved.mentions]);
       setPastes(saved.pastes.map(keyed));
     },
