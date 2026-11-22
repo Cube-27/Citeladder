@@ -41,12 +41,12 @@ export type Selection = {
   topic_id?: string | null;
 };
 export type Page = { cursor?: string | null; limit?: number | null };
-const inMarket = (scope: ReadScope, args: Selection) => ({
+export const inMarket = (scope: ReadScope, args: Selection) => ({
   ...scope,
   marketId: args.market_id ?? null,
   topicId: args.topic_id ?? null,
 });
-const runs = (scope: ReadScope, args: Selection): RunSelection => ({
+export const runs = (scope: ReadScope, args: Selection): RunSelection => ({
   ...inMarket(scope, args),
   auditId: args.audit_id ?? null,
   auditIds: null,
@@ -56,7 +56,7 @@ const runs = (scope: ReadScope, args: Selection): RunSelection => ({
   toAt: null,
 });
 
-async function requireTopic({ db, scope }: ProjectRead, topicId: string | null | undefined) {
+export async function requireTopic({ db, scope }: ProjectRead, topicId: string | null | undefined) {
   if (!topicId) return;
   const topic = await new WorkspaceScope(scope.workspaceId)
     .selectFrom(db, 'topics')
@@ -238,7 +238,7 @@ type OverviewArgs = Selection & {
   view?: 'summary' | 'topics' | 'matrix';
 };
 
-const dashboardQuery = (args: Selection) =>
+export const dashboardQuery = (args: Selection) =>
   ({
     auditId: args.audit_id ?? null,
     logicalEngine: args.engine ?? null,

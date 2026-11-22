@@ -81,7 +81,7 @@ export async function siteSnapshot(
   } satisfies McpSiteSnapshot & Evidence;
 }
 
-async function selectCrawl({ db, scope }: ProjectRead, crawlId: string | null | undefined) {
+export async function selectCrawl({ db, scope }: ProjectRead, crawlId: string | null | undefined) {
   if (!crawlId)
     return (await currentSiteCrawl(db, scope.workspaceId, scope.projectId)) ?? undefined;
   const crawl = await new WorkspaceScope(scope.workspaceId)

@@ -14,7 +14,8 @@ and the next fix, from what the answers actually say.
   (`view: topics` per topic); reuse its `audit_id` in every later read. Then
   `read_prompt_metrics` for the prompts won and lost.
 - `read_visibility_results` for what the answers said and
-  `read_visibility_sources` for what they cite.
+  `read_visibility_sources` for what they cite (`view: near_misses` for your
+  pages engines read but did not cite).
 - As the question needs: `read_competitors` (one competitor in focus),
   `read_query_fanouts` (what engines searched while answering),
   `read_content_differentiation` (an owned page against the pages that win),

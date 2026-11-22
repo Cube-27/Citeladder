@@ -3,7 +3,7 @@ id: technical_health
 label: Technical health
 group: owned_site
 order: 7
-version: 3
+version: 4
 output_kind: technical_fix
 description: Find and verify technical SEO or AI-access defects using CiteLadder site-health evidence. Use for crawlability, indexing, canonicals, rendering, broken paths and technical handoffs; not speculative readiness scoring.
 ---
@@ -16,7 +16,7 @@ The few real technical defects that matter, ordered by the business journeys the
 
 ## Where the data is
 
-- `read_site_health`: the latest crawl, its coverage and top issues. With no crawl, one must be run in CiteLadder.
+- `read_site_health`: the latest crawl, its coverage and top issues (`view: changes` for what changed since the last crawl). With no crawl, one must be run in CiteLadder.
 - `read_site_pages` with an issue's `rule_id`: the affected pages, what the check found on each and, where kept, the failing markup to write an exact fix.
 - `read_page_text`: the words of a page that is directly relevant.
 - `read_ai_crawlability` and `read_crawl_logs`: what robots rules allow each AI bot, and the visits actually seen.

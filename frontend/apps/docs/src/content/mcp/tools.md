@@ -3,7 +3,7 @@ title: 'MCP tool reference'
 description: 'Choose the narrowest registered read tool that answers your question, and see which tools make changes.'
 group: 'Connect with MCP'
 order: 320
-updated: '2026-11-18'
+updated: '2026-11-22'
 ---
 
 Start with project discovery, inspect available evidence, then ask for the concrete record or dataset you need. List tools are bounded; follow returned cursors instead of assuming the first page is complete. Visibility reads take a `topic_id` from `read_prompt_portfolio` to read one topic.
@@ -17,10 +17,14 @@ Start with project discovery, inspect available evidence, then ask for the concr
 | Which project, Action or prompt mentions this?  | `search`, then `fetch`                                         |
 | What did an AI audit observe?                   | `read_visibility_overview`, then `read_visibility_results`     |
 | How does each topic perform?                    | `read_visibility_overview` with `view` `topics` or `matrix`    |
+| How often do AI Overviews show and cite us?     | `read_visibility_overview` with `view` `surface`               |
+| How does each market compare?                   | `read_visibility_overview` with `view` `markets`               |
 | Which prompts do we win or lose?                | `read_prompt_metrics`, then `view` `history` or `answers`      |
 | What did engines search for while answering?    | `read_query_fanouts`                                           |
 | Who competes with us, and who should we track?  | `read_competitors` with `view` `focus` or `suggestions`        |
 | Which sources were used?                        | `read_visibility_sources`                                      |
+| Which of our pages are read but not cited?      | `read_visibility_sources` with `view` `near_misses`            |
+| Which sources gained or lost share?             | `read_visibility_sources` with `view` `movers` or `series`     |
 | How do answers portray us and competitors?      | `read_perception`                                              |
 | Do answers state our facts correctly? (pilot)   | `read_fact_checks`, with `view` `facts` for each fact          |
 | Which ads appear in ChatGPT answers?            | `read_ai_ads`                                                  |
@@ -29,6 +33,7 @@ Start with project discovery, inspect available evidence, then ask for the concr
 | How do cited competitor pages differ from mine? | `read_content_differentiation`                                 |
 | How do AI answers rank each of our products?    | `read_ai_shelf`                                                |
 | What did the website crawl find?                | `read_site_health`, then `read_site_pages`                     |
+| What changed since the last crawl?              | `read_site_health` with `view` `changes` or `change_list`      |
 | Can AI crawlers reach the site?                 | `read_ai_crawlability`                                         |
 | Which AI crawlers visited, per server logs?     | `read_crawl_logs`                                              |
 | Which pages get AI traffic?                     | `read_ai_traffic_pages`, then `read_ai_traffic_url`            |

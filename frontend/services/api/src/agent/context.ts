@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { currentInstructions } from './instructions.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { targetAgentContext } from '../opportunities/targets/registry.ts';
@@ -92,14 +93,7 @@ export async function buildManifest(
       }),
     ]),
   );
-  const instructions = await db
-    .selectFrom('agent_instruction_revisions')
-    .select(['revision', 'text'])
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .orderBy('revision', 'desc')
-    .limit(1)
-    .executeTakeFirst();
+  const { revision, text } = await currentInstructions(db, scope);
   const scoped = await actionScopes(db, scope, input.refs, input.actionId);
   const found = input.actionId ? actions.get(input.actionId) : undefined;
   const action = found ? { ...found, ...scoped.action } : null;
@@ -113,7 +107,7 @@ export async function buildManifest(
     ),
     action,
     mentions: input.mentionIds.map((id) => actions.get(id)),
-    instructions: instructions ?? null,
+    instructions: revision === null ? null : { revision, text },
   });
 }
 type SuppliedManifest = {
