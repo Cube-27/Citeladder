@@ -514,7 +514,12 @@ cancelled or paused (Claude `pause_turn`; a Gemini interaction still in
 progress or awaiting continuation) fails as `answer_unfinished` under the
 transient policy, whatever text it carries; a Gemini `completed` interaction
 without text is still `empty_answer`. Non-empty text cut off by the budget is still an
-observation and keeps its `length` finish reason. A Claude answer is the text
+observation and keeps its `length` finish reason. A successful API exchange
+keeps its parsed response body as evidence on the artifact's
+`provider_metadata.raw_body` (`stored`, or `over_bound` with its size when it
+passes `answer_raw_body_max_bytes`), never on the task row. Nothing derives a
+metric from it, and it is deliberately not the scraper `raw_response` that the
+ads, answer-format and Commerce parsers read. A Claude answer is the text
 after its last web search, joined exactly as written: the search preamble is
 not answer text, and a sentence split across citation blocks stays one sentence. All engines share the frozen
 `audit_max_output_tokens`; Anthropic thinking counts against it, so the
