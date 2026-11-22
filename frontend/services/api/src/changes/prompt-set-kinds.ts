@@ -13,6 +13,7 @@ import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { promptBulkDelete } from '../prompts/bulk.ts';
 import { candidateReview } from '../prompts/candidates.ts';
 import { draftCallLimit } from '../prompts/generation-drafts.ts';
+import { generationPreconditions } from '../prompts/generation.ts';
 import { generationInput, validateSelection } from '../prompts/generation-input.ts';
 import {
   createPromptSet,
@@ -231,6 +232,7 @@ export const promptSetKinds = {
         projectId: change.projectId,
       });
       validateSelection(payload.request, topics);
+      await generationPreconditions(trx, actor.workspaceId, payload.prompt_set_id, payload.request);
     },
     async execute(db, _config, actor, change, payload) {
       const result = await startGeneration(

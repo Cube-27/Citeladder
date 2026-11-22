@@ -207,9 +207,11 @@ export async function readChat(
     modelLocked(db, scope, chat.id),
     db
       .selectFrom('agent_proposal_outcomes')
-      .select(['message_id', 'proposal_index', 'state'])
+      .select(['message_id', 'proposal_index', 'state', 'reason'])
       .where('workspace_id', '=', scope.workspaceId)
       .where('chat_id', '=', chat.id)
+      .orderBy('created_at')
+      .orderBy('id')
       .execute(),
   ]);
   const generated = documents.length

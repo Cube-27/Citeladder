@@ -7,6 +7,7 @@ import { z } from 'zod';
 import {
   buyerGenerateInput,
   buyerManualInput,
+  buyerPromptHold,
   generateBuyerPrompts,
   manualBuyerPrompt,
   requestContexts,
@@ -82,7 +83,7 @@ export const commerceKinds = {
   discover_commerce_competitors: changeKind({
     permission: MEMBER_RUN,
     purpose:
-      'search for competing products of chosen products or categories; uses daily discoveries and AI credits as each runs',
+      'search for competing products of chosen products or categories; uses daily discoveries as each runs',
     payload: discoveryInput,
     async execute(trx, _config, actor, change, payload) {
       const scope = await commerceScope(trx, actor.workspaceId, change);
@@ -99,7 +100,7 @@ export const commerceKinds = {
           label: target.kind,
           value: names[index] ?? '',
         })),
-        spend: `${plural(payload.targets.length, 'competitor discovery', 'competitor discoveries')} from the day's allowance, plus AI credits for each search`,
+        spend: `${plural(payload.targets.length, 'competitor discovery', 'competitor discoveries')} from the day's allowance; no AI credits`,
         opens: PRODUCTS,
       };
     },
@@ -118,13 +119,21 @@ export const commerceKinds = {
       return { summary: `Wrote ${plural(written.length, 'buyer prompt')} for approval.` };
     },
     async preview(context, payload) {
+      const scope = await commerceScope(context.db, context.workspaceId, context);
+      const held = buyerPromptHold(
+        await requestContexts(context.db, scope, payload),
+        payload.count,
+      );
       return {
         title: `Write buyer prompts for ${plural(payload.targets.length, 'target')}`,
         rows: [
           { label: 'Targets', value: (await targetNames(context, payload.targets)).join(', ') },
           { label: 'Prompts each', value: `Up to ${payload.count}` },
         ],
-        spend: `AI credits for up to ${plural(payload.targets.length, 'model call')}`,
+        spend:
+          held === null
+            ? `AI credits for up to ${plural(payload.targets.length, 'model call')}`
+            : `Up to ${plural(held, 'AI credit')}`,
         opens: PRODUCTS,
       };
     },

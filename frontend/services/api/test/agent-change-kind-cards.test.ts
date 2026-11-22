@@ -13,7 +13,10 @@ const db = testDatabase(config);
 const fixtures = new SiteFixtures(db);
 const table = kindCases(db, fixtures);
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 afterAll(async () => {
   await fixtures.cleanup();
   await db.destroy();
@@ -206,7 +209,7 @@ const METERED: [TabledKind, string, Spend | null][] = [
   ['generate_buyer_prompts', 'AI credits for up to 1 model call', null],
   [
     'discover_commerce_competitors',
-    "1 competitor discovery from the day's allowance, plus AI credits for each search",
+    "1 competitor discovery from the day's allowance; no AI credits",
     { holds: {}, budgets: { 'commerce.competitor_discovery': 1 } },
   ],
   [
@@ -253,6 +256,13 @@ it.each(METERED)(
     expect({ holds: added('holds'), budgets: added('budgets') }).toEqual(clicked);
   },
 );
+
+it('generate_buyer_prompts quotes the AI credits its model call can hold when the model is priced', async () => {
+  vi.stubEnv('DEFAULT_AGENT_MODEL', 'claude-haiku-5-5');
+  const { before, previewed, preview } = await staged('generate_buyer_prompts');
+  expect(preview.spend).toBe('Up to 6 AI credits');
+  expect(previewed).toEqual(before);
+});
 
 it('start_crawl says in plain words when the crawl ignores robots.txt, chosen or inherited', async () => {
   const { scope } = await table.start_crawl.arrange();

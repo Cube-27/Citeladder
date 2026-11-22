@@ -9,10 +9,10 @@ change to the project's data that the user confirms on a card.
 
 It owns chats, runs, model and tool attempts, outputs and their revisions. It
 does not own business evidence, Actions or measurement and has no second
-knowledge store. It cannot publish, contact third parties, run crawls, change a
-customer site or claim an improvement without new measured evidence, and it
-changes project data only through [proposed changes](#proposed-changes) the
-person confirms; billing, plan, members, API keys, credentials and settings stay
+knowledge store. It cannot publish, contact third parties, change a customer
+site or claim an improvement without new measured evidence, and it never changes
+anything itself: every project-data change, crawls included, is a
+[proposed change](#proposed-changes) the person confirms; billing, plan, members, API keys, credentials and settings stay
 button-only. Its one reach beyond
 CiteLadder data is the model provider's hosted [web search](#web-search),
 bounded per turn; it never fetches, submits to or changes a page it finds.
@@ -305,7 +305,9 @@ from another project. `list_projects` and the MCP App views (`render_visibility`
 `render_site_health`, `open_analytics`) are not Agent tools. Each call runs as
 the chat member through MCP's membership predicate, and workspace access
 (trial and plan) is rechecked before every model call. The Agent and MCP read
-the same catalogue; there are no Agent-only reads. A caller's mistake (a bad cursor, window or
+the same catalogue; there are no Agent-only reads. The Agent's copy of a description drops each
+sentence naming a tool or change kind it lacks, so read guidance names a change
+by its kind, never by `prepare_change`. A caller's mistake (a bad cursor, window or
 filter) is refused with the owner's reason so the model can correct the call.
 A paged read whose `limit` takes any size returns the Agent `read_default_limit`
 (20) rows when the model names none and accepts at most `read_max_limit` (50),
@@ -334,9 +336,10 @@ builds from the validated payload. Each kind calls the owner function its route
 calls; where the route gates on a capability alone, the kind carries a member
 grant with no scope, which API keys cannot hold. An owner a kind calls takes the
 caller's transaction (`inTransaction`), so the dry run can roll it back. Adding a
-kind is one entry in its area's file plus its name in the Agent's list
-([`change-proposals.ts`](../frontend/services/api/src/agent/change-proposals.ts)),
-and in MCP's curated list only if MCP should offer it ([MCP](mcp.md#changes)).
+kind is one entry in its area's file; the Agent offers every kind but those its
+list in [`change-proposals.ts`](../frontend/services/api/src/agent/change-proposals.ts)
+opts out, and MCP offers it only if added to MCP's curated list
+([MCP](mcp.md#changes)).
 The model gets one built-in, `propose_change` (kind and payload). Its
 description lists each kind's name and purpose by area and no payload shapes, so
 the cached prefix stays small; a kind's shape, printed from its schema, comes
@@ -367,7 +370,9 @@ A kind whose owner calls a model or fetches outside CiteLadder (prompt and
 buyer-prompt generation, logo refresh, a Keyword research quote that confirms
 competitor sites) is **live**: its dry run runs the kind's check, never the
 owner's outside call (the quote's check runs the owner with the site fetch left
-out). At the click it runs outside the decision transaction, because a
+out). The check calls the preconditions the owner exports and runs itself
+(prompt generation's `generationPreconditions`), so no card is proposed that
+the click would refuse for a reason known before the call. At the click it runs outside the decision transaction, because a
 charged model call must not hold one, under a session advisory try-lock on the
 proposal: a second click while it runs gets 409 `agent_proposal_running`, and
 the decision is recorded only after the owner succeeds.
@@ -390,7 +395,8 @@ member against their live role and the kind's permission, and records an
 a Viewer gets 403 and another workspace 404. A changed world returns the
 owner's normal error, rolls the decision back, leaves the card confirmable
 and appends a `refused` row with that reason. The card shows open (Confirm and Dismiss, or "Editors only"),
-executed, dismissed, or no longer available when its kind is gone.
+executed, dismissed, or no longer available when its kind is gone; an open card
+shows its latest refusal's reason, read from that row.
 
 The Agent learns what happened in its next turn's opening message, never the
 cached prefix: each earlier card whose proposal or outcome is newer than the

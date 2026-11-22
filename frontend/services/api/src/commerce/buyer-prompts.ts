@@ -12,12 +12,17 @@ import { budget, spendBudget } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
 import { commerceBuyerPromptSystem } from '../config/commerce.ts';
 import { inTransaction, type Database } from '../db/database.ts';
-import { meterFor, type Meter } from '../billing/metering.ts';
+import { gatewayHold, meterFor, type Meter } from '../billing/metering.ts';
 import { record, strings } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import { firstOf, isNonEmpty } from '../lists.ts';
 import { failureFacts, getLogger } from '../logging.ts';
-import { createModelGateway, type ModelGateway } from '../models/gateway.ts';
+import {
+  createModelGateway,
+  gatewaySettings,
+  withSchema,
+  type ModelGateway,
+} from '../models/gateway.ts';
 import { ModelError } from '../models/http.ts';
 import { bindingTokens } from '../prompts/binding.ts';
 import { brandTopics } from '../prompts/brand-topics.ts';
@@ -227,6 +232,33 @@ function generationRequest(context: TargetContext, count: number) {
   return context.target_kind === 'category'
     ? { contexts: M.contexts, stages: M.stages, branded: brandedQuota(matrixCells), context }
     : { count, context };
+}
+
+const RESPONSE = z.object({ prompts: z.array(matrixRowSchema) });
+
+function modelRequest(context: TargetContext, count: number) {
+  return {
+    system: commerceBuyerPromptSystem(context.business_model, context.target_kind === 'category'),
+    user: JSON.stringify(generationRequest(context, count)),
+  };
+}
+
+export function buyerPromptHold(
+  contexts: readonly TargetContext[],
+  count: number,
+  gateway = gatewaySettings(),
+) {
+  let total = 0;
+  for (const context of contexts) {
+    const request = modelRequest(context, count);
+    const held = gatewayHold(gateway, 'commerce_buyer_prompts', {
+      system: request.system,
+      user: withSchema(request.user, z.toJSONSchema(RESPONSE)),
+    });
+    if (held === null) return null;
+    total += held;
+  }
+  return total;
 }
 
 function targetDrafts(
@@ -468,11 +500,8 @@ async function askModel(
 ) {
   const startedAt = performance.now();
   try {
-    return await gateway.structured(
-      commerceBuyerPromptSystem(context.business_model, context.target_kind === 'category'),
-      JSON.stringify(generationRequest(context, count)),
-      z.object({ prompts: z.array(matrixRowSchema) }),
-    );
+    const request = modelRequest(context, count);
+    return await gateway.structured(request.system, request.user, RESPONSE);
   } catch (error) {
     if (!(error instanceof ModelError)) throw error;
     getLogger('commerce.buyer_prompts').warning('commerce_buyer_prompts_model_failed', {

@@ -149,7 +149,7 @@ async function errorExcerpt(response: Response, limit = 8192) {
   return text.slice(0, limit);
 }
 
-function withSchema(user: string, schema: unknown) {
+export function withSchema(user: string, schema: unknown) {
   return `${user}\n\nReturn only JSON matching this schema:\n${JSON.stringify(schema)}`;
 }
 

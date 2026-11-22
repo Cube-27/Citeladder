@@ -17,7 +17,10 @@ import { createJevClient, type JevClient } from '../models/jev.ts';
 import {
   generationContext,
   offeringMaps,
+  OFFERING_NEEDED,
+  TOPIC_NEEDED,
   recoverTopics,
+  topicProposalInput,
   type GenerationContext,
   type OfferingMap,
   type TopicRecovery,
@@ -46,6 +49,7 @@ import { dimensions, geoTerms, topicWeights } from './generation-plan.ts';
 import { cohortQuotas, gatedOut, judgeDrafts, selectRun } from './generation-quality.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
 import { observedRef } from './observed-queries.ts';
+import { brandTopics } from './brand-topics.ts';
 import { scopedPromptSet } from './prompt-sets.ts';
 import { meterFor, type Meter } from '../billing/metering.ts';
 import { listTopics } from './topics.ts';
@@ -364,14 +368,32 @@ async function replay(
   });
 }
 
-async function requireCompetitor(db: Database, workspaceId: string, setId: string) {
+export async function generationPreconditions(
+  db: Database,
+  workspaceId: string,
+  setId: string,
+  input: GenerationInput,
+) {
+  validateRequest(input);
   const set = await scopedPromptSet(db, workspaceId, setId);
-  const competitor = await db
-    .selectFrom('competitors')
-    .select('id')
-    .where('project_id', '=', set.project_id)
-    .executeTakeFirst();
-  if (!competitor) throw generationInvalid('Add a competitor before generating comparison prompts');
+  if (cohortShares(input).comparison > 0) {
+    const competitor = await db
+      .selectFrom('competitors')
+      .select('id')
+      .where('project_id', '=', set.project_id)
+      .executeTakeFirst();
+    if (!competitor)
+      throw generationInvalid('Add a competitor before generating comparison prompts');
+  }
+  if (wantedTopics(input).length) return;
+  const scope = { workspaceId, projectId: set.project_id };
+  const recovery = await topicProposalInput(db, scope);
+  if (!recovery.existing.length) {
+    if (!recovery.offerings.length) throw generationInvalid(OFFERING_NEEDED);
+    return;
+  }
+  const topic = await brandTopics(db, scope).select('topics.id').executeTakeFirst();
+  if (!topic) throw generationInvalid(TOPIC_NEEDED);
 }
 
 export async function generatePrompts(
@@ -387,8 +409,7 @@ export async function generatePrompts(
     const prior = await replay(db, workspaceId, setId, input, idempotencyKey);
     if (prior) return prior;
   }
-  validateRequest(input);
-  if (cohortShares(input).comparison > 0) await requireCompetitor(db, workspaceId, setId);
+  await generationPreconditions(db, workspaceId, setId, input);
   const meter = (dependencies.meter ?? meterFor)(db, workspaceId);
   let metered: ModelGateway | undefined;
   const gatewayFor = () => {

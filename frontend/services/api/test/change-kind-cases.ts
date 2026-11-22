@@ -364,6 +364,7 @@ export function kindCases(db: Database, fixtures: SiteFixtures) {
       live: true,
       async arrange() {
         const t = await tenant();
+        await topic(db, t.projectId, 'Road');
         return {
           scope: t,
           payload: { prompt_set_id: t.setId, request: { count: 3 } },

@@ -147,6 +147,7 @@ it('previews a prompt import with its skips without writing, refuses another wor
       spend: null,
       opens: null,
       outcome: 'open',
+      refusal: null,
     },
   ]);
   expect(await promptTexts(t.setId)).toEqual(['Which running shoes suit road use?']);
@@ -238,6 +239,7 @@ it('refuses facts without the fact-checking flag, then previews duplicates and i
       spend: null,
       opens: null,
       outcome: 'open',
+      refusal: null,
     },
   ]);
   const facts = () =>
@@ -287,6 +289,7 @@ it('refuses a catalog import without commerce, then previews new and rejected pr
       spend: null,
       opens: null,
       outcome: 'open',
+      refusal: null,
     },
   ]);
   const products = () =>

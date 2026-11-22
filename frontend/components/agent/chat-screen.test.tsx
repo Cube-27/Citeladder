@@ -583,9 +583,14 @@ describe('ChatScreen', () => {
     );
     const user = userEvent.setup();
     renderChat();
-    expect(
-      await screen.findByRole('button', { name: 'Model: Sonnet 5.5, set for this chat' }),
-    ).toBeDisabled();
+    const locked = await screen.findByRole('button', {
+      name: 'Model: Sonnet 5.5, set for this chat',
+    });
+    expect(locked).toHaveAttribute('aria-disabled', 'true');
+    act(() => locked.focus());
+    expect(locked).toHaveFocus();
+    await user.click(locked);
+    expect(screen.queryByRole('menuitemradio')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Effort: Low' }));
     await user.click(await screen.findByRole('menuitemradio', { name: 'High' }));
     await user.type(screen.getByLabelText('Reply to the agent'), 'Go deeper{Enter}');
