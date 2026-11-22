@@ -222,15 +222,25 @@ async function refusal(promise: Promise<unknown>) {
 it('tells each later turn what happened to its cards once, by their card, and refuses another project’s record', async () => {
   const t = await tenant();
   const otherSet = await promptSet(db, await fixtures.project(t.workspaceId));
-  const { chatId, messageId } = await proposed(t.scope, [
+  const { chatId, messageId, proposals } = await proposed(t.scope, [
     { kind: 'create_topic', payload: { name: 'Trail' } },
     { kind: 'create_topic', payload: { name: 'Road' } },
     { kind: 'create_topic', payload: { name: 'Hills' } },
     {
       kind: 'add_prompts',
-      payload: { prompt_set_id: t.setId, prompts: [{ text: 'Best trail boots?' }] },
+      payload: {
+        prompt_set_id: t.setId,
+        prompts: [{ text: 'Which trail running shoes grip best in mud?' }],
+      },
     },
     { kind: 'create_topic', payload: { name: 'Track' } },
+  ]);
+  expect(proposals.map((card) => card.kind === 'change' && card.title)).toEqual([
+    'Create a topic',
+    'Create a topic',
+    'Create a topic',
+    'Add 1 prompt',
+    'Create a topic',
   ]);
   const stored = await db
     .selectFrom('agent_messages')

@@ -20,27 +20,42 @@ import type { TurnState } from './turn-budget.ts';
 import { documentStep } from './turn-state.ts';
 import { showView, SHOW_VIEW } from './views.ts';
 
+type BuiltinCall = { turn: Turn; state: TurnState; call: ToolCall };
+
+function projectBuiltin(
+  db: Database,
+  config: () => ServiceConfig,
+  { turn, state, call }: BuiltinCall,
+): Promise<BuiltinOutcome> | null {
+  switch (call.name) {
+    case PROPOSE_CHANGE:
+      return authorize(db, turn.scope).then(() =>
+        proposeChange(db, config(), { scope: turn.scope, state }, call.input),
+      );
+    case PROPOSE_DECLARATION:
+      return db.transaction().execute(async (trx) => {
+        await authorize(trx, turn.scope);
+        const proposal = {
+          scope: turn.scope,
+          known: knownActions(turn.manifest, state.read),
+          documents: turn.documents,
+        };
+        return proposeDeclaration(trx, proposal, state, call.input);
+      });
+    case SHOW_VIEW:
+      return authorize(db, turn.scope).then(() => showView(db, turn.scope, state, call.input));
+    default:
+      return null;
+  }
+}
+
 export async function runBuiltin(
   db: Database,
   { catalog, config }: { catalog: SkillCatalog; config: () => ServiceConfig },
-  { turn, state, call }: { turn: Turn; state: TurnState; call: ToolCall },
+  { turn, state, call }: BuiltinCall,
 ): Promise<BuiltinOutcome> {
-  if (call.name === PROPOSE_CHANGE) {
-    await authorize(db, turn.scope);
-    return proposeChange(db, config(), { scope: turn.scope, state }, call.input);
-  }
-  if (call.name === PROPOSE_DECLARATION)
-    return db.transaction().execute(async (trx) => {
-      await authorize(trx, turn.scope);
-      const proposal = {
-        scope: turn.scope,
-        known: knownActions(turn.manifest, state.read),
-        documents: turn.documents,
-      };
-      return proposeDeclaration(trx, proposal, state, call.input);
-    });
-  if (call.name === SHOW_VIEW)
-    return authorize(db, turn.scope).then(() => showView(db, turn.scope, state, call.input));
+  const project = projectBuiltin(db, config, { turn, state, call });
+  if (project) return project;
   if (call.name === LOAD_SKILL) {
     const before = state.skill;
     const outcome = loadSkill(catalog, state, call.input, turn.budget);

@@ -154,8 +154,6 @@ export async function proposeDeclaration(
     ok: false,
     text: 'Propose a declaration only for the chat’s Action, one the person mentioned, or one a read returned this turn. Read the Action first.',
   };
-  const full = proposalLimit(state);
-  if (full) return full;
   if (!turn.known.has(actionId)) return unseen;
   const checked = await eligibility(db, turn.scope, actionId);
   if (checked.kind === 'unknown') return unseen;
