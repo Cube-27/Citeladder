@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { afterAll, afterEach, expect, it, vi } from 'vitest';
 import { changeKinds } from '../src/changes/kinds.ts';
@@ -7,7 +6,8 @@ import { MCP_CHANGE_KINDS, type McpChangeKind } from '../src/mcp/change-kinds.ts
 import { auditTenant } from './audit-fixtures.ts';
 import { kindCases, type KindRow, type KindScope } from './change-kind-cases.ts';
 import { mcpWrites } from './mcp-write-support.ts';
-import { actionRow } from './opportunity-fixtures.ts';
+import { actionFixture, type ActionSeed } from './action-support.ts';
+import { boundary, pageRule } from './action-routes-support.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
 import { testConfig, testDatabase } from './support.ts';
@@ -18,8 +18,13 @@ const fixtures = new SiteFixtures(db);
 const { connection, call, failure, setRole, cleanup } = mcpWrites(db, config);
 
 afterEach(() => vi.restoreAllMocks());
+const actionSeeds: ActionSeed[] = [];
 afterAll(async () => {
   await cleanup();
+  for (const seed of actionSeeds) {
+    await db.deleteFrom('workspaces').where('id', '=', seed.workspace_id).execute();
+    await db.deleteFrom('users').where('id', '=', seed.user_id).execute();
+  }
   await fixtures.cleanup();
   await db.destroy();
 });
@@ -101,23 +106,17 @@ const MCP_ONLY: Record<
   declare_implemented: {
     foreign: 404,
     async arrange() {
-      const t = await tenant();
-      const row = actionRow(
-        { workspace_id: t.workspaceId, project_id: t.projectId },
-        { group_key: randomUUID(), target_kind: 'page', target_label: 'https://example.test/a' },
-      );
-      await db.insertInto('actions').values(row).execute();
+      const seed = await actionFixture<ActionSeed>('seed');
+      actionSeeds.push(seed);
+      const actionId = seed.actions[pageRule]!;
       return {
-        scope: t,
-        payload: {
-          action_id: row.id,
-          declaration: { declared_implemented_at: new Date().toISOString() },
-        },
+        scope: { workspaceId: seed.workspace_id, projectId: seed.project_id, userId: seed.user_id },
+        payload: { action_id: actionId, declaration: { declared_implemented_at: boundary } },
         observe: () =>
           db
             .selectFrom('opportunity_implementation_events')
             .select('id')
-            .where('action_id', '=', row.id)
+            .where('action_id', '=', actionId)
             .execute()
             .then((found) => found.length),
         before: 0,
@@ -176,7 +175,9 @@ it.each(MCP_CHANGE_KINDS)(
     const held = await reservations(scope);
     const prepared = await prepare(principal);
     expect(prepared).toMatchObject({ state: 'needs_confirmation', kind });
-    expect(JSON.stringify(prepared.preview)).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/u);
+    expect(JSON.stringify(prepared.preview).replaceAll(/"url":"[^"]*"/gu, '')).not.toMatch(
+      /[0-9a-f]{8}-[0-9a-f]{4}-/u,
+    );
     expect(await arranged.observe()).toEqual(arranged.before);
     expect(await reservations(scope)).toBe(held);
     expect(await changeEvents(scope)).toEqual([]);

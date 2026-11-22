@@ -218,11 +218,3 @@ export function overLimitSelection(excluded: number) {
     details: { key: PROMPT_SLOTS, excluded },
   });
 }
-
-export async function promptOccupancy(
-  db: Database,
-  workspaceId: string,
-): Promise<{ used: number; allowance: number }> {
-  const { values } = await lockedGrants(db, workspaceId);
-  return { used: await promptCount(db, workspaceId), allowance: values.get(PROMPT_SLOTS) ?? 0 };
-}
