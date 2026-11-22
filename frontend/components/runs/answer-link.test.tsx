@@ -46,7 +46,7 @@ describe('AnswerLink', () => {
     await user.click(link);
 
     expect(await screen.findByRole('dialog', { name: 'best plumber' })).toBeVisible();
-    expect(screen.getByLabelText('Location')).toHaveTextContent(/^\/perception$/u);
+    expect(screen.getByLabelText('Location').textContent).toBe('/perception');
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(link).toHaveFocus();
