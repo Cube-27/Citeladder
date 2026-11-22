@@ -248,14 +248,15 @@ describe('cards and strips', () => {
     );
   });
 
-  it('lists the four answer engines by name', () => {
+  it('lists the answer engines by name, AI Mode with the Google mark', () => {
     render(<EngineStrip />);
     const list = screen.getByRole('list', { name: 'Answers collected from' });
     expect(
       within(list)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['ChatGPT', 'Claude', 'Gemini', 'Google AI Overviews']);
+    ).toEqual(['ChatGPT', 'Claude', 'Gemini', 'Google AI Overviews', 'Google AI Mode']);
+    expect(list.querySelectorAll('[data-engine-mark="google"]')).toHaveLength(2);
   });
 
   it('names an engine by the source its answers come through when given one', () => {

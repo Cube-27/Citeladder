@@ -23,7 +23,7 @@ publication_status: 'editorial_review'
 product:
   heading: 'Diagnose your own AI visibility gaps'
   href: '/platform'
-  body: "CiteLadder shows how ChatGPT, Gemini, Claude and Google AI Overviews answer your buyers' questions and which pages they cite. Start with the failure you actually observe."
+  body: "CiteLadder shows how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer your buyers' questions and which pages they cite. Start with the failure you actually observe."
 ---
 
 ## Why does diagnosis come before the fix?

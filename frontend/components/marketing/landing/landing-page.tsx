@@ -246,7 +246,7 @@ export function LandingPage() {
       <Hero />
       <PageSection label="Monitored answer engines" spacing="compact">
         <EngineStrip
-          engines={['chatgpt', 'gemini', 'claude', 'google']}
+          engines={['chatgpt', 'gemini', 'claude', 'google', 'google_ai_mode']}
           names={{ chatgpt: 'OpenAI API', gemini: 'Gemini API', claude: 'Claude API' }}
         />
       </PageSection>

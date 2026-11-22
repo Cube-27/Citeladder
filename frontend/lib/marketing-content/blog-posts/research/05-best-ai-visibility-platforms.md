@@ -23,7 +23,7 @@ publication_status: 'editorial_review'
 product:
   heading: 'Track how AI answers mention you'
   href: '/platform/ai-visibility'
-  body: 'Once you know what to look for in an AEO tool, CiteLadder lets you track brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews. Every result is tied to the recorded answer behind it.'
+  body: 'Once you know what to look for in an AEO tool, CiteLadder lets you track brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode. Every result is tied to the recorded answer behind it.'
 ---
 
 ## What is the best AI visibility platform?
@@ -48,7 +48,7 @@ Confirmed entry prices in this review run from a free trial to $99 per month, bu
 | Semrush AI Visibility | AI reporting alongside an existing SEO workflow                | Base $99/mo per domain, billed annually (checked 8 Nov 2026)               | ChatGPT, Google AI, Gemini, Perplexity                                                              | 25 custom prompts                                       | Check domain, user and prompt allowances separately                    |
 | Scrunch               | Visibility combined with page audits and agent-traffic work    | Confirm on vendor pricing page (reviewed 6 Oct 2026)                       | Confirm for your configuration                                                                      | Confirm for your configuration                          | Confirm which delivery and AXP functions are in your package           |
 | Profound              | Enterprise answer-engine analysis and marketing operations     | Free 7-day trial; Enterprise custom (checked 8 Nov 2026)                   | Trial: ChatGPT, Gemini, Google AI Overviews; Enterprise: up to 9                                    | Trial: 50 prompts daily for 7 days; Enterprise tailored | Current main pricing page shows Enterprise plus trial only             |
-| CiteLadder            | Inspectable answer and source records plus site/search context | Early-access onboarding as of 6 Oct 2026; provider usage billed separately | ChatGPT, Gemini, Claude, Google AI Overviews, per CiteLadder's product page                         | Not covered in this review                              | Early-access terms and separate provider usage need confirmation       |
+| CiteLadder            | Inspectable answer and source records plus site/search context | Early-access onboarding as of 6 Oct 2026; provider usage billed separately | ChatGPT, Gemini, Claude, Google AI Overviews, Google AI Mode, per CiteLadder's product page         | Not covered in this review                              | Early-access terms and separate provider usage need confirmation       |
 
 ## How did we compare these AEO platforms?
 

@@ -20,7 +20,7 @@ publication_status: 'editorial_review'
 product:
   heading: 'Track how often AI recommends you'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder tracks brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews. Every result is tied to its recorded answer, so you can check the evidence behind each number while you compare Profound alternatives.'
+  body: 'CiteLadder tracks brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode. Every result is tied to its recorded answer, so you can check the evidence behind each number while you compare Profound alternatives.'
 ---
 
 ## What are the best alternatives to Profound?
@@ -114,7 +114,7 @@ Open-source trackers do not come with SOC 2 reports or SSO; you provide identity
 
 ## CiteLadder (our product)
 
-CiteLadder tracks what ChatGPT, Claude, Gemini and Google AI Overviews say for a fixed prompt set, stores every raw answer and cited URL, and connects the result to a Site Health crawl and a ranked Actions list. The measurement rules are stated and the code that implements them is public under AGPL-3.0: each prompt can be run up to 10 times per engine, mentions match on word boundaries, citations come only from engine metadata, and unavailable results are never counted as zero.[\[21\]](#source-21) You can self-host it or use the hosted version, which adds accounts and team workspaces and offers a 7-day free trial on ChatGPT answers. Trial limits apply. Current plans are on the [pricing page](/pricing).
+CiteLadder tracks what ChatGPT, Claude, Gemini, Google AI Overviews and Google AI Mode say for a fixed prompt set, stores every raw answer and cited URL, and connects the result to a Site Health crawl and a ranked Actions list. The measurement rules are stated and the code that implements them is public under AGPL-3.0: each prompt can be run up to 10 times per engine, mentions match on word boundaries, citations come only from engine metadata, and unavailable results are never counted as zero.[\[21\]](#source-21) You can self-host it or use the hosted version, which adds accounts and team workspaces and offers a 7-day free trial on ChatGPT answers. Trial limits apply. Current plans are on the [pricing page](/pricing).
 
 **Where it fits:** teams that want the evidence behind every score, want to read the method rather than trust a description of it, and want site diagnostics and actions in the same workflow. It also exposes read and change tools over MCP, so an assistant can query results and propose changes that you confirm.
 

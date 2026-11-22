@@ -151,7 +151,7 @@ This section is CiteLadder's interpretation of the data above.
 5. Segment [AI referral traffic](/platform/ai-referral-analytics) in your analytics. Compare its landing pages and conversion with other channels. Some AI app visits may arrive without a referrer and be counted as direct.
 6. Change one input at a time, such as feed attributes, and judge the result over repeated runs, not single answers.
 
-CiteLadder tracks how brands appear in ChatGPT, Claude, Gemini and Google AI Overviews answers. For eligible projects, [Product Visibility](/platform/product-visibility) measures product and category appearances in AI answers, alongside analysis of the cited sources. The code is [open source](/open-source) under AGPL-3.0, and a hosted version runs at citeladder.com.
+CiteLadder tracks how brands appear in ChatGPT, Claude, Gemini, Google AI Overviews and Google AI Mode answers. For eligible projects, [Product Visibility](/platform/product-visibility) measures product and category appearances in AI answers, alongside analysis of the cited sources. The code is [open source](/open-source) under AGPL-3.0, and a hosted version runs at citeladder.com.
 
 ## Frequently asked questions
 

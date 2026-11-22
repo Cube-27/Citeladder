@@ -41,7 +41,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'Which engines and sources can I track?',
-        'CiteLadder tracks ChatGPT, Claude and Gemini, and Google AI Overviews. Which of them run for you depends on your plan and project setup; the public trial runs ChatGPT only. Every result shows which engine and collection method produced it.',
+        'CiteLadder tracks ChatGPT, Claude, Gemini, Google AI Overviews and Google AI Mode. Which of them run for you depends on your plan and project setup; the public trial runs ChatGPT only. Every result shows which engine and collection method produced it.',
       ),
       faqItem(
         'Do these observations represent every answer a consumer will see?',

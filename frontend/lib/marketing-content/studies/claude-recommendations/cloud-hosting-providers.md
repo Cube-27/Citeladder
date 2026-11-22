@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude names you'
   href: '/platform/ai-visibility'
-  body: "CiteLadder tracks your brand's mentions, position and competitors across ChatGPT, Gemini, Claude and Google AI Overviews for the buyer questions you choose. Every result is tied to its recorded answer, so you can see when a hosting shortlist includes or skips you."
+  body: "CiteLadder tracks your brand's mentions, position and competitors across ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode for the buyer questions you choose. Every result is tied to its recorded answer, so you can see when a hosting shortlist includes or skips you."
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about cloud hosting, three times each, in three conditions: from memory, with web search available, and told to search first. AWS was the brand Claude named first most often in every condition. The same five providers made up the top five from memory and after searching. This page reports what Claude said through the Anthropic API. It is not a ranking of which provider is best, and the Claude apps can answer differently.

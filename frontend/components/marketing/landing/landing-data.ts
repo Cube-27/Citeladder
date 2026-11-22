@@ -49,7 +49,7 @@ export const FAQS = [
   },
   {
     q: 'Which AI engines do you track?',
-    a: 'ChatGPT, Gemini, Claude and Google AI Overviews, depending on your plan. The free trial covers ChatGPT answers. Answers come from the consumer apps and provider APIs, so one can differ from what a signed-in user sees.',
+    a: 'ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode, depending on your plan. The free trial covers ChatGPT answers. Answers come from the consumer apps and provider APIs, so one can differ from what a signed-in user sees.',
   },
   {
     q: 'What does the free trial include?',

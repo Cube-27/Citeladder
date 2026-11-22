@@ -16,7 +16,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how AI answers your buyers'
   href: '/platform/ai-visibility'
-  body: 'Once you have a list of buyer questions, CiteLadder tracks how ChatGPT, Gemini, Claude and Google AI Overviews answer them. It records brand mentions, position, sentiment and competitors, with every result tied to its recorded answer.'
+  body: 'Once you have a list of buyer questions, CiteLadder tracks how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer them. It records brand mentions, position, sentiment and competitors, with every result tied to its recorded answer.'
 ---
 
 CiteLadder gave four Claude models the same instructions, the same business profiles and the same 12 planned question slots, at three effort levels, twice each. Only the model and the effort changed. This report describes what changed in the drafted buyer questions, what the code measured and what it did not. Judging the quality of the questions is left to you, the reader.

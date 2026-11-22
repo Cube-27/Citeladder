@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude names your brand'
   href: '/platform/ai-visibility'
-  body: "CiteLadder tracks your brand's mentions, position and sentiment against competitors across Claude, ChatGPT, Gemini and Google AI Overviews. Every result is tied to the answer it was recorded from, so you can see where you appear in your own category."
+  body: "CiteLadder tracks your brand's mentions, position and sentiment against competitors across Claude, ChatGPT, Gemini, Google AI Overviews and Google AI Mode. Every result is tied to the answer it was recorded from, so you can see where you appear in your own category."
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about cloud storage, three times each, in three conditions. From memory, Dropbox was the brand Claude named most often. When told to search first, pCloud took that place, and Microsoft and Apple dropped out of the top five. This page reports what Claude said. It is not a ranking of which service is best.

@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track buyer questions for your brand'
   href: '/platform/ai-visibility'
-  body: "CiteLadder tracks your brand's mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews. Every result is tied to the answer it was recorded from."
+  body: "CiteLadder tracks your brand's mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode. Every result is tied to the answer it was recorded from."
 ---
 
 CiteLadder's Prompt Builder drafts the short buyer questions a brand tracks in AI answers. For this study it ran the same step, with the same instructions, the same IKEA business profile and the same 12 planned slots, on Claude Haiku 5.5, Claude Sonnet 5.5, Claude Opus 5.5 and Claude Fable 5.1. Each model ran at low, medium and high effort, twice per setting. Only the model and the effort changed. The tables below this text list every question each model wrote. This page describes what can be observed in them. Judging quality is left to the reader.

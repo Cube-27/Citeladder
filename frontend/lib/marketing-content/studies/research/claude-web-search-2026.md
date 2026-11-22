@@ -16,7 +16,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how Claude names your brand'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder tracks how often Claude, ChatGPT, Gemini and Google AI Overviews mention your brand when buyers ask for recommendations, along with your position, sentiment and competitors. Every result links back to the recorded answer, so you can see exactly what was said.'
+  body: 'CiteLadder tracks how often Claude, ChatGPT, Gemini, Google AI Overviews and Google AI Mode mention your brand when buyers ask for recommendations, along with your position, sentiment and competitors. Every result links back to the recorded answer, so you can see exactly what was said.'
 ---
 
 We asked Claude Sonnet 5.5 the same 400 buyer questions three ways: from memory, with web search available, and told to search first. Left to decide, it searched in 81 of 1200 answers. Told to search, it ran 5261 searches, wrote 2025 into 2307 queries, and carried inline citations in 2 answers. This report shows what Claude looked for, which sites came back, and how the brands it named changed.

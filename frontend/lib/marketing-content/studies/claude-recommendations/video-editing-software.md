@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude names your brand'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder tracks whether ChatGPT, Gemini, Claude and Google AI Overviews mention your video editing brand, where you appear in each answer, and which competitors are named alongside you. Every result is tied to the recorded answer, so you can check what was actually said.'
+  body: 'CiteLadder tracks whether ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode mention your video editing brand, where you appear in each answer, and which competitors are named alongside you. Every result is tied to the recorded answer, so you can check what was actually said.'
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about video editing software, three times each, in three conditions. From memory, DaVinci Resolve was the brand Claude named most often. When told to search first, Adobe moved to the top. This page reports what Claude said through the Anthropic API. It is not a ranking of which product is better, and the Claude apps can answer differently.

@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude recommends you'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder tracks how often ChatGPT, Gemini, Claude and Google AI Overviews mention your brand for the buyer questions you care about, and where you sit against competitors. Every result links back to the recorded answer, so you can see what was said.'
+  body: 'CiteLadder tracks how often ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode mention your brand for the buyer questions you care about, and where you sit against competitors. Every result links back to the recorded answer, so you can see what was said.'
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about project management software. Each question ran three times in three conditions: from memory, with web search available, and told to search first. Asana was the brand Claude named most often from memory and when told to search. This page reports what Claude said through the Anthropic API. It is not a ranking of which product is best, and the Claude apps can answer differently.

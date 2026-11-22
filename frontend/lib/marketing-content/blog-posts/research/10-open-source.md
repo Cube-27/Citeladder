@@ -20,12 +20,12 @@ publication_status: 'editorial_review'
 product:
   heading: 'Track your brand on hosted CiteLadder'
   href: '/platform/ai-visibility'
-  body: 'If you would rather not run servers, the hosted CiteLadder tracks brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews. It uses the same measurement approach as the open-source code, and every result is tied to its recorded answer.'
+  body: 'If you would rather not run servers, the hosted CiteLadder tracks brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode. It uses the same measurement approach as the open-source code, and every result is tied to its recorded answer.'
 ---
 
 ## Is there an open-source AI visibility tool you can self-host?
 
-**Yes. CiteLadder is an [AI visibility](/platform/ai-visibility) tracker published under the AGPL-3.0 licence, and you can run the same code on your own machine or server.** It records which brands and pages ChatGPT, Claude, Gemini and Google AI Overviews name for a fixed set of prompts, stores every answer in your own PostgreSQL database, and uses provider API keys that you supply. The hosted version at citeladder.com adds accounts, team workspaces and a managed service around the same approach to measurement.
+**Yes. CiteLadder is an [AI visibility](/platform/ai-visibility) tracker published under the AGPL-3.0 licence, and you can run the same code on your own machine or server.** It records which brands and pages ChatGPT, Claude, Gemini, Google AI Overviews and Google AI Mode name for a fixed set of prompts, stores every answer in your own PostgreSQL database, and uses provider API keys that you supply. The hosted version at citeladder.com adds accounts, team workspaces and a managed service around the same approach to measurement.
 
 This page explains what is open, how self-hosting differs from the hosted service, what the licence asks of you in plain language, how to start with Docker, and where other open-source trackers fit.
 
@@ -86,7 +86,7 @@ Nothing is required to start the app, but three environment variables unlock the
 ### Which engines, and how answers are collected
 
 - ChatGPT, Claude and Gemini are queried through their provider APIs.
-- Google AI Overviews, ChatGPT Search and the Gemini app are collected through DataForSEO.
+- Google AI Overviews, Google AI Mode, ChatGPT Search and the Gemini app are collected through DataForSEO.
 
 Each surface is labelled by its collection method in the app. An API answer is not the same thing as what a signed-in user sees in a consumer app, and CiteLadder does not present it as such. For how that affects what you measure, read the guide to [brand mentions in ChatGPT](/track-brand-mentions-chatgpt).
 
@@ -148,7 +148,7 @@ CiteLadder is not the only open-source tracker, and the right choice depends on 
 
 Some notes for choosing:
 
-- **Engine coverage differs.** Several projects above list Perplexity, Copilot, Grok or Google AI Mode. CiteLadder covers ChatGPT, Claude, Gemini and Google AI Overviews. If you need an engine outside that set, pick accordingly.
+- **Engine coverage differs.** Several projects above list Perplexity, Copilot or Grok. CiteLadder covers ChatGPT, Claude, Gemini, Google AI Overviews and Google AI Mode. If you need an engine outside that set, pick accordingly.
 - **Collection method differs.** OneGlanse drives real product interfaces in a browser. CiteLadder, Elmo and Gego use provider APIs, and CiteLadder adds DataForSEO for the search surfaces. Neither approach is "the truth"; they measure different things, and the honest move is to label which one you used.
 - **Licence differs.** MIT and Apache-2.0 place no network-source obligation on you. GPL-3.0 and AGPL-3.0 do, in different ways, when you modify and distribute or serve the code. See the section above.
 - **Scope differs.** Most projects are answer trackers. CiteLadder also crawls your site for AI readiness, keeps a ranked Actions list and exposes read and change tools over MCP.

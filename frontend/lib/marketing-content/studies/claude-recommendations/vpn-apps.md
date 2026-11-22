@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often AI names your brand'
   href: '/platform/ai-visibility'
-  body: "CiteLadder tracks your brand's mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews. Every result links back to the recorded answer, so you can see when Claude names you and where."
+  body: "CiteLadder tracks your brand's mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode. Every result links back to the recorded answer, so you can see when Claude names you and where."
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about VPN apps, three times each, in three conditions: from memory, with web search available, and told to search first. Proton VPN was named in the most answers in every condition. Telling Claude to search kept the same top five brands but changed their order and how often each was named first. This page reports what Claude said through the Anthropic API. It is not a ranking of which VPN is best, and the Claude apps can answer differently.

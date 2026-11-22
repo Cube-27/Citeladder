@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how Claude recommends your brand'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder tracks how often ChatGPT, Gemini, Claude and Google AI Overviews mention your brand, where you appear in the answer and which competitors are named beside you. Every result is tied to its recorded answer, so you can check exactly what was said.'
+  body: 'CiteLadder tracks how often ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode mention your brand, where you appear in the answer and which competitors are named beside you. Every result is tied to its recorded answer, so you can check exactly what was said.'
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about small business accounting software, three times each, through the Anthropic API. We ran three conditions: from memory, with web search available, and told to search first. Xero, QuickBooks, Wave, FreshBooks and Zoho made up the top five in every condition. The order shifted when Claude searched. This page reports what Claude said. It is not a ranking of which product is best, and API results can differ from the Claude apps.

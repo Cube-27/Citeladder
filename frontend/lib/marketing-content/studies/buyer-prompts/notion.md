@@ -17,7 +17,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track your own buyer questions'
   href: '/platform/ai-visibility'
-  body: 'Once you have buyer questions for your brand, CiteLadder tracks how ChatGPT, Gemini, Claude and Google AI Overviews answer them. You can see your mentions, position, sentiment and competitors, with each result tied to its recorded answer.'
+  body: 'Once you have buyer questions for your brand, CiteLadder tracks how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer them. You can see your mentions, position, sentiment and competitors, with each result tied to its recorded answer.'
 ---
 
 CiteLadder's Prompt Builder drafts the buyer questions a brand tracks in AI answers. For this study we ran the same Prompt Builder step for Notion on four Claude models, at low, medium and high effort, twice each. The instructions, the business profile and the 12 planned slots stayed the same. Only the model and the effort changed. This page describes what can be seen in the results. Judging quality is left to the reader. The tables below list every question each model wrote.

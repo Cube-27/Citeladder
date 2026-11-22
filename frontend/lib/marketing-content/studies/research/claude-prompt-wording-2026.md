@@ -18,7 +18,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how Claude recommends your brand'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder runs your buyer prompts across Claude, ChatGPT, Gemini and Google AI Overviews and tracks your mentions, position and competitors over time. Every result is tied to its recorded answer, so you can check whether a change comes from wording or from normal variation.'
+  body: 'CiteLadder runs your buyer prompts across Claude, ChatGPT, Gemini, Google AI Overviews and Google AI Mode and tracks your mentions, position and competitors over time. Every result is tied to its recorded answer, so you can check whether a change comes from wording or from normal variation.'
 ---
 
 Claude does not give the same brand list twice, even for the exact same question. CiteLadder took 20 buyer questions, rewrote each one in 10 styles and ran every wording three times. The original question's own runs agreed on 67.6% of brands on average. Rewrites agreed with the original on 61.5%. Most rewording barely moved the answer beyond that normal variation. Two kinds of change did move it: asking for exactly three picks, and asking which option most people use.

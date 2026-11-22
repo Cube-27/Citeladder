@@ -14,7 +14,7 @@ publication_status: 'editorial_review'
 product:
   heading: 'Check how AI answers your buyers'
   href: '/platform'
-  body: 'If AI now sits between your customers and your pages, CiteLadder shows how ChatGPT, Gemini, Claude and Google AI Overviews answer your buyers and which pages they cite. It also gives you a ranked list of what to change on your site.'
+  body: 'If AI now sits between your customers and your pages, CiteLadder shows how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer your buyers and which pages they cite. It also gives you a ranked list of what to change on your site.'
 ---
 
 ## Is SEO being replaced by AI?

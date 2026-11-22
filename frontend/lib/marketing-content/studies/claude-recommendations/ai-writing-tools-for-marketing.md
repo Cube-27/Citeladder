@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude recommends you'
   href: '/platform/ai-visibility'
-  body: "CiteLadder tracks whether ChatGPT, Gemini, Claude and Google AI Overviews mention your brand for your buyers' questions, including position, sentiment and competitors. Every result is tied to the recorded answer, so you can check what was said."
+  body: "CiteLadder tracks whether ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode mention your brand for your buyers' questions, including position, sentiment and competitors. Every result is tied to the recorded answer, so you can check what was said."
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about AI writing tools for marketing, three times each, in three conditions: from memory, with web search available, and told to search first. Jasper led in every condition. The same five brands held the top five whether Claude answered from memory or searched. This page reports what Claude said through the Anthropic API. It is not a ranking of which product is best, and the Claude apps can answer differently.

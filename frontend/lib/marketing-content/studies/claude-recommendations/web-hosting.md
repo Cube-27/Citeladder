@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often AI recommends your brand'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder tracks whether ChatGPT, Gemini, Claude and Google AI Overviews name your hosting brand, where it appears in the answer and which competitors show up beside it. Every result links back to the recorded answer, so you can check exactly what was said.'
+  body: 'CiteLadder tracks whether ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode name your hosting brand, where it appears in the answer and which competitors show up beside it. Every result links back to the recorded answer, so you can check exactly what was said.'
 ---
 
 CiteLadder asked Claude Sonnet 5.5 a set of web hosting buyer questions through the Anthropic API. Each question ran three times in three conditions: from memory, with web search available, and with an instruction to search first. SiteGround was the brand named most often from memory. Hostinger led when Claude was told to search. This page reports what Claude said. It is not a ranking of which host is best, and API results can differ from the Claude apps.

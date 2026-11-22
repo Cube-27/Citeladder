@@ -22,7 +22,7 @@ publication_status: 'editorial_review'
 product:
   heading: 'Measure your organic AI mentions'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder tracks how often ChatGPT, Gemini, Claude and Google AI Overviews name your brand, with position, sentiment and competitors tied to each recorded answer. That gives you an organic visibility baseline you can keep separate from any paid placement.'
+  body: 'CiteLadder tracks how often ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode name your brand, with position, sentiment and competitors tied to each recorded answer. That gives you an organic visibility baseline you can keep separate from any paid placement.'
 ---
 
 ## Are there ads in AI answers?
@@ -148,7 +148,7 @@ OpenAI's posts also cite advertiser outcomes, such as an unnamed ecommerce adver
 
 The same logic applies to sources. Seer found advertisers were cited as a source only 3.3% of the time, so [citation tracking](/ai-citation-tracking) and ad tracking answer different questions.
 
-CiteLadder tracks how brands appear in ChatGPT, Claude, Gemini and Google AI Overviews answers. It records ChatGPT Search ads separately from citations, and ads never count as mentions, citations or position. Other engines show ads as not applicable in CiteLadder, so ads around Google AI Overviews need to be tracked another way. CiteLadder is [open source](/open-source) under AGPL-3.0 at [github.com/abhij1306/CiteLadder](https://github.com/abhij1306/CiteLadder), with a hosted version at citeladder.com.[\[20\]](#source-20)
+CiteLadder tracks how brands appear in ChatGPT, Claude, Gemini, Google AI Overviews and Google AI Mode answers. It records ChatGPT Search ads separately from citations, and ads never count as mentions, citations or position. Other engines show ads as not applicable in CiteLadder, so ads around Google AI Overviews need to be tracked another way. CiteLadder is [open source](/open-source) under AGPL-3.0 at [github.com/abhij1306/CiteLadder](https://github.com/abhij1306/CiteLadder), with a hosted version at citeladder.com.[\[20\]](#source-20)
 
 ## Frequently asked questions
 

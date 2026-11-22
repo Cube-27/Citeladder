@@ -12,7 +12,7 @@ export const PAGES = {
     title: 'CiteLadder',
     metaTitle: 'AI visibility and search intelligence software | CiteLadder',
     description:
-      'Track how ChatGPT, Gemini, Claude and Google AI Overviews mention and cite your brand, check your site and search data, and plan fixes with CiteLadder.',
+      'Track how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode mention and cite your brand, check your site and search data, and plan fixes with CiteLadder.',
     updated: '2026-11-06',
   },
   pricing: {

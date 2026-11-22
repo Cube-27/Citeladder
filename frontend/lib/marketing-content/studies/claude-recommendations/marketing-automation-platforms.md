@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude recommends you'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder tracks whether ChatGPT, Gemini, Claude and Google AI Overviews mention your brand for buyer questions like these, along with position, sentiment and competitors. Every result is tied to its recorded answer, so you can check what was actually said.'
+  body: 'CiteLadder tracks whether ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode mention your brand for buyer questions like these, along with position, sentiment and competitors. Every result is tied to its recorded answer, so you can check what was actually said.'
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about marketing automation platforms, three times each, through the Anthropic API. HubSpot was named in 92% of answers from memory and stayed first when Claude was told to search. This page shows what Claude said, not which product is best. API results can differ from the Claude apps.

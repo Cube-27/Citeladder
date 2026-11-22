@@ -154,7 +154,7 @@ Benchmarks tell you the channel is small and growing. They cannot tell you what 
 - **Crawler requests in your server logs.** Count requests by AI user agent and compare them with AI referrals to the same pages. That gives you your own crawl-to-referral picture instead of a network average.
 - **The answers behind the clicks.** Referrals only come from answers that link to you. Track which prompts mention your brand and which sources the answer cites, using [AI citation tracking](/ai-citation-tracking) and [brand mentions in ChatGPT](/track-brand-mentions-chatgpt) as starting points.
 
-CiteLadder reports GA4 referrals from recognized AI assistants and, on paid plans, AI crawler requests from a site's own logs. It also tracks how brands appear in ChatGPT, Claude, Gemini and Google AI Overviews answers and which sources those answers cite.[\[17\]](#source-17) The source is public under AGPL-3.0 and can be self-hosted from the [open source](/open-source) repository, or used as a hosted version at citeladder.com.
+CiteLadder reports GA4 referrals from recognized AI assistants and, on paid plans, AI crawler requests from a site's own logs. It also tracks how brands appear in ChatGPT, Claude, Gemini, Google AI Overviews and Google AI Mode answers and which sources those answers cite.[\[17\]](#source-17) The source is public under AGPL-3.0 and can be self-hosted from the [open source](/open-source) repository, or used as a hosted version at citeladder.com.
 
 ## Frequently asked questions
 
