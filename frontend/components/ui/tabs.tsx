@@ -80,7 +80,7 @@ export function tabClasses(selected: boolean, className?: string) {
   return cn(
     'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
     selected
-      ? 'bg-surface border-transparent text-ink font-medium'
+      ? 'bg-surface border-rule text-ink font-medium'
       : 'text-ink-2 not-disabled:hover:text-ink border-transparent font-normal',
     className,
   );
@@ -398,11 +398,7 @@ export function SegmentedControl<T extends string>({
             strip.current = node;
           }}
           data-segmented-track=""
-          className={cn(
-            TAB_STRIP,
-            'border-transparent bg-state-hover rounded-control border p-px',
-            className,
-          )}
+          className={cn(TAB_STRIP, 'bg-state-hover rounded-control p-0.5', className)}
         >
           <div
             id={id}

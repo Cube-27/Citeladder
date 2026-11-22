@@ -18,7 +18,7 @@ const TONE: Record<TextLinkTone, string> = {
 };
 
 const APP_REST =
-  '[:root:not([data-public-surface])_&]:decoration-current/40 [:root:not([data-public-surface])_&]:hover:decoration-current [:root:not([data-public-surface])_&]:focus-visible:decoration-current';
+  '[:root:not([data-public-surface])_&]:hover:decoration-current [:root:not([data-public-surface])_&]:focus-visible:decoration-current';
 
 const UNDERLINE = {
   prose: cn('decoration-current hover:decoration-2', APP_REST),
