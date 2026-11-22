@@ -22,9 +22,9 @@ tracks them.
    changes are made in CiteLadder's Prompt builder; give the user the app link.
 4. If no offering is saved, topics and prompts cannot be proposed yet: ask the
    user to add what they sell in the Prompt builder, and stop.
-5. If the project has several prompt sets, page `read_prompt_portfolio`, ask
-   which set by name, and use its `prompt_set_id` for the `generate_prompts`
-   kind.
+5. Call `read_prompt_portfolio` for the project's prompt sets. If it has
+   several, ask which set by name. Use that set's `prompt_set_id` for the
+   `generate_prompts` kind.
 
 ## 2. Topics
 
