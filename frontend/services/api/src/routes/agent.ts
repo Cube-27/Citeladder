@@ -32,6 +32,7 @@ import { agentPolicy, AgentError, budgetSchema, type Scope } from '../agent/cont
 import { interactiveSlots } from '../http/interactive-slots.ts';
 import { workspaceChat } from '../agent/messages.ts';
 import { changeIdleChat } from '../agent/outputs.ts';
+import { DEFAULT_CHOICE } from '../agent/model-choice.ts';
 import { chooseOutputTarget } from '../agent/target-adapter.ts';
 import { readChat, listChats, listRevisions, runView, revisionView } from '../agent/reads.ts';
 import { defineGetRoute, definePostRoute, definePutRoute, defineDeleteRoute } from './define.ts';
@@ -108,10 +109,18 @@ function agentHttpError(code: string) {
     return new ApiError(402, 'Agent funding is unavailable', {
       code: asApiErrorCode('agent_funding_unavailable'),
     });
-  if (code === 'model_changed')
-    return new ApiError(409, 'The Agent model changed', {
+  if (code === 'model_unavailable')
+    return new ApiError(409, 'This model is no longer offered. Choose another model.', {
       code: asApiErrorCode('agent_model_unavailable'),
     });
+  if (code === 'model_locked')
+    return new ApiError(
+      409,
+      'The model is set once the chat has replied. Start a new chat to use another model.',
+      {
+        code: asApiErrorCode('agent_model_locked'),
+      },
+    );
   if (code === 'access_revoked' || code === 'capability_unavailable')
     return new ApiError(403, 'Agent run permission is unavailable');
   if (code === 'agent_context_unavailable') return notFound('Agent context');
@@ -267,6 +276,11 @@ export const agentRoutes = [
             prompt: step.prompt,
           })),
         })),
+        models: {
+          options: agentPolicy.models,
+          default_model: DEFAULT_CHOICE.model,
+          default_reasoning_effort: DEFAULT_CHOICE.effort,
+        },
         limits: {
           mentions_max: agentPolicy.mentions_max,
           attachments_max: agentPolicy.attachments_max,
@@ -335,6 +349,7 @@ export const agentRoutes = [
             ),
           mentionIds: input.mentions,
           attachments: input.attachments,
+          choice: { model: input.model, effort: input.reasoning_effort },
           key: key(c),
         }),
       );
@@ -370,6 +385,7 @@ export const agentRoutes = [
           skillId: input.skill_id,
           mentionIds: input.mentions,
           attachments: input.attachments,
+          choice: { model: input.model, effort: input.reasoning_effort },
           key: key(c),
         }),
       );

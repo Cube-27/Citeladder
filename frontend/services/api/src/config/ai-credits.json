@@ -4,7 +4,6 @@
   "markup_percent": 130,
   "unknown_usage_credits": 10,
   "unsettled_after_seconds": 900,
-  "gateway_default_price": "claude-haiku-5-5",
   "features": {
     "agent": "credits",
     "prompt_generation": "credits",

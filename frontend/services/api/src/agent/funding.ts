@@ -28,6 +28,7 @@ import { AgentError, agentPolicy, type Run, type Scope } from './contracts.ts';
 import type { Admission, FundingIdentity } from './store.ts';
 import type { Funding } from './model-calls.ts';
 import type { GatewaySettings } from '../models/gateway.ts';
+import { requireOffered } from './model-choice.ts';
 
 type Settings = ReturnType<typeof agentSettings>;
 
@@ -60,25 +61,26 @@ async function development(db: Database, userId: string | null, settings: Settin
   );
 }
 function configured(platform: GatewaySettings) {
-  return [platform.apiKey, platform.baseUrl, platform.model].every((value) => value.trim());
+  return [platform.apiKey, platform.baseUrl].every((value) => value.trim());
 }
 async function identity(
   db: Database,
   scope: Scope,
   settings: Settings,
   platform: GatewaySettings,
+  model: string,
 ): Promise<FundingIdentity> {
   await capability(db, scope.workspaceId);
   if (!configured(platform)) throw new AgentError('funding_unavailable');
   const unmetered = await development(db, scope.userId, settings);
   return {
     funding_source: unmetered ? 'development' : 'platform',
-    requested_model: platform.model,
+    requested_model: requireOffered(model),
   };
 }
 export function agentAdmission(settings: Settings, platform: GatewaySettings): Admission {
-  return async (db, scope) => {
-    const funding = await identity(db, scope, settings, platform);
+  return async (db, scope, model) => {
+    const funding = await identity(db, scope, settings, platform, model);
     const active = await db
       .selectFrom('agent_runs')
       .select(sql<string>`count(*)`.as('count'))
@@ -95,8 +97,8 @@ export function agentAdmission(settings: Settings, platform: GatewaySettings): A
 }
 async function recheck(db: Database, run: Run, settings: Settings, platform: GatewaySettings) {
   await capability(db, run.workspace_id);
-  if (run.requested_model !== platform.model) throw new AgentError('model_changed');
-  if (!platform.apiKey || !platform.baseUrl) throw new AgentError('funding_unavailable');
+  requireOffered(run.requested_model);
+  if (!configured(platform)) throw new AgentError('funding_unavailable');
   if (run.funding_source === 'development' && !(await development(db, run.user_id, settings)))
     throw new AgentError('funding_unavailable');
 }
@@ -160,7 +162,7 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
       await recheck(db, run, settings, platform);
       if (run.funding_source !== 'platform')
         return { reservationId: null, credits: 0, pricingRevision: '' };
-      const price = modelPrice(run.requested_model, platform.model);
+      const price = modelPrice(run.requested_model);
       if (!price) throw new AgentError('funding_unavailable');
       const maxInputTokens = await inputBound(db, run, conversationInputBytes(request));
       const accountId = await account(db, run.workspace_id);
@@ -204,7 +206,7 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
       }
     },
     settle: async (db, attempt, usage) => {
-      const price = modelPrice(attempt.requested_model, platform.model);
+      const price = modelPrice(attempt.requested_model);
       const cost = price && usage ? costMicrousd(price, usage) : null;
       if (attempt.funding_source !== 'platform')
         return { credits: 0, status: 'zero_debit', costMicrousd: cost };

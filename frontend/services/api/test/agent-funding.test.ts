@@ -22,7 +22,9 @@ import { gatewaySettings } from '../src/models/gateway.ts';
 import { ModelError } from '../src/models/http.ts';
 import { ModelCalls } from '../src/agent/model-calls.ts';
 import { AgentQueue } from '../src/agent/queue.ts';
+import { budgetSchema } from '../src/agent/contracts.ts';
 import { ledgerBalances } from '../src/entitlements/ledger.ts';
+import type { RequestedChoice } from '../src/agent/model-choice.ts';
 
 const platform = {
   ...gatewaySettings({}),
@@ -32,6 +34,7 @@ const platform = {
   maxOutputTokens: 16_384,
 };
 const HOLD = 11;
+const OPUS_HOLD = 0;
 const settings = agentSettings({});
 describe('Agent funding through the production ledger and shared pricing', () => {
   const db = testDatabase();
@@ -53,7 +56,11 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     });
     return { scope, accountId, grantId };
   }
-  async function run(scope: Awaited<ReturnType<typeof agents.scope>>, skillId?: string) {
+  async function run(
+    scope: Awaited<ReturnType<typeof agents.scope>>,
+    skillId?: string,
+    choice?: RequestedChoice,
+  ) {
     const store = agents.store({
       admission: agentAdmission(settings, platform),
     });
@@ -61,6 +68,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       key: randomUUID(),
       message: 'Answer from evidence.',
       ...(skillId ? { skillId } : {}),
+      choice,
     });
     const queue = new AgentQueue(db, 30);
     const claimed = await queue.claim('funding-test', [scope.workspaceId]);
@@ -565,12 +573,126 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       consumed: 0,
     });
   });
-  it('refuses a model change between admission and dispatch', async () => {
+  it('holds and settles a chosen model at its own price row, not the default one', async () => {
+    const { scope, accountId, grantId } = await tenant(1_000);
+    const { run: saved, lease } = await run(scope, undefined, { model: 'claude-opus-5-5' });
+    const io = {
+      fetch: vi.fn<typeof fetch>(async (_url, init) => {
+        expect(JSON.parse(String(init?.body))).toMatchObject({ model: 'claude-opus-5-5' });
+        return Response.json({
+          choices: [{ message: { content: 'Answer' }, finish_reason: 'stop' }],
+          usage: { prompt_tokens: 1_000, completion_tokens: 1_000 },
+        });
+      }),
+      sleep: vi.fn(async () => {}),
+    };
+    const calls = new ModelCalls(db, agentFunding(settings, platform));
+    await calls.call(lease, 1, await agentModels(platform, io)(saved), request);
+    expect(
+      await db
+        .selectFrom('agent_model_attempts')
+        .select(['requested_model', 'reserved_credits', 'debited_credits', 'cost_microusd'])
+        .where('run_id', '=', saved.id)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({
+      requested_model: 'claude-opus-5-5',
+      reserved_credits: String(OPUS_HOLD),
+      debited_credits: '32',
+      cost_microusd: '24000',
+    });
+    expect((await ledgerBalances(db, accountId, [grantId])).get(grantId)).toEqual({
+      reserved: 0,
+      consumed: 32,
+    });
+  });
+  it('refuses a run whose model is no longer offered, before any call', async () => {
     const { scope } = await tenant();
     const { run: saved } = await run(scope);
-    await expect(agentModels({ ...platform, model: 'another-model' })(saved)).rejects.toMatchObject(
-      { code: 'model_changed' },
-    );
+    await expect(
+      agentModels(platform)({ ...saved, requested_model: 'claude-retired-model' }),
+    ).rejects.toMatchObject({ code: 'model_unavailable' });
+  });
+  it('admits an offered model and effort, pins both on the chat and freezes them on each run', async () => {
+    const { scope } = await tenant();
+    const store = agents.store({ admission: agentAdmission(settings, platform) });
+    const send = (choice: RequestedChoice, chatId?: string) =>
+      store.enqueue(scope, { key: randomUUID(), message: 'Next turn', chatId, choice });
+    const pinned = async (chatId: string) =>
+      db
+        .selectFrom('agent_chats')
+        .select(['model', 'reasoning_effort'])
+        .where('id', '=', chatId)
+        .executeTakeFirstOrThrow();
+    const frozen = (queued: { requested_model: string; budget: unknown }) => [
+      queued.requested_model,
+      budgetSchema.parse(queued.budget).reasoning_effort,
+    ];
+    const first = await send({ model: 'claude-opus-5-5', effort: 'high' });
+    expect(frozen(first)).toEqual(['claude-opus-5-5', 'high']);
+    expect(await pinned(first.chat_id)).toEqual({
+      model: 'claude-opus-5-5',
+      reasoning_effort: 'high',
+    });
+    await store.cancel(scope, first.chat_id, first.id);
+    const unreplied = await send({ model: 'claude-sonnet-5-5' }, first.chat_id);
+    expect(frozen(unreplied)).toEqual(['claude-sonnet-5-5', 'high']);
+    await db
+      .insertInto('agent_run_transcripts')
+      .values({
+        id: randomUUID(),
+        workspace_id: scope.workspaceId,
+        project_id: scope.projectId,
+        chat_id: first.chat_id,
+        run_id: unreplied.id,
+        context_hash: '',
+        messages: JSON.stringify([]),
+        model: 'claude-sonnet-5-5',
+        provider_adapter: 'anthropic',
+        skill_id: null,
+        created_at: new Date(),
+      })
+      .execute();
+    await store.cancel(scope, first.chat_id, unreplied.id);
+    await expect(send({ model: 'claude-haiku-5-5' }, first.chat_id)).rejects.toMatchObject({
+      code: 'model_locked',
+    });
+    const lowered = await send({ effort: 'low' }, first.chat_id);
+    expect(frozen(lowered)).toEqual(['claude-sonnet-5-5', 'low']);
+    expect(await pinned(first.chat_id)).toEqual({
+      model: 'claude-sonnet-5-5',
+      reasoning_effort: 'low',
+    });
+    const fresh = await send({});
+    expect(frozen(fresh)).toEqual(['claude-haiku-5-5', 'medium']);
+  });
+  it('refuses a model outside the allow-list and a workspace without the Agent entitlement', async () => {
+    const { scope } = await tenant();
+    const store = agents.store({ admission: agentAdmission(settings, platform) });
+    await expect(
+      store.enqueue(scope, {
+        key: randomUUID(),
+        message: 'Hi',
+        choice: { model: 'gpt-6.1-terra' },
+      }),
+    ).rejects.toMatchObject({ code: 'model_unavailable' });
+    const trial = await agents.scope();
+    const trialAccount = await billingAccount(db, trial.workspaceId);
+    billing.accounts.push(trialAccount);
+    await grant(db, trialAccount, { key: 'ai_credits', value: 500 });
+    await expect(
+      store.enqueue(trial, {
+        key: randomUUID(),
+        message: 'Hi',
+        choice: { model: 'claude-opus-5-5', effort: 'high' },
+      }),
+    ).rejects.toMatchObject({ code: 'capability_unavailable' });
+    expect(
+      await db
+        .selectFrom('agent_chats')
+        .select('id')
+        .where('workspace_id', 'in', [scope.workspaceId, trial.workspaceId])
+        .execute(),
+    ).toEqual([]);
   });
   it('recognizes the development login only in a development environment', () => {
     const login = { DEV_LOGIN_EMAIL: 'developer@example.test', DEV_LOGIN_PASSWORD: 'fixture-pw' };
@@ -593,7 +715,9 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       .where('id', '=', scope.userId)
       .execute();
     const admit = () =>
-      db.transaction().execute((trx) => agentAdmission(dev, platform)(trx, scope));
+      db
+        .transaction()
+        .execute((trx) => agentAdmission(dev, platform)(trx, scope, 'claude-haiku-5-5'));
     expect((await admit()).funding_source).toBe('development');
     await db.updateTable('users').set({ role: 'user' }).where('id', '=', scope.userId).execute();
     expect((await admit()).funding_source).toBe('platform');

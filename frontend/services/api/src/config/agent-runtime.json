@@ -14,6 +14,12 @@
   "read_max_limit": 50,
   "limit_reminder_calls": 2,
   "reasoning_effort": "medium",
+  "default_model": "claude-haiku-5-5",
+  "models": [
+    { "id": "claude-haiku-5-5", "label": "Haiku 5.5" },
+    { "id": "claude-sonnet-5-5", "label": "Sonnet 5.5" },
+    { "id": "claude-opus-5-5", "label": "Opus 5.5" }
+  ],
   "compaction_trigger_tokens": 80000,
   "replay_max_chars": 200000,
   "provider_max_attempts": 2,

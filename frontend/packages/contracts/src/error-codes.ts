@@ -8,6 +8,7 @@ const API_ERROR_CODES = [
   'agent_context_conflict',
   'agent_funding_unavailable',
   'agent_idempotency_conflict',
+  'agent_model_locked',
   'agent_model_unavailable',
   'agent_not_configured',
   'agent_output_conflict',

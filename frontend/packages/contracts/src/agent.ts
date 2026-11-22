@@ -242,9 +242,17 @@ export const agentPageFetchSchema = z.discriminatedUnion('status', [
   }),
 ]);
 
+export const agentReasoningEffortSchema = z.enum(['low', 'medium', 'high']);
+export type AgentReasoningEffort = z.infer<typeof agentReasoningEffortSchema>;
+
 export const agentChatDetailSchema = responseObject({
   chat: agentChatSummarySchema,
   pinned_skill_id: z.string().nullable(),
+  model: responseObject({
+    id: z.string(),
+    reasoning_effort: agentReasoningEffortSchema,
+    locked: z.boolean(),
+  }),
   context: agentContextDisclosureSchema.partial(),
   messages: z.array(agentMessageSchema),
   latest_run: agentRunSchema.nullable(),
@@ -392,6 +400,11 @@ export const agentSkillCatalogSchema = responseObject({
   skills: z.array(agentSkillSchema),
   workflows: z.array(agentWorkflowSchema).default([]),
   output_kinds: z.array(agentOutputKindSchema).default([]),
+  models: responseObject({
+    options: z.array(responseObject({ id: z.string(), label: z.string() })),
+    default_model: z.string(),
+    default_reasoning_effort: agentReasoningEffortSchema,
+  }),
   limits: responseObject({
     mentions_max: z.number().int(),
     attachments_max: z.number().int(),
@@ -464,6 +477,8 @@ export function agentRequestSchemas(bounds: {
   const message = z.string().max(bounds.message_max_chars).trim().min(1);
   const skill = z.string().max(64).nullish();
   const workflow = z.string().max(64).nullish();
+  const model = z.string().max(64).nullish();
+  const reasoningEffort = agentReasoningEffortSchema.nullish();
   const mentions = z
     .array(uuid())
     .max(bounds.mentions_max)
@@ -482,12 +497,16 @@ export function agentRequestSchemas(bounds: {
       context: agentContextRefsSchema.default({}),
       mentions,
       attachments,
+      model,
+      reasoning_effort: reasoningEffort,
     }),
     message: z.strictObject({
       message,
       skill_id: skill,
       mentions,
       attachments,
+      model,
+      reasoning_effort: reasoningEffort,
     }),
     edit: z.strictObject({
       base_revision_id: uuid(),
