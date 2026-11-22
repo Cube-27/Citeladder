@@ -90,8 +90,8 @@ export function EnginesCard({
     };
   }
   return (
-    <TitledSection title="Retrievals by AI model">
-      <DataTable label="Retrievals by AI model" columns={ENGINE_COLUMNS} state={state}>
+    <TitledSection title="Retrievals by engine">
+      <DataTable label="Retrievals by engine" columns={ENGINE_COLUMNS} state={state}>
         {rows.map((row) => (
           <TableRow key={row.logical_engine}>
             <TableCell>{catalog.label(row.logical_engine)}</TableCell>
@@ -104,7 +104,7 @@ export function EnginesCard({
 }
 
 const ENGINE_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'model', label: 'Model' },
+  { key: 'engine', label: 'Engine' },
   { key: 'retrievals', label: 'Retrievals', width: 'figure', kind: 'number' },
 ];
 
