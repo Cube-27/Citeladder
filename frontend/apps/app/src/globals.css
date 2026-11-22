@@ -37,6 +37,7 @@
   --color-*: initial;
   --color-paper: oklch(96.7% 0 0);
   --color-surface: oklch(100% 0 0);
+  --color-page: var(--color-surface);
   --color-surface-sunken: oklch(94.3% 0 0);
   --color-state-hover: oklch(from var(--color-ink) l c h / 6%);
   --color-state-pressed: oklch(from var(--color-ink) l c h / 8%);
@@ -360,9 +361,9 @@
   --color-well: var(--color-raised);
   --color-thumb: var(--color-ink-2);
   --color-rule: rgb(255 255 255 / 11%);
-  --color-control-edge: rgb(255 255 255 / 15%);
   --color-control-line: rgb(255 255 255 / 22%);
   --card-ground: #1b1b1c;
+  --color-page: #101011;
   --color-ink: #ececec;
   --color-ink-2: #a8a8aa;
   --color-ink-hover: oklch(85% 0 0);
@@ -534,6 +535,7 @@
   --color-raised: var(--color-panel);
   --color-raised-2: #eef0f2;
   --color-well: #f3f4f6;
+  --color-page: #f4f4f7;
   --color-rule: rgb(0 0 0 / 11%);
   --color-control-line: rgb(0 0 0 / 22%);
   --color-focus: var(--color-accent);
@@ -541,7 +543,6 @@
   --focus-offset: 0px;
   --focus-glow: color-mix(in srgb, var(--color-focus) 24%, transparent);
   --field-focus-edge: var(--color-focus);
-  --color-control-edge: rgb(0 0 0 / 15%);
   --color-ink: #1d1d1d;
   --color-ink-2: #54585f;
   --color-ink-3: #71717a;
@@ -597,7 +598,7 @@
 
   --radius-mark: 4px;
   --radius-control: 6px;
-  --radius-card: 8px;
+  --radius-card: var(--radius-control);
   --radius-overlay: 12px;
   --shadow-card: 0 1px 2px oklch(21% 0.034 263 / 5%);
   --shadow-pop: 0 4px 12px oklch(21% 0.034 263 / 10%), 0 1px 2px oklch(21% 0.034 263 / 6%);
@@ -851,6 +852,7 @@
 }
 
 * {
+  scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 }
 
@@ -1960,9 +1962,14 @@ label {
 }
 
 :root:not([data-public-surface]):not([data-theme='dark']) {
-  --lift-radius: 12px;
-  --lift-border: var(--color-rule);
-  --lift-shadow: 0 1px 2px rgb(0 0 0 / 5%), 0 2px 8px rgb(0 0 0 / 4%);
+  --lift-radius: var(--radius-card);
+  --lift-border: transparent;
+  --lift-shadow: none;
+  --table-head-ground: #e6e6e9;
+}
+:root:not([data-public-surface]) [data-chart-frame]:not([data-chart-frame='auto']) {
+  border-color: transparent;
+  background-color: var(--card-ground, var(--color-surface));
 }
 :root:not([data-public-surface]):not([data-theme='dark'])
   :is(
@@ -1987,5 +1994,40 @@ label {
   ):not(
     :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], [data-figure-strip]) *
   ) {
+  border-color: transparent;
   background-color: var(--card-ground);
+}
+
+:root:not([data-public-surface]) [data-figure-strip][data-figure-strip] {
+  border-radius: var(--radius-control);
+}
+:root:not([data-public-surface])
+  :is([data-data-table-frame], .table-frame:not([data-data-table] *))[class],
+:root:not([data-public-surface]) [data-data-table-frame][data-data-table-frame] {
+  border-radius: var(--radius-control);
+}
+:root:not([data-public-surface]) .table-frame tbody {
+  clip-path: inset(0 round var(--radius-mark));
+}
+:root:not([data-public-surface])
+  :where(.surface-card, .surface-slip, .surface-lift, [role='dialog'], [data-figure-strip], .table-frame)
+  :is(.focus-input, .focus-frame) {
+  background-color: var(--color-well);
+}
+:root:not([data-public-surface])
+  :is([data-state-frame], [data-state-block-inline]):not(
+    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table], [data-data-table-frame], .table-frame, [data-figure-strip]) *
+  ) {
+  border-radius: var(--lift-radius, var(--radius-card));
+  background-color: var(--card-ground, var(--color-surface));
+}
+:root:not([data-public-surface])
+  [data-state-block-inline]:not(
+    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table], [data-data-table-frame], .table-frame, [data-figure-strip]) *
+  ) {
+  padding: 12px 16px;
+}
+:root:not([data-public-surface]) :is(a, button, [role='link']):not(:hover, :focus-visible),
+:root:not([data-public-surface]) :is(a, button, [role='link']):not(:hover, :focus-visible) * {
+  text-decoration-color: transparent;
 }

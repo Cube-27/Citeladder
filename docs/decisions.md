@@ -262,8 +262,9 @@ how to add or change an entry.
 
 [Design](design.md) holds the values; these are the rules behind them.
 
-- **AR-1 Look:** quiet greys, hairline borders, an inset content panel, compact
-  controls. **AR-2 Text:** body and labels 14px, captions 12px, controls 28px.
+- **AR-1 Look:** quiet greys, an inset content panel on tinted paper, white
+  surfaces and controls with no outer border or shadow, corners at the button
+  radius, compact controls (2026-11-22). **AR-2 Text:** body and labels 14px, captions 12px, controls 28px.
 - **AR-3 Metrics** sit in one strip with hairline dividers, never cards, with no
   meters, rings or bars in a cell. **AR-4 Tables:** the first column takes the
   spare width and the others hug their content.

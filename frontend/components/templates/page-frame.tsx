@@ -168,7 +168,7 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
     <div
       ref={strips}
       data-page-strips=""
-      className="bg-panel z-sticky sticky top-[var(--masthead-block-size,var(--masthead-height))] -mx-[var(--page-pad-inline)] flex min-w-0 flex-col gap-3"
+      className="bg-page z-sticky sticky top-[var(--masthead-block-size,var(--masthead-height))] -mx-[var(--page-pad-inline)] -my-3 flex min-w-0 flex-col gap-3 py-3"
     >
       {tabs ? (
         <div data-page-band="tabs" className={cn(STRIP, 'h-[var(--page-tabs-height)] items-end')}>
