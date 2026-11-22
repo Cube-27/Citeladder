@@ -18,6 +18,7 @@ const VERB = {
   replace: { running: 'Replacing', done: 'Replaced', failed: 'Couldn’t replace' },
   edit: { running: 'Editing', done: 'Edited', failed: 'Couldn’t edit' },
   suggest: { running: 'Suggesting', done: 'Suggested', failed: 'Couldn’t suggest' },
+  show: { running: 'Placing', done: 'Placed', failed: 'Couldn’t place' },
 } as const satisfies Record<string, Verb>;
 
 const TOOL_ACTIVITY: Record<string, { verb: Verb; noun: string }> = {
@@ -26,6 +27,7 @@ const TOOL_ACTIVITY: Record<string, { verb: Verb; noun: string }> = {
   edit_document: { verb: VERB.edit, noun: 'a document' },
   suggest_edits: { verb: VERB.suggest, noun: 'changes' },
   propose_declaration: { verb: VERB.suggest, noun: 'marking an Action implemented' },
+  show_view: { verb: VERB.show, noun: 'a chart or table' },
   web_search: { verb: VERB.search, noun: 'the web' },
   search: { verb: VERB.search, noun: 'CiteLadder' },
   fetch: { verb: VERB.read, noun: 'a record' },

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { actionStatusSchema } from './action-status.ts';
+import { agentViewSchema } from './agent-views.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -170,6 +171,7 @@ export const agentMessageSchema = responseObject({
     .default([]),
   attachments: z.array(agentAttachmentSchema).default([]),
   proposals: z.array(agentProposalSchema).default([]),
+  views: z.array(agentViewSchema).default([]),
   created_at: z.string(),
 });
 

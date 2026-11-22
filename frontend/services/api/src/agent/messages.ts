@@ -44,6 +44,7 @@ export async function appendMessage(
     mentions?: Json[];
     attachments?: Json[];
     proposals?: Json[];
+    views?: Json[];
   },
 ) {
   const previous = await db
@@ -72,6 +73,7 @@ export async function appendMessage(
       mentions: JSON.stringify(input.mentions ?? []),
       attachments: JSON.stringify(input.attachments ?? []),
       proposals: JSON.stringify(input.proposals ?? []),
+      views: JSON.stringify(input.views ?? []),
       created_at: new Date(),
     })
     .returningAll()

@@ -16,6 +16,7 @@ import {
   proposeDeclarationArguments,
 } from './proposals.ts';
 import { fetchesPage, usesFormats } from './skills.ts';
+import { SHOW_VIEW, SHOW_VIEW_DESCRIPTION, showViewArguments } from './views.ts';
 import { scrubRecordRefs } from './sources.ts';
 import {
   checkSuggestion,
@@ -161,6 +162,7 @@ export function agentToolList(
       description: PROPOSE_DESCRIPTION,
       arguments: proposeDeclarationArguments,
     },
+    { name: SHOW_VIEW, description: SHOW_VIEW_DESCRIPTION, arguments: showViewArguments },
   ]).map((tool) => (tool.name === SAVE_DOCUMENT ? { ...tool, stream_input: true } : tool));
   return [...registry.catalog(), ...builtins].toSorted((a, b) => compareText(a.name, b.name));
 }
@@ -171,6 +173,7 @@ const BUILTINS: ReadonlySet<string> = new Set([
   EDIT_DOCUMENT,
   SUGGEST_EDITS,
   PROPOSE_DECLARATION,
+  SHOW_VIEW,
 ]);
 export function isBuiltin(name: string) {
   return BUILTINS.has(name);

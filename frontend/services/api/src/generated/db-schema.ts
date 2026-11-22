@@ -147,6 +147,7 @@ export interface AgentMessages {
   skill_id: string | null;
   skill_source: string | null;
   steps: Json;
+  views: Generated<Json>;
   web_sources: Generated<Json>;
   workspace_id: string;
 }

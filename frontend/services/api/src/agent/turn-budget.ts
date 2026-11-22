@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { AgentProposal, agentStepSchema } from '@citeladder/contracts/agent';
+import type { AgentView } from '@citeladder/contracts/agent-views';
 import type { ConversationBlock, ConversationMessage } from '../models/conversation.ts';
 import type { DocumentState } from './builtin-tools.ts';
 import { AgentError, type Budget } from './contracts.ts';
@@ -15,6 +16,7 @@ export type TurnState = DocumentState & {
   searches: number;
   steps: StepRecord[];
   proposals: AgentProposal[];
+  views: AgentView[];
   toolsUsed: number;
   messages: ConversationMessage[];
   contextHash: string;

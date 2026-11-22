@@ -559,6 +559,7 @@ describe('Agent built-in tools', () => {
       ['propose_declaration', false],
       ['read_zeta', false],
       ['save_document', true],
+      ['show_view', false],
       ['suggest_edits', false],
     ]);
     expect(tools[4]!.input_schema).toEqual({
