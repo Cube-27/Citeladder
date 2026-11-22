@@ -327,6 +327,11 @@ how to add or change an entry.
   three words and help sits behind an info icon. Its table may hold a
   negative-vs-positive bar, and its donut and bars may fill with status colours
   (2026-11-22).
+- **AR-20 Sources** follows Peec's Domains and URLs views: no domain page, a
+  domain opens the URLs tab narrowed to it, and an open URL joins the page
+  breadcrumb, never a second breadcrumb or tab row (2026-11-22).
+- **AR-21 Model names** appear only in Agent chat; every other screen names the
+  answer engine alone (2026-11-22).
 
 ## Audit remediation (owner 2026-11-12)
 

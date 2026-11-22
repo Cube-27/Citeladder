@@ -61,9 +61,6 @@ describe('engine catalogue', () => {
       'google_ai_overview',
       'google_ai_mode',
     ]);
-    expect(engines.modelLabel('chatgpt', 'gpt-6.1-terra')).toBe('gpt-6.1-terra');
-    expect(engines.modelLabel('chatgpt_search', 'chat_gpt-llm-scraper')).toBeNull();
-    expect(engines.modelLabel('uncatalogued', 'some-model')).toBeNull();
   });
 });
 

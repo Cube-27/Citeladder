@@ -130,10 +130,7 @@ function PromptRow({
           <EngineLogo engine={item.logical_engine} />
           <TableCellLines
             primary={item.prompt_text || 'Untitled prompt'}
-            secondary={
-              engines.modelLabel(item.logical_engine, item.transport_model) ||
-              engines.label(item.logical_engine)
-            }
+            secondary={engines.label(item.logical_engine)}
           />
         </Inline>
       </TableCell>
