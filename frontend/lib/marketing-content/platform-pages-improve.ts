@@ -181,7 +181,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'What the Agent cannot do',
-        body: 'The Agent uses the same read tools as the CiteLadder MCP server, inside limits set for each run. It cannot publish, browse the open web or contact anyone. It starts a crawl, buys data or changes prompts only when you confirm its proposal, and it never declares that a change worked without new evidence.',
+        body: 'The Agent uses the same read tools as the CiteLadder MCP server, inside limits set for each run. It cannot publish or contact anyone, and its web searches are limited on every run. It starts a crawl, buys data or changes prompts only when you confirm its proposal, and it never declares that a change worked without new evidence.',
         points: [
           'Reads only the project you are in',
           'Step and size limits on every run',
@@ -332,7 +332,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can an assistant change my website or my data through MCP?',
-        a: 'Only if you tick Allow changes when you connect it. Then it can add, edit and archive prompts, add, rename and delete topics, add and remove competitors, launch and cancel audits, create schedules and update Actions. Your assistant asks before each change, and each one, a crawl or keyword research run included, runs only after you confirm a preview. It never publishes or changes your site.',
+        a: 'Only if you tick Allow changes when you connect it. Then it can add, edit and archive prompts, add, rename and delete topics, add and remove competitors, launch and cancel audits, create schedules and update Actions. Your assistant asks you to confirm a preview before each change, a crawl or keyword research run included. It never publishes or changes your site.',
       },
       {
         q: 'Does reading a tool refresh the data?',

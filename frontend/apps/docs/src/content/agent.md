@@ -57,7 +57,7 @@ When a reply is saved, its run summary shows how many model calls and data reads
 
 ## Know the boundary
 
-The Agent reads saved CiteLadder evidence. It does not browse the live web, publish content or contact publishers.
+The Agent reads saved CiteLadder evidence and can run a limited number of web searches in a turn; it never opens or changes a page it finds. It does not publish content or contact publishers.
 
 It never changes your project by itself. When you ask for a change to project data, such as prompts, topics, competitors, brand details or products, or for work such as an audit, a crawl, a probe or a keyword research run, it proposes the change as a card under its reply. The card shows what will change and what it can spend; nothing happens until you choose **Confirm**, and **Dismiss** drops it. Billing, plan, members, API keys, credentials and settings change only in CiteLadder's own screens.
 
