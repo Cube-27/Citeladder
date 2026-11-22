@@ -2066,6 +2066,7 @@ export interface McpAuthorizationRequests {
 }
 
 export interface McpConfirmations {
+  claimed_at: Timestamp | null;
   consumed_at: Timestamp | null;
   created_at: Timestamp;
   expires_at: Timestamp;

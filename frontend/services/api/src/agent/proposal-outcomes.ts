@@ -1,11 +1,13 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
+import type { Actor } from '../auth/actor.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
+import { confirmOnce } from '../changes/confirm-once.ts';
 import type { ChangePreview } from '../changes/kind.ts';
 import { changeKinds } from '../changes/kinds.ts';
 import { authorize } from '../commands/permission.ts';
 import type { ServiceConfig } from '../config.ts';
-import { whileTryLocked } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import {
@@ -28,14 +30,17 @@ type OutcomeRow = Readonly<{
   proposal_index: number;
   user_id: string;
 }>;
+const DECIDED = ['executed', 'dismissed'] as const;
 
 class ChangeRefused extends Error {
   readonly row: OutcomeRow;
   readonly refusal: ApiError;
-  constructor(row: OutcomeRow, refusal: ApiError) {
+  readonly ran: AgentChangeKind | null;
+  constructor(row: OutcomeRow, refusal: ApiError, ran: AgentChangeKind | null = null) {
     super(refusal.message);
     this.row = row;
     this.refusal = refusal;
+    this.ran = ran;
   }
 }
 
@@ -56,6 +61,13 @@ async function proposalAt(trx: Database, scope: Pick<Scope, 'workspaceId'>, ref:
 }
 
 type DecisionInput = Parameters<typeof decideProposal>[2];
+type Opened = Readonly<{
+  actor: Actor;
+  kind: AgentChangeKind;
+  payload: unknown;
+  row: OutcomeRow;
+  changeId: string;
+}>;
 
 function outcomeRow(
   chat: { workspace_id: string; project_id: string; id: string },
@@ -76,6 +88,12 @@ const alreadyDecided = () =>
     code: asApiErrorCode('agent_proposal_decided'),
   });
 
+const roleChanged = () =>
+  new ApiError(
+    403,
+    "The change was made, but the member's role no longer allowed it when it finished, so it is not recorded as their confirmation. A member who may make it can confirm the card again.",
+  );
+
 async function record(trx: Database, row: OutcomeRow, decision: Decision, id: string) {
   const recorded = await trx
     .insertInto('agent_proposal_outcomes')
@@ -88,12 +106,25 @@ async function record(trx: Database, row: OutcomeRow, decision: Decision, id: st
     .onConflict((conflict) =>
       conflict
         .columns(['message_id', 'proposal_index'])
-        .where('state', '<>', 'refused')
+        .where(sql<boolean>`state in ('executed', 'dismissed')`)
         .doNothing(),
     )
     .returning('id')
     .executeTakeFirst();
   if (!recorded) throw alreadyDecided();
+}
+
+async function appendOutcome(
+  db: Database,
+  row: OutcomeRow,
+  event: Readonly<{ state: 'claimed' | 'released' } | { state: 'refused'; reason: string }>,
+) {
+  const { created_at } = await db
+    .insertInto('agent_proposal_outcomes')
+    .values({ ...row, ...event, id: randomUUID(), created_at: sql`clock_timestamp()` })
+    .returning('created_at')
+    .executeTakeFirstOrThrow();
+  return created_at;
 }
 
 async function executed(run: () => Promise<unknown>, row: OutcomeRow) {
@@ -108,24 +139,6 @@ async function executed(run: () => Promise<unknown>, row: OutcomeRow) {
 const changeEvent = (trx: Database, kind: AgentChangeKind, row: OutcomeRow) =>
   recordSecurityEvent(trx, `agent.change.${kind}`, row.user_id, row.workspace_id, row.project_id);
 
-function decideInTransaction(db: Database, config: ServiceConfig, input: DecisionInput) {
-  return db.transaction().execute(async (trx) => {
-    const actor = await memberActor(trx, input.scope, 'share');
-    const { chat, kind, payload } = await proposalAt(trx, input.scope, input.ref);
-    const entry = changeKinds[kind];
-    authorize(actor, entry.permission);
-    const row = outcomeRow(chat, input);
-    const id = randomUUID();
-    await record(trx, row, input.decision, id);
-    if (input.decision === 'dismiss') return;
-    await executed(
-      () => entry.confirm(trx, config, actor, { id, projectId: chat.project_id }, payload),
-      row,
-    );
-    await changeEvent(trx, kind, row);
-  });
-}
-
 export function proposalChangeId(ref: Pick<ProposalRef, 'messageId' | 'index'>) {
   const hex = createHash('sha256')
     .update(`agent-proposal:${ref.messageId}:${ref.index}`)
@@ -139,46 +152,103 @@ export function proposalChangeId(ref: Pick<ProposalRef, 'messageId' | 'index'>) 
   ].join('-');
 }
 
-async function decideLive(db: Database, config: ServiceConfig, input: DecisionInput) {
-  const { actor, row, kind, payload } = await db.transaction().execute(async (trx) => {
-    const member = await memberActor(trx, input.scope);
-    const found = await proposalAt(trx, input.scope, input.ref);
-    authorize(member, changeKinds[found.kind].permission);
-    const decided = await trx
-      .selectFrom('agent_proposal_outcomes')
-      .select('id')
-      .where('workspace_id', '=', input.scope.workspaceId)
-      .where('message_id', '=', input.ref.messageId)
-      .where('proposal_index', '=', input.ref.index)
-      .where('state', '<>', 'refused')
-      .executeTakeFirst();
-    if (decided) throw alreadyDecided();
-    return { ...found, actor: member, row: outcomeRow(found.chat, input) };
-  });
-  const change = { id: proposalChangeId(input.ref), projectId: row.project_id };
-  if (input.decision === 'confirm')
-    await executed(() => changeKinds[kind].confirm(db, config, actor, change, payload), row);
-  await db.transaction().execute(async (trx) => {
-    await record(trx, row, input.decision, randomUUID());
-    if (input.decision === 'confirm') await changeEvent(trx, kind, row);
-  });
+async function opened(trx: Database, input: DecisionInput, changeId: string, lock?: 'share') {
+  const actor = await memberActor(trx, input.scope, lock);
+  const { chat, kind, payload } = await proposalAt(trx, input.scope, input.ref);
+  authorize(actor, changeKinds[kind].permission);
+  return { actor, kind, payload, row: outcomeRow(chat, input), changeId };
 }
 
-function decideWhileHeld(db: Database, config: ServiceConfig, input: DecisionInput) {
-  return whileTryLocked(db, {
+async function stillAllowed(trx: Database, input: DecisionInput, found: Opened) {
+  try {
+    authorize(await memberActor(trx, input.scope, 'share'), changeKinds[found.kind].permission);
+  } catch (error) {
+    if (input.decision === 'confirm' && error instanceof ApiError)
+      throw new ChangeRefused(found.row, roleChanged(), found.kind);
+    throw error;
+  }
+}
+
+const outcomesOf = (trx: Database, input: DecisionInput) =>
+  trx
+    .selectFrom('agent_proposal_outcomes')
+    .select(['state', 'created_at'])
+    .where('workspace_id', '=', input.scope.workspaceId)
+    .where('message_id', '=', input.ref.messageId)
+    .where('proposal_index', '=', input.ref.index);
+
+function decide(db: Database, config: ServiceConfig, input: DecisionInput, live: boolean) {
+  const run = async (trx: Database, found: Opened) => {
+    if (input.decision === 'dismiss') return;
+    const change = { id: found.changeId, projectId: found.row.project_id };
+    await executed(
+      () => changeKinds[found.kind].confirm(trx, config, found.actor, change, found.payload),
+      found.row,
+    );
+  };
+  const event = async (trx: Database, found: Opened) => {
+    if (input.decision === 'confirm') await changeEvent(trx, found.kind, found.row);
+  };
+  if (!live)
+    return confirmOnce(db, {
+      live,
+      open: async (trx) => {
+        const found = await opened(trx, input, randomUUID(), 'share');
+        await record(trx, found.row, input.decision, found.changeId);
+        return found;
+      },
+      run,
+      record: event,
+    });
+  return confirmOnce(db, {
+    live,
     subject: `agent-proposal:${input.ref.messageId}:${input.ref.index}`,
     busy: () =>
       new ApiError(409, 'This change is already being made.', {
         code: asApiErrorCode('agent_proposal_running'),
       }),
-    run: () => decideLive(db, config, input),
+    open: async (trx) => {
+      const found = await opened(trx, input, proposalChangeId(input.ref));
+      if (await outcomesOf(trx, input).where('state', 'in', DECIDED).executeTakeFirst())
+        throw alreadyDecided();
+      return found;
+    },
+    claimedAt: async (trx) => {
+      const latest = await outcomesOf(trx, input)
+        .orderBy('created_at', 'desc')
+        .limit(1)
+        .executeTakeFirst();
+      return latest?.state === 'claimed' ? latest.created_at : null;
+    },
+    claim: (trx, found) => appendOutcome(trx, found.row, { state: 'claimed' }),
+    run,
+    record: async (trx, found) => {
+      await stillAllowed(trx, input, found);
+      await record(trx, found.row, input.decision, randomUUID());
+      await event(trx, found);
+    },
+    release: async (trx, found, { error, owned }) => {
+      if (error instanceof ChangeRefused) await refused(trx, error, owned);
+      else if (owned) await appendOutcome(trx, found.row, { state: 'released' });
+    },
   });
 }
 
-async function decide(db: Database, config: ServiceConfig, input: DecisionInput) {
-  const { kind } = await proposalAt(db, input.scope, input.ref);
-  if (changeKinds[kind].live) return decideWhileHeld(db, config, input);
-  return decideInTransaction(db, config, input);
+async function refused(trx: Database, error: ChangeRefused, append: boolean) {
+  const { row, refusal, ran } = error;
+  if (append)
+    await appendOutcome(trx, row, {
+      state: 'refused',
+      reason: refusal.message.slice(0, agentPolicy.proposal_refusal_max_chars),
+    });
+  if (ran)
+    await recordSecurityEvent(
+      trx,
+      `agent.change.${ran}.unauthorized`,
+      row.user_id,
+      row.workspace_id,
+      row.project_id,
+    );
 }
 
 export async function decideProposal(
@@ -190,20 +260,13 @@ export async function decideProposal(
     decision: Decision;
   }>,
 ) {
+  const { kind } = await proposalAt(db, input.scope, input.ref);
+  const { live } = changeKinds[kind];
   try {
-    await decide(db, config, input);
+    await decide(db, config, input, live);
   } catch (error) {
     if (!(error instanceof ChangeRefused)) throw error;
-    await db
-      .insertInto('agent_proposal_outcomes')
-      .values({
-        ...error.row,
-        id: randomUUID(),
-        state: 'refused',
-        reason: error.refusal.message.slice(0, agentPolicy.proposal_refusal_max_chars),
-        created_at: new Date(),
-      })
-      .execute();
+    if (!live) await refused(db, error, true);
     throw error.refusal;
   }
 }
@@ -245,6 +308,7 @@ export async function proposalNews(
     .select(['message_id', 'proposal_index', 'state', 'reason', 'created_at'])
     .where('workspace_id', '=', scope.workspaceId)
     .where('chat_id', '=', run.chat_id)
+    .where('state', 'in', [...DECIDED, 'refused'])
     .orderBy('created_at')
     .execute();
   const touched = outcomes.filter((row) => row.created_at > since).map((row) => row.message_id);

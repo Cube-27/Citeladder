@@ -1,12 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, expect, it, onTestFinished, vi } from 'vitest';
+import { sql } from 'kysely';
+import { agentPolicy } from '../src/agent/contracts.ts';
 import { ApiError } from '../src/errors.ts';
 import { mcpPolicy } from '../src/mcp/config.ts';
+import { confirmChange } from '../src/mcp/confirmations.ts';
 import { admitWriteCall } from '../src/mcp/registration.ts';
 import type { McpPrincipal } from '../src/mcp/types.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { mcpWrites } from './mcp-write-support.ts';
 import { topic } from './prompt-fixtures.ts';
+import { gatedGeneration, singleConnectionDatabase } from './live-owner.ts';
 import { testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
@@ -257,6 +261,121 @@ it('keys a confirmed generation run by its confirmation, so a retry replays inst
       .where('event', 'like', 'mcp.write.%')
       .execute(),
   ).toEqual([{ event: 'mcp.write.generate_prompts' }]);
+});
+
+it('runs a live confirmation with no pooled connection held, once under concurrent confirms, leaves it unconsumed when the role is lost during the run, and replays it after its claim lapses', async () => {
+  const tenant = await auditTenant(db, fixtures);
+  const principal = await connection(tenant);
+  const narrow = singleConnectionDatabase();
+  const { keys, gate, next } = gatedGeneration();
+  const issued = async () =>
+    (
+      await db
+        .selectFrom('mcp_confirmations')
+        .select('id')
+        .where('grant_id', '=', principal.grantId)
+        .execute()
+    ).map((row) => row.id);
+  const prepared = async () => {
+    const before = await issued();
+    const { confirmation_token: token } = await prepare(principal, tenant, 'generate_prompts', {
+      prompt_set_id: tenant.setId,
+      request: { count: 10 },
+    });
+    const [id = ''] = (await issued()).filter((issuedId) => !before.includes(issuedId));
+    await db
+      .insertInto('prompt_generation_runs')
+      .values({
+        id: randomUUID(),
+        workspace_id: tenant.workspaceId,
+        project_id: tenant.projectId,
+        prompt_set_id: tenant.setId,
+        generator_version: '1',
+        request: JSON.stringify({ count: 10, idempotency_key: id }),
+        provenance: JSON.stringify({ candidates_generated: 0 }),
+        created_at: new Date(),
+      })
+      .execute();
+    return {
+      id,
+      confirm: () => confirmChange({ db: narrow, config, principal, token: String(token) }),
+    };
+  };
+  const state = (id: string) =>
+    db
+      .selectFrom('mcp_confirmations')
+      .select(['claimed_at', 'consumed_at'])
+      .where('id', '=', id)
+      .executeTakeFirstOrThrow();
+  const claimedAgo = (id: string, seconds: number) =>
+    db
+      .updateTable('mcp_confirmations')
+      .set({ claimed_at: sql`clock_timestamp() - make_interval(secs => ${seconds})` })
+      .where('id', '=', id)
+      .execute();
+
+  const first = await prepared();
+  const running = first.confirm();
+  await gate.started.promise;
+  expect(await failure(first.confirm())).toBe('This change is already being made.');
+  gate.finish.resolve();
+  expect(await running).toMatchObject({ kind: 'generate_prompts' });
+  expect(keys).toEqual([first.id]);
+
+  const expiry = async (id: string) =>
+    (
+      await db
+        .selectFrom('mcp_confirmations')
+        .select('expires_at')
+        .where('id', '=', id)
+        .executeTakeFirstOrThrow()
+    ).expires_at.getTime();
+  const second = await prepared();
+  const issuedExpiry = await expiry(second.id);
+  next();
+  const demoted = second.confirm();
+  await gate.started.promise;
+  expect(await expiry(second.id)).toBeGreaterThan(
+    issuedExpiry + agentPolicy.live_change_claim_seconds * 1000,
+  );
+  await setRole(tenant, 'viewer');
+  gate.finish.resolve();
+  expect(await failure(demoted)).toBe(
+    'The change was made, but your role or this connection no longer allows it, so it was not recorded as confirmed.',
+  );
+  expect(await state(second.id)).toEqual({ claimed_at: null, consumed_at: null });
+  expect(await expiry(second.id)).toBe(issuedExpiry);
+  await setRole(tenant, 'owner');
+
+  await claimedAgo(second.id, 0);
+  expect(await failure(second.confirm())).toBe('This change is already being made.');
+  await claimedAgo(second.id, agentPolicy.live_change_claim_seconds + 60);
+  await second.confirm();
+  expect(keys).toEqual([first.id, second.id, second.id]);
+  expect(await generationRuns(tenant)).toHaveLength(2);
+
+  const third = await prepared();
+  next();
+  const outlived = third.confirm();
+  await gate.started.promise;
+  await claimedAgo(third.id, 0);
+  const { claimed_at: newer } = await state(third.id);
+  gate.finish.reject(new Error('The provider is unavailable.'));
+  expect(await failure(outlived)).toBe('The provider is unavailable.');
+  expect(await state(third.id)).toEqual({ claimed_at: newer, consumed_at: null });
+  expect(
+    await db
+      .selectFrom('security_events')
+      .select('event')
+      .where('actor_id', '=', tenant.userId)
+      .where('event', 'like', 'mcp.write.%')
+      .orderBy('event')
+      .execute(),
+  ).toEqual([
+    { event: 'mcp.write.generate_prompts' },
+    { event: 'mcp.write.generate_prompts' },
+    { event: 'mcp.write.generate_prompts.unauthorized' },
+  ]);
 });
 
 it('spends a narrower per-connection budget on changes', async () => {

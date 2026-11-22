@@ -1,3 +1,4 @@
+import { sql } from 'kysely';
 import type { Actor } from '../auth/actor.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import type { ServiceConfig } from '../config.ts';
@@ -6,7 +7,9 @@ import type { Database } from '../db/database.ts';
 import { mcpPolicy } from './config.ts';
 import type { PreparedChange } from '../changes/kind.ts';
 import { changeKinds } from '../changes/kinds.ts';
-import { whileTryLocked } from '../db/advisory-lock.ts';
+import { claimSeconds, confirmOnce } from '../changes/confirm-once.ts';
+import { authorize } from '../commands/permission.ts';
+import { ApiError } from '../errors.ts';
 import { isMcpChangeKind, type McpChangeKind } from './change-kinds.ts';
 import { writeActor } from './data.ts';
 import { tokenHash } from './oauth.ts';
@@ -89,11 +92,13 @@ async function openConfirmation(
 }
 
 async function consume(trx: Database, principal: McpPrincipal, row: Confirmation) {
-  await trx
+  const consumed = await trx
     .updateTable('mcp_confirmations')
     .set({ consumed_at: new Date() })
     .where('id', '=', row.id)
-    .execute();
+    .where('consumed_at', 'is', null)
+    .executeTakeFirst();
+  if (!consumed.numUpdatedRows) throw new McpInputError('This change was already confirmed.');
   await recordSecurityEvent(
     trx,
     `mcp.write.${row.kind}`,
@@ -112,51 +117,93 @@ type Confirm = Readonly<{
   token: string;
 }>;
 
-function confirmInTransaction({ db, config, principal, token }: Confirm) {
-  return db.transaction().execute(async (trx) => {
-    const row = await openConfirmation(trx, config, principal, token);
-    const actor = await writeActor(trx, principal, row.project_id);
-    const result = await changeKinds[row.kind].confirm(
-      trx,
-      config,
-      actor,
-      changeOf(row),
-      row.payload,
-    );
-    await consume(trx, principal, row);
-    return { kind: row.kind, result };
-  });
+class RanUnauthorized extends McpInputError {}
+
+const roleChanged = () =>
+  new RanUnauthorized(
+    'The change was made, but your role or this connection no longer allows it, so it was not recorded as confirmed.',
+  );
+
+async function stillAllowed(trx: Database, principal: McpPrincipal, row: Confirmation) {
+  try {
+    authorize(await writeActor(trx, principal, row.project_id), changeKinds[row.kind].permission);
+  } catch (error) {
+    if (error instanceof ApiError || error instanceof McpInputError) throw roleChanged();
+    throw error;
+  }
 }
 
-function confirmLive({ db, config, principal, token }: Confirm, id: string) {
-  return whileTryLocked(db, {
-    subject: `mcp-confirmation:${id}`,
-    busy: () => new McpInputError('This change is already being made.'),
-    run: async () => {
-      const { row, actor } = await db.transaction().execute(async (trx) => {
-        const opened = await openConfirmation(trx, config, principal, token);
-        return { row: opened, actor: await writeActor(trx, principal, opened.project_id) };
-      });
-      const result = await changeKinds[row.kind].confirm(
-        db,
-        config,
-        actor,
-        changeOf(row),
-        row.payload,
-      );
-      await db.transaction().execute((trx) => consume(trx, principal, row));
-      return { kind: row.kind, result };
-    },
-  });
-}
-
-export async function confirmChange(input: Confirm) {
-  const found = await input.db
+export async function confirmChange({ db, config, principal, token }: Confirm) {
+  const found = await db
     .selectFrom('mcp_confirmations')
     .select(['id', 'kind'])
-    .where('token_hmac', '=', tokenHmac(input.config, input.token))
+    .where('token_hmac', '=', tokenHmac(config, token))
     .executeTakeFirst();
-  if (found && isMcpChangeKind(found.kind) && changeKinds[found.kind].live)
-    return confirmLive(input, found.id);
-  return confirmInTransaction(input);
+  const open = async (trx: Database) => {
+    const row = await openConfirmation(trx, config, principal, token);
+    return { row, actor: await writeActor(trx, principal, row.project_id) };
+  };
+  const run = async (trx: Database, { row, actor }: Awaited<ReturnType<typeof open>>) => ({
+    kind: row.kind,
+    result: await changeKinds[row.kind].confirm(trx, config, actor, changeOf(row), row.payload),
+  });
+  if (!found || !isMcpChangeKind(found.kind) || !changeKinds[found.kind].live)
+    return confirmOnce(db, {
+      live: false,
+      open,
+      run,
+      record: (trx, { row }) => consume(trx, principal, row),
+    });
+  return confirmOnce(db, {
+    live: true,
+    subject: `mcp-confirmation:${found.id}`,
+    busy: () => new McpInputError('This change is already being made.'),
+    open,
+    claimedAt: async (trx, { row }) =>
+      (
+        await trx
+          .selectFrom('mcp_confirmations')
+          .select('claimed_at')
+          .where('id', '=', row.id)
+          .executeTakeFirstOrThrow()
+      ).claimed_at,
+    claim: async (trx, { row }) => {
+      const outlives = claimSeconds() + mcpPolicy.confirmation_ttl_seconds;
+      const { claimed_at } = await trx
+        .updateTable('mcp_confirmations')
+        .set({
+          claimed_at: sql<Date>`clock_timestamp()`,
+          expires_at: sql<Date>`greatest(expires_at, clock_timestamp() + make_interval(secs => ${outlives}))`,
+        })
+        .where('id', '=', row.id)
+        .returning('claimed_at')
+        .executeTakeFirstOrThrow();
+      if (!claimed_at) throw new Error('An MCP confirmation claim stored no time');
+      return claimed_at;
+    },
+    run,
+    record: async (trx, { row }) => {
+      await stillAllowed(trx, principal, row);
+      await consume(trx, principal, row);
+    },
+    release: async (trx, { row }, { error, owned }) => {
+      if (owned)
+        await trx
+          .updateTable('mcp_confirmations')
+          .set({
+            claimed_at: null,
+            expires_at: sql<Date>`least(expires_at, created_at + make_interval(secs => ${mcpPolicy.confirmation_ttl_seconds}))`,
+          })
+          .where('id', '=', row.id)
+          .execute();
+      if (error instanceof RanUnauthorized)
+        await recordSecurityEvent(
+          trx,
+          `mcp.write.${row.kind}.unauthorized`,
+          principal.userId,
+          row.workspace_id,
+          row.project_id,
+        );
+    },
+  });
 }
