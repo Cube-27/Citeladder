@@ -359,7 +359,7 @@ it('runs a live confirmation with no pooled connection held, once under concurre
   next();
   const outlived = third.confirm();
   await gate.started.promise;
-  await claimedAgo(third.id, 0);
+  await claimedAgo(third.id, 1);
   const { claimed_at: newer } = await state(third.id);
   gate.finish.reject(new Error('The provider is unavailable.'));
   expect(await failure(outlived)).toBe('The provider is unavailable.');
