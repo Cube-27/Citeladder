@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useState } from 'react';
 import type {
   PerceptionCoverage,
   PerceptionQuote,
@@ -97,10 +97,9 @@ export function QuoteLink({ quote }: Readonly<{ quote: PerceptionQuote }>) {
 
 const SCROLL_REGION = { role: 'region', tabIndex: 0 } as const;
 
-function useOverflowsY(ref: RefObject<HTMLElement | null>) {
+function useOverflowsY(node: HTMLElement | null) {
   const [overflows, setOverflows] = useState(false);
   useEffect(() => {
-    const node = ref.current;
     if (!node) return;
     const observer = new ResizeObserver(() =>
       setOverflows(node.scrollHeight - node.clientHeight > 1),
@@ -108,15 +107,15 @@ function useOverflowsY(ref: RefObject<HTMLElement | null>) {
     observer.observe(node);
     if (node.firstElementChild) observer.observe(node.firstElementChild);
     return () => observer.disconnect();
-  }, [ref]);
+  }, [node]);
   return overflows;
 }
 
 export function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] }>) {
   const { label: engineLabel } = useEngineCatalog();
   const title = 'Criticism in answers';
-  const scroller = useRef<HTMLDivElement>(null);
-  const scrolls = useOverflowsY(scroller);
+  const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
+  const scrolls = useOverflowsY(scroller) && quotes.length > 0;
   return (
     <TitledSection
       title={title}
@@ -138,7 +137,7 @@ export function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] 
         </SectionContent>
       ) : (
         <div
-          ref={scroller}
+          ref={setScroller}
           {...(scrolls ? SCROLL_REGION : {})}
           aria-label={scrolls ? title : undefined}
           className={slipClasses(
