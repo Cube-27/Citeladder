@@ -44,9 +44,8 @@ function useRevealSelected(selected: string | null) {
 
 const TAB_KIND = {
   tab: {
-    base: 'min-h-[var(--control-md)] self-stretch',
-    current:
-      'after:bg-accent after:absolute after:inset-x-0 after:bottom-0 after:h-[var(--mark-width)]',
+    base: 'rounded-t-control min-h-[var(--control-md)] self-stretch border border-transparent px-4',
+    current: 'border-rule bg-surface border-b-transparent',
   },
   segment: {
     base: 'rounded-mark min-h-[calc(var(--control-md)_-_4px)] px-3',
@@ -67,9 +66,11 @@ function tabFace({
   );
 }
 
+export const TAB_BASELINE = 'shadow-[inset_0_-1px_0_var(--color-rule)]';
+
 const STRIP_ROW = {
   page: 'min-h-[var(--page-tabs-height,var(--control-md))]',
-  section: 'border-rule border-b',
+  section: TAB_BASELINE,
 } as const;
 
 export const TAB_TRACK =
@@ -212,7 +213,7 @@ export function HeldTabRow({
     <div
       aria-hidden
       data-held-tabs=""
-      className={cn(TAB_STRIP, STRIP_ROW.page, 'pointer-events-none gap-5')}
+      className={cn(TAB_STRIP, STRIP_ROW.page, 'pointer-events-none')}
     >
       {labels.map((label) => (
         <span
@@ -265,7 +266,7 @@ function TabStrip<T extends string>({
             strip.current = node;
           }}
           aria-label={ariaLabel}
-          className={cn(TAB_STRIP, STRIP_ROW[kind], 'gap-5')}
+          className={cn(TAB_STRIP, STRIP_ROW[kind])}
         >
           {items.map((item) => (
             <TabsPrimitive.Trigger

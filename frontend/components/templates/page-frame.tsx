@@ -13,6 +13,7 @@ import {
   MastheadPrimarySlot,
   PageEmptyOfferProvider,
 } from '@/components/ui/masthead-actions';
+import { TAB_BASELINE } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
 import { useUrlSearch } from '@/lib/navigation/url-params';
@@ -32,8 +33,7 @@ export type PageFrameSlots = Readonly<{
   filters?: ReactNode;
 }>;
 
-const STRIP =
-  'border-rule flex min-w-0 border-b px-[calc(var(--page-pad-inline)+var(--page-start,0px))]';
+const STRIP = 'flex min-w-0 px-[calc(var(--page-pad-inline)+var(--page-start,0px))]';
 
 export function PageFrame({
   title,
@@ -176,7 +176,7 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
     >
       {tabs ? (
         <div data-page-band="tabs" className={cn(STRIP, 'h-[var(--page-tabs-height)] items-end')}>
-          {tabs}
+          <div className={cn('flex min-w-0 flex-1 items-end', TAB_BASELINE)}>{tabs}</div>
         </div>
       ) : null}
       {filters ? (
