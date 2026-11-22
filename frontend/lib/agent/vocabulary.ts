@@ -8,19 +8,6 @@ import type {
   ActionTreeGroupBy,
 } from '@citeladder/contracts/actions';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
-import { agentReasoningEffortSchema, type AgentReasoningEffort } from '@citeladder/contracts/agent';
-
-export const AGENT_REASONING_EFFORTS = agentReasoningEffortSchema.options;
-
-const REASONING_EFFORT_LABEL: Record<AgentReasoningEffort, string> = {
-  low: 'Low effort',
-  medium: 'Medium effort',
-  high: 'High effort',
-};
-
-export function reasoningEffortLabel(effort: AgentReasoningEffort) {
-  return REASONING_EFFORT_LABEL[effort];
-}
 
 export const ACTION_GOAL_LABEL: Record<ActionGoal, string> = {
   read_site: 'Let AI read your site',

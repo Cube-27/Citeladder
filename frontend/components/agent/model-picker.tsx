@@ -10,10 +10,15 @@ import {
   MenuRadioItem,
   MenuTrigger,
 } from '@/components/ui/menu';
-import { ChevronDown, Lock } from '@/lib/icons';
-import { AGENT_REASONING_EFFORTS, reasoningEffortLabel } from '@/lib/agent/vocabulary';
+import { Lock } from '@/lib/icons';
 import type { AgentChatDetail } from '@/lib/api/agent';
 import type { AgentReasoningEffort } from '@citeladder/contracts/agent';
+
+const EFFORTS = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+] as const satisfies readonly Readonly<{ value: AgentReasoningEffort; label: string }>[];
 
 export type ModelPickerState = Readonly<{
   options: readonly Readonly<{ id: string; label: string }>[];
@@ -61,11 +66,8 @@ export function ModelPicker({
       <ChoiceMenu
         label="Effort"
         value={state.effort}
-        shown={state.effort ? reasoningEffortLabel(state.effort) : undefined}
-        options={AGENT_REASONING_EFFORTS.map((value) => ({
-          value,
-          label: reasoningEffortLabel(value),
-        }))}
+        shown={EFFORTS.find((option) => option.value === state.effort)?.label}
+        options={EFFORTS}
         onSelect={state.onEffort}
         disabled={disabled}
         locked={false}
@@ -97,7 +99,7 @@ function ChoiceMenu<Value extends string>({
       <MenuTrigger asChild>
         <Button variant="quiet" aria-label={name} disabled={disabled || options.length === 0}>
           {shown ?? label}
-          <Icon icon={locked ? Lock : ChevronDown} className="opacity-80" />
+          {locked ? <Icon icon={Lock} className="opacity-80" /> : null}
         </Button>
       </MenuTrigger>
       <MenuContent align="start" side="top">

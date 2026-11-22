@@ -75,8 +75,11 @@ export async function requireIdle(db: Database, chat: Chat) {
     throw new AgentError('agent_run_active');
 }
 
+function choiceIdentity(choice: RequestedChoice = {}) {
+  return { model: choice.model ?? null, effort: choice.effort ?? null };
+}
 function requestIdentity(scope: Scope, input: TurnInput) {
-  const choice = { model: input.choice?.model ?? null, effort: input.choice?.effort ?? null };
+  const choice = choiceIdentity(input.choice);
   if (input.chatId)
     return {
       op: 'send_message',
@@ -478,7 +481,7 @@ export class AgentStore {
       hash: payload.request_fingerprint,
       funding: { funding_source: payload.funding_source, requested_model: payload.requested_model },
       choice: {
-        model: payload.requested_model,
+        model: chat.model,
         effort: agentReasoningEffortSchema.parse(chat.reasoning_effort),
       },
       skill: this.turnSkill(chat, workflow?.skill_id ?? null, manifest.action?.skill_id ?? null),

@@ -542,8 +542,8 @@ describe('ChatScreen', () => {
     expect(
       await screen.findByRole('button', { name: 'Model: Sonnet 5.5, set for this chat' }),
     ).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: 'Effort: Low effort' }));
-    await user.click(await screen.findByRole('menuitemradio', { name: 'High effort' }));
+    await user.click(screen.getByRole('button', { name: 'Effort: Low' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'High' }));
     await user.type(screen.getByLabelText('Reply to the agent'), 'Go deeper{Enter}');
     await vi.waitFor(() =>
       expect(sends).toEqual([{ message: 'Go deeper', reasoning_effort: 'high' }]),

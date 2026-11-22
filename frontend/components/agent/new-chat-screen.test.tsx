@@ -315,7 +315,7 @@ describe('NewChatScreen', () => {
     expect(await screen.findByText(/plan does not include the agent/i)).toBeVisible();
     expect(screen.getByLabelText('Message the agent')).toBeDisabled();
     expect(await screen.findByRole('button', { name: 'Model: Haiku 5.5' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Effort: Medium effort' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Effort: Medium' })).toBeDisabled();
   });
 
   it('sends the model and effort picked in the composer', async () => {
@@ -324,8 +324,8 @@ describe('NewChatScreen', () => {
     renderNewChat('?prompt=Plan+the+quarter');
     await user.click(await screen.findByRole('button', { name: 'Model: Haiku 5.5' }));
     await user.click(await screen.findByRole('menuitemradio', { name: 'Opus 5.5' }));
-    await user.click(screen.getByRole('button', { name: 'Effort: Medium effort' }));
-    await user.click(await screen.findByRole('menuitemradio', { name: 'High effort' }));
+    await user.click(screen.getByRole('button', { name: 'Effort: Medium' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'High' }));
     expect(screen.getByRole('button', { name: 'Model: Opus 5.5' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Send' }));
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeVisible();
