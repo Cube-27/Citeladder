@@ -17,7 +17,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track your own buyer questions'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder tracks the buyer questions you care about across ChatGPT, Gemini, Claude and Google AI Overviews, showing brand mentions, position, sentiment and competitors. Every result is tied to its recorded answer, so you can check exactly what each model said.'
+  body: 'CiteLadder tracks the buyer questions you care about across ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode, showing brand mentions, position, sentiment and competitors. Every result is tied to its recorded answer, so you can check exactly what each model said.'
 ---
 
 CiteLadder's Prompt Builder drafts the short buyer questions a brand tracks in AI answers. For this study we ran the same step for HubSpot, with the same instructions, the same business profile and the same 12 planned slots, on Claude Haiku 5.5, Claude Sonnet 5.5, Claude Opus 5.5 and Claude Fable 5.1. Each model ran at low, medium and high effort, twice each. Only the model and the effort changed. This page describes what can be observed in the output. Judging quality is left to the reader. Every question each model wrote appears in the tables below.

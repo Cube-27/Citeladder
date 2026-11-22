@@ -16,7 +16,7 @@ publication_status: 'editorial_review'
 product:
   heading: 'Track your brand across AI answers'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder runs your buyer questions across ChatGPT, Gemini, Claude and Google AI Overviews and records mentions, position, sentiment and competitors for each engine. Every result links back to the saved answer, so anyone can repeat and check your visibility over time.'
+  body: 'CiteLadder runs your buyer questions across ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode and records mentions, position, sentiment and competitors for each engine. Every result links back to the saved answer, so anyone can repeat and check your visibility over time.'
 ---
 
 ## How can I check my AI visibility?

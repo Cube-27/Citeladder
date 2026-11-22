@@ -20,7 +20,7 @@ publication_status: 'editorial_review'
 product:
   heading: 'Track brand position with the answer in view'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder AI Visibility repeats each buyer prompt across ChatGPT, Claude, Gemini and Google AI Overviews, records where your brand and competitors appear, and keeps every position tied to the stored answer and its cited sources.'
+  body: 'CiteLadder AI Visibility repeats each buyer prompt across ChatGPT, Claude, Gemini, Google AI Overviews and Google AI Mode, records where your brand and competitors appear, and keeps every position tied to the stored answer and its cited sources.'
 ---
 
 ## What is an LLM rank tracker?
@@ -119,7 +119,7 @@ Daily, weekly or on demand: the cadence matters less than consistency. Compare r
 
 ## How CiteLadder tracks rank
 
-CiteLadder runs the same prompt portfolio across ChatGPT, Gemini, Claude and Google AI Overviews. Each prompt is repeated several times per run to measure consistency, runs can be scheduled once, hourly, daily or weekly, and every metric states how many answers it is based on.[\[15\]](#source-15)
+CiteLadder runs the same prompt portfolio across ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode. Each prompt is repeated several times per run to measure consistency, runs can be scheduled once, hourly, daily or weekly, and every metric states how many answers it is based on.[\[15\]](#source-15)
 
 Each recorded answer shows whether your brand was mentioned, where it ranked among the brands named, and whether your own pages were cited. Consumer answers and model APIs are labeled by surface. Query fan-out is shown when an engine exposes the searches it ran and is marked unavailable when it does not. Missing data is shown as missing, never as zero.[\[15\]](#source-15)
 

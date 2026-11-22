@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude names you'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder tracks whether ChatGPT, Gemini, Claude and Google AI Overviews mention your brand in answers to your own buyer questions, along with position, sentiment and the competitors named beside you. Every result is tied to the recorded answer, so you can check exactly what was said.'
+  body: 'CiteLadder tracks whether ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode mention your brand in answers to your own buyer questions, along with position, sentiment and the competitors named beside you. Every result is tied to the recorded answer, so you can check exactly what was said.'
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about SEO tools, three times each, in three conditions: from memory, with web search available, and told to search first. From memory, Claude named Ahrefs in 83% of answers. When told to search, Semrush moved to the top at 75%. This page shows what Claude said. It is not a ranking of which product is best.

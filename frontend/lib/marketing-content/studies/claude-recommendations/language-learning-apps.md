@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often AI names your app'
   href: '/platform/ai-visibility'
-  body: "CiteLadder tracks your brand's mentions, position and competitors across Claude, ChatGPT, Gemini and Google AI Overviews for the buyer questions you choose. Every result is tied to its recorded answer, so you can see how your app's shortlist position shifts over time."
+  body: "CiteLadder tracks your brand's mentions, position and competitors across Claude, ChatGPT, Gemini, Google AI Overviews and Google AI Mode for the buyer questions you choose. Every result is tied to its recorded answer, so you can see how your app's shortlist position shifts over time."
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about language learning apps. Each question ran three times in three conditions: from memory, with web search available, and told to search first. Duolingo was the brand Claude named most often in every condition. When Claude searched, its shortlists got shorter and some names dropped away. This page reports what Claude said through the Anthropic API. It is not a ranking of which app is best, and the Claude apps can answer differently.

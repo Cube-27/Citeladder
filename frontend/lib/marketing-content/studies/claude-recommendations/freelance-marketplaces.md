@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude recommends you'
   href: '/platform/ai-visibility'
-  body: "CiteLadder tracks whether ChatGPT, Gemini, Claude and Google AI Overviews mention your brand in answers to your buyers' questions, along with position, sentiment and the competitors named beside you. Every result is tied to the recorded answer, so you can check what was actually said."
+  body: "CiteLadder tracks whether ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode mention your brand in answers to your buyers' questions, along with position, sentiment and the competitors named beside you. Every result is tied to the recorded answer, so you can check what was actually said."
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about freelance marketplaces, three times each, in three conditions: from memory, with web search available, and told to search first. Upwork, Fiverr and Toptal were named most often in every condition. When Claude was told to search, its top five brands did not change, but its answers got shorter and named fewer brands. This page reports what Claude said through the Anthropic API. It is not a ranking of which platform is best, and the Claude apps can answer differently.

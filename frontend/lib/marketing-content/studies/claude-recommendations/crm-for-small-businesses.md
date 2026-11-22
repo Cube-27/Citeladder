@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude recommends you'
   href: '/platform/ai-visibility'
-  body: "CiteLadder tracks your brand's mentions, position and sentiment against competitors across Claude, ChatGPT, Gemini and Google AI Overviews. Every result is tied to the answer it came from, so you can run buyer questions like these for your own category."
+  body: "CiteLadder tracks your brand's mentions, position and sentiment against competitors across Claude, ChatGPT, Gemini, Google AI Overviews and Google AI Mode. Every result is tied to the answer it came from, so you can run buyer questions like these for your own category."
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about CRM software for small businesses. Each question ran three times in three conditions: from memory, with web search available, and told to search first. HubSpot was the brand Claude named most often in every condition. This page reports what Claude said. It is not a ranking of which CRM is best. Results come from the Anthropic API and can differ from the Claude apps.

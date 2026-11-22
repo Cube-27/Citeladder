@@ -152,8 +152,8 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         body: 'Diagnosis, content, technical fixes, internal links, earned media, growth plans and prompt portfolios.',
       },
       {
-        title: 'Read-only',
-        body: 'It reads your project. It cannot publish, contact anyone or change your site.',
+        title: 'Changes only when you confirm',
+        body: 'It reads your project and changes it only when you confirm a proposed change. It cannot publish, contact anyone or change your site.',
       },
     ],
     features: [
@@ -181,7 +181,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'What the Agent cannot do',
-        body: 'The Agent uses the same read tools as the CiteLadder MCP server, inside limits set for each run. It cannot crawl, buy data, change prompts, publish, browse the open web or contact anyone, and it never declares that a change worked without new evidence.',
+        body: 'The Agent uses the same read tools as the CiteLadder MCP server, inside limits set for each run. It cannot publish or contact anyone, and its web searches are limited on every run. It starts a crawl, buys data or changes prompts only when you confirm its proposal, and it never declares that a change worked without new evidence.',
         points: [
           'Reads only the project you are in',
           'Step and size limits on every run',
@@ -230,7 +230,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can it take actions on my behalf?',
-        a: 'No. It has no write tools. It cannot publish, send messages, activate prompts, start crawls, buy data or change your site.',
+        a: 'Only when you confirm. It proposes changes to your project, such as activating prompts, starting a crawl or buying data, and nothing happens until you confirm. It cannot publish, send messages or change your site.',
       },
       {
         q: 'Is the Agent in the free trial?',
@@ -286,7 +286,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         points: [
           'Weekly AI visibility brief across engines and competitors',
           'Site fix brief from the latest Site Health crawl',
-          'With Allow changes: add, activate, archive or refile prompts, track or drop competitors and review suggested ones, launch audits and schedules, and dismiss or mark Actions implemented, each after you agree; no crawls, purchases or publishing',
+          'With Allow changes: add, activate, archive or refile prompts, track or drop competitors and review suggested ones, launch audits and schedules, start crawls and keyword research, and dismiss or mark Actions implemented, each after you agree; no publishing',
         ],
         media: { kind: 'full', screen: 'visibility' },
       },
@@ -332,7 +332,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can an assistant change my website or my data through MCP?',
-        a: 'Only if you tick Allow changes when you connect it. Then it can add, edit and archive prompts, add, rename and delete topics, add and remove competitors, launch and cancel audits, create schedules and update Actions. Your assistant asks before each change, and larger ones, such as adding prompts or launching an audit, run only after you confirm a preview. It never crawls, buys data, publishes or changes your site.',
+        a: 'Only if you tick Allow changes when you connect it. Then it can add, edit and archive prompts, add, rename and delete topics, add and remove competitors, launch and cancel audits, create schedules and update Actions. Your assistant asks you to confirm a preview before each change, a crawl or keyword research run included. It never publishes or changes your site.',
       },
       {
         q: 'Does reading a tool refresh the data?',

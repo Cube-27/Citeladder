@@ -18,7 +18,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude names you'
   href: '/platform/ai-visibility'
-  body: "CiteLadder tracks your brand's mentions, position and sentiment against competitors across Claude, ChatGPT, Gemini and Google AI Overviews. Every result is tied to the recorded answer, so you can check the same questions this study asked in your own category."
+  body: "CiteLadder tracks your brand's mentions, position and sentiment against competitors across Claude, ChatGPT, Gemini, Google AI Overviews and Google AI Mode. Every result is tied to the recorded answer, so you can check the same questions this study asked in your own category."
 ---
 
 CiteLadder asked Claude Sonnet 5.5 400 buyer questions across 20 categories, three times each, with no tools. That gave 1,200 answers drawn only from what the model already knows. The average answer named 7.7 brands. Repeat runs of the same question agreed on 62.9% of brands on average. In some categories one brand appeared in nearly every answer. In others the mentions were spread thin. This report shows what Claude said. It does not rank which products are good.

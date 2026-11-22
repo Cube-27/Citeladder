@@ -24,7 +24,7 @@ publication_status: 'editorial_review'
 product:
   heading: 'Track how each AI engine mentions you'
   href: '/platform/ai-visibility'
-  body: 'Once you know which engines matter to your buyers, CiteLadder tracks your brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews. Every result is tied to the answer it was recorded from.'
+  body: 'Once you know which engines matter to your buyers, CiteLadder tracks your brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode. Every result is tied to the answer it was recorded from.'
 ---
 
 ## What are the main AI search market share numbers?
@@ -175,7 +175,7 @@ Track ChatGPT, Google AI Overviews and Gemini first, then add others based on yo
 
 Then check the yardstick that is specific to you. Your own [AI referral traffic](/platform/ai-referral-analytics), from analytics and server logs, shows which assistants actually send people to your site. Next, define a set of buyer-style prompts and run them on the engines you chose. An [LLM rank tracker](/llm-rank-tracker) records whether and where you are named, and [share of voice](/ai-search-share-of-voice) compares your presence with competitors across the same prompts.
 
-CiteLadder tracks how brands appear in ChatGPT, Claude, Gemini and Google AI Overviews answers, analyzes the sources those answers cite, and runs Site Health checks on your website. You can use the hosted [AI visibility](/platform/ai-visibility) product at citeladder.com, or self-host the [open source](/open-source) code, published under AGPL-3.0 ([GitHub](https://github.com/abhij1306/CiteLadder)).[\[17\]](#source-17) If Perplexity or Copilot matter in your referral data, confirm that any tool you choose covers them.
+CiteLadder tracks how brands appear in ChatGPT, Claude, Gemini, Google AI Overviews and Google AI Mode answers, analyzes the sources those answers cite, and runs Site Health checks on your website. You can use the hosted [AI visibility](/platform/ai-visibility) product at citeladder.com, or self-host the [open source](/open-source) code, published under AGPL-3.0 ([GitHub](https://github.com/abhij1306/CiteLadder)).[\[17\]](#source-17) If Perplexity or Copilot matter in your referral data, confirm that any tool you choose covers them.
 
 ## How can you check the latest numbers yourself?
 

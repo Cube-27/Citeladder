@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude names you'
   href: '/platform/ai-visibility'
-  body: 'If you sell an ecommerce platform or a related service, CiteLadder tracks how often ChatGPT, Gemini, Claude and Google AI Overviews mention your brand, where you appear against competitors, and the recorded answer behind every result.'
+  body: 'If you sell an ecommerce platform or a related service, CiteLadder tracks how often ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode mention your brand, where you appear against competitors, and the recorded answer behind every result.'
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about ecommerce platforms, three times each, in three conditions: from memory, with web search available, and told to search first. Shopify was named in most answers in every condition. This page reports what Claude said through the Anthropic API. It is not a ranking of which platform is best, and the Claude apps can answer differently.

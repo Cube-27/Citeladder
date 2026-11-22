@@ -6,12 +6,18 @@ import { cn } from '@/lib/utils';
 
 import './cards.css';
 
-const ENGINE_NAMES: Readonly<Record<EngineKey, string>> = {
+type ListedEngine = EngineKey | 'google_ai_mode';
+
+const ENGINE_NAMES: Readonly<Record<ListedEngine, string>> = {
   chatgpt: 'ChatGPT',
   claude: 'Claude',
   gemini: 'Gemini',
   google: 'Google AI Overviews',
+  google_ai_mode: 'Google AI Mode',
 };
+
+const markOf = (engine: ListedEngine): EngineKey =>
+  engine === 'google_ai_mode' ? 'google' : engine;
 
 export type RelatedCard = Readonly<{
   href: string;
@@ -94,12 +100,12 @@ export function LogoTile({
 
 export function EngineStrip({
   label = 'Answers collected from',
-  engines = ['chatgpt', 'claude', 'gemini', 'google'],
+  engines = ['chatgpt', 'claude', 'gemini', 'google', 'google_ai_mode'],
   names = {},
 }: Readonly<{
   label?: string;
-  engines?: readonly EngineKey[];
-  names?: Readonly<Partial<Record<EngineKey, string>>>;
+  engines?: readonly ListedEngine[];
+  names?: Readonly<Partial<Record<ListedEngine, string>>>;
 }>) {
   return (
     <div className="cl-engines">
@@ -107,7 +113,7 @@ export function EngineStrip({
       <ul className="cl-engines-list" aria-label={label}>
         {engines.map((engine) => (
           <li key={engine} className="cl-engine">
-            <EngineMark engine={engine} />
+            <EngineMark engine={markOf(engine)} />
             <span>{names[engine] ?? ENGINE_NAMES[engine]}</span>
           </li>
         ))}

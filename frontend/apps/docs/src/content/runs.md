@@ -3,14 +3,14 @@ title: 'Audits and runs'
 description: 'Run, schedule and check the audits behind every AI visibility figure, in one market or several.'
 group: 'Measure and understand'
 order: 105
-updated: '2026-11-18'
+updated: '2026-11-22'
 ---
 
 An audit sends your tracked prompts to the engines you choose and saves every answer. **Insights**, **Perception**, **Competitors** and **Sources** all read those saved answers; opening them never starts a run.
 
 ## Run a useful audit
 
-Choose the prompts, engines and repetitions in the audit launcher. CiteLadder measures answers from ChatGPT, Claude, Gemini, Google AI Overviews and Google AI Mode, collected from the consumer apps and from provider APIs; a collected answer can differ from what a signed-in user sees. Review the estimate before confirming. More repetitions give more observations under that run's conditions; they do not turn a sample into a guarantee about every user's experience.
+Choose the prompts, engines and repetitions in the audit launcher. CiteLadder measures answers from ChatGPT, Claude, Gemini, Google AI Overviews and Google AI Mode, collected from the consumer apps and from provider APIs; a collected answer can differ from what a signed-in user sees. Engines reached through a provider API get your prompt with no instruction on length or style, so they answer at the length a person would see; ChatGPT and Claude can search the web up to twice for each answer, and the engine's full response is stored as evidence. Google AI Mode is selected in the launcher with the other engines and counts like any other engine in the estimate; untick it to leave it out. Schedules keep the engines they were created with. Review the estimate before confirming. More repetitions give more observations under that run's conditions; they do not turn a sample into a guarantee about every user's experience.
 
 An audit keeps the prompts, tracked roster, topics and measurement configuration it used. Check **Runs** for completion, cancellation and unsuccessful attempts.
 

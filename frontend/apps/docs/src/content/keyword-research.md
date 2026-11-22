@@ -3,7 +3,7 @@ title: 'Keyword research'
 description: 'Find search opportunities in your Search Console data, and research keywords, organic competitors and backlinks with saved datasets.'
 group: 'Measure and understand'
 order: 160
-updated: '2026-11-18'
+updated: '2026-11-22'
 ---
 
 **Keyword research**, under **Search** in the sidebar, has five tabs: **Demand**, **Overview**, **Keywords**, **Organic competitors** and **Backlinks**. It opens on **Demand**, which reads your own Search Console data. The other four tabs show keyword research datasets you acquire; each result belongs to a saved dataset with its own target, market, scope and acquisition time.
@@ -48,7 +48,7 @@ Check connected-data coverage and the detector's stated limitations. Missing que
 
 Open the acquisition controls and review the proposed target, market, language, scope, depth and maximum cost. Confirm only when the proposed dataset answers your question.
 
-The review itself does not buy data. Confirmation is the separate decision that starts the paid acquisition. Refreshing or expanding depth returns to review.
+The review itself does not buy data. Confirmation is the separate decision that starts the paid acquisition. Refreshing or expanding depth returns to review. While the acquisition runs, the tab shows how many of its requests are complete, with **Cancel** beside it.
 
 ## Use the saved scope
 

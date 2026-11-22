@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how AI recommends your brand'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder lets you track how often ChatGPT, Gemini, Claude and Google AI Overviews mention your analytics product, where it appears in the answer and which competitors are named alongside it. Every result is tied to its recorded answer, so you can see the wording behind each mention.'
+  body: 'CiteLadder lets you track how often ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode mention your analytics product, where it appears in the answer and which competitors are named alongside it. Every result is tied to its recorded answer, so you can see the wording behind each mention.'
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about web analytics tools, three times each, in three conditions: from memory, with web search available, and told to search first. From memory, Plausible was the brand Claude named most often. When told to search, Matomo took that place. This page reports what Claude said through the Anthropic API. It is not a ranking of which product is best, and the Claude apps can answer differently.

@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often AI names your brand'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder tracks whether Claude, ChatGPT, Gemini and Google AI Overviews mention your note-taking app, where it appears in the answer, and which competitors show up beside it. Every result is tied to the answer it came from, so you can check what was actually said.'
+  body: 'CiteLadder tracks whether Claude, ChatGPT, Gemini, Google AI Overviews and Google AI Mode mention your note-taking app, where it appears in the answer, and which competitors show up beside it. Every result is tied to the answer it came from, so you can check what was actually said.'
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about note-taking apps. Each question ran three times in three conditions: from memory, with web search available, and with an instruction to search first. Obsidian was named in 77% of answers from memory and stayed the most-named brand when Claude searched. This page reports what Claude said through the Anthropic API. It is not a ranking of which app is best, and the Claude apps can answer differently.

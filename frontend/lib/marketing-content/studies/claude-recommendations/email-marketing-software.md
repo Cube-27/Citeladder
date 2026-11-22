@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude names you'
   href: '/platform/ai-visibility'
-  body: "CiteLadder records how ChatGPT, Gemini, Claude and Google AI Overviews answer your buyers' questions, tracking your mentions, position and competitors. Every result is tied to the answer it came from."
+  body: "CiteLadder records how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer your buyers' questions, tracking your mentions, position and competitors. Every result is tied to the answer it came from."
 ---
 
 CiteLadder asked Claude Sonnet 5.5 the kinds of questions buyers ask about email marketing software. Each question ran three times in three conditions: from memory, with web search available, and told to search first. Brevo was the brand Claude named most often in every condition. Mailchimp dropped out of the top five once Claude searched. This page reports what Claude said. It is not a ranking of which product is best.

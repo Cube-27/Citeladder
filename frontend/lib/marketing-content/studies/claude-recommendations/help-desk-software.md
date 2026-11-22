@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track how often Claude recommends you'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder records how ChatGPT, Gemini, Claude and Google AI Overviews answer buyer questions in your category, with your mentions, position, sentiment and competitors tied to each saved answer. You can see whether your help desk brand is named from memory and where it lands against the names in this report.'
+  body: 'CiteLadder records how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer buyer questions in your category, with your mentions, position, sentiment and competitors tied to each saved answer. You can see whether your help desk brand is named from memory and where it lands against the names in this report.'
 ---
 
 CiteLadder asked Claude Sonnet 5.5 20 buyer questions about help desk software. Each question ran three times in three conditions: from memory, with web search available, and told to search first. From memory, Claude named Freshdesk most often. When told to search, Help Scout moved to the top. This page reports what Claude said through the Anthropic API. It is not a ranking of which product is best.

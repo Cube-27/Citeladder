@@ -21,7 +21,7 @@ publication_status: 'editorial_review'
 product:
   heading: 'Track AI Overviews for your own queries'
   href: '/platform/ai-visibility'
-  body: "Published prevalence figures describe someone else's keyword set, so the useful number is how often your buyers' queries show your brand. CiteLadder tracks your mentions, position, sentiment and competitors in Google AI Overviews, ChatGPT, Gemini and Claude, and ties each result to its recorded answer."
+  body: "Published prevalence figures describe someone else's keyword set, so the useful number is how often your buyers' queries show your brand. CiteLadder tracks your mentions, position, sentiment and competitors in Google AI Overviews, Google AI Mode, ChatGPT, Gemini and Claude, and ties each result to its recorded answer."
 ---
 
 ## What share of Google searches show an AI Overview?
@@ -172,7 +172,7 @@ Third-party studies tell you the market's direction. Your exposure depends on yo
 4. **Add Search Console's generative AI report.** It shows Google's own impression counts for your pages, which a sampled query set cannot.
 5. **Connect it to visits.** Pair Overview data with your [AI referral traffic](/platform/ai-referral-analytics) and conversions, so a citation change can be checked against what happened on the site.
 
-CiteLadder's [AI visibility](/platform/ai-visibility) tracking covers AI Overviews alongside ChatGPT, Claude and Gemini. It analyzes the sources each answer cites, and runs Site Health checks. Its source code is public under AGPL-3.0 for self-hosting, and a hosted version runs at citeladder.com.[\[13\]](#source-13) Any tool you use, including ours, should let you open the raw observation behind each number.
+CiteLadder's [AI visibility](/platform/ai-visibility) tracking covers AI Overviews and AI Mode alongside ChatGPT, Claude and Gemini. It analyzes the sources each answer cites, and runs Site Health checks. Its source code is public under AGPL-3.0 for self-hosting, and a hosted version runs at citeladder.com.[\[13\]](#source-13) Any tool you use, including ours, should let you open the raw observation behind each number.
 
 ## Frequently asked questions
 

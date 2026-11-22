@@ -6,9 +6,9 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     updated: '2026-11-11',
     title: 'AI Search Visibility Platform | CiteLadder',
     description:
-      'See how ChatGPT, Gemini, Claude and Google AI Overviews answer your buyers, which pages they cite, and a ranked list of what to change on your site.',
+      'See how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer your buyers, which pages they cite, and a ranked list of what to change on your site.',
     heading: 'Find out what AI tells your buyers about you',
-    lead: 'See what ChatGPT, Gemini, Claude and Google AI Overviews say about your business, and what to change to get recommended.',
+    lead: 'See what ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode say about your business, and what to change to get recommended.',
     cta: 'trial',
     screen: 'visibility',
     note: TRIAL_NOTE,
@@ -100,11 +100,11 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     faqs: [
       {
         q: 'What does CiteLadder do?',
-        a: 'CiteLadder sends the questions your buyers ask to ChatGPT, Gemini, Claude and Google AI Overviews, and records each answer, the brands it names and the sources it cites. It shows that beside your site crawl, Search Console and GA4 data, then lists the changes to make, ranked, for your team to review.',
+        a: 'CiteLadder sends the questions your buyers ask to ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode, and records each answer, the brands it names and the sources it cites. It shows that beside your site crawl, Search Console and GA4 data, then lists the changes to make, ranked, for your team to review.',
       },
       {
         q: 'Which AI engines does CiteLadder track?',
-        a: 'ChatGPT, Gemini, Claude and Google AI Overviews. ChatGPT and Gemini are collected from their consumer answers as well as their APIs; Claude is collected through its API. Which engines a project uses depends on its plan and configuration.',
+        a: 'ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode. ChatGPT and Gemini are collected from their consumer answers as well as their APIs; Claude is collected through its API. Which engines a project uses depends on its plan and configuration.',
       },
       {
         q: 'Is every capability in the free trial?',
@@ -124,7 +124,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can I use CiteLadder from Claude or ChatGPT?',
-        a: 'Yes. The CiteLadder MCP server gives compatible assistants access to the workspaces you approve, so you can ask about your visibility, sources and site evidence in plain language. With Allow changes it can also manage prompts, topics, competitors, audits and Actions; it asks before each change, and larger ones run only after you confirm a preview.',
+        a: 'Yes. The CiteLadder MCP server gives compatible assistants access to the workspaces you approve, so you can ask about your visibility, sources and site evidence in plain language. With Allow changes it can also manage prompts, topics, competitors, audits and Actions; it asks before each change, and each runs only after you confirm a preview.',
       },
     ],
     closing: 'See what AI says about your brand',
@@ -147,7 +147,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     updated: '2026-11-18',
     title: 'AI Visibility Tracking & Brand Monitoring | CiteLadder',
     description:
-      'Track brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude and Google AI Overviews, with every result tied to its recorded answer.',
+      'Track brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode, with every result tied to its recorded answer.',
     heading: 'See how often AI recommends you',
     lead: 'Track how often AI answers recommend you, and how you compare with your competitors.',
     cta: 'trial',
@@ -181,7 +181,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Run the same prompts on every engine',
-        body: 'Send one set of prompts to ChatGPT, Gemini, Claude and Google AI Overviews and compare how each treats your brand. Answers vary, so you can repeat each prompt several times in a run. Schedule runs so this month compares cleanly with last month.',
+        body: 'Send one set of prompts to ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode and compare how each treats your brand. Answers vary, so you can repeat each prompt several times in a run. Schedule runs so this month compares cleanly with last month.',
         points: [
           'Consumer answers and model APIs, labeled by surface',
           'Repetitions per prompt to measure consistency',
@@ -254,7 +254,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     faqs: [
       {
         q: 'Which engines can I track?',
-        a: 'ChatGPT, Gemini, Claude and Google AI Overviews, depending on your plan. ChatGPT and Gemini can be tracked from their consumer answers and from their APIs. The free trial is ChatGPT only. Collected answers can differ from what a signed-in user sees.',
+        a: 'ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode, depending on your plan. ChatGPT and Gemini can be tracked from their consumer answers and from their APIs. The free trial is ChatGPT only. Collected answers can differ from what a signed-in user sees.',
       },
       {
         q: 'Does this show every answer every user gets?',

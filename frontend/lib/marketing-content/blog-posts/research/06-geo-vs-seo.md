@@ -15,7 +15,7 @@ publication_status: 'editorial_review'
 product:
   heading: 'Check how AI answers describe you'
   href: '/platform'
-  body: 'CiteLadder shows how ChatGPT, Gemini, Claude and Google AI Overviews answer your buyers, which pages those answers cite, and a ranked list of what to change on your site. Use it to see whether your next priority is an SEO fix or a GEO gap.'
+  body: 'CiteLadder shows how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer your buyers, which pages those answers cite, and a ranked list of what to change on your site. Use it to see whether your next priority is an SEO fix or a GEO gap.'
 ---
 
 ## Is GEO better than SEO?

@@ -21,7 +21,7 @@ author: 'Abhineet Jain'
 product:
   heading: 'Track your own buyer questions in AI'
   href: '/platform/ai-visibility'
-  body: 'CiteLadder tracks how ChatGPT, Gemini, Claude and Google AI Overviews answer the buyer questions for your brand, recording mentions, position, sentiment and competitors. Every result is tied to the recorded answer, so you can read exactly what each model said.'
+  body: 'CiteLadder tracks how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer the buyer questions for your brand, recording mentions, position, sentiment and competitors. Every result is tied to the recorded answer, so you can read exactly what each model said.'
 ---
 
 CiteLadder's Prompt Builder drafts the buyer questions a brand tracks in AI answers. For this study, the same step ran on Claude Haiku 5.5, Claude Sonnet 5.5, Claude Opus 5.5 and Claude Fable 5.1. Each model got the same instructions, the same Nike business profile and the same 12 planned slots. Each ran at low, medium and high effort, twice per setting. Only the model and the effort changed. The tables below show every question each model wrote. This page describes what can be observed and measured. Judging quality is left to the reader.
