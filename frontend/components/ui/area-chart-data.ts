@@ -52,6 +52,25 @@ export function gapRanges(values: readonly (number | null)[], xs: readonly numbe
   return ranges;
 }
 
+export function breakBridges(
+  values: readonly (number | null)[],
+  data: readonly TrendPoint[],
+): Readonly<{ from: { x: number; y: number }; to: { x: number; y: number } }>[] {
+  const xs = pointXs(data);
+  return data.flatMap((point, index) => {
+    const before = values[index - 1] ?? null;
+    const after = values[index] ?? null;
+    const [fromX, toX] = [xs[index - 1], xs[index]];
+    if (!point.breakBefore || before === null || after === null) return [];
+    if (fromX === undefined || toX === undefined) return [];
+    return [{ from: { x: fromX, y: before }, to: { x: toX, y: after } }];
+  });
+}
+
+export function distinctTicks(xs: readonly number[], label: (x: number) => string | undefined) {
+  return xs.filter((x, index) => index === 0 || label(x) !== label(xs[index - 1] ?? x));
+}
+
 export function eventsInSpan(data: readonly TrendPoint[], events: readonly TrendEvent[]) {
   if (!isTimed(data) || data.length < 2) return [];
   const xs = pointXs(data);

@@ -57,7 +57,7 @@ function MeterTrack({
   );
 }
 
-export function MeterLabelRow({ children }: Readonly<{ children: ReactNode }>) {
+function MeterLabelRow({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 [[data-public-surface]_&]:flex-nowrap">
       {children}

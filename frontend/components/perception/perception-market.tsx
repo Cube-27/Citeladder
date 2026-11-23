@@ -129,7 +129,7 @@ const RANK_COLUMNS: readonly DataTableColumn[] = [
   { key: 'score', label: 'Your score', kind: 'number', width: 'shortMetric' },
   { key: 'rank', label: 'Rank', kind: 'number', width: 'shortMetric' },
   { key: 'leader', label: 'Leader', width: 'name' },
-  { key: 'gap', label: 'Gap', kind: 'number', width: 'shortMetric' },
+  { key: 'gap', label: 'Behind leader', kind: 'number', width: 'metric' },
   { key: 'sources', label: 'Sources', kind: 'number', width: 'shortMetric' },
 ];
 
@@ -201,7 +201,7 @@ function RankTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
 function Gap({ leads, named, gap }: Readonly<{ leads: boolean; named: boolean; gap: number }>) {
   if (leads) return <Tag>You lead</Tag>;
   if (!named) return <Absence label="No brand named" />;
-  return gap > 0 ? `−${gap}` : '0';
+  return gap;
 }
 
 const ENGINE_COLUMNS: readonly DataTableColumn[] = [
