@@ -182,6 +182,9 @@ how to add or change an entry.
 
 - **Onboarding creates no prompts**; an empty prompt set is valid and Overview
   and Prompts ask the user to choose questions. Owner, 2026-09-26.
+- **Onboarding research keeps no evidence**: no field citations, evidence
+  manifest or stored evidence; the reviewed suggestions are the output. Owner,
+  2026-11-23.
 - **Generated prompts are reviewed before tracking.** Generate stages candidates
   in a separate table, only a user's accept creates an active prompt (never a
   `proposed` status on `Prompt`, which every measurement query would have to

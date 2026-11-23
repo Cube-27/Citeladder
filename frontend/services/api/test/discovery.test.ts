@@ -590,11 +590,12 @@ describe('durable onboarding', () => {
       .selectAll()
       .where('discovery_id', '=', row.id)
       .executeTakeFirstOrThrow();
-    expect(snapshot.extracted_fields).toMatchObject({
-      evidence_manifest: expect.arrayContaining([
-        expect.objectContaining({ source_url: 'https://acme.com/' }),
-      ]),
+    expect(snapshot).toMatchObject({
+      method: 'first_party+keenable_search+structured_models',
+      extracted_fields: { review_state: 'unreviewed', identity_status: null },
     });
+    expect(snapshot).not.toHaveProperty('evidence');
+    expect(snapshot.extracted_fields).not.toHaveProperty('evidence_manifest');
     expect(await worker.runOnce('test-worker', target)).toBe(false);
   });
   it('retries a timed-out identity and then fails with its own code, never an empty ready review', async () => {

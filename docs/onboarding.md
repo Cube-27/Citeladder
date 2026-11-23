@@ -3,8 +3,9 @@
 ## Responsibility
 
 Onboarding turns a brand name, website and market into a project with a
-reviewed identity and accepted competitors. Discovery output is
-evidence-backed suggestion, not confirmed business truth. The project is created,
+reviewed identity and accepted competitors. Discovery output is suggestion, not
+confirmed business truth, and keeps no evidence
+([decision](decisions.md#prompts-and-visibility)). The project is created,
 with an empty prompt set, only after the user confirms the category, buyer type
 and market scope. Generated positioning, description, audience and offerings
 are stored as unreviewed suggestions.
@@ -31,25 +32,31 @@ does not wait for the periodic tick. Site failures (invalid URL, blocked or
 unknown site, out-of-scope redirect) fail at once.
 
 The [research owner](../frontend/services/api/src/projects/research.ts) reads the
-resolved homepage and a bounded set of first-party pages, and runs independent
-Keenable search and fetch research in parallel when a key is configured. Each
-run has one budget equal to the 180-second interactive deadline. One identity
-model request proposes the profile under its own deadline (90 seconds by
-default, never more than what remains of the budget) and asks only for the
-output an identity needs; a field citing only unknown evidence rejects the
-identity, while unsupported extra citations are dropped. One optional search
-then feeds at most three sequential competitor suggestion requests, which share
-what is left of the budget, for up to ten provisional names and domains.
-Cleanup excludes owned, duplicate and reference sites; it does not prove
-commercial equivalence. An identity the model judges `insufficient_evidence` is
-recorded on the snapshot (`identity_status`) and raises the review warning
-`insufficient_evidence`.
+resolved homepage and a bounded set of first-party pages while Keenable search
+runs in parallel when a key is configured; it never uses Keenable page fetch,
+which is rate limited and slow. Each run has one budget equal to the 180-second
+interactive deadline. Three model requests then run at once, so the wait is the
+slowest of them, not their sum:
 
-The same identity request proposes buyer-facing themes (AV-27). Code keeps at
-most eight: confident, one to three words, never a company fact (the configured
-terms) or the `Other` fallback; too little evidence keeps none, never invented
-ones. They ride the snapshot, are never shown in onboarding, and become the
-project's themes at completion.
+- **Identity** proposes the profile under its own deadline (90 seconds by
+  default, never more than what remains of the budget). Its output stays short
+  and carries no citations, so it stays well under its output cap. An identity
+  the model judges `insufficient_evidence` is recorded on the snapshot
+  (`identity_status`) and raises the review warning of that name.
+- **Themes** proposes buyer-facing themes (AV-27). Code keeps at most eight:
+  confidence of at least `research_min_confidence`, one to three words, never a
+  company fact (the configured terms) or the `Other` fallback; too little
+  material keeps none, never invented ones. They ride the snapshot, are never
+  shown in onboarding, and become the project's themes at completion. A failed
+  themes request keeps none and does not fail research.
+- **Competitors** needs no identity. Two searches feed it: the brand name with
+  the market, and the trade named in the homepage title with the brand's own
+  words removed, which is what finds a local business's rivals. At most three
+  requests share what is left of the budget, for up to ten provisional names
+  and domains. Cleanup excludes owned, duplicate and reference sites; it does
+  not prove commercial equivalence.
+
+A failed identity aborts the other two requests.
 
 Every website, owned domain and competitor domain is stored as its site
 ([`siteDomain`](../frontend/services/api/src/analysis/domains.ts), AR-5): the
@@ -65,8 +72,7 @@ saved as a review without competitors: the task retries within its attempts,
 and the last attempt, or a pricing refusal at once, fails the discovery with
 `brand_identity_unavailable`. Spent AI credits fail it at once with
 `ai_credits_exhausted`, which onboarding answers with billing, not a rerun. Without a configured model there is
-no identity or category, so competitor suggestion is skipped and the review
-warns. Other research failures (external research, the competitor search or
+no identity, themes or competitors, and the review warns. Other research failures (external research, the competitor search or
 suggestions) degrade to a reviewable result with warnings. Onboarding makes no
 prompt-generation request. Failures log their class, code, phase and elapsed
 time, and a model deadline is logged as `timeout`, not a connection failure.
@@ -85,11 +91,10 @@ window without four queries per fetch. Progress reports the phase, whether the
 homepage was read, and, once research finishes, the pages read and competitors
 found.
 
-The brand research snapshot (`brand_research_snapshots`) retains the evidence
-manifest, model calls with prompt versions, field citations and research
-metrics. First-party captures carry a content-derived source ID and extraction
-version; external research keeps the provider source ID (or a content-derived
-one) and the parent search for fetched pages. Reads never repeat discovery.
+The brand research snapshot (`brand_research_snapshots`) keeps the profile,
+themes, competitors, offerings, model calls with prompt versions and research
+metrics, and is what the profile fields' provenance links to; it stores no
+evidence. Reads never repeat discovery.
 
 ## Review and completion
 

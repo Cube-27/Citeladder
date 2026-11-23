@@ -1018,7 +1018,6 @@ export interface BrandDiscoveries {
   domains: Json;
   error_code: string;
   error_detail: string;
-  evidence: Json;
   gaps: Json;
   id: string;
   idempotency_key: string;
@@ -1142,7 +1141,6 @@ export interface BrandProfiles {
 export interface BrandResearchSnapshots {
   created_at: Timestamp;
   discovery_id: string;
-  evidence: Json;
   extracted_fields: Json;
   field_confidence: Json;
   id: string;
