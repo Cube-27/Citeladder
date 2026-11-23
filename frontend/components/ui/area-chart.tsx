@@ -171,7 +171,7 @@ export function AreaChart({
           yFormat={yFormat}
           shown={shown}
         />
-        <ChartBreakNote data={data} lines={lines} placement={breakNote} />
+        <ChartBreakNote data={data} lines={lines} placement={breakNote} bridged />
         <EventLegend events={placed.map((event) => ({ ...event, x: 0 }))} shown={eventLegend} />
       </div>
       {table}
