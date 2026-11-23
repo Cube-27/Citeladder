@@ -10,6 +10,7 @@
   "max_views_per_turn": 4,
   "hold_min_reply_tokens": 4096,
   "hold_input_margin_tokens": 2048,
+  "hold_input_bytes_per_token": 3,
   "read_default_limit": 20,
   "read_max_limit": 50,
   "limit_reminder_calls": 2,

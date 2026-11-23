@@ -52,11 +52,8 @@ export type Funding = {
   refund: (db: Database, run: Run) => Promise<void>;
 };
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
-export class RefusedDispatch extends AgentError {
-  constructor() {
-    super('funding_unavailable');
-  }
-}
+const REFUSED = new Set(['funding_unavailable', 'funding_short']);
+export class RefusedDispatch extends AgentError {}
 export class ModelCalls {
   readonly db: Database;
   readonly funding: Funding;
@@ -254,8 +251,8 @@ export class ModelCalls {
   ) {
     executionSignal?.throwIfAborted();
     const attempt = await this.dispatch(lease, ordinal, model, request).catch((error: unknown) => {
-      if (error instanceof AgentError && error.code === 'funding_unavailable')
-        throw new RefusedDispatch();
+      if (error instanceof AgentError && REFUSED.has(error.code))
+        throw new RefusedDispatch(error.code);
       throw error;
     });
     const sent =

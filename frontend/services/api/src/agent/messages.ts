@@ -113,6 +113,8 @@ const RECOVERY: Record<string, string> = {
     'This request and its selected evidence are too large for one turn. Remove some references or ask about one part at a time.',
   skills_changed:
     'CiteLadder was updated while this request was waiting. Nothing was saved; send it again.',
+  funding_short:
+    'This turn needs more AI credits than this workspace has left, so nothing was saved. A new chat with less history, or a lower-cost model, costs less per turn.',
   funding_unavailable:
     'This workspace has no AI credits available right now. Nothing was saved. To get more, email [contact@citeladder.com](mailto:contact@citeladder.com).',
   model_unavailable:
