@@ -152,6 +152,17 @@ describe('frozen deterministic execution scoring', () => {
       false,
     );
     expect(namesEntity('Set a target for plush towels.', ['Target'], target)).toBe(false);
+    const australia = projectEntityMatching(
+      {},
+      [],
+      [{ name: 'Target Australia', aliases: ['Target'] }],
+    )[entityKey('Target Australia')];
+    const aliases = ['Target Australia', 'Target'];
+    expect(australia?.mode).toBe('context_required');
+    expect(
+      namesEntity('Target Australia is good for budget-friendly basics.', aliases, australia),
+    ).toBe(true);
+    expect(namesEntity('Know your target audience first.', aliases, australia)).toBe(false);
   });
   it('finds names inside sentences of scripts written without spaces', () => {
     const score = (brand_name: string, answerText: string) =>
