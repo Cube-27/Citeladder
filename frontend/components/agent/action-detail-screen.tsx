@@ -23,7 +23,8 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { listCrumbs, type FromAction } from '@/lib/agent/action-crumbs';
 import { actionTarget, withShortTarget } from '@/lib/agent/action-title';
-import { actionHandoffHref } from '@/lib/agent/handoff';
+import { actionHandoffHref, actionHandoffInput } from '@/lib/agent/handoff';
+import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import { issueFamilyBrief, type IssueFamilyBrief } from '@/lib/agent/issue-family-brief';
 import { actionsQueries, type ActionDetail } from '@/lib/api/actions';
 import { isNotFound } from '@/lib/api/errors';
@@ -78,6 +79,7 @@ function ActionPage({
   const brief = useIssueFamilyBrief(action, workspaceId);
   const todo = brief?.steps ?? steps(action);
   const gaps = contentGapMembers(action);
+  useAgentPanelSeed(actionHandoffInput(action, [...ticked]));
   const tick = (id: string) =>
     setTicked((current) => {
       const next = new Set(current);
