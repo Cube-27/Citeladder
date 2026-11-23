@@ -212,7 +212,7 @@ export async function issueSummary(
   };
 }
 
-export async function pageKindsByRule(db: Database, crawl: Crawl, ruleIds: string[] | null) {
+async function pageKindsByRule(db: Database, crawl: Crawl, ruleIds: string[] | null) {
   if (ruleIds?.length === 0) return new Map<string, string[]>();
   const { rows } = await sql<{ rule_id: string; kinds: string[] }>`
     select i.rule_id, array_agg(distinct a.page_kind order by a.page_kind)

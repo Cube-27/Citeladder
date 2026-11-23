@@ -138,6 +138,8 @@
     "aeo_max_evaluations": 100000,
     "aeo_max_evidence_pages": 25,
     "content_addressable_check_fields": {
+      "technical.title_present": "title",
+      "technical.meta_description_present": "meta_description",
       "technical.meta_description_length": "meta_description",
       "technical.title_length": "title"
     },

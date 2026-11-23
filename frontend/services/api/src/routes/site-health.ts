@@ -231,7 +231,10 @@ function exportRoute(format: 'csv' | 'md') {
   return defineGetRoute({
     family,
     path: `${crawlRoot}/export.${format}`,
-    params: { path: crawlPath, query: exportQuery },
+    params: {
+      path: crawlPath,
+      query: { ...exportQuery, view: { ...text, default: format === 'csv' ? 'pages' : 'issues' } },
+    },
     response: download,
     raw: true,
     async handle({ c, db }, { path, query }) {
