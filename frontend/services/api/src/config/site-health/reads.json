@@ -10,9 +10,7 @@
     "scoring_version": "sh-scoring-3",
     "rule_dimensions": ["aeo", "technical"],
     "issue_values": {
-      "technical.title_present": "title",
       "technical.title_length": "title",
-      "technical.meta_description_present": "meta_description",
       "technical.meta_description_length": "meta_description",
       "technical.h1_present": "h1_count",
       "technical.single_h1": "h1_count",
@@ -140,8 +138,6 @@
     "aeo_max_evaluations": 100000,
     "aeo_max_evidence_pages": 25,
     "content_addressable_check_fields": {
-      "technical.title_present": "title",
-      "technical.meta_description_present": "meta_description",
       "technical.meta_description_length": "meta_description",
       "technical.title_length": "title"
     },

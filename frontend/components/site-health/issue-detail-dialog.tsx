@@ -2,7 +2,7 @@ import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueFixActions, type IssueFixScope } from '@/components/site-health/issue-fix-actions';
 import { IssuePagesExport } from '@/components/site-health/issues-export';
-import { IssueValueLine, showsPageText } from '@/components/site-health/issue-value';
+import { IssueValueLine, showsPageText, valueRange } from '@/components/site-health/issue-value';
 import { AffectedPageLink, SharedOccurrences } from '@/components/site-health/shared-occurrences';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -15,14 +15,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
-import type {
-  IssueOccurrence,
-  IssueValue,
-  SiteIssue,
-  SiteIssueDetail,
-} from '@citeladder/contracts';
+import type { AffectedPage, SiteIssue, SiteIssueDetail } from '@citeladder/contracts';
 import { originOf, sitePath } from '@/lib/site-health/evidence-values';
 import {
+  isSiteLevelRule,
   linkOutcomeLabel,
   pageCountLabel,
   siteLevelEvidence,
@@ -80,6 +76,7 @@ export function IssueDetailDrawer({
   };
   useAgentPanelSeed(handoff);
   const pageKinds = issue.page_kinds ?? [];
+  const pageLevel = !isSiteLevelRule(issue.rule_id);
   return (
     <Drawer
       open
@@ -117,14 +114,18 @@ export function IssueDetailDrawer({
         <CopyButton value={buildFixPrompt(issue)} variant="secondary" className="w-fit">
           Copy fix prompt
         </CopyButton>
-        <Button variant="secondary" asChild>
-          <ProjectLink href={pagesWithIssueHref(issue.rule_id)}>View in Pages</ProjectLink>
-        </Button>
-        <IssuePagesExport
-          workspaceId={scope.workspaceId}
-          crawlId={crawlId}
-          groupId={issue.group_id}
-        />
+        {pageLevel ? (
+          <>
+            <Button variant="secondary" asChild>
+              <ProjectLink href={pagesWithIssueHref(issue.rule_id)}>View in Pages</ProjectLink>
+            </Button>
+            <IssuePagesExport
+              workspaceId={scope.workspaceId}
+              crawlId={crawlId}
+              groupId={issue.group_id}
+            />
+          </>
+        ) : null}
       </Inline>
       <IssueFixActions scope={scope} crawlId={crawlId} groupId={issue.group_id} />
       <Stack as="section" gap="workspace" aria-busy={detailQuery.isFetching || undefined}>
@@ -216,9 +217,13 @@ function OccurrenceList({
   if (siteLevel) return <SiteLevelList evidence={siteLevel} crawlId={crawlId} />;
   const complete = firstPage && !detail.next_cursor;
   const loaded = loadedPageCount(detail.occurrences);
-  const values = new Map(detail.occurrences.map((row) => [row.occurrence_id, row.value]));
-  const entries: OccurrenceEntry[] = detail.occurrences.some((row) => showsPageText(row.value))
-    ? detail.occurrences.map((occurrence): OccurrenceEntry => ({ kind: 'page', occurrence }))
+  const entries: OccurrenceEntry<AffectedPage>[] = detail.occurrences.some((row) =>
+    showsPageText(row.value),
+  )
+    ? detail.occurrences.map((occurrence): OccurrenceEntry<AffectedPage> => ({
+        kind: 'page',
+        occurrence,
+      }))
     : groupOccurrences(detail.occurrences);
   return (
     <ul className={ledgerClasses()}>
@@ -228,7 +233,6 @@ function OccurrenceList({
             key={entry.occurrence.occurrence_id}
             issue={issue}
             occurrence={entry.occurrence}
-            value={values.get(entry.occurrence.occurrence_id)}
             crawlId={crawlId}
           />
         ) : (
@@ -253,14 +257,13 @@ function OccurrenceList({
 function PageOccurrence({
   issue,
   occurrence,
-  value,
   crawlId,
 }: Readonly<{
   issue: IssueHead;
-  occurrence: IssueOccurrence;
-  value: IssueValue | undefined;
+  occurrence: AffectedPage;
   crawlId: string;
 }>) {
+  const range = valueRange(occurrence.rule_id, occurrence.evidence, occurrence.value);
   return (
     <Stack as="li" gap="tight" className={ledgerItemClasses()}>
       <AffectedPageLink
@@ -270,8 +273,8 @@ function PageOccurrence({
         url={occurrence.display_url}
         pageKind={occurrence.page_kind}
       />
-      <IssueValueLine value={value} />
-      <IssueEvidence occurrence={occurrence} />
+      <IssueValueLine value={occurrence.value} hint={range?.hint} />
+      {range ? null : <IssueEvidence occurrence={occurrence} />}
       <AskAgentLink
         appearance="text"
         handoff={{

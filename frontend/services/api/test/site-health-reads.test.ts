@@ -235,6 +235,8 @@ describe('page projections', () => {
       word_count: 240,
       internal_link_count: 1,
       external_link_count: 1,
+      image_count: null,
+      image_missing_alt_count: null,
     });
     const never = await read(pending.siteUrlId);
     expect(never.analysis_status).not.toBe('completed');
@@ -483,20 +485,18 @@ describe('issue catalog', () => {
     const product = await page(seed, '/product');
     for (const target of [home, product]) await issue(seed, target, 'technical.indexable');
     const groupId = issueGroupId(seed.crawlId, 'technical.indexable');
-    const first = await issueDetail(db, seed.workspaceId, seed.crawlId, groupId, {
-      limit: 1,
-      cursor: null,
-    });
+    const detail = (paging: { limit: number; cursor: string | null }, scope = {}) =>
+      issueDetail(db, {
+        workspaceId: seed.workspaceId,
+        crawlId: seed.crawlId,
+        groupId,
+        paging,
+        ...scope,
+      });
+    const first = await detail({ limit: 1, cursor: null });
     expect(first.next_cursor).not.toBeNull();
     await expect(
-      issueDetail(
-        db,
-        seed.workspaceId,
-        seed.crawlId,
-        groupId,
-        { limit: 1, cursor: first.next_cursor! },
-        home.id,
-      ),
+      detail({ limit: 1, cursor: first.next_cursor! }, { siteUrlId: home.id }),
     ).rejects.toThrow('cursor');
     const cursor = encodeKeysetCursor(
       'issue_detail',
@@ -508,33 +508,16 @@ describe('issue catalog', () => {
       },
       ['https://example.test/zzz', randomUUID()],
     );
-    expect(
-      await issueDetail(db, seed.workspaceId, seed.crawlId, groupId, { limit: 1, cursor }, home.id),
-    ).toMatchObject({ occurrences: [], next_cursor: null });
-    await expect(
-      issueDetail(db, seed.workspaceId, seed.crawlId, groupId, { limit: 1, cursor }, product.id),
-    ).rejects.toThrow('cursor');
-    const products = await issueDetail(
-      db,
-      seed.workspaceId,
-      seed.crawlId,
-      groupId,
-      { limit: 10, cursor: null },
-      undefined,
-      'product',
-    );
+    expect(await detail({ limit: 1, cursor }, { siteUrlId: home.id })).toMatchObject({
+      occurrences: [],
+      next_cursor: null,
+    });
+    await expect(detail({ limit: 1, cursor }, { siteUrlId: product.id })).rejects.toThrow('cursor');
+    const products = await detail({ limit: 10, cursor: null }, { pageKind: 'product' });
     expect(products.occurrences.map((row) => row.site_url_id)).toEqual([product.id]);
     expect(products.affected_url_count).toBe(1);
     await expect(
-      issueDetail(
-        db,
-        seed.workspaceId,
-        seed.crawlId,
-        groupId,
-        { limit: 1, cursor: first.next_cursor! },
-        undefined,
-        'product',
-      ),
+      detail({ limit: 1, cursor: first.next_cursor! }, { pageKind: 'product' }),
     ).rejects.toThrow('cursor');
   });
 
@@ -699,10 +682,10 @@ describe('issue catalog', () => {
     const seed = await fixtures.crawl();
     const rule = 'technical.meta_description_length';
     const short = { min_chars: 70, max_chars: 160, reason: 'too_short' };
-    const home = await page(seed, '/', { facts: { meta_description: '  Short \n text ' } });
-    const shop = await page(seed, '/shop', { facts: { meta_description: 'Tiny' } });
-    await issue(seed, home, rule, { ...short, length: 10 });
-    await issue(seed, shop, rule, { ...short, length: 4 });
+    const home = await page(seed, '/');
+    const shop = await page(seed, '/shop');
+    await issue(seed, home, rule, { ...short, length: 10, meta_description: '  Short \n text ' });
+    await issue(seed, shop, rule, { ...short, length: 4, meta_description: 'Tiny' });
     await issue(seed, home, 'technical.canonical_integrity');
     const groupId = issueGroupId(seed.crawlId, rule);
     const detail = await json(
@@ -724,11 +707,11 @@ describe('issue catalog', () => {
     const exportPath = `/site-crawls/${seed.crawlId}/export.csv?view=issue&group_id=${groupId}`;
     const lines = (await (await get(seed, exportPath)).text()).split('\r\n');
     expect(lines[0]).toBe(
-      'normalized_url,page_kind,value,value_length,evidence.length,evidence.max_chars,evidence.min_chars,evidence.reason,remediation',
+      'normalized_url,page_kind,value,value_length,evidence.max_chars,evidence.min_chars,evidence.reason,remediation',
     );
-    expect(lines.slice(1).map((line) => line.split(',').slice(0, 8))).toEqual([
-      ['https://example.test/', 'homepage', 'Short text', '10', '10', '160', '70', 'too_short'],
-      ['https://example.test/shop', 'product', 'Tiny', '4', '4', '160', '70', 'too_short'],
+    expect(lines.slice(1).map((line) => line.split(',').slice(0, 7))).toEqual([
+      ['https://example.test/', 'homepage', 'Short text', '10', '160', '70', 'too_short'],
+      ['https://example.test/shop', 'product', 'Tiny', '4', '160', '70', 'too_short'],
       [''],
     ]);
     const outsider = await fixtures.crawl();
@@ -1430,7 +1413,7 @@ describe('snapshot projections', () => {
     expect(summary).toMatchObject({ state: 'unavailable', snapshot_id: null });
   });
 
-  it('render the architecture tree without dropping pages in a parent cycle', async () => {
+  it('reads no orphans in an architecture whose pages form a parent cycle', async () => {
     const seed = await fixtures.crawl();
     const snapshot = await fixtures.snapshot(seed, 'complete');
     const node = (id: string, url: string, parent: string | null) => ({
@@ -1485,13 +1468,6 @@ describe('snapshot projections', () => {
       architectureSchema,
     );
     expect(model.internal_linking.orphan_page_count).toBe(0);
-    const tree = await (
-      await get(seed, `/site-crawls/${seed.crawlId}/export.md?view=architecture`)
-    ).text();
-    for (const path of ['/a', '/b']) {
-      const line = tree.split('\n').find((line) => line.includes(`https://example.test${path}`));
-      expect(line).toContain('[product]');
-    }
   });
 });
 
@@ -1588,7 +1564,7 @@ describe('workspace authorization', () => {
       `/site-crawls/${seed.crawlId}/issues`,
       `/site-crawls/${seed.crawlId}/issues?section=aeo&sort=pages`,
       `/site-crawls/${seed.crawlId}/events`,
-      `/site-crawls/${seed.crawlId}/export.csv`,
+      `/site-crawls/${seed.crawlId}/export.csv?view=pages`,
     ])
       expect((await get(foreign, path)).status, path).toBe(404);
     const refusals = [];

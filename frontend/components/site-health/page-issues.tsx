@@ -3,20 +3,15 @@ import { useState, type ReactNode } from 'react';
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { askAgentPrompt, buildFixPrompt } from '@/components/site-health/issue-detail-dialog';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
+import { IssueSeverityMark } from '@/components/site-health/issue-metadata';
 import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Inline, Stack } from '@/components/ui/layout';
 import { DisclosureList, DisclosureRow } from '@/components/ui/list-row';
-import { StatusMark } from '@/components/ui/status-mark';
 import { Icon } from '@/components/ui/icon';
 import type { PageIssue } from '@citeladder/contracts';
-import {
-  dimensionLabel,
-  scoreRoleLabels,
-  severityLabel,
-  severityRank,
-} from '@/lib/site-health/issues';
+import { dimensionLabel, scoreRoleLabels, severityRank } from '@/lib/site-health/issues';
 import { StateBlock } from '@/components/ui/state-block';
 import { ChevronDown } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -84,9 +79,7 @@ function IssueRow({ issue, children }: Readonly<{ issue: PageIssue; children: Re
       title={issue.issue_title}
       meta={
         <>
-          <StatusMark variant="severity" value={issue.severity}>
-            {severityLabel(issue.severity)}
-          </StatusMark>
+          <IssueSeverityMark issue={issue} />
           <span>{dimensionLabel(issue.dimension)}</span>
         </>
       }

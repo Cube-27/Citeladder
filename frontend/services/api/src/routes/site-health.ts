@@ -39,13 +39,7 @@ import {
 import { crawlProjection } from '../site-health/reads/crawl-projection.ts';
 import { dashboard } from '../site-health/reads/dashboard.ts';
 import { crawlEventTail, eventReplay } from '../site-health/reads/events.ts';
-import {
-  architectureMarkdown,
-  issueExport,
-  TABLE_VIEWS,
-  tableExport,
-  type TableView,
-} from '../site-health/reads/exports.ts';
+import { issueExport, tableExport, VIEW_NAMES } from '../site-health/reads/exports.ts';
 import { issueHistory } from '../site-health/reads/issue-history.ts';
 import { issueDetail, issues, type IssueFilters } from '../site-health/reads/issues.ts';
 import { PAGE_SCORE_ROLES, type PageRowFilters } from '../site-health/reads/page-filters.ts';
@@ -176,7 +170,7 @@ async function withCursor<T>(read: Promise<T>): Promise<T> {
 }
 
 const exportQuery = {
-  view: { ...text, default: 'inventory' },
+  view: { ...text, default: 'pages' },
   ...pageFilters,
   sort: { scalar: { kind: 'literal', values: [...PAGE_SORTS, ...issueSortSchema.options] } },
   severity: text,
@@ -203,41 +197,37 @@ async function exportBody(
   { workspaceId, crawlId, format }: { workspaceId: string; crawlId: string; format: 'csv' | 'md' },
   query: ExportQuery,
 ) {
-  if (query.view === 'architecture' || query.view === 'issue') exportSort(query.sort, []);
-  if (query.view === 'architecture')
-    return { body: await architectureMarkdown(db, workspaceId, crawlId), truncated: false };
   if (query.view === 'issue') {
+    exportSort(query.sort, []);
     if (query.group_id === null)
       throw new ApiError(422, 'group_id is required for the issue export', {
         code: 'validation_error',
       });
     return issueExport(db, { workspaceId, crawlId, groupId: query.group_id });
   }
-  const view = query.view as TableView;
-  const request = { workspaceId, crawlId, view, format };
-  if (view === 'issues')
+  if (query.view === 'issues')
     return tableExport(db, {
-      ...request,
-      issues: {
-        filters: issueFilters(query),
-        view: {
-          section: query.section ?? null,
-          sort: exportSort(query.sort, issueSortSchema.options) ?? 'severity',
-        },
+      workspaceId,
+      crawlId,
+      view: 'issues',
+      format,
+      filters: issueFilters(query),
+      issueView: {
+        section: query.section ?? null,
+        sort: exportSort(query.sort, issueSortSchema.options) ?? 'severity',
       },
     });
   return tableExport(db, {
-    ...request,
-    pages: {
-      filters: pageRowFilters(query),
-      sort: exportSort(query.sort, PAGE_SORTS) ?? 'status',
-    },
+    workspaceId,
+    crawlId,
+    view: 'pages',
+    filters: pageRowFilters(query),
+    sort: exportSort(query.sort, PAGE_SORTS) ?? 'status',
   });
 }
 
 function exportRoute(format: 'csv' | 'md') {
-  const views: string[] =
-    format === 'csv' ? [...TABLE_VIEWS, 'issue'] : [...TABLE_VIEWS, 'architecture'];
+  const views: string[] = format === 'csv' ? [...VIEW_NAMES, 'issue'] : ['issues'];
   return defineGetRoute({
     family,
     path: `${crawlRoot}/export.${format}`,
@@ -306,7 +296,16 @@ export const siteHealthRoutes = [
   defineGetRoute({
     family,
     path: `${crawlRoot}/inventory`,
-    params: { path: crawlPath, query: { ...paging, ...pageFilters, query: text } },
+    params: {
+      path: crawlPath,
+      query: {
+        ...paging,
+        status_filter: pageFilters.status_filter,
+        monitored: flag,
+        page_kind: text,
+        query: text,
+      },
+    },
     response: inventoryPageSchema,
     handle: ({ c, db }, { path, query }) =>
       withCursor(
@@ -375,15 +374,13 @@ export const siteHealthRoutes = [
     response: siteIssueDetailSchema,
     handle: ({ c, db }, { path, query }) =>
       withCursor(
-        issueDetail(
-          db,
-          c.get('workspace').workspaceId,
-          path.crawl_id,
-          path.group_id,
-          query,
-          undefined,
-          query.page_kind || null,
-        ),
+        issueDetail(db, {
+          workspaceId: c.get('workspace').workspaceId,
+          crawlId: path.crawl_id,
+          groupId: path.group_id,
+          paging: query,
+          pageKind: query.page_kind || null,
+        }),
       ),
   }),
   defineGetRoute({

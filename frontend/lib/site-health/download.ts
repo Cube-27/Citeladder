@@ -1,26 +1,26 @@
 import { apiClient, type ApiRequestOptions } from '@/lib/api/client';
-import { siteHealthApi, type ExportFilters } from '@/lib/api/site-health';
+import {
+  siteHealthApi,
+  type ExportFilters,
+  type ExportFormat,
+  type ExportView,
+} from '@/lib/api/site-health';
 import { saveBlob } from '@/lib/download';
 
-export type ExportView = 'inventory' | 'pages' | 'issues' | 'issue' | 'architecture';
-export type ExportFormat = 'csv' | 'md';
-
 export function exportFilename(crawlId: string, format: ExportFormat, view: ExportView): string {
-  const shortId = crawlId.slice(0, 8);
-  if (format === 'csv') return `site-health-${view}-${shortId}.csv`;
-  return view === 'inventory' ? `site-health-${shortId}.md` : `site-health-${view}-${shortId}.md`;
+  return `site-health-${view}-${crawlId.slice(0, 8)}.${format}`;
 }
 
 export async function downloadCrawlExport(
   {
     crawlId,
     format,
-    view = 'inventory',
+    view,
     filters,
   }: Readonly<{
     crawlId: string;
     format: ExportFormat;
-    view?: ExportView;
+    view: ExportView;
     filters?: ExportFilters;
   }>,
   options?: ApiRequestOptions,

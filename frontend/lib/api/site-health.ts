@@ -101,6 +101,8 @@ export type IssuesParams = {
 
 export type IssueExportParams = Omit<IssuesParams, 'cursor' | 'limit'>;
 export type ExportFilters = PageFilterParams | IssueExportParams | { group_id: string };
+export type ExportFormat = 'csv' | 'md';
+export type ExportView = 'pages' | 'issues' | 'issue';
 
 export type IssueDetailParams = Pick<IssuesParams, 'cursor' | 'limit' | 'page_kind'>;
 export type IssueHistoryParams = Pick<IssuesParams, 'cursor' | 'limit'>;
@@ -291,8 +293,8 @@ export const siteHealthApi = {
   eventsUrl: (crawlId: string) => `${API_BASE_URL}/site-crawls/${crawlId}/events?stream=true`,
   exportUrl: (
     crawlId: string,
-    format: 'csv' | 'md',
-    view?: 'inventory' | 'pages' | 'issues' | 'issue' | 'architecture',
+    format: ExportFormat,
+    view: ExportView,
     filters: ExportFilters = {},
   ) =>
     withQuery(

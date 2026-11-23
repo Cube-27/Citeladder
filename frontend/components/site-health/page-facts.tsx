@@ -16,6 +16,10 @@ function text(value: string | null): ReactNode {
   return value?.trim() ? value : <Absence state="not_measured" />;
 }
 
+function count(value: number | null): ReactNode {
+  return value === null ? <Absence state="not_measured" /> : formatCount(value);
+}
+
 function tags(values: readonly string[]): ReactNode {
   if (!values.length) return 'None';
   return (
@@ -31,8 +35,8 @@ function factRows(facts: Facts) {
   return [
     { label: 'Title', value: text(facts.title) },
     { label: 'Meta description', value: text(facts.meta_description) },
-    { label: 'H1 count', value: formatCount(facts.h1_count) },
-    { label: 'Word count', value: formatCount(facts.word_count) },
+    { label: 'H1 count', value: count(facts.h1_count) },
+    { label: 'Word count', value: count(facts.word_count) },
     {
       label: 'Canonical',
       value: facts.canonical_url ? (
@@ -45,7 +49,12 @@ function factRows(facts: Facts) {
     { label: 'Schema types', value: tags(facts.structured_data_types) },
     {
       label: 'Images missing alt',
-      value: `${formatCount(facts.image_missing_alt_count)} of ${formatCount(facts.image_count)}`,
+      value:
+        facts.image_missing_alt_count === null || facts.image_count === null ? (
+          <Absence state="not_measured" />
+        ) : (
+          `${formatCount(facts.image_missing_alt_count)} of ${formatCount(facts.image_count)}`
+        ),
     },
   ];
 }
