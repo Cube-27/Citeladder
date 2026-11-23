@@ -11,7 +11,7 @@ import type { InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 import { CRAWL_POLL_MS, CRAWL_VIEW_REFRESH_MS } from '@/lib/config/operational';
 import { RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { pollWhileActive, type JobStates } from '@/lib/jobs/poll';
-import { absent, availabilityLabel, formatCount, type Formatted } from '@/lib/format';
+import { absent, availabilityLabel, formatCount, pluralCount, type Formatted } from '@/lib/format';
 import { sentenceCaseStatus } from '@/lib/utils';
 
 const INTERNAL_LINK_REASON_LABELS: Record<string, string> = {
@@ -239,17 +239,20 @@ export function statusLabel(status: string): string {
 
 export { formatScore } from '@/lib/format';
 
+export type ChecksRun = Readonly<{ run: number; total: number }>;
+
+export function checksRunLabel(checks: ChecksRun | null | undefined): string | null {
+  if (!checks || checks.run >= checks.total) return null;
+  return `${formatCount(checks.run)} of ${pluralCount(checks.total, 'check')} run`;
+}
+
 export function measurementCaveat(
   state: string | undefined,
-  coverage?: number | null,
+  checks?: ChecksRun | null,
   reason?: string,
 ): string | null {
   if (state === 'measured') return null;
-  if (state === 'limited_evidence') {
-    return coverage === null || coverage === undefined
-      ? 'Partial audit'
-      : `Partial audit · ${Math.round(coverage * 100)}% coverage`;
-  }
+  if (state === 'limited_evidence') return checksRunLabel(checks) ?? 'Not every check ran';
   if (state === 'excluded') return 'Excluded from this audit';
   if (reason === 'unsupported_purpose_checklist') return 'Unsupported purpose checklist';
   return availabilityLabel('not_measured');

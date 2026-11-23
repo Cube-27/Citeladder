@@ -100,6 +100,8 @@ async function pageColumns(db: Database, crawl: Crawl, projection: MeasurementPr
   const {
     readiness_dimensions: dimensions,
     scoring_version: _scoring,
+    web_fundamentals_checks: _webChecks,
+    aeo_readiness_checks: _aeoChecks,
     ...aggregate
   } = projection.aggregate;
   return {

@@ -73,6 +73,10 @@ export type PageRow = {
   aeo_measurement_coverage: number | null;
   aeo_measurement_state: string;
   aeo_measurement_reason: string;
+  web_checks_run: number | null;
+  web_checks_total: number | null;
+  aeo_checks_run: number | null;
+  aeo_checks_total: number | null;
   main_content_indexable: boolean | null;
   robots_excluded: boolean;
   finalized_at: Date | null;
@@ -83,6 +87,18 @@ export type PageRow = {
   sort_value: string | number;
 };
 
+export const aeoChecksSql = (
+  dimensions: string,
+  points: 'determinate_points' | 'expected_points',
+) =>
+  sql<number>`(select coalesce(sum((x ->> ${points})::numeric), 0)::int
+    from jsonb_array_elements(case when jsonb_typeof(${sql.ref(dimensions)}) = 'array'
+      then ${sql.ref(dimensions)} else '[]'::jsonb end) x
+    where x ->> 'dimension_applicability' = 'applicable')`;
+
+const checksRun = (run: number | null, total: number | null) =>
+  run === null || total === null ? null : { run, total };
+
 export const measurementFields = (row: PageRow) => ({
   page_kind: row.page_kind,
   web_fundamentals_score: row.web_fundamentals_score,
@@ -92,6 +108,8 @@ export const measurementFields = (row: PageRow) => ({
   aeo_measurement_coverage: row.aeo_measurement_coverage,
   aeo_measurement_state: row.aeo_measurement_state,
   aeo_measurement_reason: row.aeo_measurement_reason,
+  web_fundamentals_checks: checksRun(row.web_checks_run, row.web_checks_total),
+  aeo_readiness_checks: checksRun(row.aeo_checks_run, row.aeo_checks_total),
   main_content_indexable: row.main_content_indexable,
   robots_excluded: row.robots_excluded,
   last_audited: row.finalized_at?.toISOString() ?? null,
@@ -264,6 +282,12 @@ export async function pageRows(
       coalesce(a.aeo_measurement_state, ${unmeasured}) as aeo_measurement_state,
       coalesce(a.aeo_measurement_reason, case when ${duplicate} then k.error_code else '' end)
         as aeo_measurement_reason,
+      a.technical_determinate_weight::int as web_checks_run,
+      a.technical_expected_weight::int as web_checks_total,
+      case when a.id is null then null else ${aeoChecksSql('a.readiness_dimensions', 'determinate_points')} end
+        as aeo_checks_run,
+      case when a.id is null then null else ${aeoChecksSql('a.readiness_dimensions', 'expected_points')} end
+        as aeo_checks_total,
       a.main_content_indexable,
       coalesce((
         select (f.acquisition_options ->> 'robots_excluded')::boolean

@@ -1,5 +1,6 @@
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { Absence } from '@/components/ui/absence';
+import { checksRunLabel } from '@/lib/site-health/status';
 import { AuditScores } from './overview-metrics';
 
 export function ScoreSection({
@@ -15,12 +16,14 @@ export function ScoreSection({
         {
           title: 'Web fundamentals',
           value: summary?.web_fundamentals_score ?? null,
+          caption: checksRunLabel(summary?.web_fundamentals_checks),
           unavailable: unavailable(summary?.web_fundamentals_state),
           href: '/issues?section=technical',
         },
         {
           title: 'AEO readiness',
           value: summary?.aeo_readiness_score ?? null,
+          caption: checksRunLabel(summary?.aeo_readiness_checks),
           unavailable: unavailable(summary?.aeo_measurement_state),
           href: '/issues?section=aeo',
         },
@@ -46,8 +49,6 @@ export function ScoreSection({
   );
 }
 function unavailable(state?: string) {
-  if (state === 'limited_evidence')
-    return <Absence state="not_measured" label="Limited evidence" />;
   if (state === 'excluded') return <Absence state="not_applicable" label="Excluded" />;
   return <Absence state="not_measured" />;
 }

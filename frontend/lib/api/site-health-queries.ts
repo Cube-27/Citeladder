@@ -35,7 +35,6 @@ const ISSUE_KEY_PARAMS = [
   'page_kind',
   'section',
   'sort',
-  'finding_class',
 ] as const satisfies ReadonlyArray<keyof IssuesParams>;
 
 const PAGE_KEY_PARAMS = [

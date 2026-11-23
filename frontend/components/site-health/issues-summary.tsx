@@ -56,8 +56,7 @@ function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary']
     <FigureStrip
       label="Issue summary"
       segments={[
-        figure('types', 'Issue types', summary.defect_issue_type_count),
-        figure('advisories', 'Advisories', summary.advisory_issue_type_count),
+        figure('types', 'Issue types', summary.issue_count),
         figure('pages', 'Pages affected', summary.affected_url_count),
         ...SEVERITIES.map((severity) =>
           figure(

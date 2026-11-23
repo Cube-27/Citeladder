@@ -21,7 +21,7 @@ Open **Actions** in the sidebar. It lists everything you can act on across CiteL
 | Get mentioned elsewhere | Cited pages that list your competitors but not you                                                                                                                   |
 | Improve your products   | Products and categories                                                                                                                                              |
 
-Each goal holds categories, and each shows how many items it holds; choose a heading to fold it. The cells above the list count each goal and take you to it. Choose a status (**New**, **In progress**, **Done** or **Declined**), narrow by **Source** or **Priority**, or group by source instead; the view stays in the page address, so you can share it. A website issue row opens that issue in Issues, where you mark it fixed; a row from a Site Health advisory is marked **Advisory**. Any other row opens the Action's detail.
+Each goal holds categories, and each shows how many items it holds; choose a heading to fold it. The cells above the list count each goal and take you to it. Choose a status (**New**, **In progress**, **Done** or **Declined**), narrow by **Source** or **Priority**, or group by source instead; the view stays in the page address, so you can share it. A website issue row opens that issue in Issues, where you mark it fixed. Any other row opens the Action's detail.
 
 Every page that the Sources URL table shows as a **Gap** becomes a "Get mentioned elsewhere" Action after its next refresh, whatever kind of page it is.
 

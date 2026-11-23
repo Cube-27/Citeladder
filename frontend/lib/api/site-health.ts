@@ -94,7 +94,6 @@ export type IssuesParams = {
   dimension?: string;
   rule?: string;
   site_url_id?: string;
-  finding_class?: 'defect' | 'advisory';
   page_kind?: string;
   section?: IssueSection;
   sort?: IssueSort;

@@ -13,6 +13,7 @@ export type AuditMetric = {
   sub?: ReactNode;
   href?: string;
   unavailable?: ReactNode;
+  caption?: string | null;
 };
 
 function auditSegment({
@@ -23,11 +24,13 @@ function auditSegment({
   sub,
   href,
   unavailable,
+  caption,
 }: AuditMetric): FigureSegment {
   const base = {
     key: title,
     label: title,
     sub,
+    caption: caption ?? undefined,
     action: href ? { label: 'View details', href } : undefined,
   };
   if (figure) return { ...base, value: figure };

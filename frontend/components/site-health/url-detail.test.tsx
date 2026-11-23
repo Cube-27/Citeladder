@@ -34,7 +34,6 @@ function resolvedIssue(id: string, title: string) {
     dimension: 'technical',
     category: 'metadata',
     severity: 'medium',
-    finding_class: 'defect',
     title,
     description: 'The page has no title.',
     remediation: 'Add a title.',
@@ -646,7 +645,7 @@ describe('UrlDetail', () => {
     expect(screen.getByText("Internal links weren't counted for this page.")).toBeVisible();
   });
 
-  it('lists every issue once, worst first, each row opening its fix, and advisories apart', async () => {
+  it('lists every issue once in one list, worst first, with its severity, each row opening its fix', async () => {
     const [low, high] = detail().issues;
     mswServer.use(
       ...handlers(
@@ -660,7 +659,6 @@ describe('UrlDetail', () => {
               rule_id: 'technical.meta_description_present',
               issue_title: 'Missing meta description',
               severity: 'medium',
-              finding_class: 'advisory',
               evidence: { present: false },
             },
           ],
@@ -671,18 +669,19 @@ describe('UrlDetail', () => {
     const user = userEvent.setup();
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
-    await screen.findByRole('heading', { name: 'All issues (2)' });
-    const list = allIssues('All issues (2)');
+    await screen.findByRole('heading', { name: 'All issues (3)' });
+    const list = allIssues('All issues (3)');
     const rows = within(list).getAllByRole('button', { expanded: false });
     expect(rows.map((row) => row.textContent)).toEqual([
       'WebSite schema is missingHighAEO',
+      'Missing meta descriptionMediumAEO',
       'FAQ schema not presentLowAEO',
     ]);
-    await user.click(rows[1]!);
+    await user.click(rows[2]!);
     await user.click(rows[0]!);
     for (const title of ['WebSite schema is missing', 'FAQ schema not present'])
       expect(screen.getAllByText(title)).toHaveLength(1);
-    const faq = document.getElementById(rows[1]!.getAttribute('aria-controls')!)!;
+    const faq = document.getElementById(rows[2]!.getAttribute('aria-controls')!)!;
     expect(within(faq).getByText('Add FAQPage markup to the questions.')).toBeInTheDocument();
     const website = document.getElementById(rows[0]!.getAttribute('aria-controls')!)!;
     expect(
@@ -690,11 +689,7 @@ describe('UrlDetail', () => {
         .getAllByText(/^(AEO readiness|Web fundamentals)$/)
         .map((badge) => badge.textContent),
     ).toEqual(['AEO readiness', 'Web fundamentals']);
-    expect(screen.getByText('Advisories (1)')).toBeInTheDocument();
-    const advisory = screen.getByText('Missing meta description').closest('li')!;
-    expect(within(advisory).queryByText('Advisory')).toBeNull();
-    expect(within(advisory).queryByText('Medium')).not.toBeInTheDocument();
-    expect(within(advisory).getByText('AEO')).toBeInTheDocument();
+    expect(screen.queryByText(/^Advisories/)).toBeNull();
     expect(figureText('Web fundamentals')).toBe('46');
     const score = document.querySelector('[data-figure-strip]')!;
     expect(score.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

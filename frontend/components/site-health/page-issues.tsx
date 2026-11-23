@@ -35,27 +35,21 @@ export function PageIssues({
   audited: boolean;
   crawlId: string;
 }>) {
-  const defects = issues
-    .filter((issue) => issue.finding_class === 'defect')
-    .sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
-  const advisories = issues.filter((issue) => issue.finding_class !== 'defect');
+  const sorted = [...issues].sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
   return (
-    <>
-      <TitledSection title={`All issues (${defects.length})`}>
-        <SectionContent>
-          {defects.length === 0 ? (
-            <StateBlock
-              kind="empty"
-              inline
-              message={audited ? 'No issues found.' : 'Audit not finished.'}
-            />
-          ) : (
-            <IssueList issues={defects} crawlId={crawlId} />
-          )}
-        </SectionContent>
-      </TitledSection>
-      {advisories.length > 0 ? <Advisories advisories={advisories} /> : null}
-    </>
+    <TitledSection title={`All issues (${sorted.length})`}>
+      <SectionContent>
+        {sorted.length === 0 ? (
+          <StateBlock
+            kind="empty"
+            inline
+            message={audited ? 'No issues found.' : 'Audit not finished.'}
+          />
+        ) : (
+          <IssueList issues={sorted} crawlId={crawlId} />
+        )}
+      </SectionContent>
+    </TitledSection>
   );
 }
 
@@ -90,11 +84,9 @@ function IssueRow({ issue, children }: Readonly<{ issue: PageIssue; children: Re
       title={issue.issue_title}
       meta={
         <>
-          {issue.finding_class === 'defect' ? (
-            <StatusMark variant="severity" value={issue.severity}>
-              {severityLabel(issue.severity)}
-            </StatusMark>
-          ) : null}
+          <StatusMark variant="severity" value={issue.severity}>
+            {severityLabel(issue.severity)}
+          </StatusMark>
           <span>{dimensionLabel(issue.dimension)}</span>
         </>
       }
@@ -139,21 +131,4 @@ function Remediation({ issue }: Readonly<{ issue: PageIssue }>) {
   return issue.remediation ? (
     <p className="type-body text-ink whitespace-pre-line">{issue.remediation}</p>
   ) : null;
-}
-
-function Advisories({ advisories }: Readonly<{ advisories: readonly PageIssue[] }>) {
-  return (
-    <TitledSection title={`Advisories (${advisories.length})`}>
-      <SectionContent>
-        <DisclosureList>
-          {advisories.map((issue) => (
-            <IssueRow key={issue.occurrence_id} issue={issue}>
-              <Remediation issue={issue} />
-              <IssueEvidence occurrence={issue} />
-            </IssueRow>
-          ))}
-        </DisclosureList>
-      </SectionContent>
-    </TitledSection>
-  );
 }
