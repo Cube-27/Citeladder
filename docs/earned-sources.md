@@ -112,9 +112,15 @@ The target is `earned-page:{url_hash}` and the rule is
 `earned_page_acquire_listing` (high). It fires for every page the URL table
 shows as a Gap (AS4) among the pages the audit's answers cited: one rule,
 `isListingGap` ([listing gap](../frontend/services/api/src/analysis/listing-gap.ts)),
-decides both. On the page's latest successful reading:
+decides both; the URL table's Gap filter (`gapPageHashes` in
+[page standing](../frontend/services/api/src/visibility/page-standing.ts)) mirrors it in SQL, so
+change both together. On the page's latest successful reading:
 
 - it is not the business's or a competitor's own page;
+- it is not about one competitor: its title, without the site suffix, is not a present
+  competitor's name (a Wikipedia or profile article about Big W lists no one);
+- its domain is not excluded (`EARNED_EXCLUDED_DOMAINS`: Wikipedia, where inclusion is not the
+  publisher's decision to grant on request);
 - at least one competitor is present on it and the brand is `not_detected`.
 
 Its format, how often it is cited and how much of it was read do not gate the
