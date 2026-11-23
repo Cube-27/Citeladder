@@ -90,10 +90,26 @@ function bounded(preview: ChangePreview): ChangePreview {
   const rows = preview.rows.map((row) => ({ label: row.label, value: clip(row.value) }));
   if (rows.length <= rowsMax) return { ...preview, rows };
   const hidden = rows.length - rowsMax + 1;
+  const run = longestRun(rows);
+  const [start, end] =
+    run.length > hidden
+      ? [run.start + run.length - hidden, run.start + run.length]
+      : [rowsMax - 1, rows.length];
   return {
     ...preview,
-    rows: [...rows.slice(0, rowsMax - 1), { label: 'More', value: `${hidden} more` }],
+    rows: [...rows.slice(0, start), { label: 'More', value: `${hidden} more` }, ...rows.slice(end)],
   };
+}
+
+function longestRun(rows: readonly { label: string }[]) {
+  let best = { start: 0, length: 0 };
+  let start = 0;
+  let label = rows[0]?.label;
+  for (const [index, row] of rows.entries()) {
+    if (row.label !== label) [start, label] = [index, row.label];
+    if (index - start + 1 > best.length) best = { start, length: index - start + 1 };
+  }
+  return best;
 }
 
 function refusal(error: unknown): BuiltinOutcome {

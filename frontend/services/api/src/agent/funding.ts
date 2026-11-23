@@ -102,6 +102,8 @@ async function recheck(db: Database, run: Run, settings: Settings, platform: Gat
   if (run.funding_source === 'development' && !(await development(db, run.user_id, settings)))
     throw new AgentError('funding_unavailable');
 }
+const estimatedTokens = (bytes: number) =>
+  Math.ceil(bytes / agentPolicy.hold_input_bytes_per_token);
 async function inputBound(db: Database, run: Run, bytes: number) {
   const previous = await db
     .selectFrom('agent_model_attempts')
@@ -119,10 +121,10 @@ async function inputBound(db: Database, run: Run, bytes: number) {
     previous.output_tokens === null ||
     previous.input_bytes === null
   )
-    return bytes;
+    return estimatedTokens(bytes);
   const read = Number(previous.input_tokens) + Number(previous.output_tokens);
   const added = Math.max(0, bytes - Number(previous.input_bytes));
-  return Math.min(bytes, read + added + agentPolicy.hold_input_margin_tokens);
+  return Math.min(bytes, read + estimatedTokens(added) + agentPolicy.hold_input_margin_tokens);
 }
 function sizedHold(
   price: ModelPrice,
@@ -145,7 +147,7 @@ function sizedHold(
     credits: available,
   });
   if (outputTokens < Math.min(agentPolicy.hold_min_reply_tokens, bound.maxOutputTokens))
-    throw new AgentError('funding_unavailable');
+    throw new AgentError(available > 0 ? 'funding_short' : 'funding_unavailable');
   return {
     credits: cachedReservationCredits(
       price,

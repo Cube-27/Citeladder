@@ -428,6 +428,7 @@ export const agentSkillCatalogSchema = responseObject({
     default_reasoning_effort: agentReasoningEffortSchema,
   }),
   limits: responseObject({
+    message_max_chars: z.number().int(),
     mentions_max: z.number().int(),
     attachments_max: z.number().int(),
     attachment_max_chars: z.number().int(),

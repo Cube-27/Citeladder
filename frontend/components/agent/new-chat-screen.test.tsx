@@ -78,6 +78,7 @@ const WORKFLOW_CATALOG = {
   output_kinds: [],
   models: AGENT_MODELS,
   limits: {
+    message_max_chars: 50000,
     mentions_max: 5,
     attachments_max: 3,
     attachment_max_chars: 40000,
@@ -94,12 +95,7 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
       HttpResponse.json({
         skills: [GROWTH_SKILL],
         models: AGENT_MODELS,
-        limits: {
-          mentions_max: 5,
-          attachments_max: 3,
-          attachment_max_chars: 40000,
-          attachments_total_max_chars: 40000,
-        },
+        limits: WORKFLOW_CATALOG.limits,
       }),
     ),
     http.get(`/api/v1/projects/${PROJECT}/actions`, () => HttpResponse.json(actionsPage(actions))),
@@ -414,9 +410,7 @@ describe('NewChatScreen', () => {
           skills: [GROWTH_SKILL],
           models: AGENT_MODELS,
           limits: {
-            mentions_max: 5,
-            attachments_max: 3,
-            attachment_max_chars: 40000,
+            ...WORKFLOW_CATALOG.limits,
             attachments_total_max_chars: prompts.length + facts.length,
           },
         }),
@@ -465,12 +459,7 @@ describe('NewChatScreen', () => {
         HttpResponse.json({
           skills: [GROWTH_SKILL],
           models: AGENT_MODELS,
-          limits: {
-            mentions_max: 1,
-            attachments_max: 3,
-            attachment_max_chars: 40000,
-            attachments_total_max_chars: 40000,
-          },
+          limits: { ...WORKFLOW_CATALOG.limits, mentions_max: 1 },
         }),
       ),
     );

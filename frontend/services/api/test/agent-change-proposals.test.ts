@@ -9,7 +9,7 @@ import { subjectXactLock } from '../src/db/advisory-lock.ts';
 import { ApiError } from '../src/errors.ts';
 import { AgentFixtures, scripted, text, toolUse } from './agent-support.ts';
 import { auditTenant } from './audit-fixtures.ts';
-import { promptSet, topic } from './prompt-fixtures.ts';
+import { prompt, promptSet, topic } from './prompt-fixtures.ts';
 import { gatedGeneration, singleConnectionDatabase } from './live-owner.ts';
 import { testConfig, testDatabase } from './support.ts';
 
@@ -186,6 +186,34 @@ it('previews a paid launch with its spend from the estimate, never the model’s
     decision: 'confirm',
   });
   expect(await audits()).toEqual([{ status: 'queued' }]);
+});
+
+it('caps a long card at its list, keeping the rows after it, and shows the topics a generation covers', async () => {
+  const t = await tenant();
+  const road = await topic(db, t.projectId, 'Road');
+  await topic(db, t.projectId, 'Trail');
+  const ids = await Promise.all(
+    Array.from({ length: 24 }, (_, index) => prompt(db, t.setId, `Which shoe ${index}?`)),
+  );
+  const { proposals } = await proposed(t.scope, [
+    { kind: 'delete_prompts', payload: { prompt_ids: ids } },
+    {
+      kind: 'generate_prompts',
+      payload: { prompt_set_id: t.setId, request: { count: 5, topic_ids: [road] } },
+    },
+    { kind: 'generate_prompts', payload: { prompt_set_id: t.setId, request: { count: 5 } } },
+  ]);
+  const rows = proposals.map((proposal) => (proposal.kind === 'change' ? proposal.rows : []));
+  expect(rows[0]).toHaveLength(agentPolicy.proposal_preview_rows_max);
+  expect(rows[0]!.slice(-3)).toEqual([
+    { label: 'More', value: '7 more' },
+    { label: 'Audits that asked them', value: '0, kept in history' },
+    { label: 'Undo', value: 'This cannot be undone.' },
+  ]);
+  expect(rows.slice(1).map((card) => card.at(-1))).toEqual([
+    { label: 'Topic', value: 'Road' },
+    { label: 'Topics', value: 'All 2 topics' },
+  ]);
 });
 
 it('stages at most the per-turn bound of proposals when the model proposes them in parallel', async () => {

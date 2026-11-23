@@ -34,7 +34,7 @@ const platform = {
   maxOutputTokens: 16_384,
 };
 const HOLD = 11;
-const OPUS_HOLD = 428;
+const OPUS_HOLD = 427;
 const settings = agentSettings({});
 describe('Agent funding through the production ledger and shared pricing', () => {
   const db = testDatabase();
@@ -307,8 +307,8 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     ]);
   });
   it.each([
-    { choice: undefined, cap: 16_384, credits: 5, shrunk: 7652 },
-    { choice: { model: 'claude-opus-5-5' }, cap: 64_000, credits: 1_000, shrunk: 38_421 },
+    { choice: undefined, cap: 16_384, credits: 5, shrunk: 7679 },
+    { choice: { model: 'claude-opus-5-5' }, cap: 64_000, credits: 1_000, shrunk: 38_448 },
   ])(
     'shrinks a call the balance covers only in part to the output it can pay for (B60) %#',
     async ({ choice, cap, credits, shrunk }) => {
@@ -349,7 +349,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const calls = new ModelCalls(db, agentFunding(settings, platform));
     await expect(
       calls.dispatch(lease, 1, await agentModels(platform)(saved), request),
-    ).rejects.toMatchObject({ code: 'funding_unavailable' });
+    ).rejects.toMatchObject({ code: 'funding_short' });
     expect(
       await db
         .selectFrom('agent_model_attempts')
@@ -357,6 +357,38 @@ describe('Agent funding through the production ledger and shared pricing', () =>
         .where('run_id', '=', saved.id)
         .execute(),
     ).toEqual([]);
+  });
+  it('funds a long Sonnet chat from about 1,000 credits, and names a short balance apart from an empty one', async () => {
+    const { scope } = await tenant(1_000);
+    const { run: saved, lease } = await run(scope, undefined, { model: 'claude-sonnet-5-5' });
+    const full = { ...platform, maxOutputTokens: 64_000 };
+    const calls = new ModelCalls(db, agentFunding(settings, full));
+    const turn = (index: number) => [
+      {
+        role: 'user' as const,
+        content: [text(`Question ${index}: ${'audit the site. '.repeat(1_500)}`)],
+      },
+      {
+        role: 'assistant' as const,
+        content: [text(`Answer ${index}: ${'found an issue. '.repeat(1_500)}`)],
+      },
+    ];
+    const history = {
+      ...request,
+      webSearches: 2,
+      messages: [
+        ...Array.from({ length: 4 }, (_, index) => turn(index)).flat(),
+        { role: 'user' as const, content: [text('Write the fix plan as a document.')] },
+      ],
+    };
+    const attempt = await calls.dispatch(lease, 1, await agentModels(full)(saved), history);
+    expect([attempt.reserved_credits, attempt.max_output_tokens]).toEqual(['1000', 49_233]);
+    const short = await tenant(60);
+    const shortRun = await run(short.scope, undefined, { model: 'claude-sonnet-5-5' });
+    await expect(
+      calls.dispatch(shortRun.lease, 1, await agentModels(full)(shortRun.run), history),
+    ).rejects.toMatchObject({ code: 'funding_short' });
+    expect(recoveryReply('funding_short')).not.toContain('contact@citeladder.com');
   });
   it('holds a later call for the input the previous call reported, never below what it can cost', async () => {
     const { scope, accountId, grantId } = await tenant(1_000);
@@ -371,7 +403,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       ...request,
       messages: [opening],
     });
-    expect(first.reserved_credits).toBe('37');
+    expect(first.reserved_credits).toBe('20');
     const reported = { input_tokens: 25_000, output_tokens: 1_000 };
     await calls.receipt(scope.workspaceId, first.id, result(reply(), { usage: reported }));
     const next = {
@@ -401,7 +433,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     ).toEqual([
       {
         ordinal: 1,
-        reserved_credits: '37',
+        reserved_credits: '20',
         debited_credits: '4',
         input_bytes: '100095',
       },

@@ -165,6 +165,7 @@ test('declaring an Action implemented shows comparable verification', async ({ p
         skills: [],
         models: AGENT_MODELS,
         limits: {
+          message_max_chars: 50000,
           mentions_max: 5,
           attachments_max: 3,
           attachment_max_chars: 40000,
@@ -265,6 +266,7 @@ test('Action filters restore through URL history and reload', async ({ page }) =
         skills: [],
         models: AGENT_MODELS,
         limits: {
+          message_max_chars: 50000,
           mentions_max: 5,
           attachments_max: 3,
           attachment_max_chars: 40000,

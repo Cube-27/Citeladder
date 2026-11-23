@@ -284,6 +284,7 @@ export const agentRoutes = [
           default_reasoning_effort: DEFAULT_CHOICE.effort,
         },
         limits: {
+          message_max_chars: agentPolicy.message_max_chars,
           mentions_max: agentPolicy.mentions_max,
           attachments_max: agentPolicy.attachments_max,
           attachment_max_chars: agentPolicy.attachment_max_chars,

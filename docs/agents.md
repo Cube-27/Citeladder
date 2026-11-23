@@ -84,7 +84,9 @@ the person once, before offering **Mark implemented**: **Link to /x** re-attache
 the document to that target's Action (created when none exists), **Keep with
 this Action** keeps it (`POST …/outputs/{output_id}/target`). The chat keeps its
 own Action, and a document whose revision a declaration names stays with that
-Action. An Action's status is derived from, never written by, the Agent.
+Action. The Agent never writes an Action's status; the person starting a chat
+on a New Action moves it to In progress
+([state machines](state-machines.md)).
 
 ## Context and the bounded loop
 
@@ -228,7 +230,8 @@ only this turn's reads are its sources.
 
 The model never writes record references for the user. Before saving, the
 runtime removes `citeladder://` references and UUIDs from the reply and the
-document's title and body, fenced blocks included: no deliverable carries a
+document's title and body, fenced blocks included, and replaces a Site Health
+or content rule id (from their config) with the check's label: no deliverable carries a
 machine-readable submission, so Copy and Export never carry a CiteLadder ID.
 A UUID the person wrote, in a message of the chat, a paste attached to one,
 or typed into a document, is theirs (a form id in pasted HTML) and stays, so
@@ -358,7 +361,8 @@ holds the exact payload and the preview without IDs, is bounded per turn by
 `agent_messages.proposals`. Model prose never reaches the card: the title is a
 server template with counts only, and every name or text the model, a page or
 a person supplied is a row value, clipped and bounded by
-`proposal_preview_rows_max` and `proposal_preview_value_max_chars`, so page
+`proposal_preview_rows_max` and `proposal_preview_value_max_chars` (a long card
+shortens its longest list, so the rows after it, Undo included, stay), so page
 text, a paste or a web result cannot dress a card as something else. A paid or
 allowance-spending kind shows its spend, from the estimate or from what its own
 dry run held, and holds nothing until the click; a launched job is
@@ -543,8 +547,14 @@ A turn executes only inside that request, exactly once:
 - The stream lives in a module, so moving around the app keeps the turn
   running, and several chats can run at once; the chat list marks each chat
   with a running turn.
-- Closing the tab or reloading closes the stream and ends the turn as
-  `interrupted`; the turn's own limit (`turn_timeout_seconds` in the runtime
+- Closing the tab or reloading closes the browser's stream. The route aborts
+  the turn as `interrupted` only when that disconnect reaches the API, as it
+  does in local development; behind the production edge proxy
+  ([`worker-origin-proxy.ts`](../frontend/lib/server/worker-origin-proxy.ts),
+  then Cloud Run) it usually does not, so the turn runs to its end and is saved
+  and charged. A reopened chat shows such a turn as running from its saved
+  steps (partial text is never saved), polls until the reply is saved, and
+  offers Stop. The turn's own limit (`turn_timeout_seconds` in the runtime
   configuration, below the API's request timeout, frozen in the run's budget at
   admission) ends it as `turn_timeout`.
 - Turns and interactive audit drives share a per-instance cap
@@ -682,9 +692,14 @@ stay fenced, and recovery runs accounting in the same transaction as its
 terminal write.
 
 Every model call is funded by its own finite AI-credit hold
-([B58](billing-decisions.md#agent-charging)); a balance below
-the full hold but above the minimum reply lowers `max_output_tokens`, below it
-the call is refused with `funding_unavailable`. A turn refused for funding after it staged a document
+([B58](billing-decisions.md#agent-charging)). The hold's input side is the
+previous call's reported tokens plus the new bytes, or for a run's first call
+the request's bytes, both converted at `hold_input_bytes_per_token`; counting
+bytes as tokens refused long chats that hundreds of credits could pay for. A
+balance below the full hold but above the minimum reply lowers
+`max_output_tokens`; below it the call is refused, as `funding_short` while
+credits remain and `funding_unavailable` when none do, and only the second
+reply sends the person to support for more. A turn refused for funding after it staged a document
 saves the document with a fixed reply and is charged. It settles against
 returned usage, with cache reads, five-minute and one-hour cache writes and
 output (thinking included) at their own rates

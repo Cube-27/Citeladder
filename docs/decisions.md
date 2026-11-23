@@ -115,6 +115,10 @@ how to add or change an entry.
   turn ends and the person resumes on return; no sub-agents. Sign-in lands on
   Overview until the Agent is tested; landing on the Agent is the last step.
   Owner, 2026-11-18 and 2026-11-22 ([plan](plans/agent-hero.md)).
+- **The Agent declines work outside the app's purview**, such as writing a
+  script for the person to run, and keeps every in-app tool and change kind.
+  Owner, 2026-11-23
+  ([operating contract](../frontend/services/api/assets/agent-skills/operating_contract.md)).
 - **Agent model picker: Claude only.** Haiku 5.5, Sonnet 5.5 and Opus 5.5 at
   low, medium or high effort, chosen per chat
   ([B75](billing-decisions.md#agent-charging)). The OpenAI-compatible route
