@@ -494,7 +494,7 @@ test.describe('marketing routes', () => {
 
     await page.setViewportSize({ width: 390, height: 900 });
     for (const { path, part } of [
-      { path: '/llm-rank-tracker', part: '.cl-screen-cols > :nth-child(2)' },
+      { path: '/ai-search-share-of-voice', part: '.cl-screen-cols > :nth-child(2)' },
     ]) {
       await page.goto(path);
       const screen = page.locator('main .cl-frame--scale .cl-screen').first();
