@@ -99,9 +99,14 @@ function FixFirst({
             <li key={issue.group_id}>
               <Pressable
                 onClick={() => onOpen(issue.group_id)}
-                className="hover:overlay-hover flex min-h-10 w-full min-w-0 items-center gap-2 px-4 text-start"
+                className="hover:overlay-hover phone:flex-wrap phone:gap-y-1 phone:py-2 flex min-h-10 w-full min-w-0 items-center gap-2 px-4 text-start"
               >
-                <span className={textRole('body', 'min-w-0 shrink truncate')}>
+                <span
+                  className={textRole(
+                    'body',
+                    'phone:basis-full phone:whitespace-normal min-w-0 shrink truncate',
+                  )}
+                >
                   {issueTitle(issue)}
                 </span>
                 <span

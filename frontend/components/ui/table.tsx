@@ -25,6 +25,8 @@ import {
 } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
+import './table-phone.css';
+
 const tableHeadClasses = 'text-caption text-ink-2 whitespace-nowrap';
 export function Table({
   children,

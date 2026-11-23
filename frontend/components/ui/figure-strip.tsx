@@ -172,11 +172,21 @@ function FigureLabel({ segment, subLine }: FigurePart) {
   const hint = segment.loading ? null : <FigureHint segment={segment} subLine={subLine} />;
   const Glyph = segment.icon;
   return (
-    <dt className="type-caption text-ink-2 phone:flex-wrap phone:gap-y-1 flex min-w-0 items-center gap-2">
-      {Glyph ? <Glyph aria-hidden className="size-3.5 shrink-0" /> : null}
+    <dt className="type-caption text-ink-2 phone:block flex min-w-0 items-center gap-2">
+      {Glyph ? (
+        <Glyph
+          aria-hidden
+          className="phone:inline phone:me-2 phone:align-middle size-3.5 shrink-0"
+        />
+      ) : null}
       {text}
       {segment.marker || hint ? (
-        <span className={cn('flex shrink-0 items-center gap-2', pressableLayer(segment))}>
+        <span
+          className={cn(
+            'phone:inline-flex phone:ms-2 phone:align-top flex shrink-0 items-center gap-2',
+            pressableLayer(segment),
+          )}
+        >
           {segment.marker}
           {hint}
         </span>
@@ -192,7 +202,10 @@ function pressableLayer(segment: FigureSegment) {
 function FigureValueLine({ segment, subLine, textValues }: FigurePart) {
   const delta = segment.loading || !reportsChange(segment.delta) ? null : segment.delta;
   return (
-    <dd data-figure-value="" className="flex min-w-0 items-baseline gap-2 whitespace-nowrap">
+    <dd
+      data-figure-value=""
+      className="phone:flex-wrap flex min-w-0 items-baseline gap-2 whitespace-nowrap"
+    >
       <FigureValue segment={segment} textValues={textValues} />
       {delta ? <span className="type-caption-strong shrink-0">{delta}</span> : null}
       {segment.labelHidden && !segment.loading ? (
@@ -206,7 +219,7 @@ function FigureValueLine({ segment, subLine, textValues }: FigurePart) {
 
 function FigureSub({ segment }: FigurePart) {
   return (
-    <dd className="type-caption text-ink-2 min-w-0 truncate">
+    <dd className="type-caption text-ink-2 phone:whitespace-normal min-w-0 truncate">
       {segment.sub && !segment.loading ? segment.sub : ' '}
     </dd>
   );

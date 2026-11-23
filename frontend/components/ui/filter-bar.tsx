@@ -135,7 +135,7 @@ function Controls({
         </div>
       ) : null}
       {actions ? (
-        <div className="phone:ms-0 phone:justify-start ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2">
+        <div className="phone:ms-0 phone:justify-start phone:flex-wrap ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2">
           {actions}
         </div>
       ) : null}
