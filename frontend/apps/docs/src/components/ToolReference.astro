@@ -10,9 +10,7 @@ import Prose from '@/components/content/Prose.astro';
     <h2 id={TOOL_REFERENCE_HEADING.slug}>{TOOL_REFERENCE_HEADING.text}</h2>
     <p>
       The reference below is generated from the backend catalog. Your connected client’s catalog
-      determines which tools are available on its server. Tools marked “Changes” appear only for a
-      connection approved with Allow changes. The assistant asks before each change, and prepare
-      tools change nothing until you agree to their preview and it calls confirm_change.
+      determines which tools are available on its server. Every tool is read-only.
     </p>
   </Prose>
   {MCP_TOOLS.map((tool) => <McpToolRef tool={tool} />)}

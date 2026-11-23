@@ -26,7 +26,6 @@ const logger = getLogger('mcp');
 const VERSIONS = ['2026-07-28', '2025-11-25'];
 const INSTRUCTIONS = [
   "CiteLadder data about a business's visibility in AI answers and search.",
-  'Changes go through prepare_change, which saves nothing and returns a preview, then confirm_change, which makes the change. Show the user the preview and call confirm_change only after they agree to it; a delete or a paid run needs their yes each time. preview_topics spends one model call and saves nothing, so ask before calling it.',
   'Start with list_projects, then get_project_business_context; use the focused reads for detail.',
   'Missing evidence is unavailable, never zero. Report change without claiming its cause.',
   'IDs and citeladder:// references are for your tool calls only: never show them to the user. Name the page, prompt, competitor or Action instead, and give app links as links.',

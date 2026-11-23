@@ -3,10 +3,18 @@ title: 'Changelog'
 description: 'Product changes and what they mean for your workflow.'
 group: 'Updates'
 order: 400
-updated: '2026-11-22'
+updated: '2026-11-23'
 ---
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
+
+## November 23, 2026: MCP connections are read-only
+
+An assistant connected over MCP now only reads: the consent page no longer offers **Allow changes**, and no change tools are listed. Add prompts, launch audits, start crawls and update Actions in the CiteLadder app.
+
+**For your team:** existing connections keep working for reads.
+
+[MCP](/mcp/)
 
 ## November 22, 2026: Google AI Mode as an engine
 
@@ -44,7 +52,7 @@ The Agent can now propose changes to your project as a card under its reply: pro
 
 An assistant connected over MCP with **Allow changes** now makes every change with two tools: `prepare_change` previews a change and saves nothing, and `confirm_change` makes it after you agree. The separate change tools (`prepare_add_prompts`, `create_topic`, `generate_prompts` and the others) are gone. MCP now also offers importing prompts, brand facts and the product catalog, adding a market, re-running an audit's failures, running a probe, starting or cancelling a crawl, re-running a page, starting an internal-link analysis, analyzing a page, quoting and starting a Keyword research run, recomputing demand and syncing performance data. Deleting prompts and prompt sets stays in CiteLadder.
 
-**For your team:** reconnect your assistant so it picks up the new tool list; see the [MCP tool reference](/mcp/tools/#make-changes).
+**For your team:** reconnect your assistant so it picks up the new tool list; see the [MCP tool reference](/mcp/tools/).
 
 ## November 22, 2026: Setup records readable over MCP and in the Agent
 
@@ -58,7 +66,7 @@ The REST API can now activate or archive, file under a topic, and delete a selec
 
 An assistant connected over MCP with **Allow changes** can now accept or reject a competitor suggestion, and activate, archive or file a selection of prompts under a topic as one change it previews first and makes only after you agree. Prompts cannot be deleted over MCP.
 
-**For your team:** see the [API changelog](/api/changelog/) and the [MCP tool reference](/mcp/tools/#make-changes).
+**For your team:** see the [API changelog](/api/changelog/) and the [MCP tool reference](/mcp/tools/).
 
 ## November 18, 2026: A Brand section, and AI Visibility split into pages
 
@@ -254,7 +262,7 @@ A connection with **Allow changes** can now stop tracking a competitor and delet
 
 **For your team:** ask your assistant to tidy your competitor list or topics directly; it asks before each change.
 
-[What you can change](/mcp/#what-you-can-change)
+[Connect with MCP](/mcp/)
 
 ## October 12, 2026: A faster Agent that remembers the chat
 
@@ -270,7 +278,7 @@ When you connect an assistant, you can now tick **Allow changes**. The assistant
 
 **For your team:** to let an assistant keep your prompts and audits up to date, revoke its connection and connect again with **Allow changes** ticked.
 
-[What you can change](/mcp/#what-you-can-change)
+[Connect with MCP](/mcp/)
 
 ## October 10, 2026: Markets
 

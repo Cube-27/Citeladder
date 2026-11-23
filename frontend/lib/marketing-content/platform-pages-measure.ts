@@ -23,7 +23,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Improve',
-        body: 'You use this when you know what is wrong and need the work done. It gives you ranked Actions, one per page or per repeated site defect, the content angles competitor and publisher pages are cited for and your site lacks, briefs and edits drafted by the Agent, and MCP access for confirmed changes from Claude or ChatGPT.',
+        body: 'You use this when you know what is wrong and need the work done. It gives you ranked Actions, one per page or per repeated site defect, the content angles competitor and publisher pages are cited for and your site lacks, briefs and edits drafted by the Agent, and read-only MCP access from Claude or ChatGPT.',
       },
     ],
     features: [
@@ -124,7 +124,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can I use CiteLadder from Claude or ChatGPT?',
-        a: 'Yes. The CiteLadder MCP server gives compatible assistants access to the workspaces you approve, so you can ask about your visibility, sources and site evidence in plain language. With Allow changes it can also manage prompts, topics, competitors, audits and Actions; it asks before each change, and each runs only after you confirm a preview.',
+        a: 'Yes. The CiteLadder MCP server gives compatible assistants access to the workspaces you approve, so you can ask about your visibility, sources and site evidence in plain language. The connection is read-only; changes happen in the app.',
       },
     ],
     closing: 'See what AI says about your brand',

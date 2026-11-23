@@ -12,7 +12,7 @@ Every client connects to the same hosted server:
 https://api.citeladder.com/mcp
 ```
 
-The connection uses browser sign-in (OAuth) with the read scope `citeladder:read`, plus `citeladder:write` when you tick **Allow changes** on the consent page. Do not paste a provider API key or a CiteLadder session cookie into the client.
+The connection uses browser sign-in (OAuth) with the read scope `citeladder:read`; the connection is read-only. Do not paste a provider API key or a CiteLadder session cookie into the client.
 
 The quickest route is the **Connect** button in the CiteLadder app under **Settings → MCP connections**, or on the MCP product page. Selecting it opens Claude with CiteLadder's name and URL filled in. Hover over it to choose ChatGPT, Gemini or Grok instead; CiteLadder copies the URL for you to paste there. The steps below cover the same setup by hand.
 
@@ -97,7 +97,7 @@ Every client finishes in the same browser consent step:
 
 1. Sign in to CiteLadder. If you do not have an account, create one; a new account gets a trial workspace. Finish project setup and you return to the approval page.
 2. Select the workspaces this connection may use.
-3. Leave **Allow changes** unticked for read-only access, or tick it to let the assistant make changes you confirm. Then select **Approve**.
+3. Select **Approve**.
 
 The connection uses only the workspaces you selected. Joining another workspace later does not add it; connect again to share it. Losing membership of a selected workspace removes access to it.
 

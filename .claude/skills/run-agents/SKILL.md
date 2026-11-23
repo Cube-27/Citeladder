@@ -40,8 +40,10 @@ GitHub: plain git as the logged-in account, no `GH_TOKEN`, every `gh` call with 
   rule). Schema changes go in through CI's fresh database; an agent never resets or re-creates the shared
   one. Where a schema change goes (a forward migration, or an owner-authorized baseline exception) is
   invariant 17 and `docs/decisions.md`; a task names the exception when one applies.
-- **Production is the owner's.** Resets, deploys, provisioning (`local-env`, "Production accounts") and
-  any prod database session: the agent reports the exact command and the owner runs it.
+- **Production.** Resets and deploys are the owner's. Prod database queries and data updates the owner
+  asks for (credits, the dev@ and Kerry test accounts, `local/ops` scripts) the agent runs itself through
+  the runbook tunnel, read-only unless the ask is an update, without handing the command back (owner,
+  2026-11-23).
 - **Owner words.** Each task quotes the owner verbatim and lists every ask; reference images are copied into
   the run folder and their paths given.
 

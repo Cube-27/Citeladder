@@ -1,15 +1,10 @@
 # CiteLadder plugin
 
-The source package contains public read-only review skills, the
-`prompt-discovery` skill and the existing `https://api.citeladder.com/mcp`
-connection. It requires a connected CiteLadder account, explicit workspace
-consent and existing project measurements. A connection approved with **Allow
-changes** also lists change tools, which `prompt-discovery` needs to follow the
-Prompt builder's steps and generate suggestions for review in CiteLadder. Every
-change needs the user's yes first; a prepared change runs only after the user
-agrees to its preview, and the skills never call `confirm_change` without that
-explicit yes. There
-is no sample mode. The repository marketplace is
+The source package contains three read-only review skills and the existing
+`https://api.citeladder.com/mcp` connection. It requires a connected CiteLadder
+account, explicit workspace consent and existing project measurements. The
+connection is read-only; changes are made in the CiteLadder app. There is no
+sample mode. The repository marketplace is
 `.agents/plugins/marketplace.json`; restart ChatGPT desktop to discover it.
 Portable clients use `mcp.json`. A registered ChatGPT connection binding must
 use its actual app ID; this package deliberately contains no invented ID.

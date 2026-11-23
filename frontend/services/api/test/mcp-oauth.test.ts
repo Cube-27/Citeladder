@@ -560,7 +560,7 @@ it('consumes denial without minting a grant and safely binds untrusted registrat
     scope: mcpPolicy.read_scope,
     token_endpoint_auth_method: 'client_secret_basic',
   });
-  expect((await client()).scope).toBe('citeladder:read citeladder:write');
+  expect((await client()).scope).toBe('citeladder:read');
 });
 
 it('matches loopback redirects on any port and returns later errors to the client', async () => {
@@ -1169,24 +1169,13 @@ async function grantedScope(options: { scope?: string; extra?: Record<string, st
   return { client: c, view, value };
 }
 
-it('grants write only when the client asks and the person ticks Allow changes', async () => {
-  const unticked = await grantedScope({});
-  expect(unticked.view.changes).toMatchObject({ type: 'checkbox', value: 'yes' });
-  expect(unticked.view.changes).not.toHaveProperty('checked');
-  expect(unticked.view.text).toContain(
-    'Your assistant must ask you before each change. Larger changes, such as adding prompts or launching an audit, show you a preview and happen only after you confirm it.',
-  );
-  expect(unticked.value.scope).toBe('citeladder:read');
-
-  const ticked = await grantedScope({ extra: { allow_changes: 'yes' } });
-  expect(ticked.value.scope).toBe('citeladder:read citeladder:write');
-
-  const readOnly = await grantedScope({
-    scope: 'citeladder:read offline_access',
+it('offers no changes and grants read only, even when the client asks and the form claims them', async () => {
+  const asked = await grantedScope({
+    scope: 'citeladder:read citeladder:write',
     extra: { allow_changes: 'yes' },
   });
-  expect(readOnly.view.changes).toBeUndefined();
-  expect(readOnly.value.scope).toBe('citeladder:read');
+  expect(asked.view.changes).toBeUndefined();
+  expect(asked.value.scope).toBe('citeladder:read');
 });
 
 it('never offers changes beyond the scope the client registered', async () => {

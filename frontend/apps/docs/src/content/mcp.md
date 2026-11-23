@@ -1,19 +1,19 @@
 ---
 title: 'Connect with MCP'
-description: "Use CiteLadder's saved evidence in an external AI assistant, and let it make changes you confirm."
+description: "Use CiteLadder's saved evidence in an external AI assistant."
 group: 'Connect with MCP'
 order: 300
 updated: '2026-11-18'
 ---
 
-The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) is an open standard that lets AI assistants use tools from other products. CiteLadder's hosted MCP server lets a compatible assistant read the CiteLadder records your account is authorized to access, so you can investigate a project, review results or prepare a report in the assistant you already use. If you allow it, the assistant can also make changes: it asks you before each one, and larger changes run only after you confirm a preview CiteLadder has checked.
+The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) is an open standard that lets AI assistants use tools from other products. CiteLadder's hosted MCP server lets a compatible assistant read the CiteLadder records your account is authorized to access, so you can investigate a project, review results or prepare a report in the assistant you already use.
 
 The hosted endpoint is `https://api.citeladder.com/mcp`. One address works for every client. The docs subdomain hosts these guides; it is not the protocol server.
 
 ## Connect in three steps
 
 1. **Connect.** Use the **Connect** button in CiteLadder, or add the endpoint as a custom connector in your assistant.
-2. **Sign in and approve.** Sign in to CiteLadder, choose the workspaces the connection may use and decide whether to tick **Allow changes**. There is no API key to copy.
+2. **Sign in and approve.** Sign in to CiteLadder, choose the workspaces the connection may use and approve. There is no API key to copy.
 3. **Ask a question.** For example: "List my CiteLadder projects, then summarize the latest AI visibility results for one of them."
 
 [Connection setup](/mcp/connect/) has the steps for each client.
@@ -26,21 +26,19 @@ The server exposes project discovery, business context, prompts and their metric
 
 Use the [tool reference](/mcp/tools/) for the registered catalog and [example requests](/mcp/examples/) for practical starting points.
 
-## What you can change
+## Changes happen in CiteLadder
 
-With **Allow changes**, in workspaces where you are a Member or above, the assistant can add, rename and delete topics (a deleted topic's prompts stay, without a topic), add and edit prompts, activate, archive or file a selection of prompts under a topic, add and remove competitors, accept or reject suggested competitors, launch and cancel audits, create audit schedules, update an Action's status and declare an Action implemented.
-
-Small edits, such as renaming a topic or removing a competitor, run when the assistant calls them, after it has asked you. Larger changes (adding prompts, changing a selection of prompts, launching an audit, creating a schedule, declaring an Action implemented) work in two steps: the assistant shows you a preview, such as the prompts to be added or the prompt runs an audit can use, and the change happens only after you agree. Added prompts are active at once. [Access](/mcp/access/#changes-and-confirmation) explains the rules.
+The connection is read-only. To add prompts, launch audits, start crawls or update Actions, use the CiteLadder app; the assistant can link you to the right page.
 
 ## How it differs from the Agent
 
-The in-app [Agent](/agent/) works inside a project-pinned chat with saved deliverables and revisions, and it only reads. MCP supplies read access, and confirmed changes if you allow them, to an external client, which controls its own conversation and outputs.
+The in-app [Agent](/agent/) works inside a project-pinned chat with saved deliverables and revisions, and it only reads. MCP supplies read access to an external client, which controls its own conversation and outputs.
 
 The Agent reads evidence through the same catalogue of read tools, limited to its chat's project. MCP does not expose the Agent's skill methodologies, its chats or its saved outputs.
 
 ## What the connection cannot do
 
-MCP cannot make a change you did not allow or confirm. It cannot start a crawl, sync a provider, buy a Keyword research dataset, generate through CiteLadder's Agent runtime, publish content, delete projects or change billing, members or credentials.
+MCP only reads. It cannot change prompts, audits or Actions, start a crawl, sync a provider, buy a Keyword research dataset, generate through CiteLadder's Agent runtime, publish content, delete projects or change billing, members or credentials.
 
 If evidence is stale or unavailable, refresh or acquire it through the appropriate CiteLadder workflow, then ask the client to read again.
 

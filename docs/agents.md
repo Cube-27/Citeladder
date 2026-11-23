@@ -445,7 +445,7 @@ The contract and skills are lean
 rules once, and a skill never restates it. Where a public plugin skill
 mirrors an in-app methodology (`ai-visibility-review` ↔ `ai_visibility`,
 `ai-search-change-review` ↔ `measure`, `technical-seo-triage` ↔
-`technical_health`, `prompt-discovery` ↔ `prompt_discovery`), a methodology
+`technical_health`), a methodology
 change lands in both, adapted to the tools each surface has.
 
 The catalog endpoint projects only each skill's ID, label, group, output kind
@@ -654,10 +654,8 @@ the screen already holds through the
 Prompt discovery ([decision](decisions.md#prompts-and-visibility)) follows the
 Prompt builder's steps and never writes prompt text: in the Agent it saves a
 short `prompt_plan` whose **Open Prompt builder** link (`/prompts/build`) is
-where a person applies it; the Agent gains no write tool. Its public plugin
-twin, `prompt-discovery`, runs the steps for MCP clients through the builder's
-owners ([MCP](mcp.md#changes)). In both, candidates stay staged and only a
-person's Track activates them.
+where a person applies it; the Agent gains no write tool. Candidates stay
+staged and only a person's Track activates them.
 
 ## Worker and funding
 

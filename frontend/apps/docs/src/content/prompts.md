@@ -37,7 +37,7 @@ While the builder suggests topics or writes questions, it shows what it is doing
 
 **Brand prompts** ask about your business directly, so more answers describe you on [Perception](/perception/). Choose up to 10 per run; a project holds at most 30, tracked and waiting for review together. Each one asks one thing about an offering from your topics: whether it is recommended for a need you confirmed, its pros and cons, reasons not to choose it, whether it is worth the price, what reviews say, or how it compares with a competitor you track. A question never states a fact about you, and one that does is dropped. Brand prompts carry the intent **Brand evaluation** in the Prompts filters.
 
-The in-app Agent's prompt discovery skill writes a prompt plan following the same steps and links to the builder; it never writes or activates prompts. An assistant connected over [MCP](/mcp/tools/#make-changes) can run the same steps with your agreement.
+The in-app Agent's prompt discovery skill writes a prompt plan following the same steps and links to the builder; it never writes or activates prompts.
 
 ## Review generated suggestions
 
