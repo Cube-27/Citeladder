@@ -20,7 +20,7 @@ import { ScreenButton, ScreenTabs } from './screen-parts';
 import './screen-vignette.css';
 import './screen-app.css';
 
-export type PageActions = 'launch' | 'crawl' | 'analysis';
+type PageActions = 'launch' | 'crawl' | 'analysis';
 
 export type AppPageHead = Readonly<{
   title: string;
@@ -122,7 +122,7 @@ function NavRow({
   );
 }
 
-export function ScreenSidebar({
+function ScreenSidebar({
   active,
   mode = 'Dashboard',
 }: Readonly<{ active?: NavLabel; mode?: 'Dashboard' | 'Agent' }>) {
@@ -189,7 +189,7 @@ export function ScreenAppPage({
   );
 }
 
-export function ScreenMenuButton({ children }: Readonly<{ children: ReactNode }>) {
+function ScreenMenuButton({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <ScreenButton>
       {children}
@@ -236,7 +236,7 @@ function HeaderActions({ actions }: Readonly<{ actions: PageActions }>) {
   }
 }
 
-export function ScreenPageHeader({
+function ScreenPageHeader({
   title,
   actions,
   mode = 'Dashboard',

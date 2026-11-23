@@ -10,19 +10,17 @@ export function ProductFrame({
   children,
   label,
   fit = 'fluid',
-  hero = false,
   title,
   caption,
 }: Readonly<{
   children: ReactNode;
   label?: string;
   fit?: FrameFit;
-  hero?: boolean;
   title?: ReactNode;
   caption?: ReactNode;
 }>) {
   return (
-    <figure className={cn('cl-frame', `cl-frame--${fit}`, hero && 'cl-frame--hero')}>
+    <figure className={cn('cl-frame', `cl-frame--${fit}`)}>
       <div className="cl-frame-card">
         <div // NOSONAR
           className="cl-frame-well"

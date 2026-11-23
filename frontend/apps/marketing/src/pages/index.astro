@@ -13,7 +13,9 @@ const page = PAGES.home;
 </MarketingLayout>
 
 <script>
+  import { mountHeroVideo } from '@/components/marketing/landing/hero-video-mount';
   import { mountCardRail } from '@/components/marketing/sections/card-rail';
 
   document.querySelectorAll<HTMLElement>('[data-card-rail]').forEach(mountCardRail);
+  document.querySelectorAll<HTMLElement>('[data-hero-video]').forEach(mountHeroVideo);
 </script>

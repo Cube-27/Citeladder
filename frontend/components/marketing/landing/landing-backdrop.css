@@ -3,13 +3,3 @@
     margin-top: 120px;
   }
 }
-
-.cl-lhero .cl-lhero-frame {
-  max-height: 760px;
-  overflow: hidden;
-  mask-image: linear-gradient(currentcolor 76%, transparent);
-}
-
-.cl-lhero .cl-frame--hero > .cl-frame-card {
-  padding: 0;
-}

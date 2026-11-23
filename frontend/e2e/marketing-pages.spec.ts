@@ -476,7 +476,7 @@ test.describe('marketing routes', () => {
         const frames = page.locator('main .cl-frame:not([data-card-rail-track] .cl-frame)');
         await expect(frames.first()).toBeVisible();
         const widest = await page
-          .locator('main :is(.cl-frame, [data-card-rail-track])')
+          .locator('main :is(.cl-frame, .cl-hero-video, [data-card-rail-track])')
           .evaluateAll((elements) =>
             Math.max(
               ...elements
@@ -493,10 +493,7 @@ test.describe('marketing routes', () => {
     }
 
     await page.setViewportSize({ width: 390, height: 900 });
-    for (const { path, part } of [
-      { path: '/', part: '.cl-app-side' },
-      { path: '/platform', part: '.cl-screen-cols > :nth-child(2)' },
-    ]) {
+    for (const { path, part } of [{ path: '/platform', part: '.cl-screen-cols > :nth-child(2)' }]) {
       await page.goto(path);
       const screen = page.locator('main .cl-frame--scale .cl-screen').first();
       await expect(screen.locator(part).first()).toBeVisible();
