@@ -1,6 +1,9 @@
-.cl-phero,
 .cl-lhero {
   padding-top: 64px;
+}
+
+.cl-phero {
+  padding-top: 80px;
 }
 
 .cl-phero-inner,
@@ -21,7 +24,7 @@
 
 @media (min-width: 1024px) {
   .cl-lhero,
-  .cl-phero:not(.cl-phero--split) {
+  .cl-phero {
     padding-top: 128px;
   }
 
