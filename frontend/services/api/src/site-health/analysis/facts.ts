@@ -599,7 +599,10 @@ export function extractPageFacts(
     ...facts,
     extractor_version: policy.site_health.versions.extractor,
     content_type: contentType,
-    delivery: deliveryFacts(delivery, headers),
+    delivery: deliveryFacts(
+      { ...delivery, decodedBytes: delivery.decodedBytes ?? body.length },
+      headers,
+    ),
     robots: mergeRobotsHeader(facts.robots, headers['x-robots-tag'] ?? ''),
   };
 }

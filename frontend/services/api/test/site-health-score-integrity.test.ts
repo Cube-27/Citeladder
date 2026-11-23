@@ -8,7 +8,12 @@ import { scoreAnalysis } from '../src/site-health/analysis/scoring.ts';
 
 const context = { sitemapMember: false, siteFacts: null, auditTime: null };
 const facts = (html: string, url: string) =>
-  extractPageFacts(Buffer.from(html), { finalUrl: url, contentType: 'text/html', statusCode: 200 });
+  extractPageFacts(Buffer.from(html), {
+    finalUrl: url,
+    contentType: 'text/html',
+    statusCode: 200,
+    ttfbMs: 120,
+  });
 const byRule = (rows: RuleEvaluation[]) => new Map(rows.map((row) => [row.rule_id, row]));
 
 describe('a full score needs every applicable check evaluated and passed', () => {
@@ -68,9 +73,9 @@ describe('a full score needs every applicable check evaluated and passed', () =>
     });
     const score = (page: typeof none) => page.scores.aeo_readiness_score!;
     expect([none, partial, complete].map((page) => score(page).toFixed(2))).toEqual([
-      '55.00',
-      '60.71',
-      '65.48',
+      '52.78',
+      '58.33',
+      '62.50',
     ]);
     expect(
       complete.scores.expected_checkpoint_profile
