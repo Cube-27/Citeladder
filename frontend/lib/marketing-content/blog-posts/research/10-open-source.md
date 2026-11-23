@@ -153,7 +153,7 @@ Some notes for choosing:
 - **Licence differs.** MIT and Apache-2.0 place no network-source obligation on you. GPL-3.0 and AGPL-3.0 do, in different ways, when you modify and distribute or serve the code. See the section above.
 - **Scope differs.** Most projects are answer trackers. CiteLadder also crawls your site for AI readiness, keeps a ranked Actions list and exposes read and change tools over MCP.
 
-For closed, commercial tools, see the comparison of [AI visibility platforms](/best-ai-visibility-platforms). If you came here because a vendor changed its plans, the guide to [Profound alternatives](/compare/profound-alternatives) covers the open-source option alongside the hosted ones.
+For a feature and technology comparison of OpenSEO, Elmo, CiteLadder and Ansvisor, read the [open-source AEO platform comparison](/blog/best-open-source-aeo-platforms). For closed, commercial tools, see the comparison of [AI visibility platforms](/best-ai-visibility-platforms). If you came here because a vendor changed its plans, the guide to [Profound alternatives](/compare/profound-alternatives) covers the open-source option alongside the hosted ones.
 
 ## What self-hosting does not solve
 
