@@ -2,6 +2,7 @@ import type { FaqItem } from './faq';
 
 export type PlatformScreen =
   | 'visibility'
+  | 'trend'
   | 'prompts'
   | 'engines'
   | 'answer'

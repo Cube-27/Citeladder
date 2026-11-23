@@ -144,23 +144,23 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/ai-visibility',
-    updated: '2026-11-18',
+    updated: '2026-11-23',
     title: 'AI Visibility Tracking & Brand Monitoring | CiteLadder',
     description:
       'Track brand mentions, position, sentiment and competitors across ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode, with every result tied to its recorded answer.',
     heading: 'See how often AI recommends you',
     lead: 'Track how often AI answers recommend you, and how you compare with your competitors.',
     cta: 'trial',
-    screen: 'visibility',
+    screen: 'trend',
     note: TRIAL_NOTE,
     highlights: [
       {
         title: 'Prompts sorted by buyer stage',
-        body: 'Group prompts by topic, buyer stage and intent. Branded and unbranded questions are tracked apart.',
+        body: 'Group prompts by topic, buyer stage and intent.',
       },
       {
         title: 'Competitors side by side',
-        body: 'Visibility, average position, share of voice, win rate and sentiment for you and every brand you track, with a page for each competitor.',
+        body: 'Visibility, position, share of voice, win rate and sentiment for you and every brand you track.',
       },
       {
         title: 'The answer behind every score',
@@ -170,53 +170,47 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Start from the questions your buyers ask',
-        body: 'The Prompt builder suggests short buyer questions from your offerings, your topics and the mix you choose, across awareness, consideration and decision. Each suggestion passes a quality check before you see it. If Search Console or keyword research is connected, suggestions follow the way your buyers already search. You can also import a CSV or write your own. Nothing is tracked until you accept it.',
+        body: 'The Prompt builder suggests short buyer questions from your offerings and topics. You can also import a CSV or write your own. Nothing is tracked until you accept it.',
         points: [
           'Suggestions grouped by topic and buyer stage',
           'Unbranded discovery prompts never name you or a competitor',
           'Branded and comparison prompts tracked separately',
-          'Accept or reject suggestions in bulk',
         ],
         media: { kind: 'full', screen: 'prompts' },
       },
       {
         title: 'Run the same prompts on every engine',
-        body: 'Send one set of prompts to ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode and compare how each treats your brand. Answers vary, so you can repeat each prompt several times in a run. Schedule runs so this month compares cleanly with last month.',
+        body: 'Send one set of prompts to ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode. Repeat each prompt in a run and schedule runs to compare month to month.',
         points: [
           'Consumer answers and model APIs, labeled by surface',
           'Repetitions per prompt to measure consistency',
           'One-off, hourly, daily or weekly schedules',
-          'Metrics state how many answers they are based on',
         ],
         media: { kind: 'split', screen: 'engines' },
       },
       {
         title: 'Read the answer behind the trend',
-        body: 'Open any result to see whether your brand was mentioned, where it ranked among the brands named and whether your own pages were cited. When an engine exposes the searches it ran, query fan-out lists them. When it does not, the field says unavailable.',
+        body: 'Open any result to see whether you were mentioned, where you ranked and whether your pages were cited.',
         points: [
           'Mention, position and citation per answer',
-          'Engine and collection date on every record',
           'Query fan-out where the engine returns it',
-          'Every past answer to a prompt on the prompt’s own page',
           'Missing data shown as missing, never zero',
         ],
         media: { kind: 'split', screen: 'answer' },
       },
       {
         title: 'Know how answers describe you',
-        body: 'Perception classifies each answer’s sentiment toward you and your competitors, groups what it says into themes like pricing, quality and support, and keeps the quotes that support each theme. Recommended rate counts the answers that recommend you, shown beside the rate that names you.',
+        body: 'Perception classifies each answer’s sentiment toward you and your competitors and groups what it says into themes like pricing, quality and support, with the quotes behind each theme.',
         points: [
           'Net sentiment from −100 to +100, with classified counts',
           'Positive and negative themes with verbatim quotes',
-          'Sentiment by theme, topic, engine and prompt',
-          'Sources cited beside criticism',
           'Included with visibility tracking, no extra credits',
         ],
         media: { kind: 'split', screen: 'perception' },
       },
       {
         title: 'See who is paying to appear beside your prompts',
-        body: 'ChatGPT Search can show sponsored placements next to an answer. CiteLadder records them apart from citations: which advertisers appear, on which prompts, and how often. Ads never count as citations or change your visibility scores.',
+        body: 'CiteLadder records sponsored placements in ChatGPT Search apart from citations: which advertisers appear, on which prompts, and how often.',
         points: [
           'Ad presence across your tracked prompts',
           'Advertisers, appearances and share',
@@ -228,19 +222,19 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     steps: [
       {
         title: 'Choose your competitors',
-        body: 'Confirm the brands you want to compare against. Each one has its own rules for what counts as a mention.',
+        body: 'Confirm the brands you want to compare against.',
       },
       {
         title: 'Build the portfolio',
-        body: 'Accept suggested prompts or bring your own, organized into topics that keep large portfolios readable.',
+        body: 'Accept suggested prompts or bring your own, organized into topics.',
       },
       {
         title: 'Run on a schedule',
-        body: 'Collect answers across your engines with repetitions, once or on a recurring schedule.',
+        body: 'Collect answers across your engines, once or on a recurring schedule.',
       },
       {
         title: 'Read and act',
-        body: 'Follow trends, open the answers behind them, and send what you find to Actions and the Agent.',
+        body: 'Follow trends, open the answers behind them, and send findings to Actions and the Agent.',
       },
     ],
     questions: [

@@ -113,7 +113,7 @@ export function EngineStrip({
       <ul className="cl-engines-list" aria-label={label}>
         {engines.map((engine) => (
           <li key={engine} className="cl-engine">
-            <EngineMark engine={markOf(engine)} />
+            <EngineMark engine={markOf(engine)} brand />
             <span>{names[engine] ?? ENGINE_NAMES[engine]}</span>
           </li>
         ))}

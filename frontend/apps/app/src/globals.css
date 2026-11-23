@@ -108,6 +108,9 @@
   --color-brand-google-green: oklch(64.8% 0.1603 148.5);
   --color-brand-google-yellow: oklch(83.04% 0.1698 84);
   --color-brand-google-red: oklch(62.6% 0.206 29);
+  --color-brand-chatgpt: #10a37f;
+  --color-brand-claude: #d97757;
+  --color-brand-gemini: #4796e3;
 
   --text-*: initial;
   --text-display-lg: 2rem;
