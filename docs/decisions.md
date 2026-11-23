@@ -14,14 +14,16 @@ how to add or change an entry.
   reset or an edited applied file; [invariant 17](invariants.md#17-schema-changes-are-forward-migrations)
   has the mechanics; production is never reset for a schema change. Owner,
   2026-11-04. While there are no customers the owner may authorize a baseline
-  refold, deployed only after the owner's own reset of every database. Four
+  refold, deployed only after the owner's own reset of every database. Five
   refolded `0001_baseline.sql` in place: 0001–0049 (owner, 2026-11-17),
   `0002_ai_visibility_gaps` with its existing-data branches removed (owner,
   2026-11-19), the Agent-plan and perception changes of November 2026,
   `0002_agent_hero` and `0003_perception_categories`, because they change every
-  feature (owner, 2026-11-22), and the MCP write removal and baseline audit
-  fixes (owner, 2026-11-23). Forward migrations from `0002` apply again after
-  each. A reset is owner-run, never agent-run.
+  feature (owner, 2026-11-22), the MCP write removal and baseline audit fixes
+  (owner, 2026-11-23), and the research-evidence drop
+  (`0002_drop_research_evidence`) with the Site Health advisory removal, which
+  takes `finding_class` off `site_issues` and `site_issue_catalogs` (owner,
+  2026-11-23). Forward migrations from `0002` apply again after each. A reset is owner-run, never agent-run.
 - **An app route change deletes the old route.** The signed-in app keeps no
   redirect, alias, tab-key remap or URL rewrite for a renamed or removed path or
   tab: an unknown path gets the not-found page, an unknown tab the page's
@@ -220,8 +222,8 @@ how to add or change an entry.
 
 - **Crawler parity checks stay deterministic** on evidence the crawl already
   fetches; headless rendering and external-link checks stay out. Title and meta
-  length, thin content and long paragraphs are advisories (config thresholds,
-  never scored). Applebot joins both crawler-access checks, Applebot-Extended the
+  length, thin content and long paragraphs are scored Low checks (config
+  thresholds). Applebot joins both crawler-access checks, Applebot-Extended the
   AI-crawler check. Owner, 2026-10-17 and 2026-11-18.
 - **User-visible text says "issues", never "defects"** (`finding_class` keeps the
   value `defect`). "Pages buried too deeply" is unknown unless crawl coverage is
@@ -229,6 +231,11 @@ how to add or change an entry.
 - **A score is 100 only when every applicable check was evaluated and passed.**
   A check that never ran (unknown, or not applicable only because an expected
   thing is absent) never lifts a page or snapshot score. Owner, 2026-11-23.
+- **Every check is scored; advisory is not a class.** Every page and site-root
+  check counts toward Web fundamentals or AEO readiness with a High, Medium or
+  Low severity; crawl-wide findings keep a severity outside page scores, and
+  diagnostics stay readings. Score cards and page scores say "N of M checks run"
+  instead of "Limited evidence". Owner, 2026-11-23.
 - **Site Health always opens on Pages**, never switching tab on its own. Owner,
   2026-11-02.
 - **Browser Site Health reads carry no provenance id lists**; the rows keep them
@@ -255,8 +262,8 @@ how to add or change an entry.
   and answers to tracked prompts. Every page in the URLs Gap filter is an Action.
   An Action opens as a page, never a drawer. Owner, 2026-11-10 and 2026-11-16
   ([Opportunities](opportunities.md)).
-- **Actions group Issues (IA1).** Each Site Health defect or advisory rule is one
-  Action per Issues group, filed by its Issues section; no per-page finding
+- **Actions group Issues (IA1).** Each Site Health issue rule is one Action per
+  Issues group, filed by its Issues section; no per-page finding
   becomes an Action; the Issues page is unchanged. Owner, 2026-11-16.
 - **Action statuses: New, In progress, Done, Declined.** Accept or Work with Agent
   moves to In progress, Mark implemented to Done (the declaration), and a chat

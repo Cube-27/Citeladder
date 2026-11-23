@@ -293,7 +293,7 @@ a fresh scope before work starts.
 | AI answer ads in exports | Add ad observations to audit exports (`src/audits/exports.ts`) with the parser version when exports next change. |
 | Enterprise SSO and SCIM | Deferred until an enterprise customer asks (BL7). WorkOS (D9.1), through a `src/auth/workos.ts` adapter; `sso_connections` with verified domains and `enforce`; SCIM membership create, removal and role; an `sso` entitlement and a security event for every change. D9.2 (which plan carries it) is open. Costs $125 per connection per month each for SSO and Directory Sync. |
 | Domain verification and authorized crawl | Deferred with SSO (BL7): DNS TXT, file or meta verification with append-only receipts, re-verification and revocation, and live authorization checks before robots-excluded requests. The shipped ignore-robots option (BL6) does not depend on it. |
-| Prompt generation extras | Advisory Site Health semantic-quality observations, competitor-candidate cleanup and a stable-core/experimental portfolio split. |
+| Prompt generation extras | Site Health semantic-quality observations, competitor-candidate cleanup and a stable-core/experimental portfolio split. |
 | Internal links | A separate judgment-policy version, normalized recommendation rows and catalog-based product variants, only if real runs justify them. |
 | Funded billing | Managed AI checkout, funded prices and a scheduled-coverage reserve. Current payment launch scope is BYOK. |
 | Ask agent in the drawer | Ask agent on Dashboard screens opens the Agent drawer with a fresh draft instead of the full-page handoff, closing any open overlay first; pending an owner decision since 2026-11-12. |

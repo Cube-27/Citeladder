@@ -111,8 +111,8 @@ and one, and size counts in multiples of the materiality floor, capped.
 
 Site Health owns acquisition and deterministic findings, and its
 [Issues](site-health.md) catalog, Mark fixed, Re-run all and fix progress. The
-crawl family promotes one `site_issue_family` finding per Issues group of every
-defect and advisory rule, never a diagnostic and never per page
+crawl family promotes one `site_issue_family` finding per Issues group (one per
+rule; diagnostics never raise issues), never per page
 ([IA1](decisions.md#actions-and-content)), plus contextual links and page
 changes. A site-level rule's group holds the URLs its evidence names; a
 site-level check reads that rule's evaluation and finding in the next

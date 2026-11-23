@@ -492,8 +492,8 @@ snippet per issue family per crawl: the first affected page in URL order (then
 issue id) whose facts carry one, with its page URL and exact issue and artifact
 IDs. Only `web.accessibility_form_names` captures one today. No UI read serves
 it; the Agent's `read_site_pages` returns it as `reference_snippet` when given
-that rule, and an issue group's Action context carries it. Each defect and
-advisory Issues group is also one Action; the Issues page is unchanged
+that rule, and an issue group's Action context carries it. Each Issues group (one per rule) is also one Action; the Issues page is
+unchanged
 ([IA1](decisions.md#actions-and-content)).
 
 Facts distinguish an available extraction from parse failure, unsupported
@@ -586,11 +586,21 @@ failures into `unknown`:
 ## Checks and scoring
 
 `config/site-health/rules.json` is the catalog. Each rule has a scope (`page`,
-`site`, `cluster`, `graph`), `applicability_key`, `finding_class` (`defect`,
-`advisory`, `diagnostic`), severity, `score_roles`, remediation and an optional
-composite contract. Pillars come from `reads.json` `aeo_check_pillar`.
-`validation.ts` requires every `aeo_readiness` rule, and only those, to have
-exactly one pillar, and forbids `diagnostic` scored rules.
+`site`, `cluster`, `graph`), `applicability_key`, `finding_class` (`defect` or
+`diagnostic`), severity (High, Medium, Low; `critical` only for
+`technical.indexable`), `score_roles`, remediation and an optional composite
+contract. Pillars come from `reads.json` `aeo_check_pillar`. `validation.ts`
+requires every `aeo_readiness` rule, and only those, to have exactly one
+pillar; forbids scored diagnostics; and requires a score role on every defect
+whose scope is `page` or `site` and that is not `crawl_finalize` (owner,
+2026-11-23: there are no advisory or unscored page checks). Crawl-finalize
+findings (graph, cluster, sitewide and sitemap rules, and the availability
+issues) keep their severity and stay out of page scores: architecture findings
+are filed once on the homepage and most need complete coverage, so scoring them
+per page would multiply one finding by the page count and cap every
+plan-limited crawl. `technical.canonical_integrity` is the one scored
+crawl-finalize rule. Diagnostics (`technical.hsts_present`,
+`technical.ttfb_band`, `aeo.llms_txt_present`) never raise an issue or score.
 
 Outcome normalization:
 
@@ -605,12 +615,13 @@ Outcome normalization:
   detects it; its content checks read `unknown`.
 - A throwing or unmapped check is `error`.
 
-`missing` or `partial` on a visible, non-diagnostic evaluation creates an issue,
-whether or not the check is scored. Severity orders issues; `weight` is
-provenance only.
+`missing` or `partial` on a visible, non-diagnostic evaluation creates an issue.
+Severity orders issues and never weights a score; `weight` is provenance only.
+Issues, issue groups, catalogs and Actions carry no class: a group is one rule
+(`issueGroupId(crawl, rule)`), and the issues route refuses unknown query
+parameters, so a `finding_class` filter is a validation error.
 
-Which checks are scored, their roles and finding classes are in `rules.json`;
-pillar weights (`readiness_dimension_weights`, summing to 1) are in
+Which checks are scored and their roles are in `rules.json`; pillar weights (`readiness_dimension_weights`, summing to 1) are in
 `reads.json`.
 
 **Site checks** run on the crawl root and score on every page. Finalization
@@ -633,19 +644,19 @@ unreadable one with no observed block is `unknown` (`robots_unreadable`). Check 
 each bot's `checks` array:
 
 - `search.crawler_access` (scored) covers the search bots;
-  `technical.ai_crawler_access` (unscored defect) adds the training and
-  user-fetch bots. Blocking only those is visible but does not move a score.
+  `technical.ai_crawler_access` (Low, web fundamentals) adds the training and
+  user-fetch bots.
 
-**Sitemap and redirect page checks** (`analysis/indexing.ts`, unscored).
+**Sitemap and redirect page checks** (`analysis/indexing.ts`, web fundamentals).
 `technical.sitemap_redirect` fails when the URL the sitemap lists and
 the URL the crawler reached differ in identity form (`canonicalUrl`, so query
 order and tracking keys are not a redirect); `technical.sitemap_canonical` then
-judges the reached page's canonical. `technical.sitemap_noindex`, an advisory,
-fails a listed page that carries noindex. The noindex itself stays the site's
+judges the reached page's canonical. `technical.sitemap_noindex` (Low) fails a
+listed page that carries noindex. The noindex itself stays the site's
 choice: sitemap membership is not indexing intent (Shopify lists every
 collection), so `technical.indexable` is not applicable there, and the snapshot
 gate counts that page, like a 404 or 410, as excluded. The listing is sitemap
-hygiene that hides nothing from search, so it is advice, not an issue.
+hygiene that hides nothing from search, so its severity is Low.
 
 **Crawl-finalize checks** (`lifecycle-finalize.ts`) evaluate canonical
 integrity, internal-link targets, internal links to redirects, duplicate
@@ -671,7 +682,7 @@ alone (`target_analyzed: false`).
 of them, link it: template navigation, header and footer links. A broken or
 redirecting sitewide target is one fix, so it is judged once, on the crawl
 root, by `technical.sitewide_broken_link` or `technical.sitewide_link_redirect`
-(site scope, unscored defects). Their evidence names each failing target, where
+(site scope, crawl-finalize, unscored). Their evidence names each failing target, where
 it lands, how many pages link it and a sample of those pages (with their
 artifact IDs), plus the target's resolution source IDs; the Issues group counts
 the distinct linking pages, and the rail lists the targets. With no failing
@@ -689,7 +700,7 @@ after terminalization and file one finding against the homepage, naming the
 pages they found. `architecture.orphan_pages` names pages no analyzed page
 links. `architecture.unreachable_from_home` names pages that have inbound links
 but no followed path from the homepage (a section linked only from itself);
-true orphans never repeat there. Both are unscored defects, need complete
+true orphans never repeat there. Both are crawl-finalize findings, need complete
 coverage, and without an observed homepage the unreachable rule is `unknown`
 (`homepage_not_observed`).
 
@@ -713,7 +724,13 @@ A score reaches 100 only when every applicable check ran and passed: an
 `unknown` scored check earns nothing but stays `unknown` in its outcome and
 measurement state. An expected schema type that is absent fails
 `aeo.schema_required_valid` (`expected_schema_absent`) rather than leaving the
-property checks `not_applicable`.
+property checks `not_applicable`. A page with no structured data at all also
+fails `aeo.structured_data_present`; both count, so no schema scores below a
+schema of the wrong type, which scores below the expected one. The length checks
+stay `not_applicable` on an empty title or description, which the matching
+presence check already fails. Score cards and page scores show the checks that
+ran as "N of M checks run" (`web_fundamentals_checks`, `aeo_readiness_checks`);
+`limited_evidence` stays the stored state.
 
 These formulas are in `analysis/scoring.ts`.
 
