@@ -349,7 +349,17 @@ export class AcquisitionState {
           .execute();
         saved += Number(inserted?.numInsertedOrUpdatedRows ?? 0n);
       }
-      const page = publishedPage({ dataset, normalized, plan, later, saved, callId: call.id, at });
+      const dropped = normalized.rows.length - rows.length;
+      const page = publishedPage({
+        dataset,
+        normalized,
+        plan,
+        later,
+        saved,
+        dropped,
+        callId: call.id,
+        at,
+      });
       const { finished } = page;
       await trx
         .updateTable('search_intelligence_datasets')

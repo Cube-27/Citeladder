@@ -40,9 +40,13 @@ function selectionHash(parentId: string, auditIds: string[], citationIds: string
   );
 }
 
-function matchCoverage(parent: { coverage: string; truncated: boolean }, matches: number) {
+function matchCoverage(
+  parent: { coverage: string; truncated: boolean },
+  matches: number,
+  dropped: number,
+) {
   if (parent.coverage === 'unknown') return 'unknown';
-  if (parent.truncated || parent.coverage === 'partial') return 'partial';
+  if (parent.truncated || parent.coverage === 'partial' || dropped > 0) return 'partial';
   return matches > 0 ? 'complete' : 'empty';
 }
 
@@ -104,12 +108,11 @@ export function deriveCitationMatches(
         .execute(),
     ]);
     const linkingDomains = new Set(linking.map((row) => normalizeDomain(row.domain)));
-    const matches = citations.flatMap((citation) => {
+    const linked = citations.flatMap((citation) => {
       const domain = normalizeDomain(citation.domain || citedUrl(citation));
-      return linkingDomains.has(domain) && fitsIndexKey(citedUrl(citation))
-        ? [{ citation, domain }]
-        : [];
+      return linkingDomains.has(domain) ? [{ citation, domain }] : [];
     });
+    const matches = linked.filter(({ citation }) => fitsIndexKey(citedUrl(citation)));
 
     const citationIds = citations.map((citation) => citation.id).sort(compareText);
     const scopeHash = selectionHash(parent.id, selected, citationIds);
@@ -141,7 +144,7 @@ export function deriveCitationMatches(
         location_code: null,
         language_code: '',
         status: 'published',
-        coverage: matchCoverage(parent, matches.length),
+        coverage: matchCoverage(parent, matches.length, linked.length - matches.length),
         requested_rows: citations.length,
         raw_rows_received: citations.length,
         unique_rows_saved: matches.length,
