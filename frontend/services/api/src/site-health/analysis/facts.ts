@@ -25,9 +25,16 @@ import {
   orderedListSteps,
 } from './content-facts.ts';
 import { emptyEntityFacts, entityFacts } from './entity-facts.ts';
-import { analysisPolicy, limits, squash } from './policy.ts';
+import { serverRenderSignals } from './delivery-checks.ts';
+import { analysisPolicy, limits, squash, words } from './policy.ts';
 import { mergeRobotsHeader, robotsMeta } from './robots-directives.ts';
-import { elementRegion, nodeIsRendered, pageScope, regionNodeIsVisible } from './regions.ts';
+import {
+  elementRegion,
+  nodeIsRendered,
+  pageScope,
+  regionNodeIsVisible,
+  regionText,
+} from './regions.ts';
 import { emptySourceSupport, sameSite, sourceSupportFacts } from './source-support.ts';
 import { structuredDataFacts as structuredData } from './structured-data.ts';
 import { widen } from '../../widen.ts';
@@ -441,6 +448,7 @@ function emptyFacts() {
     ...emptyContentFacts(),
     source_support: emptySourceSupport(),
     inline_script_chars: 0,
+    main_word_count: 0,
     client_redirect: {
       meta_refresh_url: '',
       meta_refresh_seconds: widen<number | null>(null),
@@ -526,16 +534,14 @@ function extractDocument(
     ...contentFacts(page),
     source_support: sourceSupportFacts(page),
     inline_script_chars: inlineScriptChars(root),
+    main_word_count: words(regionText(page.region)).length,
     client_redirect: clientRedirect(root, finalUrl, page.baseUrl),
     blocking_resources: blockingResources(root, links.stylesheets.length),
     body: bodyText(root, settings.maxTextChars),
     ...authorshipFacts(page, sd.blocks, articleMeta, metaContent(root, 'author'), modifiedMeta),
     commerce: commerceFacts(page),
   };
-  const shell =
-    facts.body.word_count < f.server_rendered_min_words &&
-    facts.inline_script_chars > facts.body.text.length;
-  return shell ? clearPageOwned(facts, 'client_rendering_required') : facts;
+  return serverRenderSignals(facts)[0] ? clearPageOwned(facts, 'client_rendering_required') : facts;
 }
 
 function deliveryFacts(delivery: Delivery, headers: Record<string, string>) {

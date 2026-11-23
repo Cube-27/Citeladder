@@ -66,6 +66,35 @@ describe('page checklist', () => {
     expect(readable.get('aeo.server_rendered_content')?.outcome).toBe('satisfied');
   });
 
+  it('treats chrome-only pages that load content from external bundles as unrendered, not as defects', () => {
+    const links = Array.from({ length: 40 }, (_, i) => `<a href="/c/${i}">Dept ${i} sale</a>`);
+    const chrome = (main: string) =>
+      analyzePage(
+        facts(
+          `<!doctype html><html><head><title></title></head><body>
+          <header><nav>${links.slice(0, 20).join('')}</nav></header>
+          <main>${main}</main>
+          <footer>${links.slice(20).join('')}<h2>Join our</h2></footer>
+          <script src="/main.js" type="module"></script></body></html>`,
+          'https://example.test/store/Capalaba',
+        ),
+        context,
+      );
+    const shell = byRule(chrome('').evaluations);
+    expect(
+      ['technical.title_present', 'technical.h1_present', 'technical.meta_description_present'].map(
+        (id) => [shell.get(id)?.outcome, shell.get(id)?.reason_code],
+      ),
+    ).toEqual(Array(3).fill(['unknown', 'client_rendering_required']));
+    expect(shell.get('aeo.server_rendered_content')?.outcome).toBe('missing');
+
+    const thin = byRule(chrome('<h1>Capalaba</h1><p>Open today 9am</p>').evaluations);
+    expect([
+      thin.get('aeo.server_rendered_content')?.outcome,
+      thin.get('technical.title_present')?.outcome,
+    ]).toEqual(['satisfied', 'missing']);
+  });
+
   it('keeps blog archives separate from authored articles and product categories', () => {
     const cards = Array.from(
       { length: 9 },

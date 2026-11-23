@@ -9,17 +9,21 @@ const SOFT_ERROR_PHRASES = ['page not found', '404 not found', 'does not exist']
 export const passFail = (condition: boolean) => (condition ? 'satisfied' : 'missing');
 
 export function serverRenderSignals(facts: Facts): [boolean, Record<string, unknown>] {
-  const body = record(facts.body);
-  const words = count(body.word_count);
-  const chars = text(body.text).length;
-  const scripts = count(facts.inline_script_chars);
+  const words = count(facts.main_word_count);
+  const h1Count = count(record(facts.headings).h1_count);
+  const inlineScriptChars = count(facts.inline_script_chars);
+  const externalScripts = list(record(facts.links).scripts).length;
   return [
-    words < SERVER_RENDERED_MIN_WORDS && scripts > chars,
+    (inlineScriptChars > 0 || externalScripts > 0) &&
+      h1Count === 0 &&
+      words < SERVER_RENDERED_MIN_WORDS,
     {
       word_count: words,
       minimum_words: SERVER_RENDERED_MIN_WORDS,
-      body_text_chars: chars,
-      inline_script_chars: scripts,
+      body_word_count: count(record(facts.body).word_count),
+      h1_count: h1Count,
+      inline_script_chars: inlineScriptChars,
+      external_scripts: externalScripts,
     },
   ];
 }

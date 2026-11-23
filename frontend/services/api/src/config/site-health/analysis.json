@@ -628,7 +628,6 @@
         "crawlability"
       ],
       "structural_na_reasons": [
-        "content_not_server_rendered",
         "crawl_finalize_scope",
         "empty_meta_description",
         "empty_title",
@@ -675,7 +674,8 @@
         "audit_time_unavailable",
         "content_date_in_future",
         "content_date_unparseable",
-        "body_text_truncated"
+        "body_text_truncated",
+        "client_rendering_required"
       ],
       "content_recency_max_age_days": 365,
       "content_recency_future_tolerance_days": 2,
