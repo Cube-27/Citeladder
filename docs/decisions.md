@@ -226,6 +226,9 @@ how to add or change an entry.
 - **User-visible text says "issues", never "defects"** (`finding_class` keeps the
   value `defect`). "Pages buried too deeply" is unknown unless crawl coverage is
   complete. Owner, 2026-11-01.
+- **A score is 100 only when every applicable check was evaluated and passed.**
+  A check that never ran (unknown, or not applicable only because an expected
+  thing is absent) never lifts a page or snapshot score. Owner, 2026-11-23.
 - **Site Health always opens on Pages**, never switching tab on its own. Owner,
   2026-11-02.
 - **Browser Site Health reads carry no provenance id lists**; the rows keep them
