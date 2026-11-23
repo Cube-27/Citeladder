@@ -200,7 +200,8 @@ One entry per family; wave 2 fills each from the layouts above.
   floor, so no gap opens between columns. When the floors do not fit, `low`
   columns hide, the last first; below that the table scrolls with the first
   column pinned. Every row is one line; secondary text follows the primary
-  inline (`TableCellLines`). The foot band sits inside the frame.
+  inline (`TableCellLines`). Below 768px no column is sticky and cell text
+  wraps instead of truncating (`table-phone.css`). The foot band sits inside the frame.
 - **Metric strip** (`FigureStrip`). Cells share a row equally and wrap into
   rows of equal cells; each cell draws its dividers on its start and top
   edge and the frame clips the outer ones, so a wrapped strip never doubles

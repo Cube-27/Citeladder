@@ -43,12 +43,14 @@ export function ClampText({
   tooltip,
   className,
   rowTitle = false,
+  phoneWrap = false,
 }: Readonly<{
   children: ReactNode;
   lines?: 1 | 2;
   tooltip?: ReactNode;
   className?: string;
   rowTitle?: boolean;
+  phoneWrap?: boolean;
 }>) {
   const ref = useRef<HTMLSpanElement>(null);
   const cut = useCut(ref);
@@ -69,6 +71,7 @@ export function ClampText({
         className={cn(
           'block min-w-0',
           lines === 1 ? 'truncate' : 'line-clamp-2',
+          phoneWrap && 'phone:whitespace-normal phone:break-words',
           cut && 'rounded-mark',
           className,
         )}

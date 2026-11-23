@@ -293,7 +293,9 @@ how to add or change an entry.
   radius, compact controls (2026-11-22). **AR-2 Text:** body and labels 14px, captions 12px, controls 32px and the page header 48px (owner, 2026-11-22).
 - **AR-3 Metrics** sit in one strip with hairline dividers, never cards, with no
   meters, rings or bars in a cell. **AR-4 Tables:** the first column takes the
-  spare width and the others hug their content.
+  spare width and the others hug their content. On a phone a wide table
+  scrolls sideways with no sticky column, and truncated or overlapping text is
+  the defect to fix first (2026-11-23).
 - **AR-5** The line language (solid observed, dashed draft, `—` absent, printed
   `0`) and the accent meaning "you, here" stay; the accent also marks focus.
 - **AR-6** Only the three design checks under Platform remain. **AR-7** The
