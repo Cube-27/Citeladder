@@ -35,10 +35,12 @@ diff.
 the last 150 PRs, for example #991 (`generationContext` still read every
 topic) and #928 (`buildManifest` read Actions without the new filter). #541
 read only `complete` coverage as measured and broke an E2E spec that #543 had
-to repair.
-**Check:** `rg` the table, function and status names the diff touches. If
-there are N readers and the diff changes fewer than N, each one left alone
-needs a reason.
+to repair. Admission stopped writing the frozen configuration's top-level
+`provider`/`model` while summary costing still read them, so every audit's cost
+read "unknown" in production.
+**Check:** `rg` the table, function, status and key names the diff touches,
+including keys a writer stops writing. If there are N readers and the diff
+changes fewer than N, each one left alone needs a reason.
 
 ### Take limits from their owner
 

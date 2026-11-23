@@ -673,10 +673,12 @@ A name counts as a mention under the project's
 [mention rules](../frontend/services/api/src/analysis/entity-matching.ts), stored in
 `BusinessContext.entity_matching` and edited per brand and competitor in the
 project edit panel. `always` counts every whole-word occurrence; under
-`context_required` an occurrence counts only with a context term within
-`context_window_tokens` of it, and an occurrence inside an exclusion phrase never
-counts. A name that is one common word (`common_noun_names`, the generator's
-common words or binding stopwords) defaults to `context_required`, seeded from
+`context_required` a one-word occurrence counts only with a context term within
+`context_window_tokens` of it, while an occurrence of a name or alias of two or
+more words ("Target Australia") always counts. An occurrence inside an exclusion
+phrase never counts. An entity with a name or alias that is one common word
+(`common_noun_names`, the generator's common words or binding stopwords) defaults
+to `context_required`, seeded from
 category terms, offerings and the project's other tracked names that are not
 common words (a rival named beside it marks a brand comparison); only rules a
 person changed are saved. Admission
