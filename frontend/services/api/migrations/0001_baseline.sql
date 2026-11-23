@@ -8363,7 +8363,8 @@ REVOKE ALL ON public.site_crawl_events_default, public.site_fetch_artifacts_defa
     public.site_fetch_attempts_default, public.site_issues_default,
     public.site_rule_evaluations_default, public.site_url_observations_default FROM citeladder_app;
 REVOKE ALL ON FUNCTION public.site_evidence_month_partition(text, date) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.site_evidence_ensure_partitions(integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.site_evidence_partition_targets(integer) FROM PUBLIC;
 
 -- This month and the three ahead; the migrate job tops them up on every run.
-SELECT public.site_evidence_ensure_partitions();
+SELECT public.site_evidence_month_partition(evidence_table, evidence_month)
+FROM public.site_evidence_partition_targets();
