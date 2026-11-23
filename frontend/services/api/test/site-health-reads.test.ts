@@ -23,6 +23,7 @@ import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
 import { issueGroupId } from '../src/site-health/reads/rules.ts';
 import { issueDetail } from '../src/site-health/reads/issues.ts';
+import { contentHandoff } from '../src/site-health/reads/content-handoff.ts';
 import { refreshIssueCurrency } from '../src/site-health/issue-currency.ts';
 import { loadCrawl } from '../src/site-health/reads/crawl.ts';
 import { latestLinkCrawl } from '../src/site-health/internal-link-runs.ts';
@@ -1564,6 +1565,44 @@ describe('issue history', () => {
     );
     expect(history.items.map((row: { rule_id: string }) => row.rule_id)).toEqual([
       'technical.title_present',
+    ]);
+  });
+});
+
+describe('content handoff', () => {
+  it('hands a too-short meta description to content generation with its current text', async () => {
+    const seed = await fixtures.crawl();
+    const target = await page(seed, '/short-meta');
+    const evaluationId = await fixtures.evaluation(
+      seed,
+      target,
+      'technical.meta_description_length',
+      'missing',
+    );
+    await db
+      .updateTable('site_rule_evaluations')
+      .set({
+        evidence: JSON.stringify({ reason: 'too_short', length: 6, meta_description: 'Short.' }),
+      })
+      .where('id', '=', evaluationId)
+      .execute();
+    const ref = {
+      project_id: seed.projectId,
+      crawl_id: seed.crawlId,
+      site_url_id: target.id,
+      source_analysis_id: target.analysisId,
+      dimension: 'metadata',
+      checkpoint_ids: ['technical.meta_description_length', 'technical.h1_present'],
+    };
+    const handoff = await contentHandoff(
+      db,
+      { workspaceId: seed.workspaceId, projectId: seed.projectId },
+      ref,
+    );
+    expect([handoff.checkpoint_ids, handoff.target_fields, handoff.captured_values]).toEqual([
+      ['technical.meta_description_length'],
+      ['meta_description'],
+      ['Short.'],
     ]);
   });
 });

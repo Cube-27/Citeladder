@@ -133,6 +133,15 @@ const deliveryChecks: Record<string, (facts: Facts) => CheckResult> = {
     const ms = count(ttfb);
     return [passFail(ms <= r.ttfb_warn_ms), { ttfb_ms: ms, threshold_ms: r.ttfb_warn_ms }];
   },
+  'technical.html_size': (facts) => {
+    const bytes = delivery(facts).decoded_bytes;
+    if (bytes === null || bytes === undefined)
+      return ['unknown', { reason: 'insufficient_evidence' }];
+    const evidence = { decoded_bytes: count(bytes), max_bytes: r.html_max_bytes };
+    return evidence.decoded_bytes > r.html_max_bytes
+      ? ['missing', { ...evidence, reason: 'html_too_large' }]
+      : ['satisfied', evidence];
+  },
   'technical.uncompressed_html': (facts) => {
     const d = delivery(facts);
     return [
