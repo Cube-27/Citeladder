@@ -189,12 +189,14 @@ export async function adjacentSiteCrawls(db: Database, crawl: ViewCrawl) {
   const [previous, next] = await Promise.all([
     usableSiteCrawls(db, crawl)
       .where(sql<boolean>`(created_at, id) < ${crawlKey(crawl)}`)
+      .limit(1)
       .executeTakeFirst(),
     usableSiteCrawls(db, crawl)
       .where(sql<boolean>`(created_at, id) > ${crawlKey(crawl)}`)
       .clearOrderBy()
       .orderBy('created_at')
       .orderBy('id')
+      .limit(1)
       .executeTakeFirst(),
   ]);
   return { previous: previous ?? null, next: next ?? null };

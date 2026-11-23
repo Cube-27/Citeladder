@@ -203,6 +203,7 @@ async function exportBody(
   { workspaceId, crawlId, format }: { workspaceId: string; crawlId: string; format: 'csv' | 'md' },
   query: ExportQuery,
 ) {
+  if (query.view === 'architecture' || query.view === 'issue') exportSort(query.sort, []);
   if (query.view === 'architecture')
     return { body: await architectureMarkdown(db, workspaceId, crawlId), truncated: false };
   if (query.view === 'issue') {
