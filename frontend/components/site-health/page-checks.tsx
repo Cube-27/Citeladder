@@ -55,11 +55,19 @@ function groupsOf(evaluation: Evaluation): string[] {
 }
 
 function checkGroups(evaluations: readonly Evaluation[]) {
+  const shown = evaluations
+    .filter((evaluation) => evaluation.display_applicability)
+    .toSorted(
+      (a, b) =>
+        RESULT_ORDER[checkResult(a.outcome)] - RESULT_ORDER[checkResult(b.outcome)] ||
+        a.title.localeCompare(b.title),
+    );
   const groups = new Map<string, Evaluation[]>();
-  for (const evaluation of evaluations) {
-    if (!evaluation.display_applicability) continue;
-    for (const group of groupsOf(evaluation)) {
-      groups.set(group, [...(groups.get(group) ?? []), evaluation]);
+  for (const evaluation of shown) {
+    for (const title of groupsOf(evaluation)) {
+      const rows = groups.get(title) ?? [];
+      rows.push(evaluation);
+      groups.set(title, rows);
     }
   }
   const rank = (title: string) => {
@@ -67,14 +75,7 @@ function checkGroups(evaluations: readonly Evaluation[]) {
     return title === 'Site' ? 2 : 1;
   };
   return [...groups.entries()]
-    .map(([title, rows]) => ({
-      title,
-      rows: rows.toSorted(
-        (a, b) =>
-          RESULT_ORDER[checkResult(a.outcome)] - RESULT_ORDER[checkResult(b.outcome)] ||
-          a.title.localeCompare(b.title),
-      ),
-    }))
+    .map(([title, rows]) => ({ title, rows }))
     .toSorted((a, b) => rank(a.title) - rank(b.title) || a.title.localeCompare(b.title));
 }
 
