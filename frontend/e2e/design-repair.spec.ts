@@ -53,7 +53,6 @@ const readyDiscovery = {
       domains: ['welhamgirls.com'],
     },
   ],
-  evidence: [],
   warnings: [],
   error_code: '',
   created_at: '2026-08-09T00:00:00Z',

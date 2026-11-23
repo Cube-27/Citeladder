@@ -452,6 +452,7 @@ it.each([
     'Lewis & Associates LLP: Refugee & Immigration Lawyers - Toronto',
     ['Lewis & Associates alternatives competitors GB', 'Refugee & Immigration Lawyers Toronto'],
   ],
+  ['Acme', 'Acme Plumbing Leeds', ['Acme alternatives competitors GB', 'Plumbing Leeds']],
   ['Acme', null, ['Acme alternatives competitors GB']],
 ])(
   'searches competitors for %s by name and by the trade in its homepage title',
@@ -537,7 +538,7 @@ it.each([
 ])(
   'fails research on %s from the identity request instead of an empty review',
   async (_label, failure, code, retryable) => {
-    const structured = vi.fn(async () => {
+    const structured = vi.fn(async (_system: string) => {
       throw failure;
     });
     const gateway = {

@@ -161,7 +161,6 @@ export function brandCases(db: Database, fixtures: SiteFixtures): Record<BrandKi
         method: 'recorded-test',
         extracted_fields: JSON.stringify({ themes: ['Price'] }),
         field_confidence: '{}',
-        evidence: '[]',
         warnings: '[]',
         created_at: new Date(),
       })

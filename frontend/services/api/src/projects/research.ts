@@ -214,11 +214,17 @@ async function generateThemes({
 }
 
 export function competitorQueries(input: DiscoveryInput, site: ResolvedSite) {
-  const brand = input.brand_name.toLowerCase();
+  const brand = new RegExp(
+    input.brand_name.replaceAll(/[.*+?^${}()|[\]\\]/gu, (character) => `\\${character}`),
+    'giu',
+  );
   const trade = (site.page?.title ?? '')
     .split(/\s+[|–—-]\s+|\s*\|\s*|:\s+/u)
-    .map((part) => part.trim())
-    .filter((part) => part && !part.toLowerCase().includes(brand))
+    .map((part) => {
+      const kept = part.replace(brand, ' ').replaceAll(/\s+/gu, ' ').trim();
+      return kept === part.trim() || kept.split(' ').length > 1 ? kept : '';
+    })
+    .filter(Boolean)
     .join(' ')
     .slice(0, cfg.competitor_trade_query_max_chars);
   const named = `${input.brand_name} alternatives competitors ${input.primary_market}`;
@@ -258,6 +264,7 @@ async function findCompetitors({
     if (failed.length)
       logger.warning('brand_discovery.competitor_search_failed', failureFields(failed[0]));
     if (failed.length === outcomes.length) searchState = 'failed';
+    else if (failed.length) searchState = 'partial';
     else searchState = searchResults.length ? 'ready' : 'no_results';
   }
   const schema = z.object({
@@ -418,6 +425,7 @@ export async function researchBrand(
         })
       : { competitors: [], available: false, searchState: 'unavailable' },
   );
+  competitorsFound.catch(() => undefined);
   const [firstParty, external] = await Promise.all([
     firstPartyRead,
     client
