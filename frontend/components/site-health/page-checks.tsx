@@ -57,7 +57,7 @@ function groupsOf(evaluation: Evaluation): string[] {
 function checkGroups(evaluations: readonly Evaluation[]) {
   const shown = evaluations
     .filter((evaluation) => evaluation.display_applicability)
-    .toSorted(
+    .sort(
       (a, b) =>
         RESULT_ORDER[checkResult(a.outcome)] - RESULT_ORDER[checkResult(b.outcome)] ||
         a.title.localeCompare(b.title),
@@ -76,7 +76,7 @@ function checkGroups(evaluations: readonly Evaluation[]) {
   };
   return [...groups.entries()]
     .map(([title, rows]) => ({ title, rows }))
-    .toSorted((a, b) => rank(a.title) - rank(b.title) || a.title.localeCompare(b.title));
+    .sort((a, b) => rank(a.title) - rank(b.title) || a.title.localeCompare(b.title));
 }
 
 function ResultMark({ result }: Readonly<{ result: CheckResult }>) {

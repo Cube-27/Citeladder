@@ -115,7 +115,7 @@ export function IssuesCatalog({
   const pager = useCatalogPager(cursor, issuesQuery.data?.next_cursor ?? null, catalog.goToPage);
 
   return (
-    <ReportPage>
+    <ReportPage actions={<IssuesExport workspaceId={workspaceId} crawlId={crawlId} />}>
       {notice}
       <IssuesSummary
         query={priorityQuery}
@@ -147,7 +147,6 @@ export function IssuesCatalog({
             />
           ),
           filters: catalogFilters(filters, rows, updateFilters),
-          actions: <IssuesExport workspaceId={workspaceId} crawlId={crawlId} />,
         }}
         state={tableState(issuesQuery)}
         rowCount={rows.length}
