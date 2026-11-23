@@ -906,6 +906,7 @@ html {
 
 html:has([data-app-surface]) {
   scrollbar-gutter: auto;
+  overflow: hidden;
 }
 [data-main-column] {
   scroll-padding-top: calc(var(--sticky-header-offset) + var(--page-top-gap));

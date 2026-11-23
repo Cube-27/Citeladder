@@ -210,6 +210,18 @@ rules were cut.
 **Check:** The CSS budget step in CI. In review: an `exit` or closed-state rule
 under a Radix part that uses `transition` alone.
 
+### The window never scrolls in the app
+
+**Rule:** The app panel (`[data-main-column]`) is the only scroller, and it is
+a positioned box, so `sr-only` and other absolute children scroll and clip
+inside it. The document under the app shell is `overflow: hidden`.
+**Why:** The panel scrolled without being positioned, so an `sr-only` caveat
+deep in Site Health was placed against the page and grew it: the window
+showed its own scrollbar and an empty band under the panel (owner, 2026-11-23).
+**Check:** In review: removing `relative` from the shell's panel, or a
+scroll container inside a page that holds absolute children without being
+positioned.
+
 ## Value states
 
 ### Absence goes through `Absence` and nowhere else

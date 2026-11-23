@@ -123,7 +123,8 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   mark), 12px group labels, foot with Integrations (the collapse toggle at
   its end) and the account (AR-8). The main column is the inset panel: 8 from the window
   edges (none on the sidebar side), a `rule` edge at half strength, radius 6,
-  `page` fill, the page's only scroller. Scrollbars are the browser's thin
+  `page` fill, the page's only scroller: the window never scrolls and nothing
+  shows below the panel (owner, 2026-11-23). Scrollbars are the browser's thin
   bar, shown on hover. Dragging the sidebar's edge draws no line. Below 900 the panel fills the
   window and the header's menu button opens the sidebar in a drawer.
 - **Page header**, 48 high, on `page` with a `rule` hairline under it across

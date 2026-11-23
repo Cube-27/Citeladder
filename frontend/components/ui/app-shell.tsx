@@ -11,7 +11,7 @@ const FRAME =
   'bg-ground text-ink grid h-dvh overflow-hidden grid-cols-[minmax(0,1fr)] rail:grid-cols-[var(--sidebar-width-compact)_minmax(0,1fr)] shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] data-[sidebar-state=collapsed]:rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)] transition-[grid-template-columns] duration-[var(--motion-open)] ease-[var(--ease-resize)] motion-reduce:transition-none has-[[data-dragging]]:transition-none';
 const SIDEBAR_COLUMN = 'rail:block z-sticky relative hidden min-h-0 min-w-0';
 const PANEL =
-  '@container/main bg-page rail:ms-0 rail:rounded-card rail:ring-1 ring-rule/50 m-[var(--panel-inset)] flex min-h-0 min-w-0 flex-col overflow-y-auto overscroll-contain px-[var(--page-pad-inline)]';
+  '@container/main bg-page rail:ms-0 rail:rounded-card rail:ring-1 ring-rule/50 m-[var(--panel-inset)] relative flex min-h-0 min-w-0 flex-col overflow-y-auto overscroll-contain px-[var(--page-pad-inline)]';
 const PAGE = 'flex w-full min-w-0 flex-1 flex-col';
 
 function useFrameState(): { style: CSSProperties | undefined; state: 'collapsed' | 'expanded' } {
