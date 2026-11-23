@@ -25,7 +25,7 @@ export function SiteHealthDashboardLayout({
         active={active}
         exportPages={
           mutationsAllowed
-            ? { onExport: () => void runExport('csv', 'pages'), exporting }
+            ? { onExport: (filters) => void runExport('csv', 'pages', filters), exporting }
             : undefined
         }
       />

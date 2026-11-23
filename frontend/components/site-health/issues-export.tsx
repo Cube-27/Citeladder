@@ -21,7 +21,7 @@ export function IssuesExport({
   const run = async (format: ExportFormat) => {
     setExporting(format);
     try {
-      await downloadCrawlExport(crawlId, format, 'issues', { workspaceId });
+      await downloadCrawlExport({ crawlId, format, view: 'issues' }, { workspaceId });
     } catch {
       notify('Export failed', undefined, { tone: 'negative' });
     } finally {

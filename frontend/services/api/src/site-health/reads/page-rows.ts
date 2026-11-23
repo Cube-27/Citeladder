@@ -8,11 +8,11 @@ import {
   encodeKeysetCursor,
   InvalidCursorError,
 } from '../../http/keyset-cursor.ts';
-import { containsPattern } from '../../db/like.ts';
 import { parseUuid } from '../../http/uuid.ts';
 import { failedAs } from '../task-outcome.ts';
 import { inventoryCrawlIds, isTerminal, pageAuditsSql, type Crawl } from './crawl.ts';
 import { ROW_TASK, ROW_TASK_ORDER } from './crawl-counters.ts';
+import { pageFilterSql, type PageRowFilters } from './page-filters.ts';
 import { siteLevelRuleOf } from './rules.ts';
 
 const PERSISTED = ['completed', 'partially_completed'];
@@ -49,15 +49,6 @@ export const PAGE_STATUS_FILTERS = [
   ...pageAnalysisStatusSchema.exclude(['failed']).options,
   'error_or_blocked',
 ] as const;
-
-export type PageRowFilters = {
-  status?: string | null;
-  monitored?: boolean | null;
-  pageKind?: string | null;
-  query?: string | null;
-  siteUrlId?: string;
-  rule?: string | null;
-};
 
 export type PageRow = {
   site_url_id: string;
@@ -166,8 +157,6 @@ export async function pageRows(
   const spec = SORTS[sort];
   const lineage = inventoryCrawlIds(crawl);
   const unmonitoredStatus = isTerminal(crawl) ? 'not_measured' : 'pending';
-  const search = filters.query?.trim().toLowerCase();
-  const pattern = search ? containsPattern(search) : null;
   let keyset = sql``;
   if (after) {
     const value =
@@ -239,18 +228,7 @@ export async function pageRows(
           select 1 from site_url_observations o
           where o.workspace_id = u.workspace_id and o.site_url_id = u.id
             and o.crawl_id = any(${lineage}::uuid[]))
-        ${filters.siteUrlId ? sql`and u.id = ${filters.siteUrlId}` : sql``}
-        ${pattern ? sql`and (lower(u.normalized_url) like ${pattern} or lower(u.display_url) like ${pattern})` : sql``}
-        ${filters.pageKind ? sql`and a.page_kind = ${filters.pageKind}` : sql``}
-        ${
-          filters.rule
-            ? sql`and exists (
-          select 1 from site_issues i
-          where i.workspace_id = u.workspace_id and i.rule_id = ${filters.rule}
-            and ${shownIssueFilter(crawl, 'i', 'a')})`
-            : sql``
-        }
-        ${filters.monitored === false ? sql`and m.site_url_id is null` : sql``}
+        ${pageFilterSql(filters, shownIssueFilter(crawl, 'i', 'a'))}
     ), windowed as (
       select * from keyed
       where true ${statusFilter(filters.status)} ${keyset}

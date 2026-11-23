@@ -42,24 +42,29 @@ function pagesColumns(
   sort: PagesSort,
   onSortChange: ((sort: PagesSort) => void) | undefined,
 ): DataTableColumn[] {
-  const byUrl = sort === 'url';
+  const sortBy = (key: PagesSort, descending: boolean) =>
+    onSortChange
+      ? {
+          active: sort === key,
+          descending,
+          onSort: () => onSortChange(sort === key ? DEFAULT_PAGES_SORT : key),
+        }
+      : undefined;
   return [
-    {
-      key: 'page',
-      label: 'Page',
-      kind: 'identity',
-      sort: onSortChange
-        ? {
-            active: byUrl,
-            descending: false,
-            onSort: () => onSortChange(byUrl ? DEFAULT_PAGES_SORT : 'url'),
-          }
-        : undefined,
-    },
+    { key: 'page', label: 'Page', kind: 'identity', sort: sortBy('url', false) },
+    { key: 'status', label: 'Status', kind: 'status', sort: sortBy('status', false) },
     { key: 'type', label: 'Type', kind: 'status', width: 'category', priority: 'low' },
     { key: 'issues', label: 'Issues', kind: 'number', width: 'figure' },
     { key: 'web', label: 'Web fundamentals', kind: 'number', width: 'figure' },
     { key: 'aeo', label: 'AEO readiness', kind: 'number', width: 'figure' },
+    { key: 'depth', label: 'Depth', kind: 'number', priority: 'low', sort: sortBy('depth', false) },
+    {
+      key: 'inlinks',
+      label: 'Inlinks',
+      kind: 'number',
+      priority: 'low',
+      sort: sortBy('inbound', true),
+    },
     { key: 'audited', label: 'Last audit', kind: 'date', width: 'metric', priority: 'low' },
   ];
 }
@@ -133,11 +138,6 @@ export function PagesTable({
                       {title}
                     </TextLink>
                   </ClampText>
-                  {page.analysis_status === 'completed' ? null : (
-                    <StatusMark variant="status" value={pageStatusBadgeValue(page.analysis_status)}>
-                      {statusLabel(page.analysis_status)}
-                    </StatusMark>
-                  )}
                   {page.robots_excluded ? <RobotsExcludedBadge /> : null}
                   <span className="text-ink-2 min-w-0 overflow-hidden">
                     <UrlText url={page.display_url} origin={origin} />
@@ -145,6 +145,11 @@ export function PagesTable({
                 </Inline>
                 <LinkedFromLine page={page} />
               </Stack>
+            </TableCell>
+            <TableCell className="whitespace-nowrap">
+              <StatusMark variant="status" value={pageStatusBadgeValue(page.analysis_status)}>
+                {statusLabel(page.analysis_status)}
+              </StatusMark>
             </TableCell>
             <TableCell className="whitespace-nowrap">
               <PageKindBadge pageKind={page.page_kind} />
@@ -164,6 +169,12 @@ export function PagesTable({
                 state={page.aeo_measurement_state}
               />
             </TableCell>
+            <TableCell numeric className={mutedWhenMissing(page.depth_from_home)}>
+              <DepthValue page={page} />
+            </TableCell>
+            <TableCell numeric className={mutedWhenMissing(page.inbound_count)}>
+              {page.inbound_count ?? <Absence state="not_measured" />}
+            </TableCell>
             <TableCell>
               <TableTime value={page.last_audited} fallback={<Absence state="not_measured" />} />
             </TableCell>
@@ -172,6 +183,12 @@ export function PagesTable({
       })}
     </DataTable>
   );
+}
+
+function DepthValue({ page }: Readonly<{ page: PageSummary }>) {
+  if (page.depth_from_home !== null) return page.depth_from_home;
+  if (page.inbound_count === null) return <Absence state="not_measured" />;
+  return 'Not reached';
 }
 
 function MeasurementValue({ score, state }: Readonly<{ score: number | null; state: string }>) {
