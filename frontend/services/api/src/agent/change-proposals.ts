@@ -104,8 +104,9 @@ function bounded(preview: ChangePreview): ChangePreview {
 function longestRun(rows: readonly { label: string }[]) {
   let best = { start: 0, length: 0 };
   let start = 0;
+  let label = rows[0]?.label;
   for (const [index, row] of rows.entries()) {
-    if (row.label !== rows[start]!.label) start = index;
+    if (row.label !== label) [start, label] = [index, row.label];
     if (index - start + 1 > best.length) best = { start, length: index - start + 1 };
   }
   return best;
