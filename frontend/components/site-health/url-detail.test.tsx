@@ -227,6 +227,7 @@ describe('UrlDetail', () => {
     expect(
       screen
         .getAllByText('Best&Less Online')
+        .filter((node) => !node.closest('dl[aria-label="Page facts"]'))
         .map((node) => (node.closest('nav') ? 'trail' : node.tagName)),
     ).toEqual(['trail', 'H1']);
     expect(screen.getByText('Product')).toBeInTheDocument();
@@ -274,6 +275,72 @@ describe('UrlDetail', () => {
       'page',
     );
     expect(screen.queryByRole('link', { name: /^Back to/ })).not.toBeInTheDocument();
+  });
+
+  it('lists every shown check as passed, failed or not checked under its score', async () => {
+    const check = (
+      id: string,
+      title: string,
+      fields: Partial<PageDetail['evaluations'][number]>,
+    ): PageDetail['evaluations'][number] => ({
+      id,
+      rule_id: `rule.${id.slice(0, 4)}`,
+      title,
+      dimension: 'technical',
+      category: 'metadata',
+      severity: 'medium',
+      finding_class: 'defect',
+      outcome: 'satisfied',
+      display_applicability: true,
+      score_applicability: true,
+      checklist_membership: true,
+      reason_code: '',
+      score_roles: [],
+      aeo_pillar: '',
+      weight: 1,
+      evidence: {},
+      analyzer_version: 'a1',
+      rule_version: 'r1',
+      created_at: '2026-07-16T00:00:00Z',
+      ...fields,
+    });
+    mswServer.use(
+      ...handlers(
+        detail({
+          evaluations: [
+            check('11111111-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Title present', {
+              score_roles: ['web_fundamentals'],
+            }),
+            check('22222222-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Schema matches content', {
+              outcome: 'missing',
+              score_roles: ['aeo_readiness'],
+              aeo_pillar: 'machine-readability',
+            }),
+            check('33333333-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Sitemap lists page', {
+              outcome: 'unknown',
+            }),
+            check('44444444-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Product price shown', {
+              outcome: 'not_applicable',
+              display_applicability: false,
+            }),
+          ],
+        }),
+      ),
+    );
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+
+    const rows = (name: string) =>
+      within(screen.getByRole('table', { name }))
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => row.textContent);
+    await screen.findByRole('heading', { name: 'Checks' });
+    expect(rows('Web fundamentals (1)')).toEqual(['Title presentPassed']);
+    expect(rows('AEO readiness · Machine readability (1)')).toEqual([
+      'Schema matches contentFailed',
+    ]);
+    expect(rows('Site (1)')).toEqual(['Sitemap lists pageNot checked']);
+    expect(screen.queryByText('Product price shown')).not.toBeInTheDocument();
   });
 
   it('says an unknown compression is not measured rather than "none"', async () => {
