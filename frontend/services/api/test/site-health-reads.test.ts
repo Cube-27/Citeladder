@@ -496,7 +496,7 @@ describe('page projections', () => {
       ],
       'web.accessibility_form_names': [
         issueGroupId(seed.crawlId, 'web.accessibility_form_names'),
-        [],
+        ['web_fundamentals'],
       ],
     });
     const catalog = await json(seed, `/site-crawls/${seed.crawlId}/issues`, siteIssuesPageSchema);
