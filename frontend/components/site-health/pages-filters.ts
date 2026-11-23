@@ -107,7 +107,12 @@ export function pagesFilterParams(
 export function usePagesFilters({
   workspaceId,
   crawlId,
-}: Readonly<{ workspaceId: string; crawlId: string }>): FilterDefinition[] {
+  indexableFixed,
+}: Readonly<{
+  workspaceId: string;
+  crawlId: string;
+  indexableFixed: boolean;
+}>): FilterDefinition[] {
   const state = usePagesFilterState();
   const { data } = useQuery(
     siteHealthQueries.issues(workspaceId, crawlId, { limit: ISSUE_FILTER_OPTION_LIMIT }),
@@ -131,14 +136,18 @@ export function usePagesFilters({
         },
       ],
     }),
-    choiceFilter({
-      id: 'indexable',
-      label: 'Indexable',
-      value: state.indexable,
-      defaultValue: '',
-      onChange: state.setIndexable,
-      groups: [{ options: INDEXABLE }],
-    }),
+    ...(indexableFixed
+      ? []
+      : [
+          choiceFilter({
+            id: 'indexable',
+            label: 'Indexable',
+            value: state.indexable,
+            defaultValue: '',
+            onChange: state.setIndexable,
+            groups: [{ options: INDEXABLE }],
+          }),
+        ]),
     choiceFilter({
       id: 'depth',
       label: 'Depth',

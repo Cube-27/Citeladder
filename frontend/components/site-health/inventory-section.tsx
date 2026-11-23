@@ -164,7 +164,11 @@ function usePagesToolbar({
   filters: PageFilterParams;
 }>): FilterBarProps {
   const { view, setView, pageKind, setPageKind, query, setQuery } = usePagesInventoryState();
-  const pageFilters = usePagesFilters({ workspaceId: crawl.workspace_id, crawlId: crawl.id });
+  const pageFilters = usePagesFilters({
+    workspaceId: crawl.workspace_id,
+    crawlId: crawl.id,
+    indexableFixed: view === 'not_indexable',
+  });
   return {
     view: (
       <SegmentedControl
