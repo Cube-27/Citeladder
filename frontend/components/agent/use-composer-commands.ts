@@ -158,19 +158,20 @@ export function useComposerCommands({
     },
     prepare: ({ message, edit }, send) => {
       if (resolvingRef.current || pendingReads.current > 0) return;
-      if (limits && message.length > limits.message_max_chars) {
-        toast.notify(
-          `Messages hold up to ${limits.message_max_chars.toLocaleString('en-US')} characters`,
-          `This one has ${message.length.toLocaleString('en-US')}. Shorten it, or attach the text as a file.`,
-        );
-        return;
-      }
-      const finish = (text: string) =>
+      const finish = (text: string) => {
+        if (limits && text.length > limits.message_max_chars) {
+          toast.notify(
+            `Messages hold up to ${limits.message_max_chars.toLocaleString('en-US')} characters`,
+            `This one has ${text.length.toLocaleString('en-US')}. Shorten it, or attach the text as a file.`,
+          );
+          return;
+        }
         send({
           message: text,
           mentions: latestMentions.current.map((mention) => mention.id),
           attachments: latestPastes.current.map((paste) => paste.attachment),
         });
+      };
       if (!actionLinks(message, { origin: window.location.origin, projectId }).length) {
         finish(message);
         return;

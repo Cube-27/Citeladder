@@ -203,7 +203,7 @@ it('caps a long card at its list, keeping the rows after it, and shows the topic
     },
     { kind: 'generate_prompts', payload: { prompt_set_id: t.setId, request: { count: 5 } } },
   ]);
-  const rows = proposals.map((proposal) => proposal.rows);
+  const rows = proposals.map((proposal) => (proposal.kind === 'change' ? proposal.rows : []));
   expect(rows[0]).toHaveLength(agentPolicy.proposal_preview_rows_max);
   expect(rows[0]!.slice(-3)).toEqual([
     { label: 'More', value: '7 more' },

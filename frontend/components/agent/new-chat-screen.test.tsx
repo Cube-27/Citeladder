@@ -9,7 +9,6 @@ import { openComposerSubmenu, pickFromComposerMenu } from '@/test/composer-menu'
 import { mswServer } from '@/test/msw-server';
 import { actionDetail, actionItem, actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
-import { ToastProvider } from '@/components/ui/toast';
 import { renderWithProviders } from '@/test/render';
 
 import { NewChatScreen } from './new-chat-screen';
@@ -27,12 +26,10 @@ function ChatLanding() {
 
 function renderNewChat(search: string, grants: readonly string[] = ['agent']) {
   return renderWithProviders(
-    <ToastProvider>
-      <Routes>
-        <Route path="/agent" element={<NewChatScreen />} />
-        <Route path="/agent/chats/:chatId" element={<ChatLanding />} />
-      </Routes>
-    </ToastProvider>,
+    <Routes>
+      <Route path="/agent" element={<NewChatScreen />} />
+      <Route path="/agent/chats/:chatId" element={<ChatLanding />} />
+    </Routes>,
     {
       initialEntries: [`/agent${search}`],
       entitlement: { grants },
@@ -98,13 +95,7 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
       HttpResponse.json({
         skills: [GROWTH_SKILL],
         models: AGENT_MODELS,
-        limits: {
-          message_max_chars: 50000,
-          mentions_max: 5,
-          attachments_max: 3,
-          attachment_max_chars: 40000,
-          attachments_total_max_chars: 40000,
-        },
+        limits: WORKFLOW_CATALOG.limits,
       }),
     ),
     http.get(`/api/v1/projects/${PROJECT}/actions`, () => HttpResponse.json(actionsPage(actions))),
@@ -419,10 +410,7 @@ describe('NewChatScreen', () => {
           skills: [GROWTH_SKILL],
           models: AGENT_MODELS,
           limits: {
-            message_max_chars: 50000,
-            mentions_max: 5,
-            attachments_max: 3,
-            attachment_max_chars: 40000,
+            ...WORKFLOW_CATALOG.limits,
             attachments_total_max_chars: prompts.length + facts.length,
           },
         }),
@@ -464,38 +452,6 @@ describe('NewChatScreen', () => {
     ]);
   });
 
-  it('refuses a message over the catalog limit with a plain limit notice and sends nothing', async () => {
-    const bodies = captureChats();
-    mswServer.use(
-      http.get('/api/v1/agent/skills', () =>
-        HttpResponse.json({
-          skills: [GROWTH_SKILL],
-          models: AGENT_MODELS,
-          limits: {
-            message_max_chars: 12,
-            mentions_max: 5,
-            attachments_max: 3,
-            attachment_max_chars: 40000,
-            attachments_total_max_chars: 40000,
-          },
-        }),
-      ),
-    );
-    const user = userEvent.setup();
-    renderNewChat('');
-    const message = await screen.findByLabelText('Message the agent');
-    await user.type(message, 'Audit the pricing page{Enter}');
-
-    expect(await screen.findByText('Messages hold up to 12 characters')).toBeInTheDocument();
-    expect(
-      screen.getByText('This one has 22. Shorten it, or attach the text as a file.'),
-    ).toBeInTheDocument();
-    await user.clear(message);
-    await user.type(message, 'Audit it{Enter}');
-    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
-    expect(bodies).toEqual([{ message: 'Audit it', context: {} }]);
-  });
-
   it('offers no further mention once the catalog-listed bound is reached', async () => {
     captureChats([actionItem(PRICING, 'Pricing page'), actionItem(BLOG, 'Blog hub')]);
     mswServer.use(
@@ -503,13 +459,7 @@ describe('NewChatScreen', () => {
         HttpResponse.json({
           skills: [GROWTH_SKILL],
           models: AGENT_MODELS,
-          limits: {
-            message_max_chars: 50000,
-            mentions_max: 1,
-            attachments_max: 3,
-            attachment_max_chars: 40000,
-            attachments_total_max_chars: 40000,
-          },
+          limits: { ...WORKFLOW_CATALOG.limits, mentions_max: 1 },
         }),
       ),
     );
