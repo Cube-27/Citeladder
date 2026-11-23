@@ -27,7 +27,7 @@
     "name_max_chars": 80,
     "research_max": 8,
     "research_max_words": 3,
-    "research_min_confidence": 0.5,
+    "research_min_confidence": 0.4,
     "model_max": 20,
     "model_name_max_words": 4,
     "company_fact_terms": [

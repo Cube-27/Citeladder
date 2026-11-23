@@ -419,17 +419,6 @@ const discoveryProfileSchema = responseObject({
   knowledge_strength: z.enum(['strong', 'weak', 'none']).default('none'),
 });
 
-const discoveryEvidenceSchema = responseObject({
-  source_url: z.string(),
-  capture_method: z.string(),
-  confidence: z.number(),
-  captured_at: z.string(),
-  supports: z.array(z.string()),
-  provider: z.string(),
-  model: z.string(),
-  method: z.string(),
-});
-
 export const brandDiscoverySchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
@@ -458,7 +447,6 @@ export const brandDiscoverySchema = responseObject({
       domains: z.array(z.string()),
     }),
   ),
-  evidence: z.array(discoveryEvidenceSchema),
   warnings: z.array(z.string()),
   error_code: z.string(),
   created_at: z.string(),

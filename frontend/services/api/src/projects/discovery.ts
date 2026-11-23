@@ -152,7 +152,6 @@ export function createDiscovery(
         competitors: '[]',
         topics: '[]',
         prompt_suggestions: '[]',
-        evidence: '[]',
         gaps: '[]',
         warnings: '[]',
         progress: JSON.stringify(discoveryProgress('opening_website', 0)),
@@ -346,7 +345,7 @@ export async function completeDiscovery(
       .orderBy('created_at', 'desc')
       .orderBy('id', 'desc')
       .executeTakeFirst();
-    if (!snapshot) throw new ApiError(409, 'Discovery research evidence is unavailable');
+    if (!snapshot) throw new ApiError(409, 'Discovery research is unavailable');
     const artifacts = Object.fromEntries(Object.keys(sources).map((field) => [field, snapshot.id]));
     const brandName = z.string().parse(data.brand_name);
     const aliases = seedBrandAliases(brandName, domains);
