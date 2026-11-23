@@ -238,12 +238,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
     ],
     closing: 'Ask about your project and get a draft you can review',
-    related: [
-      '/platform/content-optimization',
-      '/platform/site-health',
-      '/platform/mcp',
-      '/platform',
-    ],
+    related: ['/platform/content-optimization', '/platform/site-health', '/platform/mcp'],
   },
   {
     path: '/platform/mcp',
@@ -351,7 +346,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
     ],
     closing: 'Ask your assistant about your AI visibility',
-    related: ['/platform/integrations', '/platform/agents', '/platform'],
+    related: ['/platform/integrations', '/platform/agents'],
   },
   {
     path: '/platform/integrations',

@@ -12,6 +12,7 @@ function movedOffSite(path: string): string | undefined {
 }
 
 const RENAMED_PLATFORM_PAGES: Readonly<Record<string, string>> = {
+  '/platform': '/',
   '/platform/citation-intelligence': '/platform/cited-sources',
   '/platform/commerce-intelligence': '/platform/product-visibility',
   '/platform/demand-intelligence': '/platform/search-demand',

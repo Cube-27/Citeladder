@@ -1,8 +1,6 @@
 import { ConnectStrip } from '@/components/mcp/connect-strip';
 import { docsHref } from '@/lib/config/docs';
-import { cn } from '@/lib/utils';
-import '../chrome/mega-menu.css';
-import { PLATFORM_GROUPS, PLATFORM_OVERVIEW, platformLabel } from '@/lib/marketing-content/nav';
+import { PLATFORM_GROUPS, platformLabel } from '@/lib/marketing-content/nav';
 import { PLATFORM_GUIDES } from '@/lib/marketing-content/platform-guides';
 import type {
   PlatformCta,
@@ -10,7 +8,6 @@ import type {
   PlatformScreen,
 } from '@/lib/marketing-content/platform-pages';
 
-import { NavIcon, hasNavIcon } from '../chrome/nav-icons';
 import { ButtonLink, DemoButtonLink, SiteActions } from '../primitives/button';
 import { EngineStrip, QuestionCards, RelatedCards } from '../sections/cards';
 import { Bento, FeatureCard, FeatureSplit, type BentoSpan } from '../sections/features';
@@ -27,45 +24,6 @@ export function PlatformActions({ cta }: Readonly<{ cta: PlatformCta }>) {
       <ButtonLink href={docsHref('/mcp/')}>Read the MCP docs</ButtonLink>
       <DemoButtonLink variant="soft" />
     </>
-  );
-}
-
-function CapabilityGrid() {
-  return (
-    <ul className={cn('cl-tiles', `cl-cols-${columnsFor(PLATFORM_GROUPS.length)}`)}>
-      {PLATFORM_GROUPS.map((group) => (
-        <li key={group.label}>
-          <div className="cl-fcard">
-            <div className="cl-fcard-body">
-              <h3 className="cl-fcard-title">{group.label}</h3>
-              <ul className="grid w-full gap-1">
-                {group.items.map((item) => {
-                  const icon = hasNavIcon(item.href);
-                  return (
-                    <li key={item.href}>
-                      <a
-                        href={item.href}
-                        className={cn('cl-mega-item focus-ring', !icon && 'cl-mega-item--text')}
-                      >
-                        {icon && (
-                          <span className="cl-mega-icon" aria-hidden>
-                            <NavIcon href={item.href} className="size-5" />
-                          </span>
-                        )}
-                        <span className="cl-mega-copy">
-                          <span className="cl-mega-title">{item.title}</span>
-                          <span className="cl-mega-desc">{item.desc}</span>
-                        </span>
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -213,11 +171,7 @@ function Related({ page }: Readonly<{ page: PlatformPage }>) {
     const product = PLATFORM_GROUPS.flatMap((group) => group.items).find(
       (item) => item.href === href,
     );
-    const entry =
-      product ??
-      (href === PLATFORM_OVERVIEW.href
-        ? { title: PLATFORM_OVERVIEW.title, desc: PLATFORM_OVERVIEW.desc }
-        : PLATFORM_GUIDES[href]);
+    const entry = product ?? PLATFORM_GUIDES[href];
     return entry ? [{ href, title: entry.title, body: entry.desc }] : [];
   });
   if (!items.length) return null;
@@ -232,21 +186,12 @@ function Related({ page }: Readonly<{ page: PlatformPage }>) {
 }
 
 export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) {
-  const overview = page.path === PLATFORM_OVERVIEW.href;
   const label = platformLabel(page.path) ?? 'Platform';
   return (
     <>
       <PageHero
         size="2xl"
-        crumbs={
-          overview
-            ? [{ label: 'Home', href: '/' }, { label: 'Platform' }]
-            : [
-                { label: 'Home', href: '/' },
-                { label: 'Platform', href: PLATFORM_OVERVIEW.href },
-                { label },
-              ]
-        }
+        crumbs={[{ label: 'Home', href: '/' }, { label: 'Platform' }, { label }]}
         title={page.heading}
         lead={page.lead}
         actions={page.cta === 'mcp' ? <ConnectStrip /> : <PlatformActions cta={page.cta} />}
@@ -282,21 +227,11 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         <QuestionCards questions={page.questions} />
       </PageSection>
 
-      {overview && (
-        <PageSection
-          id="capabilities"
-          title="What a project includes"
-          lead="Every project starts with AI visibility. Add the rest when you have a question it cannot answer."
-        >
-          <CapabilityGrid />
-        </PageSection>
-      )}
-
       <PageSection id="faq" title="Frequently asked questions" layout="aside">
         <FaqList items={page.faqs.map((faq) => ({ question: faq.q, answer: faq.a }))} exclusive />
       </PageSection>
 
-      {!overview && <Related page={page} />}
+      <Related page={page} />
 
       <PageSection label="Get started">
         <CtaBand title={page.closing} actions={<PlatformActions cta={page.cta} />} />

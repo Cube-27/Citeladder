@@ -14,7 +14,7 @@ related_guides: ['/blog/geo-vs-seo', '/blog/how-to-improve-ai-visibility']
 publication_status: 'editorial_review'
 product:
   heading: 'Find out what AI tells your buyers'
-  href: '/platform'
+  href: '/platform/ai-visibility'
   body: "CiteLadder shows how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer your buyers' questions and which pages they cite. It also gives you a ranked list of what to change on your site, so your GEO work starts from evidence."
 ---
 

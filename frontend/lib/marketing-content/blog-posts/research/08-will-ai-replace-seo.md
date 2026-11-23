@@ -13,7 +13,7 @@ related_guides: ['/blog/ai-referral-traffic-statistics-2026', '/blog/geo-vs-seo'
 publication_status: 'editorial_review'
 product:
   heading: 'Check how AI answers your buyers'
-  href: '/platform'
+  href: '/platform/ai-visibility'
   body: 'If AI now sits between your customers and your pages, CiteLadder shows how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer your buyers and which pages they cite. It also gives you a ranked list of what to change on your site.'
 ---
 

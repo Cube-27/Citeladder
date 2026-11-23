@@ -1,6 +1,6 @@
 import { NavigationMenuLink as Link } from '@/components/ui/navigation-menu';
-import { ArrowRight, ArrowUpRight } from '@/lib/icons';
-import { PLATFORM_OVERVIEW, type NavDrop } from '@/lib/marketing-content/nav';
+import { ArrowUpRight } from '@/lib/icons';
+import type { NavDrop } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 import { NavIcon, hasNavIcon } from './nav-icons';
@@ -55,14 +55,6 @@ export function MegaMenu({ drop, path }: Readonly<{ drop: NavDrop; path: string 
           </div>
         ))}
       </div>
-      {drop.key === 'platform' && (
-        <Link asChild>
-          <a className="cl-mega-foot focus-ring" href={PLATFORM_OVERVIEW.href}>
-            <span className="cl-mega-title">{PLATFORM_OVERVIEW.title}</span>
-            <ArrowRight aria-hidden className="cl-mega-foot-arrow size-4" />
-          </a>
-        </Link>
-      )}
     </div>
   );
 }

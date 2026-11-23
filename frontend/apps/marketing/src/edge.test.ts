@@ -29,6 +29,8 @@ describe('marketing Worker edge', () => {
 
   it.each([
     ['/check-ai-visibility/', 'https://citeladder.com/blog/verify-improve-ai-search-visibility'],
+    ['/platform', 'https://citeladder.com/'],
+    ['/platform/', 'https://citeladder.com/'],
     ['/platform/citation-intelligence', 'https://citeladder.com/platform/cited-sources'],
     ['/platform/commerce-intelligence/', 'https://citeladder.com/platform/product-visibility'],
     ['/platform/demand-intelligence', 'https://citeladder.com/platform/search-demand'],

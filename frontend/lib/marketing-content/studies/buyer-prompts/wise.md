@@ -20,7 +20,7 @@ published_at: '2026-11-07'
 author: 'Abhineet Jain'
 product:
   heading: 'See how AI answers your buyers'
-  href: '/platform'
+  href: '/platform/ai-visibility'
   body: 'Once you have buyer questions like these for your own brand, CiteLadder shows how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer them and which pages they cite. It also gives you a ranked list of what to change on your site.'
 ---
 

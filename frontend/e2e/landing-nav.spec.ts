@@ -34,13 +34,13 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
       viewport: { width: 1440, height: 900 },
     });
     const page = await context.newPage();
-    await open(page, '/platform');
+    await open(page, '/platform/site-health');
     const toggle = trigger(page, 'Platform');
     await toggle.tap();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(menuLink(page, /Platform overview/)).toBeVisible();
+    await expect(menuLink(page, /Cited Sources/)).toBeVisible();
     await toggle.tap();
-    await expect(menuLink(page, /Platform overview/)).toBeHidden();
+    await expect(menuLink(page, /Cited Sources/)).toBeHidden();
     await context.close();
   });
 
@@ -56,7 +56,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await page.keyboard.press('Escape');
     await expect(toggle).toBeFocused();
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await expect(menuLink(page, /Platform overview/)).toBeHidden();
+    await expect(menuLink(page, /Cited Sources/)).toBeHidden();
     await page.setViewportSize({ width: 390, height: 900 });
     const mobileToggle = page.getByRole('button', { name: 'Open menu' });
     await mobileToggle.click();
@@ -98,10 +98,13 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await expect(platform).toHaveAttribute('aria-expanded', 'true');
     await platform.click();
     await expect(platform).toHaveAttribute('aria-expanded', 'true');
-    await expect(menuLink(page, /Platform overview/)).toHaveAttribute('href', '/platform');
+    await expect(menuLink(page, /Cited Sources/)).toHaveAttribute(
+      'href',
+      '/platform/cited-sources',
+    );
     await platform.click();
     await expect(platform).toHaveAttribute('aria-expanded', 'false');
-    await expect(menuLink(page, /Platform overview/)).toBeHidden();
+    await expect(menuLink(page, /Cited Sources/)).toBeHidden();
   });
 
   test('one popup stays open from trigger to trigger and down into the menu', async ({ page }) => {
@@ -111,12 +114,12 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     const solutions = trigger(page, 'Solutions');
 
     await platform.hover();
-    await expect(menuLink(page, /Platform overview/)).toBeVisible();
+    await expect(menuLink(page, /Cited Sources/)).toBeVisible();
     await solutions.hover();
     await expect(solutions).toHaveAttribute('aria-expanded', 'true');
     await expect(platform).toHaveAttribute('aria-expanded', 'false');
     await expect(menuLink(page, /Agencies/)).toBeVisible();
-    await expect(menuLink(page, /Platform overview/)).toBeHidden();
+    await expect(menuLink(page, /Cited Sources/)).toBeHidden();
 
     const box = await solutions.boundingBox();
     const row = await menuLink(page, /Agencies/).boundingBox();
@@ -183,7 +186,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await expect.poll(pageInert).toBe(true);
     const menu = page.locator('#mobile-menu');
     await menu.getByRole('button', { name: 'Platform', exact: true }).click();
-    await expect(menu.getByRole('link', { name: /Platform overview/ })).toBeVisible();
+    await expect(menu.getByRole('link', { name: /Cited Sources/ })).toBeVisible();
     const logIn = menu.getByRole('link', { name: 'Log in' });
     await expect(logIn).toHaveAttribute('href', 'http://127.0.0.1:3100/login');
     await page.keyboard.press('Escape');

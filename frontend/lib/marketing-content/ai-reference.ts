@@ -153,7 +153,7 @@ export const REFERENCE_ENTITIES: readonly ReferenceEntity[] = [
       { label: 'Supports', target: entity('Answer engine optimization', 'aeo') },
     ],
     sources: [
-      { label: 'Product overview', href: '/platform' },
+      { label: 'Product overview', href: '/' },
       { label: 'AI Instructions', href: '/ai-instructions#identity' },
     ],
   },
