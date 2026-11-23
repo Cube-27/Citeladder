@@ -57,7 +57,7 @@ class DimensionSum {
       ...fallback,
       dimension_applicability: 'applicable',
       dimension_measurement_state: measurement,
-      score: this.scored ? this.sum / this.scored : null,
+      score: this.scored ? this.sum / this.applicable : null,
       coverage: this.scored / this.applicable,
       earned_points: this.sum / 100,
       determinate_points: this.scored,

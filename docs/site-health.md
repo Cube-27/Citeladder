@@ -340,7 +340,11 @@ and are never analyzed. The lists live in `analysis.json`
 
 **Value tiers** order admission and are separate from page kind. The first path
 segment that names a tier, matching whole tokens, decides it; synonyms come
-from `value_fallback_tokens`. So `/blog/product-review` is `article`.
+from `value_fallback_tokens`. So `/blog/product-review` is `article`. A
+fallback token never names a different kind than the classifier's
+`route_patterns` gives the same segment (`store` is `local`, `shop` is
+`category`, `help` and `support` are `docs`), or the tracked set fills with
+pages the analyzer files elsewhere.
 
 Tier weights are `value_tiers` in `acquisition.json`.
 
@@ -538,7 +542,9 @@ separately: an agent-scoped line never swallows a generic one.
 - **Site facts:** only the crawl root's analysis receives `site_facts`.
 
 `analyzePage` derives page kind, traits, evaluations and provisional scores into
-an initial `site_page_analyses` row (`finalized_at` null).
+an initial `site_page_analyses` row (`finalized_at` null). Its provisional
+scores count the scored crawl-finalize and site checks that have not run yet
+as `unknown`, so a page cannot read 100 before finalization.
 
 ### Classification
 
@@ -592,8 +598,11 @@ Outcome normalization:
   `unknown`.
 - Truncated extraction turns `missing` into `unknown`.
 - A page the analyzer cannot read leaves its page-owned checks `unknown`. The
-  one exception is a script-only shell (`client_rendering_required`): it fails
-  `aeo.server_rendered_content`, the check that detects it.
+  one exception is a client-rendered shell (`client_rendering_required`): a
+  page that loads script and has no H1 and fewer than
+  `server_rendered_min_words` words in its main region (header, nav and footer
+  chrome excluded). It fails `aeo.server_rendered_content`, the check that
+  detects it; its content checks read `unknown`.
 - A throwing or unmapped check is `error`.
 
 `missing` or `partial` on a visible, non-diagnostic evaluation creates an issue,
@@ -692,11 +701,19 @@ every pair within the distance without comparing every pair of a large crawl,
 and each page keeps its closest evidence URLs, exact copies first.
 
 ```text
-role / pillar score = 100 * satisfied / (satisfied + missing), over applicable checks
+role / pillar score = 100 * satisfied / applicable, null when nothing is satisfied or missing
 coverage            = (satisfied + missing) / applicable
-AEO page score      = sum(pillar score * weight) / sum(weights of pillars with a score)
-crawl score         = mean of page scores; crawl pillar = mean of page pillar scores
+AEO page score      = sum(pillar score * weight) / sum(weights of applicable pillars),
+                      an unmeasured pillar counting 0; null when no pillar is measured
+crawl score         = mean of page scores
+crawl pillar        = sum of page pillar scores / pages where the pillar applies
 ```
+
+A score reaches 100 only when every applicable check ran and passed: an
+`unknown` scored check earns nothing but stays `unknown` in its outcome and
+measurement state. An expected schema type that is absent fails
+`aeo.schema_required_valid` (`expected_schema_absent`) rather than leaving the
+property checks `not_applicable`.
 
 These formulas are in `analysis/scoring.ts`.
 

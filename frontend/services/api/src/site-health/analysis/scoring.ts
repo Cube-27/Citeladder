@@ -86,7 +86,7 @@ function roleResult(rows: RuleEvaluation[]) {
   if (!expected || !determinate)
     return { score: null, coverage: expected ? 0 : null, state, passed, determinate, expected };
   return {
-    score: (100 * passed) / determinate,
+    score: (100 * passed) / expected,
     coverage: determinate / expected,
     state,
     passed,
@@ -142,15 +142,13 @@ function weightedReadiness(dimensions: ReadinessDimension[]) {
     const weight = WEIGHTS[row.key]!;
     applicableWeight += weight;
     weightedCoverage += (row.coverage ?? 0) * weight;
+    weightedScore += (row.score ?? 0) * weight;
     if (row.dimension_measurement_state !== 'measured') state = 'limited_evidence';
-    if (row.score !== null) {
-      scoredWeight += weight;
-      weightedScore += row.score * weight;
-    }
+    if (row.score !== null) scoredWeight += weight;
   }
   const coverage = applicableWeight ? weightedCoverage / applicableWeight : null;
   if (!scoredWeight) return { score: null, coverage, state: 'not_measured' };
-  return { score: weightedScore / scoredWeight, coverage, state };
+  return { score: weightedScore / applicableWeight, coverage, state };
 }
 
 export function readinessReason(
