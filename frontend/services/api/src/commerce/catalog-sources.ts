@@ -12,6 +12,7 @@ import { record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import { groupBy, type NonEmpty } from '../lists.ts';
 import { canonicalUrl } from '../site-health/url-identity.ts';
+import { fitsIndexKey } from '../db/index-key.ts';
 import { fragmentText } from '../web-evidence/html.ts';
 import { categoryKey, isCategoryName } from './projection-facts.ts';
 
@@ -23,7 +24,8 @@ export const catalogValuesSchema = z
   .object({
     canonical_url: z
       .url()
-      .refine((value) => canonicalUrl(value) !== null, 'Unsupported product URL'),
+      .refine((value) => canonicalUrl(value) !== null, 'Unsupported product URL')
+      .refine((value) => fitsIndexKey(canonicalUrl(value) ?? value), 'Product URL is too long'),
     name: z.string().max(512),
     description: z.string().max(policy.commerce.edit.description_max_chars),
     brand: z.string().max(255),

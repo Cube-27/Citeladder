@@ -8327,21 +8327,21 @@ REVOKE UPDATE, DELETE ON
     public.answer_ad_observations,
     public.answer_untracked_names,
     public.claim_verdict_overrides,
-    public.claim_verdicts,
     public.commerce_product_observations,
     public.commerce_recommendation_observations,
     public.site_change_observations
 FROM citeladder_app;
 
--- Billing serializes on row locks over these append-only tables (SELECT ... FOR
--- UPDATE), and PostgreSQL grants a row lock only with UPDATE privilege. So the
+-- Billing and verdict overrides serialize on row locks over these append-only
+-- tables (SELECT ... FOR UPDATE), and PostgreSQL grants a row lock only with UPDATE privilege. So the
 -- role keeps that privilege, loses DELETE, and a statement trigger refuses
 -- every UPDATE it issues with the same permission error a revoked grant raises.
 REVOKE DELETE ON
     public.account_grants,
     public.consumable_ledger,
     public.billing_payments,
-    public.raw_response_artifacts
+    public.raw_response_artifacts,
+    public.claim_verdicts
 FROM citeladder_app;
 
 CREATE TRIGGER append_only_app_update BEFORE UPDATE ON public.account_grants
@@ -8351,6 +8351,8 @@ CREATE TRIGGER append_only_app_update BEFORE UPDATE ON public.consumable_ledger
 CREATE TRIGGER append_only_app_update BEFORE UPDATE ON public.billing_payments
     FOR EACH STATEMENT EXECUTE FUNCTION public.refuse_app_role_update();
 CREATE TRIGGER append_only_app_update BEFORE UPDATE ON public.raw_response_artifacts
+    FOR EACH STATEMENT EXECUTE FUNCTION public.refuse_app_role_update();
+CREATE TRIGGER append_only_app_update BEFORE UPDATE ON public.claim_verdicts
     FOR EACH STATEMENT EXECUTE FUNCTION public.refuse_app_role_update();
 
 -- ==========================================================================

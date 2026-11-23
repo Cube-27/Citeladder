@@ -183,7 +183,6 @@ async function projectProduct(
     return facts.commerce.product_cards.length
       ? projectCategory(db, scope, source, facts, url)
       : null;
-  if (!fitsIndexKey(url)) return null;
   const existing = await db
     .selectFrom('commerce_products')
     .selectAll()
@@ -343,6 +342,7 @@ export const projectCatalog: Executor = async (task, { db, checkCancelled }) => 
         'commerce_source_url_missing',
         'Catalog source has no usable URL',
       );
+    if (!fitsIndexKey(url)) return;
     const projected =
       source.page_kind === 'category'
         ? await projectCategory(trx, scope, source, facts, url)

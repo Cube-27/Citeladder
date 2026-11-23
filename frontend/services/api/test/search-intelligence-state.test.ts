@@ -278,7 +278,11 @@ describe('durable paid acquisition boundaries', () => {
     const task = response.body.tasks[0]!;
     const oversized = {
       keyword_data: { keyword: 'shoes' },
-      ranked_serp_element: { url: `https://www.example.com/${'a'.repeat(5000)}`, rank_group: 1 },
+      ranked_serp_element: {
+        url: 'https://www.example.com/shoes',
+        rank_group: 1,
+        etv: 1e15,
+      },
     };
     await t.state.saveResponse(prep.call.id, {
       ...response,

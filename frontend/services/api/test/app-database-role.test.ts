@@ -22,6 +22,7 @@ const APPEND_ONLY = [
   'billing_payments',
   'brand_research_snapshots',
   'claim_verdict_overrides',
+  'claim_verdicts',
   'commerce_competitor_attempts',
   'commerce_product_observations',
   'commerce_recommendation_observations',

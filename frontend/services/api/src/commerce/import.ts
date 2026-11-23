@@ -35,7 +35,6 @@ import {
 import { categorySet, comparable, editHolds, importedBaseline } from './edits.ts';
 import { categoryKey } from './projection-facts.ts';
 import { widen } from '../widen.ts';
-import { fitsIndexKey } from '../db/index-key.ts';
 
 type Outcome = CatalogImport['row_outcomes'][number];
 type ImportRow = Selectable<CommerceCsvImports>;
@@ -271,8 +270,6 @@ async function importItem(
       'identity_conflict',
       'Its URL, SKU, GTIN or name belong to different products',
     );
-  if (!matches[0] && !fitsIndexKey(values.canonical_url ?? ''))
-    return rejected(item.row_number, 'url_too_long', 'Its URL is too long to store');
   const product = matches[0] ?? indexed(await newProduct(db, scope, values.canonical_url ?? ''));
   const alias = aliasOf(product, values.canonical_url);
   if (alias) delete values.canonical_url;
