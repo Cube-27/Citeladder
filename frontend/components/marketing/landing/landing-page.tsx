@@ -19,6 +19,7 @@ import { SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
 
 import { HeroVideo } from './hero-video';
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
+import './how-it-works.css';
 import './integrations.css';
 import './landing-backdrop.css';
 
@@ -69,7 +70,11 @@ function Modules() {
               label={module.title}
               title={module.desc}
               body={module.lead}
-              media={<ProductFrame label={module.title}>{module.screen}</ProductFrame>}
+              media={
+                <ProductFrame label={module.title} stage="soft">
+                  {module.screen}
+                </ProductFrame>
+              }
               page={
                 <ProductFrame label={`The ${module.page.title} page in the CiteLadder app`}>
                   <ScreenAppPage {...module.page}>{module.screen}</ScreenAppPage>
@@ -95,10 +100,21 @@ const STEPS = [
   { title: 'Run them again', body: 'Re-run prompts to check the change.' },
 ] as const;
 
+const ActionsScreen = SCREEN_CATALOG.actions.View;
+
 function HowItWorks() {
   return (
     <PageSection id="how-it-works" title="Measure, diagnose, improve">
-      <Steps items={STEPS} />
+      <div className="cl-how">
+        <Steps items={STEPS} direction="vertical" />
+        <div className="cl-how-shot">
+          <ProductFrame label="The Actions page in the CiteLadder app" stage="bold">
+            <ScreenAppPage title="Actions" active="Actions">
+              <ActionsScreen />
+            </ScreenAppPage>
+          </ProductFrame>
+        </div>
+      </div>
     </PageSection>
   );
 }
@@ -115,6 +131,7 @@ function Evidence() {
     <PageSection id="evidence" label="Evidence">
       <FeatureSplit
         as="h2"
+        reverse
         title="See how often AI recommends you and who it cites"
         body="Each score opens the saved answer: engine, prompt, date, your position and its sources."
         points={[
@@ -123,7 +140,7 @@ function Evidence() {
         ]}
         links={modules.map((href) => ({ href, label: platformLabel(href) ?? href }))}
         media={
-          <ProductFrame label="Answer record">
+          <ProductFrame label="Answer record" stage="soft">
             <AnswerScreen />
           </ProductFrame>
         }

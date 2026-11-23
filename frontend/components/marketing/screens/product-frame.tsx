@@ -5,22 +5,31 @@ import { cn } from '@/lib/utils';
 import './product-frame.css';
 
 export type FrameFit = 'fluid' | 'scale';
+export type FrameStage = 'soft' | 'bold';
 
 export function ProductFrame({
   children,
   label,
   fit = 'fluid',
+  stage,
   title,
   caption,
 }: Readonly<{
   children: ReactNode;
   label?: string;
   fit?: FrameFit;
+  stage?: FrameStage;
   title?: ReactNode;
   caption?: ReactNode;
 }>) {
   return (
-    <figure className={cn('cl-frame', `cl-frame--${fit}`)}>
+    <figure
+      className={cn(
+        'cl-frame',
+        `cl-frame--${fit}`,
+        stage && `cl-frame--stage cl-frame--stage-${stage}`,
+      )}
+    >
       <div className="cl-frame-card">
         <div // NOSONAR
           className="cl-frame-well"
