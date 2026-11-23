@@ -542,7 +542,9 @@ separately: an agent-scoped line never swallows a generic one.
 - **Site facts:** only the crawl root's analysis receives `site_facts`.
 
 `analyzePage` derives page kind, traits, evaluations and provisional scores into
-an initial `site_page_analyses` row (`finalized_at` null).
+an initial `site_page_analyses` row (`finalized_at` null). Its provisional
+scores count the scored crawl-finalize and site checks that have not run yet
+as `unknown`, so a page cannot read 100 before finalization.
 
 ### Classification
 

@@ -47,6 +47,7 @@ describe('a full score needs every applicable check evaluated and passed', () =>
         facts(
           `<!doctype html><html lang="en"><head><title>Capalaba store</title>
           <meta name="viewport" content="width=device-width">
+          <link rel="canonical" href="https://example.test/store/Capalaba">
           ${schema ? `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', ...schema })}</script>` : ''}
           </head><body><main><h1>Capalaba</h1><p>${copy}</p></main></body></html>`,
           'https://example.test/store/Capalaba',
@@ -65,7 +66,16 @@ describe('a full score needs every applicable check evaluated and passed', () =>
       reason_code: 'expected_schema_absent',
     });
     const score = (page: typeof none) => page.scores.aeo_readiness_score!;
-    expect([none, partial, complete].map(score)).toEqual([80, 260 / 3, 100]);
+    expect([none, partial, complete].map(score)).toEqual([70, 230 / 3, 90]);
+    expect(
+      complete.scores.expected_checkpoint_profile
+        .filter((item) => item.outcome === 'unknown')
+        .map((item) => [item.check_id, item.reason]),
+    ).toEqual([
+      ['technical.canonical_integrity', 'crawl_not_finalized'],
+      ['search.crawler_access', 'site_facts_unavailable'],
+    ]);
+    expect(complete.scores.web_fundamentals_score).toBeLessThan(100);
   });
 
   it('keeps a page with an unevaluated scored check below 100 while keeping it unknown', () => {
