@@ -92,10 +92,6 @@
   .cl-phero-media .cl-frame--scale .cl-frame-screen > .cl-screen {
     --screen-w: var(--screen-natural);
   }
-
-  .cl-frame--hero .cl-frame-screen > .cl-screen {
-    --screen-w: min(var(--screen-natural), 100cqi);
-  }
 }
 
 .cl-frame-screen {
@@ -153,16 +149,6 @@
 
 .cl-frame--scale > .cl-frame-card {
   overflow: hidden;
-}
-
-.cl-frame--hero > .cl-frame-card {
-  padding-bottom: 0;
-}
-
-.cl-frame--hero .cl-frame-screen > .cl-screen {
-  border-bottom: 0;
-  border-end-start-radius: 0;
-  border-end-end-radius: 0;
 }
 
 .cl-frame--scale > .cl-frame-card > .cl-frame-well {

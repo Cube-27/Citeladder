@@ -1,0 +1,18 @@
+.cl-hero-video {
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--site-radius-stage);
+  aspect-ratio: 2 / 1;
+}
+
+.cl-hero-video-clip {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+:root:not([data-theme='dark']) .cl-hero-video-clip[data-theme-clip='dark'],
+:root[data-theme='dark'] .cl-hero-video-clip[data-theme-clip='light'] {
+  display: none;
+}

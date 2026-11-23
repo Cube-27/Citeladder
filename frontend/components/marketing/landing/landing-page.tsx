@@ -15,9 +15,9 @@ import { SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import { ProductFrame } from '../screens/product-frame';
 import { ScreenAppPage } from '../screens/screen-app';
-import { ScreenAppInsights } from '../screens/screen-app-insights';
 import { SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
 
+import { HeroVideo } from './hero-video';
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
 import './integrations.css';
 import './landing-backdrop.css';
@@ -38,11 +38,7 @@ function Hero() {
           ? `${PUBLIC_TRIAL.days}-day free trial on ChatGPT answers. Trial limits apply.`
           : null
       }
-      frame={
-        <ProductFrame label="The Insights page in the CiteLadder app" fit="scale" hero>
-          <ScreenAppInsights />
-        </ProductFrame>
-      }
+      frame={<HeroVideo />}
     />
   );
 }

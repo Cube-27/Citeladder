@@ -29,7 +29,7 @@ export const TREND = {
   fathom: [18.1, 17.6, 17.9, 17.2, 17.4, 17.0, 17.1, 17.0],
 } as const;
 
-export type BrandSentiment = Readonly<
+type BrandSentiment = Readonly<
   { kind: 'value'; net: number; classified: number } | { kind: 'too_few'; classified: number }
 >;
 
@@ -45,8 +45,6 @@ export type Brand = Readonly<{
   sentiment: BrandSentiment;
   own?: boolean;
 }>;
-
-export const WIN_ANSWERS = 296;
 
 export const BRANDS: readonly Brand[] = [
   {
@@ -95,12 +93,6 @@ export const BRANDS: readonly Brand[] = [
     sentiment: { kind: 'too_few', classified: 14 },
   },
 ];
-
-export const TREND_EVENTS = [
-  { week: 2, kind: 'panel', label: 'Prompt panel: 12 prompts added' },
-  { week: 5, kind: 'model', label: 'Gemini model changed: 2.5 Pro → 3 Pro' },
-  { week: 6, kind: 'action', label: 'Action live: Session replay pricing page' },
-] as const;
 
 export type Kpi = Readonly<{
   label: string;
