@@ -4,8 +4,6 @@ import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { NAV_DROPS, PLATFORM_GROUPS, platformLabel } from '@/lib/marketing-content/nav';
 import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 
-import { ArtAnswer } from '../art/art-visibility';
-import { moduleArt } from '../art/module-art';
 import { AnnouncementPill } from '../chrome/announcement-pill';
 import { SiteActions } from '../primitives/button';
 import { EngineStrip } from '../sections/cards';
@@ -17,7 +15,7 @@ import { SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import { ProductFrame } from '../screens/product-frame';
 import { ScreenAppPage } from '../screens/screen-app';
-import { SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
+import { CatalogFrame, SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
 
 import { HeroVideo } from './hero-video';
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
@@ -49,11 +47,10 @@ function Hero() {
 function Modules() {
   const modules = PLATFORM_GROUPS.flatMap((group) => group.items).flatMap((item) => {
     const shown = moduleScreen(item.href);
-    const Artwork = moduleArt(item.href);
-    if (!shown || !Artwork) return [];
+    if (!shown) return [];
     const { View } = SCREEN_CATALOG[shown.screen];
     const lead = PLATFORM_PAGES.find((page) => page.path === item.href)?.lead ?? item.desc;
-    return [{ ...item, page: shown.page, screen: <View />, art: <Artwork />, lead }];
+    return [{ ...item, page: shown.page, screen: shown.screen, view: <View />, lead }];
   });
   return (
     <PageSection id="platform" label="Tools for AI visibility, search and your website">
@@ -73,14 +70,10 @@ function Modules() {
               label={module.title}
               title={module.desc}
               body={module.lead}
-              media={
-                <ProductFrame label={module.title} stage="soft">
-                  {module.art}
-                </ProductFrame>
-              }
+              media={<CatalogFrame screen={module.screen} />}
               page={
                 <ProductFrame label={`The ${module.page.title} page in the CiteLadder app`}>
-                  <ScreenAppPage {...module.page}>{module.screen}</ScreenAppPage>
+                  <ScreenAppPage {...module.page}>{module.view}</ScreenAppPage>
                 </ProductFrame>
               }
             />
@@ -140,11 +133,7 @@ function Evidence() {
           'Mentions, citations and AI referral visits counted apart',
         ]}
         links={modules.map((href) => ({ href, label: platformLabel(href) ?? href }))}
-        media={
-          <ProductFrame label="Answer record" stage="soft">
-            <ArtAnswer />
-          </ProductFrame>
-        }
+        media={<CatalogFrame screen="answer" />}
       />
     </PageSection>
   );

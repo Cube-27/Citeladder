@@ -57,8 +57,8 @@ it('renders the hero screen alone and the highlights, steps, questions and FAQ a
   expect(
     screen.getByRole('img', { name: 'Site health for acme.com: score 82, 7 failed checks' })
       .textContent,
-  ).toMatch(/^Site healthacme\.com · 7 failed checksScore 82/);
-  expect(screen.getAllByText('Score 82')).toHaveLength(1);
+  ).toBe('82Site health');
+  expect(screen.queryByText('Score 82')).not.toBeInTheDocument();
   expect(screen.queryByText('Pages blocked')).not.toBeInTheDocument();
   expect(
     screen.getByRole('img', { name: 'AI crawler access to acme.com from robots.txt' }),
