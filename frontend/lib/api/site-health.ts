@@ -68,15 +68,22 @@ export type InventoryParams = {
 
 export type CrawlListParams = { project_id: string; limit?: number; cursor?: string };
 export type PagesSort = 'status' | 'url' | 'inbound' | 'main_content_inbound' | 'depth';
-export type PagesParams = {
-  cursor?: string;
-  limit?: number;
+export type PageScoreRole = 'web_fundamentals' | 'aeo_readiness';
+export type PageFilterParams = {
   status?: string;
   monitored?: boolean;
   page_kind?: string;
   query?: string;
   sort?: PagesSort;
+  rule?: string;
+  with_issues?: boolean;
+  indexable?: boolean;
+  min_depth?: number;
+  max_depth?: number;
+  score_role?: PageScoreRole;
+  max_score?: number;
 };
+export type PagesParams = PageFilterParams & { cursor?: string; limit?: number };
 export type ChangesPageRequest = Parameters<typeof queryKeys.siteHealth.changes>[1];
 export type IssuesParams = {
   cursor?: string;
@@ -284,8 +291,10 @@ export const siteHealthApi = {
     crawlId: string,
     format: 'csv' | 'md',
     view?: 'inventory' | 'pages' | 'issues' | 'architecture',
-  ) => {
-    const base = `${API_BASE_URL}/site-crawls/${crawlId}/export.${format}`;
-    return view ? `${base}?view=${view}` : base;
-  },
+    filters: PageFilterParams = {},
+  ) =>
+    withQuery(
+      `${API_BASE_URL}/site-crawls/${crawlId}/export.${format}`,
+      definedQuery({ view, ...filters }),
+    ),
 };

@@ -148,6 +148,13 @@ export const siteHealthQueries = {
         page_kind: params?.page_kind ?? null,
         query: params?.query ?? null,
         sort: params?.sort ?? null,
+        rule: params?.rule ?? null,
+        with_issues: params?.with_issues ?? null,
+        indexable: params?.indexable ?? null,
+        min_depth: params?.min_depth ?? null,
+        max_depth: params?.max_depth ?? null,
+        score_role: params?.score_role ?? null,
+        max_score: params?.max_score ?? null,
       }),
       queryFn: ({ signal }) => siteHealthApi.getPages(crawlId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>

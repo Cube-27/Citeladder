@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { billingQueries } from '@/lib/api/billing';
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
-import { type StartCrawlInput } from '@/lib/api/site-health';
+import { type PageFilterParams, type StartCrawlInput } from '@/lib/api/site-health';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import {
@@ -103,12 +103,12 @@ export function useSiteHealthScreen() {
 
   const startPending = starting?.projectId === projectId;
 
-  const runExport = async (format: ExportFormat, view: ExportView) => {
+  const runExport = async (format: ExportFormat, view: ExportView, filters?: PageFilterParams) => {
     if (!crawl) return;
     setExportError(null);
     setExporting(true);
     try {
-      await downloadCrawlExport(crawl.id, format, view, { workspaceId });
+      await downloadCrawlExport({ crawlId: crawl.id, format, view, filters }, { workspaceId });
     } catch {
       setExportError('Export failed. Please try again.');
     } finally {

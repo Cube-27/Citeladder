@@ -3,10 +3,12 @@ import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueFixActions, type IssueFixScope } from '@/components/site-health/issue-fix-actions';
 import { AffectedPageLink, SharedOccurrences } from '@/components/site-health/shared-occurrences';
 import type { UseQueryResult } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pager } from '@/components/ui/pager';
+import { ProjectLink } from '@/components/ui/project-link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
@@ -105,6 +107,9 @@ export function IssueDetailDrawer({
         <CopyButton value={buildFixPrompt(issue)} variant="secondary" className="w-fit">
           Copy fix prompt
         </CopyButton>
+        <Button variant="secondary" asChild>
+          <ProjectLink href={pagesWithIssueHref(issue.rule_id)}>View in Pages</ProjectLink>
+        </Button>
       </Inline>
       <IssueFixActions scope={scope} crawlId={crawlId} groupId={issue.group_id} />
       <Stack as="section" gap="workspace" aria-busy={detailQuery.isFetching || undefined}>
@@ -145,6 +150,11 @@ export function PendingIssueDrawer({
       )}
     </Drawer>
   );
+}
+
+function pagesWithIssueHref(ruleId: string): string {
+  const params = new URLSearchParams({ tab: 'pages', pages_view: 'all', pages_rule: ruleId });
+  return `/site?${params.toString()}`;
 }
 
 export function askAgentPrompt(

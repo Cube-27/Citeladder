@@ -43,10 +43,13 @@ describe('PagesTable', () => {
     renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     expect(screen.getAllByRole('columnheader').map((head) => head.textContent)).toEqual([
       'Page',
+      'Status',
       'Type',
       'Issues',
       'Web fundamentals',
       'AEO readiness',
+      'Depth',
+      'Inlinks',
       'Last audit',
     ]);
     const link = screen.getByRole('link', { name: /^View Homepage, / });
@@ -54,7 +57,7 @@ describe('PagesTable', () => {
     expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${UUID}`);
   });
 
-  it('shows the status badge beside the title only while analysis is not completed', () => {
+  it('shows each page’s analysis status in its Status column', () => {
     renderPages(
       <PagesTable
         crawlId={CRAWL}
@@ -67,7 +70,8 @@ describe('PagesTable', () => {
     const done = screen.getByRole('row', { name: /Fine page/ });
     const queued = screen.getByRole('row', { name: /Queued page/ });
     expect(within(queued).getByText('Pending')).toBeInTheDocument();
-    expect(within(done).queryByText('Completed')).not.toBeInTheDocument();
+    expect(within(done).getByText('Completed')).toBeInTheDocument();
+    expect(within(done).queryByText('Pending')).not.toBeInTheDocument();
   });
 
   it('marks only a page fetched despite a robots.txt exclusion', () => {
