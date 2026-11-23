@@ -170,7 +170,7 @@ export function PagesTable({
               />
             </TableCell>
             <TableCell numeric className={mutedWhenMissing(page.depth_from_home)}>
-              {page.depth_from_home ?? <Absence state="not_measured" />}
+              <DepthValue page={page} />
             </TableCell>
             <TableCell numeric className={mutedWhenMissing(page.inbound_count)}>
               {page.inbound_count ?? <Absence state="not_measured" />}
@@ -183,6 +183,12 @@ export function PagesTable({
       })}
     </DataTable>
   );
+}
+
+function DepthValue({ page }: Readonly<{ page: PageSummary }>) {
+  if (page.depth_from_home !== null) return page.depth_from_home;
+  if (page.inbound_count === null) return <Absence state="not_measured" />;
+  return 'Not reached';
 }
 
 function MeasurementValue({ score, state }: Readonly<{ score: number | null; state: string }>) {

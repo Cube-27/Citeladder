@@ -3,7 +3,7 @@ import { sql, type RawBuilder } from 'kysely';
 import { containsPattern } from '../../db/like.ts';
 
 export const PAGE_SCORE_ROLES = ['web_fundamentals', 'aeo_readiness'] as const;
-export type PageScoreRole = (typeof PAGE_SCORE_ROLES)[number];
+type PageScoreRole = (typeof PAGE_SCORE_ROLES)[number];
 
 const SCORE_COLUMNS: Record<PageScoreRole, string> = {
   web_fundamentals: 'a.web_fundamentals_score',
@@ -40,31 +40,45 @@ export function pageFilterFingerprint(filters: PageRowFilters) {
   };
 }
 
-export function pageFilterSql(filters: PageRowFilters, shownIssue: RawBuilder<unknown>) {
+function identityClauses(filters: PageRowFilters) {
   const search = filters.query?.trim().toLowerCase();
   const pattern = search ? containsPattern(search) : null;
-  const issueExists = (rule: string | null) => sql`and exists (
-    select 1 from site_issues i
-    where i.workspace_id = u.workspace_id ${rule === null ? sql`` : sql`and i.rule_id = ${rule}`}
-      and ${shownIssue})`;
-  const clauses = [
+  return [
     filters.siteUrlId ? sql`and u.id = ${filters.siteUrlId}` : null,
     pattern
       ? sql`and (lower(u.normalized_url) like ${pattern} or lower(u.display_url) like ${pattern})`
       : null,
     filters.pageKind ? sql`and a.page_kind = ${filters.pageKind}` : null,
+    filters.monitored === false ? sql`and m.site_url_id is null` : null,
+  ];
+}
+
+function issueClauses(filters: PageRowFilters, shownIssue: RawBuilder<unknown>) {
+  const issueExists = (rule: string | null) => sql`and exists (
+    select 1 from site_issues i
+    where i.workspace_id = u.workspace_id ${rule === null ? sql`` : sql`and i.rule_id = ${rule}`}
+      and ${shownIssue})`;
+  return [
     filters.rule ? issueExists(filters.rule) : null,
     filters.withIssues ? issueExists(null) : null,
-    filters.monitored === false ? sql`and m.site_url_id is null` : null,
-    typeof filters.indexable === 'boolean'
-      ? sql`and a.main_content_indexable = ${filters.indexable}`
-      : null,
-    typeof filters.minDepth === 'number' ? sql`and l.depth_from_home >= ${filters.minDepth}` : null,
-    typeof filters.maxDepth === 'number' ? sql`and l.depth_from_home <= ${filters.maxDepth}` : null,
-    filters.score
-      ? sql`and round(${sql.ref(SCORE_COLUMNS[filters.score.role])}) <= ${filters.score.max}`
-      : null,
   ];
-  const present = clauses.filter((clause) => clause !== null);
+}
+
+function measureClauses(filters: PageRowFilters) {
+  const { indexable, minDepth, maxDepth, score } = filters;
+  return [
+    typeof indexable === 'boolean' ? sql`and a.main_content_indexable = ${indexable}` : null,
+    typeof minDepth === 'number' ? sql`and l.depth_from_home >= ${minDepth}` : null,
+    typeof maxDepth === 'number' ? sql`and l.depth_from_home <= ${maxDepth}` : null,
+    score ? sql`and round(${sql.ref(SCORE_COLUMNS[score.role])}) <= ${score.max}` : null,
+  ];
+}
+
+export function pageFilterSql(filters: PageRowFilters, shownIssue: RawBuilder<unknown>) {
+  const present = [
+    ...identityClauses(filters),
+    ...issueClauses(filters, shownIssue),
+    ...measureClauses(filters),
+  ].filter((clause) => clause !== null);
   return present.length ? sql.join(present, sql` `) : sql``;
 }
