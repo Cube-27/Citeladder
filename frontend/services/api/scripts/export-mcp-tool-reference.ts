@@ -1,10 +1,9 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { mcpPolicy } from '../src/mcp/config.ts';
 import { tools } from '../src/mcp/tools.ts';
-import { writeTools } from '../src/mcp/write-tools.ts';
 
 const path = new URL('../../../apps/docs/src/data/mcp-tools.json', import.meta.url);
-const entry = (tool: (typeof tools)[number] | (typeof writeTools)[number]) => ({
+const entry = (tool: (typeof tools)[number]) => ({
   name: tool.name,
   title: tool.title,
   description: tool.description,
@@ -15,7 +14,7 @@ const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompar
 const contents = `${JSON.stringify(
   {
     server_version: mcpPolicy.server_version,
-    tools: [...[...tools].sort(byName), ...[...writeTools].sort(byName)].map(entry),
+    tools: [...tools].sort(byName).map(entry),
   },
   null,
   2,

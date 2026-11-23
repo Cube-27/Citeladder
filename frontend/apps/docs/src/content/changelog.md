@@ -3,10 +3,18 @@ title: 'Changelog'
 description: 'Product changes and what they mean for your workflow.'
 group: 'Updates'
 order: 400
-updated: '2026-11-22'
+updated: '2026-11-23'
 ---
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
+
+## November 23, 2026: MCP connections are read-only
+
+An assistant connected over MCP now only reads: the consent page no longer offers **Allow changes**, and no change tools are listed. Add prompts, launch audits, start crawls and update Actions in the CiteLadder app.
+
+**For your team:** existing connections keep working for reads.
+
+[MCP](/mcp/)
 
 ## November 22, 2026: Google AI Mode as an engine
 

@@ -47,11 +47,9 @@ acceptance is recorded with the `mcp_consent` context in the same transaction as
 the code. A workspace whose trial or subscription has ended is shown, not
 selectable, with a billing link; one whose access cannot be resolved is shown as
 unconfirmed, without a billing fix.
-When the client requested `citeladder:write` (or named no scope) and the person
-is Member or above in a shareable workspace, the page offers **Allow changes**,
-unticked, listing what changes are possible and that each is shown and
-confirmed first. Ticking it adds `citeladder:write` to the code only for a
-selection including such a workspace; otherwise the grant is read-only.
+Connections are read-only: `scopes_supported` lists only `citeladder:read`, so
+no request is granted `citeladder:write` and the page never offers **Allow
+changes** ([decision](decisions.md#agent-mcp-and-public-api)).
 A workspace without a project links to onboarding, whose `return_to` brings the
 person back to consent.
 
@@ -197,7 +195,11 @@ string and fragment, as the Site tools' do.
 
 ## Changes
 
-MCP is for analysis and writing, so it offers a curated subset of the change
+Not offered: no new grant holds `citeladder:write`, so `tools/list` never lists
+the write catalogue below ([decision](decisions.md#agent-mcp-and-public-api)).
+The code stays until its removal (backlog); this section describes it.
+
+MCP was for analysis and writing, so it offered a curated subset of the change
 table it shares with the Agent ([`changes/kinds.ts`](../frontend/services/api/src/changes/kinds.ts),
 [Agent](agents.md#proposed-changes)): the kinds in
 [`MCP_CHANGE_KINDS`](../frontend/services/api/src/mcp/change-kinds.ts), typed

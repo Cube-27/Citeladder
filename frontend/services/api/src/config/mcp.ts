@@ -54,7 +54,7 @@ export const mcp = {
       "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
     read_scope: 'citeladder:read',
     write_scope: 'citeladder:write',
-    scopes_supported: ['citeladder:read', 'citeladder:write'],
+    scopes_supported: ['citeladder:read'],
     server_version: '2.0.0',
     result_cache: {
       catalogue: { ttlMs: 3_600_000, cacheScope: 'public' },

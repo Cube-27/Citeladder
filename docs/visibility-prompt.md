@@ -365,12 +365,9 @@ prompt text or a proposal of its own:
 - In the Agent it saves a **prompt plan** following the builder's steps (facts
   to fix, topics to keep or change, mix and search data) and offers **Open
   Prompt Builder** (`/prompts/build`); the Agent stays read-only.
-- Over [MCP](mcp.md), a connection with Allow changes runs the steps through
-  the builder's own owners: `get_project_business_context`, then
-  `preview_topics` and the `confirm_topics` change, then `read_seed_queries`,
-  then the `generate_prompts` change with the agreed distribution and seeds,
-  each change confirmed against its preview. Candidates stay staged; only a
-  person's Track in the Prompt builder activates them.
+- Over [MCP](mcp.md), which is read-only, prompt discovery is not offered;
+  candidates are generated in the Prompt builder, and only a person's Track
+  activates them.
 
 The Prompt Builder is the page `/prompts/build`: four steps down the left (the
 current one in the address as `?step=`, done ones reopenable), a fixed footer.

@@ -224,9 +224,9 @@ export function consentPage(view: ConsentView) {
             : ''
         }
         <p class="meta">
-          Without Allow changes it can only read. It uses only the workspaces you select; joining
-          another workspace later does not add it, and leaving one removes it. You can revoke it any
-          time in Settings → MCP connections. Approving sends you back to
+          It can only read. It uses only the workspaces you select; joining another workspace later
+          does not add it, and leaving one removes it. You can revoke it any time in Settings → MCP
+          connections. Approving sends you back to
           <code>${view.redirectUri}</code>.
         </p>
         <div class="actions">
