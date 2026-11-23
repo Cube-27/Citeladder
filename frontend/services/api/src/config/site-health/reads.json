@@ -15,6 +15,7 @@
       "technical.meta_description_present": "meta_description",
       "technical.meta_description_length": "meta_description",
       "technical.h1_present": "h1_count",
+      "technical.single_h1": "h1_count",
       "aeo.thin_content": "word_count"
     },
     "issue_section_by_category": {

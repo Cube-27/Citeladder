@@ -207,11 +207,24 @@ describe('issue state and trend', () => {
     );
     await audit(second, '/b', { [SITEMAP]: 'missing', [H1]: 'missing' }, b.id);
     await land(second);
-    expect(await changes(second)).toEqual({
-      [CLIENT]: [0, 0],
-      [SITEMAP]: [0, 1],
-      [H1]: [2, 0],
-    });
+    const secondChanges = { [CLIENT]: [0, 0], [SITEMAP]: [0, 1], [H1]: [2, 0] };
+    expect(await changes(second)).toEqual(secondChanges);
+
+    const outsider = await fixtures.crawl('completed');
+    const before = await crawlAt(outsider, minutes(0));
+    const other = await audit(before, '/b', { [SITEMAP]: 'missing' });
+    await land(before);
+    const after = await crawlAt(outsider, minutes(10));
+    await audit(after, '/b', { [SITEMAP]: 'satisfied', [H1]: 'missing' }, other.id);
+    await land(after);
+    expect(await changes(second)).toEqual(secondChanges);
+
+    const third = await crawlAt(seed, minutes(20));
+    await audit(third, '/a', { [CLIENT]: 'satisfied', [H1]: 'satisfied' }, a.id);
+    await audit(third, '/b', { [SITEMAP]: 'satisfied', [H1]: 'missing' }, b.id);
+    await land(third);
+    expect(await changes(second)).toEqual(secondChanges);
+    expect(await changes(third)).toEqual({ [H1]: [0, 1] });
   });
 
   it('marks a 404 page unavailable, never resolved, and recovers when it answers', async () => {

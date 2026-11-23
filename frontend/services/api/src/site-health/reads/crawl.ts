@@ -177,13 +177,27 @@ export function viewIssuesSql(crawl: ViewCrawl, alias = 'i', view?: RawBuilder<u
         select v.crawl_id, v.site_url_id from ${pages} v)))`;
 }
 
-export async function previousSiteCrawl(db: Database, crawl: ViewCrawl) {
-  const previous = await siteCrawls(db, crawl.workspace_id, crawl.project_id)
+function usableSiteCrawls(db: Database, crawl: ViewCrawl) {
+  return siteCrawls(db, crawl.workspace_id, crawl.project_id)
     .select(['id', 'started_at', 'created_at'])
-    .where('status', 'in', USABLE_CRAWL_STATUSES)
-    .where(sql<boolean>`(created_at, id) < (${crawl.created_at}::timestamptz, ${crawl.id}::uuid)`)
-    .executeTakeFirst();
-  return previous ?? null;
+    .where('status', 'in', USABLE_CRAWL_STATUSES);
+}
+
+const crawlKey = (crawl: ViewCrawl) => sql`(${crawl.created_at}::timestamptz, ${crawl.id}::uuid)`;
+
+export async function adjacentSiteCrawls(db: Database, crawl: ViewCrawl) {
+  const [previous, next] = await Promise.all([
+    usableSiteCrawls(db, crawl)
+      .where(sql<boolean>`(created_at, id) < ${crawlKey(crawl)}`)
+      .executeTakeFirst(),
+    usableSiteCrawls(db, crawl)
+      .where(sql<boolean>`(created_at, id) > ${crawlKey(crawl)}`)
+      .clearOrderBy()
+      .orderBy('created_at')
+      .orderBy('id')
+      .executeTakeFirst(),
+  ]);
+  return { previous: previous ?? null, next: next ?? null };
 }
 
 export async function foldingSiteCrawl(db: Database, rerun: Crawl): Promise<Crawl | null> {

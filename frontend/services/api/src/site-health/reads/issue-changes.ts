@@ -1,7 +1,7 @@
 import { sql, type RawBuilder } from 'kysely';
 
 import type { Database } from '../../db/database.ts';
-import { previousSiteCrawl, type Crawl } from './crawl.ts';
+import { adjacentSiteCrawls, type Crawl } from './crawl.ts';
 import { isSiteLevelRule, siteLevelRule } from './rules.ts';
 
 export type IssueChange = { new_url_count: number | null; resolved_url_count: number | null };
@@ -14,9 +14,10 @@ export async function issueChanges(
   crawl: Crawl,
   scope: { matching: RawBuilder<unknown>; siteUrlId: string | null; pageKind: string | null },
 ): Promise<(ruleId: string) => IssueChange> {
-  const previous = await previousSiteCrawl(db, crawl);
+  const { previous, next } = await adjacentSiteCrawls(db, crawl);
   if (previous === null) return () => UNKNOWN;
   const since = previous.started_at ?? previous.created_at;
+  const before = next ? sql`and s.resolved_at < ${next.started_at ?? next.created_at}` : sql``;
   const page = scope.siteUrlId ? sql`and s.site_url_id = ${scope.siteUrlId}::uuid` : sql``;
   const [fresh, resolved] = await Promise.all([
     sql<Counts>`
@@ -34,7 +35,7 @@ export async function issueChanges(
       from site_issue_states s
       where s.workspace_id = ${crawl.workspace_id} and s.project_id = ${crawl.project_id}
         and s.state = 'resolved' and s.resolved_at > ${since} and s.first_seen_at <= ${since}
-        ${page}
+        ${before} ${page}
       group by s.rule_id`.execute(db),
   ]);
   const counts = (rows: Counts[]) => new Map(rows.map((row) => [row.rule_id, row.count]));

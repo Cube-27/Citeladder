@@ -885,11 +885,12 @@ crawl's own `score_summary`.
 
 **New and Fixed** (SH-B12; `reads/issue-changes.ts`). Each issue group carries
 `new_url_count` and `resolved_url_count` against the previous usable site crawl
-(`previousSiteCrawl`), at that crawl's audit time: New counts the group's pages
+(`adjacentSiteCrawls`), at that crawl's audit time: New counts the group's pages
 whose state was first seen after it (or has no state yet, as in a running crawl);
-Fixed counts the rule's states `resolved` since it that were seen at or before
-it, so a page that went unavailable or left the tracked set is never fixed. With
-no previous crawl, a site-level rule, or Fixed under a page-kind filter, the
+Fixed counts the rule's states `resolved` since it, and before the next usable
+site crawl when an older crawl is viewed, that were seen at or before it, so a
+page that went unavailable or left the tracked set is never fixed. With no
+previous crawl, a site-level rule, or Fixed under a page-kind filter, the
 count is null (unknown), never zero. A landing writes the states before it
 rewrites the issue catalog, so the persisted catalog counts what just landed. A
 group that every page fixed leaves the list, so its Fixed count is not shown.
