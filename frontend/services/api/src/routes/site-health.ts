@@ -212,21 +212,24 @@ async function exportBody(
       });
     return issueExport(db, { workspaceId, crawlId, groupId: query.group_id });
   }
+  const view = query.view as TableView;
+  const request = { workspaceId, crawlId, view, format };
+  if (view === 'issues')
+    return tableExport(db, {
+      ...request,
+      issues: {
+        filters: issueFilters(query),
+        view: {
+          section: query.section ?? null,
+          sort: exportSort(query.sort, issueSortSchema.options) ?? 'severity',
+        },
+      },
+    });
   return tableExport(db, {
-    workspaceId,
-    crawlId,
-    view: query.view as TableView,
-    format,
+    ...request,
     pages: {
       filters: pageRowFilters(query),
       sort: exportSort(query.sort, PAGE_SORTS) ?? 'status',
-    },
-    issues: {
-      filters: issueFilters(query),
-      view: {
-        section: query.section ?? null,
-        sort: exportSort(query.sort, issueSortSchema.options) ?? 'severity',
-      },
     },
   });
 }
