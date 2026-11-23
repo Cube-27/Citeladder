@@ -225,6 +225,12 @@ describe('issue state and trend', () => {
     await land(third);
     expect(await changes(second)).toEqual(secondChanges);
     expect(await changes(third)).toEqual({ [H1]: [0, 1] });
+
+    const fourth = await crawlAt(seed, minutes(30));
+    await audit(fourth, '/a', { [SITEMAP]: 'missing' }, a.id);
+    await audit(fourth, '/b', { [H1]: 'missing' }, b.id);
+    await land(fourth);
+    expect(await changes(fourth)).toEqual({ [SITEMAP]: [1, 0], [H1]: [0, 0] });
   });
 
   it('marks a 404 page unavailable, never resolved, and recovers when it answers', async () => {

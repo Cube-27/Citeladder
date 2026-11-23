@@ -716,7 +716,8 @@ role / pillar score = 100 * satisfied / applicable, null when nothing is satisfi
 coverage            = (satisfied + missing) / applicable
 AEO page score      = sum(pillar score * weight) / sum(weights of applicable pillars),
                       an unmeasured pillar counting 0; null when no pillar is measured
-crawl score         = mean of page scores
+crawl score         = sum of page scores / pages where the role applies, an unscored
+                      page counting 0; null when no page is scored
 crawl pillar        = sum of page pillar scores / pages where the pillar applies
 ```
 
@@ -886,7 +887,8 @@ crawl's own `score_summary`.
 **New and Fixed** (SH-B12; `reads/issue-changes.ts`). Each issue group carries
 `new_url_count` and `resolved_url_count` against the previous usable site crawl
 (`adjacentSiteCrawls`), at that crawl's audit time: New counts the group's pages
-whose state was first seen after it (or has no state yet, as in a running crawl);
+on which that crawl's view held no current issue of the rule, so a page fixed
+then and failing again counts as New;
 Fixed counts the rule's states `resolved` since it, and before the next usable
 site crawl when an older crawl is viewed, that were seen at or before it, so a
 page that went unavailable or left the tracked set is never fixed. With no

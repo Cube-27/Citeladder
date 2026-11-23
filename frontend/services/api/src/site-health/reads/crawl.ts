@@ -179,7 +179,7 @@ export function viewIssuesSql(crawl: ViewCrawl, alias = 'i', view?: RawBuilder<u
 
 function usableSiteCrawls(db: Database, crawl: ViewCrawl) {
   return siteCrawls(db, crawl.workspace_id, crawl.project_id)
-    .select(['id', 'started_at', 'created_at'])
+    .select(['id', 'workspace_id', 'project_id', 'configuration', 'started_at', 'created_at'])
     .where('status', 'in', USABLE_CRAWL_STATUSES);
 }
 

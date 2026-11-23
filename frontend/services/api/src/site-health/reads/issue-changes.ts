@@ -1,7 +1,7 @@
 import { sql, type RawBuilder } from 'kysely';
 
 import type { Database } from '../../db/database.ts';
-import { adjacentSiteCrawls, type Crawl } from './crawl.ts';
+import { adjacentSiteCrawls, viewIssuesSql, type Crawl } from './crawl.ts';
 import { isSiteLevelRule, siteLevelRule } from './rules.ts';
 
 export type IssueChange = { new_url_count: number | null; resolved_url_count: number | null };
@@ -23,10 +23,11 @@ export async function issueChanges(
     sql<Counts>`
       select i.rule_id, count(distinct i.site_url_id)::int as count
       from site_issues i
-      left join site_issue_states s on s.workspace_id = i.workspace_id
-        and s.project_id = i.project_id and s.site_url_id = i.site_url_id and s.rule_id = i.rule_id
       where ${scope.matching} and not ${siteLevelRule}
-        and (s.id is null or s.first_seen_at > ${since})
+        and not exists (
+          select 1 from site_issues p
+          where ${viewIssuesSql(previous, 'p')}
+            and p.rule_id = i.rule_id and p.site_url_id = i.site_url_id)
       group by i.rule_id`.execute(db),
     scope.pageKind
       ? null
