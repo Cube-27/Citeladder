@@ -227,12 +227,7 @@
   background: none;
 }
 
-.cl-railcard-shot .cl-frame {
-  zoom: 0.7;
-}
-
 .cl-railcard-shot .cl-frame-card {
-  padding: 40px;
   border-radius: var(--site-radius-stage);
 }
 
@@ -392,10 +387,6 @@
 
   .cl-rail .cl-railcard[data-expanded] .cl-railcard-shot {
     display: block;
-  }
-
-  .cl-railcard-shot .cl-frame-card {
-    padding: 24px;
   }
 
   .cl-rail .cl-railcard[data-expanded] .cl-railcard-more {

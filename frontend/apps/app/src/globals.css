@@ -764,6 +764,7 @@
   --color-site-stage-mid: oklch(90% 0.06 50);
   --color-site-stage-to: oklch(78% 0.125 44);
   --color-site-stage-dot: oklch(63.4% 0.1973 37.5 / 30%);
+  --color-site-stage-line: oklch(63.4% 0.1973 37.5 / 32%);
   --color-site-stage-bold-from: oklch(50% 0.19 29);
   --color-site-stage-bold-to: oklch(67% 0.19 46);
   --site-shadow-float: 0 0 0 1px oklch(45% 0.1 40 / 10%), 0 2px 4px oklch(40% 0.1 40 / 8%), 0 18px 40px -12px oklch(40% 0.12 38 / 35%);
@@ -826,6 +827,7 @@
   --color-site-stage-mid: oklch(29% 0.06 45);
   --color-site-stage-to: oklch(42% 0.125 40);
   --color-site-stage-dot: oklch(70.3% 0.194 39.3 / 26%);
+  --color-site-stage-line: oklch(70.3% 0.194 39.3 / 38%);
   --color-site-stage-bold-from: oklch(36% 0.14 29);
   --color-site-stage-bold-to: oklch(56% 0.17 44);
   --site-shadow-float: 0 0 0 1px oklch(100% 0 0 / 8%), 0 18px 40px -12px oklch(0% 0 0 / 60%);
