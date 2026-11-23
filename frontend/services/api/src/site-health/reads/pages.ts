@@ -11,6 +11,7 @@ import { record, strings } from '../../db/json.ts';
 import { WorkspaceScope } from '../../db/workspace-scope.ts';
 import { notFound } from '../../errors.ts';
 import { loadCrawl, rootFailure, type Crawl } from './crawl.ts';
+import { pageFilterFingerprint, type PageRowFilters } from './page-filters.ts';
 import {
   linkedFrom,
   measurementFields,
@@ -19,7 +20,6 @@ import {
   pageWindow,
   shownIssueFilter,
   type PageRow,
-  type PageRowFilters,
   type PageSort,
   type Referrer,
 } from './page-rows.ts';
@@ -76,10 +76,7 @@ async function window(
 ) {
   const fingerprint = {
     crawl_id: crawl.id,
-    status: filters.status ?? null,
-    monitored: filters.monitored ?? null,
-    page_kind: filters.pageKind ?? null,
-    query: filters.query?.trim().toLowerCase() || null,
+    ...pageFilterFingerprint(filters),
     sort,
   };
   const rows = await pageRows(db, crawl, {

@@ -47,6 +47,7 @@ import {
 } from '../site-health/reads/exports.ts';
 import { issueHistory } from '../site-health/reads/issue-history.ts';
 import { issueDetail, issues } from '../site-health/reads/issues.ts';
+import { PAGE_SCORE_ROLES, type PageRowFilters } from '../site-health/reads/page-filters.ts';
 import { PAGE_SORTS } from '../site-health/reads/page-rows.ts';
 import { inventory, pageDetail, pages } from '../site-health/reads/pages.ts';
 import {
@@ -76,17 +77,23 @@ const paging = {
   },
   cursor: text,
 } as const;
+const flag = { scalar: { kind: 'bool' } } as const;
+const depth = { scalar: { kind: 'int', ge: 0 } } as const;
 const pageFilters = {
   status_filter: { ...text, alias: 'status' },
-  monitored: { scalar: { kind: 'bool' } },
+  monitored: flag,
   page_kind: text,
-} as const;
-const pagesQuery = {
-  ...paging,
-  ...pageFilters,
   query: text,
+  rule: text,
+  with_issues: flag,
+  indexable: flag,
+  min_depth: depth,
+  max_depth: depth,
+  score_role: { scalar: { kind: 'literal', values: PAGE_SCORE_ROLES } },
+  max_score: { scalar: { kind: 'int', ge: 0, le: 100 } },
   sort: { scalar: { kind: 'literal', values: PAGE_SORTS }, default: 'status' },
 } as const;
+const pagesQuery = { ...paging, ...pageFilters } as const;
 const issuesQuery = {
   ...paging,
   query: text,
@@ -103,25 +110,32 @@ const issuesQuery = {
 const download = z.unknown();
 const changeLimit = policy.site_health.change_intel;
 
+type PageFilterQuery = RequestParams<typeof crawlPath, typeof pageFilters>['query'];
 type PagesQuery = RequestParams<typeof crawlPath, typeof pagesQuery>['query'];
 type IssuesQuery = RequestParams<typeof crawlPath, typeof issuesQuery>['query'];
 
+function pageRowFilters(query: PageFilterQuery): PageRowFilters {
+  if ((query.score_role === null) !== (query.max_score === null))
+    throw new ApiError(422, 'score_role and max_score go together', { code: 'validation_error' });
+  return {
+    status: query.status_filter,
+    monitored: query.monitored,
+    pageKind: query.page_kind,
+    query: query.query,
+    rule: query.rule || null,
+    withIssues: query.with_issues,
+    indexable: query.indexable,
+    minDepth: query.min_depth,
+    maxDepth: query.max_depth,
+    score:
+      query.score_role === null || query.max_score === null
+        ? null
+        : { role: query.score_role, max: query.max_score },
+  };
+}
+
 const readPages = (db: Database, workspaceId: string, crawlId: string, query: PagesQuery) =>
-  withCursor(
-    pages(
-      db,
-      workspaceId,
-      crawlId,
-      {
-        status: query.status_filter,
-        monitored: query.monitored,
-        pageKind: query.page_kind,
-        query: query.query,
-      },
-      query.sort,
-      query,
-    ),
-  );
+  withCursor(pages(db, workspaceId, crawlId, pageRowFilters(query), query.sort, query));
 
 const readIssues = (db: Database, workspaceId: string, crawlId: string, query: IssuesQuery) =>
   withCursor(
@@ -164,7 +178,7 @@ function exportRoute(format: 'csv' | 'md') {
   return defineGetRoute({
     family,
     path: `${crawlRoot}/export.${format}`,
-    params: { path: crawlPath, query: { view: { ...text, default: 'inventory' } } },
+    params: { path: crawlPath, query: { view: { ...text, default: 'inventory' }, ...pageFilters } },
     response: download,
     raw: true,
     async handle({ c, db }, { path, query }) {
@@ -176,7 +190,13 @@ function exportRoute(format: 'csv' | 'md') {
       const { body, truncated } =
         query.view === 'architecture'
           ? { body: await architectureMarkdown(db, workspaceId, path.crawl_id), truncated: false }
-          : await tableExport(db, workspaceId, path.crawl_id, query.view as TableView, format);
+          : await tableExport(db, {
+              workspaceId,
+              crawlId: path.crawl_id,
+              view: query.view as TableView,
+              format,
+              pages: { filters: pageRowFilters(query), sort: query.sort },
+            });
       const filename = `site-health-${path.crawl_id}-${query.view}.${format}`;
       return new Response(body, {
         headers: {

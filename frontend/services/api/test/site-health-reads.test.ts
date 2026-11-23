@@ -527,6 +527,117 @@ describe('page projections', () => {
     );
   });
 
+  it('filter pages by current issue, indexability, depth and score in the list, its cursor and its export', async () => {
+    const seed = await fixtures.crawl();
+    const outsider = await fixtures.crawl();
+    const { extractor_version } = await loadCrawl(db, seed.workspaceId, seed.crawlId);
+    const measure = async (
+      target: Page,
+      values: { indexable: boolean; web: number; aeo: number | null; depth: number },
+    ) => {
+      await db
+        .updateTable('site_page_analyses')
+        .set({
+          main_content_indexable: values.indexable,
+          web_fundamentals_score: values.web,
+          aeo_readiness_score: values.aeo,
+        })
+        .where('id', '=', target.analysisId)
+        .execute();
+      await db
+        .insertInto('site_page_link_metrics')
+        .values({
+          id: randomUUID(),
+          workspace_id: seed.workspaceId,
+          project_id: seed.projectId,
+          crawl_id: seed.crawlId,
+          site_url_id: target.id,
+          inbound_count: 10 - values.depth,
+          outbound_count: 0,
+          main_content_inbound_count: 0,
+          main_content_outbound_count: 0,
+          nofollow_inbound_count: 0,
+          depth_from_home: values.depth,
+          source_page_count: 1,
+          authority_share: 0,
+          authority_rank: 1,
+          extractor_version,
+          formula_version: policy.site_health.link_metrics.formula_version,
+          created_at: new Date(),
+        })
+        .execute();
+    };
+    const home = await page(seed, '/');
+    const deep = await page(seed, '/a/b/c');
+    const clean = await page(seed, '/clean');
+    const stranger = await page(outsider, '/');
+    await measure(home, { indexable: true, web: 90, aeo: 49.4, depth: 0 });
+    await measure(deep, { indexable: false, web: 40, aeo: null, depth: 3 });
+    await measure(clean, { indexable: true, web: 79.4, aeo: 80, depth: 1 });
+    await issue(seed, home, 'technical.indexable');
+    await issue(seed, deep, 'technical.indexable');
+    await issue(seed, deep, 'web.accessibility_form_names');
+    await issue(outsider, stranger, 'technical.indexable');
+
+    const list = (tenant: Tenant, crawlId: string, query: string) =>
+      json(tenant, `/site-crawls/${crawlId}/pages?${query}`, pagesPageSchema);
+    const paths = async (query: string) =>
+      (await list(seed, seed.crawlId, `sort=url&${query}`)).items.map(
+        (item) => new URL(item.normalized_url).pathname,
+      );
+    expect(await paths('rule=technical.indexable')).toEqual(['/', '/a/b/c']);
+    expect(await paths('rule=web.accessibility_form_names')).toEqual(['/a/b/c']);
+    expect(await paths('with_issues=true')).toEqual(['/', '/a/b/c']);
+    expect(await paths('indexable=false')).toEqual(['/a/b/c']);
+    expect(await paths('indexable=true')).toEqual(['/', '/clean']);
+    expect(await paths('min_depth=1&max_depth=2')).toEqual(['/clean']);
+    expect(await paths('min_depth=1')).toEqual(['/a/b/c', '/clean']);
+    expect(await paths('max_depth=0')).toEqual(['/']);
+    expect(await paths('score_role=web_fundamentals&max_score=79')).toEqual(['/a/b/c', '/clean']);
+    expect(await paths('score_role=aeo_readiness&max_score=49')).toEqual(['/']);
+    expect((await get(seed, `/site-crawls/${seed.crawlId}/pages?max_score=49`)).status).toBe(422);
+    expect(
+      (await list(outsider, outsider.crawlId, 'rule=technical.indexable')).items.map(
+        (item) => item.site_url_id,
+      ),
+    ).toEqual([stranger.id]);
+
+    const first = await list(seed, seed.crawlId, 'rule=technical.indexable&sort=url&limit=1');
+    const resume = (query: string) =>
+      get(
+        seed,
+        `/site-crawls/${seed.crawlId}/pages?sort=url&limit=1&cursor=${first.next_cursor}&${query}`,
+      );
+    const next = await resume('rule=technical.indexable');
+    expect(next.status).toBe(200);
+    expect(pagesPageSchema.parse(await next.json()).items.map((item) => item.site_url_id)).toEqual([
+      deep.id,
+    ]);
+    for (const other of [
+      'rule=web.accessibility_form_names',
+      'rule=technical.indexable&with_issues=true',
+      'rule=technical.indexable&indexable=true',
+      'rule=technical.indexable&min_depth=0',
+      'rule=technical.indexable&max_depth=9',
+      'rule=technical.indexable&score_role=web_fundamentals&max_score=100',
+    ])
+      expect((await resume(other)).status, other).toBe(400);
+
+    const filters = 'rule=technical.indexable&indexable=true&max_depth=2';
+    const csv = await (
+      await get(seed, `/site-crawls/${seed.crawlId}/export.csv?view=pages&${filters}`)
+    ).text();
+    const exported = csv
+      .trim()
+      .split(/\r?\n/u)
+      .slice(1)
+      .map((line) => line.split(',')[0]);
+    expect(exported).toEqual(
+      (await list(seed, seed.crawlId, filters)).items.map((item) => item.site_url_id),
+    );
+    expect(exported).toEqual([home.id]);
+  });
+
   it('show a full recrawl its frozen inventory, but never to a sample crawl', async () => {
     const seed = await fixtures.crawl();
     const earlier = await page(seed, '/earlier');

@@ -6,6 +6,8 @@ import { compareText } from '../../text-order.ts';
 import { siteReadSettings } from '../runtime.ts';
 import { loadCrawl } from './crawl.ts';
 import { issues, pageKindsByRule } from './issues.ts';
+import type { PageRowFilters } from './page-filters.ts';
+import type { PageSort } from './page-rows.ts';
 import { inventory, pages } from './pages.ts';
 import { architecture } from './projections.ts';
 
@@ -48,6 +50,8 @@ const VIEWS = {
       'analysis_status',
       'error_code',
       'page_kind',
+      'depth_from_home',
+      'inbound_count',
       ...MEASUREMENT,
     ],
   },
@@ -74,7 +78,17 @@ const VIEWS = {
 
 const EXPORT_PAGE = policy.site_health.reads.export_page_size;
 
-async function tableRows(db: Database, workspaceId: string, crawlId: string, view: TableView) {
+export type TableExportRequest = {
+  workspaceId: string;
+  crawlId: string;
+  view: TableView;
+  format: 'csv' | 'md';
+  pages?: { filters: PageRowFilters; sort: PageSort };
+};
+
+async function tableRows(db: Database, request: TableExportRequest) {
+  const { workspaceId, crawlId, view } = request;
+  const pageView = request.pages ?? { filters: {}, sort: 'status' };
   const max = siteReadSettings().maxExportItems;
   const rows: Record<string, unknown>[] = [];
   let cursor: string | null = null;
@@ -82,7 +96,8 @@ async function tableRows(db: Database, workspaceId: string, crawlId: string, vie
   for (;;) {
     let page: { items: Record<string, unknown>[]; next_cursor: string | null };
     if (view === 'inventory') page = await inventory(db, workspaceId, crawlId, {}, paging());
-    else if (view === 'pages') page = await pages(db, workspaceId, crawlId, {}, 'status', paging());
+    else if (view === 'pages')
+      page = await pages(db, workspaceId, crawlId, pageView.filters, pageView.sort, paging());
     else
       page = await issues(
         db,
@@ -108,14 +123,9 @@ async function tableRows(db: Database, workspaceId: string, crawlId: string, vie
   }
 }
 
-export async function tableExport(
-  db: Database,
-  workspaceId: string,
-  crawlId: string,
-  view: TableView,
-  format: 'csv' | 'md',
-) {
-  const { rows, truncated } = await tableRows(db, workspaceId, crawlId, view);
+export async function tableExport(db: Database, request: TableExportRequest) {
+  const { workspaceId, crawlId, view, format } = request;
+  const { rows, truncated } = await tableRows(db, request);
   if (view === 'issues' && rows.length > 0) {
     const kinds = await pageKindsByRule(db, await loadCrawl(db, workspaceId, crawlId), null, null);
     for (const row of rows) row.page_kind = (kinds.get(String(row.rule_id)) ?? []).join(', ');
