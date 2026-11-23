@@ -16,6 +16,7 @@ import {
   evaluatePageRules,
   type RuleEvaluation,
 } from '../src/site-health/analysis/rules.ts';
+import { scoreAnalysis } from '../src/site-health/analysis/scoring.ts';
 import { deriveTraits } from '../src/site-health/analysis/traits.ts';
 import calibration from './fixtures/site-health/classifier-calibration.json' with { type: 'json' };
 
@@ -93,6 +94,54 @@ describe('page checklist', () => {
       thin.get('aeo.server_rendered_content')?.outcome,
       thin.get('technical.title_present')?.outcome,
     ]).toEqual(['satisfied', 'missing']);
+  });
+
+  it('scores a store page without its expected LocalBusiness schema below one that carries it', () => {
+    const copy = Array.from({ length: 30 }, (_, i) => `Capalaba store detail ${i}.`).join(' ');
+    const store = (schema: Record<string, unknown> | null) =>
+      analyzePage(
+        facts(
+          `<!doctype html><html lang="en"><head><title>Capalaba store</title>
+          <meta name="viewport" content="width=device-width">
+          ${schema ? `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', ...schema })}</script>` : ''}
+          </head><body><main><h1>Capalaba</h1><p>${copy}</p></main></body></html>`,
+          'https://example.test/store/Capalaba',
+        ),
+        context,
+      );
+    const none = store(null);
+    const partial = store({ '@type': 'LocalBusiness', name: 'Capalaba' });
+    const complete = store({
+      '@type': 'LocalBusiness',
+      name: 'Capalaba',
+      address: '1 Redland Bay Rd, Capalaba QLD',
+    });
+    expect(byRule(none.evaluations).get('aeo.schema_required_valid')).toMatchObject({
+      outcome: 'missing',
+      reason_code: 'expected_schema_absent',
+    });
+    const score = (page: typeof none) => page.scores.aeo_readiness_score!;
+    expect([none, partial, complete].map(score)).toEqual([80, 260 / 3, 100]);
+  });
+
+  it('keeps a page with an unevaluated scored check below 100 while keeping it unknown', () => {
+    const row = (rule_id: string, outcome: string) => ({
+      ...evaluatePageRules({ has_html: true }).find((item) => item.rule_id === rule_id)!,
+      outcome,
+    });
+    const scored = scoreAnalysis(
+      [row('technical.https', 'satisfied'), row('technical.title_present', 'unknown')],
+      'other',
+    );
+    expect([
+      scored.web_fundamentals_score,
+      scored.web_fundamentals_coverage,
+      scored.web_fundamentals_state,
+    ]).toEqual([50, 0.5, 'limited_evidence']);
+    expect(
+      scored.expected_checkpoint_profile.find((item) => item.check_id === 'technical.title_present')
+        ?.outcome,
+    ).toBe('unknown');
   });
 
   it('keeps blog archives separate from authored articles and product categories', () => {

@@ -471,8 +471,8 @@ describe('terminal checks from persisted evidence', () => {
         evaluations: [indexable, { ...blocked, outcome: 'not_applicable' }],
       },
     ];
-    expect(aggregateMeasurements(rows).aeo_readiness_score).toBe(25);
-    expect(aggregateByPageKind(rows).article!.aeo_readiness_score).toBe(50);
+    expect(aggregateMeasurements(rows).aeo_readiness_score).toBeCloseTo(50 / 3);
+    expect(aggregateByPageKind(rows).article!.aeo_readiness_score).toBeCloseTo(100 / 3);
   });
 });
 
