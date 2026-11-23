@@ -129,9 +129,15 @@ function coverageCounts(context: MetricContext) {
   const analyzed = count(evidence.analyzed_url_count);
   if (found === null || analyzed === null)
     return context.selected > 0
-      ? { found: context.selected, analyzed: context.analyzed, limit: null }
+      ? {
+          found: context.selected,
+          analyzed: Math.min(context.analyzed, context.selected),
+          limit: null,
+        }
       : null;
-  return found > 0 ? { found, analyzed, limit: count(evidence.automatic_limit) } : null;
+  return found > 0
+    ? { found, analyzed: Math.min(analyzed, found), limit: count(evidence.automatic_limit) }
+    : null;
 }
 
 function crawlMetric(context: MetricContext): AuditMetric {
