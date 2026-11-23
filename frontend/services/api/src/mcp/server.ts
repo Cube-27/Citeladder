@@ -397,7 +397,6 @@ async function handleMcpRequest(
   const result = await dispatchMethod({
     c,
     db,
-    config,
     settings,
     principal,
     message,

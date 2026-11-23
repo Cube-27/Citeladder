@@ -76,7 +76,6 @@ test('tests, codegen, config, content and registries are ignored; authored sourc
     'frontend/services/api/src/config/opportunity.ts',
     'frontend/lib/config/agent.ts',
     'frontend/apps/app/src/globals.css',
-    'frontend/services/api/src/mcp/write-tools.ts',
     'frontend/services/api/migrations/0002_x.sql',
     'docs/DEVELOPMENT.md',
   ];
