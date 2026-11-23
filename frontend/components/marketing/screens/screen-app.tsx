@@ -20,7 +20,7 @@ import { ScreenButton, ScreenTabs } from './screen-parts';
 import './screen-vignette.css';
 import './screen-app.css';
 
-export type PageActions = 'launch' | 'crawl' | 'analysis';
+type PageActions = 'launch' | 'crawl' | 'analysis';
 
 export type AppPageHead = Readonly<{
   title: string;
