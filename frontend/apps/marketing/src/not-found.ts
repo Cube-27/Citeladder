@@ -3,7 +3,6 @@ import { siteOrigin } from '@/lib/seo/site';
 
 export const NOT_FOUND_LINKS = [
   { label: 'Home', href: '/' },
-  { label: 'Platform overview', href: '/platform' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Documentation', href: docsHref() },
   { label: 'llms.txt', href: '/llms.txt' },

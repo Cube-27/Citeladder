@@ -87,7 +87,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                   label: 'Source',
                   values: [
                     <TextLink key="citeladder" asChild text="inherit">
-                      <a href="/platform">Platform overview</a>
+                      <a href="/">CiteLadder</a>
                     </TextLink>,
                     source ? (
                       <>

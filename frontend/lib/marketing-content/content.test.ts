@@ -30,7 +30,7 @@ function richParagraphText(block: Extract<BlogBlock, { type: 'richParagraph' }>)
 
 function internalHrefs(): string[] {
   const fromDrops = NAV_DROPS.flatMap((drop) => [
-    drop.href,
+    ...(drop.key === 'platform' ? [] : [drop.href]),
     ...drop.groups.flatMap((group) =>
       group.items
         .filter((item: NavDropItem) => !('external' in item && item.external))

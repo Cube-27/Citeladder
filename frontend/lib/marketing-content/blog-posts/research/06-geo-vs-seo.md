@@ -14,7 +14,7 @@ related_guides: ['/blog/ai-search-market-share-2026', '/blog/will-ai-replace-seo
 publication_status: 'editorial_review'
 product:
   heading: 'Check how AI answers describe you'
-  href: '/platform'
+  href: '/platform/ai-visibility'
   body: 'CiteLadder shows how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer your buyers, which pages those answers cite, and a ranked list of what to change on your site. Use it to see whether your next priority is an SEO fix or a GEO gap.'
 ---
 

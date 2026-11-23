@@ -22,7 +22,7 @@ related_guides: ['/blog/verify-improve-ai-search-visibility', '/generative-engin
 publication_status: 'editorial_review'
 product:
   heading: 'Diagnose your own AI visibility gaps'
-  href: '/platform'
+  href: '/platform/ai-visibility'
   body: "CiteLadder shows how ChatGPT, Gemini, Claude, Google AI Overviews and Google AI Mode answer your buyers' questions and which pages they cite. Start with the failure you actually observe."
 ---
 

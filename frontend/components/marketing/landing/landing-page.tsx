@@ -57,12 +57,7 @@ function Modules() {
     <PageSection id="platform" label="Tools for AI visibility, search and your website">
       <CardRail
         label="modules"
-        head={
-          <SectionHeader
-            title="Tools for AI visibility, search and your website"
-            action={<SiteArrowLink href="/platform">See the whole platform</SiteArrowLink>}
-          />
-        }
+        head={<SectionHeader title="Tools for AI visibility, search and your website" />}
         items={modules.map((module) => ({
           key: module.href,
           content: (

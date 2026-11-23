@@ -5,8 +5,6 @@ import { FOOTER_LEGAL_LINKS } from './legal-documents';
 import { STUDY_INDEXES } from './studies/indexes';
 import { CITELADDER_GITHUB, CITELADDER_LINKEDIN, CITELADDER_X } from './social';
 
-type NavDropKey = 'platform' | 'solutions' | 'resources';
-
 export type NavDropItem =
   | { title: string; desc: string; href: string; external?: boolean }
   | { num: string; title: string; desc: string; href: string };
@@ -15,24 +13,16 @@ type NavDropGroup = { label?: string; items: readonly NavDropItem[] };
 
 type LabelledNavDropGroup = { label: string; items: readonly NavDropItem[] };
 
-type NavDropBase = { label: string; href: string };
-
 export type NavDrop =
-  | (NavDropBase & {
-      key: Exclude<NavDropKey, 'resources'>;
-      groups: readonly NavDropGroup[];
-    })
-  | (NavDropBase & {
+  | { key: 'platform'; label: string; groups: readonly NavDropGroup[] }
+  | { key: 'solutions'; label: string; href: string; groups: readonly NavDropGroup[] }
+  | {
       key: 'resources';
+      label: string;
+      href: string;
       groups: readonly LabelledNavDropGroup[];
       sections: readonly string[];
-    });
-
-export const PLATFORM_OVERVIEW = {
-  title: 'Platform overview',
-  desc: 'AI answers, site checks and content work.',
-  href: '/platform',
-} as const;
+    };
 
 export const PLATFORM_GROUPS: readonly {
   label: string;
@@ -110,10 +100,7 @@ export const PLATFORM_GROUPS: readonly {
   },
 ];
 
-export const PUBLISHED_PLATFORM = [
-  PLATFORM_OVERVIEW,
-  ...PLATFORM_GROUPS.flatMap((group) => group.items),
-];
+export const PUBLISHED_PLATFORM = PLATFORM_GROUPS.flatMap((group) => group.items);
 export function platformLabel(href: string) {
   return PUBLISHED_PLATFORM.find((item) => item.href === href)?.title;
 }
@@ -122,7 +109,6 @@ export const NAV_DROPS: readonly NavDrop[] = [
   {
     key: 'platform',
     label: 'Platform',
-    href: PLATFORM_OVERVIEW.href,
     groups: PLATFORM_GROUPS,
   },
   {
@@ -276,12 +262,9 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   {
     key: 'platform',
     label: 'Platform',
-    links: [
-      { label: PLATFORM_OVERVIEW.title, href: PLATFORM_OVERVIEW.href },
-      ...PLATFORM_GROUPS.flatMap((group) =>
-        group.items.map((item) => ({ label: item.title, href: item.href })),
-      ),
-    ],
+    links: PLATFORM_GROUPS.flatMap((group) =>
+      group.items.map((item) => ({ label: item.title, href: item.href })),
+    ),
   },
   ...NAV_DROPS.filter((drop) => drop.key !== 'platform').map((drop) => ({
     key: drop.key,

@@ -40,7 +40,7 @@ function usePill() {
 
 function dropCurrent(path: string, drop: NavDrop): boolean {
   return (
-    inSection(path, drop.href) ||
+    (drop.key !== 'platform' && inSection(path, drop.href)) ||
     (drop.key === 'resources' && drop.sections.some((section) => inSection(path, section))) ||
     drop.groups.some((group) =>
       group.items.some(

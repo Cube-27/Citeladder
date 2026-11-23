@@ -42,7 +42,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
     label: 'Founders',
     title: 'Founders: see whether AI engines recommend you',
     lead: 'You use this when you want to know whether ChatGPT names your company for the questions your buyers ask. The trial shows you the recorded answers and which competitors they mention. Book a demo to talk through site diagnostics and content work.',
-    guide: { label: 'Explore the platform', href: '/platform' },
+    guide: { label: 'Explore AI Visibility', href: '/platform/ai-visibility' },
     cta: 'Request a first audit sample',
     screen: 'answer',
   },
