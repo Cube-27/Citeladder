@@ -767,6 +767,65 @@ describe('issue catalog', () => {
     expect(third).toContain(
       `${issueGroupId(seed.crawlId, meta!)},${meta},Missing meta description,technical,metadata,medium,`,
     );
+    const filtered = await (
+      await get(
+        seed,
+        `/site-crawls/${seed.crawlId}/export.csv?view=issues&severity=medium&sort=pages`,
+      )
+    ).text();
+    expect(filtered.split('\r\n').map((line) => line.split(',')[1])).toEqual([
+      'rule_id',
+      meta,
+      canonical,
+      undefined,
+    ]);
+    expect(
+      (await get(seed, `/site-crawls/${seed.crawlId}/export.csv?view=pages&sort=severity`)).status,
+    ).toBe(422);
+  });
+
+  it('reads each affected page’s value and exports one issue’s pages as CSV, in its workspace only', async () => {
+    const seed = await fixtures.crawl();
+    const rule = 'technical.meta_description_length';
+    const short = { min_chars: 70, max_chars: 160, reason: 'too_short' };
+    const home = await page(seed, '/', { facts: { meta_description: '  Short \n text ' } });
+    const shop = await page(seed, '/shop', { facts: { meta_description: 'Tiny' } });
+    await issue(seed, home, rule, { ...short, length: 10 });
+    await issue(seed, shop, rule, { ...short, length: 4 });
+    await issue(seed, home, 'technical.canonical_integrity');
+    const groupId = issueGroupId(seed.crawlId, rule);
+    const detail = await json(
+      seed,
+      `/site-crawls/${seed.crawlId}/issues/${groupId}`,
+      siteIssueDetailSchema,
+    );
+    expect(detail.occurrences.map((row) => [row.normalized_url, row.value])).toEqual([
+      ['https://example.test/', { kind: 'meta_description', text: 'Short text', length: 10 }],
+      ['https://example.test/shop', { kind: 'meta_description', text: 'Tiny', length: 4 }],
+    ]);
+    const canonical = await json(
+      seed,
+      `/site-crawls/${seed.crawlId}/issues/${issueGroupId(seed.crawlId, 'technical.canonical_integrity')}`,
+      siteIssueDetailSchema,
+    );
+    expect(canonical.occurrences.map((row) => row.value)).toEqual([{ kind: 'none' }]);
+
+    const exportPath = `/site-crawls/${seed.crawlId}/export.csv?view=issue&group_id=${groupId}`;
+    const lines = (await (await get(seed, exportPath)).text()).split('\r\n');
+    expect(lines[0]).toBe(
+      'normalized_url,page_kind,value,value_length,evidence.length,evidence.max_chars,evidence.min_chars,evidence.reason,remediation',
+    );
+    expect(lines.slice(1).map((line) => line.split(',').slice(0, 8))).toEqual([
+      ['https://example.test/', 'homepage', 'Short text', '10', '10', '160', '70', 'too_short'],
+      ['https://example.test/shop', 'product', 'Tiny', '4', '4', '160', '70', 'too_short'],
+      [''],
+    ]);
+    const outsider = await fixtures.crawl();
+    await issue(outsider, await page(outsider, '/other'), rule, { ...short, length: 5 });
+    expect((await get(outsider, exportPath)).status).toBe(404);
+    expect((await get(seed, `/site-crawls/${seed.crawlId}/export.csv?view=issue`)).status).toBe(
+      422,
+    );
   });
 
   it('serves an issue’s affected pages to an API key, inside the key’s project only', async () => {

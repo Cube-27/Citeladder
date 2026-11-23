@@ -177,6 +177,15 @@ export function viewIssuesSql(crawl: ViewCrawl, alias = 'i', view?: RawBuilder<u
         select v.crawl_id, v.site_url_id from ${pages} v)))`;
 }
 
+export async function previousSiteCrawl(db: Database, crawl: ViewCrawl) {
+  const previous = await siteCrawls(db, crawl.workspace_id, crawl.project_id)
+    .select(['id', 'started_at', 'created_at'])
+    .where('status', 'in', USABLE_CRAWL_STATUSES)
+    .where(sql<boolean>`(created_at, id) < (${crawl.created_at}::timestamptz, ${crawl.id}::uuid)`)
+    .executeTakeFirst();
+  return previous ?? null;
+}
+
 export async function foldingSiteCrawl(db: Database, rerun: Crawl): Promise<Crawl | null> {
   if (!isPageRerun(rerun)) return null;
   const crawl = await siteCrawls(db, rerun.workspace_id, rerun.project_id)

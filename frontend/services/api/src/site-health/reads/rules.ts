@@ -81,6 +81,9 @@ export function siteLevelScope(
   return { ...scope, affected: typeof counted === 'number' ? counted : 0 };
 }
 
+export const isSiteLevelRule = (ruleId: string) =>
+  ruleId.startsWith('architecture.') || SITEWIDE_LINK_RULES.has(ruleId);
+
 export const siteLevelRuleOf = (alias: string) => {
   const rule = sql.ref(`${alias}.rule_id`);
   return sql`(${rule} like 'architecture.%' or ${rule} = any(${sitewideLinkRules}::text[]))`;

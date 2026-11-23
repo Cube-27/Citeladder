@@ -546,6 +546,30 @@ describe('crawl-control HTTP contracts', () => {
       ).json(),
     );
     expect(second.items.map((crawl) => crawl.id)).toEqual([seed.crawlId]);
+    await db
+      .updateTable('site_crawls')
+      .set({
+        score_summary: JSON.stringify({ web_fundamentals_score: 72, aeo_readiness_score: 41 }),
+      })
+      .where('id', '=', seed.crawlId)
+      .execute();
+    await fixtures.sibling(seed, {
+      configuration: JSON.stringify({ page_rerun: true }),
+      created_at: new Date(Date.now() + 2000),
+    });
+    const other = await fixtures.crawl();
+    const all = siteCrawlListPageSchema.parse(await (await request(seed, '/site-crawls')).json());
+    expect(
+      all.items.map((crawl) => [
+        crawl.id,
+        crawl.score_summary?.web_fundamentals_score ?? null,
+        crawl.score_summary?.aeo_readiness_score ?? null,
+      ]),
+    ).toEqual([
+      [next, null, null],
+      [seed.crawlId, 72, 41],
+    ]);
+    expect(all.items.map((crawl) => crawl.id)).not.toContain(other.crawlId);
     expect((await request(seed, `/site-crawls?cursor=${first.next_cursor}`)).status).toBe(400);
     expect((await request(seed, '/site-crawls?cursor=garbage')).status).toBe(400);
   });

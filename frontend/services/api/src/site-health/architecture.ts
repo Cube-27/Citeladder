@@ -240,7 +240,7 @@ export async function persistArchitecture(db: Database, crawl: Crawl) {
   if (!row) return 0;
   await persistRules(db, crawl, row.id, root, pages, architectureRules(model, pages, coverage));
   await addArchitectureIssues(db, crawl);
-  await persistIssueCatalog(db, crawl);
   await landIssueStates(db, crawl);
+  await persistIssueCatalog(db, crawl);
   return 1;
 }
