@@ -170,21 +170,8 @@
   background: var(--color-paper);
 }
 
-.cl-frame--stage {
-  --frame-pad: 40px;
-}
-
-@media (max-width: 767px) {
-  .cl-frame--stage {
-    --frame-pad: 16px;
-  }
-}
-
 .cl-frame--stage > .cl-frame-card {
   overflow: hidden;
-}
-
-.cl-frame--stage-soft > .cl-frame-card {
   background: linear-gradient(
     155deg,
     var(--color-site-stage-from),
@@ -193,7 +180,7 @@
   );
 }
 
-.cl-frame--stage-soft > .cl-frame-card::before {
+.cl-frame--stage > .cl-frame-card::before {
   position: absolute;
   inset: 0;
   z-index: -1;
@@ -201,28 +188,4 @@
     10px;
   content: '';
   mask-image: linear-gradient(155deg, transparent 8%, black 55%, transparent 96%);
-}
-
-.cl-frame--stage > .cl-frame-card > .cl-frame-well > .cl-frame-screen {
-  border-radius: var(--site-radius-card);
-  box-shadow: var(--site-shadow-float);
-}
-
-.cl-frame--stage-bold > .cl-frame-card {
-  padding: 40px 0 0 40px;
-  background: linear-gradient(
-    115deg,
-    var(--color-site-stage-bold-from),
-    var(--color-site-stage-bold-to)
-  );
-}
-
-.cl-frame--stage-bold > .cl-frame-card > .cl-frame-well > .cl-frame-screen {
-  border-radius: var(--site-radius-card) 0 0;
-}
-
-@media (max-width: 767px) {
-  .cl-frame--stage-bold > .cl-frame-card {
-    padding: 20px 0 0 20px;
-  }
 }

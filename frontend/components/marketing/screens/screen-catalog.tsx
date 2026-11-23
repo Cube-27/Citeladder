@@ -2,23 +2,7 @@ import type { ComponentType } from 'react';
 
 import type { PlatformScreen } from '@/lib/marketing-content/platform-pages';
 
-import {
-  ArtAnswer,
-  ArtCommerce,
-  ArtReferrals,
-  ArtSources,
-  ArtVisibility,
-} from '../art/art-visibility';
-import {
-  ArtAgent,
-  ArtContent,
-  ArtDemand,
-  ArtKeywords,
-  ArtMcp,
-  ArtSiteHealth,
-} from '../art/art-work';
-
-import { ProductFrame } from './product-frame';
+import { ProductFrame, type FrameFit } from './product-frame';
 import type { AppPageHead, NavLabel } from './screen-app';
 import {
   ScreenActions,
@@ -48,14 +32,14 @@ import {
   ScreenVisibility,
 } from './screens-visibility';
 
-type CatalogEntry = Readonly<
-  | { fit: 'scale'; View: ComponentType; label: string }
-  | { fit: 'fluid'; View: ComponentType; Art: ComponentType; label: string }
->;
+type CatalogEntry = Readonly<{
+  View: ComponentType;
+  fit: FrameFit;
+  label: string;
+}>;
 
-const vignette = (View: ComponentType, Art: ComponentType, label: string): CatalogEntry => ({
+const vignette = (View: ComponentType, label: string): CatalogEntry => ({
   View,
-  Art,
   fit: 'fluid',
   label,
 });
@@ -66,64 +50,33 @@ export const SCREEN_CATALOG: Readonly<Record<PlatformScreen, CatalogEntry>> = {
     fit: 'scale',
     label: 'The Visibility page for Acme Analytics',
   },
-  prompts: vignette(ScreenPrompts, ArtKeywords, 'The tracked prompts for Acme Analytics'),
-  keywords: vignette(ScreenKeywords, ArtKeywords, 'Keyword research for acme.com'),
-  actions: vignette(ScreenActions, ArtContent, 'Actions for acme.com, highest priority first'),
+  prompts: vignette(ScreenPrompts, 'The tracked prompts for Acme Analytics'),
+  keywords: vignette(ScreenKeywords, 'Keyword research for acme.com'),
+  actions: vignette(ScreenActions, 'Actions for acme.com, highest priority first'),
   'content-optimization': vignette(
     ScreenContentOptimization,
-    ArtContent,
     'Content-gap Actions for acme.com: content pages to improve and pages to write, each with its lead angle',
   ),
-  answer: vignette(ScreenAnswer, ArtAnswer, 'A ChatGPT answer that names Acme Analytics first'),
-  sources: vignette(ScreenSources, ArtSources, 'Domains cited in answers about Acme Analytics'),
-  'cited-url': vignette(
-    ScreenCitedUrl,
-    ArtSources,
-    'acme.com/pricing: which engines retrieve and cite it',
-  ),
-  'site-health': vignette(
-    ScreenSiteHealth,
-    ArtSiteHealth,
-    'Site health for acme.com: score 82, 7 failed checks',
-  ),
-  'crawler-access': vignette(
-    ScreenCrawlerAccess,
-    ArtSiteHealth,
-    'AI crawler access to acme.com from robots.txt',
-  ),
+  answer: vignette(ScreenAnswer, 'A ChatGPT answer that names Acme Analytics first'),
+  sources: vignette(ScreenSources, 'Domains cited in answers about Acme Analytics'),
+  'cited-url': vignette(ScreenCitedUrl, 'acme.com/pricing: which engines retrieve and cite it'),
+  'site-health': vignette(ScreenSiteHealth, 'Site health for acme.com: score 82, 7 failed checks'),
+  'crawler-access': vignette(ScreenCrawlerAccess, 'AI crawler access to acme.com from robots.txt'),
   demand: vignette(
     ScreenDemand,
-    ArtDemand,
     'Demand signals in Keyword research for acme.com: a query in striking distance, a CTR gap, two pages on one query and an emerging query',
   ),
-  referrals: vignette(
-    ScreenReferrals,
-    ArtReferrals,
-    'Sessions referred to acme.com by AI assistants',
-  ),
-  perception: vignette(ScreenPerception, ArtAnswer, 'How AI engines describe Acme Analytics'),
-  engines: vignette(ScreenEngines, ArtVisibility, 'Acme Analytics visibility on each engine'),
-  'agent-chat': vignette(
-    ScreenAgentChat,
-    ArtAgent,
-    'The Agent answering why Acme dropped on Gemini',
-  ),
+  referrals: vignette(ScreenReferrals, 'Sessions referred to acme.com by AI assistants'),
+  perception: vignette(ScreenPerception, 'How AI engines describe Acme Analytics'),
+  engines: vignette(ScreenEngines, 'Acme Analytics visibility on each engine'),
+  'agent-chat': vignette(ScreenAgentChat, 'The Agent answering why Acme dropped on Gemini'),
   'agent-brief': vignette(
     ScreenAgentBrief,
-    ArtContent,
     'A content brief the Agent drafted for a session replay pricing page',
   ),
-  mcp: vignette(
-    ScreenMcp,
-    ArtMcp,
-    'Read-only tool calls an assistant made to the CiteLadder MCP server',
-  ),
-  integrations: vignette(ScreenIntegrations, ArtReferrals, 'Data sources connected to acme.com'),
-  commerce: vignette(
-    ScreenCommerce,
-    ArtCommerce,
-    'Which products AI answers recommended for Acme Startup',
-  ),
+  mcp: vignette(ScreenMcp, 'Read-only tool calls an assistant made to the CiteLadder MCP server'),
+  integrations: vignette(ScreenIntegrations, 'Data sources connected to acme.com'),
+  commerce: vignette(ScreenCommerce, 'Which products AI answers recommended for Acme Startup'),
 };
 
 type AppPlace = AppPageHead & Readonly<{ mode?: 'Agent' }>;
@@ -189,17 +142,10 @@ export function moduleScreen(href: string): ModuleScreen | undefined {
 }
 
 export function CatalogFrame({ screen }: Readonly<{ screen: PlatformScreen }>) {
-  const entry = SCREEN_CATALOG[screen];
-  if (entry.fit === 'fluid') {
-    return (
-      <ProductFrame label={entry.label} stage="soft">
-        <entry.Art />
-      </ProductFrame>
-    );
-  }
+  const { View, label, fit } = SCREEN_CATALOG[screen];
   return (
-    <ProductFrame label={entry.label} fit={entry.fit}>
-      <entry.View />
+    <ProductFrame label={label} fit={fit}>
+      <View />
     </ProductFrame>
   );
 }

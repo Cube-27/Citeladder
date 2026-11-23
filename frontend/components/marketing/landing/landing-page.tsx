@@ -4,6 +4,7 @@ import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { NAV_DROPS, PLATFORM_GROUPS, platformLabel } from '@/lib/marketing-content/nav';
 import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 
+import { moduleArt } from '../art/module-art';
 import { AnnouncementPill } from '../chrome/announcement-pill';
 import { SiteActions } from '../primitives/button';
 import { EngineStrip } from '../sections/cards';
@@ -15,11 +16,10 @@ import { SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import { ProductFrame } from '../screens/product-frame';
 import { ScreenAppPage } from '../screens/screen-app';
-import { CatalogFrame, SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
+import { SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
 
 import { HeroVideo } from './hero-video';
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
-import './how-it-works.css';
 import './integrations.css';
 import './landing-backdrop.css';
 
@@ -47,10 +47,11 @@ function Hero() {
 function Modules() {
   const modules = PLATFORM_GROUPS.flatMap((group) => group.items).flatMap((item) => {
     const shown = moduleScreen(item.href);
-    if (!shown) return [];
+    const Artwork = moduleArt(item.href);
+    if (!shown || !Artwork) return [];
     const { View } = SCREEN_CATALOG[shown.screen];
     const lead = PLATFORM_PAGES.find((page) => page.path === item.href)?.lead ?? item.desc;
-    return [{ ...item, page: shown.page, screen: shown.screen, view: <View />, lead }];
+    return [{ ...item, page: shown.page, screen: <View />, art: <Artwork />, lead }];
   });
   return (
     <PageSection id="platform" label="Tools for AI visibility, search and your website">
@@ -70,10 +71,14 @@ function Modules() {
               label={module.title}
               title={module.desc}
               body={module.lead}
-              media={<CatalogFrame screen={module.screen} />}
+              media={
+                <ProductFrame label={module.title} stage>
+                  {module.art}
+                </ProductFrame>
+              }
               page={
                 <ProductFrame label={`The ${module.page.title} page in the CiteLadder app`}>
-                  <ScreenAppPage {...module.page}>{module.view}</ScreenAppPage>
+                  <ScreenAppPage {...module.page}>{module.screen}</ScreenAppPage>
                 </ProductFrame>
               }
             />
@@ -96,24 +101,15 @@ const STEPS = [
   { title: 'Run them again', body: 'Re-run prompts to check the change.' },
 ] as const;
 
-const ActionsScreen = SCREEN_CATALOG.actions.View;
-
 function HowItWorks() {
   return (
     <PageSection id="how-it-works" title="Measure, diagnose, improve">
-      <div className="cl-how">
-        <Steps items={STEPS} direction="vertical" />
-        <div className="cl-how-shot">
-          <ProductFrame label="The Actions page in the CiteLadder app" stage="bold">
-            <ScreenAppPage title="Actions" active="Actions">
-              <ActionsScreen />
-            </ScreenAppPage>
-          </ProductFrame>
-        </div>
-      </div>
+      <Steps items={STEPS} />
     </PageSection>
   );
 }
+
+const AnswerScreen = SCREEN_CATALOG.answer.View;
 
 function Evidence() {
   const modules = [
@@ -125,7 +121,6 @@ function Evidence() {
     <PageSection id="evidence" label="Evidence">
       <FeatureSplit
         as="h2"
-        reverse
         title="See how often AI recommends you and who it cites"
         body="Each score opens the saved answer: engine, prompt, date, your position and its sources."
         points={[
@@ -133,7 +128,11 @@ function Evidence() {
           'Mentions, citations and AI referral visits counted apart',
         ]}
         links={modules.map((href) => ({ href, label: platformLabel(href) ?? href }))}
-        media={<CatalogFrame screen="answer" />}
+        media={
+          <ProductFrame label="Answer record">
+            <AnswerScreen />
+          </ProductFrame>
+        }
       />
     </PageSection>
   );

@@ -121,14 +121,6 @@
     min-width: 0;
     margin-top: 0;
   }
-
-  .cl-phero--split:has(.cl-art) .cl-phero-inner {
-    grid-column: 1 / span 7;
-  }
-
-  .cl-phero--split:has(.cl-art) .cl-phero-media {
-    grid-column: 8 / span 5;
-  }
 }
 
 @keyframes mk-rise-in {

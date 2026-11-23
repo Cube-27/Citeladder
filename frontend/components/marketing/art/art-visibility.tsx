@@ -129,39 +129,3 @@ export function ArtCommerce() {
     </Art>
   );
 }
-
-export function ArtAnswer() {
-  return (
-    <Art>
-      <Card className="absolute top-[10%] left-[10%] w-[66%]">
-        <div className="cl-art-row">
-          <EngineMark engine="chatgpt" className="cl-art-icon" />
-          <Line className="w-1/2" tone="strong" />
-        </div>
-        <div className="cl-art-row">
-          <Line className="w-1/5" />
-          <Line className="w-2/5" tone="wash" />
-          <Line className="w-[12%]" />
-        </div>
-        <Line className="w-full" />
-        <Line className="w-4/5" />
-        <div className="cl-art-row">
-          <span className="cl-art-num">1</span>
-          <Line className="w-1/4" tone="strong" />
-          <span className="cl-art-num">2</span>
-          <Line className="w-1/5" />
-        </div>
-      </Card>
-      <Pill ring className="absolute top-[18%] right-[4%]">
-        Named 1st of 3
-      </Pill>
-      <Card ghost className="absolute top-[70%] left-[38%] w-[52%]">
-        <div className="cl-art-row">
-          <Link2 aria-hidden className="cl-art-icon" />
-          <Line className="w-3/5" tone="strong" />
-        </div>
-        <Line className="w-4/5" />
-      </Card>
-    </Art>
-  );
-}

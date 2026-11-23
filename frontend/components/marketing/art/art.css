@@ -19,10 +19,8 @@
   padding: 0;
 }
 
-.cl-frame--stage > .cl-frame-card > .cl-frame-well > .cl-frame-screen:has(> .cl-art) {
-  border-radius: 0;
+.cl-frame-card > .cl-frame-well > .cl-frame-screen:has(> .cl-art) {
   background: none;
-  box-shadow: none;
 }
 
 .cl-art-card {
