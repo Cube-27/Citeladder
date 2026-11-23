@@ -118,3 +118,6 @@ earliest-expiry draw order is computed separately and frozen on reservation
 allocations. Provider/network I/O never occurs while a database transaction or
 lock is held. Projection refreshes that require domain locks run after the
 billing mutation commits, in a new transaction following the domain prefix.
+An issue landing takes the project's issue-states advisory lock before it
+upserts the crawl's issue catalog row; no path takes the catalog row and then
+the states lock.

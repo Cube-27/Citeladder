@@ -1,3 +1,5 @@
+import type { AffectedPage } from '@citeladder/contracts/site-health';
+
 import { policy } from '../../config.ts';
 import type { Database } from '../../db/database.ts';
 import { tableCsv, tableMarkdown } from '../../http/table-export.ts';
@@ -5,7 +7,14 @@ import { onlyOf } from '../../lists.ts';
 import { compareText } from '../../text-order.ts';
 import { siteReadSettings } from '../runtime.ts';
 import { loadCrawl } from './crawl.ts';
-import { issues, pageKindsByRule, unfilteredIssues } from './issues.ts';
+import {
+  issueDetail,
+  issues,
+  pageKindsByRule,
+  type IssueFilters,
+  type IssueView,
+  unfilteredIssues,
+} from './issues.ts';
 import type { PageRowFilters } from './page-filters.ts';
 import type { PageSort } from './page-rows.ts';
 import { inventory, pages } from './pages.ts';
@@ -83,11 +92,16 @@ export type TableExportRequest = {
   view: TableView;
   format: 'csv' | 'md';
   pages?: { filters: PageRowFilters; sort: PageSort };
+  issues?: { filters: IssueFilters; view: IssueView };
 };
 
 async function tableRows(db: Database, request: TableExportRequest) {
   const { workspaceId, crawlId, view } = request;
   const pageView = request.pages ?? { filters: {}, sort: 'status' };
+  const issueView = request.issues ?? {
+    filters: unfilteredIssues(),
+    view: { section: null, sort: 'severity' },
+  };
   const max = siteReadSettings().maxExportItems;
   const rows: Record<string, unknown>[] = [];
   let cursor: string | null = null;
@@ -97,7 +111,7 @@ async function tableRows(db: Database, request: TableExportRequest) {
     if (view === 'inventory') page = await inventory(db, workspaceId, crawlId, {}, paging());
     else if (view === 'pages')
       page = await pages(db, workspaceId, crawlId, pageView.filters, pageView.sort, paging());
-    else page = await issues(db, workspaceId, crawlId, unfilteredIssues(), paging());
+    else page = await issues(db, workspaceId, crawlId, issueView.filters, paging(), issueView.view);
     rows.push(...page.items);
     cursor = page.next_cursor;
     if (rows.length >= max)
@@ -118,6 +132,64 @@ export async function tableExport(db: Database, request: TableExportRequest) {
     body: format === 'csv' ? tableCsv(columns, rows) : tableMarkdown(title, columns, rows),
     truncated,
   };
+}
+
+const ISSUE_PAGE_COLUMNS = ['normalized_url', 'page_kind', 'value', 'value_length'];
+
+function valueCells(value: AffectedPage['value']) {
+  switch (value.kind) {
+    case 'title':
+    case 'meta_description':
+      return { value: value.text, value_length: value.length };
+    case 'h1_count':
+    case 'word_count':
+      return { value: value.count, value_length: null };
+    case 'none':
+    case 'unavailable':
+      return { value: null, value_length: null };
+    default: {
+      const unhandled: never = value;
+      return unhandled;
+    }
+  }
+}
+
+export async function issueExport(
+  db: Database,
+  request: { workspaceId: string; crawlId: string; groupId: string },
+) {
+  const max = siteReadSettings().maxExportItems;
+  const pages: AffectedPage[] = [];
+  let remediation = '';
+  let cursor: string | null = null;
+  for (;;) {
+    const detail = await issueDetail(db, request.workspaceId, request.crawlId, request.groupId, {
+      limit: EXPORT_PAGE,
+      cursor,
+    }); // NOSONAR
+    remediation = detail.remediation;
+    pages.push(...detail.occurrences);
+    cursor = detail.next_cursor ?? null;
+    if (pages.length >= max || cursor === null) break;
+  }
+  const truncated = pages.length > max || cursor !== null;
+  const shown = pages.slice(0, max);
+  const evidenceKeys = [...new Set(shown.flatMap((page) => Object.keys(page.evidence)))].sort(
+    compareText,
+  );
+  const rows = shown.map((page) => ({
+    normalized_url: page.normalized_url,
+    page_kind: page.page_kind,
+    ...valueCells(page.value),
+    ...Object.fromEntries(evidenceKeys.map((key) => [`evidence.${key}`, page.evidence[key]])),
+    remediation,
+  }));
+  const columns = [
+    ...ISSUE_PAGE_COLUMNS,
+    ...evidenceKeys.map((key) => `evidence.${key}`),
+    'remediation',
+  ];
+  return { body: tableCsv(columns, rows), truncated };
 }
 
 const COVERAGE_NOTES: Record<string, string> = {

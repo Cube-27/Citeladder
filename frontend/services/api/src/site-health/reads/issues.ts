@@ -19,6 +19,8 @@ import { containsPattern } from '../../db/like.ts';
 import { parseUuid } from '../../http/uuid.ts';
 import { firstOf } from '../../lists.ts';
 import { loadCrawl, viewIssuesSql, type Crawl } from './crawl.ts';
+import { issueChanges } from './issue-changes.ts';
+import { issueValue, pageTextColumns, pageTextJoin, type PageText } from './issue-values.ts';
 import { decodeGroupCursor, groupCursorAfter, groupOrder, resumeIndex } from './issue-order.ts';
 import {
   issueGroupId,
@@ -271,11 +273,18 @@ export async function catalogItems(
   filters: IssueFilters,
 ): Promise<IssueItem[]> {
   const groups = await issueGroups(db, crawl, filters);
-  const kinds = await pageKindsByRule(
-    db,
-    crawl,
-    groups.map((group) => group.rule_id),
-  );
+  const [kinds, changeOf] = await Promise.all([
+    pageKindsByRule(
+      db,
+      crawl,
+      groups.map((group) => group.rule_id),
+    ),
+    issueChanges(db, crawl, {
+      matching: issueWhere(crawl, filters),
+      siteUrlId: filters.siteUrlId,
+      pageKind: filters.pageKind,
+    }),
+  ]);
   const items = groups.map((group) => ({
     group_id: group.group_id,
     crawl_id: crawl.id,
@@ -291,6 +300,7 @@ export async function catalogItems(
     remediation_route: remediationRoute(group.rule_id),
     score_roles: ruleScoreRoles(group.rule_id),
     affected_url_count: group.affected_url_count,
+    ...changeOf(group.rule_id),
     analyzer_version: group.analyzer_version,
     rule_version: group.rule_version,
     created_at: group.created_at.toISOString(),
@@ -352,21 +362,23 @@ export async function issueDetail(
       select count(distinct i.site_url_id)::int as affected, count(*)::int as occurrences
       from site_issues i where ${inGroup}`.execute(db),
     sql<
-      IssueRow & {
-        site_url_id: string;
-        normalized_url: string;
-        display_url: string;
-        title: string | null;
-        page_kind: string | null;
-      }
+      IssueRow &
+        PageText & {
+          site_url_id: string;
+          normalized_url: string;
+          display_url: string;
+          title: string | null;
+          page_kind: string | null;
+        }
     >`
       select i.*, u.normalized_url, u.display_url, u.latest_title as title,
-        a.page_kind, e.reason_code
+        a.page_kind, e.reason_code, ${pageTextColumns(group.rule_id)}
       from site_issues i
       join site_urls u on u.id = i.site_url_id
       join site_page_analyses a on a.workspace_id = i.workspace_id and a.crawl_id = i.crawl_id
         and a.site_url_id = i.site_url_id and a.is_current
       join site_rule_evaluations e on e.analysis_id = i.analysis_id and e.id = i.evaluation_id
+      ${pageTextJoin}
       where ${inGroup} ${after} ${siteUrlId ? sql`and i.site_url_id = ${siteUrlId}::uuid` : sql``}
       order by u.normalized_url, i.id limit ${paging.limit + 1}`.execute(db),
   ]);
@@ -386,7 +398,10 @@ export async function issueDetail(
     description: representative.description,
     remediation: representative.remediation,
     remediation_route: remediationRoute(representative.rule_id),
-    occurrences: page.map((row) => issueOccurrence(row, row)),
+    occurrences: page.map((row) => ({
+      ...issueOccurrence(row, row),
+      value: issueValue(row.rule_id, row.evidence, row),
+    })),
     occurrence_count: total.occurrences,
     affected_url_count:
       siteLevelScope(representative.rule_id, representative.evidence, pageKind)?.affected ??

@@ -455,6 +455,8 @@ describe('siteIssueSchema + siteHealthErrorSchema', () => {
       remediation_route: 'content',
       score_roles: [],
       affected_url_count: 4,
+      new_url_count: 1,
+      resolved_url_count: null,
       analyzer_version: 'a1',
       rule_version: 'r1',
       created_at: '2026-07-15T00:00:00Z',

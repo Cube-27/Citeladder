@@ -67,8 +67,8 @@ export async function refreshIssueCurrency(
   { resync = true }: { resync?: boolean } = {},
 ): Promise<void> {
   if (resync) await syncCrawlCurrency(db, crawl);
-  await persistIssueCatalog(db, crawl);
   await landIssueStates(db, crawl);
+  await persistIssueCatalog(db, crawl);
   const site = await foldingSiteCrawl(db, crawl);
   if (site) {
     await persistIssueCatalog(db, site);

@@ -1,5 +1,5 @@
 import { createElement, type ReactElement } from 'react';
-import type { IssueOccurrence, SiteIssue } from '@citeladder/contracts';
+import type { AffectedPage, SiteIssue } from '@citeladder/contracts';
 
 import { renderWithProviders } from '@/test/render';
 import { IssuesCatalog as ScopedIssuesCatalog } from './issues-catalog';
@@ -42,6 +42,8 @@ export function issue(overrides: Partial<SiteIssue> = {}): SiteIssue {
     remediation_route: 'code',
     score_roles: ['aeo_readiness'],
     affected_url_count: 32,
+    new_url_count: null,
+    resolved_url_count: null,
     analyzer_version: 'a1',
     rule_version: 'r1',
     created_at: '2026-07-15T00:00:00Z',
@@ -49,7 +51,7 @@ export function issue(overrides: Partial<SiteIssue> = {}): SiteIssue {
   };
 }
 
-export function occurrence(overrides: Partial<IssueOccurrence> = {}): IssueOccurrence {
+export function occurrence(overrides: Partial<AffectedPage> = {}): AffectedPage {
   return {
     occurrence_id: 'dddddddd-1111-4111-8111-111111111111',
     evaluation_id: 'eeeeeeee-1111-4111-8111-111111111111',
@@ -68,6 +70,7 @@ export function occurrence(overrides: Partial<IssueOccurrence> = {}): IssueOccur
     remediation: 'Add a JSON-LD WebSite schema.',
     reason_code: 'expected_schema_absent',
     evidence: { expected_types: ['WebSite'], found_types: ['Organization'] },
+    value: { kind: 'none' },
     analyzer_version: 'a1',
     rule_version: 'r1',
     created_at: '2026-07-15T00:00:00Z',

@@ -1492,6 +1492,117 @@
         "type": "string",
         "enum": ["owned", "competitor", "other"]
       },
+      "AffectedPage": {
+        "type": "object",
+        "properties": {
+          "occurrence_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "evaluation_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "crawl_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "site_url_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "normalized_url": {
+            "type": "string"
+          },
+          "display_url": {
+            "type": "string"
+          },
+          "title": {
+            "type": ["string", "null"]
+          },
+          "page_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PageKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dimension": {
+            "$ref": "#/components/schemas/IssueDimension"
+          },
+          "category": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/IssueSeverity"
+          },
+          "issue_title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "remediation": {
+            "type": "string"
+          },
+          "reason_code": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "analyzer_version": {
+            "type": "string"
+          },
+          "rule_version": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/IssueValue"
+          }
+        },
+        "required": [
+          "occurrence_id",
+          "evaluation_id",
+          "crawl_id",
+          "rule_id",
+          "site_url_id",
+          "normalized_url",
+          "display_url",
+          "title",
+          "page_kind",
+          "dimension",
+          "category",
+          "severity",
+          "issue_title",
+          "description",
+          "remediation",
+          "reason_code",
+          "evidence",
+          "analyzer_version",
+          "rule_version",
+          "created_at",
+          "value"
+        ],
+        "additionalProperties": false
+      },
       "AiReferrals": {
         "type": "object",
         "properties": {
@@ -3814,113 +3925,6 @@
         "required": ["failing", "passing", "not_applicable", "unread", "uncovered"],
         "additionalProperties": false
       },
-      "IssueOccurrence": {
-        "type": "object",
-        "properties": {
-          "occurrence_id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "evaluation_id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "crawl_id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "rule_id": {
-            "type": "string"
-          },
-          "site_url_id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "normalized_url": {
-            "type": "string"
-          },
-          "display_url": {
-            "type": "string"
-          },
-          "title": {
-            "type": ["string", "null"]
-          },
-          "page_kind": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PageKind"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "dimension": {
-            "$ref": "#/components/schemas/IssueDimension"
-          },
-          "category": {
-            "type": "string"
-          },
-          "severity": {
-            "$ref": "#/components/schemas/IssueSeverity"
-          },
-          "issue_title": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "remediation": {
-            "type": "string"
-          },
-          "reason_code": {
-            "type": "string"
-          },
-          "evidence": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string"
-            },
-            "additionalProperties": {}
-          },
-          "analyzer_version": {
-            "type": "string"
-          },
-          "rule_version": {
-            "type": "string"
-          },
-          "created_at": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "occurrence_id",
-          "evaluation_id",
-          "crawl_id",
-          "rule_id",
-          "site_url_id",
-          "normalized_url",
-          "display_url",
-          "title",
-          "page_kind",
-          "dimension",
-          "category",
-          "severity",
-          "issue_title",
-          "description",
-          "remediation",
-          "reason_code",
-          "evidence",
-          "analyzer_version",
-          "rule_version",
-          "created_at"
-        ],
-        "additionalProperties": false
-      },
       "IssueSection": {
         "type": "string",
         "enum": ["technical", "content", "aeo"]
@@ -3997,6 +4001,102 @@
           "section_counts"
         ],
         "additionalProperties": false
+      },
+      "IssueValue": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "none"
+              }
+            },
+            "required": ["kind"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "unavailable"
+              }
+            },
+            "required": ["kind"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "title"
+              },
+              "text": {
+                "type": "string"
+              },
+              "length": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["kind", "text", "length"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "meta_description"
+              },
+              "text": {
+                "type": "string"
+              },
+              "length": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["kind", "text", "length"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "h1_count"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["kind", "count"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "word_count"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["kind", "count"],
+            "additionalProperties": false
+          }
+        ]
       },
       "KeywordPresenceExpectedCheck": {
         "type": "object",
@@ -7936,6 +8036,30 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "new_url_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resolved_url_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "analyzer_version": {
             "type": "string"
           },
@@ -7960,6 +8084,8 @@
           "remediation_route",
           "score_roles",
           "affected_url_count",
+          "new_url_count",
+          "resolved_url_count",
           "analyzer_version",
           "rule_version",
           "created_at"
@@ -8006,7 +8132,7 @@
           "occurrences": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/IssueOccurrence"
+              "$ref": "#/components/schemas/AffectedPage"
             }
           },
           "occurrence_count": {
@@ -10861,6 +10987,8 @@
                       "remediation_route": "Example remediation route",
                       "score_roles": ["Example score roles"],
                       "affected_url_count": 1,
+                      "new_url_count": null,
+                      "resolved_url_count": null,
                       "analyzer_version": "Example analyzer version",
                       "rule_version": "Example rule version",
                       "created_at": "2026-01-15T09:30:00.000Z"
@@ -11069,7 +11197,8 @@
                       },
                       "analyzer_version": "Example analyzer version",
                       "rule_version": "Example rule version",
-                      "created_at": "2026-01-15T09:30:00.000Z"
+                      "created_at": "2026-01-15T09:30:00.000Z",
+                      "value": null
                     }
                   ],
                   "occurrence_count": 1,

@@ -557,6 +557,46 @@ describe('IssuesCatalog', () => {
     expect(within(dialog).getByText('Showing 2 of 3 pages.')).toBeInTheDocument();
   });
 
+  it('shows New and Fixed since the previous crawl, a dash when unknown, and each page’s value', async () => {
+    const rule = 'technical.meta_description_length';
+    const short = { length: 4, min_chars: 70, max_chars: 160, reason: 'too_short' };
+    serveIssues([
+      issue({ rule_id: rule, affected_url_count: 2, new_url_count: 2, resolved_url_count: null }),
+    ]);
+    const page = (index: number, text: string) =>
+      occurrence({
+        rule_id: rule,
+        occurrence_id: `dddddddd-${index}111-4111-8111-111111111111`,
+        site_url_id: `cccccccc-${index}111-4111-8111-111111111111`,
+        evidence: short,
+        value: { kind: 'meta_description', text, length: 4 },
+      });
+    mswServer.use(
+      http.get(`${ISSUES}/${ISSUE_A}`, () =>
+        HttpResponse.json(
+          issueDetail({
+            rule_id: rule,
+            affected_url_count: 2,
+            occurrences: [page(1, 'Shop'), page(2, 'Shoe')],
+          }),
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    const row = (await screen.findByRole('button', { name: 'WebSite schema is missing' })).closest(
+      'tr',
+    )!;
+    const cells = within(row).getAllByRole('cell');
+    expect(cells[3]).toHaveTextContent('2');
+    expect(cells[4]).toHaveTextContent('—');
+    const dialog = await openIssue(user, 'WebSite schema is missing');
+    expect(await within(dialog).findByText('Shop')).toBeInTheDocument();
+    expect(within(dialog).getByText('Shoe')).toBeInTheDocument();
+    expect(within(dialog).getAllByText(/Meta description \(4 chars\)/)).toHaveLength(2);
+  });
+
   it('applies a severity filter as a server param (not a client filter)', async () => {
     const seen = serveIssues();
     const user = userEvent.setup();

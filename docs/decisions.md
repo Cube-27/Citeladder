@@ -380,8 +380,9 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
 
 - **SH-B1** Every surface reads one current crawl: the newest usable crawl that
   is not a one-page rerun; a rerun updates only its page. **SH-B9** Screens read
-  each tracked page's latest audit; re-audits update the totals; the only change
-  graph is open issues over time.
+  each tracked page's latest audit; re-audits update the totals; the change
+  graph is open issues over time, and a crawl list shows each crawl's own scores
+  (owner, 2026-11-23).
 - **SH-B2** Issues are tracked per page: an issue stays open until it is
   resolved on all its tracked pages, and a fix verifies only when every rule
   its finding folds together passes.
@@ -400,8 +401,9 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
 - **SH-B7** One crawl action audits the same pages each time. **SH-B8** A
   tracked page answering 404 or a redirect stays tracked, reads "page
   unavailable" and opens that issue. **SH-B10** No crawl cooldown.
-- **SH-B12** Mark fixed ("N of M pages fixed") and Re-run all exist; no "new
-  since baseline" deltas and no per-issue score gain. **SH-B13** The tracked set
+- **SH-B12** Mark fixed ("N of M pages fixed") and Re-run all exist; each issue
+  shows pages New and Fixed since the previous crawl (owner, 2026-11-23); no
+  per-issue score gain. **SH-B13** The tracked set
   has no editing API and the crawl request no advanced scope options.
 - **Stall and live score** (2026-11-17): a crawl fails as overdue only after 30
   minutes with no task settled, capped at 12 hours; while it runs the score card

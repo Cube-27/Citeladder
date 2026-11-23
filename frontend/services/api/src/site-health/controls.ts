@@ -11,6 +11,7 @@ import {
 } from '../http/keyset-cursor.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { settleCrawlFetches } from './fetch-budget.ts';
+import { pageRerunSql } from './page-rerun.ts';
 import { crawlSetting } from './planner-policy.ts';
 import { requireProject } from '../projects/access.ts';
 import { isTerminal } from './reads/crawl.ts';
@@ -29,7 +30,11 @@ export async function listCrawls(
   },
 ) {
   const filters = { workspace_id: workspaceId, project_id: input.project_id };
-  let query = db.selectFrom('site_crawls').selectAll().where('workspace_id', '=', workspaceId);
+  let query = db
+    .selectFrom('site_crawls')
+    .selectAll()
+    .where('workspace_id', '=', workspaceId)
+    .where(sql<boolean>`not ${pageRerunSql}`);
   if (input.project_id) {
     await requireProject(db, { workspaceId, projectId: input.project_id });
     query = query.where('project_id', '=', input.project_id);

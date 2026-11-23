@@ -1,8 +1,8 @@
 import { apiClient, type ApiRequestOptions } from '@/lib/api/client';
-import { siteHealthApi, type PageFilterParams } from '@/lib/api/site-health';
+import { siteHealthApi, type ExportFilters } from '@/lib/api/site-health';
 import { saveBlob } from '@/lib/download';
 
-export type ExportView = 'inventory' | 'pages' | 'issues' | 'architecture';
+export type ExportView = 'inventory' | 'pages' | 'issues' | 'issue' | 'architecture';
 export type ExportFormat = 'csv' | 'md';
 
 export function exportFilename(crawlId: string, format: ExportFormat, view: ExportView): string {
@@ -21,7 +21,7 @@ export async function downloadCrawlExport(
     crawlId: string;
     format: ExportFormat;
     view?: ExportView;
-    filters?: PageFilterParams;
+    filters?: ExportFilters;
   }>,
   options?: ApiRequestOptions,
 ): Promise<void> {

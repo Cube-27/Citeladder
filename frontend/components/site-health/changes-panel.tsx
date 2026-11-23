@@ -15,6 +15,7 @@ import type { ChangeObservation, ChangeSummary } from '@citeladder/contracts';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { changeFieldLabel } from '@/lib/site-health/change-fields';
 import { ChangeEvidenceDrawer } from './changes-panel-evidence';
+import { CrawlHistory } from './crawl-history';
 import { readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 import { FigureStrip } from '@/components/ui/figure-strip';
@@ -77,6 +78,7 @@ export function ChangesPanel({
   const origin = sharedOrigin(page?.items.map((row) => row.normalized_url) ?? []);
   return (
     <Stack gap="workspace" className="min-w-0" data-testid="website-changes">
+      <CrawlHistory workspaceId={workspaceId} projectId={projectId} />
       {summary.isPending ? (
         <StateBlock
           kind="loading"

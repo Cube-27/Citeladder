@@ -41,12 +41,13 @@ import { dashboard } from '../site-health/reads/dashboard.ts';
 import { crawlEventTail, eventReplay } from '../site-health/reads/events.ts';
 import {
   architectureMarkdown,
+  issueExport,
   TABLE_VIEWS,
   tableExport,
   type TableView,
 } from '../site-health/reads/exports.ts';
 import { issueHistory } from '../site-health/reads/issue-history.ts';
-import { issueDetail, issues } from '../site-health/reads/issues.ts';
+import { issueDetail, issues, type IssueFilters } from '../site-health/reads/issues.ts';
 import { PAGE_SCORE_ROLES, type PageRowFilters } from '../site-health/reads/page-filters.ts';
 import { PAGE_SORTS } from '../site-health/reads/page-rows.ts';
 import { inventory, pageDetail, pages } from '../site-health/reads/pages.ts';
@@ -113,7 +114,7 @@ type PageFilterQuery = RequestParams<typeof crawlPath, typeof pageFilters>['quer
 type PagesQuery = RequestParams<typeof crawlPath, typeof pagesQuery>['query'];
 type IssuesQuery = RequestParams<typeof crawlPath, typeof issuesQuery>['query'];
 
-function pageRowFilters(query: PageFilterQuery): PageRowFilters {
+function pageRowFilters(query: Omit<PageFilterQuery, 'sort'>): PageRowFilters {
   if ((query.score_role === null) !== (query.max_score === null))
     throw new ApiError(422, 'score_role and max_score go together', { code: 'validation_error' });
   return {
@@ -136,24 +137,27 @@ function pageRowFilters(query: PageFilterQuery): PageRowFilters {
 const readPages = (db: Database, workspaceId: string, crawlId: string, query: PagesQuery) =>
   withCursor(pages(db, workspaceId, crawlId, pageRowFilters(query), query.sort, query));
 
+type IssueFilterQuery = Pick<
+  IssuesQuery,
+  'query' | 'severity' | 'category' | 'dimension' | 'rule' | 'site_url_id' | 'page_kind'
+>;
+
+const issueFilters = (query: IssueFilterQuery): IssueFilters => ({
+  query: query.query || null,
+  severity: query.severity || null,
+  category: query.category || null,
+  dimension: query.dimension || null,
+  rule: query.rule || null,
+  siteUrlId: query.site_url_id,
+  pageKind: query.page_kind || null,
+});
+
 const readIssues = (db: Database, workspaceId: string, crawlId: string, query: IssuesQuery) =>
   withCursor(
-    issues(
-      db,
-      workspaceId,
-      crawlId,
-      {
-        query: query.query || null,
-        severity: query.severity || null,
-        category: query.category || null,
-        dimension: query.dimension || null,
-        rule: query.rule || null,
-        siteUrlId: query.site_url_id,
-        pageKind: query.page_kind || null,
-      },
-      query,
-      { section: query.section ?? null, sort: query.sort },
-    ),
+    issues(db, workspaceId, crawlId, issueFilters(query), query, {
+      section: query.section ?? null,
+      sort: query.sort,
+    }),
   );
 
 async function requireCurrentCrawl(db: Database, workspaceId: string, projectId: string) {
@@ -171,12 +175,73 @@ async function withCursor<T>(read: Promise<T>): Promise<T> {
   }
 }
 
+const exportQuery = {
+  view: { ...text, default: 'inventory' },
+  ...pageFilters,
+  sort: { scalar: { kind: 'literal', values: [...PAGE_SORTS, ...issueSortSchema.options] } },
+  severity: text,
+  category: text,
+  dimension: text,
+  section: issuesQuery.section,
+  site_url_id: optionalUuid,
+  group_id: optionalUuid,
+} as const;
+type ExportQuery = RequestParams<typeof crawlPath, typeof exportQuery>['query'];
+
+function exportSort<Sort extends string>(sort: string | null, allowed: readonly Sort[]) {
+  if (sort === null) return null;
+  const found = allowed.find((value) => value === sort);
+  if (found === undefined)
+    throw new ApiError(422, `sort ${sort} does not apply to this view`, {
+      code: 'validation_error',
+    });
+  return found;
+}
+
+async function exportBody(
+  db: Database,
+  { workspaceId, crawlId, format }: { workspaceId: string; crawlId: string; format: 'csv' | 'md' },
+  query: ExportQuery,
+) {
+  if (query.view === 'architecture' || query.view === 'issue') exportSort(query.sort, []);
+  if (query.view === 'architecture')
+    return { body: await architectureMarkdown(db, workspaceId, crawlId), truncated: false };
+  if (query.view === 'issue') {
+    if (query.group_id === null)
+      throw new ApiError(422, 'group_id is required for the issue export', {
+        code: 'validation_error',
+      });
+    return issueExport(db, { workspaceId, crawlId, groupId: query.group_id });
+  }
+  const view = query.view as TableView;
+  const request = { workspaceId, crawlId, view, format };
+  if (view === 'issues')
+    return tableExport(db, {
+      ...request,
+      issues: {
+        filters: issueFilters(query),
+        view: {
+          section: query.section ?? null,
+          sort: exportSort(query.sort, issueSortSchema.options) ?? 'severity',
+        },
+      },
+    });
+  return tableExport(db, {
+    ...request,
+    pages: {
+      filters: pageRowFilters(query),
+      sort: exportSort(query.sort, PAGE_SORTS) ?? 'status',
+    },
+  });
+}
+
 function exportRoute(format: 'csv' | 'md') {
-  const views = format === 'csv' ? TABLE_VIEWS : [...TABLE_VIEWS, 'architecture'];
+  const views: string[] =
+    format === 'csv' ? [...TABLE_VIEWS, 'issue'] : [...TABLE_VIEWS, 'architecture'];
   return defineGetRoute({
     family,
     path: `${crawlRoot}/export.${format}`,
-    params: { path: crawlPath, query: { view: { ...text, default: 'inventory' }, ...pageFilters } },
+    params: { path: crawlPath, query: exportQuery },
     response: download,
     raw: true,
     async handle({ c, db }, { path, query }) {
@@ -185,16 +250,11 @@ function exportRoute(format: 'csv' | 'md') {
         throw new ApiError(422, `unknown export view: ${query.view}`, {
           code: 'validation_error',
         });
-      const { body, truncated } =
-        query.view === 'architecture'
-          ? { body: await architectureMarkdown(db, workspaceId, path.crawl_id), truncated: false }
-          : await tableExport(db, {
-              workspaceId,
-              crawlId: path.crawl_id,
-              view: query.view as TableView,
-              format,
-              pages: { filters: pageRowFilters(query), sort: query.sort },
-            });
+      const { body, truncated } = await exportBody(
+        db,
+        { workspaceId, crawlId: path.crawl_id, format },
+        query,
+      );
       const filename = `site-health-${path.crawl_id}-${query.view}.${format}`;
       return new Response(body, {
         headers: {

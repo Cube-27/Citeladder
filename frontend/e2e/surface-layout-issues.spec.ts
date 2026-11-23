@@ -41,6 +41,8 @@ function issue(index: number, params: URLSearchParams) {
     remediation_route: 'code',
     score_roles: ['web_fundamentals'],
     affected_url_count: index % 2 === 0 ? 1200 - index : 3,
+    new_url_count: null,
+    resolved_url_count: null,
     analyzer_version: 'a1',
     rule_version: 'r1',
     created_at: '2026-07-15T00:00:00Z',

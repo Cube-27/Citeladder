@@ -9,6 +9,15 @@
     "max_detail_evaluations": 200,
     "scoring_version": "sh-scoring-3",
     "rule_dimensions": ["aeo", "technical"],
+    "issue_values": {
+      "technical.title_present": "title",
+      "technical.title_length": "title",
+      "technical.meta_description_present": "meta_description",
+      "technical.meta_description_length": "meta_description",
+      "technical.h1_present": "h1_count",
+      "technical.single_h1": "h1_count",
+      "aeo.thin_content": "word_count"
+    },
     "issue_section_by_category": {
       "content": "content",
       "metadata": "content"

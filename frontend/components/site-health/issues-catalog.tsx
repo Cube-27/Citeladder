@@ -44,11 +44,12 @@ import {
   issueCatalogParams,
   issueSeverityChange,
   issueSeverityChoice,
+  toIssueParams,
   useIssueFilters,
   type IssueFilters,
 } from '@/lib/site-health/issue-filters';
 import { issueTitle } from '@/lib/site-health/issues';
-import { formatCount } from '@/lib/format';
+import { absent, formatCount, type Formatted } from '@/lib/format';
 
 function useIssuesCatalogQueries({
   workspaceId,
@@ -115,7 +116,15 @@ export function IssuesCatalog({
   const pager = useCatalogPager(cursor, issuesQuery.data?.next_cursor ?? null, catalog.goToPage);
 
   return (
-    <ReportPage actions={<IssuesExport workspaceId={workspaceId} crawlId={crawlId} />}>
+    <ReportPage
+      actions={
+        <IssuesExport
+          workspaceId={workspaceId}
+          crawlId={crawlId}
+          filters={toIssueParams(filters)}
+        />
+      }
+    >
       {notice}
       <IssuesSummary
         query={priorityQuery}
@@ -212,6 +221,8 @@ function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataT
       width: 'metric',
       sort: { active: sort === 'pages', descending: true, onSort: () => onSort('pages') },
     },
+    { key: 'new', label: 'New', kind: 'number', width: 'metric' },
+    { key: 'fixed', label: 'Fixed', kind: 'number', width: 'metric' },
     { key: 'category', label: 'Category', width: 'category', priority: 'low' },
   ];
 }
@@ -248,11 +259,21 @@ function IssueRow({
       <TableCell numeric className="tabular-nums">
         {formatCount(issue.affected_url_count)}
       </TableCell>
+      <TableCell numeric className="tabular-nums">
+        {sinceLastCrawl(issue.new_url_count)}
+      </TableCell>
+      <TableCell numeric className="tabular-nums">
+        {sinceLastCrawl(issue.resolved_url_count)}
+      </TableCell>
       <TableCell>
         <IssueCategoryTag issue={issue} />
       </TableCell>
     </TableRow>
   );
+}
+
+function sinceLastCrawl(count: number | null): Formatted {
+  return count === null ? absent('unavailable') : formatCount(count);
 }
 
 function SectionControl({
