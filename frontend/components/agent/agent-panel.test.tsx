@@ -145,6 +145,7 @@ const EMPTY_CATALOG = {
   skills: [],
   models: AGENT_MODELS,
   limits: {
+    message_max_chars: 50000,
     mentions_max: 5,
     attachments_max: 3,
     attachment_max_chars: 40000,

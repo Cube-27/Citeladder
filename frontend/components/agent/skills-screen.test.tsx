@@ -32,6 +32,7 @@ const CATALOG = {
   output_kinds: [{ kind: 'linkedin_post', label: 'LinkedIn post', refinements: [], next: [] }],
   models: AGENT_MODELS,
   limits: {
+    message_max_chars: 50000,
     mentions_max: 5,
     attachments_max: 3,
     attachment_max_chars: 40000,

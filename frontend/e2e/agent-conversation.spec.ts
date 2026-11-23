@@ -86,6 +86,7 @@ function chatDetail(): AgentChatDetail {
 const LONG_URL = (n: number) =>
   `https://www.bestandless.com.au/Categories/Kids/Kids-Underwear-%2526-Socks/Boys-Underwear-Multipack-Collection/boys-trunks-${n}`;
 const LIMITS = {
+  message_max_chars: 50000,
   mentions_max: 5,
   attachments_max: 3,
   attachment_max_chars: 40000,
@@ -173,6 +174,7 @@ for (const width of [1280, 390]) {
           skills: SKILLS,
           models: AGENT_MODELS,
           limits: {
+            message_max_chars: 50000,
             mentions_max: 5,
             attachments_max: 3,
             attachment_max_chars: 40000,
@@ -250,6 +252,7 @@ for (const width of [1280, 390]) {
             skills: SKILLS,
             models: AGENT_MODELS,
             limits: {
+              message_max_chars: 50000,
               mentions_max: 5,
               attachments_max: 3,
               attachment_max_chars: 40000,

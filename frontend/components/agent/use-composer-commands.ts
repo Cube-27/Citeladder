@@ -158,6 +158,13 @@ export function useComposerCommands({
     },
     prepare: ({ message, edit }, send) => {
       if (resolvingRef.current || pendingReads.current > 0) return;
+      if (limits && message.length > limits.message_max_chars) {
+        toast.notify(
+          `Messages hold up to ${limits.message_max_chars.toLocaleString('en-US')} characters`,
+          `This one has ${message.length.toLocaleString('en-US')}. Shorten it, or attach the text as a file.`,
+        );
+        return;
+      }
       const finish = (text: string) =>
         send({
           message: text,
