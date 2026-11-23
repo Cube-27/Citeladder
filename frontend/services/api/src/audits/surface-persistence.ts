@@ -13,6 +13,7 @@ import {
   type DeriveExecution,
 } from './result-persistence.ts';
 import { type AuditRuntime } from './config.ts';
+import { fitsIndexKey } from '../db/index-key.ts';
 
 async function appendObservation(db: Database, task: AuditTask, result: OverviewResult, at: Date) {
   const request = record(task.request_snapshot);
@@ -42,11 +43,12 @@ async function appendObservation(db: Database, task: AuditTask, result: Overview
     })
     .returning('id')
     .executeTakeFirstOrThrow();
-  if (result.links.length)
+  const links = result.links.filter((link) => fitsIndexKey(link.url));
+  if (links.length)
     await db
       .insertInto('aio_entity_links')
       .values(
-        result.links.map((link) => ({
+        links.map((link) => ({
           ...link,
           id: randomUUID(),
           workspace_id: task.workspace_id,

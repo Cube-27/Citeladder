@@ -257,4 +257,40 @@ describe('persisted billing documents', () => {
     });
     await expect(renderInvoicePdf(misfiled)).rejects.toThrow('inconsistent');
   });
+
+  it("refuses an invoice for another account's payment and a refund receipt without its provider refund", async () => {
+    const [payer, other] = [await tenant(), await tenant()];
+    const row = invoice(payer.accountId);
+    await persist(row);
+    await expect(
+      db
+        .insertInto('billing_invoices')
+        .values({ ...invoice(other.accountId), payment_id: row.payment_id })
+        .execute(),
+    ).rejects.toMatchObject({ code: '23503' });
+    const refund = (externalRefundId: string | null) =>
+      db
+        .insertInto('billing_payments')
+        .values({
+          id: randomUUID(),
+          billing_account_id: payer.accountId,
+          parent_payment_id: row.payment_id,
+          provider: 'razorpay',
+          provider_mode: 'test',
+          receipt_kind: 'refund',
+          external_payment_id: `pay_${row.payment_id}`,
+          external_refund_id: externalRefundId,
+          amount_minor: 100,
+          currency: row.currency,
+          payment_method: 'upi',
+          status: 'processed',
+          paid_at: paidAt,
+          receipt_sha256: 'b'.repeat(64),
+          created_at: paidAt,
+        })
+        .execute();
+    await expect(refund(null)).rejects.toMatchObject({ code: '23514' });
+    await refund('rfnd_one');
+    await expect(refund('rfnd_one')).rejects.toMatchObject({ code: '23505' });
+  });
 });

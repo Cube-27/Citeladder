@@ -34,6 +34,7 @@ import {
   shelfLinks,
 } from './projection-facts.ts';
 import type { CatalogFacts } from '../site-health/analysis/catalog-facts.ts';
+import { fitsIndexKey } from '../db/index-key.ts';
 
 type Source = Awaited<ReturnType<typeof sourceOf>>;
 
@@ -182,6 +183,7 @@ async function projectProduct(
     return facts.commerce.product_cards.length
       ? projectCategory(db, scope, source, facts, url)
       : null;
+  if (!fitsIndexKey(url)) return null;
   const existing = await db
     .selectFrom('commerce_products')
     .selectAll()

@@ -8,6 +8,7 @@ import { chunksOf } from '../lists.ts';
 import { compareText } from '../text-order.ts';
 import type { Scope } from './reads.ts';
 import { datasetView } from './views.ts';
+import { fitsIndexKey } from '../db/index-key.ts';
 
 const PARENT_KIND = 'referring_domains';
 const DERIVED_KIND = 'citation_matches';
@@ -105,7 +106,9 @@ export function deriveCitationMatches(
     const linkingDomains = new Set(linking.map((row) => normalizeDomain(row.domain)));
     const matches = citations.flatMap((citation) => {
       const domain = normalizeDomain(citation.domain || citedUrl(citation));
-      return linkingDomains.has(domain) ? [{ citation, domain }] : [];
+      return linkingDomains.has(domain) && fitsIndexKey(citedUrl(citation))
+        ? [{ citation, domain }]
+        : [];
     });
 
     const citationIds = citations.map((citation) => citation.id).sort(compareText);

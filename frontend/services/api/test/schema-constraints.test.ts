@@ -214,6 +214,70 @@ describe('evidence tenancy keys', () => {
     await expect(crawlEvent(other.workspaceId)).rejects.toMatchObject(FOREIGN_KEY);
   });
 
+  it("refuses a task naming another audit's snapshots", async () => {
+    const owner = await fixtures.tenant();
+    const { taskId } = await fixtures.execution(owner, { auditId: await fixtures.audit(owner) });
+    const { taskId: otherTask } = await fixtures.execution(owner, {
+      auditId: await fixtures.audit(owner),
+    });
+    const foreign = await db
+      .selectFrom('audit_tasks')
+      .select(['engine_snapshot_id', 'prompt_snapshot_id'])
+      .where('id', '=', otherTask)
+      .executeTakeFirstOrThrow();
+    const copy = (overrides: Record<string, unknown>) =>
+      clone('audit_tasks', taskId, { idempotency_key: randomUUID(), repetition: 99, ...overrides });
+    await copy({});
+    await expect(
+      copy({ repetition: 98, engine_snapshot_id: foreign.engine_snapshot_id }),
+    ).rejects.toMatchObject(FOREIGN_KEY);
+    await expect(
+      copy({ repetition: 97, prompt_snapshot_id: foreign.prompt_snapshot_id }),
+    ).rejects.toMatchObject(FOREIGN_KEY);
+  });
+
+  it("refuses a chat message filed under another project than its chat's", async () => {
+    const owner = await fixtures.tenant();
+    const other = await fixtures.tenant();
+    const now = new Date();
+    const chatId = randomUUID();
+    await db
+      .insertInto('agent_chats')
+      .values({
+        id: chatId,
+        workspace_id: owner.workspaceId,
+        project_id: owner.projectId,
+        title: 'Chat',
+        context_refs: '[]',
+        turn_count: 0,
+        last_activity_at: now,
+        created_at: now,
+        updated_at: now,
+        model: 'claude-haiku-5-5',
+        reasoning_effort: 'medium',
+      })
+      .execute();
+    const message = (tenant: { workspaceId: string; projectId: string }, sequence: number) =>
+      db
+        .insertInto('agent_messages')
+        .values({
+          id: randomUUID(),
+          chat_id: chatId,
+          sequence,
+          role: 'user',
+          content: 'Hello',
+          evidence_refs: '[]',
+          steps: '[]',
+          mentions: '[]',
+          created_at: now,
+          workspace_id: tenant.workspaceId,
+          project_id: tenant.projectId,
+        })
+        .execute();
+    await message(owner, 1);
+    await expect(message(other, 2)).rejects.toMatchObject(FOREIGN_KEY);
+  });
+
   it('numbers provider attempts once per task', async () => {
     const owner = await fixtures.tenant();
     const auditId = await fixtures.audit(owner);
@@ -384,6 +448,10 @@ describe('traffic projections', () => {
       .execute();
     await expect(clone('traffic_query_stats', query.id)).rejects.toMatchObject(UNIQUE);
     await clone('traffic_query_stats', query.id, { normalized_query: 'trail shoes' });
+    await clone('traffic_query_stats', query.id, { normalized_query: '検'.repeat(600) });
+    await expect(
+      clone('traffic_query_stats', query.id, { normalized_query: '検'.repeat(700) }),
+    ).rejects.toMatchObject({ code: '23514' });
   });
 
   it('pins stats to their snapshot workspace, keeps a page when its URL goes and cascades deletes', async () => {

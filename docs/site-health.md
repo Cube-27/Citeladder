@@ -153,17 +153,20 @@ UUIDv7 ids (`db/ids.ts`), so inserts land at the right edge of each key index.
 Attempts, artifacts, issues, crawl events and URL observations are range
 partitioned by `crawl_id`, and rule evaluations by `analysis_id` (their owner,
 which snapshots reuse across crawls), one partition per UTC month of the
-owner's UUIDv7 (CO-6), so retention can drop a month. A read or join that
+owner's UUIDv7 (CO-6). A read or join that
 names the crawl or analysis next to the row id prunes to one partition; one by
 row id alone probes each partition's key index. Keys and unique constraints carry the
 partition key, and a reference into these tables names it too
 (`(crawl_id, artifact_id)`, `(analysis_id, evaluation_id)`). Issue states,
-change observations and commerce observations outlive an evidence month: they
-keep source ids as provenance without a foreign key; a retention policy must
-decide how their readers show a dropped source.
+change observations and commerce observations are meant to outlive an evidence
+month, but foreign keys still reach these tables (page analyses cascade from
+artifacts; commerce observations restrict them), so a plain `DROP` of a month
+fails. No retention runs yet: retiring a month is a `DETACH`, then a `DROP` once
+the surviving references are decided ([backlog](plans/backlog.md)).
 
 The migrate job keeps the current month and three ahead
-(`site_evidence_ensure_partitions`) and analyzes the partitioned parents, which
+(`site_evidence_partition_targets`), creating each month in its own statement so
+a parent's exclusive lock lasts one partition, and analyzes the partitioned parents, which
 autovacuum skips, so deploying at least once a quarter keeps writers in monthly
 partitions. Creating a month holds its table exclusively while PostgreSQL scans
 the default partition, so that pause grows with the legacy rows. Rows

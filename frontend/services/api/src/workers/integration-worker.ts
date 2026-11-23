@@ -27,6 +27,7 @@ import {
 import { enqueuePostSyncProjections } from '../integrations/projections.ts';
 import { cachedWorkspaceAccess } from '../entitlements/access.ts';
 import { INTEGRATION_LANE, TaskQueue, type TaskFor } from '../queue/task-queue.ts';
+import { fitsIndexKey } from '../db/index-key.ts';
 
 const logger = getLogger('workers.integrations');
 const statuses = policy.task_queue.statuses;
@@ -374,7 +375,7 @@ export class IntegrationWorker {
       startRow: offset,
       partition_complete: provider === 'bing' || page.rawRowCount < this.#settings.sync_page_size,
     };
-    const { rows, invalid, received } = normalizedRows(
+    const normalized = normalizedRows(
       provider,
       template.dataset,
       template,
@@ -382,6 +383,9 @@ export class IntegrationWorker {
       valueDate(run.window_start),
       valueDate(run.window_end),
     );
+    const rows = normalized.rows.filter((row) => fitsIndexKey(run.property_ref, row.dimension_key));
+    const invalid = normalized.invalid + normalized.rows.length - rows.length;
+    const { received } = normalized;
     const metadata = extractMetadata(
       page.payload,
       invalid > 0 || received !== page.rawRowCount,

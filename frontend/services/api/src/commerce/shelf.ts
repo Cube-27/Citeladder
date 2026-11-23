@@ -34,6 +34,7 @@ import {
   type ShelfMatch,
   type ShelfResolver,
 } from './shelf-parsing.ts';
+import { fitsIndexKey } from '../db/index-key.ts';
 
 export function frozenShelfIds(frozen: Record<string, unknown>) {
   return strings(frozen.prompt_target_ids).filter((id) => z.uuid().safeParse(id).success);
@@ -137,7 +138,7 @@ async function observedCandidate(
     citations: evidence.sourceUrls,
     ownedHosts: ctx.owned,
   });
-  if (!url) return null;
+  if (!url || !fitsIndexKey(url)) return null;
   return findOrCreateCandidate(
     db,
     ctx,
@@ -314,7 +315,7 @@ async function cardHolder(
   const byName = matchRecommendation(card.title, ctx.catalog);
   if (byName.product || byName.competitor) return { matched: byName, candidate: null };
   const url = card.url && ctx.target ? competitorPageUrl(card.url, ctx.owned) : null;
-  if (!url || !ctx.target) return { matched: NO_MATCH, candidate: null };
+  if (!url || !ctx.target || !fitsIndexKey(url)) return { matched: NO_MATCH, candidate: null };
   const candidate = await findOrCreateCandidate(
     db,
     ctx,
