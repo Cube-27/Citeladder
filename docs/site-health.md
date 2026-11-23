@@ -600,7 +600,7 @@ are filed once on the homepage and most need complete coverage, so scoring them
 per page would multiply one finding by the page count and cap every
 plan-limited crawl. `technical.canonical_integrity` is the one scored
 crawl-finalize rule. Diagnostics (`technical.hsts_present`,
-`technical.ttfb_band`, `aeo.llms_txt_present`) never raise an issue or score.
+`aeo.llms_txt_present`) never raise an issue or score.
 
 Outcome normalization:
 
