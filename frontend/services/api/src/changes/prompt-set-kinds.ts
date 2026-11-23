@@ -17,6 +17,7 @@ import {
   draftCallLimit,
   generationInput,
   validateSelection,
+  wantedTopics,
   type GenerationInput,
 } from '../prompts/generation-input.ts';
 import {
@@ -268,11 +269,20 @@ export const promptSetKinds = {
     },
     async preview(context, payload) {
       const { request } = payload;
+      const [setName, topics] = await Promise.all([
+        promptSetName(context, payload.prompt_set_id),
+        listTopics(context.db, scopeOf(context)),
+      ]);
+      const wanted = new Set(wantedTopics(request));
+      const named = topics.filter((topic) => wanted.has(topic.id)).map((topic) => topic.name);
       return {
         title: `Suggest ${plural(request.count, 'prompt')}`,
         rows: [
-          { label: 'Prompt set', value: await promptSetName(context, payload.prompt_set_id) },
+          { label: 'Prompt set', value: setName },
           { label: 'Cohort', value: cohortLabel(request) },
+          ...(named.length
+            ? rowsOf('Topic', named)
+            : [{ label: 'Topics', value: `All ${plural(topics.length, 'topic')}` }]),
         ],
         spend: `AI credits for up to ${plural(draftCallLimit(request) + policy.prompts.generation.map_calls, 'model call')}`,
         opens: { label: 'Open Prompts', path: '/prompts' },
