@@ -250,7 +250,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     updated: '2026-11-18',
     title: 'AI Visibility MCP Server for Claude, ChatGPT & More | CiteLadder',
     description:
-      'Connect Claude, ChatGPT, Gemini, Grok, Cursor and other MCP clients to your CiteLadder visibility, site and search evidence, with changes only after you confirm them.',
+      'Connect Claude, ChatGPT, Gemini, Grok, Cursor and other MCP clients to your CiteLadder visibility, site and search evidence, read-only.',
     heading: 'Your CiteLadder evidence, in your AI assistant',
     lead: 'Ask Claude, ChatGPT and other assistants about your AI visibility, right where you already work.',
     cta: 'mcp',
@@ -262,7 +262,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: '2. Sign in and approve',
-        body: 'Sign in to CiteLadder, choose which workspaces the assistant may use and whether it may make changes. No API key to copy.',
+        body: 'Sign in to CiteLadder, choose which workspaces the assistant may read. No API key to copy.',
       },
       {
         title: '3. Ask a question',
@@ -286,7 +286,6 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         points: [
           'Weekly AI visibility brief across engines and competitors',
           'Site fix brief from the latest Site Health crawl',
-          'With Allow changes: add, activate, archive or refile prompts, track or drop competitors and review suggested ones, launch audits and schedules, start crawls and keyword research, and dismiss or mark Actions implemented, each after you agree; no publishing',
         ],
         media: { kind: 'full', screen: 'visibility' },
       },
@@ -302,11 +301,11 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Approve workspaces',
-        body: 'Choose which workspaces the assistant may use, and tick Allow changes only if you want it to make changes.',
+        body: 'Choose which workspaces the assistant may read.',
       },
       {
         title: 'Ask',
-        body: 'Ask in plain language. The assistant lists your projects, reads the records it needs and, if you allowed changes, makes the ones you agree to.',
+        body: 'Ask in plain language. The assistant lists your projects, reads the records it needs and answers from them.',
       },
     ],
     questions: [
@@ -315,12 +314,12 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       'Which Site Health issues affect our most-cited pages?',
       'Which sources do AI answers cite for our top prompts?',
       'How much traffic did AI assistants send us last month?',
-      'Add five comparison prompts against our top competitor and launch an audit on ChatGPT.',
+      'Which prompts do our competitors win that we do not?',
     ],
     faqs: [
       {
         q: 'What is the CiteLadder MCP server?',
-        a: `A hosted Model Context Protocol server at ${MCP_SERVER_URL}. It lets a compatible AI assistant read your CiteLadder project evidence so you can ask questions about it in plain language, show interactive visibility and Site Health views, and, if you allow changes, manage your prompts, topics, competitors, audits and Actions.`,
+        a: `A hosted Model Context Protocol server at ${MCP_SERVER_URL}. It lets a compatible AI assistant read your CiteLadder project evidence so you can ask questions about it in plain language, and show interactive visibility and Site Health views. It only reads.`,
       },
       {
         q: 'Which assistants does it work with?',
@@ -332,7 +331,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can an assistant change my website or my data through MCP?',
-        a: 'Only if you tick Allow changes when you connect it. Then it can add, edit and archive prompts, add, rename and delete topics, add and remove competitors, launch and cancel audits, create schedules and update Actions. Your assistant asks you to confirm a preview before each change, a crawl or keyword research run included. It never publishes or changes your site.',
+        a: 'No. The connection is read-only. Prompts, audits, crawls, keyword research and Actions are changed in the CiteLadder app, and it never publishes or changes your site.',
       },
       {
         q: 'Does reading a tool refresh the data?',
@@ -375,7 +374,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Models, research and assistants',
-        body: 'Model providers for the Agent, DataForSEO for optional research, and MCP access with confirmed changes.',
+        body: 'Model providers for the Agent, DataForSEO for optional research, and read-only MCP access.',
       },
     ],
     features: [
@@ -417,7 +416,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Connect assistants',
-        body: 'Give Claude, ChatGPT and other MCP clients read access, and confirmed changes if you allow them.',
+        body: 'Give Claude, ChatGPT and other MCP clients read access.',
       },
     ],
     questions: [
