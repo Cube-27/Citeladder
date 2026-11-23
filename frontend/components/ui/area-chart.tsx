@@ -87,7 +87,7 @@ export function AreaChart({
   you = true,
   lonePoint = 'list',
   breakNote = 'hint',
-  empty = 'No readings in this period.',
+  empty,
 }: Readonly<{
   data: readonly TrendPoint[];
   name?: string;
@@ -118,7 +118,7 @@ export function AreaChart({
     tone: tones[index] ?? 'other',
     shape: keyed ? (MARKER_SHAPES[index % MARKER_SHAPES.length] ?? 'circle') : undefined,
   }));
-  if (lines.every((line) => lastMeasured(line.values) < 0))
+  if (empty && lines.every((line) => lastMeasured(line.values) < 0))
     return <StateBlock kind="empty" inline message={empty} />;
   const shown = shownWith(format);
   const table = (
