@@ -169,6 +169,7 @@ export async function pageSection(
       'page_format',
       'page_format_method',
       'source_class',
+      'registrable_domain',
     ])
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)

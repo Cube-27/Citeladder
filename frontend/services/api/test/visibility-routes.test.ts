@@ -677,6 +677,32 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       query: { audit_id: selected, standing: 'gap' },
     });
     expect(domains.status).toBe(422);
+
+    const reread = async (title: string, at: string) => {
+      const next = { ...reading('inspected', at), page_facts: JSON.stringify({ title }) };
+      await db.insertInto('source_page_snapshots').values(next).execute();
+      await db
+        .insertInto('source_page_entity_presences')
+        .values([
+          { ...presence('brand', 'Acme Corp', 'not_detected', []), snapshot_id: next.id },
+          { ...presence('competitor', 'Globex', 'present', [0]), snapshot_id: next.id },
+        ])
+        .execute();
+    };
+    await reread('Globex - Wikipedia', '2026-02-04T00:00:00Z');
+    expect(await urlRows({})).toEqual([
+      [url, 'read', action.id],
+      ['https://other.example/x', null, null],
+    ]);
+    expect(await urlRows({ standing: 'gap' })).toEqual([]);
+    await reread('Best budget retailers', '2026-02-05T00:00:00Z');
+    expect(await urlRows({ standing: 'gap' })).toEqual([[url, 'gap', action.id]]);
+    await db
+      .updateTable('source_pages')
+      .set({ registrable_domain: 'en.wikipedia.org' })
+      .where('id', '=', pageId)
+      .execute();
+    expect(await urlRows({ standing: 'gap' })).toEqual([]);
   });
 
   it("draws one page's own line for its detail view", async () => {
