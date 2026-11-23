@@ -21,13 +21,14 @@ export async function issueChanges(
   const page = scope.siteUrlId ? sql`and s.site_url_id = ${scope.siteUrlId}::uuid` : sql``;
   const [fresh, resolved] = await Promise.all([
     sql<Counts>`
+      with prior as materialized (
+        select distinct p.rule_id, p.site_url_id from site_issues p
+        where ${viewIssuesSql(previous, 'p')})
       select i.rule_id, count(distinct i.site_url_id)::int as count
       from site_issues i
       where ${scope.matching} and not ${siteLevelRule}
         and not exists (
-          select 1 from site_issues p
-          where ${viewIssuesSql(previous, 'p')}
-            and p.rule_id = i.rule_id and p.site_url_id = i.site_url_id)
+          select 1 from prior p where p.rule_id = i.rule_id and p.site_url_id = i.site_url_id)
       group by i.rule_id`.execute(db),
     scope.pageKind
       ? null
