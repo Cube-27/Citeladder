@@ -938,7 +938,6 @@ async function siteIssue(
       dimension: rule.dimension,
       category: rule.category,
       severity: rule.severity,
-      finding_class: rule.finding_class,
       description: rule.description,
       remediation: rule.remediation,
       analyzer_version: policy.site_health.versions.analyzer,
@@ -983,7 +982,7 @@ it("lists exactly the pages a Site Health rule affects, with each page's failing
       aeo_readiness_score: null,
       aeo_measurement_state: 'limited_evidence',
       issue_count: 1,
-      issue_rules: { advisory: ['technical.meta_description_present'] },
+      issue_rules: ['technical.meta_description_present'],
       rule_evidence: { present: false },
       inbound_count: null,
       depth_from_home: null,
@@ -992,10 +991,7 @@ it("lists exactly the pages a Site Health rule affects, with each page's failing
     expect.objectContaining({
       site_url_id: titled.id,
       issue_count: 2,
-      issue_rules: {
-        advisory: ['technical.meta_description_present'],
-        defect: ['technical.title_present'],
-      },
+      issue_rules: ['technical.meta_description_present', 'technical.title_present'],
     }),
   ]);
   const one = await pages({ rule_id: 'technical.title_present', limit: 1 });

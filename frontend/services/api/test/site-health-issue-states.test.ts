@@ -64,7 +64,6 @@ async function audit(
         dimension: rule.dimension,
         category: rule.category,
         severity: rule.severity,
-        finding_class: rule.finding_class,
         evidence: JSON.stringify({}),
         description: rule.description,
         remediation: rule.remediation,

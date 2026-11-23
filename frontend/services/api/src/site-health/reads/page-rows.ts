@@ -287,20 +287,17 @@ export async function pageRows(
 }
 
 export async function currentIssueRules(db: Database, crawl: Crawl, analysisIds: string[]) {
-  const result = new Map<string, Record<string, string[]>>();
+  const result = new Map<string, string[]>();
   if (!analysisIds.length) return result;
-  const { rows } = await sql<{ analysis_id: string; finding_class: string; rule_id: string }>`
-    select distinct a.id as analysis_id, i.finding_class, i.rule_id
+  const { rows } = await sql<{ analysis_id: string; rule_id: string }>`
+    select distinct a.id as analysis_id, i.rule_id
     from site_page_analyses a
     join site_issues i on i.workspace_id = a.workspace_id and ${shownIssueFilter(crawl, 'i', 'a')}
     where a.workspace_id = ${crawl.workspace_id} and a.project_id = ${crawl.project_id}
       and a.id = any(${analysisIds}::uuid[])
-    order by a.id, i.finding_class, i.rule_id`.execute(db);
-  for (const row of rows) {
-    const classes = result.get(row.analysis_id) ?? {};
-    classes[row.finding_class] = [...(classes[row.finding_class] ?? []), row.rule_id];
-    result.set(row.analysis_id, classes);
-  }
+    order by a.id, i.rule_id`.execute(db);
+  for (const row of rows)
+    result.set(row.analysis_id, [...(result.get(row.analysis_id) ?? []), row.rule_id]);
   return result;
 }
 

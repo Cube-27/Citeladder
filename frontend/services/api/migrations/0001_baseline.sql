@@ -1235,7 +1235,6 @@ CREATE TABLE public.brand_discoveries (
     competitors jsonb NOT NULL,
     topics jsonb NOT NULL,
     prompt_suggestions jsonb NOT NULL,
-    evidence jsonb NOT NULL,
     gaps jsonb NOT NULL,
     warnings jsonb NOT NULL,
     error_code character varying(32) NOT NULL,
@@ -1395,7 +1394,6 @@ CREATE TABLE public.brand_research_snapshots (
     method character varying(64) NOT NULL,
     extracted_fields jsonb NOT NULL,
     field_confidence jsonb NOT NULL,
-    evidence jsonb NOT NULL,
     warnings jsonb NOT NULL,
     created_at timestamp with time zone NOT NULL
 );
@@ -4371,7 +4369,6 @@ CREATE TABLE public.site_issue_catalogs (
     workspace_id uuid NOT NULL,
     project_id uuid NOT NULL,
     crawl_id uuid NOT NULL,
-    finding_class character varying(16) NOT NULL,
     items jsonb NOT NULL,
     summary jsonb NOT NULL,
     analyzer_version character varying(32) NOT NULL,
@@ -4382,7 +4379,7 @@ CREATE TABLE public.site_issue_catalogs (
 );
 
 ALTER TABLE ONLY public.site_issue_catalogs
-    ADD CONSTRAINT site_issue_catalogs_pkey PRIMARY KEY (crawl_id, finding_class);
+    ADD CONSTRAINT site_issue_catalogs_pkey PRIMARY KEY (crawl_id);
 
 CREATE INDEX ix_site_issue_catalogs_project_id ON public.site_issue_catalogs USING btree (project_id);
 
@@ -4469,7 +4466,6 @@ CREATE TABLE public.site_issues (
     dimension character varying(16) NOT NULL,
     category character varying(32) NOT NULL,
     severity character varying(16) NOT NULL,
-    finding_class character varying(16) NOT NULL,
     evidence jsonb,
     description text NOT NULL,
     remediation text NOT NULL,
@@ -4490,9 +4486,9 @@ ALTER TABLE public.site_issues
 
 CREATE INDEX ix_site_issues_analysis_id ON public.site_issues USING btree (analysis_id);
 
-CREATE INDEX ix_site_issues_current ON public.site_issues USING btree (crawl_id, finding_class) WHERE is_current;
+CREATE INDEX ix_site_issues_current ON public.site_issues USING btree (crawl_id) WHERE is_current;
 
-CREATE INDEX ix_site_issues_filter ON public.site_issues USING btree (crawl_id, finding_class, severity, category, rule_id);
+CREATE INDEX ix_site_issues_filter ON public.site_issues USING btree (crawl_id, severity, category, rule_id);
 
 CREATE INDEX ix_site_issues_source_artifact_id ON public.site_issues USING btree (source_artifact_id);
 

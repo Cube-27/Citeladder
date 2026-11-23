@@ -55,7 +55,7 @@ type RouteBody<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
 type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response extends z.ZodType> = {
   family: RouteContract['family'];
   path: string;
-  params: { path: Path; query: Query };
+  params: { path: Path; query: Query; closed?: true };
   response: Response;
   method?: 'get' | 'post' | 'put' | 'patch' | 'delete';
   status?: ContentfulStatusCode | 204;
@@ -79,7 +79,7 @@ type PermissionDeclaration = {
 export type ProductRoute = {
   contract: RouteContract;
   publicContract?: RouteContract;
-  params: { path: ParamSpecs; query: ParamSpecs };
+  params: { path: ParamSpecs; query: ParamSpecs; closed?: true };
   streamsBody: boolean;
   register: (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => void;
 };

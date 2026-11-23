@@ -286,7 +286,7 @@ it.each([
     reason,
   );
 });
-it('crawl contradictions only veto an archetype and absence advisories require completeness', () => {
+it('crawl contradictions only veto an archetype and absence checks require completeness', () => {
   const contradictions = Array.from({ length: 5 }, (_, index) =>
     page(`${index}`, `/docs/${index}`, 'docs'),
   );
@@ -458,7 +458,6 @@ it('complete coverage creates actionable root findings without borrowing foreign
       rule: null,
       siteUrlId: null,
       pageKind: null,
-      findingClass: 'defect',
     },
     { limit: 50, cursor: null },
   );
@@ -484,7 +483,6 @@ it('complete coverage creates actionable root findings without borrowing foreign
           rule: 'architecture.orphan_pages',
           siteUrlId: null,
           pageKind,
-          findingClass: 'defect',
         },
         { limit: 50, cursor: null },
       )

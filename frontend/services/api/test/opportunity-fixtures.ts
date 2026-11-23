@@ -109,7 +109,6 @@ async function issue(
       dimension: 'aeo',
       category: 'content',
       severity,
-      finding_class: 'defect',
       evidence: JSON.stringify({ observed: 'missing' }),
       description: '',
       remediation: 'Fix it.',

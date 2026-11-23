@@ -109,7 +109,6 @@ const records = {
     'dimension',
     'category',
     'severity',
-    'finding_class',
     'evidence',
     'description',
     'remediation',

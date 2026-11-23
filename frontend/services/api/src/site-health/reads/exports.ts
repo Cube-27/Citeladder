@@ -5,7 +5,7 @@ import { onlyOf } from '../../lists.ts';
 import { compareText } from '../../text-order.ts';
 import { siteReadSettings } from '../runtime.ts';
 import { loadCrawl } from './crawl.ts';
-import { issues, pageKindsByRule } from './issues.ts';
+import { issues, pageKindsByRule, unfilteredIssues } from './issues.ts';
 import type { PageRowFilters } from './page-filters.ts';
 import type { PageSort } from './page-rows.ts';
 import { inventory, pages } from './pages.ts';
@@ -64,7 +64,6 @@ const VIEWS = {
       'dimension',
       'category',
       'severity',
-      'finding_class',
       'page_kind',
       'affected_url_count',
       'description',
@@ -98,23 +97,7 @@ async function tableRows(db: Database, request: TableExportRequest) {
     if (view === 'inventory') page = await inventory(db, workspaceId, crawlId, {}, paging());
     else if (view === 'pages')
       page = await pages(db, workspaceId, crawlId, pageView.filters, pageView.sort, paging());
-    else
-      page = await issues(
-        db,
-        workspaceId,
-        crawlId,
-        {
-          query: null,
-          severity: null,
-          category: null,
-          dimension: null,
-          rule: null,
-          siteUrlId: null,
-          pageKind: null,
-          findingClass: 'defect',
-        },
-        paging(),
-      );
+    else page = await issues(db, workspaceId, crawlId, unfilteredIssues(), paging());
     rows.push(...page.items);
     cursor = page.next_cursor;
     if (rows.length >= max)
@@ -127,7 +110,7 @@ export async function tableExport(db: Database, request: TableExportRequest) {
   const { workspaceId, crawlId, view, format } = request;
   const { rows, truncated } = await tableRows(db, request);
   if (view === 'issues' && rows.length > 0) {
-    const kinds = await pageKindsByRule(db, await loadCrawl(db, workspaceId, crawlId), null, null);
+    const kinds = await pageKindsByRule(db, await loadCrawl(db, workspaceId, crawlId), null);
     for (const row of rows) row.page_kind = (kinds.get(String(row.rule_id)) ?? []).join(', ');
   }
   const { title, columns } = VIEWS[view];

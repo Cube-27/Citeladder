@@ -237,7 +237,6 @@ describe('terminal analysis publication', () => {
         rule: null,
         siteUrlId: null,
         pageKind: null,
-        findingClass: 'defect',
       },
       { limit: 10, cursor: null },
     );
@@ -376,7 +375,6 @@ describe('terminal analysis publication', () => {
         rule: null,
         siteUrlId: null,
         pageKind: null,
-        findingClass: 'defect',
       },
       { limit: 50, cursor: null },
     );

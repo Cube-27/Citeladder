@@ -229,7 +229,6 @@ async function settleChunk({
           dimension: rule.dimension,
           category: rule.category,
           severity: rule.severity,
-          finding_class: rule.finding_class,
           evidence: JSON.stringify({}),
           description: rule.description,
           remediation: rule.remediation,
@@ -340,7 +339,7 @@ describe('Site Health crawl at scale', () => {
     await publishRunningIssues(db, { workspace_id: seed.workspaceId, crawl_id: seed.crawlId });
     const paging = { limit: 50, cursor: null };
     const running = await timed(() =>
-      issues(db, seed.workspaceId, seed.crawlId, unfilteredIssues(null), paging),
+      issues(db, seed.workspaceId, seed.crawlId, unfilteredIssues(), paging),
     );
     expect(
       running.value.items.find((item) => item.rule_id === 'technical.title_present')
@@ -355,7 +354,7 @@ describe('Site Health crawl at scale', () => {
     const runningScans = {
       pages: await scanned((trx) => pages(trx, w, c, {}, 'status', paging)),
       issues_high: await scanned((trx) =>
-        issues(trx, w, c, { ...unfilteredIssues(null), severity: 'high' }, paging),
+        issues(trx, w, c, { ...unfilteredIssues(), severity: 'high' }, paging),
       ),
       issue_fixes: await scanned((trx) => issueFixes(trx, w, c)),
     };
@@ -383,7 +382,7 @@ describe('Site Health crawl at scale', () => {
     );
 
     const final = await timed(() =>
-      issues(db, seed.workspaceId, seed.crawlId, unfilteredIssues(null), paging),
+      issues(db, seed.workspaceId, seed.crawlId, unfilteredIssues(), paging),
     );
     expect(
       final.value.items.find((item) => item.rule_id === 'technical.title_present')

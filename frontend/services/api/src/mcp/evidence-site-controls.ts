@@ -40,7 +40,6 @@ export async function siteIssueGroups(
       rule: null,
       siteUrlId: null,
       pageKind: null,
-      findingClass: null,
     },
     {
       cursor: args.cursor ?? null,

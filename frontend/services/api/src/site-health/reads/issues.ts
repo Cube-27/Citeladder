@@ -25,6 +25,7 @@ import {
   issueOccurrence,
   issueSection,
   remediationRoute,
+  ruleScoreRoles,
   rulesTitled,
   ruleTitle,
   siteLevelRule,
@@ -43,7 +44,6 @@ export type IssueFilters = {
   rule: string | null;
   siteUrlId: string | null;
   pageKind: string | null;
-  findingClass: string | null;
 };
 
 function ofPageKind(crawl: Crawl, pageKind: string) {
@@ -72,7 +72,6 @@ function issueWhere(crawl: Crawl, filters: IssueFilters): RawBuilder<unknown> {
   if (filters.rule) clauses.push(sql`i.rule_id = ${filters.rule}`);
   if (filters.siteUrlId) clauses.push(sql`i.site_url_id = ${filters.siteUrlId}`);
   if (filters.pageKind) clauses.push(ofPageKind(crawl, filters.pageKind));
-  if (filters.findingClass) clauses.push(sql`i.finding_class = ${filters.findingClass}`);
   if (filters.query) {
     const query = filters.query.trim();
     clauses.push(
@@ -86,11 +85,7 @@ type Group = IssueRow & { affected_url_count: number; group_id: string };
 type IssueItem = z.infer<typeof siteIssuesPageSchema>['items'][number];
 export type IssueSummary = Omit<z.input<typeof siteIssuesPageSchema>['summary'], 'section_counts'>;
 
-export const ISSUE_FINDING_CLASSES = ['defect', 'advisory'] as const;
-
-export const catalogClassKey = (findingClass: string | null) => findingClass ?? 'all';
-
-export const unfilteredIssues = (findingClass: string | null): IssueFilters => ({
+export const unfilteredIssues = (): IssueFilters => ({
   query: null,
   severity: null,
   category: null,
@@ -98,7 +93,6 @@ export const unfilteredIssues = (findingClass: string | null): IssueFilters => (
   rule: null,
   siteUrlId: null,
   pageKind: null,
-  findingClass,
 });
 
 const isUnfiltered = (filters: IssueFilters) =>
@@ -113,21 +107,21 @@ const isUnfiltered = (filters: IssueFilters) =>
 async function issueGroups(db: Database, crawl: Crawl, filters: IssueFilters): Promise<Group[]> {
   const { rows } = await sql<IssueRow & { affected_url_count: number }>`
     with matching as (
-      select i.rule_id, i.finding_class, count(distinct i.site_url_id)::int as affected_url_count
-      from site_issues i where ${issueWhere(crawl, filters)} group by i.rule_id, i.finding_class
+      select i.rule_id, count(distinct i.site_url_id)::int as affected_url_count
+      from site_issues i where ${issueWhere(crawl, filters)} group by i.rule_id
     )
-    select distinct on (i.rule_id, i.finding_class) i.*, '' as reason_code, m.affected_url_count
+    select distinct on (i.rule_id) i.*, '' as reason_code, m.affected_url_count
     from site_issues i
-    join matching m on m.rule_id = i.rule_id and m.finding_class = i.finding_class
+    join matching m on m.rule_id = i.rule_id
     where ${currentIssues(crawl)}
-    order by i.rule_id, i.finding_class, i.created_at, i.id`.execute(db);
+    order by i.rule_id, i.created_at, i.id`.execute(db);
   return rows
     .map((row) => ({
       ...row,
       affected_url_count:
         siteLevelScope(row.rule_id, row.evidence, filters.pageKind)?.affected ??
         row.affected_url_count,
-      group_id: issueGroupId(crawl.id, row.rule_id, row.finding_class),
+      group_id: issueGroupId(crawl.id, row.rule_id),
     }))
     .sort(compareGroups);
 }
@@ -147,7 +141,6 @@ function summaryScope(crawl: Crawl, filters: IssueFilters) {
   const unchipped = { ...filters, severity: null, dimension: null };
   return {
     scoped: issueWhere(crawl, unchipped),
-    anyClass: issueWhere(crawl, { ...unchipped, findingClass: null }),
     countedPage: filters.pageKind
       ? sql`not ${siteLevelRule} or ${onPageOfKind(crawl, filters.pageKind)}`
       : sql`true`,
@@ -159,14 +152,14 @@ export async function issueSummary(
   crawl: Crawl,
   filters: IssueFilters,
 ): Promise<IssueSummary> {
-  const { scoped, anyClass, countedPage } = summaryScope(crawl, filters);
-  const [classes, severities, dimensions, totals, siteLevel, monitored] = await Promise.all([
-    sql<{ finding_class: string; count: number }>`
-      select i.finding_class, count(distinct i.rule_id)::int as count
-      from site_issues i where ${anyClass} group by i.finding_class`.execute(db),
+  const { scoped, countedPage } = summaryScope(crawl, filters);
+  const [types, severities, dimensions, totals, siteLevel, monitored] = await Promise.all([
+    sql<{ count: number }>`
+      select count(distinct i.rule_id)::int as count
+      from site_issues i where ${scoped}`.execute(db),
     sql<{ severity: string; count: number }>`
       select i.severity, count(distinct i.rule_id)::int as count
-      from site_issues i where ${anyClass} and i.finding_class = 'defect'
+      from site_issues i where ${scoped}
       group by i.severity`.execute(db),
     sql<{ dimension: string; count: number }>`
       select i.dimension, count(distinct i.rule_id)::int as count
@@ -185,7 +178,6 @@ export async function issueSummary(
           and m.active))::int as monitored
       from site_issues i where ${scoped}`.execute(db),
   ]);
-  const byClass = Object.fromEntries(classes.rows.map((row) => [row.finding_class, row.count]));
   const severityCounts: Record<string, number> = {
     critical: 0,
     high: 0,
@@ -209,9 +201,7 @@ export async function issueSummary(
     ),
   );
   return {
-    issue_count: byClass.defect ?? 0,
-    defect_issue_type_count: byClass.defect ?? 0,
-    advisory_issue_type_count: byClass.advisory ?? 0,
+    issue_count: firstOf(types.rows, 'the issue type count').count,
     occurrence_count: total.occurrences,
     severity_counts: severityCounts,
     dimension_counts: dimensionCounts,
@@ -220,12 +210,7 @@ export async function issueSummary(
   };
 }
 
-export async function pageKindsByRule(
-  db: Database,
-  crawl: Crawl,
-  ruleIds: string[] | null,
-  findingClass: string | null,
-) {
+export async function pageKindsByRule(db: Database, crawl: Crawl, ruleIds: string[] | null) {
   if (ruleIds?.length === 0) return new Map<string, string[]>();
   const { rows } = await sql<{ rule_id: string; kinds: string[] }>`
     select i.rule_id, array_agg(distinct a.page_kind order by a.page_kind)
@@ -235,7 +220,6 @@ export async function pageKindsByRule(
       and a.site_url_id = i.site_url_id and a.is_current
     where ${currentIssues(crawl)}
       ${ruleIds ? sql`and i.rule_id = any(${ruleIds}::text[])` : sql``}
-      ${findingClass ? sql`and i.finding_class = ${findingClass}` : sql``}
     group by i.rule_id`.execute(db);
   return new Map(rows.map((row) => [row.rule_id, row.kinds ?? []]));
 }
@@ -258,14 +242,11 @@ export async function issues(
     rule: filters.rule,
     site_url_id: filters.siteUrlId,
     page_kind: filters.pageKind,
-    finding_class: filters.findingClass,
     section: view.section,
     sort: view.sort,
   };
   const after = decodeGroupCursor(paging.cursor, fingerprint);
-  const catalog = isUnfiltered(filters)
-    ? await persistedCatalog(db, crawl, filters.findingClass)
-    : null;
+  const catalog = isUnfiltered(filters) ? await persistedCatalog(db, crawl) : null;
   const [listed, summary] = await Promise.all([
     catalog?.items ?? catalogItems(db, crawl, filters),
     catalog?.summary ?? issueSummary(db, crawl, filters),
@@ -294,7 +275,6 @@ export async function catalogItems(
     db,
     crawl,
     groups.map((group) => group.rule_id),
-    filters.findingClass,
   );
   const items = groups.map((group) => ({
     group_id: group.group_id,
@@ -305,11 +285,11 @@ export async function catalogItems(
     dimension: group.dimension,
     category: group.category,
     severity: group.severity,
-    finding_class: group.finding_class,
     title: ruleTitle(group.rule_id),
     description: group.description,
     remediation: group.remediation,
     remediation_route: remediationRoute(group.rule_id),
+    score_roles: ruleScoreRoles(group.rule_id),
     affected_url_count: group.affected_url_count,
     analyzer_version: group.analyzer_version,
     rule_version: group.rule_version,
@@ -323,13 +303,12 @@ const catalogSchema = z.object({
   summary: siteIssuesPageSchema.shape.summary.omit({ section_counts: true }),
 });
 
-async function persistedCatalog(db: Database, crawl: Crawl, findingClass: string | null) {
+async function persistedCatalog(db: Database, crawl: Crawl) {
   const row = await db
     .selectFrom('site_issue_catalogs')
     .select(['items', 'summary'])
     .where('workspace_id', '=', crawl.workspace_id)
     .where('crawl_id', '=', crawl.id)
-    .where('finding_class', '=', catalogClassKey(findingClass))
     .executeTakeFirst();
   const parsed = row ? catalogSchema.safeParse(row) : null;
   return parsed?.success ? parsed.data : null;
@@ -345,16 +324,13 @@ export async function issueDetail(
   pageKind: string | null = null,
 ) {
   const crawl = await loadCrawl(db, workspaceId, crawlId);
-  const candidates = await sql<{ rule_id: string; finding_class: string }>`
-    select distinct i.rule_id, i.finding_class from site_issues i
+  const candidates = await sql<{ rule_id: string }>`
+    select distinct i.rule_id from site_issues i
     where ${currentIssues(crawl)}`.execute(db);
-  const group = candidates.rows.find(
-    (row) => issueGroupId(crawl.id, row.rule_id, row.finding_class) === groupId,
-  );
+  const group = candidates.rows.find((row) => issueGroupId(crawl.id, row.rule_id) === groupId);
   if (group === undefined) throw notFound('Issue');
   const kindFilter = pageKind ? sql`and ${ofPageKind(crawl, pageKind)}` : sql``;
-  const inGroup = sql`${currentIssues(crawl)} and i.rule_id = ${group.rule_id}
-    and i.finding_class = ${group.finding_class} ${kindFilter}`;
+  const inGroup = sql`${currentIssues(crawl)} and i.rule_id = ${group.rule_id} ${kindFilter}`;
   const fingerprint = {
     crawl_id: crawl.id,
     group_id: groupId,
@@ -406,7 +382,6 @@ export async function issueDetail(
     dimension: representative.dimension,
     category: representative.category,
     severity: representative.severity,
-    finding_class: representative.finding_class,
     title: ruleTitle(representative.rule_id),
     description: representative.description,
     remediation: representative.remediation,

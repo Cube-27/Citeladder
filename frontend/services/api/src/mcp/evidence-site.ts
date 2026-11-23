@@ -414,7 +414,7 @@ export async function sitePages(
       ? {}
       : { aeo_measurement_state: row.aeo_measurement_state }),
     issue_count: row.issue_count,
-    issue_rules: (row.analysis_id && rules.get(row.analysis_id)) || {},
+    issue_rules: (row.analysis_id && rules.get(row.analysis_id)) || [],
     ...(args.rule_id && row.analysis_id && evidence.has(row.analysis_id)
       ? { rule_evidence: ruleEvidenceSummary(evidence.get(row.analysis_id)) }
       : {}),

@@ -165,7 +165,6 @@ async function issue(
       dimension: rule.dimension,
       category: rule.category,
       severity: rule.severity,
-      finding_class: rule.finding_class,
       description: rule.description,
       remediation: rule.remediation,
       evidence: JSON.stringify(evidence),
@@ -255,7 +254,6 @@ async function architectureIssue(seed: SiteSeed, root: Page, ruleId: string) {
       dimension: rule.dimension,
       category: rule.category,
       severity: rule.severity,
-      finding_class: rule.finding_class,
       description: rule.description,
       remediation: rule.remediation,
       evidence: '{}',
@@ -493,11 +491,11 @@ describe('page projections', () => {
       ),
     ).toEqual({
       'technical.indexable': [
-        issueGroupId(seed.crawlId, 'technical.indexable', 'defect'),
+        issueGroupId(seed.crawlId, 'technical.indexable'),
         ['aeo_readiness', 'web_fundamentals'],
       ],
       'web.accessibility_form_names': [
-        issueGroupId(seed.crawlId, 'web.accessibility_form_names', 'defect'),
+        issueGroupId(seed.crawlId, 'web.accessibility_form_names'),
         [],
       ],
     });
@@ -572,7 +570,7 @@ describe('issue catalog', () => {
     const home = await page(seed, '/');
     const product = await page(seed, '/product');
     for (const target of [home, product]) await issue(seed, target, 'technical.indexable');
-    const groupId = issueGroupId(seed.crawlId, 'technical.indexable', 'defect');
+    const groupId = issueGroupId(seed.crawlId, 'technical.indexable');
     const first = await issueDetail(db, seed.workspaceId, seed.crawlId, groupId, {
       limit: 1,
       cursor: null,
@@ -667,7 +665,7 @@ describe('issue catalog', () => {
     });
     const rail = await json(
       seed,
-      `/site-crawls/${seed.crawlId}/issues/${issueGroupId(seed.crawlId, 'technical.sitewide_broken_link', 'defect')}?page_kind=product`,
+      `/site-crawls/${seed.crawlId}/issues/${issueGroupId(seed.crawlId, 'technical.sitewide_broken_link')}?page_kind=product`,
       siteIssueDetailSchema,
     );
     expect(rail.affected_url_count).toBe(2);
@@ -701,27 +699,32 @@ describe('issue catalog', () => {
       .concat('canonical_integrity', 'meta_description_present')
       .map((rule) => `technical.${rule}`);
     const body = await list();
-    expect(body.items.map((group) => [group.rule_id, group.finding_class])).toEqual([
-      [indexable, 'defect'],
-      [title, 'defect'],
-      [canonical, 'defect'],
-      [meta, 'advisory'],
+    expect(body.items.map((group) => [group.rule_id, group.severity, group.score_roles])).toEqual([
+      [indexable, 'critical', ['aeo_readiness', 'web_fundamentals']],
+      [title, 'high', ['web_fundamentals']],
+      [meta, 'medium', ['web_fundamentals']],
+      [canonical, 'medium', ['web_fundamentals']],
     ]);
+    expect(body.items.map((group) => Object.hasOwn(group, 'finding_class'))).toEqual(
+      Array(4).fill(false),
+    );
     expect([body.items[0]!.group_id, body.items[0]!.affected_url_count]).toEqual([
-      issueGroupId(seed.crawlId, indexable!, 'defect'),
+      issueGroupId(seed.crawlId, indexable!),
       2,
     ]);
-    expect(body.items[3]!.group_id).toBe(issueGroupId(seed.crawlId, meta!, 'advisory'));
+    expect(body.items[2]!.group_id).toBe(issueGroupId(seed.crawlId, meta!));
     expect(body.summary).toMatchObject({
-      issue_count: 3,
-      advisory_issue_type_count: 1,
+      issue_count: 4,
       occurrence_count: 6,
-      severity_counts: { critical: 0, high: 2, medium: 1 },
+      severity_counts: { critical: 0, high: 2, medium: 2 },
     });
-    const defects = await list('finding_class=defect');
-    expect([rules(defects), defects.summary.occurrence_count]).toEqual([
-      [indexable, title, canonical],
-      4,
+    expect(Object.keys(body.summary)).not.toContain('advisory_issue_type_count');
+    const medium = await list('severity=medium');
+    expect(rules(medium)).toEqual([meta, canonical]);
+    const refused = await get(seed, `/site-crawls/${seed.crawlId}/issues?finding_class=advisory`);
+    expect([refused.status, await refused.json()]).toMatchObject([
+      422,
+      { error: { details: { errors: [{ loc: ['finding_class'], type: 'extra_forbidden' }] } } },
     ]);
     const byPages = await list('sort=pages&limit=2');
     const resumed = await list(`sort=pages&limit=2&cursor=${byPages.next_cursor}`);
@@ -749,16 +752,27 @@ describe('issue catalog', () => {
     const csv = await (
       await get(seed, `/site-crawls/${seed.crawlId}/export.csv?view=issues`)
     ).text();
-    const [header, first] = csv.split('\r\n');
-    expect(header!.split(',')[0]).toBe('group_id');
+    const [header, first, , third] = csv.split('\r\n');
+    expect(header!.split(',').slice(0, 7)).toEqual([
+      'group_id',
+      'rule_id',
+      'title',
+      'dimension',
+      'category',
+      'severity',
+      'page_kind',
+    ]);
     expect(first).toContain('"homepage, product"');
+    expect(third).toContain(
+      `${issueGroupId(seed.crawlId, meta!)},${meta},Missing meta description,technical,metadata,medium,`,
+    );
   });
 
   it('serves an issue’s affected pages to an API key, inside the key’s project only', async () => {
     const seed = await fixtures.crawl();
     const home = await page(seed, '/');
     await issue(seed, home, 'technical.indexable');
-    const groupId = issueGroupId(seed.crawlId, 'technical.indexable', 'defect');
+    const groupId = issueGroupId(seed.crawlId, 'technical.indexable');
     const account = await billingAccount(db, seed.workspaceId);
     await grant(db, account, { key: 'api_access', value: 1, sourceKind: 'override' });
     await grant(db, account, { key: 'api_keys', value: 10, sourceKind: 'override' });
@@ -900,27 +914,21 @@ describe('issue catalog', () => {
     const catalog = async () =>
       db
         .selectFrom('site_issue_catalogs')
-        .select(['finding_class', 'items', 'summary'])
+        .select(['items', 'summary'])
         .where('crawl_id', '=', seed.crawlId)
-        .orderBy('finding_class')
         .execute();
     await issue(seed, home, 'technical.indexable', {}, false);
     expect(await catalog()).toEqual([]);
     await issue(seed, product, 'technical.indexable');
     expect(
       (await catalog()).map((row) => [
-        row.finding_class,
         z
           .array(z.object({ rule_id: z.string() }))
           .parse(row.items)
           .map((item) => item.rule_id),
         record(row.summary).affected_url_count,
       ]),
-    ).toEqual([
-      ['advisory', [], 0],
-      ['all', ['technical.indexable'], 2],
-      ['defect', ['technical.indexable'], 2],
-    ]);
+    ).toEqual([[['technical.indexable'], 2]]);
     const late = await issue(seed, home, 'technical.title_present', {}, false);
     await db
       .updateTable('site_issues')
@@ -1218,7 +1226,6 @@ describe('snapshot projections', () => {
         top_issues: JSON.stringify([
           {
             rule_id: 'technical.indexable',
-            finding_class: 'defect',
             severity: 'critical',
             category: 'indexing',
             description: '',
@@ -1228,7 +1235,6 @@ describe('snapshot projections', () => {
           },
           {
             rule_id: 'technical.title_present',
-            finding_class: 'defect',
             severity: 'high',
             category: 'metadata',
             description: '',
@@ -1238,7 +1244,6 @@ describe('snapshot projections', () => {
           },
           {
             rule_id: 'fixture.retired_rule',
-            finding_class: 'defect',
             severity: 'low',
             category: 'technical',
             description: '',

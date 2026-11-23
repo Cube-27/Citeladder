@@ -188,14 +188,22 @@ export type RequestParams<Path extends ParamSpecs, Query extends ParamSpecs> = {
   query: ParamValues<Query>;
 };
 
+function unknownKeys(specs: ParamSpecs, params: URLSearchParams): ValidationEntry[] {
+  const known = new Set(Object.entries(specs).map(([name, spec]) => spec.alias ?? name));
+  return [...new Set(params.keys())]
+    .filter((key) => !known.has(key))
+    .map((key) => ({ loc: [key], message: 'Unknown query parameter', type: 'extra_forbidden' }));
+}
+
 export function validateParams<Path extends ParamSpecs, Query extends ParamSpecs>(
-  specs: { path: Path; query: Query },
+  specs: { path: Path; query: Query; closed?: true },
   input: { path: Readonly<Record<string, string>>; search: string },
 ): RequestParams<Path, Query> {
   const errors: ValidationEntry[] = [];
   const path = read(specs.path, (key) => (key in input.path ? [input.path[key]!] : []), errors);
   const params = new URLSearchParams(input.search);
   const query = read(specs.query, (key) => params.getAll(key), errors);
+  if (specs.closed) errors.push(...unknownKeys(specs.query, params));
   if (errors.length > 0) throw new RequestValidationError(errors);
   return { path, query };
 }

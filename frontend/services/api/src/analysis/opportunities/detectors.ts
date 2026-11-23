@@ -122,9 +122,8 @@ export function detectIssueGroups(e: SiteEvidence): DetectorHit[] {
           cohort: {
             rule_id: found.rule_id,
             rule_label: label,
-            finding_class: found.finding_class,
             crawl_id: e.crawl_id,
-            group_id: issueGroupId(e.crawl_id, found.rule_id, found.finding_class),
+            group_id: issueGroupId(e.crawl_id, found.rule_id),
             page_count: found.page_count,
             whole_site: found.whole_site,
             pages: found.pages,
@@ -135,8 +134,7 @@ export function detectIssueGroups(e: SiteEvidence): DetectorHit[] {
         source_analysis_ids: [],
         source_issue_ids: sortedUnique(found.issue_ids),
         source_metric_ids: [],
-        value_factor:
-          p.SITE_VALUE_FACTOR * (found.finding_class === 'defect' ? family.DEFECT_VALUE_FACTOR : 1),
+        value_factor: p.SITE_VALUE_FACTOR,
         gap_factor: p.SITE_GAP_FACTOR,
         finding: {
           severity: found.severity,

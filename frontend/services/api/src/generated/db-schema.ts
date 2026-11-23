@@ -3274,7 +3274,6 @@ export interface SiteIssueCatalogs {
   analyzer_version: string;
   crawl_id: string;
   created_at: Timestamp;
-  finding_class: string;
   items: Json;
   project_id: string;
   reference_snippets: Generated<Json>;
@@ -3294,7 +3293,6 @@ export interface SiteIssues {
   dimension: string;
   evaluation_id: string;
   evidence: Json | null;
-  finding_class: string;
   id: string;
   is_current: Generated<boolean>;
   project_id: string;

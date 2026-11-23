@@ -312,7 +312,7 @@ export async function pageDetail(
     delivery: deliveryFacts(facts, analysis?.decoded_bytes ?? null),
     issues: issues.map((issue) => ({
       ...issueOccurrence(issue, page),
-      group_id: issueGroupId(crawl.id, issue.rule_id, issue.finding_class),
+      group_id: issueGroupId(crawl.id, issue.rule_id),
       score_roles: ruleScoreRoles(issue.rule_id),
     })),
     evaluations: evaluations.map((evaluation) => ({
