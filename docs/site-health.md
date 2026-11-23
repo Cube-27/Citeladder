@@ -877,10 +877,22 @@ names the crawl and the exact issue, evaluation, analysis or fetch attempt that
 decided it. After each landing, `site_issue_trend` stores the project's open
 count for the UTC day: issues in the configured open states (`open`,
 `regressed`, `marked_fixed`; `config/site-health/reads.json` `issue_states`).
-The Issues reads do not use these tables yet; Mark fixed and Re-run all below
-do. The Overview's open-issues trend card (SH-B9, SH-B11) reads `site_issue_trend`
+The Overview's open-issues trend card (SH-B9, SH-B11) reads `site_issue_trend`
 as `open_issue_trend`, oldest first, up to `overview_issue_trend_day_limit` days;
-it is the only change graph, and there is no score trend.
+it is the only change graph. Per-crawl scores come from the crawl list
+(`GET /site-crawls?project_id=`, site crawls only, page reruns excluded), each
+crawl's own `score_summary`.
+
+**New and Fixed** (SH-B12; `reads/issue-changes.ts`). Each issue group carries
+`new_url_count` and `resolved_url_count` against the previous usable site crawl
+(`previousSiteCrawl`), at that crawl's audit time: New counts the group's pages
+whose state was first seen after it (or has no state yet, as in a running crawl);
+Fixed counts the rule's states `resolved` since it that were seen at or before
+it, so a page that went unavailable or left the tracked set is never fixed. With
+no previous crawl, a site-level rule, or Fixed under a page-kind filter, the
+count is null (unknown), never zero. A landing writes the states before it
+rewrites the issue catalog, so the persisted catalog counts what just landed. A
+group that every page fixed leaves the list, so its Fixed count is not shown.
 
 **Mark fixed and Re-run all** ([SH-B12](decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17);
 `issue-fixes.ts`, routes in the `site-health-crawls` family) act on one issue
