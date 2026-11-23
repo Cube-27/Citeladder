@@ -1797,6 +1797,23 @@ describe('Agent runtime on PostgreSQL', () => {
     expect(
       scrubRecordRefs('Read CITELADDER://Audit/x and [the run]( citeladder://audit/y ).'),
     ).toBe('Read and the run.');
+    expect(
+      scrubRecordRefs(
+        [
+          '| Check HTML served uncompressed (rule technical.uncompressed_html) | 4 |',
+          '| Check Missing structured data (`aeo.structured_data_present`) | 2 |',
+          'Fix technical.title_present first, then search_guidelines.original_value.',
+          'Keep https://example.com/technical.https and Pricing.html as written.',
+        ].join('\n'),
+      ),
+    ).toBe(
+      [
+        '| Check HTML served uncompressed | 4 |',
+        '| Check Missing structured data | 2 |',
+        'Fix Missing page title first, then original value.',
+        'Keep https://example.com/technical.https and Pricing.html as written.',
+      ].join('\n'),
+    );
     const [id, mentioned] = [randomUUID(), randomUUID()];
     const manifest = {
       version: 'agent-context-1',
