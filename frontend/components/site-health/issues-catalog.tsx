@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { ReportPage } from '@/components/templates/report-page';
+import { IssuesExport } from '@/components/site-health/issues-export';
 import { Inline } from '@/components/ui/layout';
 import {
   IssueDetailDrawer,
@@ -146,6 +147,7 @@ export function IssuesCatalog({
             />
           ),
           filters: catalogFilters(filters, rows, updateFilters),
+          actions: <IssuesExport workspaceId={workspaceId} crawlId={crawlId} />,
         }}
         state={tableState(issuesQuery)}
         rowCount={rows.length}
