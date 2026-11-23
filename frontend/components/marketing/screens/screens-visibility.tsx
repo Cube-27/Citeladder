@@ -27,7 +27,7 @@ import {
   ScreenTableCard,
   ScreenTabs,
 } from './screen-parts';
-import { Vignette, VignetteBar, VignetteRows, fourRows } from './screen-vignette';
+import { Vignette, VignetteBar, VignetteRows, VignetteStats, fourRows } from './screen-vignette';
 import { BrandTable, VisibilityTrend, percent } from './visibility-demo';
 import './screen-vignette.css';
 import './screen-app.css';
@@ -115,6 +115,25 @@ export function ScreenVisibility() {
         </ScreenStack>
       </ScreenCols>
     </div>
+  );
+}
+
+export function ScreenTrend() {
+  return (
+    <Vignette
+      title="Visibility over time"
+      meta="Acme Analytics · last 8 weeks"
+      badge={<Badge>27 Oct – 2 Nov</Badge>}
+    >
+      <VignetteStats
+        stats={[
+          { label: 'Visibility', value: '38.3%', change: { value: 4.1, unit: ' pp' } },
+          { label: 'Share of voice', value: '30.8%', change: { value: 1.9, unit: ' pp' } },
+          { label: 'Position', value: '1.7', change: { value: -0.3, policy: 'lower-is-better' } },
+        ]}
+      />
+      <VisibilityTrend height="md" />
+    </Vignette>
   );
 }
 

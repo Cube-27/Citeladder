@@ -29,6 +29,7 @@ import {
   ScreenCitedUrl,
   ScreenPrompts,
   ScreenSources,
+  ScreenTrend,
   ScreenVisibility,
 } from './screens-visibility';
 
@@ -50,6 +51,10 @@ export const SCREEN_CATALOG: Readonly<Record<PlatformScreen, CatalogEntry>> = {
     fit: 'scale',
     label: 'The Visibility page for Acme Analytics',
   },
+  trend: vignette(
+    ScreenTrend,
+    'Acme Analytics visibility over eight weeks against Northwind and Lumen',
+  ),
   prompts: vignette(ScreenPrompts, 'The tracked prompts for Acme Analytics'),
   keywords: vignette(ScreenKeywords, 'Keyword research for acme.com'),
   actions: vignette(ScreenActions, 'Actions for acme.com, highest priority first'),

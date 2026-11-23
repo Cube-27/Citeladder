@@ -4,6 +4,7 @@ import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { NAV_DROPS, PLATFORM_GROUPS, platformLabel } from '@/lib/marketing-content/nav';
 import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 
+import { moduleArt } from '../art/module-art';
 import { AnnouncementPill } from '../chrome/announcement-pill';
 import { SiteActions } from '../primitives/button';
 import { EngineStrip } from '../sections/cards';
@@ -46,10 +47,11 @@ function Hero() {
 function Modules() {
   const modules = PLATFORM_GROUPS.flatMap((group) => group.items).flatMap((item) => {
     const shown = moduleScreen(item.href);
-    if (!shown) return [];
+    const Artwork = moduleArt(item.href);
+    if (!shown || !Artwork) return [];
     const { View } = SCREEN_CATALOG[shown.screen];
     const lead = PLATFORM_PAGES.find((page) => page.path === item.href)?.lead ?? item.desc;
-    return [{ ...item, page: shown.page, screen: <View />, lead }];
+    return [{ ...item, page: shown.page, screen: <View />, art: <Artwork />, lead }];
   });
   return (
     <PageSection id="platform" label="Tools for AI visibility, search and your website">
@@ -69,7 +71,11 @@ function Modules() {
               label={module.title}
               title={module.desc}
               body={module.lead}
-              media={<ProductFrame label={module.title}>{module.screen}</ProductFrame>}
+              media={
+                <ProductFrame label={module.title} stage>
+                  {module.art}
+                </ProductFrame>
+              }
               page={
                 <ProductFrame label={`The ${module.page.title} page in the CiteLadder app`}>
                   <ScreenAppPage {...module.page}>{module.screen}</ScreenAppPage>

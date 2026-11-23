@@ -30,7 +30,7 @@
   background: none;
 }
 
-[class]:is(.cl-fcard, .cl-railcard):has(.cl-frame) {
+[class].cl-fcard:has(.cl-frame) {
   --cl-tint: var(--color-site-shot-well, var(--tint-neutral));
 }
 
@@ -168,4 +168,24 @@
   > .cl-frame-well
   > .cl-frame-screen:has(> .cl-screen--visibility) {
   background: var(--color-paper);
+}
+
+.cl-frame--stage > .cl-frame-card {
+  overflow: hidden;
+  background: linear-gradient(
+    155deg,
+    var(--color-site-stage-from),
+    var(--color-site-stage-mid) 48%,
+    var(--color-site-stage-to)
+  );
+}
+
+.cl-frame--stage > .cl-frame-card::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(circle, var(--color-site-stage-dot) 1px, transparent 1.5px) 0 0 / 10px
+    10px;
+  content: '';
+  mask-image: linear-gradient(155deg, transparent 8%, black 55%, transparent 96%);
 }

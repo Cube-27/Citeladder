@@ -30,11 +30,31 @@ export function engineOptionMark(engine: string): ReactNode {
 
 const PLACEMENT = { inline: 'size-4', row: 'size-5' } as const;
 
+const BRAND_FILLS: Record<EngineKey, readonly [string, ...string[]]> = {
+  chatgpt: ['fill-brand-chatgpt'],
+  claude: ['fill-brand-claude'],
+  gemini: ['fill-brand-gemini'],
+  google: [
+    'fill-brand-google-blue',
+    'fill-brand-google-green',
+    'fill-brand-google-yellow',
+    'fill-brand-google-red',
+  ],
+};
+
 export function EngineMark({
   engine,
   placement = 'row',
+  brand = false,
   className,
-}: Readonly<{ engine: EngineKey; placement?: keyof typeof PLACEMENT; className?: string }>) {
+}: Readonly<{
+  engine: EngineKey;
+  placement?: keyof typeof PLACEMENT;
+  brand?: boolean;
+  className?: string;
+}>) {
+  const fills = BRAND_FILLS[engine];
+  const shapes = brand ? ENGINE_PATHS[engine].split(/(?<=z)(?=M)/) : [ENGINE_PATHS[engine]];
   return (
     <svg
       aria-hidden
@@ -44,7 +64,9 @@ export function EngineMark({
       fillRule="evenodd"
       className={cn('shrink-0 fill-current', PLACEMENT[placement], className)}
     >
-      <path d={ENGINE_PATHS[engine]} />
+      {shapes.map((shape, index) => (
+        <path key={shape} d={shape} className={brand ? (fills[index] ?? fills[0]) : undefined} />
+      ))}
     </svg>
   );
 }

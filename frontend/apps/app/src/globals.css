@@ -108,6 +108,9 @@
   --color-brand-google-green: oklch(64.8% 0.1603 148.5);
   --color-brand-google-yellow: oklch(83.04% 0.1698 84);
   --color-brand-google-red: oklch(62.6% 0.206 29);
+  --color-brand-chatgpt: #10a37f;
+  --color-brand-claude: #d97757;
+  --color-brand-gemini: #4796e3;
 
   --text-*: initial;
   --text-display-lg: 2rem;
@@ -760,6 +763,12 @@
   --color-site-screen: var(--color-surface);
   --color-site-shot-well: #e9eef6;
   --color-site-shot-pad: var(--color-site-shot-well);
+  --color-site-stage-from: oklch(96.5% 0.022 55);
+  --color-site-stage-mid: oklch(90% 0.06 50);
+  --color-site-stage-to: oklch(78% 0.125 44);
+  --color-site-stage-dot: oklch(63.4% 0.1973 37.5 / 30%);
+  --color-site-stage-line: oklch(63.4% 0.1973 37.5 / 32%);
+  --site-shadow-float: 0 0 0 1px oklch(45% 0.1 40 / 10%), 0 2px 4px oklch(40% 0.1 40 / 8%), 0 18px 40px -12px oklch(40% 0.12 38 / 35%);
   --color-site-well-edge: oklch(25% 0 0 / 0%);
   --color-site-vignette: oklch(72.3% 0.18 42.6 / 10%);
   --color-site-hero-base: oklch(100% 0 0);
@@ -815,6 +824,12 @@
   --color-site-screen: oklch(24.5% 0 0);
   --color-site-shot-well: var(--color-site-well);
   --color-site-shot-pad: transparent;
+  --color-site-stage-from: oklch(23% 0.02 50);
+  --color-site-stage-mid: oklch(29% 0.06 45);
+  --color-site-stage-to: oklch(42% 0.125 40);
+  --color-site-stage-dot: oklch(70.3% 0.194 39.3 / 26%);
+  --color-site-stage-line: oklch(70.3% 0.194 39.3 / 38%);
+  --site-shadow-float: 0 0 0 1px oklch(100% 0 0 / 8%), 0 18px 40px -12px oklch(0% 0 0 / 60%);
   --color-site-well-edge: oklch(100% 0 0 / 0%);
   --color-site-vignette: oklch(70.3% 0.194 39.3 / 10%);
   --color-site-hero-base: oklch(11.6% 0.0023 17);

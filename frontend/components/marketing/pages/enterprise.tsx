@@ -91,6 +91,7 @@ function EvidenceSplit() {
   return (
     <FeatureSplit
       as="h2"
+      reverse
       title="Every number traces to a stored answer"
       body="Each score opens its prompt, engine, answer and cited sources, scored by public rules."
       points={EVIDENCE_POINTS}
