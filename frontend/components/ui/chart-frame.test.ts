@@ -19,7 +19,7 @@ describe('breakNote', () => {
       'A gap is a period with no reading.',
     );
     expect(breakNote([{}, { breakBefore: true }, {}], [{ values: [1, null, 3] }])).toBe(
-      'A gap is a period with no reading. A line starts again where the measurement conditions changed.',
+      'A gap is a period with no reading. A dashed line joins runs measured under different conditions.',
     );
   });
 });

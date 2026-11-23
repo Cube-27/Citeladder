@@ -11,7 +11,9 @@ import {
 } from 'recharts';
 
 import {
+  breakBridges,
   chartRows,
+  distinctTicks,
   eventsInSpan,
   gapRanges,
   isolated,
@@ -41,6 +43,7 @@ import {
   type TrendPoint,
   type TrendSeries,
 } from '@/components/ui/series-data';
+import { StateBlock } from '@/components/ui/state-block';
 import { isAbsent } from '@/lib/format';
 import {
   EventLegend,
@@ -83,7 +86,8 @@ export function AreaChart({
   eventLegend = false,
   you = true,
   lonePoint = 'list',
-  breakNote = 'caption',
+  breakNote = 'hint',
+  empty = 'No readings in this period.',
 }: Readonly<{
   data: readonly TrendPoint[];
   name?: string;
@@ -102,6 +106,7 @@ export function AreaChart({
   you?: boolean;
   lonePoint?: 'list' | 'plot';
   breakNote?: 'caption' | 'hint';
+  empty?: string;
 }>) {
   const plotted = plottedLines({ data, name: name ?? label, mark, series });
   const tones = useSeriesTones(plotted, you);
@@ -113,6 +118,8 @@ export function AreaChart({
     tone: tones[index] ?? 'other',
     shape: keyed ? (MARKER_SHAPES[index % MARKER_SHAPES.length] ?? 'circle') : undefined,
   }));
+  if (lines.every((line) => lastMeasured(line.values) < 0))
+    return <StateBlock kind="empty" inline message={empty} />;
   const shown = shownWith(format);
   const table = (
     <SeriesTable
@@ -240,7 +247,8 @@ function AreaPlot({
           dataKey="x"
           type="number"
           domain={['dataMin', 'dataMax']}
-          ticks={xs}
+          ticks={distinctTicks(xs, (x) => axisLabel.get(x))}
+          padding={{ left: 16, right: 16 }}
           interval="equidistantPreserveEnd"
           minTickGap={24}
           tickFormatter={(x: number) => axisLabel.get(x) ?? ''}
@@ -290,6 +298,18 @@ function AreaPlot({
             strokeDasharray="2 3"
           />
         ))}
+        {lines.flatMap((line, at) =>
+          breakBridges(line.values, data).map((bridge) => (
+            <ReferenceLine
+              key={`bridge-${at}-${bridge.from.x}`}
+              segment={[bridge.from, bridge.to]}
+              stroke={seriesColor(line.tone)}
+              strokeWidth={line.tone === 'you' ? 2 : 1.5}
+              strokeDasharray="4 4"
+              ifOverflow="visible"
+            />
+          )),
+        )}
         <Tooltip
           cursor={LINE_CURSOR}
           isAnimationActive={false}

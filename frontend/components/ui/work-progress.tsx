@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { Inline, Stack } from '@/components/ui/layout';
-import { RungMeter } from '@/components/ui/rung-meter';
+import { ProgressMeter } from '@/components/ui/progress-meter';
 import { Section } from '@/components/ui/section';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -25,7 +25,7 @@ export function WorkProgress({
           </Inline>
           {action}
         </Inline>
-        {meter ? <RungMeter label={meter.label} value={meter.value} /> : null}
+        {meter ? <ProgressMeter label={meter.label} value={meter.value} /> : null}
       </Stack>
     </Section>
   );

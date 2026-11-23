@@ -149,7 +149,7 @@ function SentimentTrend({ trend }: Readonly<{ trend: PerceptionResponse['trend']
       <AreaChart
         label="Net sentiment over time"
         name="Net sentiment"
-        breakNote="hint"
+        empty="Too few classified mentions to score"
         data={sentimentTrend(trend, (iso) => formatDisplayDate(iso, timeZone))}
         yMin={-100}
         yMax={100}

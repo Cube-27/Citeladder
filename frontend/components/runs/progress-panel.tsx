@@ -11,7 +11,7 @@ import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Spinner } from '@/components/ui/spinner';
-import { RungMeter } from '@/components/ui/rung-meter';
+import { ProgressMeter } from '@/components/ui/progress-meter';
 import { humanizeApiError } from '@/lib/api/errors';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
@@ -143,7 +143,7 @@ function RunProgress({
 }>) {
   const percent = requested > 0 ? Math.min(100, Math.round((finished / requested) * 100)) : 0;
 
-  return <RungMeter label="Progress" value={percent} />;
+  return <ProgressMeter label="Progress" value={percent} />;
 }
 
 const RUN_FIGURES = [

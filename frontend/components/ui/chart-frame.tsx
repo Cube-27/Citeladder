@@ -222,7 +222,7 @@ export function breakNote(
   const restart = data.some((point, index) => index > 0 && point.breakBefore === true);
   const parts = [
     gap ? 'A gap is a period with no reading.' : null,
-    restart ? 'A line starts again where the measurement conditions changed.' : null,
+    restart ? 'A dashed line joins runs measured under different conditions.' : null,
   ].filter((part) => part !== null);
   return parts.length ? parts.join(' ') : null;
 }
