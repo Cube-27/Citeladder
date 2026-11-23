@@ -6,7 +6,7 @@ import { cursorPageSchema } from './pagination.ts';
 
 export const issueSeveritySchema = z.enum(['critical', 'high', 'medium', 'low', 'info']);
 export const issueDimensionSchema = z.enum(['technical', 'aeo']);
-export const findingClassSchema = z.enum(['defect', 'advisory', 'diagnostic']);
+export const findingClassSchema = z.enum(['defect', 'diagnostic']);
 export const issueSectionSchema = z.enum(['technical', 'content', 'aeo']);
 export const issueSortSchema = z.enum(['severity', 'pages']);
 
@@ -23,7 +23,6 @@ export const issueOccurrenceSchema = responseObject({
   dimension: issueDimensionSchema,
   category: z.string(),
   severity: issueSeveritySchema,
-  finding_class: findingClassSchema,
   issue_title: z.string(),
   description: z.string(),
   remediation: z.string(),
@@ -42,11 +41,11 @@ export const siteIssueSchema = responseObject({
   dimension: issueDimensionSchema,
   category: z.string(),
   severity: issueSeveritySchema,
-  finding_class: findingClassSchema,
   title: z.string(),
   description: z.string(),
   remediation: z.string(),
   remediation_route: z.string(),
+  score_roles: z.array(z.string()),
   affected_url_count: z.number().int(),
   analyzer_version: z.string(),
   rule_version: z.string(),
@@ -55,8 +54,6 @@ export const siteIssueSchema = responseObject({
 
 export const issuesSummarySchema = responseObject({
   issue_count: z.number().int(),
-  defect_issue_type_count: z.number().int(),
-  advisory_issue_type_count: z.number().int(),
   occurrence_count: z.number().int(),
   severity_counts: z.record(z.string(), z.number().int()),
   dimension_counts: z.record(z.string(), z.number().int()),
@@ -72,7 +69,6 @@ export const siteIssueDetailSchema = responseObject({
   dimension: issueDimensionSchema,
   category: z.string(),
   severity: issueSeveritySchema,
-  finding_class: findingClassSchema,
   title: z.string(),
   description: z.string(),
   remediation: z.string(),

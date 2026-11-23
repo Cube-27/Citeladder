@@ -92,7 +92,6 @@ async function readPage(
         dimension: 'technical',
         category: rule.category,
         severity: 'high',
-        finding_class: 'defect',
         evidence: JSON.stringify(evidence),
         description: '',
         remediation: 'Add a viewport meta tag.',

@@ -99,7 +99,6 @@ function ActionRow({ action, refOf }: Readonly<{ action: Action; refOf: Grouping
   const title = actionTarget(action);
   const whole = selection.hasGrouping(refOf);
   const caption = [
-    action.finding_class === 'advisory' ? 'Advisory' : null,
     action.summary
       ? firstSentence(action.summary)
       : (approachLabel(action.approach) ?? targetKindLabel(action.target_kind)),

@@ -49,7 +49,6 @@ const action: Action = {
   member_count: 1,
   declarable_member_count: 1,
   page_count: null,
-  finding_class: null,
   summary: null,
   handoff: { context: 'action', message: MESSAGE },
   evidence_cleared_at: null,

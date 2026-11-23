@@ -390,18 +390,6 @@
               }
             ]
           },
-          "finding_class": {
-            "default": null,
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["defect", "advisory"]
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "summary": {
             "default": null,
             "type": ["string", "null"]
@@ -978,9 +966,6 @@
                   "rule_label": {
                     "type": "string"
                   },
-                  "finding_class": {
-                    "type": "string"
-                  },
                   "crawl_id": {
                     "type": "string"
                   },
@@ -1015,7 +1000,6 @@
                 "required": [
                   "rule_id",
                   "rule_label",
-                  "finding_class",
                   "crawl_id",
                   "group_id",
                   "page_count",
@@ -1060,7 +1044,6 @@
           "member_count",
           "declarable_member_count",
           "page_count",
-          "finding_class",
           "summary",
           "handoff",
           "evidence_cleared_at",
@@ -1262,18 +1245,6 @@
               }
             ]
           },
-          "finding_class": {
-            "default": null,
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["defect", "advisory"]
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "summary": {
             "default": null,
             "type": ["string", "null"]
@@ -1311,7 +1282,6 @@
           "member_count",
           "declarable_member_count",
           "page_count",
-          "finding_class",
           "summary",
           "handoff",
           "evidence_cleared_at",
@@ -2651,6 +2621,23 @@
         "type": "string",
         "enum": ["", "awareness", "consideration", "decision", "implementation"]
       },
+      "ChecksRun": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["run", "total"],
+        "additionalProperties": false
+      },
       "Citation": {
         "type": "object",
         "properties": {
@@ -3731,10 +3718,6 @@
           }
         ]
       },
-      "FindingClass": {
-        "type": "string",
-        "enum": ["defect", "advisory", "diagnostic"]
-      },
       "FirstNamed": {
         "oneOf": [
           {
@@ -3885,9 +3868,6 @@
           "severity": {
             "$ref": "#/components/schemas/IssueSeverity"
           },
-          "finding_class": {
-            "$ref": "#/components/schemas/FindingClass"
-          },
           "issue_title": {
             "type": "string"
           },
@@ -3930,7 +3910,6 @@
           "dimension",
           "category",
           "severity",
-          "finding_class",
           "issue_title",
           "description",
           "remediation",
@@ -3954,16 +3933,6 @@
         "type": "object",
         "properties": {
           "issue_count": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "defect_issue_type_count": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "advisory_issue_type_count": {
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
@@ -4020,8 +3989,6 @@
         },
         "required": [
           "issue_count",
-          "defect_issue_type_count",
-          "advisory_issue_type_count",
           "occurrence_count",
           "severity_counts",
           "dimension_counts",
@@ -4649,6 +4616,26 @@
           },
           "aeo_measurement_reason": {
             "type": "string"
+          },
+          "web_fundamentals_checks": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecksRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "aeo_readiness_checks": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecksRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -4659,7 +4646,9 @@
           "aeo_readiness_score",
           "aeo_measurement_coverage",
           "aeo_measurement_state",
-          "aeo_measurement_reason"
+          "aeo_measurement_reason",
+          "web_fundamentals_checks",
+          "aeo_readiness_checks"
         ],
         "additionalProperties": false
       },
@@ -4771,6 +4760,26 @@
           "aeo_measurement_reason": {
             "type": "string"
           },
+          "web_fundamentals_checks": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecksRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "aeo_readiness_checks": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecksRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "main_content_indexable": {
             "type": ["boolean", "null"]
           },
@@ -4845,6 +4854,8 @@
           "aeo_measurement_coverage",
           "aeo_measurement_state",
           "aeo_measurement_reason",
+          "web_fundamentals_checks",
+          "aeo_readiness_checks",
           "main_content_indexable",
           "robots_excluded",
           "last_audited",
@@ -7902,9 +7913,6 @@
           "severity": {
             "$ref": "#/components/schemas/IssueSeverity"
           },
-          "finding_class": {
-            "$ref": "#/components/schemas/FindingClass"
-          },
           "title": {
             "type": "string"
           },
@@ -7916,6 +7924,12 @@
           },
           "remediation_route": {
             "type": "string"
+          },
+          "score_roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "affected_url_count": {
             "type": "integer",
@@ -7940,11 +7954,11 @@
           "dimension",
           "category",
           "severity",
-          "finding_class",
           "title",
           "description",
           "remediation",
           "remediation_route",
+          "score_roles",
           "affected_url_count",
           "analyzer_version",
           "rule_version",
@@ -7976,9 +7990,6 @@
           },
           "severity": {
             "$ref": "#/components/schemas/IssueSeverity"
-          },
-          "finding_class": {
-            "$ref": "#/components/schemas/FindingClass"
           },
           "title": {
             "type": "string"
@@ -8028,7 +8039,6 @@
           "dimension",
           "category",
           "severity",
-          "finding_class",
           "title",
           "description",
           "remediation",
@@ -8083,6 +8093,26 @@
           "aeo_measurement_state": {
             "type": "string",
             "enum": ["measured", "limited_evidence", "not_measured", "excluded"]
+          },
+          "web_fundamentals_checks": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecksRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "aeo_readiness_checks": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChecksRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "search_eligibility": {
             "type": "string",
@@ -8190,6 +8220,8 @@
           "aeo_readiness_score",
           "aeo_measurement_coverage",
           "aeo_measurement_state",
+          "web_fundamentals_checks",
+          "aeo_readiness_checks",
           "search_eligibility",
           "classified_page_count",
           "other_page_count",
@@ -10596,6 +10628,8 @@
                       "aeo_measurement_coverage": null,
                       "aeo_measurement_state": "measured",
                       "aeo_measurement_reason": "Example aeo measurement reason",
+                      "web_fundamentals_checks": null,
+                      "aeo_readiness_checks": null,
                       "main_content_indexable": null,
                       "robots_excluded": true,
                       "last_audited": null,
@@ -10821,11 +10855,11 @@
                       "dimension": "technical",
                       "category": "Example category",
                       "severity": "critical",
-                      "finding_class": "defect",
                       "title": "Example title",
                       "description": "Example description",
                       "remediation": "Example remediation",
                       "remediation_route": "Example remediation route",
+                      "score_roles": ["Example score roles"],
                       "affected_url_count": 1,
                       "analyzer_version": "Example analyzer version",
                       "rule_version": "Example rule version",
@@ -10835,8 +10869,6 @@
                   "next_cursor": null,
                   "summary": {
                     "issue_count": 1,
-                    "defect_issue_type_count": 1,
-                    "advisory_issue_type_count": 1,
                     "occurrence_count": 1,
                     "severity_counts": {
                       "example": 1
@@ -10985,22 +11017,6 @@
             "schema": {
               "type": ["string", "null"]
             }
-          },
-          {
-            "name": "finding_class",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": ["defect", "advisory"]
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
           }
         ],
         "summary": "List Site Health issues",
@@ -11026,7 +11042,6 @@
                   "dimension": "technical",
                   "category": "Example category",
                   "severity": "critical",
-                  "finding_class": "defect",
                   "title": "Example title",
                   "description": "Example description",
                   "remediation": "Example remediation",
@@ -11045,7 +11060,6 @@
                       "dimension": "technical",
                       "category": "Example category",
                       "severity": "critical",
-                      "finding_class": "defect",
                       "issue_title": "Example issue title",
                       "description": "Example description",
                       "remediation": "Example remediation",
@@ -15421,7 +15435,6 @@
                       "member_count": 1,
                       "declarable_member_count": 1,
                       "page_count": null,
-                      "finding_class": null,
                       "summary": null,
                       "handoff": null,
                       "evidence_cleared_at": null,
@@ -15747,7 +15760,6 @@
                       "member_count": 1,
                       "declarable_member_count": 1,
                       "page_count": null,
-                      "finding_class": null,
                       "summary": null,
                       "handoff": null,
                       "evidence_cleared_at": null,
@@ -15881,7 +15893,6 @@
                   "member_count": 1,
                   "declarable_member_count": 1,
                   "page_count": null,
-                  "finding_class": null,
                   "summary": null,
                   "handoff": {
                     "context": "action",
@@ -16017,7 +16028,6 @@
                   "member_count": 1,
                   "declarable_member_count": 1,
                   "page_count": null,
-                  "finding_class": null,
                   "summary": null,
                   "handoff": {
                     "context": "action",

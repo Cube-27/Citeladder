@@ -189,11 +189,7 @@ export async function overview(
       .filter((issue) => Object.keys(issue).length > 0)
       .map((issue) => {
         const ruleId = scalarText(issue.rule_id);
-        const impact = issueImpact(
-          ruleId,
-          scalarText(issue.finding_class),
-          scalarText(issue.severity),
-        );
+        const impact = issueImpact(scalarText(issue.severity));
         return {
           score_roles: ruleScoreRoles(ruleId),
           impact_band: impact.band,

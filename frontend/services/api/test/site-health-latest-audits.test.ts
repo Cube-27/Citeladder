@@ -78,7 +78,7 @@ describe("Site Health reads show each tracked page's latest audit", () => {
     await fixtures.monitor(seed, [a.id, b.id]);
     await land(full);
     await fixtures.snapshot(full);
-    const all = unfilteredIssues('defect');
+    const all = unfilteredIssues();
     expect(groups(await issues(db, seed.workspaceId, full.crawlId, all, paging))).toEqual([
       [CLIENT, 1],
       [SITEMAP, 1],
@@ -149,7 +149,7 @@ describe("Site Health reads show each tracked page's latest audit", () => {
     const cancelled = await crawlAt(seed, minutes(10), { status: 'cancelled' });
     await audit(cancelled, '/a', SITEMAP, 'satisfied', a.id);
     await land(cancelled);
-    const all = unfilteredIssues('defect');
+    const all = unfilteredIssues();
     expect(groups(await issues(db, seed.workspaceId, cancelled.crawlId, all, paging))).toEqual([
       [CLIENT, 1],
     ]);
@@ -176,7 +176,7 @@ describe("Site Health reads show each tracked page's latest audit", () => {
     await audit(rerun, '/', SITEMAP, 'satisfied', root.id);
     await land(rerun);
 
-    const all = unfilteredIssues('defect');
+    const all = unfilteredIssues();
     expect(groups(await issues(db, seed.workspaceId, full.crawlId, all, paging))).toEqual([
       [SITEWIDE, 1],
     ]);
@@ -220,7 +220,7 @@ describe("Site Health reads show each tracked page's latest audit", () => {
     );
     await land(earlier);
     const running = await crawlAt(seed, minutes(10), { status: 'running' });
-    const all = unfilteredIssues('defect');
+    const all = unfilteredIssues();
     expect(groups(await issues(db, seed.workspaceId, running.crawlId, all, paging))).toEqual([
       [SITEMAP, PROBE_PAGES],
     ]);

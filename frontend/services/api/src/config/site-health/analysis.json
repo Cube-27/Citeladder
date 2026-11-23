@@ -690,7 +690,7 @@
         "shingle_words": 3,
         "max_hamming_distance": 3
       },
-      "on_page_advisories": {
+      "on_page_thresholds": {
         "title_length": { "min_chars": 30, "max_chars": 60 },
         "meta_description_length": { "min_chars": 70, "max_chars": 160 },
         "thin_content_min_words": 300,

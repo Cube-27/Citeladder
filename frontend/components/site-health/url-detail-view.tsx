@@ -91,7 +91,7 @@ export function UrlDetailView({
 }
 
 function pageHandoff(detail: PageDetail) {
-  const count = detail.issues.filter((issue) => issue.finding_class === 'defect').length;
+  const count = detail.issues.length;
   return {
     siteUrlId: detail.site_url_id,
     targetUrl: detail.display_url,

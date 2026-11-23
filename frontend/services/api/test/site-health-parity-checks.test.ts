@@ -104,7 +104,7 @@ describe('direct answers beyond FAQ pages', () => {
   });
 });
 
-describe('headings and length advisories', () => {
+describe('headings and length checks', () => {
   it('flags a page with no H1 at all, not one with several', () => {
     expect(judged('technical.h1_present', 'product', `<main><p>${prose(40)}</p></main>`)).toEqual([
       'missing',

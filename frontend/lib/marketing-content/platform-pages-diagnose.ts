@@ -28,12 +28,12 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Two scores: Web Fundamentals and AEO Readiness',
-        body: 'Web Fundamentals covers the basics every page needs, such as indexability, HTTPS, titles, canonicals, language and the mobile viewport. AEO Readiness scores what answer engines rely on across seven pillars. Only checks that affect visibility or performance count toward a score. The rest appear as advice.',
+        body: 'Web Fundamentals covers the basics every page needs, such as indexability, HTTPS, titles, canonicals, language and the mobile viewport. AEO Readiness scores what answer engines rely on across seven pillars. Every check counts toward a score with a High, Medium or Low severity. A check that could not run is marked not checked and never raises a score.',
         points: [
           'Crawlability, machine readability, structure and answerability',
           'Evidence, provenance and freshness',
           'Each page classified, so only relevant checks apply',
-          'Advisory and diagnostic checks shown without scoring',
+          'Every check scored, with a severity',
         ],
         media: { kind: 'card' },
       },
@@ -51,7 +51,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Know which AI crawlers you let in',
-        body: 'Site Health reads your robots.txt and reports access for each known crawler by purpose. Blocking a search crawler such as OAI-SearchBot or Claude-SearchBot is scored, because it can keep you out of answers. Blocking training crawlers is your choice, so it is shown without a penalty.',
+        body: 'Site Health reads your robots.txt and reports access for each known crawler by purpose. Blocking a search crawler such as OAI-SearchBot or Claude-SearchBot is scored, because it can keep you out of answers. Blocking a training crawler is your choice; it counts as a Low-severity check.',
         points: [
           'Search, AI search, training and user-fetch crawlers kept apart',
           'robots.txt history across crawls',

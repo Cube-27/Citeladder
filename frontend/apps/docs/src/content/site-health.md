@@ -24,11 +24,11 @@ Your confirmation is recorded on the crawl with your email. Later and scheduled 
 
 A higher score does not promise rankings, indexing or citations.
 
-A **Partial audit** can still show a score. Read the accompanying coverage to understand how many pages were scored and which applicable checks remain unresolved.
+A partly checked score still shows, with how many of its checks ran, such as **18 of 20 checks run**. The checks that did not run hold the score below 100 until a later crawl reads them.
 
 ## Find the issues to fix first
 
-**Issues** opens with how many issues the latest crawl found, how they split by severity, and the three worst to fix first. The table below lists one tab at a time: **Technical** (how pages are served and indexed), **Content** (titles, descriptions, headings, accessibility and page copy) and **AEO** (what answer engines need to read and cite a page). Each tab lists defects and advisories together: an advisory carries an **Advisory** tag and sorts after the defects of its severity. Search the list, filter by page kind or by **Severity** (**High**, **Medium**, **Low**, or **Advisory** for advisories only), and sort by severity or by pages affected. Open an issue to see how to fix it, its affected pages, **Ask agent** and **Copy fix prompt**. A sitewide finding, such as a broken link in the navigation, lists a sample of the pages it was found on with the total.
+**Issues** opens with how many issues the latest crawl found, how they split by severity, and the three worst to fix first. The table below lists one tab at a time: **Technical** (how pages are served and indexed), **Content** (titles, descriptions, headings, accessibility and page copy) and **AEO** (what answer engines need to read and cite a page). Every issue carries its severity. Search the list, filter by page kind or by **Severity** (**High**, **Medium** or **Low**), and sort by severity or by pages affected. Open an issue to see how to fix it, its affected pages, **Ask agent** and **Copy fix prompt**. A sitewide finding, such as a broken link in the navigation, lists a sample of the pages it was found on with the total.
 
 In **Site Health → Pages**, search finds pages by any part of their URL.
 
@@ -45,13 +45,13 @@ For a finding you intend to fix:
 
 Page classification affects which checks apply. A product page and an editorial article do not have identical expectations. An unresolved page purpose remains unresolved.
 
-## Scored and advisory checks
+## Scored checks
 
-Only scored checks move the Web and AEO scores. They are the checks that affect whether search and AI engines can reach, read and trust a page, such as HTTPS, indexability, crawler access, valid structured data and visible attribution.
+Every check on a page, and every check read from your homepage for the whole site, counts toward the Web fundamentals or AEO readiness score, with a **High**, **Medium** or **Low** severity. That includes meta descriptions, a missing H1, Open Graph tags, structured data, content recency, invalid JSON-LD and your site still being served over plain HTTP instead of redirecting to HTTPS. Severity orders the issues and never weights a score: checks count equally within Web fundamentals and within each AEO readiness pillar, and AEO readiness combines its pillars by their weights. A page scores 100 only when every check that applies to it ran and passed. A check that could not run is marked not checked: it never raises a score, and the score shows how many checks ran, such as **18 of 20 checks run**.
 
-Other checks are unscored: advisory checks such as meta descriptions, Open Graph tags, content recency, a missing H1, dead-end pages that link to no other page on the site, and meta descriptions repeated across the site; and defects such as broken internal links, invalid JSON-LD, titles repeated across the site, and your site still being served over plain HTTP instead of redirecting to HTTPS. A sitemap that was served but could not be parsed is reported as such, rather than as a missing sitemap. Pages marked noindex or canonicalized elsewhere are left out of the duplicate checks. A certificate problem on your homepage is named (expired, not yet valid, self-signed, wrong hostname, untrusted or revoked) instead of reported as a failed connection.
+Checks that judge the site as a whole, such as broken internal links, titles or meta descriptions repeated across the site, dead-end pages and sitemap problems, raise issues with a severity but stay out of the page scores, because one finding would otherwise count once for every page. A sitemap that was served but could not be parsed is reported as such, rather than as a missing sitemap. Pages marked noindex or canonicalized elsewhere are left out of the duplicate checks. A certificate problem on your homepage is named (expired, not yet valid, self-signed, wrong hostname, untrusted or revoked) instead of reported as a failed connection.
 
-Answer-first checks, which look for a server-rendered answer under each question-style heading, also run on articles, guides, how-tos, docs and comparison pages, not only FAQ pages. These new checks apply from your next crawl. A failing unscored check still raises an issue you can work on; fixing it does not change a score. A few diagnostic readings, such as response time, are reported without raising an issue.
+Answer-first checks, which look for a server-rendered answer under each question-style heading, also run on articles, guides, how-tos, docs and comparison pages, not only FAQ pages. These new checks apply from your next crawl. A few diagnostic readings, such as response time, are reported without raising an issue or moving a score.
 
 ## Understand how results roll up
 
@@ -83,7 +83,7 @@ conversation about the evidence.
 
 Use **Ask agent** on an issue, on one of its pages, or on supported evidence screens. Ask for a small, reviewable correction tied to the affected page, or one fix for a shared template or component that fails on many pages. For form fields without an accessible name, the crawl also keeps one redacted HTML example of a failing field (tags and attribute names, with text and values removed), so the Agent can write an exact fix.
 
-Issues are tracked here, in **Issues**, from finding to fix. Each issue with something to fix (not a diagnostic reading), advisories included, is also listed in [Actions](/agent/actions/), covering every page it affects; an advisory's row there is marked **Advisory**. This page works the same either way.
+Issues are tracked here, in **Issues**, from finding to fix. Each issue with something to fix (not a diagnostic reading) is also listed in [Actions](/agent/actions/), covering every page it affects. This page works the same either way.
 
 For example: "Explain the confirmed issue on this page, distinguish it from unresolved checks, and prepare a fix brief for our developer."
 

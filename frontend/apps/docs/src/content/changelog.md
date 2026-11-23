@@ -8,6 +8,14 @@ updated: '2026-11-23'
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## November 23, 2026: Every Site Health check is scored
+
+Advisories are gone: every check on a page or read from your homepage now counts toward Web fundamentals or AEO readiness, with a **High**, **Medium** or **Low** severity, so a missing H1, meta description, Open Graph tags or structured data lowers the score. A page scores 100 only when every check that applies ran and passed, and a partly checked score says how many checks ran instead of **Limited evidence**. Whole-site checks such as broken links and duplicate titles keep their severity and stay out of page scores. **Issues** lists every issue in one list with its severity; the **Advisory** severity filter and tags are gone. In the API and MCP, `finding_class` leaves issues, issue summaries, exports and Actions, the issues list refuses a `finding_class` parameter, the two issue-type counts become `issue_count`, issue groups carry `score_roles`, scores carry `web_fundamentals_checks` and `aeo_readiness_checks`, and MCP `issue_rules` is a list of rule IDs.
+
+**For your team:** scores drop at the next crawl because more checks count; compare against that crawl, not an earlier one.
+
+[Site Health](/site-health/#scored-checks)
+
 ## November 23, 2026: MCP connections are read-only
 
 An assistant connected over MCP now only reads: the consent page no longer offers **Allow changes**, and no change tools are listed. Add prompts, launch audits, start crawls and update Actions in the CiteLadder app.
@@ -126,7 +134,7 @@ New checks find invalid JSON-LD, a sitemap that cannot be parsed, a missing H1, 
 
 **For your team:** run a new crawl to pick up the new checks.
 
-[Site Health](/site-health/#scored-and-advisory-checks)
+[Site Health](/site-health/#scored-checks)
 
 ## November 18, 2026: Topics and new reads over MCP and the API
 

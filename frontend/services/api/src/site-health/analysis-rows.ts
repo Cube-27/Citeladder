@@ -288,7 +288,6 @@ export async function insertEvaluations(db: Database, crawl: Crawl, groups: Eval
             dimension: evaluation.dimension,
             category: evaluation.category,
             severity: evaluation.severity,
-            finding_class: evaluation.finding_class,
             evidence: JSON.stringify(evaluation.evidence),
             description: evaluation.description,
             remediation: evaluation.remediation,

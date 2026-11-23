@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { record } from '../../db/json.ts';
 import { compareText } from '../../text-order.ts';
 import { uuidV5 } from '../../uuid-v5.ts';
-import { widen } from '../../widen.ts';
 
 const reads = policy.site_health.reads;
 const RULES = new Map(policy.site_health.rule_catalog.map((rule) => [rule.rule_id, rule]));
@@ -55,25 +54,14 @@ export function ruleSection(ruleId: string): IssueSection | null {
   return rule ? issueSection(rule) : null;
 }
 
-export function issueImpact(ruleId: string, findingClass: string, severity: string) {
-  const bands: Record<string, number> = reads.defect_impact_bands;
-  if (findingClass === 'defect') {
-    const label = severity.replaceAll('_', ' ').replace(/\b\w/gu, (c) => c.toUpperCase());
-    return { band: bands[severity] ?? 0, label };
-  }
-  const pillar = widen<Record<string, string>>(reads.aeo_check_pillar)[ruleId];
-  if (findingClass !== 'advisory' || !RULES.has(ruleId) || pillar === undefined)
-    return { band: 0, label: 'Advisory' };
-  const weight = widen<Record<string, number>>(reads.readiness_dimension_weights)[pillar]!;
-  const label = widen<Record<string, string>>(reads.aeo_dimension_labels)[pillar]!;
-  return {
-    band: Math.max(1, Math.round(weight * 10)),
-    label: `${label} · ${Math.round(weight * 100)}%`,
-  };
+export function issueImpact(severity: string) {
+  const bands: Record<string, number> = reads.severity_impact_bands;
+  const label = severity.replaceAll('_', ' ').replace(/\b\w/gu, (c) => c.toUpperCase());
+  return { band: bands[severity] ?? 0, label };
 }
 
-export function issueGroupId(crawlId: string, ruleId: string, findingClass: string) {
-  return uuidV5(crawlId, `site-issue-group:${ruleId}:${findingClass}`);
+export function issueGroupId(crawlId: string, ruleId: string) {
+  return uuidV5(crawlId, `site-issue-group:${ruleId}`);
 }
 
 const sitewideLinkRules: readonly string[] = [
@@ -148,7 +136,6 @@ export type IssueRow = {
   dimension: string;
   category: string;
   severity: string;
-  finding_class: string;
   description: string;
   remediation: string;
   evidence: unknown;
@@ -180,7 +167,6 @@ export const issueOccurrence = (
   dimension: issue.dimension,
   category: issue.category,
   severity: issue.severity,
-  finding_class: issue.finding_class,
   issue_title: ruleTitle(issue.rule_id),
   description: issue.description,
   remediation: issue.remediation,

@@ -105,7 +105,6 @@ const issuesQuery = {
   rule: text,
   site_url_id: optionalUuid,
   page_kind: text,
-  finding_class: { scalar: { kind: 'literal', values: ['defect', 'advisory'] } },
 } as const;
 const download = z.unknown();
 const changeLimit = policy.site_health.change_intel;
@@ -151,7 +150,6 @@ const readIssues = (db: Database, workspaceId: string, crawlId: string, query: I
         rule: query.rule || null,
         siteUrlId: query.site_url_id,
         pageKind: query.page_kind || null,
-        findingClass: query.finding_class ?? null,
       },
       query,
       { section: query.section ?? null, sort: query.sort },
@@ -299,7 +297,7 @@ export const siteHealthRoutes = [
     exposure: 'both',
     publicPath: `${publicCrawlRoot}/issues`,
     path: `${crawlRoot}/issues`,
-    params: { path: crawlPath, query: issuesQuery },
+    params: { path: crawlPath, query: issuesQuery, closed: true },
     response: siteIssuesPageSchema,
     async handle({ c, db }, { path, query }) {
       const workspaceId = c.get('workspace').workspaceId;
@@ -392,7 +390,7 @@ export const siteHealthRoutes = [
   defineGetRoute({
     ...projectFamily,
     path: `${projectRoot}/issues`,
-    params: { path: projectPath, query: issuesQuery },
+    params: { path: projectPath, query: issuesQuery, closed: true },
     response: latestCrawlIssuesPageSchema,
     async handle({ c, db }, { path, query }) {
       const workspaceId = c.get('workspace').workspaceId;

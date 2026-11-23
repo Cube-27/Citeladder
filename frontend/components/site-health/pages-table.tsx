@@ -15,6 +15,7 @@ import type { PageSummary } from '@citeladder/contracts';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { RobotsExcludedBadge } from '@/components/site-health/robots-choice';
 import {
+  checksRunLabel,
   DEFAULT_PAGES_SORT,
   formatIssueCount,
   formatScore,
@@ -22,6 +23,7 @@ import {
   pageStatusBadgeValue,
   isFetchFailure,
   statusLabel,
+  type ChecksRun,
 } from '@/lib/site-health/status';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { scoreBand, type ScoreBand } from '@/lib/score-band';
@@ -160,12 +162,14 @@ export function PagesTable({
             <TableCell numeric className={mutedWhenMissing(page.web_fundamentals_score)}>
               <MeasurementValue
                 score={page.web_fundamentals_score}
+                checks={page.web_fundamentals_checks}
                 state={page.web_fundamentals_state}
               />
             </TableCell>
             <TableCell numeric className={mutedWhenMissing(page.aeo_readiness_score)}>
               <MeasurementValue
                 score={page.aeo_readiness_score}
+                checks={page.aeo_readiness_checks}
                 state={page.aeo_measurement_state}
               />
             </TableCell>
@@ -191,8 +195,12 @@ function DepthValue({ page }: Readonly<{ page: PageSummary }>) {
   return 'Not reached';
 }
 
-function MeasurementValue({ score, state }: Readonly<{ score: number | null; state: string }>) {
-  if (score === null) return measurementStateValue(state);
+function MeasurementValue({
+  score,
+  checks,
+  state,
+}: Readonly<{ score: number | null; checks: ChecksRun | null; state: string }>) {
+  if (score === null) return measurementStateValue(state, checks);
   return (
     <span className={SCORE_TONE[scoreBand(Math.round(score))]}>{printed(formatScore(score))}</span>
   );
@@ -204,8 +212,9 @@ const SCORE_TONE = {
   high: undefined,
 } satisfies Record<ScoreBand, string | undefined>;
 
-function measurementStateValue(state: string) {
-  if (state === 'limited_evidence') return 'Limited evidence';
+function measurementStateValue(state: string, checks: ChecksRun | null) {
+  const run = checksRunLabel(checks);
+  if (run) return run;
   if (state === 'excluded') return 'Excluded';
   return <Absence state="not_measured" />;
 }

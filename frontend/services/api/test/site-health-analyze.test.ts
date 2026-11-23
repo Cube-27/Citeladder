@@ -143,11 +143,11 @@ describe('analyze acquisition', () => {
     });
     const issues = await db
       .selectFrom('site_issues')
-      .select(['rule_id', 'finding_class'])
+      .select(['rule_id', 'severity'])
       .where('analysis_id', '=', analysis!.id)
       .where('rule_id', '=', 'technical.sitemap_noindex')
       .execute();
-    expect(issues).toEqual([{ rule_id: 'technical.sitemap_noindex', finding_class: 'advisory' }]);
+    expect(issues).toEqual([{ rule_id: 'technical.sitemap_noindex', severity: 'low' }]);
   });
 
   it('acquires, analyzes and settles the page with its evidence in one commit', async () => {

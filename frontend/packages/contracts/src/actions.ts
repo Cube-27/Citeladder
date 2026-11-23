@@ -92,7 +92,6 @@ export const actionItemSchema = responseObject({
   member_count: z.number().int(),
   declarable_member_count: z.number().int(),
   page_count: z.number().int().nullable().default(null),
-  finding_class: z.enum(['defect', 'advisory']).nullable().default(null),
   summary: z.string().nullable().default(null),
   handoff: actionHandoffSchema,
   evidence_cleared_at: z.string().nullable(),

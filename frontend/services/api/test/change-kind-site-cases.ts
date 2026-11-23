@@ -52,12 +52,7 @@ export function siteAndActionCases(db: Database, fixtures: SiteFixtures) {
     const evaluationId = await fixtures.evaluation(seed, page, SITEMAP, 'missing');
     await fixtures.issue(seed, page, SITEMAP, evaluationId);
     await land(seed);
-    const finding = await db
-      .selectFrom('site_issues')
-      .select('finding_class')
-      .where('crawl_id', '=', seed.crawlId)
-      .executeTakeFirstOrThrow();
-    return { seed, groupId: issueGroupId(seed.crawlId, SITEMAP, finding.finding_class) };
+    return { seed, groupId: issueGroupId(seed.crawlId, SITEMAP) };
   }
 
   async function contentPage(seed: SiteSeed, path: string, kind: string) {

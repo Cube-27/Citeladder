@@ -35,7 +35,6 @@ export type IssueHead = Pick<
   | 'title'
   | 'dimension'
   | 'severity'
-  | 'finding_class'
   | 'description'
   | 'remediation'
   | 'affected_url_count'
@@ -430,13 +429,11 @@ function LinkTargetList({
 export function buildFixPrompt(
   issue: Pick<
     SiteIssue,
-    'title' | 'rule_id' | 'dimension' | 'severity' | 'finding_class' | 'description' | 'remediation'
+    'title' | 'rule_id' | 'dimension' | 'severity' | 'description' | 'remediation'
   >,
 ): string {
-  const rating =
-    issue.finding_class === 'defect' ? `${severityLabel(issue.severity)} severity` : 'advisory';
   const lines = [
-    `Fix this Website issue on my website: "${issueTitle(issue)}" (${dimensionLabel(issue.dimension)}, ${rating}).`,
+    `Fix this Website issue on my website: "${issueTitle(issue)}" (${dimensionLabel(issue.dimension)}, ${severityLabel(issue.severity)} severity).`,
   ];
   if (issue.description) lines.push('', 'The check passes when:', issue.description);
   if (issue.remediation) lines.push('', 'Recommended remediation:', issue.remediation);

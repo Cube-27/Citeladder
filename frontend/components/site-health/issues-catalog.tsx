@@ -130,10 +130,7 @@ export function IssuesCatalog({
             <SectionControl
               value={filters.section}
               summary={summary}
-              upTo={
-                crawlSummary &&
-                crawlSummary.defect_issue_type_count + crawlSummary.advisory_issue_type_count
-              }
+              upTo={crawlSummary?.issue_count}
               onChange={(section) => updateFilters({ section })}
             />
           ),

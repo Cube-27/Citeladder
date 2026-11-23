@@ -374,8 +374,6 @@ export const opportunities = {
   },
   SITE_ISSUE_FAMILY: {
     RULE_ID: 'site_issue_family',
-    FINDING_CLASSES: ['defect', 'advisory'],
-    DEFECT_VALUE_FACTOR: 1.01,
     COHORT_PAGES_MAX: 500,
     AGENT_PAGES_MAX: 50,
   },
