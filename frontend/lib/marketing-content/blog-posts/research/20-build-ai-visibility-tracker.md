@@ -36,10 +36,10 @@ If you only want to check your own brand by hand, the guide to [checking AI visi
 
 There are two kinds of source, and they measure different things:
 
-| Route                     | What you call                                                    | What you get                                                  | Main limit                                                 |
-| ------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
-| Model API with web search | OpenAI Responses, Anthropic Messages, Gemini, with a search tool | Answer text, inline citations, often the list of sources read | An API answer is not what a signed-in user sees in the app |
-| Search and app surfaces   | A SERP or scraper provider such as DataForSEO                    | Google AI Overviews, AI Mode, ChatGPT and Gemini app answers  | Slower, paid per task, and the response shape can change   |
+| Route                     | What you call                                                    | What you get                                                       | Main limit                                                 |
+| ------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------- |
+| Model API with web search | OpenAI Responses, Anthropic Messages, Gemini, with a search tool | Answer text, inline citations, often the list of sources retrieved | An API answer is not what a signed-in user sees in the app |
+| Search and app surfaces   | A SERP or scraper provider such as DataForSEO                    | Google AI Overviews, AI Mode, ChatGPT and Gemini app answers       | Slower, paid per task, and the response shape can change   |
 
 Store which route produced each answer, and never pool the two into one number without saying so.
 
@@ -67,7 +67,7 @@ Reading the response:
 
 - Answer text: every `output_text` block inside `message` items in `output`.
 - Citations: annotations of type `url_citation` on those blocks, each with `url`, `title`, `start_index` and `end_index`. The indexes point into the block's text, so you can store the exact cited span.
-- Searches: `web_search_call` items. Their `action.sources` are the sources read.
+- Searches: `web_search_call` items. Their `action.sources` are the sources retrieved.
 - Finish: `status`, and `incomplete_details.reason` when the output budget ran out. A `refusal` block means the model declined.
 
 CiteLadder caps OpenAI at two tool calls per answer and every engine at 4,096 output tokens, both in configuration.[\[1\]](#source-1)
@@ -98,7 +98,7 @@ Reading the response:
 - Citations sit on `text` blocks as type `web_search_result_location`, with `url`, `title` and up to 150 characters of `cited_text`. There are no character offsets.
 - The answer is the `text` after the last search block. Text before it is the model talking about its search. Join those blocks exactly as written, because one sentence can be split across several cited blocks.
 - `usage.server_tool_use.web_search_requests` gives the number of searches for cost.
-- `stop_reason` of `pause_turn` means the turn is unfinished; treat it as a failed attempt and retry.
+- `stop_reason` of `pause_turn` means the turn paused before the answer was finished. Anthropic lets you send the returned content back to continue it, which keeps the searches already paid for. CiteLadder keeps each attempt to one request, so it fails the attempt and retries.
 - A `web_search_tool_result_error` with `too_many_requests` is a rate limit, not an empty answer.
 
 If extended thinking is on, it shares the output budget, so set it deliberately for answer capture. CiteLadder sets Claude's thinking mode in its route configuration for this reason.[\[1\]](#source-1)
@@ -110,7 +110,7 @@ Add the `google_search` tool. Google's current documentation shows grounded answ
 Two practical points:
 
 - Citation titles in Google's examples are bare domains. CiteLadder reads the domain of a Gemini citation from its title.
-- The response does not list the sources read, so record "sources read" as unavailable for Gemini. It is not zero.
+- The response does not list the sources retrieved, so record them as unavailable for Gemini. It is not zero.
 
 CiteLadder's Gemini API route has no location setting, so it measures only the project's default market there and marks other markets as not applicable.[\[1\]](#source-1)
 
@@ -125,7 +125,7 @@ answer = {
   engine, route, model, market, prompt_id, repetition,
   text, finish_reason,
   citations: [{ ordinal, url, title, domain, start, end, cited_text }],
-  sources_read: [...] | null,   // null = this engine does not expose it
+  sources_retrieved: [...] | null,   // null = this engine does not expose it
   search_queries: [...] | null,
   usage: { input_tokens, output_tokens, searches },
   raw_response,
@@ -161,12 +161,15 @@ Status codes arrive in the response body. HTTP 200 does not mean success:
 - `40202` and `40209` are rate limits. Nothing was created, so you can send again later.
 - `40200`, `40201` and `40204` mean the account is unfunded, paused or unsubscribed. Stop submitting until it is fixed.
 
-The rule that saves money: **record your intent before you post a paid task, and never resubmit a task whose post timed out.** It may have been accepted and charged. Search the task list (`/v3/serp/id_list` for SERP, `/v3/ai_optimization/id_list` for the scrapers) for your `tag`.
+The rule that saves money: **record your intent before you post a paid task, and never resubmit a task whose post timed out.** It may have been accepted and charged. Search the task list (`/v3/serp/id_list` for SERP, `/v3/ai_optimization/id_list` for the scrapers) for your `tag`, with a time window and `include_metadata: true`, because the tag is only returned in the metadata. Poll only once you have a task ID.
 
 ```js
 saveIntent(task_ref)
 try { id = post(payload with tag: task_ref) }
-catch (timeout) { id = findByTag(task_ref) ?? markUncertain(task_ref) }
+catch (timeout) {
+  id = findByTag(task_ref, window, include_metadata: true)
+  if (!id) return markUncertain(task_ref)   // reconcile later, never resubmit
+}
 poll(id, firstAfter: 15s, every: 60s, maxPolls: 75)
 ```
 
@@ -181,14 +184,15 @@ DataForSEO's published Standard-queue prices on 23 November 2026: Google Organic
 ```js
 overview = items.find((i) => i.type === 'ai_overview');
 if (!overview) return { present: false };
-text = walk(overview)
+answerElements = walk(overview, skip: ["ai_overview_paid"])   // drops ads and their children
+text = answerElements
   .map((e) => e.text || e.title)
   .dedupe()
   .join('\n\n');
-citations = [overview, ...walk(overview)].flatMap((e) => e.references).uniqueBy('url');
+citations = [overview, ...answerElements].flatMap((e) => e.references).uniqueBy('url');
 ```
 
-**ChatGPT and Gemini app answers.** The result has `markdown` (the answer), `sources` (what the answer cited, also on nested `items`), `search_results` (everything the search returned), `fan_out_queries` (the searches the model ran) and `brand_entities`.[\[8\]](#source-8) Take citations from `sources`, walking nested items. Treat `search_results` as sources read. Skip any item of type `chat_gpt_ad` in all of them, because it is a paid placement. CiteLadder keeps `brand_entities` as raw evidence and runs its own matcher, so every engine is counted by the same rule.
+**ChatGPT and Gemini app answers.** The result has `markdown` (the answer), `sources` (what the answer cited, also on nested `items`), `search_results` (everything the search returned, including pages the answer did not use), `fan_out_queries` (the searches the model ran) and `brand_entities`.[\[8\]](#source-8) Take citations from `sources`, walking nested items. Store `search_results` as sources retrieved, kept apart from citations. When a response has no `search_results` array, record sources retrieved as unavailable, not as an empty list. DataForSEO documents the field for ChatGPT; check the Gemini response before you rely on it. Skip any item of type `chat_gpt_ad` in all of them, because it is a paid placement. CiteLadder keeps `brand_entities` as raw evidence and runs its own matcher, so every engine is counted by the same rule.
 
 ## Mention and citation detection
 
