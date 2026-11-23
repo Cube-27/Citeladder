@@ -28,6 +28,7 @@ export function validateSiteHealthSettings(values: Record<string, unknown>) {
 type Rule = {
   rule_id: string;
   finding_class: string;
+  applicability_key: string;
   score_roles: readonly string[];
   kind_evidence: string;
   scope: string;
@@ -53,7 +54,7 @@ function validateComposite(rule: Rule) {
 
 function validateRule(rule: Rule, byId: Map<string, Rule>) {
   if (
-    !['defect', 'advisory', 'diagnostic'].includes(rule.finding_class) ||
+    !['defect', 'diagnostic'].includes(rule.finding_class) ||
     !['expectation', 'triggered'].includes(rule.kind_evidence) ||
     !['page', 'site', 'cluster', 'graph'].includes(rule.scope)
   )
@@ -91,6 +92,11 @@ export function validateSiteHealthCatalog(
   validateScoreMembership(rules, pillars);
 }
 
+const pageScoped = (rule: Rule) =>
+  rule.finding_class !== 'diagnostic' &&
+  (rule.scope === 'page' || rule.scope === 'site') &&
+  rule.applicability_key !== 'crawl_finalize';
+
 function validateScoreMembership(rules: readonly Rule[], pillars: Record<string, string>) {
   for (const rule of rules) {
     const roles = new Set(rule.score_roles);
@@ -100,5 +106,7 @@ function validateScoreMembership(rules: readonly Rule[], pillars: Record<string,
       throw new Error(`AEO membership and pillar disagree for ${rule.rule_id}`);
     if (roles.size && rule.finding_class === 'diagnostic')
       throw new Error(`Scored rule ${rule.rule_id} must create a visible finding`);
+    if (!roles.size && pageScoped(rule))
+      throw new Error(`Unscored check ${rule.rule_id} must count toward a page score`);
   }
 }

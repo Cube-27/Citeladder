@@ -66,16 +66,50 @@ describe('a full score needs every applicable check evaluated and passed', () =>
       reason_code: 'expected_schema_absent',
     });
     const score = (page: typeof none) => page.scores.aeo_readiness_score!;
-    expect([none, partial, complete].map(score)).toEqual([70, 230 / 3, 90]);
+    expect([none, partial, complete].map((page) => score(page).toFixed(2))).toEqual([
+      '55.00',
+      '60.71',
+      '65.48',
+    ]);
     expect(
       complete.scores.expected_checkpoint_profile
         .filter((item) => item.outcome === 'unknown')
         .map((item) => [item.check_id, item.reason]),
     ).toEqual([
       ['technical.canonical_integrity', 'crawl_not_finalized'],
-      ['search.crawler_access', 'site_facts_unavailable'],
+      ...[
+        'technical.robots_txt_present',
+        'technical.ai_crawler_access',
+        'search.crawler_access',
+        'aeo.organization_identity',
+        'aeo.entity_profiles',
+        'aeo.trust_path_present',
+        'technical.http_redirects_to_https',
+      ].map((id) => [id, 'site_facts_unavailable']),
     ]);
     expect(complete.scores.web_fundamentals_score).toBeLessThan(100);
+  });
+
+  it.each([
+    ['technical.h1_present', 'web_fundamentals_score'],
+    ['technical.meta_description_present', 'web_fundamentals_score'],
+    ['aeo.open_graph_present', 'aeo_readiness_score'],
+    ['aeo.structured_data_present', 'aeo_readiness_score'],
+  ] as const)('drops a page below 100 when only %s fails', (failing, score) => {
+    const rows = evaluatePageRules({
+      has_html: true,
+      page_kind: 'article',
+      authored_content: true,
+    }).filter((row) => row.outcome !== 'not_applicable');
+    const scored = (outcomeOf: (id: string) => string) =>
+      scoreAnalysis(
+        rows.map((row) => ({ ...row, outcome: outcomeOf(row.rule_id) })),
+        'article',
+      )[score];
+    expect([
+      scored(() => 'satisfied'),
+      scored((id) => (id === failing ? 'missing' : 'satisfied'))! < 100,
+    ]).toEqual([100, true]);
   });
 
   it('keeps a page with an unevaluated scored check below 100 while keeping it unknown', () => {

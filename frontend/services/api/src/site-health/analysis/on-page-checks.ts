@@ -3,7 +3,7 @@ import { passFail } from './delivery-checks.ts';
 import { count, list, record, text, type Facts } from './read-facts.ts';
 import type { CheckResult } from './indexing.ts';
 
-const advisories = analysisPolicy.rules.on_page_advisories;
+const thresholds = analysisPolicy.rules.on_page_thresholds;
 
 function structuredDataValid(facts: Facts): CheckResult {
   const recorded = record(facts.structured_data).invalid_json_ld_count;
@@ -30,7 +30,7 @@ const lengthInRange =
   };
 
 function thinContent(facts: Facts): CheckResult {
-  const minimum = advisories.thin_content_min_words;
+  const minimum = thresholds.thin_content_min_words;
   if (facts.primary_content_truncated === true)
     return ['satisfied', { minimum_words: minimum, truncated: true }];
   const found = words(text(facts.primary_content_text)).length;
@@ -40,7 +40,7 @@ function thinContent(facts: Facts): CheckResult {
 function longParagraphs(facts: Facts): CheckResult {
   if (!Array.isArray(facts.primary_paragraph_word_counts))
     return ['unknown', { reason: 'insufficient_evidence' }];
-  const maximum = advisories.long_paragraph_max_words;
+  const maximum = thresholds.long_paragraph_max_words;
   const counts = list(facts.primary_paragraph_word_counts).map(count);
   const long = counts.filter((value) => value > maximum);
   if (!long.length && counts.length >= limits.paragraphs_kept)
@@ -84,10 +84,10 @@ export const ON_PAGE_CHECKS: Record<string, (facts: Facts) => CheckResult> = {
   'aeo.structured_data_valid': structuredDataValid,
   'technical.h1_present': h1Present,
   'technical.http_redirects_to_https': httpRedirectsToHttps,
-  'technical.title_length': lengthInRange('title', advisories.title_length),
+  'technical.title_length': lengthInRange('title', thresholds.title_length),
   'technical.meta_description_length': lengthInRange(
     'meta_description',
-    advisories.meta_description_length,
+    thresholds.meta_description_length,
   ),
   'aeo.thin_content': thinContent,
   'aeo.long_paragraphs': longParagraphs,
