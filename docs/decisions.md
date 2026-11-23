@@ -224,7 +224,8 @@ how to add or change an entry.
   fetches; headless rendering and external-link checks stay out. Title and meta
   length, thin content and long paragraphs are scored Low checks (config
   thresholds). Applebot joins both crawler-access checks, Applebot-Extended the
-  AI-crawler check. Owner, 2026-10-17 and 2026-11-18.
+  AI-crawler check, which is a scored Low check (blocking a training crawler is
+  the site's choice). Owner, 2026-10-17, 2026-11-18 and 2026-11-23.
 - **User-visible text says "issues", never "defects"** (`finding_class` keeps the
   value `defect`). "Pages buried too deeply" is unknown unless crawl coverage is
   complete. Owner, 2026-11-01.
