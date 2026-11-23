@@ -248,6 +248,49 @@ describe('consumable hold module', () => {
     ).toEqual({ units: 7, grants: 1 });
   });
 
+  it("binds an entry to its own account's grant and refunds a whole debit once", async () => {
+    const [t, other] = [await tenant(4), await tenant(4)];
+    const subject = await agentSubject(t);
+    const { reservationId } = await holdIn({
+      capability,
+      subject,
+      dispatchId: 'dispatch',
+      units: 2,
+      at: t.at,
+    });
+    await db.transaction().execute((trx) =>
+      settle(trx, {
+        workspaceId: t.workspaceId,
+        reservationId,
+        spent: 2,
+        attempt: 1,
+        dispatch: 'dispatch',
+        at: new Date(),
+      }),
+    );
+    const debit = await db
+      .selectFrom('consumable_ledger')
+      .selectAll()
+      .where('reservation_id', '=', reservationId)
+      .where('entry_kind', '=', 'debit')
+      .executeTakeFirstOrThrow();
+    const copy = (overrides: Partial<typeof debit>) =>
+      db
+        .insertInto('consumable_ledger')
+        .values({ ...debit, id: randomUUID(), idempotency_key: randomUUID(), ...overrides })
+        .execute();
+    await expect(
+      copy({ entry_kind: 'reservation', attempt: null, grant_id: other.grant.id }),
+    ).rejects.toMatchObject({ code: '23503' });
+    await expect(
+      copy({ entry_kind: 'refund', refund_of_id: debit.id, units: 1 }),
+    ).rejects.toMatchObject({ code: '23503' });
+    await copy({ entry_kind: 'refund', refund_of_id: debit.id });
+    await expect(copy({ entry_kind: 'refund', refund_of_id: debit.id })).rejects.toMatchObject({
+      code: '23505',
+    });
+  });
+
   it('consumes frozen holds after revocation and refunds each debit once', async () => {
     const t = await tenant(4);
     const subject = await agentSubject(t);

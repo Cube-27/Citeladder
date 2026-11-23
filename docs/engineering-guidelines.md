@@ -52,6 +52,24 @@ rows the API rejects), #996 (400 bucketed runs against a 100-run cap), #804
 **Check:** A numeric literal in `.max()`, `.length >`, a row cap or a
 `limit=` param. `rg` the number and make sure one owner defines it.
 
+### Let the schema refuse what the code never writes
+
+**Rule:** A reference between two rows that share an owner (account, audit,
+chat, project) is a composite foreign key through that owner, not an id alone.
+A CHECK states `IS NOT NULL` or `IS TRUE` for every value it relies on, since a
+NULL makes the comparison unknown and the CHECK passes. A B-tree key on an
+external string has a byte bound (`policy.storage.index_key_max_bytes`) in
+the column's CHECK, and its writer skips a longer value (`fitsIndexKey`)
+instead of failing the batch.
+**Why:** The 2026-11-23 baseline audit inserted an invoice for another account's
+payment, a ledger entry against another account's grant, an audit task with
+another audit's snapshots, a platform search run with no estimate and `{}` as
+suggestion guidance; all passed. A 5,121-byte UTF-8 string under 2,704
+characters failed every wide key it reached.
+**Check:** A new FK column whose row and target both carry an owner id; a new
+CHECK over nullable columns or JSON keys; a new index on a text column fed by a
+provider, an import or a crawl.
+
 ### Reset view state when its context changes
 
 **Rule:** Page indexes, selected IDs, persisted filters, placeholder data and

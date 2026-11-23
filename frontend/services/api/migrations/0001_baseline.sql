@@ -5,7 +5,8 @@
 -- Checkpoint of 2026-11-22: the former 0001-0049 chain (folded 2026-11-17),
 -- 0002_ai_visibility_gaps (folded 2026-11-19), 0002_agent_hero and
 -- 0003_perception_categories, folded into one strict file before an owner-run
--- reset (docs/decisions.md). Their rationale stays in git history. Sections run
+-- reset (docs/decisions.md); refolded 2026-11-23 for the MCP write removal and
+-- the baseline audit fixes. Their rationale stays in git history. Sections run
 -- by area: each table with its keys and indexes, then views, every foreign key,
 -- and last the application role with its grants.
 
@@ -15,8 +16,10 @@
 
 -- Site Health evidence (site_crawl_events, site_fetch_artifacts,
 -- site_fetch_attempts, site_issues, site_rule_evaluations,
--- site_url_observations) is partitioned by crawl month (owner decision CO-6),
--- so a retention policy is a partition drop. The key is the owner id, a UUIDv7
+-- site_url_observations) is partitioned by crawl month (owner decision CO-6).
+-- No retention runs yet. Retiring a month is not a plain DROP: foreign keys
+-- into these tables refuse it, so it is a DETACH, then a DROP once surviving
+-- references are resolved (backlog). The key is the owner id, a UUIDv7
 -- whose leading 48 bits are its creation time: crawl_id, or analysis_id on rule
 -- evaluations. A month is the id range [first id of the month, first id of the
 -- next month); older random (v4) ids land in the default partition.
@@ -86,30 +89,18 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 -- The current UTC month and the next p_ahead months for every evidence
--- table. The migrate job runs it after each apply; returns what it skipped.
-CREATE FUNCTION public.site_evidence_ensure_partitions(p_ahead integer DEFAULT 3) RETURNS text[]
-    LANGUAGE plpgsql
+-- table. The migrate job creates each with its own statement, so a parent's
+-- exclusive lock lasts one partition, not the whole run.
+CREATE FUNCTION public.site_evidence_partition_targets(p_ahead integer DEFAULT 3)
+    RETURNS TABLE(evidence_table text, evidence_month date)
+    LANGUAGE sql STABLE
     SET search_path TO 'public', 'pg_catalog'
     AS $$
-DECLARE
-    tbl text;
-    step integer;
-    outcome text;
-    skipped text[] := '{}';
-    first_month date := date_trunc('month', now() AT TIME ZONE 'UTC')::date;
-BEGIN
-    FOREACH tbl IN ARRAY ARRAY['site_crawl_events', 'site_fetch_artifacts', 'site_fetch_attempts',
-                               'site_issues', 'site_rule_evaluations', 'site_url_observations'] LOOP
-        FOR step IN 0..p_ahead LOOP
-            outcome := site_evidence_month_partition(tbl, (first_month + make_interval(months => step))::date);
-            IF outcome NOT IN ('created', 'exists') THEN
-                skipped := skipped || format('%s %s: %s', tbl,
-                    to_char(first_month + make_interval(months => step), 'YYYY-MM'), outcome);
-            END IF;
-        END LOOP;
-    END LOOP;
-    RETURN skipped;
-END
+    SELECT tbl, (date_trunc('month', now() AT TIME ZONE 'UTC') + make_interval(months => step))::date
+    FROM unnest(ARRAY['site_crawl_events', 'site_fetch_artifacts', 'site_fetch_attempts',
+                      'site_issues', 'site_rule_evaluations', 'site_url_observations']) AS tbl,
+         generate_series(0, p_ahead) AS step
+    ORDER BY tbl, step
 $$;
 
 -- Refuses citeladder_app's UPDATE on the append-only billing tables that keep
@@ -554,6 +545,9 @@ ALTER TABLE ONLY public.account_grants
     ADD CONSTRAINT account_grants_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.account_grants
+    ADD CONSTRAINT uq_account_grant_account_key UNIQUE (id, billing_account_id, key);
+
+ALTER TABLE ONLY public.account_grants
     ADD CONSTRAINT uq_account_grant_bundle_key UNIQUE (billing_account_id, idempotency_key, key);
 
 CREATE INDEX ix_account_grant_account_key_valid ON public.account_grants USING btree (billing_account_id, key, valid_from);
@@ -705,17 +699,21 @@ CREATE TABLE public.billing_payments (
     receipt_sha256 character varying(64) NOT NULL,
     created_at timestamp with time zone NOT NULL,
     CONSTRAINT ck_billing_payment_amount_nonneg CHECK ((amount_minor >= 0)),
+    CONSTRAINT ck_billing_payment_receipt_shape CHECK (((((receipt_kind)::text = 'payment'::text) AND (external_refund_id IS NULL) AND (parent_payment_id IS NULL)) OR (((receipt_kind)::text = 'refund'::text) AND (external_refund_id IS NOT NULL) AND (parent_payment_id IS NOT NULL)))),
     CONSTRAINT ck_billing_payments_status CHECK ((status IN ('paid', 'processed')))
 );
 
 ALTER TABLE ONLY public.billing_payments
     ADD CONSTRAINT billing_payments_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.billing_payments
+    ADD CONSTRAINT uq_billing_payment_account UNIQUE (id, billing_account_id);
+
 CREATE INDEX ix_billing_payment_account_paid ON public.billing_payments USING btree (billing_account_id, paid_at);
 
 CREATE UNIQUE INDEX uq_billing_payment_external ON public.billing_payments USING btree (provider, provider_mode, external_payment_id) WHERE ((receipt_kind)::text = 'payment'::text);
 
-CREATE UNIQUE INDEX uq_billing_refund_external ON public.billing_payments USING btree (provider, provider_mode, external_refund_id) WHERE (external_refund_id IS NOT NULL);
+CREATE UNIQUE INDEX uq_billing_refund_external ON public.billing_payments USING btree (provider, provider_mode, external_refund_id) WHERE ((receipt_kind)::text = 'refund'::text);
 
 CREATE TABLE public.billing_subscriptions (
     id uuid NOT NULL,
@@ -832,6 +830,11 @@ CREATE INDEX ix_consumable_ledger_workspace_reservation ON public.consumable_led
 CREATE UNIQUE INDEX uq_consumable_ledger_subject_dispatch_allocation_debit ON public.consumable_ledger USING btree (subject_kind, subject_id, dispatch_key, grant_id) WHERE ((entry_kind)::text = 'debit'::text);
 
 CREATE UNIQUE INDEX uq_consumable_ledger_task_attempt ON public.consumable_ledger USING btree (task_id, attempt, grant_id) WHERE ((entry_kind)::text = 'debit'::text);
+
+ALTER TABLE ONLY public.consumable_ledger
+    ADD CONSTRAINT uq_consumable_ledger_refund_target UNIQUE (id, grant_id, billing_account_id, capability_key, units);
+
+CREATE UNIQUE INDEX uq_consumable_ledger_refund_of ON public.consumable_ledger USING btree (refund_of_id) WHERE ((entry_kind)::text = 'refund'::text);
 
 CREATE TABLE public.execution_cost_projections (
     id uuid NOT NULL,
@@ -1870,6 +1873,9 @@ ALTER TABLE ONLY public.aio_entity_links
     ADD CONSTRAINT aio_entity_links_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.aio_entity_links
+    ADD CONSTRAINT ck_aio_entity_links_url_key_bytes CHECK ((octet_length((url)::text) <= 2048));
+
+ALTER TABLE ONLY public.aio_entity_links
     ADD CONSTRAINT uq_aio_entity_link_observation_url UNIQUE (observation_id, url);
 
 CREATE INDEX ix_aio_entity_links_domain ON public.aio_entity_links USING btree (observation_id, domain);
@@ -2102,6 +2108,9 @@ ALTER TABLE ONLY public.audit_engine_snapshots
     ADD CONSTRAINT audit_engine_snapshots_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.audit_engine_snapshots
+    ADD CONSTRAINT uq_audit_engine_snapshot_audit UNIQUE (audit_id, id);
+
+ALTER TABLE ONLY public.audit_engine_snapshots
     ADD CONSTRAINT uq_audit_engine_snapshot_engine UNIQUE (audit_id, logical_engine);
 
 CREATE INDEX ix_audit_engine_snapshots_connection_id ON public.audit_engine_snapshots USING btree (connection_id) WHERE (connection_id IS NOT NULL);
@@ -2173,6 +2182,9 @@ CREATE TABLE public.audit_prompt_snapshots (
 
 ALTER TABLE ONLY public.audit_prompt_snapshots
     ADD CONSTRAINT audit_prompt_snapshots_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.audit_prompt_snapshots
+    ADD CONSTRAINT uq_audit_prompt_snapshot_audit UNIQUE (audit_id, id);
 
 ALTER TABLE ONLY public.audit_prompt_snapshots
     ADD CONSTRAINT uq_audit_prompt_snapshot_index UNIQUE (audit_id, prompt_index);
@@ -2699,6 +2711,9 @@ CREATE TABLE public.performance_dimension_stats (
 
 ALTER TABLE ONLY public.performance_dimension_stats
     ADD CONSTRAINT performance_dimension_stats_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.performance_dimension_stats
+    ADD CONSTRAINT ck_performance_dimension_stats_dimension_key_key_bytes CHECK ((octet_length((dimension_key)::text) <= 2048));
 
 ALTER TABLE ONLY public.performance_dimension_stats
     ADD CONSTRAINT uq_performance_dimension_stat_key UNIQUE (snapshot_id, dimension, dimension_key);
@@ -3283,6 +3298,12 @@ ALTER TABLE ONLY public.search_intelligence_rows
     ADD CONSTRAINT search_intelligence_rows_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.search_intelligence_rows
+    ADD CONSTRAINT ck_search_intelligence_rows_keyword_key_bytes CHECK ((octet_length((keyword)::text) <= 2048));
+
+ALTER TABLE ONLY public.search_intelligence_rows
+    ADD CONSTRAINT ck_search_intelligence_rows_url_key_bytes CHECK ((octet_length((url)::text) <= 2048));
+
+ALTER TABLE ONLY public.search_intelligence_rows
     ADD CONSTRAINT uq_si_row_provider_key UNIQUE (dataset_id, provider_row_key);
 
 CREATE INDEX ix_search_intelligence_rows_call_id ON public.search_intelligence_rows USING btree (call_id);
@@ -3333,7 +3354,7 @@ CREATE TABLE public.search_intelligence_runs (
     estimated_credits integer,
     charged_credits integer,
     platform_call_id uuid,
-    CONSTRAINT ck_si_runs_credential_source CHECK (((((credential_source)::text = 'byok'::text) AND (estimated_credits IS NULL) AND (charged_credits IS NULL) AND (platform_call_id IS NULL)) OR (((credential_source)::text = 'platform'::text) AND (estimated_credits >= 0) AND ((charged_credits IS NULL) OR ((charged_credits >= 0) AND (charged_credits <= estimated_credits)))))),
+    CONSTRAINT ck_si_runs_credential_source CHECK (((((credential_source)::text = 'byok'::text) AND (estimated_credits IS NULL) AND (charged_credits IS NULL) AND (platform_call_id IS NULL)) OR (((credential_source)::text = 'platform'::text) AND (estimated_credits IS NOT NULL) AND (estimated_credits >= 0) AND ((charged_credits IS NULL) OR ((charged_credits >= 0) AND (charged_credits <= estimated_credits)))))),
     CONSTRAINT ck_si_runs_status CHECK ((status IN ('cancelled', 'failed', 'partial', 'queued', 'reviewed', 'running', 'succeeded', 'uncertain')))
 );
 
@@ -3467,6 +3488,9 @@ CREATE TABLE public.commerce_competitor_candidates (
 
 ALTER TABLE ONLY public.commerce_competitor_candidates
     ADD CONSTRAINT commerce_competitor_candidates_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.commerce_competitor_candidates
+    ADD CONSTRAINT ck_commerce_competitor_candidates_canonical_url_key_bytes CHECK ((octet_length((canonical_url)::text) <= 2048));
 
 ALTER TABLE ONLY public.commerce_competitor_candidates
     ADD CONSTRAINT uq_commerce_competitor_candidate UNIQUE (project_id, target_kind, target_id, canonical_url);
@@ -3641,6 +3665,9 @@ CREATE TABLE public.commerce_products (
 
 ALTER TABLE ONLY public.commerce_products
     ADD CONSTRAINT commerce_products_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.commerce_products
+    ADD CONSTRAINT ck_commerce_products_canonical_url_key_bytes CHECK ((octet_length((canonical_url)::text) <= 2048));
 
 ALTER TABLE ONLY public.commerce_products
     ADD CONSTRAINT uq_commerce_product_url UNIQUE (project_id, canonical_url);
@@ -4738,6 +4765,9 @@ ALTER TABLE ONLY public.site_urls
     ADD CONSTRAINT site_urls_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.site_urls
+    ADD CONSTRAINT ck_site_urls_normalized_url_key_bytes CHECK ((octet_length((normalized_url)::text) <= 2048));
+
+ALTER TABLE ONLY public.site_urls
     ADD CONSTRAINT uq_site_url_project_hash UNIQUE (project_id, url_hash);
 
 ALTER TABLE ONLY public.site_urls
@@ -5174,7 +5204,7 @@ CREATE TABLE public.integration_metric_rows (
     provider character varying(16) NOT NULL,
     dataset character varying(48) NOT NULL,
     date date NOT NULL,
-    dimension_key character varying(1024) NOT NULL,
+    dimension_key character varying(2048) NOT NULL,
     metrics jsonb,
     source_artifact_id uuid NOT NULL,
     resync_seq integer NOT NULL,
@@ -5184,6 +5214,9 @@ CREATE TABLE public.integration_metric_rows (
 
 ALTER TABLE ONLY public.integration_metric_rows
     ADD CONSTRAINT integration_metric_rows_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.integration_metric_rows
+    ADD CONSTRAINT ck_integration_metric_rows_identity_key_bytes CHECK (((octet_length((property_ref)::text) + octet_length((dimension_key)::text)) <= 2048));
 
 ALTER TABLE ONLY public.integration_metric_rows
     ADD CONSTRAINT uq_integration_metric_row_identity UNIQUE (project_id, property_ref, provider, dataset, date, dimension_key, resync_seq);
@@ -5399,6 +5432,9 @@ ALTER TABLE ONLY public.traffic_page_stats
     ADD CONSTRAINT traffic_page_stats_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.traffic_page_stats
+    ADD CONSTRAINT ck_traffic_page_stats_canonical_url_key_bytes CHECK ((octet_length((canonical_url)::text) <= 2048));
+
+ALTER TABLE ONLY public.traffic_page_stats
     ADD CONSTRAINT uq_traffic_page_stat_url UNIQUE (snapshot_id, canonical_url);
 
 CREATE INDEX ix_traffic_page_stats_project_id ON public.traffic_page_stats USING btree (project_id);
@@ -5412,7 +5448,7 @@ CREATE TABLE public.traffic_query_stats (
     workspace_id uuid NOT NULL,
     project_id uuid NOT NULL,
     snapshot_id uuid NOT NULL,
-    normalized_query character varying(1024) NOT NULL,
+    normalized_query character varying(2048) NOT NULL,
     metrics jsonb,
     source_metric_row_ids jsonb,
     source_artifact_ids jsonb,
@@ -5421,6 +5457,9 @@ CREATE TABLE public.traffic_query_stats (
 
 ALTER TABLE ONLY public.traffic_query_stats
     ADD CONSTRAINT traffic_query_stats_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.traffic_query_stats
+    ADD CONSTRAINT ck_traffic_query_stats_normalized_query_key_bytes CHECK ((octet_length((normalized_query)::text) <= 2048));
 
 ALTER TABLE ONLY public.traffic_query_stats
     ADD CONSTRAINT uq_traffic_query_stat_query UNIQUE (snapshot_id, normalized_query);
@@ -5941,6 +5980,9 @@ CREATE TABLE public.agent_chats (
 ALTER TABLE ONLY public.agent_chats
     ADD CONSTRAINT agent_chats_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.agent_chats
+    ADD CONSTRAINT uq_agent_chat_scope UNIQUE (workspace_id, project_id, id);
+
 CREATE INDEX ix_agent_chats_action_id ON public.agent_chats USING btree (action_id);
 
 CREATE INDEX ix_agent_chats_project_activity ON public.agent_chats USING btree (project_id, last_activity_at, id);
@@ -5989,6 +6031,9 @@ CREATE TABLE public.agent_messages (
 
 ALTER TABLE ONLY public.agent_messages
     ADD CONSTRAINT agent_messages_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.agent_messages
+    ADD CONSTRAINT uq_agent_message_chat UNIQUE (chat_id, id);
 
 ALTER TABLE ONLY public.agent_messages
     ADD CONSTRAINT uq_agent_message_sequence UNIQUE (chat_id, sequence);
@@ -6155,7 +6200,7 @@ CREATE TABLE public.agent_output_suggestions (
     rule_guidance jsonb,
     CONSTRAINT ck_agent_output_suggestions_anchor_kind CHECK ((anchor_kind = ANY (ARRAY['span'::text, 'field'::text, 'page'::text]))),
     CONSTRAINT ck_agent_output_suggestions_one_ask CHECK (((replacement IS NULL) OR (needs_input IS NULL))),
-    CONSTRAINT ck_agent_output_suggestions_rule_guidance CHECK (((rule_guidance IS NULL) OR ((jsonb_typeof(rule_guidance) = 'object'::text) AND ((rule_guidance ->> 'strength'::text) = ANY (ARRAY['requirement'::text, 'recommendation'::text, 'heuristic'::text])) AND (jsonb_typeof((rule_guidance -> 'source_url'::text)) = 'string'::text) AND (jsonb_typeof((rule_guidance -> 'catalog_version'::text)) = 'string'::text)))),
+    CONSTRAINT ck_agent_output_suggestions_rule_guidance CHECK (((rule_guidance IS NULL) OR ((jsonb_typeof(rule_guidance) = 'object'::text) AND (((rule_guidance ->> 'strength'::text) = ANY (ARRAY['requirement'::text, 'recommendation'::text, 'heuristic'::text])) IS TRUE) AND ((jsonb_typeof((rule_guidance -> 'source_url'::text)) = 'string'::text) IS TRUE) AND ((jsonb_typeof((rule_guidance -> 'catalog_version'::text)) = 'string'::text) IS TRUE)))),
     CONSTRAINT ck_agent_output_suggestions_source CHECK ((source = ANY (ARRAY['model'::text, 'site_health'::text])))
 );
 
@@ -6613,13 +6658,13 @@ ALTER TABLE ONLY public.billing_invoices
     ADD CONSTRAINT billing_invoices_billing_account_id_fkey FOREIGN KEY (billing_account_id) REFERENCES public.billing_accounts(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.billing_invoices
-    ADD CONSTRAINT billing_invoices_payment_id_fkey FOREIGN KEY (payment_id) REFERENCES public.billing_payments(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT billing_invoices_payment_account_fkey FOREIGN KEY (payment_id, billing_account_id) REFERENCES public.billing_payments(id, billing_account_id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.billing_payments
     ADD CONSTRAINT billing_payments_billing_account_id_fkey FOREIGN KEY (billing_account_id) REFERENCES public.billing_accounts(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.billing_payments
-    ADD CONSTRAINT billing_payments_parent_payment_id_fkey FOREIGN KEY (parent_payment_id) REFERENCES public.billing_payments(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT billing_payments_parent_account_fkey FOREIGN KEY (parent_payment_id, billing_account_id) REFERENCES public.billing_payments(id, billing_account_id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.billing_payments
     ADD CONSTRAINT billing_payments_pending_activation_id_fkey FOREIGN KEY (pending_activation_id) REFERENCES public.pending_activations(id) ON DELETE RESTRICT;
@@ -6631,13 +6676,13 @@ ALTER TABLE ONLY public.billing_subscriptions
     ADD CONSTRAINT billing_subscriptions_billing_account_id_fkey FOREIGN KEY (billing_account_id) REFERENCES public.billing_accounts(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.consumable_ledger
-    ADD CONSTRAINT consumable_ledger_billing_account_id_fkey FOREIGN KEY (billing_account_id) REFERENCES public.billing_accounts(id) ON DELETE CASCADE;
+    ADD CONSTRAINT consumable_ledger_billing_account_id_fkey FOREIGN KEY (billing_account_id) REFERENCES public.billing_accounts(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.consumable_ledger
-    ADD CONSTRAINT consumable_ledger_grant_id_fkey FOREIGN KEY (grant_id) REFERENCES public.account_grants(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT consumable_ledger_grant_account_key_fkey FOREIGN KEY (grant_id, billing_account_id, capability_key) REFERENCES public.account_grants(id, billing_account_id, key) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.consumable_ledger
-    ADD CONSTRAINT consumable_ledger_refund_of_id_fkey FOREIGN KEY (refund_of_id) REFERENCES public.consumable_ledger(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT consumable_ledger_refund_target_fkey FOREIGN KEY (refund_of_id, grant_id, billing_account_id, capability_key, units) REFERENCES public.consumable_ledger(id, grant_id, billing_account_id, capability_key, units) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.consumable_ledger
     ADD CONSTRAINT consumable_ledger_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE RESTRICT;
@@ -6684,10 +6729,10 @@ ALTER TABLE ONLY public.provider_attempts
     ADD CONSTRAINT provider_attempts_workspace_id_task_id_fkey FOREIGN KEY (workspace_id, task_id) REFERENCES public.audit_tasks(workspace_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.provider_capacity_buckets
-    ADD CONSTRAINT provider_capacity_buckets_billing_account_id_fkey FOREIGN KEY (billing_account_id) REFERENCES public.billing_accounts(id) ON DELETE SET NULL;
+    ADD CONSTRAINT provider_capacity_buckets_billing_account_id_fkey FOREIGN KEY (billing_account_id) REFERENCES public.billing_accounts(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.provider_capacity_buckets
-    ADD CONSTRAINT provider_capacity_buckets_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.provider_connections(id) ON DELETE SET NULL;
+    ADD CONSTRAINT provider_capacity_buckets_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.provider_connections(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.provider_capacity_leases
     ADD CONSTRAINT provider_capacity_leases_analytics_task_id_fkey FOREIGN KEY (analytics_task_id) REFERENCES public.analytics_tasks(id) ON DELETE CASCADE;
@@ -6979,7 +7024,7 @@ ALTER TABLE ONLY public.audit_source_aggregates
     ADD CONSTRAINT audit_source_aggregates_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.audit_tasks
-    ADD CONSTRAINT audit_tasks_engine_snapshot_id_fkey FOREIGN KEY (engine_snapshot_id) REFERENCES public.audit_engine_snapshots(id) ON DELETE CASCADE;
+    ADD CONSTRAINT audit_tasks_audit_engine_snapshot_fkey FOREIGN KEY (audit_id, engine_snapshot_id) REFERENCES public.audit_engine_snapshots(audit_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.audit_fanout_terms
     ADD CONSTRAINT audit_fanout_terms_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
@@ -6988,7 +7033,7 @@ ALTER TABLE ONLY public.audit_fanout_terms
     ADD CONSTRAINT audit_fanout_terms_workspace_id_project_id_audit_id_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.audit_tasks
-    ADD CONSTRAINT audit_tasks_prompt_snapshot_id_fkey FOREIGN KEY (prompt_snapshot_id) REFERENCES public.audit_prompt_snapshots(id) ON DELETE CASCADE;
+    ADD CONSTRAINT audit_tasks_audit_prompt_snapshot_fkey FOREIGN KEY (audit_id, prompt_snapshot_id) REFERENCES public.audit_prompt_snapshots(audit_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.audit_topic_metrics
     ADD CONSTRAINT audit_topic_metrics_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
@@ -8078,7 +8123,7 @@ ALTER TABLE ONLY public.agent_messages
     ADD CONSTRAINT agent_messages_author_user_id_fkey FOREIGN KEY (author_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 ALTER TABLE ONLY public.agent_messages
-    ADD CONSTRAINT agent_messages_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.agent_chats(id) ON DELETE CASCADE;
+    ADD CONSTRAINT agent_messages_chat_scope_fkey FOREIGN KEY (workspace_id, project_id, chat_id) REFERENCES public.agent_chats(workspace_id, project_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.agent_messages
     ADD CONSTRAINT agent_messages_reply_to_message_id_fkey FOREIGN KEY (reply_to_message_id) REFERENCES public.agent_messages(id) ON DELETE SET NULL;
@@ -8189,13 +8234,13 @@ ALTER TABLE ONLY public.agent_run_transcripts
     ADD CONSTRAINT agent_run_transcripts_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.agent_runs
-    ADD CONSTRAINT agent_runs_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.agent_chats(id) ON DELETE CASCADE;
+    ADD CONSTRAINT agent_runs_chat_scope_fkey FOREIGN KEY (workspace_id, project_id, chat_id) REFERENCES public.agent_chats(workspace_id, project_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.agent_runs
     ADD CONSTRAINT agent_runs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 ALTER TABLE ONLY public.agent_runs
-    ADD CONSTRAINT agent_runs_user_message_id_fkey FOREIGN KEY (user_message_id) REFERENCES public.agent_messages(id) ON DELETE CASCADE;
+    ADD CONSTRAINT agent_runs_chat_message_fkey FOREIGN KEY (chat_id, user_message_id) REFERENCES public.agent_messages(chat_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.agent_runs
     ADD CONSTRAINT agent_runs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
@@ -8287,15 +8332,16 @@ REVOKE UPDATE, DELETE ON
     public.site_change_observations
 FROM citeladder_app;
 
--- Billing serializes on row locks over these append-only tables (SELECT ... FOR
--- UPDATE), and PostgreSQL grants a row lock only with UPDATE privilege. So the
+-- Billing and verdict overrides serialize on row locks over these append-only
+-- tables (SELECT ... FOR UPDATE), and PostgreSQL grants a row lock only with UPDATE privilege. So the
 -- role keeps that privilege, loses DELETE, and a statement trigger refuses
 -- every UPDATE it issues with the same permission error a revoked grant raises.
 REVOKE DELETE ON
     public.account_grants,
     public.consumable_ledger,
     public.billing_payments,
-    public.raw_response_artifacts
+    public.raw_response_artifacts,
+    public.claim_verdicts
 FROM citeladder_app;
 
 CREATE TRIGGER append_only_app_update BEFORE UPDATE ON public.account_grants
@@ -8305,6 +8351,8 @@ CREATE TRIGGER append_only_app_update BEFORE UPDATE ON public.consumable_ledger
 CREATE TRIGGER append_only_app_update BEFORE UPDATE ON public.billing_payments
     FOR EACH STATEMENT EXECUTE FUNCTION public.refuse_app_role_update();
 CREATE TRIGGER append_only_app_update BEFORE UPDATE ON public.raw_response_artifacts
+    FOR EACH STATEMENT EXECUTE FUNCTION public.refuse_app_role_update();
+CREATE TRIGGER append_only_app_update BEFORE UPDATE ON public.claim_verdicts
     FOR EACH STATEMENT EXECUTE FUNCTION public.refuse_app_role_update();
 
 -- ==========================================================================
@@ -8317,7 +8365,8 @@ REVOKE ALL ON public.site_crawl_events_default, public.site_fetch_artifacts_defa
     public.site_fetch_attempts_default, public.site_issues_default,
     public.site_rule_evaluations_default, public.site_url_observations_default FROM citeladder_app;
 REVOKE ALL ON FUNCTION public.site_evidence_month_partition(text, date) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.site_evidence_ensure_partitions(integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.site_evidence_partition_targets(integer) FROM PUBLIC;
 
 -- This month and the three ahead; the migrate job tops them up on every run.
-SELECT public.site_evidence_ensure_partitions();
+SELECT public.site_evidence_month_partition(evidence_table, evidence_month)
+FROM public.site_evidence_partition_targets();

@@ -107,6 +107,10 @@ describe('persisted billing documents', () => {
     };
   }
   async function persist(row: Selectable<BillingInvoices>) {
+    await payment(row);
+    await db.insertInto('billing_invoices').values(row).execute();
+  }
+  async function payment(row: Selectable<BillingInvoices>) {
     await db
       .insertInto('billing_payments')
       .values({
@@ -125,7 +129,6 @@ describe('persisted billing documents', () => {
         created_at: paidAt,
       })
       .execute();
-    await db.insertInto('billing_invoices').values(row).execute();
   }
   it('lists and downloads only the active workspace account, including a credit note', async () => {
     const owner = await tenant();
@@ -256,5 +259,40 @@ describe('persisted billing documents', () => {
       igst_minor: 9000,
     });
     await expect(renderInvoicePdf(misfiled)).rejects.toThrow('inconsistent');
+  });
+
+  it("refuses an invoice for another account's payment and a refund receipt without its provider refund", async () => {
+    const [payer, other] = [await tenant(), await tenant()];
+    const row = { ...invoice(payer.accountId), receipt_number: 'CLR/2627/000101' };
+    await persist(row);
+    const unbilled = { ...invoice(other.accountId), receipt_number: 'CLR/2627/000102' };
+    await payment({ ...unbilled, billing_account_id: payer.accountId });
+    await expect(
+      db.insertInto('billing_invoices').values(unbilled).execute(),
+    ).rejects.toMatchObject({ code: '23503' });
+    const refund = (externalRefundId: string | null) =>
+      db
+        .insertInto('billing_payments')
+        .values({
+          id: randomUUID(),
+          billing_account_id: payer.accountId,
+          parent_payment_id: row.payment_id,
+          provider: 'razorpay',
+          provider_mode: 'test',
+          receipt_kind: 'refund',
+          external_payment_id: `pay_${row.payment_id}`,
+          external_refund_id: externalRefundId,
+          amount_minor: 100,
+          currency: row.currency,
+          payment_method: 'upi',
+          status: 'processed',
+          paid_at: paidAt,
+          receipt_sha256: 'b'.repeat(64),
+          created_at: paidAt,
+        })
+        .execute();
+    await expect(refund(null)).rejects.toMatchObject({ code: '23514' });
+    await refund('rfnd_one');
+    await expect(refund('rfnd_one')).rejects.toMatchObject({ code: '23505' });
   });
 });

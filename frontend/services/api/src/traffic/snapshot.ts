@@ -28,6 +28,7 @@ import {
   datasetProvider,
 } from '../integrations/partitions.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
+import { fitsIndexKey } from '../db/index-key.ts';
 import { projectHosts } from '../integrations/host-scope.ts';
 import { readReferralClassifications } from '../referrals/persisted.ts';
 
@@ -107,8 +108,17 @@ async function persist(
     .returning('id')
     .executeTakeFirst();
   if (!row) return null;
-  await replaceStats(db, task, row.id, projection);
+  await replaceStats(db, task, row.id, indexable(projection));
   return row.id;
+}
+
+function indexable(projection: Projection): Projection {
+  return {
+    ...projection,
+    pages: projection.pages.filter((row) => fitsIndexKey(row.canonical_url)),
+    queries: projection.queries.filter((row) => fitsIndexKey(row.normalized_query)),
+    dimensions: projection.dimensions.filter((row) => fitsIndexKey(row.dimension_key)),
+  };
 }
 
 async function replaceStats(

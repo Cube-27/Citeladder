@@ -12,6 +12,7 @@ import { discovery } from './config/discovery.ts';
 import promptLibrary from './config/prompt-library.json' with { type: 'json' };
 import { entitlements } from './config/entitlements.ts';
 import api from './config/api.json' with { type: 'json' };
+import storage from './config/storage.json' with { type: 'json' };
 import searchIntelligence from './config/search-intelligence.json' with { type: 'json' };
 import demand from './config/demand.json' with { type: 'json' };
 import { audits, visibility, selectableEngines } from './config/audits.ts';
@@ -109,6 +110,7 @@ export const policy = {
   errors,
   agent: { ...agentRuntime },
   abuse,
+  storage,
   audit_schedules: {
     ...auditSchedules,
     selectable_engines: selectableEngines,

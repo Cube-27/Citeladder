@@ -34,6 +34,7 @@ import {
   shelfLinks,
 } from './projection-facts.ts';
 import type { CatalogFacts } from '../site-health/analysis/catalog-facts.ts';
+import { fitsIndexKey } from '../db/index-key.ts';
 
 type Source = Awaited<ReturnType<typeof sourceOf>>;
 
@@ -341,6 +342,7 @@ export const projectCatalog: Executor = async (task, { db, checkCancelled }) => 
         'commerce_source_url_missing',
         'Catalog source has no usable URL',
       );
+    if (!fitsIndexKey(url)) return;
     const projected =
       source.page_kind === 'category'
         ? await projectCategory(trx, scope, source, facts, url)

@@ -117,14 +117,24 @@ export async function applyMigrations(
 }
 
 export async function ensureEvidencePartitions(client: pg.ClientBase): Promise<string[]> {
-  const { rows } = await client.query<{ skipped: string[] }>(
-    'select public.site_evidence_ensure_partitions() as skipped',
+  const { rows: targets } = await client.query<{ evidence_table: string; evidence_month: string }>(
+    "select evidence_table, to_char(evidence_month, 'YYYY-MM-DD') as evidence_month from public.site_evidence_partition_targets()",
   );
+  const skipped: string[] = [];
+  for (const { evidence_table: table, evidence_month: month } of targets) {
+    const { rows } = await client.query<{ outcome: string }>( // NOSONAR
+      'select public.site_evidence_month_partition($1, $2::date) as outcome',
+      [table, month],
+    );
+    const outcome = rows[0]?.outcome;
+    if (outcome !== 'created' && outcome !== 'exists')
+      skipped.push(`${table} ${month.slice(0, 7)}: ${outcome}`);
+  }
   await client.query(`do $$ declare parent regclass; begin
     for parent in select partrelid from pg_partitioned_table loop
       execute format('analyze %s', parent);
     end loop; end $$`);
-  return rows[0]?.skipped ?? [];
+  return skipped;
 }
 
 function scramVerifier(password: string): string {

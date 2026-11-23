@@ -30,6 +30,7 @@ import {
   searchableName,
   verifyPage,
 } from './discovery-validation.ts';
+import { fitsIndexKey } from '../db/index-key.ts';
 
 const p = policy.commerce.discovery;
 const logger = getLogger('commerce.discovery');
@@ -228,7 +229,8 @@ async function publish(
     })
     .execute();
   const survivors = items.filter(
-    (item) => item.validation_outcome === 'accepted' && item.canonical,
+    (item) =>
+      item.validation_outcome === 'accepted' && item.canonical && fitsIndexKey(item.canonical),
   );
   if (survivors.length)
     await trx
