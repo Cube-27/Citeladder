@@ -41,12 +41,6 @@
               "prompt": "Generate buyer prompts for us to track.",
               "tools_triggered": "list_projects when needed; get_project_business_context; preview_topics; prepare_change with the confirm_topics kind, then confirm_change after the user agrees; read_seed_queries; prepare_change with the generate_prompts kind, then confirm_change once after the user agrees",
               "expected_behavior": "The assistant follows the Prompt Builder's steps: confirms the business facts, shows existing and proposed topics without IDs, saves only the agreed topic plan, offers the search queries and mix, then runs one generation. It reports the staged suggestions and sends the user to CiteLadder's review link; it writes no prompt wording itself and never says the prompts are tracked."
-            },
-            {
-              "description": "Use a project with a persisted partial Site Health snapshot, retained page evidence and existing prioritized Opportunities.",
-              "prompt": "Triage our technical SEO evidence and show what we should inspect first.",
-              "tools_triggered": "read_site_health; read_site_pages pinned to crawl_id; read_actions; read_ai_crawlability; fetch returned references; optionally render_site_health",
-              "expected_behavior": "Pin snapshot/crawl IDs and distinguish scores from partial/unknown coverage. Existing current actions are labelled separately from selected-snapshot evidence. No crawl or Action is created."
             }
           ],
           "negative": [

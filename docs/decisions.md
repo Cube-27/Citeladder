@@ -173,6 +173,9 @@ how to add or change an entry.
   in the Agent's cached prefix, so new reads are views or parameters on existing
   tools before new tools. Tool descriptions, links, docs site and changelog are
   refreshed with each change. Owner, 2026-11-18 ([MCP](mcp.md#the-catalogue)).
+- **The OpenAI plugin carries exactly five positive review cases** (three
+  negative); a new workflow replaces a case, never adds a sixth. Owner,
+  2026-11-23 (`plugins/citeladder/plugin.json`).
 
 ## Prompts and Visibility
 
