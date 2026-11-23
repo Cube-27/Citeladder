@@ -2,11 +2,15 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
-import { definitions, dispatchTool, presentationTools } from '../mcp/tools.ts';
+import {
+  definitions,
+  dispatchTool,
+  presentationTools,
+  withoutSentencesNaming,
+} from '../mcp/tools.ts';
 import { parseRecordId } from '../mcp/retrieval.ts';
-import { MCP_CHANGE_KINDS } from '../mcp/change-kinds.ts';
+import { CHANGE_KINDS } from '../changes/kinds.ts';
 import { isAgentChangeKind } from './change-proposals.ts';
-import { writeTools } from '../mcp/write-tools.ts';
 import { stoppableReads } from './async.ts';
 import { ToolRegistry, toolDefinitions, type ReadTool } from './tools.ts';
 import { agentPolicy, type Json, type Scope } from './contracts.ts';
@@ -74,20 +78,8 @@ function namedRecords(name: string, data: unknown): string[] {
 const NOT_FOR_AGENT = new Set(['list_projects', ...presentationTools]);
 const MISSING_TOOLS: ReadonlySet<string> = new Set([
   ...NOT_FOR_AGENT,
-  ...writeTools.map((tool) => tool.name),
-  ...MCP_CHANGE_KINDS.filter((kind) => !isAgentChangeKind(kind)),
+  ...CHANGE_KINDS.filter((kind) => !isAgentChangeKind(kind)),
 ]);
-function agentDescription(description: string) {
-  return description
-    .split(/(?<=\.)\s+/u)
-    .filter(
-      (sentence) =>
-        ![...sentence.matchAll(/\b[a-z]+(?:_[a-z]+)+\b/gu)].some(([word]) =>
-          MISSING_TOOLS.has(word),
-        ),
-    )
-    .join(' ');
-}
 export function sharedReads(db: Database): ReadTool[] {
   return Object.entries(definitions)
     .filter(([name]) => !NOT_FOR_AGENT.has(name))
@@ -98,7 +90,7 @@ export function sharedReads(db: Database): ReadTool[] {
       const page = agentPage(fields.limit);
       return {
         name,
-        description: agentDescription(definition.description),
+        description: withoutSentencesNaming(definition.description, MISSING_TOOLS),
         arguments: z.strictObject(page ? { ...fields, limit: page.schema } : fields) as z.ZodType<
           Record<string, Json>
         >,

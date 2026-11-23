@@ -210,7 +210,6 @@
     "introductory_operator_codes": ["src/billing/journeys.ts"],
     "mcp_authorization_codes": ["src/mcp/oauth.ts"],
     "mcp_authorization_requests": ["src/mcp/oauth-routes.ts", "src/mcp/oauth.ts"],
-    "mcp_confirmations": ["src/mcp/confirmations.ts"],
     "mcp_oauth_clients": ["src/mcp/registration.ts"],
     "mcp_oauth_grants": ["src/mcp/connections.ts", "src/mcp/oauth.ts"],
     "metric_snapshots": ["src/analysis/finalization.ts"],

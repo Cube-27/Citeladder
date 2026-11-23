@@ -74,34 +74,7 @@ export type ConsentView = Readonly<{
   error: string | null;
   termsRevision: string;
   appOrigin: string;
-  offerChanges: boolean;
 }>;
-
-const CHANGES = [
-  'Add, edit and archive prompts',
-  'Add, rename and delete topics',
-  'Add and remove competitors',
-  'Launch and cancel audits',
-  'Create audit schedules',
-  'Update Action status and declare Actions implemented',
-];
-
-function allowChanges() {
-  return html`<fieldset class="stack">
-    <legend><h2>Allow changes</h2></legend>
-    <label class="terms">
-      <input type="checkbox" name="allow_changes" value="yes" />
-      <span class="stack"
-        ><span class="name">Let it make changes in workspaces where you are a Member or above</span>
-        <span class="meta">${CHANGES.join(' · ')}.</span>
-        <span class="meta"
-          >Your assistant must ask you before each change. Larger changes, such as adding prompts or
-          launching an audit, show you a preview and happen only after you confirm it.</span
-        ></span
-      >
-    </label>
-  </fieldset>`;
-}
 
 function workspaceChoice(view: ConsentView, workspace: ConsentWorkspace, preselect: boolean) {
   const consentPath = `/mcp/oauth/consent?transaction=${encodeURIComponent(view.transaction)}`;
@@ -199,11 +172,6 @@ export function consentPage(view: ConsentView) {
                 <a href="${view.appOrigin}/onboarding?${setup}">Set up your first project</a>, then
                 you will come back here to approve.
               </p>`
-        }
-        ${
-          view.offerChanges && shareable.some((workspace) => workspace.canChange)
-            ? allowChanges()
-            : ''
         }
         ${
           needsTerms

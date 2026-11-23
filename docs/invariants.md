@@ -158,10 +158,7 @@ workflow status.
 
 A write through a public API key is an explicit user decision when the key holds
 the matching scope and its Owner or Admin creator's current role allows it
-([Public API](public-api.md)). A write through MCP is one when the grant holds
-`citeladder:write`, the member's live role allows the kind's permission, the
-kind is on MCP's curated list, and the change was confirmed through
-`confirm_change` against its preview ([MCP](mcp.md#changes)). An in-app Agent change is one only when the
+([Public API](public-api.md)). MCP never writes ([MCP](mcp.md#changes)). An in-app Agent change is one only when the
 member clicks Confirm on the card for that proposal: it executes once, as the
 clicking member, against their live role and the kind's permission
 ([Agent](agents.md#proposed-changes)). No preview makes a model call or spends

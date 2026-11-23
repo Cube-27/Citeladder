@@ -4,10 +4,10 @@ import { sessionUser } from '../auth/session.ts';
 import { demoAccessExpired, policy, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
-import { record, strings } from '../db/json.ts';
+import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import { ApiError } from '../errors.ts';
-import { holdsWrite, mcpPolicy, type McpConfig } from './config.ts';
+import { mcpPolicy, type McpConfig } from './config.ts';
 import { consentMessage, consentPage, consentReturn } from './consent-page.ts';
 import {
   completeConsent,
@@ -31,7 +31,6 @@ function consentSelection(form: URLSearchParams) {
     selected: form.getAll('workspace_id'),
     acceptedTermsRevision:
       form.get('accept_terms') === 'yes' ? (form.get('terms_revision') ?? '') : null,
-    allowChanges: form.get('allow_changes') === 'yes',
   };
 }
 export function registerConsentRoutes(
@@ -85,7 +84,6 @@ export function registerConsentRoutes(
         error,
         termsRevision: policy.auth.terms_revision,
         appOrigin: mcp.browserOrigin,
-        offerChanges: holdsWrite(strings(row.scopes)),
       }),
       error ? 400 : 200,
     );

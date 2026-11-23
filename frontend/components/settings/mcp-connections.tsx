@@ -56,7 +56,6 @@ function ConnectionRow({
           ) : null}
         </div>
       </TableCell>
-      <TableCell>{connection.access === 'read_and_change' ? 'Read and write' : 'Read'}</TableCell>
       <TableCell>
         <DisplayTime value={connection.created_at} dateOnly />
       </TableCell>
@@ -90,7 +89,6 @@ function ConnectionRow({
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'connection', label: 'Connection', kind: 'identity' },
-  { key: 'access', label: 'Actions', kind: 'text', width: 'category' },
   { key: 'connected', label: 'Connected', kind: 'date', priority: 'low' },
   { key: 'used', label: 'Last used', kind: 'date' },
   { key: 'manage', label: 'Manage', kind: 'actions', width: 'button', hideLabel: true },

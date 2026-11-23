@@ -53,7 +53,6 @@ export const mcp = {
     consent_csp:
       "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
     read_scope: 'citeladder:read',
-    write_scope: 'citeladder:write',
     scopes_supported: ['citeladder:read'],
     server_version: '2.0.0',
     result_cache: {
@@ -100,8 +99,6 @@ export const mcp = {
     tool_call_window_seconds: 60,
     tool_call_grant_limit: 120,
     tool_call_user_limit: 600,
-    write_call_grant_limit: 30,
-    confirmation_ttl_seconds: 600,
     protocol_retention_seconds: 15552000,
   },
 };

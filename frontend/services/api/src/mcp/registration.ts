@@ -98,10 +98,6 @@ export function admitToolCall(db: Database, grantId: string, userId: string) {
   ]);
 }
 
-export function admitWriteCall(db: Database, grantId: string) {
-  return admitBudgets(db, [[budget('mcp_write_call_grant'), grantId]]);
-}
-
 async function admitBudgets(db: Database, budgets: readonly (readonly [Budget, string])[]) {
   for (const [limit, subject] of budgets) await spendBudget(db, limit, subject); // NOSONAR
 }

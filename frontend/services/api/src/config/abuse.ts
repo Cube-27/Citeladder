@@ -335,12 +335,6 @@ export const budgets = {
     limit: mcpLimits.tool_call_user_limit,
     windowSeconds: mcpLimits.tool_call_window_seconds,
   },
-  mcp_write_call_grant: {
-    operation: 'mcp.write_call.grant',
-    subject: 'mcp_grant',
-    limit: mcpLimits.write_call_grant_limit,
-    windowSeconds: mcpLimits.tool_call_window_seconds,
-  },
 } satisfies Record<string, Budget>;
 
 export type BudgetName = keyof typeof budgets;

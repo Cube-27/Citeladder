@@ -44,7 +44,6 @@ beforeEach(async () => {
     grantId: randomUUID(),
     workspaceIds: [tenant.workspaceId],
     tokenHash: randomUUID(),
-    canWrite: false,
   };
   await db
     .insertInto('mcp_oauth_grants')

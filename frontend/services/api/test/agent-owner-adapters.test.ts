@@ -3,8 +3,6 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { z } from 'zod';
 import * as sharedTools from '../src/mcp/tools.ts';
-import { isMcpChangeKind } from '../src/mcp/change-kinds.ts';
-import { writeTools } from '../src/mcp/write-tools.ts';
 import { AgentFixtures, reply, save, scripted, toolUse, type Response } from './agent-support.ts';
 import { testDatabase } from './support.ts';
 import { agentTools, sharedReads, smallerLimit } from '../src/agent/tool-adapters.ts';
@@ -117,7 +115,7 @@ describe('Agent bindings to the evidence and Action owners', () => {
     expect([...named].filter((name) => !offered.has(name))).toEqual([]);
     const chatOnly = ['list_projects', 'render_visibility', 'render_site_health', 'open_analytics'];
     expect(chatOnly.filter((name) => offered.has(name))).toEqual([]);
-    const lacking = [...chatOnly, ...writeTools.map((tool) => tool.name)];
+    const lacking = [...chatOnly];
     const described = offered.catalog().map((tool) => tool.description);
     expect(lacking.filter((name) => described.some((text) => text.includes(name)))).toEqual([]);
     const actions = described.find((text) =>
@@ -145,12 +143,7 @@ describe('Agent bindings to the evidence and Action owners', () => {
     );
     expect(pluginNamed.size).toBeGreaterThan(0);
     expect(
-      [...pluginNamed].filter(
-        (name) =>
-          !Object.hasOwn(sharedTools.definitions, name) &&
-          !writeTools.some((tool) => tool.name === name) &&
-          !isMcpChangeKind(name),
-      ),
+      [...pluginNamed].filter((name) => !Object.hasOwn(sharedTools.definitions, name)),
     ).toEqual([]);
   });
   it('stops issuing a shared read’s queries once its signal aborts', async () => {
