@@ -8,7 +8,6 @@ import {
 import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 
 export const mcpPolicy = policy.mcp.constants;
-export const holdsWrite = (scopes: readonly string[]) => scopes.includes(mcpPolicy.write_scope);
 
 export function grantableScopes(requested: string | null | undefined): string[] {
   const named = (requested ?? '').split(/\s+/u).filter(Boolean);

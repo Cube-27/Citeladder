@@ -8,10 +8,9 @@ import { isRecord } from '../db/json.ts';
 import { lenient, nested, opaque } from '../lenient-fields.ts';
 import { loadMcpConfig, mcpPolicy } from './config.ts';
 import { authenticateMcp } from './oauth.ts';
-import { admitToolCall, admitWriteCall } from './registration.ts';
+import { admitToolCall } from './registration.ts';
 import { registerOAuthRoutes } from './oauth-routes.ts';
 import { dispatchTool, presentationTools, tools } from './tools.ts';
-import { dispatchWrite, isWriteTool, writeTools } from './write-tools.ts';
 import { callerMessage } from './types.ts';
 import { getLogger } from '../logging.ts';
 import { parseUuid } from '../http/uuid.ts';
@@ -34,7 +33,6 @@ const toolNames = new Set(tools.map((tool) => tool.name));
 const listedTools = tools.map((tool) =>
   presentationTools.has(tool.name) ? { ...tool, _meta: appToolMetadata } : tool,
 );
-const listedWithChanges = [...listedTools, ...writeTools];
 const CAPABILITIES = { tools: {}, resources: {}, prompts: {} };
 const VERSION_KEY = 'io.modelcontextprotocol/protocolVersion';
 const clientInfoSchema = z.object({ name: z.string(), version: z.string() });
@@ -103,7 +101,6 @@ type RpcParams = z.output<typeof paramsSchema>;
 type McpCall = {
   c: McpContext;
   db: Database;
-  config: ServiceConfig;
   settings: McpSettings;
   principal: McpPrincipalGrant;
   message: RpcMessage;
@@ -240,26 +237,16 @@ function initialize({ c, message, modern }: McpCall): MethodResult {
   };
 }
 async function callTool(call: McpCall): Promise<MethodResult> {
-  const { c, db, config, settings, principal, message } = call;
+  const { c, db, settings, principal, message } = call;
   const parsed = toolCallSchema.safeParse(call.params);
   if (!parsed.success) return c.json(rpcError(message.id, -32602, 'Invalid tool arguments'), 400);
   const { name } = parsed.data;
-  const writeName = principal.canWrite && isWriteTool(name) ? name : null;
-  const write = writeName !== null;
-  if (!toolNames.has(name) && !write)
+  if (!toolNames.has(name))
     return c.json(rpcError(message.id, -32602, `Unknown tool: ${name}`), 400);
   try {
     await admitToolCall(db, principal.grantId, principal.userId);
-    if (write) await admitWriteCall(db, principal.grantId);
     const args = parsed.data.arguments ?? {};
-    const value =
-      writeName === null
-        ? await dispatchTool(db, principal, name, args, settings.browserOrigin)
-        : await dispatchWrite(
-            { db, config, principal, origin: settings.browserOrigin },
-            writeName,
-            args,
-          );
+    const value = await dispatchTool(db, principal, name, args, settings.browserOrigin);
     return {
       content: [{ type: 'text', text: JSON.stringify(value) }],
       structuredContent: value,
@@ -267,18 +254,20 @@ async function callTool(call: McpCall): Promise<MethodResult> {
       ...(presentationTools.has(name) ? { _meta: appToolMetadata } : {}),
     };
   } catch (error) {
-    return toolFailure(error, name, write);
+    return toolFailure(error, name);
   }
 }
-function toolFailure(error: unknown, name: string, write: boolean): MethodResult {
+function toolFailure(error: unknown, name: string): MethodResult {
   const problem = callerMessage(error);
   if (problem === null)
     logger.warning('MCP tool call failed', {
       tool: name,
       exceptionType: error instanceof Error ? error.name : 'unknown',
     });
-  const fallback = write ? 'The change was not made.' : 'Evidence is unavailable.';
-  return { content: [{ type: 'text', text: problem ?? fallback }], isError: true };
+  return {
+    content: [{ type: 'text', text: problem ?? 'Evidence is unavailable.' }],
+    isError: true,
+  };
 }
 async function readResource({ c, db, settings, principal, message, params }: McpCall) {
   if (params.uri === appResource.uri) return readAppResource();
@@ -324,7 +313,7 @@ function getPrompt({ c, message, params }: McpCall): MethodResult {
   };
 }
 async function dispatchMethod(call: McpCall): Promise<MethodResult> {
-  const { c, message, principal, modern } = call;
+  const { c, message, modern } = call;
   switch (message.method) {
     case 'initialize':
       return initialize(call);
@@ -338,7 +327,7 @@ async function dispatchMethod(call: McpCall): Promise<MethodResult> {
     case 'ping':
       return {};
     case 'tools/list':
-      return { tools: principal.canWrite ? listedWithChanges : listedTools };
+      return { tools: listedTools };
     case 'tools/call':
       return callTool(call);
     case 'resources/list':
@@ -408,7 +397,6 @@ async function handleMcpRequest(
   const result = await dispatchMethod({
     c,
     db,
-    config,
     settings,
     principal,
     message,

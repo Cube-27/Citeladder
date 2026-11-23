@@ -4,18 +4,11 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { utcText } from '../db/timestamps.ts';
-import { strings } from '../db/json.ts';
-import type { Actor } from '../auth/actor.ts';
-import {
-  McpInputError,
-  type Evidence,
-  type EvidencePrincipal,
-  type McpPrincipal,
-} from './types.ts';
-import { holdsWrite, mcpPolicy } from './config.ts';
+import { McpInputError, type Evidence, type EvidencePrincipal } from './types.ts';
+import { mcpPolicy } from './config.ts';
 import { workspaceAccess } from '../entitlements/access.ts';
 import { requiresEmailVerification } from '../auth/eligibility.ts';
-import { findWorkspaceMember, memberCan, rolesWith } from '../auth/workspace.ts';
+import { memberCan, rolesWith } from '../auth/workspace.ts';
 import { appLink, recordPath } from './links.ts';
 import { containsPattern } from '../db/like.ts';
 import { LISTED_ACTION } from '../opportunities/actions.ts';
@@ -95,40 +88,6 @@ export async function authorizeProject(
   if (!row) throw new McpInputError('Project was not found in this account');
   return row;
 }
-export async function writeActor(
-  db: Database,
-  principal: McpPrincipal,
-  projectId: string,
-): Promise<Actor> {
-  if (!principal.canWrite)
-    throw new McpInputError(
-      'This connection can only read. Reconnect CiteLadder and tick Allow changes to make changes.',
-    );
-  const project = await authorizeProject(db, principal, projectId);
-  const grant = await db
-    .selectFrom('mcp_oauth_grants')
-    .select('scopes')
-    .where('id', '=', principal.grantId)
-    .where('access_token_hash', '=', principal.tokenHash)
-    .where('revoked_at', 'is', null)
-    .forShare()
-    .executeTakeFirst();
-  if (!grant) throw new McpInputError('Project was not found in this account');
-  if (!holdsWrite(strings(grant.scopes)))
-    throw new McpInputError(
-      'This connection can only read. Reconnect CiteLadder and tick Allow changes to make changes.',
-    );
-  const member = await findWorkspaceMember(db, principal.userId, project.workspace_id, 'share');
-  if (!member) throw new McpInputError('Project was not found in this account');
-  return {
-    kind: 'mcp',
-    workspaceId: project.workspace_id,
-    userId: principal.userId,
-    role: member.role,
-    scopes: 'all',
-  };
-}
-
 export const encodeCursor = (...parts: unknown[]) =>
   Buffer.from(JSON.stringify(parts.map(String))).toString('base64url');
 export function decodeCursor(value: string, size: number): string[] {

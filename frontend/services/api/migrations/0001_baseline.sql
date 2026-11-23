@@ -6412,38 +6412,6 @@ CREATE INDEX ix_mcp_authorization_requests_expires_at ON public.mcp_authorizatio
 
 CREATE UNIQUE INDEX ix_mcp_authorization_requests_transaction_hash ON public.mcp_authorization_requests USING btree (transaction_hash);
 
--- MCP offers a curated list of change kinds that grows in code
--- (MCP_CHANGE_KINDS); prepare and confirm both check the kind against it.
--- claimed_at is when a confirm of a live kind claimed the confirmation; a claim
--- older than live_change_claim_seconds lapses, so a confirm after a crash
--- replays the run.
-CREATE TABLE public.mcp_confirmations (
-    id uuid NOT NULL,
-    workspace_id uuid NOT NULL,
-    grant_id uuid NOT NULL,
-    user_id uuid NOT NULL,
-    kind character varying(40) NOT NULL,
-    project_id uuid NOT NULL,
-    payload jsonb NOT NULL,
-    payload_hash character varying(64) NOT NULL,
-    token_hmac character varying(64) NOT NULL,
-    expires_at timestamp with time zone NOT NULL,
-    consumed_at timestamp with time zone,
-    created_at timestamp with time zone NOT NULL,
-    claimed_at timestamp with time zone
-);
-
-ALTER TABLE ONLY public.mcp_confirmations
-    ADD CONSTRAINT mcp_confirmations_pkey PRIMARY KEY (id);
-
-CREATE INDEX ix_mcp_confirmations_expires_at ON public.mcp_confirmations USING btree (expires_at);
-
-CREATE INDEX ix_mcp_confirmations_grant_id ON public.mcp_confirmations USING btree (grant_id);
-
-CREATE UNIQUE INDEX ix_mcp_confirmations_token_hmac ON public.mcp_confirmations USING btree (token_hmac);
-
-CREATE INDEX ix_mcp_confirmations_workspace_id ON public.mcp_confirmations USING btree (workspace_id);
-
 CREATE TABLE public.mcp_oauth_clients (
     id uuid NOT NULL,
     client_id character varying(36) NOT NULL,
@@ -8254,18 +8222,6 @@ ALTER TABLE ONLY public.mcp_authorization_codes
 
 ALTER TABLE ONLY public.mcp_authorization_requests
     ADD CONSTRAINT mcp_authorization_requests_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.mcp_oauth_clients(client_id) ON DELETE CASCADE;
-
-ALTER TABLE ONLY public.mcp_confirmations
-    ADD CONSTRAINT mcp_confirmations_grant_id_fkey FOREIGN KEY (grant_id) REFERENCES public.mcp_oauth_grants(id) ON DELETE CASCADE;
-
-ALTER TABLE ONLY public.mcp_confirmations
-    ADD CONSTRAINT mcp_confirmations_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-ALTER TABLE ONLY public.mcp_confirmations
-    ADD CONSTRAINT mcp_confirmations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE ONLY public.mcp_confirmations
-    ADD CONSTRAINT mcp_confirmations_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.mcp_oauth_grants
     ADD CONSTRAINT mcp_oauth_grants_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.mcp_oauth_clients(client_id) ON DELETE CASCADE;

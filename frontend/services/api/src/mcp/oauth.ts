@@ -7,8 +7,8 @@ import type { Database } from '../db/database.ts';
 import { strings } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
 import { recordPolicyAcceptance } from '../workspaces/policies.ts';
-import { roleAllows, rolesWith } from '../auth/workspace.ts';
-import { accountAllowed, holdsWrite, loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
+import { rolesWith } from '../auth/workspace.ts';
+import { accountAllowed, loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
 import type { McpPrincipal } from './types.ts';
 
 export class OAuthError extends Error {
@@ -79,7 +79,6 @@ export async function authenticateMcp(
     grantId: row.id,
     workspaceIds,
     tokenHash: digest,
-    canWrite: holdsWrite(strings(row.scopes)),
   };
 }
 function refreshDeadline(mcp: McpConfig, grantedAt: Date) {
@@ -129,7 +128,6 @@ export type ConsentWorkspace = Readonly<{
   id: string;
   name: string;
   hasProject: boolean;
-  canChange: boolean;
   state: 'ready' | 'terms' | 'inactive' | 'unresolved';
 }>;
 export type ConsentSession = Readonly<{ userId: string; sessionVersion: number }>;
@@ -206,7 +204,6 @@ export async function consentWorkspaces(db: Database, userId: string): Promise<C
     id: row.id,
     name: row.name,
     hasProject: Boolean(row.has_project),
-    canChange: roleAllows(row.role, 'write'),
     state: consentState(access[index]!.status, Boolean(row.accepted)),
   }));
 }
@@ -244,7 +241,6 @@ export function completeConsent(
   decision: {
     selected: string[];
     acceptedTermsRevision: string | null;
-    allowChanges: boolean;
   } | null,
 ): Promise<string> {
   return db.transaction().execute(async (trx) => {
@@ -274,13 +270,7 @@ export function completeConsent(
           revision: policy.auth.terms_revision,
           context: 'mcp_consent',
         });
-      const changes =
-        decision.allowChanges &&
-        shareable.some((w) => w.canChange && unique.includes(w.id)) &&
-        holdsWrite(strings(request.scopes));
-      const scopes = strings(request.scopes).filter(
-        (scope) => changes || scope !== mcpPolicy.write_scope,
-      );
+      const scopes = strings(request.scopes);
       const code = mintToken();
       await trx
         .insertInto('mcp_authorization_codes')

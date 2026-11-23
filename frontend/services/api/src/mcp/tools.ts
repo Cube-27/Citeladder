@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CHANGE_KINDS } from '../changes/kinds.ts';
 import type { Database } from '../db/database.ts';
 import { isRecord, plainJson } from '../db/json.ts';
 import { principalForCall } from './data.ts';
@@ -61,10 +62,21 @@ const annotations = {
   idempotentHint: true,
   openWorldHint: false,
 };
+export function withoutSentencesNaming(description: string, names: ReadonlySet<string>) {
+  return description
+    .split(/(?<=\.)\s+/u)
+    .filter(
+      (sentence) =>
+        ![...sentence.matchAll(/\b[a-z]+(?:_[a-z]+)+\b/gu)].some(([word]) => names.has(word)),
+    )
+    .join(' ');
+}
+const changeKindNames: ReadonlySet<string> = new Set(CHANGE_KINDS);
+
 export const tools = Object.entries(definitions).map(([name, definition]) => ({
   name,
   title: definition.title,
-  description: definition.description,
+  description: withoutSentencesNaming(definition.description, changeKindNames),
   inputSchema: inputSchema(definition.schema),
   annotations,
 }));

@@ -306,15 +306,15 @@ from another project. `list_projects` and the MCP App views (`render_visibility`
 the chat member through MCP's membership predicate, and workspace access
 (trial and plan) is rechecked before every model call. The Agent and MCP read
 the same catalogue; there are no Agent-only reads. The Agent's copy of a description drops each
-sentence naming a tool or change kind it lacks, so read guidance names a change
-by its kind, never by `prepare_change`. A caller's mistake (a bad cursor, window or
+sentence naming a tool or change kind it lacks, and MCP's copy drops each
+sentence naming any change kind, so read guidance names a change by its kind
+and only the Agent sees it. A caller's mistake (a bad cursor, window or
 filter) is refused with the owner's reason so the model can correct the call.
 A paged read whose `limit` takes any size returns the Agent `read_default_limit`
 (20) rows when the model names none and accepts at most `read_max_limit` (50),
 so a representative sample comes first and more is one cursor away; MCP
 clients keep the catalogue's own page sizes, and fixed-size or self-defaulting
-limits are unchanged. No read tool writes: the MCP write catalogue and
-`confirm_change` are not Agent tools; changes go through
+limits are unchanged. No read tool writes; changes go through
 [proposed changes](#proposed-changes).
 
 Each tool attempt is recorded in `agent_tool_attempts`. `unavailable` is distinct from a successful empty or zero read and from failure
@@ -375,7 +375,7 @@ out). The check calls the preconditions the owner exports and runs itself
 the click would refuse for a reason known before the call. At the click it runs outside any transaction and holds no pooled
 connection, because a charged model call must not hold either. One confirm-once
 helper ([`confirm-once.ts`](../frontend/services/api/src/changes/confirm-once.ts))
-serves the card and MCP's `confirm_change`: a short transaction under a
+serves the card: a short transaction under a
 try-lock on the proposal appends a `claimed` outcome row, the owner runs with
 the deterministic proposal id as its idempotency key, and a second transaction
 records the decision. A second click while the claim stands gets 409

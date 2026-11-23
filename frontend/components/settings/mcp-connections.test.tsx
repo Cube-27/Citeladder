@@ -26,7 +26,6 @@ const claude: McpConnection = {
     { id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', name: 'Beta' },
   ],
   user_email: null,
-  access: 'read',
   created_at: '2026-10-01T12:00:00Z',
   last_used_at: null,
   requires_consent: false,
@@ -55,9 +54,7 @@ it('lays a connection out in columns and revokes it only after confirmation', as
   list.mockResolvedValue([claude]);
   renderTab();
   const row = (await screen.findByText(/name not verified/u)).closest('tr');
-  expect(row).toHaveTextContent(
-    'Claude · name not verified' + 'Read' + 'Oct 1, 2026' + 'Not used yet',
-  );
+  expect(row).toHaveTextContent('Claude · name not verified' + 'Oct 1, 2026' + 'Not used yet');
   expect(row?.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
   expect(list.mock.calls.map(([id]) => id)).toEqual([undefined]);
 
@@ -75,14 +72,12 @@ it("shows an Owner/Admin their own and members' connections once, each with its 
     id: OTHER_GRANT,
     workspaces: [{ id: WORKSPACE, name: 'Acme' }],
     user_email: 'ana@example.test',
-    access: 'read_and_change' as const,
   };
   list.mockImplementation(async (workspaceId) =>
     workspaceId ? [{ ...claude, user_email: 'me@example.test' }, anas] : [claude],
   );
   renderTab('owner');
   const member = (await screen.findByText('ana@example.test')).closest('tr')!;
-  expect(member).toHaveTextContent('Read and write');
   expect(screen.getAllByRole('row')).toHaveLength(3);
   expect(screen.queryByText('me@example.test')).toBeNull();
   expect(screen.getByRole('button', { name: 'Revoke Claude' })).toBeInTheDocument();

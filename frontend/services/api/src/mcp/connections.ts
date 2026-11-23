@@ -3,7 +3,6 @@ import type { Database } from '../db/database.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { record, strings } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
-import { holdsWrite } from './config.ts';
 
 export async function listConnections(
   db: Database,
@@ -49,7 +48,6 @@ export async function listConnections(
         return name === undefined ? [] : [{ id, name }];
       }),
       user_email: scope.workspaceId ? row.email : null,
-      access: holdsWrite(strings(row.scopes)) ? ('read_and_change' as const) : ('read' as const),
       created_at: row.created_at.toISOString(),
       last_used_at: row.last_used_at?.toISOString() ?? null,
       requires_consent: strings(row.workspace_ids).length === 0,

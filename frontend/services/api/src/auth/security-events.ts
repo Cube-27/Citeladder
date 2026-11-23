@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Database } from '../db/database.ts';
 import type { AgentChangeKind } from '../agent/change-proposals.ts';
-import type { McpChangeKind } from '../mcp/change-kinds.ts';
 
 type SecurityEvent =
   | 'account.create'
@@ -40,8 +39,6 @@ type SecurityEvent =
   | 'mcp.revoke'
   | 'mcp.token_reuse'
   | 'mcp.workspace_revoke'
-  | `mcp.write.${McpChangeKind}`
-  | `mcp.write.${McpChangeKind}.unauthorized`
   | `agent.change.${AgentChangeKind}`
   | `agent.change.${AgentChangeKind}.unauthorized`;
 

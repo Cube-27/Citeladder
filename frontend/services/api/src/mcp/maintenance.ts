@@ -1,11 +1,7 @@
 import type { Database } from '../db/database.ts';
 import { mcpPolicy } from './config.ts';
 
-type Table =
-  | 'mcp_authorization_requests'
-  | 'mcp_authorization_codes'
-  | 'mcp_confirmations'
-  | 'mcp_oauth_grants';
+type Table = 'mcp_authorization_requests' | 'mcp_authorization_codes' | 'mcp_oauth_grants';
 
 export async function cleanupMcpProtocol(db: Database, now = new Date(), canAdmit = () => true) {
   const retained = new Date(now.getTime() - mcpPolicy.protocol_retention_seconds * 1000);
@@ -13,7 +9,6 @@ export async function cleanupMcpProtocol(db: Database, now = new Date(), canAdmi
   for (const table of [
     'mcp_authorization_requests',
     'mcp_authorization_codes',
-    'mcp_confirmations',
     'mcp_oauth_grants',
   ] as const)
     deleted += await cleanup(db, table, now, retained, canAdmit); // NOSONAR

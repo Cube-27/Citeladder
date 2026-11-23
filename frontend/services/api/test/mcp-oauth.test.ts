@@ -1169,68 +1169,11 @@ async function grantedScope(options: { scope?: string; extra?: Record<string, st
   return { client: c, view, value };
 }
 
-it('offers no changes and grants read only, even when the client asks and the form claims them', async () => {
+it('grants read only, even when the client asks for write and the form claims changes', async () => {
   const asked = await grantedScope({
     scope: 'citeladder:read citeladder:write',
     extra: { allow_changes: 'yes' },
   });
-  expect(asked.view.changes).toBeUndefined();
+  expect(asked.view.text).not.toContain('Allow changes');
   expect(asked.value.scope).toBe('citeladder:read');
-});
-
-it('never offers changes beyond the scope the client registered', async () => {
-  const registered = await registerClient(
-    db,
-    loadMcpConfig(config),
-    { redirect_uris: [callback], token_endpoint_auth_method: 'none', scope: 'citeladder:read' },
-    unmetered,
-  );
-  clients.push(registered.client_id);
-  const transaction = await pending(registered.client_id, 'citeladder:read citeladder:write');
-  expect((await consentView(transaction)).changes).toBeUndefined();
-  const approved = await approve(transaction, [tenant.workspaceId], { allow_changes: 'yes' });
-  const response = await token(registered.client_id, {
-    grant_type: 'authorization_code',
-    code: (await callbackOf(approved)).searchParams.get('code')!,
-    code_verifier: verifier,
-    redirect_uri: callback,
-  });
-  expect(((await response.json()) as { scope: string }).scope).toBe('citeladder:read');
-});
-
-it('offers no changes to a viewer and grants none when the form claims them', async () => {
-  await db
-    .updateTable('workspace_members')
-    .set({ role: 'viewer' })
-    .where('user_id', '=', tenant.userId)
-    .where('workspace_id', '=', tenant.workspaceId)
-    .execute();
-  const viewer = await grantedScope({ extra: { allow_changes: 'yes' } });
-  expect(viewer.view.changes).toBeUndefined();
-  expect(viewer.value.scope).toBe('citeladder:read');
-});
-
-it('lets a refresh drop write but never add it back or drop read', async () => {
-  const { client: c, value } = await grantedScope({ extra: { allow_changes: 'yes' } });
-  const readOnly = await token(c.client_id, {
-    grant_type: 'refresh_token',
-    refresh_token: value.refresh_token,
-    scope: 'citeladder:read',
-  });
-  const narrowed = (await readOnly.json()) as { scope: string; refresh_token: string };
-  expect(narrowed.scope).toBe('citeladder:read');
-  const expand = await token(c.client_id, {
-    grant_type: 'refresh_token',
-    refresh_token: narrowed.refresh_token,
-    scope: 'citeladder:read citeladder:write',
-  });
-  expect(await expand.json()).toMatchObject({ error: 'invalid_scope' });
-
-  const second = await grantedScope({ extra: { allow_changes: 'yes' } });
-  const writeOnly = await token(second.client.client_id, {
-    grant_type: 'refresh_token',
-    refresh_token: second.value.refresh_token,
-    scope: 'citeladder:write',
-  });
-  expect(await writeOnly.json()).toMatchObject({ error: 'invalid_scope' });
 });

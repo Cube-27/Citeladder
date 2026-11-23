@@ -3,14 +3,11 @@
 ## Responsibility
 
 CiteLadder's hosted MCP server lets a customer's AI assistant (Claude, ChatGPT,
-Cursor and others) read their CiteLadder data and, when the person allows it,
-make changes they confirm. It is an interface over the product owners: it owns
-OAuth authorization records, the read and write catalogues, change
-confirmations and their delivery, not business data, generation or external
-mutation. Every write runs through the same [command layer](../frontend/services/api/src/commands)
-as the browser and the public API. The read catalogue is also the in-app
-[Agent](agents.md)'s, so both read the same evidence the same way; the Agent
-never sees the write catalogue.
+Cursor and others) read their CiteLadder data; it never changes it. It is an
+interface over the product owners: it owns OAuth authorization records and the
+read catalogue and its delivery, not business data, generation or external
+mutation. The read catalogue is also the in-app [Agent](agents.md)'s, so both
+read the same evidence the same way.
 Public setup lives at `https://docs.citeladder.com/mcp/`; the protocol endpoint is
 `https://api.citeladder.com/mcp`. The issuer, resource, discovery documents,
 registration, authorize, token and revoke all live on that API host origin
@@ -48,8 +45,8 @@ the code. A workspace whose trial or subscription has ended is shown, not
 selectable, with a billing link; one whose access cannot be resolved is shown as
 unconfirmed, without a billing fix.
 Connections are read-only: `scopes_supported` lists only `citeladder:read`, so
-no request is granted `citeladder:write` and the page never offers **Allow
-changes** ([decision](decisions.md#agent-mcp-and-public-api)).
+every grant is read-only and the page offers no change permission
+([decision](decisions.md#agent-mcp-and-public-api)).
 A workspace without a project links to onboarding, whose `return_to` brings the
 person back to consent.
 
@@ -78,8 +75,7 @@ redirect-host allowlist; the protections are bounds and binding:
   client name.
 - Registration narrows rather than refuses what it does not support: grant types
   reduce to `authorization_code`/`refresh_token`, the scope to the supported
-  `citeladder:read` and `citeladder:write` it names (read always; both when it
-  names none),
+  `citeladder:read` (whatever it names),
   and `code` must be among the response types. An omitted auth method is
   `client_secret_basic` (RFC 7591 §2); a confidential client may present its
   secret in the body or the header.
@@ -91,8 +87,7 @@ redirect-host allowlist; the protections are bounds and binding:
   matches on any port (RFC 8252 §7.3) and the requested URI is the one bound;
   the token exchange rechecks it and the verifier. Unknown extra scopes (such as
   `offline_access`) are dropped; a request without `citeladder:read` is refused,
-  scopes never exceed what the client registered, and a request only offers
-  write, never grants it. Oversized queries and states are refused
+  and scopes never exceed what the client registered. Oversized queries and states are refused
   before writes, and usage windows and the client row lock cap live requests
   (`config/mcp.ts`).
 - Once the redirect is proven, every later `/authorize` error returns to the
@@ -116,10 +111,9 @@ use encrypted custody.
 
 - Access tokens last an hour and are bound to the `/mcp` resource and the
   granted scopes (RFC 8707); every token holds read. A 401 carries
-  `WWW-Authenticate` with the protected-resource metadata and both supported
-  scopes (RFC 9728).
-- A refresh may narrow the scopes (dropping write), never expand them or drop
-  read; a connection gains write only by consenting again.
+  `WWW-Authenticate` with the protected-resource metadata and the supported
+  scope (RFC 9728).
+- A refresh never expands the scopes or drops read.
 - Refresh rotates both tokens and keeps the superseded refresh token's hash. A
   concurrent refresh inside the 60-second grace window is refused without
   consequence; that token presented later means it leaked, so the grant is
@@ -159,8 +153,8 @@ tools, each declaring its input schema and the owner read it delegates to.
 Project tools authorize the project on every call and must report a `state`
 (`available`, `unavailable` with a `reason`, or the owner's `observed_zero`);
 missing evidence is never zero and is never repaired by reading it. No read
-crawls, calls a provider, enqueues work or writes; changes are a separate
-catalogue (below). The generated public tool reference lists the tools.
+crawls, calls a provider, enqueues work or writes (see [Changes](#changes)).
+The generated public tool reference lists the tools.
 
 Each market is measured apart: market-scoped reads take `market_id` (omitted
 is the default market). Visibility overview, trends, results, sources, query
@@ -195,77 +189,13 @@ string and fragment, as the Site tools' do.
 
 ## Changes
 
-Not offered: no new grant holds `citeladder:write`, so `tools/list` never lists
-the write catalogue below ([decision](decisions.md#agent-mcp-and-public-api)).
-The code stays until its removal (backlog); this section describes it.
-
-MCP was for analysis and writing, so it offered a curated subset of the change
-table it shares with the Agent ([`changes/kinds.ts`](../frontend/services/api/src/changes/kinds.ts),
-[Agent](agents.md#proposed-changes)): the kinds in
-[`MCP_CHANGE_KINDS`](../frontend/services/api/src/mcp/change-kinds.ts), typed
-against that table ([decisions](decisions.md#agent-mcp-and-public-api)). A kind
-the Agent gains is not on MCP until it is added to that list. The
-[write catalogue](../frontend/services/api/src/mcp/write-tools.ts) is three
-tools, listed in `tools/list` and callable only for a grant holding
-`citeladder:write` (a read-only grant gets "Unknown tool"): `prepare_change`,
-`confirm_change` and `preview_topics`.
-
-`prepare_change` takes `project_id`, a kind and its payload; its description
-lists the kinds by area and purpose, and its input schema lists the payload as
-a free object: clients load the tool list every session, and a union of every
-kind's shape would triple its size. A call that names a kind with no payload
-returns the kind's shape and prepares nothing, and the payload is parsed against
-the kind's own schema, whose problem comes back with the shape.
-[`writeActor`](../frontend/services/api/src/mcp/data.ts) authorizes the project
-through the live grant and membership, holds the grant row (still unrevoked and
-holding write) and the membership row shared, and loads the member's live role,
-which the kind's permission checks (a Viewer is refused; a demotion applies to
-the next call). The MCP actor carries every scope, so a kind whose permission
-names no API-key scope is allowed to an MCP grant and still refused to API keys.
-The kind then stages exactly as an Agent proposal does: a **dry run** of its
-`execute` over the operator rollback transaction (every check, admission and
-write rolled back), or, for a live kind, only its check. Nothing is saved, held,
-spent, fetched or sent to a model. The exact payload goes into
-`mcp_confirmations` behind a single-use 43-character base62 token (HMAC-stored,
-ten minutes, bound to the grant), and the call returns the kind's preview
-(title, rows, spend, an app link; no IDs) plus the token. A delete's preview
-names what goes with it and that it cannot be undone; a paid kind's names its
-spend.
-
-[`confirm_change`](../frontend/services/api/src/mcp/confirmations.ts) locks the
-row, refuses a used, expired or other-connection token or a kind no longer on
-the list, reauthorizes through `writeActor` and the kind's permission, runs the
-kind's `execute` with the stored payload in the same transaction, marks the
-token consumed and records an `mcp.write.<kind>` security event targeting the
-project. A refused or failed change commits nothing and leaves the token usable
-until expiry; a changed world returns the owner's normal error. A live kind
-(prompt generation) cannot hold a transaction or a connection across its model
-call. It goes through the Agent's confirm-once claim
-([Agent](agents.md#proposed-changes)): a short transaction stamps
-`claimed_at` on the confirmation (a second confirm while the claim stands is
-refused) and extends its expiry past the claim, so a crashed confirm can still
-be replayed; releasing the claim restores the issued expiry. The owner runs with the
-confirmation's id as its idempotency key, and the token is consumed after the
-owner succeeds, so a retried confirm replays the persisted run instead of
-spending a second one. The role is checked again when the token is consumed: a
-member demoted or removed, or a grant revoked, during the run gets a refusal,
-the token stays unconsumed, and because the owner's run and its spend stand,
-an `mcp.write.<kind>.unauthorized` security event records the execution and the
-connection's member instead of `mcp.write.<kind>`.
-
-`preview_topics` stays a tool because it is not a change: it spends one model
-call through the Prompt builder's owner and saves nothing, and its result feeds
-the `confirm_topics` kind.
-
-Write calls spend the normal tool budgets plus a per-grant write budget.
-Annotations are true to behaviour: `prepare_change` stores a token and changes no
-project data or anything outside (not destructive, not open-world), and
-`confirm_change` is the only tool that deletes, spends or reaches outside
-(`destructiveHint` and `openWorldHint` true). The server instructions require
-the preview shown and the user's yes before `confirm_change`, each time for a
-delete or a paid run. MCP elicitation is not offered: the transport is stateless
-HTTP and cannot hold a server-to-client request, so every client uses the token
-path.
+None. MCP is read-only: `scopes_supported` is `citeladder:read`, `tools/list`
+lists only the read catalogue, a change tool name gets "Unknown tool", and each
+listed description drops any sentence naming a change kind (the Agent's copy
+keeps the ones it can propose). Changes happen in the app or through the
+in-app Agent's [proposed changes](agents.md#proposed-changes)
+([decision](decisions.md#agent-mcp-and-public-api)). MCP elicitation is not
+offered: the transport is stateless HTTP.
 
 ## Errors and limits
 
@@ -274,8 +204,7 @@ field; a stale cursor; an inverted window; an unknown sort, status or record; a
 selection from another project) returns as a tool error (`isError`) with the
 owner's message, so the model can correct the call. Any other failure returns
 "Evidence is unavailable." and is logged without detail. An unknown tool or a
-malformed request is a JSON-RPC error. A write that fails for any other reason
-returns "The change was not made."; its transaction rolled back.
+malformed request is a JSON-RPC error.
 
 Tool calls are budgeted per connection and account (`config/mcp.ts`); a
 refusal is a tool error naming the retry time.

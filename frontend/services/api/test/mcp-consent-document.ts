@@ -28,10 +28,8 @@ export function consentDocument(source: string) {
   const refresh = all('meta').find((meta) => meta['http-equiv'] === 'refresh')?.content ?? '';
   return {
     workspaces: inputs.filter(
-      (input) =>
-        input.type === 'checkbox' && !['accept_terms', 'allow_changes'].includes(input.name ?? ''),
+      (input) => input.type === 'checkbox' && input.name !== 'accept_terms',
     ),
-    changes: inputs.find((input) => input.name === 'allow_changes'),
     terms: inputs.find((input) => input.name === 'accept_terms'),
     termsRevision: inputs.find((input) => input.name === 'terms_revision')?.value,
     links: all('a').flatMap((a) => (a.href ? [a.href] : [])),

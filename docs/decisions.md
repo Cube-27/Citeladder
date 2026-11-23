@@ -14,12 +14,13 @@ how to add or change an entry.
   reset or an edited applied file; [invariant 17](invariants.md#17-schema-changes-are-forward-migrations)
   has the mechanics; production is never reset for a schema change. Owner,
   2026-11-04. While there are no customers the owner may authorize a baseline
-  refold, deployed only after the owner's own reset of every database. Three
+  refold, deployed only after the owner's own reset of every database. Four
   refolded `0001_baseline.sql` in place: 0001–0049 (owner, 2026-11-17),
   `0002_ai_visibility_gaps` with its existing-data branches removed (owner,
-  2026-11-19), and the Agent-plan and perception changes of November 2026,
+  2026-11-19), the Agent-plan and perception changes of November 2026,
   `0002_agent_hero` and `0003_perception_categories`, because they change every
-  feature (owner, 2026-11-22). Forward migrations from `0002` apply again after
+  feature (owner, 2026-11-22), and the MCP write removal and baseline audit
+  fixes (owner, 2026-11-23). Forward migrations from `0002` apply again after
   each. A reset is owner-run, never agent-run.
 - **An app route change deletes the old route.** The signed-in app keeps no
   redirect, alias, tab-key remap or URL rewrite for a renamed or removed path or
@@ -161,10 +162,10 @@ how to add or change an entry.
   and 2026-11-22.
 - **MCP is read-only.** It offers analysis tools only, fewer than 60, the fewer
   the better; tools may be renamed, merged or removed. No change tools are
-  listed and no grant gets `citeladder:write`, so changes happen in the app.
-  This replaces the curated `prepare_change`/`confirm_change` set, which
-  OpenAI's directory review flagged for hiding several operations behind one
-  tool. Owner, 2026-10-10 (D4.2) and 2026-11-23 ([MCP](mcp.md#changes)).
+  listed and the only scope is `citeladder:read`, so changes happen in the
+  app; the write catalogue is deleted. If changes return, each is its own tool,
+  since OpenAI's directory review flags umbrella tools. The in-app Agent keeps
+  every change kind. Owner, 2026-10-10 (D4.2) and 2026-11-23 ([MCP](mcp.md#changes)).
 - **MCP reads grow by views first.** MCP and the Agent share one read catalogue
   in the Agent's cached prefix, so new reads are views or parameters on existing
   tools before new tools. Tool descriptions, links, docs site and changelog are
