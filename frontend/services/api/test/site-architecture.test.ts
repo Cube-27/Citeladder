@@ -464,9 +464,11 @@ it('complete coverage creates actionable root findings without borrowing foreign
   const orphans = catalog.items.find((item) => item.rule_id === 'architecture.orphan_pages')!;
   expect(orphans.affected_url_count).toBe(2);
   expect(orphans.page_kinds).not.toContain('homepage');
-  const detail = await issueDetail(db, seed.workspaceId, seed.crawlId, orphans.group_id, {
-    limit: 10,
-    cursor: null,
+  const detail = await issueDetail(db, {
+    workspaceId: seed.workspaceId,
+    crawlId: seed.crawlId,
+    groupId: orphans.group_id,
+    paging: { limit: 10, cursor: null },
   });
   expect(detail.affected_url_count).toBe(2);
   const ofKind = async (pageKind: string) =>

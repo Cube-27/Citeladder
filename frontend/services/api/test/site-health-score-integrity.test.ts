@@ -163,4 +163,18 @@ describe('a full score needs every applicable check evaluated and passed', () =>
       { run: 3, total: 4 },
     ]);
   });
+
+  it('keeps a crawl below 100 when an applicable page had no check run', () => {
+    const row = (rule_id: string, outcome: string) => ({
+      ...evaluatePageRules({ has_html: true }).find((item) => item.rule_id === rule_id)!,
+      outcome,
+    });
+    const fold = new MeasurementFold([]);
+    fold.add({ page_kind: 'other', evaluations: [row('technical.https', 'satisfied')] });
+    fold.add({ page_kind: 'other', evaluations: [row('technical.https', 'unknown')] });
+    expect([
+      fold.aggregate().web_fundamentals_score,
+      fold.byPageKind().other?.web_fundamentals_score,
+    ]).toEqual([50, 50]);
+  });
 });

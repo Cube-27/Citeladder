@@ -6,6 +6,7 @@ import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import type { PageDetail } from '@citeladder/contracts';
+import { scoreRoleLabels } from '@/lib/site-health/issues';
 
 type Evaluation = PageDetail['evaluations'][number];
 type CheckResult = 'failed' | 'not_checked' | 'passed' | 'not_applicable';
@@ -41,16 +42,18 @@ function checkResult(outcome: Evaluation['outcome']): CheckResult {
   }
 }
 
+const [WEB_LABEL = '', AEO_LABEL = ''] = scoreRoleLabels(['web_fundamentals', 'aeo_readiness']);
+
 function pillarLabel(pillar: string): string {
   const words = pillar.replaceAll('-', ' ');
-  return `AEO readiness · ${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+  return `${AEO_LABEL} · ${words.charAt(0).toUpperCase()}${words.slice(1)}`;
 }
 
 function groupsOf(evaluation: Evaluation): string[] {
   const groups: string[] = [];
-  if (evaluation.score_roles.includes('web_fundamentals')) groups.push('Web fundamentals');
+  if (evaluation.score_roles.includes('web_fundamentals')) groups.push(WEB_LABEL);
   if (evaluation.aeo_pillar) groups.push(pillarLabel(evaluation.aeo_pillar));
-  else if (evaluation.score_roles.includes('aeo_readiness')) groups.push('AEO readiness');
+  else if (evaluation.score_roles.includes('aeo_readiness')) groups.push(AEO_LABEL);
   return groups.length ? groups : ['Site'];
 }
 

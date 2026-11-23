@@ -139,28 +139,29 @@ export async function requireAdmitted(db: Database, crawl: Crawl, siteUrlId: str
 
 function pageFacts(facts: Record<string, unknown>) {
   const headings = record(facts.headings);
-  const anchors = Array.isArray(record(facts.links).anchors)
-    ? (record(facts.links).anchors as unknown[]).map(record)
-    : [];
-  const internal = anchors.filter((anchor) => anchor.is_internal === true).length;
+  const links = record(facts.links).anchors;
+  const anchors = Array.isArray(links) ? links.map(record) : null;
+  const internal = anchors?.filter((anchor) => anchor.is_internal === true).length ?? null;
   const robots = record(facts.robots);
-  const int = (value: unknown) => (typeof value === 'number' ? Math.trunc(value) : 0);
+  const int = (value: unknown) => (typeof value === 'number' ? Math.trunc(value) : null);
   const text = (value: unknown) => (typeof value === 'string' && value !== '' ? value : null);
+  const headingCounts = Object.values(record(headings.counts))
+    .map(int)
+    .filter((value) => value !== null);
   return {
     title: text(facts.title),
     meta_description: text(facts.meta_description),
     canonical_url: text(facts.canonical_url),
     robots_directives: (['noindex', 'nofollow'] as const).filter((name) => robots[name] === true),
     h1_count: int(headings.h1_count),
-    heading_count: Object.values(record(headings.counts)).reduce<number>(
-      (sum, value) => sum + int(value),
-      0,
-    ),
+    heading_count: headingCounts.length
+      ? headingCounts.reduce((sum, value) => sum + value, 0)
+      : null,
     image_count: int(record(facts.images).count),
     image_missing_alt_count: int(record(facts.images).missing_alt),
     word_count: int(record(facts.body).word_count),
     internal_link_count: internal,
-    external_link_count: anchors.length - internal,
+    external_link_count: anchors && internal !== null ? anchors.length - internal : null,
     structured_data_types: strings(record(facts.structured_data).types),
   };
 }

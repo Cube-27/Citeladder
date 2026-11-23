@@ -37,7 +37,7 @@ export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
   );
 }
 
-function scoreUnavailableState(state: string, reason?: string) {
+export function scoreUnavailableState(state: string | undefined, reason?: string) {
   if (state === 'excluded') return <Absence state="not_applicable" label="Excluded" />;
   if (reason === 'unsupported_purpose_checklist') {
     return <Absence state="not_applicable" label="No AEO checklist for this page kind" />;

@@ -115,8 +115,6 @@
       "services/api/src/site-health/change-snapshot.ts::persistChangeSnapshot": 19,
       "services/api/src/site-health/issue-states.ts::write": 16,
       "services/api/src/site-health/planner.ts::createCrawl": 15,
-      "services/api/src/site-health/reads/exports.ts::rootedTree": 14,
-      "services/api/src/site-health/reads/issues.ts::issueDetail": 13,
       "services/api/src/site-health/reads/pages.ts::pageDetail": 22,
       "services/api/src/site-health/resolution-evidence.ts::canonicalResolution": 14,
       "services/api/src/site-health/site-setup-task.ts::siteEvidence": 14,

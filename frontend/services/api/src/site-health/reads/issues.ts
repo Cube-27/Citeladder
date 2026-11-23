@@ -20,7 +20,7 @@ import { parseUuid } from '../../http/uuid.ts';
 import { firstOf } from '../../lists.ts';
 import { loadCrawl, viewIssuesSql, type Crawl } from './crawl.ts';
 import { issueChanges } from './issue-changes.ts';
-import { issueValue, pageTextColumns, pageTextJoin, type PageText } from './issue-values.ts';
+import { issueValue } from './issue-values.ts';
 import { decodeGroupCursor, groupCursorAfter, groupOrder, resumeIndex } from './issue-order.ts';
 import {
   issueGroupId,
@@ -212,7 +212,7 @@ export async function issueSummary(
   };
 }
 
-export async function pageKindsByRule(db: Database, crawl: Crawl, ruleIds: string[] | null) {
+async function pageKindsByRule(db: Database, crawl: Crawl, ruleIds: string[] | null) {
   if (ruleIds?.length === 0) return new Map<string, string[]>();
   const { rows } = await sql<{ rule_id: string; kinds: string[] }>`
     select i.rule_id, array_agg(distinct a.page_kind order by a.page_kind)
@@ -324,14 +324,16 @@ async function persistedCatalog(db: Database, crawl: Crawl) {
   return parsed?.success ? parsed.data : null;
 }
 
-export async function issueDetail(
+type GroupRequest = { workspaceId: string; crawlId: string; groupId: string };
+type DetailRequest = GroupRequest & {
+  paging: Paging;
+  siteUrlId?: string | null;
+  pageKind?: string | null;
+};
+
+export async function issueGroup(
   db: Database,
-  workspaceId: string,
-  crawlId: string,
-  groupId: string,
-  paging: Paging,
-  siteUrlId?: string,
-  pageKind: string | null = null,
+  { workspaceId, crawlId, groupId, pageKind = null }: GroupRequest & { pageKind?: string | null },
 ) {
   const crawl = await loadCrawl(db, workspaceId, crawlId);
   const candidates = await sql<{ rule_id: string }>`
@@ -341,11 +343,24 @@ export async function issueDetail(
   if (group === undefined) throw notFound('Issue');
   const kindFilter = pageKind ? sql`and ${ofPageKind(crawl, pageKind)}` : sql``;
   const inGroup = sql`${currentIssues(crawl)} and i.rule_id = ${group.rule_id} ${kindFilter}`;
+  const canonical = await sql<IssueRow>`select i.*, '' as reason_code from site_issues i
+    where ${inGroup} order by i.created_at, i.id limit 1`.execute(db);
+  const representative = canonical.rows[0];
+  if (representative === undefined) throw notFound('Issue');
+  return { crawl, groupId, pageKind, inGroup, representative };
+}
+export type IssueGroup = Awaited<ReturnType<typeof issueGroup>>;
+
+export async function issueOccurrences(
+  db: Database,
+  group: IssueGroup,
+  { paging, siteUrlId = null }: { paging: Paging; siteUrlId?: string | null },
+) {
   const fingerprint = {
-    crawl_id: crawl.id,
-    group_id: groupId,
-    site_url_id: siteUrlId ?? null,
-    page_kind: pageKind,
+    crawl_id: group.crawl.id,
+    group_id: group.groupId,
+    site_url_id: siteUrlId,
+    page_kind: group.pageKind,
   };
   let after = sql``;
   if (paging.cursor) {
@@ -355,41 +370,52 @@ export async function issueDetail(
       throw new InvalidCursorError('invalid cursor');
     after = sql`and (u.normalized_url, i.id) > (${url}, ${id}::uuid)`;
   }
-  const [canonical, totals, occurrences] = await Promise.all([
-    sql<IssueRow>`select i.*, '' as reason_code from site_issues i where ${inGroup}
-      order by i.created_at, i.id limit 1`.execute(db),
+  const onePage = siteUrlId ? sql`and i.site_url_id = ${siteUrlId}::uuid` : sql``;
+  const { rows } = await sql<
+    IssueRow & {
+      site_url_id: string;
+      normalized_url: string;
+      display_url: string;
+      title: string | null;
+      page_kind: string | null;
+    }
+  >`
+    select i.*, u.normalized_url, u.display_url, u.latest_title as title,
+      a.page_kind, e.reason_code
+    from site_issues i
+    join site_urls u on u.id = i.site_url_id
+    join site_page_analyses a on a.workspace_id = i.workspace_id and a.crawl_id = i.crawl_id
+      and a.site_url_id = i.site_url_id and a.is_current
+    join site_rule_evaluations e on e.analysis_id = i.analysis_id and e.id = i.evaluation_id
+    where ${group.inGroup} ${after} ${onePage}
+    order by u.normalized_url, i.id limit ${paging.limit + 1}`.execute(db);
+  const page = rows.slice(0, paging.limit);
+  const last = page.at(-1);
+  return {
+    items: page.map((row) => ({
+      ...issueOccurrence(row, row),
+      value: issueValue(row.rule_id, row.evidence),
+    })),
+    next_cursor:
+      rows.length > paging.limit && last
+        ? encodeKeysetCursor('issue_detail', fingerprint, [last.normalized_url, last.id])
+        : null,
+  };
+}
+
+export async function issueDetail(db: Database, request: DetailRequest) {
+  const group = await issueGroup(db, request);
+  const [totals, occurrences] = await Promise.all([
     sql<{ affected: number; occurrences: number }>`
       select count(distinct i.site_url_id)::int as affected, count(*)::int as occurrences
-      from site_issues i where ${inGroup}`.execute(db),
-    sql<
-      IssueRow &
-        PageText & {
-          site_url_id: string;
-          normalized_url: string;
-          display_url: string;
-          title: string | null;
-          page_kind: string | null;
-        }
-    >`
-      select i.*, u.normalized_url, u.display_url, u.latest_title as title,
-        a.page_kind, e.reason_code, ${pageTextColumns(group.rule_id)}
-      from site_issues i
-      join site_urls u on u.id = i.site_url_id
-      join site_page_analyses a on a.workspace_id = i.workspace_id and a.crawl_id = i.crawl_id
-        and a.site_url_id = i.site_url_id and a.is_current
-      join site_rule_evaluations e on e.analysis_id = i.analysis_id and e.id = i.evaluation_id
-      ${pageTextJoin}
-      where ${inGroup} ${after} ${siteUrlId ? sql`and i.site_url_id = ${siteUrlId}::uuid` : sql``}
-      order by u.normalized_url, i.id limit ${paging.limit + 1}`.execute(db),
+      from site_issues i where ${group.inGroup}`.execute(db),
+    issueOccurrences(db, group, request),
   ]);
-  const representative = canonical.rows[0];
-  if (representative === undefined) throw notFound('Issue');
-  const page = occurrences.rows.slice(0, paging.limit);
-  const last = page.at(-1);
+  const { representative } = group;
   const total = firstOf(totals.rows, 'the issue group totals');
   return siteIssueDetailSchema.parse({
-    group_id: groupId,
-    crawl_id: crawl.id,
+    group_id: group.groupId,
+    crawl_id: group.crawl.id,
     rule_id: representative.rule_id,
     dimension: representative.dimension,
     category: representative.category,
@@ -398,20 +424,14 @@ export async function issueDetail(
     description: representative.description,
     remediation: representative.remediation,
     remediation_route: remediationRoute(representative.rule_id),
-    occurrences: page.map((row) => ({
-      ...issueOccurrence(row, row),
-      value: issueValue(row.rule_id, row.evidence, row),
-    })),
+    occurrences: occurrences.items,
     occurrence_count: total.occurrences,
     affected_url_count:
-      siteLevelScope(representative.rule_id, representative.evidence, pageKind)?.affected ??
+      siteLevelScope(representative.rule_id, representative.evidence, group.pageKind)?.affected ??
       total.affected,
     analyzer_version: representative.analyzer_version,
     rule_version: representative.rule_version,
     created_at: representative.created_at.toISOString(),
-    next_cursor:
-      occurrences.rows.length > paging.limit && last
-        ? encodeKeysetCursor('issue_detail', fingerprint, [last.normalized_url, last.id])
-        : null,
+    next_cursor: occurrences.next_cursor,
   });
 }

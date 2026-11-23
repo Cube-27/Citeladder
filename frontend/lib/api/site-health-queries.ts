@@ -54,12 +54,20 @@ const PAGE_KEY_PARAMS = [
   'max_score',
 ] as const satisfies ReadonlyArray<keyof PagesParams>;
 
-function pageKeyFilters(params: PagesParams = {}) {
-  return Object.fromEntries(PAGE_KEY_PARAMS.map((name) => [name, params[name] ?? null]));
-}
+const INVENTORY_KEY_PARAMS = [
+  'cursor',
+  'limit',
+  'query',
+  'status',
+  'monitored',
+  'page_kind',
+] as const satisfies ReadonlyArray<keyof InventoryParams>;
 
-function issueKeyFilters(params: IssuesParams = {}) {
-  return Object.fromEntries(ISSUE_KEY_PARAMS.map((name) => [name, params[name] ?? null]));
+function keyFilters<Params extends object>(
+  names: ReadonlyArray<keyof Params & string>,
+  params: Partial<Params> = {},
+) {
+  return Object.fromEntries(names.map((name) => [name, params[name] ?? null]));
 }
 
 export const siteHealthQueries = {
@@ -146,21 +154,22 @@ export const siteHealthQueries = {
     }),
   inventory: (workspaceId: string | null, crawlId: string, params?: InventoryParams) =>
     queryOptions({
-      queryKey: queryKeys.siteHealth.inventory(workspaceId, crawlId, {
-        cursor: params?.cursor ?? null,
-        limit: params?.limit ?? null,
-        query: params?.query ?? null,
-        status: params?.status ?? null,
-        monitored: params?.monitored ?? null,
-        page_kind: params?.page_kind ?? null,
-      }),
+      queryKey: queryKeys.siteHealth.inventory(
+        workspaceId,
+        crawlId,
+        keyFilters<InventoryParams>(INVENTORY_KEY_PARAMS, params),
+      ),
       queryFn: ({ signal }) => siteHealthApi.getInventory(crawlId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(crawlId, previousData, previousQuery),
     }),
   pages: (workspaceId: string | null, crawlId: string, params?: PagesParams) =>
     queryOptions({
-      queryKey: queryKeys.siteHealth.pages(workspaceId, crawlId, pageKeyFilters(params)),
+      queryKey: queryKeys.siteHealth.pages(
+        workspaceId,
+        crawlId,
+        keyFilters<PagesParams>(PAGE_KEY_PARAMS, params),
+      ),
       queryFn: ({ signal }) => siteHealthApi.getPages(crawlId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(crawlId, previousData, previousQuery),
@@ -172,7 +181,11 @@ export const siteHealthQueries = {
     }),
   issues: (workspaceId: string | null, crawlId: string, params?: IssuesParams) =>
     queryOptions({
-      queryKey: queryKeys.siteHealth.issues(workspaceId, crawlId, issueKeyFilters(params)),
+      queryKey: queryKeys.siteHealth.issues(
+        workspaceId,
+        crawlId,
+        keyFilters<IssuesParams>(ISSUE_KEY_PARAMS, params),
+      ),
       queryFn: ({ signal }) => siteHealthApi.getIssues(crawlId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(crawlId, previousData, previousQuery),

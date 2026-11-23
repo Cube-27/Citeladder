@@ -6,6 +6,7 @@ import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { ISSUE_FILTER_OPTION_LIMIT } from '@/lib/config/site-health';
 import { stringUrlCodec, useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { issueTitle } from '@/lib/site-health/issues';
+import { isSiteLevelRule } from '@/lib/site-health/site-level-evidence';
 
 export const PAGES_FILTER_URL_KEYS = [
   'pages_rule',
@@ -117,7 +118,11 @@ export function usePagesFilters({
   const { data } = useQuery(
     siteHealthQueries.issues(workspaceId, crawlId, { limit: ISSUE_FILTER_OPTION_LIMIT }),
   );
-  const rules = new Map((data?.items ?? []).map((issue) => [issue.rule_id, issueTitle(issue)]));
+  const rules = new Map(
+    (data?.items ?? [])
+      .filter((issue) => !isSiteLevelRule(issue.rule_id))
+      .map((issue) => [issue.rule_id, issueTitle(issue)]),
+  );
   if (state.rule && !rules.has(state.rule)) rules.set(state.rule, state.rule);
   return [
     choiceFilter({

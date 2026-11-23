@@ -12,11 +12,21 @@ function state(scored: number, expected: number, unresolved: boolean) {
 
 class RoleSum {
   pages = 0;
+  applicable = 0;
   sum = 0;
   scored = 0;
   unresolved = false;
-  add(score: number | null, measured: boolean) {
+  add({
+    score,
+    expected,
+    measured,
+  }: {
+    score: number | null;
+    expected: number;
+    measured: boolean;
+  }) {
     this.pages++;
+    if (expected > 0 || score !== null) this.applicable++;
     if (score !== null) {
       this.sum += score;
       this.scored++;
@@ -25,7 +35,7 @@ class RoleSum {
   }
   result() {
     return {
-      score: this.scored ? this.sum / this.scored : null,
+      score: this.scored ? this.sum / this.applicable : null,
       coverage: this.pages ? this.scored / this.pages : null,
       state: state(this.scored, this.pages, this.unresolved),
     };
@@ -101,10 +111,18 @@ class PageSetFold {
   private pages = 0;
   add(page: Measurement) {
     this.pages++;
-    this.web.add(page.web_fundamentals_score, page.web_fundamentals_state === 'measured');
-    this.aeo.add(page.aeo_readiness_score, page.aeo_measurement_state === 'measured');
-    this.webChecks.add(page.technical_determinate_weight, page.technical_expected_weight);
     const aeo = aeoChecks(page.readiness_dimensions);
+    this.web.add({
+      score: page.web_fundamentals_score,
+      expected: page.technical_expected_weight,
+      measured: page.web_fundamentals_state === 'measured',
+    });
+    this.aeo.add({
+      score: page.aeo_readiness_score,
+      expected: aeo.total,
+      measured: page.aeo_measurement_state === 'measured',
+    });
+    this.webChecks.add(page.technical_determinate_weight, page.technical_expected_weight);
     this.aeoChecks.add(aeo.run, aeo.total);
     page.readiness_dimensions.forEach((pillar, index) => this.dimensions[index]?.add(pillar));
   }

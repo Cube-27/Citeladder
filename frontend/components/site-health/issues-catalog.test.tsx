@@ -594,7 +594,10 @@ describe('IssuesCatalog', () => {
     const dialog = await openIssue(user, 'WebSite schema is missing');
     expect(await within(dialog).findByText('Shop')).toBeInTheDocument();
     expect(within(dialog).getByText('Shoe')).toBeInTheDocument();
-    expect(within(dialog).getAllByText(/Meta description \(4 chars\)/)).toHaveLength(2);
+    expect(
+      within(dialog).getAllByText(/Meta description \(4 chars, recommended 70–160\)/),
+    ).toHaveLength(2);
+    expect(within(dialog).queryByText(/4 characters/)).toBeNull();
   });
 
   it('applies a severity filter as a server param (not a client filter)', async () => {

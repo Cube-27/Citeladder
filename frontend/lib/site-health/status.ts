@@ -7,7 +7,8 @@ import type {
 } from '@citeladder/contracts';
 import type { PagesSort } from '@/lib/api/site-health';
 import type { RunStatusValue, StatusValue } from '@/components/ui/status-mark';
-import type { InternalLinkAnalysis } from '@citeladder/contracts/site-health';
+import { checksRunSchema, type InternalLinkAnalysis } from '@citeladder/contracts/site-health';
+import type { z } from 'zod';
 import { CRAWL_POLL_MS, CRAWL_VIEW_REFRESH_MS } from '@/lib/config/operational';
 import { RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { pollWhileActive, type JobStates } from '@/lib/jobs/poll';
@@ -239,7 +240,7 @@ export function statusLabel(status: string): string {
 
 export { formatScore } from '@/lib/format';
 
-export type ChecksRun = Readonly<{ run: number; total: number }>;
+export type ChecksRun = z.infer<typeof checksRunSchema>;
 
 export function checksRunLabel(checks: ChecksRun | null | undefined): string | null {
   if (!checks || checks.run >= checks.total) return null;
