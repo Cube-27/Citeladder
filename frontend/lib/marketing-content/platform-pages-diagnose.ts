@@ -51,7 +51,7 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Know which AI crawlers you let in',
-        body: 'Site Health reads your robots.txt and reports access for each known crawler by purpose. Blocking a search crawler such as OAI-SearchBot or Claude-SearchBot is scored, because it can keep you out of answers. Blocking training crawlers is your choice, so it is shown without a penalty.',
+        body: 'Site Health reads your robots.txt and reports access for each known crawler by purpose. Blocking a search crawler such as OAI-SearchBot or Claude-SearchBot is scored, because it can keep you out of answers. Blocking a training crawler is your choice; it counts as a Low-severity check.',
         points: [
           'Search, AI search, training and user-fetch crawlers kept apart',
           'robots.txt history across crawls',
