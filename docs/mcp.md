@@ -318,7 +318,7 @@ This repository proves the wire contract, not acceptance in a particular client
 build or the deployed origin. Before public directory submission the release
 owner verifies publisher identity, support/privacy/terms URLs, a reviewer
 account, a recorded walkthrough and portal scans; the plugin's review cases
-(six positive, three negative: publish, acquire, mutate) describe the expected
+(five positive, three negative: publish, acquire, mutate) describe the expected
 behaviour. The public tool reference is generated from the catalogue
 (`pnpm --filter @citeladder/api mcp:reference`); the repository check detects
 drift.
