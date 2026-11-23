@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { ReportPage } from '@/components/templates/report-page';
+import { IssuesExport } from '@/components/site-health/issues-export';
 import { Inline } from '@/components/ui/layout';
 import {
   IssueDetailDrawer,
@@ -114,7 +115,7 @@ export function IssuesCatalog({
   const pager = useCatalogPager(cursor, issuesQuery.data?.next_cursor ?? null, catalog.goToPage);
 
   return (
-    <ReportPage>
+    <ReportPage actions={<IssuesExport workspaceId={workspaceId} crawlId={crawlId} />}>
       {notice}
       <IssuesSummary
         query={priorityQuery}

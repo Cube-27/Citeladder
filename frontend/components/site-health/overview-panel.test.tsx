@@ -206,14 +206,14 @@ describe('OverviewPanel', () => {
       screen.queryByRole('heading', { name: 'Classification completeness' }),
     ).not.toBeInTheDocument();
     expect(figureText('AEO checklist completion')).toBe('50%');
-    expect(figureText('Crawl coverage')).toBe('40%');
+    expect(figureText('Crawl coverage')).toBe('4 of 10 pages audited');
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Loading Overview details')).not.toBeInTheDocument();
     expect(overviewRequests).toBe(0);
   });
 
-  it('says how many found pages were analyzed and why the rest were not', async () => {
+  it('counts audited against found pages for a plan-limited crawl of a large site', async () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
         HttpResponse.json(
@@ -222,10 +222,10 @@ describe('OverviewPanel', () => {
               state: 'partial',
               evidence: {
                 reasons: ['requested_page_limit_reached'],
-                observation_count: 100,
-                analyzed_url_count: 20,
+                observation_count: 51306,
+                analyzed_url_count: 199,
                 failed_url_count: 2,
-                automatic_limit: 20,
+                automatic_limit: 200,
               },
               denominator_kind: 'selected_intended_public_urls',
             },
@@ -242,7 +242,7 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    await waitFor(() => expect(figureText('Crawl coverage')).toBe('20%'));
+    await waitFor(() => expect(figureText('Crawl coverage')).toBe('199 of 51,306 pages audited'));
   });
 
   it('keeps an unknown crawl that found nothing from reading as a percentage', async () => {
