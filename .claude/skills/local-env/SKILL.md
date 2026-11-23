@@ -34,5 +34,6 @@ the API gets no provider keys. Launching runs, crawls or Agent messages does not
 
 ## Production accounts
 
-After a production reset the owner recreates the accounts with `local/ops/provision-prod.mjs` (README,
-"Production accounts"). Agents never run production steps: they tell the owner the command.
+After a production reset the accounts are recreated with `local/ops/provision-prod.mjs` (README,
+"Production accounts"). When the owner asks, the agent runs these scripts and prod database queries itself
+(`run-agents`, "Production").
