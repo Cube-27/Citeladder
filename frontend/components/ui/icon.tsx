@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ComponentType } from 'react';
+import type { ComponentType } from 'react';
 
 import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -25,19 +25,6 @@ export function Icon({
       aria-hidden={label ? undefined : true}
       aria-label={label}
       role={label ? 'img' : undefined}
-    />
-  );
-}
-
-export function Dot({
-  className,
-  ...props
-}: Readonly<Omit<ComponentPropsWithoutRef<'span'>, 'children'>>) {
-  return (
-    <span
-      {...props}
-      className={cn('inline-block size-1.5 shrink-0 rounded-full', className)}
-      aria-hidden
     />
   );
 }

@@ -58,11 +58,11 @@ describe('RouteLoadingScreen', () => {
     expect(container.querySelector('[data-loading-shape]')).toBeNull();
   });
 
-  it('draws Issues as its summary, then the table under its one control row', () => {
+  it('draws Issues as one table under its one control row, with no summary above it', () => {
     const { container } = renderAt('/issues');
     expect(container.querySelector('[data-page-band="filters"]')).toBeNull();
+    expect(container.querySelector('[data-skeleton="summary"]')).toBeNull();
     const order = [
-      container.querySelector('[data-skeleton="summary"]'),
       container.querySelector('[data-filter-bar]'),
       container.querySelector('[data-loading-shape="table"]'),
     ];

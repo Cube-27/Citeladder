@@ -14,9 +14,7 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 
 export type IssueFixScope = Readonly<{ workspaceId: string; projectId: string }>;
 
-export function fixedLabel(
-  progress: Pick<IssueFixProgress, 'fixed_url_count' | 'affected_url_count'>,
-) {
+function fixedLabel(progress: Pick<IssueFixProgress, 'fixed_url_count' | 'affected_url_count'>) {
   const total = progress.affected_url_count;
   return `${formatCount(progress.fixed_url_count)} of ${pluralCount(total, 'page')} fixed`;
 }

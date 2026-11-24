@@ -20,7 +20,7 @@ export type IssueRowFacts = Pick<
   | 'resolved_url_count'
 >;
 
-export const ISSUE_ROW_COLUMNS = {
+const ISSUE_ROW_COLUMNS = {
   issue: { key: 'issue', label: 'Issue', kind: 'identity' },
   severity: { key: 'severity', label: 'Severity', kind: 'status', width: 'status' },
   pages: { key: 'pages', label: 'Pages', kind: 'number', width: 'metric' },

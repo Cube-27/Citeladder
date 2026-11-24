@@ -31,7 +31,7 @@ const MEASUREMENT_LABELS: Record<string, string> = {
   not_applicable: availabilityLabel('not_applicable'),
 };
 
-export function measurementLabel(state: string): string {
+function measurementLabel(state: string): string {
   return MEASUREMENT_LABELS[state] ?? statusLabel(state);
 }
 
