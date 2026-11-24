@@ -34,7 +34,7 @@ describe('Agent thread views', () => {
       `/visibility?tab=domains&market=${MARKET}`,
       `/site?crawl_id=${CRAWL}`,
       '/ai-traffic?tab=overview&range=30d',
-      '/search-intelligence?tab=competitors',
+      '/search-intelligence?tab=keywords',
       '/search-intelligence',
     ]);
   });

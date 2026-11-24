@@ -11,6 +11,7 @@ export type SearchColumn = {
   numeric?: boolean;
   detail?: boolean;
   low?: boolean;
+  date?: boolean;
   currencyField?: string;
 };
 export const SEARCH_COLUMNS_BY_KIND: {
@@ -87,6 +88,9 @@ export const SEARCH_COLUMNS_BY_KIND: {
     { field: 'dofollow', label: 'Follow', detail: true, low: true },
     { field: 'dataforseo_rank', label: 'Link rank (0–100)', numeric: true },
     { field: 'backlinks_spam_score', label: 'Spam', numeric: true, low: true },
+    { field: 'first_seen', label: 'First seen', detail: true, low: true, date: true },
+    { field: 'last_seen', label: 'Last seen', detail: true, low: true, date: true },
+    { field: 'is_broken', label: 'Broken', detail: true, low: true },
   ],
 };
 
@@ -122,7 +126,7 @@ export const SEARCH_DATASET_LABELS: Readonly<Record<string, string>> = {
   backlink_history: 'Backlink history (past year)',
   citation_matches: 'Citation matches',
 };
-export const PRESET_OWNED_KINDS: readonly SearchDatasetKind[] = ['footprint', 'ranking_keywords'];
+export const PRESET_KINDS: readonly SearchDatasetKind[] = ['footprint', 'ranking_keywords'];
 
 export function searchScopeLabel(scope?: string): string {
   return scope === 'domain_subdomains' ? 'Domain + subdomains' : 'Exact host';

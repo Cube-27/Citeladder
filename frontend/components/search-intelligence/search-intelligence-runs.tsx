@@ -1,17 +1,8 @@
 import { Button } from '@/components/ui/button';
-import { DisplayTime } from '@/components/ui/display-time';
-import { Drawer } from '@/components/ui/drawer';
-import { Stack } from '@/components/ui/layout';
-import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
 import type { SearchIntelligenceRun } from '@/lib/api/search-intelligence';
 import { formatCount, pluralCount } from '@/lib/format';
-import { words } from '@/lib/ai-traffic/vocabulary';
 import { SEARCH_RUN_STATES } from '@/lib/search-intelligence/status';
-import { reportedCost, runEstimate } from './search-intelligence-format';
 import { Notice } from '@/components/ui/notice';
-import { StateBlock } from '@/components/ui/state-block';
-import { FigureStrip } from '@/components/ui/figure-strip';
 import { countMeter, WorkProgress } from '@/components/ui/work-progress';
 
 const STOP_REASONS: Readonly<Record<string, string>> = {
@@ -87,82 +78,5 @@ export function RunNotice({
     >
       {`Analysis ${SEARCH_RUN_STATES[run.status].label.toLowerCase()}. ${reason} Saved results remain available below.`}
     </Notice>
-  );
-}
-
-export function CostDetails({
-  open,
-  onOpenChange,
-  runs,
-  pending,
-  error,
-  onRetry,
-}: Readonly<{
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  runs: SearchIntelligenceRun[] | undefined;
-  pending: boolean;
-  error: unknown;
-  onRetry: () => void;
-}>) {
-  let content = <StateBlock kind="empty" inline message="No analysis has been run yet." />;
-  if (runs?.length) {
-    content = (
-      <Stack as="ul" gap="section">
-        {runs.map((run) => (
-          <Stack as="li" gap="compact" key={run.id}>
-            <Stack gap="tight">
-              <p className={textRole('body')}>
-                {words(run.action)} · {SEARCH_RUN_STATES[run.status].label}
-              </p>
-              <p className={textRole('caption')}>
-                <DisplayTime value={run.created_at} />
-              </p>
-            </Stack>
-            <FigureStrip
-              segments={[
-                {
-                  key: 'estimated',
-                  label: 'Estimated',
-                  value: runEstimate(run),
-                },
-                {
-                  key: 'reported',
-                  label: run.credential_mode === 'funded' ? 'Charged' : 'Charged by DataForSEO',
-                  value: reportedCost(run),
-                },
-                {
-                  key: 'calls',
-                  label: 'Requests completed',
-                  value: `${run.completed_calls} of ${run.planned_calls}`,
-                },
-                { key: 'rows', label: 'Saved results', value: formatCount(run.received_rows) },
-                {
-                  key: 'uncertain',
-                  label: 'Requests with unknown outcome',
-                  value: formatCount(run.uncertain_calls),
-                },
-              ]}
-            />
-          </Stack>
-        ))}
-      </Stack>
-    );
-  }
-  if (error)
-    content = (
-      <Notice
-        kind="read"
-        error={error}
-        fallback="Cost history could not be loaded."
-        title="Cost history could not be loaded"
-        onRetry={onRetry}
-      />
-    );
-  if (pending) content = <Skeleton variant="list" />;
-  return (
-    <Drawer open={open} onOpenChange={onOpenChange} title="Cost details">
-      {content}
-    </Drawer>
   );
 }

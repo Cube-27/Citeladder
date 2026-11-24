@@ -9,13 +9,15 @@ import { matchesCompetitor } from './search-intelligence-competitors';
 
 type View = { value: string; label: string };
 
-export type CollectionTab = 'keywords' | 'backlinks' | 'competitors';
+export type CollectionTab = 'keywords' | 'backlinks';
 
 const VIEWS: Record<CollectionTab, readonly [View, ...View[]]> = {
   keywords: [
     { value: 'ranking_keywords', label: 'Ranking keywords' },
     { value: 'organic_pages', label: 'Top pages' },
     { value: 'keyword_suggestions', label: 'Keyword ideas' },
+    { value: 'missing_keywords', label: 'Missing keywords' },
+    { value: 'shared_keywords', label: 'Shared keywords' },
   ],
   backlinks: [
     { value: 'backlinks', label: 'Backlinks' },
@@ -23,13 +25,9 @@ const VIEWS: Record<CollectionTab, readonly [View, ...View[]]> = {
     { value: 'destination_pages', label: 'Top linked pages' },
     { value: 'citation_matches', label: 'Citation matches' },
   ],
-  competitors: [
-    { value: 'missing_keywords', label: 'Missing keywords' },
-    { value: 'shared_keywords', label: 'Shared keywords' },
-  ],
 };
 
-const COLLECTION_TABS: readonly CollectionTab[] = ['keywords', 'backlinks', 'competitors'];
+const COLLECTION_TABS: readonly CollectionTab[] = ['keywords', 'backlinks'];
 
 export function collectionTabOf(kind: string): CollectionTab | null {
   return COLLECTION_TABS.find((tab) => VIEWS[tab].some((view) => view.value === kind)) ?? null;
@@ -43,7 +41,7 @@ type TabState = Readonly<{
   kind: string;
   selectedId: string;
   targetOrigin: string;
-  pendingKind: { kind: string; selection: string } | null;
+  comparisonOrigin: string;
   filters: KeywordFilterValues & { datasetId: string | undefined };
 }>;
 
@@ -52,18 +50,22 @@ function initialState(tab: CollectionTab): TabState {
     kind: VIEWS[tab][0].value,
     selectedId: '',
     targetOrigin: '',
-    pendingKind: null,
+    comparisonOrigin: '',
     filters: { ...NO_KEYWORD_FILTERS, datasetId: undefined },
   };
 }
 
-function collectionTargets(datasets: readonly SearchIntelligenceDataset[], tab: CollectionTab) {
+function collectionTargets(
+  datasets: readonly SearchIntelligenceDataset[],
+  tab: CollectionTab,
+  ownedOrigins: readonly string[],
+) {
   const kinds = new Set(VIEWS[tab].map((item) => item.value));
   if (tab === 'backlinks') {
     kinds.add('backlink_summary');
     kinds.add('backlink_history');
   }
-  return [
+  const targets = [
     ...new Map(
       datasets
         .filter((item) => kinds.has(item.dataset_kind))
@@ -73,17 +75,8 @@ function collectionTargets(datasets: readonly SearchIntelligenceDataset[], tab: 
         ]),
     ).values(),
   ];
-}
-
-function selectCollectionDataset(
-  candidates: readonly SearchIntelligenceDataset[],
-  selected: SearchIntelligenceDataset | null,
-  selectedId: string,
-  comparison: boolean,
-) {
-  if (comparison)
-    return candidates.find((item) => item.comparison_origin === selected?.comparison_origin);
-  return candidates.find((item) => item.id === selectedId) ?? candidates[0];
+  const owned = (item: { value: string }) => ownedOrigins.includes(item.value);
+  return [...targets.filter(owned), ...targets.filter((item) => !owned(item))];
 }
 
 function datasetLabel(
@@ -112,13 +105,24 @@ export function useSearchCollection({
   }
 >) {
   const [states, setStates] = useState<Partial<Record<CollectionTab, TabState>>>({});
-  if (tab === null) return null;
-  const patch = (next: Partial<TabState>) =>
+  const patchTab = (target: CollectionTab, next: Partial<TabState>) =>
     setStates((current) => ({
       ...current,
-      [tab]: { ...(current[tab] ?? initialState(tab)), ...next },
+      [target]: { ...(current[target] ?? initialState(target)), ...next },
     }));
-  return collectionView({ ...input, tab, state: states[tab] ?? initialState(tab), patch });
+  const openComparison = (dataset: SearchIntelligenceDataset) =>
+    patchTab('keywords', {
+      kind: dataset.dataset_kind,
+      comparisonOrigin: dataset.comparison_origin,
+    });
+  if (tab === null) return { collection: null, openComparison };
+  const collection = collectionView({
+    ...input,
+    tab,
+    state: states[tab] ?? initialState(tab),
+    patch: (next) => patchTab(tab, next),
+  });
+  return { collection, openComparison };
 }
 
 export type SearchCollection = ReturnType<typeof collectionView>;
@@ -129,8 +133,7 @@ type CollectionInput = Readonly<{
   patch: (next: Partial<TabState>) => void;
   datasets: readonly SearchIntelligenceDataset[];
   competitors: SearchIntelligenceReadiness['competitors'];
-  selected: SearchIntelligenceDataset | null;
-  onSelect: (dataset: SearchIntelligenceDataset | null) => void;
+  ownedOrigins: readonly string[];
 }>;
 
 function collectionView({
@@ -139,41 +142,20 @@ function collectionView({
   patch,
   datasets,
   competitors,
-  selected,
-  onSelect,
+  ownedOrigins,
 }: CollectionInput) {
-  const comparison = tab === 'competitors' ? selected : null;
-  const targets = collectionTargets(datasets, tab);
+  const { kind } = state;
+  const comparison = Boolean(searchDatasetTraits(kind)?.comparison);
+  const targets = collectionTargets(datasets, tab, ownedOrigins);
   const target =
     targets.find((item) => item.value === state.targetOrigin)?.value ?? targets[0]?.value;
-  const kind =
-    state.pendingKind && state.pendingKind.selection === comparison?.id
-      ? state.pendingKind.kind
-      : (comparison?.dataset_kind ?? state.kind);
   const candidates = datasets.filter(
-    (item) =>
-      item.dataset_kind === kind && (tab === 'competitors' || item.target_origin === target),
+    (item) => item.dataset_kind === kind && (comparison || item.target_origin === target),
   );
-  const dataset = selectCollectionDataset(
-    candidates,
-    comparison,
-    state.selectedId,
-    tab === 'competitors',
-  );
-
-  function changeKind(value: string) {
-    const next = comparison
-      ? datasets.find(
-          (item) =>
-            item.dataset_kind === value && item.comparison_origin === comparison.comparison_origin,
-        )
-      : undefined;
-    patch({
-      kind: value,
-      pendingKind: comparison && !next ? { kind: value, selection: comparison.id } : null,
-    });
-    if (next) onSelect(next);
-  }
+  const dataset =
+    candidates.find((item) =>
+      comparison ? item.comparison_origin === state.comparisonOrigin : item.id === state.selectedId,
+    ) ?? candidates[0];
 
   const filters = state.filters.datasetId === dataset?.id ? state.filters : NO_KEYWORD_FILTERS;
   const setFilters = (next: Partial<KeywordFilterValues>) =>
@@ -181,28 +163,28 @@ function collectionView({
 
   return {
     tab,
-    listingCompetitors: tab === 'competitors' && !comparison,
+    comparison,
     views: VIEWS[tab].filter(
       (item) =>
         item.value !== 'citation_matches' ||
         datasets.some((entry) => entry.dataset_kind === item.value),
     ),
     kind,
-    changeKind,
+    changeKind: (value: string) => patch({ kind: value }),
     title: VIEWS[tab].find((item) => item.value === kind)?.label ?? 'Saved results',
-    targets: tab === 'competitors' ? [] : targets,
+    targets: comparison ? [] : targets,
     target,
     changeTarget: (value: string) => patch({ targetOrigin: value }),
     candidates,
     dataset,
-    changeDataset: (id: string) => {
-      patch({ selectedId: id });
-      if (tab === 'competitors') onSelect(candidates.find((item) => item.id === id) ?? null);
-    },
-    showAllCompetitors: () => {
-      patch({ pendingKind: null, selectedId: '' });
-      onSelect(null);
-    },
+    changeDataset: (id: string) =>
+      patch(
+        comparison
+          ? {
+              comparisonOrigin: candidates.find((item) => item.id === id)?.comparison_origin ?? '',
+            }
+          : { selectedId: id },
+      ),
     label: (item: SearchIntelligenceDataset) => datasetLabel(item, competitors),
     keywordDataset: Boolean(dataset && searchDatasetTraits(dataset.dataset_kind)?.keyword),
     keywordFilters: filters,

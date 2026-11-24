@@ -109,7 +109,7 @@ it('filters on the server and exports every saved matching page', async () => {
   );
 });
 
-it('hands the visible rows, or one selected row, to the Agent by id', async () => {
+it('hands the visible rows to the Agent by id', async () => {
   const first = '44444444-4444-4444-8444-444444444444';
   const second = '55555555-5555-4555-8555-555555555555';
   mswServer.use(
@@ -131,12 +131,6 @@ it('hands the visible rows, or one selected row, to the Agent by id', async () =
 
   await screen.findByText('crm software');
   expect(handoff('Ask agent')).toEqual({ dataset_id: dataset.id, row_ids: [first, second] });
-  await userEvent.click(screen.getByRole('button', { name: 'View evidence for crm pricing' }));
-  expect(await screen.findByRole('link', { name: 'Ask agent about this row' })).toBeVisible();
-  expect(handoff('Ask agent about this row')).toEqual({
-    dataset_id: dataset.id,
-    row_ids: [second],
-  });
 });
 
 it.each([
@@ -182,7 +176,7 @@ it.each([
   },
 );
 
-it('rounds estimated traffic and opens only details the row lacks from the keyword', async () => {
+it('rounds estimated traffic and shows difficulty in the table with no row drawer', async () => {
   const result = {
     ...row('33333333-3333-4333-8333-333333333333', 'Family outfits'),
     etv: '7.55999994',
@@ -203,14 +197,42 @@ it('rounds estimated traffic and opens only details the row lacks from the keywo
   });
   expect(await screen.findByRole('cell', { name: '8' })).toBeInTheDocument();
   expect(screen.getByRole('cell', { name: '3,600' })).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: 'View evidence for Family outfits' }));
-  expect(screen.getByText('Plain row')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'View evidence for Plain row' })).toBeNull();
-  const details = screen.getByRole('dialog', { name: 'Row details' });
-  expect(within(details).getByText('Difficulty')).toBeInTheDocument();
-  expect(details).not.toHaveTextContent('3,600');
-  expect(details).not.toHaveTextContent(result.id);
-  expect(details).not.toHaveTextContent(dataset.id);
+  const outfits = screen.getByRole('row', { name: /Family outfits/ });
+  expect(within(outfits).getByRole('cell', { name: '24' })).toBeInTheDocument();
+  expect(within(outfits).queryByRole('button')).toBeNull();
+});
+
+it('shows when a backlink was seen and a blocked target in place of a broken flag', async () => {
+  const links = { ...dataset, dataset_kind: 'backlinks' };
+  const link = (id: string, status: number) => ({
+    ...row(id, ''),
+    row_kind: 'backlinks',
+    url: `https://example.com/${status}`,
+    url_from: `https://blog.example/${status}`,
+    first_seen: '2024-12-24 03:30:29 +00:00',
+    is_broken: true,
+    url_to_status_code: status,
+  });
+  mswServer.use(
+    http.get(`/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`, () =>
+      HttpResponse.json({
+        dataset: links,
+        rows: [
+          link('33333333-3333-4333-8333-333333333333', 403),
+          link('44444444-4444-4444-8444-444444444444', 404),
+        ],
+        next_cursor: null,
+      }),
+    ),
+  );
+  renderWithProviders(<SearchIntelligenceDatasetView dataset={links} title="Backlinks" />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  const blocked = await screen.findByRole('row', { name: /blog\.example\/403/ });
+  expect(within(blocked).getByText('Blocked (403)')).toBeInTheDocument();
+  expect(within(blocked).getByText('Dec 24, 2024')).toBeInTheDocument();
+  const broken = screen.getByRole('row', { name: /blog\.example\/404/ });
+  expect(within(broken).getByText('Yes')).toBeInTheDocument();
 });
 
 it('links a missing keyword that became an Action', async () => {
@@ -235,10 +257,7 @@ it('links a missing keyword that became an Action', async () => {
       }),
     },
   );
-  await userEvent.click(
-    await screen.findByRole('button', { name: 'View evidence for running shoes' }),
-  );
-  expect(screen.getByRole('link', { name: 'Open Action' })).toHaveAttribute(
+  expect(await screen.findByRole('link', { name: 'running shoes' })).toHaveAttribute(
     'href',
     expect.stringContaining(`/actions/${actionId}`),
   );
@@ -259,10 +278,7 @@ it('opens Sources on the run a citation match came from', async () => {
   renderWithProviders(<SearchIntelligenceDatasetView dataset={dataset} />, {
     projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
   });
-  await userEvent.click(
-    await screen.findByRole('button', { name: 'View evidence for crm software' }),
-  );
-  const href = screen.getByRole('link', { name: 'View in Sources' }).getAttribute('href')!;
+  const href = (await screen.findByRole('link', { name: 'crm software' })).getAttribute('href')!;
   const url = new URL(href, 'http://x');
   expect(url.pathname).toBe('/visibility');
   expect(url.searchParams.get('tab')).toBe('domains');

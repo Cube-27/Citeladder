@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it, vi } from 'vite-plus/test';
@@ -26,51 +25,70 @@ const saved = {
 function Tab({
   tab,
   datasets,
-  initial = null,
+  open,
 }: Readonly<{
-  tab: 'keywords' | 'competitors';
+  tab: 'keywords' | 'backlinks';
   datasets: SearchIntelligenceDataset[];
-  initial?: SearchIntelligenceDataset | null;
+  open?: SearchIntelligenceDataset;
 }>) {
-  const [selected, setSelected] = useState(initial);
-  const collection = useSearchCollection({
+  const { collection, openComparison } = useSearchCollection({
     tab,
     datasets,
     competitors: [],
-    selected,
-    onSelect: setSelected,
+    ownedOrigins: ['https://owned.test'],
   });
   if (!collection) return null;
   return (
     <>
+      {open ? <button onClick={() => openComparison(open)}>Open comparison</button> : null}
       <CollectionViewControl collection={collection} />
       <FiltersMenu filters={collectionFilters(collection)} />
       <SearchIntelligenceCollection
         collection={collection}
         datasets={datasets}
         backlinkFigures={[]}
-        competitors={[]}
-        onSelect={setSelected}
       />
     </>
   );
 }
 
-it('keeps an absent comparison kind on the selected competitor and clears it on return', async () => {
-  const other = {
+it('opens a competitor comparison inside Keywords and keeps that competitor across views', async () => {
+  const ranking = {
     ...saved,
-    id: 'second',
-    dataset_kind: 'shared_keywords',
-    comparison_origin: 'https://other.test',
+    id: 'ranking',
+    dataset_kind: 'ranking_keywords',
+    comparison_origin: '',
   };
-  render(<Tab tab="competitors" datasets={[saved, other]} initial={saved} />);
-  await userEvent.click(screen.getByRole('radio', { name: 'Shared keywords' }));
-  expect(screen.getByText('No saved shared keywords')).toBeInTheDocument();
-  expect(screen.queryByText('Dataset second')).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole('radio', { name: 'Missing keywords' }));
+  const otherMissing = { ...saved, id: 'other-missing', comparison_origin: 'https://other.test' };
+  const shared = { ...saved, id: 'shared', dataset_kind: 'shared_keywords' };
+  const otherShared = { ...otherMissing, id: 'other-shared', dataset_kind: 'shared_keywords' };
+  render(
+    <Tab
+      tab="keywords"
+      datasets={[ranking, otherMissing, saved, otherShared, shared]}
+      open={saved}
+    />,
+  );
+  expect(screen.getByText('Dataset ranking')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Open comparison' }));
   expect(screen.getByText('Dataset first')).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: 'All competitors' }));
-  expect(screen.getByText('Competitive footprint')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('radio', { name: 'Shared keywords' }));
+  expect(screen.getByText('Dataset shared')).toBeInTheDocument();
+});
+
+it('shows your website first when competitors have saved results too', () => {
+  const rival = {
+    ...saved,
+    id: 'rival-links',
+    dataset_kind: 'backlinks',
+    comparison_origin: '',
+    target_origin: 'https://rival.test',
+    target_hostname: 'rival.test',
+  };
+  const owned = { ...saved, id: 'owned-links', dataset_kind: 'backlinks', comparison_origin: '' };
+  render(<Tab tab="backlinks" datasets={[rival, owned]} />);
+  expect(screen.getByText('Dataset owned-links')).toBeInTheDocument();
+  expect(screen.queryByText('Dataset rival-links')).toBeNull();
 });
 
 it('offers the keyword filters only while a keyword dataset is on screen', async () => {

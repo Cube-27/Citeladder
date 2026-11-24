@@ -1,16 +1,11 @@
-import { ArrowLeft } from '@/lib/icons';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { menuFieldKeys } from '@/components/ui/filter-options';
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Inline } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/tabs';
 import type { SearchCollection } from './search-intelligence-collection-state';
 
 export function CollectionViewControl({ collection }: Readonly<{ collection: SearchCollection }>) {
-  if (collection.listingCompetitors) return null;
-  const views = (
+  return (
     <SegmentedControl
       ariaLabel={`${collection.tab} view`}
       value={collection.kind}
@@ -18,21 +13,9 @@ export function CollectionViewControl({ collection }: Readonly<{ collection: Sea
       options={collection.views}
     />
   );
-  if (collection.tab !== 'competitors') return views;
-  return (
-    <Inline gap="compact">
-      <Button variant="quiet" onClick={collection.showAllCompetitors}>
-        <Icon icon={ArrowLeft} />
-        All competitors
-      </Button>
-      {views}
-    </Inline>
-  );
 }
 
 export function collectionFilters(collection: SearchCollection): FilterDefinition[] {
-  if (collection.listingCompetitors) return [];
-  const competitors = collection.tab === 'competitors';
   const filters: FilterDefinition[] = [];
   const { target, dataset } = collection;
   if (collection.targets.length && target)
@@ -50,7 +33,7 @@ export function collectionFilters(collection: SearchCollection): FilterDefinitio
     filters.push(
       choiceFilter({
         id: 'dataset',
-        label: competitors ? 'Competitor' : 'Saved results',
+        label: collection.comparison ? 'Competitor' : 'Saved results',
         value: dataset.id,
         defaultValue: dataset.id,
         groups: [

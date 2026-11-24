@@ -101,8 +101,7 @@ function renderPage(data: SearchIntelligenceReadiness, role: TestRole = 'owner')
 it('lets a viewer read an analysis in progress without offering to start or cancel one', async () => {
   renderPage({ ...readiness, latest_run: run }, 'viewer');
   expect(await screen.findByText(/1 of 4 requests complete/)).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Cost details' })).toBeVisible();
-  for (const name of ['Cancel', 'Review first analysis', 'New analysis', 'Refresh'])
+  for (const name of ['Cost details', 'Cancel', 'Review first analysis', 'New analysis', 'Refresh'])
     expect(screen.queryByRole('button', { name })).toBeNull();
 });
 
@@ -226,7 +225,7 @@ it('moves between Demand and the research tabs on one tab row, keeping focus and
   const demand = await screen.findByRole('tab', { name: 'Demand' });
   await within(pageActions()).findByRole('button', { name: 'New analysis' });
   const onDemand = actionNames();
-  expect(onDemand).toEqual(expect.arrayContaining(['Cost details', 'Refresh', 'New analysis']));
+  expect(onDemand).toEqual(expect.arrayContaining(['Refresh', 'New analysis']));
   demand.focus();
   await userEvent.keyboard('{ArrowRight}');
   const overview = screen.getByRole('tab', { name: 'Overview' });

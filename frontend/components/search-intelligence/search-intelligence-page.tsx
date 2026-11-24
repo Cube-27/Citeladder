@@ -22,7 +22,7 @@ import { NoAnalysisYet, NotConnected, UnavailableNotice } from './search-intelli
 import { Icon } from '@/components/ui/icon';
 import { Section } from '@/components/ui/section';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CostDetails, RunNotice } from './search-intelligence-runs';
+import { RunNotice } from './search-intelligence-runs';
 import { Button } from '@/components/ui/button';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Drawer } from '@/components/ui/drawer';
@@ -38,7 +38,7 @@ import {
   type SearchIntelligenceReadiness,
 } from '@/lib/api/search-intelligence';
 import type { SearchReviewAction } from '@citeladder/contracts/search-intelligence-requests';
-import { Layers, Play, Receipt, RefreshCw, Settings2 } from '@/lib/icons';
+import { Layers, Play, RefreshCw, Settings2 } from '@/lib/icons';
 import { searchMarketLabel } from '@/lib/config/search-intelligence';
 import { pollSearchRun } from '@/lib/search-intelligence/status';
 import { SEARCH_INTELLIGENCE_TABS } from '@/lib/search-intelligence/tabs';
@@ -138,10 +138,8 @@ function useKeywordResearch({
 }: Readonly<{ tab: PageTab; setTab: (tab: PageTab) => void }>) {
   const { workspaceId, projectId } = useProjectScope();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [costOpen, setCostOpen] = useState(false);
   const [citationOpen, setCitationOpen] = useState(false);
   const [citationOrigin, setCitationOrigin] = useState<string>();
-  const [comparison, setComparison] = useState<SearchIntelligenceDataset | null>(null);
   const [market, setMarket] = useState('');
   const [scope, setScope] = useState('');
   const [action, setAction] = useState<SearchReviewAction>('analysis');
@@ -149,10 +147,6 @@ function useKeywordResearch({
   const readiness = useQuery({
     ...searchIntelligenceQueries.readiness(requestScope),
     refetchInterval: (query) => pollSearchRun(query.state.data?.latest_run?.status),
-  });
-  const runsQuery = useQuery({
-    ...searchIntelligenceQueries.runs(requestScope),
-    enabled: costOpen,
   });
   const cancelMutation = useMutation(searchIntelligenceMutations.cancel(requestScope));
   const reviewMutation = useMutation(searchIntelligenceMutations.review(requestScope));
@@ -174,12 +168,11 @@ function useKeywordResearch({
     scope,
     market,
   );
-  const collection = useSearchCollection({
+  const { collection, openComparison } = useSearchCollection({
     tab: tab === 'overview' || tab === 'demand' ? null : tab,
     datasets,
     competitors: readiness.data?.competitors ?? [],
-    selected: comparison,
-    onSelect: setComparison,
+    ownedOrigins: (readiness.data?.owned_targets ?? []).map((target) => target.origin),
   });
   const data = readiness.data;
   const overlays = (
@@ -192,14 +185,6 @@ function useKeywordResearch({
           onDerived={() => setCitationOpen(false)}
         />
       </Drawer>
-      <CostDetails
-        open={costOpen}
-        onOpenChange={setCostOpen}
-        runs={runsQuery.data}
-        pending={runsQuery.isPending}
-        error={runsQuery.error}
-        onRetry={() => void runsQuery.refetch()}
-      />
       {data ? (
         <SearchIntelligenceReviewDrawer
           key={`${workspaceId}:${projectId}:${action}:${drawerOpen}`}
@@ -221,7 +206,6 @@ function useKeywordResearch({
   const pageActions = {
     hasDatasets: !empty && Boolean(data?.owned_targets.length),
     onReview: actions.review,
-    onCost: () => setCostOpen(true),
   };
   return {
     actions: pageActions,
@@ -242,20 +226,13 @@ function useKeywordResearch({
           markets,
           market: activeMarket,
           tab: researchTab,
-          onScope: (value) => {
-            setScope(value);
-            setComparison(null);
-          },
-          onMarket: (value) => {
-            setMarket(value);
-            setComparison(null);
-          },
+          onScope: setScope,
+          onMarket: setMarket,
         }),
       onOpen: (dataset) => {
-        setComparison(dataset);
-        setTab('competitors');
+        openComparison(dataset);
+        setTab('keywords');
       },
-      onSelect: setComparison,
     }),
   };
 }
@@ -271,7 +248,6 @@ function researchView({
   cancelling,
   savedView,
   onOpen,
-  onSelect,
 }: Readonly<{
   readiness: UseQueryResult<SearchIntelligenceReadiness>;
   tab: PageTab;
@@ -283,7 +259,6 @@ function researchView({
   cancelling: boolean;
   savedView: (tab: Tab) => FilterDefinition[];
   onOpen: (dataset: SearchIntelligenceDataset) => void;
-  onSelect: (dataset: SearchIntelligenceDataset | null) => void;
 }>): Readonly<{ filters?: ReactNode; body: ReactNode }> {
   if (readiness.isPending)
     return {
@@ -355,7 +330,6 @@ function researchView({
             backlinkFigures={backlinkFigures}
             collection={collection}
             onOpen={onOpen}
-            onSelect={onSelect}
           />
         )}
       </Stack>
@@ -407,14 +381,12 @@ function ResearchPanels({
   backlinkFigures,
   collection,
   onOpen,
-  onSelect,
 }: Readonly<{
   data: SearchIntelligenceReadiness;
   datasets: SearchIntelligenceDataset[];
   backlinkFigures: SearchIntelligenceReadiness['backlink_figures'];
-  collection: ReturnType<typeof useSearchCollection>;
+  collection: SearchCollection | null;
   onOpen: (dataset: SearchIntelligenceDataset) => void;
-  onSelect: (dataset: SearchIntelligenceDataset | null) => void;
 }>) {
   return (
     <>
@@ -434,8 +406,6 @@ function ResearchPanels({
               collection={collection}
               datasets={datasets}
               backlinkFigures={backlinkFigures}
-              competitors={data.competitors}
-              onSelect={onSelect}
             />
           ) : null}
         </TabPanel>
@@ -447,20 +417,14 @@ function ResearchPanels({
 function PageActions({
   hasDatasets,
   onReview,
-  onCost,
   children,
 }: Readonly<{
   hasDatasets: boolean;
   onReview?: (action: SearchReviewAction) => void;
-  onCost: () => void;
   children: ReactNode;
 }>) {
   return (
     <>
-      <Button variant="quiet" onClick={onCost}>
-        <Icon icon={Receipt} />
-        Cost details
-      </Button>
       {children}
       {onReview && hasDatasets ? (
         <>
@@ -521,7 +485,7 @@ function CollectionAction({
   const matchable =
     collection.tab === 'backlinks' &&
     referringLists(datasets).some((dataset) => dataset.target_origin === collection.target);
-  const expandable = !collection.listingCompetitors && Boolean(collection.dataset);
+  const expandable = Boolean(collection.dataset);
   return (
     <>
       {collection.tab === 'keywords' && onSeed ? (

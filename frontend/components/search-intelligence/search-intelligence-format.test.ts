@@ -3,19 +3,16 @@ import {
   datasetCount,
   datasetCoverage,
   estimateUsd,
-  evidenceFields,
-  reportedCost,
   runEstimate,
   searchAmount,
+  searchDate,
 } from './search-intelligence-format';
 
 it('keeps a calendar date on its own day west of UTC, and zones a timestamp', () => {
-  const fields = evidenceFields({
-    kind: 'referring_domains',
-    row: { first_seen: '2026-01-01', last_seen: '2026-01-01T03:00:00Z' },
-    timeZone: 'America/Los_Angeles',
-  });
-  expect(fields.map(({ value }) => value)).toEqual(['Jan 1, 2026', 'Dec 31, 2025']);
+  const zone = 'America/Los_Angeles';
+  expect(searchDate('2026-01-01', zone)).toBe('Jan 1, 2026');
+  expect(searchDate('2026-01-01T03:00:00Z', zone)).toBe('Dec 31, 2025');
+  expect(searchDate('soon', zone)).toBeNull();
 });
 
 const byok = {
@@ -33,13 +30,7 @@ const managed = {
   estimated_credits: 32,
 };
 
-it('distinguishes unconfirmed, unknown, zero and fractional provider costs', () => {
-  expect(reportedCost({ ...byok, confirmed_at: null, provider_reported_cost_usd: '1' })).toBe(
-    'Not charged',
-  );
-  expect(reportedCost(byok)).toBe('Unresolved');
-  expect(reportedCost({ ...byok, provider_reported_cost_usd: '0' })).toBe('$0');
-  expect(reportedCost({ ...byok, provider_reported_cost_usd: '0.024468' })).toBe('$0.024468');
+it('rounds an estimate up to four decimals', () => {
   expect(runEstimate(byok)).toBe('$0.0245');
   expect(estimateUsd('1.00000000')).toBe('1.0000');
 });
@@ -51,11 +42,8 @@ it('prices a provider CPC in its currency, keeping unreported apart from zero', 
   expect(searchAmount(null, 'USD')).toBeNull();
 });
 
-it('prices a managed analysis in AI credits only, pending until it settles', () => {
+it('prices a managed analysis in AI credits only', () => {
   expect(runEstimate(managed)).toBe('32 AI credits');
-  expect(reportedCost(managed)).toBe('Pending');
-  expect(reportedCost({ ...managed, charged_credits: 1 })).toBe('1 AI credit');
-  expect(reportedCost({ ...managed, confirmed_at: null })).toBe('Not charged');
 });
 
 it('counts saved rows against the provider total wherever fewer were saved', () => {
@@ -87,38 +75,4 @@ it('counts saved rows against the provider total wherever fewer were saved', () 
       summary: { referring_domains_compared: 3 },
     }),
   ).toBe('Against 3 referring domains');
-});
-
-it('opens only what the table row lacks, and no broken flag a blocked crawler raised', () => {
-  const link = {
-    id: 'row',
-    url: 'https://shop.example/',
-    url_from: 'https://blog.example/post',
-    domain: 'blog.example',
-    keyword: '',
-    search_volume: null,
-    dataforseo_rank: 40,
-    backlinks_spam_score: 3,
-    is_broken: true,
-    url_to_status_code: 403,
-  };
-  const shown = (row: Record<string, unknown>) =>
-    evidenceFields({ kind: 'backlinks', row, timeZone: 'UTC' }).map(({ label, value }) => [
-      label,
-      value,
-    ]);
-  expect(shown(link)).toEqual([
-    ['Source URL', 'https://blog.example/post'],
-    ['Domain', 'blog.example'],
-    ['Spam', '3'],
-    ['Target status', '403'],
-  ]);
-  expect(shown({ ...link, url_to_status_code: 404 })).toContainEqual(['Is broken', 'Yes']);
-  expect(
-    evidenceFields({
-      kind: 'shared_keywords',
-      row: { keyword: 'shoes', rank_group: 2, owned_rank_group: 4, search_volume: 90 },
-      timeZone: 'UTC',
-    }),
-  ).toEqual([]);
 });

@@ -26,6 +26,17 @@ it('distinguishes empty comparisons from unfetched data and opens the saved www 
   render(
     <SearchIntelligenceCompetitors
       datasets={[dataset]}
+      backlinkFigures={[
+        {
+          target_origin: 'https://rival.test',
+          target_hostname: 'rival.test',
+          research_scope: 'domain_subdomains',
+          backlinks: { value: 315964, dataset_id: 'summary', as_of: null },
+          referring_domains: null,
+          referring_main_domains: null,
+          rank: null,
+        },
+      ]}
       competitors={[competitor('rival'), competitor('other')]}
       onOpen={onOpen}
     />,
@@ -34,9 +45,10 @@ it('distinguishes empty comparisons from unfetched data and opens the saved www 
   expect(
     within(screen.getByRole('row', { name: /rival/ })).getAllByText('Not fetched'),
   ).toHaveLength(3);
+  expect(within(screen.getByRole('row', { name: /rival/ })).getByText('315,964')).toBeVisible();
   expect(
     within(screen.getByRole('row', { name: /other/ })).getAllByText('Not fetched'),
-  ).toHaveLength(4);
+  ).toHaveLength(5);
   await userEvent.click(
     screen.getByRole('button', { name: 'No results Keywords they rank for and you don’t: rival' }),
   );
@@ -47,6 +59,7 @@ it('says once that nothing was fetched and draws no figure columns', () => {
   render(
     <SearchIntelligenceCompetitors
       datasets={[]}
+      backlinkFigures={[]}
       competitors={[competitor('rival'), competitor('other')]}
       onOpen={vi.fn()}
     />,
