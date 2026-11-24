@@ -73,7 +73,6 @@ export const SITE_HEALTH_CRAWL = {
       next_available_at: null,
     },
     by_page_kind: {},
-    score_weighting: { kind: 'sample_average' },
   },
   total_url_count: null,
   score_summary: null,

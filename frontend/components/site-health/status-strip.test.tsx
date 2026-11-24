@@ -35,7 +35,6 @@ function crawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
         next_available_at: null,
       },
       by_page_kind: {},
-      score_weighting: { kind: 'sample_average' },
     },
     score_summary: {
       web_fundamentals_score: null,

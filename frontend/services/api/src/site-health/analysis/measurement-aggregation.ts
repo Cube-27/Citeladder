@@ -32,10 +32,15 @@ export function stratify(
 }
 
 function weighted(strata: Stratum[], role: Headline, plain: number | null) {
-  const scored = strata.filter((row) => row.known_url_count > 0 && row[role] !== null);
-  const weight = scored.reduce((sum, row) => sum + row.known_url_count, 0);
-  if (!weight) return plain;
-  return scored.reduce((sum, row) => sum + row.known_url_count * row[role]!, 0) / weight;
+  let weight = 0;
+  let sum = 0;
+  for (const row of strata) {
+    const score = row[role];
+    if (score === null || row.known_url_count <= 0) continue;
+    weight += row.known_url_count;
+    sum += row.known_url_count * score;
+  }
+  return weight ? sum / weight : plain;
 }
 
 export function siteWeighted<T extends Record<Headline, number | null>>(

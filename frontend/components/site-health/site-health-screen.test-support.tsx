@@ -70,7 +70,6 @@ function crawl(overrides: Record<string, unknown> = {}) {
         next_available_at: null,
       },
       by_page_kind: {},
-      score_weighting: { kind: 'sample_average' },
     },
     ...overrides,
   });

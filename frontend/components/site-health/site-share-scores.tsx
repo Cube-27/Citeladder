@@ -13,9 +13,9 @@ export function SiteShareScores({ summary }: Readonly<{ summary: SiteScoreSummar
   return (
     <Section data-testid="site-share-scores">
       <SectionHeader>
-        <SectionTitle>Score weighting by share of site</SectionTitle>
+        <SectionTitle>Score weighting by share of known URLs</SectionTitle>
       </SectionHeader>
-      <DataTable label="Score weighting by share of site" columns={COLUMNS}>
+      <DataTable label="Score weighting by share of known URLs" columns={COLUMNS}>
         {weighting.strata.map((row) => (
           <TableRow key={row.page_kind}>
             <TableCell className="whitespace-nowrap">
@@ -40,7 +40,7 @@ export function SiteShareScores({ summary }: Readonly<{ summary: SiteScoreSummar
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'kind', label: 'Page kind', kind: 'identity' },
-  { key: 'share', label: 'Share of site', kind: 'number' },
+  { key: 'share', label: 'Share of known URLs', kind: 'number' },
   { key: 'analyzed', label: 'Pages analyzed', kind: 'number', priority: 'low' },
   { key: 'web', label: 'Web fundamentals', kind: 'number' },
   { key: 'aeo', label: 'AEO readiness', kind: 'number' },
