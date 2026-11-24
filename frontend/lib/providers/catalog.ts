@@ -48,6 +48,7 @@ export type EngineCardModel = {
   route: EngineRouteOption | null;
   state: ProviderConnectionState;
   latest_probe: ProviderConnectionStateEntry['latest_probe'];
+  pause: ProviderConnectionStateEntry['pause'];
 };
 
 export function buildEngineCards(
@@ -73,6 +74,7 @@ export function buildEngineCards(
       route,
       state: entry?.state ?? ('missing' as const),
       latest_probe: entry?.latest_probe ?? null,
+      pause: entry?.pause ?? null,
     };
   });
 }

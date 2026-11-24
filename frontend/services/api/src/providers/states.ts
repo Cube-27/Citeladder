@@ -29,29 +29,13 @@ export async function connectionStates(db: Database, workspaceId: string, at = n
         (row) => row.transport_provider === route?.transport_provider,
       );
       const probe = probes.find((row) => row.connection_id === connection?.id);
-      const paused =
-        connection?.paused_at != null &&
-        (connection.pause_until == null || connection.pause_until > at);
-      let state: 'unavailable' | 'missing' | 'failed' | 'connected';
-      let reason: string | null;
-      if (!entry.adapter_shipped) {
-        state = 'unavailable';
-        reason = entry.unavailable_reason;
-      } else if (!connection?.api_key_encrypted || !probe || connection.last_tested_at == null) {
-        state = 'missing';
-        reason = 'verification_required';
-      } else if (paused || probe.status !== 'ok') {
-        state = 'failed';
-        reason = paused ? connection.pause_reason || 'unknown' : probe.error_code || 'unknown';
-      } else {
-        state = 'connected';
-        reason = null;
-      }
+      const { state, reason, pause } = resolveState({ entry, connection, probe, at });
       return {
         key: entry.key,
         label: entry.label,
         state,
         safe_reason: reason,
+        pause,
         grant_key: entry.grant_key,
         latest_probe:
           state === 'missing' || state === 'unavailable' || !probe
@@ -66,4 +50,34 @@ export async function connectionStates(db: Database, workspaceId: string, at = n
       };
     }),
   };
+}
+
+type Connection = Awaited<ReturnType<ReturnType<typeof tenantConnections>['execute']>>[number];
+
+function resolveState(o: {
+  entry: (typeof providerPolicy.catalog)[number];
+  connection: Connection | undefined;
+  probe: { status: string; error_code: string } | undefined;
+  at: Date;
+}): {
+  state: 'unavailable' | 'missing' | 'failed' | 'connected';
+  reason: string | null;
+  pause: { until: string | null } | null;
+} {
+  const { entry, connection, probe, at } = o;
+  if (!entry.adapter_shipped)
+    return { state: 'unavailable', reason: entry.unavailable_reason, pause: null };
+  if (!connection?.api_key_encrypted || !probe || connection.last_tested_at == null)
+    return { state: 'missing', reason: 'verification_required', pause: null };
+  const paused =
+    connection.paused_at != null && (connection.pause_until == null || connection.pause_until > at);
+  if (paused)
+    return {
+      state: 'failed',
+      reason: connection.pause_reason || 'unknown',
+      pause: { until: connection.pause_until?.toISOString() ?? null },
+    };
+  if (probe.status !== 'ok')
+    return { state: 'failed', reason: probe.error_code || 'unknown', pause: null };
+  return { state: 'connected', reason: null, pause: null };
 }

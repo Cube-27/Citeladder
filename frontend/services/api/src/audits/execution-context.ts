@@ -87,9 +87,13 @@ async function loadActiveConnection(db: Database, route: RouteSnapshot, task: Au
     .executeTakeFirst();
   const paused =
     connection?.paused_at != null && (!connection.pause_until || connection.pause_until > at);
-  if (paused && connection.pause_reason === searchPolicy.constants.pause_reason_account)
+  const accountPaused =
+    paused && connection.pause_reason === searchPolicy.constants.pause_reason_account;
+  const retrieving = Boolean(task.provider_task_id);
+  if (accountPaused && !retrieving)
     throw new ProviderError(searchPolicy.constants.error_account_unavailable);
-  if (!connection?.active || connection.last_test_status !== 'ok' || paused) throw unavailable();
+  const held = paused && !accountPaused;
+  if (!connection?.active || connection.last_test_status !== 'ok' || held) throw unavailable();
   return connection;
 }
 export async function loadExecutionContext(

@@ -71,12 +71,14 @@ export async function reviewConnection(
   return { connection, source: 'byok' };
 }
 
-export function runConnection(db: Database, run: Run) {
+export async function runConnection(db: Database, run: Run) {
+  const connectionId = run.connection_id;
+  if (!connectionId) return undefined;
   return db
     .selectFrom('provider_connections as c')
     .innerJoin('workspaces as w', 'w.id', 'c.workspace_id')
     .selectAll('c')
-    .where('c.id', '=', run.connection_id)
+    .where('c.id', '=', connectionId)
     .where('c.transport_provider', '=', si.transport_provider)
     .where('c.credential_source', '=', run.credential_source)
     .where('c.active', '=', true)

@@ -1,6 +1,7 @@
 import { retryAfterSeconds } from '@citeladder/contracts/retry-after';
 import { z } from 'zod';
 import { policy } from '../config.ts';
+import { getLogger } from '../logging.ts';
 import { providerErrorCode } from '../models/http.ts';
 import { round } from '../numbers.ts';
 import { approvedEndpoint, basicAuthorization } from './connections.ts';
@@ -8,6 +9,7 @@ import type { ProviderSettings } from './config.ts';
 import { ProviderError } from './errors.ts';
 import { boundedJson } from './response.ts';
 
+const logger = getLogger('providers.dataforseo');
 const constants = policy.dataforseo.constants;
 const taskSchema = z.looseObject({ status_code: z.number().int() });
 const envelopeSchema = z.looseObject({
@@ -103,7 +105,10 @@ export function dataforseoClient(
     try {
       const body = await boundedJson(response, transport.maxResponseBytes, signal);
       const status = z.object({ status_code: z.number().int() }).parse(body).status_code;
-      if (!acceptedStatus(status)) throw envelopeStatusError(status);
+      if (!acceptedStatus(status)) {
+        logger.warning('dataforseo_status_refused', { path, status_code: status });
+        throw envelopeStatusError(status);
+      }
       return envelopeSchema.parse(body);
     } catch (error) {
       if (error instanceof ProviderError) throw error;

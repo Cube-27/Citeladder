@@ -2933,7 +2933,7 @@ export interface SearchIntelligenceRuns {
   completed_at: Timestamp | null;
   completed_calls: number;
   confirmed_at: Timestamp | null;
-  connection_id: string;
+  connection_id: string | null;
   connection_revision: string;
   created_at: Timestamp;
   credential_source: string;

@@ -144,6 +144,7 @@ describe('ProviderSettings', () => {
               label: 'ChatGPT',
               state: verified ? 'connected' : 'missing',
               safe_reason: verified ? null : 'verification required',
+              pause: null,
               grant_key: 'provider.openai',
               latest_probe: null,
             },
@@ -200,6 +201,46 @@ describe('ProviderSettings', () => {
     expect(
       await openai.findByText('The provider rejected the key. Check it in Settings.'),
     ).toBeInTheDocument();
+  });
+
+  it('shows an account pause as a pause with its end, never as a failed test', async () => {
+    mswServer.use(
+      catalogHandler(),
+      http.get('/api/v1/provider-connections', () => HttpResponse.json([connection()])),
+      http.get('/api/v1/provider-connections/states', () =>
+        HttpResponse.json({
+          workspace_id: WORKSPACE_ID,
+          providers: [
+            {
+              key: 'chatgpt',
+              label: 'ChatGPT',
+              state: 'failed',
+              safe_reason: 'provider_account',
+              pause: { until: '2026-11-24T16:27:00Z' },
+              grant_key: 'provider.openai',
+              latest_probe: {
+                status: 'ok',
+                safe_reason: 'provider_account',
+                tested_at: '2026-11-24T15:31:00Z',
+                model: null,
+                latency_ms: 40,
+              },
+            },
+          ],
+        }),
+      ),
+    );
+
+    renderWithProviders(<ProviderSettings />);
+    const openai = await row('OpenAI');
+    expect(await openai.findByText('Paused')).toBeInTheDocument();
+    expect(
+      openai.getByText(
+        /^Paused until Nov 24, 2026, .+\. The provider refused the account\. Check its funds and status\. A passing test resumes it\.$/,
+      ),
+    ).toBeInTheDocument();
+    expect(openai.queryByText(/Last test failed/)).toBeNull();
+    expect(openai.queryByText('Failed')).toBeNull();
   });
 
   it('removes a saved key after confirmation', async () => {
