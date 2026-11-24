@@ -119,48 +119,53 @@ function moved(before: Box, after: Box): boolean {
 
 const print = (box: Box) => (box ? box.map(Math.round).join(',') : 'absent');
 
-for (const width of [1280, 1600])
-  test(`no click on the Issues page moves the bands above its rows at ${width}px`, async ({
+async function openIssues(page: Page, width: number) {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width, height: 900 });
+  await stubIssues(page);
+  await page.goto(fixtureProjectPath('/issues'));
+  const table = page.getByRole('region', { name: 'Issues', exact: true });
+  const rows = table.locator('tbody tr');
+  await expect(rows.first()).toContainText('technical issue 1');
+  await page.evaluate(() => document.fonts.ready);
+  const settled = async () => {
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    await expect(table).not.toHaveAttribute('aria-busy', 'true');
+    return layout(page, table);
+  };
+  const before = await settled();
+  const [, tabsY = 0, , tabsHeight = 0] = before.tabs ?? [];
+  const [searchY = 0, , searchHeight = 0] = before.search ?? [];
+  expect(Math.abs(tabsY + tabsHeight / 2 - (searchY + searchHeight / 2))).toBeLessThanOrEqual(1);
+  expect(before.filters?.[3] ?? Infinity).toBeLessThan(Math.max(tabsHeight, searchHeight) + 8);
+  const shifts: string[] = [];
+  const check = async (step: string) => {
+    const after = await settled();
+    for (const [name, box] of Object.entries(before)) {
+      const next = after[name] ?? null;
+      if (moved(box, next)) shifts.push(`${step}: ${name} ${print(box)} -> ${print(next)}`);
+    }
+  };
+  const openFilter = async (filter: RegExp) => {
+    await table
+      .locator('[data-filter-bar]')
+      .getByRole('button', { name: /^Filters/ })
+      .click();
+    await page.getByRole('menuitem', { name: filter }).click();
+  };
+  const choose = async (filter: RegExp, option: string) => {
+    await openFilter(filter);
+    await page.getByRole('menuitemradio', { name: option }).click();
+  };
+
+  return { table, rows, check, choose, openFilter, shifts };
+}
+
+for (const width of [1280, 1600]) {
+  test(`no tab or severity click on the Issues page moves the bands above its rows at ${width}px`, async ({
     page,
   }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.setViewportSize({ width, height: 900 });
-    await stubIssues(page);
-    await page.goto(fixtureProjectPath('/issues'));
-    const table = page.getByRole('region', { name: 'Issues', exact: true });
-    const rows = table.locator('tbody tr');
-    await expect(rows.first()).toContainText('technical issue 1');
-    await page.evaluate(() => document.fonts.ready);
-    const settled = async () => {
-      await expect(page.getByRole('menu')).toHaveCount(0);
-      await expect(table).not.toHaveAttribute('aria-busy', 'true');
-      return layout(page, table);
-    };
-    const before = await settled();
-    const [, tabsY = 0, , tabsHeight = 0] = before.tabs ?? [];
-    const [searchY = 0, , searchHeight = 0] = before.search ?? [];
-    expect(Math.abs(tabsY + tabsHeight / 2 - (searchY + searchHeight / 2))).toBeLessThanOrEqual(1);
-    expect(before.filters?.[3] ?? Infinity).toBeLessThan(Math.max(tabsHeight, searchHeight) + 8);
-    const shifts: string[] = [];
-    const check = async (step: string) => {
-      const after = await settled();
-      for (const [name, box] of Object.entries(before)) {
-        const next = after[name] ?? null;
-        if (moved(box, next)) shifts.push(`${step}: ${name} ${print(box)} -> ${print(next)}`);
-      }
-    };
-    const openFilter = async (filter: RegExp) => {
-      await table
-        .locator('[data-filter-bar]')
-        .getByRole('button', { name: /^Filters/ })
-        .click();
-      await page.getByRole('menuitem', { name: filter }).click();
-    };
-    const choose = async (filter: RegExp, option: string) => {
-      await openFilter(filter);
-      await page.getByRole('menuitemradio', { name: option }).click();
-    };
-
+    const { table, rows, check, choose, shifts } = await openIssues(page, width);
     await page.getByRole('radio', { name: /^Content/ }).click();
     await expect(rows.first()).toContainText('content issue 1');
     await check('Content tab');
@@ -188,6 +193,13 @@ for (const width of [1280, 1600])
     await expect(table.getByRole('button', { name: 'Next page' })).toBeEnabled();
     await check('Severity all');
 
+    expect(shifts).toEqual([]);
+  });
+
+  test(`no page kind, sort, paging or issue click on the Issues page moves the bands above its rows at ${width}px`, async ({
+    page,
+  }) => {
+    const { table, rows, check, choose, openFilter, shifts } = await openIssues(page, width);
     await openFilter(/^Page kind/);
     await page.getByRole('menuitemradio').nth(1).click();
     await expect.poll(() => new URL(page.url()).searchParams.get('page_kind')).not.toBeNull();
@@ -218,6 +230,7 @@ for (const width of [1280, 1600])
 
     expect(shifts).toEqual([]);
   });
+}
 
 test('at phone width the search takes a line and the other controls share the next', async ({
   page,
