@@ -104,6 +104,13 @@ export class SitemapCollector {
     this.limits = options.limits;
     this.#options = options;
   }
+  #recordSources(source: string, urls: readonly string[], kept: number) {
+    for (const [index, url] of urls.entries()) {
+      const sources = this.listedIn.get(url);
+      if (sources && !sources.includes(source)) sources.push(source);
+      else if (!sources && index < kept) this.listedIn.set(url, [source]);
+    }
+  }
   add(source: string, document: SitemapDocument, depth: number) {
     this.#visited.add(sitemapRef(source) ?? source);
     const room = Math.max(0, this.#options.maxSiteUrls - this.urls.length);
@@ -114,11 +121,7 @@ export class SitemapCollector {
       const declared = document.lastmod.get(url);
       if (declared && !this.lastmod.has(url)) this.lastmod.set(url, declared);
     }
-    for (const [index, url] of document.urls.entries()) {
-      const sources = this.listedIn.get(url);
-      if (sources && !sources.includes(source)) sources.push(source);
-      else if (!sources && index < kept.length) this.listedIn.set(url, [source]);
-    }
+    this.#recordSources(source, document.urls, kept.length);
     const unseen = [...new Set(document.refs.flatMap((ref) => sitemapRef(ref) ?? []))].filter(
       (ref) => !this.#visited.has(ref),
     );

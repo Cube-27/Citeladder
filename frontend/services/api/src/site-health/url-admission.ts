@@ -82,8 +82,9 @@ function sourceKind(sitemapUrl: string) {
 
 export function listedAdmission(admission: Admission, sitemaps: readonly string[]): Admission {
   if (admission.valueKind === 'root') return admission;
-  const kind = sitemaps.flatMap(sourceKind).toSorted((a, b) => PRIORITIES[b]! - PRIORITIES[a]!)[0];
-  return kind ? { ...admission, valueKind: kind, priority: PRIORITIES[kind]! } : admission;
+  const tier = (kind: string) => PRIORITIES[kind] ?? 0;
+  const kind = sitemaps.flatMap(sourceKind).toSorted((a, b) => tier(b) - tier(a))[0];
+  return kind ? { ...admission, valueKind: kind, priority: tier(kind) } : admission;
 }
 
 function valueKind(url: string) {
