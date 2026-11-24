@@ -4,11 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ReportPage } from '@/components/templates/report-page';
 import { IssuesExport } from '@/components/site-health/issues-export';
 import { Inline } from '@/components/ui/layout';
-import {
-  IssueDetailDrawer,
-  PendingIssueDrawer,
-  type IssueHead,
-} from '@/components/site-health/issue-detail-dialog';
+import { IssuePage, PendingIssuePage, type IssueHead } from '@/components/site-health/issue-page';
 import { IssueCategoryTag, IssueSeverityMark } from '@/components/site-health/issue-metadata';
 import { IssuesSummary } from '@/components/site-health/issues-summary';
 import { pageKindFilter } from '@/components/site-health/page-kind-select';
@@ -115,6 +111,27 @@ export function IssuesCatalog({
   const crawlSummary = priorityQuery.data?.summary;
   const pager = useCatalogPager(cursor, issuesQuery.data?.next_cursor ?? null, catalog.goToPage);
 
+  if (selectedGroupId !== null) {
+    const close = () => catalog.selectIssue(null);
+    return open ? (
+      <IssuePage
+        issue={open}
+        scope={{ workspaceId, projectId }}
+        crawlId={crawlId}
+        detailQuery={detailQuery}
+        canPrevious={catalog.canPageOccurrencesBack}
+        onPrevious={catalog.previousOccurrences}
+        onNext={() => {
+          const next = detailQuery.data?.next_cursor;
+          if (next) catalog.nextOccurrences(next);
+        }}
+        onClose={close}
+      />
+    ) : (
+      <PendingIssuePage detailQuery={detailQuery} onClose={close} />
+    );
+  }
+
   return (
     <ReportPage
       actions={
@@ -164,24 +181,6 @@ export function IssuesCatalog({
           <IssueRow key={issue.group_id} issue={issue} onOpen={catalog.selectIssue} />
         ))}
       </DataTable>
-      {selectedGroupId !== null && open === null ? (
-        <PendingIssueDrawer detailQuery={detailQuery} onClose={() => catalog.selectIssue(null)} />
-      ) : null}
-      {open ? (
-        <IssueDetailDrawer
-          issue={open}
-          scope={{ workspaceId, projectId }}
-          crawlId={crawlId}
-          detailQuery={detailQuery}
-          canPrevious={catalog.canPageOccurrencesBack}
-          onPrevious={catalog.previousOccurrences}
-          onNext={() => {
-            const next = detailQuery.data?.next_cursor;
-            if (next) catalog.nextOccurrences(next);
-          }}
-          onClose={() => catalog.selectIssue(null)}
-        />
-      ) : null}
     </ReportPage>
   );
 }
@@ -238,7 +237,6 @@ function IssueRow({
         <Inline gap="tight">
           <TextLink asChild underline="hover">
             <Pressable
-              aria-haspopup="dialog"
               onClick={(event) => {
                 event.stopPropagation();
                 onOpen(issue.group_id);

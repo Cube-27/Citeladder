@@ -1,3 +1,6 @@
+import { ScoreCard } from '@/components/site-health/score-cards';
+import { AppGrid } from '@/components/ui/app-grid';
+import type { BarRow } from '@/components/ui/score-gauge';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
@@ -136,10 +139,35 @@ export function AeoReadinessPanel({
       {data.limitations.length > 0 ? (
         <Notice tone="info">{data.limitations.join(' ')}</Notice>
       ) : null}
-      <ReadinessLedger dimensions={data.dimensions} onOpen={setDetailKey} />
+      <AppGrid layout="main-aside">
+        <ReadinessLedger dimensions={data.dimensions} onOpen={setDetailKey} />
+        <ScoreCard
+          title="AEO readiness"
+          score={data.score}
+          rows={[
+            pageRow('analyzed', 'Pages analyzed', data.analysis_count, data.analysis_count),
+            pageRow(
+              'affected',
+              'Pages with an AEO gap',
+              data.affected_page_count,
+              data.analysis_count,
+            ),
+          ]}
+        />
+      </AppGrid>
       <DimensionDrawer dimension={selected} crawlId={crawlId} onClose={() => setDetailKey(null)} />
     </Stack>
   );
+}
+
+function pageRow(key: string, label: string, count: number, of: number): BarRow {
+  return {
+    key,
+    label,
+    figure: formatCount(count),
+    share: of > 0 ? count / of : null,
+    tone: key === 'affected' ? 'negative' : 'info',
+  };
 }
 
 function ReadinessLedger({

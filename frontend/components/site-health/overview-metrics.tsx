@@ -71,12 +71,8 @@ export function OverviewMetricCards({
   crawl: SiteCrawl | null;
 }>) {
   const context = metricContext(overview, dashboard, crawl);
-  const metrics = [
-    technicalMetric(context),
-    aeoMetric(context),
-    measurementMetric(context),
-    crawlMetric(context),
-  ];
+  const coverage = [measurementMetric(context), crawlMetric(context)];
+  const metrics = overview ? coverage : [...scoreMetrics(context), ...coverage];
   return <AuditScores metrics={metrics} testId="overview-metrics" />;
 }
 
@@ -95,22 +91,19 @@ function metricContext(
   };
 }
 
-function technicalMetric(context: MetricContext): AuditMetric {
-  const source = context.overview ?? context.summary;
-  return {
-    title: 'Web fundamentals',
-    value: source?.web_fundamentals_score ?? null,
-    href: '/issues?section=technical',
-  };
-}
-
-function aeoMetric(context: MetricContext): AuditMetric {
-  const source = context.overview ?? context.summary;
-  return {
-    title: 'AEO readiness',
-    value: source?.aeo_readiness_score ?? null,
-    href: '/issues?section=aeo',
-  };
+function scoreMetrics({ summary }: MetricContext): AuditMetric[] {
+  return [
+    {
+      title: 'Web fundamentals',
+      value: summary?.web_fundamentals_score ?? null,
+      href: '/issues?section=technical',
+    },
+    {
+      title: 'AEO readiness',
+      value: summary?.aeo_readiness_score ?? null,
+      href: '/issues?section=aeo',
+    },
+  ];
 }
 
 function measurementMetric(context: MetricContext): AuditMetric {

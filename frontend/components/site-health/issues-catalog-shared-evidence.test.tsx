@@ -106,7 +106,7 @@ describe('IssuesCatalog', () => {
       renderIssues(<IssuesCatalog crawlId={CRAWL} />, OPEN);
 
       expect(await screen.findByText('On all 2 pages shown, of 179 affected')).toBeInTheDocument();
-      const dialog = screen.getByRole('dialog', { name: 'Form controls missing accessible names' });
+      const dialog = screen.getByRole('region', { name: 'Form controls missing accessible names' });
       expect(within(dialog).getByRole('button', { name: 'Next page' })).not.toBeDisabled();
     });
 

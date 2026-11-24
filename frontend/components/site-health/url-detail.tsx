@@ -1,4 +1,4 @@
-import { useRef, useState, type MutableRefObject } from 'react';
+import { useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
@@ -21,7 +21,7 @@ import { RERUN_MAX_PRE_ACTIVE_POLLS, RERUN_POLL_INTERVAL_MS } from '@/lib/config
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
-import { PAGE_DETAIL_TRAIL, UrlDetailView } from './url-detail-view';
+import { PAGE_DETAIL_TRAIL, UrlDetailView, type PageFrameKind } from './url-detail-view';
 import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { RecordPage } from '@/components/templates/record-page';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -40,7 +40,8 @@ export function PageDetailScreen() {
 export function UrlDetail({
   crawlId,
   siteUrlId,
-}: Readonly<{ crawlId: string; siteUrlId: string }>) {
+  frame = 'page',
+}: Readonly<{ crawlId: string; siteUrlId: string; frame?: PageFrameKind }>) {
   const { workspaceId, projectId } = useProjectScope();
   const router = useNavigate();
   const rerunRequested = useUrlParam('rerun');
@@ -75,30 +76,31 @@ export function UrlDetail({
 
   if (detailQuery.isLoading)
     return (
-      <RecordPage trail={PAGE_DETAIL_TRAIL}>
+      <Framed frame={frame}>
         <StateBlock
           kind="loading"
           label="Loading page detail…"
           shape={{ kind: 'facts', rows: 3, tagRows: [1] }}
         />
-      </RecordPage>
+      </Framed>
     );
-  if (isNotFound(detailQuery.error)) return <NotFoundScreen />;
+  if (frame === 'page' && isNotFound(detailQuery.error)) return <NotFoundScreen />;
   if (detailQuery.isError || !detailQuery.data) {
     return (
-      <RecordPage trail={PAGE_DETAIL_TRAIL}>
+      <Framed frame={frame}>
         <StateBlock
           kind="error"
           {...readErrorProps(detailQuery)}
           fallback="Couldn't load this page. It may not exist in this crawl."
           title="Couldn't load this page"
         />
-      </RecordPage>
+      </Framed>
     );
   }
 
   return (
     <UrlDetailView
+      frame={frame}
       detail={detailQuery.data}
       rerun={
         canRun
@@ -125,6 +127,14 @@ export function UrlDetail({
       {usedUp ? <Notice tone="warning">{usedUp}</Notice> : null}
       {rerunError ? <Notice tone="negative">{rerunError}</Notice> : null}
     </UrlDetailView>
+  );
+}
+
+function Framed({ frame, children }: Readonly<{ frame: PageFrameKind; children: ReactNode }>) {
+  return frame === 'drawer' ? (
+    children
+  ) : (
+    <RecordPage trail={PAGE_DETAIL_TRAIL}>{children}</RecordPage>
   );
 }
 

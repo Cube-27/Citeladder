@@ -377,10 +377,10 @@ describe('OverviewPanel', () => {
     );
 
     await screen.findByRole('table', { name: 'Top issues' });
-    const areas = within(screen.getByRole('list', { name: 'Web fundamentals areas' }));
+    const areas = within(screen.getByRole('list', { name: 'Web fundamentals breakdown' }));
     expect(areas.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'accessibilityMeasured',
-      'mobile1 of 4 checks run',
+      'accessibility75',
+      'mobile100',
     ]);
     await user.click(screen.getByRole('button', { name: 'View evidence' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('Images missing alt attributes');
@@ -458,11 +458,10 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    const table = await screen.findByRole('region', { name: 'AEO readiness by pillar' });
-    const scoreOf = (label: string) =>
-      within(within(table).getByText(label).closest('tr')!).getAllByRole('cell')[1]!.textContent;
-    expect(scoreOf('Commerce')).toBe('—Not applicable');
-    expect(scoreOf('Answerability')).toBe('—Not measured');
+    const rows = within(await screen.findByRole('list', { name: 'AEO readiness breakdown' }));
+    const scoreOf = (label: string) => rows.getByText(label).closest('li')!.textContent;
+    expect(scoreOf('Commerce')).toBe('Commerce—Not applicable');
+    expect(scoreOf('Answerability')).toBe('Answerability—Not measured');
   });
 
   const ALERT = "Couldn't load the Site health overview";
