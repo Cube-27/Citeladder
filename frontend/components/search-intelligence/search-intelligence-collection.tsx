@@ -6,7 +6,6 @@ import type {
   SearchIntelligenceReadiness,
 } from '@/lib/api/search-intelligence';
 import { SearchIntelligenceDatasetView } from './search-intelligence-dataset-view';
-import { SearchIntelligenceCompetitors } from './search-intelligence-competitors';
 import {
   figureDatasets,
   figureMetric,
@@ -22,23 +21,11 @@ export function SearchIntelligenceCollection({
   collection,
   datasets,
   backlinkFigures,
-  competitors,
-  onSelect,
 }: Readonly<{
   collection: SearchCollection;
   datasets: SearchIntelligenceDataset[];
   backlinkFigures: SearchIntelligenceReadiness['backlink_figures'];
-  competitors: SearchIntelligenceReadiness['competitors'];
-  onSelect: (dataset: SearchIntelligenceDataset | null) => void;
 }>) {
-  if (collection.listingCompetitors)
-    return (
-      <SearchIntelligenceCompetitors
-        datasets={datasets}
-        competitors={competitors}
-        onOpen={onSelect}
-      />
-    );
   return (
     <Stack gap="workspace" className="min-w-0">
       {collection.tab === 'backlinks' ? (
@@ -111,7 +98,7 @@ function CollectionResult({ collection }: Readonly<{ collection: SearchCollectio
       dataset={dataset}
       title={title}
       description={
-        collection.tab === 'competitors'
+        collection.comparison
           ? `${collection.label(dataset)} compared with ${dataset.target_hostname}`
           : undefined
       }

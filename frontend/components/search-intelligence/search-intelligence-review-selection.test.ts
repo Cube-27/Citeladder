@@ -72,9 +72,11 @@ it('ignores a comparison saved for another of your websites and preselects every
     'footprint:',
     'ranking_keywords:',
     'footprint:rival',
+    'ranking_keywords:rival',
     'missing_keywords:rival',
     'shared_keywords:rival',
     'footprint:other',
+    'ranking_keywords:other',
     'missing_keywords:other',
     'shared_keywords:other',
   ]);

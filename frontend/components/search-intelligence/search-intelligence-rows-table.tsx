@@ -1,15 +1,20 @@
 import type { ReactNode } from 'react';
 import type { DataTableColumn } from '@/components/ui/data-table';
-import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import type { SearchIntelligenceRow } from '@/lib/api/search-intelligence';
-import { SEARCH_COLUMNS_BY_KIND, type SearchColumn } from '@/lib/config/search-intelligence';
+import {
+  PROVIDER_BLOCKED_STATUSES,
+  SEARCH_COLUMNS_BY_KIND,
+  type SearchColumn,
+} from '@/lib/config/search-intelligence';
+import { visibilityRunSourcesHref } from '@/lib/visibility/use-visibility-dashboard';
 import { Absence } from '@/components/ui/absence';
 import { sharedOrigin } from '@/lib/format';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { searchDate } from './search-intelligence-format';
 import { SearchValue } from './search-intelligence-value';
-import { opensEvidence } from './search-intelligence-format';
 
 function cellText(value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
@@ -26,16 +31,35 @@ function displayValue(row: SearchIntelligenceRow, column: SearchColumn, origin: 
   if (column.currencyField)
     return <SearchValue value={result} currency={cellText(row[column.currencyField])} />;
   if (column.numeric) return <SearchValue value={result} />;
+  if (column.date) return <DateValue value={cellText(result)} />;
+  if (column.field === 'is_broken' && blockedStatus(row) !== null)
+    return `Blocked (${blockedStatus(row)})`;
   if (URL_FIELDS.has(column.field) && typeof result === 'string' && result)
     return <UrlText url={result} origin={origin} />;
   return cellText(result) ?? <Absence />;
+}
+
+function DateValue({ value }: Readonly<{ value: string | null }>) {
+  const timeZone = useDisplayTimeZone();
+  return (value === null ? null : searchDate(value, timeZone)) ?? <Absence />;
+}
+
+function blockedStatus(row: SearchIntelligenceRow): number | null {
+  const status = row.url_to_status_code;
+  return typeof status === 'number' && PROVIDER_BLOCKED_STATUSES.includes(status) ? status : null;
+}
+
+function rowHref(row: SearchIntelligenceRow): string | null {
+  if (row.row_kind === 'citation_match' && typeof row.auxiliary.audit_id === 'string')
+    return visibilityRunSourcesHref(row.auxiliary.audit_id);
+  return row.action_id ? `/actions/${row.action_id}` : null;
 }
 
 function columnsFor(kind: string) {
   return SEARCH_COLUMNS_BY_KIND[kind] ?? SEARCH_COLUMNS_BY_KIND.footprint;
 }
 
-const SHORT_TEXT_FIELDS: ReadonlySet<string> = new Set(['intent', 'dofollow']);
+const SHORT_TEXT_FIELDS: ReadonlySet<string> = new Set(['intent', 'dofollow', 'is_broken']);
 
 function columnKind(column: SearchColumn, first: boolean): DataTableColumn['kind'] {
   if (first) return URL_FIELDS.has(column.field) ? 'url' : 'identity';
@@ -46,7 +70,7 @@ function columnKind(column: SearchColumn, first: boolean): DataTableColumn['kind
 
 function columnWidth(column: SearchColumn, first: boolean): DataTableColumn['width'] {
   if (first || URL_FIELDS.has(column.field)) return 'flex';
-  if (column.numeric) return 'figure';
+  if (column.numeric || column.date) return 'figure';
   return SHORT_TEXT_FIELDS.has(column.field) ? 'status' : 'name';
 }
 
@@ -78,11 +102,9 @@ export function searchIntelligenceColumns({
 export function SearchIntelligenceRows({
   kind,
   rows,
-  onSelect,
 }: Readonly<{
   kind: string;
   rows: SearchIntelligenceRow[];
-  onSelect: (row: SearchIntelligenceRow) => void;
 }>) {
   const columns = columnsFor(kind);
   const origins = new Map(
@@ -98,18 +120,13 @@ export function SearchIntelligenceRows({
       {columns.map((column, index) => (
         <TableCell key={column.field} numeric={column.numeric}>
           {index === 0 ? (
-            <IdentityCell
-              row={row}
-              opens={opensEvidence(kind, row)}
-              onSelect={onSelect}
-              value={
-                URL_FIELDS.has(column.field) ? (
-                  displayValue(row, column, null)
-                ) : (
-                  <ClampText>{displayValue(row, column, null)}</ClampText>
-                )
-              }
-            />
+            <Identity href={rowHref(row)}>
+              {URL_FIELDS.has(column.field) ? (
+                displayValue(row, column, null)
+              ) : (
+                <ClampText>{displayValue(row, column, null)}</ClampText>
+              )}
+            </Identity>
           ) : (
             displayValue(row, column, origins.get(column.field) ?? null)
           )}
@@ -119,28 +136,11 @@ export function SearchIntelligenceRows({
   ));
 }
 
-function IdentityCell({
-  row,
-  opens,
-  onSelect,
-  value,
-}: Readonly<{
-  row: SearchIntelligenceRow;
-  opens: boolean;
-  onSelect: (row: SearchIntelligenceRow) => void;
-  value: ReactNode;
-}>) {
-  if (!opens) return value;
+function Identity({ href, children }: Readonly<{ href: string | null; children: ReactNode }>) {
+  if (!href) return children;
   return (
-    <TextLink asChild text="body" underline="hover">
-      <Pressable
-        type="button"
-        className="flex max-w-full min-w-0 text-left"
-        aria-label={`View evidence for ${row.keyword || row.domain || row.url}`}
-        onClick={() => onSelect(row)}
-      >
-        {value}
-      </Pressable>
+    <TextLink href={href} text="body" underline="hover">
+      {children}
     </TextLink>
   );
 }

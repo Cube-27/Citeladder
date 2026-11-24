@@ -137,6 +137,7 @@ export function SearchIntelligenceOverview({
       />
       <SearchIntelligenceCompetitors
         datasets={datasets}
+        backlinkFigures={backlinkFigures}
         competitors={competitors}
         onOpen={onOpen}
       />

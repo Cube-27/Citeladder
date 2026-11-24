@@ -5,7 +5,6 @@ import type { AgentView } from '@citeladder/contracts/agent-views';
 import { ViewFrame, ViewRead } from '@/components/agent/thread-view-frame';
 import { OverviewFigures, RequestsByPurpose } from '@/components/ai-traffic/overview-signals';
 import { useSourceStep } from '@/components/integrations/data-sources';
-import { EvidenceDrawer } from '@/components/search-intelligence/search-intelligence-dataset-view';
 import {
   SearchIntelligenceRows,
   searchIntelligenceColumns,
@@ -15,10 +14,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { crawlLogsAvailable, useCrawlSources } from '@/lib/ai-traffic/use-crawl-connections';
 import { aiTrafficQueries } from '@/lib/api/ai-traffic';
-import {
-  searchIntelligenceQueries,
-  type SearchIntelligenceRow,
-} from '@/lib/api/search-intelligence';
+import { searchIntelligenceQueries } from '@/lib/api/search-intelligence';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { agentViewHref } from '@/lib/agent/view-links';
 
@@ -77,7 +73,6 @@ export function KeywordRowsView({
     sort: 'id',
     direction: 'asc',
   });
-  const [selected, setSelected] = useState<SearchIntelligenceRow | null>(null);
   const query = useQuery(
     searchIntelligenceQueries.datasetRows(scope, view.dataset_id, {
       ...order,
@@ -89,39 +84,28 @@ export function KeywordRowsView({
     <ViewFrame title="Keyword research" href={agentViewHref(view, kind)}>
       <ViewRead query={query} subject="the saved rows" shape={{ kind: 'table' }}>
         {(page) => (
-          <>
-            <DataTable
-              label={page.dataset.target_hostname}
-              columns={searchIntelligenceColumns({
-                kind: page.dataset.dataset_kind,
-                order,
-                onSort: (sort) =>
-                  setOrder({
-                    sort,
-                    direction: order.sort === sort && order.direction === 'asc' ? 'desc' : 'asc',
-                  }),
-              })}
-              rowCount={page.items.length}
-              pageSize={KEYWORD_ROWS}
-              busy={{ active: query.isFetching, label: 'Updating saved rows' }}
-              state={
-                page.items.length
-                  ? undefined
-                  : { kind: 'empty', headingLevel: 3, heading: 'No saved rows in this dataset' }
-              }
-            >
-              <SearchIntelligenceRows
-                kind={page.dataset.dataset_kind}
-                rows={page.items}
-                onSelect={setSelected}
-              />
-            </DataTable>
-            <EvidenceDrawer
-              kind={page.dataset.dataset_kind}
-              selected={selected}
-              onClose={() => setSelected(null)}
-            />
-          </>
+          <DataTable
+            label={page.dataset.target_hostname}
+            columns={searchIntelligenceColumns({
+              kind: page.dataset.dataset_kind,
+              order,
+              onSort: (sort) =>
+                setOrder({
+                  sort,
+                  direction: order.sort === sort && order.direction === 'asc' ? 'desc' : 'asc',
+                }),
+            })}
+            rowCount={page.items.length}
+            pageSize={KEYWORD_ROWS}
+            busy={{ active: query.isFetching, label: 'Updating saved rows' }}
+            state={
+              page.items.length
+                ? undefined
+                : { kind: 'empty', headingLevel: 3, heading: 'No saved rows in this dataset' }
+            }
+          >
+            <SearchIntelligenceRows kind={page.dataset.dataset_kind} rows={page.items} />
+          </DataTable>
         )}
       </ViewRead>
     </ViewFrame>

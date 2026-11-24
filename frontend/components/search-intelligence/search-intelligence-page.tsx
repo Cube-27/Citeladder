@@ -141,7 +141,6 @@ function useKeywordResearch({
   const [costOpen, setCostOpen] = useState(false);
   const [citationOpen, setCitationOpen] = useState(false);
   const [citationOrigin, setCitationOrigin] = useState<string>();
-  const [comparison, setComparison] = useState<SearchIntelligenceDataset | null>(null);
   const [market, setMarket] = useState('');
   const [scope, setScope] = useState('');
   const [action, setAction] = useState<SearchReviewAction>('analysis');
@@ -174,12 +173,11 @@ function useKeywordResearch({
     scope,
     market,
   );
-  const collection = useSearchCollection({
+  const { collection, openComparison } = useSearchCollection({
     tab: tab === 'overview' || tab === 'demand' ? null : tab,
     datasets,
     competitors: readiness.data?.competitors ?? [],
-    selected: comparison,
-    onSelect: setComparison,
+    ownedOrigins: (readiness.data?.owned_targets ?? []).map((target) => target.origin),
   });
   const data = readiness.data;
   const overlays = (
@@ -242,20 +240,13 @@ function useKeywordResearch({
           markets,
           market: activeMarket,
           tab: researchTab,
-          onScope: (value) => {
-            setScope(value);
-            setComparison(null);
-          },
-          onMarket: (value) => {
-            setMarket(value);
-            setComparison(null);
-          },
+          onScope: setScope,
+          onMarket: setMarket,
         }),
       onOpen: (dataset) => {
-        setComparison(dataset);
-        setTab('competitors');
+        openComparison(dataset);
+        setTab('keywords');
       },
-      onSelect: setComparison,
     }),
   };
 }
@@ -271,7 +262,6 @@ function researchView({
   cancelling,
   savedView,
   onOpen,
-  onSelect,
 }: Readonly<{
   readiness: UseQueryResult<SearchIntelligenceReadiness>;
   tab: PageTab;
@@ -283,7 +273,6 @@ function researchView({
   cancelling: boolean;
   savedView: (tab: Tab) => FilterDefinition[];
   onOpen: (dataset: SearchIntelligenceDataset) => void;
-  onSelect: (dataset: SearchIntelligenceDataset | null) => void;
 }>): Readonly<{ filters?: ReactNode; body: ReactNode }> {
   if (readiness.isPending)
     return {
@@ -355,7 +344,6 @@ function researchView({
             backlinkFigures={backlinkFigures}
             collection={collection}
             onOpen={onOpen}
-            onSelect={onSelect}
           />
         )}
       </Stack>
@@ -407,14 +395,12 @@ function ResearchPanels({
   backlinkFigures,
   collection,
   onOpen,
-  onSelect,
 }: Readonly<{
   data: SearchIntelligenceReadiness;
   datasets: SearchIntelligenceDataset[];
   backlinkFigures: SearchIntelligenceReadiness['backlink_figures'];
-  collection: ReturnType<typeof useSearchCollection>;
+  collection: SearchCollection | null;
   onOpen: (dataset: SearchIntelligenceDataset) => void;
-  onSelect: (dataset: SearchIntelligenceDataset | null) => void;
 }>) {
   return (
     <>
@@ -434,8 +420,6 @@ function ResearchPanels({
               collection={collection}
               datasets={datasets}
               backlinkFigures={backlinkFigures}
-              competitors={data.competitors}
-              onSelect={onSelect}
             />
           ) : null}
         </TabPanel>
@@ -521,7 +505,7 @@ function CollectionAction({
   const matchable =
     collection.tab === 'backlinks' &&
     referringLists(datasets).some((dataset) => dataset.target_origin === collection.target);
-  const expandable = !collection.listingCompetitors && Boolean(collection.dataset);
+  const expandable = Boolean(collection.dataset);
   return (
     <>
       {collection.tab === 'keywords' && onSeed ? (

@@ -210,15 +210,15 @@ for (const viewport of [
     await expect(page.getByRole('radio', { name: 'Top pages', exact: true })).toBeVisible();
     await chooseSaved(page, 'Saved scope', 'Exact host');
     await chooseSaved(page, 'Saved market', 'United States · en');
-    await page.getByRole('tab', { name: 'Organic competitors', exact: true }).click();
+    await page.getByRole('tab', { name: 'Overview', exact: true }).click();
+    await expect(page.getByRole('cell', { name: 'Kmart kmart.com.au' })).toBeVisible();
     await page
       .getByRole('button', { name: 'No results Keywords you both rank for: Kmart' })
       .click();
     await expect(
       page.getByText('The provider returned no data for this saved scope.'),
     ).toBeVisible();
-    await page.getByRole('button', { name: 'All competitors' }).click();
-    await expect(page.getByRole('cell', { name: 'Kmart kmart.com.au' })).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Shared keywords', exact: true })).toBeChecked();
     await page.getByRole('tab', { name: 'Backlinks', exact: true }).click();
     await page.getByRole('radio', { name: 'Referring domains', exact: true }).click();
     await expect(

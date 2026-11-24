@@ -5,7 +5,7 @@ import {
   searchDatasetKindsWith,
   type SearchDatasetKind,
 } from '@citeladder/contracts/search-intelligence';
-import { PRESET_OWNED_KINDS } from '@/lib/config/search-intelligence';
+import { PRESET_KINDS } from '@/lib/config/search-intelligence';
 import { matchesCompetitor } from './search-intelligence-competitors';
 
 export const selectionKey = (selection: SearchDatasetSelectionRequest) =>
@@ -73,10 +73,8 @@ export function defaultSelections(
     );
     if (current.length) return current;
   }
-  return available.filter(({ kind, competitor_id }) =>
-    competitor_id
-      ? kind === 'footprint' || SEARCH_DATASET_KINDS[kind].comparison
-      : PRESET_OWNED_KINDS.includes(kind),
+  return available.filter(
+    ({ kind }) => PRESET_KINDS.includes(kind) || SEARCH_DATASET_KINDS[kind].comparison,
   );
 }
 

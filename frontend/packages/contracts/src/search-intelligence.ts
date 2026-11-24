@@ -55,7 +55,7 @@ const ownedAndCompetitor = { owned: true, competitor: true } as const;
 
 export const SEARCH_DATASET_KINDS: Readonly<Record<SearchDatasetKind, SearchDatasetTraits>> = {
   footprint: traits({ ...ownedAndCompetitor, fixedDepth: true, summary: true }),
-  ranking_keywords: traits({ owned: true, keyword: true }),
+  ranking_keywords: traits({ ...ownedAndCompetitor, keyword: true }),
   keyword_suggestions: traits({ owned: true, keyword: true, seed: true }),
   missing_keywords: traits({ competitor: true, comparison: true, keyword: true }),
   shared_keywords: traits({ competitor: true, comparison: true, keyword: true }),

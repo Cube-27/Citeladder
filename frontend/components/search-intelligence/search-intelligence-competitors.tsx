@@ -28,10 +28,12 @@ export function matchesCompetitor(origin: string, domain: string): boolean {
 
 export function SearchIntelligenceCompetitors({
   datasets,
+  backlinkFigures,
   competitors,
   onOpen,
 }: Readonly<{
   datasets: SearchIntelligenceDataset[];
+  backlinkFigures: SearchIntelligenceReadiness['backlink_figures'];
   competitors: SearchIntelligenceReadiness['competitors'];
   onOpen: (dataset: SearchIntelligenceDataset) => void;
 }>) {
@@ -51,8 +53,12 @@ export function SearchIntelligenceCompetitors({
         ),
       ]),
     );
-    const fetched = Boolean(footprint) || [...comparisons.values()].some(Boolean);
-    return { competitor, footprint, comparisons, fetched };
+    const backlinks = backlinkFigures.find((item) =>
+      matchesCompetitor(item.target_origin, competitor.registrable_domain),
+    )?.backlinks;
+    const fetched =
+      Boolean(footprint) || Boolean(backlinks) || [...comparisons.values()].some(Boolean);
+    return { competitor, footprint, backlinks, comparisons, fetched };
   });
   const noneFetched = rows.length > 0 && !rows.some((row) => row.fetched);
   return (
@@ -70,7 +76,7 @@ export function SearchIntelligenceCompetitors({
             }
       }
     >
-      {rows.map(({ competitor, footprint, comparisons, fetched }) => {
+      {rows.map(({ competitor, footprint, backlinks, comparisons, fetched }) => {
         const identity = (
           <TableCell>
             <Inline as="span">
@@ -110,6 +116,9 @@ export function SearchIntelligenceCompetitors({
                 fetched={Boolean(footprint)}
               />
             </TableCell>
+            <TableCell numeric>
+              <SearchValue value={backlinks?.value} fetched={Boolean(backlinks)} />
+            </TableCell>
             {COMPARISON_KINDS.map((kind) => {
               const dataset = comparisons.get(kind);
               return (
@@ -141,6 +150,7 @@ const COMPETITOR_COLUMNS: readonly DataTableColumn[] = [
   { key: 'competitor', label: 'Competitor', kind: 'identity' },
   { key: 'organic', label: 'Organic keywords', kind: 'number' },
   { key: 'traffic', label: 'Est. monthly traffic', kind: 'number', priority: 'low' },
+  { key: 'backlinks', label: 'Backlinks', kind: 'number' },
   { key: 'missing', label: 'Missing keywords', kind: 'number' },
   { key: 'shared', label: 'Shared keywords', kind: 'number' },
 ];

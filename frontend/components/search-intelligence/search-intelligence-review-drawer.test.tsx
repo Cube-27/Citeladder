@@ -167,9 +167,11 @@ describe('SearchIntelligenceReviewDrawer', () => {
       ['footprint', null, 1],
       ['ranking_keywords', null, 50],
       ['footprint', 'rival', 1],
+      ['ranking_keywords', 'rival', 200],
       ['missing_keywords', 'rival', 100],
       ['shared_keywords', 'rival', 100],
       ['footprint', 'other', 1],
+      ['ranking_keywords', 'other', 200],
       ['missing_keywords', 'other', 100],
       ['shared_keywords', 'other', 100],
     ]);
@@ -201,10 +203,10 @@ describe('SearchIntelligenceReviewDrawer', () => {
     );
     const rail = () =>
       screen.getAllByRole('tab').map((tab) => tab.textContent?.replaceAll(/\s+/gu, ' ').trim());
-    expect(rail()).toEqual(['Your website (2)', 'Other (3)', 'Rival (3)']);
+    expect(rail()).toEqual(['Your website (2)', 'Other (4)', 'Rival (4)']);
     await userEvent.click(screen.getByRole('tab', { name: /Rival/u }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Keyword footprint' }));
-    expect(rail()).toEqual(['Your website (2)', 'Other (3)', 'Rival (2)']);
+    expect(rail()).toEqual(['Your website (2)', 'Other (4)', 'Rival (3)']);
   });
 
   it('refuses exact-host comparisons ordered by traffic before asking for a price', async () => {
