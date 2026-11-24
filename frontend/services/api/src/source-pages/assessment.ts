@@ -4,6 +4,8 @@ import { routePageKind } from '../site-health/routes.ts';
 import type { ExtractedPage } from './extract.ts';
 import { publicUrl } from '../safe-fetch.ts';
 import {
+  aliasSpellings,
+  CONNECTOR,
   countsAnywhere,
   DENSE_SCRIPT,
   entityOffset,
@@ -11,6 +13,7 @@ import {
   normalizeText,
   occurrenceCounts,
   tokensOf,
+  withoutAliases,
   type EntityPolicy,
 } from '../analysis/aliases.ts';
 import { scoringConfig } from '../analysis/scoring.ts';
@@ -26,13 +29,36 @@ export type Presence = {
   first_offset: number | null;
   passage_refs: number[];
 };
-export function urlFormat(value: string): { format: string; method: string } {
+export function rosterNames(configuration: unknown): string[] {
+  const config = scoringConfig(configuration);
+  return [...config.brandAliases, ...config.competitors.flatMap((item) => item.aliases)];
+}
+function decoded(segment: string) {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+function unnamedSegment(segment: string, names: readonly string[]) {
+  const text = normalizeText(decoded(segment).replaceAll(/[-_+.]+/gu, ' '));
+  const rest = withoutAliases(text, names);
+  return rest === text ? segment : rest.replaceAll(' ', '-') || p.name_mask;
+}
+export function urlFormat(
+  value: string,
+  names: readonly string[],
+): { format: string; method: string } {
   let url: URL;
   try {
     url = publicUrl(value);
   } catch {
     return { format: 'unresolved', method: 'none' };
   }
+  url.pathname = url.pathname
+    .split('/')
+    .map((segment) => unnamedSegment(segment, names))
+    .join('/');
   const slug = url.pathname
     .toLowerCase()
     .replaceAll(/[/_+.]+/gu, '-')
@@ -46,17 +72,26 @@ export function urlFormat(value: string): { format: string; method: string } {
     ? { format: 'article', method: 'url_pattern' }
     : { format: 'unresolved', method: 'none' };
 }
-function pageFormat(page: ExtractedPage) {
+function pageFormat(page: ExtractedPage, names: readonly string[]) {
   if (!page.facts.parsed) return { format: 'unresolved', method: 'none' };
   const types = new Set(
     page.facts.structured_types.map((s) => s.replace(/\/$/u, '').split('/').at(-1)!.toLowerCase()),
   );
-  for (const [token, format] of p.schema_formats)
-    if (types.has(token!)) return { format: format!, method: 'structured_data' };
-  const title = [page.facts.title, ...page.facts.headings].join(' ');
-  for (const [pattern, format] of p.heading_formats)
-    if (new RegExp(pattern!, 'iu').test(title))
-      return { format: format!, method: 'heading_evidence' };
+  const title = withoutAliases(
+    normalizeText([page.facts.title, ...page.facts.headings].join(' ')),
+    names,
+  );
+  const heading = p.heading_formats.find(([pattern]) =>
+    new RegExp(pattern!, 'iu').test(title),
+  )?.[1];
+  const schema = p.schema_formats.find(([token]) => types.has(token!));
+  const headingWins =
+    heading !== undefined &&
+    heading !== schema?.[1] &&
+    p.headings_over_schema.formats.includes(heading) &&
+    p.headings_over_schema.schemas.includes(schema?.[0] ?? '');
+  if (schema && !headingWins) return { format: schema[1]!, method: 'structured_data' };
+  if (heading) return { format: heading, method: 'heading_evidence' };
   return p.generic_schema_types.some((token) => types.has(token))
     ? { format: 'article', method: 'structured_data' }
     : { format: 'unresolved', method: 'none' };
@@ -67,10 +102,13 @@ const bounded = (body: string, alias: string) =>
   DENSE_SCRIPT.test(alias)
     ? new RegExp(body, 'giu')
     : new RegExp(`(?<!${WORD})${body}(?!${WORD})`, 'giu');
+const SEPARATOR = String.raw`[^\p{L}\p{M}\p{N}_]{0,3}`;
+const wordPattern = (word: string) => (word === CONNECTOR ? `(?:${CONNECTOR}|&)` : escape(word));
 function spellings(alias: string): RegExp[] {
-  const words = normalizeAlias(alias).split(' ').filter(Boolean);
-  const spaced = words.map(escape).join(String.raw`[^\p{L}\p{M}\p{N}_]{0,3}`);
-  return [bounded(escape(alias), alias), ...(words.length ? [bounded(spaced, alias)] : [])];
+  const spaced = aliasSpellings(alias).map((words) =>
+    bounded(words.map(wordPattern).join(SEPARATOR), alias),
+  );
+  return [bounded(escape(alias), alias), ...spaced];
 }
 function counted(
   text: string,
@@ -184,5 +222,5 @@ export function assessPage(page: ExtractedPage, configuration: unknown) {
         ),
       );
   }
-  return { ...pageFormat(page), presences, passages };
+  return { ...pageFormat(page, rosterNames(configuration)), presences, passages };
 }
