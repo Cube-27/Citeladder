@@ -216,7 +216,7 @@ function RowFields({ kind, row }: Readonly<{ kind: string; row: SearchIntelligen
 }
 
 function EmptyDataset({ dataset }: Readonly<{ dataset: SearchIntelligenceDataset }>) {
-  if (dataset.dataset_kind === 'citation_matches')
+  if (dataset.dataset_kind === 'citation_matches' && dataset.coverage !== 'unknown')
     return (
       <StateBlock
         kind="empty"

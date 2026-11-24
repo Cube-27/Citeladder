@@ -9,11 +9,14 @@ import type {
 } from '@/lib/api/search-intelligence';
 import type { BacklinkFigureKey } from '@citeladder/contracts/search-intelligence';
 import { Database } from '@/lib/icons';
+import { formatWindowDate } from '@/lib/format';
 import { SEARCH_DATASET_LABELS } from '@/lib/config/search-intelligence';
 import { SearchIntelligenceCompetitors } from './search-intelligence-competitors';
 import { SearchValue } from './search-intelligence-value';
 import { StateBlock } from '@/components/ui/state-block';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/u;
 
 type BacklinkFigures = SearchIntelligenceReadiness['backlink_figures'][number];
 
@@ -25,7 +28,7 @@ export type SearchMetric = Readonly<{
   sub?: FigureSegment['sub'];
 }>;
 
-export const datasetMetric = (
+const datasetMetric = (
   label: string,
   dataset: SearchIntelligenceDataset | undefined,
   field: string,
@@ -74,7 +77,12 @@ export function SearchMetrics({
           metric.sub ??
           (metric.asOf ? (
             <>
-              as of <DisplayTime value={metric.asOf} dateOnly />
+              as of{' '}
+              {DAY.test(metric.asOf) ? (
+                formatWindowDate(metric.asOf)
+              ) : (
+                <DisplayTime value={metric.asOf} dateOnly />
+              )}
             </>
           ) : undefined),
       }))}

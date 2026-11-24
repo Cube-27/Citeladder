@@ -141,6 +141,9 @@ async function dataset(
     scope?: string;
     coverage?: string;
     publishedAt?: Date;
+    total?: number;
+    mode?: string;
+    summary?: object;
   } = {},
 ) {
   const id = randomUUID();
@@ -163,9 +166,13 @@ async function dataset(
       requested_rows: 10,
       raw_rows_received: 10,
       unique_rows_saved: 10,
+      provider_total: options.total ?? null,
       truncated: false,
-      summary: JSON.stringify({}),
-      provider_filters: JSON.stringify(options.scope ? { research_scope: options.scope } : {}),
+      summary: JSON.stringify(options.summary ?? {}),
+      provider_filters: JSON.stringify({
+        ...(options.scope ? { research_scope: options.scope } : {}),
+        ...(options.mode ? { mode: options.mode } : {}),
+      }),
       parser_version: '1',
       published_at: options.status === 'collecting' ? null : (options.publishedAt ?? now()),
       created_at: now(),
@@ -367,61 +374,39 @@ describe('Search Intelligence readiness and preferences', () => {
   it('fills each backlink figure per target and scope, summary before totals and history', async () => {
     const runId = await review(t, await connection(t));
     const earlier = new Date(Date.now() - 60_000);
-    const saved = async (
-      kind: string,
-      values: { scope?: string; total?: number; mode?: string; summary?: object; at?: Date },
-    ) => {
-      const id = await dataset(t, runId, {
-        kind,
-        scope: values.scope ?? 'domain_subdomains',
-        publishedAt: values.at,
-      });
-      await db
-        .updateTable('search_intelligence_datasets')
-        .set({
-          provider_total: values.total ?? null,
-          summary: JSON.stringify(values.summary ?? {}),
-          provider_filters: JSON.stringify({
-            research_scope: values.scope ?? 'domain_subdomains',
-            ...(values.mode ? { mode: values.mode } : {}),
-          }),
-        })
-        .where('id', '=', id)
-        .execute();
-      return id;
-    };
+    const saved = (kind: string, values: Parameters<typeof dataset>[2] = {}) =>
+      dataset(t, runId, { kind, scope: 'domain_subdomains', ...values });
     const exact = await saved('backlink_summary', {
       scope: 'exact_host',
-      at: earlier,
+      publishedAt: earlier,
       summary: { backlinks: 5, referring_domains: 4, rank: 40 },
     });
     const links = await saved('backlinks', { total: 30_795, mode: 'as_is' });
     await saved('backlinks', { total: 900, mode: 'one_per_domain' });
     const referring = await saved('referring_domains', { total: 2_062 });
-    const history = await saved('backlink_history', {});
-    for (const [date, roots] of [
-      ['2026-09-01', 1_400],
-      ['2026-10-01', 1_500],
-    ] as const)
-      await db
-        .insertInto('search_intelligence_rows')
-        .values({
-          id: randomUUID(),
-          workspace_id: t.workspaceId,
-          project_id: t.projectId,
-          dataset_id: history,
-          provider_row_key: date,
-          row_kind: 'backlink_history',
-          keyword: '',
-          domain: '',
-          url: '',
-          intent: '',
-          backlinks: 1,
-          referring_main_domains: roots,
-          auxiliary: JSON.stringify({ date }),
-          created_at: now(),
-        })
-        .execute();
+    const history = await saved('backlink_history');
+    const month = (date: string, roots: number) => ({
+      id: randomUUID(),
+      workspace_id: t.workspaceId,
+      project_id: t.projectId,
+      dataset_id: history,
+      provider_row_key: date,
+      row_kind: 'backlink_history',
+      keyword: '',
+      domain: '',
+      url: '',
+      intent: '',
+      referring_main_domains: roots,
+      auxiliary: JSON.stringify({ date }),
+      created_at: now(),
+    });
+    await db
+      .insertInto('search_intelligence_rows')
+      .values([
+        month('2026-09-30 00:00:00 +00:00', 1_400),
+        month('2026-10-31 00:00:00 +00:00', 1_500),
+      ])
+      .execute();
 
     const { body } = await call<Readiness>('');
     expect(body.backlink_figures).toEqual([
@@ -431,7 +416,7 @@ describe('Search Intelligence readiness and preferences', () => {
         research_scope: 'domain_subdomains',
         backlinks: { value: 30_795, dataset_id: links, as_of: null },
         referring_domains: { value: 2_062, dataset_id: referring, as_of: null },
-        referring_main_domains: { value: 1_500, dataset_id: history, as_of: null },
+        referring_main_domains: { value: 1_500, dataset_id: history, as_of: '2026-10-31' },
         rank: null,
       },
       {
@@ -738,13 +723,9 @@ describe('Search Intelligence citation matches', () => {
     const parent = await dataset(t, runId, {
       kind: 'referring_domains',
       scope: 'domain_subdomains',
+      total: 2_062,
     });
     await rows(t, parent, [{ domain: 'WWW.Linker.example' }, { domain: 'other.example' }]);
-    await db
-      .updateTable('search_intelligence_datasets')
-      .set({ provider_total: 2_062 })
-      .where('id', '=', parent)
-      .execute();
     const auditId = await fixtures.audit(t);
     await fixtures.execution(t, {
       auditId,

@@ -11,7 +11,11 @@ import type { Scope } from './reads.ts';
 
 type DatasetView = z.input<typeof searchDatasetSchema>;
 type BacklinkFigures = z.input<typeof searchBacklinkFiguresSchema>;
-type HistoryMonth = { backlinks: number | null; referring_main_domains: number | null };
+type HistoryMonth = {
+  backlinks: number | null;
+  referring_main_domains: number | null;
+  date: string | null;
+};
 type Carried = Partial<Record<BacklinkFigureKey, unknown>>;
 
 const PRECEDENCE: readonly string[] = [
@@ -44,6 +48,7 @@ function latestHistoryMonths(db: Database, scope: Scope, datasetIds: string[]) {
   return scope.workspace
     .selectFrom(db, 'search_intelligence_rows')
     .select(['dataset_id', 'backlinks', 'referring_main_domains'])
+    .select(sql<string | null>`left(auxiliary->>'date', 10)`.as('date'))
     .distinctOn('dataset_id')
     .where('project_id', '=', scope.projectId)
     .where('dataset_id', 'in', datasetIds)
@@ -87,8 +92,13 @@ export async function backlinkFigures(
     const pick = (key: BacklinkFigureKey) => {
       for (const dataset of peers) {
         const value = figure(carried(dataset, months)[key]);
-        if (value !== null)
-          return { value, dataset_id: dataset.id, as_of: dataset.collection_ended_at ?? null };
+        if (value === null) continue;
+        const month = dataset.dataset_kind === 'backlink_history' ? months.get(dataset.id) : null;
+        return {
+          value,
+          dataset_id: dataset.id,
+          as_of: month ? month.date : (dataset.collection_ended_at ?? null),
+        };
       }
       return null;
     };
