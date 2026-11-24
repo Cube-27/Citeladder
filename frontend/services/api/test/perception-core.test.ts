@@ -157,7 +157,7 @@ describe('perception passages', () => {
       policy: policy.perception,
       promptNamesBrand: true,
     });
-    expect(answer.split(/\s+/u).length).toBe(920);
+    expect(answer.split(/\s+/u)).toHaveLength(920);
     expect(named).toMatchObject({
       spans: [{ start: 0, end: Array.from(answer).length, text: answer }],
       cut_chars: 0,

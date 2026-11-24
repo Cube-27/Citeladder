@@ -150,24 +150,27 @@ async function chatIn(db: Database, workspace: Pick<Scope, 'workspaceId'>, chatI
 const ACTION_REF =
   /^citeladder:\/\/action\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/u;
 
+type ActionSources = Pick<
+  z.infer<typeof agentMessageSchema>,
+  'evidence_refs' | 'mentions' | 'proposals'
+>;
+
+function* messageActionIds(message: ActionSources) {
+  for (const ref of message.evidence_refs) {
+    const id = ACTION_REF.exec(ref)?.[1];
+    if (id) yield id;
+  }
+  for (const mention of message.mentions) if (mention.kind === 'action') yield mention.id;
+  for (const proposal of message.proposals)
+    if (proposal.kind === 'declaration') yield proposal.action_id;
+}
+
 async function referencedActions(
   db: Database,
   scope: Pick<Scope, 'workspaceId' | 'projectId'>,
-  thread: readonly Pick<
-    z.infer<typeof agentMessageSchema>,
-    'evidence_refs' | 'mentions' | 'proposals'
-  >[],
+  thread: readonly ActionSources[],
 ) {
-  const ids = new Set<string>();
-  for (const message of thread) {
-    for (const ref of message.evidence_refs) {
-      const id = ACTION_REF.exec(ref)?.[1];
-      if (id) ids.add(id);
-    }
-    for (const mention of message.mentions) if (mention.kind === 'action') ids.add(mention.id);
-    for (const proposal of message.proposals)
-      if (proposal.kind === 'declaration') ids.add(proposal.action_id);
-  }
+  const ids = new Set(thread.flatMap((message) => [...messageActionIds(message)]));
   if (!ids.size) return [];
   const rows = await db
     .selectFrom('actions')

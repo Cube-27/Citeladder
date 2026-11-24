@@ -14,7 +14,7 @@ import { changeKind, MEMBER_RUN, MEMBER_WRITE, plural, type PreviewContext } fro
 type Scope = Readonly<{ workspaceId: string; projectId: string }>;
 
 const RESEARCH = { label: 'Open Keyword research', path: '/search-intelligence' };
-const FINISHED = ['succeeded', 'failed', 'cancelled', 'partial', 'uncertain'];
+const FINISHED = new Set(['succeeded', 'failed', 'cancelled', 'partial', 'uncertain']);
 const research = (scope: Scope) => ({
   workspace: new WorkspaceScope(scope.workspaceId),
   projectId: scope.projectId,
@@ -159,7 +159,7 @@ export const researchKinds = {
     },
     async preview(context, payload) {
       const run = await projectRun(context, payload.run_id);
-      if (FINISHED.includes(run.status)) throw new ApiError(409, 'This run already finished');
+      if (FINISHED.has(run.status)) throw new ApiError(409, 'This run already finished');
       return {
         title: 'Cancel a Keyword research run',
         rows: [started(run), { label: 'Status', value: run.status }],

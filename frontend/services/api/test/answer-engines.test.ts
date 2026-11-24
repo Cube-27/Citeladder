@@ -236,19 +236,18 @@ describe('frozen answer-engine execution', () => {
         calls++;
         expect(options?.redirect).toBe('error');
         expect(JSON.parse(String(options?.body))).toEqual(body);
-        return Response.json(
-          engine === 'chatgpt'
-            ? {
-                status: 'completed',
-                output: [{ type: 'message', content: [{ type: 'output_text', text: 'Answer.' }] }],
-              }
-            : engine === 'gemini'
-              ? {
-                  finish_reason: 'STOP',
-                  steps: [{ type: 'model_output', content: [{ type: 'text', text: 'Answer.' }] }],
-                }
-              : { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Answer.' }] },
-        );
+        const replies = {
+          chatgpt: {
+            status: 'completed',
+            output: [{ type: 'message', content: [{ type: 'output_text', text: 'Answer.' }] }],
+          },
+          gemini: {
+            finish_reason: 'STOP',
+            steps: [{ type: 'model_output', content: [{ type: 'text', text: 'Answer.' }] }],
+          },
+          claude: { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Answer.' }] },
+        };
+        return Response.json(replies[engine]);
       };
       const result = await executeAnswer(
         input,

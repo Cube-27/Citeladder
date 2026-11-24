@@ -22,7 +22,7 @@ import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import type { NamedBrand, NetSentiment, Prompt, PromptStatus } from '@citeladder/contracts';
 import { Archive, Check, ICONS, MoreHorizontal, Pencil, Power, Trash2 } from '@/lib/icons';
-import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
+import { POSITION_HINT, SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import type { PromptMentions } from '@/lib/prompts/filter';
 import { promptHistoryHref } from '@/lib/prompts/history';
@@ -31,7 +31,6 @@ import type { RowSelectionState } from '@/lib/prompts/selection';
 import { CitedDomainMarks } from './cited-domain-marks';
 import { NO_ANSWERS, NOT_MEASURED, positionAbsence } from './prompt-figures';
 import { formatMean, percentText } from '@/lib/format';
-import { POSITION_HINT } from '@/lib/config/visibility';
 
 export type PromptChange =
   | { kind: 'delta'; points: number }

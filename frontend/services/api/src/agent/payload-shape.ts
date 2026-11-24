@@ -1,15 +1,15 @@
 import { z } from 'zod';
 
 type SchemaNode = {
-  type?: string | string[] | undefined;
-  format?: string | undefined;
+  type?: string | string[];
+  format?: string;
   const?: unknown;
-  enum?: unknown[] | undefined;
-  items?: SchemaNode | undefined;
-  anyOf?: SchemaNode[] | undefined;
-  oneOf?: SchemaNode[] | undefined;
-  properties?: Record<string, SchemaNode> | undefined;
-  required?: string[] | undefined;
+  enum?: unknown[];
+  items?: SchemaNode;
+  anyOf?: SchemaNode[];
+  oneOf?: SchemaNode[];
+  properties?: Record<string, SchemaNode>;
+  required?: string[];
 };
 const schemaNode: z.ZodType<SchemaNode> = z.lazy(() =>
   z.object({

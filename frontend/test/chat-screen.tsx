@@ -9,7 +9,9 @@ import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders, type TestEntitlement } from '@/test/render';
 
-export function renderChat(entitlement: TestEntitlement = { grants: ['agent'] }) {
+const AGENT_ENTITLEMENT: TestEntitlement = { grants: ['agent'] };
+
+export function renderChat(entitlement = AGENT_ENTITLEMENT) {
   return renderWithProviders(
     <Routes>
       <Route path="/agent/chats/:chatId" element={<ChatScreen />} />

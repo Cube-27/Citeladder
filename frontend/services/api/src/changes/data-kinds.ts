@@ -24,7 +24,7 @@ const scopeOf = (workspaceId: string, change: { projectId: string }) => ({
 const syncSpend = (count: number) =>
   `${plural(count, 'on-demand sync')} from the workspace's sync allowance`;
 
-async function syncedProperty(context: PreviewContext, syncRunId: string) {
+function syncedProperty(context: PreviewContext, syncRunId: string) {
   return context.db
     .selectFrom('integration_sync_runs as run')
     .innerJoin('integration_connections as connection', 'connection.id', 'run.connection_id')

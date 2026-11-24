@@ -22,6 +22,7 @@ import {
   PERMANENT,
   ROW_COUNT,
   rowsOf,
+  shownValue,
   type PreviewContext,
 } from './kind.ts';
 
@@ -42,9 +43,6 @@ const projectEdit = projectUpdate
   .refine((edit) => Object.values(edit).some((value) => value !== undefined), {
     message: 'An edit changes at least one field',
   });
-
-const shown = (value: unknown) =>
-  value === null || value === undefined || value === '' ? 'empty' : String(value);
 
 export const projectKinds = {
   update_project: changeKind({
@@ -73,7 +71,7 @@ export const projectKinds = {
             .filter(([, value]) => value !== undefined)
             .map(([field, value]) => ({
               label: field.replaceAll('_', ' '),
-              value: `${shown(current[field])} → ${shown(value)}`,
+              value: `${shownValue(current[field])} → ${shownValue(value)}`,
             })),
           ...replaced('Also called', brand?.aliases),
           ...replaced('Owned domain', owned),

@@ -127,6 +127,22 @@ export const plural = (count: number, one: string, many = `${one}s`) =>
 export const rowsOf = (label: string, values: readonly string[]) =>
   values.map((value) => ({ label, value }));
 
+function shownItem(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  const primitive =
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint';
+  return primitive ? String(value) : (JSON.stringify(value) ?? '');
+}
+
+export function shownValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return 'empty';
+  if (Array.isArray(value)) return value.map(shownItem).join(', ') || 'none';
+  return shownItem(value) || 'empty';
+}
+
 export const MEMBER_WRITE = permission({ capability: 'write' });
 export const MEMBER_RUN = permission({ capability: 'run' });
 export const PERMANENT = { label: 'Undo', value: 'This cannot be undone.' };

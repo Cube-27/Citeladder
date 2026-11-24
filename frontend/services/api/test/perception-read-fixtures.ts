@@ -52,7 +52,8 @@ export function perceptionReads() {
   async function get(tenant: Tenant, path: string, query: Record<string, string> = {}) {
     const token = await sessionToken({ sub: tenant.userId, ver: 0 });
     const search = new URLSearchParams(query);
-    const response = await app.request(`${path}${search.size ? `?${search}` : ''}`, {
+    const suffix = search.size ? '?' + search.toString() : '';
+    const response = await app.request(path + suffix, {
       headers: { cookie: `${config.session.cookieName}=${token}` },
     });
     return { status: response.status, body: (await response.json()) as Body };

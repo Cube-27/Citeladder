@@ -18,7 +18,14 @@ import { editProduct, productEditInput, setProductLifecycle } from '../commerce/
 import { commerceMissing, type CommerceScope } from '../commerce/reads.ts';
 import type { Database } from '../db/database.ts';
 import { requireFlag } from '../entitlements/access.ts';
-import { changeKind, MEMBER_RUN, MEMBER_WRITE, plural, type PreviewContext } from './kind.ts';
+import {
+  changeKind,
+  MEMBER_RUN,
+  MEMBER_WRITE,
+  plural,
+  shownValue,
+  type PreviewContext,
+} from './kind.ts';
 
 type Target = Readonly<{ kind: 'product' | 'category'; id: string }>;
 
@@ -58,12 +65,6 @@ async function product(context: PreviewContext, id: string) {
     .executeTakeFirst();
   if (!row) commerceMissing('Product not found');
   return row;
-}
-
-function shown(value: unknown) {
-  if (value === null || value === undefined || value === '') return 'empty';
-  if (Array.isArray(value)) return value.join(', ') || 'none';
-  return String(value);
 }
 
 async function buyerPromptText(context: PreviewContext, id: string) {
@@ -184,8 +185,8 @@ export const commerceKinds = {
             label: field.replaceAll('_', ' '),
             value:
               field === 'categories'
-                ? `Replaced by ${shown(value)}`
-                : `${shown(current[field])} → ${shown(value)}`,
+                ? `Replaced by ${shownValue(value)}`
+                : `${shownValue(current[field])} → ${shownValue(value)}`,
           })),
         ],
         spend: null,

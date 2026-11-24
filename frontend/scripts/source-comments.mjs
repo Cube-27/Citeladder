@@ -28,8 +28,8 @@ const IGNORE = [
 
 const RULES = String.raw`(?: [\w@/-]+(?:, ?[\w@/-]+)*)?`;
 const DIRECTIVES = [
-  new RegExp(String.raw`^(?:oxlint|eslint)-(?:disable|enable)(?:-next-line|-line)?${RULES}$`, 'u'),
-  new RegExp(String.raw`^react-doctor-disable(?:-next-line|-line)?${RULES}$`, 'u'),
+  new RegExp(`^(?:oxlint|eslint)-(?:disable|enable)(?:-next-line|-line)?${RULES}$`, 'u'),
+  new RegExp(`^react-doctor-disable(?:-next-line|-line)?${RULES}$`, 'u'),
   /^NOSONAR$/u,
   /^@ts-expect-error$/u,
   /^\/ <reference (?:path|types|lib)="[^"]+" \/>$/u,
@@ -68,7 +68,8 @@ function scriptComments({ source, label, offset = 0 }) {
 function cssComments(source, offset = 0) {
   const found = [];
   let quote = null;
-  for (let index = 0; index < source.length; index += 1) {
+  let index = 0;
+  while (index < source.length) {
     const char = source[index];
     if (quote) {
       if (char === '\\') index += 1;
@@ -81,6 +82,7 @@ function cssComments(source, offset = 0) {
       found.push({ kind: 'block', value: source.slice(index + 2, end), start: index + offset });
       index = end + 1;
     }
+    index += 1;
   }
   return found;
 }
@@ -93,21 +95,21 @@ function expressionEnd({ source, open, label }) {
   throw new Error(`${label}: unterminated expression at offset ${open}`);
 }
 
-function astroComments(source, label) {
-  const found = [];
-  let index = 0;
+function astroFrontmatter(source, label) {
   const fence = /^\s*---\r?\n/u.exec(source);
-  if (fence) {
-    const close = source.indexOf('\n---', fence[0].length - 1);
-    found.push(
-      ...scriptComments({
-        source: source.slice(fence[0].length, close),
-        label: `${label}.ts`,
-        offset: fence[0].length,
-      }),
-    );
-    index = close + 4;
-  }
+  if (!fence) return { found: [], end: 0 };
+  const close = source.indexOf('\n---', fence[0].length - 1);
+  const found = scriptComments({
+    source: source.slice(fence[0].length, close),
+    label: `${label}.ts`,
+    offset: fence[0].length,
+  });
+  return { found, end: close + 4 };
+}
+
+function astroComments(source, label) {
+  const { found, end } = astroFrontmatter(source, label);
+  let index = end;
   while (index < source.length) {
     const head = source.slice(index, index + 8).toLowerCase();
     const raw = /^<(script|style)[\s>]/u.exec(head);

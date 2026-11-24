@@ -35,12 +35,13 @@ export function ScoreGauge({
 }: Readonly<{ label: string; score: number | null; absent?: string; caveat?: string | null }>) {
   const shown = score === null ? null : clampScore(score);
   const band = shown === null ? null : BAND[scoreBand(shown)];
+  const spoken = shown === null ? (absent ?? 'not measured') : `${shown} of 100`;
   return (
     <div className="flex min-w-0 flex-col items-center gap-1">
       <svg
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
         role="img"
-        aria-label={`${label}: ${shown === null ? (absent ?? 'not measured') : `${shown} of 100`}`}
+        aria-label={`${label}: ${spoken}`}
         viewBox="0 0 200 112"
         className="h-28 w-50 max-w-full"
       >
@@ -68,18 +69,25 @@ export function ScoreGauge({
           </text>
         )}
       </svg>
-      {band ? (
-        <span className="flex flex-wrap items-center justify-center gap-2">
-          <StatusMark tone={band.tone}>{band.label}</StatusMark>
-          {caveat ? <span className="text-caption text-ink-2">{caveat}</span> : null}
-        </span>
-      ) : absent ? (
-        <Absence state="unavailable" label={absent} />
-      ) : (
-        <Absence state="not_measured" />
-      )}
+      <GaugeMark band={band} absent={absent} caveat={caveat} />
     </div>
   );
+}
+
+function GaugeMark({
+  band,
+  absent,
+  caveat,
+}: Readonly<{ band: (typeof BAND)[ScoreBand] | null; absent?: string; caveat?: string | null }>) {
+  if (band)
+    return (
+      <span className="flex flex-wrap items-center justify-center gap-2">
+        <StatusMark tone={band.tone}>{band.label}</StatusMark>
+        {caveat ? <span className="text-caption text-ink-2">{caveat}</span> : null}
+      </span>
+    );
+  if (absent) return <Absence state="unavailable" label={absent} />;
+  return <Absence state="not_measured" />;
 }
 
 export type BarRow = Readonly<{

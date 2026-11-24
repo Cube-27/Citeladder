@@ -3,7 +3,18 @@ import { AGENT_ATTACHMENT_NAME_MAX_CHARS, type AgentAttachment } from '@citeladd
 import { READ_FAILED_MESSAGE, readCsvFileText } from '@/lib/csv/read-file-text';
 
 const TEXT_EXTENSIONS = ['csv', 'tsv', 'json', 'ndjson', 'jsonl', 'md', 'markdown', 'txt'];
-const SAVE_AS_TEXT = ['xlsx', 'xls', 'ods', 'numbers', 'pdf', 'docx', 'doc', 'odt', 'pages', 'rtf'];
+const SAVE_AS_TEXT = new Set([
+  'xlsx',
+  'xls',
+  'ods',
+  'numbers',
+  'pdf',
+  'docx',
+  'doc',
+  'odt',
+  'pages',
+  'rtf',
+]);
 const MAX_BYTES_PER_CHAR = 4;
 
 export const AGENT_ATTACHMENT_ACCEPT = TEXT_EXTENSIONS.map((extension) => `.${extension}`).join(
@@ -24,7 +35,7 @@ function extensionOf(name: string) {
 
 export async function readAttachmentFile(file: File, maxChars: number): Promise<AttachmentRead> {
   const extension = extensionOf(file.name);
-  if (SAVE_AS_TEXT.includes(extension))
+  if (SAVE_AS_TEXT.has(extension))
     return refused(`${file.name} can't be read here. Save it as CSV, or paste the text.`);
   if (!TEXT_EXTENSIONS.includes(extension))
     return refused('Attach a CSV, TSV, JSON, NDJSON, Markdown or plain text file.');

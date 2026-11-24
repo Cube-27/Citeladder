@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, expect, it, vi } from 'vitest';
 import type { Actor } from '../src/auth/actor.ts';
+import { shownValue } from '../src/changes/kind.ts';
 import { changeKinds } from '../src/changes/kinds.ts';
 import { AGENT_CHANGE_KINDS, type AgentChangeKind } from '../src/agent/change-proposals.ts';
 import { ApiError } from '../src/errors.ts';
@@ -76,3 +77,16 @@ it.each(TABLED)(
     expect(await arranged.observe()).toEqual(arranged.after);
   },
 );
+
+it.each([
+  [null, 'empty'],
+  ['', 'empty'],
+  ['Acme', 'Acme'],
+  [3, '3'],
+  [['a', '', 'b'], 'a, , b'],
+  [[], 'none'],
+  [{ tone: 'plain' }, '{"tone":"plain"}'],
+  [[{ id: 1 }], '{"id":1}'],
+])('previews %j as %s', (value, shown) => {
+  expect(shownValue(value)).toBe(shown);
+});

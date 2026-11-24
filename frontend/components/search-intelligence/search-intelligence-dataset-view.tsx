@@ -41,8 +41,8 @@ export function SearchIntelligenceDatasetView({
   const { workspaceId, projectId } = useProjectScope();
   const [filter, setFilter] = useState('');
   const search = useDebounced(filter, TABLE_SEARCH_DEBOUNCE_MS);
-  const [chosen, setOrder] = useState<SearchRowOrder | null>(null);
-  const order = chosen ?? defaultRowOrder(dataset.dataset_kind);
+  const [chosenOrder, setOrder] = useState<SearchRowOrder | null>(null);
+  const order = chosenOrder ?? defaultRowOrder(dataset.dataset_kind);
   const minVolume = keywordFilters?.minVolume ?? '';
   const filters = {
     ...order,

@@ -6,14 +6,14 @@ const env: Parameters<typeof handleAppRequest>[1] = {
   ORIGIN_UPSTREAM: 'https://citeladder-api-44437656491.us-central1.run.app',
   ORIGIN_TOKEN: 'x'.repeat(32),
   ASSETS: {
-    fetch: async (request: Request) =>
-      new URL(request.url).pathname === '/index.html'
-        ? new Response('<html>app</html>', { headers: { 'Content-Type': 'text/html' } })
-        : ['/app-assets/page-DqDZ7Zs-.js', '/theme-preference.js'].includes(
-              new URL(request.url).pathname,
-            )
-          ? new Response('export {};', { headers: { 'Content-Type': 'text/javascript' } })
-          : new Response('missing', { status: 404 }),
+    fetch: async (request: Request) => {
+      const path = new URL(request.url).pathname;
+      if (path === '/index.html')
+        return new Response('<html>app</html>', { headers: { 'Content-Type': 'text/html' } });
+      if (['/app-assets/page-DqDZ7Zs-.js', '/theme-preference.js'].includes(path))
+        return new Response('export {};', { headers: { 'Content-Type': 'text/javascript' } });
+      return new Response('missing', { status: 404 });
+    },
   },
 };
 

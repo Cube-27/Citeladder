@@ -21,6 +21,7 @@ import {
   quoted,
   ROW_COUNT,
   rowsOf,
+  shownValue,
   type PreviewContext,
 } from './kind.ts';
 
@@ -67,8 +68,6 @@ export async function promptSetName(context: PreviewContext, setId: string) {
 }
 
 const topicName = topicCreate.shape.name;
-const shown = (value: unknown) =>
-  value === null || value === undefined || value === '' ? 'empty' : String(value);
 const promptEdit = z
   .strictObject({
     prompt_id: z.uuid(),
@@ -228,19 +227,17 @@ export const promptKinds = {
       const now = await editedPrompt(context, promptId);
       const current: Record<string, unknown> = now;
       const names = await topicNames(context);
-      const named = (field: string, value: unknown) =>
-        field === 'topic_id'
-          ? typeof value === 'string'
-            ? (names.get(value) ?? '')
-            : 'no topic'
-          : value;
+      const named = (field: string, value: unknown) => {
+        if (field !== 'topic_id') return value;
+        return typeof value === 'string' ? (names.get(value) ?? '') : 'no topic';
+      };
       return {
         title: edit.text ? 'Reword a prompt' : 'Edit a prompt',
         rows: [
           ...(edit.text ? [] : [{ label: 'Prompt', value: now.text }]),
           ...Object.entries(edit).map(([field, value]) => ({
             label: field === 'topic_id' ? 'Topic' : field.replaceAll('_', ' '),
-            value: `${shown(named(field, current[field]))} → ${shown(named(field, value))}`,
+            value: `${shownValue(named(field, current[field]))} → ${shownValue(named(field, value))}`,
           })),
         ],
         spend: null,

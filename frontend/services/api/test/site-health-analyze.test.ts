@@ -255,26 +255,29 @@ describe('analyze acquisition', () => {
     expect((await crawlCounters(db, await crawl(seed))).analyzed).toBe(1);
   });
 
-  it.each(['product', 'category', 'other'])(
+  const catalogPages = {
+    product: {
+      path: '/products/widget',
+      body: () =>
+        readFileSync(new URL('./fixtures/site-health/multi_main_product.html', import.meta.url)),
+    },
+    category: {
+      path: '/collections/widgets',
+      body: () =>
+        readFileSync(
+          new URL('./fixtures/site-health/category_faceted_canonical.html', import.meta.url),
+        ),
+    },
+    other: { path: '/plain', body: () => RICH },
+  };
+  it.each(['product', 'category', 'other'] as const)(
     'hands %s analyses to Commerce only for catalog pages',
     async (kind) => {
       const seed = await running();
       await fixtures.businessProfile(seed, { business_model: 'retail' });
-      const path =
-        kind === 'product'
-          ? '/products/widget'
-          : kind === 'category'
-            ? '/collections/widgets'
-            : '/plain';
+      const { path } = catalogPages[kind];
       const page = await fixtures.analyzable(seed, path);
-      const body =
-        kind === 'product'
-          ? readFileSync(new URL('./fixtures/site-health/multi_main_product.html', import.meta.url))
-          : kind === 'category'
-            ? readFileSync(
-                new URL('./fixtures/site-health/category_faceted_canonical.html', import.meta.url),
-              )
-            : RICH;
+      const body = catalogPages[kind].body();
       await analyze(site({ [path]: { body } }), page.taskId);
       const [analysis] = await analyses(seed, page.siteUrlId);
       expect(analysis!.page_kind).toBe(kind);
@@ -368,32 +371,27 @@ describe('analyze failures', () => {
     expect((await task(page.taskId)).completed_at).not.toBeNull();
   });
 
-  it.each(['45', '3600', 'invalid', '0', 'past-date', 'http-date'])(
-    'persists a bounded retry window from Retry-After %s',
-    async (advice) => {
+  it.each([
+    { advice: '45', offset: null, wait: 45 },
+    { advice: '3600', offset: null, wait: 60 },
+    { advice: 'invalid', offset: null, wait: 2 },
+    { advice: '0', offset: null, wait: 2 },
+    { advice: 'past-date', offset: -45_000, wait: 2 },
+    { advice: 'http-date', offset: 45_000, wait: null },
+  ])(
+    'persists a bounded retry window from Retry-After $advice',
+    async ({ advice, offset, wait }) => {
       const seed = await running();
       const page = await fixtures.analyzable(seed, '/limited');
       const before = Date.now();
-      const header =
-        advice === 'http-date'
-          ? new Date(before + 45_000).toUTCString()
-          : advice === 'past-date'
-            ? new Date(before - 45_000).toUTCString()
-            : advice;
+      const header = offset === null ? advice : new Date(before + offset).toUTCString();
       await analyzeWith(
         { ...siteWorkerSettings({}), concurrency: 1 },
         site({ '/limited': { status: 429, headers: { 'retry-after': header } } }),
         page.taskId,
       );
       const settled = await task(page.taskId);
-      const expected =
-        header === '45'
-          ? 45
-          : header === '3600'
-            ? 60
-            : ['invalid', '0', 'past-date'].includes(advice)
-              ? 2
-              : (Date.parse(header) - before) / 1000;
+      const expected = wait ?? (Date.parse(header) - before) / 1000;
       expect(settled.status).toBe('retry_wait');
       expect(settled.available_at.getTime() - before).toBeGreaterThanOrEqual(
         expected * 1000 - 1000,

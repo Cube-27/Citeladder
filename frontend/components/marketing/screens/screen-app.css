@@ -75,10 +75,6 @@
   height: var(--page-header-band);
 }
 
-.cl-app-header {
-  border-bottom: 1px solid var(--color-line);
-}
-
 .cl-app-side > .cl-app-topbar {
   margin-inline: -12px;
   padding-inline: 12px;
@@ -208,6 +204,7 @@
 
 .cl-app-header {
   justify-content: space-between;
+  border-bottom: 1px solid var(--color-line);
   gap: var(--card-padding);
   margin-inline: calc(var(--content-gutter) * -1);
   padding-inline: var(--content-gutter);

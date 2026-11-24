@@ -44,7 +44,7 @@ export function dataCases(db: Database, fixtures: SiteFixtures): Record<DataKind
     return t;
   }
 
-  async function dataForSeo(workspaceId: string, platform = false) {
+  function dataForSeo(workspaceId: string, platform = false) {
     const at = new Date();
     return db
       .insertInto('provider_connections')

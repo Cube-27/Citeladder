@@ -61,12 +61,12 @@ export async function runBuiltin(
     const outcome = loadSkill(catalog, state, call.input, turn.budget);
     if (outcome.ok && state.skill && before?.id !== state.skill.id)
       state.steps.push({ kind: 'skill', skill_id: state.skill.id });
-    return Promise.resolve(outcome);
+    return outcome;
   }
   if (call.name === SUGGEST_EDITS) {
     const outcome = suggestEdits(catalog, state, call.input, turn.budget);
     if (outcome.ok) state.steps.push({ kind: 'suggestion' });
-    return Promise.resolve(outcome);
+    return outcome;
   }
   const edit = call.name === EDIT_DOCUMENT;
   const outcome = edit
@@ -74,5 +74,5 @@ export async function runBuiltin(
     : saveDocument(catalog, state, call.input, turn.budget);
   if (outcome.ok && outcome.document)
     state.steps.push(documentStep(turn, state, { number: outcome.document, edit }));
-  return Promise.resolve(outcome);
+  return outcome;
 }

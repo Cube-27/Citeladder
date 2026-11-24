@@ -162,6 +162,10 @@ const responseExample =
 </style>
 
 <script>
+  const ARROW_STEPS = new Map([
+    ['ArrowRight', 1],
+    ['ArrowLeft', -1],
+  ]);
   for (const root of document.querySelectorAll<HTMLElement>('[data-api-request]')) {
     const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-api-lang]')];
     const code = root.querySelector('pre code');
@@ -180,7 +184,7 @@ const responseExample =
     for (const [index, tab] of tabs.entries()) {
       tab.addEventListener('click', () => select(tab));
       tab.addEventListener('keydown', (event) => {
-        const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+        const step = ARROW_STEPS.get(event.key) ?? 0;
         if (step === 0) return;
         const next = tabs[(index + step + tabs.length) % tabs.length];
         if (!next) return;
