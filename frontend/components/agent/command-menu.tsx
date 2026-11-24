@@ -34,7 +34,7 @@ export type ComposerCommands = {
 
 export type ComposerPastes = {
   items: readonly { key: string; attachment: AgentAttachment }[];
-  add: (text: string) => boolean;
+  add: (text: string, minChars?: number) => boolean;
   attach: (files: readonly File[]) => void;
   remove: (key: string) => void;
 };
@@ -57,6 +57,8 @@ export function CommandField({
   disabled,
   placeholder,
   maxRows,
+  minRows = 1,
+  pasteMinChars,
 }: Readonly<{
   id: string;
   value: string;
@@ -66,6 +68,8 @@ export function CommandField({
   disabled: boolean;
   placeholder: string;
   maxRows: number;
+  minRows?: number;
+  pasteMinChars?: number;
 }>) {
   const field = useRef<HTMLTextAreaElement>(null);
   const pendingCaret = useRef<number | null>(null);
@@ -135,6 +139,7 @@ export function CommandField({
         ref={field}
         id={id}
         maxRows={maxRows}
+        rows={minRows}
         placement="composer"
         value={value}
         disabled={disabled}
@@ -176,7 +181,8 @@ export function CommandField({
         onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
         onPaste={(event) => {
           const pasted = event.clipboardData.getData('text/plain');
-          if (commands?.pastes?.add(pasted)) event.preventDefault();
+          const overflows = pasteMinChars !== undefined && pasted.split('\n').length > maxRows;
+          if (commands?.pastes?.add(pasted, overflows ? 1 : pasteMinChars)) event.preventDefault();
           else commands?.onPaste?.(pasted, (change) => onChange(change(latest.current)));
         }}
         onKeyDown={(event) => {

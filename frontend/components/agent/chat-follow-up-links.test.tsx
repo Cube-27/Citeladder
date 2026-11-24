@@ -61,6 +61,13 @@ describe('A follow-up with an Action link', () => {
     const reply = await screen.findByLabelText('Reply to the agent');
     await screen.findByRole('button', { name: 'Make it shorter' });
     await user.click(reply);
+    await user.paste('one\ntwo');
+    expect(reply).toHaveValue('one\ntwo');
+    await user.clear(reply);
+    await user.paste('one\ntwo\nthree\nfour');
+    expect(reply).toHaveValue('');
+    await user.click(screen.getByRole('button', { name: 'Remove Pasted text, 4 lines' }));
+    await user.click(reply);
     await user.paste('x'.repeat(AGENT_PASTE_ATTACHMENT_MIN_CHARS));
     await user.type(reply, `See ${link}`);
     await user.click(screen.getByRole('button', { name: 'Send' }));

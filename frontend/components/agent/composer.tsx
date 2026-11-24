@@ -5,7 +5,12 @@ import { ComposerFrame, PastedTextChip, RemovableChip } from '@/components/ui/ch
 import { AGENT_ATTACHMENT_ACCEPT } from '@/lib/agent/attachment-file';
 import { CornerDownLeft, Paperclip, RotateCcw, Square } from '@/lib/icons';
 import type { ContextChip } from '@/lib/agent/handoff';
-import { AGENT_COMPOSER_MAX_ROWS } from '@/lib/config/agent';
+import {
+  AGENT_COMPOSER_MAX_ROWS,
+  AGENT_COMPOSER_MIN_ROWS,
+  AGENT_REPLY_MAX_ROWS,
+  AGENT_REPLY_PASTE_ATTACHMENT_MIN_CHARS,
+} from '@/lib/config/agent';
 
 import { CommandField } from './command-menu';
 import { ComposerMenu } from './composer-menu';
@@ -15,6 +20,7 @@ import type { ComposerState } from './use-composer-commands';
 
 export function Composer({
   id,
+  layout = 'dock',
   label,
   value,
   onChange,
@@ -35,6 +41,7 @@ export function Composer({
   onRetry,
 }: Readonly<{
   id: string;
+  layout?: 'dock' | 'opening';
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -58,6 +65,7 @@ export function Composer({
   const menuDisabled = disabled || submissionDisabled;
   return (
     <ComposerFrame
+      layout={layout}
       onSubmit={() => {
         if (canSend) onSubmit();
       }}
@@ -86,7 +94,12 @@ export function Composer({
             commands={menuDisabled ? { ...commands, openSkillPicker: undefined } : commands}
             disabled={disabled}
             placeholder={placeholder}
-            maxRows={AGENT_COMPOSER_MAX_ROWS}
+            {...(layout === 'opening'
+              ? { maxRows: AGENT_COMPOSER_MAX_ROWS, minRows: AGENT_COMPOSER_MIN_ROWS }
+              : {
+                  maxRows: AGENT_REPLY_MAX_ROWS,
+                  pasteMinChars: AGENT_REPLY_PASTE_ATTACHMENT_MIN_CHARS,
+                })}
           />
         </>
       }
