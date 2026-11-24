@@ -81,16 +81,14 @@ function pageFormat(page: ExtractedPage, names: readonly string[]) {
     normalizeText([page.facts.title, ...page.facts.headings].join(' ')),
     names,
   );
-  const heading = p.heading_formats.find(([pattern]) =>
-    new RegExp(pattern!, 'iu').test(title),
-  )?.[1];
-  const schema = p.schema_formats.find(([token]) => types.has(token!));
+  const heading = p.heading_formats.find(([pattern]) => new RegExp(pattern, 'iu').test(title))?.[1];
+  const schema = p.schema_formats.find(([token]) => types.has(token));
   const headingWins =
     heading !== undefined &&
     heading !== schema?.[1] &&
     p.headings_over_schema.formats.includes(heading) &&
     p.headings_over_schema.schemas.includes(schema?.[0] ?? '');
-  if (schema && !headingWins) return { format: schema[1]!, method: 'structured_data' };
+  if (schema && !headingWins) return { format: schema[1], method: 'structured_data' };
   if (heading) return { format: heading, method: 'heading_evidence' };
   return p.generic_schema_types.some((token) => types.has(token))
     ? { format: 'article', method: 'structured_data' }

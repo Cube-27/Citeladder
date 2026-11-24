@@ -31,7 +31,7 @@ export const sourcePages = {
     ['videoobject', 'video'],
     ['itemlist', 'listicle'],
     ['faqpage', 'reference'],
-  ],
+  ] satisfies [string, string][],
   headings_over_schema: {
     schemas: ['itemlist', 'faqpage'],
     formats: ['comparison', 'listicle', 'review'],
@@ -45,7 +45,7 @@ export const sourcePages = {
     [String.raw`\breviews?\b|\bhands[- ]on\b|\bpros\s+and\s+cons\b`, 'review'],
     [String.raw`\bdirectory\b|\bprofile\b|\blistings?\b`, 'directory'],
     [String.raw`\bforum\b|\bthread\b|\bdiscussion\b`, 'discussion'],
-  ],
+  ] satisfies [string, string][],
   schema_max_depth: 12,
   min_alias_chars: 3,
   redirect_hosts: ['vertexaisearch.cloud.google.com', 'grounding-api-redirect'],
