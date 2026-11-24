@@ -192,24 +192,6 @@ These wait for billing and production row counts:
 
 Owner: [Connected data](../integrations-traffic-analytics.md#keyword-research-acquisition).
 
-### Production data audit leftovers (2026-11-24)
-
-A read-only audit of a production workspace found these misleading reads; the
-owner kept them out of the fix PR:
-
-- `product_not_mentioned` ("Catalog product never mentioned by answer
-  engines", `frontend/services/api/src/config/opportunity.ts`) fired for 127
-  products while none of the 50 tracked prompts asks about a product, so zero
-  mentions is guaranteed. Raise it only when some measured prompt could name
-  the product, or show that as not applicable.
-- Site Health headline scores average a sample weighted by page kind: store
-  pages were 0.4% of the site but 28% of the sample, so the headline does not
-  describe the site.
-- Keyword research Overview shows "Not fetched" for backlinks and referring
-  domains when no `backlink_summary` dataset was acquired
-  (`frontend/components/search-intelligence/search-intelligence-collection.tsx`),
-  while the Backlinks tab lists 30,795 backlinks from other datasets.
-
 ### Acceptance, calibration and rollout
 
 Implemented code is not deployed, provider or legal acceptance. Failures found
