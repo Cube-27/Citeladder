@@ -70,7 +70,7 @@ export function KeywordRowsView({
   scope,
   view,
 }: Readonly<{ scope: Scope; view: ViewOf<'keyword_research_rows'> }>) {
-  const [chosen, setOrder] = useState<SearchRowOrder | null>(null);
+  const [chosen, setChosen] = useState<SearchRowOrder | null>(null);
   const dataset = useQuery(
     searchIntelligenceQueries.datasetRows(scope, view.dataset_id, {
       sort: 'id',
@@ -98,7 +98,7 @@ export function KeywordRowsView({
               kind: page.dataset.dataset_kind,
               order,
               onSort: (sort) =>
-                setOrder({
+                setChosen({
                   sort,
                   direction: order.sort === sort && order.direction === 'asc' ? 'desc' : 'asc',
                 }),
