@@ -64,8 +64,14 @@ verification and Opportunities but is never compared as a site crawl. It writes
 no project snapshot and no score summary, so it is never a compared snapshot.
 
 **The current crawl** ([SH-B1](decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17))
-is the project's newest usable crawl (`completed`, `partially_completed` or
-`cancelled`, by creation) that is not a page rerun. `currentSiteCrawl` in
+is the project's newest site crawl (by creation, not a page rerun) that is
+`completed` or `partially_completed`, or `cancelled` with a published snapshot.
+A cancelled crawl that analysed nothing, or whose finalize has not published
+yet, never becomes current, so the Pages table and Overview keep the previous
+crawl's view instead of going blank; an Overview or projection read naming such
+a crawl reads the current crawl. `siteViewSql` in `reads/crawl.ts` is the one
+predicate; `nextSiteAudit`, `adjacentSiteCrawls` and `foldingSiteCrawl` use it
+too. `currentSiteCrawl` in
 `reads/crawl.ts` owns it, and `currentSiteSnapshotQuery` reads its snapshot.
 Every read that names no crawl uses it: the project `/pages` and `/issues`
 reads, Overview, AEO readiness and Architecture, Opportunities, the Agent's
@@ -908,8 +914,10 @@ count for the UTC day: issues in the configured open states (`open`,
 The Overview's open-issues trend card (SH-B9, SH-B11) reads `site_issue_trend`
 as `open_issue_trend`, oldest first, up to `overview_issue_trend_day_limit` days;
 it is the only change graph. Per-crawl scores come from the crawl list
-(`GET /site-crawls?project_id=`, site crawls only, page reruns excluded), each
-crawl's own `score_summary`.
+(`GET /site-crawls?project_id=`), each crawl's own `score_summary`. The list
+also holds page reruns as their own rows; each item's `run` says whether it was
+a site crawl, a one-page run (its `site_url_id`) or a rerun of several pages. A
+row opens the Pages view, or the page a one-page run audited.
 
 **New and Fixed** (SH-B12; `reads/issue-changes.ts`). Each issue group carries
 `new_url_count` and `resolved_url_count` against the previous usable site crawl

@@ -69,7 +69,7 @@ export function useSiteHealthScreen() {
     enabled: canLoadPagePreview(crawl?.id, phase),
   });
 
-  const inventoryMode: InventoryMode = inventoryModeForPhase(phase, crawl);
+  const inventoryMode: InventoryMode = inventoryModeForPhase(phase);
 
   const [starting, setStarting] = useState<{
     projectId: string;

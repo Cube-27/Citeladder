@@ -449,14 +449,27 @@ describe('crawl-control HTTP contracts', () => {
       })
       .where('id', '=', seed.crawlId)
       .execute();
-    await fixtures.sibling(seed, {
-      configuration: JSON.stringify({ page_rerun: true }),
-      created_at: new Date(Date.now() + 2000),
-    });
+    const rerunAt = async (offset: number, paths: string[]) => {
+      const crawlId = await fixtures.sibling(seed, {
+        configuration: JSON.stringify({ page_rerun: true }),
+        created_at: new Date(Date.now() + offset),
+      });
+      const pages = [];
+      for (const path of paths)
+        pages.push(await fixtures.page({ ...seed, crawlId }, path, {}, { observed: true })); // NOSONAR
+      return { crawlId, pages };
+    };
+    const single = await rerunAt(2000, ['/a']);
+    const pair = await rerunAt(3000, ['/b', '/c']);
     await fixtures.crawl();
     const all = siteCrawlListPageSchema.parse(await (await request(seed, '/site-crawls')).json());
-    expect(all.items.map((crawl) => crawl.id)).toEqual([next, seed.crawlId]);
-    expect(all.items[1]!.score_summary).toMatchObject({
+    expect(all.items.map((crawl) => [crawl.id, crawl.run])).toEqual([
+      [pair.crawlId, { kind: 'pages', page_count: 2 }],
+      [single.crawlId, { kind: 'page', site_url_id: single.pages[0]!.id }],
+      [next, { kind: 'site' }],
+      [seed.crawlId, { kind: 'site' }],
+    ]);
+    expect(all.items[3]!.score_summary).toMatchObject({
       web_fundamentals_score: 72,
       aeo_readiness_score: 41,
     });

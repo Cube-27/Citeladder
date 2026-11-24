@@ -1,20 +1,22 @@
-import type { SiteCrawl } from '@citeladder/contracts';
+import { useNavigate } from 'react-router-dom';
+import type { SiteCrawlListItem } from '@citeladder/contracts';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { Pressable } from '@/components/ui/pressable';
+import { Inline } from '@/components/ui/layout';
 import { TableCell, TableRow, TableTime } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { absent, formatCount, formatScore } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
-import { optionalStringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
 export function CrawlHistory({
   workspaceId,
   projectId,
 }: Readonly<{ workspaceId: string; projectId: string }>) {
-  const [pinnedCrawlId, setPinnedCrawlId] = useUrlState('crawl_id', optionalStringUrlCodec);
+  const router = useNavigate();
+  const projectHref = useProjectHref();
   const { page, table } = useCursorTableQuery({
     workspaceId,
     scopeId: projectId,
@@ -28,37 +30,41 @@ export function CrawlHistory({
   return (
     <DataTable label="Crawls" columns={COLUMNS} {...table}>
       {page?.items.map((crawl) => (
-        <CrawlRow
-          key={crawl.id}
-          crawl={crawl}
-          viewing={crawl.id === pinnedCrawlId}
-          onView={() => setPinnedCrawlId(crawl.id)}
-        />
+        <CrawlRow key={crawl.id} crawl={crawl} onView={() => router(projectHref(runHref(crawl)))} />
       ))}
     </DataTable>
   );
 }
 
-function CrawlRow({
-  crawl,
-  viewing,
-  onView,
-}: Readonly<{ crawl: SiteCrawl; viewing: boolean; onView: () => void }>) {
+function runHref(crawl: Pick<SiteCrawlListItem, 'id' | 'run'>) {
+  switch (crawl.run.kind) {
+    case 'page':
+      return `/site/crawls/${crawl.id}/pages/${crawl.run.site_url_id}`;
+    case 'pages':
+    case 'site':
+      return '/site';
+    default: {
+      const exhaustive: never = crawl.run;
+      return exhaustive;
+    }
+  }
+}
+
+function CrawlRow({ crawl, onView }: Readonly<{ crawl: SiteCrawlListItem; onView: () => void }>) {
   const summary = crawl.score_summary;
   return (
-    <TableRow onClick={onView} className="cursor-pointer" aria-current={viewing || undefined}>
+    <TableRow onClick={onView} className="cursor-pointer">
       <TableCell>
-        <TextLink asChild underline="hover">
-          <Pressable
-            onClick={(event) => {
-              event.stopPropagation();
-              onView();
-            }}
-            className="min-h-6 w-auto min-w-0"
+        <Inline as="span">
+          <TextLink
+            underline="hover"
+            href={runHref(crawl)}
+            onClick={(event) => event.stopPropagation()}
           >
             <TableTime value={crawl.started_at ?? crawl.created_at} />
-          </Pressable>
-        </TextLink>
+          </TextLink>
+          {crawl.run.kind === 'site' ? null : <span className="type-caption">Re-audit</span>}
+        </Inline>
       </TableCell>
       <TableCell>
         <CrawlStatusBadge crawl={crawl} />

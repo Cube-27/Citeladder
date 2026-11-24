@@ -177,18 +177,14 @@ export function crawlProgressVersion(
 
 export type InventoryMode = 'none' | 'discovering' | 'scored';
 
-export function inventoryModeForPhase(
-  phase: SiteHealthPhase,
-  crawl?: Pick<SiteCrawl, 'status'> | null,
-): InventoryMode {
+export function inventoryModeForPhase(phase: SiteHealthPhase): InventoryMode {
   switch (phase) {
     case 'discovering':
       return 'discovering';
     case 'analyzing':
     case 'dashboard':
-      return 'scored';
     case 'terminal':
-      return crawl?.status === 'failed' ? 'scored' : 'none';
+      return 'scored';
     case 'resolving':
     case 'empty':
       return 'none';
