@@ -117,7 +117,7 @@ describe('PageKindScores', () => {
       web_fundamentals_checks: null,
       aeo_readiness_checks: null,
       aeo_measurement_reason: '',
-    };
+    } satisfies SiteScoreSummary['by_page_kind'][string];
     const stratum = {
       analyzed_count: 3,
       web_fundamentals_score: 80,
