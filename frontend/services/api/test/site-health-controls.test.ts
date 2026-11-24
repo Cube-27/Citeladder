@@ -10,32 +10,26 @@ import {
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
 import { cancelCrawl } from '../src/site-health/controls.ts';
-import { createCrawl } from '../src/site-health/planner.ts';
 import { controls } from '../src/site-health/planner-policy.ts';
 import { rerunPage } from '../src/site-health/selection.ts';
 import { publishCancelledCrawls, reconcileCrawl } from '../src/site-health/lifecycle.ts';
 import { record } from '../src/db/json.ts';
 import { revokeBundle } from '../src/entitlements/grants.ts';
-import { billingAccount, grant } from './prompt-fixtures.ts';
-import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
-import { FinalizeFixtures, type SiteSeed } from './site-health-finalize-fixtures.ts';
+import { grant } from './prompt-fixtures.ts';
+import { sessionToken, testConfig, testDatabase } from './support.ts';
+import { controlHarness } from './site-health-control-support.ts';
+import type { SiteSeed } from './site-health-finalize-fixtures.ts';
 import type { Tenant } from './visibility-fixtures.ts';
 
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 const config = testConfig();
 const db = testDatabase(config);
 const app = createApp(config, db);
-const fixtures = new FinalizeFixtures(db);
-const accounts: string[] = [];
+const harness = controlHarness(db);
+const { fixtures, allow, create } = harness;
 afterEach(() => vi.unstubAllEnvs());
 afterAll(async () => {
-  if (accounts.length) {
-    await asOwner((owner) =>
-      owner.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute(),
-    );
-    await db.deleteFrom('billing_accounts').where('id', 'in', accounts).execute();
-  }
-  await fixtures.cleanup();
+  await harness.cleanup();
   await db.destroy();
 });
 
@@ -50,22 +44,7 @@ async function request(tenant: Tenant, path: string, method = 'GET', body?: unkn
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
-async function allow(tenant: Tenant, limit: number, fetches?: number) {
-  const account = await billingAccount(db, tenant.workspaceId);
-  accounts.push(account);
-  await grant(db, account, { key: 'monitored_urls', value: limit });
-  if (fetches !== undefined)
-    await grant(db, account, { key: 'site_health_page_fetches_per_period', value: fetches });
-  return account;
-}
 const otherProject = (seed: SiteSeed) => fixtures.otherProject(seed);
-async function create(tenant: Tenant, options: Record<string, unknown> = {}) {
-  return db
-    .transaction()
-    .execute((trx) =>
-      createCrawl(trx, tenant.workspaceId, { project_id: tenant.projectId, ...options }),
-    );
-}
 
 describe('crawl control admission', () => {
   it('denies corrupt grants with a non-retryable entitlement error for creation and rerun', async () => {

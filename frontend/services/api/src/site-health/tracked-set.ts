@@ -37,8 +37,8 @@ export function trackedFillOrder(candidates: Candidate[]) {
     },
   );
   const order: Candidate[] = [];
-  while (lanes.length) {
-    const lane = lanes.reduce((best, item) => (due(item) < due(best) ? item : best));
+  while (lanes[0]) {
+    const lane = lanes.reduce((best, item) => (due(item) < due(best) ? item : best), lanes[0]);
     order.push(lane.head);
     lane.taken += 1;
     const next = lane.rest.next();

@@ -1,34 +1,20 @@
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { fitTrackedSet } from '../src/site-health/admission-writes.ts';
 import { candidate } from '../src/site-health/frontier.ts';
-import { createCrawl } from '../src/site-health/planner.ts';
 import { fillTrackedSet } from '../src/site-health/tracked-set.ts';
 import { classifyUrlAdmission } from '../src/site-health/url-admission.ts';
-import { asOwner, testConfig, testDatabase } from './support.ts';
-import { billingAccount, grant } from './prompt-fixtures.ts';
-import { FinalizeFixtures } from './site-health-finalize-fixtures.ts';
-import type { Tenant } from './visibility-fixtures.ts';
+import { controlHarness } from './site-health-control-support.ts';
+import { testConfig, testDatabase } from './support.ts';
 
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 const db = testDatabase(testConfig());
-const fixtures = new FinalizeFixtures(db);
-const accounts: string[] = [];
+const harness = controlHarness(db);
+const { fixtures, allow, create } = harness;
 afterAll(async () => {
-  if (accounts.length) {
-    await asOwner((owner) =>
-      owner.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute(),
-    );
-    await db.deleteFrom('billing_accounts').where('id', 'in', accounts).execute();
-  }
-  await fixtures.cleanup();
+  await harness.cleanup();
   await db.destroy();
 });
 
-async function allow(tenant: Tenant, limit: number) {
-  const account = await billingAccount(db, tenant.workspaceId);
-  accounts.push(account);
-  await grant(db, account, { key: 'monitored_urls', value: limit });
-}
 const sitemapCandidates = (urls: string[]) =>
   urls.map((url, index) => {
     const admission = classifyUrlAdmission(url);
@@ -41,13 +27,6 @@ const sitemapCandidates = (urls: string[]) =>
       linkOrdinal: index,
     });
   });
-async function create(tenant: Tenant, options: Record<string, unknown> = {}) {
-  return db
-    .transaction()
-    .execute((trx) =>
-      createCrawl(trx, tenant.workspaceId, { project_id: tenant.projectId, ...options }),
-    );
-}
 
 describe('tracked-set fill', () => {
   it('fills tracked pages in share order, never re-picks one, and fits the set to the plan limit', async () => {
