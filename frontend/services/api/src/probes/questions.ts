@@ -50,6 +50,7 @@ export function probeQuestions(input: {
   category: string;
   country: string;
   themes: readonly { id: string; name: string }[];
+  webSearch: boolean;
 }): FrozenPrompt[] {
   const ask = (text: string, question: ProbeQuestion): FrozenPrompt => ({
     id: null,
@@ -61,7 +62,7 @@ export function probeQuestions(input: {
     buyer_stage: '',
     prompt_intent: '',
     cohort: probes.cohort,
-    generation_evidence: { probe: question },
+    generation_evidence: { probe: question, web_search: input.webSearch },
   });
   const named = (template: string) => template.replaceAll('{brand}', input.brand);
   return [
@@ -79,15 +80,9 @@ export function probeQuestions(input: {
   ];
 }
 
-export function askedText(
-  prompt: Pick<FrozenPrompt, 'text' | 'generation_evidence'>,
-  engine: string,
-) {
-  const asked = frozenQuestion(prompt.generation_evidence);
-  const { engines, questions, template } = probes.search_instruction;
-  if (!asked || !engines.some((each) => each === engine) || !questions.includes(asked.question))
-    return prompt.text;
-  return template.replaceAll('{question}', () => prompt.text);
+export function askedText(prompt: Pick<FrozenPrompt, 'text' | 'generation_evidence'>) {
+  if (record(prompt.generation_evidence).web_search !== true) return prompt.text;
+  return probes.search_instruction.replaceAll('{question}', () => prompt.text);
 }
 
 export async function probeSubject(
@@ -119,9 +114,13 @@ export async function probeSubject(
 export async function probePrompts(
   db: Database,
   scope: { workspaceId: string; projectId: string },
-  countryCode: string,
+  ask: { countryCode: string; webSearch: boolean },
 ) {
-  return probeQuestions({ ...(await probeSubject(db, scope)), country: countryName(countryCode) });
+  return probeQuestions({
+    ...(await probeSubject(db, scope)),
+    country: countryName(ask.countryCode),
+    webSearch: ask.webSearch,
+  });
 }
 
 export function probeEngines(requested: readonly Engine[]): Engine[] {

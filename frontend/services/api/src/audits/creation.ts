@@ -312,7 +312,7 @@ async function persistTasks(
             logical_engine: slot.engine,
             transport_provider: route.transport_provider,
             transport_model: route.transport_model,
-            prompt_text: askedText(frozen, slot.engine),
+            prompt_text: askedText(frozen),
             idempotency_key: `${auditId}:${slot.prompt}:${slot.repetition}:${slot.engine}`,
             max_attempts: plan.measurement.max_attempts,
             status: 'pending_reservation',

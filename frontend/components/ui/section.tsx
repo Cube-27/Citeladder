@@ -115,7 +115,7 @@ export function TitledSection({
   children,
   className,
 }: Readonly<{
-  title: string;
+  title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
   variant?: SectionVariant;

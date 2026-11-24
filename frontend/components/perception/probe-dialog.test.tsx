@@ -69,11 +69,39 @@ it('re-quotes the AI credits for the chosen engines and repetitions and runs the
   await userEvent.click(screen.getByRole('radio', { name: '1' }));
   expect(await screen.findByText('90')).toBeInTheDocument();
   await waitFor(() => expect(screen.getByRole('button', { name: 'Run probe' })).toBeEnabled());
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Web search' }));
   await userEvent.click(screen.getByRole('button', { name: 'Run probe' }));
   await waitFor(() => expect(onClose).toHaveBeenCalled());
   expect(post).toHaveBeenCalledWith(
     `/projects/${SCOPE.projectId}/probes`,
-    { fingerprint: 'claude-once', engines: ['claude'], repetitions: 1 },
+    { fingerprint: 'claude-once', engines: ['claude'], repetitions: 1, web_search: true },
     expect.anything(),
   );
+});
+
+it('runs without web search unless it is ticked, and offers no web search on a schedule', async () => {
+  const post = vi.spyOn(apiClient, 'post').mockResolvedValue([]);
+  const onClose = vi.fn();
+  const { unmount } = renderWithProviders(
+    <ProbeDialog scope={SCOPE} quote={ALL} intent={{ kind: 'run' }} onClose={onClose} />,
+  );
+  expect(screen.getByRole('checkbox', { name: 'Web search' })).not.toBeChecked();
+  await userEvent.click(screen.getByRole('button', { name: 'Run probe' }));
+  await waitFor(() => expect(onClose).toHaveBeenCalled());
+  expect(post).toHaveBeenCalledWith(
+    `/projects/${SCOPE.projectId}/probes`,
+    { fingerprint: 'all', web_search: false },
+    expect.anything(),
+  );
+  unmount();
+  renderWithProviders(
+    <ProbeDialog
+      scope={SCOPE}
+      quote={ALL}
+      intent={{ kind: 'schedule', cadence: 'weekly' }}
+      onClose={onClose}
+    />,
+  );
+  expect(screen.getByRole('button', { name: 'Probe weekly' })).toBeInTheDocument();
+  expect(screen.queryByRole('checkbox', { name: 'Web search' })).toBeNull();
 });

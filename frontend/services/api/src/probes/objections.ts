@@ -28,6 +28,30 @@ function groupScores(answers: readonly ProbeAnswer[]) {
   return { asked, scores: positionScores(places), firsts };
 }
 
+const quotesOf = (answer: ProbeAnswer, groupId: string) =>
+  answer.items
+    .filter((item) => item.objection_group_id === groupId)
+    .toSorted((a, b) => a.rank - b.rank)
+    .map((item) => item.quote);
+
+const wording = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+
+function distinctQuotes<Quote extends { text: string; logical_engine: string }>(
+  quotes: readonly Quote[],
+) {
+  const seen = new Set<string>();
+  return quotes.filter((quote) => {
+    const key = `${quote.logical_engine}:${wording(quote.text)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export async function probeObjections(
   db: Database,
   scope: Scope,
@@ -58,25 +82,19 @@ export async function probeObjections(
       score,
       engines: logicalEngines.filter((engine) => raising.has(engine)),
       history: series,
-      quotes: current.asked
-        .flatMap((answer) =>
-          answer.items
-            .filter((item) => item.objection_group_id === group.id)
-            .toSorted((a, b) => a.rank - b.rank)
-            .map((item) => ({
-              text: item.quote,
-              logical_engine: answer.engine,
-              prompt: answer.prompt,
-              run_id: answer.auditId,
-              execution_id: answer.taskId,
-            })),
-        )
-        .slice(0, probes.max_quotes_per_group),
+      quotes: distinctQuotes(
+        current.asked.flatMap((answer) =>
+          quotesOf(answer, group.id).map((text) => ({
+            text,
+            logical_engine: answer.engine,
+            prompt: answer.prompt,
+            run_id: answer.auditId,
+            execution_id: answer.taskId,
+          })),
+        ),
+      ).slice(0, probes.max_quotes_per_group),
       ...(raising.size
-        ? pagesOf(
-            (answer) => answer.items.some((item) => item.objection_group_id === group.id),
-            pageLimit,
-          )
+        ? pagesOf((answer) => quotesOf(answer, group.id).length > 0, pageLimit)
         : { sources: null, pages: [] }),
     };
   });

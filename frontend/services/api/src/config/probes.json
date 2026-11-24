@@ -19,11 +19,7 @@
     "objection": "Why might someone not choose {brand}?",
     "theme": "Which {category} brands in {country} are best known for {theme}?"
   },
-  "search_instruction": {
-    "engines": ["claude"],
-    "questions": ["objection"],
-    "template": "Use web search to answer this question: {question}"
-  },
+  "search_instruction": "Use web search to answer this question: {question}",
   "max_answer_chars": 24000,
   "max_items_per_answer": 10,
   "max_new_groups_per_probe": 12,

@@ -25,7 +25,10 @@ export const auditRequestInput = auditFields.refine(
   'Select a prompt set or prompt IDs',
 );
 export const auditInput = auditFields
-  .extend({ audit_scope: auditScopeSchema.default('brand') })
+  .extend({
+    audit_scope: auditScopeSchema.default('brand'),
+    probe_web_search: z.boolean().optional(),
+  })
   .refine(selectedPrompts, 'Select a prompt set or prompt IDs');
 export const auditLaunchInput = auditFields
   .omit({ project_id: true })

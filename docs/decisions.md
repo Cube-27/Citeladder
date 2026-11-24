@@ -526,16 +526,19 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
 - **AV-29 to AV-35 Probes:** one run asks market and objection questions on
   each search-capable engine with a saved key (managed mode uses CiteLadder's),
   on the engines the user ticks and as many times (1 to 3, default 3) as the
-  user picks before running (owner, 2026-11-24); the objection question is
-  answered with web search, worded as an instruction where the engine cannot
-  be forced to search (owner, 2026-11-24); direct questions ask about the
+  user picks before running (owner, 2026-11-24); a Web search tick in the run
+  window, off by default, words every question of that run as an instruction
+  to use web search, on every engine (owner, 2026-11-24); direct questions ask
+  about the
   project's brand only, theme
   questions cover competitors; on demand with an optional schedule; charged in
   AI credits shown first; tables lead with the position score (100 when named
   first, minus 10 per later place, 0 when not raised).
-- **AV-36** No objection detail page and no "Draft rebuttal". Objections show
-  the probe's question once, linking to its answers filtered by engine and
-  repetition (owner, 2026-11-24). **AV-37** An
+- **AV-36** No objection detail page and no "Draft rebuttal". The Objections
+  table title is itself the link to the question's answers, filtered by engine
+  and repetition; an objection lists each distinct wording once per engine; its
+  sources are the pages cited by the answers that raised it, counted per
+  answer (owner, 2026-11-24). **AV-37** An
   objection's Ask agent opens Agent chat, which lists its sources and suggests
   edits, outreach or advice, never acting on its own.
 - **AV-40** A run's answered prompts reach the dashboards even when the run is

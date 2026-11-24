@@ -411,7 +411,11 @@ async function panelOf(
 ): Promise<{ prompts: FrozenPrompt[]; requested: Engine[]; repetitions: number }> {
   if (input.audit_scope === probes.audit_scope)
     return {
-      prompts: await probePrompts(db, { workspaceId, projectId }, market.country_code),
+      prompts: await probePrompts(
+        db,
+        { workspaceId, projectId },
+        { countryCode: market.country_code, webSearch: input.probe_web_search === true },
+      ),
       requested: probeEngines(input.engines.filter((engine) => canMeasure(engine, market))),
       repetitions: input.repetitions ?? probes.repetitions,
     };

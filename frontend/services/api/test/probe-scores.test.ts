@@ -130,12 +130,21 @@ describe('probe questions and funding', () => {
       category: 'discount clothing',
       country: 'Australia',
       themes: [{ id: '0f3b1c9e-0000-4000-8000-000000000001', name: 'Low Prices' }],
+      webSearch: false,
     });
     expect(
       asked.map(({ text, cohort, generation_evidence }) => [text, cohort, generation_evidence]),
     ).toEqual([
-      ['What is Best&Less known for?', 'probe', { probe: { question: 'known_for' } }],
-      ['Why might someone not choose Best&Less?', 'probe', { probe: { question: 'objection' } }],
+      [
+        'What is Best&Less known for?',
+        'probe',
+        { probe: { question: 'known_for' }, web_search: false },
+      ],
+      [
+        'Why might someone not choose Best&Less?',
+        'probe',
+        { probe: { question: 'objection' }, web_search: false },
+      ],
       [
         'Which discount clothing brands in Australia are best known for low prices?',
         'probe',
@@ -145,6 +154,7 @@ describe('probe questions and funding', () => {
             theme_id: '0f3b1c9e-0000-4000-8000-000000000001',
             theme_name: 'Low Prices',
           },
+          web_search: false,
         },
       ],
     ]);

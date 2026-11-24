@@ -66,6 +66,7 @@ describe('probe admission', () => {
     ]);
     expect(snapshots[2]!.generation_evidence).toEqual({
       probe: { question: 'theme', theme_id: themeId, theme_name: 'Comfort' },
+      web_search: false,
     });
     const tasks = await db
       .selectFrom('audit_tasks')
@@ -189,37 +190,35 @@ describe('probe admission', () => {
     ]);
   });
 
-  it('asks Claude to search the web for the objection question and every other ask as frozen', async () => {
+  it('words every question as a web search instruction on every engine only when web search is ticked', async () => {
     const { t } = await probeTenant(1_000_000);
     await connectClaude(db, t);
-    const { quote } = await probeStatus(db, t, runtime, { engines: ['claude', 'chatgpt'] });
-    const [auditId] = await runProbe(
-      db,
-      t,
-      { fingerprint: quote.fingerprint, engines: ['claude', 'chatgpt'] },
-      runtime,
-    );
-    const asked = await db
-      .selectFrom('audit_tasks')
-      .select(['logical_engine', 'prompt_index', 'prompt_text'])
-      .where('audit_id', '=', auditId!)
-      .where('prompt_index', '<', 2)
-      .where('repetition', '=', 1)
-      .orderBy('prompt_index')
-      .orderBy('logical_engine')
-      .execute();
-    expect(asked.map((task) => [task.prompt_index, task.logical_engine, task.prompt_text])).toEqual(
-      [
-        [0, 'chatgpt', 'What is Acme Running known for?'],
-        [0, 'claude', 'What is Acme Running known for?'],
-        [1, 'chatgpt', 'Why might someone not choose Acme Running?'],
-        [
-          1,
-          'claude',
-          'Use web search to answer this question: Why might someone not choose Acme Running?',
-        ],
-      ],
-    );
+    const engines = ['claude', 'chatgpt'];
+    const { quote } = await probeStatus(db, t, runtime, { engines });
+    const asked = async (webSearch: boolean) => {
+      const choice = { fingerprint: quote.fingerprint, engines, web_search: webSearch };
+      const [auditId] = await runProbe(db, t, choice, runtime);
+      const tasks = await db
+        .selectFrom('audit_tasks')
+        .select(['logical_engine', 'prompt_text'])
+        .where('audit_id', '=', auditId!)
+        .where('prompt_index', '<', 2)
+        .where('repetition', '=', 1)
+        .orderBy('prompt_index')
+        .orderBy('logical_engine')
+        .execute();
+      return tasks.map((task) => [task.logical_engine, task.prompt_text]);
+    };
+    const known = 'What is Acme Running known for?';
+    const objection = 'Why might someone not choose Acme Running?';
+    const searched = (question: string) => `Use web search to answer this question: ${question}`;
+    const perEngine = (first: string, second: string) =>
+      [first, second].flatMap((question) => [
+        ['chatgpt', question],
+        ['claude', question],
+      ]);
+    expect(await asked(true)).toEqual(perEngine(searched(known), searched(objection)));
+    expect(await asked(false)).toEqual(perEngine(known, objection));
   });
 
   it('refuses probe_quote_changed, launching nothing, when the probe changed after its quote', async () => {
@@ -450,8 +449,8 @@ describe('probe labelling and reads', () => {
     ]);
     expect([objections.average, objections.answered_by]).toEqual([95, ['chatgpt']]);
     expect(objections.groups.map(({ quotes }) => quotes.map(({ text }) => text))).toEqual([
-      ['pricey', 'pricey', 'pricey'],
-      ['late', 'late', 'late'],
+      ['pricey'],
+      ['late'],
       [],
     ]);
     const [quoted] = objections.groups[0]?.quotes ?? [];
