@@ -297,7 +297,8 @@ async function persistTasks(
       .insertInto('audit_tasks')
       .values(
         inserted.map(({ taskId, slot, route, engine }, position) => {
-          const prompt = snapshots.prompts[slot.prompt]!;
+          const prompt = snapshots.prompts[slot.prompt]!,
+            frozen = plan.prompts[slot.prompt]!;
           return {
             id: taskId,
             workspace_id: scope.workspaceId,
@@ -311,7 +312,7 @@ async function persistTasks(
             logical_engine: slot.engine,
             transport_provider: route.transport_provider,
             transport_model: route.transport_model,
-            prompt_text: askedText(plan.prompts[slot.prompt]!, slot.engine),
+            prompt_text: askedText(frozen, slot.engine),
             idempotency_key: `${auditId}:${slot.prompt}:${slot.repetition}:${slot.engine}`,
             max_attempts: plan.measurement.max_attempts,
             status: 'pending_reservation',
@@ -332,7 +333,7 @@ async function persistTasks(
             citations: null,
             request_snapshot: JSON.stringify({
               ...frozenSearch(plan, slot.engine),
-              original_prompt_id: plan.prompts[slot.prompt]!.id,
+              original_prompt_id: frozen.id,
             }),
             provider_route_snapshot: null,
             provider_submission_ref: '',
