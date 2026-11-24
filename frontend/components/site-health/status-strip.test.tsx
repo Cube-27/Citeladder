@@ -35,6 +35,7 @@ function crawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
         next_available_at: null,
       },
       by_page_kind: {},
+      score_weighting: { kind: 'sample_average' },
     },
     score_summary: {
       web_fundamentals_score: null,
@@ -56,6 +57,7 @@ function crawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
       scored_page_kind_set: ['article'],
       scored_page_count_by_kind: { article: 1 },
       by_page_kind: {},
+      score_weighting: { kind: 'sample_average' },
     },
     completed_at: null,
     ...overrides,

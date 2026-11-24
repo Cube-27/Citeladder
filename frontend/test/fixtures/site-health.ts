@@ -144,6 +144,7 @@ export function makeSiteCrawl(overrides: Partial<SiteCrawl> = {}): SiteCrawl {
         next_available_at: null,
       },
       by_page_kind: {},
+      score_weighting: { kind: 'sample_average' },
     },
     discovered_count: 3,
     total_url_count: 3,

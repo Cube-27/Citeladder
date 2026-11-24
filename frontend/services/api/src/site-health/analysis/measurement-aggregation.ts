@@ -4,7 +4,60 @@ import { crawlSiteChecks, readinessReason, scoreAnalysis } from './scoring.ts';
 import type { RuleEvaluation } from './rules.ts';
 
 type Measurement = ReturnType<typeof scoreAnalysis>;
-export type MeasuredPage = { id: string; page_kind: string; evaluations: RuleEvaluation[] };
+export type MeasuredPage = {
+  id: string;
+  page_kind: string;
+  url_kind?: string | null;
+  evaluations: RuleEvaluation[];
+};
+export type KnownUrls = ReadonlyMap<string, number>;
+type Headline = 'web_fundamentals_score' | 'aeo_readiness_score';
+type StratumScores = Record<Headline, number | null> & { analyzed_count: number };
+export type Stratum = StratumScores & { page_kind: string; known_url_count: number };
+
+export function stratify(
+  known: KnownUrls,
+  measured: ReadonlyMap<string, StratumScores>,
+): Stratum[] {
+  const kinds = new Set([...known.keys(), ...measured.keys()]);
+  return [...kinds]
+    .map((kind) => ({
+      page_kind: kind,
+      known_url_count: known.get(kind) ?? 0,
+      analyzed_count: measured.get(kind)?.analyzed_count ?? 0,
+      web_fundamentals_score: measured.get(kind)?.web_fundamentals_score ?? null,
+      aeo_readiness_score: measured.get(kind)?.aeo_readiness_score ?? null,
+    }))
+    .sort((a, b) => b.known_url_count - a.known_url_count || compareText(a.page_kind, b.page_kind));
+}
+
+function weighted(strata: Stratum[], role: Headline, plain: number | null) {
+  const scored = strata.filter((row) => row.known_url_count > 0 && row[role] !== null);
+  const weight = scored.reduce((sum, row) => sum + row.known_url_count, 0);
+  if (!weight) return plain;
+  return scored.reduce((sum, row) => sum + row.known_url_count * row[role]!, 0) / weight;
+}
+
+export function siteWeighted<T extends Record<Headline, number | null>>(
+  plain: T,
+  strata: Stratum[],
+): T {
+  return {
+    ...plain,
+    web_fundamentals_score: weighted(
+      strata,
+      'web_fundamentals_score',
+      plain.web_fundamentals_score,
+    ),
+    aeo_readiness_score: weighted(strata, 'aeo_readiness_score', plain.aeo_readiness_score),
+  };
+}
+
+export function siteWeighting(strata: Stratum[]) {
+  const known = strata.reduce((sum, row) => sum + row.known_url_count, 0);
+  if (!known) return { kind: 'sample_average' as const };
+  return { kind: 'site_share' as const, known_url_count: known, strata };
+}
 function state(scored: number, expected: number, unresolved: boolean) {
   if (!scored || !expected) return 'not_measured';
   return scored < expected || unresolved ? 'limited_evidence' : 'measured';
@@ -149,6 +202,7 @@ class PageSetFold {
 export class MeasurementFold {
   private readonly all = new PageSetFold();
   private readonly kinds = new Map<string, PageSetFold>();
+  private readonly strata = new Map<string, PageSetFold>();
   private readonly site: RuleEvaluation[];
   constructor(site: RuleEvaluation[]) {
     this.site = site;
@@ -159,9 +213,32 @@ export class MeasurementFold {
     const kind = this.kinds.get(page.page_kind) ?? new PageSetFold();
     kind.add(measured);
     this.kinds.set(page.page_kind, kind);
+    if (!page.url_kind) return;
+    const stratum = this.strata.get(page.url_kind) ?? new PageSetFold();
+    stratum.add(measured);
+    this.strata.set(page.url_kind, stratum);
   }
-  aggregate() {
-    return this.all.result();
+  private stratified(known: KnownUrls) {
+    const measured = new Map(
+      [...this.strata].map(([kind, fold]) => {
+        const scores = fold.result();
+        return [
+          kind,
+          {
+            analyzed_count: scores.analyzed_url_count,
+            web_fundamentals_score: scores.web_fundamentals_score,
+            aeo_readiness_score: scores.aeo_readiness_score,
+          },
+        ] as const;
+      }),
+    );
+    return stratify(known, measured);
+  }
+  aggregate(known: KnownUrls = new Map()) {
+    return siteWeighted(this.all.result(), this.stratified(known));
+  }
+  weighting(known: KnownUrls) {
+    return siteWeighting(this.stratified(known));
   }
   byPageKind() {
     return Object.fromEntries(

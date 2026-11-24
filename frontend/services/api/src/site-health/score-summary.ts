@@ -4,6 +4,7 @@ import type { Database } from '../db/database.ts';
 import { MeasurementFold } from './analysis/measurement-aggregation.ts';
 import { crawlSiteChecks } from './analysis/scoring.ts';
 import { persistedEvaluation } from './terminal-analysis.ts';
+import { knownUrlsByKind, urlKindSql } from './known-urls.ts';
 import { pageAuditsSql } from './reads/crawl.ts';
 import { EligibilityFold } from './snapshot-eligibility.ts';
 import { ReadinessDiagnosticFold, WebDiagnosticFold } from './snapshot-diagnostics.ts';
@@ -96,6 +97,7 @@ function batchAnalyses(db: Database, crawl: Crawl, ids: string[]) {
       'p.source_evaluation_ids',
       'u.normalized_url',
       sql<string | null>`p.page_kind_evidence ->> 'other_reason'`.as('other_reason'),
+      urlKindSql(crawl, sql.ref('p.site_url_id')).as('url_kind'),
     ])
     .distinctOn('p.site_url_id')
     .where('p.workspace_id', '=', crawl.workspace_id)
@@ -276,6 +278,7 @@ export async function measurementProjection(db: Database, crawl: Crawl) {
       own.set(row.site_url_id, evaluations);
       measurement.add({
         page_kind: row.page_kind,
+        url_kind: row.url_kind,
         evaluations: evaluations.map(persistedEvaluation),
       });
       const counted = evaluations.filter((evaluation) => {
@@ -296,7 +299,8 @@ export async function measurementProjection(db: Database, crawl: Crawl) {
       evaluations: own,
     });
   });
-  const aggregate = measurement.aggregate();
+  const known = await knownUrlsByKind(db, crawl);
+  const aggregate = measurement.aggregate(known);
   return {
     selectedCount: selected,
     analysisIds,
@@ -304,6 +308,7 @@ export async function measurementProjection(db: Database, crawl: Crawl) {
     classification: classification.result(),
     aggregate,
     byPageKind: measurement.byPageKind(),
+    scoreWeighting: measurement.weighting(known),
     eligibility: eligibility.result(),
     readinessDiagnostic: readiness.result(crawl, aggregate),
     webDiagnostic: web.result(artifactIds),
@@ -327,5 +332,6 @@ export function scoreSummary(projection: MeasurementProjection, issueCount: numb
     ...projection.classification,
     presentation_version: policy.site_health.reads.measurement_versions.presentation,
     by_page_kind: projection.byPageKind,
+    score_weighting: projection.scoreWeighting,
   };
 }

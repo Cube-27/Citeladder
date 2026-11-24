@@ -164,6 +164,56 @@ describe('a full score needs every applicable check evaluated and passed', () =>
     ]);
   });
 
+  it('weights the headline by each page kind’s share of the site’s known URLs', () => {
+    const row = (outcome: string) => ({
+      ...evaluatePageRules({ has_html: true }).find((item) => item.rule_id === 'technical.https')!,
+      outcome,
+    });
+    const fold = new MeasurementFold([]);
+    for (const [kind, outcome] of [
+      ['local', 'missing'],
+      ['local', 'missing'],
+      ['local', 'missing'],
+      ['product', 'satisfied'],
+    ] as const)
+      fold.add({ page_kind: 'other', url_kind: kind, evaluations: [row(outcome)] });
+    expect(fold.aggregate(new Map()).web_fundamentals_score).toBe(25);
+    expect(fold.weighting(new Map())).toEqual({ kind: 'sample_average' });
+    const known = new Map([
+      ['local', 1],
+      ['product', 9],
+      ['article', 10],
+    ]);
+    expect(fold.aggregate(known).web_fundamentals_score).toBe(90);
+    expect(fold.weighting(known)).toEqual({
+      kind: 'site_share',
+      known_url_count: 20,
+      strata: [
+        {
+          page_kind: 'article',
+          known_url_count: 10,
+          analyzed_count: 0,
+          web_fundamentals_score: null,
+          aeo_readiness_score: null,
+        },
+        {
+          page_kind: 'product',
+          known_url_count: 9,
+          analyzed_count: 1,
+          web_fundamentals_score: 100,
+          aeo_readiness_score: null,
+        },
+        {
+          page_kind: 'local',
+          known_url_count: 1,
+          analyzed_count: 3,
+          web_fundamentals_score: 0,
+          aeo_readiness_score: null,
+        },
+      ],
+    });
+  });
+
   it('keeps a crawl below 100 when an applicable page had no check run', () => {
     const row = (rule_id: string, outcome: string) => ({
       ...evaluatePageRules({ has_html: true }).find((item) => item.rule_id === rule_id)!,

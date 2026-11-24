@@ -491,6 +491,7 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
       classification_expected_page_count: 1,
       scored_page_kind_set: ['other'],
       scored_page_count_by_kind: { other: 1 },
+      score_weighting: { kind: 'sample_average' },
       by_page_kind: {
         other: {
           analyzed_count: 1,
