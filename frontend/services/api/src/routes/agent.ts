@@ -20,7 +20,10 @@ import {
   agentSuggestionResultSchema,
   agentSuggestionsAppliedSchema,
   agentSuggestionsDismissedSchema,
+  agentPageFetchSchema,
 } from '@citeladder/contracts/agent';
+import { loadWorkerSettings } from '../config/analytics.ts';
+import { runChatPageFetch } from '../page-documents/run-fetch.ts';
 import { listSuggestions } from '../page-documents/suggestion-views.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { readBody } from '../http/body.ts';
@@ -250,6 +253,19 @@ export const agentRoutes = [
         return c.json(await finished());
       }
       return eventStreamResponse(turnStream(execute, finished, () => gone.abort()));
+    },
+  }),
+  definePostRoute({
+    family,
+    path: '/api/v1/agent/chats/{chat_id}/page-fetch/run',
+    capability: 'run',
+    params: { path: chatPath, query: {} },
+    response: agentPageFetchSchema,
+    async handle({ db, c, config }, { path }) {
+      const chat = await workspaceChat(db, c.get('workspace').workspaceId, path.chat_id);
+      const fetch = await runChatPageFetch(db, loadWorkerSettings(config.settings), chat);
+      if (!fetch) throw notFound('Page fetch');
+      return fetch;
     },
   }),
   defineGetRoute({

@@ -23,6 +23,7 @@ import {
   agentRevisionSchema,
   agentRevisionsPageSchema,
   agentRunSchema,
+  agentPageFetchSchema,
   agentSkillCatalogSchema,
   agentSkillSchema,
   agentSuggestionResultSchema,
@@ -136,6 +137,12 @@ const agentApi = {
     idempotencyKey: string,
     options?: ApiRequestOptions,
   ) => admitTurn(`/agent/chats/${chatId}/messages`, input, idempotencyKey, options),
+  runPageFetch: async (chatId: string, options?: ApiRequestOptions) =>
+    strictValidate(
+      agentPageFetchSchema,
+      await apiClient.post(`/agent/chats/${chatId}/page-fetch/run`, {}, options),
+      'agent.runPageFetch',
+    ),
   cancelRun: async (chatId: string, runId: string, options?: ApiRequestOptions) =>
     strictValidate(
       agentRunSchema,
@@ -407,6 +414,12 @@ export const agentMutations = {
           refreshAgentChatLists(client, scope.projectId),
         ]);
       },
+    }),
+  runPageFetch: (workspaceId: string | null) =>
+    mutationOptions({
+      mutationFn: (vars: { chatId: string }) => agentApi.runPageFetch(vars.chatId, { workspaceId }),
+      onSettled: (_fetch, _error, vars, _result, { client }) =>
+        refreshAgentChat(client, vars.chatId),
     }),
   cancelRun: (workspaceId: string | null) =>
     mutationOptions({

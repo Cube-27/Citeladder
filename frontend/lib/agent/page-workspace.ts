@@ -104,7 +104,7 @@ export function groupByPassage(
   return [...groups.values()];
 }
 
-type HighlightTone = 'ready' | 'needs_input';
+type HighlightTone = 'ready' | 'needs_input' | 'applied';
 
 export type SuggestionHighlight = Readonly<{
   id: string;
@@ -112,7 +112,14 @@ export type SuggestionHighlight = Readonly<{
   to: number;
   tone: HighlightTone;
   label: string;
+  proposal: string | null;
 }>;
+
+function highlightTone(suggestion: AgentSuggestion): HighlightTone | null {
+  if (suggestion.status === 'applied') return 'applied';
+  if (suggestion.status !== 'open') return null;
+  return suggestion.readiness === 'needs_input' ? 'needs_input' : 'ready';
+}
 
 export function suggestionHighlights(
   suggestions: readonly AgentSuggestion[],
@@ -120,9 +127,9 @@ export function suggestionHighlights(
 ): SuggestionHighlight[] {
   return suggestions.flatMap((suggestion) => {
     const { position } = suggestion;
-    if (suggestion.status !== 'open' || suggestion.anchor.kind !== 'span' || !position) return [];
+    const tone = highlightTone(suggestion);
+    if (!tone || suggestion.anchor.kind !== 'span' || !position) return [];
     if (position.end <= position.start) return [];
-    const tone: HighlightTone = suggestion.readiness === 'needs_input' ? 'needs_input' : 'ready';
     return [
       {
         id: suggestion.id,
@@ -130,9 +137,35 @@ export function suggestionHighlights(
         to: position.end,
         tone,
         label: labelOf(suggestion),
+        proposal:
+          suggestion.readiness === 'ready' && tone === 'ready' ? suggestion.replacement : null,
       },
     ];
   });
+}
+
+export type PageField = AgentPageField;
+export const PAGE_FIELDS = [
+  'title',
+  'meta_description',
+  'json_ld',
+] as const satisfies readonly PageField[];
+export const pageFieldLabel = (field: PageField) => FIELD_LABEL[field];
+
+export type FieldReview = Readonly<{ open: AgentSuggestion | null; edited: boolean }>;
+
+export function fieldReview(
+  suggestions: readonly AgentSuggestion[],
+  field: PageField,
+): FieldReview {
+  const onField = suggestions.filter(
+    (suggestion) => suggestion.anchor.kind === 'field' && suggestion.anchor.field === field,
+  );
+  const open = onField.filter((suggestion) => suggestion.status === 'open');
+  return {
+    open: open.find((suggestion) => suggestion.readiness === 'ready') ?? open[0] ?? null,
+    edited: onField.some((suggestion) => suggestion.status === 'applied'),
+  };
 }
 
 export function withQuotedReference(

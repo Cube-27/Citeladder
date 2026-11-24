@@ -38,13 +38,32 @@ export function pageExport(body: string, format: PageExportFormat): string {
   return `${body.trimEnd()}\n`;
 }
 
-function pageHtmlDocument(title: string, body: string): string {
+export type PageDownload = Readonly<{
+  title: string;
+  body: string;
+  fields: Readonly<{ meta_description: string; json_ld: string }> | null;
+}>;
+
+function headFields(fields: PageDownload['fields']): string[] {
+  if (!fields) return [];
+  const description = fields.meta_description.trim();
+  const jsonLd = fields.json_ld.trim();
+  return [
+    ...(description ? [`<meta name="description" content="${escapeHtml(description)}">`] : []),
+    ...(jsonLd
+      ? [`<script type="application/ld+json">${jsonLd.replaceAll('</', '<\\/')}</script>`]
+      : []),
+  ];
+}
+
+function pageHtmlDocument({ title, body, fields }: PageDownload): string {
   return [
     '<!doctype html>',
     '<html>',
     '<head>',
     '<meta charset="utf-8">',
     `<title>${escapeHtml(title)}</title>`,
+    ...headFields(fields),
     '</head>',
     '<body>',
     markdownHtml(body),
@@ -54,10 +73,24 @@ function pageHtmlDocument(title: string, body: string): string {
   ].join('\n');
 }
 
-export function downloadPage(title: string, body: string, extension: 'md' | 'html'): void {
+const frontMatterValue = (text: string) => JSON.stringify(text.trim());
+
+function pageMarkdownDocument({ title, body, fields }: PageDownload): string {
+  if (!fields) return pageExport(body, 'markdown');
+  return [
+    '---',
+    `title: ${frontMatterValue(title)}`,
+    `description: ${frontMatterValue(fields.meta_description)}`,
+    '---',
+    '',
+    pageExport(body, 'markdown'),
+  ].join('\n');
+}
+
+export function downloadPage(page: PageDownload, extension: 'md' | 'html'): void {
   const blob =
     extension === 'html'
-      ? new Blob([pageHtmlDocument(title, body)], { type: 'text/html;charset=utf-8' })
-      : new Blob([pageExport(body, 'markdown')], { type: 'text/markdown;charset=utf-8' });
-  saveBlob(blob, exportFilename(title, extension));
+      ? new Blob([pageHtmlDocument(page)], { type: 'text/html;charset=utf-8' })
+      : new Blob([pageMarkdownDocument(page)], { type: 'text/markdown;charset=utf-8' });
+  saveBlob(blob, exportFilename(page.title, extension));
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { fieldSuggestion, spanSuggestion } from '@/test/page-suggestions-fixture';
 
 import {
+  fieldReview,
   groupByPassage,
   pageOutline,
   suggestionHighlights,
@@ -69,21 +70,35 @@ describe('groupByPassage', () => {
 });
 
 describe('suggestionHighlights', () => {
-  it('highlights open body suggestions only, amber when one needs a fact', () => {
+  it('highlights open and applied body suggestions, proposing text only for a ready one', () => {
     const body = 'Ships in two days. Costs less.';
     const highlights = suggestionHighlights(
       [
-        spanSuggestion(A, body, 'two days'),
-        spanSuggestion(B, body, 'Costs less', { readiness: 'needs_input' }),
+        spanSuggestion(A, body, 'two days', { replacement: '48 hours' }),
+        spanSuggestion(B, body, 'Costs less', { readiness: 'needs_input', replacement: null }),
         spanSuggestion(C, body, 'Ships', { status: 'applied' }),
-        fieldSuggestion(D, 'title'),
+        spanSuggestion(D, body, 'in', { status: 'dismissed' }),
+        fieldSuggestion('aaaaaaaa-0000-4000-8000-000000000005', 'title'),
       ],
       (suggestion) => `Label ${suggestion.id.slice(-1)}`,
     );
     expect(highlights).toEqual([
-      { id: A, from: 9, to: 17, tone: 'ready', label: 'Label 1' },
-      { id: B, from: 19, to: 29, tone: 'needs_input', label: 'Label 2' },
+      { id: A, from: 9, to: 17, tone: 'ready', label: 'Label 1', proposal: '48 hours' },
+      { id: B, from: 19, to: 29, tone: 'needs_input', label: 'Label 2', proposal: null },
+      { id: C, from: 0, to: 5, tone: 'applied', label: 'Label 3', proposal: null },
     ]);
+  });
+});
+
+describe('fieldReview', () => {
+  it('offers the ready suggestion on a field and says when the field was edited', () => {
+    const advice = fieldSuggestion(A, 'title', { readiness: 'advice', replacement: null });
+    const ready = fieldSuggestion(B, 'title', { replacement: 'Pricing plans | Acme' });
+    const applied = fieldSuggestion(C, 'meta_description', { status: 'applied' });
+    const all = [advice, ready, applied];
+    expect(fieldReview(all, 'title')).toEqual({ open: ready, edited: false });
+    expect(fieldReview(all, 'meta_description')).toEqual({ open: null, edited: true });
+    expect(fieldReview([advice], 'title').open).toBe(advice);
   });
 });
 

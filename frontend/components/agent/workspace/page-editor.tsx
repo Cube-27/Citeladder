@@ -6,7 +6,7 @@ import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
 
 import type { SuggestionHighlight } from '@/lib/agent/page-workspace';
 
-import { highlightAt, highlightField, setHighlights } from './editor-highlights';
+import { highlightAt, highlightField, setHighlights, type HighlightAct } from './editor-highlights';
 import { livePreview } from './editor-preview';
 
 export type PageEditorHandle = {
@@ -28,6 +28,7 @@ type Callbacks = {
   onChange: (text: string) => void;
   onSelection: (text: string) => void;
   onHighlight: (id: string) => void;
+  onAct: (id: string, act: HighlightAct) => void;
 };
 
 function listener(callbacks: { current: Callbacks }) {
@@ -42,18 +43,32 @@ function listener(callbacks: { current: Callbacks }) {
     if (text !== selected) callbacks.current.onSelection(text);
     selected = text;
     const moved = update.transactions.some((transaction) => transaction.isUserEvent('select'));
-    const under = moved && main.empty ? highlightAt(state.field(highlightField), main.head) : null;
+    const under =
+      moved && main.empty ? highlightAt(state.field(highlightField).items, main.head) : null;
     if (under) callbacks.current.onHighlight(under.id);
   });
 }
 
+const isAct = (value: string | undefined): value is HighlightAct =>
+  value === 'apply' || value === 'dismiss';
+
 const highlightPress = (callbacks: { current: Callbacks }) =>
   EditorView.domEventHandlers({
+    mousedown: (event) =>
+      event.target instanceof Element && event.target.closest('[data-suggestion-act]') !== null,
     click: (event) => {
       const target = event.target instanceof Element ? event.target : null;
       const marked = target?.closest('[data-suggestion-id]');
       const id = marked instanceof HTMLElement ? marked.dataset.suggestionId : undefined;
-      if (id) callbacks.current.onHighlight(id);
+      if (!id) return false;
+      const button = target?.closest('[data-suggestion-act]');
+      const act = button instanceof HTMLElement ? button.dataset.suggestionAct : undefined;
+      if (isAct(act)) {
+        event.preventDefault();
+        callbacks.current.onAct(id, act);
+        return true;
+      }
+      callbacks.current.onHighlight(id);
       return false;
     },
   });
@@ -68,9 +83,11 @@ export function PageEditor({
   editing,
   readOnly,
   highlights,
+  actionable,
   onChange,
   onSelection,
   onHighlight,
+  onAct,
 }: Readonly<
   Callbacks & {
     ref?: Ref<PageEditorHandle>;
@@ -79,14 +96,15 @@ export function PageEditor({
     editing: boolean;
     readOnly: boolean;
     highlights: readonly SuggestionHighlight[];
+    actionable: boolean;
   }
 >) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const readOnlyMode = useRef(new Compartment());
-  const callbacks = useRef<Callbacks>({ onChange, onSelection, onHighlight });
+  const callbacks = useRef<Callbacks>({ onChange, onSelection, onHighlight, onAct });
   useEffect(() => {
-    callbacks.current = { onChange, onSelection, onHighlight };
+    callbacks.current = { onChange, onSelection, onHighlight, onAct };
   });
   const initial = useRef({ text, label, readOnly });
 
@@ -129,7 +147,7 @@ export function PageEditor({
     if (!current || editing || current.state.doc.toString() === text) return;
     current.dispatch({
       changes: { from: 0, to: current.state.doc.length, insert: text },
-      effects: setHighlights.of([]),
+      effects: setHighlights.of({ items: [], actionable: false }),
       annotations: external.of(true),
     });
   }, [text, editing]);
@@ -138,15 +156,20 @@ export function PageEditor({
     const current = view.current;
     if (!current || editing) return;
     current.dispatch({
-      effects: setHighlights.of(within(highlights, current.state.doc.length)),
+      effects: setHighlights.of({
+        items: within(highlights, current.state.doc.length),
+        actionable,
+      }),
       annotations: external.of(true),
     });
-  }, [highlights, editing, text]);
+  }, [highlights, actionable, editing, text]);
 
   useImperativeHandle(ref, () => ({
     revealHighlight: (id) => {
       const current = view.current;
-      const found = current?.state.field(highlightField).find((highlight) => highlight.id === id);
+      const found = current?.state
+        .field(highlightField)
+        .items.find((highlight) => highlight.id === id);
       if (!current || !found) return;
       current.dispatch({
         selection: { anchor: found.from, head: found.to },

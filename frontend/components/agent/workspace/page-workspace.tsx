@@ -1,14 +1,16 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { isDeclarable, MarkImplementedButton } from '@/components/agent/action-declaration';
-import { useChatThread } from '@/components/agent/chat-thread';
+import { useChatThread, type ChatThread } from '@/components/agent/chat-thread';
 import { contentGapMembers } from '@/components/agent/content-gap-evidence';
 import { WorkbenchPage } from '@/components/templates/workbench-page';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
 import {
+  EDITOR_RAIL_TAB,
   EditorPane,
   EditorRail,
+  EditorRailPanel,
   EditorStack,
   EditorWorkspace,
 } from '@/components/ui/editor-workspace';
@@ -29,12 +31,20 @@ import type { AgentChatDetail, AgentOutput, AgentRevision, AgentSuggestion } fro
 import { shortUrlTitle } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
+import type { HighlightAct } from './editor-highlights';
 import { ExportMenu } from './export-menu';
 import { OutlinePanel } from './outline-panel';
 import { PageEditor, type PageEditorHandle } from './page-editor';
+import { PageFields } from './page-fields';
 import { SeoPanel } from './seo-panel';
-import { SuggestionsPanel, type ContextReference } from './suggestions-panel';
 import {
+  SuggestionsPanel,
+  useSuggestionChanges,
+  type ContextReference,
+  type SuggestionChanges,
+} from './suggestions-panel';
+import {
+  RAIL_TABS,
   useChatAction,
   usePageDraft,
   usePageSuggestions,
@@ -42,9 +52,9 @@ import {
   useWorkspaceTabs,
   type PageDraft,
   type RailTab,
-  type StackTab,
+  type WorkspaceTabs,
 } from './use-page-workspace';
-import { WorkspaceChat } from './workspace-chat';
+import { WorkspaceComposer, WorkspaceConversation } from './workspace-chat';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
@@ -54,6 +64,7 @@ const ASK_REQUEST = 'Suggest how to improve this passage.';
 
 function highlightLabel(suggestion: AgentSuggestion): string {
   const category = suggestionCategoryLabel(suggestion.category);
+  if (suggestion.status === 'applied') return `${category} suggestion: applied`;
   return suggestion.readiness === 'needs_input'
     ? `${category} suggestion: needs a fact from you`
     : `${category} suggestion`;
@@ -125,6 +136,19 @@ function SuggestionsTab({
   );
 }
 
+function opensChat(thread: ChatThread, showChat: () => void): ChatThread {
+  return {
+    ...thread,
+    turn: {
+      ...thread.turn,
+      send: (message) => {
+        showChat();
+        thread.turn.send(message);
+      },
+    },
+  };
+}
+
 export function PageWorkspace({
   detail,
   output,
@@ -134,7 +158,7 @@ export function PageWorkspace({
   const revision = output.latest_revision;
   const thread = useChatThread(workspaceId, detail);
   const canEdit = useWorkspaceCapability('run');
-  const tabs = useWorkspaceTabs();
+  const tabs = useWorkspaceTabs(thread.runActive ? 'chat' : 'suggestions');
   const editor = useRef<PageEditorHandle>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selection, setSelection] = useState('');
@@ -144,6 +168,13 @@ export function PageWorkspace({
   const { page } = suggestions;
   const action = useChatAction(workspaceId, detail.chat.action_id);
   const { shown, text, editing, status } = usePageText(detail, revision, draft);
+  const changes = useSuggestionChanges(workspaceId, {
+    chatId,
+    outputId: output.id,
+    baseRevisionId: revision.id,
+  });
+  const locked = lockedReason(canEdit, thread.runActive, editing);
+  const actionable = locked === null && !changes.pending;
   const highlights = useMemo<readonly SuggestionHighlight[]>(
     () => (page && shown === revision.body ? suggestionHighlights(page.items, highlightLabel) : []),
     [page, shown, revision.body],
@@ -152,12 +183,17 @@ export function PageWorkspace({
   const addToContext = (reference: ContextReference) => {
     thread.turn.setDraft((current) => withQuotedReference(current, reference));
     setFocusRequest((count) => count + 1);
-    tabs.showChat();
+    if (tabs.narrow) tabs.show('chat');
   };
   const openCard = (id: string) => {
     setSelectedId(id);
-    tabs.showSuggestions();
+    tabs.show('suggestions');
   };
+  const act = (id: string, kind: HighlightAct) => {
+    const suggestion = page?.items.find((item) => item.id === id);
+    if (suggestion && actionable) changes.change(suggestion, kind);
+  };
+  const chatThread = opensChat(thread, () => tabs.show('chat'));
 
   const pagePane = (
     <EditorPane
@@ -166,32 +202,45 @@ export function PageWorkspace({
         <PageHead
           status={status}
           draft={draft}
+          notice={pageNotice(tabs, changes.notice)}
           canAsk={thread.access.canSend && selection.trim().length > 0}
           onAsk={() => addToContext({ quote: selection, request: ASK_REQUEST })}
         />
       }
     >
-      <PageEditor
-        ref={editor}
-        label="Page content (Markdown)"
-        text={shown}
-        editing={editing}
-        readOnly={thread.runActive || !canEdit}
-        highlights={highlights}
-        onChange={draft.edit}
-        onSelection={setSelection}
-        onHighlight={openCard}
-      />
+      <div className="flex min-h-full flex-col">
+        {revision.fields ? (
+          <PageFields
+            fields={revision.fields}
+            suggestions={page?.items ?? []}
+            actionable={actionable}
+            onAct={act}
+            onShow={openCard}
+          />
+        ) : null}
+        <PageEditor
+          ref={editor}
+          label="Page content (Markdown)"
+          text={shown}
+          editing={editing}
+          readOnly={thread.runActive || !canEdit}
+          highlights={highlights}
+          actionable={actionable}
+          onChange={draft.edit}
+          onSelection={setSelection}
+          onHighlight={openCard}
+          onAct={act}
+        />
+      </div>
     </EditorPane>
   );
-  const panels: Record<RailTab, ReactNode> = {
+  const panels: ToolPanels = {
     suggestions: (
       <SuggestionsTab
         suggestions={suggestions}
-        workspaceId={workspaceId}
-        target={{ chatId, outputId: output.id, baseRevisionId: revision.id }}
+        changes={changes}
         body={revision.body}
-        locked={lockedReason(canEdit, thread.runActive, editing)}
+        locked={locked}
         gaps={action ? contentGapMembers(action) : []}
         selectedId={selectedId}
         onShow={(id) => tabs.inPage(() => editor.current?.revealHighlight(id))}
@@ -204,15 +253,11 @@ export function PageWorkspace({
         onJump={(from) => tabs.inPage(() => editor.current?.jumpTo(from))}
       />
     ),
-    seo: (
-      <SeoPanel
-        fields={revision.fields}
-        fetch={detail.page_fetch?.status === 'done' ? detail.page_fetch : null}
-      />
-    ),
+    seo: <SeoPanel fetch={detail.page_fetch?.status === 'done' ? detail.page_fetch : null} />,
   };
-  const chat = <WorkspaceChat thread={thread} detail={detail} focusRequest={focusRequest} />;
-  const open = page?.counts.open;
+  const composer = (
+    <WorkspaceComposer thread={chatThread} detail={detail} focusRequest={focusRequest} />
+  );
   const header = workspaceHeader(detail, output);
 
   return (
@@ -227,108 +272,111 @@ export function PageWorkspace({
             revision={revision}
             disabled={thread.runActive || editing}
           />
-          <ExportMenu title={revision.fields?.title || revision.title} body={text} />
+          <ExportMenu
+            title={revision.fields?.title || revision.title}
+            body={text}
+            fields={revision.fields}
+          />
         </>
       }
     >
       <UnsavedChangesGuard when={editing} />
-      {tabs.narrow ? (
-        <NarrowWorkspace
-          tab={tabs.stackTab}
-          onTab={tabs.setStackTab}
-          open={open}
-          page={pagePane}
-          panels={panels}
-          chat={chat}
-        />
-      ) : (
-        <EditorWorkspace
-          page={pagePane}
-          rail={
-            <TabsRoot
-              value={tabs.railTab}
-              onValueChange={tabs.setRailTab}
-              className="flex min-h-0 min-w-0"
-            >
-              <EditorRail
-                head={<TabRow ariaLabel="Page tools" items={railItems(open)} />}
-                dock={chat}
-              >
-                {(['suggestions', 'outline', 'seo'] as const).map((value) => (
-                  <TabPanel key={value} value={value}>
-                    {panels[value]}
-                  </TabPanel>
-                ))}
-              </EditorRail>
-            </TabsRoot>
-          }
-        />
-      )}
+      <WorkspaceLayout
+        tabs={tabs}
+        open={page?.counts.open}
+        page={pagePane}
+        panels={panels}
+        conversation={<WorkspaceConversation thread={chatThread} detail={detail} />}
+        composer={composer}
+      />
     </WorkbenchPage>
+  );
+}
+
+type ToolPanels = Record<Exclude<RailTab, 'chat'>, ReactNode>;
+
+function pageNotice(tabs: WorkspaceTabs, notice: SuggestionChanges['notice']) {
+  return tabs.railTab === 'suggestions' && !tabs.narrow ? null : notice;
+}
+
+function WorkspaceLayout({
+  tabs,
+  open,
+  page,
+  panels,
+  conversation,
+  composer,
+}: Readonly<{
+  tabs: WorkspaceTabs;
+  open: number | undefined;
+  page: ReactNode;
+  panels: ToolPanels;
+  conversation: ReactNode;
+  composer: ReactNode;
+}>) {
+  const railPanels = RAIL_TABS.map((value) => (
+    <TabPanel key={value} value={value} className={EDITOR_RAIL_TAB}>
+      {value === 'chat' ? conversation : <EditorRailPanel>{panels[value]}</EditorRailPanel>}
+    </TabPanel>
+  ));
+  if (!tabs.narrow)
+    return (
+      <EditorWorkspace
+        page={page}
+        rail={
+          <TabsRoot value={tabs.railTab} onValueChange={tabs.show} className="flex min-h-0 min-w-0">
+            <EditorRail
+              head={<TabRow ariaLabel="Page tools" items={railItems(open)} />}
+              foot={composer}
+            >
+              {railPanels}
+            </EditorRail>
+          </TabsRoot>
+        }
+      />
+    );
+  return (
+    <TabsRoot
+      value={tabs.stackTab}
+      onValueChange={tabs.showStack}
+      className="flex min-h-0 flex-col"
+    >
+      <EditorStack
+        tabs={
+          <TabRow
+            ariaLabel="Page workspace"
+            items={[{ value: 'page' as const, label: 'Page' }, ...railItems(open)]}
+          />
+        }
+      >
+        <TabPanel value="page" forceMount className={EDITOR_RAIL_TAB}>
+          {page}
+        </TabPanel>
+        {tabs.stackTab === 'page' ? null : <EditorRail foot={composer}>{railPanels}</EditorRail>}
+      </EditorStack>
+    </TabsRoot>
   );
 }
 
 function railItems(open: number | undefined) {
   return [
     { value: 'suggestions' as const, label: 'Suggestions', count: open },
+    { value: 'chat' as const, label: 'Chat' },
     { value: 'outline' as const, label: 'Outline' },
     { value: 'seo' as const, label: 'SEO' },
   ];
 }
 
-function NarrowWorkspace({
-  tab,
-  onTab,
-  open,
-  page,
-  panels,
-  chat,
-}: Readonly<{
-  tab: StackTab;
-  onTab: (tab: StackTab) => void;
-  open: number | undefined;
-  page: ReactNode;
-  panels: Record<RailTab, ReactNode>;
-  chat: ReactNode;
-}>) {
-  return (
-    <TabsRoot value={tab} onValueChange={onTab} className="flex min-h-0 flex-col">
-      <EditorStack
-        tabs={
-          <TabRow
-            ariaLabel="Page workspace"
-            items={[
-              { value: 'page' as const, label: 'Page' },
-              ...railItems(open),
-              { value: 'chat' as const, label: 'Chat' },
-            ]}
-          />
-        }
-      >
-        <TabPanel value="page" forceMount className="flex min-h-0 flex-1 flex-col">
-          {page}
-        </TabPanel>
-        {(['suggestions', 'outline', 'seo'] as const).map((value) => (
-          <TabPanel key={value} value={value} className="flex min-h-0 flex-1 flex-col">
-            <EditorRail>{panels[value]}</EditorRail>
-          </TabPanel>
-        ))}
-        <TabPanel value="chat" className="flex min-h-0 flex-1 flex-col">
-          <EditorRail dock={chat} />
-        </TabPanel>
-      </EditorStack>
-    </TabsRoot>
-  );
-}
-
 function PageHead({
   status,
   draft,
+  notice,
   canAsk,
   onAsk,
 }: Readonly<{
   status: string;
   draft: PageDraft;
+  notice: SuggestionChanges['notice'];
   canAsk: boolean;
   onAsk: () => void;
 }>) {
@@ -361,6 +409,7 @@ function PageHead({
           ) : null}
         </Inline>
       </Inline>
+      {notice ? <Notice tone={notice.tone}>{notice.message}</Notice> : null}
       {draft.moved && !draft.failure ? (
         <Notice tone="warning">
           The page changed since you started editing. Saving will be refused.

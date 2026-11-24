@@ -154,11 +154,20 @@ describe('ChatScreen running turn', () => {
     const { reading, fetched, answered } = pageChatPhases('Here is what to change.');
     let phase: 'reading' | 'fetched' | 'answered' = 'reading';
     const streamed: string[] = [];
+    let finishRead = () => {};
+    const read = new Promise<void>((resolve) => {
+      finishRead = resolve;
+    });
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
       http.get(`/api/v1/agent/chats/${CHAT}`, () =>
         HttpResponse.json({ reading, fetched, answered }[phase]),
       ),
+      http.post(`/api/v1/agent/chats/${CHAT}/page-fetch/run`, async () => {
+        await read;
+        phase = 'fetched';
+        return HttpResponse.json(fetched.page_fetch);
+      }),
       http.post(`/api/v1/agent/chats/${CHAT}/runs/:runId/run`, ({ params }) => {
         streamed.push(String(params.runId));
         phase = 'answered';
@@ -172,8 +181,10 @@ describe('ChatScreen running turn', () => {
     expect(await screen.findByText('Reading your page…')).toBeVisible();
     await user.type(screen.getByLabelText('Reply to the agent'), 'Also the title');
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
-    phase = 'fetched';
-    expect(await screen.findByText('Here is what to change.', {}, { timeout: 5000 })).toBeVisible();
+    finishRead();
+    expect(
+      await screen.findByText('Here is what to change.', { selector: 'article p' }),
+    ).toBeVisible();
     expect(streamed).toEqual([fetched.latest_run.id]);
     expect(screen.queryByText('Reading your page…')).not.toBeInTheDocument();
   });

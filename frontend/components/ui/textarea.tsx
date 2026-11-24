@@ -19,7 +19,7 @@ const fieldClasses = cn(
 );
 
 const composerClasses =
-  'field-sizing-content min-h-[var(--control-md)] resize-none border-0 bg-transparent px-2 py-1 max-h-[calc(var(--field-max-rows)*1lh+0.5rem)]';
+  'field-sizing-content min-h-[var(--control-md)] min-w-0 resize-none overflow-y-auto border-0 bg-transparent px-2 py-1 [overflow-wrap:anywhere] max-h-[calc(var(--field-max-rows)*1lh+0.5rem)]';
 
 const sizesItself = () => globalThis.CSS?.supports('field-sizing', 'content') ?? false;
 

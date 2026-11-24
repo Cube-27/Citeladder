@@ -1,6 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-import { SLIP_FACE } from '@/components/ui/slip';
+import { SLIP_FACE, slipClasses } from '@/components/ui/slip';
 import { StateHeadingLevelContext } from '@/components/ui/state-heading-level';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
@@ -90,6 +90,18 @@ export function SectionContent({
 }: Readonly<ComponentPropsWithoutRef<'div'> & { children: ReactNode }>) {
   return (
     <div {...props} className={className}>
+      {children}
+    </div>
+  );
+}
+
+export function SectionCard({
+  children,
+  className,
+  ...props
+}: Readonly<ComponentPropsWithoutRef<'div'> & { children: ReactNode }>) {
+  return (
+    <div {...props} className={slipClasses(cn('min-w-0', className))}>
       {children}
     </div>
   );

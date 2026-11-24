@@ -51,7 +51,10 @@ the request commits the chat, its first message and one `page_fetch` analytics
 task keyed by chat and URL, with no Agent run. A retried request returns the
 same chat, and its run once the fetch queued one.
 
-**The fetch.** The `page_fetch` task
+**The fetch.** The chat screen starts the read itself
+(`POST /agent/chats/{chat_id}/page-fetch/run`, a worker scoped to that chat's
+task), because a runner execution takes minutes to start; the runner remains
+the fallback for a closed tab. The `page_fetch` task
 ([page documents module](../frontend/services/api/src/page-documents/)) fetches
 the page once through Site Health's `SitePageFetcher` (robots gate, hard
 exclusions, the operator stop list, host pacing; a redirect off the page's
@@ -169,9 +172,14 @@ with its `expected` value, or the `page`). Suggestions are insert-only in
 A chat with a `page` document opens as the page workspace instead of the
 thread (E1); every other chat keeps the thread. The workspace is a lazy chunk
 (`components/agent/workspace/`), so CodeMirror never loads for other screens.
-The page is the latest revision's Markdown in CodeMirror (E2); open body
-suggestions are highlighted only while the text on screen is the revision the
-suggestions read placed them on, and a person's edit is a draft until **Save
+The page is the latest revision's SEO fields over its Markdown in CodeMirror
+(E2). An open body suggestion is highlighted with its proposed text and
+Accept and Dismiss beside it, an applied one marks the text it changed, and a
+field suggestion sits under its field; all only while the text on screen is the
+revision the suggestions read placed them on. The rail holds Suggestions, Chat,
+Outline and SEO as tabs over a composer that is always there, and sending opens
+Chat. Export carries the title, meta description and JSON-LD with the body. A
+person's edit is a draft until **Save
 changes** appends a revision with compare-and-set on the revision it started
 from. Every change names the revision on screen: `agent_output_conflict` says
 the page changed, `agent_suggestion_conflict` shows the server's reason, and

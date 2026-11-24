@@ -1,22 +1,14 @@
-import { Absence } from '@/components/ui/absence';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Disclosure } from '@/components/ui/disclosure';
-import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import type { AgentPageFetchDone, AgentRevision } from '@/lib/api/agent';
+import type { AgentPageFetchDone } from '@/lib/api/agent';
 import { pluralCount } from '@/lib/format';
 import { severityLabel } from '@/lib/site-health/issues';
 import { issueSeveritySchema } from '@citeladder/contracts';
 
 type PageCheck = AgentPageFetchDone['checks'][number];
-
-function FieldValue({ value }: Readonly<{ value: string }>) {
-  if (!value.trim()) return <Absence state="none" />;
-  return <span className={textRole('body', '[overflow-wrap:anywhere]')}>{value}</span>;
-}
 
 function CheckRow({ check }: Readonly<{ check: PageCheck }>) {
   const severity = issueSeveritySchema.safeParse(check.severity);
@@ -32,46 +24,11 @@ function CheckRow({ check }: Readonly<{ check: PageCheck }>) {
   );
 }
 
-export function SeoPanel({
-  fields,
-  fetch,
-}: Readonly<{ fields: AgentRevision['fields']; fetch: AgentPageFetchDone | null }>) {
+export function SeoPanel({ fetch }: Readonly<{ fetch: AgentPageFetchDone | null }>) {
   const failing = fetch?.checks.filter((check) => check.failing) ?? [];
   const passed = (fetch?.checks.length ?? 0) - failing.length;
   return (
     <Stack gap="workspace">
-      <Stack as="section" gap="compact" aria-labelledby="seo-fields">
-        <h3 id="seo-fields" className={textRole('subheading')}>
-          SEO fields
-        </h3>
-        {fields ? (
-          <>
-            <FactList
-              layout="ruled"
-              facts={[
-                { label: 'Title tag', value: <FieldValue value={fields.title} /> },
-                {
-                  label: 'Meta description',
-                  value: <FieldValue value={fields.meta_description} />,
-                },
-              ]}
-            />
-            {fields.json_ld.trim() ? (
-              <Disclosure title="Structured data (JSON-LD)">
-                <pre
-                  className={textRole('caption', 'whitespace-pre-wrap [overflow-wrap:anywhere]')}
-                >
-                  {fields.json_ld}
-                </pre>
-              </Disclosure>
-            ) : (
-              <p className={textRole('caption')}>The page has no structured data (JSON-LD).</p>
-            )}
-          </>
-        ) : (
-          <p className={textRole('body', 'text-ink-2')}>This revision has no SEO fields.</p>
-        )}
-      </Stack>
       <Stack as="section" gap="compact" aria-labelledby="seo-checks">
         <h3 id="seo-checks" className={textRole('subheading')}>
           Page checks

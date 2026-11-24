@@ -613,20 +613,14 @@ describe('UrlDetail', () => {
     expect(screen.queryByText('Pending')).not.toBeInTheDocument();
   }, 20_000);
 
-  it('keeps delivery and internal-link measurements collapsed under Technical details', async () => {
+  it('shows delivery and internal-link measurements in their own sections', async () => {
     mswServer.use(...handlers(detail()));
 
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    const user = userEvent.setup();
-    const summary = screen.getByText('Technical details');
-    const disclosure = summary.closest('details')!;
-    expect(disclosure).not.toHaveAttribute('open');
-    await user.click(summary);
-    expect(disclosure).toHaveAttribute('open');
-    expect(within(disclosure).getByText('840ms')).toBeVisible();
-    expect(within(disclosure).getByText('Main-content inbound')).toBeVisible();
+    expect(within(allIssues('Delivery')).getByText('840ms')).toBeVisible();
+    expect(within(allIssues('Internal links')).getByText('Main-content inbound')).toBeVisible();
     expect(screen.getByText('7 pages crawled')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'https://acme.com/collections/bags' })).toHaveAttribute(
       'href',
@@ -641,8 +635,11 @@ describe('UrlDetail', () => {
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    await userEvent.setup().click(screen.getByText('Technical details'));
-    expect(screen.getByText("Internal links weren't counted for this page.")).toBeVisible();
+    expect(
+      within(allIssues('Internal links')).getByText(
+        "Internal links weren't counted for this page.",
+      ),
+    ).toBeVisible();
   });
 
   it('lists every issue once in one list, worst first, with its severity, each row opening its fix', async () => {

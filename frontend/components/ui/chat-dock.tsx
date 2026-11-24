@@ -98,7 +98,7 @@ export function ComposerFrame({
     <form // NOSONAR
       data-dragging={dragging || undefined}
       className={cn(
-        'focus-frame max-w-thread mx-auto grid w-full gap-1 rounded-card p-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)] data-[dragging]:border-focus',
+        'focus-frame max-w-thread mx-auto grid w-full min-w-0 grid-cols-[minmax(0,1fr)] gap-1 rounded-card p-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)] data-[dragging]:border-focus',
         FIELD_EDGE,
       )}
       onDragOver={(event) => {

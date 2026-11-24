@@ -71,7 +71,7 @@ function UrlBody({ data }: Readonly<{ data: UrlActions }>) {
           { label: 'Open actions', value: `${formatCount(open.length)} on this URL` },
         ]}
       />
-      <Labelled title="Actions on this URL">
+      <Labelled title="Actions on this URL" bare={data.items.length > 0}>
         {data.items.length === 0 ? (
           <StateBlock kind="empty" inline message="No action touches this URL." />
         ) : (

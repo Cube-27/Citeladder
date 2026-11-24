@@ -28,6 +28,11 @@ export function useChatDetail(workspaceId: string, chatId: string) {
   });
   const closed = useLiveTurnConnected(query.data?.latest_run?.id) === false;
   const { refetch } = query;
+  const reading = isPageReading(query.data?.page_fetch);
+  const { mutate: readPage } = useMutation(agentMutations.runPageFetch(workspaceId));
+  useEffect(() => {
+    if (reading) readPage({ chatId });
+  }, [reading, chatId, readPage]);
   useEffect(() => {
     if (closed) void refetch();
   }, [closed, refetch]);

@@ -15,7 +15,7 @@ import { dimensionLabel, scoreRoleLabels, severityRank } from '@/lib/site-health
 import { StateBlock } from '@/components/ui/state-block';
 import { ChevronDown } from '@/lib/icons';
 import { cn } from '@/lib/utils';
-import { SectionContent, TitledSection } from '@/components/ui/section';
+import { SectionCard, TitledSection } from '@/components/ui/section';
 
 const PREVIEW_COUNT = 5;
 
@@ -33,7 +33,7 @@ export function PageIssues({
   const sorted = [...issues].sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
   return (
     <TitledSection title={`All issues (${sorted.length})`}>
-      <SectionContent>
+      <SectionCard>
         {sorted.length === 0 ? (
           <StateBlock
             kind="empty"
@@ -43,7 +43,7 @@ export function PageIssues({
         ) : (
           <IssueList issues={sorted} crawlId={crawlId} />
         )}
-      </SectionContent>
+      </SectionCard>
     </TitledSection>
   );
 }

@@ -3,7 +3,12 @@ import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
 import { useToast } from '@/components/ui/toast';
 import { ChevronDown } from '@/lib/icons';
-import { downloadPage, pageExport, type PageExportFormat } from '@/lib/agent/export';
+import {
+  downloadPage,
+  pageExport,
+  type PageDownload,
+  type PageExportFormat,
+} from '@/lib/agent/export';
 
 const COPIED: Readonly<Record<PageExportFormat, string>> = {
   markdown: 'Copied as Markdown',
@@ -25,7 +30,8 @@ async function copyPage(body: string, format: PageExportFormat) {
   ]);
 }
 
-export function ExportMenu({ title, body }: Readonly<{ title: string; body: string }>) {
+export function ExportMenu(page: PageDownload) {
+  const { body } = page;
   const { notify } = useToast();
   const copy = (format: PageExportFormat) =>
     void copyPage(body, format).then(
@@ -45,8 +51,8 @@ export function ExportMenu({ title, body }: Readonly<{ title: string; body: stri
         <MenuItem onSelect={() => copy('html')}>Copy as HTML</MenuItem>
         <MenuItem onSelect={() => copy('text')}>Copy as plain text</MenuItem>
         <MenuSeparator />
-        <MenuItem onSelect={() => downloadPage(title, body, 'md')}>Download .md</MenuItem>
-        <MenuItem onSelect={() => downloadPage(title, body, 'html')}>Download .html</MenuItem>
+        <MenuItem onSelect={() => downloadPage(page, 'md')}>Download .md</MenuItem>
+        <MenuItem onSelect={() => downloadPage(page, 'html')}>Download .html</MenuItem>
       </MenuContent>
     </Menu>
   );

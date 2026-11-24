@@ -20,6 +20,7 @@ import { mswServer } from '@/test/msw-server';
 import { actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
 import {
+  fieldSuggestion,
   pageChat as sharedPageChat,
   spanSuggestion,
   suggestionsPage,
@@ -108,16 +109,23 @@ describe('The page workspace', () => {
         .map((link) => link.textContent),
     ).toEqual(['Actions']);
     expect(screen.getByRole('textbox', { name: 'Page content (Markdown)' })).toHaveTextContent(
-      'Our plans start at ten dollars.',
+      'Our plans start at ten dollars',
     );
     expect(await screen.findByRole('tab', { name: counted('Suggestions', 2) })).toBeVisible();
     await vi.waitFor(() => expect(highlight(READY)).toHaveTextContent('ten dollars'));
     expect(highlight(READY)).toHaveClass('page-editor-suggestion-ready');
     expect(highlight(NEEDS)).toHaveClass('page-editor-suggestion-needs_input');
+    expect(document.querySelector('ins')).toHaveTextContent('$10');
+    expect(screen.getByLabelText('Reply to the agent')).toBeVisible();
+    expect(
+      within(screen.getByRole('list', { name: 'Search listing' })).getByText('Pricing | Acme'),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole('tab', { name: 'Chat' }));
+    expect(screen.getByRole('region', { name: 'Agent conversation' })).toBeVisible();
     expect(screen.getByLabelText('Reply to the agent')).toBeVisible();
 
     await user.click(screen.getByRole('tab', { name: 'SEO' }));
-    expect(screen.getByText('Pricing | Acme')).toBeVisible();
     expect(screen.getByText('Missing meta description')).toBeVisible();
     expect(screen.getByText(/Editing the page doesn’t rerun them/)).toBeVisible();
   });
@@ -182,7 +190,37 @@ describe('The page workspace', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('applies a ready suggestion against the revision on screen and clears its highlight', async () => {
+  it('accepts a suggestion from the article: beside its passage, and on a search listing field', async () => {
+    const TITLE = 'aaaaaaaa-0000-4000-8000-000000000003';
+    const title = fieldSuggestion(TITLE, 'title', { replacement: 'Pricing plans | Acme' });
+    serve({ chat: pageChat(), suggestions: suggestionsPage([ready(), title]) });
+    const applied: string[] = [];
+    mswServer.use(
+      http.post(`${SUGGESTIONS}/:id/apply`, ({ params }) => {
+        applied.push(String(params.id));
+        return HttpResponse.json({
+          outcome: 'applied',
+          reason: null,
+          suggestion: ready({ status: 'applied' }),
+          revision: null,
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderChat();
+
+    const listing = within(await screen.findByRole('list', { name: 'Search listing' }));
+    expect(await listing.findByText('Pricing plans | Acme')).toBeVisible();
+    await user.click(listing.getByRole('button', { name: 'Accept suggestion: Title tag' }));
+    await vi.waitFor(() => expect(applied).toEqual([TITLE]));
+    await vi.waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Accept suggestion' })).toBeVisible(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Accept suggestion' }));
+    await vi.waitFor(() => expect(applied).toEqual([TITLE, READY]));
+  });
+
+  it('applies a ready suggestion against the revision on screen and marks the changed text', async () => {
     const applied = BODY.replace('ten dollars', '$10');
     const state = serve({ chat: pageChat(), suggestions: suggestionsPage([ready(), needsInput]) });
     const requests: unknown[] = [];
@@ -223,7 +261,9 @@ describe('The page workspace', () => {
         'Our plans start at $10.',
       ),
     );
-    await vi.waitFor(() => expect(highlight(READY)).toBeNull());
+    await vi.waitFor(() => expect(highlight(READY)).toHaveTextContent('$10'));
+    expect(highlight(READY)).toHaveClass('page-editor-suggestion-applied');
+    expect(document.querySelector('ins')).toBeNull();
     expect(highlight(NEEDS)).toHaveTextContent('Teams pay more');
     expect(screen.getByRole('radio', { name: counted('Applied', 1) })).toBeVisible();
   });
