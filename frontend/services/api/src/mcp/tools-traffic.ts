@@ -135,7 +135,7 @@ export const trafficTools = {
   }),
   read_ai_referrals: projectTool({
     title: 'Read AI referral traffic',
-    description: `Visits that arrived from AI assistants such as ChatGPT, from GA4: sessions, share of all traffic, key events and the top ${mcpPolicy.referral_landing_pages} landing pages by sessions (landing_page_count counts them all) for a range. These are people clicking through; read_crawl_logs has crawler requests. An unavailable state means no referral data has been imported, which is not zero; read_integration_status says why.`,
+    description: `Visits that arrived from AI assistants such as ChatGPT, from GA4: sessions, share of all traffic, key events and the top ${mcpPolicy.referral_landing_pages} landing pages by sessions (landing_page_count counts them all) for a range. These are people clicking through; read_crawl_logs has crawler requests. unavailable no_ai_referrals_snapshot means no referral snapshot is saved for the range, which is not zero; read_integration_status says why.`,
     schema: z.strictObject({ ...project, range: analyticsRange, ...dates }),
     read: referrals,
   }),

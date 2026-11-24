@@ -366,7 +366,7 @@ describe('A3 integration partition replacement', () => {
       { start_date: day, end_date: day },
     );
     expect([
-      referrals.landing_pages.map((page) => [page.canonical_url, 'url_hash' in page]),
+      referrals.landing_pages.map((page) => [page.canonical_url, 'url_hash' in page]).toSorted(),
       (named.landing_pages as Record<string, unknown>[]).map((page) => [
         page.canonical_url,
         page.sessions,

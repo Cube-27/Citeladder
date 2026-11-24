@@ -211,28 +211,30 @@ export async function promptPortfolio(
     active: enabled && row.status === 'active',
     record_uri: `citeladder://prompt/${row.id}`,
   }));
-  const topics = args.cursor
-    ? null
-    : await new WorkspaceScope(scope.workspaceId)
-        .selectFrom(db, 'projects')
-        .innerJoin('topics as t', 't.project_id', 'projects.id')
-        .select(['t.id', 't.name', 't.description'])
-        .where('projects.id', '=', scope.projectId)
-        .orderBy('t.name')
-        .orderBy('t.id')
-        .limit(mcpPolicy.max_list_limit + 1)
-        .execute();
   return {
     state: 'available',
-    ...(topics && {
-      topics: topics.slice(0, mcpPolicy.max_list_limit),
-      topics_truncated: topics.length > mcpPolicy.max_list_limit,
-    }),
+    ...(args.cursor ? {} : await portfolioTopics({ db, scope })),
     items,
     pagination: pagination(
       items,
       rows.length > count && last ? encodeCursor(filters, last.cursor_at, last.id) : null,
     ),
+  };
+}
+
+async function portfolioTopics({ db, scope }: Pick<ProjectRead, 'db' | 'scope'>) {
+  const topics = await new WorkspaceScope(scope.workspaceId)
+    .selectFrom(db, 'projects')
+    .innerJoin('topics as t', 't.project_id', 'projects.id')
+    .select(['t.id', 't.name', 't.description'])
+    .where('projects.id', '=', scope.projectId)
+    .orderBy('t.name')
+    .orderBy('t.id')
+    .limit(mcpPolicy.max_list_limit + 1)
+    .execute();
+  return {
+    topics: topics.slice(0, mcpPolicy.max_list_limit),
+    topics_truncated: topics.length > mcpPolicy.max_list_limit,
   };
 }
 

@@ -16,7 +16,7 @@ Decide whether a repeatable family of pages is justified and, if so, specify a s
 
 ## Where the data is
 
-- `get_project_business_context` with `sections: ["profile"]`: the real products, locations, integrations or datasets behind each page.
+- `get_project_business_context` with `sections: ["profile", "integrations", "search_intelligence"]`: the real products, locations, integrations or datasets behind each page.
 - `read_search_intelligence`, then `read_search_dataset`, and `read_performance`: demand for the pattern.
 - `read_site_pages`: the pages that already exist.
 

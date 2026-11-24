@@ -13,7 +13,6 @@
       "services/api/src/agent/model-calls.ts::dispatch::<anonymous>": 21,
       "services/api/src/agent/model-calls.ts::receipt::<anonymous>": 18,
       "services/api/src/agent/reads.ts::readChat": 19,
-      "services/api/src/agent/tools.ts::boundToolData": 14,
       "services/api/src/analysis/comparison.ts::frozenComparisonKey": 13,
       "services/api/src/analysis/opportunities/detectors.ts::gapHit": 13,
       "services/api/src/analysis/opportunities/source-patterns.ts::summarizeSourcePattern": 13,

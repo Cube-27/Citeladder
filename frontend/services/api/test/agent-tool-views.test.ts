@@ -205,7 +205,7 @@ describe('the Agent view of a read', () => {
               logo_url: 'https://logo',
               website_url: 'https://acme.example',
               mention_rate: 0.33333,
-              citation_rate: 0.1,
+              citation_rate: 0.00041234,
               share_of_voice: 0.5,
               mention_count: 3,
               gap_count: null,
@@ -224,18 +224,18 @@ describe('the Agent view of a read', () => {
         {
           audit_id: audit,
           completed_at: '2026-09-01T00:00:00Z',
-          visibility_score: 41.235,
+          visibility_score: 41.23,
           comparison_key: 'k1',
           spans_version_boundary: false,
           rankings: [
             {
               name: 'Acme',
               is_brand: true,
-              mention_rate: 0.333,
-              citation_rate: 0.1,
+              mention_rate: 0.3333,
+              citation_rate: 0.0004123,
               share_of_voice: 0.5,
               avg_position: 1.5,
-              win_rate: 0.667,
+              win_rate: 0.6667,
             },
           ],
           events: [],
@@ -319,7 +319,10 @@ describe('the Agent view of a read', () => {
       entities: [entity],
       themes: [{ theme: 'price', quotes: ['a', 'b', 'c'].map(quote) }],
       negative_quotes: [quote('n')],
-      prompts: Array.from({ length: 25 }, (_, index) => breakdown(index - 12)),
+      prompts: [
+        { key: 'unscored', label: 'U', score: { net_sentiment: null } },
+        ...Array.from({ length: 25 }, (_, index) => breakdown(index - 12)),
+      ],
       trend,
     });
     const shownEntity = {
@@ -343,7 +346,7 @@ describe('the Agent view of a read', () => {
         ...Array.from({ length: 10 }, (_, index) => breakdown(index - 12)),
         ...Array.from({ length: 10 }, (_, index) => breakdown(index + 3)),
       ],
-      prompt_count: 25,
+      prompt_count: 26,
       trend,
     });
   });
@@ -398,7 +401,7 @@ describe('the Agent view of a read', () => {
           prompt_id: prompt,
           prompt_text: 'best nets',
           theme: 'Nets',
-          composite_score: 52.123,
+          composite_score: 52.12,
           previous_score: 50,
           immediate_delta: 2.123,
           visibility_rate: 0.5,

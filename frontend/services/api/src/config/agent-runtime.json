@@ -65,7 +65,7 @@
     "quotes_max": 2,
     "list_max": 10,
     "brands_max": 3,
-    "rate_decimals": 3
+    "significant_digits": 4
   },
   "context_package_max_chars": 24000,
   "step_detail_max_chars": 200,

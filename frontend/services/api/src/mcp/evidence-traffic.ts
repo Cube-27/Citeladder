@@ -113,7 +113,10 @@ async function queryEvidenceDays(...read: Parameters<typeof queryEvidencePage>) 
 }
 
 async function savedWindow(read: ProjectRead, start?: string | null, end?: string | null) {
-  if (start && end) return { start, end };
+  if (start && end) {
+    if (end < start) throw new McpInputError('window_end must not precede window_start');
+    return { start, end };
+  }
   if (start || end) throw new McpInputError('Pass both window_start and window_end, or neither');
   const latest = await latestDemandSnapshot(read);
   return latest ? { start: latest.start, end: latest.end } : null;
@@ -135,7 +138,6 @@ export async function queryEvidence(
   const { db, scope } = read;
   const saved = await savedWindow(read, args.window_start, args.window_end);
   if (!saved) return unavailable('exact_query_evidence_window_not_projected');
-  if (saved.end < saved.start) throw new McpInputError('window_end must not precede window_start');
   const window = { ...scope, windowStart: saved.start, windowEnd: saved.end };
   const options = {
     limit: args.limit ?? mcpPolicy.default_list_limit,

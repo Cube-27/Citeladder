@@ -14,7 +14,7 @@ const objects = (value: Json | undefined): JsonObject[] =>
   Array.isArray(value) ? value.filter(isObject) : [];
 
 function pick(row: JsonObject, keys: readonly string[]): JsonObject {
-  return Object.fromEntries(keys.flatMap((key) => (key in row ? [[key, row[key]!]] : [])));
+  return Object.fromEntries(Object.entries(row).filter(([key]) => keys.includes(key)));
 }
 
 function hide(value: Json, keys: ReadonlySet<string>): Json {
@@ -29,7 +29,7 @@ function hide(value: Json, keys: ReadonlySet<string>): Json {
 
 function rounded(value: Json): Json {
   if (typeof value === 'number' && !Number.isInteger(value))
-    return Number(value.toFixed(settings.rate_decimals));
+    return Number(value.toPrecision(settings.significant_digits));
   if (Array.isArray(value)) return value.map(rounded);
   if (isObject(value))
     return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, rounded(child)]));
@@ -93,15 +93,20 @@ const perceptionEntity = (entity: JsonObject) =>
   mapList(entity, 'categories', (category) => mapList(category, 'attributes', fewQuotes));
 const netSentiment = (row: JsonObject) => {
   const score = isObject(row.score) ? row.score.net_sentiment : null;
-  return typeof score === 'number' ? score : 0;
+  return typeof score === 'number' ? score : null;
 };
 
 function perceptionPrompts(data: JsonObject): JsonObject {
-  const prompts = objects(data.prompts).toSorted((a, b) => netSentiment(a) - netSentiment(b));
+  const all = objects(data.prompts);
+  const scored = all.flatMap((row) => {
+    const score = netSentiment(row);
+    return score === null ? [] : [{ row, score }];
+  });
+  const prompts = scored.toSorted((a, b) => a.score - b.score).map(({ row }) => row);
   const most = settings.list_max;
   const shown =
     prompts.length <= most * 2 ? prompts : [...prompts.slice(0, most), ...prompts.slice(-most)];
-  return { ...data, prompts: shown, prompt_count: prompts.length };
+  return { ...data, prompts: shown, prompt_count: all.length };
 }
 
 function perception(data: JsonObject): JsonObject {
