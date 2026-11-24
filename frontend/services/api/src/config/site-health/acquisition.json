@@ -41,7 +41,7 @@
       ["local", ["locations", "location", "stores", "store", "store-locator"]],
       ["category", ["collections", "collection", "categories", "shop"]],
       ["pricing", ["plans", "prices"]],
-      ["about", ["company", "team", "story", "who-we-are"]],
+      ["about", ["company", "team", "who-we-are"]],
       ["article", ["blog", "articles", "news", "insights"]],
       ["guide", ["guides", "resources", "learn"]],
       ["faq", ["faqs"]],
@@ -49,6 +49,30 @@
       ["contact", ["get-in-touch"]],
       ["trust", ["privacy", "terms", "legal", "policy", "policies", "security"]]
     ],
+    "sitemap_source_kinds": [
+      ["product", ["product", "products"]],
+      ["local", ["store", "stores", "storelocation", "location", "locations"]],
+      [
+        "category",
+        [
+          "category",
+          "categories",
+          "collection",
+          "collections",
+          "brand",
+          "brands",
+          "colour",
+          "colours",
+          "color",
+          "colors"
+        ]
+      ],
+      ["article", ["post", "posts", "blog", "blogs", "article", "articles", "news"]],
+      ["faq", ["faq", "faqs"]],
+      ["docs", ["documentation", "docs", "help", "support"]]
+    ],
+    "sitemap_neutral_words": ["sitemap", "sitemaps", "core", "xml", "gz"],
+    "sitemap_neutral_token_pattern": "^[a-z]{0,2}$",
     "exclusions": {
       "hard_path": "hard_excluded_path",
       "hard_asset": "hard_excluded_asset",

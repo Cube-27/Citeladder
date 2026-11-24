@@ -406,7 +406,11 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
   never re-picked; the allowance mixes the important page types (product,
   article, FAQ, store and the like) rather than letting one type take it all
   (owner, 2026-11-24); full crawls fill the set up to the plan
-  limit; an upgrade extends it, a downgrade keeps the first N.
+  limit, with a global tracked-page cap of 500 pages (owner, 2026-11-24); an upgrade extends it, a downgrade keeps the first N. A page's type
+  comes from the child sitemap that lists it first and its URL words second;
+  post means article, page decides nothing, brand and colour mean category, and
+  a custom multi-word name decides nothing unless its words agree (owner,
+  2026-11-24).
 - **SH-B7** One crawl action audits the same pages each time. **SH-B8** A
   tracked page answering 404 or a redirect stays tracked, reads "page
   unavailable" and opens that issue. **SH-B10** No crawl cooldown.

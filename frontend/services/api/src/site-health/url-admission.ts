@@ -56,6 +56,37 @@ function namedKind(segment: string) {
   return fallback?.[0] ?? null;
 }
 
+const SOURCE_KINDS = new Map(
+  (crawl.sitemap_source_kinds as [string, string[]][]).flatMap(([kind, words]) =>
+    words.map((word) => [word, kind] as const),
+  ),
+);
+const NEUTRAL_WORDS = new Set(crawl.sitemap_neutral_words);
+const NEUTRAL_TOKEN = new RegExp(crawl.sitemap_neutral_token_pattern, 'u');
+
+const sitemapWords = (part: string) =>
+  part
+    .split(/[-_.]+/u)
+    .map((token) => token.replace(/\d+$/u, ''))
+    .filter((token) => !NEUTRAL_TOKEN.test(token) && !NEUTRAL_WORDS.has(token));
+
+function sourceKind(sitemapUrl: string) {
+  const folders = (URL.parse(sitemapUrl)?.pathname.toLowerCase() ?? '').split('/').filter(Boolean);
+  const fileWords = sitemapWords(folders.pop() ?? '');
+  const fileKinds = fileWords.flatMap((word) => SOURCE_KINDS.get(word) ?? []);
+  if (fileKinds.length < fileWords.length) return [];
+  const folderKinds = folders.flatMap(sitemapWords).flatMap((word) => SOURCE_KINDS.get(word) ?? []);
+  const kinds = new Set([...folderKinds, ...fileKinds]);
+  return kinds.size === 1 ? [...kinds] : [];
+}
+
+export function listedAdmission(admission: Admission, sitemaps: readonly string[]): Admission {
+  if (admission.valueKind === 'root') return admission;
+  const tier = (kind: string) => PRIORITIES[kind] ?? 0;
+  const kind = sitemaps.flatMap(sourceKind).toSorted((a, b) => tier(b) - tier(a))[0];
+  return kind ? { ...admission, valueKind: kind, priority: tier(kind) } : admission;
+}
+
 function valueKind(url: string) {
   const path = stripTrailing(new URL(url).pathname.toLowerCase(), '/') || '/';
   if (path === '/') return 'root';
