@@ -145,7 +145,7 @@ const commerce: Family = {
   hits: async (db, scope, { at, commerceAuditId, commerceMatchPassId }) =>
     commerceAuditId === null && commerceMatchPassId === null
       ? none()
-      : { hits: await commerceHits(db, scope, commerceAuditId, at), limitations: [] },
+      : commerceHits(db, scope, commerceAuditId, at),
   present: (sources) => sources.commerceAuditId !== null || sources.commerceMatchPassId !== null,
 };
 

@@ -161,6 +161,44 @@ export async function observationIds(
   return new Map(rows.map((row) => [row.holder_id, row.ids]));
 }
 
+async function shoppingReach(
+  db: Database,
+  scope: CommerceScope,
+  executions: ExecutionScope,
+): Promise<Map<string, number>> {
+  const ws = scope.workspaceId,
+    project = scope.projectId;
+  const { rows } = await sql<{ product_id: string; n: number }>`
+    WITH ${scopedSlots(scope, executions)},
+    shopping AS (
+      SELECT DISTINCT sp.task_id, c.target_kind, c.target_id
+      FROM (SELECT DISTINCT task_id FROM scoped_passes) sp
+      JOIN audit_tasks t ON t.id = sp.task_id AND t.workspace_id = ${ws}
+      JOIN audit_prompt_snapshots s ON s.id = t.prompt_snapshot_id AND s.audit_id = t.audit_id
+      JOIN commerce_prompt_targets c ON c.prompt_id = s.prompt_id
+        AND c.workspace_id = ${ws} AND c.project_id = ${project}
+    ),
+    reach AS (
+      SELECT sh.task_id, sh.target_id AS product_id FROM shopping sh
+      WHERE sh.target_kind = 'product'
+      UNION
+      SELECT sh.task_id, m.product_id FROM shopping sh
+      JOIN commerce_product_categories m ON m.category_id = sh.target_id
+        AND m.workspace_id = ${ws} AND m.project_id = ${project}
+      WHERE sh.target_kind = 'category'
+    )
+    SELECT product_id::text AS product_id, count(DISTINCT task_id)::int AS n
+    FROM reach GROUP BY product_id
+  `.execute(db);
+  return new Map(rows.map((row) => [row.product_id, row.n]));
+}
+
+function unreachedLimitation(count: number) {
+  return count === 1
+    ? 'Mentions not checked for 1 catalog product: no audited shopping prompt asks about it or its category.'
+    : `Mentions not checked for ${count} catalog products: no audited shopping prompt asks about them or their category.`;
+}
+
 function evidence(
   row: ProductRow,
   rule: ProductMetricRule,
@@ -196,11 +234,11 @@ export async function productMetricHits(
   db: Database,
   scope: CommerceScope,
   asOf: Date,
-): Promise<DetectorHit[]> {
+): Promise<{ hits: DetectorHit[]; limitations: string[] }> {
   const enabled = Object.keys(m.RULES)
     .filter(isProductMetricRule)
     .filter((id) => rules[id]?.enabled);
-  if (!enabled.length) return [];
+  if (!enabled.length) return { hits: [], limitations: [] };
   const window: ExecutionScope = {
     windowDays: m.WINDOW_DAYS,
     engine: null,
@@ -209,26 +247,32 @@ export async function productMetricHits(
   };
   const { rows, executions } = await catalogRows(db, scope, window);
   const owned = await ownedHosts(db, scope);
+  const reach = await shoppingReach(db, scope, window);
+  const unreached = new Set<string>();
   const found = enabled.flatMap((id) =>
     rows.flatMap((row) => {
       const rule = productMetricRule(id);
-      const reading = readMetric(rule, row, executions, owned);
+      const asked = rule.metric === 'appearances';
+      const measured = asked ? (reach.get(row.holder_id) ?? 0) : executions;
+      const reading = readMetric(rule, row, measured, owned);
+      if (asked && measured === 0 && !clears(rule, row.appearances)) unreached.add(row.holder_id);
       return reading.state === 'measured' && !clears(rule, reading.value)
-        ? [{ id, rule, row, reading }]
+        ? [{ id, rule, row, reading, measured }]
         : [];
     }),
   );
   const ids = await observationIds(db, scope, window, [
     ...new Set(found.map((item) => item.row.holder_id)),
   ]);
-  return found.map(({ id, rule, row, reading }) => ({
+  const hits = found.map(({ id, rule, row, reading, measured }) => ({
     rule_id: id,
     target: { kind: 'product' as const, product_id: row.holder_id },
-    evidence: evidence(row, rule, reading, { asOf, executions }),
+    evidence: evidence(row, rule, reading, { asOf, executions: measured }),
     source_analysis_ids: [],
     source_issue_ids: [],
     source_metric_ids: ids.get(row.holder_id) ?? [],
     value_factor: o.COMMERCE_VALUE_FACTOR,
     gap_factor: o.COMMERCE_GAP_FACTOR,
   }));
+  return { hits, limitations: unreached.size ? [unreachedLimitation(unreached.size)] : [] };
 }
