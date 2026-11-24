@@ -176,7 +176,7 @@ function PolaritySplit({ negative, positive }: Readonly<{ negative: number; posi
 const QUOTE_GRID =
   'grid grid-cols-[minmax(9rem,12rem)_minmax(16rem,1fr)_6rem_4rem_minmax(9rem,14rem)] gap-x-4';
 
-const QUOTE_HEADS = ['Attribute', 'In the answer', 'Answer', 'Engine', 'Prompt'];
+const QUOTE_HEADS = ['Attribute', 'In the answer', 'Sentiment', 'Engine', 'Prompt'];
 
 function QuoteRows({
   label,
