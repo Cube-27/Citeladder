@@ -83,19 +83,46 @@ export async function countUse(
 
 export async function budgetReached(
   db: Database,
-  { subject: kind, operation, limit, windowSeconds }: Budget,
+  spent: Budget,
   subject: string,
   at: Date = new Date(),
 ): Promise<boolean> {
+  return (await budgetUse(db, spent, subject, at)).used >= spent.limit;
+}
+
+export async function budgetUse(
+  db: Database,
+  { subject: kind, operation, windowSeconds }: Budget,
+  subject: string,
+  at: Date = new Date(),
+): Promise<{ used: number; resetsAt: Date }> {
+  const window = windowOf(windowSeconds, at);
   const row = await db
     .selectFrom('usage_windows')
     .select('count')
     .where('subject_kind', '=', kind)
     .where('subject_hash', '=', subjectHash(subject))
     .where('operation', '=', operation)
-    .where('window_started_at', '=', windowOf(windowSeconds, at).started)
+    .where('window_started_at', '=', window.started)
     .executeTakeFirst();
-  return (row?.count ?? 0) >= limit;
+  return { used: row?.count ?? 0, resetsAt: window.expires };
+}
+
+export async function giveBackUse(
+  db: Database,
+  { subject: kind, operation, windowSeconds }: Budget,
+  subject: string,
+  spentAt: Date,
+): Promise<void> {
+  await db
+    .updateTable('usage_windows')
+    .set({ count: sql`count - 1`, updated_at: new Date() })
+    .where('subject_kind', '=', kind)
+    .where('subject_hash', '=', subjectHash(subject))
+    .where('operation', '=', operation)
+    .where('window_started_at', '=', windowOf(windowSeconds, spentAt).started)
+    .where('count', '>', 0)
+    .execute();
 }
 
 export async function releaseBudget(

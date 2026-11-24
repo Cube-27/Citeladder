@@ -7,6 +7,26 @@ import { mswServer } from '@/test/msw-server';
 import { PROJECT, crawl, mockRoutes, renderScreen } from './site-health-screen.test-support';
 
 describe('SiteHealthScreen — the one crawl action', () => {
+  it('disables Run new crawl and says why once the full crawls for the period are used', async () => {
+    const used = { limit: 10, used: 10, remaining: 0, resets_at: '2026-12-20T00:00:00.000Z' };
+    mockRoutes();
+    mswServer.use(
+      http.get('/api/v1/projects/:projectId/crawl-budgets', () =>
+        HttpResponse.json({
+          full_crawls: used,
+          page_crawls: { ...used, limit: 50, used: 0, remaining: 50 },
+        }),
+      ),
+    );
+
+    renderScreen();
+
+    expect(
+      await screen.findByText('All 10 full crawls for this period are used. More from 2026-12-20.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run new crawl' })).toBeDisabled();
+  });
+
   it('keeps a crawl that ignored robots.txt ignoring it, and offers to respect it again', async () => {
     const user = userEvent.setup();
     const bodies: unknown[] = [];

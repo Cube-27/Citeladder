@@ -6,6 +6,7 @@ import {
   architectureSchema,
   changeSummarySchema,
   changesPageSchema,
+  crawlBudgetsSchema,
   crawlScheduleSchema,
   inventoryPageSchema,
   issueFixesSchema,
@@ -34,6 +35,7 @@ import type {
   AeoReadiness,
   ChangeSummary,
   ChangesPage,
+  CrawlBudgets,
   CrawlSchedule,
   InventoryPage,
   IssueFixes,
@@ -148,6 +150,10 @@ export const siteHealthApi = {
       options,
     );
     return strictValidate(monitoredUrlsResponseSchema, res, 'siteHealth.getMonitoredUrls');
+  },
+  getCrawlBudgets: async (projectId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get<CrawlBudgets>(`/projects/${projectId}/crawl-budgets`, options);
+    return strictValidate(crawlBudgetsSchema, res, 'siteHealth.getCrawlBudgets');
   },
   getCrawlSchedule: async (projectId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<CrawlSchedule>(

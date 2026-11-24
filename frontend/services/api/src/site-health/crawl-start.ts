@@ -1,6 +1,6 @@
-import { budget, spendBudget } from '../abuse/usage.ts';
 import type { SettingSource } from '../config/settings.ts';
 import { inTransaction, type Database } from '../db/database.ts';
+import { withCrawlStart } from './crawl-budgets.ts';
 import { crawlRequest } from './crawl-request.ts';
 import { createCrawl } from './planner.ts';
 
@@ -32,12 +32,13 @@ function robotsChoice({ robots, user }: CrawlStart): Parameters<typeof crawlRequ
 
 export async function startCrawl(db: Database, settings: SettingSource, start: CrawlStart) {
   const choice = robotsChoice(start);
-  await spendBudget(db, budget('crawl_create', settings), start.workspaceId);
-  return inTransaction(db, async (trx) =>
-    createCrawl(
-      trx,
-      start.workspaceId,
-      await crawlRequest(trx, start.workspaceId, start.projectId, choice),
+  return inTransaction(db, (trx) =>
+    withCrawlStart(trx, { workspaceId: start.workspaceId, kind: 'full', settings }, async () =>
+      createCrawl(
+        trx,
+        start.workspaceId,
+        await crawlRequest(trx, start.workspaceId, start.projectId, choice),
+      ),
     ),
   );
 }

@@ -94,7 +94,7 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
             {
               error: {
                 code: 'crawl_already_active',
-                message: 'Project already has an active crawl',
+                message: 'A crawl is already running for this project. Try again when it ends.',
               },
             },
             { status: 409 },
@@ -115,7 +115,9 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
 
     await user.click(within(dialog).getByRole('button', { name: 'Re-run all' }));
     expect(
-      await within(dialog).findByText('A crawl is running. Re-run this issue when it finishes.'),
+      await within(dialog).findByText(
+        'A crawl is already running for this project. Try again when it ends.',
+      ),
     ).toBeInTheDocument();
   });
 

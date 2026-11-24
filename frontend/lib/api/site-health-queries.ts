@@ -141,6 +141,12 @@ export const siteHealthQueries = {
       queryFn: ({ signal }) =>
         siteHealthApi.getMonitoredUrls(scope.projectId, scoped(scope, signal)),
     }),
+  crawlBudgets: (scope: ProjectScope) =>
+    queryOptions({
+      queryKey: queryKeys.siteHealth.crawlBudgets(scope),
+      queryFn: ({ signal }) =>
+        siteHealthApi.getCrawlBudgets(scope.projectId, scoped(scope, signal)),
+    }),
   crawlSchedule: (scope: ProjectScope) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.crawlSchedule(scope),
@@ -288,12 +294,19 @@ async function refreshCrawlStart(client: QueryClient, projectId: string) {
 
 export type CrawlStart = { refreshed: Promise<void> | null };
 
+function refreshCrawlBudgets(client: QueryClient) {
+  return client.invalidateQueries({
+    predicate: ({ queryKey }) => queryKey[0] === 'site-health' && queryKey[2] === 'crawl-budgets',
+  });
+}
+
 export const siteHealthMutations = {
   createCrawl: (workspaceId: string | null) =>
     mutationOptions({
       mutationFn: (input: StartCrawlInput) => siteHealthApi.createCrawl(input, { workspaceId }),
       onMutate: (): CrawlStart => ({ refreshed: null }),
       onSuccess: (_crawl, input, start, { client }) => {
+        void refreshCrawlBudgets(client);
         start.refreshed = refreshCrawlStart(client, input.project_id);
       },
     }),
@@ -307,8 +320,10 @@ export const siteHealthMutations = {
   cancelCrawl: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: (crawlId: string) => siteHealthApi.cancelCrawl(crawlId, scoped(scope)),
-      onSuccess: (_crawl, _crawlId, _result, { client }) =>
-        refreshSiteHealthDashboard(client, scope.projectId),
+      onSuccess: (_crawl, _crawlId, _result, { client }) => {
+        void refreshCrawlBudgets(client);
+        return refreshSiteHealthDashboard(client, scope.projectId);
+      },
     }),
   markIssueFixed: (workspaceId: string | null, crawlId: string) =>
     mutationOptions({
@@ -330,6 +345,7 @@ export const siteHealthMutations = {
     mutationOptions({
       mutationFn: (groupId: string) => siteHealthApi.rerunIssue(crawlId, groupId, scoped(scope)),
       onSuccess: (rerun, _groupId, _result, { client }) => {
+        void refreshCrawlBudgets(client);
         void refreshWhenRerunLands(client, scope, crawlId, rerun.crawl_id);
       },
     }),
@@ -338,6 +354,7 @@ export const siteHealthMutations = {
       mutationFn: (vars: { crawlId: string; siteUrlId: string }) =>
         siteHealthApi.rerunPage(vars.crawlId, vars.siteUrlId, { workspaceId }),
       onSuccess: (result, _vars, _result, { client }) => {
+        void refreshCrawlBudgets(client);
         client.setQueryData<PageDetail>(
           queryKeys.siteHealth.page(workspaceId, result.crawl_id, result.site_url_id),
           (previous) =>

@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ import { StatusStrip } from '@/components/site-health/status-strip';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
+import { budgetUsedUp, type CrawlBudget } from '@/lib/site-health/crawl-budget';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
@@ -60,6 +61,12 @@ function SiteHealthContent({
   const mutationsAllowed = !entitlementQuery.isError;
   const canRun = useWorkspaceCapability('run');
   const canWrite = useWorkspaceCapability('write');
+  const budgets = useQuery({
+    ...siteHealthQueries.crawlBudgets({ workspaceId, projectId }),
+    enabled: mutationsAllowed && canRun,
+  });
+  const fullCrawls = budgets.data?.full_crawls;
+  const usedUp = budgetUsedUp(fullCrawls, 'full crawls');
   const schedule = useCrawlSchedule(
     { workspaceId, projectId },
     Boolean(crawl) && mutationsAllowed && canWrite,
@@ -84,6 +91,7 @@ function SiteHealthContent({
         active={active}
         cancelPending={cancelMutation.isPending}
         startPending={startPending}
+        budget={fullCrawls}
         schedule={schedule.control}
         onCancel={cancelCrawl}
         onStart={(robots) => startCrawl({ project_id: projectId, robots })}
@@ -109,6 +117,7 @@ function SiteHealthContent({
           <Stack gap="workspace" className="min-w-0" data-regular-table-text="">
             <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
             {schedule.notice}
+            {usedUp ? <Notice tone="warning">{usedUp}</Notice> : null}
             <SiteHealthRefreshFailures screen={screen} />
             {crawl ? (
               <>
@@ -457,6 +466,7 @@ function CrawlActions({
   active,
   cancelPending,
   startPending,
+  budget,
   schedule,
   onCancel,
   onStart,
@@ -465,6 +475,7 @@ function CrawlActions({
   active: boolean;
   cancelPending: boolean;
   startPending: boolean;
+  budget: CrawlBudget | undefined;
   schedule: ReactNode;
   onCancel: () => void;
   onStart: (robots?: CrawlRobotsHandling) => void;
@@ -474,6 +485,7 @@ function CrawlActions({
       siteUrl={crawl.root_url}
       robots={crawl.robots}
       pending={startPending}
+      budget={budget}
       onStart={onStart}
     />
   );

@@ -106,9 +106,19 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 
-function handlers(pageDetail: PageDetail) {
+const budget = (remaining: number) => ({
+  limit: 50,
+  used: 50 - remaining,
+  remaining,
+  resets_at: '2026-12-20T00:00:00.000Z',
+});
+
+function handlers(pageDetail: PageDetail, pageCrawlsLeft = 50) {
   return [
     http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}`, () => HttpResponse.json(pageDetail)),
+    http.get('/api/v1/projects/:projectId/crawl-budgets', () =>
+      HttpResponse.json({ full_crawls: budget(10), page_crawls: budget(pageCrawlsLeft) }),
+    ),
   ];
 }
 
@@ -518,7 +528,10 @@ describe('UrlDetail', () => {
       http.post(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/rerun`, () =>
         HttpResponse.json(
           {
-            error: { code: 'crawl_already_active', message: 'Project already has an active crawl' },
+            error: {
+              code: 'crawl_already_active',
+              message: 'A crawl is already running for this project. Try again when it ends.',
+            },
           },
           { status: 409 },
         ),
@@ -532,7 +545,9 @@ describe('UrlDetail', () => {
     await user.click(screen.getByRole('button', { name: 'Re-audit this page' }));
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('A crawl is running. Re-audit this page when it finishes.');
+    expect(alert).toHaveTextContent(
+      'A crawl is already running for this project. Try again when it ends.',
+    );
     expect(screen.getByTestId('location')).toHaveTextContent(
       `/site/crawls/${CRAWL}/pages/${URL_ID}`,
     );
@@ -567,11 +582,19 @@ describe('UrlDetail', () => {
     );
   });
 
-  it('shows a helpful alert when rerun is rejected for an unmonitored page', async () => {
+  it('shows the server reason when a rerun is refused for an untracked page', async () => {
     mswServer.use(
       ...handlers(detail({ analysis_status: 'completed' })),
       http.post(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/rerun`, () =>
-        HttpResponse.json({ error: { message: 'rerun_not_allowed' } }, { status: 409 }),
+        HttpResponse.json(
+          {
+            error: {
+              code: 'rerun_not_allowed',
+              message: 'This page is not in the tracked set, so it cannot be crawled on its own',
+            },
+          },
+          { status: 409 },
+        ),
       ),
     );
 
@@ -583,8 +606,18 @@ describe('UrlDetail', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(
-      'This page is not in your monitored set, so it can’t be re-audited.',
+      'This page is not in the tracked set, so it cannot be crawled on its own',
     );
+  });
+
+  it('disables the re-audit and says why when the single-page crawls are used up', async () => {
+    mswServer.use(...handlers(detail({ analysis_status: 'completed' }), 0));
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+
+    await screen.findByText(
+      'All 50 single-page crawls for this period are used. More from 2026-12-20.',
+    );
+    expect(screen.getByRole('button', { name: 'Re-audit this page' })).toBeDisabled();
   });
 
   it('landing on a fresh rerun crawl with ?rerun=1 begins polling immediately', async () => {

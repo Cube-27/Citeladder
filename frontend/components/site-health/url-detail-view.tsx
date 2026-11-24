@@ -14,6 +14,7 @@ import { RobotsExcludedBadge } from '@/components/site-health/robots-choice';
 import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { FactList } from '@/components/ui/facts';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
@@ -37,6 +38,15 @@ export const PAGE_DETAIL_TRAIL: readonly Crumb[] = [
 ];
 
 const rerunLabel = (pending: boolean) => (pending ? 'Re-auditing…' : 'Re-audit this page');
+
+function RerunButton({ rerun }: Readonly<{ rerun: RerunControl }>) {
+  const button = (
+    <Button variant="primary" onClick={rerun.onRerun} disabled={rerun.busy || rerun.usedUp}>
+      {rerunLabel(rerun.busy)}
+    </Button>
+  );
+  return rerun.left ? <Tooltip content={rerun.left}>{button}</Tooltip> : button;
+}
 
 export function UrlDetailView({
   detail,
@@ -66,13 +76,7 @@ export function UrlDetailView({
           }
         />
       }
-      actions={
-        rerun ? (
-          <Button variant="primary" onClick={rerun.onRerun} disabled={rerun.busy}>
-            {rerunLabel(rerun.busy)}
-          </Button>
-        ) : undefined
-      }
+      actions={rerun ? <RerunButton rerun={rerun} /> : undefined}
     >
       {children}
       <LinkedFrom detail={detail} />

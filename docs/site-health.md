@@ -30,7 +30,13 @@ does not restate them.
 one crawl action ([SH-B7](decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17)):
 the one Run new crawl button and a scheduled crawl both admit through it. It runs as
 one transaction. It locks workspace, project, runtime, membership, profile,
-then capacity/account, and allows one active crawl per project. Page reruns
+then capacity/account, and allows one active crawl per project. Inside that
+transaction it spends one start from the workspace's monthly crawl budget
+(`site-health/crawl-budgets.ts`, [SH-B10](decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17)):
+a full crawl, however started, draws on the full-crawl budget and a page or
+issue rerun counts once on the single-page budget, so a refused start costs
+nothing. Stop gives the start back when no analysis task had begun. An empty
+budget refuses with 429 `site_health_crawl_budget_exhausted`. Page reruns
 (`selection.ts`) lock project, runtime, membership, the active crawl, profile,
 then capacity/account. In order, admission:
 
@@ -118,7 +124,8 @@ off by default, weekly or monthly, on every plan. The `crawl-scheduler`
 periodic owner (`workers/crawl-scheduler.ts`) leases each due schedule and
 admits the crawl through `createCrawl` with no robots choice, so it keeps the
 shown crawl's as every crawl action does, and the fetch budget, grants and the
-one-active-crawl rule apply unchanged. Skip, retry and turn-off rules are in
+one-active-crawl rule apply unchanged; a crawl already running makes it retry
+after `active_crawl_retry_seconds` instead of skipping the cycle. Skip, retry and turn-off rules are in
 [state machines](state-machines.md) and `config/crawl-schedules.ts`.
 
 | Task kind (`site_crawl_tasks`) | Does |

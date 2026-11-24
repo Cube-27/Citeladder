@@ -128,7 +128,7 @@ export function siteAndActionCases(db: Database, fixtures: SiteFixtures) {
       },
     },
     rerun_page: {
-      foreign: 404,
+      foreign: 'none',
       async arrange() {
         const seed = await fixtures.crawl();
         await allow(seed, 1, 2);
@@ -141,7 +141,7 @@ export function siteAndActionCases(db: Database, fixtures: SiteFixtures) {
           .execute();
         return {
           scope: seed,
-          payload: { crawl_id: seed.crawlId, site_url_id: page.id },
+          payload: { url: 'https://example.test/a' },
           observe: () => crawls(seed),
           before: 1,
           after: 2,

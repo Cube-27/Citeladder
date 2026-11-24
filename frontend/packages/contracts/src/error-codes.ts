@@ -195,6 +195,7 @@ const API_ERROR_CODES = [
   'run_deadline_exceeded',
   'server_error',
   'service_unavailable',
+  'site_health_crawl_budget_exhausted',
   'site_health_fetches_exhausted',
   'skills_changed',
   'stopped_at_limit',

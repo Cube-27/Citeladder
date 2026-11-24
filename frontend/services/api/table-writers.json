@@ -308,6 +308,7 @@
     "site_crawls": [
       "src/site-health/controls.ts",
       "src/site-health/crawl-assessment.ts",
+      "src/site-health/crawl-budgets.ts",
       "src/site-health/discover-task.ts",
       "src/site-health/planner.ts",
       "src/site-health/site-setup-task.ts",

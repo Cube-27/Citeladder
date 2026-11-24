@@ -42,6 +42,7 @@ export const siteHealthKeys = {
     siteHealth.read('crawls', scope, filters),
   monitored: (scope: ProjectScope) => siteHealth.read('monitored', scope),
   crawlSchedule: (scope: ProjectScope) => siteHealth.read('crawl-schedule', scope),
+  crawlBudgets: (scope: ProjectScope) => siteHealth.read('crawl-budgets', scope),
   internalLinks: (scope: ProjectScope, analysisId?: string) =>
     siteHealth.read('internal-links', scope, analysisId ?? 'latest'),
   latestCrawlPages: (scope: ProjectScope, filters: ListFilters = {}) =>

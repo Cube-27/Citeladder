@@ -400,7 +400,7 @@ describe('crawl-control HTTP contracts', () => {
       expect((await request(owner, path, method, body)).status, path).toBe(404);
   });
 
-  it('uses read, write and run capabilities and spends failed create attempts on the abuse limit', async () => {
+  it('uses read, write and run capabilities and counts only created crawls on the full-crawl budget', async () => {
     const seed = await fixtures.crawl();
     const viewer = await fixtures.user();
     await fixtures.member(seed.workspaceId, viewer, 'viewer');
@@ -410,11 +410,18 @@ describe('crawl-control HTTP contracts', () => {
       (await request(reader, '/site-crawls', 'POST', { project_id: seed.projectId })).status,
     ).toBe(403);
     expect((await request(reader, `/site-crawls/${seed.crawlId}/cancel`, 'POST')).status).toBe(403);
-    const limited = createApp(testConfig({ ABUSE_CRAWL_CREATE_LIMIT: '1' }), db);
+    await allow(seed, 2);
+    const limited = createApp(testConfig({ ABUSE_SITE_HEALTH_FULL_CRAWL_LIMIT: '1' }), db);
     const create = (projectId: string) =>
       request(seed, '/site-crawls', 'POST', { project_id: projectId }, limited);
     expect((await create(randomUUID())).status).toBe(404);
-    expect((await create(seed.projectId)).status).toBe(429);
+    const created = await create(seed.projectId);
+    expect(created.status, await created.clone().text()).toBe(201);
+    const refused = await create(seed.projectId);
+    expect(refused.status).toBe(429);
+    expect(await refused.json()).toMatchObject({
+      error: { code: 'site_health_crawl_budget_exhausted' },
+    });
   });
 
   it('lists by descending keyset with workspace/project/cursor isolation and count redaction', async () => {
