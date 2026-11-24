@@ -227,10 +227,10 @@ export function useComposerCommands({
     onRemoveMention: (id) => setMentions((current) => current.filter((item) => item.id !== id)),
     pastes: {
       items: pastes,
-      add: (text) => {
+      add: (text, minChars = AGENT_PASTE_ATTACHMENT_MIN_CHARS) => {
         const fits =
           limits != null &&
-          text.length >= AGENT_PASTE_ATTACHMENT_MIN_CHARS &&
+          text.length >= minChars &&
           text.length <= limits.attachment_max_chars &&
           heldChars() + text.length <= limits.attachments_total_max_chars &&
           pastes.length + pendingReads.current < limits.attachments_max;

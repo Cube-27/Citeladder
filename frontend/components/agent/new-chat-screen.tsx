@@ -120,6 +120,7 @@ function NewChat({
         <Stack gap="tight">
           <Composer
             id="new-chat-message"
+            layout="opening"
             label="Message the agent"
             value={message}
             onChange={setTyped}

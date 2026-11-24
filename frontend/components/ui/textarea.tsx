@@ -19,14 +19,14 @@ const fieldClasses = cn(
 );
 
 const composerClasses =
-  'field-sizing-content min-h-[var(--control-md)] min-w-0 resize-none overflow-y-auto border-0 bg-transparent px-2 py-1 [overflow-wrap:anywhere] max-h-[calc(var(--field-max-rows)*1lh+0.5rem)]';
+  'field-sizing-content min-h-[max(var(--control-md),calc(var(--field-min-rows)*1lh+0.5rem))] min-w-0 resize-none overflow-y-auto border-0 bg-transparent px-2 py-1 [overflow-wrap:anywhere] max-h-[calc(var(--field-max-rows)*1lh+0.5rem)]';
 
 const sizesItself = () => globalThis.CSS?.supports('field-sizing', 'content') ?? false;
 
 export function Textarea({
   className,
   placement = 'field',
-  rows = 4,
+  rows: rowsProp,
   maxRows = 8,
   style,
   ref,
@@ -38,6 +38,7 @@ export function Textarea({
     ref?: Ref<HTMLTextAreaElement>;
   }
 >) {
+  const rows = rowsProp ?? 4;
   const grows = placement === 'composer';
   const own = useRef<HTMLTextAreaElement | null>(null);
   const setRef = useCallback(
@@ -51,7 +52,7 @@ export function Textarea({
   const growStyle: CSSProperties & Record<'--field-max-rows' | '--field-min-rows', number> = {
     ...style,
     '--field-max-rows': maxRows,
-    '--field-min-rows': rows,
+    '--field-min-rows': grows && rowsProp === undefined ? 1 : rows,
   };
   const { value } = props;
   useLayoutEffect(() => {
