@@ -37,7 +37,7 @@ const serveFixes = (rerun: number | null, fixed = 0) =>
 
 async function openDialog() {
   renderIssues(<IssuesCatalog crawlId={CRAWL} />, OPEN);
-  return screen.findByRole('dialog', { name: TITLE });
+  return screen.findByRole('region', { name: TITLE });
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
@@ -72,7 +72,7 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
     expect(await within(dialog).findByText('32 of 32 pages fixed')).toBeInTheDocument();
     expect(within(dialog).getByText('32 awaiting a re-audit')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Mark fixed' })).toBeDisabled();
-    await user.click(within(dialog).getByRole('button', { name: 'Close drawer' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Back to issues' }));
     const fixFirst = await screen.findByRole('region', { name: 'Fix these first' });
     expect(within(fixFirst).getByText('Marked fixed, awaiting re-audit')).toBeInTheDocument();
   });
@@ -133,7 +133,7 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
     );
     serveFixes(null);
     const { unmount } = renderIssues(<IssuesCatalog crawlId={CRAWL} />, OPEN);
-    let dialog = await screen.findByRole('dialog', { name: TITLE });
+    let dialog = await screen.findByRole('region', { name: TITLE });
     expect(
       await within(dialog).findByText('A full crawl re-checks this site-wide issue.'),
     ).toBeInTheDocument();
@@ -157,7 +157,7 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
       projectSelection: selectionAs('viewer'),
     });
 
-    const dialog = await screen.findByRole('dialog', { name: TITLE });
+    const dialog = await screen.findByRole('region', { name: TITLE });
     expect(await within(dialog).findByText('5 of 32 pages fixed')).toBeInTheDocument();
     for (const name of ['Mark fixed', 'Re-run all'])
       expect(within(dialog).queryByRole('button', { name })).toBeNull();

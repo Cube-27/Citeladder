@@ -1,3 +1,6 @@
+import { useContext } from 'react';
+
+import { PageOpenContext } from '@/components/site-health/page-open-context';
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { EvidenceLine } from '@/components/site-health/issue-evidence';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -82,11 +85,22 @@ export function AffectedPageLink({
   url: string;
   pageKind: string | null;
 }>) {
+  const openPage = useContext(PageOpenContext);
   return (
     <TextLink
       text="body"
       className="block min-w-0"
       href={`/site/crawls/${crawlId}/pages/${siteUrlId}`}
+      aria-haspopup={openPage ? 'dialog' : undefined}
+      onClick={
+        openPage
+          ? (event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+              event.preventDefault();
+              openPage(siteUrlId);
+            }
+          : undefined
+      }
     >
       <Stack as="span" gap="tight" className="min-w-0">
         <Inline as="span" className="items-baseline justify-between">

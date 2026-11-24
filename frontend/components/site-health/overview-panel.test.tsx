@@ -377,10 +377,10 @@ describe('OverviewPanel', () => {
     );
 
     await screen.findByRole('table', { name: 'Top issues' });
-    const areas = within(screen.getByRole('list', { name: 'Web fundamentals areas' }));
+    const areas = within(screen.getByRole('list', { name: 'Web fundamentals breakdown' }));
     expect(areas.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'accessibilityMeasured',
-      'mobile1 of 4 checks run',
+      'accessibility75',
+      'mobile100',
     ]);
     await user.click(screen.getByRole('button', { name: 'View evidence' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('Images missing alt attributes');
@@ -421,13 +421,13 @@ describe('OverviewPanel', () => {
     ]);
   });
 
-  it('says a pillar with no applicable checks is not applicable, apart from one not measured', async () => {
-    const pillar = (key: string, label: string, applicability: string) => ({
+  it('says a pillar with no applicable checks is not applicable, apart from one not measured or excluded', async () => {
+    const pillar = (key: string, label: string, applicability: string, state = 'not_measured') => ({
       key,
       label,
       description: `${label} checks.`,
       dimension_applicability: applicability,
-      dimension_measurement_state: 'not_measured',
+      dimension_measurement_state: state,
       score: null,
       coverage: null,
       earned_points: 0,
@@ -444,6 +444,7 @@ describe('OverviewPanel', () => {
             aeo_dimensions: [
               pillar('commerce', 'Commerce', 'not_applicable'),
               pillar('answerability', 'Answerability', 'applicable'),
+              pillar('freshness', 'Freshness', 'applicable', 'excluded'),
             ],
           }),
         ),
@@ -458,11 +459,11 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    const table = await screen.findByRole('region', { name: 'AEO readiness by pillar' });
-    const scoreOf = (label: string) =>
-      within(within(table).getByText(label).closest('tr')!).getAllByRole('cell')[1]!.textContent;
-    expect(scoreOf('Commerce')).toBe('—Not applicable');
-    expect(scoreOf('Answerability')).toBe('—Not measured');
+    const rows = within(await screen.findByRole('list', { name: 'AEO readiness breakdown' }));
+    const scoreOf = (label: string) => rows.getByText(label).closest('li')!.textContent;
+    expect(scoreOf('Commerce')).toBe('Commerce—Not applicable');
+    expect(scoreOf('Answerability')).toBe('Answerability—Not measured');
+    expect(scoreOf('Freshness')).toBe('Freshness—Excluded');
   });
 
   const ALERT = "Couldn't load the Site health overview";

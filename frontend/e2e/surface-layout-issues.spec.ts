@@ -223,9 +223,10 @@ for (const width of [1280, 1600]) {
     await check('Previous page');
 
     await rows.first().getByRole('button').first().click();
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog')).toHaveCount(0);
+    const back = page.getByRole('button', { name: 'Back to issues' });
+    await expect(back).toBeVisible();
+    await back.click();
+    await expect(rows.first()).toContainText('technical issue 1');
     await check('Open and close an issue');
 
     expect(shifts).toEqual([]);

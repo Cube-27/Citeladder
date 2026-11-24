@@ -36,7 +36,7 @@ async function chooseFilter(user: User, label: string, choice: string) {
 
 async function openIssue(user: User, title: string) {
   await user.click(await screen.findByRole('button', { name: title }));
-  return screen.findByRole('dialog', { name: title });
+  return screen.findByRole('region', { name: title });
 }
 
 function currentUrl(): string {
@@ -107,7 +107,7 @@ describe('IssuesCatalog', () => {
     expect(within(table).getByRole('button', { name: 'Canonical tag is missing' })).toBeVisible();
     expect(seen.at(-1)?.get('section')).toBe('technical');
     expect(seen.at(-1)?.get('sort')).toBe('severity');
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull();
   });
 
   it('holds the table in its loading state until the list lands', async () => {
@@ -168,8 +168,10 @@ describe('IssuesCatalog', () => {
     });
     expect(pageHandoff.prompt).toContain('https://acme.com/');
 
-    await user.click(within(dialog).getByRole('button', { name: 'Close drawer' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await user.click(within(dialog).getByRole('button', { name: 'Back to issues' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull(),
+    );
     expect(currentUrl()).not.toContain('issue=');
   });
 
@@ -181,7 +183,7 @@ describe('IssuesCatalog', () => {
     const fixFirst = await screen.findByRole('region', { name: 'Fix these first' });
     await user.click(within(fixFirst).getByRole('button', { name: /WebSite schema is missing/ }));
     expect(
-      await screen.findByRole('dialog', { name: 'WebSite schema is missing' }),
+      await screen.findByRole('region', { name: 'WebSite schema is missing' }),
     ).toBeInTheDocument();
   });
 
@@ -201,7 +203,7 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />, `/issues?issue=${OTHER}`);
 
-    const dialog = await screen.findByRole('dialog', { name: 'Canonical tag is missing' });
+    const dialog = await screen.findByRole('region', { name: 'Canonical tag is missing' });
     expect(await within(dialog).findByRole('link', { name: /Pricing page/ })).toBeInTheDocument();
   });
 
@@ -219,14 +221,16 @@ describe('IssuesCatalog', () => {
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />, `/issues?issue=${OTHER}`);
 
-    const pending = await screen.findByRole('dialog', { name: 'Issue' });
+    const pending = await screen.findByRole('region', { name: 'Issue' });
     await user.click(await within(pending).findByRole('button', { name: 'Retry' }));
     expect(
-      await screen.findByRole('dialog', { name: 'Canonical tag is missing' }),
+      await screen.findByRole('region', { name: 'Canonical tag is missing' }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Close drawer' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await user.click(screen.getByRole('button', { name: 'Back to issues' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull(),
+    );
     expect(currentUrl()).not.toContain('issue=');
   });
 
@@ -253,8 +257,10 @@ describe('IssuesCatalog', () => {
 
     const first = await openIssue(user, 'WebSite schema is missing');
     await within(first).findByRole('link', { name: /Homepage/ });
-    await user.click(within(first).getByRole('button', { name: 'Close drawer' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await user.click(within(first).getByRole('button', { name: 'Back to issues' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull(),
+    );
 
     const second = await openIssue(user, 'Canonical tag is missing');
     expect(within(second).queryByRole('link', { name: /Homepage/ })).toBeNull();
@@ -272,7 +278,8 @@ describe('IssuesCatalog', () => {
     expect(screen.queryByRole('button', { name: 'First page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Previous page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
-    const table = screen.getByRole('region', { name: 'Issues', hidden: true });
+    await user.click(within(dialog).getByRole('button', { name: 'Back to issues' }));
+    const table = await screen.findByRole('region', { name: 'Issues' });
     expect(table.querySelectorAll('tbody tr')).toHaveLength(1);
     expect(table.querySelector('tbody + tbody')).toBeNull();
   });
@@ -747,8 +754,10 @@ describe('IssuesCatalog', () => {
     expect(seenCursors).toEqual([null, 'cursor-page-2']);
     await user.click(within(dialog).getByRole('button', { name: 'Previous page' }));
     await within(dialog).findByRole('link', { name: /Homepage/ });
-    await user.click(within(dialog).getByRole('button', { name: 'Close drawer' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await user.click(within(dialog).getByRole('button', { name: 'Back to issues' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull(),
+    );
 
     await user.click(screen.getByRole('button', { name: 'Next page' }));
     await waitFor(() => expect(currentUrl()).toContain('cursor=catalog-page-2'));
@@ -773,10 +782,12 @@ describe('IssuesCatalog', () => {
     expect(within(typed).getByText('Page kinds').nextElementSibling?.textContent).toBe(
       'Product, Category',
     );
-    expect(within(typed).queryByText('32 pages affected')).toBeNull();
-    expect(within(typed).queryByText('High')).toBeNull();
-    await user.click(within(typed).getByRole('button', { name: 'Close drawer' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(within(typed).getByText('32 pages affected')).toBeInTheDocument();
+    expect(within(typed).getByText('High')).toBeInTheDocument();
+    await user.click(within(typed).getByRole('button', { name: 'Back to issues' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull(),
+    );
 
     const untyped = await openIssue(user, 'Canonical tag is missing');
     expect(within(untyped).queryByText('Page kinds')).toBeNull();

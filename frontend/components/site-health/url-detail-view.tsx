@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { RecordPage } from '@/components/templates/record-page';
 import type { Crumb } from '@/components/ui/breadcrumb';
@@ -30,7 +30,8 @@ import {
 } from '@/lib/site-health/status';
 import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
 import { StateBlock } from '@/components/ui/state-block';
-import { SectionCard, TitledSection } from '@/components/ui/section';
+import { SectionCard, SectionStack, TitledSection } from '@/components/ui/section';
+import { TabPanel, Tabs } from '@/components/ui/tabs';
 
 export const PAGE_DETAIL_TRAIL: readonly Crumb[] = [
   { label: 'Site health', href: '/site' },
@@ -48,63 +49,110 @@ function RerunButton({ rerun }: Readonly<{ rerun: RerunControl }>) {
   return rerun.left ? <Tooltip content={rerun.left}>{button}</Tooltip> : button;
 }
 
+export type PageFrameKind = 'page' | 'drawer';
+
+const DRAWER_TABS = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'issues', label: 'Issues' },
+  { value: 'checks', label: 'Checks' },
+  { value: 'links', label: 'Links' },
+] as const;
+
 export function UrlDetailView({
+  frame = 'page',
   detail,
   rerun,
   history,
   children,
 }: Readonly<{
+  frame?: PageFrameKind;
   detail: PageDetail;
   rerun?: RerunControl;
   history?: ReactNode;
   children?: ReactNode;
 }>) {
   const title = pageDisplayTitle(detail.title, detail.display_url);
-  useAgentPanelSeed(pageHandoff(detail));
+  useAgentPanelSeed(frame === 'drawer' ? null : pageHandoff(detail));
+  const [tab, setTab] = useState<(typeof DRAWER_TABS)[number]['value']>('overview');
+  const identity = (
+    <PageIdentity
+      detail={detail}
+      actions={
+        <>
+          {history}
+          {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
+        </>
+      }
+    />
+  );
+  const issues = (
+    <PageIssues
+      issues={detail.issues}
+      audited={detail.analysis_status === 'completed'}
+      crawlId={detail.crawl_id}
+    />
+  );
+  const delivery = (
+    <TitledSection title="Delivery">
+      <SectionCard>
+        <DeliveryMetrics delivery={detail.delivery} />
+      </SectionCard>
+    </TitledSection>
+  );
+  const links = (
+    <TitledSection title="Internal links">
+      <SectionCard>
+        {detail.internal_links ? (
+          <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
+        ) : (
+          <StateBlock kind="empty" inline message="Internal links weren't counted for this page." />
+        )}
+      </SectionCard>
+    </TitledSection>
+  );
+  if (frame === 'drawer')
+    return (
+      <Tabs value={tab} onValueChange={setTab} items={DRAWER_TABS} ariaLabel="Page sections" spaced>
+        <TabPanel value="overview">
+          <SectionStack>
+            {identity}
+            {rerun ? (
+              <Inline>
+                <RerunButton rerun={rerun} />
+              </Inline>
+            ) : null}
+            {children}
+            <UrlScoreSummary detail={detail} />
+            <PageFacts facts={detail.facts} />
+            {delivery}
+          </SectionStack>
+        </TabPanel>
+        <TabPanel value="issues">{issues}</TabPanel>
+        <TabPanel value="checks">
+          <PageChecks evaluations={detail.evaluations} />
+        </TabPanel>
+        <TabPanel value="links">
+          <SectionStack>
+            <LinkedFrom detail={detail} />
+            {links}
+          </SectionStack>
+        </TabPanel>
+      </Tabs>
+    );
   return (
     <RecordPage
       title={title}
       trail={PAGE_DETAIL_TRAIL}
-      identity={
-        <PageIdentity
-          detail={detail}
-          actions={
-            <>
-              {history}
-              {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
-            </>
-          }
-        />
-      }
+      identity={identity}
       actions={rerun ? <RerunButton rerun={rerun} /> : undefined}
     >
       {children}
       <LinkedFrom detail={detail} />
       <UrlScoreSummary detail={detail} />
-      <PageIssues
-        issues={detail.issues}
-        audited={detail.analysis_status === 'completed'}
-        crawlId={detail.crawl_id}
-      />
+      {issues}
       <PageFacts facts={detail.facts} />
-      <TitledSection title="Delivery">
-        <SectionCard>
-          <DeliveryMetrics delivery={detail.delivery} />
-        </SectionCard>
-      </TitledSection>
-      <TitledSection title="Internal links">
-        <SectionCard>
-          {detail.internal_links ? (
-            <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
-          ) : (
-            <StateBlock
-              kind="empty"
-              inline
-              message="Internal links weren't counted for this page."
-            />
-          )}
-        </SectionCard>
-      </TitledSection>
+      {delivery}
+      {links}
       <PageChecks evaluations={detail.evaluations} />
     </RecordPage>
   );

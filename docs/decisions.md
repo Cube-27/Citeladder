@@ -249,6 +249,10 @@ how to add or change an entry.
   what the screen shows: names, URLs and figures. Owner, 2026-11-24.
 - **Site Health always opens on Pages**, never switching tab on its own. Owner,
   2026-11-02.
+- **An issue opens as a page and a URL opens in a drawer.** The flow is Issues,
+  then the issue's page with its affected URLs, then a drawer for one URL. The
+  Web fundamentals and AEO readiness scores are a gauge with their breakdown
+  rows aligned beneath. Owner, 2026-11-24.
 - **Browser Site Health reads carry no provenance id lists**; the rows keep them
   ([invariant 5](invariants.md#5-derived-artifacts-record-provenance)). Owner,
   2026-11-02. The Overview also drops the per-page eligibility reasons no screen

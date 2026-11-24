@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
-import { askAgentPrompt, buildFixPrompt } from '@/components/site-health/issue-detail-dialog';
+import { askAgentPrompt, buildFixPrompt } from '@/lib/site-health/issue-prompts';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueSeverityMark } from '@/components/site-health/issue-metadata';
 import { Tag } from '@/components/ui/tag';

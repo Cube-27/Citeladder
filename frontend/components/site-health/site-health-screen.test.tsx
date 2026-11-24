@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vite-plus/test';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { figureText } from '@/test/figures';
 import { mswServer } from '@/test/msw-server';
 import { COMPLETE_CLASSIFICATION_PROJECTION } from '@/test/site-health-fixtures';
 import type { SiteHealthDashboard } from '@citeladder/contracts';
@@ -23,6 +22,9 @@ import {
   renderScreen,
   setSearch,
 } from './site-health-screen.test-support';
+
+const gaugeLabel = (title: string) =>
+  screen.queryByRole('img', { name: new RegExp('^' + title + ': ') })?.getAttribute('aria-label');
 
 describe('SiteHealthScreen — Website tab deep links', () => {
   it('preserves Architecture from the URL on initial load', async () => {
@@ -122,7 +124,7 @@ describe('SiteHealthScreen — Website tab deep links', () => {
 
     renderScreen();
     await user.click(await screen.findByRole('tab', { name: 'Overview' }));
-    await waitFor(() => expect(figureText('Web fundamentals')).toBe('80'));
+    await waitFor(() => expect(gaugeLabel('Web fundamentals')).toBe('Web fundamentals: 80 of 100'));
 
     const start = screen.getByRole('button', { name: 'Run new crawl' });
     await waitFor(() => expect(start).toBeEnabled());
@@ -384,7 +386,7 @@ describe('SiteHealthScreen — loading frames', () => {
     expect(screen.queryByTestId('overview-metrics')).not.toBeInTheDocument();
 
     snapshot.release();
-    await waitFor(() => expect(figureText('Web fundamentals')).toBe('80'));
+    await waitFor(() => expect(gaugeLabel('Web fundamentals')).toBe('Web fundamentals: 80 of 100'));
     expect(loadingRegions()).toHaveLength(0);
   });
 
@@ -404,7 +406,7 @@ describe('SiteHealthScreen — loading frames', () => {
     );
 
     const { queryClient } = renderScreen();
-    await waitFor(() => expect(figureText('Web fundamentals')).toBe('80'));
+    await waitFor(() => expect(gaugeLabel('Web fundamentals')).toBe('Web fundamentals: 80 of 100'));
 
     refresh = held();
     void queryClient.invalidateQueries({ queryKey: queryKeys.siteHealth.all });
@@ -412,7 +414,7 @@ describe('SiteHealthScreen — loading frames', () => {
       expect(queryClient.isFetching({ queryKey: queryKeys.siteHealth.all })).toBeGreaterThan(0),
     );
 
-    expect(figureText('Web fundamentals')).toBe('80');
+    expect(gaugeLabel('Web fundamentals')).toBe('Web fundamentals: 80 of 100');
     expect(screen.getByRole('tablist', { name: 'Site health analysis' })).toBeVisible();
     expect(loadingRegions()).toHaveLength(0);
     refresh.release();

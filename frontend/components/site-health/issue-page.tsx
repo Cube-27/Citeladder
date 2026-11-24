@@ -1,3 +1,4 @@
+import { askAgentPrompt, buildFixPrompt } from '@/lib/site-health/issue-prompts';
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueFixActions, type IssueFixScope } from '@/components/site-health/issue-fix-actions';
@@ -7,7 +8,12 @@ import { AffectedPageLink, SharedOccurrences } from '@/components/site-health/sh
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
-import { Drawer } from '@/components/ui/drawer';
+import { PageDrawer } from '@/components/site-health/page-drawer';
+import { PageOpenContext } from '@/components/site-health/page-open-context';
+import { ReportPage } from '@/components/templates/report-page';
+import { IssueSeverityMark } from '@/components/site-health/issue-metadata';
+import { pluralCount } from '@/lib/format';
+import { useState } from 'react';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pager } from '@/components/ui/pager';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -24,7 +30,7 @@ import {
   siteLevelEvidence,
   type SiteLevelEvidence,
 } from '@/lib/site-health/site-level-evidence';
-import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
+import { issueTitle } from '@/lib/site-health/issues';
 import {
   groupOccurrences,
   loadedPageCount,
@@ -48,7 +54,7 @@ export type IssueHead = Pick<
 > &
   Partial<Pick<SiteIssue, 'page_kinds'>>;
 
-export function IssueDetailDrawer({
+export function IssuePage({
   issue,
   scope,
   crawlId,
@@ -77,15 +83,67 @@ export function IssueDetailDrawer({
   useAgentPanelSeed(handoff);
   const pageKinds = issue.page_kinds ?? [];
   const pageLevel = !isSiteLevelRule(issue.rule_id);
+  const [openPageId, setOpenPageId] = useState<string | null>(null);
+  const title = issueTitle(issue);
   return (
-    <Drawer
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-      title={issueTitle(issue)}
-      footer={
-        detail || canPrevious ? (
+    <ReportPage>
+      <Stack as="section" aria-label={title} gap="workspace" className="min-w-0">
+        <Inline className="items-start justify-between">
+          <h2 className={textRole('heading', 'min-w-0')}>{title}</h2>
+          <Button variant="secondary" onClick={onClose} className="shrink-0">
+            Back to issues
+          </Button>
+        </Inline>
+        <Inline className="flex-wrap">
+          <IssueSeverityMark issue={issue} />
+          <span className={textRole('body', 'text-ink-2')}>
+            {pluralCount(issue.affected_url_count, 'page')} affected
+          </span>
+        </Inline>
+        {issue.remediation ? (
+          <Stack gap="tight" className="min-w-0">
+            <span className="type-caption">How to fix</span>
+            <p className={textRole('body', 'whitespace-pre-line')}>{issue.remediation}</p>
+          </Stack>
+        ) : null}
+        {pageKinds.length > 0 ? (
+          <Stack gap="tight" className="min-w-0">
+            <span className="type-caption">Page kinds</span>
+            <p className={textRole('body')}>{pageKinds.map(pageKindLabel).join(', ')}</p>
+          </Stack>
+        ) : null}
+        <Inline className="flex-wrap">
+          <AskAgentLink handoff={handoff} />
+          <CopyButton value={buildFixPrompt(issue)} variant="secondary" className="w-fit">
+            Copy fix prompt
+          </CopyButton>
+          {pageLevel ? (
+            <>
+              <Button variant="secondary" asChild>
+                <ProjectLink href={pagesWithIssueHref(issue.rule_id)}>View in Pages</ProjectLink>
+              </Button>
+              <IssuePagesExport
+                workspaceId={scope.workspaceId}
+                crawlId={crawlId}
+                groupId={issue.group_id}
+              />
+            </>
+          ) : null}
+        </Inline>
+        <IssueFixActions scope={scope} crawlId={crawlId} groupId={issue.group_id} />
+        <Stack as="section" gap="workspace" aria-busy={detailQuery.isFetching || undefined}>
+          <h3 className={textRole('heading')}>Affected pages</h3>
+          <PageOpenContext value={setOpenPageId}>
+            <OccurrenceList
+              issue={issue}
+              detail={detail}
+              crawlId={crawlId}
+              query={detailQuery}
+              firstPage={!canPrevious}
+            />
+          </PageOpenContext>
+        </Stack>
+        {detail || canPrevious ? (
           <Pager
             hideWhenSinglePage
             canPrev={canPrevious}
@@ -94,95 +152,48 @@ export function IssueDetailDrawer({
             onNext={onNext}
             busy={detailQuery.isFetching}
           />
-        ) : null
-      }
-    >
-      {issue.remediation ? (
-        <Stack gap="tight" className="min-w-0">
-          <span className="type-caption">How to fix</span>
-          <p className={textRole('body', 'whitespace-pre-line')}>{issue.remediation}</p>
-        </Stack>
-      ) : null}
-      {pageKinds.length > 0 ? (
-        <Stack gap="tight" className="min-w-0">
-          <span className="type-caption">Page kinds</span>
-          <p className={textRole('body')}>{pageKinds.map(pageKindLabel).join(', ')}</p>
-        </Stack>
-      ) : null}
-      <Inline className="flex-wrap">
-        <AskAgentLink handoff={handoff} />
-        <CopyButton value={buildFixPrompt(issue)} variant="secondary" className="w-fit">
-          Copy fix prompt
-        </CopyButton>
-        {pageLevel ? (
-          <>
-            <Button variant="secondary" asChild>
-              <ProjectLink href={pagesWithIssueHref(issue.rule_id)}>View in Pages</ProjectLink>
-            </Button>
-            <IssuePagesExport
-              workspaceId={scope.workspaceId}
-              crawlId={crawlId}
-              groupId={issue.group_id}
-            />
-          </>
         ) : null}
-      </Inline>
-      <IssueFixActions scope={scope} crawlId={crawlId} groupId={issue.group_id} />
-      <Stack as="section" gap="workspace" aria-busy={detailQuery.isFetching || undefined}>
-        <h3 className={textRole('heading')}>Affected pages</h3>
-        <OccurrenceList
-          issue={issue}
-          detail={detail}
-          crawlId={crawlId}
-          query={detailQuery}
-          firstPage={!canPrevious}
-        />
       </Stack>
-    </Drawer>
+      <PageDrawer
+        workspaceId={scope.workspaceId}
+        crawlId={crawlId}
+        siteUrlId={openPageId}
+        onClose={() => setOpenPageId(null)}
+      />
+    </ReportPage>
   );
 }
 
-export function PendingIssueDrawer({
+export function PendingIssuePage({
   detailQuery,
   onClose,
 }: Readonly<{ detailQuery: UseQueryResult<SiteIssueDetail>; onClose: () => void }>) {
   return (
-    <Drawer
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-      title="Issue"
-    >
-      {detailQuery.isError ? (
-        <Notice
-          kind="read"
-          {...readErrorProps(detailQuery)}
-          fallback="Couldn't load this issue."
-          title="Couldn't load this issue"
-        />
-      ) : (
-        <StateBlock kind="loading" label="Loading the issue…" shape={{ kind: 'list' }} />
-      )}
-    </Drawer>
+    <ReportPage>
+      <Stack as="section" aria-label="Issue" gap="workspace" className="min-w-0">
+        <Inline className="justify-end">
+          <Button variant="secondary" onClick={onClose}>
+            Back to issues
+          </Button>
+        </Inline>
+        {detailQuery.isError ? (
+          <Notice
+            kind="read"
+            {...readErrorProps(detailQuery)}
+            fallback="Couldn't load this issue."
+            title="Couldn't load this issue"
+          />
+        ) : (
+          <StateBlock kind="loading" label="Loading the issue…" shape={{ kind: 'list' }} />
+        )}
+      </Stack>
+    </ReportPage>
   );
 }
 
 function pagesWithIssueHref(ruleId: string): string {
   const params = new URLSearchParams({ tab: 'pages', pages_view: 'all', pages_rule: ruleId });
   return `/site?${params.toString()}`;
-}
-
-export function askAgentPrompt(
-  issue: Pick<SiteIssue, 'title' | 'rule_id' | 'affected_url_count'>,
-  page?: string,
-): string {
-  const count = issue.affected_url_count;
-  const pages = count === 1 ? 'page' : 'pages';
-  const scope = page ? ` on ${page}` : ` (${count} affected ${pages})`;
-  return page
-    ? `Analyze the Website issue "${issueTitle(issue)}"${scope} and propose exact page edits from the selected evidence.`
-    : `Analyze the Website issue "${issueTitle(issue)}"${scope}, prioritize the work and propose a bounded implementation plan from the supplied sample; say how many pages it covers versus the total.`;
 }
 
 function OccurrenceList({
@@ -455,18 +466,4 @@ function LinkTargetList({
       })}
     </ul>
   );
-}
-
-export function buildFixPrompt(
-  issue: Pick<
-    SiteIssue,
-    'title' | 'rule_id' | 'dimension' | 'severity' | 'description' | 'remediation'
-  >,
-): string {
-  const lines = [
-    `Fix this Website issue on my website: "${issueTitle(issue)}" (${dimensionLabel(issue.dimension)}, ${severityLabel(issue.severity)} severity).`,
-  ];
-  if (issue.description) lines.push('', 'The check passes when:', issue.description);
-  if (issue.remediation) lines.push('', 'Recommended remediation:', issue.remediation);
-  return lines.join('\n');
 }
