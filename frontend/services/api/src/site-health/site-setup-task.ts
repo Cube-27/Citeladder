@@ -22,7 +22,7 @@ import {
   type SitemapUrl,
   type SitemapWalk,
 } from './sitemap-walk.ts';
-import { fillTrackedSet, orderedUnique, trackedRoom } from './tracked-set.ts';
+import { joinInFillOrder, trackedFillOrder, trackedRoom } from './tracked-set.ts';
 import {
   Abandoned,
   commitTask,
@@ -198,7 +198,7 @@ async function saveSitemapInventory(ctx: SiteTaskContext, claimed: SiteTask, lis
 }
 
 async function trackSitemapPages(ctx: SiteTaskContext, claimed: SiteTask, listed: SitemapUrl[]) {
-  const ordered = orderedUnique(listed.map(({ item }) => item));
+  const ordered = trackedFillOrder(listed.map(({ item }) => item));
   for (let offset = 0; offset < ordered.length; offset += INVENTORY_CHUNK) {
     const window = ordered.slice(offset, offset + INVENTORY_CHUNK);
     let full = false;
@@ -213,7 +213,7 @@ async function trackSitemapPages(ctx: SiteTaskContext, claimed: SiteTask, listed
       }
       await lockRuntime(trx, crawl.workspace_id);
       const { crawl: locked } = await lock();
-      const joined = await fillTrackedSet(trx, locked, window);
+      const joined = await joinInFillOrder(trx, locked, window);
       await enqueueCrawlTasks(
         trx,
         locked,

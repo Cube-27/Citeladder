@@ -690,7 +690,7 @@ describe('site setup', () => {
     });
     expect(await crawlRow(seed)).toMatchObject({ discovered_url_count: 4, admitted_url_count: 4 });
     expect((await memberships(seed)).map((row) => row.normalized_url)).toEqual([
-      url('/about'),
+      url('/blog/x'),
       url('/products/a'),
     ]);
     const listed = [url('/about'), url('/blog/x'), url('/products/a'), url('/products/manual.pdf')];

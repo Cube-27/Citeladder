@@ -20,6 +20,34 @@ export function orderedUnique(candidates: Candidate[]) {
   return [...unique.values()];
 }
 
+const SHARES = policy.site_health.crawl.tracked_shares;
+const SHARE_BY_KIND = new Map(Object.entries(SHARES));
+const shareOf = (kind: string) => SHARE_BY_KIND.get(kind) ?? SHARES.other;
+
+type Lane = { head: Candidate; rest: Iterator<Candidate>; share: number; taken: number };
+const due = (lane: Lane) => (lane.taken + 1) / lane.share;
+
+export function trackedFillOrder(candidates: Candidate[]) {
+  const eligible = orderedUnique(candidates).filter((item) => item.disposition === 'analyze');
+  const lanes: Lane[] = [...Map.groupBy(eligible, (item) => item.valueKind)].flatMap(
+    ([kind, items]) => {
+      const rest = items.values();
+      const first = rest.next();
+      return first.done ? [] : [{ head: first.value, rest, share: shareOf(kind), taken: 0 }];
+    },
+  );
+  const order: Candidate[] = [];
+  while (lanes[0]) {
+    const lane = lanes.reduce((best, item) => (due(item) < due(best) ? item : best), lanes[0]);
+    order.push(lane.head);
+    lane.taken += 1;
+    const next = lane.rest.next();
+    if (next.done) lanes.splice(lanes.indexOf(lane), 1);
+    else lane.head = next.value;
+  }
+  return order;
+}
+
 export async function lockTrackedSet(db: Database, workspaceId: string, projectId: string) {
   await db
     .selectFrom('monitored_site_urls')
@@ -62,8 +90,11 @@ async function trackedPages(trx: Database, crawl: Crawl, hashes: string[]) {
   return { hashes: new Set(rows.map((row) => row.url_hash)), active: Number(active.count) };
 }
 
-export async function fillTrackedSet(trx: Database, crawl: Crawl, candidates: Candidate[]) {
-  const ordered = orderedUnique(candidates);
+export function fillTrackedSet(trx: Database, crawl: Crawl, candidates: Candidate[]) {
+  return joinInFillOrder(trx, crawl, trackedFillOrder(candidates));
+}
+
+export async function joinInFillOrder(trx: Database, crawl: Crawl, ordered: Candidate[]) {
   const tracked = await trackedPages(
     trx,
     crawl,
@@ -71,9 +102,7 @@ export async function fillTrackedSet(trx: Database, crawl: Crawl, candidates: Ca
   );
   const room = trackedTarget(crawl) - tracked.active;
   if (room <= 0) return [];
-  const picked = ordered
-    .filter((item) => item.disposition === 'analyze' && !tracked.hashes.has(item.hash))
-    .slice(0, room);
+  const picked = ordered.filter((item) => !tracked.hashes.has(item.hash)).slice(0, room);
   if (!picked.length) return [];
   const ids = await upsertSiteUrls(trx, crawl, picked);
   const joined = new Set(
