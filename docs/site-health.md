@@ -35,7 +35,8 @@ transaction it spends one start from the workspace's monthly crawl budget
 (`site-health/crawl-budgets.ts`, [SH-B10](decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17)):
 a full crawl, however started, draws on the full-crawl budget and a page or
 issue rerun counts once on the single-page budget, so a refused start costs
-nothing. Stop gives the start back when no analysis task had begun. An empty
+nothing. Stop gives the start back when no site setup, discovery or analysis
+task had begun. An empty
 budget refuses with 429 `site_health_crawl_budget_exhausted`. Page reruns
 (`selection.ts`) lock project, runtime, membership, the active crawl, profile,
 then capacity/account. In order, admission:

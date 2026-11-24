@@ -107,5 +107,57 @@ describe('Site Health crawl budgets', () => {
     expect(marked.numUpdatedRows).toBe(1n);
     expect((await request(tenant, `/site-crawls/${fetched}/cancel`, 'POST')).status).toBe(200);
     expect(await used(tenant)).toEqual({ full: 1, page: 0 });
+
+    const discovered = await startCrawl(tenant);
+    const discovery = await db
+      .updateTable('site_crawl_tasks')
+      .set({ status: 'succeeded' })
+      .where('crawl_id', '=', discovered)
+      .where('task_kind', 'in', ['discover', 'site_setup'])
+      .executeTakeFirstOrThrow();
+    expect(discovery.numUpdatedRows).toBeGreaterThan(0n);
+    expect((await request(tenant, `/site-crawls/${discovered}/cancel`, 'POST')).status).toBe(200);
+    expect(await used(tenant)).toEqual({ full: 2, page: 0 });
+  });
+
+  it('gives a start back once when the same crawl is cancelled twice at the same time', async () => {
+    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    await allow(tenant, 2);
+    await spendBudget(db, budget('site_health_full_crawl', {}), tenant.workspaceId);
+    const crawl = await startCrawl(tenant);
+    expect(await used(tenant)).toEqual({ full: 2, page: 0 });
+
+    const cancels = await Promise.all([
+      request(tenant, `/site-crawls/${crawl}/cancel`, 'POST'),
+      request(tenant, `/site-crawls/${crawl}/cancel`, 'POST'),
+    ]);
+
+    expect(cancels.map((response) => response.status)).toEqual([200, 200]);
+    expect(await used(tenant)).toEqual({ full: 1, page: 0 });
+  });
+
+  it('lets only one of two simultaneous starts take the last full crawl, and only in its own workspace', async () => {
+    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const other = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    await Promise.all([allow(tenant, 2), allow(other, 2)]);
+    const second = {
+      ...tenant,
+      projectId: await fixtures.project(tenant.workspaceId, 'https://example.test/'),
+    };
+    const full = budget('site_health_full_crawl', {});
+    await spendBudget(db, full, tenant.workspaceId, { amount: full.limit - 1 });
+
+    const starts = await Promise.all(
+      [tenant, second].map((scope) =>
+        request(scope, '/site-crawls', 'POST', { project_id: scope.projectId }),
+      ),
+    );
+
+    expect(starts.map((response) => response.status).toSorted()).toEqual([201, 429]);
+    expect(await used(tenant)).toEqual({ full: full.limit, page: 0 });
+    expect(await used(other)).toEqual({ full: 0, page: 0 });
+    expect((await request(other, `/projects/${tenant.projectId}/crawl-budgets`)).status).toBe(404);
+    await startCrawl(other);
+    expect(await used(other)).toEqual({ full: 1, page: 0 });
   });
 });

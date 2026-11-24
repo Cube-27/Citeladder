@@ -5,6 +5,7 @@ import type { SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
+import { LIFECYCLE_KINDS } from './crawl-assessment.ts';
 import type { Crawl } from './site-task.ts';
 
 const startBudgets = {
@@ -71,7 +72,7 @@ export async function giveBackUnfetchedStart(
     .select('id')
     .where('workspace_id', '=', crawl.workspace_id)
     .where('crawl_id', '=', crawl.id)
-    .where('task_kind', '=', 'analyze')
+    .where('task_kind', 'in', LIFECYCLE_KINDS)
     .where('status', '<>', 'queued')
     .limit(1)
     .executeTakeFirst();
