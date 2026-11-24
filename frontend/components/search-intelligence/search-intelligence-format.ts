@@ -78,7 +78,8 @@ export function comparedAgainst(compared: unknown, total: unknown): string | nul
   const saved = searchNumber(compared);
   if (saved === null) return null;
   const available = searchNumber(total);
-  return `Against ${available === null || available === saved ? saved : `${saved} of ${available}`} referring domains`;
+  const against = available === null || available === saved ? saved : `${saved} of ${available}`;
+  return `Against ${against} referring domains`;
 }
 
 export function datasetCoverage(

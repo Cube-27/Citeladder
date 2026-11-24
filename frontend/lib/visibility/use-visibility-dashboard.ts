@@ -440,6 +440,7 @@ function selectionParams(
   { mode, from, engine }: Readonly<{ mode: SelectionMode; from?: string; engine?: string }>,
 ) {
   const range = mode === 'range';
+  const runMode = filters.selectedRunId ? 'run' : 'latest';
   return {
     audit_id: filters.selectedRunId ?? undefined,
     market: filters.market ?? undefined,
@@ -447,7 +448,7 @@ function selectionParams(
     engine,
     topic: filters.topic ?? undefined,
     baseline_id: filters.baselineId ?? undefined,
-    selection_mode: range ? 'range' : filters.selectedRunId ? 'run' : 'latest',
+    selection_mode: range ? 'range' : runMode,
     from: range ? from : undefined,
     to: range ? (filters.toAt ?? undefined) : undefined,
     configuration_key: filters.configuration ?? undefined,

@@ -64,7 +64,7 @@ const NEUTRAL_TOKEN = new RegExp(crawl.sitemap_neutral_token_pattern, 'u');
 const sitemapWords = (part: string) =>
   part
     .split(/[-_.]+/u)
-    .map((token) => token.replace(/\d+$/u, ''))
+    .map((token) => token.replace(/(?<!\d)\d+$/u, ''))
     .filter((token) => !NEUTRAL_TOKEN.test(token) && !NEUTRAL_WORDS.has(token));
 
 function sourceKind(sitemapUrl: string) {

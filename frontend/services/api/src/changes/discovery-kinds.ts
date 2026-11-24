@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { record } from '../db/json.ts';
 import {
   completeDiscovery,
   createDiscovery,
@@ -12,15 +11,12 @@ import { changeKind, MEMBER_RUN, rowsOf, type PreviewContext } from './kind.ts';
 const PROJECTS = { label: 'Open Projects', path: '/projects' };
 const SPEND = "One of the day's brand discoveries; its research spends AI credits as it runs";
 const discoveryPayload = z.strictObject({ discovery_id: z.uuid() });
+const discoveredNames = discoveryCreate.pick({ brand_name: true, website_url: true });
 
 async function discovered(context: PreviewContext, id: string) {
   const row = await discoveryRow(context.db, context.workspaceId, id);
-  const input = record(row.input_data);
-  return {
-    status: row.status,
-    brand: String(input.brand_name ?? ''),
-    website: String(input.website_url ?? ''),
-  };
+  const input = discoveredNames.parse(row.input_data);
+  return { status: row.status, brand: input.brand_name, website: input.website_url };
 }
 
 export const discoveryKinds = {

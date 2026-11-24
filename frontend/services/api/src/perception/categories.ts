@@ -50,7 +50,7 @@ export function cleanAttribute(
   return Array.from(attribute).length > policy.attribute_max_chars ? null : attribute;
 }
 
-async function projectThemes(db: Database, scope: { workspaceId: string; projectId: string }) {
+function projectThemes(db: Database, scope: { workspaceId: string; projectId: string }) {
   return db
     .selectFrom('project_themes')
     .select(['id', 'name', 'source'])

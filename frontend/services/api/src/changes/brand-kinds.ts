@@ -14,19 +14,20 @@ import {
 } from '../projects/brand-facts.ts';
 import { brandProfileUpdate, updateBrandProfile } from '../projects/brand-profile.ts';
 import { businessMapUpdate, readBusinessMap, updateBusinessMap } from '../projects/business-map.ts';
-import { changeKind, MEMBER_WRITE, plural, rowsOf, type PreviewContext } from './kind.ts';
+import {
+  changeKind,
+  MEMBER_WRITE,
+  plural,
+  rowsOf,
+  shownValue,
+  type PreviewContext,
+} from './kind.ts';
 
 const CONTEXT = { label: 'Open Brand context', path: '/agent/context' };
 const scopeOf = (workspaceId: string, change: { projectId: string }) => ({
   workspaceId,
   projectId: change.projectId,
 });
-
-function shown(value: unknown) {
-  if (value === null || value === undefined || value === '') return 'empty';
-  if (Array.isArray(value)) return value.join(', ') || 'none';
-  return String(value);
-}
 
 async function currentProfile(context: PreviewContext): Promise<Record<string, unknown>> {
   const row = await context.db
@@ -99,12 +100,14 @@ const offeringNames = (offerings: readonly { offering: string }[]) =>
   offerings.map((offering) => offering.offering).join(', ') || 'none';
 const values = (entries: readonly { value: string }[]) =>
   entries.map((entry) => entry.value).join(', ') || 'none';
+const exclusionPairs = (pairs: readonly { first: string; second: string }[]) =>
+  pairs.map((pair) => [pair.first, pair.second].join(' / ')).join(', ') || 'none';
 const offeringDetail = (offering: z.output<typeof businessMapUpdate>['offerings'][number]) =>
   [
     `attributes ${values(offering.attributes)}`,
     `situations ${values(offering.situations)}`,
     `audiences ${values(offering.audiences)}`,
-    `exclusions ${offering.exclusions.map((pair) => `${pair.first} / ${pair.second}`).join(', ') || 'none'}`,
+    `exclusions ${exclusionPairs(offering.exclusions)}`,
   ].join('; ');
 
 export const brandKinds = {
@@ -124,7 +127,7 @@ export const brandKinds = {
         title: `Change ${plural(fields.length, 'brand profile field')}`,
         rows: fields.map(([field, value]) => ({
           label: field.replaceAll('_', ' '),
-          value: `${shown(current[field])} → ${shown(value)}`,
+          value: `${shownValue(current[field])} → ${shownValue(value)}`,
         })),
         spend: null,
         opens: CONTEXT,
@@ -211,7 +214,7 @@ export const brandKinds = {
           : [
               {
                 label: field.replace('_url', ''),
-                value: `${shown(now[field])} → ${shown(payload[field])}`,
+                value: `${shownValue(now[field])} → ${shownValue(payload[field])}`,
               },
             ],
       );

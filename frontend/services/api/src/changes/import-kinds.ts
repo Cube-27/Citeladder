@@ -46,7 +46,7 @@ function withBindingRows(error: unknown): never {
   });
 }
 
-async function promptIds(trx: Database, scope: Scope, promptSetId: string) {
+function promptIds(trx: Database, scope: Scope, promptSetId: string) {
   return trx
     .selectFrom('prompts')
     .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')

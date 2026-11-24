@@ -2,7 +2,7 @@ import { lineIndex, nameText, parseSource, stringValue, walk } from './source-as
 
 const COLOUR_LITERAL = /#[\da-f]{3,8}\b|(?<![\w-])(?:rgba?|hsla?|oklch|oklab|lab|lch)\(/i;
 const CLASS_COLOUR_LITERAL =
-  /(?<![\w-])(?:[\w-]+:)*[a-z]+(?:-[a-z]+)*-\[(?:#|(?:rgba?|hsla?|oklch|oklab|lab|lch)\()/i;
+  /(?<![\w-])[a-z]+(?:-[a-z]+)*-\[(?:#|(?:rgba?|hsla?|oklch|oklab|lab|lch)\()/i;
 
 const textOf = (node) =>
   node.type === 'TemplateElement' ? (node.value.cooked ?? node.value.raw) : stringValue(node);
