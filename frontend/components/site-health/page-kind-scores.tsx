@@ -33,6 +33,11 @@ export function PageKindScores({
 }>) {
   const summary = dashboard?.score_summary ?? crawl?.score_summary ?? null;
   const rows = summary === null ? [] : byPageKindRows(summary.by_page_kind);
+  const weighting = summary?.score_weighting.kind === 'site_share' ? summary.score_weighting : null;
+  const share = (pageKind: string) => {
+    const known = weighting?.strata.find((row) => row.page_kind === pageKind)?.known_url_count;
+    return weighting && known !== undefined ? known / weighting.known_url_count : null;
+  };
 
   return (
     <Section data-testid="page-kind-scores">
@@ -41,7 +46,7 @@ export function PageKindScores({
       </SectionHeader>
       <DataTable
         label="Scores by page kind"
-        columns={COLUMNS}
+        columns={weighting ? COLUMNS : COLUMNS.filter((column) => column.key !== 'share')}
         state={emptyState(summary === null, rows.length)}
       >
         {rows.map((row) => (
@@ -49,6 +54,9 @@ export function PageKindScores({
             <TableCell className="whitespace-nowrap">
               <PageKindBadge pageKind={row.page_kind} />
             </TableCell>
+            {weighting ? (
+              <TableCell numeric>{printed(formatPercent(share(row.page_kind)))}</TableCell>
+            ) : null}
             <TableCell numeric>{formatCount(row.analyzed_count)}</TableCell>
             <TableCell numeric className={mutedWhenMissing(row.web_fundamentals_score)}>
               <MeasurementValue
@@ -80,6 +88,7 @@ export function PageKindScores({
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'kind', label: 'Page kind', kind: 'identity' },
+  { key: 'share', label: 'Share of known URLs', kind: 'number' },
   { key: 'analyzed', label: 'Pages analyzed', kind: 'number', priority: 'low' },
   { key: 'web', label: 'Web fundamentals', kind: 'number' },
   { key: 'aeo', label: 'AEO readiness', kind: 'number' },

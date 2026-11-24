@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 
 import { PageKindScores } from './page-kind-scores';
 import type { SiteCrawl, SiteHealthDashboard, SiteScoreSummary } from '@citeladder/contracts';
@@ -103,6 +103,44 @@ describe('PageKindScores', () => {
     expect(
       homepage.compareDocumentPosition(article) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it('adds each kind\u2019s share of known URLs only when the score is weighted by it', () => {
+    const kind = {
+      analyzed_count: 3,
+      web_fundamentals_score: 80,
+      web_fundamentals_coverage: 1,
+      web_fundamentals_state: 'measured',
+      aeo_readiness_score: 62,
+      aeo_measurement_coverage: 0.8,
+      aeo_measurement_state: 'measured',
+      web_fundamentals_checks: null,
+      aeo_readiness_checks: null,
+      aeo_measurement_reason: '',
+    } satisfies SiteScoreSummary['by_page_kind'][string];
+    const stratum = {
+      analyzed_count: 3,
+      web_fundamentals_score: 80,
+      aeo_readiness_score: 62,
+    };
+    const weighted = summary({
+      by_page_kind: { product: kind, article: kind },
+      score_weighting: {
+        kind: 'site_share',
+        known_url_count: 1000,
+        strata: [{ ...stratum, page_kind: 'product', known_url_count: 304 }],
+      },
+    });
+    const { rerender } = render(<PageKindScores crawl={null} dashboard={dashboard(weighted)} />);
+    expect(screen.getByRole('columnheader', { name: 'Share of known URLs' })).toBeVisible();
+    expect(within(screen.getByRole('row', { name: /Product/ })).getByText('30.4%')).toBeVisible();
+    rerender(
+      <PageKindScores
+        crawl={null}
+        dashboard={dashboard({ ...weighted, score_weighting: { kind: 'sample_average' } })}
+      />,
+    );
+    expect(screen.queryByRole('columnheader', { name: 'Share of known URLs' })).toBeNull();
   });
 
   it('renders not measured for a missing mean score, never a fabricated zero', () => {
