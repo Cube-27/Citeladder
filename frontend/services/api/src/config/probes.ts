@@ -17,6 +17,11 @@ const schema = z.strictObject({
   answer_credits: z.record(z.string(), positive),
   label_credits: positive,
   questions: z.strictObject({ known_for: template, objection: template, theme: template }),
+  search_instruction: z.strictObject({
+    engines: z.array(logicalEngineSchema),
+    questions: z.array(z.enum(['known_for', 'objection', 'theme'])),
+    template,
+  }),
   max_answer_chars: positive,
   max_items_per_answer: positive,
   max_new_groups_per_probe: positive,
@@ -52,6 +57,8 @@ function loadProbes(input: unknown) {
   for (const [key, slots] of SLOTS)
     for (const slot of slots)
       if (!config[key].includes(slot)) throw new ConfigError(`Probe ${key} is missing ${slot}`);
+  if (!config.search_instruction.template.includes('{question}'))
+    throw new ConfigError('Probe search_instruction template is missing {question}');
   for (const slot of ['{theme}', '{country}'])
     if (!config.questions.theme.includes(slot))
       throw new ConfigError(`Probe theme question is missing ${slot}`);

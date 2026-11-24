@@ -40,6 +40,26 @@ export async function auditTenant(db: Database, fixtures: VisibilityFixtures) {
   return { ...t, setId, promptId, connectionId: connection.id };
 }
 
+export async function connectClaude(db: Database, t: { workspaceId: string; userId: string }) {
+  const providers = providerSettings({});
+  const connection = await createConnection(
+    db,
+    t.workspaceId,
+    t.userId,
+    createConnectionInput.parse({
+      transport_provider: 'anthropic',
+      api_key: 'test-key',
+      routes: [{ logical_engine: 'claude' }],
+    }),
+    auditTestKey,
+    providers,
+  );
+  await probeConnection(db, t.workspaceId, connection.id, auditTestKey, providers, async () => ({
+    status: 200,
+    body: { content: [{ type: 'text', text: 'ok' }] },
+  }));
+}
+
 export async function managedPlan(db: Database, workspaceId: string) {
   const accountId = await billingAccount(db, workspaceId);
   const now = new Date();

@@ -79,6 +79,17 @@ export function probeQuestions(input: {
   ];
 }
 
+export function askedText(
+  prompt: Pick<FrozenPrompt, 'text' | 'generation_evidence'>,
+  engine: string,
+) {
+  const asked = frozenQuestion(prompt.generation_evidence);
+  const { engines, questions, template } = probes.search_instruction;
+  if (!asked || !engines.some((each) => each === engine) || !questions.includes(asked.question))
+    return prompt.text;
+  return template.replaceAll('{question}', prompt.text);
+}
+
 export async function probeSubject(
   db: Database,
   scope: { workspaceId: string; projectId: string },

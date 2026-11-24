@@ -20,6 +20,7 @@ import { auditPolicy, auditRuntime, type AuditRuntime } from './config.ts';
 import { auditInput, type AuditInput } from './inputs.ts';
 import { workspaceCredentialMode } from '../billing/credential-mode.ts';
 import { resolveMarkets, type Market } from '../projects/markets.ts';
+import { askedText } from '../probes/questions.ts';
 
 export type AuditLaunch = {
   trigger?: string;
@@ -307,7 +308,7 @@ async function persistTasks(
         logical_engine: slot.engine,
         transport_provider: route.transport_provider,
         transport_model: route.transport_model,
-        prompt_text: prompt.text,
+        prompt_text: askedText(plan.prompts[slot.prompt]!, slot.engine),
         idempotency_key: `${auditId}:${slot.prompt}:${slot.repetition}:${slot.engine}`,
         max_attempts: plan.measurement.max_attempts,
         status: 'pending_reservation',

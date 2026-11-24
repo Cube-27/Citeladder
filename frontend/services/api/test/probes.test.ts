@@ -20,7 +20,7 @@ import { setProbeSchedule } from '../src/probes/schedule.ts';
 import { probeStatus } from '../src/probes/status.ts';
 import { addMarket } from '../src/projects/markets.ts';
 import { createTheme, deleteTheme } from '../src/projects/themes.ts';
-import { managedPlan } from './audit-fixtures.ts';
+import { connectClaude, managedPlan } from './audit-fixtures.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { first, labeller, probeFixtures, type Tenant } from './probe-fixtures.ts';
 import { asOwner, testDatabase } from './support.ts';
@@ -186,6 +186,39 @@ describe('probe admission', () => {
       'cancelled',
       before.balance,
     ]);
+  });
+
+  it('asks Claude to search the web for the objection question and every other ask as frozen', async () => {
+    const { t } = await probeTenant(1_000_000);
+    await connectClaude(db, t);
+    const { quote } = await probeStatus(db, t, runtime, { engines: ['claude', 'chatgpt'] });
+    const [auditId] = await runProbe(
+      db,
+      t,
+      { fingerprint: quote.fingerprint, engines: ['claude', 'chatgpt'] },
+      runtime,
+    );
+    const asked = await db
+      .selectFrom('audit_tasks')
+      .select(['logical_engine', 'prompt_index', 'prompt_text'])
+      .where('audit_id', '=', auditId!)
+      .where('prompt_index', '<', 2)
+      .where('repetition', '=', 1)
+      .orderBy('prompt_index')
+      .orderBy('logical_engine')
+      .execute();
+    expect(asked.map((task) => [task.prompt_index, task.logical_engine, task.prompt_text])).toEqual(
+      [
+        [0, 'chatgpt', 'What is Acme Running known for?'],
+        [0, 'claude', 'What is Acme Running known for?'],
+        [1, 'chatgpt', 'Why might someone not choose Acme Running?'],
+        [
+          1,
+          'claude',
+          'Use web search to answer this question: Why might someone not choose Acme Running?',
+        ],
+      ],
+    );
   });
 
   it('refuses probe_quote_changed, launching nothing, when the probe changed after its quote', async () => {
