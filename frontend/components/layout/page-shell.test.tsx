@@ -198,10 +198,11 @@ describe('PageFrame', () => {
     expect([
       widthAt('/billing', report),
       widthAt('/actions/a1', report),
+      widthAt('/actions', report),
       widthAt('/site', report),
       widthAt('/agent/chats/c1', <WorkbenchPage>body</WorkbenchPage>),
       widthAt('/issues', <RouteLoadingScreen />),
-    ]).toEqual(['compact', 'narrow', 'full', 'fill', 'narrow']);
+    ]).toEqual(['compact', 'compact', 'narrow', 'full', 'fill', 'narrow']);
   });
 
   it('stacks the masthead, the page tabs band, the filter bar band, then the content', () => {
