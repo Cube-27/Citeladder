@@ -34,6 +34,8 @@ import { StatusStrip } from '@/components/site-health/status-strip';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
+import { useCrawlBudget } from '@/lib/site-health/crawl-budget';
+import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
@@ -84,6 +86,7 @@ function SiteHealthContent({
         active={active}
         cancelPending={cancelMutation.isPending}
         startPending={startPending}
+        scope={{ workspaceId, projectId }}
         schedule={schedule.control}
         onCancel={cancelCrawl}
         onStart={(robots) => startCrawl({ project_id: projectId, robots })}
@@ -109,6 +112,7 @@ function SiteHealthContent({
           <Stack gap="workspace" className="min-w-0" data-regular-table-text="">
             <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
             {schedule.notice}
+            <FullCrawlsUsedUp scope={{ workspaceId, projectId }} allowed={mutationsAllowed} />
             <SiteHealthRefreshFailures screen={screen} />
             {crawl ? (
               <>
@@ -452,11 +456,18 @@ function screenBlockingState({
   return null;
 }
 
+function FullCrawlsUsedUp({ scope, allowed }: Readonly<{ scope: ProjectScope; allowed: boolean }>) {
+  const canRun = useWorkspaceCapability('run');
+  const { usedUp } = useCrawlBudget(scope, 'full_crawls', allowed && canRun);
+  return usedUp ? <Notice tone="warning">{usedUp}</Notice> : null;
+}
+
 function CrawlActions({
   crawl,
   active,
   cancelPending,
   startPending,
+  scope,
   schedule,
   onCancel,
   onStart,
@@ -465,15 +476,18 @@ function CrawlActions({
   active: boolean;
   cancelPending: boolean;
   startPending: boolean;
+  scope: ProjectScope;
   schedule: ReactNode;
   onCancel: () => void;
   onStart: (robots?: CrawlRobotsHandling) => void;
 }>) {
+  const { budget } = useCrawlBudget(scope, 'full_crawls', true);
   const start = active ? null : (
     <StartCrawlControl
       siteUrl={crawl.root_url}
       robots={crawl.robots}
       pending={startPending}
+      budget={budget}
       onStart={onStart}
     />
   );

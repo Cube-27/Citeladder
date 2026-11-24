@@ -22,6 +22,12 @@ export const crawlSchedules = {
       default: 3600,
       exclusive_minimum: 0,
     },
+    active_crawl_retry_seconds: {
+      env: ['CRAWL_SCHEDULE_ACTIVE_CRAWL_RETRY_SECONDS'],
+      type: 'int',
+      default: 900,
+      exclusive_minimum: 0,
+    },
     max_consecutive_failures: {
       env: ['CRAWL_SCHEDULE_MAX_CONSECUTIVE_FAILURES'],
       type: 'int',

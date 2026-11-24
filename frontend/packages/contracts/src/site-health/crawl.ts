@@ -224,6 +224,7 @@ export const crawlScheduleOutcomeSchema = z.enum([
   'created',
   'crawl_already_active',
   'site_health_fetches_exhausted',
+  'site_health_crawl_budget_exhausted',
   'failed',
 ]);
 export const crawlScheduleSchema = responseObject({
@@ -236,6 +237,18 @@ export const crawlScheduleSchema = responseObject({
   last_crawl_id: uuid().nullable(),
 });
 
+const crawlBudgetSchema = z.object({
+  limit: z.number().int(),
+  used: z.number().int(),
+  remaining: z.number().int(),
+  resets_at: z.string(),
+});
+export const crawlBudgetsSchema = responseObject({
+  full_crawls: crawlBudgetSchema,
+  page_crawls: crawlBudgetSchema,
+});
+
+export type CrawlBudgets = z.infer<typeof crawlBudgetsSchema>;
 export type CrawlScheduleCadence = z.infer<typeof crawlScheduleCadenceSchema>;
 export type CrawlSchedule = z.infer<typeof crawlScheduleSchema>;
 export type CrawlOverallStatus = z.infer<typeof crawlOverallStatusSchema>;

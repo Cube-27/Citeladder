@@ -7,6 +7,7 @@ import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { MenuItem } from '@/components/ui/menu';
 import { SPLIT_ACTION_JOIN, SplitButton } from '@/components/ui/split-button';
 import { Tooltip } from '@/components/ui/tooltip';
+import { budgetLeft, type CrawlBudget } from '@/lib/site-health/crawl-budget';
 
 export function RobotsExcludedBadge() {
   return (
@@ -27,15 +28,20 @@ export function StartCrawlControl({
   siteUrl,
   robots,
   pending,
+  budget,
   onStart,
 }: Readonly<{
   siteUrl: string;
   robots: CrawlRobotsChoice;
   pending: boolean;
+  budget?: CrawlBudget;
   onStart: (robots?: CrawlRobotsHandling) => void;
 }>) {
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
-  const note = robotsChoiceNote(robots);
+  const usedUp = budget?.remaining === 0;
+  const note = [robotsChoiceNote(robots), budget ? budgetLeft(budget, 'full crawls') : null]
+    .filter(Boolean)
+    .join('. ');
   const askToIgnore = () =>
     setConfirm({
       title: 'Ignore robots.txt for this crawl?',
@@ -57,6 +63,7 @@ export function StartCrawlControl({
       onClick={() => onStart()}
       pending={pending}
       pendingLabel="Starting…"
+      disabled={usedUp}
       style={SPLIT_ACTION_JOIN}
     />
   );
@@ -65,9 +72,9 @@ export function StartCrawlControl({
       <SplitButton
         action={note ? <Tooltip content={`${note}.`}>{button}</Tooltip> : button}
         menuLabel="More crawl options"
-        disabled={pending}
+        disabled={pending || usedUp}
       >
-        {note ? (
+        {robots.handling === 'ignore' ? (
           <MenuItem onSelect={() => onStart('respect')}>Respect robots.txt</MenuItem>
         ) : (
           <MenuItem onSelect={askToIgnore}>Ignore robots.txt</MenuItem>

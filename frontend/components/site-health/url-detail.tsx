@@ -14,7 +14,9 @@ import { urlParamHref, useUrlParam } from '@/lib/navigation/url-params';
 import { History } from '@/lib/icons';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { PageDetail } from '@citeladder/contracts';
-import { ApiError, isNotFound } from '@/lib/api/errors';
+import { isNotFound } from '@/lib/api/errors';
+import { serverMessage } from '@/lib/api/mutation-notice';
+import { useCrawlBudget } from '@/lib/site-health/crawl-budget';
 import { RERUN_MAX_PRE_ACTIVE_POLLS, RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
@@ -39,7 +41,7 @@ export function UrlDetail({
   crawlId,
   siteUrlId,
 }: Readonly<{ crawlId: string; siteUrlId: string }>) {
-  const { workspaceId } = useProjectScope();
+  const { workspaceId, projectId } = useProjectScope();
   const router = useNavigate();
   const rerunRequested = useUrlParam('rerun');
   const [rerunPolling] = useState(() => rerunRequested);
@@ -58,6 +60,7 @@ export function UrlDetail({
   });
   const rerun = useMutation(siteHealthMutations.rerunPage(workspaceId));
   const canRun = useWorkspaceCapability('run');
+  const { usedUp, left } = useCrawlBudget({ workspaceId, projectId }, 'page_crawls', canRun);
   const startRerun = () =>
     rerun.mutate(
       { crawlId, siteUrlId },
@@ -101,6 +104,8 @@ export function UrlDetail({
         canRun
           ? {
               busy: rerun.isPending,
+              usedUp: usedUp !== null,
+              left: left ?? undefined,
               onRerun: () => {
                 setRerunError(null);
                 startRerun();
@@ -117,6 +122,7 @@ export function UrlDetail({
         />
       }
     >
+      {usedUp ? <Notice tone="warning">{usedUp}</Notice> : null}
       {rerunError ? <Notice tone="negative">{rerunError}</Notice> : null}
     </UrlDetailView>
   );
@@ -143,13 +149,7 @@ function rerunPollInterval(
 }
 
 function rerunErrorMessage(error: unknown): string {
-  if (error instanceof ApiError && error.code === 'crawl_already_active')
-    return 'A crawl is running. Re-audit this page when it finishes.';
-  if (error instanceof ApiError && error.status === 409)
-    return 'This page is not in your monitored set, so it can’t be re-audited.';
-  if (error instanceof ApiError && error.status === 403)
-    return 'Re-auditing pages requires a Starter plan.';
-  return 'Could not re-audit this page. Please try again.';
+  return serverMessage(error) ?? 'Could not re-audit this page. Please try again.';
 }
 
 type HistoryTarget = Readonly<{ workspaceId: string; crawlId: string; siteUrlId: string }>;

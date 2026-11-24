@@ -1,5 +1,6 @@
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { crawlScheduleSchema } from '@citeladder/contracts/site-health';
+import { budget, budgetUse, spendBudget } from '../src/abuse/usage.ts';
 import { createApp } from '../src/app.ts';
 import { cancelCrawl } from '../src/site-health/controls.ts';
 import { nextOccurrence, updateSchedule } from '../src/site-health/schedules.ts';
@@ -129,7 +130,7 @@ describe('scheduled crawl occurrences', () => {
     expect(await audited(rerun!.id)).toEqual(await audited(crawl!.id));
   });
 
-  it('skips an occurrence while a crawl is active, without counting a failure', async () => {
+  it('retries once the running crawl ends instead of skipping its cycle, without counting a failure', async () => {
     const seed = await fixtures.crawl('running');
     await db
       .updateTable('site_crawls')
@@ -142,13 +143,39 @@ describe('scheduled crawl occurrences', () => {
     expect(await scheduler('active').runOnce(due)).toBe(0);
 
     expect((await crawls(seed)).map((crawl) => crawl.id)).toEqual([seed.crawlId]);
+    const retry = new Date(due.getTime() + settings.active_crawl_retry_seconds * 1000);
     expect(await schedule(seed)).toMatchObject({
       enabled: true,
-      next_run_at: new Date(base.getTime() + 14 * DAY),
+      next_run_at: retry,
       last_run_at: null,
       last_outcome: 'crawl_already_active',
       failure_count: 0,
       lease_owner: null,
+    });
+
+    await cancelCrawl(db, seed.workspaceId, seed.crawlId);
+    const later = new CrawlScheduler(db, settings, { owner: 'active-retry', now: () => retry });
+    expect(await later.runOnce(retry)).toBe(1);
+    expect(await schedule(seed)).toMatchObject({ last_outcome: 'created', failure_count: 0 });
+    const full = budget('site_health_full_crawl', {});
+    expect(await budgetUse(db, full, seed.workspaceId)).toMatchObject({ used: 1 });
+  });
+
+  it('draws on the full-crawl budget and skips its cycle with that reason when it is used up', async () => {
+    const seed = await fixtures.crawl('completed');
+    await allow(seed, 5);
+    await weekly(seed);
+    const full = budget('site_health_full_crawl', {});
+    await spendBudget(db, full, seed.workspaceId, { amount: full.limit });
+
+    expect(await scheduler('budget').runOnce(due)).toBe(0);
+
+    expect((await crawls(seed)).map((crawl) => crawl.id)).toEqual([seed.crawlId]);
+    expect(await schedule(seed)).toMatchObject({
+      enabled: true,
+      next_run_at: new Date(base.getTime() + 14 * DAY),
+      last_outcome: 'site_health_crawl_budget_exhausted',
+      failure_count: 0,
     });
   });
 

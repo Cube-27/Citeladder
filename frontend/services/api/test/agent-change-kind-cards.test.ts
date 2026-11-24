@@ -196,18 +196,24 @@ const METERED: [TabledKind, string, Spend | null][] = [
     'Up to 5 page fetches from the Site Health allowance',
     {
       holds: { site_health_page_fetches_per_period: 5 },
-      budgets: { 'site_health.crawl_create': 1 },
+      budgets: { 'site_health.full_crawl': 1 },
     },
   ],
   [
     'rerun_page',
     'Up to 1 page fetch from the Site Health allowance',
-    { holds: { site_health_page_fetches_per_period: 1 }, budgets: {} },
+    {
+      holds: { site_health_page_fetches_per_period: 1 },
+      budgets: { 'site_health.page_crawl': 1 },
+    },
   ],
   [
     'rerun_issue_group',
     'Up to 1 page fetch from the Site Health allowance',
-    { holds: { site_health_page_fetches_per_period: 1 }, budgets: {} },
+    {
+      holds: { site_health_page_fetches_per_period: 1 },
+      budgets: { 'site_health.page_crawl': 1 },
+    },
   ],
   [
     'start_link_analysis',
@@ -364,5 +370,42 @@ it('override_claim_verdict shows the claim, the model verdict, the current one a
     { label: 'Now', value: 'contradicted' },
     { label: 'After', value: 'supported' },
     { label: 'Note', value: 'Checked the pricing page' },
+  ]);
+});
+
+it('rerun_page offers one tracked page by URL and refuses an untracked one with the plain reason', async () => {
+  const { preview } = await staged('rerun_page');
+  expect({ title: preview.title, rows: preview.rows }).toEqual({
+    title: 'Crawl one page again',
+    rows: [
+      { label: 'Page', value: 'https://example.test/a' },
+      { label: 'Pages', value: '1 tracked page' },
+      { label: 'Single-page crawls', value: '1 of 50 this period, counting this one' },
+    ],
+  });
+  const { scope } = await table.rerun_page.arrange();
+  await expect(
+    changeKinds.rerun_page.stage(
+      { db, config, workspaceId: scope.workspaceId, projectId: scope.projectId },
+      owner(scope),
+      { id: randomUUID(), projectId: scope.projectId },
+      { url: 'https://example.test/underwear' },
+    ),
+  ).rejects.toMatchObject({
+    code: 'rerun_not_allowed',
+    message: 'This page is not in the tracked set, so it cannot be crawled on its own',
+  });
+});
+
+it('start_crawl says it crawls the whole site, how many pages, and the full crawls used', async () => {
+  const { preview } = await staged('start_crawl');
+  expect(preview.title).toBe('Crawl the whole site');
+  expect(preview.rows.filter((row) => row.label !== 'robots.txt')).toEqual([
+    { label: 'Website', value: 'https://example.test/' },
+    {
+      label: 'Pages',
+      value: 'Up to 5 pages: your 1 tracked page, then new ones until the set is full',
+    },
+    { label: 'Full crawls', value: '1 of 10 this period, counting this one' },
   ]);
 });

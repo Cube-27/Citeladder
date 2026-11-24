@@ -5,7 +5,8 @@ import type { IssueFixProgress } from '@citeladder/contracts';
 import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
-import { ApiError } from '@/lib/api/errors';
+import { serverMessage } from '@/lib/api/mutation-notice';
+import { useCrawlBudget } from '@/lib/site-health/crawl-budget';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount, pluralCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-scope';
@@ -37,6 +38,7 @@ export function IssueFixActions({
   const canWrite = useWorkspaceCapability('write');
   const canRun = useWorkspaceCapability('run');
   const [notice, setNotice] = useState<Notice | null>(null);
+  const pages = useCrawlBudget(scope, 'page_crawls', canRun);
   if (query.isError && !query.data)
     return (
       <Notice
@@ -50,6 +52,7 @@ export function IssueFixActions({
   if (!progress) return null;
   const awaiting = progress.fixed_url_count - progress.verified_url_count;
   const rerunCount = progress.rerun_url_count;
+  const note = rerunNote(rerunCount, pages);
   return (
     <Stack gap="tight" className="min-w-0">
       <Inline className="flex-wrap">
@@ -76,13 +79,11 @@ export function IssueFixActions({
             crawlId={crawlId}
             groupId={groupId}
             onNotice={setNotice}
-            none={rerunCount === 0}
+            none={rerunCount === 0 || note.usedUp}
           />
         ) : null}
       </Inline>
-      {canRun || rerunCount === null ? (
-        <span className="type-caption">{rerunCaption(rerunCount)}</span>
-      ) : null}
+      {canRun || rerunCount === null ? <span className="type-caption">{note.caption}</span> : null}
       {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
     </Stack>
   );
@@ -143,6 +144,18 @@ function RerunAllButton({
   );
 }
 
+function rerunNote(
+  count: number | null,
+  pages: Readonly<{ usedUp: string | null; left: string | null }>,
+) {
+  if (count === null || !pages.usedUp)
+    return {
+      usedUp: false,
+      caption: [rerunCaption(count), count === null ? null : pages.left].filter(Boolean).join(' '),
+    };
+  return { usedUp: true, caption: pages.usedUp };
+}
+
 function rerunCaption(count: number | null): string {
   if (count === null) return 'A full crawl re-checks this site-wide issue.';
   if (count === 0) return 'No tracked page with this issue is left to re-audit.';
@@ -150,12 +163,5 @@ function rerunCaption(count: number | null): string {
 }
 
 function rerunErrorMessage(error: unknown): string {
-  if (!(error instanceof ApiError)) return 'Could not re-run this issue. Please try again.';
-  if (error.code === 'crawl_already_active')
-    return 'A crawl is running. Re-run this issue when it finishes.';
-  if (error.code === 'site_health_fetches_exhausted')
-    return 'Not enough page fetches remain this period to re-audit every page.';
-  if (error.status === 403) return 'Re-auditing pages requires a Starter plan.';
-  if (error.status === 409) return 'No tracked page with this issue can be re-audited.';
-  return 'Could not re-run this issue. Please try again.';
+  return serverMessage(error) ?? 'Could not re-run this issue. Please try again.';
 }

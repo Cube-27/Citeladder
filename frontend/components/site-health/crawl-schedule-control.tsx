@@ -29,7 +29,9 @@ const CHOICES: ReadonlyArray<{ value: Choice; label: string }> = [
 ];
 
 const SKIPPED: Partial<Record<NonNullable<CrawlSchedule['last_outcome']>, string>> = {
-  crawl_already_active: 'Last run skipped: a crawl was already running.',
+  crawl_already_active:
+    'A crawl was running at the scheduled time. It will try again once that crawl ends.',
+  site_health_crawl_budget_exhausted: 'Last run skipped: this period’s full crawls are used up.',
   site_health_fetches_exhausted: 'Last run skipped: no page fetches left this period.',
   failed: 'Last run could not start a crawl. It will try again.',
 };

@@ -28,8 +28,9 @@ const defaults = {
   provider_test_window_seconds: 3600,
   property_discovery_limit: 60,
   property_discovery_window_seconds: 3600,
-  crawl_create_limit: 10,
-  crawl_create_window_seconds: 86400,
+  site_health_full_crawl_limit: 10,
+  site_health_page_crawl_limit: 50,
+  site_health_crawl_budget_window_seconds: 2_592_000,
   brand_logo_refresh_limit: 10,
   brand_logo_refresh_window_seconds: 3600,
   client_error_client_limit: 20,
@@ -151,11 +152,17 @@ export const budgets = {
     limit: abuse.provider_test_limit,
     windowSeconds: abuse.provider_test_window_seconds,
   },
-  crawl_create: {
-    operation: 'site_health.crawl_create',
+  site_health_full_crawl: {
+    operation: 'site_health.full_crawl',
     subject: 'workspace',
-    limit: abuse.crawl_create_limit,
-    windowSeconds: abuse.crawl_create_window_seconds,
+    limit: abuse.site_health_full_crawl_limit,
+    windowSeconds: abuse.site_health_crawl_budget_window_seconds,
+  },
+  site_health_page_crawl: {
+    operation: 'site_health.page_crawl',
+    subject: 'workspace',
+    limit: abuse.site_health_page_crawl_limit,
+    windowSeconds: abuse.site_health_crawl_budget_window_seconds,
   },
   integration_properties: {
     operation: 'integrations.properties',

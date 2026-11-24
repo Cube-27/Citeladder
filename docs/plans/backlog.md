@@ -166,6 +166,13 @@ Build these before enabling them:
   whole occurrence in `freezeRoutes` instead of dropping that engine as Run
   probe does.
 
+- **Site Health crawl budgets are temporary (owner 2026-11-24).** Each
+  workspace may start 10 full crawls and 50 single-page crawls per 30-day
+  period, whoever starts them (`config/abuse.ts`, `site-health/crawl-budgets.ts`,
+  [SH-B10](../decisions.md#site-health-crawling-sh-b-owner-2026-11-12-co-owner-2026-11-17)).
+  Review the amounts, the 30-day window and whether they become plan
+  entitlements after the billing launch.
+
 Owners: [Billing and entitlements](../billing-entitlements.md),
 [billing provider readiness](../billing-provider-readiness.md) and the
 [billing decision log](../billing-decisions.md).

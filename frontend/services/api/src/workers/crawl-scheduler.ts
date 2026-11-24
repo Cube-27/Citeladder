@@ -7,6 +7,7 @@ import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
 import { createCrawl } from '../site-health/planner.ts';
+import { withCrawlStart } from '../site-health/crawl-budgets.ts';
 import { crawlRequest } from '../site-health/crawl-request.ts';
 import { claimDueCrawlSchedules, nextOccurrence } from '../site-health/schedules.ts';
 
@@ -14,7 +15,11 @@ export function crawlSchedulerSettings(env: SettingSource = process.env) {
   return settingValues(policy.crawl_schedules.settings, env);
 }
 
-const SKIPPED = new Set(['crawl_already_active', 'site_health_fetches_exhausted']);
+const SKIPPED = new Set([
+  'crawl_already_active',
+  'site_health_fetches_exhausted',
+  'site_health_crawl_budget_exhausted',
+]);
 
 type ScheduleClaim = Awaited<ReturnType<typeof claimDueCrawlSchedules>>[number];
 const logger = getLogger('workers.crawl_scheduler');
@@ -72,10 +77,15 @@ export class CrawlScheduler {
       );
       await sql`savepoint crawl_schedule_planning`.execute(trx);
       try {
-        const crawl = await createCrawl(
+        const crawl = await withCrawlStart(
           trx,
-          schedule.workspace_id,
-          await crawlRequest(trx, schedule.workspace_id, schedule.project_id),
+          { workspaceId: schedule.workspace_id, kind: 'full' },
+          async () =>
+            createCrawl(
+              trx,
+              schedule.workspace_id,
+              await crawlRequest(trx, schedule.workspace_id, schedule.project_id),
+            ),
         );
         await sql`release savepoint crawl_schedule_planning`.execute(trx);
         await scoped
@@ -97,7 +107,11 @@ export class CrawlScheduler {
         await sql`release savepoint crawl_schedule_planning`.execute(trx);
         const code = error instanceof ApiError ? error.code : null;
         if (code && SKIPPED.has(code)) {
-          await scoped.set({ ...release, next_run_at: next, last_outcome: code }).execute();
+          const retry =
+            code === 'crawl_already_active'
+              ? new Date(at.getTime() + this.settings.active_crawl_retry_seconds * 1000)
+              : next;
+          await scoped.set({ ...release, next_run_at: retry, last_outcome: code }).execute();
           logger.info('scheduled_crawl_skipped', { schedule_id: schedule.id, reason: code });
           return false;
         }

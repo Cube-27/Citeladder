@@ -12,6 +12,7 @@ import {
 } from '../http/keyset-cursor.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { settleCrawlFetches } from './fetch-budget.ts';
+import { giveBackUnfetchedStart } from './crawl-budgets.ts';
 import { isPageRerun } from './page-rerun.ts';
 import { crawlSetting } from './planner-policy.ts';
 import { requireProject } from '../projects/access.ts';
@@ -100,6 +101,7 @@ function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
       .executeTakeFirst();
     if (!crawl) throw notFound('Crawl');
     if (isTerminal(crawl)) return;
+    await giveBackUnfetchedStart(trx, crawl);
     const now = new Date();
     const analyzed = await analyzedPageCount(trx, crawl);
     await trx

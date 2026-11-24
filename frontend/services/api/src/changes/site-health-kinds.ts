@@ -1,24 +1,27 @@
 import { z } from 'zod';
 import { crawlScheduleUpdateRequestSchema } from '@citeladder/contracts/site-health-requests';
 import type { Database } from '../db/database.ts';
+import { record } from '../db/json.ts';
 import { notFound } from '../errors.ts';
 import { cancelCrawl } from '../site-health/controls.ts';
+import { crawlBudgets, type CrawlStartKind } from '../site-health/crawl-budgets.ts';
 import { crawlRequest } from '../site-health/crawl-request.ts';
 import { startCrawl } from '../site-health/crawl-start.ts';
 import { admitLinkRun, cancelLinkRun } from '../site-health/internal-link-runs.ts';
 import { issueFixes, markIssueGroupFixed, rerunIssueGroup } from '../site-health/issue-fixes.ts';
 import { loadCrawl } from '../site-health/reads/crawl.ts';
-import { requireAdmitted } from '../site-health/reads/pages.ts';
 import { updateSchedule } from '../site-health/schedules.ts';
-import { rerunPage } from '../site-health/selection.ts';
+import { rerunPage, trackedPage } from '../site-health/selection.ts';
 import {
   changeKind,
+  countOf,
   heldUnits,
   MEMBER_RUN,
   MEMBER_WRITE,
   plural,
   type PreparedChange,
   type PreviewContext,
+  ROW_COUNT,
 } from './kind.ts';
 
 const SITE = { label: 'Open Site Health', path: '/site' };
@@ -56,6 +59,34 @@ async function crawlStarted(context: PreviewContext, crawlId: string) {
   return { label: 'Crawl started', value: crawl.created_at.toISOString().slice(0, 16) };
 }
 
+async function budgetRow(context: PreviewContext, kind: CrawlStartKind) {
+  const budgets = await crawlBudgets(context.db, context.workspaceId, context.config.settings);
+  const { used, limit } = kind === 'full' ? budgets.full_crawls : budgets.page_crawls;
+  return {
+    label: kind === 'full' ? 'Full crawls' : 'Single-page crawls',
+    value: `${used} of ${limit} this period, counting this one`,
+  };
+}
+
+async function crawlPages(context: PreviewContext, crawlId: string) {
+  const configuration = record((await projectCrawl(context.db, context, crawlId)).configuration);
+  if (configuration.sample_mode === true)
+    return `A free sample of up to ${plural(Number(configuration.requested_page_limit), 'page')}`;
+  const limit = Number(configuration.monitored_url_limit);
+  const tracked = await countOf(
+    context.db
+      .selectFrom('monitored_site_urls')
+      .select(ROW_COUNT)
+      .where('workspace_id', '=', context.workspaceId)
+      .where('project_id', '=', context.projectId)
+      .where('active', '=', true)
+      .executeTakeFirst(),
+  );
+  return tracked >= limit
+    ? `Re-crawls your ${plural(tracked, 'tracked page')} and adds no new pages`
+    : `Up to ${plural(limit, 'page')}: your ${plural(tracked, 'tracked page')}, then new ones until the set is full`;
+}
+
 async function issuePages(context: PreviewContext, crawlId: string, groupId: string) {
   const fixes = await issueFixes(context.db, context.workspaceId, crawlId);
   const group = fixes.items.find((item) => item.group_id === groupId);
@@ -84,7 +115,7 @@ export const siteHealthKinds = {
   start_crawl: changeKind({
     permission: MEMBER_RUN,
     purpose:
-      "crawl the project's website now; robots 'ignore' crawls pages robots.txt disallows and records the person's decision",
+      "crawl the whole site again: it re-crawls the tracked pages and adds newly found ones only while the tracked set has room, so it cannot read one chosen page; never offer it to crawl or read one page; robots 'ignore' crawls pages robots.txt disallows and records the person's decision",
     payload: z.strictObject({ robots: z.enum(['respect', 'ignore']).optional() }),
     async execute(trx, config, actor, change, payload) {
       const user = await trx
@@ -100,6 +131,7 @@ export const siteHealthKinds = {
       return { summary: 'Started a crawl. It runs on its own.', crawl: { id: crawl.id } };
     },
     async preview(context, payload, rehearse) {
+      const { crawl } = await rehearse();
       const project = await context.db
         .selectFrom('projects')
         .select('website_url')
@@ -107,12 +139,14 @@ export const siteHealthKinds = {
         .where('id', '=', context.projectId)
         .executeTakeFirst();
       return {
-        title: 'Start a crawl',
+        title: 'Crawl the whole site',
         rows: [
           { label: 'Website', value: project?.website_url ?? '' },
+          { label: 'Pages', value: await crawlPages(context, crawl.id) },
           await robotsRow(context, payload.robots),
+          await budgetRow(context, 'full'),
         ],
-        spend: await fetchSpend(context, (await rehearse()).crawl.id),
+        spend: await fetchSpend(context, crawl.id),
         opens: SITE,
       };
     },
@@ -162,30 +196,26 @@ export const siteHealthKinds = {
   }),
   rerun_page: changeKind({
     permission: MEMBER_RUN,
-    purpose: 'fetch and analyze one tracked page again',
-    payload: z.strictObject({ crawl_id: z.uuid(), site_url_id: z.uuid() }),
+    purpose:
+      "crawl one tracked page again by its URL, from the same monthly budget as the page's own button; a page outside the tracked set is refused, and then you say so and never offer a full crawl instead",
+    payload: z.strictObject({ url: z.string().trim().min(1) }),
     async execute(trx, _config, actor, change, payload) {
-      const crawl = await projectCrawl(
-        trx,
-        changeScope(actor.workspaceId, change),
-        payload.crawl_id,
-      );
-      await requireAdmitted(trx, crawl, payload.site_url_id);
-      const rerun = await rerunPage(trx, actor.workspaceId, crawl.project_id, payload.site_url_id);
-      return { summary: 'The page is queued to be analyzed again.', crawl: { id: rerun.crawl_id } };
+      const scope = changeScope(actor.workspaceId, change);
+      const page = await trackedPage(trx, { ...scope, url: payload.url });
+      const rerun = await rerunPage(trx, actor.workspaceId, scope.projectId, page.id);
+      return { summary: 'The page is queued to be crawled again.', crawl: { id: rerun.crawl_id } };
     },
     async preview(context, payload, rehearse) {
-      const page = await context.db
-        .selectFrom('site_urls')
-        .select('normalized_url')
-        .where('workspace_id', '=', context.workspaceId)
-        .where('project_id', '=', context.projectId)
-        .where('id', '=', payload.site_url_id)
-        .executeTakeFirst();
+      const { crawl } = await rehearse();
+      const page = await trackedPage(context.db, { ...context, url: payload.url });
       return {
-        title: 'Analyze a page again',
-        rows: [{ label: 'Page', value: page?.normalized_url ?? '' }],
-        spend: await fetchSpend(context, (await rehearse()).crawl.id),
+        title: 'Crawl one page again',
+        rows: [
+          { label: 'Page', value: page.normalized_url },
+          { label: 'Pages', value: '1 tracked page' },
+          await budgetRow(context, 'page'),
+        ],
+        spend: await fetchSpend(context, crawl.id),
         opens: SITE,
       };
     },

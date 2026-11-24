@@ -1,4 +1,5 @@
 import {
+  crawlBudgetsSchema,
   crawlScheduleSchema,
   issueFixesSchema,
   issueFixProgressSchema,
@@ -13,6 +14,7 @@ import { ApiError } from '../errors.ts';
 import { readBody } from '../http/body.ts';
 import { InvalidCursorError } from '../http/keyset-cursor.ts';
 import { cancelCrawl, listCrawls } from '../site-health/controls.ts';
+import { crawlBudgets } from '../site-health/crawl-budgets.ts';
 import { startCrawl } from '../site-health/crawl-start.ts';
 import { readSchedule, updateSchedule } from '../site-health/schedules.ts';
 import { createCrawlRequest } from '../site-health/planner-policy.ts';
@@ -98,6 +100,14 @@ export const siteHealthCrawlRoutes = [
     response: monitoredUrlsResponseSchema,
     handle: ({ c, db }, { path }) =>
       monitoredSet(db, c.get('workspace').workspaceId, path.project_id),
+  }),
+  defineGetRoute({
+    ...projectFamily,
+    path: '/api/v1/projects/{project_id}/crawl-budgets',
+    params: { path: projectPath, query: {} },
+    response: crawlBudgetsSchema,
+    handle: ({ c, db, config }) =>
+      crawlBudgets(db, c.get('workspace').workspaceId, config.settings),
   }),
   defineGetRoute({
     ...projectFamily,

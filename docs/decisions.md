@@ -420,11 +420,19 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
   its words agree (owner, 2026-11-24).
 - **SH-B7** One crawl action audits the same pages each time. **SH-B8** A
   tracked page answering 404 or a redirect stays tracked, reads "page
-  unavailable" and opens that issue. **SH-B10** No crawl cooldown.
+  unavailable" and opens that issue. **SH-B10** No crawl cooldown; instead
+  each workspace has two temporary monthly budgets: 10 full crawls and 50
+  single-page crawls in total, whoever starts them (person, Agent card or
+  schedule); a crawl cancelled before it fetched a page gives its start back,
+  and a scheduled crawl that finds one running retries after it ends (owner,
+  2026-11-24; reviewed after the billing launch).
 - **SH-B12** Mark fixed ("N of M pages fixed") and Re-run all exist; each issue
   shows pages New and Fixed since the previous crawl (owner, 2026-11-23); no
   per-issue score gain. **SH-B13** The tracked set
-  has no editing API and the crawl request no advanced scope options.
+  has no editing API and the crawl request no advanced scope options; a page
+  outside it cannot be crawled on its own, so asked to crawl one page the Agent
+  offers the single-page card, which refuses an untracked page, and never a
+  full crawl instead (owner, 2026-11-24).
 - **Stall and live score** (2026-11-17): a crawl fails as overdue only after 30
   minutes with no task settled, capped at 12 hours; while it runs the score card
   is the average of stored page scores.

@@ -301,7 +301,12 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
     .where('project_id', '=', request.project_id)
     .where('status', 'in', ACTIVE_CRAWL_STATUSES)
     .executeTakeFirst();
-  if (existing) crawlError('Project already has an active crawl', 'crawl_already_active', 409);
+  if (existing)
+    crawlError(
+      'A crawl is already running for this project. Try again when it ends.',
+      'crawl_already_active',
+      409,
+    );
   const { root, domain } = projectWebsiteRoot(project.website_url);
   const scope = { domain };
   if (!classifyUrlAdmission(root, scope).accepted)
@@ -421,4 +426,19 @@ export async function createPageRerunCrawl(
     urls.map((url) => url.id),
   );
   return crawl;
+}
+
+export async function mergeCrawlConfiguration(
+  db: Database,
+  crawl: Pick<Crawl, 'id' | 'workspace_id'>,
+  patch: Record<string, string>,
+) {
+  await db
+    .updateTable('site_crawls')
+    .set({
+      configuration: sql`coalesce(configuration, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb`,
+    })
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('id', '=', crawl.id)
+    .execute();
 }
