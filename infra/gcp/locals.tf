@@ -99,7 +99,7 @@ locals {
       TRUSTED_PROXY_CIDRS              = "169.254.0.0/16"
       DEFAULT_AGENT_BASE_URL           = var.agent_base_url
       DEFAULT_AGENT_MODEL              = var.agent_model
-      SITE_HEALTH_AUTOMATIC_PAGE_LIMIT = "200"
+      SITE_HEALTH_AUTOMATIC_PAGE_LIMIT = "500"
       SITE_HEALTH_GLOBAL_CONCURRENCY   = "8"
       SITE_HEALTH_PER_HOST_CONCURRENCY = "6"
       RUNNER_BUDGET_SECONDS            = tostring(var.runner_budget_seconds)
