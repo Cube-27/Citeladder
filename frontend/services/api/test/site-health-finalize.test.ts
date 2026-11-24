@@ -106,6 +106,15 @@ describe('terminal checks from persisted evidence', () => {
     expect(
       canonicalResolution(['/'], 'https://example.test/page', resolutions, noindex).reason_code,
     ).toBe('canonical_target_noindex');
+    const fetched = new Map([
+      ['https://example.test/shirts', resolution({ finalUrl: 'https://example.test/shirts' })],
+    ]);
+    expect(
+      ['/shirts/', '/tops'].map(
+        (declared) =>
+          canonicalResolution([declared], 'https://example.test/shirts', fetched).outcome,
+      ),
+    ).toEqual(['satisfied', 'unknown']);
     const links = linkRedirects(
       ['https://example.test/', 'https://example.test/old', 'https://example.test/loop'],
       resolutions,

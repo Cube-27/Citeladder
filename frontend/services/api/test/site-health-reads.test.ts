@@ -648,30 +648,30 @@ describe('issue catalog', () => {
       await get(seed, `/site-crawls/${seed.crawlId}/export.csv?view=issues`)
     ).text();
     const [header, first, , third] = csv.split('\r\n');
-    expect(header!.split(',').slice(0, 7)).toEqual([
-      'group_id',
-      'rule_id',
+    expect(header!.split(',')).toEqual([
       'title',
       'dimension',
       'category',
       'severity',
       'page_kind',
+      'affected_url_count',
+      'description',
+      'remediation',
+      'created_at',
     ]);
     expect(first).toContain('"homepage, product"');
-    expect(third).toContain(
-      `${issueGroupId(seed.crawlId, meta!)},${meta},Missing meta description,technical,metadata,medium,`,
-    );
+    expect(third!.startsWith('Missing meta description,technical,metadata,medium,')).toBe(true);
     const filtered = await (
       await get(
         seed,
         `/site-crawls/${seed.crawlId}/export.csv?view=issues&severity=medium&sort=pages`,
       )
     ).text();
-    expect(filtered.split('\r\n').map((line) => line.split(',')[1])).toEqual([
-      'rule_id',
-      meta,
-      canonical,
-      undefined,
+    expect(filtered.split('\r\n').map((line) => line.split(',')[0])).toEqual([
+      'title',
+      'Missing meta description',
+      'Canonical URL conflict',
+      '',
     ]);
     expect(
       (await get(seed, `/site-crawls/${seed.crawlId}/export.csv?view=pages&sort=severity`)).status,

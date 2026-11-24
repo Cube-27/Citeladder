@@ -95,14 +95,9 @@ const traitsOf = (facts: Facts) => new Set(textList(facts.page_traits));
 const tokensAfter = (key: string, prefix: string) =>
   new Set(key.slice(prefix.length).split('|').filter(Boolean));
 
-function observedContent(facts: Facts): [boolean, string] {
-  if (!facts.has_html) return [false, 'no_html'];
-  return [!serverRenderSignals(facts)[0], 'client_rendering_required'];
-}
+const observedContent = (facts: Facts): [boolean, string] => [Boolean(facts.has_html), 'no_html'];
 function requirement(kind: '' | 'html' | 'content', facts: Facts): [boolean, string] {
-  if (kind === 'content') return observedContent(facts);
-  if (kind === 'html') return [Boolean(facts.has_html), 'no_html'];
-  return [true, ''];
+  return kind ? observedContent(facts) : [true, ''];
 }
 
 function prefixedScope(key: string, facts: Facts): [boolean, string] | null {
@@ -194,8 +189,8 @@ function normalized(
 const needsExtraction = (rule: Rule) =>
   rule.applicability_key.includes('html') || rule.applicability_key.includes('content');
 
-const judgesShell = (rule: Rule, reason: string) =>
-  rule.rule_id === 'aeo.server_rendered_content' && reason === 'client_rendering_required';
+const CLIENT_RENDERED = 'client_rendering_required';
+const needsRenderedContent = (rule: Rule) => rule.applicability_key.includes('content');
 
 function runCheck(
   rule: Rule,
@@ -260,10 +255,20 @@ function evaluateRule(rule: Rule, facts: Facts): RuleEvaluation {
       reason_code: reason,
     };
   }
+  const [clientRendered, signals] = serverRenderSignals(facts);
+  if (clientRendered && needsRenderedContent(rule))
+    return {
+      ...base,
+      ...membership(rule.rule_id),
+      outcome: 'missing',
+      evidence: { ...signals, reason: CLIENT_RENDERED },
+      display_applicability: true,
+      reason_code: CLIENT_RENDERED,
+    };
   const extraction = record(facts.extraction);
   const state = text(extraction.state);
   const unread = text(extraction.reason);
-  if (state && state !== 'available' && needsExtraction(rule) && !judgesShell(rule, unread)) {
+  if (state && state !== 'available' && needsExtraction(rule) && unread !== CLIENT_RENDERED) {
     const reason = unread || 'extraction_unavailable';
     return {
       ...base,

@@ -11,6 +11,7 @@ import {
 } from '../../web-evidence/html.ts';
 import { stripTrailing } from '../../text-order.ts';
 import { analysisPolicy, limits, regionPolicy, squash } from './policy.ts';
+import { isBreadcrumb } from './commerce-facts.ts';
 import { isGenericItemLabel } from './copy.ts';
 import {
   CHROME_REGIONS,
@@ -29,6 +30,7 @@ import { widen } from '../../widen.ts';
 const e = analysisPolicy.entity;
 const PRICE = new RegExp(e.price_pattern, 'i');
 const RESULT_COUNT = new RegExp(e.result_count_pattern, 'i');
+const ZERO_RESULT_COUNT = new RegExp(e.zero_result_count_pattern, 'i');
 const SORT = new Set(e.sort_control_tokens);
 const FILTER = new Set(e.filter_control_tokens);
 const VARIANT = new Set(analysisPolicy.traits.variant_form_fields);
@@ -307,7 +309,9 @@ function insideExcludedCollection(node: HtmlElement, region: HtmlNode, allowPagi
   for (let depth = 0; depth < regionPolicy.max_ancestor_depth && current; depth++) {
     if (current === region) return false;
     const excluded =
-      EXCLUDED_COLLECTION_TAGS.has(current.tagName) || EXCLUDED_COLLECTION_ROLES.has(role(current));
+      EXCLUDED_COLLECTION_TAGS.has(current.tagName) ||
+      EXCLUDED_COLLECTION_ROLES.has(role(current)) ||
+      isBreadcrumb(current);
     const navigation = current.tagName === 'nav' || role(current) === 'navigation';
     if (
       excluded &&
@@ -543,6 +547,9 @@ function listingFacts(page: PageScope) {
   );
   const evidence = selected?.evidence ?? emptyCollection();
   const classes = new Set(evidence.affordances.map((item) => item.class));
+  const countsNone = evidence.affordances.some(
+    (item) => item.class === 'result_count' && ZERO_RESULT_COUNT.test(item.text),
+  );
   return {
     largest_card_list_size: largest?.evidence.container.item_count ?? 0,
     distinct_card_list_targets: largest?.evidence.container.distinct_targets ?? 0,
@@ -553,7 +560,13 @@ function listingFacts(page: PageScope) {
     has_pagination: classes.has('pagination'),
     has_empty_state:
       classes.has('empty_state') ||
-      (!observations.length && affordances.some((item) => item.kind === 'empty_state')),
+      countsNone ||
+      (!observations.length &&
+        affordances.some(
+          (item) =>
+            item.kind === 'empty_state' ||
+            (item.kind === 'result_count' && ZERO_RESULT_COUNT.test(evidenceText(item.node))),
+        )),
     collection_evidence: evidence,
   };
 }

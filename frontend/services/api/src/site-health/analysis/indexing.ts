@@ -131,7 +131,7 @@ export function checkSitemapLastmod(facts: Facts): CheckResult {
   if (declared > audit + LASTMOD_TOLERANCE_MS)
     return ['missing', { ...evidence, reason: 'sitemap_lastmod_in_future' }];
   const parsed = pageDates.map((value) => Date.parse(value)).filter((time) => !Number.isNaN(time));
-  if (!parsed.length) return ['unknown', { ...evidence, reason: 'page_date_unavailable' }];
+  if (!parsed.length) return ['not_applicable', { ...evidence, reason: 'no_content_date' }];
   const newest = Math.max(...parsed);
   if (newest > audit + LASTMOD_TOLERANCE_MS)
     return ['unknown', { ...evidence, reason: 'content_date_in_future' }];

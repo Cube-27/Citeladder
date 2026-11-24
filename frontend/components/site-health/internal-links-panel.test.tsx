@@ -331,23 +331,9 @@ describe('Internal links', () => {
     await userEvent.click(within(controls).getByRole('button', { name: 'Export CSV' }));
     expect(downloadCsv).toHaveBeenCalledWith(
       'internal-links',
+      ['Source page', 'Destination', 'Anchor text', 'Source passage'],
       expect.arrayContaining([
-        'Source analysis ID',
-        'Source artifact ID',
-        'Source site URL ID',
-        'Source extractor version',
-      ]),
-      expect.arrayContaining([
-        [
-          links[0]!.source.url,
-          links[0]!.target.url,
-          links[0]!.anchor,
-          links[0]!.placement.text,
-          links[0]!.source.analysis_id,
-          links[0]!.source.artifact_id,
-          links[0]!.source.site_url_id,
-          links[0]!.source.extractor_version,
-        ],
+        [links[0]!.source.url, links[0]!.target.url, links[0]!.anchor, links[0]!.placement.text],
       ]),
     );
     expect(screen.queryByText('Anchor 11')).not.toBeInTheDocument();

@@ -150,6 +150,7 @@
     "entity": {
       "price_pattern": "(?:[$€£¥]\\s?\\d+(?:[.,]\\d{1,2})?|\\b(?:USD|EUR|GBP|AUD|CAD|JPY|INR)\\s?\\d+(?:[.,]\\d{1,2})?)",
       "result_count_pattern": "\\b\\d{1,6}\\s*(?:results?|items?|products?)\\b",
+      "zero_result_count_pattern": "(?<![\\d.,])0\\s*(?:results?|items?|products?)\\b",
       "cart_markers": [
         "add to bag",
         "add to basket",

@@ -60,7 +60,7 @@ function isProductPath(href: string) {
   const path = href.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]*/iu, '').split(/[?#]/u)[0] ?? '';
   return path.split('/').some((segment) => PRODUCT_SEGMENTS.has(segment.trim().toLowerCase()));
 }
-const isBreadcrumb = (node: HtmlElement) =>
+export const isBreadcrumb = (node: HtmlElement) =>
   attribute(node, 'class').toLowerCase().includes('breadcrumb') ||
   ['breadcrumb', 'Breadcrumb'].includes(attribute(node, 'aria-label'));
 

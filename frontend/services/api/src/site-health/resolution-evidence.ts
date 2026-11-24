@@ -7,6 +7,7 @@ import { policy } from '../config.ts';
 import type { Crawl } from './site-task.ts';
 import { taskOutcome } from './task-outcome.ts';
 import { canonicalUrl } from './url-identity.ts';
+import { comparableUrl } from './analysis/indexing.ts';
 import {
   canonicalIntegrity,
   entitySetEvaluation,
@@ -109,9 +110,10 @@ export function canonicalResolution(
   const unique = [...new Set(declarations.map((value) => value.trim()).filter(Boolean))];
   const only = onlyOf(unique);
   const target = only === undefined ? '' : (canonicalUrl(only, finalUrl) ?? '');
-  const resolution = resolutions.get(target);
+  const own = canonicalUrl(finalUrl) ?? '';
+  const self = Boolean(target) && comparableUrl(target) === comparableUrl(own);
+  const resolution = resolutions.get(target) ?? (self ? resolutions.get(own) : undefined);
   const limited = resolution?.status === 429;
-  const self = target === canonicalUrl(finalUrl);
   const evaluation = canonicalIntegrity({
     declarations,
     finalUrl,
