@@ -46,7 +46,12 @@ async function applySchedule(
     return;
   }
   const plan = runnable(
-    await probePlan(db, scope, { runtime, at: new Date(), engines: input.engines }),
+    await probePlan(db, scope, {
+      runtime,
+      at: new Date(),
+      engines: input.engines,
+      repetitions: input.repetitions,
+    }),
   );
   if (plan.fingerprint !== input.fingerprint) throw changed();
   const markets = plan.runs.map((run) => run.market.id);
@@ -57,6 +62,7 @@ async function applySchedule(
       enabled: true,
       engines: plan.engines,
       market_ids: markets,
+      repetitions: plan.repetitions,
     });
     return;
   }
@@ -69,6 +75,7 @@ async function applySchedule(
       cadence: input.cadence,
       engines: plan.engines,
       market_ids: markets,
+      repetitions: plan.repetitions,
     }),
   );
 }

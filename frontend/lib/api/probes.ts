@@ -34,15 +34,17 @@ const EXPORT_FILES = {
   objections: 'objection-sources.csv',
 } as const satisfies Record<ProbeView, string>;
 
+export type ProbeChoice = { engines: readonly string[]; repetitions: number };
+
 const probesApi = {
-  status: async (projectId: string, engines: readonly string[], options?: ApiRequestOptions) => {
-    const query = new URLSearchParams(engines.map((engine) => ['engines', engine]));
+  status: async (projectId: string, choice: ProbeChoice | null, options?: ApiRequestOptions) => {
+    const query = new URLSearchParams([
+      ...(choice?.engines ?? []).map((engine) => ['engines', engine]),
+      ...(choice ? [['repetitions', String(choice.repetitions)]] : []),
+    ]);
     return strictValidate(
       probeStatusSchema,
-      await apiClient.get(
-        engines.length ? `${root(projectId)}?${query}` : root(projectId),
-        options,
-      ),
+      await apiClient.get(choice ? `${root(projectId)}?${query}` : root(projectId), options),
       'probes.status',
     );
   },
@@ -121,14 +123,15 @@ export const probeQueries = {
   status: (scope: ProjectScope) =>
     queryOptions({
       queryKey: queryKeys.projects.probes(scope),
-      queryFn: ({ signal }) => probesApi.status(scope.projectId, [], { signal, ...scoped(scope) }),
+      queryFn: ({ signal }) =>
+        probesApi.status(scope.projectId, null, { signal, ...scoped(scope) }),
       refetchInterval: (query) => (probeBusy(query.state.data) ? PROBE_POLL_MS : false),
     }),
-  quote: (scope: ProjectScope, engines: readonly string[]) =>
+  quote: (scope: ProjectScope, choice: ProbeChoice) =>
     queryOptions({
-      queryKey: queryKeys.projects.probeQuote(scope, engines),
+      queryKey: queryKeys.projects.probeQuote(scope, choice),
       queryFn: ({ signal }) =>
-        probesApi.status(scope.projectId, engines, { signal, ...scoped(scope) }),
+        probesApi.status(scope.projectId, choice, { signal, ...scoped(scope) }),
       select: (status) => status.quote,
       placeholderData: keepPreviousData,
     }),

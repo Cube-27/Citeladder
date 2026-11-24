@@ -8,7 +8,7 @@ import type { ProjectScope as Scope } from '../projects/brand-profile.ts';
 import { grantBalances } from '../entitlements/ledger.ts';
 import { loadAccountState } from '../entitlements/state.ts';
 import { probeLaunches } from './launches.ts';
-import { blockedBy, probePlan } from './plan.ts';
+import { blockedBy, probePlan, type ProbeChoice } from './plan.ts';
 import { probeSchedules } from './schedule.ts';
 const probes = policy.probes;
 
@@ -20,16 +20,14 @@ async function aiCreditBalance(db: Database, workspaceId: string, at: Date) {
   return [...balances.values()].reduce((sum, balance) => sum + balance.remaining, 0);
 }
 
-type QuoteInput = { runtime: AuditRuntime; engines?: readonly string[] };
-
 async function probeQuote(
   db: Database,
   scope: Scope,
-  { runtime, engines }: QuoteInput,
+  { runtime, ...choice }: ProbeChoice & { runtime: AuditRuntime },
 ): Promise<ProbeQuote> {
   const at = new Date();
   const [plan, balance] = await Promise.all([
-    probePlan(db, scope, { runtime, at, engines }),
+    probePlan(db, scope, { runtime, at, ...choice }),
     aiCreditBalance(db, scope.workspaceId, at),
   ]);
   return {
@@ -39,7 +37,8 @@ async function probeQuote(
     blocked: blockedBy(plan),
     markets: plan.runs.map((run) => run.market),
     questions: plan.questions,
-    repetitions: probes.repetitions,
+    repetitions: plan.repetitions,
+    max_repetitions: probes.max_repetitions,
     answers: plan.answers,
     credits: plan.credits,
     balance,
@@ -73,10 +72,10 @@ export async function probeStatus(
   db: Database,
   scope: Scope,
   runtime: AuditRuntime,
-  engines?: readonly string[],
+  choice: ProbeChoice = {},
 ): Promise<ProbeStatus> {
   const [quote, runs] = await Promise.all([
-    probeQuote(db, scope, { runtime, engines }),
+    probeQuote(db, scope, { runtime, ...choice }),
     probeRuns(db, scope),
   ]);
   return { quote, ...runs };

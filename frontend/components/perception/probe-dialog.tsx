@@ -13,12 +13,13 @@ import { Dialog } from '@/components/ui/dialog';
 import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
+import { RadioGroup } from '@/components/ui/radio-group';
 import { TextLink } from '@/components/ui/text-link';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { probeMutations, probeQueries, refreshProbeStatus } from '@/lib/api/probes';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { PLANS_HREF } from '@/lib/billing/plan-limit';
-import { formatCount } from '@/lib/format';
+import { formatCount, pluralCount } from '@/lib/format';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
 export type ProbeIntent = { kind: 'run' } | { kind: 'schedule'; cadence: 'daily' | 'weekly' };
@@ -59,8 +60,8 @@ export function ProbeDialog({
   const run = useMutation(probeMutations.run(scope));
   const schedule = useMutation(probeMutations.schedule(scope));
   const [connecting, setConnecting] = useState(true);
-  const choice = useEngineChoice(scope, all, intent !== null);
-  const { quote, engines } = choice;
+  const choice = useProbeChoice(scope, all, intent !== null);
+  const { quote, request } = choice;
   const short = quote.balance !== null && quote.credits > quote.balance;
   const copy = COPY[intent?.kind === 'schedule' ? intent.cadence : 'run'];
   const pending = intent?.kind === 'schedule' ? schedule : run;
@@ -74,14 +75,10 @@ export function ProbeDialog({
   const confirm = () => {
     if (intent?.kind === 'schedule')
       schedule.mutate(
-        {
-          cadence: intent.cadence,
-          fingerprint: quote.fingerprint,
-          engines,
-        },
+        { cadence: intent.cadence, fingerprint: quote.fingerprint, ...request },
         { onSuccess: close },
       );
-    else run.mutate({ fingerprint: quote.fingerprint, engines }, { onSuccess: close });
+    else run.mutate({ fingerprint: quote.fingerprint, ...request }, { onSuccess: close });
   };
   return (
     <Dialog
@@ -133,24 +130,36 @@ export function ProbeDialog({
   );
 }
 
-function useEngineChoice(scope: ProjectScope, all: ProbeQuote, open: boolean) {
+function useProbeChoice(scope: ProjectScope, all: ProbeQuote, open: boolean) {
   const [picked, setPicked] = useState<readonly LogicalEngine[] | null>(null);
+  const [repeats, setRepeats] = useState<number | null>(null);
   const chosen = picked ?? all.engines;
+  const repetitions = repeats ?? all.repetitions;
+  const changed = picked !== null || repeats !== null;
   const narrowed = useQuery({
-    ...probeQueries.quote(scope, chosen),
-    enabled: open && picked !== null && picked.length > 0,
+    ...probeQueries.quote(scope, { engines: chosen, repetitions }),
+    enabled: open && changed && chosen.length > 0,
   });
   return {
     available: all.available_engines,
     chosen,
-    engines: picked ? [...picked] : undefined,
-    quote: picked?.length && narrowed.data ? narrowed.data : all,
-    unsettled: picked !== null && (picked.length === 0 || narrowed.isFetching || !narrowed.data),
+    repetitions,
+    maxRepetitions: all.max_repetitions,
+    request: {
+      ...(picked ? { engines: [...picked] } : {}),
+      ...(repeats === null ? {} : { repetitions: repeats }),
+    },
+    quote: changed && chosen.length && narrowed.data ? narrowed.data : all,
+    unsettled: changed && (chosen.length === 0 || narrowed.isFetching || !narrowed.data),
     toggle: (engine: LogicalEngine, on: boolean) =>
       setPicked(
         all.available_engines.filter((each) => (each === engine ? on : chosen.includes(each))),
       ),
-    reset: () => setPicked(null),
+    repeat: setRepeats,
+    reset: () => {
+      setPicked(null);
+      setRepeats(null);
+    },
   };
 }
 
@@ -161,9 +170,13 @@ function QuoteFacts({
 }: Readonly<{
   quote: ProbeQuote;
   credits: string;
-  choice: Pick<ReturnType<typeof useEngineChoice>, 'available' | 'chosen' | 'toggle'>;
+  choice: Pick<
+    ReturnType<typeof useProbeChoice>,
+    'available' | 'chosen' | 'toggle' | 'repetitions' | 'maxRepetitions' | 'repeat'
+  >;
 }>) {
   const { label } = useEngineCatalog();
+  const counts = Array.from({ length: choice.maxRepetitions }, (_, index) => String(index + 1));
   const facts = [
     {
       label: 'Engines',
@@ -182,8 +195,20 @@ function QuoteFacts({
     },
     { label: 'Markets', value: quote.markets.map(marketLabel).join(', ') },
     {
+      label: 'Repetitions',
+      value: (
+        <RadioGroup
+          ariaLabel="Repetitions"
+          variant="inline"
+          value={String(choice.repetitions)}
+          onValueChange={(value) => choice.repeat(Number(value))}
+          options={counts.map((count) => ({ value: count, label: count }))}
+        />
+      ),
+    },
+    {
       label: 'Questions',
-      value: `${quote.questions} per engine in each market it can measure, asked ${quote.repetitions} times`,
+      value: `${quote.questions} per engine in each market it can measure, asked ${pluralCount(quote.repetitions, 'time')}`,
     },
     { label: 'Answers', value: formatCount(quote.answers) },
     { label: credits, value: <b>{formatCount(quote.credits)}</b> },

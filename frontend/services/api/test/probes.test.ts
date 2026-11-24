@@ -131,7 +131,7 @@ describe('probe admission', () => {
     await managedPlan(db, t.workspaceId);
     const all = (await probeStatus(db, t, runtime)).quote;
     const engines = all.available_engines.slice(0, 2);
-    const { quote } = await probeStatus(db, t, runtime, engines);
+    const { quote } = await probeStatus(db, t, runtime, { engines });
     expect([all.engines, quote.engines, quote.available_engines]).toEqual([
       all.available_engines,
       engines,
@@ -142,19 +142,44 @@ describe('probe admission', () => {
     await expect(
       runProbe(db, t, { fingerprint: all.fingerprint, engines }, runtime),
     ).rejects.toMatchObject({ status: 409, code: 'probe_quote_changed' });
-    await expect(probeStatus(db, t, runtime, ['unknown-engine'])).rejects.toMatchObject({
-      status: 422,
-      code: 'probe_engines_unavailable',
-    });
+    const once = (await probeStatus(db, t, runtime, { engines, repetitions: 1 })).quote;
+    const per = policy.probes.repetitions;
+    expect([once.repetitions, once.answers, once.credits]).toEqual([
+      1,
+      quote.answers / per,
+      quote.credits / per,
+    ]);
+    expect(once.fingerprint).not.toBe(quote.fingerprint);
+    await expect(
+      runProbe(db, t, { fingerprint: quote.fingerprint, engines, repetitions: 1 }, runtime),
+    ).rejects.toMatchObject({ status: 409, code: 'probe_quote_changed' });
+    await expect(
+      probeStatus(db, t, runtime, { engines: ['unknown-engine'] }),
+    ).rejects.toMatchObject({ status: 422, code: 'probe_engines_unavailable' });
+    await expect(
+      probeStatus(db, t, runtime, { repetitions: policy.probes.max_repetitions + 1 }),
+    ).rejects.toMatchObject({ status: 422, code: 'probe_repetitions_invalid' });
     await expect(cancelProbe(db, t)).rejects.toMatchObject({ code: 'probe_not_running' });
     const { t: own } = await probeTenant(1_000_000);
-    const before = (await probeStatus(db, own, runtime)).quote;
-    await runProbe(db, own, { fingerprint: before.fingerprint, engines: before.engines }, runtime);
+    const before = (await probeStatus(db, own, runtime, { repetitions: 1 })).quote;
+    const [launched] = await runProbe(
+      db,
+      own,
+      { fingerprint: before.fingerprint, engines: before.engines, repetitions: 1 },
+      runtime,
+    );
     const running = await probeStatus(db, own, runtime);
-    expect([running.latest!.state, running.quote.balance]).toEqual([
-      'running',
-      before.balance! - before.credits,
-    ]);
+    const audit = await db
+      .selectFrom('audits')
+      .select('repetitions')
+      .where('id', '=', launched!)
+      .executeTakeFirstOrThrow();
+    expect([
+      running.latest!.state,
+      running.latest!.planned,
+      audit.repetitions,
+      running.quote.balance,
+    ]).toEqual(['running', before.answers, 1, before.balance! - before.credits]);
     await cancelProbe(db, own);
     const cancelled = await probeStatus(db, own, runtime);
     expect([cancelled.latest!.state, cancelled.quote.balance]).toEqual([
@@ -218,7 +243,7 @@ describe('probe admission', () => {
     const schedules = (scope: { workspaceId: string; projectId: string }) =>
       db
         .selectFrom('audit_schedules')
-        .select(['id', 'audit_scope', 'cadence', 'enabled', 'engines'])
+        .select(['id', 'audit_scope', 'cadence', 'enabled', 'engines', 'repetitions'])
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .execute();
@@ -247,7 +272,13 @@ describe('probe admission', () => {
       runtime,
     );
     const [weekly] = await schedules(t);
-    await setProbeSchedule(db, t, { cadence: 'daily', fingerprint: await fingerprint(t) }, runtime);
+    const twice = (await probeStatus(db, t, runtime, { repetitions: 2 })).quote.fingerprint;
+    await setProbeSchedule(
+      db,
+      t,
+      { cadence: 'daily', fingerprint: twice, repetitions: 2 },
+      runtime,
+    );
     expect(await schedules(t)).toEqual([
       {
         id: weekly?.id,
@@ -255,6 +286,7 @@ describe('probe admission', () => {
         cadence: 'daily',
         enabled: true,
         engines: policy.probes.engines,
+        repetitions: 2,
       },
     ]);
     await setProbeSchedule(db, t, { cadence: null }, runtime);

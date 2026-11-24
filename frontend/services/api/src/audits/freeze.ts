@@ -413,7 +413,7 @@ async function panelOf(
     return {
       prompts: await probePrompts(db, { workspaceId, projectId }, market.country_code),
       requested: probeEngines(input.engines.filter((engine) => canMeasure(engine, market))),
-      repetitions: probes.repetitions,
+      repetitions: input.repetitions ?? probes.repetitions,
     };
   const prompts = await loadPrompts(db, workspaceId, projectId, input, settings);
   count(prompts.length);

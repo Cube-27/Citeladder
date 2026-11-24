@@ -12,6 +12,7 @@ const schema = z.strictObject({
   task_kind: z.literal('probe_labelling'),
   labelling_version: z.string().trim().min(1).max(64),
   repetitions: positive,
+  max_repetitions: positive,
   engines: z.array(logicalEngineSchema).min(1),
   answer_credits: z.record(z.string(), positive),
   label_credits: positive,
@@ -43,6 +44,8 @@ function loadProbes(input: unknown) {
   if (!result.success)
     throw new ConfigError('Invalid probe configuration: ' + result.error.message);
   const config = result.data;
+  if (config.repetitions > config.max_repetitions)
+    throw new ConfigError('Probe repetitions exceed max_repetitions');
   for (const engine of config.engines)
     if (config.answer_credits[engine] === undefined)
       throw new ConfigError(`Probe engine ${engine} has no answer price`);

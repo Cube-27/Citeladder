@@ -4,6 +4,7 @@
   "task_kind": "probe_labelling",
   "labelling_version": "probe-labelling-v1",
   "repetitions": 3,
+  "max_repetitions": 3,
   "engines": ["chatgpt", "claude", "gemini", "chatgpt_search", "gemini_consumer"],
   "answer_credits": {
     "chatgpt": 100,

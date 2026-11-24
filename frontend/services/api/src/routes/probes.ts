@@ -11,6 +11,7 @@ import {
 import { z } from 'zod';
 
 import { auditRuntime } from '../audits/config.ts';
+import { policy } from '../config.ts';
 import { readAudits } from '../audits/reads.ts';
 import { readBody } from '../http/body.ts';
 import { logicalEngines } from '../providers/config.ts';
@@ -56,16 +57,17 @@ export const probeRoutes = [
     path: root,
     params: {
       path: projectPath,
-      query: { engines: { scalar: { kind: 'literal', values: logicalEngines }, list: true } },
+      query: {
+        engines: { scalar: { kind: 'literal', values: logicalEngines }, list: true },
+        repetitions: { scalar: { kind: 'int', ge: 1, le: policy.probes.max_repetitions } },
+      },
     },
     response: probeStatusSchema,
     handle: ({ c, db, config }, { path, query }) =>
-      probeStatus(
-        db,
-        projectScopeOf(c, path.project_id),
-        auditRuntime(config.settings),
-        query.engines ?? undefined,
-      ),
+      probeStatus(db, projectScopeOf(c, path.project_id), auditRuntime(config.settings), {
+        engines: query.engines ?? undefined,
+        repetitions: query.repetitions ?? undefined,
+      }),
   }),
   definePostRoute({
     ...activeProject,
