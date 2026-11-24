@@ -64,6 +64,7 @@ const backlinkDetails = z
     broken_backlinks: count,
     broken_pages: count,
     backlinks_spam_score: count,
+    backlink_spam_score: count,
     rank: count,
     domain_from_rank: count,
     page_from_rank: count,
@@ -76,7 +77,11 @@ const backlinkDetails = z
     info: nested({ target_spam_score: count }),
     first_seen: passthrough,
   })
-  .transform(({ info, ...details }) => ({ ...details, target_spam_score: info.target_spam_score }));
+  .transform(({ info, backlink_spam_score, ...details }) => ({
+    ...details,
+    backlinks_spam_score: details.backlinks_spam_score ?? backlink_spam_score,
+    target_spam_score: info.target_spam_score,
+  }));
 const withDetails = <S extends z.ZodRawShape>(shape: S) =>
   z.object(shape).and(backlinkDetails.transform((details) => ({ details })));
 const keywordData = z
