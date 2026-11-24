@@ -20,25 +20,30 @@ export function orderedUnique(candidates: Candidate[]) {
   return [...unique.values()];
 }
 
-const SHARES: Record<string, number> = policy.site_health.crawl.tracked_shares;
-const shareOf = (kind: string) => SHARES[kind] ?? SHARES.other!;
+const SHARES = policy.site_health.crawl.tracked_shares;
+const SHARE_BY_KIND = new Map(Object.entries(SHARES));
+const shareOf = (kind: string) => SHARE_BY_KIND.get(kind) ?? SHARES.other;
+
+type Lane = { head: Candidate; rest: Iterator<Candidate>; share: number; taken: number };
+const due = (lane: Lane) => (lane.taken + 1) / lane.share;
 
 export function trackedFillOrder(candidates: Candidate[]) {
   const eligible = orderedUnique(candidates).filter((item) => item.disposition === 'analyze');
-  const lanes = [...Map.groupBy(eligible, (item) => item.valueKind)].map(([kind, items]) => ({
-    items,
-    share: shareOf(kind),
-    taken: 0,
-  }));
-  const due = (lane: (typeof lanes)[number]) => (lane.taken + 1) / lane.share;
+  const lanes: Lane[] = [...Map.groupBy(eligible, (item) => item.valueKind)].flatMap(
+    ([kind, items]) => {
+      const rest = items.values();
+      const first = rest.next();
+      return first.done ? [] : [{ head: first.value, rest, share: shareOf(kind), taken: 0 }];
+    },
+  );
   const order: Candidate[] = [];
   while (lanes.length) {
-    let next = 0;
-    for (let index = 1; index < lanes.length; index++)
-      if (due(lanes[index]!) < due(lanes[next]!)) next = index;
-    const lane = lanes[next]!;
-    order.push(lane.items[lane.taken++]!);
-    if (lane.taken === lane.items.length) lanes.splice(next, 1);
+    const lane = lanes.reduce((best, item) => (due(item) < due(best) ? item : best));
+    order.push(lane.head);
+    lane.taken += 1;
+    const next = lane.rest.next();
+    if (next.done) lanes.splice(lanes.indexOf(lane), 1);
+    else lane.head = next.value;
   }
   return order;
 }
