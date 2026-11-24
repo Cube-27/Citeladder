@@ -402,8 +402,10 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
   only when there is no sitemap (with a "No sitemap" issue); an unreadable
   sitemap is retried, then the crawl analyzes what it knows as partial
   (2026-11-14 and 2026-11-17).
-- **SH-B6 Tracked pages** are picked by value tier in a stable order, never by
-  the person and never re-picked; full crawls fill the set up to the plan
+- **SH-B6 Tracked pages** are picked in a stable order, never by the person and
+  never re-picked; the allowance mixes the important page types (product,
+  article, FAQ, store and the like) rather than letting one type take it all
+  (owner, 2026-11-24); full crawls fill the set up to the plan
   limit; an upgrade extends it, a downgrade keeps the first N.
 - **SH-B7** One crawl action audits the same pages each time. **SH-B8** A
   tracked page answering 404 or a redirect stays tracked, reads "page

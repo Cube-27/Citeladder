@@ -20,6 +20,26 @@ export function orderedUnique(candidates: Candidate[]) {
   return [...unique.values()];
 }
 
+const SHARES: Record<string, number> = policy.site_health.crawl.tracked_shares;
+const shareOf = (kind: string) => SHARES[kind] ?? SHARES.other!;
+
+export function trackedFillOrder(candidates: Candidate[]) {
+  const lanes = [...Map.groupBy(orderedUnique(candidates), (item) => item.valueKind)].map(
+    ([kind, items]) => ({ items, share: shareOf(kind), taken: 0 }),
+  );
+  const due = (lane: (typeof lanes)[number]) => (lane.taken + 1) / lane.share;
+  const order: Candidate[] = [];
+  while (lanes.length) {
+    let next = 0;
+    for (let index = 1; index < lanes.length; index++)
+      if (due(lanes[index]!) < due(lanes[next]!)) next = index;
+    const lane = lanes[next]!;
+    order.push(lane.items[lane.taken++]!);
+    if (lane.taken === lane.items.length) lanes.splice(next, 1);
+  }
+  return order;
+}
+
 export async function lockTrackedSet(db: Database, workspaceId: string, projectId: string) {
   await db
     .selectFrom('monitored_site_urls')
@@ -63,7 +83,7 @@ async function trackedPages(trx: Database, crawl: Crawl, hashes: string[]) {
 }
 
 export async function fillTrackedSet(trx: Database, crawl: Crawl, candidates: Candidate[]) {
-  const ordered = orderedUnique(candidates);
+  const ordered = trackedFillOrder(candidates);
   const tracked = await trackedPages(
     trx,
     crawl,

@@ -245,7 +245,7 @@ describe('crawl control admission', () => {
     ).toHaveLength(0);
   });
 
-  it('fills tracked pages in tier order, never re-picks one, and fits the set to the plan limit', async () => {
+  it('fills tracked pages in share order, never re-picks one, and fits the set to the plan limit', async () => {
     const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
     await allow(tenant, 3);
     const crawl = await create(tenant);
@@ -276,22 +276,50 @@ describe('crawl control admission', () => {
 
     expect(await fill(['/blog/x', '/about', '/products/a'])).toEqual([
       'https://example.test/products/a',
-      'https://example.test/about',
+      'https://example.test/blog/x',
     ]);
     await fit(2);
     expect(await tracked()).toEqual([
       ['/', 0, true, false],
       ['/products/a', 1, true, false],
-      ['/about', 2, false, true],
+      ['/blog/x', 2, false, true],
     ]);
-    expect(await fill(['/about', '/blog/x'])).toEqual(['https://example.test/blog/x']);
+    expect(await fill(['/about', '/blog/x'])).toEqual(['https://example.test/about']);
     await fit(3);
     expect(await tracked()).toEqual([
       ['/', 0, true, false],
       ['/products/a', 1, true, false],
-      ['/about', 2, true, false],
-      ['/blog/x', 3, false, true],
+      ['/blog/x', 2, true, false],
+      ['/about', 3, false, true],
     ]);
+  });
+
+  it('shares the tracked allowance across page types so a dominant type cannot take it all', async () => {
+    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    await allow(tenant, 61);
+    const crawl = await create(tenant);
+    const paths = (prefix: string, count: number) =>
+      Array.from({ length: count }, (_, index) => `https://example.test/${prefix}/${index}`);
+    const items = sitemapCandidates([
+      ...paths('store', 500),
+      ...paths('products', 20),
+      ...paths('blog', 10),
+      ...paths('faq', 5),
+    ]);
+    const joined = await db.transaction().execute((trx) => fillTrackedSet(trx, crawl, items));
+    const kinds = Map.groupBy(joined, ({ item }) => item.valueKind);
+    expect(Object.fromEntries([...kinds].map(([kind, rows]) => [kind, rows.length]))).toEqual({
+      product: 20,
+      local: 25,
+      article: 10,
+      faq: 5,
+    });
+    expect(
+      joined
+        .slice(0, 4)
+        .map(({ item }) => item.valueKind)
+        .toSorted(),
+    ).toEqual(['article', 'faq', 'local', 'product']);
   });
 
   it('fills a full sitemap’s worth of tracked pages past the bind-parameter limit', async () => {

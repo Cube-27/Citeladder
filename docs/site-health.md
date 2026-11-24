@@ -346,11 +346,19 @@ fallback token never names a different kind than the classifier's
 `category`, `help` and `support` are `docs`), or the tracked set fills with
 pages the analyzer files elsewhere.
 
-Tier weights are `value_tiers` in `acquisition.json`.
+Tier weights are `value_priorities` in `acquisition.json`.
 
 Within a tier, candidates sort by `url_hash`, the SHA-256 of the canonical
 URL. The order is the project's, the same in every crawl, and not biased toward
 header or footer links.
+
+The tracked-set fill (`trackedFillOrder`) interleaves the tiers by their
+`tracked_shares` (`acquisition.json`): the next page comes from the tier
+with the lowest (taken + 1) / share, higher tier first on a tie, and an exhausted
+tier drops out so its share goes to the rest. Every prefix of the order is
+therefore a mix: one dominant type never takes the whole allowance. The HTML
+walk tracks pages as their fetches commit, so it follows admission order
+instead.
 
 **www/apex twins.** A URL whose `www.`/apex twin is already in the batch or the
 frontier is skipped. In sample mode, a twin that was already observed also

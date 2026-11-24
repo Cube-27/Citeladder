@@ -17,6 +17,23 @@
       "trust": 40,
       "other": 20
     },
+    "tracked_shares": {
+      "root": 1,
+      "product": 3,
+      "comparison": 2,
+      "service": 2,
+      "local": 2,
+      "category": 2,
+      "pricing": 1,
+      "about": 1,
+      "article": 2,
+      "guide": 2,
+      "faq": 2,
+      "docs": 2,
+      "contact": 1,
+      "trust": 1,
+      "other": 1
+    },
     "value_fallback_tokens": [
       ["product", ["products", "p"]],
       ["comparison", ["compare", "vs", "versus"]],
