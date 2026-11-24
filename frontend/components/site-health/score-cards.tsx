@@ -7,13 +7,30 @@ import { Stack } from '@/components/ui/layout';
 import { BarRows, ScoreGauge, scoreTone, type BarRow } from '@/components/ui/score-gauge';
 import { SectionCard, TitledSection } from '@/components/ui/section';
 import { StatusMark } from '@/components/ui/status-mark';
-import { formatCount } from '@/lib/format';
-import { formatScore } from '@/lib/site-health/status';
+import { availabilityLabel, formatCount } from '@/lib/format';
+import { formatScore, statusLabel } from '@/lib/site-health/status';
 
 type Dimension = Pick<
   SiteHealthOverview['aeo_dimensions'][number],
-  'key' | 'label' | 'score' | 'dimension_applicability'
+  'key' | 'label' | 'score' | 'dimension_applicability' | 'dimension_measurement_state' | 'reason'
 >;
+
+const MEASUREMENT_LABELS: Record<string, string> = {
+  measured: 'Measured',
+  limited_evidence: 'Not every check ran',
+  not_measured: 'Not checked',
+  excluded: 'Excluded',
+  not_applicable: availabilityLabel('not_applicable'),
+};
+
+export function measurementLabel(state: string): string {
+  return MEASUREMENT_LABELS[state] ?? statusLabel(state);
+}
+
+function Unscored({ state, label }: Readonly<{ state: string; label?: string }>) {
+  if (state === 'not_applicable' || state === 'not_measured') return <Absence state={state} />;
+  return <Absence state="unavailable" label={label ?? measurementLabel(state)} />;
+}
 type Area = SiteHealthOverview['web_fundamentals']['areas'][number];
 
 function scoreRow(key: string, label: ReactNode, score: number | null, absent: ReactNode): BarRow {
@@ -31,10 +48,13 @@ const dimensionRow = (dimension: Dimension) =>
     dimension.key,
     dimension.label,
     dimension.score,
-    <Absence
+    <Unscored
       state={
-        dimension.dimension_applicability === 'not_applicable' ? 'not_applicable' : 'not_measured'
+        dimension.dimension_applicability === 'not_applicable'
+          ? 'not_applicable'
+          : dimension.dimension_measurement_state
       }
+      label={dimension.reason === 'measured_at_site_scope' ? 'Site-scoped evidence' : undefined}
     />,
   );
 
@@ -44,18 +64,20 @@ function areaRow(area: Area) {
     area.key,
     <span className="capitalize">{area.key}</span>,
     judged > 0 ? (area.passed_count / judged) * 100 : null,
-    <Absence state="not_measured" />,
+    <Unscored state={area.state} />,
   );
 }
 
 export function ScoreCard({
   title,
   score,
+  state,
   rows,
   actions,
 }: Readonly<{
   title: string;
   score: number | null;
+  state: string;
   rows: readonly BarRow[];
   actions?: ReactNode;
 }>) {
@@ -63,7 +85,11 @@ export function ScoreCard({
     <TitledSection title={title} actions={actions}>
       <SectionCard>
         <Stack gap="item">
-          <ScoreGauge label={title} score={score} />
+          <ScoreGauge
+            label={title}
+            score={score}
+            absent={state === 'not_measured' ? undefined : measurementLabel(state)}
+          />
           <BarRows label={`${title} breakdown`} rows={rows} />
         </Stack>
       </SectionCard>
@@ -73,13 +99,20 @@ export function ScoreCard({
 
 export function AeoScoreCard({
   score,
+  state,
   dimensions,
   actions,
-}: Readonly<{ score: number | null; dimensions: readonly Dimension[]; actions?: ReactNode }>) {
+}: Readonly<{
+  score: number | null;
+  state: string;
+  dimensions: readonly Dimension[];
+  actions?: ReactNode;
+}>) {
   return (
     <ScoreCard
       title="AEO readiness"
       score={score}
+      state={state}
       rows={dimensions.map(dimensionRow)}
       actions={actions}
     />
@@ -94,6 +127,7 @@ export function WebFundamentalsScoreCard({
     <ScoreCard
       title="Web fundamentals"
       score={data.web_fundamentals_score}
+      state={data.web_fundamentals_state}
       rows={data.web_fundamentals.areas.map(areaRow)}
       actions={actions}
     />

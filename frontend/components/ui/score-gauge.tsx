@@ -30,8 +30,8 @@ const clampScore = (score: number) => Math.max(0, Math.min(100, Math.round(score
 export function ScoreGauge({
   label,
   score,
-  unavailable,
-}: Readonly<{ label: string; score: number | null; unavailable?: ReactNode }>) {
+  absent,
+}: Readonly<{ label: string; score: number | null; absent?: string }>) {
   const shown = score === null ? null : clampScore(score);
   const band = shown === null ? null : BAND[scoreBand(shown)];
   return (
@@ -39,7 +39,7 @@ export function ScoreGauge({
       <svg
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
         role="img"
-        aria-label={shown === null ? `${label}: not measured` : `${label}: ${shown} of 100`}
+        aria-label={`${label}: ${shown === null ? (absent ?? 'not measured') : `${shown} of 100`}`}
         viewBox="0 0 200 112"
         className="h-28 w-50 max-w-full"
       >
@@ -69,8 +69,10 @@ export function ScoreGauge({
       </svg>
       {band ? (
         <StatusMark tone={band.tone}>{band.label}</StatusMark>
+      ) : absent ? (
+        <Absence state="unavailable" label={absent} />
       ) : (
-        (unavailable ?? <Absence state="not_measured" />)
+        <Absence state="not_measured" />
       )}
     </div>
   );

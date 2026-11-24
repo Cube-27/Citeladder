@@ -144,6 +144,7 @@ export function AeoReadinessPanel({
         <ScoreCard
           title="AEO readiness"
           score={data.score}
+          state={data.state}
           rows={[
             pageRow('analyzed', 'Pages analyzed', data.analysis_count, data.analysis_count),
             pageRow(
