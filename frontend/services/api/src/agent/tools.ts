@@ -85,7 +85,7 @@ export class ToolRegistry {
     try {
       const result = await abortable(() => tool.read(scope, parsed.data, signal, maxChars), signal);
       const serialized = JSON.stringify(result.data);
-      const bounded = boundToolData(result.data, maxChars, name === 'get_project_business_context');
+      const bounded = boundToolData(result.data, maxChars);
       return {
         status: result.state === 'unavailable' ? 'unavailable' : 'completed',
         text: bounded.text,
@@ -112,28 +112,7 @@ function mentions(text: string, ref: ToolResult['artifactRefs'][number]) {
     (value) => typeof value === 'string' && value !== '' && text.includes(JSON.stringify(value)),
   );
 }
-function packNestedEvidence(
-  selected: Record<string, Json>,
-  omitted: string[],
-  key: string,
-  value: Record<string, Json>,
-  fits: () => boolean,
-) {
-  const nested: Record<string, Json> = {};
-  selected[key] = nested;
-  omitted.splice(omitted.indexOf(key), 1, ...Object.keys(value).map((field) => `${key}.${field}`));
-  for (const [field, child] of Object.entries(value)) {
-    const path = `${key}.${field}`;
-    const at = omitted.indexOf(path);
-    nested[field] = child;
-    omitted.splice(at, 1);
-    if (!fits()) {
-      delete nested[field];
-      omitted.splice(at, 0, path);
-    }
-  }
-}
-export function boundToolData(data: Json, maxChars: number, splitOverview = false) {
+export function boundToolData(data: Json, maxChars: number) {
   const full = JSON.stringify(data);
   if (full.length <= maxChars) return { text: full, complete: true, supplied: true, omissions: [] };
   const selected: Record<string, Json> = {};
@@ -148,15 +127,6 @@ export function boundToolData(data: Json, maxChars: number, splitOverview = fals
     if (envelope().length > maxChars) {
       delete selected[key];
       omitted.splice(index, 0, key);
-      if (
-        splitOverview &&
-        key === 'evidence' &&
-        value &&
-        typeof value === 'object' &&
-        !Array.isArray(value)
-      ) {
-        packNestedEvidence(selected, omitted, key, value, () => envelope().length <= maxChars);
-      }
     }
   }
   const text = envelope();

@@ -9,6 +9,7 @@ import {
 } from '../crawl-logs/reads.ts';
 import { insightsRead } from '../ai-traffic/insights.ts';
 import { pageContext, pagesRead, urlRead } from '../ai-traffic/pages.ts';
+import { pageDataset } from '../ai-traffic/pages-data.ts';
 import { readAiReferrals } from '../analytics/ai-referrals.ts';
 import { queryEvidencePage, queryEvidenceTotals } from '../demand/reads.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
@@ -18,6 +19,7 @@ import { getPerformance, getPerformanceTable } from '../traffic/performance.ts';
 import { canonicalPage, pathIdentity } from '../page-identity.ts';
 import { mcpPolicy } from './config.ts';
 import { pagination, reference, unavailable } from './data.ts';
+import { latestDemandSnapshot } from './evidence.ts';
 import { McpInputError, type Evidence, type ProjectRead } from './types.ts';
 
 type Window = { range?: string | null; start_date?: string | null; end_date?: string | null };
@@ -110,11 +112,18 @@ async function queryEvidenceDays(...read: Parameters<typeof queryEvidencePage>) 
   };
 }
 
+async function savedWindow(read: ProjectRead, start?: string | null, end?: string | null) {
+  if (start && end) return { start, end };
+  if (start || end) throw new McpInputError('Pass both window_start and window_end, or neither');
+  const latest = await latestDemandSnapshot(read);
+  return latest ? { start: latest.start, end: latest.end } : null;
+}
+
 export async function queryEvidence(
-  { db, scope }: ProjectRead,
+  read: ProjectRead,
   args: {
-    window_start: string;
-    window_end: string;
+    window_start?: string | null;
+    window_end?: string | null;
     query?: string | null;
     site_url_id?: string | null;
     resolution_outcome?: string | null;
@@ -123,9 +132,11 @@ export async function queryEvidence(
     granularity?: 'window' | 'day' | null;
   },
 ): Promise<Evidence> {
-  if (args.window_end < args.window_start)
-    throw new McpInputError('window_end must not precede window_start');
-  const window = { ...scope, windowStart: args.window_start, windowEnd: args.window_end };
+  const { db, scope } = read;
+  const saved = await savedWindow(read, args.window_start, args.window_end);
+  if (!saved) return unavailable('exact_query_evidence_window_not_projected');
+  if (saved.end < saved.start) throw new McpInputError('window_end must not precede window_start');
+  const window = { ...scope, windowStart: saved.start, windowEnd: saved.end };
   const options = {
     limit: args.limit ?? mcpPolicy.default_list_limit,
     cursor: args.cursor ?? null,
@@ -160,7 +171,7 @@ export async function queryEvidence(
     if (error instanceof ApiError && error.status === 404)
       return {
         ...unavailable('exact_query_evidence_window_not_projected'),
-        window: { start: args.window_start, end: args.window_end },
+        window: saved,
       };
     throw error;
   }
@@ -187,7 +198,11 @@ export async function referrals({ db, scope }: ProjectRead, args: Window): Promi
     reporting_timezone: result.reporting_timezone,
     currency_code: result.currency_code,
     source_measures: result.source_measures,
-    landing_pages: result.landing_pages,
+    landing_pages: result.landing_pages
+      .toSorted((a, b) => (b.sessions ?? -1) - (a.sessions ?? -1))
+      .slice(0, mcpPolicy.referral_landing_pages)
+      .map(({ url_hash: _hash, ...page }) => page),
+    landing_page_count: result.landing_pages.length,
     analytics_quality: result.analytics_quality,
     channel_comparison: result.channel_comparison,
     unattributed_landing: result.unattributed_landing,
@@ -266,7 +281,33 @@ export async function aiTrafficInsights(
   args: Window,
 ): Promise<Evidence> {
   const result = await insightsRead(db, scope, crawlOptions(args));
-  return { state: result.snapshot_id ? 'available' : 'unavailable', ...result };
+  const shown = result.patterns.flatMap((pattern) =>
+    pattern.url_hashes.slice(0, mcpPolicy.insight_pattern_paths),
+  );
+  const { rows } = shown.length
+    ? await pageDataset(db, scope, {
+        range: null,
+        start_date: result.window_start,
+        end_date: result.window_end,
+        url_hashes: shown,
+        dataset_limit: shown.length,
+      })
+    : { rows: [] };
+  const paths = new Map(rows.map((row) => [row.url_hash, row.display_path]));
+  return {
+    state: result.snapshot_id ? 'available' : 'unavailable',
+    ...result,
+    patterns: result.patterns.map(({ url_hashes, ...pattern }) => {
+      const pages = url_hashes
+        .slice(0, mcpPolicy.insight_pattern_paths)
+        .flatMap((hash) => paths.get(hash) ?? []);
+      return {
+        ...pattern,
+        pages,
+        pages_omitted: (pattern.numbers.page_count ?? url_hashes.length) - pages.length,
+      };
+    }),
+  };
 }
 
 export async function aiTrafficUrl(

@@ -15,6 +15,8 @@ import { stoppableReads } from './async.ts';
 import { ToolRegistry, toolDefinitions, type ReadTool } from './tools.ts';
 import { agentPolicy, type Json, type Scope } from './contracts.ts';
 import { widen } from '../widen.ts';
+import { mcpPolicy } from '../mcp/config.ts';
+import { modelView } from './tool-views.ts';
 
 const reference = z.object({ id: z.string(), record_uri: z.string().nullish() }).catchall(z.json());
 const availability = z.enum([
@@ -22,18 +24,14 @@ const availability = z.enum([
   'unavailable',
   policy.demand.QUERY_EVIDENCE_STATE_OBSERVED_ZERO,
 ]);
-function modelData(data: Record<string, Json>) {
-  const { artifact_refs: _refs, ...rest } = data;
-  return rest;
-}
-function outcome(value: unknown) {
+function outcome(tool: string, value: unknown) {
   const data = z.record(z.string(), z.json()).parse(value);
   const refs = z.array(reference).parse(data.artifact_refs ?? []);
   const unavailable = availability.parse(data.state ?? 'available') === 'unavailable';
   const reason = unavailable && typeof data.reason === 'string' ? [{ reason: data.reason }] : [];
   return {
     state: unavailable ? ('unavailable' as const) : ('available' as const),
-    data: modelData(data),
+    data: modelView(tool, data),
     artifactRefs: refs.map((ref) => {
       const { record_uri, ...rest } = ref;
       return { ...rest, ...(record_uri ? { record_uri } : {}) };
@@ -101,7 +99,7 @@ export function sharedReads(db: Database): ReadTool[] {
             ...(page ? { limit: args.limit ?? page.fallback } : {}),
             ...(_project ? { project_id: scope.projectId } : {}),
           };
-          const dispatch = () =>
+          const dispatch = (bytes = maxChars) =>
             dispatchTool(
               reads,
               {
@@ -113,20 +111,22 @@ export function sharedReads(db: Database): ReadTool[] {
               name,
               input,
               '',
-              maxChars,
+              bytes,
             );
-          let data = await dispatch();
+          const size = (value: unknown) => JSON.stringify(outcome(name, value).data).length;
+          let data = await dispatch(name === 'fetch' ? mcpPolicy.max_document_bytes : maxChars);
+          if (name === 'fetch' && size(data) > maxChars) data = await dispatch();
           const limitSchema = fields.limit;
           if (limitSchema && Array.isArray(data.items)) {
             let limit: number | null = data.items.length;
-            while (JSON.stringify(outcome(data).data).length > maxChars) {
+            while (size(data) > maxChars) {
               limit = smallerLimit(limitSchema, limit);
               if (limit === null) break;
               input.limit = limit;
               data = await dispatch(); // NOSONAR
             }
           }
-          const result = outcome(data);
+          const result = outcome(name, data);
           for (const uri of namedRecords(name, data))
             result.artifactRefs.push({ id: parseRecordId(uri).id, record_uri: uri });
           return result;

@@ -159,10 +159,11 @@ async function resolveOrigins(
       .where('o.id', '=', upstreamRef.output_id)
       .executeTakeFirst();
     if (!revision) throw new AgentError('agent_context_unavailable');
+    const { source_refs: sources, ...content } = revision;
     upstream = {
-      ...revision,
-      source_refs: revisionRefs(revision.source_refs),
-      evidence_state: 'upstream deliverable; source references require re-fetching',
+      ...content,
+      source_count: revisionRefs(sources).length,
+      evidence_state: 'upstream deliverable; re-read its sources before relying on its figures',
     };
   }
   const fetchedPage = refs.page_snapshot_reference

@@ -344,6 +344,7 @@ it('pages prompts stably while context includes only active prompts and foreign 
     cursor: (page.pagination as { next_cursor: string }).next_cursor,
   });
   expect(next.items).toEqual([expect.objectContaining({ id: second, grounded: true })]);
+  expect([Object.hasOwn(page, 'topics'), Object.hasOwn(next, 'topics')]).toEqual([true, false]);
   expect(JSON.stringify(next.items)).not.toContain('observed_query');
   const context = await read('get_project_business_context', { sections: ['prompts'] });
   expect((context.prompts as { items: { id: string }[] }).items.map((r) => r.id)).toEqual([
@@ -498,13 +499,17 @@ it('fetches the exact page analysis after a newer analysis replaces it, with fac
       expect(result.text.length).toBeLessThanOrEqual(policy.agent.tool_result_max_chars);
       return JSON.parse(result.text);
     };
-    const first = await readPart(`citeladder://site_page/${finalId}`);
-    const parts = first.metadata.part_uris as string[];
-    const whole = parts.length
-      ? JSON.parse((await Promise.all(parts.map(readPart))).map((part) => part.text).join(''))
-      : JSON.parse(first.text);
-    expect(whole.issues).toEqual(final.issues);
-    expect(whole.evaluations).toEqual(final.evaluations);
+    const whole = (await readPart(`citeladder://site_page/${finalId}`)).record;
+    const rules = (rows: { rule_id: string; outcome: string }[]) =>
+      rows.map(({ rule_id, outcome }) => [rule_id, outcome]);
+    expect(rules(whole.evaluations)).toEqual(rules(final.evaluations));
+    expect(whole.issues.map((issue: { rule_id: string }) => issue.rule_id)).toEqual(
+      final.issues.map((issue: { rule_id: string }) => issue.rule_id),
+    );
+    expect([
+      'source_artifact_id' in final.evaluations[0],
+      'source_artifact_id' in whole.evaluations[0],
+    ]).toEqual([true, false]);
   } finally {
     await db.deleteFrom('mcp_oauth_grants').where('id', '=', principal.grantId).execute();
     await db.deleteFrom('workspaces').where('id', '=', seed.workspace_id).execute();
@@ -681,6 +686,31 @@ it('exposes published dataset aggregates without treating them as backlink edges
     dataset: { dataset_kind: 'referring_domains' },
     aggregate_not_individual_links: true,
   });
+  const [row] = page.items as Record<string, unknown>[];
+  expect([row?.domain, 'auxiliary' in row!, 'dataset_id' in row!, 'call_id' in row!]).toEqual([
+    'publisher.example',
+    false,
+    false,
+    false,
+  ]);
+  await db
+    .updateTable('search_intelligence_rows')
+    .set({ auxiliary: JSON.stringify({ backlinks: 42, anchors: 'x'.repeat(3000) }) })
+    .where('id', '=', rowId)
+    .execute();
+  const agentRead = await agentTools(db).execute(
+    db,
+    { userId: tenant.userId, workspaceId: tenant.workspaceId, projectId: tenant.projectId },
+    'read_search_dataset',
+    { dataset_id: datasetId },
+    AbortSignal.timeout(5000),
+    5000,
+  );
+  expect([
+    agentRead.omissions,
+    JSON.parse(agentRead.text).items.map((item: { id: string }) => item.id),
+    agentRead.received.map((ref) => ref.id),
+  ]).toEqual([[], [rowId], [datasetId]]);
   const fetched = await fetchRecord(db, principal, `citeladder://search_row/${rowId}`, origin);
   expect(record(fetched)).toMatchObject({ id: rowId, project_id: tenant.projectId, backlinks: 0 });
   expect(fetched.url).toBe(
@@ -705,8 +735,10 @@ it('keeps answer identity through the visibility owner and refuses another proje
       citations: [{ url: 'https://publisher.example/review', title: 'Review' }],
     },
     taskEvents: [{ query: 'acme review' }],
+    answerText: 'Acme makes the sturdiest nets.',
   });
   const page = await read('read_visibility_results', { audit_id: auditId });
+  expect(page.items).toMatchObject([{ answer_excerpt: 'Acme makes the sturdiest nets.' }]);
   const items = page.items as {
     task_id: string;
     record_uri: string;

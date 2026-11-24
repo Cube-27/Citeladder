@@ -246,6 +246,38 @@ describe('Agent bindings to the evidence and Action owners', () => {
       read.mockRestore();
     }
   });
+  it('still cites the runs a truncated read showed after their provenance ids are hidden', async () => {
+    const scope = await fixtures.scope();
+    const [shown, dropped] = [randomUUID(), randomUUID()];
+    const ref = (id: string) => ({ kind: 'audit', id, record_uri: `citeladder://audit/${id}` });
+    const read = vi.spyOn(sharedTools, 'dispatchTool');
+    try {
+      read.mockResolvedValueOnce({
+        state: 'available',
+        points: [{ audit_id: shown, source_audit_ids: [shown, dropped], rankings: [] }],
+        notes: 'x'.repeat(2000),
+        artifact_refs: [ref(shown), ref(dropped)],
+      });
+      const outcome = await agentTools(db).execute(
+        db,
+        scope,
+        'read_visibility_trends',
+        { from_at: '2026-09-01T00:00:00Z', to_at: '2026-09-30T00:00:00Z' },
+        signal(),
+        1000,
+      );
+      expect([JSON.parse(outcome.text), outcome.received.map((r) => r.id)]).toEqual([
+        {
+          data: { state: 'available', points: [{ audit_id: shown, rankings: [] }] },
+          complete: false,
+          omitted_sections: ['notes'],
+        },
+        [shown],
+      ]);
+    } finally {
+      read.mockRestore();
+    }
+  });
   it('reads the Action owner and refuses a sibling Action even inside the same workspace', async () => {
     const scope = await fixtures.scope(),
       sibling = await fixtures.project(scope.workspaceId);

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { performanceDimensionSchema } from '@citeladder/contracts/performance';
 import { policy } from '../config.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
+import { mcpPolicy } from './config.ts';
 import { resolutionOutcome } from '../routes/demand-contracts.ts';
 import {
   aiTrafficInsights,
@@ -128,15 +129,13 @@ export const trafficTools = {
   }),
   read_ai_traffic_insights: projectTool({
     title: 'Read AI traffic insights',
-    description:
-      'Read the patterns CiteLadder found by joining AI crawler, referral and citation data for one saved window: pages crawled but never visited from AI, pages getting AI referrals but not crawled recently, crawler errors on valuable pages, and key events concentrated on few pages. Each pattern has a short explanation, the numbers behind it and the pages involved, with coverage. These are co-occurrence, not cause. It reads the newest saved 30-day window by default; custom dates must match a saved window exactly. unavailable means no insight snapshot exists yet, and coverage.notice says why, such as GA4 not being connected. Use read_ai_traffic_pages for the per-page numbers.',
+    description: `Read the patterns CiteLadder found by joining AI crawler, referral and citation data for one saved window: pages crawled but never visited from AI, pages getting AI referrals but not crawled recently, crawler errors on valuable pages, and key events concentrated on few pages. Each pattern has a short explanation, the numbers behind it, the paths of up to ${mcpPolicy.insight_pattern_paths} pages involved (pages_omitted counts the rest) and coverage. These are co-occurrence, not cause. It reads the newest saved 30-day window by default; custom dates must match a saved window exactly. unavailable means no insight snapshot exists yet, and coverage.notice says why, such as GA4 not being connected. Use read_ai_traffic_pages for the per-page numbers.`,
     schema: z.strictObject({ ...project, range: analyticsRange, ...dates }),
     read: aiTrafficInsights,
   }),
   read_ai_referrals: projectTool({
     title: 'Read AI referral traffic',
-    description:
-      'Visits that arrived from AI assistants such as ChatGPT, from GA4: sessions, share of all traffic, key events and top landing pages for a range. These are people clicking through; read_crawl_logs has crawler requests. An unavailable state means no referral data has been imported, which is not zero; read_integration_status says why.',
+    description: `Visits that arrived from AI assistants such as ChatGPT, from GA4: sessions, share of all traffic, key events and the top ${mcpPolicy.referral_landing_pages} landing pages by sessions (landing_page_count counts them all) for a range. These are people clicking through; read_crawl_logs has crawler requests. An unavailable state means no referral data has been imported, which is not zero; read_integration_status says why.`,
     schema: z.strictObject({ ...project, range: analyticsRange, ...dates }),
     read: referrals,
   }),
@@ -185,15 +184,21 @@ export const trafficTools = {
   read_query_evidence: projectTool({
     title: 'Read queries by page',
     description:
-      'Read the Search Console queries that bring searchers to each site page, matched to pages CiteLadder crawled, for one saved window. Use it to see which queries a page ranks for, or which page answers a query; for totals and trends use read_performance, and for the search signals found in the same window use read_demand. The window must exactly match a saved one: read_demand returns it. Any other window returns unavailable exact_query_evidence_window_not_projected, which is not zero. Each row is one query and page with its totals over the whole window, largest impressions first: the query, the page Search Console reported, the crawled page it was matched to (site_url_id), how the match was made (resolution_outcome), impressions, clicks, CTR (clicks divided by impressions), the impression-weighted average position and the number of days with data. Pass site_url_id to keep the queries of one page, and follow next_cursor until it is null before calling the list complete. granularity day returns the daily rows behind the totals instead, each with a citeladder:// id for fetch. Rows come in pages; pass next_cursor for more, with the same granularity and filters. Country, device and search type are not broken out.',
+      'Read the Search Console queries that bring searchers to each site page, matched to pages CiteLadder crawled, for one saved window, the latest by default. Use it to see which queries a page ranks for, or which page answers a query; for totals and trends use read_performance, and for the search signals found in the same window use read_demand. A window you pass must exactly match a saved one: read_demand returns them. Any other window returns unavailable exact_query_evidence_window_not_projected, which is not zero. Each row is one query and page with its totals over the whole window, largest impressions first: the query, the page Search Console reported, the crawled page it was matched to (site_url_id), how the match was made (resolution_outcome), impressions, clicks, CTR (clicks divided by impressions), the impression-weighted average position and the number of days with data. Pass site_url_id to keep the queries of one page, and follow next_cursor until it is null before calling the list complete. granularity day returns the daily rows behind the totals instead, each with a citeladder:// id for fetch. Rows come in pages; pass next_cursor for more, with the same granularity and filters. Country, device and search type are not broken out.',
     schema: z.strictObject({
       ...project,
-      window_start: z.iso
-        .date()
-        .describe("First day of a saved window, inclusive: read_demand's window.start."),
-      window_end: z.iso
-        .date()
-        .describe("Last day of the same saved window, inclusive: read_demand's window.end."),
+      window_start: optional(
+        z.iso
+          .date()
+          .describe(
+            "First day of a saved window, inclusive: read_demand's window.start; omit both dates for the latest.",
+          ),
+      ),
+      window_end: optional(
+        z.iso
+          .date()
+          .describe("Last day of the same saved window, inclusive: read_demand's window.end."),
+      ),
       query: optional(
         z
           .string()

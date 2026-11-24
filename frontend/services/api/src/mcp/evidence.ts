@@ -26,8 +26,8 @@ const AGGREGATE_KINDS = new Set<string>([
   'destination_pages',
 ]);
 
-export async function demandSnapshot({ db, scope }: ProjectRead): Promise<Evidence> {
-  const row = await new WorkspaceScope(scope.workspaceId)
+export function latestDemandSnapshot({ db, scope }: ProjectRead) {
+  return new WorkspaceScope(scope.workspaceId)
     .selectFrom(db, 'demand_snapshots')
     .selectAll()
     .select([
@@ -39,6 +39,10 @@ export async function demandSnapshot({ db, scope }: ProjectRead): Promise<Eviden
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
     .executeTakeFirst();
+}
+
+export async function demandSnapshot(read: ProjectRead): Promise<Evidence> {
+  const row = await latestDemandSnapshot(read);
   if (!row) return unavailable('no_demand_snapshot');
   return {
     state: 'available',
@@ -207,19 +211,23 @@ export async function promptPortfolio(
     active: enabled && row.status === 'active',
     record_uri: `citeladder://prompt/${row.id}`,
   }));
-  const topics = await new WorkspaceScope(scope.workspaceId)
-    .selectFrom(db, 'projects')
-    .innerJoin('topics as t', 't.project_id', 'projects.id')
-    .select(['t.id', 't.name', 't.description'])
-    .where('projects.id', '=', scope.projectId)
-    .orderBy('t.name')
-    .orderBy('t.id')
-    .limit(mcpPolicy.max_list_limit + 1)
-    .execute();
+  const topics = args.cursor
+    ? null
+    : await new WorkspaceScope(scope.workspaceId)
+        .selectFrom(db, 'projects')
+        .innerJoin('topics as t', 't.project_id', 'projects.id')
+        .select(['t.id', 't.name', 't.description'])
+        .where('projects.id', '=', scope.projectId)
+        .orderBy('t.name')
+        .orderBy('t.id')
+        .limit(mcpPolicy.max_list_limit + 1)
+        .execute();
   return {
     state: 'available',
-    topics: topics.slice(0, mcpPolicy.max_list_limit),
-    topics_truncated: topics.length > mcpPolicy.max_list_limit,
+    ...(topics && {
+      topics: topics.slice(0, mcpPolicy.max_list_limit),
+      topics_truncated: topics.length > mcpPolicy.max_list_limit,
+    }),
     items,
     pagination: pagination(
       items,
@@ -329,10 +337,12 @@ export async function searchDataset(
       intent: '',
     },
   );
-  const items = page.rows.map((row) => ({
-    ...row,
-    record_uri: `citeladder://search_row/${row.id}`,
-  }));
+  const items = page.rows.map(
+    ({ auxiliary: _auxiliary, dataset_id: _dataset, call_id: _call, ...row }) => ({
+      ...row,
+      record_uri: `citeladder://search_row/${row.id}`,
+    }),
+  );
   return {
     state: 'available',
     dataset: page.dataset,
