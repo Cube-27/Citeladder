@@ -108,10 +108,10 @@ async function searchConsole(
 
 async function keywordResearch(
   p: Project,
-  options: { kind: string; language: string; status: string },
+  options: { kind: string; language: string; status: string; comparison?: string; at?: Date },
   keywords: { keyword: string; volume: number }[],
 ) {
-  const at = new Date(),
+  const at = options.at ?? new Date(),
     datasetId = randomUUID(),
     runId = await searchIntelligenceRun(db, p);
   await db
@@ -126,7 +126,7 @@ async function keywordResearch(
       target_domain: 'example.com',
       target_hostname: 'www.example.com',
       target_origin: 'https://www.example.com',
-      comparison_origin: '',
+      comparison_origin: options.comparison ?? '',
       location_code: 2840,
       language_code: options.language,
       status: options.status,
@@ -260,6 +260,29 @@ describe('observed queries at the PostgreSQL boundary', () => {
     tenants.push(other);
     expect((await load(p, other.workspaceId)).map((row) => row.text)).toEqual([]);
     expect(await load(p)).toHaveLength(3);
+  });
+
+  it("keeps every competitor's latest missing keywords, not only the last one published", async () => {
+    const p = await project();
+    const missing = (comparison: string, minute: number, keyword: string) =>
+      keywordResearch(
+        p,
+        {
+          kind: 'missing_keywords',
+          language: 'en',
+          status: 'published',
+          comparison,
+          at: new Date(Date.UTC(2026, 10, 1, 9, minute)),
+        },
+        [{ keyword, volume: 100 + minute }],
+      );
+    await missing('https://rival.test', 0, 'running shoes outdated gap');
+    await missing('https://rival.test', 1, 'running shoes for trail gap');
+    await missing('https://other.test', 2, 'running shoes for road gap');
+    expect((await load(p)).map((row) => row.text)).toEqual([
+      'running shoes for road gap',
+      'running shoes for trail gap',
+    ]);
   });
 
   it('counts words in a search written without spaces', async () => {
