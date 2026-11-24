@@ -12,6 +12,7 @@ import { parseUuid } from '../../http/uuid.ts';
 import { loadCrawl, pageAuditsSql } from './crawl.ts';
 import type { Paging } from './issues.ts';
 import { shownIssueFilter } from './page-rows.ts';
+import { siteLevelRuleOf } from './rules.ts';
 import { requireAdmitted } from './pages.ts';
 import { ruleTitle, type IssueRow } from './rules.ts';
 
@@ -53,13 +54,14 @@ export async function issueHistory(
       join site_page_analyses cur on cur.id = ${finalized.id} and cur.workspace_id = i.workspace_id
       join site_crawls audited on audited.id = cur.crawl_id and audited.workspace_id = i.workspace_id
       where i.workspace_id = ${workspaceId} and i.project_id = ${crawl.project_id}
-        and i.site_url_id = ${siteUrlId} and c.project_id = ${crawl.project_id}
+        and i.site_url_id = ${siteUrlId} and not ${siteLevelRuleOf('i')}
+        and c.project_id = ${crawl.project_id}
         and (coalesce(c.started_at, c.created_at), c.id)
           <= (coalesce(audited.started_at, audited.created_at), audited.id)
         and not exists (
           select 1 from site_issues still_open
           where still_open.workspace_id = ${workspaceId}
-            and ${shownIssueFilter(crawl, 'still_open', 'cur')}
+            and ${shownIssueFilter('still_open', 'cur')}
             and still_open.rule_id = i.rule_id)
       order by i.rule_id, i.created_at desc, i.id desc
     )

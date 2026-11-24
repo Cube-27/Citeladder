@@ -193,23 +193,24 @@ describe("Site Health reads show each tracked page's latest audit", () => {
     ]);
   });
 
-  it("keeps the site crawl's site-level findings on the root after a rerun of the root", async () => {
+  it("lists the site crawl's site-level findings in Issues, never on the root page they are stored against", async () => {
     const seed = await fixtures.crawl('completed');
     const full = await crawlAt(seed, minutes(0));
     const root = await audit(full, '/', SITEWIDE, 'missing');
     await fixtures.monitor(seed, [root.id]);
     await land(full);
     const rerun = await crawlAt(seed, minutes(10), { rerun: true });
-    await audit(rerun, '/', SITEMAP, 'satisfied', root.id);
+    await audit(rerun, '/', CLIENT, 'missing', root.id);
     await land(rerun);
 
     const all = unfilteredIssues();
     expect(groups(await issues(db, seed.workspaceId, full.crawlId, all, paging))).toEqual([
       [SITEWIDE, 1],
+      [CLIENT, 1],
     ]);
     expect(await pageCounts(full)).toEqual([['/', 1]]);
     const detail = await pageDetail(db, seed.workspaceId, full.crawlId, root.id);
-    expect(detail.issues.map((issue) => issue.rule_id)).toEqual([SITEWIDE]);
+    expect(detail.issues.map((issue) => issue.rule_id)).toEqual([CLIENT]);
     const history = await issueHistory(db, seed.workspaceId, full.crawlId, root.id, paging);
     expect(history.items.map((item) => item.rule_id)).toEqual([]);
   });

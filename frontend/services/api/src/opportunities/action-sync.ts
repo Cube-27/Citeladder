@@ -29,12 +29,12 @@ type NewMember = NewOpportunity & { target: TargetRef };
 
 export function actionMember(row: NewMember): ActionMember {
   const evidence = record(row.evidence);
-  const prompt = evidence.prompt_text || evidence.prompt;
+  const hint = evidence.prompt_text || evidence.prompt || evidence.product_name;
   return {
     opportunity_id: row.id,
     rule_id: row.rule_id,
     target: row.target,
-    label_hint: typeof prompt === 'string' ? prompt : null,
+    label_hint: typeof hint === 'string' && hint ? hint : null,
     measured_by: memberMeasurementLeg(row),
     title: row.title || row.rule_id,
     priority_score: row.priority_score || 0,

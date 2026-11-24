@@ -128,14 +128,12 @@ export function currentIssueFilter(issue: string, analysis: string) {
         and e.source_architecture_id is not null)))`;
 }
 
-export function shownIssueFilter(crawl: Pick<Crawl, 'id'>, issue: string, analysis: string) {
+export function shownIssueFilter(issue: string, analysis: string) {
   const ref = (alias: string, column: string) => sql.ref(`${alias}.${column}`);
-  const siteLevel = siteLevelRuleOf(issue);
-  return sql`(${ref(issue, 'site_url_id')} = ${ref(analysis, 'site_url_id')} and (
-    (not ${siteLevel} and ${ref(issue, 'crawl_id')} = ${ref(analysis, 'crawl_id')}
-      and ${currentIssueFilter(issue, analysis)})
-    or (${siteLevel} and ${ref(issue, 'crawl_id')} = ${crawl.id}::uuid
-      and ${ref(issue, 'is_current')})))`;
+  return sql`(${ref(issue, 'site_url_id')} = ${ref(analysis, 'site_url_id')}
+    and not ${siteLevelRuleOf(issue)}
+    and ${ref(issue, 'crawl_id')} = ${ref(analysis, 'crawl_id')}
+    and ${currentIssueFilter(issue, analysis)})`;
 }
 
 function statusFilter(status: string | null | undefined) {
@@ -246,7 +244,7 @@ export async function pageRows(
           select 1 from site_url_observations o
           where o.workspace_id = u.workspace_id and o.site_url_id = u.id
             and o.crawl_id = any(${lineage}::uuid[]))
-        ${pageFilterSql(filters, shownIssueFilter(crawl, 'i', 'a'))}
+        ${pageFilterSql(filters, shownIssueFilter('i', 'a'))}
     ), windowed as (
       select * from keyed
       where true ${statusFilter(filters.status)} ${keyset}
@@ -297,7 +295,7 @@ export async function pageRows(
       a.finalized_at,
       case when a.id is null then null else (
         select count(*)::int from site_issues i
-        where i.workspace_id = u.workspace_id and ${shownIssueFilter(crawl, 'i', 'a')}
+        where i.workspace_id = u.workspace_id and ${shownIssueFilter('i', 'a')}
       ) end as issue_count,
       k.inbound_count,
       k.main_content_inbound_count,
@@ -316,7 +314,7 @@ export async function currentIssueRules(db: Database, crawl: Crawl, analysisIds:
   const { rows } = await sql<{ analysis_id: string; rule_id: string }>`
     select distinct a.id as analysis_id, i.rule_id
     from site_page_analyses a
-    join site_issues i on i.workspace_id = a.workspace_id and ${shownIssueFilter(crawl, 'i', 'a')}
+    join site_issues i on i.workspace_id = a.workspace_id and ${shownIssueFilter('i', 'a')}
     where a.workspace_id = ${crawl.workspace_id} and a.project_id = ${crawl.project_id}
       and a.id = any(${analysisIds}::uuid[])
     order by a.id, i.rule_id`.execute(db);
@@ -336,7 +334,7 @@ export async function currentRuleEvidence(
   const { rows } = await sql<{ analysis_id: string; evidence: unknown }>`
     select distinct on (a.id) a.id as analysis_id, i.evidence
     from site_page_analyses a
-    join site_issues i on i.workspace_id = a.workspace_id and ${shownIssueFilter(crawl, 'i', 'a')}
+    join site_issues i on i.workspace_id = a.workspace_id and ${shownIssueFilter('i', 'a')}
     where a.workspace_id = ${crawl.workspace_id} and a.project_id = ${crawl.project_id}
       and a.id = any(${analysisIds}::uuid[]) and i.rule_id = ${ruleId}
     order by a.id, i.created_at, i.id`.execute(db);

@@ -9,6 +9,8 @@ import {
   declarationTargets,
   namedTarget,
 } from '../src/opportunities/targets/registry.ts';
+import { actionMember } from '../src/opportunities/action-sync.ts';
+import { newOpportunity } from '../src/opportunities/refresh-compute.ts';
 import { actionRow } from './opportunity-fixtures.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { testDatabase } from './support.ts';
@@ -106,6 +108,28 @@ describe('a target the Agent names', () => {
     const refused = namedTarget(db, scopeOf(own), kind, text);
     await expect(refused).rejects.toThrow(ActionTargetError);
     await expect(refused).rejects.toThrow(message);
+  });
+});
+
+describe("an Action's label", () => {
+  it('names the product a product finding is about', () => {
+    const target = { kind: 'product' as const, product_id: randomUUID() };
+    const row = newOpportunity(
+      {
+        rule_id: 'catalog_fields_missing',
+        target,
+        evidence: { product_id: target.product_id, product_name: 'Trail Sock', missing_fields: [] },
+        source_analysis_ids: [],
+        source_issue_ids: [],
+        source_metric_ids: [],
+        value_factor: 1,
+        gap_factor: 1,
+      },
+      40,
+    );
+    expect(actionTargetOf(actionMember({ ...row, id: randomUUID(), target })).label).toBe(
+      'Trail Sock',
+    );
   });
 });
 

@@ -117,8 +117,10 @@ async function keywordResearchQueries(db: Database, scope: ObservedScope): Promi
     .where('status', '=', 'published')
     .where('dataset_kind', 'in', O.si_dataset_kinds)
     .where(datasetLanguage, '=', language)
-    .distinctOn('dataset_kind')
+    .distinctOn(['dataset_kind', 'target_origin', 'comparison_origin'])
     .orderBy('dataset_kind')
+    .orderBy('target_origin')
+    .orderBy('comparison_origin')
     .orderBy('published_at', 'desc')
     .orderBy('id', 'desc')
     .execute();
