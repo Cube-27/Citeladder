@@ -84,6 +84,7 @@ export const probeStatusSchema = z.object({
     .nullable(),
 });
 export type ProbeStatus = z.infer<typeof probeStatusSchema>;
+export const probeRunsSchema = probeStatusSchema.omit({ quote: true });
 
 const probeBasisSchema = probeRunSchema.omit({ state: true, planned: true, failed: true });
 

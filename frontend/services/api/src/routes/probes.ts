@@ -5,6 +5,7 @@ import {
   probeMarketSchema,
   probeObjectionsSchema,
   probeRunRequestSchema,
+  probeRunsSchema,
   probeScheduleRequestSchema,
   probeStatusSchema,
 } from '@citeladder/contracts/probes';
@@ -28,7 +29,7 @@ import { deleteGroup, groupRequest, mergeGroups, renameGroup } from '../probes/o
 import { probeObjections } from '../probes/objections.ts';
 import { setProbeSchedule } from '../probes/schedule.ts';
 import { runProbe } from '../probes/plan.ts';
-import { probeStatus } from '../probes/status.ts';
+import { probeRuns, probeStatus } from '../probes/status.ts';
 import {
   defineDeleteRoute,
   defineGetRoute,
@@ -68,6 +69,13 @@ export const probeRoutes = [
         engines: query.engines ?? undefined,
         repetitions: query.repetitions ?? undefined,
       }),
+  }),
+  defineGetRoute({
+    ...activeProject,
+    path: `${root}/runs`,
+    params: { path: projectPath, query: {} },
+    response: probeRunsSchema,
+    handle: ({ c, db }, { path }) => probeRuns(db, projectScopeOf(c, path.project_id)),
   }),
   definePostRoute({
     ...activeProject,

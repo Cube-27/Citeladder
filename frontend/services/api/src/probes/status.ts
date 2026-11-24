@@ -1,5 +1,6 @@
 import { auditScheduleCadenceSchema } from '@citeladder/contracts/audits';
-import type { ProbeQuote, ProbeStatus } from '@citeladder/contracts/probes';
+import type { ProbeQuote, ProbeStatus, probeRunsSchema } from '@citeladder/contracts/probes';
+import type { z } from 'zod';
 
 import type { AuditRuntime } from '../audits/config.ts';
 import { policy } from '../config.ts';
@@ -46,7 +47,10 @@ async function probeQuote(
   };
 }
 
-export async function probeRuns(db: Database, scope: Scope): Promise<Omit<ProbeStatus, 'quote'>> {
+export async function probeRuns(
+  db: Database,
+  scope: Scope,
+): Promise<z.infer<typeof probeRunsSchema>> {
   const [[latest], schedule] = await Promise.all([
     probeLaunches(db, scope, { limit: 1 }),
     probeSchedules(db, scope)

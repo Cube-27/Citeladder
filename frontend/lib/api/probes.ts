@@ -11,6 +11,7 @@ import {
   objectionGroupSchema as groupSchema,
   probeMarketSchema,
   probeObjectionsSchema,
+  probeRunsSchema,
   probeStatusSchema,
   type ProbeRunRequest,
   type ProbeScheduleRequest,
@@ -48,6 +49,12 @@ const probesApi = {
       'probes.status',
     );
   },
+  runs: async (projectId: string, options?: ApiRequestOptions) =>
+    strictValidate(
+      probeRunsSchema,
+      await apiClient.get(`${root(projectId)}/runs`, options),
+      'probes.runs',
+    ),
   cancel: async (projectId: string, options?: ApiRequestOptions) =>
     strictValidate(
       probeStatusSchema,
@@ -113,7 +120,7 @@ const probesApi = {
 const scoped = (scope: ProjectScope) => ({ workspaceId: scope.workspaceId });
 const PROBE_POLL_MS = 5000;
 
-export const probeBusy = (status: ProbeStatus | undefined) =>
+export const probeBusy = (status: Pick<ProbeStatus, 'latest'> | undefined) =>
   status?.latest?.state === 'running' || status?.latest?.state === 'labelling';
 
 export const probeBasis = (status: ProbeStatus | undefined) =>
@@ -123,8 +130,16 @@ export const probeQueries = {
   status: (scope: ProjectScope) =>
     queryOptions({
       queryKey: queryKeys.projects.probes(scope),
-      queryFn: ({ signal }) =>
-        probesApi.status(scope.projectId, null, { signal, ...scoped(scope) }),
+      queryFn: async ({ signal, client, queryKey }) => {
+        const options = { signal, ...scoped(scope) };
+        const shown = client.getQueryData<ProbeStatus>(queryKey);
+        if (shown && probeBusy(shown)) {
+          const runs = await probesApi.runs(scope.projectId, options);
+          if (runs.latest?.launch_id === shown.latest?.launch_id && probeBusy(runs))
+            return { ...shown, ...runs };
+        }
+        return probesApi.status(scope.projectId, null, options);
+      },
       refetchInterval: (query) => (probeBusy(query.state.data) ? PROBE_POLL_MS : false),
     }),
   quote: (scope: ProjectScope, choice: ProbeChoice) =>
