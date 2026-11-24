@@ -76,6 +76,7 @@ it('filters on the server and exports every saved matching page', async () => {
         requests.push(params);
         const filtered = params.get('search') === 'needle';
         const second = params.has('cursor');
+        const match = second ? '=needle second' : 'needle first';
         return HttpResponse.json({
           dataset: { ...dataset, filtered_saved_count: filtered ? 2 : 201 },
           rows: [
@@ -83,7 +84,7 @@ it('filters on the server and exports every saved matching page', async () => {
               second
                 ? '55555555-5555-4555-8555-555555555555'
                 : '44444444-4444-4444-8444-444444444444',
-              filtered ? (second ? '=needle second' : 'needle first') : 'Unfiltered page',
+              filtered ? match : 'Unfiltered page',
             ),
           ],
           next_cursor: filtered && !second ? 'next-matching-page' : null,

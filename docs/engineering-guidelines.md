@@ -401,14 +401,20 @@ replacement diff with no deletions.
 
 **Rule:** Fix every new SonarCloud issue on the PR before merge; don't leave
 it for a cleanup PR.
-**Why:** Seven cleanup PRs (#368 to #372, #409, #464, #739, #984) fixed
-findings that had merged. The same rules return in new PRs: S3358 nested
-ternary (7 of the last 60 PRs), S3776 cognitive complexity (5), S4624 nested
-template literals (4), S8786 backtracking regex (3), S7503 async without
-await, and S7765 `.some()` for an includes check.
-**Check:** The Sonar PR comment reports zero new issues. In the diff: a
-ternary inside a ternary, deeply nested branching, a template literal inside
-another, or a regex with nested quantifiers.
+**Why:** Eight cleanup PRs (#368 to #372, #409, #464, #739, #984 and the
+2026-11-24 sweep) fixed findings that had merged. The same rules return in new
+PRs: S3358 nested ternary (7 of the last 60 PRs, 3 open on 2026-11-24), S3776
+cognitive complexity (5), S4624 nested template literals (4, 4 open), S8786
+backtracking regex (3), S7503 `async` without `await` (4 open) and S6551
+`String(x)` on an `unknown` (8 open). The last came from four copies of one
+`shown` preview helper in `services/api/src/changes/`, now `shownValue` in
+`changes/kind.ts`, and from reading a JSON column field by field instead of
+through its schema.
+**Check:** `vp lint` rejects a nested ternary (`no-nested-ternary`). The Sonar
+PR comment reports zero new issues. In the diff: deeply nested branching, a
+template literal inside another, a regex with nested quantifiers, an `async`
+function that only returns a promise, or `String()`/a template over a value
+typed `unknown` (parse it, or reuse the owner's formatter).
 
 ## Review process
 

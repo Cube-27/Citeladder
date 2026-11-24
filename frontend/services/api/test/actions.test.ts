@@ -190,28 +190,18 @@ describe('Action routes', () => {
     expect(missing.status).toBe(404);
     expect(await missing.json()).toMatchObject({ error: { code: 'not_found', retryable: false } });
     const paths = [
-      [`/api/v1/projects/${s.project_id}/actions`, 'GET'],
-      [actionPath(s), 'GET'],
-      [actionPath(s), 'PATCH'],
-      [`${actionPath(s)}/declaration`, 'POST'],
+      { path: `/api/v1/projects/${s.project_id}/actions`, method: 'GET', body: undefined },
+      { path: actionPath(s), method: 'GET', body: undefined },
+      { path: actionPath(s), method: 'PATCH', body: { status: 'dismissed' } },
+      {
+        path: `${actionPath(s)}/declaration`,
+        method: 'POST',
+        body: { declared_implemented_at: boundary },
+      },
     ];
-    for (const [path, method] of paths) {
-      expect((await app.request(path!, { method })).status).toBe(401);
-      expect(
-        (
-          await request(
-            foreign,
-            path!,
-            method,
-            method === 'PATCH'
-              ? { status: 'dismissed' }
-              : method === 'POST'
-                ? { declared_implemented_at: boundary }
-                : undefined,
-            'foreign',
-          )
-        ).status,
-      ).toBe(404);
+    for (const { path, method, body } of paths) {
+      expect((await app.request(path, { method })).status).toBe(401);
+      expect((await request(foreign, path, method, body, 'foreign')).status).toBe(404);
     }
     await db
       .updateTable('workspace_members')

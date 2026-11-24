@@ -144,6 +144,7 @@ export const lintConfig: OxlintConfig = {
   rules: {
     'no-array-constructor': 'error',
     'no-console': 'error',
+    'no-nested-ternary': 'error',
     'no-unused-expressions': 'warn',
     'no-unused-vars': [
       'error',
