@@ -561,7 +561,7 @@ function listingFacts(page: PageScope) {
     has_empty_state:
       classes.has('empty_state') ||
       countsNone ||
-      (!observations.length &&
+      (!selected &&
         affordances.some(
           (item) =>
             item.kind === 'empty_state' ||

@@ -412,7 +412,7 @@ describe('page checklist', () => {
     expect(empty.empty_state).toBe(true);
     expect(uncaptured.empty_state).toBe(false);
     const trail =
-      '<ul class="breadcrumb"><li><a href="/">Home</a></li><li><a href="/brands">Brands</a></li><li><a href="/brands/acme">Acme</a></li></ul>';
+      '<ul class="breadcrumb"><li><a href="/">Home</a></li><li><a href="/products">Products</a></li><li><a href="/brands/acme">Acme</a></li></ul>';
     const counted = (count: number) =>
       items(
         `${trail}<div><span class="result-count">(${count} results)</span></div><div class="product-grid"></div>`,
@@ -1269,6 +1269,10 @@ describe('visibility checks', () => {
     ]);
     expect(lastmod('last tuesday', {})).toEqual(['missing', 'sitemap_lastmod_unparseable']);
     expect(lastmod('2026-09-01', {})).toEqual(['not_applicable', 'no_content_date']);
+    expect(lastmod('2026-09-01', { modified: 'last spring' })).toEqual([
+      'unknown',
+      'content_date_unparseable',
+    ]);
     expect(lastmod(undefined, { modified: '2026-09-01' })).toEqual([
       'not_applicable',
       'no_sitemap_lastmod',
