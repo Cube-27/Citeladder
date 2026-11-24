@@ -73,9 +73,7 @@ describe('application route recovery', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Finish session' }));
     const shell = screen.getByRole('region', { name: 'Application shell' });
-    expect(
-      await screen.findByRole('status', { name: 'Loading the issue summary' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('status', { name: 'Loading issues' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Issues' })).toBeInTheDocument();
     await act(async () => finish({ IssuesScreen: () => <p>Issue catalog</p> }));
     expect(await screen.findByText('Issue catalog')).toBeInTheDocument();
