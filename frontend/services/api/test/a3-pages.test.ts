@@ -25,6 +25,7 @@ import { hash } from '../src/crypto-text.ts';
 import { canonicalPage } from '../src/page-identity.ts';
 import { canonicalIdentity } from '../src/site-health/url-identity.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
+import { aiTrafficInsights } from '../src/mcp/evidence-traffic.ts';
 
 const db = testDatabase(),
   fixtures = new SiteFixtures(db),
@@ -859,6 +860,13 @@ describe('A3 persisted insight gates', () => {
       result.patterns.find((r) => r.pattern === 'crawler_errors_on_valuable_pages')?.numbers
         .status_403,
     ).toBe(2);
+    const named = await aiTrafficInsights({ db, scope: scope(), origin: '' }, filters);
+    const shown = (r: Record<string, unknown>) => [r.pages, r.pages_omitted, 'url_hashes' in r];
+    const paths = ['/without-referrals', '/without-crawl', '/guide', '/guide'];
+    expect('url_hashes' in result.patterns[0]!).toBe(true);
+    expect((named.patterns as Record<string, unknown>[]).map(shown)).toEqual(
+      paths.map((path) => [[path], 0, false]),
+    );
     await asOwner((owner) =>
       owner
         .updateTable('integration_import_artifacts')

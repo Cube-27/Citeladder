@@ -3,7 +3,7 @@ id: growth_plan
 label: Growth plan
 group: strategy
 order: 1
-version: 3
+version: 4
 output_kind: plan
 description: Prioritize SEO and AI visibility opportunities using persisted CiteLadder evidence. Produce bounded growth plans and explicit next-step advice for specialist work.
 ---
@@ -16,7 +16,7 @@ A short, evidence-backed sequence of work toward the business objective, each it
 
 ## Where the data is
 
-- `get_project_business_context` and `read_integration_status`: the business, and which data is connected.
+- `get_project_business_context` with `sections: ["profile"]` and `read_integration_status`: the business, and which data is connected.
 - `read_actions`: the work CiteLadder already ranks.
 - `read_performance`, `read_visibility_overview`, `read_site_health`, `read_demand`: one headline read per area the plan touches.
 

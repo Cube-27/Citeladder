@@ -3,7 +3,7 @@ id: internal_links
 label: Internal links
 group: owned_site
 order: 6
-version: 3
+version: 4
 output_kind: link_plan
 description: Improve contextual internal links to commercially important pages using CiteLadder page and crawl evidence. Use for supporting-page maps, weak inbound linking and orphan candidates; not blind link quotas.
 ---
@@ -19,7 +19,7 @@ Make important pages easy to reach from relevant content, with each link the rea
 - `read_site_links`: inbound and outbound counts per page (overall and in main content), click depth, and the neighbours and anchors of up to 10 named pages.
 - `read_site_pages`: page types and URLs, to find source pages for a target.
 - `read_page_text`: the current sentence a placement would change.
-- `get_project_business_context`: the conversion pages that matter.
+- `get_project_business_context` with `sections: ["profile"]`: the conversion pages that matter.
 
 ## What good looks like
 

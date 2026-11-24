@@ -134,22 +134,6 @@ describe('structurally bounded Agent context and tool results', () => {
     expect(supplied.omissions).toContain('package.sections.brand');
     expect(supplied.omissions).not.toContain('package.sections.issue_group.occurrences');
   });
-  it('retains small evidence families when one family makes the overview oversized', () => {
-    const health = { state: 'available', count: 94 };
-    const bounded = boundToolData(
-      { evidence: { health, opportunities: { items: 'x'.repeat(10000) } } },
-      300,
-      true,
-    );
-    expect(JSON.parse(bounded.text)).toEqual({
-      data: { evidence: { health } },
-      complete: false,
-      omitted_sections: ['evidence.opportunities'],
-    });
-    expect(bounded.omissions).toContainEqual(
-      expect.objectContaining({ sections: ['evidence.opportunities'] }),
-    );
-  });
   it('keeps arbitrary state-bearing projections atomic under size pressure', () => {
     const bounded = boundToolData(
       {

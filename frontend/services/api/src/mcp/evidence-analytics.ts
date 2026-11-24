@@ -326,6 +326,27 @@ export async function oneRun(
   }
 }
 
+async function answerTexts({ db, scope }: ProjectRead, items: readonly { task_id: string }[]) {
+  if (!items.length) return new Map<string, string>();
+  const rows = await new WorkspaceScope(scope.workspaceId)
+    .selectFrom(db, 'audit_tasks')
+    .select(['id', 'answer_text'])
+    .where(
+      'id',
+      'in',
+      items.map((item) => item.task_id),
+    )
+    .execute();
+  return new Map(rows.map((row) => [row.id, row.answer_text]));
+}
+
+export function answerExcerpt(text: string, at: number, size = mcpPolicy.answer_excerpt_chars) {
+  if (!text) return null;
+  const start = Math.max(0, Math.min(at - Math.floor(size / 4), text.length - size));
+  const end = start + size;
+  return `${start > 0 ? '…' : ''}${text.slice(start, end).trim()}${end < text.length ? '…' : ''}`;
+}
+
 export async function visibilityResults(
   read: ProjectRead,
   args: Selection &
@@ -345,6 +366,7 @@ export async function visibilityResults(
     asOf: null,
     limit: args.limit ?? mcpPolicy.default_list_limit,
   });
+  const answers = await answerTexts(read, page.items);
   const items = page.items.map(
     ({
       analysis_id: _analysis,
@@ -353,6 +375,10 @@ export async function visibilityResults(
       ...item
     }) => ({
       ...item,
+      answer_excerpt: answerExcerpt(
+        answers.get(item.task_id) ?? '',
+        item.mentions.find((mention) => mention.kind === 'brand')?.first_offset ?? 0,
+      ),
       record_uri: `citeladder://visibility_result/${item.task_id}`,
     }),
   );

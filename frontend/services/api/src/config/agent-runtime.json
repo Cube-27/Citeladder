@@ -26,6 +26,47 @@
   "provider_max_attempts": 2,
   "chat_turn_limit": 200,
   "tool_result_max_chars": 40000,
+  "tool_view": {
+    "hidden_keys": [
+      "artifact_refs",
+      "logo_url",
+      "source_audit_ids",
+      "source_snapshot_ids",
+      "source_artifact_ids",
+      "source_artifact_id",
+      "supporting_artifact_ids",
+      "source_evaluation_ids",
+      "source_metric_row_ids",
+      "source_rollup_ids",
+      "analyzer_version",
+      "analyzer_versions",
+      "scoring_rule_version",
+      "scoring_rule_versions",
+      "source_taxonomy_version",
+      "taxonomy_versions",
+      "catalog_version",
+      "ip_range_snapshot_id"
+    ],
+    "hidden_keys_by_tool": {
+      "read_prompt_portfolio": ["record_uri"],
+      "read_query_evidence": ["record_uri"],
+      "read_search_dataset": ["record_uri"],
+      "read_search_intelligence": ["record_uri"],
+      "read_crawl_logs": [
+        "source_id",
+        "batch_id",
+        "url_hash",
+        "verification_reason",
+        "verification_basis"
+      ],
+      "read_visibility_trends": ["model_provenance"]
+    },
+    "overview_top": 5,
+    "quotes_max": 2,
+    "list_max": 10,
+    "brands_max": 3,
+    "significant_digits": 4
+  },
   "context_package_max_chars": 24000,
   "step_detail_max_chars": 200,
   "history_search_max_chars": 120,

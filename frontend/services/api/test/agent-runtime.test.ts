@@ -1708,6 +1708,16 @@ describe('Agent runtime on PostgreSQL', () => {
         revision_id: detail.outputs[0]!.latest_revision.id,
       },
     };
+    await db
+      .updateTable('agent_output_revisions')
+      .set({
+        source_refs: JSON.stringify([
+          `citeladder://audit/${randomUUID()}`,
+          `citeladder://action/${randomUUID()}`,
+        ]),
+      })
+      .where('id', '=', refs.output_revision_reference.revision_id)
+      .execute();
     const accepted = await fixtures.store({ context: readAgentContext }).enqueue(scope, {
       key: randomUUID(),
       message: 'Measure this accepted brief',
@@ -1719,9 +1729,14 @@ describe('Agent runtime on PostgreSQL', () => {
       body: 'Later changed content',
     });
     const manifest = accepted.context_manifest as {
-      package: { sections: { upstream_revision: { body: string } } };
+      package: { sections: { upstream_revision: Record<string, unknown> } };
     };
-    expect(manifest.package.sections.upstream_revision.body).toBe('Accepted upstream brief');
+    const upstream = manifest.package.sections.upstream_revision;
+    expect([upstream.body, upstream.source_count, 'source_refs' in upstream]).toEqual([
+      'Accepted upstream brief',
+      2,
+      false,
+    ]);
     const sibling = await fixtures.project(scope.workspaceId);
     await expect(
       readAgentContext(db, { ...scope, projectId: sibling }, refs, 'Measure'),

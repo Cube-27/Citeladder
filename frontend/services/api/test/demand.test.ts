@@ -359,6 +359,12 @@ describe('demand projections and admission', () => {
     ]);
     expect(totals.snapshot).toMatchObject({ source_metric_row_count: 3 });
     expect(totals.snapshot).not.toHaveProperty('source_metric_row_ids');
+    expect((await queryEvidence(read, { site_url_id: page, limit: 1 })).items).toMatchObject([
+      { query: 'ai software', impressions: 40, days: 2 },
+    ]);
+    await expect(queryEvidence(read, { window_start: WINDOW[0] })).rejects.toThrow(
+      'Pass both window_start and window_end, or neither',
+    );
     const rest = await queryEvidence(read, {
       ...window,
       limit: 1,
@@ -383,6 +389,12 @@ describe('demand projections and admission', () => {
         window,
       ),
     ).toMatchObject({ state: 'unavailable' });
+    expect(
+      await queryEvidence(
+        { ...read, scope: { workspaceId: foreign.workspaceId, projectId: foreign.projectId } },
+        {},
+      ),
+    ).toMatchObject({ state: 'unavailable', reason: 'exact_query_evidence_window_not_projected' });
   });
 
   it('scopes query paging, resolution and override writes to membership/project, and validates 422 locations', async () => {

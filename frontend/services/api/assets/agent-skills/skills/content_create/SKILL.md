@@ -3,7 +3,7 @@ id: content_create
 label: Create content
 group: content
 order: 10
-version: 5
+version: 6
 output_kind: content
 description: Write or refresh complete articles, buyer guides, homepages, landing pages, YouTube scripts and community/social drafts using CiteLadder business and search evidence. Use for actual content delivery, not generic recommendations.
 ---
@@ -16,7 +16,7 @@ The complete piece the person asked for, in the chosen format, grounded in the b
 
 ## Where the data is
 
-- `get_project_business_context`: audience, offers, proof and voice.
+- `get_project_business_context` with `sections: ["profile"]`: audience, offers, proof and voice.
 - `read_page_text`: the current words of the target page or a related one.
 - `read_query_evidence` (for the window `read_demand` returns) and `read_prompt_portfolio`: the searches and buyer questions the piece should answer.
 

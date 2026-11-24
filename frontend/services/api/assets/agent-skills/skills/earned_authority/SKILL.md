@@ -3,7 +3,7 @@ id: earned_authority
 label: Earned authority
 group: visibility
 order: 9
-version: 3
+version: 4
 output_kind: earned_brief
 description: Find legitimate third-party citation, mention and backlink opportunities using CiteLadder source and competitor evidence. Produce source-specific pitches, corrections or linkable-asset plans; never bulk spam or automatic outreach.
 ---
@@ -18,7 +18,7 @@ A short list of attainable, relevant third-party opportunities with usable draft
 
 - `read_visibility_sources` and `read_source_url`: the pages AI answers cite, and the brands each one lists.
 - `read_search_intelligence`, then `read_search_dataset`: the brand's and competitors' referring-domain totals.
-- `get_project_business_context`: the facts and assets worth pitching.
+- `get_project_business_context` with `sections: ["profile"]`: the facts and assets worth pitching.
 
 ## What good looks like
 

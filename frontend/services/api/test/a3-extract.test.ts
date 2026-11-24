@@ -11,6 +11,7 @@ import { classifyReferrals } from '../src/referrals/classify.ts';
 import { refreshAiReferralsSnapshot } from '../src/referrals/snapshot.ts';
 import { partitionQuality, selectedPartition } from '../src/integrations/partitions.ts';
 import { getAiReferrals } from '../src/analytics/ai-referrals.ts';
+import { referrals as referralsRead } from '../src/mcp/evidence-traffic.ts';
 import { pagesRead } from '../src/ai-traffic/pages.ts';
 import { referralEvidence, referralExtras } from '../src/referrals/landing.ts';
 import { policy } from '../src/config.ts';
@@ -342,6 +343,11 @@ describe('A3 integration partition replacement', () => {
       engagedSessions: 3,
       keyEvents: 1,
     });
+    await row(landing, ['/pricing', 'ordinary.example', 'referral', 'example.test', day], {
+      sessions: 9,
+      engagedSessions: 3,
+      keyEvents: 0,
+    });
     await refreshAiReferralsSnapshot(
       await task(db, t, 'ai_referrals_snapshot_refresh', window),
       context,
@@ -355,10 +361,29 @@ describe('A3 integration partition replacement', () => {
       granularity: 'day',
     });
     expect(referrals.referral_volume).toEqual([{ date: day, value: 7 }]);
-    expect(referrals.landing_pages[0]).toMatchObject({
-      canonical_url: 'https://example.test/guide',
-      sessions: 7,
-    });
+    const named = await referralsRead(
+      { db, scope: { workspaceId: t.workspaceId, projectId: t.projectId }, origin: '' },
+      { start_date: day, end_date: day },
+    );
+    expect([
+      referrals.landing_pages.map((page) => [page.canonical_url, 'url_hash' in page]).toSorted(),
+      (named.landing_pages as Record<string, unknown>[]).map((page) => [
+        page.canonical_url,
+        page.sessions,
+        'url_hash' in page,
+      ]),
+      named.landing_page_count,
+    ]).toEqual([
+      [
+        ['https://example.test/guide', true],
+        ['https://example.test/pricing', true],
+      ],
+      [
+        ['https://example.test/pricing', 9, false],
+        ['https://example.test/guide', 7, false],
+      ],
+      2,
+    ]);
     await refreshTrafficSnapshot(await task(db, t, 'traffic_snapshot_refresh', window), context);
     const performance = await requests(db, t)(`performance?range=custom&from=${day}&to=${day}`);
     expect(performance.body.selected.totals.sessions).toBe(7);

@@ -341,7 +341,9 @@ page's 415 daily rows. A Search Console turn took 35 model calls and over four
 minutes, and still answered on partial data.
 **Check:** A read that returns an owner's whole row or snapshot (`selectAll`,
 provenance arrays) to a tool. A list whose rows are per day when the skill
-asks per query or page.
+asks per query or page. A new provenance or version key reaching the model:
+list it in `tool_view.hidden_keys` unless a skill passes it back or compares
+on it. Hashes the model cannot pass to another read (give the path).
 
 ### Independent awaits run together
 

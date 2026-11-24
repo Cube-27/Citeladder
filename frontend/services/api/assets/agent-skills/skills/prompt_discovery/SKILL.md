@@ -3,7 +3,7 @@ id: prompt_discovery
 label: Prompt discovery
 group: demand
 order: 4
-version: 6
+version: 7
 output_kind: prompt_plan
 description: Plan the next prompt run for the Prompt builder from CiteLadder business, topic and search evidence: the facts to fix, the topics to keep or change, the mix and the search queries to ground on. Use for prompt coverage and generation planning; not ordinary task-prompt writing.
 ---
@@ -16,7 +16,7 @@ Help the person set up the Prompt builder (its own page, opened from Prompts) so
 
 ## Where the data is
 
-- `get_project_business_context`: what is sold, who buys it, the market and service areas.
+- `get_project_business_context` with `sections: ["profile"]`: what is sold, who buys it, the market and service areas.
 - `read_prompt_portfolio`: the topics, including empty ones, and the tracked prompts.
 - `read_seed_queries`: the searches each connected source would ground the run on.
 

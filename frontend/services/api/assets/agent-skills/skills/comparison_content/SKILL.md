@@ -3,7 +3,7 @@ id: comparison_content
 label: Comparison content
 group: content
 order: 11
-version: 4
+version: 5
 output_kind: content
 description: Research and write honest product, service or provider comparisons and alternatives pages grounded in CiteLadder buyer demand and verified claims. Use for named competitors, not fabricated superiority or neutral-looking promotion.
 ---
@@ -16,7 +16,7 @@ A comparison that helps a real buyer decide. The sponsoring brand may be the bes
 
 ## Where the data is
 
-- `get_project_business_context`: the brand's offers, prices and named competitors.
+- `get_project_business_context` with `sections: ["profile"]`: the brand's offers, prices and named competitors.
 - `read_visibility_results`: how AI answers compare the options today.
 - `read_performance` by query, and `read_search_intelligence` then `read_search_dataset`: the comparison searches buyers make.
 - Competitor facts from a web search or the person, dated.
