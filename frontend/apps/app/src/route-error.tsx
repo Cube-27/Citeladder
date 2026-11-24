@@ -5,7 +5,7 @@ import { FirstFrame } from '@/components/layout/first-frame';
 import { NoticePage, NoticeScreen } from '@/components/templates/notice-page';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
-import { isChunkLoadError, reportClientError } from '@/lib/client-errors';
+import { isChunkLoadError, reloadOnceForChunkLoad, reportClientError } from '@/lib/client-errors';
 
 function useReportedRouteError(kind: 'render' | 'route') {
   const caught = useRouteError();
@@ -13,6 +13,7 @@ function useReportedRouteError(kind: 'render' | 'route') {
     let error = caught;
     if (isRouteErrorResponse(caught)) error = new Error(`${caught.status} ${caught.statusText}`);
     reportClientError({ kind: isChunkLoadError(error) ? 'chunk_load' : kind, error });
+    reloadOnceForChunkLoad(error);
   }, [caught, kind]);
 }
 

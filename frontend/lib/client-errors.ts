@@ -12,6 +12,7 @@ import {
 } from '@/lib/config/operational';
 
 const COUNT_KEY = 'citeladder.client-error-reports';
+const CHUNK_RELOAD_KEY = 'citeladder.chunk-reload';
 const sent = new Set<string>();
 const sentErrors = new WeakSet<object>();
 let memoryCount = 0;
@@ -25,12 +26,28 @@ const CHUNK_LOAD_MESSAGES = [
   'Unable to preload CSS',
 ];
 
-export function isChunkLoadError(error: unknown): boolean {
+export function isChunkLoadError(error: unknown): error is Error {
   if (!(error instanceof Error)) return false;
   return (
     error.name === 'ChunkLoadError' ||
     CHUNK_LOAD_MESSAGES.some((text) => error.message.includes(text))
   );
+}
+
+export function reloadOnceForChunkLoad(
+  error: unknown,
+  reload: () => void = () => window.location.reload(),
+): boolean {
+  if (!isChunkLoadError(error)) return false;
+  const failure = withoutQueryStrings(error.message);
+  try {
+    if (sessionStorage.getItem(CHUNK_RELOAD_KEY) === failure) return false;
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, failure);
+  } catch {
+    return false;
+  }
+  reload();
+  return true;
 }
 
 export function releaseId(): string {
