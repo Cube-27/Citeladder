@@ -300,16 +300,18 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
   await stubAuthedShell(page);
   await page.goto(fixtureProjectPath('/agent'));
   const prompt = page.locator('textarea');
-  const form = prompt.locator('xpath=ancestor::form');
+  const box = prompt.locator(
+    'xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " focus-frame ")][1]',
+  );
   const inputEdge = await prompt.evaluate((node) => getComputedStyle(node).borderColor);
   await prompt.click();
   await expect(prompt).toBeFocused();
-  await expect(form).toHaveCSS('outline-style', lit.outline);
-  await expect(form).toHaveCSS('box-shadow', lit.glow);
+  await expect(box).toHaveCSS('outline-style', lit.outline);
+  await expect(box).toHaveCSS('box-shadow', lit.glow);
   expect(await prompt.evaluate((node) => getComputedStyle(node).borderColor)).toBe(inputEdge);
   expect(await prompt.evaluate((node) => getComputedStyle(node).boxShadow)).toBe('none');
   expect(await prompt.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
-  const room = await form.evaluate((node) => {
+  const room = await box.evaluate((node) => {
     let clip = node.parentElement;
     while (clip && getComputedStyle(clip).overflowX === 'visible') clip = clip.parentElement;
     if (!clip) return Infinity;
