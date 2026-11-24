@@ -1,112 +1,38 @@
-import { ScoreCard } from '@/components/site-health/score-cards';
-import { AppGrid } from '@/components/ui/app-grid';
-import type { BarRow } from '@/components/ui/score-gauge';
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
-import { CopyButton } from '@/components/ui/copy-button';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { Drawer } from '@/components/ui/drawer';
-import { Dot } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
-import { Pressable } from '@/components/ui/pressable';
-import { TextLink } from '@/components/ui/text-link';
-import { Absence } from '@/components/ui/absence';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow } from '@/components/ui/table';
-import { siteHealthQueries } from '@/lib/api/site-health-queries';
-import type { ReadinessCheck, ReadinessDimension } from '@citeladder/contracts';
-import { scoreBand } from '@/lib/score-band';
-import { formatScore } from '@/lib/site-health/status';
-import { textRole } from '@/components/ui/typography';
+import type { SiteScoreSummary } from '@citeladder/contracts';
+
 import {
-  EditorialSectionHeader,
-  ledgerClasses,
-  ledgerItemClasses,
-} from '@/components/ui/workspace';
+  DimensionsTable,
+  KindScoresTable,
+  ReadableCard,
+} from '@/components/site-health/aeo-readiness-cards';
+import { IssueTable } from '@/components/site-health/overview-cards';
+import { ScoreCard } from '@/components/site-health/score-cards';
+import { AppGrid } from '@/components/ui/app-grid';
+import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
+import type { BarRow } from '@/components/ui/score-gauge';
 import { StateBlock } from '@/components/ui/state-block';
-import { type DataAvailabilityState, formatCount, formatPercent, pluralCount } from '@/lib/format';
+import type { IssuesParams } from '@/lib/api/site-health';
+import { siteHealthQueries } from '@/lib/api/site-health-queries';
+import { formatCount } from '@/lib/format';
 
-function pageLabel(url: string) {
-  try {
-    const parsed = new URL(url);
-    return `${parsed.hostname}${parsed.pathname}`;
-  } catch {
-    return url;
-  }
-}
-
-type DimensionBand = 'Critical' | 'Needs work' | 'Nearly there' | 'Passing' | 'Excluded';
-
-type DimensionState =
-  | DimensionBand
-  | Extract<DataAvailabilityState, 'not_applicable' | 'not_measured'>;
-
-function dimensionState(dimension: ReadinessDimension): DimensionState {
-  if (dimension.dimension_applicability === 'not_applicable') return 'not_applicable';
-  if (dimension.dimension_measurement_state === 'excluded') return 'Excluded';
-  if (dimension.score === null) return 'not_measured';
-  const band = scoreBand(Math.round(dimension.score));
-  if (band === 'low') return 'Critical';
-  if (band === 'mid') return 'Needs work';
-  const unresolved =
-    dimension.dimension_measurement_state !== 'measured' ||
-    dimension.unresolved_count > 0 ||
-    dimension.unknown_count > 0 ||
-    dimension.error_count > 0 ||
-    dimension.partial_count > 0;
-  if (dimension.score < 100 || unresolved) return 'Nearly there';
-  return 'Passing';
-}
-
-function bandReason(dimension: ReadinessDimension): string | null {
-  if (dimension.score === null || Math.round(dimension.score) < 100) return null;
-  if (dimensionState(dimension) !== 'Nearly there') return null;
-  if (dimension.unresolved_count > 0) {
-    return `${pluralCount(dimension.unresolved_count, 'check')} unresolved`;
-  }
-  const incomplete = dimension.checks.filter(
-    (check) => check.error_count > 0 || check.unknown_count > 0,
-  ).length;
-  if (incomplete > 0) return `${pluralCount(incomplete, 'check')} incomplete`;
-  const partial = dimension.checks.filter(
-    (check) => check.partial_count > 0 || check.missing_count > 0,
-  ).length;
-  if (partial > 0) return `${pluralCount(partial, 'check')} not fully met`;
-  return 'Not every check resolved';
-}
-
-const DIMENSION_TONES: Record<DimensionBand, StatusTone> = {
-  Critical: 'negative',
-  'Needs work': 'warning',
-  'Nearly there': 'info',
-  Passing: 'positive',
-  Excluded: 'neutral',
-};
-
-type CheckState = 'Incomplete' | 'Needs work' | 'Passing' | 'Did not apply' | 'Not checked';
-
-const CHECK_TONES: Record<CheckState, StatusTone> = {
-  Incomplete: 'info',
-  'Needs work': 'warning',
-  Passing: 'positive',
-  'Did not apply': 'neutral',
-  'Not checked': 'neutral',
-};
+const AEO_ISSUE_PARAMS = { section: 'aeo', sort: 'severity', limit: 25 } satisfies IssuesParams;
 
 export function AeoReadinessPanel({
   workspaceId,
   projectId,
   crawlId,
+  summary,
 }: Readonly<{
   workspaceId: string;
   projectId: string;
   crawlId: string;
+  summary: SiteScoreSummary | null;
 }>) {
   const readiness = useQuery(siteHealthQueries.aeoReadiness({ workspaceId, projectId }, crawlId));
-  const [detailKey, setDetailKey] = useState<string | null>(null);
+  const issues = useQuery(siteHealthQueries.issues(workspaceId, crawlId, AEO_ISSUE_PARAMS));
 
   if (readiness.isLoading) {
     return (
@@ -133,20 +59,19 @@ export function AeoReadinessPanel({
   }
 
   const data = readiness.data;
-  const selected = data.dimensions.find((dimension) => dimension.key === detailKey) ?? null;
+  const groups = new Map(issues.data?.items.map((issue) => [issue.rule_id, issue.group_id]));
   return (
     <Stack gap="workspace" className="min-w-0" data-testid="aeo-readiness">
       {data.limitations.length > 0 ? (
         <Notice tone="info">{data.limitations.join(' ')}</Notice>
       ) : null}
-      <AppGrid layout="main-aside">
-        <ReadinessLedger dimensions={data.dimensions} onOpen={setDetailKey} />
+      <AppGrid layout="aside-main">
         <ScoreCard
           title="AEO readiness"
           score={data.score}
           state={data.state}
           rows={[
-            pageRow('analyzed', 'Pages analyzed', data.analysis_count, data.analysis_count),
+            pageRow('analyzed', 'Pages audited', data.analysis_count, data.analysis_count),
             pageRow(
               'affected',
               'Pages with an AEO gap',
@@ -155,8 +80,22 @@ export function AeoReadinessPanel({
             ),
           ]}
         />
+        <ReadableCard dimensions={data.dimensions} />
       </AppGrid>
-      <DimensionDrawer dimension={selected} crawlId={crawlId} onClose={() => setDetailKey(null)} />
+      <DimensionsTable
+        dimensions={data.dimensions}
+        issueHref={(ruleId) => {
+          const group = groups.get(ruleId);
+          return group ? `/issues?issue=${group}` : `/issues?rule=${encodeURIComponent(ruleId)}`;
+        }}
+      />
+      <KindScoresTable summary={summary} />
+      <IssueTable
+        title="AEO issues"
+        workspaceId={workspaceId}
+        crawlId={crawlId}
+        params={AEO_ISSUE_PARAMS}
+      />
     </Stack>
   );
 }
@@ -169,209 +108,4 @@ function pageRow(key: string, label: string, count: number, of: number): BarRow 
     share: of > 0 ? count / of : null,
     tone: key === 'affected' ? 'negative' : 'info',
   };
-}
-
-function ReadinessLedger({
-  dimensions,
-  onOpen,
-}: Readonly<{ dimensions: ReadinessDimension[]; onOpen: (key: string) => void }>) {
-  return (
-    <DataTable title="Readiness dimensions" columns={READINESS_COLUMNS}>
-      {dimensions.map((dimension) => {
-        const state = dimensionState(dimension);
-        const reason = bandReason(dimension);
-        const open = () => onOpen(dimension.key);
-        return (
-          <TableRow key={dimension.key} onClick={open} className="cursor-pointer">
-            <TableCell>
-              <Pressable
-                aria-haspopup="dialog"
-                aria-label={`${dimension.label} evidence`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  open();
-                }}
-                className="grid min-w-0"
-              >
-                <ClampText lines={1} className={textRole('emphasis')}>
-                  {dimension.label}
-                </ClampText>
-              </Pressable>
-            </TableCell>
-            <TableCell numeric>{formatScore(dimension.score)}</TableCell>
-            <TableCell numeric>
-              {dimension.coverage === null ? (
-                <Absence state="not_measured" />
-              ) : (
-                formatPercent(dimension.coverage)
-              )}
-            </TableCell>
-            <TableCell>
-              <Inline>
-                {state === 'not_applicable' || state === 'not_measured' ? (
-                  <Absence state={state} />
-                ) : (
-                  <StatusMark tone={DIMENSION_TONES[state]}>{state}</StatusMark>
-                )}
-                {reason ? <ClampText className="type-caption">{reason}</ClampText> : null}
-              </Inline>
-            </TableCell>
-          </TableRow>
-        );
-      })}
-    </DataTable>
-  );
-}
-
-const READINESS_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'dimension', label: 'Dimension', kind: 'identity' },
-  { key: 'score', label: 'Score', kind: 'number' },
-  { key: 'coverage', label: 'Coverage', kind: 'number' },
-  { key: 'state', label: 'State', kind: 'status', width: 'flex' },
-];
-
-function DimensionDrawer({
-  dimension,
-  crawlId,
-  onClose,
-}: Readonly<{
-  dimension: ReadinessDimension | null;
-  crawlId: string;
-  onClose: () => void;
-}>) {
-  return (
-    <Drawer
-      open={Boolean(dimension)}
-      onOpenChange={(open) => (open ? undefined : onClose())}
-      title={dimension ? `${dimension.label} evidence` : ''}
-      closeLabel="Close evidence"
-    >
-      {dimension ? (
-        <Stack gap="workspace">
-          <CheckLedger checks={dimension.checks} />
-          <FailingPages dimension={dimension} crawlId={crawlId} />
-        </Stack>
-      ) : null}
-    </Drawer>
-  );
-}
-
-function CheckLedger({ checks }: Readonly<{ checks: ReadinessCheck[] }>) {
-  return (
-    <Stack as="section" gap="item">
-      <EditorialSectionHeader title="Checks" />
-      {checks.length === 0 ? (
-        <StateBlock kind="empty" inline message="No determinate checks were recorded." />
-      ) : (
-        <ul className={ledgerClasses()}>
-          {checks.map((check) => (
-            <CheckRow key={check.rule_id} check={check} />
-          ))}
-        </ul>
-      )}
-    </Stack>
-  );
-}
-
-function CheckRow({ check }: Readonly<{ check: ReadinessCheck }>) {
-  const state = checkState(check);
-  return (
-    <Stack as="li" gap="tight" className={ledgerItemClasses()}>
-      <Inline className="flex-wrap justify-between">
-        <span className={textRole('body')}>{check.title}</span>
-        <StatusMark tone={CHECK_TONES[state]}>{state}</StatusMark>
-      </Inline>
-      <p className={textRole('body', check.remediation ? 'text-ink' : 'text-ink-2')}>
-        {check.remediation || '—'}
-      </p>
-      <p className="type-caption tabular-nums">
-        {check.satisfied_count} satisfied · {check.partial_count} partial · {check.missing_count}{' '}
-        missing · {check.unknown_count} unknown
-      </p>
-    </Stack>
-  );
-}
-
-function checkState(check: ReadinessCheck): CheckState {
-  if (check.error_count > 0 || check.unknown_count > 0) return 'Incomplete';
-  if (check.missing_count > 0 || check.partial_count > 0) return 'Needs work';
-  if (check.satisfied_count > 0) return 'Passing';
-  if (check.not_applicable_count > 0) return 'Did not apply';
-  return 'Not checked';
-}
-
-function failingPagesCaption(shown: number, total: number): string | undefined {
-  if (total === 0) return '—';
-  return shown < total ? `Worst ${formatCount(shown)} of ${formatCount(total)}` : undefined;
-}
-
-function FailingPages({
-  dimension,
-  crawlId,
-}: Readonly<{ dimension: ReadinessDimension; crawlId: string }>) {
-  const shown = dimension.evidence_pages.length;
-  const total = dimension.failing_page_count;
-  return (
-    <Stack as="section" gap="item">
-      <EditorialSectionHeader
-        title="Pages to fix"
-        description={failingPagesCaption(shown, total)}
-      />
-      <ul className={ledgerClasses()}>
-        {dimension.evidence_pages.map((page) => (
-          <Stack as="li" gap="item" key={page.site_url_id} className={ledgerItemClasses()}>
-            <TextLink
-              text="body"
-              className="truncate"
-              href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
-            >
-              {pageLabel(page.normalized_url)}
-            </TextLink>
-            <Stack as="ul" gap="tight">
-              {page.failed_checks.map((check) => (
-                <Inline as="li" key={check.rule_id} className="type-caption items-baseline">
-                  <Dot className="bg-negative" />
-                  <span>
-                    {check.title}: {check.expected_capability}
-                  </span>
-                </Inline>
-              ))}
-            </Stack>
-            <PageActions page={page} dimensionLabel={dimension.label} />
-          </Stack>
-        ))}
-      </ul>
-    </Stack>
-  );
-}
-
-function PageActions({
-  page,
-  dimensionLabel,
-}: Readonly<{
-  page: ReadinessDimension['evidence_pages'][number];
-  dimensionLabel: string;
-}>) {
-  const promptChecks = page.failed_checks;
-  return (
-    <Inline gap="compact" className="flex-wrap">
-      {promptChecks.length > 0 ? (
-        <CopyButton
-          value={fixPrompt(dimensionLabel, page.normalized_url, promptChecks)}
-          variant="secondary"
-        >
-          Copy fix prompt
-        </CopyButton>
-      ) : null}
-    </Inline>
-  );
-}
-
-function fixPrompt(
-  dimensionLabel: string,
-  url: string,
-  checks: ReadinessDimension['evidence_pages'][number]['failed_checks'],
-): string {
-  const lines = checks.map((check) => `- ${check.title}: ${check.remediation}`);
-  return [`Improve ${dimensionLabel} on ${url}.`, '', 'Failing checks:', ...lines].join('\n');
 }

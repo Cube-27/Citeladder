@@ -13,7 +13,6 @@ import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
 import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-layout';
 import { PAGES_INVENTORY_URL_KEYS } from '@/components/site-health/inventory-section';
-import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
 import { ChangesPanel } from '@/components/site-health/changes-panel';
 import { useCrawlSchedule } from '@/components/site-health/crawl-schedule-control';
@@ -272,8 +271,6 @@ function useSiteHealthTabPrefetch(
       if (terminal) warmQuery(queryClient, siteHealthQueries.overview(scope, crawlId));
     } else if (nextTab === 'architecture') {
       warmQuery(queryClient, siteHealthQueries.architecture(scope, crawlId));
-    } else if (nextTab === 'aeo-readiness') {
-      warmQuery(queryClient, siteHealthQueries.aeoReadiness(scope, crawlId));
     } else if (nextTab === 'internal-links') {
       warmQuery(queryClient, internalLinksQueries.analysis(scope));
     } else if (nextTab === 'changes') {
@@ -353,10 +350,6 @@ function AnalysisPanel({
     case 'architecture':
       return (
         <ArchitecturePanel projectId={projectId} workspaceId={workspaceId} crawlId={crawlId} />
-      );
-    case 'aeo-readiness':
-      return (
-        <AeoReadinessPanel projectId={projectId} workspaceId={workspaceId} crawlId={crawlId} />
       );
     case 'internal-links':
       return <InternalLinksPanel read={linksRead} workspaceId={workspaceId} />;

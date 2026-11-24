@@ -20,22 +20,20 @@ const summary = {
 function rowsFor(params: URLSearchParams): number {
   if (params.get('severity')) return 4;
   if (params.get('page_kind')) return 6;
-  if (params.get('section') === 'content') return 9;
-  if (params.get('section') === 'aeo') return 3;
   return 30;
 }
 
-function issue(index: number, params: URLSearchParams) {
+function issue(index: number) {
   const id = String(index + 1).padStart(12, '0');
   return {
     group_id: `00000000-0000-4000-8000-${id}`,
     crawl_id: CRAWL,
     rule_id: `rule.${index}`,
     page_kinds: [],
-    dimension: params.get('section') === 'aeo' ? 'aeo' : 'technical',
+    dimension: 'technical',
     category: 'schema',
     severity: ['high', 'medium', 'low'][index % 3],
-    title: `${params.get('section') ?? 'top'} issue ${index + 1}${index % 4 === 0 ? ' where the structured data names a different organisation than the page footer' : ''}`,
+    title: `technical issue ${index + 1}${index % 4 === 0 ? ' where the structured data names a different organisation than the page footer' : ''}`,
     description: 'What this check looks for.',
     remediation: 'Fix it.',
     remediation_route: 'code',
@@ -51,13 +49,13 @@ function issue(index: number, params: URLSearchParams) {
 
 function issuesPage(route: Route) {
   const params = new URL(route.request().url()).searchParams;
-  const total = params.has('section') ? rowsFor(params) : 3;
+  const total = rowsFor(params);
   const start = params.get('cursor') === 'page-2' ? PAGE_SIZE : 0;
   const count = Math.min(PAGE_SIZE, total - start);
   const narrowed = params.has('severity') || params.has('page_kind');
   return route.fulfill({
     json: {
-      items: Array.from({ length: count }, (_, index) => issue(start + index, params)),
+      items: Array.from({ length: count }, (_, index) => issue(start + index)),
       next_cursor: start + count < total ? 'page-2' : null,
       summary: narrowed
         ? {
@@ -98,12 +96,10 @@ async function stubIssues(page: Page) {
 async function layout(page: Page, table: Locator): Promise<Record<string, Box>> {
   const parts: Record<string, Locator> = {
     masthead: page.locator('[data-masthead]'),
-    tabs: page.getByRole('radiogroup', { name: 'Issue type' }),
     filters: table.locator('[data-filter-bar]'),
     search: page.getByRole('searchbox', { name: 'Search issues' }),
-    summary: page.getByRole('region', { name: 'Fix these first' }),
     head: table.locator('thead'),
-    firstRow: table.locator('tbody tr').first(),
+    firstRow: table.locator('tbody tr').nth(1),
   };
   const boxes: Record<string, Box> = {};
   for (const [name, part] of Object.entries(parts))
@@ -125,7 +121,7 @@ async function openIssues(page: Page, width: number) {
   await stubIssues(page);
   await page.goto(fixtureProjectPath('/issues'));
   const table = page.getByRole('region', { name: 'Issues', exact: true });
-  const rows = table.locator('tbody tr');
+  const rows = table.locator('tbody tr').filter({ has: page.getByRole('button') });
   await expect(rows.first()).toContainText('technical issue 1');
   await page.evaluate(() => document.fonts.ready);
   const settled = async () => {
@@ -134,10 +130,8 @@ async function openIssues(page: Page, width: number) {
     return layout(page, table);
   };
   const before = await settled();
-  const [, tabsY = 0, , tabsHeight = 0] = before.tabs ?? [];
-  const [searchY = 0, , searchHeight = 0] = before.search ?? [];
-  expect(Math.abs(tabsY + tabsHeight / 2 - (searchY + searchHeight / 2))).toBeLessThanOrEqual(1);
-  expect(before.filters?.[3] ?? Infinity).toBeLessThan(Math.max(tabsHeight, searchHeight) + 8);
+  const [, , searchHeight = 0] = before.search ?? [];
+  expect(before.filters?.[3] ?? Infinity).toBeLessThan(searchHeight + 8);
   const shifts: string[] = [];
   const check = async (step: string) => {
     const after = await settled();
@@ -162,20 +156,10 @@ async function openIssues(page: Page, width: number) {
 }
 
 for (const width of [1280, 1600]) {
-  test(`no tab or severity click on the Issues page moves the bands above its rows at ${width}px`, async ({
+  test(`no severity click on the Issues page moves the bands above its rows at ${width}px`, async ({
     page,
   }) => {
     const { table, rows, check, choose, shifts } = await openIssues(page, width);
-    await page.getByRole('radio', { name: /^Content/ }).click();
-    await expect(rows.first()).toContainText('content issue 1');
-    await check('Content tab');
-    await page.getByRole('radio', { name: /^AEO/ }).click();
-    await expect(rows.first()).toContainText('aeo issue 1');
-    await check('AEO tab');
-    await page.getByRole('radio', { name: /^Technical/ }).click();
-    await expect(rows.first()).toContainText('technical issue 1');
-    await check('Technical tab');
-
     await choose(/^Severity/, 'Low');
     await expect(rows.nth(1)).toContainText('technical issue 2');
     await expect.poll(() => new URL(page.url()).searchParams.get('severity')).toBe('low');
@@ -209,7 +193,7 @@ for (const width of [1280, 1600]) {
     await check('Page kind all');
 
     const heads = table.locator('thead');
-    await heads.getByRole('button', { name: /^Pages affected/ }).click();
+    await heads.getByRole('button', { name: /^Pages/ }).click();
     await expect.poll(() => new URL(page.url()).searchParams.get('sort')).toBe('pages');
     await check('Sort by pages');
     await heads.getByRole('button', { name: /^Severity/ }).click();
@@ -241,7 +225,7 @@ test('at phone width the search takes a line and the other controls share the ne
   await stubIssues(page);
   await page.goto(fixtureProjectPath('/issues'));
   const table = page.getByRole('region', { name: 'Issues', exact: true });
-  await expect(table.locator('tbody tr').first()).toContainText('technical issue 1');
+  await expect(table.locator('tbody tr').nth(1)).toContainText('technical issue 1');
   const bar = table.locator('[data-filter-bar]');
   const filters = bar.getByRole('button', { name: /^Filters/ });
   await filters.click();

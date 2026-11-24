@@ -6,6 +6,7 @@ const LAYOUT = {
   pair: 'column-split:grid-cols-2',
   thirds: 'column-split:grid-cols-3',
   'main-aside': 'column-wide:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
+  'aside-main': 'column-wide:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]',
   halves: 'column-wide:grid-cols-2',
   slips: 'grid-cols-[repeat(auto-fill,minmax(min(100%,17.5rem),1fr))]',
 } as const;

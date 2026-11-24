@@ -61,6 +61,13 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
       ]),
     warmSiteHealth,
   ),
+  '/aeo-readiness': routeReads(
+    () => import('@/lib/api/site-health-queries'),
+    ({ siteHealthQueries }, client, scope) => {
+      warmQuery(client, siteHealthQueries.dashboard(scope));
+      warmQuery(client, siteHealthQueries.aeoReadiness(scope));
+    },
+  ),
   '/issues': routeReads(
     () =>
       Promise.all([
@@ -287,7 +294,7 @@ async function warmIssues(
   const dashboard = siteHealthQueries.dashboard(scope);
   const cachedCrawlId = client.getQueryData(dashboard.queryKey)?.crawl?.id;
   warmQuery(client, dashboard);
-  const params = issueCatalogParams(emptyIssueFilters, null);
+  const params = { ...issueCatalogParams(emptyIssueFilters, null), section: undefined };
   const warmSummary = (crawlId: string) =>
     warmQuery(client, siteHealthQueries.issues(workspaceId, crawlId, ISSUE_PRIORITY_PARAMS));
   if (cachedCrawlId) {

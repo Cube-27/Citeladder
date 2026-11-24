@@ -32,7 +32,7 @@ export function ScoreSection({
           value: coverage == null ? null : coverage * 100,
           valueUnit: 'percent',
           unavailable: scoreUnavailableState(summary?.aeo_measurement_state),
-          href: '/site?tab=aeo-readiness',
+          href: '/aeo-readiness',
         },
         {
           title: 'Pages discovered',

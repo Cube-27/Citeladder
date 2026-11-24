@@ -11,10 +11,10 @@ import {
   ISSUE_A,
   IssuesCatalog,
   URL_A,
-  isSummaryRequest,
   issue,
   issueDetail,
   occurrence,
+  pageRow,
   renderIssues,
   summary,
 } from './issues-catalog.test-support';
@@ -23,6 +23,17 @@ type User = ReturnType<typeof userEvent.setup>;
 
 const OTHER = 'bbbbbbbb-2222-4222-8222-222222222222';
 const ISSUES = `/api/v1/site-crawls/${CRAWL}/issues`;
+const PAGES = `/api/v1/site-crawls/${CRAWL}/pages`;
+
+function servePages(items = [pageRow()], seen: URLSearchParams[] = []) {
+  mswServer.use(
+    http.get(PAGES, ({ request }) => {
+      seen.push(new URL(request.url).searchParams);
+      return HttpResponse.json({ items, next_cursor: null, root_errors: [] });
+    }),
+  );
+  return seen;
+}
 
 async function findSetFilter(label: string, value: string) {
   const remove = await screen.findByRole('button', { name: `Remove ${label} filter` });
@@ -46,10 +57,10 @@ function currentUrl(): string {
 function serveIssues(items = [issue()], seen: URLSearchParams[] = [], nextCursor?: string) {
   mswServer.use(
     http.get(ISSUES, ({ request }) => {
-      if (!isSummaryRequest(request)) seen.push(new URL(request.url).searchParams);
+      seen.push(new URL(request.url).searchParams);
       return HttpResponse.json({
         items,
-        next_cursor: isSummaryRequest(request) ? null : (nextCursor ?? null),
+        next_cursor: nextCursor ?? null,
         summary,
       });
     }),
@@ -62,6 +73,12 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/issues');
   mswServer.use(
     http.get(`${ISSUES}/${ISSUE_A}`, () => HttpResponse.json(issueDetail())),
+    http.get(PAGES, () =>
+      HttpResponse.json({ items: [pageRow()], next_cursor: null, root_errors: [] }),
+    ),
+    http.get(`/api/v1/site-crawls/${CRAWL}`, () =>
+      HttpResponse.json({ error: { message: 'Not found' } }, { status: 404 }),
+    ),
     http.get(`/api/v1/site-crawls/${CRAWL}/issue-fixes`, () =>
       HttpResponse.json({ crawl_id: CRAWL, items: [] }),
     ),
@@ -71,42 +88,34 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('IssuesCatalog', () => {
-  it('opens on the crawl summary, the issues to fix first, and the Technical tab', async () => {
+  it('opens on one table of every issue, grouped by kind and ordered by severity', async () => {
     const seen = serveIssues([
       issue(),
       issue({
         group_id: OTHER,
+        rule_id: 'technical.canonical_missing',
+        dimension: 'technical',
+        category: 'indexability',
         title: 'Canonical tag is missing',
-        remediation: 'Add a canonical link. Point it at this page.',
       }),
     ]);
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    const strip = await screen.findByRole('group', { name: 'Issue summary' });
+    const table = await screen.findByRole('region', { name: 'Issues' });
+    await within(table).findByRole('button', { name: 'Canonical tag is missing' });
     expect(
-      within(strip)
-        .getAllByRole('term')
-        .map((term) => term.textContent),
-    ).toEqual(['Issue types', 'Pages affected', 'High', 'Medium', 'Low']);
-    expect(
-      within(strip)
-        .getAllByRole('definition')
-        .map((value) => value.textContent),
-    ).toEqual(['47', '50', '12', '23', '12']);
-    const fixFirst = screen.getByRole('region', { name: 'Fix these first' });
-    const [first, second] = within(fixFirst).getAllByRole('listitem');
-    expect(within(first!).getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
-    expect(within(second!).getByText('Add a canonical link.')).toBeInTheDocument();
-    expect(within(fixFirst).queryByText(/Point it at this page/)).toBeNull();
-    expect(
-      screen.getAllByRole('radio').map((tab) => tab.textContent?.replaceAll(/\s+/g, ' ').trim()),
-    ).toEqual(['Technical (24)', 'Content (9)', 'AEO (14)']);
-    expect(screen.getByRole('radio', { name: /^Technical/ })).toBeChecked();
-    const table = screen.getByRole('region', { name: 'Issues' });
-    expect(within(table).getByRole('button', { name: 'Canonical tag is missing' })).toBeVisible();
-    expect(seen.at(-1)?.get('section')).toBe('technical');
+      [...table.querySelectorAll('tbody tr')].map((row) => row.querySelector('td')?.textContent),
+    ).toEqual([
+      'AEO: schema',
+      expect.stringContaining('WebSite schema is missing'),
+      'Technical',
+      expect.stringContaining('Canonical tag is missing'),
+    ]);
+    expect(seen.at(-1)?.get('section')).toBeNull();
     expect(seen.at(-1)?.get('sort')).toBe('severity');
+    expect(screen.queryByRole('group', { name: 'Issue summary' })).toBeNull();
+    expect(screen.queryByRole('radio')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull();
   });
 
@@ -131,80 +140,50 @@ describe('IssuesCatalog', () => {
     ).toBeInTheDocument();
   });
 
-  it('opens an issue over the list, links each page to its detail, and closes it again', async () => {
+  it('opens an issue as a page with why, how to fix and its affected pages, and closes it again', async () => {
     serveIssues();
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    const dialog = await openIssue(user, 'WebSite schema is missing');
+    const page = await openIssue(user, 'WebSite schema is missing');
     await waitFor(() => expect(currentUrl()).toContain(`issue=${ISSUE_A}`));
 
-    expect(within(dialog).getByText('How to fix')).toBeInTheDocument();
-    expect(within(dialog).getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
-    expect(
-      within(dialog).queryByText(
-        'Search engines cannot find WebSite structured data on this page.',
-      ),
-    ).toBeNull();
-    expect(
-      await within(dialog).findByText('expected types WebSite, found types Organization'),
-    ).toBeInTheDocument();
-    const link = within(dialog).getByRole('link', { name: /Homepage/ });
-    expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${URL_A}`);
-    expect(within(link).getByText('Article')).toBeInTheDocument();
+    expect(within(page).getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
+    const pages = within(page).getByRole('region', { name: 'Affected pages' });
+    const row = (await within(pages).findByText('Homepage')).closest('tr')!;
+    expect(within(row).getByRole('link')).toHaveAttribute(
+      'href',
+      `/site/crawls/${CRAWL}/pages/${URL_A}`,
+    );
+    expect(within(row).getByText('Article')).toBeInTheDocument();
 
-    const ask = within(dialog).getByRole('link', { name: 'Ask agent' });
+    const ask = within(page).getByRole('link', { name: 'Ask agent' });
     const handoff = parseAgentHandoff(new URL(ask.getAttribute('href')!, 'http://x').searchParams);
     expect(handoff.context).toEqual({
       issue_group_reference: { crawl_id: CRAWL, group_id: ISSUE_A },
     });
     expect(handoff.skillId).toBe('technical_health');
-    const askPage = within(dialog).getByRole('link', { name: 'Ask agent about this page' });
-    const pageHandoff = parseAgentHandoff(
-      new URL(askPage.getAttribute('href')!, 'http://x').searchParams,
-    );
-    expect(pageHandoff.context).toEqual({
-      issue_group_reference: { crawl_id: CRAWL, group_id: ISSUE_A, site_url_id: URL_A },
-    });
-    expect(pageHandoff.prompt).toContain('https://acme.com/');
 
-    await user.click(within(dialog).getByRole('button', { name: 'Back to issues' }));
+    await user.click(within(page).getByRole('button', { name: 'Back to issues' }));
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull(),
     );
     expect(currentUrl()).not.toContain('issue=');
   });
 
-  it('opens an issue from the summary’s fix-first list', async () => {
-    serveIssues();
-    const user = userEvent.setup();
-    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-
-    const fixFirst = await screen.findByRole('region', { name: 'Fix these first' });
-    await user.click(within(fixFirst).getByRole('button', { name: /WebSite schema is missing/ }));
-    expect(
-      await screen.findByRole('region', { name: 'WebSite schema is missing' }),
-    ).toBeInTheDocument();
-  });
-
   it('opens an addressed issue on load, even one the listed page does not hold', async () => {
     serveIssues();
+    servePages([pageRow({ title: 'Pricing page' })]);
     mswServer.use(
       http.get(`${ISSUES}/${OTHER}`, () =>
-        HttpResponse.json(
-          issueDetail({
-            group_id: OTHER,
-            title: 'Canonical tag is missing',
-            occurrences: [occurrence({ title: 'Pricing page' })],
-          }),
-        ),
+        HttpResponse.json(issueDetail({ group_id: OTHER, title: 'Canonical tag is missing' })),
       ),
     );
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />, `/issues?issue=${OTHER}`);
 
-    const dialog = await screen.findByRole('region', { name: 'Canonical tag is missing' });
-    expect(await within(dialog).findByRole('link', { name: /Pricing page/ })).toBeInTheDocument();
+    const page = await screen.findByRole('region', { name: 'Canonical tag is missing' });
+    expect(await within(page).findByText('Pricing page')).toBeInTheDocument();
   });
 
   it('says when an addressed issue cannot load, retries it, and closes it', async () => {
@@ -234,79 +213,36 @@ describe('IssuesCatalog', () => {
     expect(currentUrl()).not.toContain('issue=');
   });
 
-  it('never shows one issue’s pages under another issue’s title', async () => {
-    serveIssues([issue(), issue({ group_id: OTHER, title: 'Canonical tag is missing' })]);
-    let releaseOther!: () => void;
-    const otherSettled = new Promise<void>((resolve) => {
-      releaseOther = resolve;
-    });
-    mswServer.use(
-      http.get(`${ISSUES}/${OTHER}`, async () => {
-        await otherSettled;
-        return HttpResponse.json(
-          issueDetail({
-            group_id: OTHER,
-            title: 'Canonical tag is missing',
-            occurrences: [occurrence({ title: 'Pricing page' })],
-          }),
-        );
-      }),
-    );
-    const user = userEvent.setup();
-    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-
-    const first = await openIssue(user, 'WebSite schema is missing');
-    await within(first).findByRole('link', { name: /Homepage/ });
-    await user.click(within(first).getByRole('button', { name: 'Back to issues' }));
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull(),
-    );
-
-    const second = await openIssue(user, 'Canonical tag is missing');
-    expect(within(second).queryByRole('link', { name: /Homepage/ })).toBeNull();
-    act(() => releaseOther());
-    expect(await within(second).findByRole('link', { name: /Pricing page/ })).toBeInTheDocument();
-  });
-
   it('shows no pagination when everything already fits on one page', async () => {
     serveIssues();
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    const dialog = await openIssue(user, 'WebSite schema is missing');
-    await within(dialog).findByRole('link', { name: /Homepage/ });
+    const page = await openIssue(user, 'WebSite schema is missing');
+    await within(page).findByText('Homepage');
 
     expect(screen.queryByRole('button', { name: 'First page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Previous page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
-    await user.click(within(dialog).getByRole('button', { name: 'Back to issues' }));
-    const table = await screen.findByRole('region', { name: 'Issues' });
-    expect(table.querySelectorAll('tbody tr')).toHaveLength(1);
-    expect(table.querySelector('tbody + tbody')).toBeNull();
   });
 
-  it('switches tabs and ordering as server params, from the first page', async () => {
+  it('switches ordering as a server param, from the first page', async () => {
     window.history.replaceState(null, '', '/issues?cursor=page-two&campaign=overview');
     const seen = serveIssues();
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     await screen.findByRole('button', { name: 'WebSite schema is missing' });
 
-    await user.click(screen.getByRole('radio', { name: /^Content/ }));
-    await waitFor(() => expect(seen.at(-1)?.get('section')).toBe('content'));
-    expect(seen.at(-1)?.get('cursor')).toBeNull();
-    expect(currentUrl()).toContain('section=content');
-    expect(currentUrl()).toContain('campaign=overview');
-
     await user.click(screen.getByRole('button', { name: /^Pages/ }));
     await waitFor(() => expect(seen.at(-1)?.get('sort')).toBe('pages'));
-    expect(seen.at(-1)?.get('section')).toBe('content');
+    expect(seen.at(-1)?.get('cursor')).toBeNull();
+    expect(currentUrl()).toContain('campaign=overview');
   });
 
   it('seeds the server query from an Overview rule deep link', async () => {
     window.history.replaceState(
       null,
       '',
-      '/issues?rule=aeo.website_schema&section=aeo&query=schema&page_kind=article&cursor=page-two&campaign=overview',
+      '/issues?rule=aeo.website_schema&query=schema&page_kind=article&cursor=page-two&campaign=overview',
     );
     const seen = serveIssues();
 
@@ -316,12 +252,10 @@ describe('IssuesCatalog', () => {
     expect(screen.getByRole('button', { name: 'First page' })).not.toBeDisabled();
     const sent = seen.at(-1)!;
     expect(sent.get('rule')).toBe('aeo.website_schema');
-    expect(sent.get('section')).toBe('aeo');
     expect(sent.get('query')).toBe('schema');
     expect(sent.get('page_kind')).toBe('article');
     expect(sent.get('cursor')).toBe('page-two');
     expect(screen.getByRole('searchbox', { name: 'Search issues' })).toHaveValue('schema');
-    expect(screen.getByRole('radio', { name: /^AEO/ })).toBeChecked();
   });
 
   it('writes filters to history and reflects back/forward navigation', async () => {
@@ -378,19 +312,14 @@ describe('IssuesCatalog', () => {
   it('narrows an issue’s pages to the page kind the list is filtered to', async () => {
     window.history.replaceState(null, '', '/issues?page_kind=product');
     serveIssues();
-    const detailKinds: Array<string | null> = [];
-    mswServer.use(
-      http.get(`${ISSUES}/${ISSUE_A}`, ({ request }) => {
-        detailKinds.push(new URL(request.url).searchParams.get('page_kind'));
-        return HttpResponse.json(issueDetail());
-      }),
-    );
+    const seen = servePages();
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    const dialog = await openIssue(user, 'WebSite schema is missing');
-    await within(dialog).findByRole('link', { name: /Homepage/ });
-    expect(detailKinds).toEqual(['product']);
+    const page = await openIssue(user, 'WebSite schema is missing');
+    await within(page).findByText('Homepage');
+    expect(seen.at(-1)?.get('page_kind')).toBe('product');
+    expect(seen.at(-1)?.get('rule')).toBe('aeo.website_schema');
   });
 
   it('lists the pages a site-level architecture finding names, not the homepage it is filed on', async () => {
@@ -564,47 +493,17 @@ describe('IssuesCatalog', () => {
     expect(within(dialog).getByText('Showing 2 of 3 pages.')).toBeInTheDocument();
   });
 
-  it('shows New and Fixed since the previous crawl, a dash when unknown, and each page’s value', async () => {
-    const rule = 'technical.meta_description_length';
-    const short = { length: 4, min_chars: 70, max_chars: 160, reason: 'too_short' };
-    serveIssues([
-      issue({ rule_id: rule, affected_url_count: 2, new_url_count: 2, resolved_url_count: null }),
-    ]);
-    const page = (index: number, text: string) =>
-      occurrence({
-        rule_id: rule,
-        occurrence_id: `dddddddd-${index}111-4111-8111-111111111111`,
-        site_url_id: `cccccccc-${index}111-4111-8111-111111111111`,
-        evidence: short,
-        value: { kind: 'meta_description', text, length: 4 },
-      });
-    mswServer.use(
-      http.get(`${ISSUES}/${ISSUE_A}`, () =>
-        HttpResponse.json(
-          issueDetail({
-            rule_id: rule,
-            affected_url_count: 2,
-            occurrences: [page(1, 'Shop'), page(2, 'Shoe')],
-          }),
-        ),
-      ),
-    );
-    const user = userEvent.setup();
+  it('shows New and Fixed since the previous crawl, and a dash when unknown', async () => {
+    serveIssues([issue({ affected_url_count: 2, new_url_count: 2, resolved_url_count: null })]);
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
     const row = (await screen.findByRole('button', { name: 'WebSite schema is missing' })).closest(
       'tr',
     )!;
     const cells = within(row).getAllByRole('cell');
-    expect(cells[3]).toHaveTextContent('2');
-    expect(cells[4]).toHaveTextContent('—');
-    const dialog = await openIssue(user, 'WebSite schema is missing');
-    expect(await within(dialog).findByText('Shop')).toBeInTheDocument();
-    expect(within(dialog).getByText('Shoe')).toBeInTheDocument();
-    expect(
-      within(dialog).getAllByText(/Meta description \(4 chars, recommended 70–160\)/),
-    ).toHaveLength(2);
-    expect(within(dialog).queryByText(/4 characters/)).toBeNull();
+    expect(cells[2]).toHaveTextContent('2');
+    expect(cells[4]).toHaveTextContent('2');
+    expect(cells[5]).toHaveTextContent('—');
   });
 
   it('applies a severity filter as a server param (not a client filter)', async () => {
@@ -622,7 +521,7 @@ describe('IssuesCatalog', () => {
     mswServer.use(
       http.get(ISSUES, ({ request }) => {
         const params = new URL(request.url).searchParams;
-        if (!isSummaryRequest(request)) seen.push(params.toString());
+        seen.push(params.toString());
         return HttpResponse.json({
           items: [
             issue(),
@@ -686,78 +585,11 @@ describe('IssuesCatalog', () => {
     expect(screen.getByRole('searchbox', { name: 'Search issues' })).toHaveValue('');
   });
 
-  it('keeps the way back when a later page of an issue’s occurrences fails', async () => {
-    serveIssues();
-    mswServer.use(
-      http.get(`${ISSUES}/${ISSUE_A}`, ({ request }) =>
-        new URL(request.url).searchParams.get('cursor') === null
-          ? HttpResponse.json(
-              issueDetail({
-                occurrence_count: 2,
-                affected_url_count: 2,
-                next_cursor: 'cursor-page-2',
-              }),
-            )
-          : HttpResponse.json({ error: { message: 'Bad cursor' } }, { status: 400 }),
-      ),
-    );
-    const user = userEvent.setup();
-    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-
-    const dialog = await openIssue(user, 'WebSite schema is missing');
-    await within(dialog).findByRole('link', { name: /Homepage/ });
-    await user.click(within(dialog).getByRole('button', { name: 'Next page' }));
-    expect(await within(dialog).findByText('Bad cursor')).toBeInTheDocument();
-
-    const previous = within(dialog).getByRole('button', { name: 'Previous page' });
-    expect(within(dialog).getByRole('button', { name: 'Next page' })).toBeDisabled();
-    await user.click(previous);
-    expect(await within(dialog).findByRole('link', { name: /Homepage/ })).toBeInTheDocument();
-  });
-
-  it('pages an issue’s occurrences in the dialog and the list beneath it', async () => {
+  it('pages the issue list by cursor', async () => {
     serveIssues([issue()], [], 'catalog-page-2');
-    const seenCursors: (string | null)[] = [];
-    mswServer.use(
-      http.get(`${ISSUES}/${ISSUE_A}`, ({ request }) => {
-        const cursor = new URL(request.url).searchParams.get('cursor');
-        seenCursors.push(cursor);
-        const onFirstPage = cursor === null;
-        return HttpResponse.json(
-          issueDetail({
-            occurrences: [
-              occurrence({
-                occurrence_id: onFirstPage
-                  ? 'dddddddd-1111-4111-8111-111111111111'
-                  : 'dddddddd-2222-4111-8111-111111111111',
-                site_url_id: onFirstPage ? URL_A : 'cccccccc-2222-4111-8111-111111111111',
-                normalized_url: onFirstPage ? 'https://acme.com/' : 'https://acme.com/page-2',
-                display_url: onFirstPage ? 'https://acme.com/' : 'https://acme.com/page-2',
-                title: onFirstPage ? 'Homepage' : 'Page Two',
-              }),
-            ],
-            occurrence_count: 2,
-            affected_url_count: 2,
-            next_cursor: onFirstPage ? 'cursor-page-2' : null,
-          }),
-        );
-      }),
-    );
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-
-    const dialog = await openIssue(user, 'WebSite schema is missing');
-    await within(dialog).findByRole('link', { name: /Homepage/ });
-    expect(within(dialog).getByRole('button', { name: 'Previous page' })).toBeDisabled();
-    await user.click(within(dialog).getByRole('button', { name: 'Next page' }));
-    await within(dialog).findByRole('link', { name: /Page Two/ });
-    expect(seenCursors).toEqual([null, 'cursor-page-2']);
-    await user.click(within(dialog).getByRole('button', { name: 'Previous page' }));
-    await within(dialog).findByRole('link', { name: /Homepage/ });
-    await user.click(within(dialog).getByRole('button', { name: 'Back to issues' }));
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull(),
-    );
+    await screen.findByRole('button', { name: 'WebSite schema is missing' });
 
     await user.click(screen.getByRole('button', { name: 'Next page' }));
     await waitFor(() => expect(currentUrl()).toContain('cursor=catalog-page-2'));
@@ -782,7 +614,7 @@ describe('IssuesCatalog', () => {
     expect(within(typed).getByText('Page kinds').nextElementSibling?.textContent).toBe(
       'Product, Category',
     );
-    expect(within(typed).getByText('32 pages affected')).toBeInTheDocument();
+    expect(typed.querySelector('dl')).toHaveTextContent('Affected pages32');
     expect(within(typed).getByText('High')).toBeInTheDocument();
     await user.click(within(typed).getByRole('button', { name: 'Back to issues' }));
     await waitFor(() =>

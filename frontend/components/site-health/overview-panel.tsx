@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { OverviewDetails } from './overview-details';
 import { OverviewMetricCards } from './overview-metrics';
@@ -40,9 +40,33 @@ export function OverviewPanel({
         <StateBlock kind="loading" label="Loading Overview details" shape={PILLAR_TABLE} />
       </Stack>
     );
-  let overviewBody: ReactNode = null;
-  if (terminal && overview.isError && httpErrorStatus(overview.error) !== 404) {
-    overviewBody = (
+  const summary = dashboard?.score_summary ?? crawl?.score_summary ?? null;
+  return (
+    <Stack gap="workspace" className="min-w-0" data-testid="site-health-overview">
+      {data ? (
+        <OverviewDetails
+          data={data}
+          workspaceId={workspaceId}
+          crawlId={crawlId}
+          summary={summary}
+        />
+      ) : (
+        <>
+          <OverviewMetricCards overview={data} dashboard={dashboard} crawl={crawl} />
+          {terminal ? <OverviewReadState overview={overview} /> : null}
+        </>
+      )}
+    </Stack>
+  );
+}
+
+function OverviewReadState({
+  overview,
+}: Readonly<{
+  overview: Pick<UseQueryResult, 'isError' | 'isLoading' | 'isFetching' | 'error' | 'refetch'>;
+}>) {
+  if (overview.isError && httpErrorStatus(overview.error) !== 404)
+    return (
       <StateBlock
         kind="error"
         {...readErrorProps(overview)}
@@ -50,20 +74,9 @@ export function OverviewPanel({
         title="Couldn't load the Site health overview"
       />
     );
-  } else if (data) {
-    overviewBody = <OverviewDetails data={data} />;
-  } else if (terminal && overview.isLoading) {
-    overviewBody = (
-      <StateBlock kind="loading" label="Loading Overview details" shape={PILLAR_TABLE} />
-    );
-  }
-
-  return (
-    <Stack gap="workspace" className="min-w-0" data-testid="site-health-overview">
-      <OverviewMetricCards overview={data} dashboard={dashboard} crawl={crawl} />
-      {overviewBody}
-    </Stack>
-  );
+  if (overview.isLoading)
+    return <StateBlock kind="loading" label="Loading Overview details" shape={PILLAR_TABLE} />;
+  return null;
 }
 
 function useAwaitingFirstSnapshot(snapshotPending: boolean): boolean {

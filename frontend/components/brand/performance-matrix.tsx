@@ -18,7 +18,6 @@ import { SegmentedControl } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { downloadCsv } from '@/lib/csv/download';
 import { MATRIX_DIMENSIONS, MATRIX_METRICS, POSITION_HINT } from '@/lib/config/visibility';
-import { pluralCount } from '@/lib/format';
 import { setUrlParams, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
   cellAt,
@@ -91,7 +90,7 @@ export function PerformanceMatrix({
       ? {
           kind: 'value',
           text: reading.text,
-          detail: pluralCount(reading.answers, 'answer'),
+          detail: null,
           tint: place(reading.value),
         }
       : {

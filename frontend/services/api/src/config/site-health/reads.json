@@ -130,7 +130,7 @@
     "classification_formula_version": "sh-classification-1",
     "overview_issue_trend_day_limit": 90,
     "overview_cohort_share_shift_points": 10,
-    "web_fundamentals_areas": ["accessibility", "mobile", "security", "lab"],
+    "web_fundamentals_areas": ["indexability", "metadata", "content", "performance", "security"],
     "eligibility_critical_checkpoints": [
       "acquisition.public_representation",
       "search.indexability"

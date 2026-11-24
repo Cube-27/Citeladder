@@ -229,7 +229,10 @@ export class WebDiagnosticFold {
   );
   addEvaluations(rows: Evaluation[]) {
     for (const row of rows) {
-      const area = this.areas.get(catalog.get(row.rule_id)?.web_fundamentals_area ?? '');
+      const scored = catalog.get(row.rule_id);
+      const area = scored?.score_roles.includes('web_fundamentals')
+        ? this.areas.get(scored.category)
+        : undefined;
       if (!area) continue;
       area.rows++;
       if (row.outcome !== 'not_applicable') area.applicable++;

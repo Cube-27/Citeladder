@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
-import { screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
+import { screen, within } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
+import type { SiteIssue } from '@citeladder/contracts';
 
 import { figureText } from '@/test/figures';
 import { mswServer } from '@/test/msw-server';
@@ -22,14 +22,51 @@ function OverviewPanel(props: Omit<ComponentProps<typeof ScopedOverviewPanel>, '
   return <ScopedOverviewPanel workspaceId={WORKSPACE} {...props} />;
 }
 
+const ISSUES = `/api/v1/site-crawls/${CRAWL}/issues`;
+const ISSUE_SUMMARY = {
+  issue_count: 2,
+  occurrence_count: 13,
+  severity_counts: { high: 9, low: 4 },
+  dimension_counts: { technical: 2 },
+  affected_url_count: 10,
+  monitored_affected_url_count: 10,
+  section_counts: { technical: 2, content: 0, aeo: 0 },
+};
+
+function topIssue(overrides: Partial<SiteIssue>): SiteIssue {
+  return {
+    group_id: 'aaaaaaaa-1111-4111-8111-111111111111',
+    crawl_id: CRAWL,
+    rule_id: 'technical.title_present',
+    page_kinds: [],
+    dimension: 'technical',
+    category: 'metadata',
+    severity: 'high',
+    title: 'Missing page title',
+    description: '',
+    remediation: '',
+    remediation_route: 'code',
+    score_roles: [],
+    affected_url_count: 1,
+    new_url_count: null,
+    resolved_url_count: null,
+    analyzer_version: 'v1',
+    rule_version: 'v1',
+    created_at: '2026-11-20T10:00:00.000Z',
+    ...overrides,
+  };
+}
+
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
+beforeEach(() =>
+  mswServer.use(
+    http.get(ISSUES, () =>
+      HttpResponse.json({ items: [], next_cursor: null, summary: ISSUE_SUMMARY }),
+    ),
+  ),
+);
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
-
-function stat(label: string) {
-  const term = within(screen.getByTestId('overview-metrics')).getByText(label);
-  return term.closest('[data-figure-cell]');
-}
 
 const terminalOverview = (overrides: Record<string, unknown> = {}) => ({
   project_id: PROJECT,
@@ -210,72 +247,6 @@ describe('OverviewPanel', () => {
     expect(overviewRequests).toBe(0);
   });
 
-  it('counts audited against found pages for a plan-limited crawl of a large site', async () => {
-    mswServer.use(
-      http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
-        HttpResponse.json(
-          terminalOverview({
-            crawl_coverage: {
-              state: 'partial',
-              evidence: {
-                reasons: ['requested_page_limit_reached'],
-                observation_count: 51306,
-                analyzed_url_count: 199,
-                failed_url_count: 2,
-                automatic_limit: 200,
-              },
-              denominator_kind: 'selected_intended_public_urls',
-            },
-          }),
-        ),
-      ),
-    );
-    renderWithProviders(
-      <OverviewPanel
-        projectId={PROJECT}
-        crawlId={CRAWL}
-        crawl={{ status: 'completed' } as never}
-        dashboard={undefined}
-      />,
-    );
-
-    await waitFor(() => expect(figureText('Crawl coverage')).toBe('199 of 51,306 pages audited'));
-  });
-
-  it('keeps an unknown crawl that found nothing from reading as a percentage', async () => {
-    mswServer.use(
-      http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
-        HttpResponse.json(
-          terminalOverview({
-            crawl_coverage: {
-              state: 'unknown',
-              evidence: {
-                reasons: ['discovery_failed', 'no_observed_urls'],
-                observation_count: 0,
-                analyzed_url_count: 0,
-                failed_url_count: 0,
-                automatic_limit: null,
-              },
-              denominator_kind: 'selected_intended_public_urls',
-            },
-          }),
-        ),
-      ),
-    );
-    renderWithProviders(
-      <OverviewPanel
-        projectId={PROJECT}
-        crawlId={CRAWL}
-        crawl={{ status: 'completed', analyzed_count: 4, visible_url_count: 4 } as never}
-        dashboard={undefined}
-      />,
-    );
-
-    await screen.findByRole('table', { name: 'Top issues' });
-    expect(stat('Crawl coverage')).toHaveTextContent('Not measured');
-    expect(screen.queryByRole('progressbar', { name: 'Crawl coverage' })).not.toBeInTheDocument();
-  });
-
   it('links each score to where it is acted on', () => {
     renderWithProviders(
       <OverviewPanel
@@ -289,84 +260,17 @@ describe('OverviewPanel', () => {
     expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
       ['Web fundamentals', '/issues?section=technical'],
       ['AEO readiness', '/issues?section=aeo'],
-      ['AEO checklist completion', '/site?tab=aeo-readiness'],
+      ['AEO checklist completion', '/aeo-readiness'],
       ['Crawl coverage', '/site?tab=pages'],
     ]);
   });
 
-  it('plots open issues per day, oldest first', async () => {
-    mswServer.use(
-      http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
-        HttpResponse.json(
-          terminalOverview({
-            open_issue_trend: [
-              { day: '2026-08-28', open_count: 12 },
-              { day: '2026-08-30', open_count: 9 },
-            ],
-          }),
-        ),
-      ),
-    );
-    renderWithProviders(
-      <OverviewPanel
-        projectId={PROJECT}
-        crawlId={CRAWL}
-        crawl={{ status: 'completed' } as never}
-        dashboard={undefined}
-      />,
-    );
-
-    const table = await screen.findByRole('table', { name: 'Open issues over time' });
-    expect(
-      within(table)
-        .getAllByRole('row')
-        .map((row) => row.textContent),
-    ).toEqual(['Series2026-08-282026-08-30', 'Open issues129']);
-    expect(screen.queryByRole('heading', { name: 'AEO readiness trend' })).not.toBeInTheDocument();
-  });
-
-  it('explains a changed scored cohort once, beside the score changes', async () => {
-    const changedComposition = {
-      added_page_kinds: ['product'],
-      removed_page_kinds: [],
-      previous_page_count_by_kind: { homepage: 1 },
-      current_page_count_by_kind: { homepage: 1, product: 4 },
-    };
-    mswServer.use(
-      http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
-        HttpResponse.json(
-          terminalOverview({
-            change_summary: {
-              state: 'measured',
-              reason: 'cohort_composition_changed',
-              metrics: [],
-              cohort_composition: changedComposition,
-            },
-          }),
-        ),
-      ),
-    );
-    renderWithProviders(
-      <OverviewPanel
-        projectId={PROJECT}
-        crawlId={CRAWL}
-        crawl={{ status: 'completed' } as never}
-        dashboard={undefined}
-      />,
-    );
-
-    expect(await screen.findByRole('heading', { name: 'Score change' })).toBeVisible();
-    expect(screen.getAllByText('Scored cohort composition changed.')).toHaveLength(1);
-    expect(screen.getByText('Added page kinds: Product.')).toBeInTheDocument();
-  });
-
-  it('opens HTTP Web fundamentals evidence without browser-only checks', async () => {
+  it('breaks Web fundamentals down by area with no evidence drawer', async () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
         HttpResponse.json(terminalOverview()),
       ),
     );
-    const user = userEvent.setup();
     renderWithProviders(
       <OverviewPanel
         projectId={PROJECT}
@@ -380,19 +284,32 @@ describe('OverviewPanel', () => {
     const areas = within(screen.getByRole('list', { name: 'Web fundamentals breakdown' }));
     expect(areas.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       'accessibility75',
-      'mobile · 1 of 4 checks run100',
+      'mobile100',
     ]);
-    await user.click(screen.getByRole('button', { name: 'View evidence' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('Images missing alt attributes');
-    expect(screen.getByRole('dialog')).not.toHaveTextContent('mobile_layout');
-    expect(screen.getByRole('dialog')).not.toHaveTextContent('HTTP evidence only');
-    expect(screen.getByRole('dialog')).not.toHaveTextContent('Core Web Vitals');
+    expect(screen.queryByRole('button', { name: 'View evidence' })).toBeNull();
   });
 
-  it('names each top issue by its failing title under its severity', async () => {
+  it('lists the top issues with their change since the last crawl, each opening its issue page', async () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
         HttpResponse.json(terminalOverview()),
+      ),
+      http.get(ISSUES, () =>
+        HttpResponse.json({
+          items: [
+            topIssue({ title: 'Missing page title', severity: 'high', affected_url_count: 9 }),
+            topIssue({
+              group_id: 'bbbbbbbb-2222-4222-8222-222222222222',
+              title: 'Missing meta description',
+              severity: 'low',
+              affected_url_count: 4,
+              new_url_count: 3,
+              resolved_url_count: 1,
+            }),
+          ],
+          next_cursor: null,
+          summary: ISSUE_SUMMARY,
+        }),
       ),
     );
     renderWithProviders(
@@ -405,20 +322,25 @@ describe('OverviewPanel', () => {
     );
 
     const table = await screen.findByRole('table', { name: 'Top issues' });
-    expect(
-      screen.getByRole('link', { name: 'Visible creator attribution incomplete' }),
-    ).toHaveAttribute('href', '/issues?rule=aeo.visible_attribution&section=content');
-    expect(screen.getByRole('link', { name: 'Missing page title' })).toHaveAttribute(
+    expect(await within(table).findByRole('link', { name: 'Missing page title' })).toHaveAttribute(
       'href',
-      '/issues?rule=technical.title_present',
+      '/issues?issue=aaaaaaaa-1111-4111-8111-111111111111',
     );
     const rows = within(table).getAllByRole('row');
-    expect(rows.map((row) => row.textContent)).toEqual([
-      'ImpactIssuePages affected',
-      'HighMissing page title1',
-      'MediumVisible creator attribution incomplete1',
-      'LowMissing meta description1',
+    expect(
+      rows.map((row) =>
+        within(row)
+          .getAllByRole(row === rows[0] ? 'columnheader' : 'cell')
+          .map((cell) => cell.textContent),
+      ),
+    ).toEqual([
+      ['Issue', 'Severity', 'Pages', 'Change', 'New', 'Fixed'],
+      ['Missing page title', 'High', '9', '—Not measured', '—Unavailable', '—Unavailable'],
+      ['Missing meta description', 'Low', '4', expect.stringContaining('2'), '3', '1'],
     ]);
+    expect(screen.queryByRole('group', { name: 'Site health scores' })).toBeNull();
+    expect(screen.queryByText('Crawl coverage')).toBeNull();
+    expect(screen.queryByText('Not every check ran')).toBeNull();
   });
 
   it('says a pillar with no applicable checks is not applicable, apart from one not measured or excluded', async () => {

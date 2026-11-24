@@ -1,5 +1,4 @@
 import type { ComponentProps } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
@@ -25,7 +24,6 @@ import {
   statusLabel,
   type ChecksRun,
 } from '@/lib/site-health/status';
-import { useProjectHref } from '@/lib/navigation/project-destination';
 import { scoreBand, type ScoreBand } from '@/lib/score-band';
 
 function LinkedFromLine({ page }: Readonly<{ page: PageSummary }>) {
@@ -73,7 +71,7 @@ function pagesColumns(
 
 export function PagesTable({
   pages,
-  crawlId,
+  onOpen,
   sort = DEFAULT_PAGES_SORT,
   onSortChange,
   state,
@@ -83,7 +81,7 @@ export function PagesTable({
   busy,
 }: Readonly<{
   pages: PageSummary[];
-  crawlId: string;
+  onOpen: (page: PageSummary) => void;
   sort?: PagesSort;
   onSortChange?: (sort: PagesSort) => void;
   state?: DataTableState;
@@ -92,11 +90,9 @@ export function PagesTable({
   pageSize?: number;
   busy?: ComponentProps<typeof DataTable>['busy'];
 }>) {
-  const router = useNavigate();
-  const projectHref = useProjectHref();
   const openPage = (siteUrlId: string) => {
     const page = pages.find((row) => row.site_url_id === siteUrlId);
-    router(projectHref(`/site/crawls/${page?.crawl_id ?? crawlId}/pages/${siteUrlId}`));
+    if (page) onOpen(page);
   };
   const origin = sharedOrigin(pages.map((page) => page.display_url));
   return (
@@ -134,7 +130,13 @@ export function PagesTable({
                       text="emphasis"
                       underline="hover"
                       href={`/site/crawls/${page.crawl_id}/pages/${page.site_url_id}`}
-                      onClick={(event) => event.stopPropagation()}
+                      aria-haspopup="dialog"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+                        event.preventDefault();
+                        onOpen(page);
+                      }}
                       aria-label={`View ${title}, ${page.display_url}`}
                     >
                       {title}
