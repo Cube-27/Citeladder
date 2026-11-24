@@ -54,7 +54,8 @@ export function EngineMark({
   className?: string;
 }>) {
   const fills = BRAND_FILLS[engine];
-  const shapes = brand ? ENGINE_PATHS[engine].split(/(?<=z)(?=M)/) : [ENGINE_PATHS[engine]];
+  const shapes =
+    brand && fills.length > 1 ? ENGINE_PATHS[engine].split(/(?<=z)(?=M)/) : [ENGINE_PATHS[engine]];
   return (
     <svg
       aria-hidden
