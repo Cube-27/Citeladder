@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
-import { createReview } from '../src/search-intelligence/reviews.ts';
+import { createReview, resolveCompetitor } from '../src/search-intelligence/reviews.ts';
 import { reviewBody } from '../src/routes/search-intelligence-contracts.ts';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
@@ -181,7 +181,7 @@ describe('atomic Search Intelligence reviews', () => {
       ),
     ).rejects.toMatchObject({ code: 'dataforseo_connection_required' });
   });
-  it('does unpaid resolution with no project lock and rejects a changed saved competitor', async () => {
+  it('reads a competitor website only for an exact host, with no project lock, and rejects a changed saved competitor', async () => {
     const t = await tenant(),
       competitorId = randomUUID();
     await db
@@ -198,7 +198,22 @@ describe('atomic Search Intelligence reviews', () => {
         updated_at: new Date(),
       })
       .execute();
+    const broad = await createReview(
+      db,
+      t.scope,
+      t.userId,
+      'broad-scope',
+      reviewBody.parse({ datasets: [{ kind: 'missing_keywords', competitor_id: competitorId }] }),
+      key,
+      {
+        resolve: async () => {
+          throw new Error('The default scope reads no competitor website');
+        },
+      },
+    );
+    expect(broad.status).toBe('reviewed');
     const input = reviewBody.parse({
+      research_scope: 'exact_host',
       datasets: [{ kind: 'missing_keywords', competitor_id: competitorId }],
     });
     await expect(
@@ -227,6 +242,34 @@ describe('atomic Search Intelligence reviews', () => {
         .select('id')
         .where('workspace_id', '=', t.workspaceId)
         .execute(),
-    ).toHaveLength(0);
+    ).toHaveLength(1);
+  });
+});
+
+describe('competitor website confirmation', () => {
+  const saved = {
+    identity: 'rival',
+    label: 'Rival',
+    registrable_domain: 'rival.com',
+    hostname: 'rival.com',
+    origin: 'https://rival.com',
+    source_kind: 'competitor' as const,
+  };
+  it('takes the host the website answers on, even when refused, and names the competitor it cannot reach', async () => {
+    const refused = await resolveCompetitor(saved, async () => ({
+      url: 'https://www.rival.com/',
+      status: 403,
+      contentType: 'text/html',
+      body: Buffer.alloc(0),
+    }));
+    expect(refused.hostname).toBe('www.rival.com');
+    await expect(
+      resolveCompetitor(saved, async () => {
+        throw new Error('timeout');
+      }),
+    ).rejects.toMatchObject({
+      code: 'unsupported_target',
+      message: 'Could not find the exact host of Rival; use the Domain + subdomains scope',
+    });
   });
 });
