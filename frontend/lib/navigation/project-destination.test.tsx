@@ -156,12 +156,12 @@ describe('useSelectProject', () => {
   });
 
   it('leaves a path that names the outgoing project crawl', () => {
-    pathname = '/site/crawls/22222222-2222-4222-8222-222222222222/pages/abc';
+    pathname = '/runs/22222222-2222-4222-8222-222222222222';
     const { result } = renderScoped(useSelectProject, PROJECT_1);
 
     act(() => result.current(PROJECT_2));
 
-    expect(navigate).toHaveBeenCalledWith(`/site?project=${PROJECT_2}`);
+    expect(navigate).toHaveBeenCalledWith(`/runs?project=${PROJECT_2}`);
   });
 
   it("leaves the outgoing project's prompt for the new project's prompt library", () => {
@@ -214,7 +214,7 @@ describe('useSelectProject', () => {
   });
 
   it('keeps a crawl detail path when the ACTIVE project is re-selected', () => {
-    pathname = '/site/crawls/22222222-2222-4222-8222-222222222222/pages/abc';
+    pathname = '/runs/22222222-2222-4222-8222-222222222222';
     const { result } = renderScoped(useSelectProject, PROJECT_1);
 
     act(() => result.current(PROJECT_1));
@@ -226,7 +226,7 @@ describe('useSelectProject', () => {
   });
 
   it('keeps an explicit destination even when leaving a crawl detail path', () => {
-    pathname = '/site/crawls/22222222-2222-4222-8222-222222222222/pages/abc';
+    pathname = '/runs/22222222-2222-4222-8222-222222222222';
     const { result } = renderScoped(useSelectProject, PROJECT_1);
 
     act(() => result.current(PROJECT_2, { destination: '/settings' }));

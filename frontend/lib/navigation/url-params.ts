@@ -20,9 +20,9 @@ type UrlParamTypes = {
   links_status: string | null;
   new: boolean;
   project: string | null;
-  rerun: boolean;
   return_to: string | null;
   setup: string | null;
+  site_page: string | null;
   sort: string | null;
   step: string | null;
   token: string | null;
@@ -44,19 +44,14 @@ const URL_PARAMS: { readonly [N in UrlParamName]: UrlCodec<UrlParamTypes[N]> } =
   links_status: optionalStringUrlCodec,
   new: flagUrlCodec,
   project: optionalStringUrlCodec,
-  rerun: flagUrlCodec,
   return_to: optionalStringUrlCodec,
   setup: optionalStringUrlCodec,
+  site_page: optionalStringUrlCodec,
   sort: optionalStringUrlCodec,
   step: optionalStringUrlCodec,
   token: optionalStringUrlCodec,
   workspace: optionalStringUrlCodec,
 };
-
-export function urlParamHref<N extends UrlParamName>(name: N, value: UrlParamTypes[N]): string {
-  const encoded = URL_PARAMS[name].serialize(value);
-  return encoded === null ? '' : `?${new URLSearchParams({ [name]: encoded }).toString()}`;
-}
 
 export function readUrlParam<N extends UrlParamName>(
   params: URLSearchParams,

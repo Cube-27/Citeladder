@@ -18,18 +18,18 @@ describe('useSetUrlParams', () => {
   it('writes through the router so typed reads see the new value', async () => {
     let write: (values: UrlParamValues) => void = () => undefined;
     function Probe() {
-      const rerun = useUrlParam('rerun');
+      const fresh = useUrlParam('new');
       const link = useUrlParam('link');
       write = useSetUrlParams();
-      return <output>{`${rerun}:${link ?? 'none'}`}</output>;
+      return <output>{`${fresh}:${link ?? 'none'}`}</output>;
     }
     const router = createMemoryRouter([{ path: '/site', element: <Probe /> }], {
-      initialEntries: ['/site?link=l1&rerun=1'],
+      initialEntries: ['/site?link=l1&new=1'],
     });
     render(<RouterProvider router={router} />);
     expect(screen.getByRole('status')).toHaveTextContent('true:l1');
 
-    await act(async () => write({ link: null, rerun: false }));
+    await act(async () => write({ link: null, new: false }));
 
     expect(screen.getByRole('status')).toHaveTextContent('false:none');
     expect(router.state.location.search).toBe('');

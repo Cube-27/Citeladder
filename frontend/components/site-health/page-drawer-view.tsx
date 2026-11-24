@@ -5,22 +5,22 @@ import type { PageDetail } from '@citeladder/contracts';
 import { PageChecks } from '@/components/site-health/page-checks';
 import { PageIssues } from '@/components/site-health/page-issues';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
+import { PageLink } from '@/components/site-health/page-link';
 import { scoreUnavailableState } from '@/components/site-health/url-score-summary';
 import { Absence, printed } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { FactList } from '@/components/ui/facts';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
-import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatCount, formatDisplayTimestamp } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { severityCount } from '@/lib/site-health/issues';
-import { formatScore } from '@/lib/site-health/status';
+import { formatScore, pageStatusBadgeValue, statusLabel } from '@/lib/site-health/status';
 
 type Pane = 'overview' | 'issues' | 'checks' | 'in' | 'out';
 type Links = NonNullable<PageDetail['internal_links']>;
@@ -55,14 +55,16 @@ export function PageDrawerView({
         <TabRail items={items} ariaLabel="Page sections" />
       </div>
       <div className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain p-6">
+        <Stack gap="item" className="mb-6 empty:hidden">
+          {actions ? <Inline className="flex-wrap justify-end">{actions}</Inline> : null}
+          {children}
+        </Stack>
         <TabPanel value="overview">
           <Stack gap="workspace">
-            {children}
             <Figures detail={detail} />
             <FactSection title="URL" facts={urlFacts(detail, useDisplayTimeZone())} />
             <FactSection title="Server HTML" facts={htmlFacts(detail)} />
             <FactSection title="Delivery" facts={deliveryFacts(detail)} />
-            {actions}
           </Stack>
         </TabPanel>
         <TabPanel value="issues">
@@ -180,6 +182,18 @@ function urlFacts(detail: PageDetail, timeZone: string): FactRow[] {
         ? formatDisplayTimestamp(detail.last_audited, timeZone)
         : notMeasured,
     },
+    ...(detail.analysis_status === 'completed'
+      ? []
+      : [
+          {
+            label: 'Status',
+            value: (
+              <StatusMark variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>
+                {statusLabel(detail.analysis_status)}
+              </StatusMark>
+            ),
+          },
+        ]),
   ];
 }
 
@@ -274,14 +288,15 @@ function LinkTable({
           <TableRow key={row.url}>
             <TableCell>
               {row.site_url_id ? (
-                <TextLink
+                <PageLink
                   text="body"
                   underline="hover"
-                  href={`/site/crawls/${crawlId}/pages/${row.site_url_id}`}
+                  crawlId={crawlId}
+                  siteUrlId={row.site_url_id}
                   className="flex min-w-0 items-center"
                 >
                   <UrlText url={row.url} />
-                </TextLink>
+                </PageLink>
               ) : (
                 <UrlText url={row.url} />
               )}

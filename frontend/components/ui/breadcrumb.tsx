@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, type MouseEvent, type ReactNode } from 'react';
 
 import { ChevronRight } from '@/lib/icons';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -7,6 +7,7 @@ import { textRole } from '@/components/ui/typography';
 export type Crumb = Readonly<{
   label: string;
   href?: string;
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
   state?: unknown;
   mark?: ReactNode;
 }>;
@@ -23,6 +24,7 @@ export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
                 <ProjectLink
                   href={part.href}
                   state={part.state}
+                  onClick={part.onClick}
                   className="hover:overlay-hover hover:text-ink focus-ring rounded-mark block min-h-6 max-w-68 min-w-6 truncate px-1 py-0.5"
                 >
                   {part.label}

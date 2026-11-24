@@ -16,7 +16,6 @@ import { routeTrail } from './route-trail';
 describe('app route manifest', () => {
   it('titles a page by its own route, else by the section it sits below', () => {
     expect(resolveTitle('/runs/1f0c')).toBe('Run');
-    expect(resolveTitle('/site/crawls/c1/pages/p1')).toBe('Page detail');
     expect(resolveTitle('/agent/chats/c1')).toBe('Chat');
     expect(resolveTitle('/products/overview')).toBe('Shopping');
     expect(resolveTitle('/settings/unknown')).toBe('Settings');
@@ -49,15 +48,11 @@ describe('app route manifest', () => {
     expect(projectSwitchPathname('/runs/r1')).toBe('/runs');
     expect(projectSwitchPathname('/agent/chats/c1')).toBe('/agent');
     expect(projectSwitchPathname('/actions/a1')).toBe('/actions');
-    expect(projectSwitchPathname('/site/crawls/c1/pages/p1')).toBe('/site');
     expect(projectSwitchPathname('/performance')).toBe('/performance');
   });
 
   it('trails a record page to its collection, and a top-level page or a chat nowhere', () => {
     expect(routeTrail('/runs/r1')).toEqual([{ label: 'Runs', href: '/runs' }]);
-    expect(routeTrail('/site/crawls/c1/pages/p1')).toEqual([
-      { label: 'Site health', href: '/site' },
-    ]);
     expect(routeTrail('/prompts/abc')).toEqual([{ label: 'Prompts', href: '/prompts' }]);
     expect(routeTrail('/prompts/build')).toEqual([]);
     expect(routeTrail('/runs')).toEqual([]);
@@ -86,7 +81,6 @@ describe('app route manifest', () => {
     ['/actions', 'dashboard'],
     ['/actions/a1', 'dashboard'],
     ['/projects', 'dashboard'],
-    ['/site/crawls/c1/pages/p1', 'dashboard'],
     ['/products/overview', 'dashboard'],
     ['/agents-report', 'dashboard'],
     ['/settings', 'dashboard'],

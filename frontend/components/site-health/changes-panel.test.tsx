@@ -147,7 +147,7 @@ describe('Website Changes', () => {
     renderWithProviders(<ChangesPanel projectId={PROJECT} />);
 
     const pageLink = await screen.findByRole('link', { name: 'https://acme.test/guide' });
-    expect(pageLink).toHaveAttribute('href', `/site/crawls/${CRAWL_B}/pages/${SITE_URL}`);
+    expect(pageLink).toHaveAttribute('href', `/site?tab=pages&site_page=${CRAWL_B}_${SITE_URL}`);
     expect(pageLink.textContent).toBe('/guide');
     expect(screen.getByRole('cell', { name: 'HTTP status' })).toBeInTheDocument();
     const table = screen.getByRole('region', { name: 'Website changes' });
@@ -165,11 +165,11 @@ describe('Website Changes', () => {
     expect(within(drawer).getByRole('region', { name: 'After' })).toHaveTextContent('503');
     expect(within(drawer).getByRole('link', { name: 'Previous crawl' })).toHaveAttribute(
       'href',
-      `/site/crawls/${CRAWL_A}/pages/${SITE_URL}`,
+      `/site?tab=pages&site_page=${CRAWL_A}_${SITE_URL}`,
     );
     expect(within(drawer).getByRole('link', { name: 'Latest crawl' })).toHaveAttribute(
       'href',
-      `/site/crawls/${CRAWL_B}/pages/${SITE_URL}`,
+      `/site?tab=pages&site_page=${CRAWL_B}_${SITE_URL}`,
     );
     expect(within(drawer).getByRole('button', { name: 'Copy event ID' })).toBeInTheDocument();
     expect(drawer).not.toHaveTextContent(CRAWL_A);
@@ -273,7 +273,7 @@ describe('Website Changes', () => {
     );
     expect(await screen.findByRole('link', { name: 'https://acme.test/old' })).toHaveAttribute(
       'href',
-      `/site/crawls/${CRAWL_B}/pages/${SITE_URL}`,
+      `/site?tab=pages&site_page=${CRAWL_B}_${SITE_URL}`,
     );
 
     head = CRAWL_C;

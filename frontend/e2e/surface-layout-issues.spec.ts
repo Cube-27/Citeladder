@@ -207,7 +207,9 @@ for (const width of [1280, 1600]) {
     await check('Previous page');
 
     await rows.first().getByRole('button').first().click();
-    const back = page.getByRole('button', { name: 'Back to issues' });
+    const back = page
+      .getByRole('navigation', { name: 'Breadcrumb' })
+      .getByRole('link', { name: 'Issues' });
     await expect(back).toBeVisible();
     await back.click();
     await expect(rows.first()).toContainText('technical issue 1');

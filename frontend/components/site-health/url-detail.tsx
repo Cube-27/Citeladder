@@ -1,5 +1,4 @@
-import { useRef, useState, type MutableRefObject, type ReactNode } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useContext, useRef, useState, type MutableRefObject } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { StatusMark } from '@/components/ui/status-mark';
@@ -10,20 +9,19 @@ import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Drawer } from '@/components/ui/drawer';
-import { urlParamHref, useUrlParam } from '@/lib/navigation/url-params';
+import { Tooltip } from '@/components/ui/tooltip';
 import { History } from '@/lib/icons';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { PageDetail } from '@citeladder/contracts';
-import { isNotFound } from '@/lib/api/errors';
 import { serverMessage } from '@/lib/api/mutation-notice';
 import { useCrawlBudget } from '@/lib/site-health/crawl-budget';
 import { RERUN_MAX_PRE_ACTIVE_POLLS, RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
-import { PAGE_DETAIL_TRAIL, UrlDetailView, type PageFrameKind } from './url-detail-view';
-import { NotFoundScreen } from '@/components/templates/not-found-screen';
-import { RecordPage } from '@/components/templates/record-page';
+import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
+import { PageDrawerView } from '@/components/site-health/page-drawer-view';
+import { PageOpenContext } from '@/components/site-health/page-open-context';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -31,21 +29,13 @@ import { StateBlock } from '@/components/ui/state-block';
 
 const HISTORY_LIMIT = 25;
 
-export function PageDetailScreen() {
-  const { crawlId, siteUrlId } = useParams<{ crawlId: string; siteUrlId: string }>();
-  if (!crawlId || !siteUrlId) return null;
-  return <UrlDetail key={`${crawlId}:${siteUrlId}`} crawlId={crawlId} siteUrlId={siteUrlId} />;
-}
-
 export function UrlDetail({
   crawlId,
   siteUrlId,
-  frame = 'page',
-}: Readonly<{ crawlId: string; siteUrlId: string; frame?: PageFrameKind }>) {
+  polling = false,
+}: Readonly<{ crawlId: string; siteUrlId: string; polling?: boolean }>) {
   const { workspaceId, projectId } = useProjectScope();
-  const router = useNavigate();
-  const rerunRequested = useUrlParam('rerun');
-  const [rerunPolling] = useState(() => rerunRequested);
+  const openPage = useContext(PageOpenContext);
   const hasObservedActiveRerunRef = useRef(false);
   const preActivePollCountRef = useRef(0);
   const [rerunError, setRerunError] = useState<string | null>(null);
@@ -53,7 +43,7 @@ export function UrlDetail({
     ...siteHealthQueries.page(workspaceId, crawlId, siteUrlId),
     refetchInterval: (query) =>
       rerunPollInterval(
-        rerunPolling,
+        polling,
         query.state.data?.analysis_status,
         hasObservedActiveRerunRef,
         preActivePollCountRef,
@@ -62,79 +52,62 @@ export function UrlDetail({
   const rerun = useMutation(siteHealthMutations.rerunPage(workspaceId));
   const canRun = useWorkspaceCapability('run');
   const { usedUp, left } = useCrawlBudget({ workspaceId, projectId }, 'page_crawls', canRun);
-  const startRerun = () =>
+  const startRerun = () => {
+    setRerunError(null);
     rerun.mutate(
       { crawlId, siteUrlId },
       {
         onSuccess: (result) =>
-          router(
-            `/site/crawls/${result.crawl_id}/pages/${result.site_url_id}${urlParamHref('rerun', true)}`,
-          ),
+          openPage?.({ crawlId: result.crawl_id, siteUrlId: result.site_url_id, rerun: true }),
         onError: (error) => setRerunError(rerunErrorMessage(error)),
       },
     );
+  };
 
   if (detailQuery.isLoading)
     return (
-      <Framed frame={frame}>
-        <StateBlock
-          kind="loading"
-          label="Loading page detail…"
-          shape={{ kind: 'facts', rows: 3, tagRows: [1] }}
-        />
-      </Framed>
+      <StateBlock
+        kind="loading"
+        label="Loading page detail…"
+        shape={{ kind: 'facts', rows: 3, tagRows: [1] }}
+      />
     );
-  if (frame === 'page' && isNotFound(detailQuery.error)) return <NotFoundScreen />;
-  if (detailQuery.isError || !detailQuery.data) {
+  if (detailQuery.isError || !detailQuery.data)
     return (
-      <Framed frame={frame}>
-        <StateBlock
-          kind="error"
-          {...readErrorProps(detailQuery)}
-          fallback="Couldn't load this page. It may not exist in this crawl."
-          title="Couldn't load this page"
-        />
-      </Framed>
+      <StateBlock
+        kind="error"
+        {...readErrorProps(detailQuery)}
+        fallback="Couldn't load this page. It may not exist in this crawl."
+        title="Couldn't load this page"
+      />
     );
-  }
+  const detail = detailQuery.data;
+  const rerunButton = (
+    <Button variant="primary" onClick={startRerun} disabled={rerun.isPending || usedUp !== null}>
+      {rerun.isPending ? 'Re-auditing…' : 'Re-audit this page'}
+    </Button>
+  );
+  const rerunAction = left ? <Tooltip content={left}>{rerunButton}</Tooltip> : rerunButton;
 
   return (
-    <UrlDetailView
-      frame={frame}
-      detail={detailQuery.data}
-      rerun={
-        canRun
-          ? {
-              busy: rerun.isPending,
-              usedUp: usedUp !== null,
-              left: left ?? undefined,
-              onRerun: () => {
-                setRerunError(null);
-                startRerun();
-              },
-            }
-          : undefined
-      }
-      history={
-        <IssueHistoryButton
-          key={`history:${crawlId}:${siteUrlId}:${detailQuery.data.last_audited ?? ''}`}
-          workspaceId={workspaceId}
-          crawlId={crawlId}
-          siteUrlId={siteUrlId}
-        />
+    <PageDrawerView
+      detail={detail}
+      actions={
+        <>
+          <IssueHistoryButton
+            key={`history:${crawlId}:${siteUrlId}:${detail.last_audited ?? ''}`}
+            workspaceId={workspaceId}
+            crawlId={crawlId}
+            siteUrlId={siteUrlId}
+          />
+          {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
+          {canRun ? rerunAction : null}
+        </>
       }
     >
       {usedUp ? <Notice tone="warning">{usedUp}</Notice> : null}
       {rerunError ? <Notice tone="negative">{rerunError}</Notice> : null}
-    </UrlDetailView>
-  );
-}
-
-function Framed({ frame, children }: Readonly<{ frame: PageFrameKind; children: ReactNode }>) {
-  return frame === 'drawer' ? (
-    children
-  ) : (
-    <RecordPage trail={PAGE_DETAIL_TRAIL}>{children}</RecordPage>
+    </PageDrawerView>
   );
 }
 

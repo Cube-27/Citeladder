@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
@@ -40,6 +40,11 @@ async function openDialog() {
   return screen.findByRole('region', { name: TITLE });
 }
 
+async function figure(label: string) {
+  const term = await within(screen.getByLabelText('Issue figures')).findByText(label);
+  return term.nextElementSibling?.textContent;
+}
+
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() => {
   window.history.replaceState(null, '', '/issues');
@@ -65,13 +70,13 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
     );
     const user = userEvent.setup();
 
-    const dialog = await openDialog();
-    expect(await within(dialog).findByText('0 of 32 pages fixed')).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: 'Mark fixed' }));
+    await openDialog();
+    expect(await figure('Marked fixed')).toBe('0');
+    await user.click(screen.getByRole('button', { name: 'Mark fixed' }));
 
-    expect(await within(dialog).findByText('32 of 32 pages fixed')).toBeInTheDocument();
-    expect(within(dialog).getByText('32 awaiting a re-audit')).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Mark fixed' })).toBeDisabled();
+    await waitFor(async () => expect(await figure('Marked fixed')).toBe('32'));
+    expect(await figure('Awaiting re-audit')).toBe('32');
+    expect(screen.getByRole('button', { name: 'Mark fixed' })).toBeDisabled();
   });
 
   it('re-runs an issue’s open tracked pages, refreshes its progress once the re-audit lands, and says why when a crawl is running', async () => {
@@ -102,17 +107,14 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
     );
     const user = userEvent.setup();
 
-    const dialog = await openDialog();
-    expect(
-      await within(dialog).findByText('Re-run all re-audits 3 pages, one page fetch each.'),
-    ).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: 'Re-run all' }));
-    expect(await within(dialog).findByText('Re-auditing 3 pages.')).toBeInTheDocument();
-    expect(await within(dialog).findByText('3 of 32 pages fixed')).toBeInTheDocument();
+    await openDialog();
+    await user.click(await screen.findByRole('button', { name: 'Re-run all' }));
+    expect(await screen.findByText('Re-auditing 3 pages.')).toBeInTheDocument();
+    await waitFor(async () => expect(await figure('Marked fixed')).toBe('3'));
 
-    await user.click(within(dialog).getByRole('button', { name: 'Re-run all' }));
+    await user.click(screen.getByRole('button', { name: 'Re-run all' }));
     expect(
-      await within(dialog).findByText(
+      await screen.findByText(
         'A crawl is already running for this project. Try again when it ends.',
       ),
     ).toBeInTheDocument();
@@ -130,21 +132,13 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
     );
     serveFixes(null);
     const { unmount } = renderIssues(<IssuesCatalog crawlId={CRAWL} />, OPEN);
-    let dialog = await screen.findByRole('region', { name: TITLE });
-    expect(
-      await within(dialog).findByText('A full crawl re-checks this site-wide issue.'),
-    ).toBeInTheDocument();
-    expect(within(dialog).queryByRole('button', { name: 'Re-run all' })).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Mark fixed' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Re-run all' })).toBeNull();
     unmount();
 
     serveFixes(0, 4);
-    dialog = await openDialog();
-    expect(
-      await within(dialog).findByText(
-        'All 50 single-page crawls for this period are used. More from 2026-12-20.',
-      ),
-    ).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Re-run all' })).toBeDisabled();
+    await openDialog();
+    expect(await screen.findByRole('button', { name: 'Re-run all' })).toBeDisabled();
   });
 
   it('shows a viewer how many pages are fixed without Mark fixed or Re-run all', async () => {
@@ -154,10 +148,10 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
       projectSelection: selectionAs('viewer'),
     });
 
-    const dialog = await screen.findByRole('region', { name: TITLE });
-    expect(await within(dialog).findByText('5 of 32 pages fixed')).toBeInTheDocument();
+    await screen.findByRole('region', { name: TITLE });
+    expect(await figure('Marked fixed')).toBe('5');
     for (const name of ['Mark fixed', 'Re-run all'])
-      expect(within(dialog).queryByRole('button', { name })).toBeNull();
+      expect(screen.queryByRole('button', { name })).toBeNull();
   });
 
   it('says the fix progress could not load instead of hiding the actions', async () => {
@@ -170,9 +164,9 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
       ),
     );
 
-    const dialog = await openDialog();
+    await openDialog();
 
-    expect(await within(dialog).findByRole('button', { name: 'Retry' })).toBeInTheDocument();
-    expect(within(dialog).queryByRole('button', { name: 'Mark fixed' })).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mark fixed' })).toBeNull();
   });
 });

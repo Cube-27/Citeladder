@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 
 import type { PageSummary } from '@citeladder/contracts';
 
@@ -11,7 +11,8 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { StatusMark } from '@/components/ui/status-mark';
 import { mutedWhenMissing, TableCell, TableRow, UrlText } from '@/components/ui/table';
-import { TextLink } from '@/components/ui/text-link';
+import { PageLink } from '@/components/site-health/page-link';
+import { PageOpenContext } from '@/components/site-health/page-open-context';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount, sharedOrigin } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
@@ -50,15 +51,14 @@ export function IssueUrlTable({
   groupId,
   ruleId,
   initialPageKind = '',
-  onOpen,
 }: Readonly<{
   workspaceId: string;
   crawlId: string;
   groupId: string;
   ruleId: string;
   initialPageKind?: string;
-  onOpen: (siteUrlId: string) => void;
 }>) {
+  const openPage = useContext(PageOpenContext);
   const [pageKind, setPageKind] = useState(initialPageKind);
   const [search, setSearch] = useState('');
   const { page, table } = useCursorTableQuery({
@@ -106,25 +106,19 @@ export function IssueUrlTable({
       {rows.map((row) => (
         <TableRow
           key={row.site_url_id}
-          onClick={() => onOpen(row.site_url_id)}
+          onClick={() => openPage?.({ crawlId: row.crawl_id, siteUrlId: row.site_url_id })}
           className="cursor-pointer"
         >
           <TableCell>
-            <TextLink
+            <PageLink
               text="body"
               underline="hover"
-              href={`/site/crawls/${row.crawl_id}/pages/${row.site_url_id}`}
-              aria-haspopup="dialog"
-              onClick={(event) => {
-                event.stopPropagation();
-                if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-                event.preventDefault();
-                onOpen(row.site_url_id);
-              }}
+              crawlId={row.crawl_id}
+              siteUrlId={row.site_url_id}
               className="flex min-w-0 items-center"
             >
               <UrlText url={row.display_url} origin={origin} />
-            </TextLink>
+            </PageLink>
           </TableCell>
           <TableCell className="whitespace-nowrap">
             <PageKindBadge pageKind={row.page_kind} />

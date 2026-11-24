@@ -5,7 +5,6 @@ import userEvent from '@testing-library/user-event';
 
 import { chooseFilterOption } from '@/test/all-filters';
 import { mswServer } from '@/test/msw-server';
-import { parseAgentHandoff } from '@/lib/agent/handoff';
 import {
   CRAWL,
   ISSUE_A,
@@ -153,21 +152,18 @@ describe('IssuesCatalog', () => {
     const row = (await within(pages).findByText('Homepage')).closest('tr')!;
     expect(within(row).getByRole('link')).toHaveAttribute(
       'href',
-      `/site/crawls/${CRAWL}/pages/${URL_A}`,
+      `/site?tab=pages&site_page=${CRAWL}_${URL_A}`,
     );
     expect(within(row).getByText('Article')).toBeInTheDocument();
 
-    const ask = within(page).getByRole('link', { name: 'Ask agent' });
-    const handoff = parseAgentHandoff(new URL(ask.getAttribute('href')!, 'http://x').searchParams);
-    expect(handoff.context).toEqual({
-      issue_group_reference: { crawl_id: CRAWL, group_id: ISSUE_A },
-    });
-    expect(handoff.skillId).toBe('technical_health');
+    expect(within(page).queryByRole('link', { name: 'Ask agent' })).toBeNull();
 
-    await user.click(within(page).getByRole('button', { name: 'Back to issues' }));
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull(),
+    await user.click(
+      within(await screen.findByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', {
+        name: 'Issues',
+      }),
     );
+    await waitFor(() => expect(currentUrl()).not.toContain('issue='));
     expect(currentUrl()).not.toContain('issue=');
   });
 
@@ -206,10 +202,12 @@ describe('IssuesCatalog', () => {
       await screen.findByRole('region', { name: 'Canonical tag is missing' }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Back to issues' }));
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull(),
+    await user.click(
+      within(await screen.findByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', {
+        name: 'Issues',
+      }),
     );
+    await waitFor(() => expect(currentUrl()).not.toContain('issue='));
     expect(currentUrl()).not.toContain('issue=');
   });
 
@@ -376,7 +374,7 @@ describe('IssuesCatalog', () => {
     const winner = await within(dialog).findByRole('link', { name: /Winner announced/ });
     expect(winner).toHaveAttribute(
       'href',
-      `/site/crawls/${CRAWL}/pages/dddddddd-2222-4111-8111-111111111111`,
+      `/site?tab=pages&site_page=${CRAWL}_dddddddd-2222-4111-8111-111111111111`,
     );
     expect(within(dialog).getByText('7 clicks from the homepage')).toBeInTheDocument();
     expect(within(dialog).getByText('5 clicks from the homepage')).toBeInTheDocument();
@@ -433,7 +431,7 @@ describe('IssuesCatalog', () => {
     expect(within(dialog).getByText('On 438 pages, including:')).toBeInTheDocument();
     expect(within(dialog).getByRole('link', { name: /Winner announced/ })).toHaveAttribute(
       'href',
-      `/site/crawls/${CRAWL}/pages/dddddddd-2222-4111-8111-111111111111`,
+      `/site?tab=pages&site_page=${CRAWL}_dddddddd-2222-4111-8111-111111111111`,
     );
   });
 
@@ -487,8 +485,8 @@ describe('IssuesCatalog', () => {
     expect(within(dialog).getByText('Including:')).toBeInTheDocument();
     const links = within(dialog).getAllByRole('link', { name: /Contact us \| Acme/ });
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
-      `/site/crawls/${CRAWL}/pages/dddddddd-2222-4111-8111-111111111111`,
-      `/site/crawls/${CRAWL}/pages/dddddddd-3333-4111-8111-111111111111`,
+      `/site?tab=pages&site_page=${CRAWL}_dddddddd-2222-4111-8111-111111111111`,
+      `/site?tab=pages&site_page=${CRAWL}_dddddddd-3333-4111-8111-111111111111`,
     ]);
     expect(within(dialog).getByText('Showing 2 of 3 pages.')).toBeInTheDocument();
   });
@@ -616,10 +614,12 @@ describe('IssuesCatalog', () => {
     );
     expect(typed.querySelector('dl')).toHaveTextContent('Affected pages32');
     expect(within(typed).getByText('High')).toBeInTheDocument();
-    await user.click(within(typed).getByRole('button', { name: 'Back to issues' }));
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Back to issues' })).toBeNull(),
+    await user.click(
+      within(await screen.findByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', {
+        name: 'Issues',
+      }),
     );
+    await waitFor(() => expect(currentUrl()).not.toContain('issue='));
 
     const untyped = await openIssue(user, 'Canonical tag is missing');
     expect(within(untyped).queryByText('Page kinds')).toBeNull();

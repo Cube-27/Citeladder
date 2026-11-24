@@ -11,7 +11,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager';
 import { TableCell, TableCellLines, TableRow, UrlText } from '@/components/ui/table';
-import { TextLink } from '@/components/ui/text-link';
+import { PageLink } from '@/components/site-health/page-link';
 import { ICONS, PanelRightOpen } from '@/lib/icons';
 import { actionStatusSchema } from '@citeladder/contracts/action-status';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -241,10 +241,7 @@ function LinksTable({
       {paged.map((link) => (
         <TableRow key={link.id}>
           <TableCell>
-            <PageCell
-              page={link.source}
-              href={`/site/crawls/${crawlId}/pages/${link.source.site_url_id}`}
-            />
+            <PageCell page={link.source} crawlId={crawlId} siteUrlId={link.source.site_url_id} />
           </TableCell>
           <TableCell>
             <PageCell page={link.target} />
@@ -281,16 +278,21 @@ function NoAction() {
 
 function PageCell({
   page,
-  href,
-}: Readonly<{ page: Pick<InternalLink['source'], 'title' | 'url'>; href?: string }>) {
+  crawlId,
+  siteUrlId,
+}: Readonly<{
+  page: Pick<InternalLink['source'], 'title' | 'url'>;
+  crawlId?: string;
+  siteUrlId?: string;
+}>) {
   const name = page.title || readableUrl(new URL(page.url).pathname);
   return (
     <TableCellLines
       primary={
-        href ? (
-          <TextLink text="inherit" underline="hover" href={href}>
+        crawlId && siteUrlId ? (
+          <PageLink text="inherit" underline="hover" crawlId={crawlId} siteUrlId={siteUrlId}>
             {name}
-          </TextLink>
+          </PageLink>
         ) : (
           name
         )

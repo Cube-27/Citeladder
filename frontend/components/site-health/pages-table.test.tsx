@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import type { PageSummary } from '@citeladder/contracts';
 import { fireEvent, render as raw, screen, within } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 
+import { PageOpenContext } from './page-open-context';
 import { PagesTable } from './pages-table';
 import {
   SITE_HEALTH_UUID as UUID,
@@ -27,14 +27,16 @@ function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-function renderPages(ui: ReactElement) {
-  return raw(ui, { wrapper: RouterTestWrapper });
-}
-
 const opened: string[] = [];
-const onOpen = (row: PageSummary) => {
-  opened.push(`${row.crawl_id}:${row.site_url_id}`);
-};
+
+function renderPages(ui: ReactElement) {
+  return raw(
+    <PageOpenContext value={(target) => opened.push(`${target.crawlId}:${target.siteUrlId}`)}>
+      {ui}
+    </PageOpenContext>,
+    { wrapper: RouterTestWrapper },
+  );
+}
 
 describe('PagesTable', () => {
   beforeEach(() => {
@@ -42,7 +44,7 @@ describe('PagesTable', () => {
   });
 
   it('exposes scores as cells in a native row and keeps keyboard navigation', () => {
-    renderPages(<PagesTable pages={[page()]} onOpen={onOpen} />);
+    renderPages(<PagesTable pages={[page()]} />);
     const row = screen.getByRole('row', { name: /Homepage/ });
     expect(within(row).getByRole('cell', { name: '46' })).toBeInTheDocument();
     fireEvent.keyDown(row, { key: 'Enter' });
@@ -50,7 +52,7 @@ describe('PagesTable', () => {
   });
 
   it('leads with the page, its title the link to its detail', () => {
-    renderPages(<PagesTable pages={[page()]} onOpen={onOpen} />);
+    renderPages(<PagesTable pages={[page()]} />);
     expect(screen.getAllByRole('columnheader').map((head) => head.textContent)).toEqual([
       'Page',
       'Status',
@@ -64,13 +66,12 @@ describe('PagesTable', () => {
     ]);
     const link = screen.getByRole('link', { name: /^View Homepage, / });
     expect(link).toHaveTextContent('Homepage');
-    expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${UUID}`);
+    expect(link).toHaveAttribute('href', `/site?tab=pages&site_page=${CRAWL}_${UUID}`);
   });
 
   it('shows each page’s analysis status in its Status column', () => {
     renderPages(
       <PagesTable
-        onOpen={onOpen}
         pages={[
           page({ title: 'Fine page' }),
           page({ site_url_id: SOURCE_CRAWL, title: 'Queued page', analysis_status: 'pending' }),
@@ -87,7 +88,6 @@ describe('PagesTable', () => {
   it('marks only a page fetched despite a robots.txt exclusion', () => {
     renderPages(
       <PagesTable
-        onOpen={onOpen}
         pages={[
           page({ title: 'Open page' }),
           page({ site_url_id: SOURCE_CRAWL, title: 'Private page', robots_excluded: true }),
@@ -103,7 +103,6 @@ describe('PagesTable', () => {
   it('keeps a limited-evidence score from reading as fully measured', () => {
     renderPages(
       <PagesTable
-        onOpen={onOpen}
         pages={[
           page({
             web_fundamentals_state: 'limited_evidence',
@@ -126,7 +125,6 @@ describe('PagesTable', () => {
   it('tells a page not reached from home apart from one without link metrics', () => {
     renderPages(
       <PagesTable
-        onOpen={onOpen}
         pages={[
           page({ title: 'Linked page', inbound_count: 4, depth_from_home: 2 }),
           page({
@@ -154,7 +152,7 @@ describe('PagesTable', () => {
   });
 
   it('renders the not-measured state for an unclassified page (null page_kind)', () => {
-    renderPages(<PagesTable pages={[page({ page_kind: null })]} onOpen={onOpen} />);
+    renderPages(<PagesTable pages={[page({ page_kind: null })]} />);
     expect(screen.queryByText('Article')).not.toBeInTheDocument();
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
   });
@@ -162,7 +160,6 @@ describe('PagesTable', () => {
   it('uses the persisted unresolved-purpose reason for Other pages', () => {
     renderPages(
       <PagesTable
-        onOpen={onOpen}
         pages={[
           page({
             page_kind: 'other',
@@ -184,7 +181,6 @@ describe('PagesTable', () => {
   it('renders the not-measured state for a blocked page — never a fabricated zero', () => {
     renderPages(
       <PagesTable
-        onOpen={onOpen}
         pages={[
           page({
             site_url_id: '33333333-3333-4333-8333-333333333333',
@@ -217,7 +213,6 @@ describe('PagesTable', () => {
     ];
     renderPages(
       <PagesTable
-        onOpen={onOpen}
         pages={[
           page({
             display_url: 'https://example.com/gone',
@@ -237,37 +232,32 @@ describe('PagesTable', () => {
     ]);
   });
 
-  it('opens the page, not its full-page route, when the row or its title is clicked', () => {
-    renderPages(<PagesTable pages={[page()]} onOpen={onOpen} />);
+  it('opens the page drawer in place when the row or its title is clicked', () => {
+    renderPages(<PagesTable pages={[page()]} />);
     fireEvent.click(screen.getByText('Homepage'));
     expect(opened).toEqual([`${CRAWL}:${UUID}`]);
-    expect(screen.getByTestId('location')).not.toHaveTextContent('/pages/');
+    expect(screen.getByTestId('location')).not.toHaveTextContent('site_page=');
   });
 
   it('links an inherited discovered row to the crawl that owns its detail', () => {
     renderPages(
-      <PagesTable
-        pages={[page({ crawl_id: SOURCE_CRAWL, analysis_status: 'not_selected' })]}
-        onOpen={onOpen}
-      />,
+      <PagesTable pages={[page({ crawl_id: SOURCE_CRAWL, analysis_status: 'not_selected' })]} />,
     );
     expect(screen.getByRole('link', { name: /^View Homepage, / })).toHaveAttribute(
       'href',
-      `/site/crawls/${SOURCE_CRAWL}/pages/${UUID}`,
+      `/site?tab=pages&site_page=${SOURCE_CRAWL}_${UUID}`,
     );
   });
 
   it('asks the server to order by URL from the Page header, and back to the default', () => {
     const onSortChange = vi.fn();
     const { rerender } = renderPages(
-      <PagesTable pages={[page()]} onOpen={onOpen} sort="status" onSortChange={onSortChange} />,
+      <PagesTable pages={[page()]} sort="status" onSortChange={onSortChange} />,
     );
     fireEvent.click(screen.getByRole('button', { name: /^Page/ }));
     expect(onSortChange).toHaveBeenLastCalledWith('url');
 
-    rerender(
-      <PagesTable pages={[page()]} onOpen={onOpen} sort="url" onSortChange={onSortChange} />,
-    );
+    rerender(<PagesTable pages={[page()]} sort="url" onSortChange={onSortChange} />);
     expect(screen.getByRole('columnheader', { name: /^Page/ })).toHaveAttribute(
       'aria-sort',
       'ascending',
@@ -277,7 +267,7 @@ describe('PagesTable', () => {
   });
 
   it('renders a plain Page header where the table cannot reorder', () => {
-    renderPages(<PagesTable pages={[page()]} onOpen={onOpen} />);
+    renderPages(<PagesTable pages={[page()]} />);
     expect(screen.queryByRole('button', { name: /^Page/ })).not.toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Page' })).toBeInTheDocument();
   });

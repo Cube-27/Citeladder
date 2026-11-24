@@ -18,7 +18,7 @@ it('links each record to the app screen that shows it, relative for internal rea
     observedAt: null,
     origin: '',
   });
-  expect(page.url).toBe(`/site/crawls/${crawl}/pages/${id}?project=${id}`);
+  expect(page.url).toBe(`/site?tab=pages&site_page=${crawl}_${id}&project=${id}`);
   expect(JSON.parse(String(page.text))).toEqual(record);
   const prompt = retrievalDocument({
     kind: 'prompt',

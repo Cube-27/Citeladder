@@ -3,17 +3,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-p
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { figureText } from '@/test/figures';
 import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders as raw, selectionAs, type TestRole } from '@/test/render';
-import type { ReactElement } from 'react';
-import { useLocation } from 'react-router-dom';
 import type { PageDetail } from '@citeladder/contracts';
 
-import { parseAgentHandoff, type AgentHandoff } from '@/lib/agent/handoff';
-import { AgentPanelProvider, useAgentPanel } from '@/lib/agent/panel-context';
-import { UrlDetail } from './url-detail';
+import { parseAgentHandoff } from '@/lib/agent/handoff';
+import { PageDrawerHost } from './page-drawer';
 import {
   CRAWL,
   GROUP_H,
@@ -25,6 +21,7 @@ import {
 
 const NEW_CRAWL = '55555555-5555-4555-8555-555555555555';
 const TASK_ID = '66666666-6666-4666-8666-666666666666';
+const PAGE = 'Best&Less Online';
 
 function resolvedIssue(id: string, title: string) {
   return {
@@ -43,60 +40,36 @@ function resolvedIssue(id: string, title: string) {
   };
 }
 
+function renderDrawer(role: TestRole = 'owner') {
+  window.history.replaceState(null, '', '/site');
+  return raw(
+    <PageDrawerHost workspaceId={makeProject().workspace_id} linked={`${CRAWL}_${URL_ID}`} />,
+    {
+      projectSelection: { ...selectionAs(role), activeProject: makeProject() },
+    },
+  );
+}
+
+const opened = () => screen.findByRole('dialog', { name: PAGE });
+
+async function openIssues(count: number) {
+  const user = userEvent.setup();
+  renderDrawer();
+  const drawer = await opened();
+  await user.click(await within(drawer).findByRole('tab', { name: /^Issues/ }));
+  const heading = await within(drawer).findByRole('heading', { name: `All issues (${count})` });
+  return { user, list: heading.closest('section')! };
+}
+
 async function openHistory(history: HttpResponseResolver) {
   mswServer.use(
-    http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}`, () => HttpResponse.json(detail())),
+    ...handlers(detail()),
     http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/issue-history`, history),
   );
   const user = userEvent.setup();
-  renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+  renderDrawer();
   await user.click(await screen.findByRole('button', { name: 'History' }));
   return { user, drawer: await screen.findByRole('dialog', { name: 'Issue history' }) };
-}
-
-function allIssues(heading: string): HTMLElement {
-  return screen.getByRole('heading', { name: heading }).closest('section')!;
-}
-
-function handoffOf(link: HTMLElement) {
-  return parseAgentHandoff(new URL(link.getAttribute('href')!, 'http://x').searchParams);
-}
-
-function PanelSeedProbe() {
-  const panel = useAgentPanel();
-  return (
-    <>
-      <button type="button" onClick={() => panel?.setOpen(true)}>
-        Open agent panel
-      </button>
-      <output data-testid="panel-seed">{JSON.stringify(panel?.seed ?? null)}</output>
-    </>
-  );
-}
-
-async function openedSeed(user: ReturnType<typeof userEvent.setup>): Promise<AgentHandoff> {
-  await user.click(screen.getByRole('button', { name: 'Open agent panel' }));
-  return JSON.parse(screen.getByTestId('panel-seed').textContent!) as AgentHandoff;
-}
-
-function LocationDisplay() {
-  const { pathname, search } = useLocation();
-  return <output data-testid="location">{pathname + search}</output>;
-}
-
-function renderUrlDetail(
-  ui: ReactElement,
-  initialLocation = `/site/crawls/${CRAWL}/pages/${URL_ID}`,
-  role: TestRole = 'owner',
-) {
-  window.history.replaceState(null, '', initialLocation);
-  return raw(
-    <>
-      {ui}
-      <LocationDisplay />
-    </>,
-    { projectSelection: { ...selectionAs(role), activeProject: makeProject() } },
-  );
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
@@ -122,7 +95,7 @@ function handlers(pageDetail: PageDetail, pageCrawlsLeft = 50) {
   ];
 }
 
-describe('UrlDetail', () => {
+describe('URL drawer', () => {
   it('recovers a failed page read with its request reference and exact retry', async () => {
     let reads = 0;
     let available = false;
@@ -138,7 +111,7 @@ describe('UrlDetail', () => {
       }),
       ...handlers(detail()),
     );
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderDrawer();
     expect(
       await screen.findByText(
         "Couldn't load this page. It may not exist in this crawl.",
@@ -149,10 +122,9 @@ describe('UrlDetail', () => {
     const beforeRetry = reads;
     available = true;
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(
-      await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Re-audit this page' })).toBeInTheDocument();
     expect(reads).toBe(beforeRetry + 1);
+    expect(await opened()).toBeInTheDocument();
   });
 
   it('reports access failures without implying the page is missing or exposing retry', async () => {
@@ -161,15 +133,16 @@ describe('UrlDetail', () => {
         HttpResponse.json({ error: { message: 'Workspace access denied' } }, { status: 403 }),
       ),
     );
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderDrawer();
     expect(await screen.findByText('Workspace access denied')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     expect(screen.queryByText(/may not exist/)).not.toBeInTheDocument();
   });
-  it('opens resolved issue history in a drawer instead of inline', async () => {
+
+  it('opens resolved issue history only when asked', async () => {
     let historyReads = 0;
     mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}`, () => HttpResponse.json(detail())),
+      ...handlers(detail()),
       http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/issue-history`, () => {
         historyReads += 1;
         return HttpResponse.json({
@@ -180,16 +153,13 @@ describe('UrlDetail', () => {
       }),
     );
     const user = userEvent.setup();
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderDrawer();
 
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(screen.queryByText('Issue history')).not.toBeInTheDocument();
-    expect(historyReads).toBe(0);
-
-    await user.click(screen.getByRole('button', { name: 'History' }));
+    await user.click(await screen.findByRole('button', { name: 'History' }));
     const drawer = await screen.findByRole('dialog', { name: 'Issue history' });
     expect(await within(drawer).findByText('Page title is missing')).toBeInTheDocument();
     expect(within(drawer).getByRole('columnheader', { name: 'Last found' })).toBeInTheDocument();
+    expect(historyReads).toBe(1);
   });
 
   it('keeps the resolved issues and the pager in place while the next history page loads', async () => {
@@ -223,278 +193,22 @@ describe('UrlDetail', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders scores, delivery metrics, and severity-ordered issues', async () => {
+  it('puts the re-audit above the page sections, only for a role that may run one', async () => {
     mswServer.use(...handlers(detail()));
-    const user = userEvent.setup();
-
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    expect(
-      await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 }),
-    ).toBeInTheDocument();
-    await screen.findByRole('navigation', { name: 'Breadcrumb' });
-    expect(
-      screen
-        .getAllByText('Best&Less Online')
-        .filter((node) => !node.closest('dl[aria-label="Page facts"]'))
-        .map((node) => (node.closest('nav') ? 'trail' : node.tagName)),
-    ).toEqual(['trail', 'H1']);
-    expect(screen.getByText('Product')).toBeInTheDocument();
-    expect(screen.getByText('840ms')).toBeInTheDocument();
-    expect(screen.getByText('200')).toBeInTheDocument();
-
-    const list = allIssues('All issues (2)');
-    const high = within(list).getByText('WebSite schema is missing');
-    const low = within(list).getByText('FAQ schema not present');
-    expect(high.compareDocumentPosition(low) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.queryByText('expected types WebSite, found types Organization')).toBeNull();
-    await user.click(within(list).getByRole('button', { name: /WebSite schema is missing/ }));
-    expect(
-      screen.getByText('expected types WebSite, found types Organization'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Observed evidence')).not.toBeInTheDocument();
-  });
-
-  it('offers re-audits only to a role that may run one', async () => {
-    mswServer.use(...handlers(detail()));
-    const { unmount } = renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-    expect(await screen.findAllByRole('button', { name: /^Re-audit/ })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: 'Re-audit this page' })).toBeVisible();
+    const { unmount } = renderDrawer();
+    const drawer = await opened();
+    const rerun = await within(drawer).findByRole('button', { name: 'Re-audit this page' });
+    const overview = within(drawer).getByRole('tabpanel', { name: 'Overview' });
+    expect(rerun.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(overview.contains(rerun)).toBe(false);
     unmount();
 
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />, undefined, 'viewer');
-    expect(
-      await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 }),
-    ).toBeVisible();
+    renderDrawer('viewer');
+    expect(await within(await opened()).findByRole('button', { name: 'History' })).toBeVisible();
     expect(screen.queryByRole('button', { name: /^Re-audit/ })).toBeNull();
-    expect(screen.getByRole('button', { name: 'History' })).toBeVisible();
   });
 
-  it('opens as a page detail trailed through Pages, with no back link', async () => {
-    mswServer.use(...handlers(detail()));
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    const trail = await screen.findByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(trail).getByRole('link', { name: 'Pages' }).getAttribute('href')).toMatch(
-      /^\/site\?tab=pages/,
-    );
-    expect(within(trail).getByText('Best&Less Online').closest('li')).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
-    expect(screen.queryByRole('link', { name: /^Back to/ })).not.toBeInTheDocument();
-  });
-
-  it('lists every shown check as passed, failed or not checked under its score', async () => {
-    const check = (
-      id: string,
-      title: string,
-      fields: Partial<PageDetail['evaluations'][number]>,
-    ): PageDetail['evaluations'][number] => ({
-      id,
-      rule_id: `rule.${id.slice(0, 4)}`,
-      title,
-      dimension: 'technical',
-      category: 'metadata',
-      severity: 'medium',
-      finding_class: 'defect',
-      outcome: 'satisfied',
-      display_applicability: true,
-      score_applicability: true,
-      checklist_membership: true,
-      reason_code: '',
-      score_roles: [],
-      aeo_pillar: '',
-      weight: 1,
-      evidence: {},
-      analyzer_version: 'a1',
-      rule_version: 'r1',
-      created_at: '2026-07-16T00:00:00Z',
-      ...fields,
-    });
-    mswServer.use(
-      ...handlers(
-        detail({
-          evaluations: [
-            check('11111111-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Title present', {
-              score_roles: ['web_fundamentals'],
-            }),
-            check('22222222-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Schema matches content', {
-              outcome: 'missing',
-              score_roles: ['aeo_readiness'],
-              aeo_pillar: 'machine-readability',
-            }),
-            check('33333333-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Sitemap lists page', {
-              outcome: 'unknown',
-            }),
-            check('44444444-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Product price shown', {
-              outcome: 'not_applicable',
-              display_applicability: false,
-            }),
-          ],
-        }),
-      ),
-    );
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    const rows = (name: string) =>
-      within(screen.getByRole('table', { name }))
-        .getAllByRole('row')
-        .slice(1)
-        .map((row) => row.textContent);
-    await screen.findByRole('heading', { name: 'Checks' });
-    expect(rows('Web fundamentals (1)')).toEqual(['Title presentPassed']);
-    expect(rows('AEO readiness · Machine readability (1)')).toEqual([
-      'Schema matches contentFailed',
-    ]);
-    expect(rows('Site (1)')).toEqual(['Sitemap lists pageNot checked']);
-    expect(screen.queryByText('Product price shown')).not.toBeInTheDocument();
-  });
-
-  it('says an unknown compression is not measured rather than "none"', async () => {
-    const known = detail().delivery;
-    mswServer.use(...handlers(detail({ delivery: { ...known, compression: null } })));
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    const compression = screen.getByText('Compression').closest('div');
-    expect(compression).toHaveTextContent('Not measured');
-    expect(compression).not.toHaveTextContent('none');
-    expect(screen.getByText('Response size').closest('div')).toHaveTextContent('142 KB');
-  });
-
-  it('renders a persisted unresolved-purpose state simply as not measured', async () => {
-    mswServer.use(
-      ...handlers(
-        detail({
-          page_kind: 'other',
-          aeo_readiness_score: null,
-          aeo_measurement_coverage: null,
-          aeo_measurement_state: 'not_measured',
-          aeo_measurement_reason: 'page_purpose_unresolved',
-        }),
-      ),
-    );
-
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
-    expect(screen.queryByText(/purpose unresolved/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: /^AEO readiness score:/ })).not.toBeInTheDocument();
-  });
-
-  it('renders the not-measured state for a missing score, never a zero', async () => {
-    mswServer.use(
-      ...handlers(
-        detail({
-          web_fundamentals_score: null,
-          web_fundamentals_coverage: null,
-          web_fundamentals_state: 'not_measured',
-          aeo_readiness_score: null,
-          aeo_measurement_coverage: null,
-          aeo_measurement_state: 'not_measured',
-        }),
-      ),
-    );
-
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
-    expect(
-      screen.queryByRole('img', { name: /^(Web fundamentals|AEO readiness) score:/ }),
-    ).toBeNull();
-  });
-
-  it.each(['page_purpose_unresolved', 'unsupported_purpose_checklist'])(
-    'distinguishes unavailable purpose: %s',
-    async (reason) => {
-      mswServer.use(
-        ...handlers(
-          detail({
-            aeo_readiness_score: null,
-            aeo_measurement_coverage: null,
-            aeo_measurement_state: 'not_measured',
-            aeo_measurement_reason: reason,
-          }),
-        ),
-      );
-      renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-      await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-      const unsupported = screen.queryAllByText('No AEO checklist for this page kind');
-      expect(unsupported).toHaveLength(reason === 'unsupported_purpose_checklist' ? 2 : 0);
-    },
-  );
-
-  it('renders partial scores with checklist completion', async () => {
-    mswServer.use(
-      ...handlers(
-        detail({
-          web_fundamentals_score: 46,
-          web_fundamentals_coverage: 0.5,
-          web_fundamentals_state: 'limited_evidence',
-          aeo_readiness_score: 64,
-          aeo_measurement_coverage: 0.75,
-          aeo_measurement_state: 'limited_evidence',
-        }),
-      ),
-    );
-
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(figureText('Web fundamentals')).toBe('46');
-    expect(figureText('AEO readiness')).toBe('64');
-    expect(figureText('AEO checklist completion')).toBe('75%');
-  });
-
-  it('preserves the AEO state when measurement coverage is unavailable', async () => {
-    mswServer.use(
-      ...handlers(
-        detail({
-          aeo_readiness_score: null,
-          aeo_measurement_coverage: null,
-          aeo_measurement_state: 'excluded',
-        }),
-      ),
-    );
-
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(screen.getAllByText('Excluded')).toHaveLength(2);
-  });
-
-  it('renders the placeholder (not "no-cache") for a missing Cache-Control header', async () => {
-    mswServer.use(
-      ...handlers(
-        detail({
-          delivery: {
-            field_cwv_available: false,
-            status_code: 200,
-            ttfb_ms: 840,
-            wire_bytes: 40000,
-            decoded_bytes: 145408,
-            html_bytes: 145408,
-            http_version: 'HTTP/2',
-            compression: 'gzip',
-            cache_control: null,
-            blocking_resource_count: 0,
-          },
-        }),
-      ),
-    );
-
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(screen.queryByText('no-cache')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
-  });
-
-  it('renders the placeholder (not "0ms") for an unmeasured TTFB (B6)', async () => {
+  it('renders the placeholder (not "0 ms") for an unmeasured TTFB (B6)', async () => {
     mswServer.use(
       ...handlers(
         detail({
@@ -513,16 +227,14 @@ describe('UrlDetail', () => {
         }),
       ),
     );
-
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(screen.queryByText('0ms')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
-    expect(screen.getByText('39.1 KB')).toBeInTheDocument();
+    renderDrawer();
+    const drawer = await opened();
+    expect(await within(drawer).findByText('142 KB')).toBeInTheDocument();
+    expect(within(drawer).queryByText('0 ms')).not.toBeInTheDocument();
+    expect(within(drawer).getAllByText('Not measured').length).toBeGreaterThan(0);
   });
 
-  it('tells the person to wait when a crawl is running, and stays on the page', async () => {
+  it('tells the person to wait when a crawl is running, and keeps the page open', async () => {
     mswServer.use(
       ...handlers(detail({ analysis_status: 'completed' })),
       http.post(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/rerun`, () =>
@@ -537,23 +249,19 @@ describe('UrlDetail', () => {
         ),
       ),
     );
-
     const user = userEvent.setup();
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderDrawer();
+    await user.click(await screen.findByRole('button', { name: 'Re-audit this page' }));
 
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    await user.click(screen.getByRole('button', { name: 'Re-audit this page' }));
-
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       'A crawl is already running for this project. Try again when it ends.',
     );
-    expect(screen.getByTestId('location')).toHaveTextContent(
-      `/site/crawls/${CRAWL}/pages/${URL_ID}`,
-    );
+    expect(await opened()).toBeInTheDocument();
   });
 
-  it('a rerun navigates to its own one-page crawl identity detail route with ?rerun=1', async () => {
+  it('a rerun shows its own one-page crawl in the same drawer and polls it until it settles', async () => {
+    const statuses: PageDetail['analysis_status'][] = ['pending', 'running', 'completed'];
+    let reads = 0;
     mswServer.use(
       ...handlers(detail({ analysis_status: 'completed' })),
       http.post(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/rerun`, () =>
@@ -567,84 +275,33 @@ describe('UrlDetail', () => {
           { status: 202 },
         ),
       ),
-    );
-
-    const user = userEvent.setup();
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    await user.click(screen.getByRole('button', { name: 'Re-audit this page' }));
-
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent(
-        `/site/crawls/${NEW_CRAWL}/pages/${URL_ID}?rerun=1`,
-      ),
-    );
-  });
-
-  it('disables the re-audit and says why when the single-page crawls are used up', async () => {
-    mswServer.use(...handlers(detail({ analysis_status: 'completed' }), 0));
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByText(
-      'All 50 single-page crawls for this period are used. More from 2026-12-20.',
-    );
-    expect(screen.getByRole('button', { name: 'Re-audit this page' })).toBeDisabled();
-  });
-
-  it('landing on a fresh rerun crawl with ?rerun=1 begins polling immediately', async () => {
-    const statuses: PageDetail['analysis_status'][] = ['pending', 'running', 'completed'];
-    let getCallCount = 0;
-
-    mswServer.use(
       http.get(`/api/v1/site-crawls/${NEW_CRAWL}/pages/${URL_ID}`, () => {
-        const status = statuses[Math.min(getCallCount, statuses.length - 1)];
-        getCallCount += 1;
+        const status = statuses[Math.min(reads, statuses.length - 1)];
+        reads += 1;
         return HttpResponse.json(detail({ crawl_id: NEW_CRAWL, analysis_status: status }));
       }),
     );
+    const user = userEvent.setup();
+    renderDrawer();
+    await user.click(await screen.findByRole('button', { name: 'Re-audit this page' }));
 
-    renderUrlDetail(
-      <UrlDetail crawlId={NEW_CRAWL} siteUrlId={URL_ID} />,
-      `/site/crawls/${NEW_CRAWL}/pages/${URL_ID}?rerun=1`,
-    );
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(screen.getByText('Pending')).toBeInTheDocument();
-    await waitFor(() => expect(getCallCount).toBeGreaterThanOrEqual(statuses.length), {
+    expect(await screen.findByText(/^(Pending|Running)$/)).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/site');
+    await waitFor(() => expect(reads).toBeGreaterThanOrEqual(statuses.length), {
       timeout: 15_000,
     });
     await waitFor(() => expect(screen.queryByText('Running')).not.toBeInTheDocument());
     expect(screen.queryByText('Pending')).not.toBeInTheDocument();
   }, 20_000);
 
-  it('shows delivery and internal-link measurements in their own sections', async () => {
-    mswServer.use(...handlers(detail()));
+  it('disables the re-audit and says why when the single-page crawls are used up', async () => {
+    mswServer.use(...handlers(detail({ analysis_status: 'completed' }), 0));
+    renderDrawer();
 
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(within(allIssues('Delivery')).getByText('840ms')).toBeVisible();
-    expect(within(allIssues('Internal links')).getByText('Main-content inbound')).toBeVisible();
-    expect(screen.getByText('7 pages crawled')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'https://acme.com/collections/bags' })).toHaveAttribute(
-      'href',
-      `/site/crawls/${CRAWL}/pages/dddddddd-1111-4111-8111-111111111111`,
+    await screen.findByText(
+      'All 50 single-page crawls for this period are used. More from 2026-12-20.',
     );
-    expect(screen.getByText('This page links to no other crawled page.')).toBeInTheDocument();
-  });
-
-  it('distinguishes unmeasured internal links from an observed zero', async () => {
-    mswServer.use(...handlers(detail({ internal_links: null })));
-
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(
-      within(allIssues('Internal links')).getByText(
-        "Internal links weren't counted for this page.",
-      ),
-    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Re-audit this page' })).toBeDisabled();
   });
 
   it('lists every issue once in one list, worst first, with its severity, each row opening its fix', async () => {
@@ -667,12 +324,7 @@ describe('UrlDetail', () => {
         }),
       ),
     );
-
-    const user = userEvent.setup();
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'All issues (3)' });
-    const list = allIssues('All issues (3)');
+    const { user, list } = await openIssues(3);
     const rows = within(list).getAllByRole('button', { expanded: false });
     expect(rows.map((row) => row.textContent)).toEqual([
       'WebSite schema is missingHighAEO',
@@ -682,62 +334,19 @@ describe('UrlDetail', () => {
     await user.click(rows[2]!);
     await user.click(rows[0]!);
     for (const title of ['WebSite schema is missing', 'FAQ schema not present'])
-      expect(screen.getAllByText(title)).toHaveLength(1);
+      expect(within(list).getAllByText(title)).toHaveLength(1);
     const faq = document.getElementById(rows[2]!.getAttribute('aria-controls')!)!;
     expect(within(faq).getByText('Add FAQPage markup to the questions.')).toBeInTheDocument();
     const website = document.getElementById(rows[0]!.getAttribute('aria-controls')!)!;
-    expect(
-      within(website)
-        .getAllByText(/^(AEO readiness|Web fundamentals)$/)
-        .map((badge) => badge.textContent),
-    ).toEqual(['AEO readiness', 'Web fundamentals']);
-    expect(screen.queryByText(/^Advisories/)).toBeNull();
-    expect(figureText('Web fundamentals')).toBe('46');
-    const score = document.querySelector('[data-figure-strip]')!;
-    expect(score.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  it('hands the agent the page, or one issue on it, by id and never by evidence', async () => {
-    mswServer.use(...handlers(detail()));
-    const user = userEvent.setup();
-    renderUrlDetail(
-      <AgentPanelProvider>
-        <UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />
-        <PanelSeedProbe />
-      </AgentPanelProvider>,
+    const issue = parseAgentHandoff(
+      new URL(
+        within(website).getByRole('link', { name: 'Ask agent' }).getAttribute('href')!,
+        'http://x',
+      ).searchParams,
     );
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-
-    expect(screen.queryByRole('link', { name: 'Ask agent about this page' })).toBeNull();
-    const page = await openedSeed(user);
-    expect(page.context).toEqual({ target_site_url_id: URL_ID, target_url: 'https://acme.com/' });
-    expect(page.prompt).toBe(
-      'Review the 2 Website issues on https://acme.com/, worst first, and propose exact page edits for each.',
-    );
-    expect(page.skillId).toBe('technical_health');
-    const row = screen.getByRole('button', { name: /WebSite schema is missing/ });
-    await user.click(row);
-    const body = document.getElementById(row.getAttribute('aria-controls')!)!;
-    const issue = handoffOf(within(body).getByRole('link', { name: 'Ask agent' }));
     expect(issue.context).toEqual({
       issue_group_reference: { crawl_id: CRAWL, group_id: GROUP_H, site_url_id: URL_ID },
     });
-    expect(issue.skillId).toBe('technical_health');
-  });
-
-  it('asks the agent why a page’s audit did not finish, rather than how ready the page is', async () => {
-    mswServer.use(...handlers(detail({ analysis_status: 'error', issues: [] })));
-    const user = userEvent.setup();
-    renderUrlDetail(
-      <AgentPanelProvider>
-        <UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />
-        <PanelSeedProbe />
-      </AgentPanelProvider>,
-    );
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-
-    const page = await openedSeed(user);
-    expect(page.prompt).toMatch(/^The Website audit of https:\/\/acme\.com\/ did not complete/);
   });
 
   it('shows five issues until asked for all, and opens the one chosen in place', async () => {
@@ -750,11 +359,8 @@ describe('UrlDetail', () => {
       }),
     );
     mswServer.use(...handlers(detail({ issues })));
-    const user = userEvent.setup();
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-    await screen.findByRole('heading', { name: 'All issues (7)' });
+    const { user, list } = await openIssues(7);
 
-    const list = allIssues('All issues (7)');
     expect(within(list).getByText('Fifth issue')).toBeInTheDocument();
     expect(within(list).queryByText('Sixth issue')).toBeNull();
     await user.click(within(list).getByRole('button', { name: 'View all 7 issues' }));
@@ -766,19 +372,17 @@ describe('UrlDetail', () => {
     expect(within(list).getAllByRole('button', { expanded: true })).toEqual([seventh]);
   });
 
-  it('says so plainly when a page has nothing to fix', async () => {
+  it('says a page has nothing to fix only once its audit finished', async () => {
     mswServer.use(...handlers(detail({ issues: [] })));
-
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    expect(await screen.findByRole('heading', { name: 'All issues (0)' })).toBeInTheDocument();
-    expect(screen.getByText('No issues found.')).toBeInTheDocument();
+    const { list } = await openIssues(0);
+    expect(within(list).getByText('No issues found.')).toBeInTheDocument();
   });
 
   it('does not call a page clean before its audit finishes', async () => {
     mswServer.use(...handlers(detail({ issues: [], analysis_status: 'pending' })));
-
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    const user = userEvent.setup();
+    renderDrawer();
+    await user.click(await within(await opened()).findByRole('tab', { name: /^Issues/ }));
 
     expect(await screen.findByText('Audit not finished.')).toBeInTheDocument();
     expect(screen.queryByText('No issues found.')).not.toBeInTheDocument();

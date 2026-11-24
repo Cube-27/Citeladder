@@ -14,7 +14,7 @@ import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MeterRow } from '@/components/ui/meter';
 import { Pressable } from '@/components/ui/pressable';
-import { TextLink } from '@/components/ui/text-link';
+import { PageLink } from '@/components/site-health/page-link';
 import { Absence, printed } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -260,13 +260,14 @@ function PageKindPages({
             {pages.map((page) => (
               <li key={page.site_url_id} className="min-w-0">
                 {crawlId ? (
-                  <TextLink
+                  <PageLink
                     text="body"
                     className="block min-w-0"
-                    href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
+                    crawlId={crawlId}
+                    siteUrlId={page.site_url_id}
                   >
                     <ClampText lines={1}>{page.url}</ClampText>
-                  </TextLink>
+                  </PageLink>
                 ) : (
                   <ClampText lines={1} className="type-body text-ink">
                     {page.url}

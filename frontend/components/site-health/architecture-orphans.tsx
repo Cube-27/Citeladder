@@ -1,6 +1,6 @@
 import { Drawer } from '@/components/ui/drawer';
 import { Stack } from '@/components/ui/layout';
-import { TextLink } from '@/components/ui/text-link';
+import { PageLink } from '@/components/site-health/page-link';
 import type { SiteArchitecture } from '@citeladder/contracts';
 import { ClampText } from '@/components/ui/clamp-text';
 import { formatCount, pluralCount, readableUrl } from '@/lib/format';
@@ -55,13 +55,14 @@ export function OrphanPageDrawer({
           {pages.map((page) => (
             <Stack as="li" gap="tight" key={page.site_url_id} className="min-w-0">
               {crawlId ? (
-                <TextLink
+                <PageLink
                   text="body"
                   className="block min-w-0"
-                  href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
+                  crawlId={crawlId}
+                  siteUrlId={page.site_url_id}
                 >
                   <ClampText>{page.title || page.url}</ClampText>
-                </TextLink>
+                </PageLink>
               ) : (
                 <ClampText className="type-body text-ink">{page.title || page.url}</ClampText>
               )}

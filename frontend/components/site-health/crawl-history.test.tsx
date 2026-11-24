@@ -48,7 +48,7 @@ describe('CrawlHistory', () => {
         within(row).queryByText('Re-audit') !== null,
       ]),
     ).toEqual([
-      [`/site/crawls/${SINGLE}/pages/${PAGE}`, true],
+      [`/site?tab=pages&site_page=${SINGLE}_${PAGE}`, true],
       ['/site?tab=pages', true],
       ['/site?tab=pages', false],
     ]);
