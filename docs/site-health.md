@@ -1027,8 +1027,10 @@ carries the page.
 A URL's issue history lists only resolved issues: rules recorded on the page in
 the selected crawl's superseded analyses or the project's earlier crawls that its
 current finalized analysis no longer reports, one row per rule at its latest
-record. Current issues, the root's attached site-level (architecture) findings
-included, stay in page detail and never repeat there. Without a
+record. Current issues stay in page detail and never repeat there. Site-level
+findings (architecture and sitewide link rules) are filed on the root but are
+about the whole site: they appear only in the issues list, never in any page's
+issue count, detail or history. Without a
 finalized current analysis nothing is known to be resolved, and the page says so
 (`current_analysis_finalized: false`) instead of reading as an empty history.
 
