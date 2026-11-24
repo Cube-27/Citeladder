@@ -24,9 +24,12 @@ const SHARES: Record<string, number> = policy.site_health.crawl.tracked_shares;
 const shareOf = (kind: string) => SHARES[kind] ?? SHARES.other!;
 
 export function trackedFillOrder(candidates: Candidate[]) {
-  const lanes = [...Map.groupBy(orderedUnique(candidates), (item) => item.valueKind)].map(
-    ([kind, items]) => ({ items, share: shareOf(kind), taken: 0 }),
-  );
+  const eligible = orderedUnique(candidates).filter((item) => item.disposition === 'analyze');
+  const lanes = [...Map.groupBy(eligible, (item) => item.valueKind)].map(([kind, items]) => ({
+    items,
+    share: shareOf(kind),
+    taken: 0,
+  }));
   const due = (lane: (typeof lanes)[number]) => (lane.taken + 1) / lane.share;
   const order: Candidate[] = [];
   while (lanes.length) {
@@ -82,8 +85,11 @@ async function trackedPages(trx: Database, crawl: Crawl, hashes: string[]) {
   return { hashes: new Set(rows.map((row) => row.url_hash)), active: Number(active.count) };
 }
 
-export async function fillTrackedSet(trx: Database, crawl: Crawl, candidates: Candidate[]) {
-  const ordered = trackedFillOrder(candidates);
+export function fillTrackedSet(trx: Database, crawl: Crawl, candidates: Candidate[]) {
+  return joinInFillOrder(trx, crawl, trackedFillOrder(candidates));
+}
+
+export async function joinInFillOrder(trx: Database, crawl: Crawl, ordered: Candidate[]) {
   const tracked = await trackedPages(
     trx,
     crawl,
@@ -91,9 +97,7 @@ export async function fillTrackedSet(trx: Database, crawl: Crawl, candidates: Ca
   );
   const room = trackedTarget(crawl) - tracked.active;
   if (room <= 0) return [];
-  const picked = ordered
-    .filter((item) => item.disposition === 'analyze' && !tracked.hashes.has(item.hash))
-    .slice(0, room);
+  const picked = ordered.filter((item) => !tracked.hashes.has(item.hash)).slice(0, room);
   if (!picked.length) return [];
   const ids = await upsertSiteUrls(trx, crawl, picked);
   const joined = new Set(

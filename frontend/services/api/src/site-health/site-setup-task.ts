@@ -22,7 +22,7 @@ import {
   type SitemapUrl,
   type SitemapWalk,
 } from './sitemap-walk.ts';
-import { fillTrackedSet, trackedFillOrder, trackedRoom } from './tracked-set.ts';
+import { joinInFillOrder, trackedFillOrder, trackedRoom } from './tracked-set.ts';
 import {
   Abandoned,
   commitTask,
@@ -213,7 +213,7 @@ async function trackSitemapPages(ctx: SiteTaskContext, claimed: SiteTask, listed
       }
       await lockRuntime(trx, crawl.workspace_id);
       const { crawl: locked } = await lock();
-      const joined = await fillTrackedSet(trx, locked, window);
+      const joined = await joinInFillOrder(trx, locked, window);
       await enqueueCrawlTasks(
         trx,
         locked,

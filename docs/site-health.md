@@ -352,7 +352,8 @@ Within a tier, candidates sort by `url_hash`, the SHA-256 of the canonical
 URL. The order is the project's, the same in every crawl, and not biased toward
 header or footer links.
 
-The tracked-set fill (`trackedFillOrder`) interleaves the tiers by their
+The tracked-set fill (`trackedFillOrder`, computed once over the analyzable
+sitemap pages and consumed in windows) interleaves the tiers by their
 `tracked_shares` (`acquisition.json`): the next page comes from the tier
 with the lowest (taken + 1) / share, higher tier first on a tie, and an exhausted
 tier drops out so its share goes to the rest. Every prefix of the order is
