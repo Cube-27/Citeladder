@@ -107,7 +107,9 @@ function allowance(value: unknown) {
   return Number.isFinite(limit) && limit >= 0 ? limit : null;
 }
 
-const PRIORITIES: Record<string, number> = policy.site_health.crawl.value_priorities;
+const PRIORITIES = new Map(
+  Object.entries(policy.site_health.crawl.page_kinds).map(([kind, row]) => [kind, row.priority]),
+);
 const EXPECTED_KINDS: readonly string[] = policy.site_health.crawl.coverage_expected_value_kinds;
 
 export async function valueKindCoverage(db: Database, crawl: Crawl): Promise<ValueKindCoverage[]> {
@@ -145,7 +147,8 @@ export async function valueKindCoverage(db: Database, crawl: Crawl): Promise<Val
       analyzed: 0,
     })),
   ].toSorted(
-    (a, b) => (PRIORITIES[b.kind] ?? 0) - (PRIORITIES[a.kind] ?? 0) || compareText(a.kind, b.kind),
+    (a, b) =>
+      (PRIORITIES.get(b.kind) ?? 0) - (PRIORITIES.get(a.kind) ?? 0) || compareText(a.kind, b.kind),
   );
 }
 

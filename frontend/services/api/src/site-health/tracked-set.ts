@@ -20,9 +20,11 @@ export function orderedUnique(candidates: Candidate[]) {
   return [...unique.values()];
 }
 
-const SHARES = policy.site_health.crawl.tracked_shares;
-const SHARE_BY_KIND = new Map(Object.entries(SHARES));
-const shareOf = (kind: string) => SHARE_BY_KIND.get(kind) ?? SHARES.other;
+const KINDS = policy.site_health.crawl.page_kinds;
+const SHARE_BY_KIND = new Map(
+  Object.entries(KINDS).map(([kind, row]) => [kind, row.tracked_share]),
+);
+const shareOf = (kind: string) => SHARE_BY_KIND.get(kind) ?? KINDS.other.tracked_share;
 
 type Lane = { head: Candidate; rest: Iterator<Candidate>; share: number; taken: number };
 const due = (lane: Lane) => (lane.taken + 1) / lane.share;

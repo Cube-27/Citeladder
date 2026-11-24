@@ -14,6 +14,7 @@ const SIGNAL_ORDER = [
   'primary_listing_structure',
   'primary_location_entity',
   'root_path',
+  'sitemap_declaration',
   'path_pattern',
   'documentation_context',
   'service_capability_expression',
@@ -104,7 +105,7 @@ function locationEvidence(facts: Facts, localRoute: boolean) {
   return location.has_phone || location.has_hours ? 'single_address_entity' : '';
 }
 
-function structuralSignals(facts: Facts, route: Signal[]) {
+function structuralSignals(facts: Facts, hints: Signal[]) {
   const found: Signal[] = [];
   const product = productEvidence(facts);
   if (product) found.push(signal('primary_product_entity', 'product', product));
@@ -113,13 +114,13 @@ function structuralSignals(facts: Facts, route: Signal[]) {
     found.push(
       signal(
         'primary_listing_structure',
-        route.some((item) => item.page_kind === 'editorial_index') ? 'editorial_index' : 'category',
+        hints.some((item) => item.page_kind === 'editorial_index') ? 'editorial_index' : 'category',
         listing,
       ),
     );
   const location = locationEvidence(
     facts,
-    route.some((item) => item.page_kind === 'local'),
+    hints.some((item) => item.page_kind === 'local'),
   );
   if (location) found.push(signal('primary_location_entity', 'local', location));
   return found;
@@ -224,7 +225,11 @@ function semanticSignals(url: URL, path: string, facts: Facts) {
   return found;
 }
 
-function classificationSignals(finalUrl: string, facts: Facts): [Signal[], string | null] {
+function classificationSignals(
+  finalUrl: string,
+  facts: Facts,
+  declaredKind: string | null,
+): [Signal[], string | null] {
   const url = documentUrl(finalUrl);
   if (!url) return [[], null];
   const contentType = text(facts.content_type).split(';')[0]!.trim().toLowerCase();
@@ -235,8 +240,10 @@ function classificationSignals(finalUrl: string, facts: Facts): [Signal[], strin
   if (isHomepagePath(path)) return [[signal('root_path', 'homepage', path || '/')], schema];
   const routed = routeSignal(path);
   const route = routed ? [signal('path_pattern', routed.kind, routed.pattern)] : [];
+  const declared = declaredKind ? [signal('sitemap_declaration', declaredKind, declaredKind)] : [];
+  const hints = [...declared, ...route];
   return [
-    [...structuralSignals(facts, route), ...route, ...semanticSignals(url, path, facts)],
+    [...structuralSignals(facts, hints), ...hints, ...semanticSignals(url, path, facts)],
     schema,
   ];
 }
@@ -277,8 +284,8 @@ function otherReason(matched: Signal[], winner: Signal | null) {
   return matched.length ? c.other_reasons.schema_only : c.other_reasons.no_signals;
 }
 
-export function classify(finalUrl: string, facts: Facts) {
-  const [matched, schemaKind] = classificationSignals(finalUrl, facts);
+export function classify(finalUrl: string, facts: Facts, declaredKind: string | null = null) {
+  const [matched, schemaKind] = classificationSignals(finalUrl, facts, declaredKind);
   const winner = winningSignal(matched);
   const kind = winner?.page_kind ?? null;
   const tier = winner?.tier ?? 'semantic';

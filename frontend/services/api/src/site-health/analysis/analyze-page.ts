@@ -8,6 +8,7 @@ export type PageContext = {
   sitemapMember: boolean;
   sitemapUrl?: string | null;
   sitemapLastmod?: string | null;
+  sitemapKind?: string | null;
   siteFacts: Facts | null;
   auditTime: string | null;
   sources?: {
@@ -20,7 +21,7 @@ export type PageContext = {
 
 export function analyzePage(facts: Facts, context: PageContext) {
   const finalUrl = text(record(facts.delivery).final_url);
-  const assessment = classify(finalUrl, facts);
+  const assessment = classify(finalUrl, facts, context.sitemapKind ?? null);
   const traits = deriveTraits(finalUrl, facts);
   const evaluationFacts: Facts = {
     ...facts,

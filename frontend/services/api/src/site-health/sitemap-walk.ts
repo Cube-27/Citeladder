@@ -269,7 +269,7 @@ function collectRefetch(walk: Walk, entry: Entry, stale: IndexRead, read: Sitema
   queueChildren(walk, indexRead(entry.url, entry.depth), read.document);
 }
 
-export type SitemapUrl = { item: Candidate; lastmod: string | null };
+export type SitemapUrl = { item: Candidate; lastmod: string | null; declaredKind: string | null };
 
 export function admittedUrls(collector: SitemapCollector, scope: Scope) {
   const found = new Map<
@@ -285,17 +285,21 @@ export function admittedUrls(collector: SitemapCollector, scope: Scope) {
     else found.set(admission.hash, { admission, url: admission.url, raw, sources: [...sources] });
   }
   const listed = [...found.values()]
-    .map(({ admission, url, raw, sources }, linkOrdinal): SitemapUrl => ({
-      item: candidate(listedAdmission(admission, sources), {
-        url,
-        hash: admission.hash,
-        depth: 1,
-        sourceKind: 'sitemap',
-        parentPosition: 0,
-        linkOrdinal,
-      }),
-      lastmod: collector.lastmod.get(raw) ?? null,
-    }))
+    .map(({ admission, url, raw, sources }, linkOrdinal): SitemapUrl => {
+      const listed = listedAdmission(admission, sources);
+      return {
+        item: candidate(listed.admission, {
+          url,
+          hash: admission.hash,
+          depth: 1,
+          sourceKind: 'sitemap',
+          parentPosition: 0,
+          linkOrdinal,
+        }),
+        lastmod: collector.lastmod.get(raw) ?? null,
+        declaredKind: listed.declaredKind,
+      };
+    })
     .toSorted((a, b) => trackedOrder(a.item, b.item));
   return { discovered: found.size, listed };
 }

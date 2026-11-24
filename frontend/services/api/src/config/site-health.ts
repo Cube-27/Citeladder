@@ -10,7 +10,7 @@ import rules from './site-health/rules.json' with { type: 'json' };
 import { changeIntel } from './site-health/change-intel.ts';
 import { siteAuthorship } from './site-authorship.ts';
 import { companyIdentity } from './company-identity.ts';
-import { validateSiteHealthCatalog } from './site-health/validation.ts';
+import { validateAdmissionKinds, validateSiteHealthCatalog } from './site-health/validation.ts';
 
 const contentChecks = new Set(Object.keys(reads.reads.content_addressable_check_fields));
 
@@ -110,4 +110,8 @@ validateSiteHealthCatalog(
   siteHealth.reads.readiness_dimension_weights,
   siteHealth.reads.aeo_check_pillar,
   siteHealth.reads.content_addressable_check_fields,
+);
+validateAdmissionKinds(
+  analysis.page_analysis.classification.page_kinds,
+  acquisition.crawl.page_kinds,
 );

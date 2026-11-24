@@ -327,12 +327,13 @@
         ["about_contact", "our story"],
         ["about_contact", "contact"]
       ],
-      "tiers": ["structural", "route", "semantic"],
+      "tiers": ["structural", "declared", "route", "semantic"],
       "signal_tiers": {
         "primary_product_entity": "structural",
         "primary_listing_structure": "structural",
         "primary_location_entity": "structural",
         "root_path": "structural",
+        "sitemap_declaration": "declared",
         "path_pattern": "route",
         "content_heuristic": "semantic",
         "structured_data": "semantic",
@@ -340,6 +341,7 @@
       },
       "tier_confidence": {
         "structural": "high",
+        "declared": "medium",
         "route": "medium",
         "semantic": "low"
       },

@@ -312,7 +312,12 @@ export async function insertObservations(trx: Database, crawl: Crawl, observed: 
   return inserted;
 }
 
-export type SitemapEntry = { siteUrlId: string; listedUrl: string; lastmod: string | null };
+export type SitemapEntry = {
+  siteUrlId: string;
+  listedUrl: string;
+  lastmod: string | null;
+  declaredKind: string | null;
+};
 
 export async function insertSitemapEntries(trx: Database, crawl: Crawl, entries: SitemapEntry[]) {
   const now = new Date();
@@ -328,6 +333,7 @@ export async function insertSitemapEntries(trx: Database, crawl: Crawl, entries:
           site_url_id: entry.siteUrlId,
           listed_url: entry.listedUrl,
           lastmod: entry.lastmod,
+          declared_kind: entry.declaredKind,
           created_at: now,
         })),
       )

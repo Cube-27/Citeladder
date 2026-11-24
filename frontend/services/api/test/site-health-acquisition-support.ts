@@ -174,7 +174,7 @@ export function acquisitionHarness(db: Database, fixtures: SiteFixtures) {
   const entries = (seed: SiteSeed) =>
     db
       .selectFrom('site_sitemap_entries')
-      .select(['listed_url', 'lastmod'])
+      .select(['listed_url', 'lastmod', 'declared_kind'])
       .where('crawl_id', '=', seed.crawlId)
       .orderBy('listed_url')
       .execute();

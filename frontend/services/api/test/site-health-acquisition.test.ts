@@ -574,7 +574,7 @@ describe('site setup', () => {
           '/llms.txt': { body: '# Example', contentType: 'text/markdown' },
           '/index.xml': {
             contentType: 'application/xml',
-            body: '<sitemapindex><sitemap><loc>https://example.test/pages.xml</loc></sitemap></sitemapindex>',
+            body: '<sitemapindex><sitemap><loc>https://example.test/product-sitemap.xml</loc></sitemap></sitemapindex>',
             onFetch: async () => {
               const initial = await crawlRow(seed);
               expect(initial.robots_snapshot_id).not.toBeNull();
@@ -589,7 +589,7 @@ describe('site setup', () => {
               });
             },
           },
-          '/pages.xml': {
+          '/product-sitemap.xml': {
             contentType: 'application/xml',
             body: `<urlset><url><loc>${url('/a')}</loc><lastmod>2026-09-01</lastmod></url><url><loc>${url('/cart')}</loc><lastmod>2026-09-02</lastmod></url><url><loc>https://other.test/b</loc></url><url><loc>${url('/a')}</loc></url></urlset>`,
           },
@@ -638,7 +638,7 @@ describe('site setup', () => {
       '/robots.txt',
       '/',
       '/index.xml',
-      '/pages.xml',
+      '/product-sitemap.xml',
     ]);
     expect(facts.http_origin).toEqual({
       state: 'answered',
@@ -651,7 +651,9 @@ describe('site setup', () => {
     expect(await observations(seed)).toEqual([
       { observed_url: url('/a'), source_kind: 'sitemap', depth: 1 },
     ]);
-    expect(await entries(seed)).toEqual([{ listed_url: url('/a'), lastmod: '2026-09-01' }]);
+    expect(await entries(seed)).toEqual([
+      { listed_url: url('/a'), lastmod: '2026-09-01', declared_kind: 'product' },
+    ]);
     expect(await tasks(seed, 'discover')).toEqual([]);
     expect((await tasks(seed, 'analyze')).map((row) => row.requested_url)).toEqual([url('/a')]);
     expect((await memberships(seed)).map((row) => row.normalized_url)).toEqual([url('/a')]);
@@ -722,8 +724,8 @@ describe('site setup', () => {
       { observed_url: url('/a'), source_kind: 'sitemap', depth: 1 },
     ]);
     expect(await entries(seed)).toEqual([
-      { listed_url: url('/'), lastmod: '2026-10-01' },
-      { listed_url: url('/a'), lastmod: null },
+      { listed_url: url('/'), lastmod: '2026-10-01', declared_kind: null },
+      { listed_url: url('/a'), lastmod: null, declared_kind: null },
     ]);
     expect(await urlRow(seed, '/')).toMatchObject({ depth: 0, latest_source_kind: 'root' });
   });
@@ -1021,8 +1023,7 @@ describe('frontier admission', () => {
     expect(await valueKindCoverage(db, live)).toEqual([
       { kind: 'product', found: 2, analyzed: 0 },
       { kind: 'pricing', found: 0, analyzed: 0 },
-      { kind: 'about', found: 1, analyzed: 0 },
-      { kind: 'contact', found: 0, analyzed: 0 },
+      { kind: 'about_contact', found: 1, analyzed: 0 },
     ]);
     const sample = await crawl({ sample: true, config: { automatic_monitor_limit: 0 } });
     await admit(sample, ['/products/a']);

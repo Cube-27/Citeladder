@@ -6,13 +6,18 @@ import { isHomepagePath, routePageKind } from '../src/site-health/routes.ts';
 
 const prose =
   'Teams can investigate website observations and compare practical improvements using a clear record of the evidence they collected during their review.';
-const inspect = (html: string, path: string) => {
+const inspect = (html: string, path: string, sitemapKind: string | null = null) => {
   const facts = extractPageFacts(Buffer.from(html), {
     finalUrl: `https://example.test${path}`,
     contentType: 'text/html',
     statusCode: 200,
   });
-  const result = analyzePage(facts, { sitemapMember: false, siteFacts: null, auditTime: null });
+  const result = analyzePage(facts, {
+    sitemapMember: sitemapKind !== null,
+    sitemapKind,
+    siteFacts: null,
+    auditTime: null,
+  });
   const rules = new Map<string, RuleEvaluation>(
     result.evaluations.map((row) => [row.rule_id, row]),
   );
@@ -217,6 +222,27 @@ describe('page-purpose regression boundaries', () => {
       expect(rules.get(id)!.outcome).toBe('unknown');
       expect(createsIssue(rules.get(id)!)).toBe(false);
     }
+  });
+
+  it('takes the sitemap-declared kind over the path unless content structure contradicts it', () => {
+    const path = '/Categories/Mens/Flannelette-Shirt/MN154_1648598_GREY';
+    const thin = `<title>Flannelette Shirt</title><main><h1>Flannelette Shirt</h1><p>${prose}</p></main>`;
+    const listing = `<main><h1>Shirts</h1><section><p role='status'>9 results</p>${grid('shirt')}</section></main>`;
+    const assess = (html: string, kind: string | null) =>
+      inspect(html, path, kind).result.assessment;
+    expect(assess(thin, null)).toMatchObject({
+      page_kind: 'category',
+      evidence: { tier: 'route' },
+    });
+    expect(assess(thin, 'product')).toMatchObject({
+      page_kind: 'product',
+      evidence: { classified_by: 'sitemap_declaration', tier: 'declared', confidence: 'medium' },
+    });
+    const contradicted = assess(listing, 'product');
+    expect(contradicted.page_kind).toBe('category');
+    expect(contradicted.evidence.conflicts).toContainEqual(
+      expect.objectContaining({ conflicting_page_kind: 'product', signal: 'sitemap_declaration' }),
+    );
   });
 
   it('reads item labels and targets from the bound collection without assuming product URL names', () => {

@@ -88,7 +88,7 @@ const attempts = (taskId: string) =>
     .execute();
 
 describe('analyze acquisition', () => {
-  it('retains the sitemap observation behind a sitemap-listed noindex finding', async () => {
+  it('retains the sitemap observation and declared kind behind a sitemap-listed page', async () => {
     const seed = await running();
     const page = await fixtures.analyzable(seed, '/sitemap-page');
     const observationId = crypto.randomUUID();
@@ -113,7 +113,7 @@ describe('analyze acquisition', () => {
         created_at: new Date(),
       })
       .execute();
-    await fixtures.sitemapEntry(seed, page);
+    await fixtures.sitemapEntry(seed, page, 'product');
     await analyze(
       site({
         '/sitemap-page': {
@@ -123,6 +123,7 @@ describe('analyze acquisition', () => {
       page.taskId,
     );
     const [analysis] = await analyses(seed, page.siteUrlId);
+    expect(analysis).toMatchObject({ page_kind: 'product' });
     const evaluations = await db
       .selectFrom('site_rule_evaluations')
       .select(['rule_id', 'evidence', 'outcome', 'extractor_version'])

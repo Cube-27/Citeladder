@@ -25,6 +25,19 @@ export function validateSiteHealthSettings(values: Record<string, unknown>) {
     throw new Error('Site Health acquisition_policy_version must not be empty');
 }
 
+export function validateAdmissionKinds(
+  pageKinds: readonly string[],
+  admission: Record<string, { sitemap_words: readonly string[] }>,
+) {
+  const unknown = Object.keys(admission).filter((kind) => !pageKinds.includes(kind));
+  if (unknown.length)
+    throw new Error(`Site Health crawl.page_kinds names unknown page kinds: ${unknown.join(', ')}`);
+  const words = Object.values(admission).flatMap((row) => row.sitemap_words);
+  const repeated = words.filter((word, index) => words.indexOf(word) !== index);
+  if (repeated.length)
+    throw new Error(`Site Health sitemap words name two page kinds: ${repeated.join(', ')}`);
+}
+
 type Rule = {
   rule_id: string;
   finding_class: string;

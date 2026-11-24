@@ -3463,6 +3463,7 @@ export interface SiteRuleEvaluations {
 export interface SiteSitemapEntries {
   crawl_id: string;
   created_at: Timestamp;
+  declared_kind: string | null;
   id: string;
   lastmod: string | null;
   listed_url: string;

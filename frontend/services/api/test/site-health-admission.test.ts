@@ -5,6 +5,7 @@ import { policy } from '../src/config.ts';
 import { extractPageFacts, factSettings } from '../src/site-health/analysis/facts.ts';
 import { parseSitemapAsync } from '../src/site-health/analysis/off-thread.ts';
 import { discoveryLinks } from '../src/site-health/discovery-links.ts';
+import { routePageKind } from '../src/site-health/routes.ts';
 import { admittedUrls } from '../src/site-health/sitemap-walk.ts';
 import { classifyUrlAdmission, listedAdmission } from '../src/site-health/url-admission.ts';
 import { document } from '../src/web-evidence/html.ts';
@@ -82,13 +83,15 @@ describe('URL admission', () => {
 
   it('orders by the most valuable kind a path names', () => {
     const priority = (url: string) => classifyUrlAdmission(url).priority;
-    expect(classifyUrlAdmission('https://example.test/').valueKind).toBe('root');
+    expect(classifyUrlAdmission('https://example.test/').valueKind).toBe('homepage');
     expect(priority('https://example.test/products/widget')).toBeGreaterThan(
       priority('https://example.test/blog/widget'),
     );
     const kind = (path: string) => classifyUrlAdmission(`https://example.test${path}`).valueKind;
     expect(kind('/blog/product-review')).toBe('article');
-    expect(kind('/about-us')).toBe('about');
+    expect(kind('/about-us')).toBe('about_contact');
+    expect(kind('/contact')).toBe('about_contact');
+    expect(kind('/privacy-policy')).toBe('trust_policy');
     expect(kind('/help/getting-started')).toBe('docs');
     expect(kind('/support/returns')).toBe('docs');
     expect(kind('/store/Airport%20West')).toBe('local');
@@ -96,6 +99,18 @@ describe('URL admission', () => {
     expect(kind('/shop/dresses')).toBe('category');
     expect(kind('/products/widget')).toBe('product');
     expect(kind('/productivity-tips')).toBe('other');
+  });
+
+  it('never files a path word under a kind the classifier route gives the same segment', () => {
+    const pairs = Object.entries(policy.site_health.crawl.page_kinds).flatMap(([kind, row]) =>
+      row.path_words.map((word) => [
+        word,
+        kind,
+        routePageKind(`https://example.test/${word}/item`),
+      ]),
+    );
+    expect(pairs).toContainEqual(['store', 'local', 'local']);
+    expect(pairs.filter(([, kind, routed]) => routed !== null && routed !== kind)).toEqual([]);
   });
 });
 
@@ -384,7 +399,7 @@ describe('sitemaps', () => {
       '/cars-baby-bodysuits-onesies': 'category',
       '/store/capalaba': 'local',
       '/kids-tshirts': 'other',
-      '/about-us': 'about',
+      '/about-us': 'about_contact',
       '/toy-story-shoes': 'other',
       '/shop/dresses': 'category',
     });
@@ -434,41 +449,42 @@ describe('sitemaps', () => {
     ['/sitemap_collections_1.xml', 'category'],
     ['/sitemap_blogs_1.xml', 'article'],
     ['/sitemap_articles_1.xml', 'article'],
-    ['/sitemap_pages_1.xml', 'other'],
-    ['/sitemap_metaobject_pages_1.xml', 'other'],
-    ['/hreflang_sitemap.xml', 'other'],
+    ['/sitemap_pages_1.xml', null],
+    ['/sitemap_metaobject_pages_1.xml', null],
+    ['/hreflang_sitemap.xml', null],
     ['/post-sitemap.xml', 'article'],
     ['/post-sitemap2.xml', 'article'],
-    ['/page-sitemap.xml', 'other'],
+    ['/page-sitemap.xml', null],
     ['/product-sitemap2.xml', 'product'],
     ['/documentation-sitemap3.xml', 'docs'],
     ['/category-sitemap.xml', 'category'],
-    ['/author-sitemap.xml', 'other'],
-    ['/product_updates-sitemap.xml', 'other'],
-    ['/feature_request-sitemap.xml', 'other'],
-    ['/yoast_employees-sitemap.xml', 'other'],
+    ['/author-sitemap.xml', null],
+    ['/product_updates-sitemap.xml', null],
+    ['/feature_request-sitemap.xml', null],
+    ['/yoast_employees-sitemap.xml', null],
     ['/sitemap-product-4.xml', 'product'],
     ['/sitemap-core-category.xml', 'category'],
     ['/sitemap-core-brand-category-2.xml', 'category'],
-    ['/sitemap-campaign-landing-page.xml', 'other'],
+    ['/sitemap-campaign-landing-page.xml', null],
     ['/sitemap/au/product-sitemap-a.xml', 'product'],
     ['/collection-sitemap.xml', 'category'],
     ['/storelocation-sitemap.xml', 'local'],
-    ['/content-sitemap.xml', 'other'],
-    ['/seller-sitemap.xml', 'other'],
+    ['/content-sitemap.xml', null],
+    ['/seller-sitemap.xml', null],
     ['/medias/colour-sitemap.xml', 'category'],
     ['/blog/sitemap.xml', 'article'],
     ['/help/sitemap.xml', 'docs'],
-    ['/customers/sitemap.xml', 'other'],
+    ['/customers/sitemap.xml', null],
     ['/es-es/blog/sitemap.xml', 'article'],
-    ['/blog/product-sitemap.xml', 'other'],
-    ['/sitemap/partition-3.xml', 'other'],
-    ['/generated_sitemap_part1.xml', 'other'],
-    ['/sitemaps/sitemap_12.xml', 'other'],
-    ['/profiles_sitemap0.xml', 'other'],
+    ['/blog/product-sitemap.xml', null],
+    ['/sitemap/partition-3.xml', null],
+    ['/generated_sitemap_part1.xml', null],
+    ['/sitemaps/sitemap_12.xml', null],
+    ['/profiles_sitemap0.xml', null],
   ])('reads the child sitemap %s as %s for a page its path does not name', (path, kind) => {
     const page = classifyUrlAdmission('https://example.test/kids-boxer-shorts-orange');
-    expect(listedAdmission(page, [`https://example.test${path}`]).valueKind).toBe(kind);
+    const listed = listedAdmission(page, [`https://example.test${path}`]);
+    expect([listed.admission.valueKind, listed.declaredKind]).toEqual([kind ?? 'other', kind]);
   });
 
   it('parses a sitemap off the event loop with the same answer and refusals', async () => {

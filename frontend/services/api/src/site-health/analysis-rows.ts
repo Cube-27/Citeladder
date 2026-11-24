@@ -170,7 +170,7 @@ async function sitemapObservation(db: Database, crawl: Crawl, siteUrlId: string)
         .onRef('o.crawl_id', '=', 'e.crawl_id')
         .onRef('o.site_url_id', '=', 'e.site_url_id'),
     )
-    .select(['o.id', 'e.listed_url', 'e.lastmod'])
+    .select(['o.id', 'e.listed_url', 'e.lastmod', 'e.declared_kind'])
     .where('e.workspace_id', '=', crawl.workspace_id)
     .where('e.project_id', '=', crawl.project_id)
     .where('e.crawl_id', '=', crawl.id)
@@ -314,6 +314,7 @@ export async function pageAnalysisContext(
     sitemapMember: observationId !== null,
     sitemapUrl: observation?.listed_url ?? null,
     sitemapLastmod: observation?.lastmod ?? null,
+    sitemapKind: observation?.declared_kind ?? null,
     siteFacts,
     auditTime: auditTime ? new Date(auditTime).toISOString() : null,
     sources: {
