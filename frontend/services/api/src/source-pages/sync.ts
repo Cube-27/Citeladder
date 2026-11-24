@@ -6,7 +6,7 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { pageIdentity } from './identity.ts';
-import { urlFormat } from './assessment.ts';
+import { rosterNames, urlFormat } from './assessment.ts';
 import type { SourceScope } from './admission.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { fenceInspectionTask } from './task-fence.ts';
@@ -47,12 +47,11 @@ type PageInput = {
   sourceClass?: string | null;
   taxonomy?: string | null;
 };
+type Sync = { scope: SourceScope; auditId: string; names: string[]; now: Date };
 async function upsertPages(
   db: Database,
-  scope: SourceScope,
-  auditId: string,
+  { scope, auditId, names, now }: Sync,
   inputs: PageInput[],
-  now: Date,
   citation: boolean,
 ) {
   if (!inputs.length) return new Map<string, string>();
@@ -61,7 +60,7 @@ async function upsertPages(
     .insertInto('source_pages')
     .values(
       inputs.map((input) => {
-        const format = urlFormat(input.url);
+        const format = urlFormat(input.url, names);
         return {
           id: randomUUID(),
           workspace_id: scope.workspaceId,
@@ -107,13 +106,8 @@ async function upsertPages(
     .execute();
   return new Map(rows.map((row) => [row.url_hash, row.id]));
 }
-async function syncCited(
-  db: Database,
-  scope: SourceScope,
-  auditId: string,
-  now: Date,
-  hashes?: string[],
-) {
+async function syncCited(db: Database, sync: Sync, hashes?: string[]) {
+  const { scope, auditId } = sync;
   let query = db
     .selectFrom('citations')
     .select([
@@ -134,10 +128,8 @@ async function syncCited(
   const rows = await query.execute();
   await upsertPages(
     db,
-    scope,
-    auditId,
+    sync,
     rows.map((row) => ({ ...row, hash: row.url_hash!, answers: Number(row.answers) })),
-    now,
     true,
   );
 }
@@ -146,17 +138,19 @@ async function auditInTransaction(
   scope: SourceScope,
   auditId: string,
   task: QueueTask | undefined,
-) {
+  now: Date,
+): Promise<Sync> {
   await fenceInspectionTask(trx, task);
   const audit = await trx
     .selectFrom('audits')
-    .select('id')
+    .select(['id', 'configuration'])
     .where('id', '=', auditId)
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .executeTakeFirst();
   if (!audit) throw new Error('Source-page audit is outside its project');
   await acquireProjectLock(trx, scope.projectId);
+  return { scope, auditId, names: rosterNames(audit.configuration), now };
 }
 export async function syncCitedPages(
   db: Database,
@@ -168,8 +162,7 @@ export async function syncCitedPages(
 ) {
   if (!hashes.length) return;
   await db.transaction().execute(async (trx) => {
-    await auditInTransaction(trx, scope, auditId, task);
-    await syncCited(trx, scope, auditId, now, hashes);
+    await syncCited(trx, await auditInTransaction(trx, scope, auditId, task, now), hashes);
   });
 }
 export function syncPages(
@@ -181,8 +174,8 @@ export function syncPages(
   task?: QueueTask,
 ) {
   return db.transaction().execute(async (trx) => {
-    await auditInTransaction(trx, scope, auditId, task);
-    await syncCited(trx, scope, auditId, now);
+    const sync = await auditInTransaction(trx, scope, auditId, task, now);
+    await syncCited(trx, sync);
     await trx
       .updateTable('source_pages')
       .set({ inspection_state: 'stale', updated_at: now })
@@ -207,7 +200,7 @@ export function syncPages(
         ]),
       )
       .execute();
-    await syncOrganicPages(trx, scope, auditId, now);
+    await syncOrganicPages(trx, sync);
     const unresolved = await trx
       .selectFrom('citations')
       .select(['url', 'domain'])
@@ -230,7 +223,8 @@ export function syncPages(
     });
   });
 }
-async function syncOrganicPages(db: Database, scope: SourceScope, auditId: string, now: Date) {
+async function syncOrganicPages(db: Database, sync: Sync) {
+  const { scope, auditId, now } = sync;
   const rows = await db
     .selectFrom('raw_response_artifacts as artifact')
     .innerJoin('audit_tasks as task', 'task.id', 'artifact.task_id')
@@ -266,10 +260,8 @@ async function syncOrganicPages(db: Database, scope: SourceScope, auditId: strin
   );
   const ids = await upsertPages(
     db,
-    scope,
-    auditId,
+    sync,
     [...unique.values()].map((identity) => ({ ...identity, answers: 0 })),
-    now,
     false,
   );
   const candidates = picks.flatMap(({ row, ranks }) =>

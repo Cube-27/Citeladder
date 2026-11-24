@@ -15,7 +15,11 @@ import {
   type ClassifiedCitation,
 } from './scoring.ts';
 import { assessEntities, brandNamed } from './entity-assessment.ts';
-import { classifySourceDomain, classifySourceOrigin } from './opportunities/source-patterns.ts';
+import {
+  classifySourceDomain,
+  classifySourceOrigin,
+  profileOwner,
+} from './opportunities/source-patterns.ts';
 import { citationIdentity } from '../source-pages/identity.ts';
 import { fanoutProjection } from './fanout.ts';
 import { answerAds, persistAds } from './ads.ts';
@@ -126,7 +130,8 @@ async function persistCitations(
       .values(
         citations.map((citation, ordinal) => {
           const classified = classifyCitation(citation, config),
-            resolved = scalarText(citation.resolved_url).trim();
+            resolved = scalarText(citation.resolved_url).trim(),
+            profile = profileOwner(resolved || scalarText(citation.url), config);
           return {
             ...provenance,
             id: randomUUID(),
@@ -137,8 +142,8 @@ async function persistCitations(
             classification: citationClassification(classified),
             source_class: classifySourceDomain(
               classified.domain,
-              classified.is_owned,
-              classified.matched_competitor,
+              classified.is_owned || profile.owned,
+              classified.matched_competitor ?? profile.competitor,
             ),
             source_origin: classifySourceOrigin(classified.domain),
             source_taxonomy_version: policy.opportunity.source_patterns.SOURCE_TAXONOMY_VERSION,

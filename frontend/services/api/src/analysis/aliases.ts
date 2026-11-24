@@ -17,16 +17,18 @@ export function normalizeAlias(value: string): string {
     .replaceAll(/\s+/gu, ' ');
 }
 
+export const CONNECTOR = 'and';
+
 export function aliasSpellings(alias: string): string[][] {
   const words = normalizeAlias(alias).split(' ').filter(Boolean);
   if (!words.length) return [];
   const min = policy.audits.analysis.alias_connector_part_min_chars;
   const spellings = [words];
   words.forEach((word, index) => {
-    for (let at = word.indexOf('and', min); at !== -1; at = word.indexOf('and', at + 1)) {
-      const [head, tail] = [word.slice(0, at), word.slice(at + 3)];
+    for (let at = word.indexOf(CONNECTOR, min); at !== -1; at = word.indexOf(CONNECTOR, at + 1)) {
+      const [head, tail] = [word.slice(0, at), word.slice(at + CONNECTOR.length)];
       if (head.length < min || tail.length < min) continue;
-      spellings.push([...words.slice(0, index), head, 'and', tail, ...words.slice(index + 1)]);
+      spellings.push([...words.slice(0, index), head, CONNECTOR, tail, ...words.slice(index + 1)]);
     }
   });
   return spellings;
@@ -178,6 +180,19 @@ export function entityOffset(
   entity?: EntityPolicy,
 ): number | null {
   return firstOccurrence(normalizedText, aliases, entity)?.codePoints ?? null;
+}
+
+export function withoutAliases(normalizedText: string, aliases: readonly string[]): string {
+  const tokens = normalizedText.split(' ').filter(Boolean);
+  const named = new Set<number>();
+  const spellings = aliases.flatMap(aliasSpellings).flatMap((words) => {
+    const bare = words.filter((word) => word !== CONNECTOR);
+    return bare.length && bare.length < words.length ? [words, bare] : [words];
+  });
+  for (const words of spellings)
+    for (const found of occurrences(tokens, words))
+      for (let index = found.start; index < found.end; index++) named.add(index);
+  return tokens.filter((_, index) => !named.has(index)).join(' ');
 }
 
 export function firstAliasOffset(

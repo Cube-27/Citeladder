@@ -73,11 +73,17 @@ tasks.
 ## What a reading establishes
 
 **Page format is not publisher class.** `source_class` describes a domain and
-comes from `config/source-patterns.ts`. `page_format` describes one page. Sync
+comes from `config/source-patterns.ts`, except that a profile on a social domain
+whose handle matches the brand's or a competitor's name, alias or site label
+is that company's own. `page_format` describes one page. Sync
 derives a first verdict from the URL's shape (`url_pattern`); a reading may
 replace it with what the page says about itself, and a reading that learns
 nothing leaves it standing. A specific schema type (ItemList, FAQPage,
-VideoObject) is strongest. A list, comparison or review heading outranks
+VideoObject) is strongest, except that a list, comparison or review title or
+main heading outranks ItemList or FAQPage markup that says otherwise, because sites put FAQ
+markup on lists and comparisons. The tracked brand's and competitors' names
+are removed from the title, headings and URL path first, so a name such as
+Best & Less never reads as a list. A list, comparison or review heading outranks
 generic Article, BlogPosting or NewsArticle markup, because most CMSs mark
 every post up as an article whatever its shape. The page-kind catalog is
 shared with Site Health (`config/site-health/analysis.json` and
@@ -87,11 +93,12 @@ shared with Site Health (`config/site-health/analysis.json` and
 would count in an answer: the same normalisation and the project's mention
 rules (context terms, exclusion phrases). A positive verdict always carries a
 quoted window from the raw text, found by the name as written or by its words
-with short separators, or none, between them ("The Asian School" quotes
-"theasianschool.com"); only occurrences the mention rules accept are quoted and
+with short separators, or none, between them, in every spelling the matcher
+splits a joined name into, with "&" for "and" ("The Asian School" quotes
+"theasianschool.com", "bestandless" quotes "Best & Less"); only occurrences the mention rules accept are quoted and
 counted. Each entity has its own small passage allowance, so one name
 that fills the page never leaves the others unquoted. A name matched only in a
-spelling no raw window reproduces ("and" for "&") is `ambiguous`, not present.
+spelling no raw window reproduces is `ambiguous`, not present.
 A non-detection carries the extracted length and the matching method instead,
 because no passage can show an absence; too little readable text is `partial`.
 A name whose every spelling is shorter than `min_alias_chars` (3) is

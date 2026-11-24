@@ -10,7 +10,10 @@ import {
   siteDomain,
 } from '../src/analysis/domains.ts';
 import { landingPage, pathIdentity } from '../src/page-identity.ts';
-import { classifySourceDomain } from '../src/analysis/opportunities/source-patterns.ts';
+import {
+  classifySourceDomain,
+  profileOwner,
+} from '../src/analysis/opportunities/source-patterns.ts';
 import { epochMicros, parseDatetime } from '../src/http/datetimes.ts';
 import { RequestValidationError, validateParams } from '../src/http/params.ts';
 
@@ -62,6 +65,32 @@ describe('recorded evidence normalization', () => {
     expect(classifySourceDomain('google.evil.test', false, null)).toBe(
       p.SOURCE_CLASS_OTHER_THIRD_PARTY,
     );
+  });
+
+  it.each([
+    ['https://www.facebook.com/bestandless', { owned: true, competitor: null }],
+    ['https://x.com/BestandLess/status/1', { owned: true, competitor: null }],
+    ['https://au.linkedin.com/company/best-&-less', { owned: true, competitor: null }],
+    ['https://www.threads.net/@bestandless_au', { owned: true, competitor: null }],
+    ['https://www.instagram.com/kmartaus/', { owned: false, competitor: 'Kmart' }],
+    ['https://www.facebook.com/someoneelse', { owned: false, competitor: null }],
+    ['https://bestandless.example/bestandless', { owned: false, competitor: null }],
+    ['https://www.linkedin.com/in/bestandless', { owned: false, competitor: null }],
+  ])('reads the profile handle of %s as its owner', (url, expected) => {
+    expect(
+      profileOwner(url, {
+        brandAliases: ['bestandless', 'Best & Less AU'],
+        ownedDomains: ['bestandless.com.au'],
+        competitors: [
+          {
+            id: null,
+            name: 'Kmart',
+            aliases: ['Kmart'],
+            domains: ['kmart.com.au', 'kmartaus.example'],
+          },
+        ],
+      }),
+    ).toEqual(expected);
   });
 
   it('keeps a site on a shared platform whole, and other sites at their registrable domain', () => {

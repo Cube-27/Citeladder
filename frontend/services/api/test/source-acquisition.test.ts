@@ -383,7 +383,13 @@ it('matches names the way answers do, quoting spaced and joined spellings, and k
     first_offset: 8,
   });
   const spelled = extractSourcePage(Buffer.from('<p>A &amp; B uses a tool</p>'));
-  expect(assessPage(spelled, { brand_name: 'A and B' }).presences[0]?.presence).toBe('ambiguous');
+  expect(assessPage(spelled, { brand_name: 'A and B' }).presences[0]?.presence).toBe('present');
+  for (const written of ['Best &amp; Less', 'Best&amp;Less', 'Best and Less'])
+    expect(
+      assessPage(extractSourcePage(Buffer.from(`<p>Baby clothes at ${written} stores</p>`)), {
+        brand_name: 'bestandless',
+      }).presences[0],
+    ).toMatchObject({ presence: 'present', match_method: 'normalized_alias', first_offset: 16 });
   const excluded = extractSourcePage(
     Buffer.from(`<p>Shop at Target stores. ${'Other words '.repeat(100)}</p>`),
   );
@@ -446,8 +452,11 @@ it('never judges a name too short to find on a page absent, so it leaves no list
   expect(presences(['Hewlett-Packard'])[0]).toEqual(['brand', 'not_detected']);
 });
 it('derives page formats from a page address and keeps redirect tokens unresolved', () => {
-  expect(urlFormat('https://example.test/compare/tools').format).toBe('comparison');
-  expect(urlFormat('https://example.test/notes')).toEqual({ format: 'unresolved', method: 'none' });
+  expect(urlFormat('https://example.test/compare/tools', []).format).toBe('comparison');
+  expect(urlFormat('https://example.test/notes', [])).toEqual({
+    format: 'unresolved',
+    method: 'none',
+  });
   expect(
     pageIdentity('https://vertexaisearch.cloud.google.com/grounding-api-redirect/token'),
   ).toBeNull();
@@ -467,10 +476,21 @@ it('serializes canonical URLs so one page has one identity', () => {
     'https://ex.com/a b?q=a b': 'https://ex.com/a%20b?q=a+b',
     'https://ex.com/a?a&b=1': 'https://ex.com/a?a=&b=1',
     'https://ex.com/p?utm_source=x': 'https://ex.com/p',
+    'https://ex.com/p?sc_cid=1&SC_channel=x&utm_id=3&id=2': 'https://ex.com/p?id=2',
   };
   for (const [input, expected] of Object.entries(vectors)) {
     expect(canonicalIdentity(input).url, input).toBe(expected);
   }
+  const page = (url: string) => pageIdentity(url)?.url;
+  expect(page('https://en.wikipedia.org/wiki/Best_%26_Less')).toBe(
+    'https://en.wikipedia.org/wiki/Best_&_Less',
+  );
+  expect(page('https://bestandless.com.au/kids?sc_cid=email&utm_id=4&size=2')).toBe(
+    'https://bestandless.com.au/kids?size=2',
+  );
+  expect(page('https://www.facebook.com/bestandless')).not.toBe(
+    page('https://facebook.com/bestandless'),
+  );
 });
 it('compares owned outbound links by registrable domain, excluding the owned site', () => {
   const anchors = [
@@ -517,10 +537,46 @@ it('reads a list heading over generic Article markup and ignores nested entity t
   const article = (heading: string) =>
     `<title>${heading}</title><script type="application/ld+json">${'['.repeat(20000)}${']'.repeat(20000)}</script>
     <script type="application/ld+json">{"@type":"https://schema.org/NewsArticle","publisher":{"@type":"Organization"}}</script><h1>${heading}</h1><p>Acme leads.</p>`;
-  const format = (body: string) => {
-    const { format: kind, method } = assessPage(extractSourcePage(Buffer.from(body)), {});
+  const format = (body: string, configuration: object = {}) => {
+    const { format: kind, method } = assessPage(
+      extractSourcePage(Buffer.from(body)),
+      configuration,
+    );
     return { kind, method };
   };
+  const roster = { brand_name: 'bestandless', competitors: [{ name: 'Best Buy' }] };
+  expect(
+    format('<title>Best &amp; Less - Wikipedia</title><h1>Best &amp; Less</h1>', roster).kind,
+  ).toBe('unresolved');
+  expect(format('<title>Best&amp;Less - Apps on Google Play</title>', roster).kind).toBe(
+    'unresolved',
+  );
+  expect(format('<h1>Best Buy store</h1>', roster).kind).toBe('unresolved');
+  expect(format('<h1>Best&amp;Less Pros and Cons</h1>', roster)).toEqual({
+    kind: 'review',
+    method: 'heading_evidence',
+  });
+  expect(format('<h1>Best &amp; Less baby clothes</h1>').kind).toBe('listicle');
+  const marked = (type: string, heading: string) =>
+    format(`<script type="application/ld+json">{"@type":"${type}"}</script><h1>${heading}</h1>`);
+  expect(marked('FAQPage', 'Best baby clothes brands')).toEqual({
+    kind: 'listicle',
+    method: 'heading_evidence',
+  });
+  expect(marked('FAQPage', 'Kmart vs Target vs Big W').kind).toBe('comparison');
+  expect(marked('ItemList', 'Kmart vs Target').kind).toBe('comparison');
+  expect(marked('ItemList', 'Kmart review').kind).toBe('review');
+  expect(
+    format(
+      '<script type="application/ld+json">{"@type":"FAQPage"}</script><h1>Wool care</h1><h2>What is the best way to wash wool?</h2>',
+    ).kind,
+  ).toBe('reference');
+  expect(format('<h1>Best laptops: pros and cons</h1>').kind).toBe('review');
+  expect(marked('FAQPage', 'Shipping questions')).toEqual({
+    kind: 'reference',
+    method: 'structured_data',
+  });
+  expect(marked('ItemList', 'Spring range').kind).toBe('listicle');
   expect(format(article('Best tools'))).toEqual({ kind: 'listicle', method: 'heading_evidence' });
   expect(format(article('Our spring update'))).toEqual({
     kind: 'article',
@@ -619,6 +675,14 @@ it.each([
   ['/2024/05/chip-item-shortage', 'article'],
   ['/versatile-tools', 'unresolved'],
   ['/a-p-q', 'unresolved'],
+  ['/best-less', 'unresolved'],
+  ['/retailer/best-and-less', 'unresolved'],
+  ['/wiki/Best_%26_Less', 'unresolved'],
+  ['/wiki/Best_&_Less', 'unresolved'],
+  ['/best-less-reviews', 'review'],
+  ['/best-buy-alternatives', 'alternative'],
 ])('classifies the cited path %s from URL evidence as %s', (path, expected) => {
-  expect(urlFormat(`https://example.test${path}`).format).toBe(expected);
+  expect(urlFormat(`https://example.test${path}`, ['bestandless', 'Best Buy']).format).toBe(
+    expected,
+  );
 });

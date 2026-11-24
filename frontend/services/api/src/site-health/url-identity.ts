@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { getDomain } from 'tldts';
 
-import { policy } from '../config.ts';
 import { compareIdentityText } from '../analysis/comparison.ts';
+import { ignoredQueryKey } from '../page-identity.ts';
 import { publicUrl } from '../safe-fetch.ts';
 
 const UNRESERVED = /[A-Za-z0-9\-._~]/u;
@@ -23,12 +23,8 @@ export function canonicalIdentity(value: string, base?: string) {
   const url = publicUrl(value, base);
   url.hostname = url.hostname.replace(/\.$/u, '');
   url.pathname = canonicalPath(url.pathname);
-  const ignored = new Set([
-    ...policy.site_health.tracking_params,
-    ...policy.site_health.ignored_query_keys,
-  ]);
   const pairs = [...url.searchParams]
-    .filter(([key]) => !ignored.has(key.toLowerCase()))
+    .filter(([key]) => !ignoredQueryKey(key))
     .sort((a, b) => compareIdentityText(a[0], b[0]) || compareIdentityText(a[1], b[1]));
   url.search = pairs.map(([key, item]) => `${quotePlus(key)}=${quotePlus(item)}`).join('&');
   return {
