@@ -39,6 +39,7 @@ const readiness: SearchIntelligenceReadiness = {
     { country_code: 'US', location_code: 2840 },
     { country_code: 'AU', location_code: 2036 },
   ],
+  backlink_figures: [],
   max_depth: 1_000_000,
 };
 const reviewedRun: SearchIntelligenceRun = {
@@ -129,7 +130,7 @@ describe('SearchIntelligenceReviewDrawer', () => {
     );
   });
 
-  it('starts from a small preset: your site and one competitor’s keyword gaps', async () => {
+  it('starts from your site and every competitor’s footprint and keyword gaps', async () => {
     const review = vi.fn().mockResolvedValue(reviewedRun);
     const competitor = (identity: string, label: string) => ({
       identity,
@@ -165,8 +166,12 @@ describe('SearchIntelligenceReviewDrawer', () => {
     expect(datasets).toEqual([
       ['footprint', null, 1],
       ['ranking_keywords', null, 50],
+      ['footprint', 'rival', 1],
       ['missing_keywords', 'rival', 100],
       ['shared_keywords', 'rival', 100],
+      ['footprint', 'other', 1],
+      ['missing_keywords', 'other', 100],
+      ['shared_keywords', 'other', 100],
     ]);
   });
 
@@ -196,10 +201,10 @@ describe('SearchIntelligenceReviewDrawer', () => {
     );
     const rail = () =>
       screen.getAllByRole('tab').map((tab) => tab.textContent?.replaceAll(/\s+/gu, ' ').trim());
-    expect(rail()).toEqual(['Your website (2)', 'Other (2)', 'Rival (0)']);
+    expect(rail()).toEqual(['Your website (2)', 'Other (3)', 'Rival (3)']);
     await userEvent.click(screen.getByRole('tab', { name: /Rival/u }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Keyword footprint' }));
-    expect(rail()).toEqual(['Your website (2)', 'Other (2)', 'Rival (1)']);
+    expect(rail()).toEqual(['Your website (2)', 'Other (3)', 'Rival (2)']);
   });
 
   it('refuses exact-host comparisons ordered by traffic before asking for a price', async () => {

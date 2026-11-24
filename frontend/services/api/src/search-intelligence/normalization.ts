@@ -257,6 +257,7 @@ const backlinkLink = z
     is_new: passthrough,
     is_lost: passthrough,
     is_broken: passthrough,
+    url_to_status_code: count,
   })
   .transform((link) => ({ link }));
 const backlinkValues = rowKind(

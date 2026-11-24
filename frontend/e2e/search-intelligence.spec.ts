@@ -165,6 +165,17 @@ for (const viewport of [
             },
             latest_run: null,
             datasets,
+            backlink_figures: [
+              {
+                target_origin: target.origin,
+                target_hostname: target.hostname,
+                research_scope: 'domain_subdomains',
+                backlinks: { value: 3000, dataset_id: id(10), as_of: null },
+                referring_domains: { value: 400, dataset_id: id(10), as_of: null },
+                referring_main_domains: { value: 250, dataset_id: id(10), as_of: null },
+                rank: { value: 60, dataset_id: id(10), as_of: null },
+              },
+            ],
             markets: [
               { country_code: 'US', location_code: 2840 },
               { country_code: 'AU', location_code: 2036 },

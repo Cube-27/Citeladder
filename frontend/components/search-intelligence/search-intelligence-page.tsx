@@ -91,7 +91,10 @@ function selectDatasets(
       (item.location_code === null ||
         `${item.location_code}:${item.language_code}` === activeMarket),
   );
-  return { scopes, activeScope, markets, activeMarket, datasets };
+  const backlinkFigures = (readiness?.backlink_figures ?? []).filter(
+    (item) => item.research_scope === activeScope,
+  );
+  return { scopes, activeScope, markets, activeMarket, datasets, backlinkFigures };
 }
 
 export function SearchIntelligencePage() {
@@ -166,7 +169,7 @@ function useKeywordResearch({
       setCitationOpen(true);
     },
   });
-  const { scopes, activeScope, markets, activeMarket, datasets } = selectDatasets(
+  const { scopes, activeScope, markets, activeMarket, datasets, backlinkFigures } = selectDatasets(
     readiness.data,
     scope,
     market,
@@ -228,6 +231,7 @@ function useKeywordResearch({
       tab,
       empty,
       datasets,
+      backlinkFigures,
       collection,
       actions,
       cancelling: cancelMutation.isPending,
@@ -261,6 +265,7 @@ function researchView({
   tab,
   empty,
   datasets,
+  backlinkFigures,
   collection,
   actions,
   cancelling,
@@ -272,6 +277,7 @@ function researchView({
   tab: PageTab;
   empty: boolean;
   datasets: SearchIntelligenceDataset[];
+  backlinkFigures: SearchIntelligenceReadiness['backlink_figures'];
   collection: SearchCollection | null;
   actions: ReturnType<typeof useRoleActions>;
   cancelling: boolean;
@@ -346,6 +352,7 @@ function researchView({
           <ResearchPanels
             data={loaded}
             datasets={datasets}
+            backlinkFigures={backlinkFigures}
             collection={collection}
             onOpen={onOpen}
             onSelect={onSelect}
@@ -397,12 +404,14 @@ function ResearchLoading({ tab }: Readonly<{ tab: Tab }>) {
 function ResearchPanels({
   data,
   datasets,
+  backlinkFigures,
   collection,
   onOpen,
   onSelect,
 }: Readonly<{
   data: SearchIntelligenceReadiness;
   datasets: SearchIntelligenceDataset[];
+  backlinkFigures: SearchIntelligenceReadiness['backlink_figures'];
   collection: ReturnType<typeof useSearchCollection>;
   onOpen: (dataset: SearchIntelligenceDataset) => void;
   onSelect: (dataset: SearchIntelligenceDataset | null) => void;
@@ -412,6 +421,7 @@ function ResearchPanels({
       <TabPanel value="overview" className="min-w-0">
         <SearchIntelligenceOverview
           datasets={datasets}
+          backlinkFigures={backlinkFigures}
           competitors={data.competitors}
           ownedHostname={data.owned_targets[0]?.hostname ?? ''}
           onOpen={onOpen}
@@ -423,6 +433,7 @@ function ResearchPanels({
             <SearchIntelligenceCollection
               collection={collection}
               datasets={datasets}
+              backlinkFigures={backlinkFigures}
               competitors={data.competitors}
               onSelect={onSelect}
             />

@@ -8,6 +8,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { textRole } from '@/components/ui/typography';
 import { useToast } from '@/components/ui/toast';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp, pluralCount } from '@/lib/format';
@@ -17,7 +18,7 @@ import {
   type SearchIntelligenceDataset,
 } from '@/lib/api/search-intelligence';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { referringLists } from './search-intelligence-format';
+import { comparedAgainst, datasetCoverage, referringLists } from './search-intelligence-format';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
@@ -54,7 +55,13 @@ export function SearchIntelligenceCitationMatcher({
           setSelectedAudits([]);
           notify(
             'Citation matches saved',
-            `${pluralCount(dataset.unique_rows_saved, 'citation')} came from sites that link to you. Open Citation matches in Backlinks.`,
+            [
+              `${pluralCount(dataset.unique_rows_saved, 'citation')} came from sites that link to you`,
+              datasetCoverage(dataset),
+              'Open Citation matches in Backlinks',
+            ]
+              .filter(Boolean)
+              .join('. ') + '.',
             { tone: 'positive' },
           );
           onDerived();
@@ -119,7 +126,7 @@ export function SearchIntelligenceCitationMatcher({
           </Inline>
         ))}
       </div>
-      <div>
+      <Inline gap="compact" className="flex-wrap">
         <Button
           variant="primary"
           disabled={!selectedAudits.length || derive.isPending}
@@ -127,7 +134,10 @@ export function SearchIntelligenceCitationMatcher({
         >
           Match citations
         </Button>
-      </div>
+        <span className={textRole('caption')}>
+          {comparedAgainst(referring.unique_rows_saved, referring.provider_total)}
+        </span>
+      </Inline>
     </Stack>
   );
 }

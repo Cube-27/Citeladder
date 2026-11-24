@@ -141,6 +141,9 @@ async function dataset(
     scope?: string;
     coverage?: string;
     publishedAt?: Date;
+    total?: number;
+    mode?: string;
+    summary?: object;
   } = {},
 ) {
   const id = randomUUID();
@@ -163,9 +166,13 @@ async function dataset(
       requested_rows: 10,
       raw_rows_received: 10,
       unique_rows_saved: 10,
+      provider_total: options.total ?? null,
       truncated: false,
-      summary: JSON.stringify({}),
-      provider_filters: JSON.stringify(options.scope ? { research_scope: options.scope } : {}),
+      summary: JSON.stringify(options.summary ?? {}),
+      provider_filters: JSON.stringify({
+        ...(options.scope ? { research_scope: options.scope } : {}),
+        ...(options.mode ? { mode: options.mode } : {}),
+      }),
       parser_version: '1',
       published_at: options.status === 'collecting' ? null : (options.publishedAt ?? now()),
       created_at: now(),
@@ -362,6 +369,66 @@ describe('Search Intelligence readiness and preferences', () => {
       connected: false,
       connection_id: null,
     });
+  });
+
+  it('fills each backlink figure per target and scope, summary before totals and history', async () => {
+    const runId = await review(t, await connection(t));
+    const earlier = new Date(Date.now() - 60_000);
+    const saved = (kind: string, values: Parameters<typeof dataset>[2] = {}) =>
+      dataset(t, runId, { kind, scope: 'domain_subdomains', ...values });
+    const exact = await saved('backlink_summary', {
+      scope: 'exact_host',
+      publishedAt: earlier,
+      summary: { backlinks: 5, referring_domains: 4, rank: 40 },
+    });
+    const links = await saved('backlinks', { total: 30_795, mode: 'as_is' });
+    await saved('backlinks', { total: 900, mode: 'one_per_domain' });
+    const referring = await saved('referring_domains', { total: 2_062 });
+    const history = await saved('backlink_history');
+    const month = (date: string, roots: number) => ({
+      id: randomUUID(),
+      workspace_id: t.workspaceId,
+      project_id: t.projectId,
+      dataset_id: history,
+      provider_row_key: date,
+      row_kind: 'backlink_history',
+      keyword: '',
+      domain: '',
+      url: '',
+      intent: '',
+      referring_main_domains: roots,
+      auxiliary: JSON.stringify({ date }),
+      created_at: now(),
+    });
+    await db
+      .insertInto('search_intelligence_rows')
+      .values([
+        month('2026-09-30 00:00:00 +00:00', 1_400),
+        month('2026-10-31 00:00:00 +00:00', 1_500),
+      ])
+      .execute();
+
+    const { body } = await call<Readiness>('');
+    expect(body.backlink_figures).toEqual([
+      {
+        target_origin: 'https://acme.example',
+        target_hostname: 'acme.example',
+        research_scope: 'domain_subdomains',
+        backlinks: { value: 30_795, dataset_id: links, as_of: null },
+        referring_domains: { value: 2_062, dataset_id: referring, as_of: null },
+        referring_main_domains: { value: 1_500, dataset_id: history, as_of: '2026-10-31' },
+        rank: null,
+      },
+      {
+        target_origin: 'https://acme.example',
+        target_hostname: 'acme.example',
+        research_scope: 'exact_host',
+        backlinks: { value: 5, dataset_id: exact, as_of: null },
+        referring_domains: { value: 4, dataset_id: exact, as_of: null },
+        referring_main_domains: null,
+        rank: { value: 40, dataset_id: exact, as_of: null },
+      },
+    ]);
   });
 
   it('saves validated preferences, which readiness returns', async () => {
@@ -656,6 +723,7 @@ describe('Search Intelligence citation matches', () => {
     const parent = await dataset(t, runId, {
       kind: 'referring_domains',
       scope: 'domain_subdomains',
+      total: 2_062,
     });
     await rows(t, parent, [{ domain: 'WWW.Linker.example' }, { domain: 'other.example' }]);
     const auditId = await fixtures.audit(t);
@@ -678,7 +746,13 @@ describe('Search Intelligence citation matches', () => {
       dataset_kind: 'citation_matches',
       research_scope: 'domain_subdomains',
       unique_rows_saved: 1,
-      summary: { selected_audits: 1, citations_reviewed: 2, matches: 1 },
+      summary: {
+        selected_audits: 1,
+        citations_reviewed: 2,
+        matches: 1,
+        referring_domains_compared: 2,
+        referring_domains_total: 2_062,
+      },
     });
     const matched = await call<Page>(`/datasets/${first!.body.id}/rows`);
     expect(matched.body.rows.map((row) => [row.domain, row.url])).toEqual([

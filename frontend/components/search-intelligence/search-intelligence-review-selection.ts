@@ -73,10 +73,9 @@ export function defaultSelections(
     );
     if (current.length) return current;
   }
-  const [first] = reviewCompetitors(data);
   return available.filter(({ kind, competitor_id }) =>
     competitor_id
-      ? competitor_id === first && SEARCH_DATASET_KINDS[kind].comparison
+      ? kind === 'footprint' || SEARCH_DATASET_KINDS[kind].comparison
       : PRESET_OWNED_KINDS.includes(kind),
   );
 }

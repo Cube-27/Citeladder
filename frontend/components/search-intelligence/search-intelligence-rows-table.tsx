@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { DataTableColumn } from '@/components/ui/data-table';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
@@ -8,6 +9,7 @@ import { SEARCH_COLUMNS_BY_KIND, type SearchColumn } from '@/lib/config/search-i
 import { Absence } from '@/components/ui/absence';
 import { sharedOrigin } from '@/lib/format';
 import { SearchValue } from './search-intelligence-value';
+import { opensEvidence } from './search-intelligence-format';
 
 function cellText(value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
@@ -93,23 +95,21 @@ export function SearchIntelligenceRows({
   );
   return rows.map((row) => (
     <TableRow key={row.id}>
-      {columns.map((column) => (
+      {columns.map((column, index) => (
         <TableCell key={column.field} numeric={column.numeric}>
-          {column === columns[0] ? (
-            <TextLink asChild text="body" underline="hover">
-              <Pressable
-                type="button"
-                className="flex max-w-full min-w-0 text-left"
-                aria-label={`View evidence for ${row.keyword || row.domain || row.url}`}
-                onClick={() => onSelect(row)}
-              >
-                {URL_FIELDS.has(column.field) ? (
+          {index === 0 ? (
+            <IdentityCell
+              row={row}
+              opens={opensEvidence(kind, row)}
+              onSelect={onSelect}
+              value={
+                URL_FIELDS.has(column.field) ? (
                   displayValue(row, column, null)
                 ) : (
                   <ClampText>{displayValue(row, column, null)}</ClampText>
-                )}
-              </Pressable>
-            </TextLink>
+                )
+              }
+            />
           ) : (
             displayValue(row, column, origins.get(column.field) ?? null)
           )}
@@ -117,4 +117,30 @@ export function SearchIntelligenceRows({
       ))}
     </TableRow>
   ));
+}
+
+function IdentityCell({
+  row,
+  opens,
+  onSelect,
+  value,
+}: Readonly<{
+  row: SearchIntelligenceRow;
+  opens: boolean;
+  onSelect: (row: SearchIntelligenceRow) => void;
+  value: ReactNode;
+}>) {
+  if (!opens) return value;
+  return (
+    <TextLink asChild text="body" underline="hover">
+      <Pressable
+        type="button"
+        className="flex max-w-full min-w-0 text-left"
+        aria-label={`View evidence for ${row.keyword || row.domain || row.url}`}
+        onClick={() => onSelect(row)}
+      >
+        {value}
+      </Pressable>
+    </TextLink>
+  );
 }

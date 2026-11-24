@@ -9,6 +9,12 @@ import {
   pluralCount,
 } from '@/lib/format';
 
+import type { SearchIntelligenceRow } from '@/lib/api/search-intelligence';
+import {
+  PROVIDER_BLOCKED_STATUSES,
+  SEARCH_COLUMNS_BY_KIND,
+} from '@/lib/config/search-intelligence';
+
 const numberFormats = new Map<number, Intl.NumberFormat>();
 
 function providerNumber(value: unknown): number | null {
@@ -70,15 +76,44 @@ export function estimateUsd(value: string): string {
   return `${rounded / 10000n}.${String(rounded % 10000n).padStart(4, '0')}`;
 }
 
-export function datasetCount(
-  dataset: { provider_total: number | null; unique_rows_saved: number } | undefined,
-): string {
+type SavedCount = { provider_total: number | null; unique_rows_saved: number };
+
+const savedOfTotal = ({ provider_total, unique_rows_saved }: SavedCount) =>
+  provider_total !== null && unique_rows_saved < provider_total
+    ? `${searchNumber(unique_rows_saved)} of ${searchNumber(provider_total)}`
+    : null;
+
+export function datasetCount(dataset: SavedCount | undefined): string {
   if (!dataset) return 'Not fetched';
   if (dataset.provider_total !== null)
-    return searchNumber(dataset.provider_total) ?? String(dataset.provider_total);
+    return savedOfTotal(dataset) ?? searchNumber(dataset.provider_total) ?? '';
   return dataset.unique_rows_saved
     ? `${searchNumber(dataset.unique_rows_saved)} saved`
     : 'No results';
+}
+
+export function comparedAgainst(compared: unknown, total: unknown): string | null {
+  const saved = searchNumber(compared);
+  if (saved === null) return null;
+  const available = searchNumber(total);
+  return `Against ${available === null || available === saved ? saved : `${saved} of ${available}`} referring domains`;
+}
+
+export function datasetCoverage(
+  dataset: SavedCount & {
+    dataset_kind: string;
+    truncated: boolean;
+    summary: Readonly<Record<string, unknown>>;
+  },
+): string | null {
+  if (dataset.dataset_kind === 'citation_matches')
+    return comparedAgainst(
+      dataset.summary.referring_domains_compared,
+      dataset.summary.referring_domains_total,
+    );
+  const fewer = savedOfTotal(dataset);
+  if (fewer) return `${fewer} saved`;
+  return dataset.truncated && dataset.provider_total === null ? 'Truncated' : null;
 }
 
 export const referringLists = <T extends { dataset_kind: string; unique_rows_saved: number }>(
@@ -106,18 +141,48 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/u;
 
 export type EvidenceField = { key: string; label: string; value: string | null };
 
-export function evidenceFields(
-  row: Readonly<Record<string, unknown>>,
-  labels: Readonly<Record<string, string>>,
-  timeZone: string,
-): EvidenceField[] {
-  return Object.entries(row).flatMap(([key, value]) => {
-    if (HIDDEN_FIELDS.has(key)) return [];
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) return [];
-    const label = labels[key] ?? words(key);
-    return [{ key, label, value: evidenceValue(value, timeZone) }];
+const EVIDENCE_LABELS: Readonly<Record<string, string>> = { url_to_status_code: 'Target status' };
+
+function shownInTable(kind: string): ReadonlySet<string> {
+  return new Set(
+    (SEARCH_COLUMNS_BY_KIND[kind] ?? []).flatMap((column) => [
+      ...(column.detail || column.low ? [] : [column.field]),
+      ...(column.currencyField ? [column.currencyField] : []),
+    ]),
+  );
+}
+
+const blockedCrawl = (row: Readonly<Record<string, unknown>>) =>
+  typeof row.url_to_status_code === 'number' &&
+  PROVIDER_BLOCKED_STATUSES.includes(row.url_to_status_code);
+
+export function evidenceFields({
+  kind,
+  row,
+  timeZone,
+}: Readonly<{
+  kind: string;
+  row: Readonly<Record<string, unknown>>;
+  timeZone: string;
+}>): EvidenceField[] {
+  const inTable = shownInTable(kind);
+  const labels = Object.fromEntries(
+    (SEARCH_COLUMNS_BY_KIND[kind] ?? []).map((column) => [column.field, column.label]),
+  );
+  return Object.entries(row).flatMap(([key, raw]) => {
+    if (HIDDEN_FIELDS.has(key) || inTable.has(key)) return [];
+    if (key === 'is_broken' && blockedCrawl(row)) return [];
+    if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) return [];
+    const value = evidenceValue(raw, timeZone);
+    if (value === null) return [];
+    return [{ key, label: labels[key] ?? EVIDENCE_LABELS[key] ?? words(key), value }];
   });
 }
+
+export const opensEvidence = (kind: string, row: SearchIntelligenceRow) =>
+  Boolean(row.action_id) ||
+  row.row_kind === 'citation_match' ||
+  evidenceFields({ kind, row, timeZone: 'UTC' }).length > 0;
 
 const listText = (value: unknown[]) =>
   value.length && value.every((item) => typeof item !== 'object') ? value.join(', ') : null;
