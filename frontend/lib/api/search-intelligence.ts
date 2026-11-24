@@ -63,12 +63,6 @@ export const searchIntelligenceApi = {
       await apiClient.post<unknown>(`${root(projectId)}/runs/${runId}/cancel`, {}, options),
       'searchIntelligence.cancel',
     ),
-  runs: async (projectId: string, options?: ApiRequestOptions) =>
-    strictValidate(
-      z.array(searchRunSchema),
-      await apiClient.get<unknown>(`${root(projectId)}/runs`, options),
-      'searchIntelligence.runs',
-    ),
   rows: async (
     projectId: string,
     datasetId: string,
@@ -116,11 +110,6 @@ export const searchIntelligenceQueries = {
       queryKey: queryKeys.searchIntelligence.readiness(scope),
       queryFn: ({ signal }) =>
         searchIntelligenceApi.readiness(scope.projectId, scoped(scope, signal)),
-    }),
-  runs: (scope: ProjectScope) =>
-    queryOptions({
-      queryKey: queryKeys.searchIntelligence.runs(scope),
-      queryFn: ({ signal }) => searchIntelligenceApi.runs(scope.projectId, scoped(scope, signal)),
     }),
   datasetRows: (scope: ProjectScope, datasetId: string, params: DatasetRowsParams) =>
     queryOptions({

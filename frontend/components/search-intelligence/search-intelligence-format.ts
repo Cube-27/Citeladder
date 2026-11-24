@@ -35,11 +35,8 @@ export function searchNumber(value: unknown, maximumFractionDigits = 0): string 
 
 type RunCost = {
   credential_mode: CredentialMode;
-  confirmed_at: string | null;
   estimated_cost_usd: string | null;
-  provider_reported_cost_usd: string | null;
   estimated_credits: number | null;
-  charged_credits: number | null;
 };
 
 export function runEstimate(run: RunCost): Formatted {
@@ -48,14 +45,6 @@ export function runEstimate(run: RunCost): Formatted {
       ? absent('unavailable')
       : pluralCount(run.estimated_credits, 'AI credit');
   return '$' + estimateUsd(run.estimated_cost_usd ?? '0');
-}
-
-export function reportedCost(run: RunCost): string {
-  if (!run.confirmed_at) return 'Not charged';
-  if (run.credential_mode === 'funded')
-    return run.charged_credits === null ? 'Pending' : pluralCount(run.charged_credits, 'AI credit');
-  if (run.provider_reported_cost_usd === null) return 'Unresolved';
-  return '$' + (searchNumber(run.provider_reported_cost_usd, 6) ?? run.provider_reported_cost_usd);
 }
 
 export function estimateUsd(value: string): string {

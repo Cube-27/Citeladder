@@ -3,7 +3,6 @@ import {
   datasetCount,
   datasetCoverage,
   estimateUsd,
-  reportedCost,
   runEstimate,
   searchAmount,
   searchDate,
@@ -31,13 +30,7 @@ const managed = {
   estimated_credits: 32,
 };
 
-it('distinguishes unconfirmed, unknown, zero and fractional provider costs', () => {
-  expect(reportedCost({ ...byok, confirmed_at: null, provider_reported_cost_usd: '1' })).toBe(
-    'Not charged',
-  );
-  expect(reportedCost(byok)).toBe('Unresolved');
-  expect(reportedCost({ ...byok, provider_reported_cost_usd: '0' })).toBe('$0');
-  expect(reportedCost({ ...byok, provider_reported_cost_usd: '0.024468' })).toBe('$0.024468');
+it('rounds an estimate up to four decimals', () => {
   expect(runEstimate(byok)).toBe('$0.0245');
   expect(estimateUsd('1.00000000')).toBe('1.0000');
 });
@@ -49,11 +42,8 @@ it('prices a provider CPC in its currency, keeping unreported apart from zero', 
   expect(searchAmount(null, 'USD')).toBeNull();
 });
 
-it('prices a managed analysis in AI credits only, pending until it settles', () => {
+it('prices a managed analysis in AI credits only', () => {
   expect(runEstimate(managed)).toBe('32 AI credits');
-  expect(reportedCost(managed)).toBe('Pending');
-  expect(reportedCost({ ...managed, charged_credits: 1 })).toBe('1 AI credit');
-  expect(reportedCost({ ...managed, confirmed_at: null })).toBe('Not charged');
 });
 
 it('counts saved rows against the provider total wherever fewer were saved', () => {

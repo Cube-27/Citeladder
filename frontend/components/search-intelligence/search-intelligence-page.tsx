@@ -22,7 +22,7 @@ import { NoAnalysisYet, NotConnected, UnavailableNotice } from './search-intelli
 import { Icon } from '@/components/ui/icon';
 import { Section } from '@/components/ui/section';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CostDetails, RunNotice } from './search-intelligence-runs';
+import { RunNotice } from './search-intelligence-runs';
 import { Button } from '@/components/ui/button';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Drawer } from '@/components/ui/drawer';
@@ -38,7 +38,7 @@ import {
   type SearchIntelligenceReadiness,
 } from '@/lib/api/search-intelligence';
 import type { SearchReviewAction } from '@citeladder/contracts/search-intelligence-requests';
-import { Layers, Play, Receipt, RefreshCw, Settings2 } from '@/lib/icons';
+import { Layers, Play, RefreshCw, Settings2 } from '@/lib/icons';
 import { searchMarketLabel } from '@/lib/config/search-intelligence';
 import { pollSearchRun } from '@/lib/search-intelligence/status';
 import { SEARCH_INTELLIGENCE_TABS } from '@/lib/search-intelligence/tabs';
@@ -138,7 +138,6 @@ function useKeywordResearch({
 }: Readonly<{ tab: PageTab; setTab: (tab: PageTab) => void }>) {
   const { workspaceId, projectId } = useProjectScope();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [costOpen, setCostOpen] = useState(false);
   const [citationOpen, setCitationOpen] = useState(false);
   const [citationOrigin, setCitationOrigin] = useState<string>();
   const [market, setMarket] = useState('');
@@ -148,10 +147,6 @@ function useKeywordResearch({
   const readiness = useQuery({
     ...searchIntelligenceQueries.readiness(requestScope),
     refetchInterval: (query) => pollSearchRun(query.state.data?.latest_run?.status),
-  });
-  const runsQuery = useQuery({
-    ...searchIntelligenceQueries.runs(requestScope),
-    enabled: costOpen,
   });
   const cancelMutation = useMutation(searchIntelligenceMutations.cancel(requestScope));
   const reviewMutation = useMutation(searchIntelligenceMutations.review(requestScope));
@@ -190,14 +185,6 @@ function useKeywordResearch({
           onDerived={() => setCitationOpen(false)}
         />
       </Drawer>
-      <CostDetails
-        open={costOpen}
-        onOpenChange={setCostOpen}
-        runs={runsQuery.data}
-        pending={runsQuery.isPending}
-        error={runsQuery.error}
-        onRetry={() => void runsQuery.refetch()}
-      />
       {data ? (
         <SearchIntelligenceReviewDrawer
           key={`${workspaceId}:${projectId}:${action}:${drawerOpen}`}
@@ -219,7 +206,6 @@ function useKeywordResearch({
   const pageActions = {
     hasDatasets: !empty && Boolean(data?.owned_targets.length),
     onReview: actions.review,
-    onCost: () => setCostOpen(true),
   };
   return {
     actions: pageActions,
@@ -431,20 +417,14 @@ function ResearchPanels({
 function PageActions({
   hasDatasets,
   onReview,
-  onCost,
   children,
 }: Readonly<{
   hasDatasets: boolean;
   onReview?: (action: SearchReviewAction) => void;
-  onCost: () => void;
   children: ReactNode;
 }>) {
   return (
     <>
-      <Button variant="quiet" onClick={onCost}>
-        <Icon icon={Receipt} />
-        Cost details
-      </Button>
       {children}
       {onReview && hasDatasets ? (
         <>
