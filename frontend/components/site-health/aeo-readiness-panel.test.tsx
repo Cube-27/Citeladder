@@ -1,6 +1,5 @@
 import { http, HttpResponse } from 'msw';
 import { screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
@@ -193,160 +192,15 @@ describe('AEO readiness', () => {
         .getAllByRole('cell')
         .map((cell) => cell.textContent),
     ).toEqual(['Structure', '100', '', '0', '0', '']);
-  });
-
-  it('opens a dimension from anywhere on its row', async () => {
-    stubReadiness();
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    const table = await screen.findByRole('table', { name: 'Dimensions' });
-    const row = within(table).getByText('Structure').closest('tr')!;
-    await userEvent.click(within(row).getByText('100'));
-    const drawer = await screen.findByRole('dialog', { name: 'Structure evidence' });
-    expect(within(drawer).getByText('Passing').closest('[data-status-tone]')).toHaveAttribute(
-      'data-status-tone',
-      'positive',
-    );
-  });
-
-  it('opens a pillar from the keyboard through its named row button', async () => {
-    stubReadiness();
-    const user = userEvent.setup();
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    const trigger = await screen.findByRole('button', { name: 'Answerability evidence' });
-    trigger.focus();
-    await user.keyboard('{Enter}');
-    expect(await screen.findByRole('dialog', { name: 'Answerability evidence' })).toBeVisible();
-  });
-
-  it('names checks by their catalog title and never by a rule id', async () => {
-    stubReadiness();
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
-    const drawer = await screen.findByRole('dialog', { name: 'Answerability evidence' });
-    expect(within(drawer).getAllByText(/Answer is not stated first/)).toHaveLength(3);
-    expect(screen.queryByText(/rule\.answerability\.0/)).toBeNull();
-    expect(screen.queryByText(/^aeo\./)).toBeNull();
-  });
-
-  it('labels an errored check as incomplete, never passing', async () => {
-    const dimensions = DIMENSIONS.map(([key, label], index) => {
-      const base = dimension(key, label, false);
-      return index === 0
-        ? {
-            ...base,
-            error_count: 1,
-            dimension_measurement_state: 'limited_evidence',
-            checks: [{ ...base.checks[0], error_count: 1 }],
-          }
-        : base;
-    });
-    stubReadiness({ dimensions });
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
-    const drawer = await screen.findByRole('dialog', { name: 'Answerability evidence' });
-    expect(within(drawer).getAllByText('Incomplete')).toHaveLength(1);
-    expect(within(drawer).queryByText('Passing')).toBeNull();
-  });
-
-  it('labels unknown-only checks as incomplete rather than not applicable', async () => {
-    const dimensions = DIMENSIONS.map(([key, label], index) => {
-      const base = dimension(key, label, false);
-      return index === 0
-        ? {
-            ...base,
-            unknown_count: 1,
-            checks: [{ ...base.checks[0], satisfied_count: 0, unknown_count: 1 }],
-          }
-        : base;
-    });
-    stubReadiness({ dimensions });
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
-    expect(screen.getAllByText('Incomplete').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Did not apply')).not.toBeInTheDocument();
-  });
-
-  it('reveals the remediation for a check on demand', async () => {
-    stubReadiness();
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
     expect(
-      screen.getByText('Move the direct answer into the first paragraph.'),
-    ).toBeInTheDocument();
-  });
-
-  it('lists each failing page once with the checks it failed', async () => {
-    stubReadiness();
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
-    const link = screen.getByRole('link', { name: 'acme.test/blogs/american-summer' });
-    expect(link).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${PAGE_A}`);
-    expect(screen.getAllByRole('link', { name: 'acme.test/blogs/american-summer' })).toHaveLength(
-      1,
-    );
-    const row = link.closest('li');
-    expect(within(row!).getByText(/No question headings/)).toBeInTheDocument();
-    expect(screen.queryByText('fail')).toBeNull();
-  });
-
-  it('says a bounded evidence list is bounded rather than implying it is the total', async () => {
-    stubReadiness({
-      dimensions: DIMENSIONS.map(([key, label], index) => {
-        const base = dimension(key, label, index === 0);
-        return index === 0 ? { ...base, failing_page_count: 140, evidence_truncated: true } : base;
-      }),
-    });
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
-    expect(screen.getByText('Worst 2 of 140')).toBeInTheDocument();
+      within(failing).getByRole('link', { name: 'Answer is not stated first' }),
+    ).toHaveAttribute('href', '/issues?rule=rule.answerability.0');
+    expect(within(table).queryByRole('button')).toBeNull();
   });
 
   it('shows the persisted empty state rather than an empty grid', async () => {
     stubReadiness({ state: 'not_measured', crawl_id: null, limitations: ['Run a crawl first.'] });
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
     expect(await screen.findByRole('status')).toHaveTextContent('Run a crawl first.');
-  });
-
-  it('gives a code-only page the fix prompt rather than no action at all', async () => {
-    stubReadiness({
-      dimensions: DIMENSIONS.map(([key, label], index) => {
-        const base = dimension(key, label, index === 0);
-        if (index !== 0) return base;
-        return {
-          ...base,
-          evidence_pages: base.evidence_pages.map((page) => ({
-            ...page,
-            failed_checks: [
-              {
-                ...page.failed_checks[0],
-                rule_id: 'technical.hsts_present',
-                content_addressable: false,
-                remediation_route: 'code',
-              },
-            ],
-          })),
-        };
-      }),
-    });
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
-    expect(screen.getAllByRole('button', { name: /Copy fix prompt/ }).length).toBeGreaterThan(0);
-  });
-
-  it('gives a page whose checks route to content the fix prompt too', async () => {
-    stubReadiness();
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
-    expect(screen.getAllByRole('button', { name: /Copy fix prompt/ }).length).toBeGreaterThan(0);
   });
 });

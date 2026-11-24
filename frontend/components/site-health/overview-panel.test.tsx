@@ -1,6 +1,5 @@
 import { http, HttpResponse } from 'msw';
 import { screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 import type { SiteIssue } from '@citeladder/contracts';
 
@@ -266,13 +265,12 @@ describe('OverviewPanel', () => {
     ]);
   });
 
-  it('opens HTTP Web fundamentals evidence without browser-only checks', async () => {
+  it('breaks Web fundamentals down by area with no evidence drawer', async () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
         HttpResponse.json(terminalOverview()),
       ),
     );
-    const user = userEvent.setup();
     renderWithProviders(
       <OverviewPanel
         projectId={PROJECT}
@@ -288,11 +286,7 @@ describe('OverviewPanel', () => {
       'accessibility75',
       'mobile100',
     ]);
-    await user.click(screen.getByRole('button', { name: 'View evidence' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('Images missing alt attributes');
-    expect(screen.getByRole('dialog')).not.toHaveTextContent('mobile_layout');
-    expect(screen.getByRole('dialog')).not.toHaveTextContent('HTTP evidence only');
-    expect(screen.getByRole('dialog')).not.toHaveTextContent('Core Web Vitals');
+    expect(screen.queryByRole('button', { name: 'View evidence' })).toBeNull();
   });
 
   it('lists the top issues with their change since the last crawl, each opening its issue page', async () => {

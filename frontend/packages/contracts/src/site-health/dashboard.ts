@@ -257,7 +257,7 @@ export const siteHealthOverviewSchema = responseObject({
     state: measurementStateSchema,
     areas: z.array(
       responseObject({
-        key: z.enum(['accessibility', 'mobile', 'security', 'lab']),
+        key: z.string(),
         state: measurementStateSchema,
         coverage: z.number().nullable(),
         passed_count: z.number().int(),

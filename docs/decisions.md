@@ -256,10 +256,18 @@ how to add or change an entry.
   what the screen shows: names, URLs and figures. Owner, 2026-11-24.
 - **Site Health always opens on Pages**, never switching tab on its own. Owner,
   2026-11-02.
-- **An issue opens as a page and a URL opens in a drawer.** The flow is Issues,
-  then the issue's page with its affected URLs, then a drawer for one URL. The
-  Web fundamentals and AEO readiness scores are a gauge with their breakdown
-  rows aligned beneath. Owner, 2026-11-24.
+- **Site Health follows the approved mockup: one place per thing.** An issue
+  name anywhere opens that issue's page; a URL anywhere (Pages, an issue's
+  affected pages, link lists) opens the URL drawer with a section rail; no other
+  drawers. AEO readiness is its own page under Website, not a Site health tab.
+  Issues is one table grouped by kind, with no summary strip, fix-first cards or
+  type tabs. Owner, 2026-11-24.
+- **Site Health score cards show the score only.** A gauge with breakdown rows
+  beneath; no figure strip above the cards on a finished crawl, and no
+  measurement caveats ("Not every check ran", unresolved-check notes) beside the
+  gauge or its rows. Web fundamentals is broken down by the same categories the
+  issues carry (indexability, metadata, content, performance, security).
+  Owner, 2026-11-24.
 - **Browser Site Health reads carry no provenance id lists**; the rows keep them
   ([invariant 5](invariants.md#5-derived-artifacts-record-provenance)). Owner,
   2026-11-02. The Overview also drops the per-page eligibility reasons no screen

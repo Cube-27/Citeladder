@@ -3,12 +3,12 @@ import type { ReadinessCheck, ReadinessDimension, SiteScoreSummary } from '@cite
 import { Absence, printed } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { Pressable } from '@/components/ui/pressable';
 import { scoreTone, type BarTone } from '@/components/ui/score-gauge';
 import { SectionCard, TitledSection } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 import { byPageKindRows, pageKindLabel } from '@/lib/site-health/page-kinds';
@@ -149,29 +149,22 @@ function DimensionScore({ dimension }: Readonly<{ dimension: ReadinessDimension 
 
 export function DimensionsTable({
   dimensions,
-  onOpen,
-}: Readonly<{ dimensions: readonly ReadinessDimension[]; onOpen: (key: string) => void }>) {
+  issueHref,
+}: Readonly<{
+  dimensions: readonly ReadinessDimension[];
+  issueHref: (ruleId: string) => string;
+}>) {
   return (
     <DataTable title="Dimensions" columns={DIMENSION_COLUMNS}>
       {dimensions.map((dimension) => {
         const issues = dimensionIssues(dimension);
-        const open = () => onOpen(dimension.key);
+        const largest = issues[0];
         return (
-          <TableRow key={dimension.key} onClick={open} className="cursor-pointer">
+          <TableRow key={dimension.key}>
             <TableCell>
-              <Pressable
-                aria-haspopup="dialog"
-                aria-label={`${dimension.label} evidence`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  open();
-                }}
-                className="grid min-w-0"
-              >
-                <ClampText lines={1} className={textRole('emphasis')}>
-                  {dimension.label}
-                </ClampText>
-              </Pressable>
+              <ClampText lines={1} className={textRole('emphasis')}>
+                {dimension.label}
+              </ClampText>
             </TableCell>
             <TableCell numeric>
               <DimensionScore dimension={dimension} />
@@ -189,7 +182,16 @@ export function DimensionsTable({
             <TableCell numeric>{formatCount(issues.length)}</TableCell>
             <TableCell numeric>{formatCount(dimension.failing_page_count)}</TableCell>
             <TableCell>
-              {issues[0] ? <ClampText lines={1}>{issues[0].title}</ClampText> : null}
+              {largest ? (
+                <TextLink
+                  text="body"
+                  underline="hover"
+                  href={issueHref(largest.rule_id)}
+                  className="inline-flex min-h-6 min-w-0 items-center"
+                >
+                  <ClampText lines={1}>{largest.title}</ClampText>
+                </TextLink>
+              ) : null}
             </TableCell>
           </TableRow>
         );
