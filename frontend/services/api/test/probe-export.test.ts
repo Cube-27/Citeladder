@@ -80,11 +80,11 @@ describe('probe source exports', () => {
       );
       const objections = await download('objections', owner.t.userId, owner.t.workspaceId);
       expect(await objections.text()).toBe(
-        'objection,position_score,page_title,url,page_type,source_type,mentions_you,citations\r\n' +
-          `Too expensive,97,Budget Standards,${blocked},Article,Third-party,Blocked,3\r\n` +
-          `Too expensive,97,unread.test,${unread},Listicle,Third-party,Not read,3\r\n` +
-          `Fit runs small,63,Budget Standards,${blocked},Article,Third-party,Blocked,2\r\n` +
-          `Fit runs small,63,unread.test,${unread},Listicle,Third-party,Not read,2\r\n`,
+        'objection,position_score,page_title,url,page_type,source_type,citations\r\n' +
+          `Too expensive,97,Budget Standards,${blocked},Article,Third-party,3\r\n` +
+          `Too expensive,97,unread.test,${unread},Listicle,Third-party,3\r\n` +
+          `Fit runs small,63,Budget Standards,${blocked},Article,Third-party,2\r\n` +
+          `Fit runs small,63,unread.test,${unread},Listicle,Third-party,2\r\n`,
       );
       const outsider = await fixtures.user();
       const refused = [

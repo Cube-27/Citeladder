@@ -67,7 +67,7 @@ export async function giveBackUnfetchedStart(
     .where('crawl_id', '=', crawl.id)
     .where('task_kind', 'in', LIFECYCLE_KINDS)
     .orderBy('id')
-    .forUpdate()
+    .forNoKeyUpdate()
     .execute();
   if (tasks.some((task) => task.status !== 'queued')) return;
   await giveBackUse(db, startBudget(kind, process.env), crawl.workspace_id, crawl.created_at);

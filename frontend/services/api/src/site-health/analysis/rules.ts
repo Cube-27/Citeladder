@@ -191,6 +191,8 @@ const needsExtraction = (rule: Rule) =>
 
 const CLIENT_RENDERED = 'client_rendering_required';
 const needsRenderedContent = (rule: Rule) => rule.applicability_key.includes('content');
+const failsUnrendered = (rule: Rule, facts: Facts) =>
+  needsRenderedContent(rule) && !purposeUnconfirmed(rule, facts);
 
 function runCheck(
   rule: Rule,
@@ -256,7 +258,7 @@ function evaluateRule(rule: Rule, facts: Facts): RuleEvaluation {
     };
   }
   const [clientRendered, signals] = serverRenderSignals(facts);
-  if (clientRendered && needsRenderedContent(rule))
+  if (clientRendered && failsUnrendered(rule, facts))
     return {
       ...base,
       ...membership(rule.rule_id),

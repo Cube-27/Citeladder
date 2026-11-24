@@ -1,13 +1,13 @@
 import { getDomain } from 'tldts';
 
 import { hash } from '../crypto-text.ts';
-import { canonicalPage } from '../page-identity.ts';
+import { canonicalCitedPage } from '../page-identity.ts';
 import { isGroundingRedirect } from '../analysis/domains.ts';
 import { policy } from '../config.ts';
 
 export function pageIdentity(url: string) {
   const raw = url.trim();
-  const canonical = raw && !isGroundingRedirect(raw) ? canonicalPage(raw) : null;
+  const canonical = raw && !isGroundingRedirect(raw) ? canonicalCitedPage(raw) : null;
   if (!canonical) return null;
   const host = new URL(canonical).hostname;
   return { url: canonical, hash: hash(canonical), domain: getDomain(host) ?? host };

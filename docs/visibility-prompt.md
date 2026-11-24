@@ -816,7 +816,7 @@ customer credits. Policy, caps, the project-theme limits and the templates live 
   market order, since a later market maps onto the groups earlier ones named,
   so a first probe groups objections once. Each call's latency is stored in the
   labelling's `usage`. The outcome (`labelled` or `unavailable`) is
-  recorded once per launch; a launch that answered nothing stays `failed`.
+  recorded once per launch; a launch that answered nothing stays `failed`, or `cancelled` when it was cancelled.
   A theme or group deleted while it runs reads as Other or drops.
 - **Scores.** [Position scores](../frontend/services/api/src/probes/scores.ts)
   are computed by code over the answered runs only; a read's basis names only

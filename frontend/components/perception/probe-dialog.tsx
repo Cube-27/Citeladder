@@ -182,6 +182,9 @@ function QuoteFacts({
   >;
 }>) {
   const { label } = useEngineCatalog();
+  const none = choice.chosen.length === 0;
+  const answers = none ? 0 : quote.answers;
+  const spend = none ? 0 : quote.credits;
   const counts = Array.from({ length: choice.maxRepetitions }, (_, index) => String(index + 1));
   const facts = [
     {
@@ -216,15 +219,15 @@ function QuoteFacts({
       label: 'Questions',
       value: `${quote.questions} per engine in each market it can measure, asked ${pluralCount(quote.repetitions, 'time')}`,
     },
-    { label: 'Answers', value: formatCount(quote.answers) },
-    { label: credits, value: <b>{formatCount(quote.credits)}</b> },
+    { label: 'Answers', value: formatCount(answers) },
+    { label: credits, value: <b>{formatCount(spend)}</b> },
     {
       label: 'Balance after',
       value:
         quote.balance === null ? (
           <Absence state="unavailable" />
         ) : (
-          `${formatCount(quote.balance - quote.credits)} of ${formatCount(quote.balance)}`
+          `${formatCount(quote.balance - spend)} of ${formatCount(quote.balance)}`
         ),
     },
   ];

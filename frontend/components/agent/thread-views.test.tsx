@@ -65,4 +65,76 @@ describe('Agent thread views', () => {
       `/site?crawl_id=${CRAWL}&project=${PROJECT}`,
     );
   });
+
+  it('asks for a keyword dataset largest first, not in row id order', async () => {
+    const dataset = {
+      id: CRAWL,
+      run_id: MARKET,
+      dataset_kind: 'ranking_keywords',
+      target_domain: 'example.com',
+      target_hostname: 'example.com',
+      target_origin: 'https://example.com',
+      research_scope: 'exact_host',
+      acquisition: {},
+      comparison_origin: '',
+      location_code: 2840,
+      language_code: 'en',
+      status: 'published',
+      coverage: 'complete',
+      requested_rows: 1,
+      raw_rows_received: 1,
+      unique_rows_saved: 1,
+      provider_total: 1,
+      truncated: false,
+      summary: {},
+      collection_started_at: null,
+      collection_ended_at: null,
+      published_at: null,
+    };
+    const row = {
+      id: WORKSPACE,
+      dataset_id: CRAWL,
+      call_id: null,
+      row_kind: 'ranking_keywords',
+      keyword: 'school shoes',
+      domain: '',
+      url: '',
+      search_volume: 3600,
+      difficulty: null,
+      intent: '',
+      rank_group: null,
+      owned_rank_group: null,
+      etv: null,
+      backlinks: null,
+      referring_main_domains: null,
+      dataforseo_rank: null,
+      auxiliary: {},
+    };
+    const orders: string[] = [];
+    mswServer.use(
+      http.get(
+        `/api/v1/projects/${PROJECT}/search-intelligence/datasets/${CRAWL}/rows`,
+        ({ request }) => {
+          const params = new URL(request.url).searchParams;
+          orders.push(`${params.get('sort')} ${params.get('direction')} ${params.get('limit')}`);
+          return HttpResponse.json({ dataset, rows: [row], next_cursor: null });
+        },
+      ),
+    );
+    renderWithProviders(
+      <ThreadViews
+        scope={{ workspaceId: WORKSPACE, projectId: PROJECT }}
+        views={[{ kind: 'keyword_research_rows', dataset_id: CRAWL }]}
+      />,
+      {
+        projectSelection: {
+          activeProjectId: PROJECT,
+          activeProject: makeProject({ id: PROJECT }),
+          status: 'ready',
+        },
+      },
+    );
+    expect(await screen.findByRole('cell', { name: '3,600' })).toBeVisible();
+    expect(orders.at(-1)).toBe('search_volume desc 10');
+  });
 });

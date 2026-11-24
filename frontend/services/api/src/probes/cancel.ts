@@ -13,7 +13,10 @@ export async function cancelProbe(db: Database, scope: Scope) {
     .execute();
   if (!active.length) throw new ApiError(409, 'No probe is running', { code: 'probe_not_running' });
   for (const { id } of active) {
-    const { finalize } = await cancelAudit(db, scope, id);
-    if (finalize) await auditProjections(db).finalize(scope.workspaceId, id);
+    const cancelled = await cancelAudit(db, scope, id).catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 409) return null;
+      throw error;
+    });
+    if (cancelled?.finalize) await auditProjections(db).finalize(scope.workspaceId, id);
   }
 }

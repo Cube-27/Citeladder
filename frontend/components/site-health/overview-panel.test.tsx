@@ -380,7 +380,7 @@ describe('OverviewPanel', () => {
     const areas = within(screen.getByRole('list', { name: 'Web fundamentals breakdown' }));
     expect(areas.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       'accessibility75',
-      'mobile100',
+      'mobile · 1 of 4 checks run100',
     ]);
     await user.click(screen.getByRole('button', { name: 'View evidence' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('Images missing alt attributes');

@@ -7,13 +7,19 @@ import { Stack } from '@/components/ui/layout';
 import { BarRows, ScoreGauge, scoreTone, type BarRow } from '@/components/ui/score-gauge';
 import { SectionCard, TitledSection } from '@/components/ui/section';
 import { StatusMark } from '@/components/ui/status-mark';
-import { availabilityLabel, formatCount } from '@/lib/format';
+import { availabilityLabel, formatCount, pluralCount } from '@/lib/format';
 import { severityCount } from '@/lib/site-health/issues';
-import { formatScore, statusLabel } from '@/lib/site-health/status';
+import { checksRunLabel, formatScore, statusLabel } from '@/lib/site-health/status';
 
 type Dimension = Pick<
   SiteHealthOverview['aeo_dimensions'][number],
-  'key' | 'label' | 'score' | 'dimension_applicability' | 'dimension_measurement_state' | 'reason'
+  | 'key'
+  | 'label'
+  | 'score'
+  | 'dimension_applicability'
+  | 'dimension_measurement_state'
+  | 'reason'
+  | 'unresolved_count'
 >;
 
 const MEASUREMENT_LABELS: Record<string, string> = {
@@ -34,39 +40,73 @@ function Unscored({ state, label }: Readonly<{ state: string; label?: string }>)
 }
 type Area = SiteHealthOverview['web_fundamentals']['areas'][number];
 
-function scoreRow(key: string, label: ReactNode, score: number | null, absent: ReactNode): BarRow {
+function scoreRow({
+  key,
+  label,
+  score,
+  absent,
+  caveat,
+}: {
+  key: string;
+  label: ReactNode;
+  score: number | null;
+  absent: ReactNode;
+  caveat: string | null;
+}): BarRow {
   return {
     key,
-    label,
+    label:
+      score !== null && caveat ? (
+        <>
+          {label} <span className="text-ink-2">· {caveat}</span>
+        </>
+      ) : (
+        label
+      ),
     figure: score === null ? absent : printed(formatScore(score)),
     share: score === null ? null : score / 100,
-    tone: score === null ? 'info' : scoreTone(score),
+    tone: score === null || caveat ? 'info' : scoreTone(score),
   };
 }
 
+function dimensionCaveat(dimension: Dimension): string | null {
+  if (dimension.unresolved_count > 0)
+    return `${pluralCount(dimension.unresolved_count, 'check')} unresolved`;
+  return dimension.dimension_measurement_state === 'measured'
+    ? null
+    : measurementLabel(dimension.dimension_measurement_state);
+}
+
 const dimensionRow = (dimension: Dimension) =>
-  scoreRow(
-    dimension.key,
-    dimension.label,
-    dimension.score,
-    <Unscored
-      state={
-        dimension.dimension_applicability === 'not_applicable'
-          ? 'not_applicable'
-          : dimension.dimension_measurement_state
-      }
-      label={dimension.reason === 'measured_at_site_scope' ? 'Site-scoped evidence' : undefined}
-    />,
-  );
+  scoreRow({
+    key: dimension.key,
+    label: dimension.label,
+    score: dimension.score,
+    caveat: dimensionCaveat(dimension),
+    absent: (
+      <Unscored
+        state={
+          dimension.dimension_applicability === 'not_applicable'
+            ? 'not_applicable'
+            : dimension.dimension_measurement_state
+        }
+        label={dimension.reason === 'measured_at_site_scope' ? 'Site-scoped evidence' : undefined}
+      />
+    ),
+  });
 
 function areaRow(area: Area) {
   const judged = area.passed_count + area.missing_count;
-  return scoreRow(
-    area.key,
-    <span className="capitalize">{area.key}</span>,
-    judged > 0 ? (area.passed_count / judged) * 100 : null,
-    <Unscored state={area.state} />,
-  );
+  const total = judged + area.unknown_count + area.unavailable_count;
+  return scoreRow({
+    key: area.key,
+    label: <span className="capitalize">{area.key}</span>,
+    score: judged > 0 ? (area.passed_count / judged) * 100 : null,
+    caveat:
+      checksRunLabel({ run: judged, total }) ??
+      (area.state === 'measured' ? null : measurementLabel(area.state)),
+    absent: <Unscored state={area.state} />,
+  });
 }
 
 export function ScoreCard({
@@ -90,6 +130,7 @@ export function ScoreCard({
             label={title}
             score={score}
             absent={state === 'not_measured' ? undefined : measurementLabel(state)}
+            caveat={state === 'measured' ? null : measurementLabel(state)}
           />
           <BarRows label={`${title} breakdown`} rows={rows} />
         </Stack>

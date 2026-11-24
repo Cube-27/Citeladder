@@ -31,6 +31,7 @@ const PAGE_COLUMNS = [
   'issue_count',
   'web_fundamentals_score',
   'aeo_readiness_score',
+  'aeo_measurement_state',
   'aeo_measurement_coverage',
   'last_audited',
 ];

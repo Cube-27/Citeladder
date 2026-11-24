@@ -21,7 +21,20 @@ export function ignoredQueryKey(key: string): boolean {
   );
 }
 
-const PATH_LITERAL = /[A-Za-z0-9\-._~:@!$&'()*+,;=]/u;
+const UNRESERVED = /[A-Za-z0-9\-._~]/u;
+const SUB_DELIMITER = /[:@!$&'()*+,;=]/u;
+
+export function canonicalCitedPage(input: string): string | null {
+  const page = canonicalPage(input);
+  if (!page) return null;
+  const cut = page.indexOf('?');
+  const path = cut < 0 ? page : page.slice(0, cut);
+  const literal = path.replaceAll(/%([0-9A-F]{2})/gu, (escaped, hex: string) => {
+    const char = String.fromCodePoint(Number.parseInt(hex, 16));
+    return SUB_DELIMITER.test(char) ? char : escaped;
+  });
+  return cut < 0 ? literal : literal + page.slice(cut);
+}
 
 export function canonicalPage(input: string, origin?: string | null): string | null {
   try {
@@ -45,7 +58,7 @@ export function canonicalPage(input: string, origin?: string | null): string | n
     if (!siteHealth.web_fetch.ports.includes(port)) return null;
     const path = (rawPath || '/').replace(/%([0-9a-f]{2})/giu, (_match, hex: string) => {
       const char = String.fromCodePoint(Number.parseInt(hex, 16));
-      return PATH_LITERAL.test(char) ? char : `%${hex.toUpperCase()}`;
+      return UNRESERVED.test(char) ? char : `%${hex.toUpperCase()}`;
     });
     const encoded = [...path]
       .map((char) =>

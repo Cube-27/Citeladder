@@ -610,6 +610,8 @@ describe('A3 persisted Pages join', () => {
       'https://example.test/guide',
       'https://example.test/%67uide',
       'https://example.test/a%2Fb',
+      'https://example.test/collections/bath-%26-body',
+      'https://example.test/p/a%2Cb',
       'https://example.test/über',
       'https://example.test/guide?utm_source=x',
     ])
