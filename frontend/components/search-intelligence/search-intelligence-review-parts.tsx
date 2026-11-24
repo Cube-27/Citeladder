@@ -15,6 +15,7 @@ import { FigureStrip } from '@/components/ui/figure-strip';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
+import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { formatCount, formattedText, pluralCount } from '@/lib/format';
@@ -25,11 +26,10 @@ import type {
   SearchIntelligenceReadiness,
   SearchIntelligenceRun,
 } from '@/lib/api/search-intelligence';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   availableSelections,
   historyScopeConflict,
-  reviewCompetitors,
   selectionKey,
 } from './search-intelligence-review-selection';
 import { Notice } from '@/components/ui/notice';
@@ -53,98 +53,99 @@ export function marketOptions(location: string, markets: SearchIntelligenceReadi
     : options;
 }
 
-export function DatasetChoices({
-  readiness,
-  isSelected,
-  onToggle,
-  depthOf,
-  onDepth,
-}: Readonly<{
-  readiness: SearchIntelligenceReadiness;
+type DatasetPicks = Readonly<{
   isSelected: (option: SearchDatasetSelectionRequest) => boolean;
   onToggle: (option: SearchDatasetSelectionRequest) => void;
   depthOf: (option: SearchDatasetSelectionRequest) => string;
   onDepth: (option: SearchDatasetSelectionRequest, text: string) => void;
-}>) {
-  const { entries, firstCompetitor } = useMemo(() => {
+}>;
+
+const OWNED = 'owned';
+
+export function DatasetChoices({
+  readiness,
+  ...picks
+}: DatasetPicks & Readonly<{ readiness: SearchIntelligenceReadiness }>) {
+  const targets = useMemo(() => {
     const groups = new Map<string, SearchDatasetSelectionRequest[]>();
     for (const selection of availableSelections(readiness)) {
-      const key = selection.competitor_id ?? 'owned';
-      const group = groups.get(key);
-      if (group) group.push(selection);
-      else groups.set(key, [selection]);
+      const key = selection.competitor_id ?? OWNED;
+      groups.set(key, [...(groups.get(key) ?? []), selection]);
     }
-    return { entries: [...groups.entries()], firstCompetitor: reviewCompetitors(readiness)[0] };
-  }, [readiness]);
-  const group = ([owner, options]: [string, SearchDatasetSelectionRequest[]]) => (
-    <DatasetGroup
-      key={owner}
-      legend={
-        owner === 'owned'
+    return [...groups.entries()].map(([value, options]) => ({
+      value,
+      options,
+      label:
+        value === OWNED
           ? 'Your website'
-          : (readiness.competitors.find((item) => item.identity === owner)?.label ?? 'Competitor')
-      }
-      options={options}
-      isSelected={isSelected}
-      onToggle={onToggle}
-      depthOf={depthOf}
-      onDepth={onDepth}
-    />
-  );
-  const others = entries.filter(([owner]) => owner !== 'owned' && owner !== firstCompetitor);
+          : (readiness.competitors.find((item) => item.identity === value)?.label ?? 'Competitor'),
+    }));
+  }, [readiness]);
+  const [current, setCurrent] = useState(OWNED);
+  const items = targets.map(({ value, label, options }) => ({
+    value,
+    label,
+    count: options.filter(picks.isSelected).length,
+  }));
   return (
-    <>
-      {entries.filter(([owner]) => owner === 'owned' || owner === firstCompetitor).map(group)}
-      {others.length ? (
-        <Disclosure title={`Other competitors (${others.length})`}>{others.map(group)}</Disclosure>
-      ) : null}
-    </>
+    <TabsRoot value={current} onValueChange={setCurrent} orientation="vertical">
+      <div className="desktop:grid-cols-[11rem_minmax(0,1fr)] grid min-w-0 gap-[var(--card-padding)]">
+        <div className="desktop:block hidden min-w-0">
+          <TabRail items={items} ariaLabel="Datasets for" />
+        </div>
+        <div className="desktop:hidden min-w-0">
+          <Select
+            ariaLabel="Datasets for"
+            value={current}
+            onValueChange={setCurrent}
+            options={items.map((item) => ({
+              value: item.value,
+              label: `${item.label} (${formatCount(item.count)})`,
+            }))}
+          />
+        </div>
+        {targets.map(({ value, options }) => (
+          <TabPanel key={value} value={value} className={wellClasses('min-w-0')}>
+            <DatasetRows options={options} {...picks} />
+          </TabPanel>
+        ))}
+      </div>
+    </TabsRoot>
   );
 }
 
-function DatasetGroup({
-  legend,
+function DatasetRows({
   options,
   isSelected,
   onToggle,
   depthOf,
   onDepth,
-}: Readonly<{
-  legend: string;
-  options: SearchDatasetSelectionRequest[];
-  isSelected: (option: SearchDatasetSelectionRequest) => boolean;
-  onToggle: (option: SearchDatasetSelectionRequest) => void;
-  depthOf: (option: SearchDatasetSelectionRequest) => string;
-  onDepth: (option: SearchDatasetSelectionRequest, text: string) => void;
-}>) {
+}: DatasetPicks & Readonly<{ options: SearchDatasetSelectionRequest[] }>) {
   return (
-    <fieldset className={wellClasses()}>
-      <legend className={textRole('body', 'text-ink-2')}>{legend}</legend>
-      <Stack gap="compact">
-        {options.map((option) => {
-          const checked = isSelected(option);
-          const label = SEARCH_DATASET_LABELS[option.kind] ?? option.kind;
-          return (
-            <Stack
-              key={selectionKey(option)}
-              gap="compact"
-              className="grid-cols-[1fr_6rem] items-center"
-            >
-              <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} label={label} />
-              {SEARCH_DATASET_KINDS[option.kind].fixedDepth ? null : (
-                <Input
-                  aria-label={`${label}: number of results`}
-                  disabled={!checked}
-                  inputMode="numeric"
-                  value={depthOf(option)}
-                  onChange={(event) => onDepth(option, event.target.value)}
-                />
-              )}
-            </Stack>
-          );
-        })}
-      </Stack>
-    </fieldset>
+    <Stack gap="compact">
+      {options.map((option) => {
+        const checked = isSelected(option);
+        const label = SEARCH_DATASET_LABELS[option.kind] ?? option.kind;
+        return (
+          <Stack
+            key={selectionKey(option)}
+            gap="compact"
+            className="grid-cols-[minmax(0,1fr)_6rem] items-center"
+          >
+            <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} label={label} />
+            {SEARCH_DATASET_KINDS[option.kind].fixedDepth ? null : (
+              <Input
+                aria-label={`${label}: number of results`}
+                disabled={!checked}
+                inputMode="numeric"
+                value={depthOf(option)}
+                onChange={(event) => onDepth(option, event.target.value)}
+              />
+            )}
+          </Stack>
+        );
+      })}
+    </Stack>
   );
 }
 

@@ -7,6 +7,12 @@ import { X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { SHEET_FACE } from '@/components/ui/slip';
 
+const DRAWER_WIDTH = {
+  narrow: 'max-w-narrow',
+  wide: 'max-w-form',
+  split: 'max-w-prose',
+} as const;
+
 export function Drawer({
   open,
   onOpenChange,
@@ -32,7 +38,7 @@ export function Drawer({
   closeLabel?: string;
   side?: 'left' | 'right';
   hideHeader?: boolean;
-  width?: 'narrow' | 'wide';
+  width?: keyof typeof DRAWER_WIDTH;
 }>) {
   const returnFocus = useReturnFocus(open);
   const close = (
@@ -58,7 +64,7 @@ export function Drawer({
             SHEET_FACE,
             'drawer-panel z-modal fixed inset-y-2 flex w-[calc(100vw-1rem)] flex-col overflow-hidden',
             side === 'left' ? 'left-2 max-w-68' : 'right-2',
-            side === 'right' && (width === 'wide' ? 'max-w-form' : 'max-w-narrow'),
+            side === 'right' && DRAWER_WIDTH[width],
           )}
         >
           <DrawerHeader

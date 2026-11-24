@@ -161,6 +161,7 @@ export function SearchIntelligenceReviewDrawer({
         }
         onOpenChange(nextOpen);
       }}
+      width="split"
       title={action === 'seed' ? 'Research a keyword' : 'Review analysis cost'}
       footer={
         <ReviewFooter

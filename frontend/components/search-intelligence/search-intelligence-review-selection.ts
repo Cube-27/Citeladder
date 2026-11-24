@@ -15,7 +15,7 @@ function depthFor(data: SearchIntelligenceReadiness, kind: SearchDatasetKind) {
   return data.preferences.depths[kind] ?? 1;
 }
 
-export function reviewCompetitors(data: SearchIntelligenceReadiness): string[] {
+function reviewCompetitors(data: SearchIntelligenceReadiness): string[] {
   const all = data.competitors.map(({ identity }) => identity);
   const preferred = data.preferences.competitor_ids.filter((id) => all.includes(id));
   return [...preferred, ...all.filter((id) => !preferred.includes(id))];
