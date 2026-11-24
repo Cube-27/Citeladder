@@ -165,6 +165,8 @@ const API_ERROR_CODES = [
   'price_ref_mismatch',
   'pricing_changed',
   'probe_engines',
+  'probe_engines_unavailable',
+  'probe_not_running',
   'probe_quote_changed',
   'project_work_running',
   'prompt_count_exceeded',

@@ -13,18 +13,28 @@ export const objectionGroupRequestSchema = z.object({ name: z.string() });
 export const objectionGroupMergeRequestSchema = z.object({ into_id: uuid() });
 export const objectionGroupSchema = z.object({ id: uuid(), name: z.string() });
 
-export const probeRunRequestSchema = z.object({ fingerprint: z.string().min(1) });
+const probeEnginesSchema = z.array(logicalEngineSchema).min(1).optional();
+
+export const probeRunRequestSchema = z.object({
+  fingerprint: z.string().min(1),
+  engines: probeEnginesSchema,
+});
 export type ProbeRunRequest = z.infer<typeof probeRunRequestSchema>;
 
 export const probeScheduleRequestSchema = z.union([
   z.object({ cadence: z.null() }),
-  z.object({ cadence: z.enum(['daily', 'weekly']), fingerprint: z.string().min(1) }),
+  z.object({
+    cadence: z.enum(['daily', 'weekly']),
+    fingerprint: z.string().min(1),
+    engines: probeEnginesSchema,
+  }),
 ]);
 export type ProbeScheduleRequest = z.infer<typeof probeScheduleRequestSchema>;
 
 const probeQuoteSchema = z.object({
   credential_mode: credentialModeSchema,
   engines: z.array(logicalEngineSchema),
+  available_engines: z.array(logicalEngineSchema),
   blocked: z.enum(['trial', 'no_key', 'no_market', 'task_limit']).nullable(),
   markets: z.array(auditMarketSchema),
   questions: z.int().nonnegative(),
@@ -36,7 +46,14 @@ const probeQuoteSchema = z.object({
 });
 export type ProbeQuote = z.infer<typeof probeQuoteSchema>;
 
-const probeStateSchema = z.enum(['running', 'labelling', 'ready', 'failed', 'unavailable']);
+const probeStateSchema = z.enum([
+  'running',
+  'labelling',
+  'ready',
+  'failed',
+  'cancelled',
+  'unavailable',
+]);
 
 const probeRunSchema = z.object({
   launch_id: uuid(),

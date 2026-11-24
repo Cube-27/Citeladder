@@ -13,6 +13,8 @@ import { z } from 'zod';
 import { auditRuntime } from '../audits/config.ts';
 import { readAudits } from '../audits/reads.ts';
 import { readBody } from '../http/body.ts';
+import { logicalEngines } from '../providers/config.ts';
+import { cancelProbe } from '../probes/cancel.ts';
 import { csvDownload } from '../http/table-export.ts';
 import {
   OBJECTION_EXPORT_COLUMNS,
@@ -52,10 +54,30 @@ export const probeRoutes = [
   defineGetRoute({
     ...activeProject,
     path: root,
+    params: {
+      path: projectPath,
+      query: { engines: { scalar: { kind: 'literal', values: logicalEngines }, list: true } },
+    },
+    response: probeStatusSchema,
+    handle: ({ c, db, config }, { path, query }) =>
+      probeStatus(
+        db,
+        projectScopeOf(c, path.project_id),
+        auditRuntime(config.settings),
+        query.engines ?? undefined,
+      ),
+  }),
+  definePostRoute({
+    ...activeProject,
+    path: `${root}/cancel`,
+    capability: 'write',
     params: { path: projectPath, query: {} },
     response: probeStatusSchema,
-    handle: ({ c, db, config }, { path }) =>
-      probeStatus(db, projectScopeOf(c, path.project_id), auditRuntime(config.settings)),
+    async handle({ c, db, config }, { path }) {
+      const scope = projectScopeOf(c, path.project_id);
+      await cancelProbe(db, scope);
+      return probeStatus(db, scope, auditRuntime(config.settings));
+    },
   }),
   definePostRoute({
     ...activeProject,

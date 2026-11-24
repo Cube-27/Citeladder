@@ -14,6 +14,7 @@ import { enqueueProbeLabelling } from '../src/probes/launch-end.ts';
 import { probeMarket } from '../src/probes/market.ts';
 import { mergeGroups, renameGroup } from '../src/probes/objection-groups.ts';
 import { probeObjections } from '../src/probes/objections.ts';
+import { cancelProbe } from '../src/probes/cancel.ts';
 import { runProbe } from '../src/probes/plan.ts';
 import { setProbeSchedule } from '../src/probes/schedule.ts';
 import { probeStatus } from '../src/probes/status.ts';
@@ -123,6 +124,43 @@ describe('probe admission', () => {
     await managedPlan(db, t.workspaceId);
     const managed = (await probeStatus(db, t, runtime)).quote;
     expect(managed.answers).toBe((5 + 3) * perMarket);
+  });
+
+  it('asks only the chosen engines at their own quote, and cancelling the run releases its hold', async () => {
+    const { t } = await probeTenant(1_000_000);
+    await managedPlan(db, t.workspaceId);
+    const all = (await probeStatus(db, t, runtime)).quote;
+    const engines = all.available_engines.slice(0, 2);
+    const { quote } = await probeStatus(db, t, runtime, engines);
+    expect([all.engines, quote.engines, quote.available_engines]).toEqual([
+      all.available_engines,
+      engines,
+      all.available_engines,
+    ]);
+    expect(quote.answers).toBe((all.answers / all.engines.length) * 2);
+    expect(quote.credits).toBeLessThan(all.credits);
+    await expect(
+      runProbe(db, t, { fingerprint: all.fingerprint, engines }, runtime),
+    ).rejects.toMatchObject({ status: 409, code: 'probe_quote_changed' });
+    await expect(probeStatus(db, t, runtime, ['unknown-engine'])).rejects.toMatchObject({
+      status: 422,
+      code: 'probe_engines_unavailable',
+    });
+    await expect(cancelProbe(db, t)).rejects.toMatchObject({ code: 'probe_not_running' });
+    const { t: own } = await probeTenant(1_000_000);
+    const before = (await probeStatus(db, own, runtime)).quote;
+    await runProbe(db, own, { fingerprint: before.fingerprint, engines: before.engines }, runtime);
+    const running = await probeStatus(db, own, runtime);
+    expect([running.latest!.state, running.quote.balance]).toEqual([
+      'running',
+      before.balance! - before.credits,
+    ]);
+    await cancelProbe(db, own);
+    const cancelled = await probeStatus(db, own, runtime);
+    expect([cancelled.latest!.state, cancelled.quote.balance]).toEqual([
+      'cancelled',
+      before.balance,
+    ]);
   });
 
   it('refuses probe_quote_changed, launching nothing, when the probe changed after its quote', async () => {

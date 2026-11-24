@@ -306,7 +306,7 @@ const RUN_ERROR_COPY: Record<string, string> = {
     'The output changed while the agent was working, so its revision was not saved. Ask again to revise the latest version.',
   funding_unavailable: 'There are not enough AI credits to finish this request.',
   funding_short:
-    'This turn needs more AI credits than the workspace has left. Nothing was saved; a new chat with less history costs less.',
+    'This turn needs more AI credits than the workspace has left. Nothing was saved; a new chat with less history uses fewer.',
   capability_unavailable: 'Your plan does not include the agent.',
   provider_error: 'The model provider returned an error. Try again.',
   interrupted: 'The page closed before the agent finished. Nothing was saved; send it again.',

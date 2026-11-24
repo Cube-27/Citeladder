@@ -31,8 +31,6 @@ type Estimate = {
   execution_count: number;
   maximum_attempt_count: number;
   maximum_wall_clock_seconds: number;
-  cost_status: string;
-  estimated_total_cost_microusd: number | null;
 };
 
 function PromptSetField({
@@ -276,11 +274,7 @@ function EstimateNote({ estimate }: Readonly<{ estimate: Estimate }>) {
         planned
       </span>
       <span className="text-ink-2">
-        Maximum wall-clock budget {estimate.maximum_wall_clock_seconds}s · cost{' '}
-        {estimate.cost_status}
-        {estimate.estimated_total_cost_microusd !== null
-          ? ` · ~$${(estimate.estimated_total_cost_microusd / 1_000_000).toFixed(4)}`
-          : ' · unavailable'}
+        Maximum wall-clock budget {estimate.maximum_wall_clock_seconds}s
       </span>
     </Stack>
   );

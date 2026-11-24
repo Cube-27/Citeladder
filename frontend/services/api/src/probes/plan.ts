@@ -30,10 +30,12 @@ async function probeEngineList(
   );
 }
 
+type PlanInput = { runtime: AuditRuntime; at: Date; engines?: readonly string[] };
+
 export async function probePlan(
   db: Database,
   scope: Scope,
-  { runtime, at }: { runtime: AuditRuntime; at: Date },
+  { runtime, at, engines: picked }: PlanInput,
 ) {
   const funded = (await workspaceCredentialMode(db, scope.workspaceId)) === 'funded';
   const [usable, markets, subject, access] = await Promise.all([
@@ -42,9 +44,18 @@ export async function probePlan(
     probeSubject(db, scope),
     workspaceAccess(db, scope.workspaceId, at),
   ]);
-  const runs = markets.flatMap(({ id, country_code, language_code }) => {
+  const measured = markets.map(({ id, country_code, language_code }) => {
     const market = { id, country_code, language_code };
-    const engines = usable.filter((engine) => canMeasure(engine, market));
+    return { market, engines: usable.filter((engine) => canMeasure(engine, market)) };
+  });
+  const available = usable.filter((engine) => measured.some((run) => run.engines.includes(engine)));
+  if (picked && !available.some((engine) => picked.includes(engine)))
+    throw new ApiError(422, 'Choose at least one engine the probe can ask', {
+      code: 'probe_engines_unavailable',
+    });
+  const runs = measured.flatMap(({ market, engines: all }) => {
+    const { country_code } = market;
+    const engines = picked ? all.filter((engine) => picked.includes(engine)) : all;
     const questions = probeQuestions({ ...subject, country: countryName(country_code) });
     return engines.length ? [{ market, engines, questions: questions.map((q) => q.text) }] : [];
   });
@@ -66,6 +77,7 @@ export async function probePlan(
         runtime.audits.max_tasks_per_audit,
     ),
     usable,
+    available,
     engines,
     runs,
     questions,
@@ -117,9 +129,13 @@ export function runnable(plan: Plan) {
 }
 
 export const changed = () =>
-  new ApiError(409, 'The probe changed since its cost was shown. Check the new cost and run it.', {
-    code: 'probe_quote_changed',
-  });
+  new ApiError(
+    409,
+    'The probe changed since its AI credits were shown. Check the new figure and run it.',
+    {
+      code: 'probe_quote_changed',
+    },
+  );
 
 async function heldCredits(db: Database, workspaceId: string, auditIds: readonly string[]) {
   const row = await db
@@ -139,12 +155,12 @@ async function heldCredits(db: Database, workspaceId: string, auditIds: readonly
 export function runProbe(
   db: Database,
   scope: Scope,
-  { fingerprint }: { fingerprint: string },
+  { fingerprint, engines }: { fingerprint: string; engines?: readonly string[] },
   runtime: AuditRuntime,
 ) {
   return inTransaction(db, async (trx) => {
     const at = new Date();
-    const plan = runnable(await probePlan(trx, scope, { runtime, at }));
+    const plan = runnable(await probePlan(trx, scope, { runtime, at, engines }));
     if (plan.fingerprint !== fingerprint) throw changed();
     const ids = await createAuditsInTransaction(
       trx,

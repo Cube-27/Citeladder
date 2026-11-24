@@ -1,4 +1,9 @@
-import { mutationOptions, queryOptions, type QueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  mutationOptions,
+  queryOptions,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { auditSchema } from '@citeladder/contracts/audits';
@@ -30,11 +35,22 @@ const EXPORT_FILES = {
 } as const satisfies Record<ProbeView, string>;
 
 const probesApi = {
-  status: async (projectId: string, options?: ApiRequestOptions) =>
+  status: async (projectId: string, engines: readonly string[], options?: ApiRequestOptions) => {
+    const query = new URLSearchParams(engines.map((engine) => ['engines', engine]));
+    return strictValidate(
+      probeStatusSchema,
+      await apiClient.get(
+        engines.length ? `${root(projectId)}?${query}` : root(projectId),
+        options,
+      ),
+      'probes.status',
+    );
+  },
+  cancel: async (projectId: string, options?: ApiRequestOptions) =>
     strictValidate(
       probeStatusSchema,
-      await apiClient.get(root(projectId), options),
-      'probes.status',
+      await apiClient.post(`${root(projectId)}/cancel`, {}, options),
+      'probes.cancel',
     ),
   run: async (projectId: string, input: ProbeRunRequest, options?: ApiRequestOptions) => {
     const res = await apiClient.post(root(projectId), input, options);
@@ -105,8 +121,16 @@ export const probeQueries = {
   status: (scope: ProjectScope) =>
     queryOptions({
       queryKey: queryKeys.projects.probes(scope),
-      queryFn: ({ signal }) => probesApi.status(scope.projectId, { signal, ...scoped(scope) }),
+      queryFn: ({ signal }) => probesApi.status(scope.projectId, [], { signal, ...scoped(scope) }),
       refetchInterval: (query) => (probeBusy(query.state.data) ? PROBE_POLL_MS : false),
+    }),
+  quote: (scope: ProjectScope, engines: readonly string[]) =>
+    queryOptions({
+      queryKey: queryKeys.projects.probeQuote(scope, engines),
+      queryFn: ({ signal }) =>
+        probesApi.status(scope.projectId, engines, { signal, ...scoped(scope) }),
+      select: (status) => status.quote,
+      placeholderData: keepPreviousData,
     }),
   market: (scope: ProjectScope, basis: string) =>
     queryOptions({
@@ -135,10 +159,18 @@ export const probeMutations = {
     }),
   run: (scope: ProjectScope) =>
     mutationOptions({
-      mutationFn: (fingerprint: string) =>
-        probesApi.run(scope.projectId, { fingerprint }, scoped(scope)),
+      mutationFn: (input: ProbeRunRequest) => probesApi.run(scope.projectId, input, scoped(scope)),
       onSuccess: (_audits, _input, _result, { client }) => {
         refreshProbeStatus(client, scope);
+        void client.invalidateQueries({ queryKey: queryKeys.runs.all });
+      },
+      onError: (_error, _input, _result, { client }) => refreshProbeStatus(client, scope),
+    }),
+  cancel: (scope: ProjectScope) =>
+    mutationOptions({
+      mutationFn: () => probesApi.cancel(scope.projectId, scoped(scope)),
+      onSuccess: (status, _input, _result, { client }) => {
+        client.setQueryData(queryKeys.projects.probes(scope), status);
         void client.invalidateQueries({ queryKey: queryKeys.runs.all });
       },
       onError: (_error, _input, _result, { client }) => refreshProbeStatus(client, scope),

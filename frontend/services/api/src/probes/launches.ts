@@ -61,7 +61,8 @@ type LaunchRow = Awaited<ReturnType<typeof launchRows>>[number];
 function launchState(audits: readonly LaunchRow[]): ProbeRun['state'] {
   const terminal = policy.audits.constants.audit_terminal_statuses;
   if (audits.some((audit) => !terminal.includes(audit.status))) return 'running';
-  if (!audits.some((audit) => ANSWERED_STATUSES.includes(audit.status))) return 'failed';
+  if (!audits.some((audit) => ANSWERED_STATUSES.includes(audit.status)))
+    return audits.some((audit) => audit.status === 'cancelled') ? 'cancelled' : 'failed';
   const outcome = audits[0]?.outcome ?? null;
   if (outcome === null) return 'labelling';
   return outcome === 'labelled' ? 'ready' : 'unavailable';

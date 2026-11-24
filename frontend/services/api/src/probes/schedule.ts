@@ -45,7 +45,9 @@ async function applySchedule(
     for (const schedule of existing) await deleteSchedule(db, scope, schedule.id); // NOSONAR
     return;
   }
-  const plan = runnable(await probePlan(db, scope, { runtime, at: new Date() }));
+  const plan = runnable(
+    await probePlan(db, scope, { runtime, at: new Date(), engines: input.engines }),
+  );
   if (plan.fingerprint !== input.fingerprint) throw changed();
   const markets = plan.runs.map((run) => run.market.id);
   const [current] = existing;

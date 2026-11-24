@@ -110,6 +110,7 @@ function ProbeExport({ scope, view }: Readonly<{ scope: ProjectScope; view: Prob
 
 const FAILED = {
   failed: 'The last probe failed',
+  cancelled: 'The last probe was cancelled',
   unavailable: "The last probe couldn't be labelled",
 } as const;
 
@@ -123,7 +124,9 @@ export function ProbeEmpty({
     <StateBlock
       kind="empty"
       heading={
-        state === 'failed' || state === 'unavailable' ? FAILED[state] : 'No market probe yet'
+        state === 'failed' || state === 'cancelled' || state === 'unavailable'
+          ? FAILED[state]
+          : 'No market probe yet'
       }
       description="A probe asks each engine what you're known for, which brands lead each theme, and why a buyer might not choose you. It's paid from your AI credits."
       action={mayRun ? <Button onClick={onRun}>Run probe</Button> : undefined}

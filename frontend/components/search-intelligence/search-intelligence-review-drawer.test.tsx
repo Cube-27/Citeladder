@@ -93,7 +93,7 @@ describe('SearchIntelligenceReviewDrawer', () => {
         busy={false}
       />,
     );
-    const submit = screen.getByRole('button', { name: 'Review cost' });
+    const submit = screen.getByRole('button', { name: 'Review AI credits' });
     expect(submit).toBeDisabled();
     await userEvent.click(screen.getByRole('combobox', { name: 'Market' }));
     await userEvent.click(screen.getByRole('option', { name: 'Australia' }));
@@ -121,7 +121,7 @@ describe('SearchIntelligenceReviewDrawer', () => {
     );
     for (const name of ['Keyword footprint', 'Ranked keywords', 'Referring domains'])
       await userEvent.click(screen.getByRole('checkbox', { name }));
-    await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Review AI credits' }));
     expect(review).toHaveBeenCalledWith(
       expect.objectContaining({
         location_code: null,
@@ -156,9 +156,9 @@ describe('SearchIntelligenceReviewDrawer', () => {
     );
     const depth = screen.getByRole('textbox', { name: 'Ranked keywords: number of results' });
     await userEvent.clear(depth);
-    expect(screen.getByRole('button', { name: 'Review cost' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Review AI credits' })).toBeDisabled();
     await userEvent.type(depth, '50');
-    await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Review AI credits' }));
     const datasets = review.mock.calls[0]![0].datasets.map(
       (item: { kind: string; competitor_id?: string; depth: number }) =>
         [item.kind, item.competitor_id ?? null, item.depth] as const,
@@ -237,7 +237,7 @@ describe('SearchIntelligenceReviewDrawer', () => {
     await userEvent.click(screen.getByText('Advanced options'));
     await userEvent.click(screen.getByRole('combobox', { name: 'Keyword order' }));
     await userEvent.click(screen.getByRole('option', { name: 'Most estimated traffic' }));
-    expect(screen.getByRole('button', { name: 'Review cost' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Review AI credits' })).toBeDisabled();
     expect(screen.getByText(/Keyword comparisons on an exact host/)).toBeInTheDocument();
   });
 
@@ -262,7 +262,7 @@ describe('SearchIntelligenceReviewDrawer', () => {
       screen.getByRole('textbox', { name: 'Keyword suggestion seed' }),
       'analytics',
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Review AI credits' }));
     expect(review).toHaveBeenCalledWith(
       expect.objectContaining({
         datasets: [
@@ -290,9 +290,9 @@ describe('SearchIntelligenceReviewDrawer', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Review AI credits' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Review expired');
-    await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Review AI credits' }));
     const confirmation = await screen.findByRole('button', { name: 'Confirm $0.1442 analysis' });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     await userEvent.click(confirmation);
@@ -319,7 +319,7 @@ describe('SearchIntelligenceReviewDrawer', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Review AI credits' }));
     expect(review).toHaveBeenCalledTimes(1);
     expect(confirm).not.toHaveBeenCalled();
     expect(await screen.findByText('$0.1442')).toBeInTheDocument();
@@ -349,7 +349,7 @@ describe('SearchIntelligenceReviewDrawer', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Review AI credits' }));
     expect(await screen.findByText('188 AI credits')).toBeInTheDocument();
     expect(screen.queryByText(/\$/u)).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Confirm 188 AI credits analysis' }));
