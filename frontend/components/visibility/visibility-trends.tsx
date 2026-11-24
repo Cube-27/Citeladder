@@ -34,7 +34,6 @@ import {
   trendAxis,
 } from '@/lib/visibility/trends';
 import { noObservations } from '@/lib/visibility/vocabulary';
-import { selectionBasis } from '@/lib/visibility/coverage';
 import { type Absent, formatCount } from '@/lib/format';
 import {
   PERCEPTION_MIN_CLASSIFIED,
@@ -58,12 +57,10 @@ export const metricCodec = stringUrlCodec(
 const ALL_BRANDS = '__all__';
 
 export function InsightsLede({ selected }: Readonly<{ selected: Visibility }>) {
-  const shortfall = selectionBasis(selected);
   const { headline, sub } = standingHeadline(brandStanding(selected.rankings));
   return (
     <Section aria-labelledby="insights-headline">
       <SectionHeader>
-        {shortfall ? <p className={textRole('caption')}>{shortfall}</p> : null}
         <h2 id="insights-headline" className={textRole('title')}>
           {headline}
         </h2>

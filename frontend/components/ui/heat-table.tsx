@@ -22,7 +22,7 @@ const heat = (place: number) =>
 const HATCH = 'repeating-linear-gradient(135deg, transparent 0 6px, var(--color-rule) 6px 7px)';
 
 export type HeatValue =
-  | { kind: 'value'; text: string; detail: string; tint: number }
+  | { kind: 'value'; text: string; tint: number }
   | { kind: 'void'; state: DataAvailabilityState; label: string };
 
 type HeatTableProps = Readonly<{
@@ -67,7 +67,6 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
                       style={{ background: heat(cell.tint) }}
                     >
                       <span className={textRole('label', 'tabular-nums')}>{cell.text}</span>
-                      <span className={textRole('caption', 'text-ink')}>{cell.detail}</span>
                     </div>
                   )}
                 </td>
