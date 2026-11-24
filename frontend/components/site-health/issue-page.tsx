@@ -107,6 +107,7 @@ export function IssuePage({
             label: 'Issues',
             href: `${location.pathname}${backQuery ? `?${backQuery}` : ''}`,
             onClick: (event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey) return;
               event.preventDefault();
               onClose();
             },
@@ -186,7 +187,9 @@ function IssueFigures({
 }: Readonly<{
   issue: FigureFacts;
   audited: number | null;
-  progress: Pick<IssueFixProgress, 'fixed_url_count' | 'verified_url_count'> | undefined;
+  progress:
+    | Pick<IssueFixProgress, 'fixed_url_count' | 'verified_url_count' | 'rerun_url_count'>
+    | undefined;
 }>) {
   const count = (value: number | null | undefined) =>
     value === null || value === undefined ? <Absence state="not_measured" /> : formatCount(value);
@@ -202,10 +205,14 @@ function IssueFigures({
     ...(progress
       ? [
           { label: 'Marked fixed', value: formatCount(progress.fixed_url_count) },
-          {
-            label: 'Awaiting re-audit',
-            value: formatCount(progress.fixed_url_count - progress.verified_url_count),
-          },
+          ...(progress.rerun_url_count === null
+            ? []
+            : [
+                {
+                  label: 'Awaiting re-audit',
+                  value: formatCount(progress.fixed_url_count - progress.verified_url_count),
+                },
+              ]),
         ]
       : []),
     ...(kinds.length > 0

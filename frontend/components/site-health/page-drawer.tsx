@@ -27,7 +27,7 @@ export function PageDrawerHost({
   const [seen, setSeen] = useState(linked);
   if (linked !== seen) {
     setSeen(linked);
-    if (linked) setTarget(linkedPage(linked));
+    setTarget(linkedPage(linked));
   }
   const page = useQuery({
     ...siteHealthQueries.page(workspaceId, target?.crawlId ?? '', target?.siteUrlId ?? ''),

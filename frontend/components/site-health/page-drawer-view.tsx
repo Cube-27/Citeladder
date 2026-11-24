@@ -55,10 +55,12 @@ export function PageDrawerView({
         <TabRail items={items} ariaLabel="Page sections" />
       </div>
       <div className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain p-6">
-        {actions ? <Inline className="mb-6 flex-wrap justify-end">{actions}</Inline> : null}
+        <Stack gap="item" className="mb-6 empty:hidden">
+          {actions ? <Inline className="flex-wrap justify-end">{actions}</Inline> : null}
+          {children}
+        </Stack>
         <TabPanel value="overview">
           <Stack gap="workspace">
-            {children}
             <Figures detail={detail} />
             <FactSection title="URL" facts={urlFacts(detail, useDisplayTimeZone())} />
             <FactSection title="Server HTML" facts={htmlFacts(detail)} />

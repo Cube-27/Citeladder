@@ -178,9 +178,7 @@ export function SeverityCard({
     <TitledSection title="Issues by severity" actions={actions}>
       <SectionCard>
         <Stack gap="item">
-          <span className={textRole('figure')}>
-            {formatCount(counts.reduce((sum, count) => sum + count, 0))}
-          </span>
+          <span className={textRole('figure')}>{formatCount(data.issue_count)}</span>
           <BarRows
             label="Issues by severity"
             rows={SEVERITIES.map((severity, index) => ({
