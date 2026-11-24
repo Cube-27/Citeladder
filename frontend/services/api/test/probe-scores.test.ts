@@ -77,6 +77,8 @@ describe('rank in top theme', () => {
   const asked = (brandNamed: number) =>
     Array.from({ length: 21 }, (_, n) => ({
       taskId: `task-${n}`,
+      auditId: 'audit',
+      prompt: 'Which brands lead on comfort?',
       engine: 'chatgpt' as const,
       question: { question: 'theme' as const, theme_id: themeId, theme_name: 'Comfort' },
       items: [{ id: 'rival', rank: 0 }, ...(n < brandNamed ? [{ id: null, rank: 9 }] : [])].map(
@@ -87,6 +89,7 @@ describe('rank in top theme', () => {
           objection_group_id: null,
           entity_kind: id ? 'competitor' : 'brand',
           entity_id: id,
+          quote: '',
         }),
       ),
     }));

@@ -130,6 +130,7 @@ function group(
     score,
     engines,
     history: [score],
+    quotes: [],
     sources: 0,
     pages: [],
   };

@@ -12,9 +12,12 @@ type ProbeItem = {
   objection_group_id: string | null;
   entity_kind: string | null;
   entity_id: string | null;
+  quote: string;
 };
 export type ProbeAnswer = {
   taskId: string;
+  auditId: string;
+  prompt: string;
   engine: Engine;
   question: ProbeQuestion;
   items: ProbeItem[];
@@ -50,7 +53,10 @@ export async function probeAnswers(
 ): Promise<ProbeAnswer[]> {
   if (!auditIds.length) return [];
   const [tasks, items] = await Promise.all([
-    answeredProbeTasks(db, scope, auditIds).select('t.logical_engine').orderBy('t.id').execute(),
+    answeredProbeTasks(db, scope, auditIds)
+      .select(['t.logical_engine', 't.audit_id', 'p.text'])
+      .orderBy('t.id')
+      .execute(),
     db
       .selectFrom('probe_answer_items')
       .select([
@@ -61,6 +67,7 @@ export async function probeAnswers(
         'objection_group_id',
         'entity_kind',
         'entity_id',
+        'quote',
       ])
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
@@ -71,7 +78,16 @@ export async function probeAnswers(
   return withQuestion(tasks).flatMap((task) => {
     const engine = engineOf(task.logical_engine);
     return engine
-      ? [{ taskId: task.id, engine, question: task.question, items: byTask.get(task.id) ?? [] }]
+      ? [
+          {
+            taskId: task.id,
+            auditId: task.audit_id,
+            prompt: task.text,
+            engine,
+            question: task.question,
+            items: byTask.get(task.id) ?? [],
+          },
+        ]
       : [];
   });
 }
