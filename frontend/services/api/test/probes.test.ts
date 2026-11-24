@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { sql } from 'kysely';
+import { z } from 'zod';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { readAgentContext } from '../src/agent/context-adapter.ts';
@@ -356,11 +357,25 @@ describe('probe labelling and reads', () => {
     ]);
   });
 
-  it('labels a probe once, scores Market and Objections, then maps the next probe onto the same groups', async () => {
+  it('labels a probe once, asking its questions together, scores Market and Objections, then maps the next probe onto the same groups', async () => {
     const { t, themeId, rivalId } = await probeTenant();
     const [firstId] = await launch(t);
     await answered(t, firstId);
-    await label(t, labeller(first));
+    const themeAsked = Promise.withResolvers<void>();
+    await label(
+      t,
+      labeller(first, async (sent) => {
+        if (sent.includes('best known for')) themeAsked.resolve();
+        else if (sent.includes('known for?')) await themeAsked.promise;
+      }),
+    );
+    const { usage } = await db
+      .selectFrom('probe_labellings')
+      .select('usage')
+      .where('launch_id', '=', await launchOf(firstId))
+      .executeTakeFirstOrThrow();
+    const timed = z.object({ calls: z.array(z.object({ latency_ms: z.number() })) });
+    expect(timed.parse(usage).calls).toHaveLength(3);
     const market = await probeMarket(db, t);
     if (market.state !== 'value') throw new Error('expected a labelled probe');
     expect(market.known_for.map(({ theme, score }) => [theme, score])).toEqual([

@@ -29,6 +29,7 @@
   "max_new_groups_per_probe": 12,
   "group_name_max_chars": 120,
   "max_attempts": 2,
+  "label_concurrency": 4,
   "task_max_attempts": 3,
   "history_probes": 6,
   "max_sources_per_group": 10,

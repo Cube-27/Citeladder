@@ -27,6 +27,7 @@ const schema = z.strictObject({
   max_new_groups_per_probe: positive,
   group_name_max_chars: positive,
   max_attempts: positive,
+  label_concurrency: positive,
   task_max_attempts: positive,
   history_probes: positive,
   max_sources_per_group: positive,

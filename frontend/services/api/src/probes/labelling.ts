@@ -109,74 +109,102 @@ type Labels = {
   themes: (ReturnType<typeof mapThemeBrands>[number] & { themeId: string })[];
 };
 
+async function runJobs(jobs: readonly (() => Promise<void>)[]) {
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(probes.label_concurrency, jobs.length) }, async () => {
+      while (next < jobs.length) await jobs[next++]!(); // NOSONAR
+    }),
+  );
+}
+
 async function label(db: Database, gateway: ModelGateway, scope: Scope, launch: Launch) {
   const { brand, tracked: roster } = probeRoster(launch.configuration);
   const [themes, groups] = await Promise.all([listThemes(db, scope), listGroups(db, scope)]);
-  const calls: ModelCall[] = [];
   const max = probes.max_items_per_answer;
-  const labels: Labels = { known: [], objections: { items: [], newGroups: [] }, themes: [] };
-  for (const run of Map.groupBy(launch.answers, (answer) => answer.auditId).values()) {
+  const runs = [...Map.groupBy(launch.answers, (answer) => answer.auditId).values()].map((run) => {
     const of = (question: string): LabelAnswer[] =>
       run.filter((answer) => answer.question.question === question);
-    const known = of('known_for');
-    const objections = of('objection');
-    if (known.length) {
-      const request = {
-        user: knownForRequest(probes, {
-          brand,
-          fallback: policy.perception.project_themes.fallback,
-          themes,
-          answers: known,
-        }),
-        schema: covering(knownForOutput, known.length),
-      };
-      const accept = (value: z.infer<typeof knownForOutput>) =>
-        mapKnownFor(value, known, { themes, maxItems: max });
-      labels.known.push(...(await ask(gateway, calls, request, accept))); // NOSONAR
-    }
-    if (objections.length) {
-      const named = labels.objections.newGroups;
+    return { known: of('known_for'), objections: of('objection') };
+  });
+  const questions = [
+    ...Map.groupBy(
+      launch.answers.filter((answer) => answer.question.question === 'theme'),
+      (answer) => answer.questionText,
+    ),
+  ].flatMap(([question, answers]) => {
+    const asked = answers[0]?.question;
+    return asked?.question === 'theme' && themes.some((theme) => theme.id === asked.theme_id)
+      ? [{ question, answers, themeId: asked.theme_id }]
+      : [];
+  });
+  const slots = () => [] as ModelCall[];
+  const knownCalls = runs.map(slots);
+  const objectionCalls = runs.map(slots);
+  const themeCalls = questions.map(slots);
+  const known: Labels['known'][] = runs.map(() => []);
+  const themed: Labels['themes'][] = questions.map(() => []);
+  let objections: Labels['objections'] = { items: [], newGroups: [] };
+  const objectionChain = async () => {
+    for (const [index, run] of runs.entries()) {
+      if (!run.objections.length) continue;
+      const named = objections.newGroups;
       const request = {
         user: objectionRequest(probes, {
           brand,
           groups: [...groups, ...named.map((name) => ({ name }))],
-          answers: objections,
+          answers: run.objections,
         }),
-        schema: covering(objectionOutput, objections.length),
+        schema: covering(objectionOutput, run.objections.length),
       };
       const accept = (value: z.infer<typeof objectionOutput>) =>
-        mapObjections(value, objections, {
+        mapObjections(value, run.objections, {
           groups,
           named,
           maxItems: max,
           maxNewGroups: probes.max_new_groups_per_probe,
           nameMaxChars: probes.group_name_max_chars,
         });
-      const mapped = await ask(gateway, calls, request, accept); // NOSONAR
-      labels.objections = {
-        items: [...labels.objections.items, ...mapped.items],
-        newGroups: mapped.newGroups,
-      };
+      const mapped = await ask(gateway, objectionCalls[index]!, request, accept); // NOSONAR
+      objections = { items: [...objections.items, ...mapped.items], newGroups: mapped.newGroups };
     }
-  }
-  const byQuestion = Map.groupBy(
-    launch.answers.filter((answer) => answer.question.question === 'theme'),
-    (answer) => answer.questionText,
+  };
+  const knownJobs = runs.flatMap((run, index) =>
+    run.known.length
+      ? [
+          async () => {
+            const request = {
+              user: knownForRequest(probes, {
+                brand,
+                fallback: policy.perception.project_themes.fallback,
+                themes,
+                answers: run.known,
+              }),
+              schema: covering(knownForOutput, run.known.length),
+            };
+            const accept = (value: z.infer<typeof knownForOutput>) =>
+              mapKnownFor(value, run.known, { themes, maxItems: max });
+            known[index] = await ask(gateway, knownCalls[index]!, request, accept);
+          },
+        ]
+      : [],
   );
-  for (const [question, answers] of byQuestion) {
-    const [sample] = answers;
-    const asked = sample?.question;
-    if (asked?.question !== 'theme' || !themes.some((theme) => theme.id === asked.theme_id))
-      continue;
+  const themeJobs = questions.map(({ question, answers, themeId }, index) => async () => {
     const request = {
       user: themeRequest(probes, { question, answers }),
       schema: covering(themeOutput, answers.length),
     };
     const accept = (value: z.infer<typeof themeOutput>) =>
       mapThemeBrands(value, answers, { tracked: roster, maxItems: max });
-    const mapped = await ask(gateway, calls, request, accept); // NOSONAR
-    labels.themes.push(...mapped.map((item) => ({ ...item, themeId: asked.theme_id })));
-  }
+    const mapped = await ask(gateway, themeCalls[index]!, request, accept);
+    themed[index] = mapped.map((item) => ({ ...item, themeId }));
+  });
+  await runJobs([objectionChain, ...knownJobs, ...themeJobs]);
+  const labels: Labels = { known: known.flat(), objections, themes: themed.flat() };
+  const calls = [
+    ...runs.flatMap((_, index) => [...knownCalls[index]!, ...objectionCalls[index]!]),
+    ...themeCalls.flat(),
+  ];
   return { labels, calls };
 }
 
@@ -264,7 +292,11 @@ function persist(scope: Scope, launch: Launch, outcome: Outcome, calls: ModelCal
         outcome_reason: outcome.outcome === 'unavailable' ? outcome.reason : null,
         model_provider: calls[0]?.provider ?? null,
         model: calls[0]?.model ?? null,
-        usage: calls.length ? JSON.stringify({ calls: calls.map((call) => call.usage) }) : null,
+        usage: calls.length
+          ? JSON.stringify({
+              calls: calls.map((call) => ({ ...call.usage, latency_ms: call.latencyMs })),
+            })
+          : null,
         created_at: at,
       })
       .onConflict((conflict) => conflict.column('launch_id').doNothing())
