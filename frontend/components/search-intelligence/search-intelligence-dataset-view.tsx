@@ -26,7 +26,11 @@ import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { TABLE_SEARCH_DEBOUNCE_MS } from '@/lib/config/operational';
 import { useDebounced } from '@/lib/use-debounced';
 import { evidenceFields, searchNumber } from './search-intelligence-format';
-import { SEARCH_COLUMNS_BY_KIND } from '@/lib/config/search-intelligence';
+import {
+  defaultRowOrder,
+  SEARCH_COLUMNS_BY_KIND,
+  type SearchRowOrder,
+} from '@/lib/config/search-intelligence';
 import { visibilityRunSourcesHref } from '@/lib/visibility/use-visibility-dashboard';
 import { SearchIntelligenceExport } from './search-intelligence-export';
 import type { KeywordFilterValues } from './search-intelligence-collection-state';
@@ -51,10 +55,8 @@ export function SearchIntelligenceDatasetView({
   const [selected, setSelected] = useState<SearchIntelligenceRow | null>(null);
   const [filter, setFilter] = useState('');
   const search = useDebounced(filter, TABLE_SEARCH_DEBOUNCE_MS);
-  const [order, setOrder] = useState<{ sort: string; direction: 'asc' | 'desc' }>({
-    sort: 'id',
-    direction: 'asc',
-  });
+  const [chosen, setOrder] = useState<SearchRowOrder | null>(null);
+  const order = chosen ?? defaultRowOrder(dataset.dataset_kind);
   const minVolume = keywordFilters?.minVolume ?? '';
   const filters = {
     ...order,

@@ -320,6 +320,10 @@ it('uses shared pagination and resets its cursor when sorting or changing rows p
 
   expect(await screen.findByText('First keyword')).toBeInTheDocument();
   expect(requests[0]?.get('limit')).toBe('10');
+  expect([requests[0]?.get('sort'), requests[0]?.get('direction')]).toEqual([
+    'search_volume',
+    'desc',
+  ]);
   expect(
     screen.getByText(
       (_, node) =>
