@@ -76,7 +76,7 @@ export function SearchIntelligenceCompetitors({
             }
       }
     >
-      {rows.map(({ competitor, footprint, backlinks, comparisons, fetched }) => {
+      {rows.map(({ competitor, footprint, backlinks, comparisons }) => {
         const identity = (
           <TableCell>
             <Inline as="span">
@@ -90,17 +90,6 @@ export function SearchIntelligenceCompetitors({
           </TableCell>
         );
         if (noneFetched) return <TableRow key={competitor.identity}>{identity}</TableRow>;
-        if (!fetched)
-          return (
-            <TableRow key={competitor.identity}>
-              {identity}
-              {FIGURE_KEYS.map((key) => (
-                <TableCell numeric key={key}>
-                  <SearchValue value={null} fetched={false} />
-                </TableCell>
-              ))}
-            </TableRow>
-          );
         return (
           <TableRow key={competitor.identity}>
             {identity}
@@ -154,5 +143,3 @@ const COMPETITOR_COLUMNS: readonly DataTableColumn[] = [
   { key: 'missing', label: 'Missing keywords', kind: 'number' },
   { key: 'shared', label: 'Shared keywords', kind: 'number' },
 ];
-
-const FIGURE_KEYS = COMPETITOR_COLUMNS.slice(1).map((column) => column.key);

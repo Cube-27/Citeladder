@@ -31,7 +31,8 @@ export function ScoreGauge({
   label,
   score,
   absent,
-}: Readonly<{ label: string; score: number | null; absent?: string }>) {
+  caveat,
+}: Readonly<{ label: string; score: number | null; absent?: string; caveat?: string | null }>) {
   const shown = score === null ? null : clampScore(score);
   const band = shown === null ? null : BAND[scoreBand(shown)];
   return (
@@ -68,7 +69,10 @@ export function ScoreGauge({
         )}
       </svg>
       {band ? (
-        <StatusMark tone={band.tone}>{band.label}</StatusMark>
+        <span className="flex flex-wrap items-center justify-center gap-2">
+          <StatusMark tone={band.tone}>{band.label}</StatusMark>
+          {caveat ? <span className="text-caption text-ink-2">{caveat}</span> : null}
+        </span>
       ) : absent ? (
         <Absence state="unavailable" label={absent} />
       ) : (

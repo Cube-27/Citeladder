@@ -74,6 +74,27 @@ Owners: [Workspace access](../workspace-access.md), [MCP](../mcp.md),
 
 The cloud cleanup shipped with tier 1. The rest waits for launch:
 
+- From the 2026-11-24 code review, not yet fixed:
+  - A tracked page's URL kind is the one recorded in the crawl that added it
+    (`planner.ts` seeds later observations with an empty kind and
+    `known-urls.ts` skips those), so the headline weighting uses stale kinds and
+    loses them after 20 crawls. Seed the admission kind and prefer the crawl's
+    own `declared_kind`.
+  - `latestKinds` in `known-urls.ts` reads every observation of up to 21 lineage
+    crawls under the snapshot and crawl locks; compute the known-URL counts once
+    per crawl and store them.
+  - Owner decision: say on the score card that the headline is weighted by share
+    of known URLs while its rows are plain averages.
+  - Agent tool descriptions still promise a `citeladder://` id on rows whose
+    `record_uri` the Agent view hides (`read_search_dataset`,
+    `read_query_evidence`, `read_prompt_portfolio`).
+  - `perception-objections.test.tsx` uses per-test timeouts and
+    `probe-dialog.test.tsx` spies on the API client; move both to MSW.
+  - Simplifications: one helper for "cancel then finalize" an audit, one bounded
+    worker pool for labelling and the source inspector, score strata computed
+    once per fold, `AuditWorker.runOnce` (tests only), the html/content split in
+    rule applicability, and the Agent adapter building the model view twice.
+
 - Measured workspace-wide Demand refresh rate and aggregate limits;
   one-refresh-per-project only partly addresses that risk.
 - Recovery objectives, backup and deletion protections, and a verified isolated

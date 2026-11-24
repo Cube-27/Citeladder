@@ -17,6 +17,7 @@ import { aiTrafficQueries } from '@/lib/api/ai-traffic';
 import { searchIntelligenceQueries } from '@/lib/api/search-intelligence';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { agentViewHref } from '@/lib/agent/view-links';
+import { defaultRowOrder, type SearchRowOrder } from '@/lib/config/search-intelligence';
 
 type Scope = Readonly<{ workspaceId: string; projectId: string }>;
 type ViewOf<Kind extends AgentView['kind']> = Extract<AgentView, { kind: Kind }>;
@@ -69,17 +70,24 @@ export function KeywordRowsView({
   scope,
   view,
 }: Readonly<{ scope: Scope; view: ViewOf<'keyword_research_rows'> }>) {
-  const [order, setOrder] = useState<{ sort: string; direction: 'asc' | 'desc' }>({
-    sort: 'id',
-    direction: 'asc',
-  });
-  const query = useQuery(
+  const [chosen, setChosen] = useState<SearchRowOrder | null>(null);
+  const dataset = useQuery(
     searchIntelligenceQueries.datasetRows(scope, view.dataset_id, {
+      sort: 'id',
+      direction: 'asc',
+      limit: 1,
+    }),
+  );
+  const kind = dataset.data?.dataset.dataset_kind ?? null;
+  const order = chosen ?? defaultRowOrder(kind ?? '');
+  const rows = useQuery({
+    ...searchIntelligenceQueries.datasetRows(scope, view.dataset_id, {
       ...order,
       limit: KEYWORD_ROWS,
     }),
-  );
-  const kind = query.data?.dataset.dataset_kind ?? null;
+    enabled: kind !== null,
+  });
+  const query = kind === null ? dataset : rows;
   return (
     <ViewFrame title="Keyword research" href={agentViewHref(view, kind)}>
       <ViewRead query={query} subject="the saved rows" shape={{ kind: 'table' }}>
@@ -90,7 +98,7 @@ export function KeywordRowsView({
               kind: page.dataset.dataset_kind,
               order,
               onSort: (sort) =>
-                setOrder({
+                setChosen({
                   sort,
                   direction: order.sort === sort && order.direction === 'asc' ? 'desc' : 'asc',
                 }),

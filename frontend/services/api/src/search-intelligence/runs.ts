@@ -47,9 +47,9 @@ async function assertConfirmable(trx: Database, scope: Scope, run: LockedRun, no
   if (run.status !== RUN_REVIEWED)
     throw conflict(asApiErrorCode('review_not_confirmable'), 'Review is no longer confirmable');
   if (run.expires_at <= now)
-    throw conflict(asApiErrorCode('review_expired'), 'Review expired; create a new cost review');
+    throw conflict(asApiErrorCode('review_expired'), 'Review expired; review the analysis again');
   if (run.pricing_version !== si.price_version)
-    throw conflict(asApiErrorCode('pricing_changed'), 'Pricing changed; create a new cost review');
+    throw conflict(asApiErrorCode('pricing_changed'), 'Pricing changed; review the analysis again');
   if (!(await runConnection(trx, run)))
     throw conflict(
       asApiErrorCode('connection_changed'),

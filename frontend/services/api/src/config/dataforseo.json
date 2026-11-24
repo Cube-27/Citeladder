@@ -407,7 +407,6 @@
       }
     },
     "keyword_max_chars": 2000,
-    "priority": 2,
     "id_list_path": "/v3/ai_optimization/id_list",
     "reconcile_max_pages": 10,
     "products": {

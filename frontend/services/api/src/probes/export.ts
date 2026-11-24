@@ -23,7 +23,10 @@ const PAGE_COLUMNS = [
 ] as const;
 
 export const THEME_EXPORT_COLUMNS = ['theme', ...PAGE_COLUMNS] as const;
-export const OBJECTION_EXPORT_COLUMNS = ['objection', ...PAGE_COLUMNS] as const;
+export const OBJECTION_EXPORT_COLUMNS = [
+  'objection',
+  ...PAGE_COLUMNS.filter((column) => column !== 'mentions_you'),
+] as const;
 
 type PageRow = Record<(typeof PAGE_COLUMNS)[number], string | number>;
 

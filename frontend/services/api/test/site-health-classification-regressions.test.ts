@@ -31,6 +31,19 @@ const grid = (prefix: string, wrapper = '') =>
   ).join('')}</div>`;
 
 describe('page-purpose regression boundaries', () => {
+  it.each([null, 'product'])(
+    'leaves product checks unknown on a script-only shell whose purpose only the URL or sitemap (%s) suggests',
+    (sitemapKind) => {
+      const { rules } = inspect(
+        `<!doctype html><html><head><title>Widget</title></head><body><script>(()=>{${'window.__app=window.__app||{};'.repeat(30)}})();</script><app-root></app-root><script src='main.js' type='module'></script></body></html>`,
+        '/products/widget-story',
+        sitemapKind,
+      );
+      expect(rules.get('technical.h1_present')!.reason_code).toBe('client_rendering_required');
+      expect(rules.get('aeo.product_answer_facts')!.evidence.reason).toBe('page_kind_unconfirmed');
+    },
+  );
+
   it('reads a lone keyword only as the whole page name', () => {
     const kind = (title: string, path: string) =>
       inspect(

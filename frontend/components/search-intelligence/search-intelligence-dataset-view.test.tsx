@@ -184,7 +184,7 @@ it.each([
   },
 );
 
-it('rounds estimated traffic and shows difficulty in the table with no row drawer', async () => {
+it('rounds estimated traffic and shows difficulty in the table', async () => {
   const result = {
     ...row('33333333-3333-4333-8333-333333333333', 'Family outfits'),
     etv: '7.55999994',
@@ -207,7 +207,6 @@ it('rounds estimated traffic and shows difficulty in the table with no row drawe
   expect(screen.getByRole('cell', { name: '3,600' })).toBeInTheDocument();
   const outfits = screen.getByRole('row', { name: /Family outfits/ });
   expect(within(outfits).getByRole('cell', { name: '24' })).toBeInTheDocument();
-  expect(within(outfits).queryByRole('button')).toBeNull();
 });
 
 it('shows when a backlink was seen and a blocked target in place of a broken flag', async () => {

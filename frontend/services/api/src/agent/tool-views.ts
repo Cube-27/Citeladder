@@ -111,6 +111,7 @@ function perceptionPrompts(data: JsonObject): JsonObject {
 
 function perception(data: JsonObject): JsonObject {
   if (data.view === 'quotes') return mapList(data, 'items', quote);
+  if (data.view === 'objections') return mapList(data, 'groups', fewQuotes);
   if (data.state !== 'available') return data;
   const summary = mapList(mapList(data, 'entities', perceptionEntity), 'themes', fewQuotes);
   return perceptionPrompts({
@@ -152,7 +153,7 @@ const pageOf = (section: JsonObject) => (isObject(section.pagination) ? section.
 const sectionViews: Record<string, View> = {
   prompts: (section) => ({
     ...pick(section, ['state', 'topics_truncated']),
-    prompt_count: objects(section.items).length,
+    ...(pageOf(section).has_more === true ? {} : { prompt_count: objects(section.items).length }),
     more_prompts: pageOf(section).has_more === true || objects(section.items).length > top,
     topic_count: objects(section.topics).length,
     top_prompts: objects(section.items)

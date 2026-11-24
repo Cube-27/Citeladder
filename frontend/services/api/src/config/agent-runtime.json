@@ -34,6 +34,7 @@
       "source_snapshot_ids",
       "source_artifact_ids",
       "source_artifact_id",
+      "artifact_ids",
       "supporting_artifact_ids",
       "source_evaluation_ids",
       "source_metric_row_ids",
