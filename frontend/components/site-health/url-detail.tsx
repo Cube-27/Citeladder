@@ -16,7 +16,7 @@ import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-qu
 import type { PageDetail } from '@citeladder/contracts';
 import { isNotFound } from '@/lib/api/errors';
 import { serverMessage } from '@/lib/api/mutation-notice';
-import { budgetLeft, budgetUsedUp } from '@/lib/site-health/crawl-budget';
+import { useCrawlBudget } from '@/lib/site-health/crawl-budget';
 import { RERUN_MAX_PRE_ACTIVE_POLLS, RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
@@ -60,12 +60,7 @@ export function UrlDetail({
   });
   const rerun = useMutation(siteHealthMutations.rerunPage(workspaceId));
   const canRun = useWorkspaceCapability('run');
-  const budgets = useQuery({
-    ...siteHealthQueries.crawlBudgets({ workspaceId, projectId }),
-    enabled: canRun,
-  });
-  const pageCrawls = budgets.data?.page_crawls;
-  const usedUp = budgetUsedUp(pageCrawls, 'single-page crawls');
+  const { usedUp, left } = useCrawlBudget({ workspaceId, projectId }, 'page_crawls', canRun);
   const startRerun = () =>
     rerun.mutate(
       { crawlId, siteUrlId },
@@ -110,7 +105,7 @@ export function UrlDetail({
           ? {
               busy: rerun.isPending,
               usedUp: usedUp !== null,
-              left: pageCrawls ? budgetLeft(pageCrawls, 'single-page crawls') : undefined,
+              left: left ?? undefined,
               onRerun: () => {
                 setRerunError(null);
                 startRerun();

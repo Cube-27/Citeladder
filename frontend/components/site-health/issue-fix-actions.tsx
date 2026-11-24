@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { serverMessage } from '@/lib/api/mutation-notice';
-import { budgetLeft, budgetUsedUp } from '@/lib/site-health/crawl-budget';
+import { useCrawlBudget } from '@/lib/site-health/crawl-budget';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount, pluralCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-scope';
@@ -38,7 +38,7 @@ export function IssueFixActions({
   const canWrite = useWorkspaceCapability('write');
   const canRun = useWorkspaceCapability('run');
   const [notice, setNotice] = useState<Notice | null>(null);
-  const budgets = useQuery({ ...siteHealthQueries.crawlBudgets(scope), enabled: canRun });
+  const pages = useCrawlBudget(scope, 'page_crawls', canRun);
   if (query.isError && !query.data)
     return (
       <Notice
@@ -52,10 +52,7 @@ export function IssueFixActions({
   if (!progress) return null;
   const awaiting = progress.fixed_url_count - progress.verified_url_count;
   const rerunCount = progress.rerun_url_count;
-  const pageCrawls = budgets.data?.page_crawls;
-  const usedUp = rerunCount === null ? null : budgetUsedUp(pageCrawls, 'single-page crawls');
-  const left =
-    rerunCount !== null && pageCrawls ? budgetLeft(pageCrawls, 'single-page crawls') : '';
+  const note = rerunNote(rerunCount, pages);
   return (
     <Stack gap="tight" className="min-w-0">
       <Inline className="flex-wrap">
@@ -82,15 +79,11 @@ export function IssueFixActions({
             crawlId={crawlId}
             groupId={groupId}
             onNotice={setNotice}
-            none={rerunCount === 0 || usedUp !== null}
+            none={rerunCount === 0 || note.usedUp}
           />
         ) : null}
       </Inline>
-      {canRun || rerunCount === null ? (
-        <span className="type-caption">
-          {usedUp ?? [rerunCaption(rerunCount), left].filter(Boolean).join(' ')}
-        </span>
-      ) : null}
+      {canRun || rerunCount === null ? <span className="type-caption">{note.caption}</span> : null}
       {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
     </Stack>
   );
@@ -149,6 +142,18 @@ function RerunAllButton({
       {rerun.isPending ? 'Re-running…' : 'Re-run all'}
     </Button>
   );
+}
+
+function rerunNote(
+  count: number | null,
+  pages: Readonly<{ usedUp: string | null; left: string | null }>,
+) {
+  if (count === null || !pages.usedUp)
+    return {
+      usedUp: false,
+      caption: [rerunCaption(count), count === null ? null : pages.left].filter(Boolean).join(' '),
+    };
+  return { usedUp: true, caption: pages.usedUp };
 }
 
 function rerunCaption(count: number | null): string {

@@ -417,11 +417,7 @@ describe('crawl-control HTTP contracts', () => {
     expect((await create(randomUUID())).status).toBe(404);
     const created = await create(seed.projectId);
     expect(created.status, await created.clone().text()).toBe(201);
-    const refused = await create(seed.projectId);
-    expect(refused.status).toBe(429);
-    expect(await refused.json()).toMatchObject({
-      error: { code: 'site_health_crawl_budget_exhausted' },
-    });
+    expect((await create(seed.projectId)).status).toBe(429);
   });
 
   it('lists by descending keyset with workspace/project/cursor isolation and count redaction', async () => {

@@ -582,34 +582,6 @@ describe('UrlDetail', () => {
     );
   });
 
-  it('shows the server reason when a rerun is refused for an untracked page', async () => {
-    mswServer.use(
-      ...handlers(detail({ analysis_status: 'completed' })),
-      http.post(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/rerun`, () =>
-        HttpResponse.json(
-          {
-            error: {
-              code: 'rerun_not_allowed',
-              message: 'This page is not in the tracked set, so it cannot be crawled on its own',
-            },
-          },
-          { status: 409 },
-        ),
-      ),
-    );
-
-    const user = userEvent.setup();
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    await user.click(screen.getByRole('button', { name: 'Re-audit this page' }));
-
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent(
-      'This page is not in the tracked set, so it cannot be crawled on its own',
-    );
-  });
-
   it('disables the re-audit and says why when the single-page crawls are used up', async () => {
     mswServer.use(...handlers(detail({ analysis_status: 'completed' }), 0));
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);

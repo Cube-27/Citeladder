@@ -427,3 +427,18 @@ export async function createPageRerunCrawl(
   );
   return crawl;
 }
+
+export async function mergeCrawlConfiguration(
+  db: Database,
+  crawl: Pick<Crawl, 'id' | 'workspace_id'>,
+  patch: Record<string, string>,
+) {
+  await db
+    .updateTable('site_crawls')
+    .set({
+      configuration: sql`coalesce(configuration, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb`,
+    })
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('id', '=', crawl.id)
+    .execute();
+}

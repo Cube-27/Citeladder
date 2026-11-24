@@ -1,4 +1,3 @@
-import { sql } from 'kysely';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { budget, budgetUse, giveBackUse, spendBudget } from '../abuse/usage.ts';
 import type { SettingSource } from '../config/settings.ts';
@@ -6,6 +5,7 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import { LIFECYCLE_KINDS } from './crawl-assessment.ts';
+import { mergeCrawlConfiguration } from './planner.ts';
 import type { Crawl } from './site-task.ts';
 
 const startBudgets = {
@@ -50,14 +50,7 @@ export async function withCrawlStart<Created extends Pick<Crawl, 'id' | 'workspa
     throw exhausted(start.kind, spent.limit, resetsAt);
   }
   const crawl = await create();
-  await db
-    .updateTable('site_crawls')
-    .set({
-      configuration: sql`coalesce(configuration, '{}'::jsonb) || ${JSON.stringify({ [START_KEY]: start.kind })}::jsonb`,
-    })
-    .where('workspace_id', '=', crawl.workspace_id)
-    .where('id', '=', crawl.id)
-    .execute();
+  await mergeCrawlConfiguration(db, crawl, { [START_KEY]: start.kind });
   return crawl;
 }
 
@@ -67,16 +60,16 @@ export async function giveBackUnfetchedStart(
 ) {
   const kind = record(crawl.configuration)[START_KEY];
   if (!isStartKind(kind)) return;
-  const fetched = await db
+  const tasks = await db
     .selectFrom('site_crawl_tasks')
-    .select('id')
+    .select('status')
     .where('workspace_id', '=', crawl.workspace_id)
     .where('crawl_id', '=', crawl.id)
     .where('task_kind', 'in', LIFECYCLE_KINDS)
-    .where('status', '<>', 'queued')
-    .limit(1)
-    .executeTakeFirst();
-  if (fetched) return;
+    .orderBy('id')
+    .forUpdate()
+    .execute();
+  if (tasks.some((task) => task.status !== 'queued')) return;
   await giveBackUse(db, startBudget(kind, process.env), crawl.workspace_id, crawl.created_at);
 }
 
