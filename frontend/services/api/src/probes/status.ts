@@ -20,15 +20,22 @@ async function aiCreditBalance(db: Database, workspaceId: string, at: Date) {
   return [...balances.values()].reduce((sum, balance) => sum + balance.remaining, 0);
 }
 
-async function probeQuote(db: Database, scope: Scope, runtime: AuditRuntime): Promise<ProbeQuote> {
+type QuoteInput = { runtime: AuditRuntime; engines?: readonly string[] };
+
+async function probeQuote(
+  db: Database,
+  scope: Scope,
+  { runtime, engines }: QuoteInput,
+): Promise<ProbeQuote> {
   const at = new Date();
   const [plan, balance] = await Promise.all([
-    probePlan(db, scope, { runtime, at }),
+    probePlan(db, scope, { runtime, at, engines }),
     aiCreditBalance(db, scope.workspaceId, at),
   ]);
   return {
     credential_mode: plan.funded ? 'funded' : 'byok',
     engines: plan.engines,
+    available_engines: plan.available,
     blocked: blockedBy(plan),
     markets: plan.runs.map((run) => run.market),
     questions: plan.questions,
@@ -66,7 +73,11 @@ export async function probeStatus(
   db: Database,
   scope: Scope,
   runtime: AuditRuntime,
+  engines?: readonly string[],
 ): Promise<ProbeStatus> {
-  const [quote, runs] = await Promise.all([probeQuote(db, scope, runtime), probeRuns(db, scope)]);
+  const [quote, runs] = await Promise.all([
+    probeQuote(db, scope, { runtime, engines }),
+    probeRuns(db, scope),
+  ]);
   return { quote, ...runs };
 }

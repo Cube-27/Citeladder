@@ -7,7 +7,7 @@ import { countMeter, WorkProgress } from '@/components/ui/work-progress';
 
 const STOP_REASONS: Readonly<Record<string, string>> = {
   cost_ceiling_reached:
-    'The next request could have cost more than the estimate you confirmed, so it was not sent.',
+    'The next request could have gone over the estimate you confirmed, so it was not sent.',
   cost_ceiling_exceeded:
     'DataForSEO charged more than the estimate, so the remaining requests stopped.',
   auth_failure: 'DataForSEO refused the saved credential. Update it in provider settings.',
@@ -18,7 +18,7 @@ const STOP_REASONS: Readonly<Record<string, string>> = {
   provider_result_missing:
     'A request was sent but its result never arrived. It may have been charged; it is never resent automatically.',
   provider_cost_unavailable:
-    'DataForSEO did not report what a request cost, so the analysis stopped.',
+    'DataForSEO did not report the charge for a request, so the analysis stopped.',
   provider_scope_violation:
     'DataForSEO returned results outside the reviewed website, so they were not saved.',
   acquisition_queue_terminal: 'The analysis stopped before every request finished.',

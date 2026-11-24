@@ -375,33 +375,7 @@ describe('LaunchDialog fixed prompt selection', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT API' }));
     expect(await screen.findByText('14 responses planned')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Maximum wall-clock budget 900s · cost complete · ~\$0\.1234/),
-    ).toBeInTheDocument();
-  });
-
-  it('marks the cost unavailable rather than printing a fabricated zero', async () => {
-    stubApis({
-      ...ESTIMATE,
-      execution_count: 1,
-      cost_status: 'unpriced',
-      estimated_total_cost_microusd: null,
-    });
-
-    renderWithProviders(
-      <RoutedLaunchDialog
-        open
-        onOpenChange={() => undefined}
-        projectId={PROJECT_ID}
-        fixedPromptIds={PROMPT_IDS}
-        auditScope="commerce"
-      />,
-    );
-
-    fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT API' }));
-    expect(await screen.findByText('1 response planned')).toBeInTheDocument();
-    expect(screen.getByText(/cost unpriced · unavailable/)).toBeInTheDocument();
-    expect(screen.queryByText(/\$0\.0000/)).not.toBeInTheDocument();
+    expect(screen.getByText('Maximum wall-clock budget 900s')).toBeInTheDocument();
   });
 
   it('locks the field and shows the selection the prompt_ids payload uses', async () => {

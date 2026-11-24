@@ -101,7 +101,7 @@ function renderPage(data: SearchIntelligenceReadiness, role: TestRole = 'owner')
 it('lets a viewer read an analysis in progress without offering to start or cancel one', async () => {
   renderPage({ ...readiness, latest_run: run }, 'viewer');
   expect(await screen.findByText(/1 of 4 requests complete/)).toBeInTheDocument();
-  for (const name of ['Cost details', 'Cancel', 'Review first analysis', 'New analysis', 'Refresh'])
+  for (const name of ['Cancel', 'Review first analysis', 'New analysis', 'Refresh'])
     expect(screen.queryByRole('button', { name })).toBeNull();
 });
 
@@ -113,7 +113,7 @@ it('offers the first analysis from the empty overview', async () => {
     }),
   ).toBeInTheDocument();
   await userEvent.click(screen.getAllByRole('button', { name: 'Review first analysis' })[0]!);
-  expect(await screen.findByRole('dialog', { name: 'Review analysis cost' })).toBeInTheDocument();
+  expect(await screen.findByRole('dialog', { name: 'Review analysis' })).toBeInTheDocument();
 });
 
 function dataset(
@@ -274,5 +274,5 @@ it('offers a stopped analysis its recovery: review and run it again', async () =
   ).toBeVisible();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Review again' }));
-  expect(await screen.findByRole('dialog', { name: 'Review analysis cost' })).toBeInTheDocument();
+  expect(await screen.findByRole('dialog', { name: 'Review analysis' })).toBeInTheDocument();
 });

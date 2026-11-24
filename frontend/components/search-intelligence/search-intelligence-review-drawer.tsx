@@ -138,7 +138,7 @@ export function SearchIntelligenceReviewDrawer({
         }),
       );
     } catch (cause) {
-      failed(cause, 'The cost could not be reviewed.');
+      failed(cause, 'The analysis could not be estimated.');
     }
   };
   const confirmReview = async (runId: string) => {
@@ -162,7 +162,7 @@ export function SearchIntelligenceReviewDrawer({
         onOpenChange(nextOpen);
       }}
       width="split"
-      title={action === 'seed' ? 'Research a keyword' : 'Review analysis cost'}
+      title={action === 'seed' ? 'Research a keyword' : 'Review analysis'}
       footer={
         <ReviewFooter
           review={review}

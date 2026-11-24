@@ -88,7 +88,9 @@ how to add or change an entry.
   2026-09-24 and 2026-10-11 (B0, B2); enablement waits for the owner's
   separate live sign-off ([provider readiness](billing-provider-readiness.md)).
 - **Platform AI is metered in AI credits** (1 credit = $0.001 of usage after a
-  30% markup, at the serving model's token price); customers see only credits.
+  30% markup, at the serving model's token price); customers see only credits:
+  the app names what a run uses as AI credits, never as a cost or a dollar
+  estimate (owner, 2026-11-24).
   The Agent has no customer-model (BYOK) route; BYOK stays for answer-engine and
   research providers. Owner, 2026-10-11 and 2026-10-12 (B4, B8, B12, B19,
   B31, B53); prices and plan sizes are configuration (B55).
@@ -504,7 +506,8 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
   them and add only genuinely new groups; users rename, merge or delete.
 - **AV-29 to AV-35 Probes:** one run asks market and objection questions, three
   times per search-capable engine with a saved key (managed mode uses
-  CiteLadder's); direct questions ask about the project's brand only, theme
+  CiteLadder's), on the engines the user ticks before running (owner,
+  2026-11-24); direct questions ask about the project's brand only, theme
   questions cover competitors; on demand with an optional schedule; charged in
   AI credits shown first; tables lead with the position score (100 when named
   first, minus 10 per later place, 0 when not raised).
@@ -513,5 +516,5 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
   edits, outreach or advice, never acting on its own.
 - **AV-40** A run's answered prompts reach the dashboards even when the run is
   cancelled or an engine fails. An engine whose key is out of credit stops with
-  that error rather than retrying, and probes get no cancel control (owner,
-  2026-11-22).
+  that error rather than retrying (owner, 2026-11-22). A running probe can be
+  cancelled from its progress bar (owner, 2026-11-24).

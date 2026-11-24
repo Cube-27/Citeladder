@@ -115,7 +115,7 @@ export function PerceptionProbe({
   const latest = status.data.latest;
   return (
     <Stack gap="workspace">
-      {latest ? <ProbeProgress run={latest} /> : null}
+      {latest ? <ProbeProgress scope={scope} run={latest} /> : null}
       {read}
     </Stack>
   );

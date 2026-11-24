@@ -295,7 +295,7 @@ export function ReviewFooter({
         pendingLabel="Estimating…"
         onClick={onReview}
       >
-        Review cost
+        Review AI credits
       </Button>
     </Inline>
   );
@@ -333,7 +333,11 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
           segments={[
             { key: 'requests', label: 'Requests', value: formatCount(review.planned_calls) },
             { key: 'results', label: 'Results, at most', value: formatCount(review.planned_rows) },
-            { key: 'cost', label: 'Estimated cost', value: runEstimate(review) },
+            {
+              key: 'estimate',
+              label: review.credential_mode === 'funded' ? 'AI credits' : 'DataForSEO estimate',
+              value: runEstimate(review),
+            },
           ]}
         />
         <p className={textRole('body', 'text-ink-2')}>
@@ -377,7 +381,8 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
       ) : null}
       {review.reused_datasets.length ? (
         <p className="type-body text-ink-2">
-          {pluralCount(review.reused_datasets.length, 'recent result')} will be reused at no cost.
+          {pluralCount(review.reused_datasets.length, 'recent result')} will be reused without AI
+          credits.
         </p>
       ) : null}
     </Stack>
