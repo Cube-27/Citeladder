@@ -14,18 +14,18 @@ const probes = policy.probes;
 
 function groupScores(answers: readonly ProbeAnswer[]) {
   const asked = answers.filter((answer) => answer.question.question === 'objection');
-  return {
-    asked,
-    scores: positionScores(
-      asked.map((answer) =>
-        distinctPlaces(
-          answer.items.flatMap((item) =>
-            item.objection_group_id ? [{ key: item.objection_group_id, rank: item.rank }] : [],
-          ),
-        ),
+  const places = asked.map((answer) =>
+    distinctPlaces(
+      answer.items.flatMap((item) =>
+        item.objection_group_id ? [{ key: item.objection_group_id, rank: item.rank }] : [],
       ),
     ),
-  };
+  );
+  const firsts = new Map<string, number>();
+  for (const answer of places)
+    for (const [group, place] of answer)
+      if (place === 0) firsts.set(group, (firsts.get(group) ?? 0) + 1);
+  return { asked, scores: positionScores(places), firsts };
 }
 
 export async function probeObjections(
@@ -80,6 +80,7 @@ export async function probeObjections(
         : { sources: null, pages: [] }),
     };
   });
+  const firstsOf = (row: { id: string }) => current.firsts.get(row.id) ?? 0;
   const raised = rows.filter((row) => row.engines.length > 0);
   const answering = new Set(current.asked.map((answer) => answer.engine));
   return {
@@ -91,7 +92,12 @@ export async function probeObjections(
     average: raised.length
       ? Math.round(raised.reduce((sum, row) => sum + (row.score ?? 0), 0) / raised.length)
       : null,
-    groups: rows.sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.name.localeCompare(b.name)),
+    groups: rows.sort(
+      (a, b) =>
+        (b.score ?? -1) - (a.score ?? -1) ||
+        firstsOf(b) - firstsOf(a) ||
+        a.name.localeCompare(b.name),
+    ),
   };
 }
 

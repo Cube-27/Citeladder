@@ -346,6 +346,33 @@ describe('probe labelling and reads', () => {
     expect(labellings).toEqual([{ outcome: 'labelled' }, { outcome: 'labelled' }]);
   });
 
+  it('breaks a score tie by how many answers raised the objection first', async () => {
+    const { t } = await probeTenant();
+    const [auditId] = await launch(t);
+    await answered(t, auditId);
+    const reasons = (...groups: string[]) => groups.map((group) => ({ group, quote: '' }));
+    await label(
+      t,
+      labeller({
+        ...first,
+        objection: {
+          answers: [
+            { answer: 1, reasons: reasons('Too expensive', 'Slow delivery') },
+            { answer: 2, reasons: reasons('Slow delivery', 'Fit runs small', 'Too expensive') },
+            { answer: 3, reasons: reasons('Too expensive', 'Slow delivery') },
+          ],
+        },
+      }),
+    );
+    const objections = await probeObjections(db, t);
+    if (objections.state !== 'value') throw new Error('expected a labelled probe');
+    expect(objections.groups.map(({ name, score }) => [name, score])).toEqual([
+      ['Too expensive', 93],
+      ['Slow delivery', 93],
+      ['Fit runs small', 30],
+    ]);
+  });
+
   it('merges and renames groups and themes inside their project only', async () => {
     const owner = await probeTenant();
     const other = await probeTenant();
