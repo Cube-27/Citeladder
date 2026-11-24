@@ -5,6 +5,7 @@ import { record } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
 import type { Crawl } from './site-task.ts';
 import { failedAs } from './task-outcome.ts';
+import { kindPriority } from './url-admission.ts';
 
 export type CoverageSignals = {
   sampleMode: boolean;
@@ -107,9 +108,6 @@ function allowance(value: unknown) {
   return Number.isFinite(limit) && limit >= 0 ? limit : null;
 }
 
-const PRIORITIES = new Map(
-  Object.entries(policy.site_health.crawl.page_kinds).map(([kind, row]) => [kind, row.priority]),
-);
 const EXPECTED_KINDS: readonly string[] = policy.site_health.crawl.coverage_expected_value_kinds;
 
 export async function valueKindCoverage(db: Database, crawl: Crawl): Promise<ValueKindCoverage[]> {
@@ -146,10 +144,7 @@ export async function valueKindCoverage(db: Database, crawl: Crawl): Promise<Val
       found: 0,
       analyzed: 0,
     })),
-  ].toSorted(
-    (a, b) =>
-      (PRIORITIES.get(b.kind) ?? 0) - (PRIORITIES.get(a.kind) ?? 0) || compareText(a.kind, b.kind),
-  );
+  ].toSorted((a, b) => kindPriority(b.kind) - kindPriority(a.kind) || compareText(a.kind, b.kind));
 }
 
 export const expectedTaskFailure = failedAs('site_crawl_tasks', ['excluded', 'not_page', 'gone']);

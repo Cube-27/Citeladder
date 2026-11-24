@@ -15,7 +15,8 @@ const QUERY_EXCLUSIONS = new Set(acquisition.hard_exclusion_query_keys);
 const MAX_URL_CHARS = policy.site_health.page_analysis.facts.limits.url_chars;
 const KINDS = Object.entries(crawl.page_kinds).toSorted(([, a], [, b]) => b.priority - a.priority);
 const PRIORITIES = new Map(KINDS.map(([kind, { priority }]) => [kind, priority]));
-const tier = (kind: string) => PRIORITIES.get(kind) ?? crawl.page_kinds.other.priority;
+export const kindPriority = (kind: string) =>
+  PRIORITIES.get(kind) ?? crawl.page_kinds.other.priority;
 const SCHEME_PREFIX = /^[A-Za-z][A-Za-z0-9+.-]*:/u;
 
 export type Scope = { domain?: string };
@@ -79,10 +80,11 @@ export function listedAdmission(admission: Admission, sitemaps: readonly string[
   const declaredKind =
     admission.valueKind === 'homepage'
       ? null
-      : (sitemaps.flatMap(sourceKind).toSorted((a, b) => tier(b) - tier(a))[0] ?? null);
+      : (sitemaps.flatMap(sourceKind).toSorted((a, b) => kindPriority(b) - kindPriority(a))[0] ??
+        null);
   return {
     admission: declaredKind
-      ? { ...admission, valueKind: declaredKind, priority: tier(declaredKind) }
+      ? { ...admission, valueKind: declaredKind, priority: kindPriority(declaredKind) }
       : admission,
     declaredKind,
   };
@@ -139,7 +141,7 @@ const rejected = (reason: string, url: string | null = null, kind = 'other'): Ad
   hash: '',
   reason,
   valueKind: kind,
-  priority: url ? tier(kind) : 0,
+  priority: url ? kindPriority(kind) : 0,
   disposition: 'analyze',
   dispositionReason: 'html_content',
   itemKind: 'html_page',
@@ -173,7 +175,7 @@ export function classifyUrlAdmission(
     hash: canonical.hash,
     reason: null,
     valueKind: kind,
-    priority: tier(kind),
+    priority: kindPriority(kind),
     disposition: document ? 'inventory_only' : 'analyze',
     dispositionReason: document ? 'document' : 'html_content',
     itemKind: document ? 'document' : 'html_page',
