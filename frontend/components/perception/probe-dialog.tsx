@@ -130,27 +130,33 @@ export function ProbeDialog({
   );
 }
 
+function choiceRequest(picked: readonly LogicalEngine[] | null, repeats: number | null) {
+  return {
+    ...(picked ? { engines: [...picked] } : {}),
+    ...(repeats === null ? {} : { repetitions: repeats }),
+  };
+}
+
 function useProbeChoice(scope: ProjectScope, all: ProbeQuote, open: boolean) {
   const [picked, setPicked] = useState<readonly LogicalEngine[] | null>(null);
   const [repeats, setRepeats] = useState<number | null>(null);
   const chosen = picked ?? all.engines;
   const repetitions = repeats ?? all.repetitions;
   const changed = picked !== null || repeats !== null;
+  const narrowing = changed && chosen.length > 0;
   const narrowed = useQuery({
     ...probeQueries.quote(scope, { engines: chosen, repetitions }),
-    enabled: open && changed && chosen.length > 0,
+    enabled: open && narrowing,
   });
+  const shown = narrowing ? narrowed.data : undefined;
   return {
     available: all.available_engines,
     chosen,
     repetitions,
     maxRepetitions: all.max_repetitions,
-    request: {
-      ...(picked ? { engines: [...picked] } : {}),
-      ...(repeats === null ? {} : { repetitions: repeats }),
-    },
-    quote: changed && chosen.length && narrowed.data ? narrowed.data : all,
-    unsettled: changed && (chosen.length === 0 || narrowed.isFetching || !narrowed.data),
+    request: choiceRequest(picked, repeats),
+    quote: shown ?? all,
+    unsettled: changed && (shown === undefined || narrowed.isFetching),
     toggle: (engine: LogicalEngine, on: boolean) =>
       setPicked(
         all.available_engines.filter((each) => (each === engine ? on : chosen.includes(each))),
