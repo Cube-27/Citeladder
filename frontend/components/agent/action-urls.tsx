@@ -50,7 +50,7 @@ export function ActionUrls({
     else void extra.fetchNextPage();
   };
   return (
-    <Labelled title={`URLs · ${formatCount(first.total)}`}>
+    <Labelled title={`URLs · ${formatCount(first.total)}`} bare>
       <LinkRows
         label="URLs"
         more={

@@ -127,7 +127,7 @@ stopping never strands a preclaimed batch; admitted units finish settlement.
 Worker-owned lease and crawl backstops still run in each lane, including idle
 passes. Runner and tick own background execution. After durable admission, the
 browser starts a separate authorized POST for onboarding discovery,
-Internal Links, audits, Agent turns, integration syncs, Performance range
+Internal Links, audits, Agent turns, page-chat page reads, integration syncs, Performance range
 projections and Commerce competitor discovery. These requests reuse existing
 workers scoped to the admitted work, with bounded admission and provider
 deadlines, so initial progress does not require a new Cloud Run job. Site

@@ -7,7 +7,7 @@ export const AGENT_RUN_POLL_STEPS: readonly { untilMs: number; everyMs: number }
   { untilMs: 120_000, everyMs: 5_000 },
 ];
 export const AGENT_RUN_POLL_MAX_MS = 10_000;
-export const AGENT_PAGE_FETCH_POLL_MS = 2_000;
+export const AGENT_PAGE_FETCH_POLL_MS = 1_000;
 export const AGENT_CHAT_LIST_POLL_MS = 5_000;
 export const AGENT_STREAM_IDLE_MS = 30_000;
 export const AGENT_RUN_RETRY = { defaultDelayMs: 15_000, maxAttempts: 8 } as const;

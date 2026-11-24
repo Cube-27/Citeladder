@@ -15,8 +15,9 @@ import {
 } from '@/lib/api/agent';
 import { useMediaQuery } from '@/lib/use-media-query';
 
-export type RailTab = 'suggestions' | 'outline' | 'seo';
-export type StackTab = 'page' | RailTab | 'chat';
+export const RAIL_TABS = ['suggestions', 'chat', 'outline', 'seo'] as const;
+export type RailTab = (typeof RAIL_TABS)[number];
+export type StackTab = 'page' | RailTab;
 
 const NARROW_QUERY = '(max-width: 1023px)';
 
@@ -116,27 +117,27 @@ export function usePageText(detail: AgentChatDetail, revision: AgentRevision, dr
   };
 }
 
-export function useWorkspaceTabs() {
+export type WorkspaceTabs = ReturnType<typeof useWorkspaceTabs>;
+
+export function useWorkspaceTabs(initial: RailTab) {
   const narrow = useMediaQuery(NARROW_QUERY);
-  const [stackTab, setStackTab] = useState<StackTab>('page');
-  const [railTab, setRailTab] = useState<RailTab>('suggestions');
+  const [onPage, setOnPage] = useState(true);
+  const [railTab, setRailTab] = useState<RailTab>(initial);
+  const stackTab: StackTab = onPage ? 'page' : railTab;
+  const show = (tab: RailTab) => {
+    setRailTab(tab);
+    setOnPage(false);
+  };
   return {
     narrow,
-    stackTab,
-    setStackTab,
     railTab,
-    setRailTab,
+    stackTab,
+    show,
+    showStack: (tab: StackTab) => (tab === 'page' ? setOnPage(true) : show(tab)),
     inPage: (act: () => void) => {
       if (!narrow) return act();
-      setStackTab('page');
+      setOnPage(true);
       requestAnimationFrame(act);
-    },
-    showChat: () => {
-      if (narrow) setStackTab('chat');
-    },
-    showSuggestions: () => {
-      setRailTab('suggestions');
-      if (narrow) setStackTab('suggestions');
     },
   };
 }

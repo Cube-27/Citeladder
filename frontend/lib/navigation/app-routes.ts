@@ -168,7 +168,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/site/crawls/:crawlId/pages/:siteUrlId',
-    width: 'narrow',
+    width: 'compact',
     title: 'Page detail',
     collection: '/site',
     screen: screens.pageDetail,
@@ -237,7 +237,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/actions/:actionId',
-    width: 'narrow',
+    width: 'compact',
     title: 'Action',
     collection: '/actions',
     screen: screens.action,
@@ -245,7 +245,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/actions/urls/:siteUrlId',
-    width: 'narrow',
+    width: 'compact',
     title: 'URL',
     collection: '/actions',
     screen: screens.actionUrl,

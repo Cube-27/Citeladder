@@ -91,11 +91,11 @@ function ActionPage({
       <ReadingColumn>
         <Labelled title="Overview" caption={suggested}>
           <Prose>{brief?.overview ?? withShortTarget(action.handoff.message, action)}</Prose>
+          <ReadingTools>
+            <CopyButton value={actionPrompt(action, todo)}>Copy as prompt</CopyButton>
+            {placement ? null : <DeveloperTicketButton action={action} />}
+          </ReadingTools>
         </Labelled>
-        <ReadingTools>
-          <CopyButton value={actionPrompt(action, todo)}>Copy as prompt</CopyButton>
-          {placement ? null : <DeveloperTicketButton action={action} />}
-        </ReadingTools>
         <ActionFacts action={action} />
         {gaps.length > 0 ? (
           <Labelled title={placement ? 'Competitor evidence' : 'Why this matters'}>

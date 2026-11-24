@@ -280,6 +280,8 @@ how to add or change an entry.
   `comparison`, `alternative`, `case_study_review` (CO15); the editor lives inside
   the Agent window as Markdown in CodeMirror 6 with offsets equal to server
   offsets (E1, E2); reverting an applied suggestion needs its span unchanged (E4).
+  Open suggestions are highlighted in the article, an accepted one changes the
+  article there, and the download is the revised page (2026-11-24).
 - **Commerce** ([owner doc](commerce-intelligence.md)), owner 2026-11-11: product
   metrics read all runs, re-derived from stored answers over 30 days and never
   rewriting raw answers (CM1); structured capture starts with the ChatGPT
@@ -320,8 +322,8 @@ how to add or change an entry.
   website and docs keep their look; the app's tokens are its own.
 - **AR-8 Sidebar collapse:** the toggle sits at the end of the Integrations row
   when expanded and on its own row in the icon rail (2026-11-21).
-- **AR-9 Widths:** 1040 column for Overview, Projects, Issues, Actions, page
-  detail, Agent, Settings and Agent context; 720 for Billing and Runs. Settings
+- **AR-9 Widths:** 1040 column for Overview, Projects, Issues, Actions, Agent,
+  Settings and Agent context; 720 for Billing and Runs. Settings
   and Agent context list their sections in a sticky left rail, never a tab row,
   so their header and rail never move; only Business map's content is wider.
   Side space beats space in the middle (2026-11-20 and 2026-11-21).
@@ -352,6 +354,10 @@ how to add or change an entry.
   breadcrumb, never a second breadcrumb or tab row (2026-11-22).
 - **AR-21 Model names** appear only in Agent chat; every other screen names the
   answer engine alone (2026-11-22).
+- **AR-22 Everything sits on a surface:** content is on a card, table or strip;
+  only headings sit on the paper. The Site Health page detail and the Action
+  detail pages are narrower than AR-9's column (2026-11-24; the 800 column is
+  the implementer's pick).
 
 ## Audit remediation (owner 2026-11-12)
 

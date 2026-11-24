@@ -1,6 +1,9 @@
 import { useId, type ReactNode } from 'react';
 
+import { slipClasses } from '@/components/ui/slip';
 import { textRole, type TextRole } from '@/components/ui/typography';
+
+const READING_CARD = slipClasses('flex min-w-0 flex-col gap-3');
 
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   return (
@@ -11,7 +14,7 @@ export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 export function ReadingTools({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="mt-3 flex flex-wrap gap-2">{children}</div>;
+  return <div className="flex flex-wrap gap-2">{children}</div>;
 }
 
 export const READING_SECTION_TITLE = 'label' satisfies TextRole;
@@ -19,10 +22,12 @@ export const READING_SECTION_TITLE = 'label' satisfies TextRole;
 export function Labelled({
   title,
   caption,
+  bare = false,
   children,
 }: Readonly<{
   title: string;
   caption?: string | null;
+  bare?: boolean;
   children: ReactNode;
 }>) {
   const id = useId();
@@ -31,7 +36,7 @@ export function Labelled({
       <h2 id={id} className={textRole(READING_SECTION_TITLE)}>
         {title}
       </h2>
-      {children}
+      {bare ? children : <div className={READING_CARD}>{children}</div>}
       {caption ? <p className={textRole('caption', 'text-ink-2')}>{caption}</p> : null}
     </section>
   );
@@ -46,11 +51,11 @@ export type DetailFact = Readonly<{ label: string; value: ReactNode }>;
 export function DetailsFacts({ facts }: Readonly<{ facts: readonly DetailFact[] }>) {
   const id = useId();
   return (
-    <section aria-labelledby={id} className="mt-8 flex flex-col gap-3">
+    <section aria-labelledby={id} className="mt-6 flex flex-col gap-2">
       <h2 id={id} className={textRole(READING_SECTION_TITLE)}>
         Details
       </h2>
-      <dl className="flex flex-col gap-3">
+      <dl className={READING_CARD}>
         {facts.map((fact) => (
           <div key={fact.label} className="flex">
             <dt className={textRole('body', 'text-ink-2 w-30 shrink-0')}>{fact.label}</dt>

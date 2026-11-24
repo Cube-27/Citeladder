@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import { lazy, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { ChatConversation, ReplyComposer, useChatThread } from '@/components/agent/chat-thread';
@@ -13,6 +13,7 @@ import { ActionButton } from '@/components/ui/actions';
 import { ComposerDock } from '@/components/ui/chat-dock';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
+import { isPageReading } from '@/lib/agent/run-state';
 import type { AgentChatDetail } from '@/lib/api/agent';
 import { isNotFound } from '@/lib/api/errors';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -22,14 +23,19 @@ import { StateBlock } from '@/components/ui/state-block';
 
 const PAGE_OUTPUT_KIND = 'page';
 
+const loadPageWorkspace = () => import('./workspace/page-workspace');
 const PageWorkspace = lazy(() =>
-  import('./workspace/page-workspace').then(({ PageWorkspace }) => ({ default: PageWorkspace })),
+  loadPageWorkspace().then(({ PageWorkspace }) => ({ default: PageWorkspace })),
 );
 
 export function ChatScreen() {
   const { chatId = '' } = useParams();
   const { workspaceId, projectId } = useProjectScope();
   const query = useChatDetail(workspaceId, chatId);
+  const reading = isPageReading(query.data?.page_fetch);
+  useEffect(() => {
+    if (reading) void loadPageWorkspace();
+  }, [reading]);
 
   if (isNotFound(query.error)) return <NotFoundScreen />;
   if (query.isError && !query.data)

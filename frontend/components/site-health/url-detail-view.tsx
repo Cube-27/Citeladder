@@ -14,12 +14,11 @@ import { RobotsExcludedBadge } from '@/components/site-health/robots-choice';
 import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
-import { Disclosure } from '@/components/ui/disclosure';
 import { FactList } from '@/components/ui/facts';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { ledgerClasses, ledgerItemClasses, SubsectionHeader } from '@/components/ui/workspace';
+import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { DeliveryFacts, PageDetail } from '@citeladder/contracts';
 import { formatDisplayTimestamp } from '@/lib/format';
 import {
@@ -30,7 +29,7 @@ import {
 } from '@/lib/site-health/status';
 import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { SectionCard, TitledSection } from '@/components/ui/section';
 
 export const PAGE_DETAIL_TRAIL: readonly Crumb[] = [
   { label: 'Site health', href: '/site' },
@@ -83,9 +82,26 @@ export function UrlDetailView({
         audited={detail.analysis_status === 'completed'}
         crawlId={detail.crawl_id}
       />
-      <TechnicalDetails detail={detail} />
-      <PageChecks evaluations={detail.evaluations} />
       <PageFacts facts={detail.facts} />
+      <TitledSection title="Delivery">
+        <SectionCard>
+          <DeliveryMetrics delivery={detail.delivery} />
+        </SectionCard>
+      </TitledSection>
+      <TitledSection title="Internal links">
+        <SectionCard>
+          {detail.internal_links ? (
+            <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
+          ) : (
+            <StateBlock
+              kind="empty"
+              inline
+              message="Internal links weren't counted for this page."
+            />
+          )}
+        </SectionCard>
+      </TitledSection>
+      <PageChecks evaluations={detail.evaluations} />
     </RecordPage>
   );
 }
@@ -162,11 +178,8 @@ function PageIdentity({ detail, actions }: Readonly<{ detail: PageDetail; action
 function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
   if (!isFetchFailure(detail.analysis_status) || !detail.linked_from.length) return null;
   return (
-    <Section className="min-w-0">
-      <SectionHeader>
-        <SectionTitle>Linked from</SectionTitle>
-      </SectionHeader>
-      <SectionContent>
+    <TitledSection title="Linked from">
+      <SectionCard>
         <ul className={ledgerClasses()}>
           {detail.linked_from.map((referrer) => (
             <li key={referrer.site_url_id} className={ledgerItemClasses()}>
@@ -181,37 +194,8 @@ function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
             </li>
           ))}
         </ul>
-      </SectionContent>
-    </Section>
-  );
-}
-
-function TechnicalDetails({ detail }: Readonly<{ detail: PageDetail }>) {
-  return (
-    <Section className="min-w-0">
-      <SectionContent>
-        <Disclosure title="Technical details">
-          <Stack gap="workspace" className="min-w-0">
-            <Stack as="section" gap="item">
-              <SubsectionHeader title="Delivery" />
-              <DeliveryMetrics delivery={detail.delivery} />
-            </Stack>
-            <Stack as="section" gap="item">
-              <SubsectionHeader title="Internal links" />
-              {detail.internal_links ? (
-                <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
-              ) : (
-                <StateBlock
-                  kind="empty"
-                  inline
-                  message="Internal links weren't counted for this page."
-                />
-              )}
-            </Stack>
-          </Stack>
-        </Disclosure>
-      </SectionContent>
-    </Section>
+      </SectionCard>
+    </TitledSection>
   );
 }
 

@@ -146,8 +146,9 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   then the metric strip, then sections 24 apart with no rule between them;
   a section's head sits 12 above its body. Links carry no underline at rest,
   only on hover and focus. Narrow pages centre the body in their column (AR-9; 1040:
-  Overview, Projects, Issues, Actions, page detail, Agent, Settings, Agent
-  context; 720: Billing, Pricing, Runs).
+  Overview, Projects, Issues, Actions, Agent, Settings, Agent context; 720:
+  Billing, Pricing, Runs, and the Site Health page detail and Action detail
+  pages, AR-22).
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
   page-wide toolbar is the strip under the tabs, with no rule.
@@ -208,7 +209,9 @@ One entry per family; wave 2 fills each from the layouts above.
   edge and the frame clips the outer ones, so a wrapped strip never doubles
   a line. A score is a printed figure.
 - **Containers.** One section head (16/24 at 500, actions right, body 12
-  below) and one surface (`SLIP_FACE`: radius 6, `panel`). Surfaces carry
+  below) and one surface (`SLIP_FACE`: radius 6, `panel`). Everything but a
+  heading sits on a surface (AR-22): a section's bare list, facts or prose
+  goes in `SectionCard`, a form in `SettingRows`. Surfaces carry
   no outer edge and no shadow (owner, 2026-11-22): on the `page` paper every
   surface (strips, setting rows, cards, charts, a table's body on its tray)
   is `panel`, and so are the controls on it;

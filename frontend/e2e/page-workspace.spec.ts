@@ -158,7 +158,8 @@ for (const width of [1280, 390]) {
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
     if (narrow) await page.getByRole('tab', { name: 'Page' }).click();
     await expect(editor).toContainText('Our plans start at $10');
-    await expect(highlight(page, READY)).toHaveCount(0);
+    await expect(highlight(page, READY)).toHaveText('$10');
+    await expect(highlight(page, READY)).toHaveClass(/page-editor-suggestion-applied/);
     await expect(highlight(page, NEEDS)).toHaveText('Teams pay more');
 
     if (narrow) await page.getByRole('tab', { name: /Suggestions/ }).click();

@@ -6,15 +6,24 @@ import type { SuggestionHighlight } from '@/lib/agent/page-workspace';
 import { highlightAt, highlightField, setHighlights } from './editor-highlights';
 
 const BODY = 'Our plans start at ten dollars.';
-const SPAN: SuggestionHighlight = { id: 'a', from: 19, to: 30, tone: 'ready', label: 'Clarity' };
+const SPAN: SuggestionHighlight = {
+  id: 'a',
+  from: 19,
+  to: 30,
+  tone: 'ready',
+  label: 'Clarity',
+  proposal: null,
+};
 
 function stateWith(highlights: readonly SuggestionHighlight[]) {
   const state = EditorState.create({ doc: BODY, extensions: [highlightField] });
-  return state.update({ effects: setHighlights.of(highlights) }).state;
+  return state.update({ effects: setHighlights.of({ items: highlights, actionable: true }) }).state;
 }
 
 const textOf = (state: EditorState) =>
-  state.field(highlightField).map((highlight) => state.sliceDoc(highlight.from, highlight.to));
+  state
+    .field(highlightField)
+    .items.map((highlight) => state.sliceDoc(highlight.from, highlight.to));
 
 describe('highlightField', () => {
   it('keeps a highlight on its text when the person types before it', () => {
@@ -30,12 +39,14 @@ describe('highlightField', () => {
   it('drops a highlight once a deletion crosses its start or end', () => {
     const state = stateWith([SPAN]).update({ changes: { from: 16, to: 22 } }).state;
     expect(state.doc.toString()).toBe('Our plans start  dollars.');
-    expect(state.field(highlightField)).toEqual([]);
+    expect(state.field(highlightField).items).toEqual([]);
   });
 
   it('replaces every highlight when a new read places them', () => {
     const other: SuggestionHighlight = { ...SPAN, id: 'b', from: 0, to: 9 };
-    const state = stateWith([SPAN]).update({ effects: setHighlights.of([other]) }).state;
+    const state = stateWith([SPAN]).update({
+      effects: setHighlights.of({ items: [other], actionable: true }),
+    }).state;
     expect(textOf(state)).toEqual(['Our plans']);
   });
 });

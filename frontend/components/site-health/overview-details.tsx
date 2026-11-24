@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/workspace';
 import { ICONS } from '@/lib/icons';
 import { StateBlock } from '@/components/ui/state-block';
-import { SectionContent, TitledSection } from '@/components/ui/section';
+import { SectionCard, SectionContent, TitledSection } from '@/components/ui/section';
 import { availabilityLabel, formatCount, formatPercent, pluralCount } from '@/lib/format';
 
 const MEASUREMENT_LABELS: Record<string, string> = {
@@ -188,7 +188,7 @@ function WebFundamentalsCard({
 }: Readonly<{ data: SiteHealthOverview['web_fundamentals']; onOpen: () => void }>) {
   return (
     <TitledSection title="Web fundamentals">
-      <SectionContent>
+      <SectionCard>
         <Stack gap="workspace">
           <ul aria-label="Web fundamentals areas" className={ledgerClasses()}>
             {data.areas.map((area) => (
@@ -202,7 +202,7 @@ function WebFundamentalsCard({
             <ActionButton action="viewEvidence" onClick={onOpen} />
           </Inline>
         </Stack>
-      </SectionContent>
+      </SectionCard>
     </TitledSection>
   );
 }
@@ -246,7 +246,7 @@ const CHANGE_METRIC_LABELS: Record<string, string> = {
 function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change_summary'] }>) {
   return (
     <TitledSection title="Score change">
-      <SectionContent>
+      <SectionCard>
         <Stack>
           {data.metrics.map((metric) => (
             <Inline gap="compact" key={metric.key} className="type-body text-ink-2 justify-between">
@@ -259,7 +259,7 @@ function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change
           ) : null}
           <CohortCompositionContext reason={data.reason} composition={data.cohort_composition} />
         </Stack>
-      </SectionContent>
+      </SectionCard>
     </TitledSection>
   );
 }

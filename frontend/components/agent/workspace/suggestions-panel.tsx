@@ -295,7 +295,7 @@ function CoverageGaps({
   );
 }
 
-function useSuggestionChanges(
+export function useSuggestionChanges(
   workspaceId: string,
   document: { chatId: string; outputId: string; baseRevisionId: string },
 ) {
@@ -369,9 +369,12 @@ const EMPTY: Readonly<Record<Filter, string>> = {
   dismissed: 'No suggestions dismissed.',
 };
 
+export type SuggestionChanges = ReturnType<typeof useSuggestionChanges>;
+
+const FILTERS: readonly Filter[] = ['open', 'applied', 'dismissed'];
+
 export function SuggestionsPanel({
-  workspaceId,
-  target,
+  changes,
   page,
   body,
   locked,
@@ -380,8 +383,7 @@ export function SuggestionsPanel({
   onShow,
   onAddToContext,
 }: Readonly<{
-  workspaceId: string;
-  target: { chatId: string; outputId: string; baseRevisionId: string };
+  changes: SuggestionChanges;
   page: AgentSuggestionsPage;
   body: string;
   locked: string | null;
@@ -390,13 +392,17 @@ export function SuggestionsPanel({
   onShow: (id: string) => void;
   onAddToContext: (reference: ContextReference) => void;
 }>) {
-  const [filter, setFilter] = useState<Filter>('open');
+  const filterOf = (id: string | null) => {
+    const status = page.items.find((item) => item.id === id)?.status;
+    return FILTERS.find((value) => value === status);
+  };
+  const [filter, setFilter] = useState<Filter>(() => filterOf(selectedId) ?? 'open');
   const [shownSelection, setShownSelection] = useState(selectedId);
-  const changes = useSuggestionChanges(workspaceId, target);
   const canChange = useWorkspaceCapability('run');
   if (selectedId !== shownSelection) {
     setShownSelection(selectedId);
-    if (selectedId) setFilter('open');
+    const shown = filterOf(selectedId);
+    if (shown) setFilter(shown);
   }
   useEffect(() => {
     if (selectedId)

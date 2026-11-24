@@ -13,11 +13,11 @@ import { Bot } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { count } from '@/lib/visibility/sources';
 import { StateBlock } from '@/components/ui/state-block';
-import { SectionContent, TitledSection } from '@/components/ui/section';
+import { SectionCard, TitledSection } from '@/components/ui/section';
 
 type UrlDetail = z.infer<typeof visibilitySourceUrlSchema>;
 
-function SectionCard({
+function ListSection({
   title,
   loading,
   errored,
@@ -32,27 +32,26 @@ function SectionCard({
 }>) {
   return (
     <TitledSection title={title}>
-      <SectionContent>
-        <SectionBody loading={loading} errored={errored} empty={empty}>
-          {children}
-        </SectionBody>
-      </SectionContent>
+      {errored ? null : (
+        <SectionCard>
+          <SectionBody loading={loading} empty={empty}>
+            {children}
+          </SectionBody>
+        </SectionCard>
+      )}
     </TitledSection>
   );
 }
 
 function SectionBody({
   loading,
-  errored,
   empty,
   children,
 }: Readonly<{
   loading: boolean;
-  errored?: boolean;
   empty: string;
   children: ReactNode | null;
 }>) {
-  if (errored) return null;
   if (loading) return <Skeleton variant="list" />;
   if (children) return <>{children}</>;
   return <StateBlock kind="empty" inline message={empty} />;
@@ -118,7 +117,7 @@ export function BrandsCard({
   errored?: boolean;
 }>) {
   return (
-    <SectionCard
+    <ListSection
       title="Named in the answers"
       loading={loading}
       errored={errored}
@@ -141,6 +140,6 @@ export function BrandsCard({
           ))}
         </Stack>
       ) : null}
-    </SectionCard>
+    </ListSection>
   );
 }

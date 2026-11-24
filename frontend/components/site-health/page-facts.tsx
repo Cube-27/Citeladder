@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Absence } from '@/components/ui/absence';
 import { FactList } from '@/components/ui/facts';
 import { Inline } from '@/components/ui/layout';
-import { SectionContent, TitledSection } from '@/components/ui/section';
+import { SectionCard, TitledSection } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { UrlText } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
@@ -62,13 +62,13 @@ function factRows(facts: Facts) {
 export function PageFacts({ facts }: Readonly<{ facts: PageDetail['facts'] }>) {
   return (
     <TitledSection title="Page facts">
-      <SectionContent>
+      <SectionCard>
         {facts ? (
           <FactList layout="ruled" label="Page facts" facts={factRows(facts)} />
         ) : (
           <StateBlock kind="empty" inline message="Audit not finished." />
         )}
-      </SectionContent>
+      </SectionCard>
     </TitledSection>
   );
 }

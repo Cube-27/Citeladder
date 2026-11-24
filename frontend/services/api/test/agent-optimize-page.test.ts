@@ -9,6 +9,8 @@ import { createAgentBindings } from '../src/agent/bindings.ts';
 import type { FundingIdentity } from '../src/agent/store.ts';
 import { pageFetchTask } from '../src/page-documents/fetch-task.ts';
 import { PAGE_FETCH_KIND } from '../src/page-documents/keys.ts';
+import { runChatPageFetch } from '../src/page-documents/run-fetch.ts';
+import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { drainWorkspace } from './analytics-drain.ts';
 import { recordedSite, SiteFixtures, storedFacts } from './site-health-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -73,7 +75,19 @@ async function setup() {
         }),
       },
     });
-  return { seed, headers, startChat, drain };
+  const readNow = (chatId: string) =>
+    runChatPageFetch(
+      db,
+      loadWorkerSettings({}),
+      { workspace_id: seed.workspaceId, id: chatId },
+      {
+        executor: pageFetchTask({
+          fetcher: recordedSite({ '/crm-pricing': { body: ARTICLE } }),
+          store: () => Promise.resolve(bindings.store),
+        }),
+      },
+    );
+  return { seed, headers, startChat, drain, readNow };
 }
 
 const fetchTasks = (workspaceId: string) =>
@@ -99,6 +113,23 @@ describe('optimize-page chats', () => {
     expect((await fetchTasks(seed.workspaceId)).map(({ payload }) => payload)).toMatchObject([
       { chat_id: created.chat_id, url: PAGE, workflow_id: 'optimize_page' },
     ]);
+  });
+
+  it('reads the page in the request that asks for it, without a background drain', async () => {
+    const { headers, startChat, readNow } = await setup();
+    const created = agentChatCreatedSchema.parse(await (await startChat(PAGE)).json());
+    expect(await readNow(created.chat_id)).toMatchObject({ status: 'done', outcome: 'fetched' });
+    const detail = agentChatDetailSchema.parse(
+      await (await app.request(`/api/v1/agent/chats/${created.chat_id}`, { headers })).json(),
+    );
+    expect(detail.latest_run?.status).toBe('queued');
+    expect(await readNow(created.chat_id)).toMatchObject({ status: 'done', outcome: 'fetched' });
+    expect(await readNow(randomUUID())).toBeNull();
+    const missing = await app.request(`/api/v1/agent/chats/${randomUUID()}/page-fetch/run`, {
+      method: 'POST',
+      headers,
+    });
+    expect(missing.status).toBe(404);
   });
 
   it('queues exactly one turn once the page is read, and a retried request returns it', async () => {

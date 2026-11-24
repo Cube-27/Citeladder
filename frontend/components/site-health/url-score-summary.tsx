@@ -32,6 +32,11 @@ export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
             detail.aeo_measurement_reason,
           ),
         },
+        {
+          title: 'Issues',
+          value: detail.analysis_status === 'completed' ? detail.issues.length : null,
+          valueUnit: 'count',
+        },
       ]}
     />
   );

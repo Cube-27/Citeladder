@@ -6,6 +6,8 @@ import { SLIP_FACE } from '@/components/ui/slip';
 const FILL = 'h-[calc(100dvh-var(--route-chrome-height))] min-h-0';
 const COLUMN = cn('surface-card', SLIP_FACE, 'flex min-h-0 min-w-0 flex-col overflow-hidden');
 
+export const EDITOR_RAIL_TAB = 'flex min-h-0 flex-1 flex-col';
+
 export function EditorWorkspace({ page, rail }: Readonly<{ page: ReactNode; rail: ReactNode }>) {
   return (
     <div
@@ -54,54 +56,46 @@ export function EditorPane({
 export function EditorRail({
   head,
   children,
-  dock,
-}: Readonly<{ head?: ReactNode; children?: ReactNode; dock?: ReactNode }>) {
-  const panel = children != null;
+  foot,
+}: Readonly<{ head?: ReactNode; children: ReactNode; foot?: ReactNode }>) {
   return (
     <div className={cn(COLUMN, 'flex-1')}>
       {head ? (
         <div className="px-[var(--card-padding)] pt-[var(--card-padding)]">{head}</div>
       ) : null}
-      {panel ? (
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-[var(--card-padding)]">
-          {children}
-        </div>
-      ) : null}
-      {dock ? (
-        <div
-          className={cn(
-            'flex min-h-0 flex-col',
-            panel ? 'border-rule max-h-[50%] shrink-0 border-t' : 'flex-1',
-          )}
-        >
-          {dock}
-        </div>
+      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      {foot ? (
+        <div className="border-rule shrink-0 border-t p-[var(--compact-gap)]">{foot}</div>
       ) : null}
     </div>
   );
 }
 
-export function EditorDock({
+export function EditorRailPanel({
   label,
   scrollRef,
+  padding = 'card',
   children,
-  composer,
 }: Readonly<{
-  label: string;
+  label?: string;
   scrollRef?: RefObject<HTMLElement | null>;
+  padding?: 'card' | 'thread';
   children: ReactNode;
-  composer: ReactNode;
 }>) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <section
-        ref={scrollRef}
-        aria-label={label}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-[var(--compact-gap)]"
+    <section
+      ref={scrollRef}
+      aria-label={label}
+      className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+    >
+      <div
+        className={cn(
+          'flex min-w-0 flex-col gap-[var(--workspace-gap)]',
+          padding === 'card' ? 'p-[var(--card-padding)]' : 'py-[var(--compact-gap)]',
+        )}
       >
-        <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">{children}</div>
-      </section>
-      <div className="shrink-0 px-[var(--compact-gap)] pb-[var(--compact-gap)]">{composer}</div>
-    </div>
+        {children}
+      </div>
+    </section>
   );
 }

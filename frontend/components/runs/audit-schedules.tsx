@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { SettingRow } from '@/components/ui/setting-row';
+import { SettingRow, SettingRows } from '@/components/ui/setting-row';
 import { Select } from '@/components/ui/select';
 import { Absence } from '@/components/ui/absence';
 import { CalendarPlus, Play } from '@/lib/icons';
@@ -35,7 +35,7 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import {
   Section,
-  SectionContent,
+  SectionCard,
   SectionHeader,
   SectionTitle,
   TitledSection,
@@ -84,7 +84,7 @@ function WorkspaceSchedules({
   return (
     <>
       <TitledSection title="Scheduled audits">
-        <SectionContent>
+        <SectionCard>
           <Stack>
             {schedulesQuery.isError ? (
               <Notice
@@ -118,7 +118,7 @@ function WorkspaceSchedules({
               }}
             />
           </Stack>
-        </SectionContent>
+        </SectionCard>
       </TitledSection>
       {canWrite ? <ScheduleForm scope={scope} promptSets={promptSets} markets={markets} /> : null}
     </>
@@ -167,75 +167,79 @@ function ScheduleForm({
         <SectionTitle id="new-schedule-title">New schedule</SectionTitle>
       </SectionHeader>
       <Stack gap="item">
-        <FormRow label="Prompt set">
-          <Select
-            ariaLabel="Prompt set"
-            placeholder="Choose a prompt set"
-            value={promptSetId}
-            onValueChange={setPromptSetId}
-            options={promptSets.map((set) => ({ value: set.id, label: set.name }))}
-          />
-        </FormRow>
-        <FormRow label="Measurement scope">
-          <Select
-            ariaLabel="Measurement scope"
-            value={auditScope}
-            onValueChange={setAuditScope}
-            options={CREATE_SCOPES.map((value) => ({ value, label: SCOPE_LABELS[value] }))}
-          />
-        </FormRow>
-        <FormRow label="Cadence">
-          <Select
-            ariaLabel="Cadence"
-            value={cadence}
-            onValueChange={setCadence}
-            options={auditScheduleCadenceSchema.options.map((value) => ({
-              value,
-              label: CADENCE_LABELS[value],
-            }))}
-          />
-        </FormRow>
-        {cadence === 'every_n_minutes' ? (
-          <FormRow label="Minutes">
-            <Input
-              aria-label="Minutes"
-              min="5"
-              type="number"
-              value={intervalMinutes}
-              onChange={(event) => setIntervalMinutes(event.target.value)}
+        <SettingRows
+          label="New schedule"
+          foot={
+            <Button variant="secondary" onClick={createSchedule} disabled={!canCreate}>
+              <Icon icon={CalendarPlus} />
+              {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
+            </Button>
+          }
+        >
+          <FormRow label="Prompt set">
+            <Select
+              ariaLabel="Prompt set"
+              placeholder="Choose a prompt set"
+              value={promptSetId}
+              onValueChange={setPromptSetId}
+              options={promptSets.map((set) => ({ value: set.id, label: set.name }))}
             />
           </FormRow>
-        ) : null}
-        <FormRow label="Engines">
-          <Stack
-            as="fieldset"
-            aria-label="Engines"
-            gap="item"
-            className="grid-cols-[auto_auto] justify-start gap-x-4"
-          >
-            {catalog.order.map((engine) => (
-              <Checkbox
-                key={engine}
-                label={catalog.label(engine)}
-                checked={engines.includes(engine)}
-                onCheckedChange={() =>
-                  setEngines((current) =>
-                    current.includes(engine)
-                      ? current.filter((value) => value !== engine)
-                      : [...current, engine],
-                  )
-                }
+          <FormRow label="Measurement scope">
+            <Select
+              ariaLabel="Measurement scope"
+              value={auditScope}
+              onValueChange={setAuditScope}
+              options={CREATE_SCOPES.map((value) => ({ value, label: SCOPE_LABELS[value] }))}
+            />
+          </FormRow>
+          <FormRow label="Cadence">
+            <Select
+              ariaLabel="Cadence"
+              value={cadence}
+              onValueChange={setCadence}
+              options={auditScheduleCadenceSchema.options.map((value) => ({
+                value,
+                label: CADENCE_LABELS[value],
+              }))}
+            />
+          </FormRow>
+          {cadence === 'every_n_minutes' ? (
+            <FormRow label="Minutes">
+              <Input
+                aria-label="Minutes"
+                min="5"
+                type="number"
+                value={intervalMinutes}
+                onChange={(event) => setIntervalMinutes(event.target.value)}
               />
-            ))}
-          </Stack>
-        </FormRow>
-        <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
-        <div className="flex justify-end">
-          <Button variant="secondary" onClick={createSchedule} disabled={!canCreate}>
-            <Icon icon={CalendarPlus} />
-            {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
-          </Button>
-        </div>
+            </FormRow>
+          ) : null}
+          <FormRow label="Engines">
+            <Stack
+              as="fieldset"
+              aria-label="Engines"
+              gap="item"
+              className="grid-cols-[auto_auto] justify-start gap-x-4"
+            >
+              {catalog.order.map((engine) => (
+                <Checkbox
+                  key={engine}
+                  label={catalog.label(engine)}
+                  checked={engines.includes(engine)}
+                  onCheckedChange={() =>
+                    setEngines((current) =>
+                      current.includes(engine)
+                        ? current.filter((value) => value !== engine)
+                        : [...current, engine],
+                    )
+                  }
+                />
+              ))}
+            </Stack>
+          </FormRow>
+          <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
+        </SettingRows>
         {createMutation.isError ? (
           <Notice
             kind="mutation"
