@@ -303,8 +303,8 @@ describe('probe labelling and reads', () => {
           answers: [1, 2, 3].map((answer) => ({
             answer,
             reasons: [
-              { group: 'TOO EXPENSIVE', quote: '' },
-              { group: 'Slow delivery', quote: '' },
+              { group: 'TOO EXPENSIVE', quote: 'pricey' },
+              { group: 'Slow delivery', quote: 'late' },
             ],
           })),
         },
@@ -331,6 +331,13 @@ describe('probe labelling and reads', () => {
       ['Fit runs small', 0, [], [63, 0], null],
     ]);
     expect([objections.average, objections.answered_by]).toEqual([95, ['chatgpt']]);
+    expect(objections.groups.map(({ quotes }) => quotes.map(({ text }) => text))).toEqual([
+      ['pricey', 'pricey', 'pricey'],
+      ['late', 'late', 'late'],
+      [],
+    ]);
+    const [quoted] = objections.groups[0]?.quotes ?? [];
+    expect([quoted?.run_id, quoted?.logical_engine]).toEqual([secondId, 'chatgpt']);
     const labellings = await db
       .selectFrom('probe_labellings')
       .select('outcome')

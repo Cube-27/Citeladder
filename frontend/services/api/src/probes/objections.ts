@@ -58,6 +58,20 @@ export async function probeObjections(
       score,
       engines: logicalEngines.filter((engine) => raising.has(engine)),
       history: series,
+      quotes: current.asked
+        .flatMap((answer) =>
+          answer.items
+            .filter((item) => item.objection_group_id === group.id)
+            .toSorted((a, b) => a.rank - b.rank)
+            .map((item) => ({
+              text: item.quote,
+              logical_engine: answer.engine,
+              prompt: answer.prompt,
+              run_id: answer.auditId,
+              execution_id: answer.taskId,
+            })),
+        )
+        .slice(0, probes.max_quotes_per_group),
       ...(raising.size
         ? pagesOf(
             (answer) => answer.items.some((item) => item.objection_group_id === group.id),

@@ -3,6 +3,7 @@ import { Fragment, useState } from 'react';
 import type { ProbeObjectionsValue } from '@citeladder/contracts/probes';
 
 import { ObjectionActions } from '@/components/perception/objection-actions';
+import { ObjectionQuotesRow } from '@/components/perception/objection-quotes';
 import { Absence } from '@/components/ui/absence';
 import { buttonClasses } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -157,6 +158,13 @@ function ObjectionTable({
                   ) : null}
                 </TableActionsCell>
               </TableRow>
+              {expanded ? (
+                <ObjectionQuotesRow
+                  label={`What AI said about ${group.name}`}
+                  quotes={group.quotes}
+                  columns={COLUMNS}
+                />
+              ) : null}
               {expanded ? (
                 <SourcePagesRow
                   label={`Sources behind ${group.name}`}

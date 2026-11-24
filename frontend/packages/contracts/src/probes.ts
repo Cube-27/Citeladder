@@ -142,6 +142,15 @@ export const probeObjectionsSchema = z.discriminatedUnion('state', [
         score: score.nullable(),
         engines: z.array(logicalEngineSchema),
         history: z.array(score.nullable()),
+        quotes: z.array(
+          z.object({
+            text: z.string(),
+            logical_engine: logicalEngineSchema,
+            prompt: z.string(),
+            run_id: uuid(),
+            execution_id: uuid(),
+          }),
+        ),
         sources: z.int().nonnegative().nullable(),
         pages: z.array(probePageSchema),
       }),

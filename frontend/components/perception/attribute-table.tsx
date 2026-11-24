@@ -230,7 +230,7 @@ function QuoteRows({
   );
 }
 
-function EngineCell({ engine }: Readonly<{ engine: string }>) {
+export function EngineCell({ engine }: Readonly<{ engine: string }>) {
   const label = useEngineCatalog().label(engine);
   const key = engineMarkKey(engine);
   if (!key) return <>{label}</>;
