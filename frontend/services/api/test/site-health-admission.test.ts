@@ -5,6 +5,7 @@ import { policy } from '../src/config.ts';
 import { extractPageFacts, factSettings } from '../src/site-health/analysis/facts.ts';
 import { parseSitemapAsync } from '../src/site-health/analysis/off-thread.ts';
 import { discoveryLinks } from '../src/site-health/discovery-links.ts';
+import { admittedUrls } from '../src/site-health/sitemap-walk.ts';
 import { classifyUrlAdmission } from '../src/site-health/url-admission.ts';
 import { document } from '../src/web-evidence/html.ts';
 import {
@@ -343,6 +344,71 @@ describe('sitemaps', () => {
       'https://example.test/s1.xml',
     ]);
     expect(offsite.truncated).toBe(true);
+  });
+
+  it('takes a listed page’s kind from the child sitemap named for it, else from its path', () => {
+    const site = 'https://example.test';
+    const walk = new SitemapCollector({
+      limits: { maxDecodedBytes: 4096, maxUrls: 10, maxIndexDepth: 1 },
+      maxSiteUrls: 100,
+      follows: () => true,
+    });
+    const child = (name: string, ...paths: string[]) =>
+      walk.add(
+        `${site}/medias/${name}`,
+        parseSitemap(urlset(...paths.map((path) => `${site}${path}`)), 'text/xml', limits),
+        1,
+      );
+    child(
+      'product-sitemap.xml',
+      '/Categories/Mens/Flannelette-Shirt/MN154_1648598_GREY',
+      '/Categories/Kids/Pyjamas/KP1_22_RED',
+    );
+    child('category-sitemap.xml', '/kids-boxer-shorts-orange', '/wiggles-kids-clothing');
+    child('brand-sitemap.xml', '/wiggles-kids-clothing', '/cars-baby-bodysuits-onesies');
+    child('store-sitemap.xml', '/store/capalaba');
+    child('sitemap_products_1.xml', '/Categories/Kids/Pyjamas/KP1_22_RED');
+    child('product_cat-sitemap.xml', '/kids-tshirts');
+    child('sitemap-3.xml', '/about-us', '/toy-story-shoes', '/shop/dresses');
+    const kinds = Object.fromEntries(
+      admittedUrls(walk, { domain: 'example.test' }).listed.map(({ item }) => [
+        new URL(item.url).pathname,
+        item.valueKind,
+      ]),
+    );
+    expect(kinds).toEqual({
+      '/Categories/Mens/Flannelette-Shirt/MN154_1648598_GREY': 'product',
+      '/Categories/Kids/Pyjamas/KP1_22_RED': 'product',
+      '/kids-boxer-shorts-orange': 'category',
+      '/wiggles-kids-clothing': 'category',
+      '/cars-baby-bodysuits-onesies': 'category',
+      '/store/capalaba': 'local',
+      '/kids-tshirts': 'category',
+      '/about-us': 'about',
+      '/toy-story-shoes': 'other',
+      '/shop/dresses': 'category',
+    });
+  });
+
+  it('takes the highest tier among the named children that list a page, whatever the fetch order', () => {
+    const kindOf = (names: string[]) => {
+      const walk = new SitemapCollector({
+        limits: { maxDecodedBytes: 4096, maxUrls: 10, maxIndexDepth: 1 },
+        maxSiteUrls: 100,
+        follows: () => true,
+      });
+      for (const name of names)
+        walk.add(`https://example.test/${name}`, read(urlset('https://example.test/a')), 1);
+      return admittedUrls(walk, { domain: 'example.test' }).listed.map(
+        ({ item }) => item.valueKind,
+      );
+    };
+    expect(kindOf(['category-sitemap.xml', 'store-sitemap.xml', 'page-sitemap.xml'])).toEqual([
+      'local',
+    ]);
+    expect(kindOf(['page-sitemap.xml', 'store-sitemap.xml', 'category-sitemap.xml'])).toEqual([
+      'local',
+    ]);
   });
 
   it('parses a sitemap off the event loop with the same answer and refusals', async () => {

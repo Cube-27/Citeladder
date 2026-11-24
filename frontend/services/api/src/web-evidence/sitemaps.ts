@@ -95,6 +95,7 @@ type CollectorOptions = {
 export class SitemapCollector {
   readonly urls: string[] = [];
   readonly lastmod = new Map<string, string>();
+  readonly listedIn = new Map<string, string[]>();
   readonly #visited = new Set<string>();
   readonly limits: SitemapLimits;
   readonly #options: CollectorOptions;
@@ -112,6 +113,9 @@ export class SitemapCollector {
     for (const url of kept) {
       const declared = document.lastmod.get(url);
       if (declared && !this.lastmod.has(url)) this.lastmod.set(url, declared);
+      const sources = this.listedIn.get(url);
+      if (!sources) this.listedIn.set(url, [source]);
+      else if (!sources.includes(source)) sources.push(source);
     }
     const unseen = [...new Set(document.refs.flatMap((ref) => sitemapRef(ref) ?? []))].filter(
       (ref) => !this.#visited.has(ref),

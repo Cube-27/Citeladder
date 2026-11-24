@@ -13,7 +13,7 @@ import { InterpretationTimeoutError, parseSitemapAsync } from './analysis/off-th
 import { candidate, crawlScope, type Candidate } from './frontier.ts';
 import type { Crawl, SiteTaskContext } from './site-task.ts';
 import { trackedOrder } from './tracked-set.ts';
-import { classifyUrlAdmission } from './url-admission.ts';
+import { classifyUrlAdmission, listedKind, type Scope } from './url-admission.ts';
 
 const crawlPolicy = policy.site_health.crawl;
 const { evidence_urls: evidenceUrls, signal_detail_chars: evidenceChars } =
@@ -160,7 +160,7 @@ export async function walkSitemaps(
     unread: walk.unread,
     invalidCount: walk.invalid.length,
     invalid: walk.invalid.slice(0, evidenceUrls),
-    ...admittedUrls(walk.collector, crawl),
+    ...admittedUrls(walk.collector, crawlScope(crawl)),
   };
 }
 export type SitemapWalk = Awaited<ReturnType<typeof walkSitemaps>>;
@@ -266,11 +266,13 @@ function collectRefetch(walk: Walk, entry: Entry, stale: IndexRead, read: Sitema
 
 export type SitemapUrl = { item: Candidate; lastmod: string | null };
 
-function admittedUrls(collector: SitemapCollector, crawl: Crawl) {
-  const scope = crawlScope(crawl);
+export function admittedUrls(collector: SitemapCollector, scope: Scope) {
   const found = new Map<string, SitemapUrl>();
   for (const raw of collector.urls) {
-    const admission = classifyUrlAdmission(raw, scope);
+    const admission = classifyUrlAdmission(raw, {
+      ...scope,
+      listedKind: listedKind(collector.listedIn.get(raw) ?? []),
+    });
     if (!admission.accepted || !admission.url || found.has(admission.hash)) continue;
     found.set(admission.hash, {
       item: candidate(admission, {

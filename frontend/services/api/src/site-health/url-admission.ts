@@ -56,6 +56,25 @@ function namedKind(segment: string) {
   return fallback?.[0] ?? null;
 }
 
+const SOURCE_WORDS = (crawl.sitemap_source_kinds as [string, string[]][]).flatMap(([kind, words]) =>
+  words.map((word) => ({ kind, tokens: word.split(/[-_.]+/u) })),
+);
+
+const containsRun = (tokens: string[], run: string[]) =>
+  tokens.some((_, start) => run.every((token, offset) => tokens[start + offset] === token));
+
+function sourceKind(sitemapUrl: string) {
+  const name = URL.parse(sitemapUrl)?.pathname.toLowerCase().split('/').at(-1) ?? '';
+  const tokens = name.split(/[-_.]+/u).filter(Boolean);
+  const named = SOURCE_WORDS.filter((word) => containsRun(tokens, word.tokens)).toSorted(
+    (a, b) => b.tokens.length - a.tokens.length || PRIORITIES[b.kind]! - PRIORITIES[a.kind]!,
+  );
+  return named[0]?.kind ?? [];
+}
+
+export const listedKind = (sitemaps: readonly string[]) =>
+  sitemaps.flatMap(sourceKind).toSorted((a, b) => PRIORITIES[b]! - PRIORITIES[a]!)[0] ?? null;
+
 function valueKind(url: string) {
   const path = stripTrailing(new URL(url).pathname.toLowerCase(), '/') || '/';
   if (path === '/') return 'root';
@@ -115,7 +134,7 @@ const rejected = (reason: string, url: string | null = null, kind = 'other'): Ad
 
 export function classifyUrlAdmission(
   url: string,
-  scope: Scope & { base?: string; infrastructure?: 'sitemap' } = {},
+  scope: Scope & { base?: string; infrastructure?: 'sitemap'; listedKind?: string | null } = {},
 ): Admission {
   let canonical: { url: string; hash: string };
   try {
@@ -128,7 +147,8 @@ export function classifyUrlAdmission(
   } catch {
     return rejected(reasons.invalid);
   }
-  const kind = valueKind(canonical.url);
+  const pathKind = valueKind(canonical.url);
+  const kind = pathKind === 'root' ? pathKind : (scope.listedKind ?? pathKind);
   if (scope.domain && !inScope(canonical.url, scope.domain))
     return rejected(reasons.out_of_scope, canonical.url, kind);
   const path = new URL(canonical.url).pathname.toLowerCase();

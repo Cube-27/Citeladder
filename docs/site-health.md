@@ -338,9 +338,16 @@ and are never analyzed. The lists live in `analysis.json`
 (`acquisition.hard_exclusion_*`) and the reason codes in `acquisition.json`
 (`crawl.exclusions`).
 
-**Value tiers** order admission and are separate from page kind. The first path
-segment that names a tier, matching whole tokens, decides it; synonyms come
-from `value_fallback_tokens`. So `/blog/product-review` is `article`. A
+**Value tiers** order admission and are separate from page kind. A sitemap URL
+takes the tier its child sitemap's file name names (`sitemap_source_kinds`,
+matched on whole tokens, the longest word winning, so `product_cat-sitemap.xml`
+is `category`); a URL in several named children takes the highest tier, so fetch
+order never matters. Names like `page` or `sitemap-3` decide nothing. Sites
+file products under paths like `/Categories/...` and listings under bare slugs,
+which the path alone misreads. The source lives in memory for admission only.
+Otherwise the first path segment that names a tier, matching whole tokens,
+decides it; synonyms come from `value_fallback_tokens`. So
+`/blog/product-review` is `article`. A
 fallback token never names a different kind than the classifier's
 `route_patterns` gives the same segment (`store` is `local`, `shop` is
 `category`, `help` and `support` are `docs`), or the tracked set fills with

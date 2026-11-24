@@ -41,13 +41,38 @@
       ["local", ["locations", "location", "stores", "store", "store-locator"]],
       ["category", ["collections", "collection", "categories", "shop"]],
       ["pricing", ["plans", "prices"]],
-      ["about", ["company", "team", "story", "who-we-are"]],
+      ["about", ["company", "team", "who-we-are"]],
       ["article", ["blog", "articles", "news", "insights"]],
       ["guide", ["guides", "resources", "learn"]],
       ["faq", ["faqs"]],
       ["docs", ["documentation", "help", "support"]],
       ["contact", ["get-in-touch"]],
       ["trust", ["privacy", "terms", "legal", "policy", "policies", "security"]]
+    ],
+    "sitemap_source_kinds": [
+      ["product", ["product", "products"]],
+      ["local", ["store", "stores", "location", "locations"]],
+      [
+        "category",
+        [
+          "category",
+          "categories",
+          "collection",
+          "collections",
+          "brand",
+          "brands",
+          "colour",
+          "colours",
+          "color",
+          "colors",
+          "product_cat",
+          "product_tag",
+          "product_brand",
+          "post_tag"
+        ]
+      ],
+      ["article", ["post", "posts", "blog", "blogs", "article", "articles", "news"]],
+      ["faq", ["faq", "faqs"]]
     ],
     "exclusions": {
       "hard_path": "hard_excluded_path",
