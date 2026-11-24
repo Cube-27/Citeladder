@@ -510,14 +510,19 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
   2026-11-22).
 - **AV-28** The first probe groups objections by meaning; later probes map onto
   them and add only genuinely new groups; users rename, merge or delete.
-- **AV-29 to AV-35 Probes:** one run asks market and objection questions, three
-  times per search-capable engine with a saved key (managed mode uses
-  CiteLadder's), on the engines the user ticks before running (owner,
-  2026-11-24); direct questions ask about the project's brand only, theme
+- **AV-29 to AV-35 Probes:** one run asks market and objection questions on
+  each search-capable engine with a saved key (managed mode uses CiteLadder's),
+  on the engines the user ticks and as many times (1 to 3, default 3) as the
+  user picks before running (owner, 2026-11-24); the objection question is
+  answered with web search, worded as an instruction where the engine cannot
+  be forced to search (owner, 2026-11-24); direct questions ask about the
+  project's brand only, theme
   questions cover competitors; on demand with an optional schedule; charged in
   AI credits shown first; tables lead with the position score (100 when named
   first, minus 10 per later place, 0 when not raised).
-- **AV-36** No objection detail page and no "Draft rebuttal". **AV-37** An
+- **AV-36** No objection detail page and no "Draft rebuttal". Objections show
+  the probe's question once, linking to its answers filtered by engine and
+  repetition (owner, 2026-11-24). **AV-37** An
   objection's Ask agent opens Agent chat, which lists its sources and suggests
   edits, outreach or advice, never acting on its own.
 - **AV-40** A run's answered prompts reach the dashboards even when the run is
