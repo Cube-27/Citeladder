@@ -136,7 +136,7 @@ export function PromptEngineCoverage({ latest }: Readonly<{ latest: PromptMetric
           <TableRow key={outcome.logical_engine}>
             <TableCell>
               <Inline gap="item">
-                {mark ? <EngineMark engine={mark} /> : null}
+                {mark ? <EngineMark engine={mark} brand /> : null}
                 {engines.label(outcome.logical_engine)}
               </Inline>
             </TableCell>

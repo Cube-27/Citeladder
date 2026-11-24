@@ -219,8 +219,8 @@ how to add or change an entry.
   measurement filter is an icon chip like the other frequent filters; the data
   window stays in sight as the filter row's end text ("Latest run · 18 Nov
   09:12"), not as the chip's value. Owner, 2026-11-18.
-- **Engine logos in filter options are in their brand colours**, not the text
-  ink. Owner, 2026-11-24.
+- **Engine logos in the app are in their brand colours**, not the text ink, in
+  filters and everywhere else an engine is named. Owner, 2026-11-24.
 
 ## Site Health and data
 

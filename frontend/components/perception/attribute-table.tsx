@@ -236,7 +236,7 @@ export function EngineCell({ engine }: Readonly<{ engine: string }>) {
   if (!key) return <>{label}</>;
   return (
     <span title={label} className="inline-flex items-center">
-      <EngineMark engine={key} placement="inline" />
+      <EngineMark engine={key} placement="inline" brand />
       <span className="sr-only">{label}</span>
     </span>
   );

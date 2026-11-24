@@ -135,7 +135,7 @@ function EngineAvatar({ engine, label }: Readonly<{ engine: string; label: strin
   return (
     <ChatAvatar tone="engine">
       {key ? (
-        <EngineMark engine={key} placement="inline" />
+        <EngineMark engine={key} placement="inline" brand />
       ) : (
         <span className={textRole('label')}>{label.slice(0, 1)}</span>
       )}
