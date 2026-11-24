@@ -90,6 +90,22 @@ export const SEARCH_COLUMNS_BY_KIND: {
   ],
 };
 
+export type SearchRowOrder = { sort: string; direction: 'asc' | 'desc' };
+const LARGEST_FIRST: Readonly<Record<string, string>> = {
+  ranking_keywords: 'search_volume',
+  keyword_suggestions: 'search_volume',
+  missing_keywords: 'search_volume',
+  shared_keywords: 'search_volume',
+  referring_domains: 'backlinks',
+  destination_pages: 'backlinks',
+  organic_pages: 'etv',
+  backlinks: 'dataforseo_rank',
+};
+export function defaultRowOrder(kind: string): SearchRowOrder {
+  const sort = LARGEST_FIRST[kind];
+  return sort ? { sort, direction: 'desc' } : { sort: 'id', direction: 'asc' };
+}
+
 export const SEARCH_DATASET_LABELS: Readonly<Record<string, string>> = {
   footprint: 'Keyword footprint',
   ranking_keywords: 'Ranked keywords',
