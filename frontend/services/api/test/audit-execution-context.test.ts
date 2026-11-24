@@ -211,7 +211,7 @@ describe('frozen audit execution identity', () => {
     );
     expect(request).toMatchObject({
       location_code: 2840,
-      request_settings: { priority: 1, force_web_search: true },
+      request_settings: { priority: 2, force_web_search: true },
     });
     await updateConnection(
       db,

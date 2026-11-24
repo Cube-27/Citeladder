@@ -463,9 +463,9 @@ searches are priced from it.
 
 | Endpoint family | Used for | Published price | Configured in code |
 |---|---|---|---|
-| SERP Google Organic `task_post` (10 results) | Google AI Overview surface | Standard $0.0006, priority $0.0012, live $0.002 per SERP; async AI Overview loading adds one base price | `observed_standard_task_cost_microusd` 1,200 and `async_ai_overview_surcharge_microusd` 600 (`dataforseo.json`). The 1,200 matches the priority-queue price and was observed live; check which queue the task uses before relying on either figure |
-| SERP Google AI Mode `task_post` | Google AI Mode surface | Standard $0.0012, priority $0.0024, live $0.004 per SERP ([pricing](https://dataforseo.com/pricing/serp/google-ai-mode-serp-api)) | Standard queue, no request settings (`serp` in `dataforseo.json`); the cost each task reports is stored as charged |
-| AI Optimization LLM Scraper (ChatGPT, Gemini) | ChatGPT Search and Gemini consumer surfaces | Standard $0.0012, priority $0.0024, live $0.004 per results page | Priority 1 (standard queue) in `dataforseo.json` |
+| SERP Google Organic `task_post` (10 results) | Google AI Overview surface | Standard $0.0006, priority $0.0012, live $0.002 per SERP; async AI Overview loading adds one base price | Priority 2 (priority queue, $0.0024 per task with async AI Overview) in `serp` in `dataforseo.json`; the cost each task reports is stored as charged |
+| SERP Google AI Mode `task_post` | Google AI Mode surface | Standard $0.0012, priority $0.0024, live $0.004 per SERP ([pricing](https://dataforseo.com/pricing/serp/google-ai-mode-serp-api)) | Priority 2 (priority queue, $0.0024 per task) in `serp` in `dataforseo.json`; the cost each task reports is stored as charged |
+| AI Optimization LLM Scraper (ChatGPT, Gemini) | ChatGPT Search and Gemini consumer surfaces | Standard $0.0012, priority $0.0024, live $0.004 per results page | Priority 2 (priority queue, $0.0024 per task) in `dataforseo.json`; the cost each task reports is stored as charged |
 | DataForSEO Labs live endpoints (ranked keywords, page and domain intersection, keyword suggestions, relevant pages, subdomains, domain rank overview) | Keyword Research | $0.012 per task plus $0.00012 per returned item | `rates.labs_task` and `rates.labs_item` (`search-intelligence.json`) — match |
 | Backlinks API | Keyword Research | $0.024 per request plus $0.000036 per row | `rates.backlinks_request` and `rates.backlinks_row` — match |
 

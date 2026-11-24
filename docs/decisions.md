@@ -221,6 +221,11 @@ how to add or change an entry.
   09:12"), not as the chip's value. Owner, 2026-11-18.
 - **Engine logos in the app are in their brand colours**, not the text ink, in
   filters and everywhere else an engine is named. Owner, 2026-11-24.
+- **DataForSEO audit surfaces use the priority queue.** Google AI Overview,
+  Google AI Mode and the ChatGPT and Gemini scrapers submit `priority` 2 tasks:
+  double the per-task price for answers in minutes instead of about ten.
+  Keyword research and other non-audit DataForSEO calls keep their queue.
+  Owner, 2026-11-24.
 
 ## Site Health and data
 

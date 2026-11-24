@@ -399,15 +399,15 @@
   "scraper": {
     "request_settings": {
       "chatgpt_search": {
-        "priority": 1,
+        "priority": 2,
         "force_web_search": true
       },
       "gemini_consumer": {
-        "priority": 1
+        "priority": 2
       }
     },
     "keyword_max_chars": 2000,
-    "priority": 1,
+    "priority": 2,
     "id_list_path": "/v3/ai_optimization/id_list",
     "reconcile_max_pages": 10,
     "products": {
@@ -423,9 +423,12 @@
     "request_settings": {
       "google_ai_overview": {
         "depth": 10,
-        "load_async_ai_overview": true
+        "load_async_ai_overview": true,
+        "priority": 2
       },
-      "google_ai_mode": {}
+      "google_ai_mode": {
+        "priority": 2
+      }
     },
     "answer_element_types": {
       "google_ai_overview": [

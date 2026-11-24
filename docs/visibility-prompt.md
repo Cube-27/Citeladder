@@ -581,8 +581,8 @@ provisioned explicitly with the credential-admin-only
 `POST /api/v1/provider-connections/{id}/provision-dataforseo-routes`; it adds missing
 routes without reactivating disabled routes or acquiring provider data.
 
-The scrapers submit the literal tracked prompt using normal-priority Standard
-tasks and collect Advanced results. ChatGPT requests web search; Gemini receives
+Every DataForSEO audit surface submits `priority` 2 (priority queue) tasks.
+The scrapers submit the literal tracked prompt as Standard tasks and collect Advanced results. ChatGPT requests web search; Gemini receives
 no ChatGPT-only settings. Every DataForSEO surface uses the project's frozen
 search context (US, English, desktop by default), validated against the location,
 language and device lists in `dataforseo.json`; unsupported contexts and over-long
