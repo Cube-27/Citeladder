@@ -96,7 +96,7 @@ function promptsState(
     return {
       kind: 'error',
       ...readErrorProps(query),
-      title: "Couldn't load the tracked answers",
+      title: "Couldn't load the tracked prompts",
       fallback: 'The request failed or timed out.',
     };
   }
@@ -106,7 +106,7 @@ function promptsState(
     kind: 'empty',
     headingLevel: 3,
     icon: MessageSquare,
-    heading: 'No tracked answers in this selection used this source',
+    heading: 'No tracked prompts in this selection used this source',
   };
 }
 

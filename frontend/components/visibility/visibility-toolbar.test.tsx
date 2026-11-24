@@ -168,7 +168,7 @@ describe('useVisibilityFilterMenu', () => {
     });
     expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Remove Prompt filter' })).toBeVisible();
-    expect(await filtersMenu()).toEqual(['Prompt: Best CRM?', 'Answer outcome: All answers']);
+    expect(await filtersMenu()).toEqual(['Prompt: Best CRM?', 'Prompt outcome: All prompts']);
   });
 
   it('names the latest run at the row’s end while the measurement shows only its icon', () => {

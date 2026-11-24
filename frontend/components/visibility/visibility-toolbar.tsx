@@ -272,7 +272,7 @@ function outcomeFilter({ outcome, onChangeOutcome }: ToolbarProps): FilterDefini
   if (!onChangeOutcome) return null;
   return choiceFilter({
     id: 'outcome',
-    label: 'Answer outcome',
+    label: 'Prompt outcome',
     value: outcome ?? 'all',
     defaultValue: 'all',
     groups: [{ options: ANSWER_OUTCOMES }],

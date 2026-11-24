@@ -48,7 +48,7 @@ export const PERCEPTION_MIN_CLASSIFIED = 20;
 export const PERCEPTION_MIN_THEME_JUDGING = 5;
 
 export const ANSWER_OUTCOMES = [
-  { value: 'all', label: 'All answers' },
+  { value: 'all', label: 'All prompts' },
   { value: 'brand_absent', label: 'Brand absent' },
   { value: 'uncited', label: 'Brand mentioned without owned citation' },
 ] as const;
