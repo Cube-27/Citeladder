@@ -80,10 +80,12 @@ async function setup() {
       db,
       loadWorkerSettings({}),
       { workspace_id: seed.workspaceId, id: chatId },
-      pageFetchTask({
-        fetcher: recordedSite({ '/crm-pricing': { body: ARTICLE } }),
-        store: () => Promise.resolve(bindings.store),
-      }),
+      {
+        executor: pageFetchTask({
+          fetcher: recordedSite({ '/crm-pricing': { body: ARTICLE } }),
+          store: () => Promise.resolve(bindings.store),
+        }),
+      },
     );
   return { seed, headers, startChat, drain, readNow };
 }

@@ -12,13 +12,14 @@ export async function runChatPageFetch(
   db: Database,
   settings: WorkerSettings,
   chat: { workspace_id: string; id: string },
-  executor: Executor = interactiveFetch,
+  { executor = interactiveFetch, signal }: { executor?: Executor; signal?: AbortSignal } = {},
 ) {
   const task = await chatPageFetch(db, chat.workspace_id, chat.id);
   if (!task) return null;
   const worker = new AnalyticsWorker(db, settings, {
     taskScope: { workspaceId: chat.workspace_id, taskIds: [task.id] },
     executors: { [PAGE_FETCH_KIND]: executor },
+    signal,
   });
   await worker.runOnce();
   return pageFetchView(db, chat);

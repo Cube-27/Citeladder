@@ -392,13 +392,16 @@ export function SuggestionsPanel({
   onShow: (id: string) => void;
   onAddToContext: (reference: ContextReference) => void;
 }>) {
-  const [filter, setFilter] = useState<Filter>('open');
+  const filterOf = (id: string | null) => {
+    const status = page.items.find((item) => item.id === id)?.status;
+    return FILTERS.find((value) => value === status);
+  };
+  const [filter, setFilter] = useState<Filter>(() => filterOf(selectedId) ?? 'open');
   const [shownSelection, setShownSelection] = useState(selectedId);
   const canChange = useWorkspaceCapability('run');
   if (selectedId !== shownSelection) {
     setShownSelection(selectedId);
-    const status = page.items.find((item) => item.id === selectedId)?.status;
-    const shown = FILTERS.find((value) => value === status);
+    const shown = filterOf(selectedId);
     if (shown) setFilter(shown);
   }
   useEffect(() => {

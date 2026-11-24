@@ -1,6 +1,6 @@
 import type { AgentSuggestion } from '@/lib/api/agent';
 
-type AgentPageField = Extract<AgentSuggestion['anchor'], { kind: 'field' }>['field'];
+export type AgentPageField = Extract<AgentSuggestion['anchor'], { kind: 'field' }>['field'];
 
 export type OutlineHeading = Readonly<{ level: number; text: string; from: number }>;
 
@@ -144,19 +144,18 @@ export function suggestionHighlights(
   });
 }
 
-export type PageField = AgentPageField;
 export const PAGE_FIELDS = [
   'title',
   'meta_description',
   'json_ld',
-] as const satisfies readonly PageField[];
-export const pageFieldLabel = (field: PageField) => FIELD_LABEL[field];
+] as const satisfies readonly AgentPageField[];
+export const pageFieldLabel = (field: AgentPageField) => FIELD_LABEL[field];
 
 export type FieldReview = Readonly<{ open: AgentSuggestion | null; edited: boolean }>;
 
 export function fieldReview(
   suggestions: readonly AgentSuggestion[],
-  field: PageField,
+  field: AgentPageField,
 ): FieldReview {
   const onField = suggestions.filter(
     (suggestion) => suggestion.anchor.kind === 'field' && suggestion.anchor.field === field,

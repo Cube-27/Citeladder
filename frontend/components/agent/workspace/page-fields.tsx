@@ -12,7 +12,7 @@ import {
   PAGE_FIELDS,
   pageFieldLabel,
   type FieldReview,
-  type PageField,
+  type AgentPageField,
 } from '@/lib/agent/page-workspace';
 import type { AgentRevision, AgentSuggestion } from '@/lib/api/agent';
 import { X } from '@/lib/icons';
@@ -29,7 +29,7 @@ type FieldActions = Readonly<{
 const WRAP = '[overflow-wrap:anywhere]';
 const RAW = textRole('caption', `whitespace-pre-wrap ${WRAP}`);
 
-function FieldText({ field, value }: Readonly<{ field: PageField; value: string }>) {
+function FieldText({ field, value }: Readonly<{ field: AgentPageField; value: string }>) {
   if (!value.trim()) return <Absence state="none" />;
   if (field !== 'json_ld') return <span className={textRole('body', WRAP)}>{value}</span>;
   return (
@@ -45,7 +45,7 @@ function Proposal({
   actionable,
   onAct,
   onShow,
-}: Readonly<FieldActions & { field: PageField; suggestion: AgentSuggestion }>) {
+}: Readonly<FieldActions & { field: AgentPageField; suggestion: AgentSuggestion }>) {
   const { replacement } = suggestion;
   if (suggestion.readiness !== 'ready' || replacement === null)
     return (
@@ -91,7 +91,7 @@ function FieldRow({
   value,
   review,
   ...actions
-}: Readonly<FieldActions & { field: PageField; value: string; review: FieldReview }>) {
+}: Readonly<FieldActions & { field: AgentPageField; value: string; review: FieldReview }>) {
   return (
     <Stack as="li" gap="tight" className="min-w-0">
       <Inline className="flex-wrap">

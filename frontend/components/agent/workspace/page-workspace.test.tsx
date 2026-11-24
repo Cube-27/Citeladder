@@ -96,7 +96,17 @@ afterAll(() => mswServer.close());
 
 describe('The page workspace', () => {
   it('opens a page chat as the page beside its suggestions, outline, SEO and chat', async () => {
-    serve({ chat: pageChat(), suggestions: suggestionsPage([ready(), needsInput]) });
+    const chat = pageChat();
+    const check = chat.page_fetch.checks[0]!;
+    const checks = [
+      check,
+      { ...check, rule_id: 'title_present', outcome: 'satisfied', failing: false },
+      { ...check, rule_id: 'canonical', outcome: 'unknown', failing: false },
+    ];
+    serve({
+      chat: { ...chat, page_fetch: { ...chat.page_fetch, checks } },
+      suggestions: suggestionsPage([ready(), needsInput]),
+    });
     const user = userEvent.setup();
     renderChat();
 
@@ -127,6 +137,7 @@ describe('The page workspace', () => {
 
     await user.click(screen.getByRole('tab', { name: 'SEO' }));
     expect(screen.getByText('Missing meta description')).toBeVisible();
+    expect(screen.getByText('1 other check passed.')).toBeVisible();
     expect(screen.getByText(/Editing the page doesn’t rerun them/)).toBeVisible();
   });
 

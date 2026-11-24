@@ -73,8 +73,8 @@ class ProposalWidget extends WidgetType {
     return root;
   }
 
-  ignoreEvent() {
-    return false;
+  ignoreEvent(event: Event) {
+    return event.type.startsWith('key');
   }
 }
 

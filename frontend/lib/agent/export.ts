@@ -51,7 +51,9 @@ function headFields(fields: PageDownload['fields']): string[] {
   return [
     ...(description ? [`<meta name="description" content="${escapeHtml(description)}">`] : []),
     ...(jsonLd
-      ? [`<script type="application/ld+json">${jsonLd.replaceAll('</', '<\\/')}</script>`]
+      ? [
+          `<script type="application/ld+json">${jsonLd.replaceAll('<', String.raw`\u003c`)}</script>`,
+        ]
       : []),
   ];
 }

@@ -65,9 +65,7 @@ export function EditorRail({
       ) : null}
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       {foot ? (
-        <div className="border-rule max-h-[60%] shrink-0 overflow-y-auto border-t p-[var(--compact-gap)]">
-          {foot}
-        </div>
+        <div className="border-rule shrink-0 border-t p-[var(--compact-gap)]">{foot}</div>
       ) : null}
     </div>
   );

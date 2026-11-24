@@ -177,8 +177,8 @@ The page is the latest revision's SEO fields over its Markdown in CodeMirror
 Accept and Dismiss beside it, an applied one marks the text it changed, and a
 field suggestion sits under its field; all only while the text on screen is the
 revision the suggestions read placed them on. The rail holds Suggestions, Chat,
-Outline and SEO as tabs over a composer that is always there, and sending opens
-Chat. Export carries the title, meta description and JSON-LD with the body. A
+Outline and SEO as tabs over a composer that stays under every one of them
+(on a phone the Page tab keeps the full height), and sending opens Chat. Export carries the title, meta description and JSON-LD with the body. A
 person's edit is a draft until **Save
 changes** appends a revision with compare-and-set on the revision it started
 from. Every change names the revision on screen: `agent_output_conflict` says

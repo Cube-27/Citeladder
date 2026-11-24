@@ -68,7 +68,7 @@ describe('downloadPage', () => {
     expect(text).toContain('<title>Pricing &lt;Plans&gt; &amp; more</title>');
     expect(text).toContain('<meta name="description" content="Plans &amp; &quot;prices&quot;">');
     expect(text).toContain(
-      String.raw`<script type="application/ld+json">{"name":"<\/script>"}</script>`,
+      String.raw`<script type="application/ld+json">{"name":"\u003c/script>"}</script>`,
     );
     expect(text).toContain('<body>\n<h1>Pricing</h1>\n</body>');
   });

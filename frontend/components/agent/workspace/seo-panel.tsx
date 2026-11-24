@@ -26,7 +26,7 @@ function CheckRow({ check }: Readonly<{ check: PageCheck }>) {
 
 export function SeoPanel({ fetch }: Readonly<{ fetch: AgentPageFetchDone | null }>) {
   const failing = fetch?.checks.filter((check) => check.failing) ?? [];
-  const passed = (fetch?.checks.length ?? 0) - failing.length;
+  const passed = fetch?.checks.filter((check) => check.outcome === 'satisfied').length ?? 0;
   return (
     <Stack gap="workspace">
       <Stack as="section" gap="compact" aria-labelledby="seo-checks">

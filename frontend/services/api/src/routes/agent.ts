@@ -263,7 +263,9 @@ export const agentRoutes = [
     response: agentPageFetchSchema,
     async handle({ db, c, config }, { path }) {
       const chat = await workspaceChat(db, c.get('workspace').workspaceId, path.chat_id);
-      const fetch = await runChatPageFetch(db, loadWorkerSettings(config.settings), chat);
+      const fetch = await interactiveSlots.run((signal) =>
+        runChatPageFetch(db, loadWorkerSettings(config.settings), chat, { signal }),
+      );
       if (!fetch) throw notFound('Page fetch');
       return fetch;
     },
