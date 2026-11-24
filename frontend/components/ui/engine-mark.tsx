@@ -25,7 +25,7 @@ export function engineMarkKey(engine: string): EngineKey | null {
 
 export function engineOptionMark(engine: string): ReactNode {
   const key = engineMarkKey(engine);
-  return key ? <EngineMark engine={key} placement="inline" /> : undefined;
+  return key ? <EngineMark engine={key} placement="inline" brand /> : undefined;
 }
 
 const PLACEMENT = { inline: 'size-4', row: 'size-5' } as const;
