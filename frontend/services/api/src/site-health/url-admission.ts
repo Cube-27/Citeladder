@@ -56,24 +56,35 @@ function namedKind(segment: string) {
   return fallback?.[0] ?? null;
 }
 
-const SOURCE_WORDS = (crawl.sitemap_source_kinds as [string, string[]][]).flatMap(([kind, words]) =>
-  words.map((word) => ({ kind, tokens: word.split(/[-_.]+/u) })),
+const SOURCE_KINDS = new Map(
+  (crawl.sitemap_source_kinds as [string, string[]][]).flatMap(([kind, words]) =>
+    words.map((word) => [word, kind] as const),
+  ),
 );
+const NEUTRAL_WORDS = new Set(crawl.sitemap_neutral_words);
+const NEUTRAL_TOKEN = new RegExp(crawl.sitemap_neutral_token_pattern, 'u');
 
-const containsRun = (tokens: string[], run: string[]) =>
-  tokens.some((_, start) => run.every((token, offset) => tokens[start + offset] === token));
+const sitemapWords = (part: string) =>
+  part
+    .split(/[-_.]+/u)
+    .map((token) => token.replace(/\d+$/u, ''))
+    .filter((token) => !NEUTRAL_TOKEN.test(token) && !NEUTRAL_WORDS.has(token));
 
 function sourceKind(sitemapUrl: string) {
-  const name = URL.parse(sitemapUrl)?.pathname.toLowerCase().split('/').at(-1) ?? '';
-  const tokens = name.split(/[-_.]+/u).filter(Boolean);
-  const named = SOURCE_WORDS.filter((word) => containsRun(tokens, word.tokens)).toSorted(
-    (a, b) => b.tokens.length - a.tokens.length || PRIORITIES[b.kind]! - PRIORITIES[a.kind]!,
-  );
-  return named[0]?.kind ?? [];
+  const folders = (URL.parse(sitemapUrl)?.pathname.toLowerCase() ?? '').split('/').filter(Boolean);
+  const fileWords = sitemapWords(folders.pop() ?? '');
+  const fileKinds = fileWords.flatMap((word) => SOURCE_KINDS.get(word) ?? []);
+  if (fileKinds.length < fileWords.length) return [];
+  const folderKinds = folders.flatMap(sitemapWords).flatMap((word) => SOURCE_KINDS.get(word) ?? []);
+  const kinds = new Set([...folderKinds, ...fileKinds]);
+  return kinds.size === 1 ? [...kinds] : [];
 }
 
-export const listedKind = (sitemaps: readonly string[]) =>
-  sitemaps.flatMap(sourceKind).toSorted((a, b) => PRIORITIES[b]! - PRIORITIES[a]!)[0] ?? null;
+export function listedAdmission(admission: Admission, sitemaps: readonly string[]): Admission {
+  if (admission.valueKind === 'root') return admission;
+  const kind = sitemaps.flatMap(sourceKind).toSorted((a, b) => PRIORITIES[b]! - PRIORITIES[a]!)[0];
+  return kind ? { ...admission, valueKind: kind, priority: PRIORITIES[kind]! } : admission;
+}
 
 function valueKind(url: string) {
   const path = stripTrailing(new URL(url).pathname.toLowerCase(), '/') || '/';
@@ -134,7 +145,7 @@ const rejected = (reason: string, url: string | null = null, kind = 'other'): Ad
 
 export function classifyUrlAdmission(
   url: string,
-  scope: Scope & { base?: string; infrastructure?: 'sitemap'; listedKind?: string | null } = {},
+  scope: Scope & { base?: string; infrastructure?: 'sitemap' } = {},
 ): Admission {
   let canonical: { url: string; hash: string };
   try {
@@ -147,8 +158,7 @@ export function classifyUrlAdmission(
   } catch {
     return rejected(reasons.invalid);
   }
-  const pathKind = valueKind(canonical.url);
-  const kind = pathKind === 'root' ? pathKind : (scope.listedKind ?? pathKind);
+  const kind = valueKind(canonical.url);
   if (scope.domain && !inScope(canonical.url, scope.domain))
     return rejected(reasons.out_of_scope, canonical.url, kind);
   const path = new URL(canonical.url).pathname.toLowerCase();

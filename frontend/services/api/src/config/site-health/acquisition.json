@@ -51,7 +51,7 @@
     ],
     "sitemap_source_kinds": [
       ["product", ["product", "products"]],
-      ["local", ["store", "stores", "location", "locations"]],
+      ["local", ["store", "stores", "storelocation", "location", "locations"]],
       [
         "category",
         [
@@ -64,16 +64,15 @@
           "colour",
           "colours",
           "color",
-          "colors",
-          "product_cat",
-          "product_tag",
-          "product_brand",
-          "post_tag"
+          "colors"
         ]
       ],
       ["article", ["post", "posts", "blog", "blogs", "article", "articles", "news"]],
-      ["faq", ["faq", "faqs"]]
+      ["faq", ["faq", "faqs"]],
+      ["docs", ["documentation", "docs", "help", "support"]]
     ],
+    "sitemap_neutral_words": ["sitemap", "sitemaps", "core", "xml", "gz"],
+    "sitemap_neutral_token_pattern": "^[a-z]{0,2}$",
     "exclusions": {
       "hard_path": "hard_excluded_path",
       "hard_asset": "hard_excluded_asset",

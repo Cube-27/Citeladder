@@ -338,13 +338,18 @@ and are never analyzed. The lists live in `analysis.json`
 (`acquisition.hard_exclusion_*`) and the reason codes in `acquisition.json`
 (`crawl.exclusions`).
 
-**Value tiers** order admission and are separate from page kind. A sitemap URL
-takes the tier its child sitemap's file name names (`sitemap_source_kinds`,
-matched on whole tokens, the longest word winning, so `product_cat-sitemap.xml`
-is `category`); a URL in several named children takes the highest tier, so fetch
-order never matters. Names like `page` or `sitemap-3` decide nothing. Sites
-file products under paths like `/Categories/...` and listings under bare slugs,
-which the path alone misreads. The source lives in memory for admission only.
+**Value tiers** order admission and are separate from page kind. The sitemap
+decides first (owner, 2026-11-24): a sitemap URL takes the tier its child
+sitemap's path names, through `sitemap_source_kinds`. The file name decides only
+when every word in it names the same kind, apart from neutral words
+(`sitemap_neutral_words`, numbers, one- and two-letter tokens such as locale
+codes), so `sitemap-core-brand-category-2.xml` is `category` while
+`product_updates-sitemap.xml` and `page-sitemap.xml` decide nothing. Folder
+words add a kind when they name one (`/blog/sitemap.xml`) and are otherwise
+ignored (`/medias/`); a folder and file naming different kinds decide nothing.
+A URL in several named children takes the highest tier, so fetch order never
+matters. Products filed under `/Categories/...` and listings under bare slugs
+are why the path alone misreads. The source lives in memory for admission only.
 Otherwise the first path segment that names a tier, matching whole tokens,
 decides it; synonyms come from `value_fallback_tokens`. So
 `/blog/product-review` is `article`. A

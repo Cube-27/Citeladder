@@ -6,7 +6,7 @@ import { extractPageFacts, factSettings } from '../src/site-health/analysis/fact
 import { parseSitemapAsync } from '../src/site-health/analysis/off-thread.ts';
 import { discoveryLinks } from '../src/site-health/discovery-links.ts';
 import { admittedUrls } from '../src/site-health/sitemap-walk.ts';
-import { classifyUrlAdmission } from '../src/site-health/url-admission.ts';
+import { classifyUrlAdmission, listedAdmission } from '../src/site-health/url-admission.ts';
 import { document } from '../src/web-evidence/html.ts';
 import {
   parseSitemap,
@@ -368,7 +368,7 @@ describe('sitemaps', () => {
     child('brand-sitemap.xml', '/wiggles-kids-clothing', '/cars-baby-bodysuits-onesies');
     child('store-sitemap.xml', '/store/capalaba');
     child('sitemap_products_1.xml', '/Categories/Kids/Pyjamas/KP1_22_RED');
-    child('product_cat-sitemap.xml', '/kids-tshirts');
+    child('product_updates-sitemap.xml', '/kids-tshirts');
     child('sitemap-3.xml', '/about-us', '/toy-story-shoes', '/shop/dresses');
     const kinds = Object.fromEntries(
       admittedUrls(walk, { domain: 'example.test' }).listed.map(({ item }) => [
@@ -383,7 +383,7 @@ describe('sitemaps', () => {
       '/wiggles-kids-clothing': 'category',
       '/cars-baby-bodysuits-onesies': 'category',
       '/store/capalaba': 'local',
-      '/kids-tshirts': 'category',
+      '/kids-tshirts': 'other',
       '/about-us': 'about',
       '/toy-story-shoes': 'other',
       '/shop/dresses': 'category',
@@ -391,24 +391,84 @@ describe('sitemaps', () => {
   });
 
   it('takes the highest tier among the named children that list a page, whatever the fetch order', () => {
-    const kindOf = (names: string[]) => {
+    const kindOf = (lists: [string, ...string[]][], maxSiteUrls = 100) => {
       const walk = new SitemapCollector({
         limits: { maxDecodedBytes: 4096, maxUrls: 10, maxIndexDepth: 1 },
-        maxSiteUrls: 100,
+        maxSiteUrls,
         follows: () => true,
       });
-      for (const name of names)
-        walk.add(`https://example.test/${name}`, read(urlset('https://example.test/a')), 1);
-      return admittedUrls(walk, { domain: 'example.test' }).listed.map(
-        ({ item }) => item.valueKind,
-      );
+      for (const [name, ...paths] of lists)
+        walk.add(
+          `https://example.test/${name}`,
+          read(urlset(...paths.map((path) => `https://example.test${path}`))),
+          1,
+        );
+      return admittedUrls(walk, { domain: 'example.test' }).listed.map(({ item }) => [
+        new URL(item.url).pathname,
+        item.valueKind,
+      ]);
     };
-    expect(kindOf(['category-sitemap.xml', 'store-sitemap.xml', 'page-sitemap.xml'])).toEqual([
-      'local',
+    const named: [string, ...string[]][] = [
+      ['category-sitemap.xml', '/a'],
+      ['store-sitemap.xml', '/a?utm_source=feed'],
+      ['page-sitemap.xml', '/a'],
+    ];
+    expect(kindOf(named)).toEqual([['/a', 'local']]);
+    expect(kindOf(named.toReversed())).toEqual([['/a', 'local']]);
+    const atCeiling = kindOf(
+      [
+        ['category-sitemap.xml', '/a', '/b'],
+        ['product-sitemap.xml', '/a', '/c'],
+      ],
+      2,
+    );
+    expect(atCeiling).toEqual([
+      ['/a', 'product'],
+      ['/b', 'category'],
     ]);
-    expect(kindOf(['page-sitemap.xml', 'store-sitemap.xml', 'category-sitemap.xml'])).toEqual([
-      'local',
-    ]);
+  });
+
+  it.each([
+    ['/sitemap_products_1.xml', 'product'],
+    ['/es-US/sitemap_products_1.xml', 'product'],
+    ['/sitemap_collections_1.xml', 'category'],
+    ['/sitemap_blogs_1.xml', 'article'],
+    ['/sitemap_articles_1.xml', 'article'],
+    ['/sitemap_pages_1.xml', 'other'],
+    ['/sitemap_metaobject_pages_1.xml', 'other'],
+    ['/hreflang_sitemap.xml', 'other'],
+    ['/post-sitemap.xml', 'article'],
+    ['/post-sitemap2.xml', 'article'],
+    ['/page-sitemap.xml', 'other'],
+    ['/product-sitemap2.xml', 'product'],
+    ['/documentation-sitemap3.xml', 'docs'],
+    ['/category-sitemap.xml', 'category'],
+    ['/author-sitemap.xml', 'other'],
+    ['/product_updates-sitemap.xml', 'other'],
+    ['/feature_request-sitemap.xml', 'other'],
+    ['/yoast_employees-sitemap.xml', 'other'],
+    ['/sitemap-product-4.xml', 'product'],
+    ['/sitemap-core-category.xml', 'category'],
+    ['/sitemap-core-brand-category-2.xml', 'category'],
+    ['/sitemap-campaign-landing-page.xml', 'other'],
+    ['/sitemap/au/product-sitemap-a.xml', 'product'],
+    ['/collection-sitemap.xml', 'category'],
+    ['/storelocation-sitemap.xml', 'local'],
+    ['/content-sitemap.xml', 'other'],
+    ['/seller-sitemap.xml', 'other'],
+    ['/medias/colour-sitemap.xml', 'category'],
+    ['/blog/sitemap.xml', 'article'],
+    ['/help/sitemap.xml', 'docs'],
+    ['/customers/sitemap.xml', 'other'],
+    ['/es-es/blog/sitemap.xml', 'article'],
+    ['/blog/product-sitemap.xml', 'other'],
+    ['/sitemap/partition-3.xml', 'other'],
+    ['/generated_sitemap_part1.xml', 'other'],
+    ['/sitemaps/sitemap_12.xml', 'other'],
+    ['/profiles_sitemap0.xml', 'other'],
+  ])('reads the child sitemap %s as %s for a page its path does not name', (path, kind) => {
+    const page = classifyUrlAdmission('https://example.test/kids-boxer-shorts-orange');
+    expect(listedAdmission(page, [`https://example.test${path}`]).valueKind).toBe(kind);
   });
 
   it('parses a sitemap off the event loop with the same answer and refusals', async () => {

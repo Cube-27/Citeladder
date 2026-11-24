@@ -113,9 +113,11 @@ export class SitemapCollector {
     for (const url of kept) {
       const declared = document.lastmod.get(url);
       if (declared && !this.lastmod.has(url)) this.lastmod.set(url, declared);
+    }
+    for (const [index, url] of document.urls.entries()) {
       const sources = this.listedIn.get(url);
-      if (!sources) this.listedIn.set(url, [source]);
-      else if (!sources.includes(source)) sources.push(source);
+      if (sources && !sources.includes(source)) sources.push(source);
+      else if (!sources && index < kept.length) this.listedIn.set(url, [source]);
     }
     const unseen = [...new Set(document.refs.flatMap((ref) => sitemapRef(ref) ?? []))].filter(
       (ref) => !this.#visited.has(ref),

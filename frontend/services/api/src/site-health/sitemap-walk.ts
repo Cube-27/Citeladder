@@ -13,7 +13,12 @@ import { InterpretationTimeoutError, parseSitemapAsync } from './analysis/off-th
 import { candidate, crawlScope, type Candidate } from './frontier.ts';
 import type { Crawl, SiteTaskContext } from './site-task.ts';
 import { trackedOrder } from './tracked-set.ts';
-import { classifyUrlAdmission, listedKind, type Scope } from './url-admission.ts';
+import {
+  classifyUrlAdmission,
+  listedAdmission,
+  type Admission,
+  type Scope,
+} from './url-admission.ts';
 
 const crawlPolicy = policy.site_health.crawl;
 const { evidence_urls: evidenceUrls, signal_detail_chars: evidenceChars } =
@@ -267,25 +272,30 @@ function collectRefetch(walk: Walk, entry: Entry, stale: IndexRead, read: Sitema
 export type SitemapUrl = { item: Candidate; lastmod: string | null };
 
 export function admittedUrls(collector: SitemapCollector, scope: Scope) {
-  const found = new Map<string, SitemapUrl>();
+  const found = new Map<
+    string,
+    { admission: Admission; url: string; raw: string; sources: string[] }
+  >();
   for (const raw of collector.urls) {
-    const admission = classifyUrlAdmission(raw, {
-      ...scope,
-      listedKind: listedKind(collector.listedIn.get(raw) ?? []),
-    });
-    if (!admission.accepted || !admission.url || found.has(admission.hash)) continue;
-    found.set(admission.hash, {
-      item: candidate(admission, {
-        url: admission.url,
+    const sources = collector.listedIn.get(raw) ?? [];
+    const admission = classifyUrlAdmission(raw, scope);
+    if (!admission.accepted || !admission.url) continue;
+    const first = found.get(admission.hash);
+    if (first) first.sources.push(...sources);
+    else found.set(admission.hash, { admission, url: admission.url, raw, sources: [...sources] });
+  }
+  const listed = [...found.values()]
+    .map(({ admission, url, raw, sources }, linkOrdinal): SitemapUrl => ({
+      item: candidate(listedAdmission(admission, sources), {
+        url,
         hash: admission.hash,
         depth: 1,
         sourceKind: 'sitemap',
         parentPosition: 0,
-        linkOrdinal: found.size,
+        linkOrdinal,
       }),
       lastmod: collector.lastmod.get(raw) ?? null,
-    });
-  }
-  const listed = [...found.values()].toSorted((a, b) => trackedOrder(a.item, b.item));
+    }))
+    .toSorted((a, b) => trackedOrder(a.item, b.item));
   return { discovered: found.size, listed };
 }
