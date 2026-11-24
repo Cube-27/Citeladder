@@ -166,7 +166,7 @@ async function pageSelection(db: Database, scope: CrawlScope, input: PageOptions
     finding as (select u.url_hash,count(i.id)::integer as findings from site_page_analyses a join site_urls u
       on u.id=a.site_url_id and u.workspace_id=a.workspace_id and u.project_id=a.project_id
       left join site_issues i on i.workspace_id=a.workspace_id and i.project_id=a.project_id
-        and ${crawl ? shownIssueFilter(crawl, 'i', 'a') : sql`false`}
+        and ${shownIssueFilter('i', 'a')}
       where a.workspace_id=${scope.workspaceId}::uuid and a.project_id=${scope.projectId}::uuid
         and ${crawl ? sql`a.id in (select v.analysis_id from (${pageAuditsSql(crawl)}) v)` : sql`false`}
       group by u.url_hash),
