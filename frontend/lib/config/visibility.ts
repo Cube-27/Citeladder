@@ -7,6 +7,9 @@ const METRIC_LABELS = {
   ownedCitationRate: 'Owned citation rate',
 } as const;
 
+export const POSITION_HINT =
+  'Where the brand was named among the brands you track, averaged over the answers that name it. 1.0 means named first every time; brands you do not track are not counted.';
+
 export const VISIBILITY_METRICS = [
   { value: 'brand_mention_rate', label: METRIC_LABELS.visibility },
   { value: 'sov', label: METRIC_LABELS.shareOfVoice },

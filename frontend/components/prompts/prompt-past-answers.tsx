@@ -31,7 +31,12 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'engine', label: 'Engine', width: 'category' },
   { key: 'market', label: 'Market', width: 'index' },
   { key: 'brands', label: 'Brands named', kind: 'identity' },
-  { key: 'you', label: 'You', kind: 'number' },
+  {
+    key: 'you',
+    label: 'You',
+    kind: 'number',
+    hint: 'Your place among the brands you track in this answer; brands you do not track are not counted.',
+  },
   { key: 'cited', label: 'Cited', width: 'figure' },
   { key: 'search', label: 'Search used', width: 'figure', priority: 'low' },
   { key: 'formats', label: 'Answer formats', width: 'name', priority: 'low' },

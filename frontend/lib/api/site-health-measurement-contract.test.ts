@@ -29,6 +29,7 @@ describe('siteScoreSummarySchema by_page_kind (v2 P1)', () => {
     analyzed_count: 4,
     issue_count: 3,
     scoring_version: 's1',
+    score_weighting: { kind: 'sample_average' },
     by_page_kind: {
       homepage: {
         analyzed_count: 1,

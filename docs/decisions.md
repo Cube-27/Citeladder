@@ -263,6 +263,10 @@ how to add or change an entry.
   and answers to tracked prompts. Every page in the URLs Gap filter is an Action.
   An Action opens as a page, never a drawer. Owner, 2026-11-10 and 2026-11-16
   ([Opportunities](opportunities.md)).
+- **No unmentioned-product Action without a shopping prompt** (owner,
+  2026-11-24): a catalog product is flagged as never mentioned only when the
+  audited prompts include shopping prompts that could surface it; otherwise the
+  rule abstains with a reason.
 - **Actions group Issues (IA1).** Each Site Health issue rule is one Action per
   Issues group, filed by its Issues section; no per-page finding
   becomes an Action; the Issues page is unchanged. Owner, 2026-11-16.
@@ -435,7 +439,11 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
   full crawl instead (owner, 2026-11-24).
 - **Stall and live score** (2026-11-17): a crawl fails as overdue only after 30
   minutes with no task settled, capped at 12 hours; while it runs the score card
-  is the average of stored page scores.
+  is built from stored page scores.
+- **Headline scores describe the site, not the sample** (owner, 2026-11-24): Web
+  Fundamentals and AEO readiness weight each page kind's average by that kind's
+  share of the site's known URLs, with the per-kind averages shown beside them;
+  a plain average only when the inventory has no kinds.
 - **CO-1** Only the runner's Site Health transactions turn
   `synchronous_commit` off (`SET LOCAL`); billing, ledger, webhook and paid
   provider commits stay durable. **CO-2** Terminalization is batched and leased;
@@ -457,7 +465,8 @@ IDs from the 2026-11-12 codebase audit; "AR" here predates the app design's.
   or weakest engine. **AV-5** Answers group by the topic frozen at the run;
   topic renames show.
 - **AV-6** Competitors get theme counts; quotes stay brand-only. **AV-7**
-  Position and win rate count only the tracked roster.
+  Position and win rate count only the tracked roster; every Position label's
+  hint says it ranks among the brands you track (owner, 2026-11-24).
 - **AV-8** Query fanouts count queries exactly as engines returned them, with
   Share, Change against the previous comparable run and Brands matched.
 - **AV-11** Competitor discovery extends the perception template, adding no

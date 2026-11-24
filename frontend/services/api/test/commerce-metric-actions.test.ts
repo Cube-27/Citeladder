@@ -173,7 +173,55 @@ afterAll(async () => {
   await db.destroy();
 });
 
+async function latestLimitations(tenant: Tenant) {
+  const row = await db
+    .selectFrom('opportunity_snapshots')
+    .select('limitations')
+    .where('workspace_id', '=', tenant.workspaceId)
+    .orderBy('created_at', 'desc')
+    .executeTakeFirstOrThrow();
+  return row.limitations;
+}
+
+async function targetShopping(tenant: Tenant, category: string) {
+  const { id } = await db
+    .selectFrom('commerce_categories')
+    .select('id')
+    .where('workspace_id', '=', tenant.workspaceId)
+    .where('name', '=', category)
+    .executeTakeFirstOrThrow();
+  await db
+    .insertInto('commerce_prompt_targets')
+    .values({
+      id: randomUUID(),
+      workspace_id: tenant.workspaceId,
+      project_id: tenant.projectId,
+      prompt_id: tenant.promptId,
+      target_kind: 'category',
+      target_id: id,
+      template_version: 'test',
+      approved_at: new Date(),
+      created_at: new Date(),
+    })
+    .execute();
+}
+
 describe('Commerce Actions from the per-product metrics', () => {
+  it('abstains from unmentioned products until an audited shopping prompt could surface them', async () => {
+    const before = await findings(t);
+    expect(before.map((row) => row.rule_id)).not.toContain('product_not_mentioned');
+    expect(before.map((row) => row.rule_id)).toContain('price_mismatch');
+    expect(await latestLimitations(t)).toContain(
+      'Mentions not checked for 1 catalog product: no audited shopping prompt asks about it or its category.',
+    );
+    await targetShopping(t, 'Road');
+    const after = await findings(t);
+    expect(
+      after.filter((row) => row.rule_id === 'product_not_mentioned').map((row) => row.target_key),
+    ).toEqual([`product:${gem}`]);
+    expect(JSON.stringify(await latestLimitations(t))).not.toContain('Mentions not checked');
+  });
+
   it('raises each rule from the window of this workspace’s matched answers', async () => {
     const rows = await findings(t);
     expect(rows.map((row) => [row.rule_id, row.target_key])).toEqual([

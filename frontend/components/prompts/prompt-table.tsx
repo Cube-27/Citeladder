@@ -31,6 +31,7 @@ import type { RowSelectionState } from '@/lib/prompts/selection';
 import { CitedDomainMarks } from './cited-domain-marks';
 import { NO_ANSWERS, NOT_MEASURED, positionAbsence } from './prompt-figures';
 import { formatMean, percentText } from '@/lib/format';
+import { POSITION_HINT } from '@/lib/config/visibility';
 
 export type PromptChange =
   | { kind: 'delta'; points: number }
@@ -329,7 +330,7 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
     width: 'figure',
     kind: 'number',
     priority: 'low',
-    hint: 'Where your brand was named among the brands in an answer, averaged over the answers that named it.',
+    hint: POSITION_HINT,
   },
   {
     key: 'sov',

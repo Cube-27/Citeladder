@@ -1,7 +1,14 @@
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import {
+  siteWeighted,
+  siteWeighting,
+  stratify,
+  type KnownUrls,
+} from './analysis/measurement-aggregation.ts';
 import { readinessReason } from './analysis/scoring.ts';
+import { knownUrlsByKind, urlKindSql } from './known-urls.ts';
 import { aeoChecksSql } from './reads/page-rows.ts';
 import { classificationState } from './score-summary.ts';
 import type { Crawl } from './site-task.ts';
@@ -12,6 +19,7 @@ const TERMINAL = policy.task_queue.terminal;
 
 type KindRow = {
   page_kind: string;
+  url_kind: string | null;
   other_reason: string | null;
   analyzed: number;
   web_sum: number;
@@ -26,7 +34,7 @@ type KindRow = {
   aeo_total: number;
 };
 
-type Totalled = Exclude<keyof KindRow, 'page_kind' | 'other_reason'>;
+type Totalled = Exclude<keyof KindRow, 'page_kind' | 'url_kind' | 'other_reason'>;
 
 function currentAnalyses(db: Database, crawl: Crawl) {
   return db
@@ -51,6 +59,7 @@ function kindRows(db: Database, crawl: Crawl): Promise<KindRow[]> {
       sql<string | null>`case when p.page_kind = 'other'
         then coalesce(nullif(p.page_kind_evidence->>'other_reason', ''), 'page_purpose_unresolved')
         end`.as('other_reason'),
+      urlKindSql(crawl, sql.ref('p.site_url_id')).as('url_kind'),
       sql<number>`count(*)::int`.as('analyzed'),
       sql<number>`coalesce(sum(p.web_fundamentals_score), 0)::float8`.as('web_sum'),
       sql<number>`count(p.web_fundamentals_score)::int`.as('web_scored'),
@@ -69,7 +78,7 @@ function kindRows(db: Database, crawl: Crawl): Promise<KindRow[]> {
         'aeo_total',
       ),
     ])
-    .groupBy([sql`1`, sql`2`])
+    .groupBy([sql`1`, sql`2`, sql`3`])
     .orderBy('p.page_kind')
     .execute();
 }
@@ -104,6 +113,19 @@ function byPageKind(rows: KindRow[]) {
       return [kind, { ...measured, analyzed_count: analyzed, aeo_measurement_reason: reason }];
     }),
   );
+}
+
+function strata(rows: KindRow[], known: KnownUrls) {
+  const kinds = [...new Set(rows.flatMap((row) => (row.url_kind ? [row.url_kind] : [])))];
+  const measured = new Map(
+    kinds.map((kind) => {
+      const { analyzed, web_fundamentals_score, aeo_readiness_score } = scores(
+        rows.filter((row) => row.url_kind === kind),
+      );
+      return [kind, { analyzed_count: analyzed, web_fundamentals_score, aeo_readiness_score }];
+    }),
+  );
+  return stratify(known, measured);
 }
 
 function classificationErrors(db: Database, crawl: Crawl) {
@@ -196,7 +218,8 @@ function classification(rows: KindRow[], errors: { error: string | null; pages: 
 export async function liveScoreSummary(db: Database, crawl: Crawl) {
   const rows = await kindRows(db, crawl);
   if (!rows.length) return null;
-  const { analyzed, ...measured } = scores(rows);
+  const strataRows = strata(rows, await knownUrlsByKind(db, crawl));
+  const { analyzed, ...measured } = siteWeighted(scores(rows), strataRows);
   const { issues, selected } = await counts(db, crawl);
   return {
     ...measured,
@@ -208,5 +231,6 @@ export async function liveScoreSummary(db: Database, crawl: Crawl) {
     ...classification(rows, await classificationErrors(db, crawl)),
     presentation_version: policy.site_health.reads.measurement_versions.presentation,
     by_page_kind: byPageKind(rows),
+    score_weighting: siteWeighting(strataRows),
   };
 }

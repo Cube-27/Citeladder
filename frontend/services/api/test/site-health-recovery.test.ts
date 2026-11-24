@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, expect, it, vi } from 'vitest';
 import { sql } from 'kysely';
 
@@ -488,8 +489,10 @@ it('commits an analysis while another analysis holds the workspace runtime lock'
 
 it('scores a running crawl as the mean of its tracked pages’ stored scores', async () => {
   const seed = await fixtures.crawl('running');
+  const kinds = new Map<string, string>();
   const analyzed = async (path: string, web: number | null, aeo: number | null) => {
     const member = await fixtures.analyzable(seed, path);
+    kinds.set(member.siteUrlId, path === '/' ? 'homepage' : 'product');
     const page = await fixtures.page(seed, path, {}, { siteUrlId: member.siteUrlId });
     await db
       .updateTable('site_page_analyses')
@@ -531,6 +534,58 @@ it('scores a running crawl as the mean of its tracked pages’ stored scores', a
     by_page_kind: {
       homepage: { analyzed_count: 1, web_fundamentals_score: 90, aeo_readiness_score: null },
       product: { analyzed_count: 2, web_fundamentals_score: 60, aeo_readiness_score: 60 },
+    },
+    score_weighting: { kind: 'sample_average' },
+  });
+  await db
+    .insertInto('site_url_observations')
+    .values(
+      [...kinds].map(([siteUrlId, kind]) => ({
+        id: randomUUID(),
+        workspace_id: seed.workspaceId,
+        project_id: seed.projectId,
+        crawl_id: seed.crawlId,
+        site_url_id: siteUrlId,
+        source_kind: 'sitemap',
+        observed_url: siteUrlId,
+        final_url: siteUrlId,
+        content_type: 'text/html',
+        depth: 0,
+        title: '',
+        rewrite_reason: '',
+        rewrite_version: '',
+        value_kind: kind,
+        value_priority: 0,
+        created_at: new Date(),
+      })),
+    )
+    .execute();
+  expect(await liveScoreSummary(db, await crawlOf(seed.crawlId))).toMatchObject({
+    web_fundamentals_score: 67.5,
+    aeo_readiness_score: 60,
+    by_page_kind: {
+      homepage: { analyzed_count: 1, web_fundamentals_score: 90 },
+      product: { analyzed_count: 2, web_fundamentals_score: 60 },
+    },
+    score_weighting: {
+      kind: 'site_share',
+      known_url_count: 4,
+      strata: [
+        {
+          page_kind: 'product',
+          known_url_count: 3,
+          analyzed_count: 2,
+          web_fundamentals_score: 60,
+          aeo_readiness_score: 60,
+        },
+        {
+          page_kind: 'homepage',
+          known_url_count: 1,
+          analyzed_count: 1,
+          web_fundamentals_score: 90,
+          aeo_readiness_score: null,
+        },
+      ],
     },
   });
 });

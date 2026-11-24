@@ -369,14 +369,16 @@ export async function commerceHits(
   scope: Scope,
   auditId: string | null,
   asOf: Date,
-): Promise<DetectorHit[]> {
+): Promise<{ hits: DetectorHit[]; limitations: string[] }> {
+  const products = await productMetricHits(db, scope, asOf);
   const hits = [
-    ...(await productMetricHits(db, scope, asOf)),
+    ...products.hits,
     ...(await catalogFieldHits(db, scope)),
     ...(await shelfHits(db, scope, auditId)),
   ];
-  return hits.sort(
+  hits.sort(
     (a, b) =>
       compareText(a.rule_id, b.rule_id) || compareText(targetKey(a.target), targetKey(b.target)),
   );
+  return { hits, limitations: products.limitations };
 }

@@ -251,8 +251,8 @@ cadence, as are the per-page `analysis.progress` and `discovery.progress`
 events. The summary's elapsed-time bound lengthens to
 `live_score_refresh_large_crawl_interval_seconds` once a crawl has admitted
 `live_score_refresh_large_crawl_pages`. The provisional summary
-(`live-score.ts`) is the equal-page average of the tracked pages' stored
-provisional scores, with counts, from a few grouped queries that never read
+(`live-score.ts`) weights the tracked pages' stored provisional scores like
+the terminal headline (below), with counts, from a few grouped queries that never read
 rule evaluations (owner, 2026-11-17); the terminal summary rebuilds from
 evaluations. It is read outside the crawl lock every task commit takes, which
 is held only to write, skipping a crawl that settled meanwhile. An analyze commit
@@ -779,6 +779,14 @@ These formulas are in `analysis/scoring.ts`.
 - **Duplicate rows:** they count once, and disagreeing duplicates count as
   `unknown`.
 - **Page-kind rollups** use the same arithmetic, with crawl-wide site checks.
+- **Headline scores** (Web Fundamentals, AEO readiness) describe the site, not
+  the sample, which `tracked_share` fills by fixed per-kind shares: each
+  sampled page counts in its URL's inventory kind (`site_url_observations.value_kind`
+  across the crawl's inventory lineage), and each kind's average weighs by that
+  kind's share of the known URLs (`known-urls.ts`). Kinds with no scored
+  page drop out; with no kinds in the inventory the headline is the plain page
+  average. `score_summary.score_weighting` stores the strata the screen
+  shows beside the headline.
 
 ## Coverage and measurement states
 

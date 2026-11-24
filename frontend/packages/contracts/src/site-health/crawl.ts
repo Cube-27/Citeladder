@@ -119,6 +119,23 @@ export const pageKindScoreSummarySchema = responseObject({
   aeo_readiness_checks: checksRunSchema.nullable(),
 });
 
+export const scoreWeightingSchema = z.discriminatedUnion('kind', [
+  responseObject({ kind: z.literal('sample_average') }),
+  responseObject({
+    kind: z.literal('site_share'),
+    known_url_count: z.number().int().nonnegative(),
+    strata: z.array(
+      responseObject({
+        page_kind: pageKindSchema,
+        known_url_count: z.number().int().nonnegative(),
+        analyzed_count: z.number().int().nonnegative(),
+        web_fundamentals_score: z.number().nullable(),
+        aeo_readiness_score: z.number().nullable(),
+      }),
+    ),
+  }),
+]);
+
 export const siteScoreSummarySchema = responseObject({
   web_fundamentals_score: z.number().nullable(),
   web_fundamentals_coverage: z.number().nullable(),
@@ -135,6 +152,7 @@ export const siteScoreSummarySchema = responseObject({
   issue_count: z.number().int(),
   scoring_version: z.string(),
   by_page_kind: z.record(z.string(), pageKindScoreSummarySchema),
+  score_weighting: scoreWeightingSchema,
 });
 
 export const crawlCountersSchema = responseObject({

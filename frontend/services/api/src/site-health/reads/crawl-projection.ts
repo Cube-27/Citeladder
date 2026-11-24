@@ -1,6 +1,7 @@
 import {
   checksRunSchema,
   isActiveCrawl,
+  scoreWeightingSchema,
   type crawlCountersSchema,
 } from '@citeladder/contracts/site-health';
 import type { z } from 'zod';
@@ -20,6 +21,10 @@ const num = (value: unknown) => (typeof value === 'number' ? value : null);
 const checks = (value: unknown) => {
   const parsed = checksRunSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
+};
+const weighting = (value: unknown) => {
+  const parsed = scoreWeightingSchema.safeParse(value);
+  return parsed.success ? parsed.data : { kind: 'sample_average' as const };
 };
 const text = (value: unknown, fallback: string) =>
   typeof value === 'string' && value !== '' ? value : fallback;
@@ -70,6 +75,7 @@ export function scoreSummary(crawl: ProjectedCrawl) {
     scored_page_kind_set: strings(summary.scored_page_kind_set),
     scored_page_count_by_kind: record(summary.scored_page_count_by_kind),
     by_page_kind: Object.fromEntries(byKind),
+    score_weighting: weighting(summary.score_weighting),
   };
 }
 

@@ -7179,6 +7179,72 @@
         "required": ["method", "target", "outcome", "error_code", "status_code", "latency_ms"],
         "additionalProperties": false
       },
+      "ScoreWeighting": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "sample_average"
+              }
+            },
+            "required": ["kind"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "site_share"
+              },
+              "known_url_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "strata": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "page_kind": {
+                      "$ref": "#/components/schemas/PageKind"
+                    },
+                    "known_url_count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "analyzed_count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "web_fundamentals_score": {
+                      "type": ["number", "null"]
+                    },
+                    "aeo_readiness_score": {
+                      "type": ["number", "null"]
+                    }
+                  },
+                  "required": [
+                    "page_kind",
+                    "known_url_count",
+                    "analyzed_count",
+                    "web_fundamentals_score",
+                    "aeo_readiness_score"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["kind", "known_url_count", "strata"],
+            "additionalProperties": false
+          }
+        ]
+      },
       "SearchDataset": {
         "type": "object",
         "properties": {
@@ -8337,6 +8403,9 @@
             "additionalProperties": {
               "$ref": "#/components/schemas/PageKindScoreSummary"
             }
+          },
+          "score_weighting": {
+            "$ref": "#/components/schemas/ScoreWeighting"
           }
         },
         "required": [
@@ -8363,7 +8432,8 @@
           "analyzed_count",
           "issue_count",
           "scoring_version",
-          "by_page_kind"
+          "by_page_kind",
+          "score_weighting"
         ],
         "additionalProperties": false
       },

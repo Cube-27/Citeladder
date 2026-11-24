@@ -47,6 +47,7 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
           analyzed_count: 0,
           issue_count: 0,
           scoring_version: 's1',
+          score_weighting: { kind: 'sample_average' },
           by_page_kind: {},
         },
         failure_summary: {
@@ -213,6 +214,7 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
       issue_count: 3,
       scoring_version: 's1',
       ...COMPLETE_CLASSIFICATION_PROJECTION,
+      score_weighting: { kind: 'sample_average' },
       by_page_kind: {
         article: {
           analyzed_count: 4,

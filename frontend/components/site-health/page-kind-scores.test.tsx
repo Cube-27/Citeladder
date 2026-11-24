@@ -23,6 +23,7 @@ function summary(overrides: Partial<SiteScoreSummary> = {}): SiteScoreSummary {
     scoring_version: 's1',
     ...COMPLETE_CLASSIFICATION_PROJECTION,
     by_page_kind: {},
+    score_weighting: { kind: 'sample_average' },
     ...overrides,
   };
 }

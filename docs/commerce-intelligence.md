@@ -427,7 +427,10 @@ for every active owned product, ending when the refresh resolved its sources:
 currencies are not converted). Each rule needs a configured number of samples (executions, quotes in the
 catalog currency, ordered appearances, merchant answers); below it the product
 has too little data and raises nothing, and a product without a catalog price
-raises no price finding. A finding stores the window, the reading, the
+raises no price finding. `product_not_mentioned` counts only the answers to
+shopping prompts (`commerce_prompt_targets`) that target the product or one of
+its categories; a product none of them could surface abstains, and the refresh
+records how many abstained as a limitation. A finding stores the window, the reading, the
 threshold and the row's figures, with the observation IDs it was read from. A
 declared Action freezes each finding's rule as a `product_metric` check that
 reads the same metric over the answers completed after go-live
