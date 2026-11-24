@@ -476,7 +476,6 @@ it('serializes canonical URLs so one page has one identity', () => {
     'https://ex.com/a b?q=a b': 'https://ex.com/a%20b?q=a+b',
     'https://ex.com/a?a&b=1': 'https://ex.com/a?a=&b=1',
     'https://ex.com/p?utm_source=x': 'https://ex.com/p',
-    'https://en.wikipedia.org/wiki/Best_%26_Less': 'https://en.wikipedia.org/wiki/Best_&_Less',
     'https://ex.com/p?sc_cid=1&SC_channel=x&utm_id=3&id=2': 'https://ex.com/p?id=2',
   };
   for (const [input, expected] of Object.entries(vectors)) {

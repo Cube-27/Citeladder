@@ -21,7 +21,7 @@ export function ignoredQueryKey(key: string): boolean {
   );
 }
 
-export const PATH_LITERAL = /[A-Za-z0-9\-._~:@!$&'()*+,;=]/u;
+const PATH_LITERAL = /[A-Za-z0-9\-._~:@!$&'()*+,;=]/u;
 
 export function canonicalPage(input: string, origin?: string | null): string | null {
   try {
