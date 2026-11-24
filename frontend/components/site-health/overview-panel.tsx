@@ -3,7 +3,6 @@ import { useState, type ReactNode } from 'react';
 
 import { OverviewDetails } from './overview-details';
 import { OverviewMetricCards } from './overview-metrics';
-import { SiteShareScores } from './site-share-scores';
 import { Stack } from '@/components/ui/layout';
 import { httpErrorStatus } from '@/lib/api/client';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
@@ -62,7 +61,6 @@ export function OverviewPanel({
   return (
     <Stack gap="workspace" className="min-w-0" data-testid="site-health-overview">
       <OverviewMetricCards overview={data} dashboard={dashboard} crawl={crawl} />
-      <SiteShareScores summary={dashboard?.score_summary ?? crawl?.score_summary ?? null} />
       {overviewBody}
     </Stack>
   );
