@@ -7,6 +7,7 @@ import type {
   SearchIntelligenceDataset,
   SearchIntelligenceReadiness,
 } from '@/lib/api/search-intelligence';
+import type { BacklinkFigureKey } from '@citeladder/contracts/search-intelligence';
 import { Database } from '@/lib/icons';
 import { SEARCH_DATASET_LABELS } from '@/lib/config/search-intelligence';
 import { SearchIntelligenceCompetitors } from './search-intelligence-competitors';
@@ -14,12 +15,49 @@ import { SearchValue } from './search-intelligence-value';
 import { StateBlock } from '@/components/ui/state-block';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
-export type SearchMetric = readonly [
+type BacklinkFigures = SearchIntelligenceReadiness['backlink_figures'][number];
+
+export type SearchMetric = Readonly<{
+  label: string;
+  value: unknown;
+  fetched: boolean;
+  asOf?: string | null;
+  sub?: FigureSegment['sub'];
+}>;
+
+export const datasetMetric = (
   label: string,
   dataset: SearchIntelligenceDataset | undefined,
   field: string,
-  options?: Readonly<{ asOf?: boolean; sub?: FigureSegment['sub'] }>,
-];
+  options: Readonly<{ asOf?: boolean; sub?: FigureSegment['sub'] }> = {},
+): SearchMetric => ({
+  label,
+  value: dataset?.summary[field],
+  fetched: Boolean(dataset),
+  asOf: options.asOf ? dataset?.collection_ended_at : null,
+  sub: options.sub,
+});
+
+export const figureMetric = (
+  label: string,
+  figures: BacklinkFigures | undefined,
+  key: BacklinkFigureKey,
+): SearchMetric => {
+  const figure = figures?.[key];
+  return { label, value: figure?.value, fetched: Boolean(figure), asOf: figure?.as_of };
+};
+
+export const figureDatasets = (
+  figures: BacklinkFigures | undefined,
+  datasets: readonly SearchIntelligenceDataset[],
+) => {
+  const ids = new Set(
+    [figures?.backlinks, figures?.referring_domains, figures?.referring_main_domains, figures?.rank]
+      .filter((figure) => figure != null)
+      .map((figure) => figure.dataset_id),
+  );
+  return datasets.filter((dataset) => ids.has(dataset.id));
+};
 
 export function SearchMetrics({
   metrics,
@@ -28,15 +66,15 @@ export function SearchMetrics({
   return (
     <FigureStrip
       label={label}
-      segments={metrics.map(([label, dataset, field, options]) => ({
-        key: label,
-        label,
-        value: <SearchValue value={dataset?.summary[field]} fetched={Boolean(dataset)} />,
+      segments={metrics.map((metric) => ({
+        key: metric.label,
+        label: metric.label,
+        value: <SearchValue value={metric.value} fetched={metric.fetched} />,
         sub:
-          options?.sub ??
-          (options?.asOf && dataset?.collection_ended_at ? (
+          metric.sub ??
+          (metric.asOf ? (
             <>
-              as of <DisplayTime value={dataset.collection_ended_at} dateOnly />
+              as of <DisplayTime value={metric.asOf} dateOnly />
             </>
           ) : undefined),
       }))}
@@ -46,11 +84,13 @@ export function SearchMetrics({
 
 export function SearchIntelligenceOverview({
   datasets,
+  backlinkFigures,
   competitors,
   ownedHostname,
   onOpen,
 }: Readonly<{
   datasets: SearchIntelligenceDataset[];
+  backlinkFigures: SearchIntelligenceReadiness['backlink_figures'];
   competitors: SearchIntelligenceReadiness['competitors'];
   ownedHostname: string;
   onOpen: (dataset: SearchIntelligenceDataset) => void;
@@ -58,9 +98,7 @@ export function SearchIntelligenceOverview({
   const footprint = datasets.find(
     (item) => item.dataset_kind === 'footprint' && item.target_hostname === ownedHostname,
   );
-  const backlinks = datasets.find(
-    (item) => item.dataset_kind === 'backlink_summary' && item.target_hostname === ownedHostname,
-  );
+  const backlinks = backlinkFigures.find((item) => item.target_hostname === ownedHostname);
   if (!footprint && !backlinks)
     return (
       <StateBlock
@@ -75,23 +113,18 @@ export function SearchIntelligenceOverview({
       <SearchMetrics
         label="Your search footprint"
         metrics={[
-          ['Organic keywords', footprint, 'organic_keywords', { asOf: true }],
-          ['Estimated monthly traffic', footprint, 'estimated_monthly_traffic'],
-          [
-            'Top-10 keywords',
-            footprint,
-            'top_10_keywords',
-            {
-              sub:
-                footprint && share != null ? (
-                  <>
-                    <SearchValue value={share} digits={1} />% of ranking keywords
-                  </>
-                ) : undefined,
-            },
-          ],
-          ['Referring domains', backlinks, 'referring_domains', { asOf: true }],
-          ['Backlinks', backlinks, 'backlinks', { asOf: true }],
+          datasetMetric('Organic keywords', footprint, 'organic_keywords', { asOf: true }),
+          datasetMetric('Estimated monthly traffic', footprint, 'estimated_monthly_traffic'),
+          datasetMetric('Top-10 keywords', footprint, 'top_10_keywords', {
+            sub:
+              footprint && share != null ? (
+                <>
+                  <SearchValue value={share} digits={1} />% of ranking keywords
+                </>
+              ) : undefined,
+          }),
+          figureMetric('Referring domains', backlinks, 'referring_domains'),
+          figureMetric('Backlinks', backlinks, 'backlinks'),
         ]}
       />
       <SearchIntelligenceCompetitors
@@ -100,7 +133,7 @@ export function SearchIntelligenceOverview({
         onOpen={onOpen}
       />
       <SearchSummaryEvidence
-        datasets={[footprint, backlinks].filter((item) => item !== undefined)}
+        datasets={[...(footprint ? [footprint] : []), ...figureDatasets(backlinks, datasets)]}
       />
     </Stack>
   );

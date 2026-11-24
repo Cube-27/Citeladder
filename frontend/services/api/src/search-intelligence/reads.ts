@@ -18,6 +18,7 @@ import { policy } from '../config.ts';
 import { preferencesBody } from '../routes/search-intelligence-contracts.ts';
 import { competitorTarget, ownedTargets, searchMarket } from './targets.ts';
 import { datasetView, rowView, runView } from './views.ts';
+import { backlinkFigures } from './backlink-figures.ts';
 import { isNonEmpty, lastOf, onlyOf } from '../lists.ts';
 import { workspaceCredentialMode } from '../billing/credential-mode.ts';
 import { surfaceMarkets } from '../search-surfaces/locations.ts';
@@ -132,6 +133,7 @@ export async function readiness(
     latestDatasets(db, scope),
   ]);
   const saved = preferencesBody.parse(project.search_intelligence_preferences);
+  const views = datasets.map(datasetView);
   return {
     ...account,
     owned_targets: ownedTargets(project, ownedDomains),
@@ -144,7 +146,8 @@ export async function readiness(
       depths: { ...si.default_depths, ...saved.depths },
     },
     latest_run: latest ? runView(latest) : null,
-    datasets: datasets.map(datasetView),
+    datasets: views,
+    backlink_figures: await backlinkFigures(db, scope, views),
     markets: surfaceMarkets('google_ai_overview'),
     max_depth: si.max_depth,
   };

@@ -21,16 +21,11 @@ import {
 } from '@/lib/api/search-intelligence';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
-import { Absence } from '@/components/ui/absence';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { TABLE_SEARCH_DEBOUNCE_MS } from '@/lib/config/operational';
 import { useDebounced } from '@/lib/use-debounced';
-import { evidenceFields, searchNumber } from './search-intelligence-format';
-import {
-  defaultRowOrder,
-  SEARCH_COLUMNS_BY_KIND,
-  type SearchRowOrder,
-} from '@/lib/config/search-intelligence';
+import { datasetCoverage, evidenceFields } from './search-intelligence-format';
+import { defaultRowOrder, type SearchRowOrder } from '@/lib/config/search-intelligence';
 import { visibilityRunSourcesHref } from '@/lib/visibility/use-visibility-dashboard';
 import { SearchIntelligenceExport } from './search-intelligence-export';
 import type { KeywordFilterValues } from './search-intelligence-collection-state';
@@ -131,7 +126,11 @@ export function SearchIntelligenceDatasetView({
       >
         <SearchIntelligenceRows kind={dataset.dataset_kind} rows={rows} onSelect={setSelected} />
       </DataTable>
-      <EvidenceDrawer selected={selected} onClose={() => setSelected(null)} />
+      <EvidenceDrawer
+        kind={dataset.dataset_kind}
+        selected={selected}
+        onClose={() => setSelected(null)}
+      />
     </>
   );
 }
@@ -163,9 +162,10 @@ function rowsHandoff(
 }
 
 export function EvidenceDrawer({
+  kind,
   selected,
   onClose,
-}: Readonly<{ selected: SearchIntelligenceRow | null; onClose: () => void }>) {
+}: Readonly<{ kind: string; selected: SearchIntelligenceRow | null; onClose: () => void }>) {
   return (
     <Drawer
       open={selected !== null}
@@ -192,23 +192,22 @@ export function EvidenceDrawer({
           View in Sources
         </TextLink>
       ) : null}
-      {selected ? <RowFields row={selected} /> : null}
+      {selected ? <RowFields kind={kind} row={selected} /> : null}
     </Drawer>
   );
 }
 
-function RowFields({ row }: Readonly<{ row: SearchIntelligenceRow }>) {
+function RowFields({ kind, row }: Readonly<{ kind: string; row: SearchIntelligenceRow }>) {
   const timeZone = useDisplayTimeZone();
-  const labels = Object.fromEntries(
-    (SEARCH_COLUMNS_BY_KIND[row.row_kind] ?? []).map((column) => [column.field, column.label]),
-  );
+  const fields = evidenceFields({ kind, row, timeZone });
+  if (!fields.length) return null;
   return (
     <dl className={ledgerClasses('type-body text-ink-2')}>
-      {evidenceFields(row, labels, timeZone).map((field) => (
+      {fields.map((field) => (
         <Stack key={field.key} gap="tight" className={ledgerItemClasses('min-w-0')}>
           <dt className="text-ink-2">{field.label}</dt>
           <dd className="min-w-0">
-            {field.value === null ? <Absence /> : <ClampText>{field.value}</ClampText>}
+            <ClampText>{field.value}</ClampText>
           </dd>
         </Stack>
       ))}
@@ -217,6 +216,15 @@ function RowFields({ row }: Readonly<{ row: SearchIntelligenceRow }>) {
 }
 
 function EmptyDataset({ dataset }: Readonly<{ dataset: SearchIntelligenceDataset }>) {
+  if (dataset.dataset_kind === 'citation_matches')
+    return (
+      <StateBlock
+        kind="empty"
+        icon={SearchX}
+        heading="No citations matched"
+        description={datasetCoverage(dataset) ?? undefined}
+      />
+    );
   return (
     <StateBlock
       kind="empty"
@@ -248,12 +256,6 @@ function filteredSavedCount(dataset: SearchIntelligenceDataset) {
 }
 
 function datasetSummary(dataset: SearchIntelligenceDataset) {
-  const coverage = [
-    dataset.provider_total === null
-      ? null
-      : `${searchNumber(dataset.provider_total)} available from the provider`,
-    dataset.truncated ? 'Truncated' : null,
-  ].filter((part) => part !== null);
-  if (!coverage.length) return null;
-  return <p className={textRole('caption')}>{coverage.join(' · ')}</p>;
+  const coverage = datasetCoverage(dataset);
+  return coverage ? <p className={textRole('caption')}>{coverage}</p> : null;
 }

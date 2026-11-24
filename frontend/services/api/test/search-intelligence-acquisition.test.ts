@@ -107,16 +107,22 @@ describe('single-dispatch research transport and scoped normalization', () => {
       expect(response.body).toEqual(malformed);
     },
   );
-  it('reads the spam score of one backlink from the field its endpoint uses', () => {
+  it('reads the spam score and target status of one backlink from its endpoint fields', () => {
     const link = {
       url_from: 'https://blog.example.org/post',
       url_to: 'https://www.example.com/shoes',
       domain_from: 'blog.example.org',
       rank: 40,
       backlink_spam_score: 45,
+      is_broken: true,
+      url_to_status_code: 403,
     };
     const result = normalizeResponse('backlinks', body({ items: [link], total_count: 1 }), plan);
-    expect(result.rows[0]?.auxiliary).toMatchObject({ backlinks_spam_score: 45 });
+    expect(result.rows[0]?.auxiliary).toMatchObject({
+      backlinks_spam_score: 45,
+      is_broken: true,
+      url_to_status_code: 403,
+    });
   });
   it('keeps scoped rows with unknown metrics and rejects another host', () => {
     const item = {

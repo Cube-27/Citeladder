@@ -154,6 +154,8 @@ export function deriveCitationMatches(
           selected_audits: selected.length,
           citations_reviewed: citations.length,
           matches: matches.length,
+          referring_domains_compared: linkingDomains.size,
+          referring_domains_total: parent.provider_total,
         }),
         provider_filters: JSON.stringify({
           audit_ids: selected,

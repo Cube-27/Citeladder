@@ -48,6 +48,7 @@ function Tab({
       <SearchIntelligenceCollection
         collection={collection}
         datasets={datasets}
+        backlinkFigures={[]}
         competitors={[]}
         onSelect={setSelected}
       />

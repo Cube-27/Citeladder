@@ -116,7 +116,11 @@ export function KeywordRowsView({
                 onSelect={setSelected}
               />
             </DataTable>
-            <EvidenceDrawer selected={selected} onClose={() => setSelected(null)} />
+            <EvidenceDrawer
+              kind={page.dataset.dataset_kind}
+              selected={selected}
+              onClose={() => setSelected(null)}
+            />
           </>
         )}
       </ViewRead>

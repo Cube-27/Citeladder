@@ -90,6 +90,8 @@ export const SEARCH_COLUMNS_BY_KIND: {
   ],
 };
 
+export const PROVIDER_BLOCKED_STATUSES: readonly number[] = [401, 403, 429];
+
 export type SearchRowOrder = { sort: string; direction: 'asc' | 'desc' };
 const LARGEST_FIRST: Readonly<Record<string, string>> = {
   ranking_keywords: 'search_volume',

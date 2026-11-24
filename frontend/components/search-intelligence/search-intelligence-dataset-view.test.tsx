@@ -116,7 +116,7 @@ it('hands the visible rows, or one selected row, to the Agent by id', async () =
     http.get(`/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`, () =>
       HttpResponse.json({
         dataset,
-        rows: [row(first, 'crm software'), row(second, 'crm pricing')],
+        rows: [row(first, 'crm software'), { ...row(second, 'crm pricing'), rank_absolute: 4 }],
         next_cursor: null,
       }),
     ),
@@ -182,15 +182,20 @@ it.each([
   },
 );
 
-it('rounds estimated traffic in the table and opens readable details from the keyword', async () => {
+it('rounds estimated traffic and opens only details the row lacks from the keyword', async () => {
   const result = {
     ...row('33333333-3333-4333-8333-333333333333', 'Family outfits'),
     etv: '7.55999994',
     search_volume: 3600,
+    difficulty: 24,
   };
   mswServer.use(
     http.get(`/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`, () =>
-      HttpResponse.json({ dataset, rows: [result], next_cursor: null }),
+      HttpResponse.json({
+        dataset,
+        rows: [result, row('44444444-4444-4444-8444-444444444444', 'Plain row')],
+        next_cursor: null,
+      }),
     ),
   );
   renderWithProviders(<SearchIntelligenceDatasetView dataset={dataset} />, {
@@ -199,8 +204,11 @@ it('rounds estimated traffic in the table and opens readable details from the ke
   expect(await screen.findByRole('cell', { name: '8' })).toBeInTheDocument();
   expect(screen.getByRole('cell', { name: '3,600' })).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'View evidence for Family outfits' }));
+  expect(screen.getByText('Plain row')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'View evidence for Plain row' })).toBeNull();
   const details = screen.getByRole('dialog', { name: 'Row details' });
-  expect(within(details).getByText('3,600')).toBeInTheDocument();
+  expect(within(details).getByText('Difficulty')).toBeInTheDocument();
+  expect(details).not.toHaveTextContent('3,600');
   expect(details).not.toHaveTextContent(result.id);
   expect(details).not.toHaveTextContent(dataset.id);
 });
@@ -330,7 +338,7 @@ it('uses shared pagination and resets its cursor when sorting or changing rows p
         node?.tagName === 'OUTPUT' && /of 201 evidence rows$/.test(node.textContent ?? ''),
     ),
   ).toBeInTheDocument();
-  expect(screen.getByText('201 available from the provider')).toBeInTheDocument();
+  expect(screen.queryByText(/201 saved|available from the provider/)).not.toBeInTheDocument();
   expect(screen.queryByText(/rows shown|saved rows/)).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
   expect(await screen.findByText('Later keyword')).toBeInTheDocument();

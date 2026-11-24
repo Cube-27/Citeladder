@@ -150,6 +150,24 @@ export const searchDatasetSchema = responseObject({
   published_at: z.string().nullable(),
   filtered_saved_count: z.number().int().nullable().optional(),
 }).catchall(z.unknown());
+const backlinkFigureSchema = responseObject({
+  value: z.number(),
+  dataset_id: z.uuid(),
+  as_of: z.string().nullable(),
+}).nullable();
+export const searchBacklinkFiguresSchema = responseObject({
+  target_origin: z.string(),
+  target_hostname: z.string(),
+  research_scope: researchScopeSchema,
+  backlinks: backlinkFigureSchema,
+  referring_domains: backlinkFigureSchema,
+  referring_main_domains: backlinkFigureSchema,
+  rank: backlinkFigureSchema,
+});
+export type BacklinkFigureKey = Exclude<
+  keyof z.infer<typeof searchBacklinkFiguresSchema>,
+  'target_origin' | 'target_hostname' | 'research_scope'
+>;
 export const searchReadinessSchema = responseObject({
   credential_mode: credentialModeSchema,
   connected: z.boolean(),
@@ -159,6 +177,7 @@ export const searchReadinessSchema = responseObject({
   preferences: searchPreferencesSchema,
   latest_run: searchRunSchema.nullable(),
   datasets: z.array(searchDatasetSchema),
+  backlink_figures: z.array(searchBacklinkFiguresSchema),
   markets: z.array(responseObject({ country_code: z.string(), location_code: z.number().int() })),
   max_depth: z.number().int(),
 });

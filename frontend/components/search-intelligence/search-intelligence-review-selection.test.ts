@@ -12,7 +12,7 @@ const target = (identity: string, hostname: string) => ({
   registrable_domain: hostname.replace(/^www\./u, ''),
   hostname,
   origin: `https://${hostname}`,
-  source_kind: identity === 'rival' ? 'competitor' : 'owned',
+  source_kind: ['rival', 'other'].includes(identity) ? 'competitor' : 'owned',
 });
 
 const comparison = (targetOrigin: string): SearchIntelligenceDataset => ({
@@ -45,7 +45,7 @@ const readiness = (datasets: SearchIntelligenceDataset[]): SearchIntelligenceRea
   connected: true,
   connection_id: '72dbc77c-676f-4bf7-8c29-16f163cb09f5',
   owned_targets: [target('shop', 'www.shop.example'), target('blog', 'blog.example')],
-  competitors: [target('rival', 'rival.com')],
+  competitors: [target('rival', 'rival.com'), target('other', 'other.com')],
   preferences: {
     owned_target_id: 'shop',
     competitor_ids: [],
@@ -57,6 +57,7 @@ const readiness = (datasets: SearchIntelligenceDataset[]): SearchIntelligenceRea
   latest_run: null,
   datasets,
   markets: [{ country_code: 'US', location_code: 2840 }],
+  backlink_figures: [],
   max_depth: 1_000_000,
 });
 
@@ -65,12 +66,16 @@ it('refreshes a comparison saved for the website under review', () => {
   expect(keys.map(selectionKey)).toEqual(['missing_keywords:rival']);
 });
 
-it('ignores a comparison saved for another of your websites and starts from the preset', () => {
+it('ignores a comparison saved for another of your websites and preselects every competitor', () => {
   const keys = defaultSelections(readiness([comparison('https://blog.example')]), 'refresh');
   expect(keys.map(selectionKey)).toEqual([
     'footprint:',
     'ranking_keywords:',
+    'footprint:rival',
     'missing_keywords:rival',
     'shared_keywords:rival',
+    'footprint:other',
+    'missing_keywords:other',
+    'shared_keywords:other',
   ]);
 });

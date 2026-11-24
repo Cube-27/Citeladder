@@ -7,7 +7,12 @@ import type {
 } from '@/lib/api/search-intelligence';
 import { SearchIntelligenceDatasetView } from './search-intelligence-dataset-view';
 import { SearchIntelligenceCompetitors } from './search-intelligence-competitors';
-import { SearchMetrics, SearchSummaryEvidence } from './search-intelligence-overview';
+import {
+  figureDatasets,
+  figureMetric,
+  SearchMetrics,
+  SearchSummaryEvidence,
+} from './search-intelligence-overview';
 import { SearchIntelligenceHistory } from './search-intelligence-history';
 import { SearchValue } from './search-intelligence-value';
 import type { SearchCollection } from './search-intelligence-collection-state';
@@ -16,11 +21,13 @@ import { StateBlock } from '@/components/ui/state-block';
 export function SearchIntelligenceCollection({
   collection,
   datasets,
+  backlinkFigures,
   competitors,
   onSelect,
 }: Readonly<{
   collection: SearchCollection;
   datasets: SearchIntelligenceDataset[];
+  backlinkFigures: SearchIntelligenceReadiness['backlink_figures'];
   competitors: SearchIntelligenceReadiness['competitors'];
   onSelect: (dataset: SearchIntelligenceDataset | null) => void;
 }>) {
@@ -35,7 +42,11 @@ export function SearchIntelligenceCollection({
   return (
     <Stack gap="workspace" className="min-w-0">
       {collection.tab === 'backlinks' ? (
-        <BacklinkMetrics datasets={datasets} targetOrigin={collection.target} />
+        <BacklinkMetrics
+          datasets={datasets}
+          backlinkFigures={backlinkFigures}
+          targetOrigin={collection.target}
+        />
       ) : null}
       <CollectionResult collection={collection} />
     </Stack>
@@ -44,18 +55,24 @@ export function SearchIntelligenceCollection({
 
 function BacklinkMetrics({
   datasets,
+  backlinkFigures,
   targetOrigin,
-}: Readonly<{ datasets: SearchIntelligenceDataset[]; targetOrigin?: string }>) {
+}: Readonly<{
+  datasets: SearchIntelligenceDataset[];
+  backlinkFigures: SearchIntelligenceReadiness['backlink_figures'];
+  targetOrigin?: string;
+}>) {
+  const ofTarget = (item: { target_origin: string }) =>
+    !targetOrigin || item.target_origin === targetOrigin;
+  const figures = backlinkFigures.find(ofTarget);
   const summary = datasets.find(
     (item) =>
-      item.dataset_kind === 'backlink_summary' &&
-      (!targetOrigin || item.target_origin === targetOrigin),
+      item.dataset_kind === 'backlink_summary' && item.target_origin === figures?.target_origin,
   );
   const history = datasets.find(
-    (item) =>
-      item.dataset_kind === 'backlink_history' &&
-      (!targetOrigin || item.target_origin === targetOrigin),
+    (item) => item.dataset_kind === 'backlink_history' && ofTarget(item),
   );
+  const sources = figureDatasets(figures, datasets);
   return (
     <>
       <Section aria-labelledby="backlink-summary">
@@ -71,15 +88,15 @@ function BacklinkMetrics({
         </SectionHeader>
         <SearchMetrics
           metrics={[
-            ['Backlinks', summary, 'backlinks', { asOf: true }],
-            ['Referring domains', summary, 'referring_domains', { asOf: true }],
-            ['Referring root domains', summary, 'referring_main_domains', { asOf: true }],
-            ['Domain rank', summary, 'rank', { asOf: true }],
+            figureMetric('Backlinks', figures, 'backlinks'),
+            figureMetric('Referring domains', figures, 'referring_domains'),
+            figureMetric('Referring root domains', figures, 'referring_main_domains'),
+            figureMetric('Domain rank', figures, 'rank'),
           ]}
         />
       </Section>
       {history ? <SearchIntelligenceHistory dataset={history} /> : null}
-      {summary ? <SearchSummaryEvidence datasets={[summary]} /> : null}
+      {sources.length ? <SearchSummaryEvidence datasets={sources} /> : null}
     </>
   );
 }
