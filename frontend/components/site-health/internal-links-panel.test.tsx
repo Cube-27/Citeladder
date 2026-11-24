@@ -365,8 +365,8 @@ describe('Internal links', () => {
     mswServer.use(http.get(endpoint, () => HttpResponse.json(read(current))));
     renderPanel();
     const source = await screen.findByRole('link', { name: 'Source' });
-    expect(new URL(source.getAttribute('href')!, 'http://x').pathname).toBe(
-      `/site/crawls/${current.crawl_id}/pages/${link.source.site_url_id}`,
+    expect(new URL(source.getAttribute('href')!, 'http://x').searchParams.get('site_page')).toBe(
+      `${current.crawl_id}_${link.source.site_url_id}`,
     );
     expect(screen.queryByRole('link', { name: 'Destination' })).toBeNull();
     await userEvent.click(

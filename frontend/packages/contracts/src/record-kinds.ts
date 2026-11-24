@@ -9,6 +9,9 @@ type RecordKind = {
 const own = (path: string) => (field: Field) => (field('id') ? `${path}/${field('id')}` : null);
 const KEYWORD_RESEARCH = '/search-intelligence?tab=overview';
 
+export const sitePagePath = (crawlId: string, siteUrlId: string) =>
+  `/site?tab=pages&site_page=${crawlId}_${siteUrlId}`;
+
 export const RECORD_KINDS = {
   project: { label: 'Project', screen: '/projects' },
   prompt: { label: 'Prompt', screen: '/prompts', page: own('/prompts') },
@@ -31,7 +34,7 @@ export const RECORD_KINDS = {
     screen: '/site',
     page: (field) =>
       field('crawl_id') && field('site_url_id')
-        ? `/site/crawls/${field('crawl_id')}/pages/${field('site_url_id')}`
+        ? sitePagePath(field('crawl_id'), field('site_url_id'))
         : null,
   },
   site_issue: { label: 'Site Health issue', screen: '/issues' },

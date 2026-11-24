@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 
-import { PageDrawer } from '@/components/site-health/page-drawer';
+import { PageDrawerHost } from '@/components/site-health/page-drawer';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -24,7 +24,7 @@ import { SubmittedSearch } from '@/components/site-health/submitted-search';
 import { Download, FileText } from '@/lib/icons';
 import { type PageFilterParams, type PagesParams, type PagesSort } from '@/lib/api/site-health';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
-import type { PageSummary, SiteCrawl } from '@citeladder/contracts';
+import type { SiteCrawl } from '@citeladder/contracts';
 import { sharedOrigin } from '@/lib/format';
 import { useUrlParam } from '@/lib/navigation/url-params';
 import { stringUrlCodec, useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
@@ -274,30 +274,24 @@ function ScoredInventoryState({
       headingLevel: 3,
     }),
   });
-  const [opened, setOpened] = useState<PageSummary | null>(null);
   const rootErrors = view === 'errors' ? (page?.root_errors ?? []) : [];
 
   return (
-    <Stack>
-      <RootErrorsBlock errors={rootErrors} />
-      <PagesTable
-        toolbar={toolbar}
-        pages={page?.items ?? []}
-        onOpen={setOpened}
-        sort={sort}
-        onSortChange={setSort}
-        state={table.state}
-        pageSize={table.pageSize}
-        pager={table.pager}
-        busy={table.busy}
-      />
-      <PageDrawer
-        workspaceId={crawl.workspace_id}
-        crawlId={opened?.crawl_id ?? crawl.id}
-        siteUrlId={opened?.site_url_id ?? null}
-        onClose={() => setOpened(null)}
-      />
-    </Stack>
+    <PageDrawerHost workspaceId={crawl.workspace_id}>
+      <Stack>
+        <RootErrorsBlock errors={rootErrors} />
+        <PagesTable
+          toolbar={toolbar}
+          pages={page?.items ?? []}
+          sort={sort}
+          onSortChange={setSort}
+          state={table.state}
+          pageSize={table.pageSize}
+          pager={table.pager}
+          busy={table.busy}
+        />
+      </Stack>
+    </PageDrawerHost>
   );
 }
 

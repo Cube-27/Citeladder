@@ -177,7 +177,7 @@ describe('Architecture panel', () => {
     expect(productButton).toHaveAttribute('aria-expanded', 'true');
     const controlled = document.getElementById(productButton.getAttribute('aria-controls')!);
     const bags = within(controlled!).getByRole('link', { name: 'https://acme.test/shop/bags' });
-    expect(bags).toHaveAttribute('href', `/site/crawls/${CRAWL}/pages/${BAGS}`);
+    expect(bags).toHaveAttribute('href', `/site?tab=pages&site_page=${CRAWL}_${BAGS}`);
     expect(
       within(controlled!).getByRole('link', { name: 'https://acme.test/shop/boots' }),
     ).toBeInTheDocument();

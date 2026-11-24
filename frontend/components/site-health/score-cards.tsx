@@ -8,7 +8,7 @@ import { BarRows, ScoreGauge, scoreTone, type BarRow } from '@/components/ui/sco
 import { SectionCard, TitledSection } from '@/components/ui/section';
 import { StatusMark } from '@/components/ui/status-mark';
 import { textRole } from '@/components/ui/typography';
-import { availabilityLabel, formatCount, pluralCount } from '@/lib/format';
+import { availabilityLabel, formatCount } from '@/lib/format';
 import { severityCount } from '@/lib/site-health/issues';
 import { formatScore, statusLabel } from '@/lib/site-health/status';
 
@@ -178,13 +178,8 @@ export function SeverityCard({
     <TitledSection title="Issues by severity" actions={actions}>
       <SectionCard>
         <Stack gap="item">
-          <span className="flex min-w-0 flex-wrap items-baseline gap-2">
-            <span className={textRole('figure')}>
-              {formatCount(counts.reduce((sum, count) => sum + count, 0))}
-            </span>
-            <span className={textRole('caption')}>
-              across {pluralCount(data.issue_count, 'issue')}
-            </span>
+          <span className={textRole('figure')}>
+            {formatCount(counts.reduce((sum, count) => sum + count, 0))}
           </span>
           <BarRows
             label="Issues by severity"
@@ -203,12 +198,8 @@ export function SeverityCard({
           <BarRows
             label="Pages affected"
             rows={[
-              pages(
-                'technical',
-                'Pages with a technical issue',
-                data.technical_defect_affected_page_count,
-              ),
-              pages('aeo', 'Pages with an AEO gap', data.aeo_readiness_gap_affected_page_count),
+              pages('technical', 'Technical pages', data.technical_defect_affected_page_count),
+              pages('aeo', 'AEO gap pages', data.aeo_readiness_gap_affected_page_count),
             ]}
           />
         </Stack>

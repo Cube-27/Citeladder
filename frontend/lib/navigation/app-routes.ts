@@ -67,7 +67,6 @@ const screens = {
   ),
   projects: pick(() => import('@/components/projects/projects-screen'), 'ProjectsScreen'),
   site: pick(() => import('@/components/site-health/site-health-screen'), 'SiteHealthScreen'),
-  pageDetail: pick(() => import('@/components/site-health/url-detail'), 'PageDetailScreen'),
   issues: pick(() => import('@/components/site-health/issues-screen'), 'IssuesScreen'),
   aeoReadiness: pick(
     () => import('@/components/site-health/aeo-readiness-screen'),
@@ -169,14 +168,6 @@ export const APP_ROUTES = [
       tabs: held('tab', SITE_HEALTH_TABS),
     }),
     nav: [listed('Site health', 'site', 'website')],
-  }),
-  page({
-    path: '/site/crawls/:crawlId/pages/:siteUrlId',
-    width: 'compact',
-    title: 'Page detail',
-    collection: '/site',
-    screen: screens.pageDetail,
-    loading: cards([facts(3, [1]), figures(3)]),
   }),
   page({
     path: '/aeo-readiness',

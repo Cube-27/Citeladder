@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableRow, TableTime } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
+import { sitePagePath } from '@citeladder/contracts/record-kinds';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { absent, formatCount, formatScore } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
@@ -39,7 +40,7 @@ export function CrawlHistory({
 function runHref(crawl: Pick<SiteCrawlListItem, 'id' | 'run'>) {
   switch (crawl.run.kind) {
     case 'page':
-      return `/site/crawls/${crawl.id}/pages/${crawl.run.site_url_id}`;
+      return sitePagePath(crawl.id, crawl.run.site_url_id);
     case 'pages':
     case 'site':
       return '/site?tab=pages';

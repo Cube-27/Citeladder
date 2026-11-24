@@ -1,23 +1,17 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import type { IssueFixProgress } from '@citeladder/contracts';
 
 import { Button } from '@/components/ui/button';
-import { Inline, Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { Inline } from '@/components/ui/layout';
+import { Tooltip } from '@/components/ui/tooltip';
 import { serverMessage } from '@/lib/api/mutation-notice';
 import { useCrawlBudget } from '@/lib/site-health/crawl-budget';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
-import { formatCount, pluralCount } from '@/lib/format';
+import { pluralCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-scope';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 
 export type IssueFixScope = Readonly<{ workspaceId: string; projectId: string }>;
-
-function fixedLabel(progress: Pick<IssueFixProgress, 'fixed_url_count' | 'affected_url_count'>) {
-  const total = progress.affected_url_count;
-  return `${formatCount(progress.fixed_url_count)} of ${pluralCount(total, 'page')} fixed`;
-}
 
 type Notice = { tone: 'info' | 'negative'; text: string };
 type ActionProps = Readonly<{
@@ -48,19 +42,20 @@ export function IssueFixActions({
     );
   const progress = query.data?.items.find((item) => item.group_id === groupId);
   if (!progress) return null;
-  const awaiting = progress.fixed_url_count - progress.verified_url_count;
   const rerunCount = progress.rerun_url_count;
   const note = rerunNote(rerunCount, pages);
+  const rerunButton = (
+    <RerunAllButton
+      scope={scope}
+      crawlId={crawlId}
+      groupId={groupId}
+      onNotice={setNotice}
+      none={rerunCount === 0 || note.usedUp}
+      hint={note.caption}
+    />
+  );
   return (
-    <Stack gap="tight" className="min-w-0">
-      <Inline className="flex-wrap">
-        <span className={textRole('body', 'tabular-nums')}>{fixedLabel(progress)}</span>
-        {awaiting > 0 ? (
-          <span className="type-caption tabular-nums">
-            {formatCount(awaiting)} awaiting a re-audit
-          </span>
-        ) : null}
-      </Inline>
+    <>
       <Inline className="flex-wrap">
         {canWrite ? (
           <MarkFixedButton
@@ -71,19 +66,14 @@ export function IssueFixActions({
             done={progress.fixed_url_count >= progress.affected_url_count}
           />
         ) : null}
-        {canRun && rerunCount !== null ? (
-          <RerunAllButton
-            scope={scope}
-            crawlId={crawlId}
-            groupId={groupId}
-            onNotice={setNotice}
-            none={rerunCount === 0 || note.usedUp}
-          />
-        ) : null}
+        {canRun && rerunCount !== null ? rerunButton : null}
       </Inline>
-      {canRun || rerunCount === null ? <span className="type-caption">{note.caption}</span> : null}
-      {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
-    </Stack>
+      {notice ? (
+        <Notice tone={notice.tone} className="basis-full">
+          {notice.text}
+        </Notice>
+      ) : null}
+    </>
   );
 }
 
@@ -120,25 +110,28 @@ function RerunAllButton({
   groupId,
   onNotice,
   none,
-}: ActionProps & Readonly<{ none: boolean }>) {
+  hint,
+}: ActionProps & Readonly<{ none: boolean; hint: string }>) {
   const rerun = useMutation(siteHealthMutations.rerunIssue(scope, crawlId));
   return (
-    <Button
-      disabled={rerun.isPending || none}
-      onClick={() => {
-        onNotice(null);
-        rerun.mutate(groupId, {
-          onSuccess: (result) =>
-            onNotice({
-              tone: 'info',
-              text: `Re-auditing ${pluralCount(result.page_count, 'page')}.`,
-            }),
-          onError: (error) => onNotice({ tone: 'negative', text: rerunErrorMessage(error) }),
-        });
-      }}
-    >
-      {rerun.isPending ? 'Re-running…' : 'Re-run all'}
-    </Button>
+    <Tooltip content={hint}>
+      <Button
+        disabled={rerun.isPending || none}
+        onClick={() => {
+          onNotice(null);
+          rerun.mutate(groupId, {
+            onSuccess: (result) =>
+              onNotice({
+                tone: 'info',
+                text: `Re-auditing ${pluralCount(result.page_count, 'page')}.`,
+              }),
+            onError: (error) => onNotice({ tone: 'negative', text: rerunErrorMessage(error) }),
+          });
+        }}
+      >
+        {rerun.isPending ? 'Re-running…' : 'Re-run all'}
+      </Button>
+    </Tooltip>
   );
 }
 
@@ -155,7 +148,7 @@ function rerunNote(
 }
 
 function rerunCaption(count: number | null): string {
-  if (count === null) return 'A full crawl re-checks this site-wide issue.';
+  if (count === null) return '';
   if (count === 0) return 'No tracked page with this issue is left to re-audit.';
   return `Re-run all re-audits ${pluralCount(count, 'page')}, one page fetch each.`;
 }

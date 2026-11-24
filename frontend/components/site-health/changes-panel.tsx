@@ -9,7 +9,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { GitCompare } from '@/lib/icons';
 import { readableUrl, sharedOrigin } from '@/lib/format';
-import { TextLink } from '@/components/ui/text-link';
+import { PageLink } from '@/components/site-health/page-link';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { ChangeObservation, ChangeSummary } from '@citeladder/contracts';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
@@ -139,15 +139,16 @@ function ChangeRow({
   return (
     <TableRow>
       <TableCell>
-        <TextLink
+        <PageLink
           text="emphasis"
           underline="hover"
           className="flex min-w-0"
-          href={`/site/crawls/${crawlBId}/pages/${row.site_url_id}`}
+          crawlId={crawlBId ?? ''}
+          siteUrlId={row.site_url_id}
           aria-label={url}
         >
           <UrlText url={row.normalized_url} origin={origin} />
-        </TextLink>
+        </PageLink>
       </TableCell>
       <TableCell>{field}</TableCell>
       <TableCell>

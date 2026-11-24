@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { UrlText } from '@/components/ui/table';
-import { TextLink } from '@/components/ui/text-link';
+import { PageLink } from '@/components/site-health/page-link';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import type { ArchitectureNode } from '@citeladder/contracts';
 import { StateBlock } from '@/components/ui/state-block';
@@ -131,14 +131,15 @@ function HierarchyList({
           <Stack as="li" gap="item" key={node.site_url_id} className="min-w-0">
             <Inline>
               {crawlId ? (
-                <TextLink
+                <PageLink
                   text="body"
                   className="flex min-w-0"
                   aria-label={readableUrl(node.url)}
-                  href={`/site/crawls/${crawlId}/pages/${node.site_url_id}`}
+                  crawlId={crawlId}
+                  siteUrlId={node.site_url_id}
                 >
                   <UrlText url={node.url} origin={origin} />
-                </TextLink>
+                </PageLink>
               ) : (
                 <span className="type-body text-ink flex min-w-0">
                   <UrlText url={node.url} origin={origin} />

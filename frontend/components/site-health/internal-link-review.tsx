@@ -1,9 +1,9 @@
 import type { InternalLink } from '@citeladder/contracts/site-health';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 
-import { ProjectLink } from '@/components/ui/project-link';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
+import { PageOpenContext } from '@/components/site-health/page-open-context';
 import { Checkbox } from '@/components/ui/checkbox';
 
 import { settingRowsClasses } from '@/components/ui/setting-row';
@@ -75,6 +75,7 @@ export function InternalLinkReview({
   stale: boolean;
   onClose: () => void;
 }>) {
+  const openPage = useContext(PageOpenContext);
   return (
     <Drawer
       open={Boolean(link)}
@@ -125,11 +126,13 @@ export function InternalLinkReview({
               </CopyButton>
             </Inline>
             <Inline className="flex-wrap">
-              <Button asChild variant="quiet">
-                <ProjectLink href={`/site/crawls/${crawlId}/pages/${link.source.site_url_id}`}>
-                  <Icon icon={FileSearch} />
-                  Source page evidence
-                </ProjectLink>
+              <Button
+                variant="quiet"
+                aria-haspopup="dialog"
+                onClick={() => openPage?.({ crawlId, siteUrlId: link.source.site_url_id })}
+              >
+                <Icon icon={FileSearch} />
+                Source page evidence
               </Button>
               {link.action_id ? (
                 <ActionButton action="openAction" href={`/actions/${link.action_id}`} />

@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import { useContext, type ComponentProps } from 'react';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
@@ -8,7 +8,8 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { mutedWhenMissing, TableCell, TableRow, TableTime, UrlText } from '@/components/ui/table';
 import { sharedOrigin } from '@/lib/format';
 import { Absence, printed } from '@/components/ui/absence';
-import { TextLink } from '@/components/ui/text-link';
+import { PageLink } from '@/components/site-health/page-link';
+import { PageOpenContext } from '@/components/site-health/page-open-context';
 import type { PagesSort } from '@/lib/api/site-health';
 import type { PageSummary } from '@citeladder/contracts';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
@@ -71,7 +72,6 @@ function pagesColumns(
 
 export function PagesTable({
   pages,
-  onOpen,
   sort = DEFAULT_PAGES_SORT,
   onSortChange,
   state,
@@ -81,7 +81,6 @@ export function PagesTable({
   busy,
 }: Readonly<{
   pages: PageSummary[];
-  onOpen: (page: PageSummary) => void;
   sort?: PagesSort;
   onSortChange?: (sort: PagesSort) => void;
   state?: DataTableState;
@@ -90,10 +89,9 @@ export function PagesTable({
   pageSize?: number;
   busy?: ComponentProps<typeof DataTable>['busy'];
 }>) {
-  const openPage = (siteUrlId: string) => {
-    const page = pages.find((row) => row.site_url_id === siteUrlId);
-    if (page) onOpen(page);
-  };
+  const open = useContext(PageOpenContext);
+  const openPage = (page: PageSummary) =>
+    open?.({ crawlId: page.crawl_id, siteUrlId: page.site_url_id });
   const origin = sharedOrigin(pages.map((page) => page.display_url));
   return (
     <DataTable
@@ -113,12 +111,12 @@ export function PagesTable({
           <TableRow
             key={page.site_url_id}
             tabIndex={0}
-            onClick={() => openPage(page.site_url_id)}
+            onClick={() => openPage(page)}
             onKeyDown={(event) => {
               if (event.key !== 'Enter' && event.key !== ' ') return;
               if (event.target !== event.currentTarget) return;
               event.preventDefault();
-              openPage(page.site_url_id);
+              openPage(page);
             }}
             className="focus-ring cursor-pointer"
           >
@@ -126,21 +124,15 @@ export function PagesTable({
               <Stack as="span" gap="tight" className="min-w-0">
                 <Inline as="span" className="phone:flex-wrap">
                   <ClampText className="max-w-full shrink-0">
-                    <TextLink
+                    <PageLink
                       text="emphasis"
                       underline="hover"
-                      href={`/site/crawls/${page.crawl_id}/pages/${page.site_url_id}`}
-                      aria-haspopup="dialog"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-                        event.preventDefault();
-                        onOpen(page);
-                      }}
+                      crawlId={page.crawl_id}
+                      siteUrlId={page.site_url_id}
                       aria-label={`View ${title}, ${page.display_url}`}
                     >
                       {title}
-                    </TextLink>
+                    </PageLink>
                   </ClampText>
                   {page.robots_excluded ? <RobotsExcludedBadge /> : null}
                   <span className="text-ink-2 min-w-0 overflow-hidden">

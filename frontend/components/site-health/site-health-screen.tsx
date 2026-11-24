@@ -22,6 +22,8 @@ import {
   type LinksRead,
 } from '@/components/site-health/internal-links-panel-bands';
 import { OverviewPanel } from '@/components/site-health/overview-panel';
+import { PageDrawerHost } from '@/components/site-health/page-drawer';
+import { useSetUrlParams, useUrlParam } from '@/lib/navigation/url-params';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { warmQuery } from '@/lib/api/query-client';
@@ -92,56 +94,66 @@ function SiteHealthContent({
       />
     ) : undefined;
   const prefetchTab = useSiteHealthTabPrefetch(workspaceId, projectId, crawl?.id, !active);
+  const linkedPage = useUrlParam('site_page');
+  const setUrlParams = useSetUrlParams();
   return (
-    <TabsRoot value={tab} onValueChange={selectTab}>
-      <ReportPage
-        actions={blocking?.kind === 'state' ? undefined : headerActions}
-        tabs={
-          <TabRow
-            items={SITE_HEALTH_TABS}
-            ariaLabel="Site health analysis"
-            onIntent={prefetchTab}
-          />
-        }
-        filters={controls ? <FilterBar {...controls} /> : undefined}
-      >
-        {blocking ? (
-          <SiteHealthBlocked blocking={blocking} />
-        ) : (
-          <Stack gap="workspace" className="min-w-0" data-regular-table-text="">
-            <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
-            {schedule.notice}
-            <FullCrawlsUsedUp scope={{ workspaceId, projectId }} allowed={mutationsAllowed} />
-            <SiteHealthRefreshFailures screen={screen} />
-            {crawl ? (
-              <>
-                <CrawlStatusLine
-                  crawl={crawl}
-                  screen={screen}
-                  mutationsAllowed={mutationsAllowed}
+    <PageDrawerHost
+      workspaceId={workspaceId}
+      linked={linkedPage}
+      onClosed={() => {
+        if (linkedPage) setUrlParams({ site_page: null }, 'replace');
+      }}
+    >
+      <TabsRoot value={tab} onValueChange={selectTab}>
+        <ReportPage
+          actions={blocking?.kind === 'state' ? undefined : headerActions}
+          tabs={
+            <TabRow
+              items={SITE_HEALTH_TABS}
+              ariaLabel="Site health analysis"
+              onIntent={prefetchTab}
+            />
+          }
+          filters={controls ? <FilterBar {...controls} /> : undefined}
+        >
+          {blocking ? (
+            <SiteHealthBlocked blocking={blocking} />
+          ) : (
+            <Stack gap="workspace" className="min-w-0" data-regular-table-text="">
+              <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
+              {schedule.notice}
+              <FullCrawlsUsedUp scope={{ workspaceId, projectId }} allowed={mutationsAllowed} />
+              <SiteHealthRefreshFailures screen={screen} />
+              {crawl ? (
+                <>
+                  <CrawlStatusLine
+                    crawl={crawl}
+                    screen={screen}
+                    mutationsAllowed={mutationsAllowed}
+                  />
+                  <AnalysisPanel
+                    tab={tab}
+                    crawlId={crawl.id}
+                    projectId={projectId}
+                    workspaceId={workspaceId}
+                    screen={screen}
+                    mutationsAllowed={mutationsAllowed}
+                    linksRead={links.read}
+                  />
+                </>
+              ) : (
+                <FirstCrawl
+                  canRun={canRun}
+                  onStart={() => startCrawl()}
+                  pending={startPending}
+                  allowed={mutationsAllowed}
                 />
-                <AnalysisPanel
-                  tab={tab}
-                  crawlId={crawl.id}
-                  projectId={projectId}
-                  workspaceId={workspaceId}
-                  screen={screen}
-                  mutationsAllowed={mutationsAllowed}
-                  linksRead={links.read}
-                />
-              </>
-            ) : (
-              <FirstCrawl
-                canRun={canRun}
-                onStart={() => startCrawl()}
-                pending={startPending}
-                allowed={mutationsAllowed}
-              />
-            )}
-          </Stack>
-        )}
-      </ReportPage>
-    </TabsRoot>
+              )}
+            </Stack>
+          )}
+        </ReportPage>
+      </TabsRoot>
+    </PageDrawerHost>
   );
 }
 

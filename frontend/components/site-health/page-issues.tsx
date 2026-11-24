@@ -19,13 +19,6 @@ import { SectionCard, TitledSection } from '@/components/ui/section';
 
 const PREVIEW_COUNT = 5;
 
-export type RerunControl = Readonly<{
-  onRerun: () => void;
-  busy: boolean;
-  usedUp?: boolean;
-  left?: string;
-}>;
-
 export function PageIssues({
   issues,
   audited,

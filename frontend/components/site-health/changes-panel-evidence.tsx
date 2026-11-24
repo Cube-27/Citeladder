@@ -3,7 +3,7 @@ import type { ChangeObservation } from '@citeladder/contracts';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
 import { Inline, Stack } from '@/components/ui/layout';
-import { TextLink } from '@/components/ui/text-link';
+import { PageLink } from '@/components/site-health/page-link';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader, treeBranchClasses } from '@/components/ui/workspace';
 import {
@@ -140,16 +140,16 @@ function EvidenceSources({
       <EditorialSectionHeader title="Page evidence" />
       <Inline className="flex-wrap">
         {crawlAId && row.source_analysis_a_id ? (
-          <TextLink text="body" href={`/site/crawls/${crawlAId}/pages/${row.site_url_id}`}>
+          <PageLink text="body" crawlId={crawlAId} siteUrlId={row.site_url_id}>
             Previous crawl
-          </TextLink>
+          </PageLink>
         ) : (
           <span className={textRole('caption')}>Previous crawl: no page evidence</span>
         )}
         {crawlBId && row.source_analysis_b_id ? (
-          <TextLink text="body" href={`/site/crawls/${crawlBId}/pages/${row.site_url_id}`}>
+          <PageLink text="body" crawlId={crawlBId} siteUrlId={row.site_url_id}>
             Latest crawl
-          </TextLink>
+          </PageLink>
         ) : (
           <span className={textRole('caption')}>Latest crawl: no page evidence</span>
         )}
