@@ -25,7 +25,7 @@ export function engineMarkKey(engine: string): EngineKey | null {
 
 export function engineOptionMark(engine: string): ReactNode {
   const key = engineMarkKey(engine);
-  return key ? <EngineMark engine={key} placement="inline" /> : undefined;
+  return key ? <EngineMark engine={key} placement="inline" brand /> : undefined;
 }
 
 const PLACEMENT = { inline: 'size-4', row: 'size-5' } as const;
@@ -54,7 +54,8 @@ export function EngineMark({
   className?: string;
 }>) {
   const fills = BRAND_FILLS[engine];
-  const shapes = brand ? ENGINE_PATHS[engine].split(/(?<=z)(?=M)/) : [ENGINE_PATHS[engine]];
+  const shapes =
+    brand && fills.length > 1 ? ENGINE_PATHS[engine].split(/(?<=z)(?=M)/) : [ENGINE_PATHS[engine]];
   return (
     <svg
       aria-hidden

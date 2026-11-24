@@ -112,7 +112,7 @@ function promptsState(
 
 function EngineLogo({ engine }: Readonly<{ engine: string }>) {
   const key = engineMarkKey(engine);
-  return key ? <EngineMark engine={key} className="shrink-0" /> : null;
+  return key ? <EngineMark engine={key} brand className="shrink-0" /> : null;
 }
 
 function PromptRow({

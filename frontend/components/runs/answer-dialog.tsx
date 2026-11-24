@@ -81,7 +81,7 @@ function EngineChip({ engine }: Readonly<{ engine: string }>) {
   const key = engineMarkKey(engine);
   return (
     <Tag>
-      {key ? <EngineMark engine={key} placement="inline" /> : null}
+      {key ? <EngineMark engine={key} placement="inline" brand /> : null}
       {label}
     </Tag>
   );
