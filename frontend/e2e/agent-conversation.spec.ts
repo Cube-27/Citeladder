@@ -322,18 +322,21 @@ for (const width of [1280, 390]) {
         .getByRole('button', { name: 'Add a skill or Action' })
         .boundingBox();
       const stopBox = await page.getByRole('button', { name: 'Stop', exact: true }).boundingBox();
-      expect(Math.abs(menuBox!.y - stopBox!.y)).toBeLessThanOrEqual(1);
-      expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(stopBox!.x);
+      const fieldBox = await reply.boundingBox();
+      expect(stopBox!.x).toBeGreaterThanOrEqual(fieldBox!.x + fieldBox!.width);
+      expect(stopBox!.y).toBeLessThan(fieldBox!.y + fieldBox!.height);
+      expect(stopBox!.y + stopBox!.height).toBeGreaterThan(fieldBox!.y);
+      expect(menuBox!.y).toBeGreaterThanOrEqual(stopBox!.y + stopBox!.height);
       const thread = page.getByRole('region', { name: 'Agent conversation' });
       await thread.evaluate((element) => element.scrollTo(0, 0));
       await expect(page.getByRole('button', { name: 'Jump to latest' })).toBeAttached();
       const jumpBox = await page.getByRole('button', { name: 'Jump to latest' }).boundingBox();
-      const replyBox = await reply.boundingBox();
+      const composerBox = await reply.locator('xpath=ancestor::form').boundingBox();
       expect(jumpBox!.width).toBe(jumpBox!.height);
       expect(
-        Math.abs(jumpBox!.x + jumpBox!.width / 2 - (replyBox!.x + replyBox!.width / 2)),
+        Math.abs(jumpBox!.x + jumpBox!.width / 2 - (composerBox!.x + composerBox!.width / 2)),
       ).toBeLessThanOrEqual(2);
-      expect(jumpBox!.y + jumpBox!.height).toBeLessThanOrEqual(replyBox!.y);
+      expect(jumpBox!.y + jumpBox!.height).toBeLessThanOrEqual(composerBox!.y);
       const priorReads = reads;
       current.messages.push({
         ...current.messages.at(-1)!,
