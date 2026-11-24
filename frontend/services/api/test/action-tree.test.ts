@@ -225,6 +225,7 @@ describe('issue-group Actions', () => {
       own.pages.map((page) => page.url),
     ]);
     expect(second.next_cursor).toBeNull();
+    expect(new Set(first.items.map((url) => url.crawl_id))).toEqual(new Set([own.seed.crawlId]));
     expect(first.items.map((url) => [url.page_kind, url.open_action_count])).toEqual([
       ['product', 3],
       ['product', 2],

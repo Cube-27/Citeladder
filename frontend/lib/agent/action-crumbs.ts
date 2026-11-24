@@ -14,11 +14,6 @@ export const listJumpSchema = z.object({
 });
 export type ListJump = z.infer<typeof listJumpSchema>;
 
-export const fromActionSchema = z.object({
-  fromAction: listJumpSchema.required().extend({ id: z.uuid(), title: z.string() }),
-});
-export type FromAction = z.infer<typeof fromActionSchema>['fromAction'];
-
 export function listCrumbs(
   at: Required<ListJump>,
 ): { label: string; href: string; state?: ListJump }[] {

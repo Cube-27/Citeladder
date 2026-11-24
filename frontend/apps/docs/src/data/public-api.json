@@ -1445,6 +1445,18 @@
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
+          "crawl_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "url": {
             "type": "string"
           },
@@ -1457,7 +1469,7 @@
             "maximum": 9007199254740991
           }
         },
-        "required": ["site_url_id", "url", "page_kind", "open_action_count"],
+        "required": ["site_url_id", "crawl_id", "url", "page_kind", "open_action_count"],
         "additionalProperties": false
       },
       "ActionUrlsPage": {
@@ -16015,6 +16027,7 @@
                   "items": [
                     {
                       "site_url_id": "00000000-0000-4000-8000-000000000001",
+                      "crawl_id": null,
                       "url": "https://example.com/page",
                       "page_kind": null,
                       "open_action_count": 1
@@ -16159,6 +16172,7 @@
                     "items": [
                       {
                         "site_url_id": null,
+                        "crawl_id": null,
                         "url": null,
                         "page_kind": null,
                         "open_action_count": null

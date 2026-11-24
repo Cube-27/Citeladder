@@ -90,7 +90,6 @@ const screens = {
   chat: pick(() => import('@/components/agent/chat-screen'), 'ChatScreen'),
   actions: pick(() => import('@/components/agent/actions-list-screen'), 'ActionsScreen'),
   action: pick(() => import('@/components/agent/action-detail-screen'), 'ActionDetailScreen'),
-  actionUrl: pick(() => import('@/components/agent/action-url-screen'), 'ActionUrlScreen'),
   skills: pick(() => import('@/components/agent/skills-screen'), 'SkillsScreen'),
   context: pick(() => import('@/components/agent/context-screen'), 'ContextScreen'),
   insights: pick(() => import('@/components/brand/insights-screen'), 'InsightsScreen'),
@@ -244,14 +243,6 @@ export const APP_ROUTES = [
     collection: '/actions',
     screen: screens.action,
     loading: cards([facts(5)]),
-  }),
-  page({
-    path: '/actions/urls/:siteUrlId',
-    width: 'compact',
-    title: 'URL',
-    collection: '/actions',
-    screen: screens.actionUrl,
-    loading: cards([facts(3)]),
   }),
   page({
     path: '/insights',

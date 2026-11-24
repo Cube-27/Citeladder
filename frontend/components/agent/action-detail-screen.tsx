@@ -13,6 +13,7 @@ import {
   ReadingTools,
 } from '@/components/ui/reading-page';
 import { ActionUrls } from '@/components/agent/action-urls';
+import { PageDrawerHost } from '@/components/site-health/page-drawer';
 import { ContentGapWhy, contentGapMembers } from '@/components/agent/content-gap-evidence';
 import { DeclarationStatus } from '@/components/agent/declaration-status';
 import { DeveloperTicketButton } from '@/components/agent/developer-ticket';
@@ -21,7 +22,7 @@ import { PageFrame } from '@/components/templates/page-frame';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { listCrumbs, type FromAction } from '@/lib/agent/action-crumbs';
+import { listCrumbs } from '@/lib/agent/action-crumbs';
 import { actionTarget, withShortTarget } from '@/lib/agent/action-title';
 import { actionHandoffHref, actionHandoffInput } from '@/lib/agent/handoff';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
@@ -67,13 +68,6 @@ function ActionPage({
 }: Readonly<{ action: ActionDetail; workspaceId: string }>) {
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
   const title = actionTarget(action);
-  const from: FromAction = {
-    id: action.id,
-    title,
-    status: action.status,
-    goal: action.goal,
-    grouping: action.grouping,
-  };
   const placement = action.target_kind === 'earned_page';
   const suggested = action.origin === 'agent' ? 'Suggested by the agent' : null;
   const brief = useIssueFamilyBrief(action, workspaceId);
@@ -87,7 +81,10 @@ function ActionPage({
       return next;
     });
   return (
-    <PageFrame title={title} trail={listCrumbs(from)}>
+    <PageFrame
+      title={title}
+      trail={listCrumbs({ status: action.status, goal: action.goal, grouping: action.grouping })}
+    >
       <ReadingColumn>
         <Labelled title="Overview" caption={suggested}>
           <Prose>{brief?.overview ?? withShortTarget(action.handoff.message, action)}</Prose>
@@ -112,13 +109,9 @@ function ActionPage({
             <StepList items={todo} />
           </Labelled>
         ) : null}
-        <ActionUrls
-          action={action}
-          workspaceId={workspaceId}
-          from={from}
-          ticked={ticked}
-          onTick={tick}
-        />
+        <PageDrawerHost workspaceId={workspaceId}>
+          <ActionUrls action={action} workspaceId={workspaceId} ticked={ticked} onTick={tick} />
+        </PageDrawerHost>
         {action.declaration ? (
           <Labelled title="Implementation">
             <DeclarationStatus

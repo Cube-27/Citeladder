@@ -68,8 +68,10 @@ const group: Action = {
 };
 
 const urlId = (index: number) => `55555555-5555-4555-8555-${String(index + 1).padStart(12, '0')}`;
+const CRAWL = '77777777-7777-4777-8777-777777777777';
 const url = (index: number) => ({
   site_url_id: urlId(index),
+  crawl_id: CRAWL,
   url: `https://acme.test/shop/p${String(index + 1).padStart(2, '0')}`,
   page_kind: 'product',
   open_action_count: 2,
@@ -218,10 +220,14 @@ describe('An issue-group Action page', () => {
         .slice(9)
         .map((link) => link.getAttribute('href')),
     ).toEqual([
-      `/actions/urls/${urlId(9)}?project=${PROJECT}`,
-      `/actions/urls/${urlId(10)}?project=${PROJECT}`,
-      `/actions/urls/${urlId(11)}?project=${PROJECT}`,
+      `/site?tab=pages&site_page=${CRAWL}_${urlId(9)}&project=${PROJECT}`,
+      `/site?tab=pages&site_page=${CRAWL}_${urlId(10)}&project=${PROJECT}`,
+      `/site?tab=pages&site_page=${CRAWL}_${urlId(11)}&project=${PROJECT}`,
     ]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await user.click(within(urls).getAllByRole('link')[0]!);
+    expect(await screen.findByRole('dialog', { name: 'Page' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'URLs · 12', hidden: true })).toBeInTheDocument();
     expect(cursors).toEqual(['after-ten']);
     expect(screen.queryByRole('button', { name: /more/ })).toBeNull();
   });
