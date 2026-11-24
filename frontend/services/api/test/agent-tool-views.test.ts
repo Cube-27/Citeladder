@@ -29,7 +29,7 @@ describe('the Agent view of a read', () => {
           topics: [{ id: 't', name: 'Nets', description: '' }],
           topics_truncated: false,
           items: prompts,
-          pagination: { returned_count: 7, has_more: true, next_cursor: 'c' },
+          pagination: { returned_count: 7, has_more: false, next_cursor: null },
         },
         actions: {
           state: 'available',

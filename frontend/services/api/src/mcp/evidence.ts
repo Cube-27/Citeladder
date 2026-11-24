@@ -213,7 +213,7 @@ export async function promptPortfolio(
   }));
   return {
     state: 'available',
-    ...(args.cursor ? {} : await portfolioTopics({ db, scope })),
+    ...(await portfolioTopics({ db, scope }, args.cursor)),
     items,
     pagination: pagination(
       items,
@@ -222,7 +222,11 @@ export async function promptPortfolio(
   };
 }
 
-async function portfolioTopics({ db, scope }: Pick<ProjectRead, 'db' | 'scope'>) {
+async function portfolioTopics(
+  { db, scope }: Pick<ProjectRead, 'db' | 'scope'>,
+  cursor: string | null | undefined,
+) {
+  if (cursor) return {};
   const topics = await new WorkspaceScope(scope.workspaceId)
     .selectFrom(db, 'projects')
     .innerJoin('topics as t', 't.project_id', 'projects.id')
