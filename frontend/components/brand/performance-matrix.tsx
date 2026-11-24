@@ -90,6 +90,7 @@ export function PerformanceMatrix({
       ? {
           kind: 'value',
           text: reading.text,
+          detail: null,
           tint: place(reading.value),
         }
       : {
