@@ -57,7 +57,7 @@ export function ThreadPage({
   }>) {
   return (
     <PageFrame {...slots} head="masthead">
-      <div className="flex h-[calc(100dvh-var(--route-chrome-height))] min-h-0 flex-col gap-[var(--workspace-gap)]">
+      <div className="-mb-[var(--page-pad-block)] flex h-[calc(100dvh-var(--route-chrome-height)+var(--page-pad-block))] min-h-0 flex-col gap-[var(--workspace-gap)]">
         <section
           ref={scrollRef}
           aria-label={scrollLabel}
