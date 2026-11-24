@@ -77,6 +77,7 @@ describe('persisted audit reads and immutable repair', () => {
     expect(executions[0]).toEqual({
       id: task.id,
       prompt_index: task.prompt_index,
+      repetition: task.repetition,
       logical_engine: 'chatgpt',
       transport_provider: task.transport_provider,
       status: 'capacity_wait',

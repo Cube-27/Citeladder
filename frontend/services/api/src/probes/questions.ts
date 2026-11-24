@@ -87,7 +87,7 @@ export function askedText(
   const { engines, questions, template } = probes.search_instruction;
   if (!asked || !engines.some((each) => each === engine) || !questions.includes(asked.question))
     return prompt.text;
-  return template.replaceAll('{question}', prompt.text);
+  return template.replaceAll('{question}', () => prompt.text);
 }
 
 export async function probeSubject(

@@ -168,6 +168,7 @@ const API_ERROR_CODES = [
   'probe_engines_unavailable',
   'probe_not_running',
   'probe_quote_changed',
+  'probe_repetitions_invalid',
   'project_work_running',
   'prompt_count_exceeded',
   'prompt_count_policy_unconfigured',

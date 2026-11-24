@@ -10,11 +10,11 @@ const SCOPE = {
   workspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   projectId: '11111111-1111-4111-8111-111111111111',
 };
-const run = (state: 'running' | 'ready', answers: number) => ({
+const run = (state: 'running' | 'ready', answers: number): NonNullable<ProbeStatus['latest']> => ({
   launch_id: '22222222-2222-4222-8222-222222222222',
   state,
   created_at: '2026-11-24T00:00:00Z',
-  engines: ['claude'] as const,
+  engines: ['claude'],
   markets: [{ id: null, country_code: 'US', language_code: 'en' }],
   answers,
   planned: 3,

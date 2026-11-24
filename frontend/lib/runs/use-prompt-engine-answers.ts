@@ -40,7 +40,7 @@ function answerFilters(
       const engines = [...new Set(answers.map((answer) => answer.logical_engine))];
       const repeats = answers
         .filter((answer) => answer.logical_engine === active.logical_engine)
-        .toSorted((a, b) => a.repetition - b.repetition);
+        .sort((a, b) => a.repetition - b.repetition);
       const pickWhere = (match: (answer: Execution) => boolean, fallback: Execution[]) => {
         const next = answers.find(match) ?? fallback[0];
         if (next) input.pick(next.id);

@@ -111,11 +111,16 @@ type Labels = {
 
 async function runJobs(jobs: readonly (() => Promise<void>)[]) {
   const queue = jobs.values();
+  const failures: unknown[] = [];
   await Promise.all(
     Array.from({ length: Math.min(probes.label_concurrency, jobs.length) }, async () => {
-      for (const job of queue) await job(); // NOSONAR
+      for (const job of queue) {
+        if (failures.length) return;
+        await job().catch((error: unknown) => failures.push(error)); // NOSONAR
+      }
     }),
   );
+  if (failures.length) throw failures[0];
 }
 
 type RunLabels = {
