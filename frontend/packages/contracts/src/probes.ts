@@ -20,6 +20,7 @@ export const probeRunRequestSchema = z.object({
   fingerprint: z.string().min(1),
   engines: probeEnginesSchema,
   repetitions: probeRepetitionsSchema,
+  web_search: z.boolean().default(false),
 });
 export type ProbeRunRequest = z.infer<typeof probeRunRequestSchema>;
 

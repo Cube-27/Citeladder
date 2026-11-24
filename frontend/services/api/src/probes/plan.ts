@@ -30,7 +30,11 @@ async function probeEngineList(
   );
 }
 
-export type ProbeChoice = { engines?: readonly string[]; repetitions?: number };
+export type ProbeChoice = {
+  engines?: readonly string[];
+  repetitions?: number;
+  web_search?: boolean;
+};
 type PlanInput = ProbeChoice & { runtime: AuditRuntime; at: Date };
 
 function chosenRepetitions(repetitions: number | undefined) {
@@ -67,10 +71,14 @@ export async function probePlan(
   const runs = measured.flatMap(({ market, engines: all }) => {
     const { country_code } = market;
     const engines = picked ? all.filter((engine) => picked.includes(engine)) : all;
-    const questions = probeQuestions({ ...subject, country: countryName(country_code) });
+    const questions = probeQuestions({
+      ...subject,
+      country: countryName(country_code),
+      webSearch: false,
+    });
     return engines.length ? [{ market, engines, questions: questions.map((q) => q.text) }] : [];
   });
-  const questions = probeQuestions({ ...subject, country: '' }).length;
+  const questions = probeQuestions({ ...subject, country: '', webSearch: false }).length;
   const asks = questions * repetitions;
   let credits = 0;
   for (const run of runs)
@@ -185,6 +193,7 @@ export function runProbe(
         market_ids: plan.runs.map((run) => run.market.id),
         repetitions: plan.repetitions,
         audit_scope: probes.audit_scope,
+        probe_web_search: choice.web_search === true,
       },
       {},
       runtime,

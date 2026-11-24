@@ -91,10 +91,7 @@ function ObjectionTable({
   const mayEdit = useWorkspaceCapability('write');
   const [open, setOpen] = useState<string | null>(null);
   return (
-    <TitledSection
-      title={`Why buyers might not choose ${data.brand}`}
-      description={<QuestionLink question={data.question} />}
-    >
+    <TitledSection title={<QuestionTitle brand={data.brand} question={data.question} />}>
       <DataTable
         label="Objections"
         columns={COLUMNS}
@@ -182,19 +179,20 @@ function ObjectionTable({
   );
 }
 
-function QuestionLink({ question }: Readonly<{ question: ProbeObjectionsValue['question'] }>) {
-  if (!question) return 'Higher score is raised earlier';
+function QuestionTitle({
+  brand,
+  question,
+}: Readonly<{ brand: string; question: ProbeObjectionsValue['question'] }>) {
+  const title = `Why buyers might not choose ${brand}`;
+  if (!question) return title;
   return (
-    <>
-      <AnswerLink
-        answer={{ ...question, prompt: question.text }}
-        filters="engine_repetition"
-        text="inherit"
-      >
-        {question.text}
-      </AnswerLink>
-      {' · Higher score is raised earlier'}
-    </>
+    <AnswerLink
+      answer={{ ...question, prompt: question.text }}
+      filters="engine_repetition"
+      text="inherit"
+    >
+      {title}
+    </AnswerLink>
   );
 }
 

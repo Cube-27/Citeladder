@@ -60,6 +60,7 @@ export function ProbeDialog({
   const run = useMutation(probeMutations.run(scope));
   const schedule = useMutation(probeMutations.schedule(scope));
   const [connecting, setConnecting] = useState(true);
+  const [webSearch, setWebSearch] = useState(false);
   const choice = useProbeChoice(scope, all, intent !== null);
   const { quote, request } = choice;
   const short = quote.balance !== null && quote.credits > quote.balance;
@@ -69,6 +70,7 @@ export function ProbeDialog({
     run.reset();
     schedule.reset();
     setConnecting(true);
+    setWebSearch(false);
     choice.reset();
     onClose();
   };
@@ -78,7 +80,11 @@ export function ProbeDialog({
         { cadence: intent.cadence, fingerprint: quote.fingerprint, ...request },
         { onSuccess: close },
       );
-    else run.mutate({ fingerprint: quote.fingerprint, ...request }, { onSuccess: close });
+    else
+      run.mutate(
+        { fingerprint: quote.fingerprint, ...request, web_search: webSearch },
+        { onSuccess: close },
+      );
   };
   return (
     <Dialog
@@ -125,6 +131,9 @@ export function ProbeDialog({
         {quote.blocked === null ? (
           <QuoteFacts quote={quote} credits={copy.credits} choice={choice} />
         ) : null}
+        {quote.blocked === null && intent?.kind === 'run' ? (
+          <WebSearchChoice checked={webSearch} onChange={setWebSearch} />
+        ) : null}
       </Stack>
     </Dialog>
   );
@@ -135,6 +144,19 @@ function choiceRequest(picked: readonly LogicalEngine[] | null, repeats: number 
     ...(picked ? { engines: [...picked] } : {}),
     ...(repeats === null ? {} : { repetitions: repeats }),
   };
+}
+
+function WebSearchChoice({
+  checked,
+  onChange,
+}: Readonly<{ checked: boolean; onChange: (checked: boolean) => void }>) {
+  return (
+    <Checkbox
+      label="Web search"
+      checked={checked}
+      onCheckedChange={(next) => onChange(next === true)}
+    />
+  );
 }
 
 function useProbeChoice(scope: ProjectScope, all: ProbeQuote, open: boolean) {

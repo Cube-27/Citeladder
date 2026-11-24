@@ -103,7 +103,7 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-it('asks the objection question once, as a link to its answers by engine and repetition', async () => {
+it('links the section title to the objection answers by engine and repetition', async () => {
   mswServer.use(
     ...ANSWERS.map((answer) =>
       http.get(`/api/v1/executions/${answer.id}`, () => HttpResponse.json(evidence(answer))),
@@ -131,9 +131,10 @@ it('asks the objection question once, as a link to its answers by engine and rep
     { projectSelection: projectScope(project) },
   );
   await user.click(screen.getByRole('button', { name: 'Too expensive' }));
-  expect(screen.getAllByText(QUESTION)).toHaveLength(1);
+  expect(screen.queryByText(QUESTION)).toBeNull();
 
-  await user.click(screen.getByRole('link', { name: QUESTION }));
+  const heading = screen.getByRole('heading', { name: 'Why buyers might not choose Acme' });
+  await user.click(within(heading).getByRole('link'));
   const dialog = await screen.findByRole('dialog', { name: QUESTION });
   await within(dialog).findByText('Answer of chatgpt 1.', {}, { timeout: 15_000 });
   await user.click(within(dialog).getByRole('button', { name: /^Repetition:/u }));
