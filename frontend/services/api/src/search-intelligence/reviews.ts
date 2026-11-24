@@ -9,7 +9,7 @@ import { workspaceCredentialMode } from '../billing/credential-mode.ts';
 import { ProviderError } from '../providers/errors.ts';
 import type { SettingSource } from '../config/settings.ts';
 import { resolveSite } from '../projects/site-resolution.ts';
-import { fetchWebsite } from '../safe-fetch.ts';
+import { fetchWebsite, type WebsiteFetcher } from '../safe-fetch.ts';
 import {
   preferencesBody,
   reviewBody,
@@ -73,26 +73,20 @@ function comparison(saved: Awaited<ReturnType<typeof savedProject>>, id: string)
     throw error('unsupported_target', 'Competitor must have one canonical saved website');
   return target;
 }
-async function resolveCompetitor(target: CanonicalTarget) {
-  let status = 0;
-  try {
-    const site = await resolveSite(target.origin, async (url, options) => {
-      const result = await fetchWebsite(url, options);
-      status = result.status;
-      return result;
-    });
-    const resolved = competitorTarget({ id: target.identity, name: target.label }, [site.url]);
-    if (
-      !resolved ||
-      resolved.registrable_domain !== target.registrable_domain ||
-      status < 200 ||
-      status >= 400
-    )
-      throw new Error('Unsupported resolved target');
-    return resolved;
-  } catch {
-    throw error('unsupported_target', 'Could not confirm the saved competitor website');
-  }
+export async function resolveCompetitor(
+  target: CanonicalTarget,
+  fetcher: WebsiteFetcher = fetchWebsite,
+) {
+  const site = await resolveSite(target.origin, fetcher).catch(() => null);
+  const resolved = site
+    ? competitorTarget({ id: target.identity, name: target.label }, [site.url])
+    : null;
+  if (resolved?.registrable_domain !== target.registrable_domain)
+    throw error(
+      'unsupported_target',
+      `Could not find the exact host of ${target.label}; use the Domain + subdomains scope`,
+    );
+  return resolved;
 }
 
 type Review = ReturnType<typeof reviewBody.parse>;
@@ -292,9 +286,14 @@ export async function createReview(
   const saved = new Map<string, CanonicalTarget>();
   for (const item of payload.datasets)
     if (item.competitor_id) saved.set(item.competitor_id, comparison(initial, item.competitor_id));
-  const resolved = new Map<string, CanonicalTarget>();
-  for (const [id, target] of saved)
-    resolved.set(id, await (options.resolve ?? resolveCompetitor)(target)); // NOSONAR
+  const resolve = options.resolve ?? resolveCompetitor;
+  const resolved = new Map(
+    researchScope === 'exact_host'
+      ? await Promise.all(
+          [...saved].map(async ([id, target]) => [id, await resolve(target)] as const),
+        )
+      : saved,
+  );
   return inTransaction(db, async (trx) => {
     await scope.workspace
       .selectFrom(trx, 'projects')
