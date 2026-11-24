@@ -1,8 +1,11 @@
 import { lineIndex, nameText, parseSource, stringValue, walk } from './source-ast.mjs';
 
 const COLOUR_LITERAL = /#[\da-f]{3,8}\b|(?<![\w-])(?:rgba?|hsla?|oklch|oklab|lab|lch)\(/i;
-const CLASS_COLOUR_LITERAL =
-  /(?<![\w-])[a-z]+(?:-[a-z]+)*-\[(?:#|(?:rgba?|hsla?|oklch|oklab|lab|lch)\()/i;
+const COLOUR_FUNCTIONS = 'rgba?|hsla?|oklch|oklab|lab|lch';
+const CLASS_COLOUR_LITERAL = new RegExp(
+  String.raw`(?<![\w-])[a-z]+(?:-[a-z]+)*-\[(?:#|(?:${COLOUR_FUNCTIONS})\()`,
+  'i',
+);
 
 const textOf = (node) =>
   node.type === 'TemplateElement' ? (node.value.cooked ?? node.value.raw) : stringValue(node);
