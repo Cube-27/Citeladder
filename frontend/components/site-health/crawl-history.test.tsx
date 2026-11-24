@@ -49,8 +49,8 @@ describe('CrawlHistory', () => {
       ]),
     ).toEqual([
       [`/site/crawls/${SINGLE}/pages/${PAGE}`, true],
-      ['/site', true],
-      ['/site', false],
+      ['/site?tab=pages', true],
+      ['/site?tab=pages', false],
     ]);
   });
 });

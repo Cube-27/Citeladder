@@ -42,7 +42,7 @@ function runHref(crawl: Pick<SiteCrawlListItem, 'id' | 'run'>) {
       return `/site/crawls/${crawl.id}/pages/${crawl.run.site_url_id}`;
     case 'pages':
     case 'site':
-      return '/site';
+      return '/site?tab=pages';
     default: {
       const exhaustive: never = crawl.run;
       return exhaustive;
