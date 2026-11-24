@@ -121,7 +121,16 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
     ).toBeInTheDocument();
   });
 
-  it('offers no Re-run all for a site-wide issue, and a disabled one when no page is left', async () => {
+  it('offers no Re-run all for a site-wide issue, even with single-page crawls used up, and a disabled one when no page is left', async () => {
+    const usedUp = { limit: 50, used: 50, remaining: 0, resets_at: '2026-12-20T00:00:00.000Z' };
+    mswServer.use(
+      http.get('/api/v1/projects/:projectId/crawl-budgets', () =>
+        HttpResponse.json({
+          full_crawls: { ...usedUp, limit: 10, used: 0, remaining: 10 },
+          page_crawls: usedUp,
+        }),
+      ),
+    );
     serveFixes(null);
     const { unmount } = renderIssues(<IssuesCatalog crawlId={CRAWL} />, OPEN);
     let dialog = await screen.findByRole('dialog', { name: TITLE });
@@ -134,7 +143,9 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
     serveFixes(0, 4);
     dialog = await openDialog();
     expect(
-      await within(dialog).findByText('No tracked page with this issue is left to re-audit.'),
+      await within(dialog).findByText(
+        'All 50 single-page crawls for this period are used. More from 2026-12-20.',
+      ),
     ).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Re-run all' })).toBeDisabled();
   });

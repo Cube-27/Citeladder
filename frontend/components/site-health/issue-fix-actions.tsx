@@ -53,7 +53,9 @@ export function IssueFixActions({
   const awaiting = progress.fixed_url_count - progress.verified_url_count;
   const rerunCount = progress.rerun_url_count;
   const pageCrawls = budgets.data?.page_crawls;
-  const usedUp = budgetUsedUp(pageCrawls, 'single-page crawls');
+  const usedUp = rerunCount === null ? null : budgetUsedUp(pageCrawls, 'single-page crawls');
+  const left =
+    rerunCount !== null && pageCrawls ? budgetLeft(pageCrawls, 'single-page crawls') : '';
   return (
     <Stack gap="tight" className="min-w-0">
       <Inline className="flex-wrap">
@@ -86,13 +88,7 @@ export function IssueFixActions({
       </Inline>
       {canRun || rerunCount === null ? (
         <span className="type-caption">
-          {usedUp ??
-            [
-              rerunCaption(rerunCount),
-              pageCrawls ? budgetLeft(pageCrawls, 'single-page crawls') : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
+          {usedUp ?? [rerunCaption(rerunCount), left].filter(Boolean).join(' ')}
         </span>
       ) : null}
       {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}

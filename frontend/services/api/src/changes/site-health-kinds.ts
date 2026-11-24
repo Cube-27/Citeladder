@@ -115,7 +115,7 @@ export const siteHealthKinds = {
   start_crawl: changeKind({
     permission: MEMBER_RUN,
     purpose:
-      "crawl the whole site again: it re-crawls the tracked pages and never reads a page outside them, so never offer it to crawl or read one page; robots 'ignore' crawls pages robots.txt disallows and records the person's decision",
+      "crawl the whole site again: it re-crawls the tracked pages and adds newly found ones only while the tracked set has room, so it cannot read one chosen page; never offer it to crawl or read one page; robots 'ignore' crawls pages robots.txt disallows and records the person's decision",
     payload: z.strictObject({ robots: z.enum(['respect', 'ignore']).optional() }),
     async execute(trx, config, actor, change, payload) {
       const user = await trx
