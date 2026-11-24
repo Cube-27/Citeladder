@@ -444,7 +444,7 @@ describe('sitemaps', () => {
     ]);
   });
 
-  it.each([
+  it.each<[string, string | null]>([
     ['/sitemap_products_1.xml', 'product'],
     ['/es-US/sitemap_products_1.xml', 'product'],
     ['/sitemap_collections_1.xml', 'category'],
@@ -483,7 +483,7 @@ describe('sitemaps', () => {
       '/generated_sitemap_part1.xml',
       '/sitemaps/sitemap_12.xml',
       '/profiles_sitemap0.xml',
-    ].map((path) => [path, null] as const),
+    ].map((path): [string, null] => [path, null]),
   ])('reads the child sitemap %s as %s for a page its path does not name', (path, kind) => {
     const page = classifyUrlAdmission('https://example.test/kids-boxer-shorts-orange');
     const listed = listedAdmission(page, [`https://example.test${path}`]);
