@@ -214,7 +214,11 @@ owns one coherent budget. A 40 000-character body bound (user edits share it)
 fits the output-token cap in
 [gateway settings](../frontend/services/api/src/config/model-gateway.json). Each
 read result is bounded to `tool_result_max_chars`, and the frozen context to
-`context_package_max_chars`.
+`context_package_max_chars`. Before the bound, the model gets a view of each
+read ([`tool-views.ts`](../frontend/services/api/src/agent/tool-views.ts)):
+the keys listed in `tool_view` removed at any depth and the wide rows of a few
+reads reshaped, while MCP clients and screens keep the full rows. A row keeps
+one plain id, so a truncated read still matches its sources.
 
 ### Sources
 
