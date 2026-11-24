@@ -255,6 +255,19 @@ it("reads a crawl's link metrics at the formula the crawl wrote, not the current
     ['https://example.test/', 0],
     ['https://example.test/product', 1],
   ]);
+  await db
+    .updateTable('site_crawls')
+    .set({ inventory_complete: false })
+    .where('id', '=', seed.crawlId)
+    .execute();
+  const partial = await pages(db, seed.workspaceId, seed.crawlId, {}, 'url', {
+    limit: 10,
+    cursor: null,
+  });
+  expect(partial.items.map((row) => [row.normalized_url, row.inbound_count])).toEqual([
+    ['https://example.test/', null],
+    ['https://example.test/product', 1],
+  ]);
 });
 it('parallel claims are disjoint and give each workspace a turn before another row', async () => {
   const first = await fixtures.crawl();

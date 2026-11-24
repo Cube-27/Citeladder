@@ -186,7 +186,7 @@ export function PagesTable({
 function DepthValue({ page }: Readonly<{ page: PageSummary }>) {
   if (page.depth_from_home !== null) return page.depth_from_home;
   if (page.inbound_count === null) return <Absence state="not_measured" />;
-  return 'Not reached';
+  return <Absence state="unavailable" label="Not reached" />;
 }
 
 function MeasurementValue({

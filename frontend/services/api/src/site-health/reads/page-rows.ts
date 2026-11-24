@@ -172,6 +172,7 @@ export async function pageRows(
   const { filters, sort, limit, after } = options;
   const spec = SORTS[sort];
   const lineage = inventoryCrawlIds(crawl);
+  const partial = crawl.sample_mode || !crawl.inventory_complete;
   const unmonitoredStatus = isTerminal(crawl) ? 'not_measured' : 'pending';
   let keyset = sql``;
   if (after) {
@@ -212,7 +213,8 @@ export async function pageRows(
           when t.status = 'succeeded' and u.disposition_reason = ${DUPLICATE} then u.disposition_reason
           else ''
         end as error_code,
-        l.inbound_count,
+        case when ${partial} and l.inbound_count = 0 then null else l.inbound_count end
+          as inbound_count,
         l.main_content_inbound_count,
         l.depth_from_home,
         ${spec.value} as sort_value
