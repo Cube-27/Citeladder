@@ -101,11 +101,10 @@ export async function fetchResolutions(db: Database, crawl: Crawl) {
 const redirects = (resolution: Resolution) =>
   resolution.redirected || resolution.errorCode === REDIRECT_LIMIT;
 
-export function canonicalResolution(
+function canonicalTarget(
   declarations: string[],
   finalUrl: string,
   resolutions: Map<string, Resolution>,
-  targets: Map<string, CanonicalTarget> = new Map(),
 ) {
   const unique = [...new Set(declarations.map((value) => value.trim()).filter(Boolean))];
   const only = onlyOf(unique);
@@ -113,6 +112,16 @@ export function canonicalResolution(
   const own = canonicalUrl(finalUrl) ?? '';
   const self = Boolean(target) && comparableUrl(target) === comparableUrl(own);
   const resolution = resolutions.get(target) ?? (self ? resolutions.get(own) : undefined);
+  return { target, self, resolution };
+}
+
+export function canonicalResolution(
+  declarations: string[],
+  finalUrl: string,
+  resolutions: Map<string, Resolution>,
+  targets: Map<string, CanonicalTarget> = new Map(),
+) {
+  const { target, self, resolution } = canonicalTarget(declarations, finalUrl, resolutions);
   const limited = resolution?.status === 429;
   const evaluation = canonicalIntegrity({
     declarations,

@@ -1174,7 +1174,6 @@ describe('persisted analytics and coverage decisions', () => {
             r.verification,
             r.verification_reason,
             r.verification_basis,
-            r.batch_id,
           ]
             .map((v) => (v === null ? '' : String(v)))
             .join(','),
@@ -1190,7 +1189,7 @@ describe('persisted analytics and coverage decisions', () => {
     );
     expect(await all.text()).toBe(
       [
-        'occurred_at,bot_id,host,display_path,identity,folder,resource_class,status_code,verification,verification_reason,verification_basis,batch_id',
+        'occurred_at,bot_id,host,display_path,identity,folder,resource_class,status_code,verification,verification_reason,verification_basis',
         ...activityRows,
         '',
       ].join('\r\n'),
