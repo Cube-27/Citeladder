@@ -19,6 +19,7 @@ function execution(overrides: Partial<Execution> = {}): Execution {
     prompt_text: 'Best trail running shoes',
     error_code: '',
     latency_ms: 1200,
+    repetition: 1,
     ...overrides,
   };
 }

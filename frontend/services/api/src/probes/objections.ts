@@ -83,10 +83,16 @@ export async function probeObjections(
   const firstsOf = (row: { id: string }) => current.firsts.get(row.id) ?? 0;
   const raised = rows.filter((row) => row.engines.length > 0);
   const answering = new Set(current.asked.map((answer) => answer.engine));
+  const [opening] = current.asked.toSorted(
+    (a, b) => logicalEngines.indexOf(a.engine) - logicalEngines.indexOf(b.engine),
+  );
   return {
     state: 'value',
     probe: { ...latest.basis, answers: latestAnswers.length },
     brand: latest.brand,
+    question: opening
+      ? { text: opening.prompt, run_id: opening.auditId, execution_id: opening.taskId }
+      : null,
     answers: current.asked.length,
     answered_by: logicalEngines.filter((engine) => answering.has(engine)),
     average: raised.length

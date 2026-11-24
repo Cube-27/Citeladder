@@ -39,6 +39,7 @@ const execution = {
   prompt_text: 'Which CRM is best for a growing team?',
   error_code: '',
   latency_ms: 900,
+  repetition: 1,
 };
 
 const evidence = {

@@ -153,6 +153,7 @@ export const probeObjectionsSchema = z.discriminatedUnion('state', [
     state: z.literal('value'),
     probe: probeBasisSchema,
     brand: z.string(),
+    question: z.object({ text: z.string(), run_id: uuid(), execution_id: uuid() }).nullable(),
     answers: z.int().nonnegative(),
     answered_by: z.array(logicalEngineSchema),
     average: score.nullable(),

@@ -100,6 +100,7 @@ export async function listExecutions(db: Database, workspaceId: string, auditId:
     .select([
       'id',
       'prompt_index',
+      'repetition',
       'logical_engine',
       'transport_provider',
       'status',

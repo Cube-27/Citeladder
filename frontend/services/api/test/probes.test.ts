@@ -441,6 +441,14 @@ describe('probe labelling and reads', () => {
     ]);
     const [quoted] = objections.groups[0]?.quotes ?? [];
     expect([quoted?.run_id, quoted?.logical_engine]).toEqual([secondId, 'chatgpt']);
+    expect(objections.question).toEqual({
+      text: 'Why might someone not choose Acme Running?',
+      run_id: secondId,
+      execution_id: expect.any(String),
+    });
+    expect(objections.groups[0]?.quotes.map((quote) => quote.execution_id)).toContain(
+      objections.question?.execution_id,
+    );
     const labellings = await db
       .selectFrom('probe_labellings')
       .select('outcome')

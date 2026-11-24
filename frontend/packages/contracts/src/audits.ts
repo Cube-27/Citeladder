@@ -209,6 +209,7 @@ export const executionStatusSchema = z.enum([
 export const executionSchema = responseObject({
   id: uuid(),
   prompt_index: z.number().int(),
+  repetition: z.number().int(),
   logical_engine: z.string(),
   transport_provider: z.string(),
   status: executionStatusSchema,
