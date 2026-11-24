@@ -355,7 +355,7 @@
     "status_ok": 20000,
     "pending_task_status_codes": [40601, 40602],
     "status_unauthorized": 40100,
-    "account_unavailable_status_codes": [40200, 40201, 40204],
+    "account_unavailable_status_codes": [40200, 40201, 40204, 40210],
     "rate_limit_status_codes": [40202, 40209],
     "error_account_unavailable": "provider_account_unavailable",
     "error_result_unsaved": "result_unsaved",

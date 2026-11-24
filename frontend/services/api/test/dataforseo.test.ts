@@ -142,7 +142,7 @@ describe('DataForSEO paid submission boundary', () => {
       ).submit('google_ai_overview', request),
     ).rejects.toMatchObject({ code: 'client_error' });
   });
-  it.each([40200, 40201, 40204])(
+  it.each([40200, 40201, 40204, 40210])(
     'reports a refused account (%i) apart from a bad request',
     async (status) => {
       await expect(
