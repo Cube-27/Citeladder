@@ -194,3 +194,36 @@ export function acquisitionHarness(db: Database, fixtures: SiteFixtures) {
     entries,
   };
 }
+
+export async function sitemapListing(
+  db: Database,
+  fixtures: SiteFixtures,
+  seed: SiteSeed,
+  page: { siteUrlId: string; url: string },
+  kind: string,
+) {
+  const observationId = randomUUID();
+  await db
+    .insertInto('site_url_observations')
+    .values({
+      id: observationId,
+      workspace_id: seed.workspaceId,
+      project_id: seed.projectId,
+      crawl_id: seed.crawlId,
+      site_url_id: page.siteUrlId,
+      observed_url: page.url,
+      final_url: page.url,
+      depth: 1,
+      source_kind: 'sitemap',
+      rewrite_reason: '',
+      rewrite_version: '',
+      title: '',
+      content_type: '',
+      value_kind: 'page',
+      value_priority: 0,
+      created_at: new Date(),
+    })
+    .execute();
+  await fixtures.sitemapEntry(seed, page, kind);
+  return observationId;
+}

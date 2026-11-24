@@ -19,6 +19,7 @@ import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { asOwner, testDatabase } from './support.ts';
 import { recordedSite, SiteFixtures, type Served, type SiteSeed } from './site-health-fixtures.ts';
+import { sitemapListing } from './site-health-acquisition-support.ts';
 
 const db = testDatabase();
 const fixtures = new SiteFixtures(db);
@@ -91,29 +92,7 @@ describe('analyze acquisition', () => {
   it('retains the sitemap observation and declared kind behind a sitemap-listed page', async () => {
     const seed = await running();
     const page = await fixtures.analyzable(seed, '/sitemap-page');
-    const observationId = crypto.randomUUID();
-    await db
-      .insertInto('site_url_observations')
-      .values({
-        id: observationId,
-        workspace_id: seed.workspaceId,
-        project_id: seed.projectId,
-        crawl_id: seed.crawlId,
-        site_url_id: page.siteUrlId,
-        observed_url: page.url,
-        final_url: page.url,
-        depth: 1,
-        source_kind: 'sitemap',
-        rewrite_reason: '',
-        rewrite_version: '',
-        title: '',
-        content_type: '',
-        value_kind: 'page',
-        value_priority: 0,
-        created_at: new Date(),
-      })
-      .execute();
-    await fixtures.sitemapEntry(seed, page, 'product');
+    const observationId = await sitemapListing(db, fixtures, seed, page, 'product');
     await analyze(
       site({
         '/sitemap-page': {
@@ -293,6 +272,26 @@ describe('analyze acquisition', () => {
       );
     },
   );
+
+  it('classifies a page by its last sitemap listing while this crawl is still walking the sitemap', async () => {
+    const kindWhile = async (siteFacts: string | null) => {
+      const seed = await running({ site_facts: siteFacts });
+      const page = await fixtures.analyzable(seed, '/plain');
+      await sitemapListing(
+        db,
+        fixtures,
+        { ...seed, crawlId: await fixtures.sibling(seed) },
+        page,
+        'product',
+      );
+      await analyze(site({ '/plain': { body: RICH } }), page.taskId);
+      return (await analyses(seed, page.siteUrlId))[0]!.page_kind;
+    };
+    expect(await kindWhile(JSON.stringify({ sitemap: { fetched: false, pending: true } }))).toBe(
+      'product',
+    );
+    expect(await kindWhile(JSON.stringify({ sitemap: { fetched: true } }))).toBe('other');
+  });
 
   it('waits for in-flight prerequisites without spending an attempt, then acquires past the bound', async () => {
     const seed = await running({ site_facts: null });

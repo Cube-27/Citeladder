@@ -147,7 +147,7 @@ describe('PagesTable', () => {
       return cells[6]!.textContent;
     };
     expect(depthOf(/Linked page/)).toBe('2');
-    expect(depthOf(/Orphan page/)).toBe('Not reached');
+    expect(depthOf(/Orphan page/)).toBe('—Not reached');
     expect(depthOf(/Unmeasured page/)).toContain('Not measured');
   });
 

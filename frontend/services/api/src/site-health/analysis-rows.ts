@@ -161,8 +161,12 @@ export async function writeAttempts(
   await db.insertInto('site_fetch_attempts').values(rows).execute();
 }
 
+function sitemapWalkUnfinished(crawl: Crawl) {
+  return crawl.site_facts === null || record(record(crawl.site_facts).sitemap).pending === true;
+}
+
 async function sitemapObservation(db: Database, crawl: Crawl, siteUrlId: string) {
-  const row = await db
+  const listings = db
     .selectFrom('site_sitemap_entries as e')
     .innerJoin('site_url_observations as o', (join) =>
       join
@@ -170,13 +174,14 @@ async function sitemapObservation(db: Database, crawl: Crawl, siteUrlId: string)
         .onRef('o.crawl_id', '=', 'e.crawl_id')
         .onRef('o.site_url_id', '=', 'e.site_url_id'),
     )
-    .select(['o.id', 'e.listed_url', 'e.lastmod', 'e.declared_kind'])
+    .select(['o.id', 'e.crawl_id', 'e.listed_url', 'e.lastmod', 'e.declared_kind'])
     .where('e.workspace_id', '=', crawl.workspace_id)
     .where('e.project_id', '=', crawl.project_id)
-    .where('e.crawl_id', '=', crawl.id)
-    .where('e.site_url_id', '=', siteUrlId)
-    .executeTakeFirst();
-  return row ?? null;
+    .where('e.site_url_id', '=', siteUrlId);
+  const current = await listings.where('e.crawl_id', '=', crawl.id).executeTakeFirst();
+  if (current || !sitemapWalkUnfinished(crawl)) return current ?? null;
+  const last = await listings.orderBy('e.created_at', 'desc').limit(1).executeTakeFirst();
+  return last ?? null;
 }
 
 function rootSiteFacts(crawl: Crawl, task: SiteTask): Facts | null {
@@ -318,7 +323,7 @@ export async function pageAnalysisContext(
     siteFacts,
     auditTime: auditTime ? new Date(auditTime).toISOString() : null,
     sources: {
-      sitemap_crawl_id: crawl.id,
+      sitemap_crawl_id: observation?.crawl_id ?? crawl.id,
       sitemap_observation_id: observationId,
       site_facts_crawl_id: siteFacts ? crawl.id : null,
       audit_time_crawl_id: auditTime ? crawl.id : null,
