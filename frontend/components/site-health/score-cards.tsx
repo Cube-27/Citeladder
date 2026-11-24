@@ -7,9 +7,10 @@ import { Stack } from '@/components/ui/layout';
 import { BarRows, ScoreGauge, scoreTone, type BarRow } from '@/components/ui/score-gauge';
 import { SectionCard, TitledSection } from '@/components/ui/section';
 import { StatusMark } from '@/components/ui/status-mark';
+import { textRole } from '@/components/ui/typography';
 import { availabilityLabel, formatCount, pluralCount } from '@/lib/format';
 import { severityCount } from '@/lib/site-health/issues';
-import { checksRunLabel, formatScore, statusLabel } from '@/lib/site-health/status';
+import { formatScore, statusLabel } from '@/lib/site-health/status';
 
 type Dimension = Pick<
   SiteHealthOverview['aeo_dimensions'][number],
@@ -45,36 +46,19 @@ function scoreRow({
   label,
   score,
   absent,
-  caveat,
 }: {
   key: string;
   label: ReactNode;
   score: number | null;
   absent: ReactNode;
-  caveat: string | null;
 }): BarRow {
   return {
     key,
-    label:
-      score !== null && caveat ? (
-        <>
-          {label} <span className="text-ink-2">· {caveat}</span>
-        </>
-      ) : (
-        label
-      ),
+    label,
     figure: score === null ? absent : printed(formatScore(score)),
     share: score === null ? null : score / 100,
-    tone: score === null || caveat ? 'info' : scoreTone(score),
+    tone: score === null ? 'info' : scoreTone(score),
   };
-}
-
-function dimensionCaveat(dimension: Dimension): string | null {
-  if (dimension.unresolved_count > 0)
-    return `${pluralCount(dimension.unresolved_count, 'check')} unresolved`;
-  return dimension.dimension_measurement_state === 'measured'
-    ? null
-    : measurementLabel(dimension.dimension_measurement_state);
 }
 
 const dimensionRow = (dimension: Dimension) =>
@@ -82,7 +66,6 @@ const dimensionRow = (dimension: Dimension) =>
     key: dimension.key,
     label: dimension.label,
     score: dimension.score,
-    caveat: dimensionCaveat(dimension),
     absent: (
       <Unscored
         state={
@@ -97,14 +80,10 @@ const dimensionRow = (dimension: Dimension) =>
 
 function areaRow(area: Area) {
   const judged = area.passed_count + area.missing_count;
-  const total = judged + area.unknown_count + area.unavailable_count;
   return scoreRow({
     key: area.key,
     label: <span className="capitalize">{area.key}</span>,
     score: judged > 0 ? (area.passed_count / judged) * 100 : null,
-    caveat:
-      checksRunLabel({ run: judged, total }) ??
-      (area.state === 'measured' ? null : measurementLabel(area.state)),
     absent: <Unscored state={area.state} />,
   });
 }
@@ -130,7 +109,6 @@ export function ScoreCard({
             label={title}
             score={score}
             absent={state === 'not_measured' ? undefined : measurementLabel(state)}
-            caveat={state === 'measured' ? null : measurementLabel(state)}
           />
           <BarRows label={`${title} breakdown`} rows={rows} />
         </Stack>
@@ -200,6 +178,14 @@ export function SeverityCard({
     <TitledSection title="Issues by severity" actions={actions}>
       <SectionCard>
         <Stack gap="item">
+          <span className="flex min-w-0 flex-wrap items-baseline gap-2">
+            <span className={textRole('figure')}>
+              {formatCount(counts.reduce((sum, count) => sum + count, 0))}
+            </span>
+            <span className={textRole('caption')}>
+              across {pluralCount(data.issue_count, 'issue')}
+            </span>
+          </span>
           <BarRows
             label="Issues by severity"
             rows={SEVERITIES.map((severity, index) => ({

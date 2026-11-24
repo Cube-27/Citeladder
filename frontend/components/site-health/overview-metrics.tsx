@@ -112,7 +112,7 @@ function measurementMetric(context: MetricContext): AuditMetric {
     title: 'AEO checklist completion',
     valueUnit: 'percent',
     value: percentRatio(source?.aeo_measurement_coverage),
-    href: '/site?tab=aeo-readiness',
+    href: '/aeo-readiness',
   };
 }
 

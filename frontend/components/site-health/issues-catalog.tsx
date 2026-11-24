@@ -1,12 +1,11 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { ReportPage } from '@/components/templates/report-page';
 import { IssuesExport } from '@/components/site-health/issues-export';
 import { Inline } from '@/components/ui/layout';
 import { IssuePage, PendingIssuePage, type IssueHead } from '@/components/site-health/issue-page';
-import { IssueCategoryTag, IssueSeverityMark } from '@/components/site-health/issue-metadata';
-import { IssuesSummary } from '@/components/site-health/issues-summary';
+import { ISSUE_COLUMNS, IssueRow } from '@/components/site-health/issue-rows';
 import { pageKindFilter } from '@/components/site-health/page-kind-select';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import {
@@ -23,19 +22,13 @@ import { TextLink } from '@/components/ui/text-link';
 import { SubmittedSearch } from '@/components/site-health/submitted-search';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { SegmentedControl } from '@/components/ui/tabs';
+import { textRole } from '@/components/ui/typography';
+import { statusLabel } from '@/lib/site-health/status';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { ICONS } from '@/lib/icons';
 import { ISSUE_OCCURRENCE_LIMIT, ISSUE_PAGE_LIMIT } from '@/lib/config/site-health';
-import type {
-  IssueSection,
-  IssueSort,
-  IssuesSummary as Summary,
-  SiteIssue,
-} from '@citeladder/contracts';
+import type { IssueSort, SiteIssue } from '@citeladder/contracts';
 import {
-  ISSUE_PRIORITY_PARAMS,
-  ISSUE_SECTIONS,
   ISSUE_SEVERITY_CHOICES,
   issueCatalogParams,
   issueSeverityChange,
@@ -45,7 +38,6 @@ import {
   type IssueFilters,
 } from '@/lib/site-health/issue-filters';
 import { issueTitle } from '@/lib/site-health/issues';
-import { absent, formatCount, type Formatted } from '@/lib/format';
 
 function useIssuesCatalogQueries({
   workspaceId,
@@ -62,11 +54,11 @@ function useIssuesCatalogQueries({
   selectedGroupId: string | null;
   occurrenceCursor: string | undefined;
 }>) {
-  const params = useMemo(() => issueCatalogParams(filters, cursor), [filters, cursor]);
-  const issuesQuery = useQuery(siteHealthQueries.issues(workspaceId, crawlId, params));
-  const priorityQuery = useQuery(
-    siteHealthQueries.issues(workspaceId, crawlId, ISSUE_PRIORITY_PARAMS),
+  const params = useMemo(
+    () => ({ ...issueCatalogParams(filters, cursor), section: undefined }),
+    [filters, cursor],
   );
+  const issuesQuery = useQuery(siteHealthQueries.issues(workspaceId, crawlId, params));
   const detailQuery = useQuery({
     ...siteHealthQueries.issue(workspaceId, crawlId, selectedGroupId ?? '', {
       cursor: occurrenceCursor,
@@ -78,11 +70,8 @@ function useIssuesCatalogQueries({
   const rows = issuesQuery.data?.items ?? [];
   const detail = detailQuery.data?.group_id === selectedGroupId ? detailQuery.data : undefined;
   const open: IssueHead | null =
-    rows.find((issue) => issue.group_id === selectedGroupId) ??
-    priorityQuery.data?.items.find((issue) => issue.group_id === selectedGroupId) ??
-    detail ??
-    null;
-  return { issuesQuery, priorityQuery, detailQuery, rows, open };
+    rows.find((issue) => issue.group_id === selectedGroupId) ?? detail ?? null;
+  return { issuesQuery, detailQuery, rows, open };
 }
 
 export function IssuesCatalog({
@@ -98,7 +87,7 @@ export function IssuesCatalog({
 }>) {
   const catalog = useIssueFilters();
   const { filters, cursor, selectedGroupId, updateFilters } = catalog;
-  const { issuesQuery, priorityQuery, detailQuery, rows, open } = useIssuesCatalogQueries({
+  const { issuesQuery, detailQuery, rows, open } = useIssuesCatalogQueries({
     workspaceId,
     crawlId,
     filters,
@@ -106,9 +95,6 @@ export function IssuesCatalog({
     selectedGroupId,
     occurrenceCursor: catalog.occurrenceCursor,
   });
-  const fixesQuery = useQuery(siteHealthQueries.issueFixes(workspaceId, crawlId));
-  const summary = issuesQuery.data?.summary ?? null;
-  const crawlSummary = priorityQuery.data?.summary;
   const pager = useCatalogPager(cursor, issuesQuery.data?.next_cursor ?? null, catalog.goToPage);
 
   if (selectedGroupId !== null) {
@@ -118,6 +104,7 @@ export function IssuesCatalog({
         issue={open}
         scope={{ workspaceId, projectId }}
         crawlId={crawlId}
+        pageKind={filters.page_kind}
         detailQuery={detailQuery}
         canPrevious={catalog.canPageOccurrencesBack}
         onPrevious={catalog.previousOccurrences}
@@ -138,28 +125,15 @@ export function IssuesCatalog({
         <IssuesExport
           workspaceId={workspaceId}
           crawlId={crawlId}
-          filters={toIssueParams(filters)}
+          filters={{ ...toIssueParams(filters), section: undefined }}
         />
       }
     >
       {notice}
-      <IssuesSummary
-        query={priorityQuery}
-        fixes={fixesQuery.data?.items}
-        onOpen={catalog.selectIssue}
-      />
       <DataTable
         label="Issues"
         columns={issueColumns(filters.sort, (sort) => updateFilters({ sort }))}
         toolbar={{
-          view: (
-            <SectionControl
-              value={filters.section}
-              summary={summary}
-              upTo={crawlSummary?.issue_count}
-              onChange={(section) => updateFilters({ section })}
-            />
-          ),
           search: (
             <SubmittedSearch
               key={filters.query}
@@ -177,8 +151,17 @@ export function IssuesCatalog({
         pager={pager}
         busy={{ active: issuesQuery.isFetching, label: 'Updating issues' }}
       >
-        {rows.map((issue) => (
-          <IssueRow key={issue.group_id} issue={issue} onOpen={catalog.selectIssue} />
+        {issueGroups(rows).map((group) => (
+          <Fragment key={group.label}>
+            <TableRow>
+              <TableCell colSpan={ISSUE_COLUMNS.length} className={textRole('emphasis', 'bg-well')}>
+                {group.label}
+              </TableCell>
+            </TableRow>
+            {group.issues.map((issue) => (
+              <CatalogRow key={issue.group_id} issue={issue} onOpen={catalog.selectIssue} />
+            ))}
+          </Fragment>
         ))}
       </DataTable>
     </ReportPage>
@@ -204,42 +187,49 @@ function tableState(query: ReturnType<typeof useIssuesCatalogQueries>['issuesQue
 }
 
 function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataTableColumn[] {
-  return [
-    { key: 'issue', label: 'Issue', kind: 'identity' },
-    {
-      key: 'severity',
-      label: 'Severity',
-      kind: 'status',
-      width: 'status',
-      sort: { active: sort === 'severity', descending: true, onSort: () => onSort('severity') },
-    },
-    {
-      key: 'pages',
-      label: 'Pages affected',
-      kind: 'number',
-      width: 'metric',
-      sort: { active: sort === 'pages', descending: true, onSort: () => onSort('pages') },
-    },
-    { key: 'new', label: 'New', kind: 'number', width: 'metric' },
-    { key: 'fixed', label: 'Fixed', kind: 'number', width: 'metric' },
-    { key: 'category', label: 'Category', width: 'category', priority: 'low' },
-  ];
+  const sorted = (key: IssueSort) => ({
+    active: sort === key,
+    descending: true,
+    onSort: () => onSort(key),
+  });
+  return ISSUE_COLUMNS.map((column) => {
+    if (column.key === 'severity') return { ...column, sort: sorted('severity') };
+    if (column.key === 'pages') return { ...column, sort: sorted('pages') };
+    return column;
+  });
 }
 
-function IssueRow({
+function groupLabel(issue: SiteIssue): string {
+  return issue.dimension === 'aeo'
+    ? `AEO: ${statusLabel(issue.category).toLowerCase()}`
+    : 'Technical';
+}
+
+function issueGroups(rows: readonly SiteIssue[]) {
+  const groups = new Map<string, SiteIssue[]>();
+  for (const issue of rows) {
+    const label = groupLabel(issue);
+    groups.set(label, [...(groups.get(label) ?? []), issue]);
+  }
+  return [...groups].map(([label, issues]) => ({ label, issues }));
+}
+
+function CatalogRow({
   issue,
   onOpen,
 }: Readonly<{ issue: SiteIssue; onOpen: (groupId: string) => void }>) {
-  const title = issueTitle(issue);
+  const open = () => onOpen(issue.group_id);
   return (
-    <TableRow onClick={() => onOpen(issue.group_id)} className="cursor-pointer">
-      <TableCell>
+    <IssueRow
+      issue={issue}
+      onOpen={open}
+      name={(title) => (
         <Inline gap="tight">
           <TextLink asChild underline="hover">
             <Pressable
               onClick={(event) => {
                 event.stopPropagation();
-                onOpen(issue.group_id);
+                open();
               }}
               className="min-h-6 w-auto min-w-0"
             >
@@ -250,52 +240,7 @@ function IssueRow({
             <InfoHint label={`What “${title}” checks`}>{issue.description}</InfoHint>
           ) : null}
         </Inline>
-      </TableCell>
-      <TableCell>
-        <IssueSeverityMark issue={issue} />
-      </TableCell>
-      <TableCell numeric className="tabular-nums">
-        {formatCount(issue.affected_url_count)}
-      </TableCell>
-      <TableCell numeric className="tabular-nums">
-        {sinceLastCrawl(issue.new_url_count)}
-      </TableCell>
-      <TableCell numeric className="tabular-nums">
-        {sinceLastCrawl(issue.resolved_url_count)}
-      </TableCell>
-      <TableCell>
-        <IssueCategoryTag issue={issue} />
-      </TableCell>
-    </TableRow>
-  );
-}
-
-function sinceLastCrawl(count: number | null): Formatted {
-  return count === null ? absent('unavailable') : formatCount(count);
-}
-
-function SectionControl({
-  value,
-  summary,
-  upTo,
-  onChange,
-}: Readonly<{
-  value: IssueSection;
-  summary: Summary | null;
-  upTo: number | undefined;
-  onChange: (value: IssueSection) => void;
-}>) {
-  return (
-    <SegmentedControl
-      value={value}
-      onChange={onChange}
-      ariaLabel="Issue type"
-      options={ISSUE_SECTIONS.map((section) => ({
-        value: section.value,
-        label: section.label,
-        count: summary?.section_counts[section.value],
-        countUpTo: upTo,
-      }))}
+      )}
     />
   );
 }

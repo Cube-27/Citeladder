@@ -51,7 +51,14 @@ export function OverviewPanel({
       />
     );
   } else if (data) {
-    overviewBody = <OverviewDetails data={data} />;
+    overviewBody = (
+      <OverviewDetails
+        data={data}
+        workspaceId={workspaceId}
+        crawlId={crawlId}
+        summary={dashboard?.score_summary ?? crawl?.score_summary ?? null}
+      />
+    );
   } else if (terminal && overview.isLoading) {
     overviewBody = (
       <StateBlock kind="loading" label="Loading Overview details" shape={PILLAR_TABLE} />
@@ -60,7 +67,7 @@ export function OverviewPanel({
 
   return (
     <Stack gap="workspace" className="min-w-0" data-testid="site-health-overview">
-      <OverviewMetricCards overview={data} dashboard={dashboard} crawl={crawl} />
+      {data ? null : <OverviewMetricCards overview={data} dashboard={dashboard} crawl={crawl} />}
       {overviewBody}
     </Stack>
   );

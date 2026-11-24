@@ -25,7 +25,7 @@ const DIMENSIONS = [
 ] as const;
 
 function AeoReadinessPanel(props: Readonly<{ projectId: string; crawlId: string }>) {
-  return <ScopedAeoReadinessPanel workspaceId={WORKSPACE} {...props} />;
+  return <ScopedAeoReadinessPanel workspaceId={WORKSPACE} summary={null} {...props} />;
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
@@ -126,6 +126,21 @@ function dimension(key: string, label: string, failing: boolean) {
 
 function stubReadiness(overrides: Record<string, unknown> = {}) {
   mswServer.use(
+    http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
+      HttpResponse.json({
+        items: [],
+        next_cursor: null,
+        summary: {
+          issue_count: 0,
+          occurrence_count: 0,
+          severity_counts: {},
+          dimension_counts: {},
+          affected_url_count: 0,
+          monitored_affected_url_count: 0,
+          section_counts: { technical: 0, content: 0, aeo: 0 },
+        },
+      }),
+    ),
     http.get(`/api/v1/projects/${PROJECT}/site-health/aeo-readiness`, () =>
       HttpResponse.json({
         state: 'measured',
@@ -152,43 +167,41 @@ describe('AEO readiness', () => {
     stubReadiness();
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
 
-    await screen.findByRole('heading', { name: 'Readiness dimensions' });
-    for (const [, label] of DIMENSIONS) expect(screen.getByText(label)).toBeInTheDocument();
+    const table = await screen.findByRole('table', { name: 'Dimensions' });
+    for (const [, label] of DIMENSIONS) expect(within(table).getByText(label)).toBeInTheDocument();
   });
 
-  it('counts pages that need work, never a bare evaluation total', async () => {
+  it('gives each dimension its issues, pages affected and largest issue', async () => {
     stubReadiness();
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
 
-    const answerability = (await screen.findByText('Answerability')).closest('tr');
-    expect(within(answerability!).getByText('Needs work')).toBeInTheDocument();
-    expect(within(answerability!).getByText('83.3%')).toBeInTheDocument();
-    expect(screen.queryByText(/evidence link/i)).toBeNull();
-  });
-
-  it('opens a pillar from anywhere on its row, without an actions column', async () => {
-    stubReadiness({
-      dimensions: DIMENSIONS.map(([key, label], index) => {
-        const base = dimension(key, label, index === 0);
-        return index === 1 ? { ...base, score: 95 } : base;
-      }),
-    });
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    const table = await screen.findByRole('table', { name: 'Readiness dimensions' });
+    const table = await screen.findByRole('table', { name: 'Dimensions' });
     expect(
       within(table)
         .getAllByRole('columnheader')
         .map((head) => head.textContent),
-    ).toEqual(['Dimension', 'Score', 'Coverage', 'State']);
-    expect(within(table).getByText('Needs work').closest('[data-status-tone]')).toHaveAttribute(
-      'data-status-tone',
-      'warning',
-    );
-    const nearly = within(table).getByText('Nearly there');
-    expect(nearly.closest('[data-status-tone]')).toHaveAttribute('data-status-tone', 'info');
+    ).toEqual(['Dimension', 'Score', 'Score bar', 'Issues', 'Pages affected', 'Largest issue']);
+    const failing = within(table).getByText('Answerability').closest('tr')!;
+    expect(
+      within(failing)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['Answerability', '60', '', '1', '2', 'Answer is not stated first']);
+    const clean = within(table).getByText('Structure').closest('tr')!;
+    expect(
+      within(clean)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['Structure', '100', '', '0', '0', '']);
+  });
 
-    await userEvent.click(nearly);
+  it('opens a dimension from anywhere on its row', async () => {
+    stubReadiness();
+    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
+
+    const table = await screen.findByRole('table', { name: 'Dimensions' });
+    const row = within(table).getByText('Structure').closest('tr')!;
+    await userEvent.click(within(row).getByText('100'));
     const drawer = await screen.findByRole('dialog', { name: 'Structure evidence' });
     expect(within(drawer).getByText('Passing').closest('[data-status-tone]')).toHaveAttribute(
       'data-status-tone',
@@ -212,12 +225,13 @@ describe('AEO readiness', () => {
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
-    expect(screen.getAllByText(/Answer is not stated first/)).toHaveLength(3);
+    const drawer = await screen.findByRole('dialog', { name: 'Answerability evidence' });
+    expect(within(drawer).getAllByText(/Answer is not stated first/)).toHaveLength(3);
     expect(screen.queryByText(/rule\.answerability\.0/)).toBeNull();
     expect(screen.queryByText(/^aeo\./)).toBeNull();
   });
 
-  it('labels errored dimensions and checks as incomplete, never passing', async () => {
+  it('labels an errored check as incomplete, never passing', async () => {
     const dimensions = DIMENSIONS.map(([key, label], index) => {
       const base = dimension(key, label, false);
       return index === 0
@@ -232,28 +246,10 @@ describe('AEO readiness', () => {
     stubReadiness({ dimensions });
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
 
-    const row = (await screen.findByText('Answerability')).closest('tr');
-    expect(within(row!).queryByText('Passing')).toBeNull();
-    expect(within(row!).getByText('Nearly there')).toBeInTheDocument();
-    expect(within(row!).getByText('1 check incomplete')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Answerability evidence' }));
-    expect(screen.getAllByText('Incomplete')).toHaveLength(1);
-  });
-
-  it('says how many checks hold a printed 100 below Passing', async () => {
-    const dimensions = DIMENSIONS.map(([key, label], index) => {
-      const base = dimension(key, label, false);
-      return index === 1 ? { ...base, unresolved_count: 1 } : base;
-    });
-    stubReadiness({ dimensions });
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    const held = (await screen.findByText(DIMENSIONS[1][1])).closest('tr');
-    expect(within(held!).getByText('Nearly there')).toBeInTheDocument();
-    expect(within(held!).getByText('1 check unresolved')).toBeInTheDocument();
-    const passing = screen.getByText(DIMENSIONS[0][1]).closest('tr');
-    expect(within(passing!).getByText('Passing')).toBeInTheDocument();
-    expect(within(passing!).queryByText(/unresolved|incomplete/)).toBeNull();
+    await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Answerability evidence' });
+    expect(within(drawer).getAllByText('Incomplete')).toHaveLength(1);
+    expect(within(drawer).queryByText('Passing')).toBeNull();
   });
 
   it('labels unknown-only checks as incomplete rather than not applicable', async () => {
@@ -317,20 +313,6 @@ describe('AEO readiness', () => {
     stubReadiness({ state: 'not_measured', crawl_id: null, limitations: ['Run a crawl first.'] });
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
     expect(await screen.findByRole('status')).toHaveTextContent('Run a crawl first.');
-  });
-
-  it('does not turn a rounded score into a claim that every check passed', async () => {
-    stubReadiness({
-      dimensions: DIMENSIONS.map(([key, label], index) => {
-        const base = dimension(key, label, false);
-        return index === 0 ? { ...base, score: 99.6 } : base;
-      }),
-    });
-    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    const row = (await screen.findByText('Answerability')).closest('tr');
-    expect(within(row!).getByText('100')).toBeInTheDocument();
-    expect(within(row!).getByText('Nearly there')).toBeInTheDocument();
   });
 
   it('gives a code-only page the fix prompt rather than no action at all', async () => {

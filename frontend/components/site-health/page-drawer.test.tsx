@@ -14,7 +14,7 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-it('opens a page in a drawer titled by the page, with its issues on their own tab', async () => {
+it('opens a page in a drawer titled by the page, with a section rail and its issues on their own pane', async () => {
   mswServer.use(
     http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}`, () => HttpResponse.json(pageDetail())),
   );
@@ -26,6 +26,15 @@ it('opens a page in a drawer titled by the page, with its issues on their own ta
   );
   const drawer = await screen.findByRole('dialog', { name: 'Best&Less Online' });
   expect(within(drawer).queryByText('WebSite schema is missing')).toBeNull();
-  await user.click(await within(drawer).findByRole('tab', { name: 'Issues' }));
+  expect(
+    within(drawer)
+      .getAllByRole('tab')
+      .map((tab) => tab.textContent?.replace(/ \(\d+\)$/, '')),
+  ).toEqual(['Overview', 'Issues', 'Checks', 'Linked from', 'Links out']);
+  expect(within(drawer).getByRole('link', { name: 'Open full page' })).toHaveAttribute(
+    'href',
+    expect.stringContaining(`/site/crawls/${CRAWL}/pages/${URL_ID}`),
+  );
+  await user.click(await within(drawer).findByRole('tab', { name: /^Issues/ }));
   expect(await within(drawer).findByText('WebSite schema is missing')).toBeInTheDocument();
 });

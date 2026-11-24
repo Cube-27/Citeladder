@@ -11,6 +11,7 @@ const DRAWER_WIDTH = {
   narrow: 'max-w-narrow',
   wide: 'max-w-form',
   split: 'max-w-prose',
+  rail: 'max-w-220',
 } as const;
 
 export function Drawer({
@@ -19,6 +20,7 @@ export function Drawer({
   title,
   eyebrow,
   description,
+  actions,
   children,
   footer,
   body = 'scroll',
@@ -32,6 +34,7 @@ export function Drawer({
   title: ReactNode;
   eyebrow?: string;
   description?: ReactNode;
+  actions?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
   body?: 'scroll' | 'dock';
@@ -71,6 +74,7 @@ export function Drawer({
             title={title}
             eyebrow={eyebrow}
             description={description}
+            actions={actions}
             hidden={hideHeader}
             close={close}
           />
@@ -99,12 +103,14 @@ function DrawerHeader({
   title,
   eyebrow,
   description,
+  actions,
   hidden,
   close,
 }: Readonly<{
   title: ReactNode;
   eyebrow?: string;
   description?: ReactNode;
+  actions?: ReactNode;
   hidden: boolean;
   close: ReactNode;
 }>) {
@@ -132,7 +138,10 @@ function DrawerHeader({
           </DialogPrimitive.Description>
         ) : null}
       </div>
-      {close}
+      <div className="flex shrink-0 items-center gap-2">
+        {actions}
+        {close}
+      </div>
     </header>
   );
 }

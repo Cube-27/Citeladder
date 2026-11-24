@@ -7,35 +7,36 @@ import {
   WebFundamentalsScoreCard,
   measurementLabel,
 } from './score-cards';
-import { CohortCompositionContext } from './cohort-composition-context';
 import { AppGrid } from '@/components/ui/app-grid';
 import { StatusMark } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
-import { Delta } from '@/components/ui/delta';
 import { Drawer } from '@/components/ui/drawer';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow } from '@/components/ui/table';
-import { AreaChart } from '@/components/ui/area-chart';
-import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
-import type { SiteHealthOverview } from '@citeladder/contracts';
-import { issueTitle } from '@/lib/site-health/issues';
+import type { SiteHealthOverview, SiteScoreSummary } from '@citeladder/contracts';
+import { KnownUrlsCard, PageKindsCard, TopIssues } from './overview-cards';
 import { checksRunLabel, type ChecksRun } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
 import {
   EditorialSectionHeader,
   ledgerClasses,
   ledgerItemClasses,
 } from '@/components/ui/workspace';
-import { ICONS } from '@/lib/icons';
 import { StateBlock } from '@/components/ui/state-block';
-import { SectionCard, SectionContent, TitledSection } from '@/components/ui/section';
 import { formatCount, formatPercent, pluralCount } from '@/lib/format';
 
-export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>) {
+export function OverviewDetails({
+  data,
+  workspaceId,
+  crawlId,
+  summary,
+}: Readonly<{
+  data: SiteHealthOverview;
+  workspaceId: string;
+  crawlId: string;
+  summary: SiteScoreSummary | null;
+}>) {
   const [webFundamentalsOpen, setWebFundamentalsOpen] = useState(false);
   return (
     <>
@@ -52,16 +53,16 @@ export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>
           dimensions={data.aeo_dimensions}
           actions={
             <Button asChild variant="secondary">
-              <ProjectLink href="/site?tab=aeo-readiness">Open report</ProjectLink>
+              <ProjectLink href="/aeo-readiness">Open report</ProjectLink>
             </Button>
           }
         />
         <SeverityCard data={data} />
       </AppGrid>
-      <TopIssues issues={data.top_issues} />
+      <TopIssues workspaceId={workspaceId} crawlId={crawlId} />
       <AppGrid layout="halves">
-        <OpenIssuesTrendCard points={data.open_issue_trend} />
-        <ChangeSummaryCard data={data.change_summary} />
+        <PageKindsCard summary={summary} />
+        <KnownUrlsCard summary={summary} />
       </AppGrid>
       <WebFundamentalsDrawer
         data={data.web_fundamentals}
@@ -70,135 +71,6 @@ export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>
       />
     </>
   );
-}
-
-const TOP_ISSUE_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'impact', label: 'Impact', kind: 'status', width: 'figure' },
-  { key: 'issue', label: 'Issue', kind: 'identity' },
-  { key: 'pages', label: 'Pages affected', kind: 'number' },
-];
-
-function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues'] }>) {
-  return (
-    <DataTable
-      title="Top issues"
-      toolbar={{
-        actions: (
-          <Button asChild variant="secondary">
-            <ProjectLink href="/issues">View all issues</ProjectLink>
-          </Button>
-        ),
-      }}
-      columns={TOP_ISSUE_COLUMNS}
-      state={
-        issues.length === 0
-          ? { kind: 'empty', icon: ICONS.issues, headingLevel: 3, heading: 'No issues found' }
-          : undefined
-      }
-    >
-      {issues.map((issue) => (
-        <TableRow key={issue.rule_id}>
-          <TableCell className="whitespace-nowrap">
-            <StatusMark variant="severity" value={impactSeverity(issue.impact_band)}>
-              {impactLabel(issue.impact_band)}
-            </StatusMark>
-          </TableCell>
-          <TableCell>
-            <TextLink
-              text="body"
-              underline="hover"
-              href={issueHref(issue)}
-              className="inline-flex min-h-6 min-w-0 items-center"
-            >
-              <ClampText lines={1}>{issueTitle(issue)}</ClampText>
-            </TextLink>
-          </TableCell>
-          <TableCell numeric>{formatCount(issue.affected_pages)}</TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
-  );
-}
-
-function OpenIssuesTrendCard({
-  points,
-}: Readonly<{ points: SiteHealthOverview['open_issue_trend'] }>) {
-  return (
-    <TitledSection title="Open issues over time">
-      <SectionContent>
-        <Stack gap="item">
-          <AreaChart
-            data={points.map((point) => ({
-              label: point.day,
-              value: point.open_count,
-              timestamp: Date.parse(point.day),
-            }))}
-            label="Open issues over time"
-            name="Open issues"
-            you={false}
-            height="sm"
-            yMin={0}
-            yFormat={(value) => `${Math.round(value)}`}
-          />
-          {points.length < 2 ? (
-            <p className="type-caption">The trend starts once audits land on two days.</p>
-          ) : null}
-        </Stack>
-      </SectionContent>
-    </TitledSection>
-  );
-}
-
-const CHANGE_METRIC_LABELS: Record<string, string> = {
-  web_fundamentals_score: 'Web fundamentals',
-  web_fundamentals_coverage: 'Web fundamentals coverage',
-  aeo_readiness_score: 'AEO readiness',
-  aeo_measurement_coverage: 'AEO checklist completion',
-};
-
-function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change_summary'] }>) {
-  return (
-    <TitledSection title="Score change">
-      <SectionCard>
-        <Stack>
-          {data.metrics.map((metric) => (
-            <Inline gap="compact" key={metric.key} className="type-body text-ink-2 justify-between">
-              <span className="text-ink-2">{CHANGE_METRIC_LABELS[metric.key] ?? metric.label}</span>
-              <ChangeDelta metricKey={metric.key} delta={metric.delta} />
-            </Inline>
-          ))}
-          {data.state === 'unavailable' ? (
-            <StateBlock kind="empty" inline message="No comparable crawl yet." />
-          ) : null}
-          <CohortCompositionContext reason={data.reason} composition={data.cohort_composition} />
-        </Stack>
-      </SectionCard>
-    </TitledSection>
-  );
-}
-
-function ChangeDelta({ metricKey, delta }: Readonly<{ metricKey: string; delta: number | null }>) {
-  const coverage = metricKey.endsWith('_coverage');
-  const scale = coverage ? 100 : 1;
-  return (
-    <Delta
-      value={delta === null ? null : delta * scale}
-      precision={0}
-      unit={coverage ? ' pp' : ''}
-    />
-  );
-}
-
-function impactLabel(impactBand: number): 'High' | 'Medium' | 'Low' {
-  if (impactBand >= 3) return 'High';
-  if (impactBand === 2) return 'Medium';
-  return 'Low';
-}
-
-function impactSeverity(impactBand: number): 'high' | 'medium' | 'low' {
-  if (impactBand >= 3) return 'high';
-  if (impactBand === 2) return 'medium';
-  return 'low';
 }
 
 function measurementTone(state: string): 'success' | 'warning' | 'info' {
@@ -222,12 +94,6 @@ function MeasurementMark({ state, checks }: Readonly<{ state: string; checks: Ch
       {(state === 'limited_evidence' ? checksRunLabel(checks) : null) ?? measurementLabel(state)}
     </StatusMark>
   );
-}
-
-function issueHref(issue: SiteHealthOverview['top_issues'][number]): string {
-  const params = new URLSearchParams({ rule: issue.rule_id });
-  if (issue.section && issue.section !== 'technical') params.set('section', issue.section);
-  return `/issues?${params.toString()}`;
 }
 
 function WebFundamentalsDrawer({

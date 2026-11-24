@@ -2,21 +2,25 @@ import { askAgentPrompt, buildFixPrompt } from '@/lib/site-health/issue-prompts'
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueFixActions, type IssueFixScope } from '@/components/site-health/issue-fix-actions';
-import { IssuePagesExport } from '@/components/site-health/issues-export';
 import { IssueValueLine, showsPageText, valueRange } from '@/components/site-health/issue-value';
 import { AffectedPageLink, SharedOccurrences } from '@/components/site-health/shared-occurrences';
-import type { UseQueryResult } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { IssueUrlTable } from '@/components/site-health/issue-urls';
+import { Absence } from '@/components/ui/absence';
+import { Pressable } from '@/components/ui/pressable';
+import { SectionCard, TitledSection } from '@/components/ui/section';
+import { TextLink } from '@/components/ui/text-link';
+import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { PageDrawer } from '@/components/site-health/page-drawer';
 import { PageOpenContext } from '@/components/site-health/page-open-context';
 import { ReportPage } from '@/components/templates/report-page';
 import { IssueSeverityMark } from '@/components/site-health/issue-metadata';
-import { pluralCount } from '@/lib/format';
+import { formatCount, formatPercent } from '@/lib/format';
 import { useState } from 'react';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pager } from '@/components/ui/pager';
-import { ProjectLink } from '@/components/ui/project-link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
@@ -58,6 +62,7 @@ export function IssuePage({
   issue,
   scope,
   crawlId,
+  pageKind,
   detailQuery,
   canPrevious,
   onPrevious,
@@ -67,6 +72,7 @@ export function IssuePage({
   issue: IssueHead;
   scope: IssueFixScope;
   crawlId: string;
+  pageKind?: string;
   detailQuery: UseQueryResult<SiteIssueDetail>;
   canPrevious: boolean;
   onPrevious: () => void;
@@ -81,78 +87,82 @@ export function IssuePage({
     skillId: 'technical_health',
   };
   useAgentPanelSeed(handoff);
-  const pageKinds = issue.page_kinds ?? [];
   const pageLevel = !isSiteLevelRule(issue.rule_id);
   const [openPageId, setOpenPageId] = useState<string | null>(null);
   const title = issueTitle(issue);
+  const crawl = useQuery(siteHealthQueries.crawl(scope.workspaceId, crawlId));
+  const audited = crawl.data?.score_summary?.analyzed_count ?? null;
   return (
     <ReportPage>
       <Stack as="section" aria-label={title} gap="workspace" className="min-w-0">
-        <Inline className="items-start justify-between">
-          <h2 className={textRole('heading', 'min-w-0')}>{title}</h2>
-          <Button variant="secondary" onClick={onClose} className="shrink-0">
-            Back to issues
-          </Button>
-        </Inline>
-        <Inline className="flex-wrap">
-          <IssueSeverityMark issue={issue} />
-          <span className={textRole('body', 'text-ink-2')}>
-            {pluralCount(issue.affected_url_count, 'page')} affected
+        <Inline className="flex-wrap items-center">
+          <TextLink asChild text="heading" underline="hover">
+            <Pressable aria-label="Back to issues" onClick={onClose} className="text-ink-2 w-auto">
+              Issues
+            </Pressable>
+          </TextLink>
+          <span aria-hidden className={textRole('heading', 'text-ink-2')}>
+            /
           </span>
-        </Inline>
-        {issue.remediation ? (
-          <Stack gap="tight" className="min-w-0">
-            <span className="type-caption">How to fix</span>
-            <p className={textRole('body', 'whitespace-pre-line')}>{issue.remediation}</p>
-          </Stack>
-        ) : null}
-        {pageKinds.length > 0 ? (
-          <Stack gap="tight" className="min-w-0">
-            <span className="type-caption">Page kinds</span>
-            <p className={textRole('body')}>{pageKinds.map(pageKindLabel).join(', ')}</p>
-          </Stack>
-        ) : null}
-        <Inline className="flex-wrap">
+          <h2 className={textRole('heading', 'min-w-0')}>{title}</h2>
+          <IssueSeverityMark issue={issue} />
+          <span className="flex-1" />
           <AskAgentLink handoff={handoff} />
           <CopyButton value={buildFixPrompt(issue)} variant="secondary" className="w-fit">
             Copy fix prompt
           </CopyButton>
-          {pageLevel ? (
-            <>
-              <Button variant="secondary" asChild>
-                <ProjectLink href={pagesWithIssueHref(issue.rule_id)}>View in Pages</ProjectLink>
-              </Button>
-              <IssuePagesExport
-                workspaceId={scope.workspaceId}
-                crawlId={crawlId}
-                groupId={issue.group_id}
-              />
-            </>
-          ) : null}
         </Inline>
-        <IssueFixActions scope={scope} crawlId={crawlId} groupId={issue.group_id} />
-        <Stack as="section" gap="workspace" aria-busy={detailQuery.isFetching || undefined}>
-          <h3 className={textRole('heading')}>Affected pages</h3>
-          <PageOpenContext value={setOpenPageId}>
-            <OccurrenceList
-              issue={issue}
-              detail={detail}
-              crawlId={crawlId}
-              query={detailQuery}
-              firstPage={!canPrevious}
-            />
-          </PageOpenContext>
-        </Stack>
-        {detail || canPrevious ? (
-          <Pager
-            hideWhenSinglePage
-            canPrev={canPrevious}
-            canNext={Boolean(detail?.next_cursor)}
-            onPrev={onPrevious}
-            onNext={onNext}
-            busy={detailQuery.isFetching}
+        <TitledSection title="Why and how to fix">
+          <SectionCard>
+            <Stack gap="item">
+              {issue.description ? (
+                <p className={textRole('body', 'max-w-prose')}>{issue.description}</p>
+              ) : null}
+              {issue.remediation ? (
+                <p className={textRole('body', 'max-w-prose whitespace-pre-line')}>
+                  {issue.remediation}
+                </p>
+              ) : null}
+              <IssueFigures issue={issue} audited={audited} />
+              <IssueFixActions scope={scope} crawlId={crawlId} groupId={issue.group_id} />
+            </Stack>
+          </SectionCard>
+        </TitledSection>
+        {pageLevel ? (
+          <IssueUrlTable
+            workspaceId={scope.workspaceId}
+            crawlId={crawlId}
+            groupId={issue.group_id}
+            ruleId={issue.rule_id}
+            initialPageKind={pageKind}
+            onOpen={setOpenPageId}
           />
-        ) : null}
+        ) : (
+          <>
+            <Stack as="section" gap="workspace" aria-busy={detailQuery.isFetching || undefined}>
+              <h3 className={textRole('heading')}>Affected pages</h3>
+              <PageOpenContext value={setOpenPageId}>
+                <OccurrenceList
+                  issue={issue}
+                  detail={detail}
+                  crawlId={crawlId}
+                  query={detailQuery}
+                  firstPage={!canPrevious}
+                />
+              </PageOpenContext>
+            </Stack>
+            {detail || canPrevious ? (
+              <Pager
+                hideWhenSinglePage
+                canPrev={canPrevious}
+                canNext={Boolean(detail?.next_cursor)}
+                onPrev={onPrevious}
+                onNext={onNext}
+                busy={detailQuery.isFetching}
+              />
+            ) : null}
+          </>
+        )}
       </Stack>
       <PageDrawer
         workspaceId={scope.workspaceId}
@@ -161,6 +171,45 @@ export function IssuePage({
         onClose={() => setOpenPageId(null)}
       />
     </ReportPage>
+  );
+}
+
+type FigureFacts = Pick<IssueHead, 'affected_url_count'> &
+  Partial<Pick<SiteIssue, 'new_url_count' | 'resolved_url_count' | 'page_kinds'>>;
+
+function IssueFigures({
+  issue,
+  audited,
+}: Readonly<{ issue: FigureFacts; audited: number | null }>) {
+  const count = (value: number | null | undefined) =>
+    value === null || value === undefined ? <Absence state="not_measured" /> : formatCount(value);
+  const kinds = issue.page_kinds ?? [];
+  const figures = [
+    { label: 'Affected pages', value: formatCount(issue.affected_url_count) },
+    {
+      label: 'Share of audited pages',
+      value: audited ? formatPercent(issue.affected_url_count / audited) : count(null),
+    },
+    { label: 'New since last crawl', value: count(issue.new_url_count) },
+    { label: 'Fixed since last crawl', value: count(issue.resolved_url_count) },
+    ...(kinds.length > 0
+      ? [{ label: 'Page kinds', value: kinds.map(pageKindLabel).join(', '), text: true }]
+      : []),
+  ];
+  return (
+    <dl
+      aria-label="Issue figures"
+      className="border-rule flex min-w-0 flex-wrap gap-x-10 gap-y-4 border-t pt-4"
+    >
+      {figures.map((figure) => (
+        <div key={figure.label} className="min-w-0">
+          <dt className={textRole('caption', 'text-ink-2')}>{figure.label}</dt>
+          <dd className={textRole('text' in figure ? 'emphasis' : 'figure', 'tabular-nums')}>
+            {figure.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -189,11 +238,6 @@ export function PendingIssuePage({
       </Stack>
     </ReportPage>
   );
-}
-
-function pagesWithIssueHref(ruleId: string): string {
-  const params = new URLSearchParams({ tab: 'pages', pages_view: 'all', pages_rule: ruleId });
-  return `/site?${params.toString()}`;
 }
 
 function OccurrenceList({

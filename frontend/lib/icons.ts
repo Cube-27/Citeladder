@@ -190,6 +190,7 @@ export const ICONS = {
   content: IconFileText,
   siteHealth: IconShieldCheck,
   issues: IconAlertOctagon,
+  aeoReadiness: IconSparkles,
   opportunities: IconBulb,
   newChat: IconEdit,
   skills: IconSparkles,

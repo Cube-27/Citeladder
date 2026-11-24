@@ -69,6 +69,10 @@ const screens = {
   site: pick(() => import('@/components/site-health/site-health-screen'), 'SiteHealthScreen'),
   pageDetail: pick(() => import('@/components/site-health/url-detail'), 'PageDetailScreen'),
   issues: pick(() => import('@/components/site-health/issues-screen'), 'IssuesScreen'),
+  aeoReadiness: pick(
+    () => import('@/components/site-health/aeo-readiness-screen'),
+    'AeoReadinessScreen',
+  ),
   keywords: pick(
     () => import('@/components/search-intelligence/search-intelligence-page'),
     'SearchIntelligencePage',
@@ -173,6 +177,13 @@ export const APP_ROUTES = [
     collection: '/site',
     screen: screens.pageDetail,
     loading: cards([facts(3, [1]), figures(3)]),
+  }),
+  page({
+    path: '/aeo-readiness',
+    title: 'AEO readiness',
+    screen: screens.aeoReadiness,
+    loading: cards([figures(), table(6)]),
+    nav: [listed('AEO readiness', 'aeoReadiness', 'website')],
   }),
   page({
     path: '/issues',

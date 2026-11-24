@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { RecordPage } from '@/components/templates/record-page';
 import type { Crumb } from '@/components/ui/breadcrumb';
@@ -30,8 +30,8 @@ import {
 } from '@/lib/site-health/status';
 import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
 import { StateBlock } from '@/components/ui/state-block';
-import { SectionCard, SectionStack, TitledSection } from '@/components/ui/section';
-import { TabPanel, Tabs } from '@/components/ui/tabs';
+import { SectionCard, TitledSection } from '@/components/ui/section';
+import { PageDrawerView } from '@/components/site-health/page-drawer-view';
 
 export const PAGE_DETAIL_TRAIL: readonly Crumb[] = [
   { label: 'Site health', href: '/site' },
@@ -51,13 +51,6 @@ function RerunButton({ rerun }: Readonly<{ rerun: RerunControl }>) {
 
 export type PageFrameKind = 'page' | 'drawer';
 
-const DRAWER_TABS = [
-  { value: 'overview', label: 'Overview' },
-  { value: 'issues', label: 'Issues' },
-  { value: 'checks', label: 'Checks' },
-  { value: 'links', label: 'Links' },
-] as const;
-
 export function UrlDetailView({
   frame = 'page',
   detail,
@@ -73,7 +66,6 @@ export function UrlDetailView({
 }>) {
   const title = pageDisplayTitle(detail.title, detail.display_url);
   useAgentPanelSeed(frame === 'drawer' ? null : pageHandoff(detail));
-  const [tab, setTab] = useState<(typeof DRAWER_TABS)[number]['value']>('overview');
   const identity = (
     <PageIdentity
       detail={detail}
@@ -112,32 +104,9 @@ export function UrlDetailView({
   );
   if (frame === 'drawer')
     return (
-      <Tabs value={tab} onValueChange={setTab} items={DRAWER_TABS} ariaLabel="Page sections" spaced>
-        <TabPanel value="overview">
-          <SectionStack>
-            {identity}
-            {rerun ? (
-              <Inline>
-                <RerunButton rerun={rerun} />
-              </Inline>
-            ) : null}
-            {children}
-            <UrlScoreSummary detail={detail} />
-            <PageFacts facts={detail.facts} />
-            {delivery}
-          </SectionStack>
-        </TabPanel>
-        <TabPanel value="issues">{issues}</TabPanel>
-        <TabPanel value="checks">
-          <PageChecks evaluations={detail.evaluations} />
-        </TabPanel>
-        <TabPanel value="links">
-          <SectionStack>
-            <LinkedFrom detail={detail} />
-            {links}
-          </SectionStack>
-        </TabPanel>
-      </Tabs>
+      <PageDrawerView detail={detail} actions={rerun ? <RerunButton rerun={rerun} /> : null}>
+        {children}
+      </PageDrawerView>
     );
   return (
     <RecordPage

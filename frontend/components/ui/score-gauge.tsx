@@ -31,8 +31,7 @@ export function ScoreGauge({
   label,
   score,
   absent,
-  caveat,
-}: Readonly<{ label: string; score: number | null; absent?: string; caveat?: string | null }>) {
+}: Readonly<{ label: string; score: number | null; absent?: string }>) {
   const shown = score === null ? null : clampScore(score);
   const band = shown === null ? null : BAND[scoreBand(shown)];
   const spoken = shown === null ? (absent ?? 'not measured') : `${shown} of 100`;
@@ -69,7 +68,7 @@ export function ScoreGauge({
           </text>
         )}
       </svg>
-      <GaugeMark band={band} absent={absent} caveat={caveat} />
+      <GaugeMark band={band} absent={absent} />
     </div>
   );
 }
@@ -77,15 +76,8 @@ export function ScoreGauge({
 function GaugeMark({
   band,
   absent,
-  caveat,
-}: Readonly<{ band: (typeof BAND)[ScoreBand] | null; absent?: string; caveat?: string | null }>) {
-  if (band)
-    return (
-      <span className="flex flex-wrap items-center justify-center gap-2">
-        <StatusMark tone={band.tone}>{band.label}</StatusMark>
-        {caveat ? <span className="text-caption text-ink-2">{caveat}</span> : null}
-      </span>
-    );
+}: Readonly<{ band: (typeof BAND)[ScoreBand] | null; absent?: string }>) {
+  if (band) return <StatusMark tone={band.tone}>{band.label}</StatusMark>;
   if (absent) return <Absence state="unavailable" label={absent} />;
   return <Absence state="not_measured" />;
 }

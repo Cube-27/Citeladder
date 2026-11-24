@@ -1,5 +1,5 @@
 import { createElement, type ReactElement } from 'react';
-import type { AffectedPage, SiteIssue } from '@citeladder/contracts';
+import type { AffectedPage, PageSummary, SiteIssue } from '@citeladder/contracts';
 
 import { renderWithProviders } from '@/test/render';
 import { IssuesCatalog as ScopedIssuesCatalog } from './issues-catalog';
@@ -111,6 +111,34 @@ export const summary = {
   section_counts: { technical: 24, content: 9, aeo: 14 },
 };
 
-export function isSummaryRequest(request: Request): boolean {
-  return !new URL(request.url).searchParams.has('section');
+export function pageRow(overrides: Partial<PageSummary> = {}): PageSummary {
+  return {
+    site_url_id: URL_A,
+    crawl_id: CRAWL,
+    normalized_url: 'https://acme.com/',
+    display_url: 'https://acme.com/',
+    title: 'Homepage',
+    monitored: true,
+    analysis_status: 'completed',
+    error_code: '',
+    linked_from: [],
+    issue_count: 1,
+    web_fundamentals_score: 80,
+    web_fundamentals_coverage: 1,
+    web_fundamentals_state: 'measured',
+    aeo_readiness_score: 40,
+    aeo_measurement_coverage: 1,
+    aeo_measurement_state: 'measured',
+    aeo_measurement_reason: '',
+    web_fundamentals_checks: null,
+    aeo_readiness_checks: null,
+    main_content_indexable: true,
+    robots_excluded: false,
+    last_audited: '2026-11-20T10:00:00.000Z',
+    page_kind: 'article',
+    inbound_count: 3,
+    main_content_inbound_count: 2,
+    depth_from_home: 1,
+    ...overrides,
+  };
 }
