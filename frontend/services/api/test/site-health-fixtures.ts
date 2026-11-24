@@ -381,7 +381,11 @@ export class SiteFixtures extends VisibilityFixtures {
     return { ...other, crawlId: await this.sibling(other) };
   }
 
-  async sitemapEntry(seed: SiteSeed, page: { siteUrlId: string; url: string }, lastmod?: string) {
+  async sitemapEntry(
+    seed: SiteSeed,
+    page: { siteUrlId: string; url: string },
+    declaredKind: string | null = null,
+  ) {
     await this.siteDb
       .insertInto('site_sitemap_entries')
       .values({
@@ -391,7 +395,8 @@ export class SiteFixtures extends VisibilityFixtures {
         crawl_id: seed.crawlId,
         site_url_id: page.siteUrlId,
         listed_url: page.url,
-        lastmod: lastmod ?? null,
+        lastmod: null,
+        declared_kind: declaredKind,
         created_at: new Date(),
       })
       .execute();

@@ -2,6 +2,7 @@ import { parse as parseHost } from 'tldts';
 
 import { policy } from '../config.ts';
 import { stripTrailing } from '../text-order.ts';
+import { isHomepagePath, normalizedPath } from './routes.ts';
 import { canonicalIdentity } from './url-identity.ts';
 
 const crawl = policy.site_health.crawl;
@@ -13,10 +14,10 @@ const PATH_EXCLUSIONS = acquisition.hard_exclusion_path_patterns.map(
 const HOST_EXCLUSIONS = new Set(acquisition.hard_exclusion_host_labels);
 const QUERY_EXCLUSIONS = new Set(acquisition.hard_exclusion_query_keys);
 const MAX_URL_CHARS = policy.site_health.page_analysis.facts.limits.url_chars;
-const PRIORITIES: Record<string, number> = crawl.value_priorities;
-const VALUE_KINDS = Object.keys(PRIORITIES)
-  .filter((kind) => kind !== 'root')
-  .sort((a, b) => PRIORITIES[b]! - PRIORITIES[a]!);
+const KINDS = Object.entries(crawl.page_kinds).toSorted(([, a], [, b]) => b.priority - a.priority);
+const PRIORITIES = new Map(KINDS.map(([kind, { priority }]) => [kind, priority]));
+export const kindPriority = (kind: string) =>
+  PRIORITIES.get(kind) ?? crawl.page_kinds.other.priority;
 const SCHEME_PREFIX = /^[A-Za-z][A-Za-z0-9+.-]*:/u;
 
 export type Scope = { domain?: string };
@@ -48,18 +49,14 @@ const pathTokens = (segment: string) => new Set(segment.split(/[-_.]+/u).filter(
 
 function namedKind(segment: string) {
   const tokens = pathTokens(segment);
-  const named = VALUE_KINDS.find((kind) => tokens.has(kind));
-  if (named) return named;
-  const fallback = (crawl.value_fallback_tokens as [string, string[]][]).find(([, words]) =>
-    words.some((word) => segment === word || tokens.has(word)),
+  const named = KINDS.find(([, { path_words }]) =>
+    path_words.some((word) => segment === word || tokens.has(word)),
   );
-  return fallback?.[0] ?? null;
+  return named?.[0] ?? null;
 }
 
 const SOURCE_KINDS = new Map(
-  (crawl.sitemap_source_kinds as [string, string[]][]).flatMap(([kind, words]) =>
-    words.map((word) => [word, kind] as const),
-  ),
+  KINDS.flatMap(([kind, { sitemap_words }]) => sitemap_words.map((word) => [word, kind] as const)),
 );
 const NEUTRAL_WORDS = new Set(crawl.sitemap_neutral_words);
 const NEUTRAL_TOKEN = new RegExp(crawl.sitemap_neutral_token_pattern, 'u');
@@ -80,16 +77,24 @@ function sourceKind(sitemapUrl: string) {
   return kinds.size === 1 ? [...kinds] : [];
 }
 
-export function listedAdmission(admission: Admission, sitemaps: readonly string[]): Admission {
-  if (admission.valueKind === 'root') return admission;
-  const tier = (kind: string) => PRIORITIES[kind] ?? 0;
-  const kind = sitemaps.flatMap(sourceKind).toSorted((a, b) => tier(b) - tier(a))[0];
-  return kind ? { ...admission, valueKind: kind, priority: tier(kind) } : admission;
+export function listedAdmission(admission: Admission, sitemaps: readonly string[]) {
+  const declaredKind =
+    admission.valueKind === 'homepage'
+      ? null
+      : (sitemaps.flatMap(sourceKind).toSorted((a, b) => kindPriority(b) - kindPriority(a))[0] ??
+        null);
+  return {
+    admission: declaredKind
+      ? { ...admission, valueKind: declaredKind, priority: kindPriority(declaredKind) }
+      : admission,
+    declaredKind,
+  };
 }
 
 function valueKind(url: string) {
-  const path = stripTrailing(new URL(url).pathname.toLowerCase(), '/') || '/';
-  if (path === '/') return 'root';
+  const parsed = new URL(url);
+  if (isHomepagePath(normalizedPath(parsed))) return 'homepage';
+  const path = stripTrailing(parsed.pathname.toLowerCase(), '/');
   const segments = path.split('/').filter(Boolean);
   for (const segment of segments) {
     const kind = namedKind(segment);
@@ -138,7 +143,7 @@ const rejected = (reason: string, url: string | null = null, kind = 'other'): Ad
   hash: '',
   reason,
   valueKind: kind,
-  priority: url ? (PRIORITIES[kind] ?? PRIORITIES.other!) : 0,
+  priority: url ? kindPriority(kind) : 0,
   disposition: 'analyze',
   dispositionReason: 'html_content',
   itemKind: 'html_page',
@@ -172,7 +177,7 @@ export function classifyUrlAdmission(
     hash: canonical.hash,
     reason: null,
     valueKind: kind,
-    priority: PRIORITIES[kind] ?? PRIORITIES.other!,
+    priority: kindPriority(kind),
     disposition: document ? 'inventory_only' : 'analyze',
     dispositionReason: document ? 'document' : 'html_content',
     itemKind: document ? 'document' : 'html_page',

@@ -338,9 +338,11 @@ and are never analyzed. The lists live in `analysis.json`
 (`acquisition.hard_exclusion_*`) and the reason codes in `acquisition.json`
 (`crawl.exclusions`).
 
-**Value tiers** order admission and are separate from page kind. The sitemap
-decides first (owner, 2026-11-24): a sitemap URL takes the tier its child
-sitemap's path names, through `sitemap_source_kinds`. The file name decides only
+**Value tiers** order admission. Their names are the classifier's page kinds
+(`crawl.page_kinds`, checked against `classification.page_kinds` at load),
+one row per kind with its priority, tracked share, sitemap words and path
+words. The sitemap decides first (owner, 2026-11-24): a sitemap URL takes the
+kind its child sitemap's path names, through `sitemap_words`. The file name decides only
 when every word in it names the same kind, apart from neutral words
 (`sitemap_neutral_words`, numbers, one- and two-letter tokens such as locale
 codes), so `sitemap-core-brand-category-2.xml` is `category` while
@@ -349,16 +351,15 @@ words add a kind when they name one (`/blog/sitemap.xml`) and are otherwise
 ignored (`/medias/`); a folder and file naming different kinds decide nothing.
 A URL in several named children takes the highest tier, so fetch order never
 matters. Products filed under `/Categories/...` and listings under bare slugs
-are why the path alone misreads. The source lives in memory for admission only.
-Otherwise the first path segment that names a tier, matching whole tokens,
-decides it; synonyms come from `value_fallback_tokens`. So
+are why the path alone misreads. That declared kind is stored on the sitemap
+entry for the classifier; the child sitemap itself is not.
+Otherwise the first path segment matching a kind's `path_words` as a whole
+token decides it, higher priority first, and that kind stays a weak hint. So
 `/blog/product-review` is `article`. A
-fallback token never names a different kind than the classifier's
+path word never names a different kind than the classifier's
 `route_patterns` gives the same segment (`store` is `local`, `shop` is
 `category`, `help` and `support` are `docs`), or the tracked set fills with
 pages the analyzer files elsewhere.
-
-Tier weights are `value_priorities` in `acquisition.json`.
 
 Within a tier, candidates sort by `url_hash`, the SHA-256 of the canonical
 URL. The order is the project's, the same in every crawl, and not biased toward
@@ -366,7 +367,7 @@ header or footer links.
 
 The tracked-set fill (`trackedFillOrder`, computed once over the analyzable
 sitemap pages and consumed in windows) interleaves the tiers by their
-`tracked_shares` (`acquisition.json`): the next page comes from the tier
+`tracked_share` of each `crawl.page_kinds` row: the next page comes from the tier
 with the lowest (taken + 1) / share, higher tier first on a tie, and an exhausted
 tier drops out so its share goes to the rest. Every prefix of the order is
 therefore a mix: one dominant type never takes the whole allowance. The HTML
@@ -573,7 +574,9 @@ as `unknown`, so a page cannot read 100 before finalization.
 into `classification.page_kinds` (18 kinds plus `other`).
 
 Tiers, by descending confidence: structural (high: root path, product buy box,
-a collection with bound sort or filter controls, a local address entity), route
+a collection with bound sort or filter controls, a local address entity),
+declared (medium: the kind the page's child sitemap declares, read from
+`site_sitemap_entries.declared_kind`), route
 (medium: slug and route patterns, nearest segment to the root wins) and
 semantic (low: docs host, FAQ pairs, byline plus date, title keywords,
 structured data); signals live in `page-kinds.ts` and `analysis.json`.
@@ -582,6 +585,9 @@ The highest tier with evidence decides. If kinds tie in that tier, the result
 is `other` (`conflicting_top_tier_evidence`). Structured data never decides
 alone (`schema_only`). Evidence keeps every signal, alternative and conflict. A
 structural winner that has any dissenting signal gets medium confidence.
+So fetched content structure beats the sitemap, which then shows under
+`conflicts`, and the sitemap beats path words; a page no sitemap declares
+classifies from content and path alone.
 
 - **Paths** are normalized by `site-health/routes.ts`, which
   `analysis/page-kinds.ts` and source-page assessment share.
@@ -780,7 +786,7 @@ The evidence records `observation_count`, `analyzed_url_count`,
 `failed_url_count` and `automatic_limit`, which is `null` (never 0) when no
 allowance was recorded. It also records `value_kinds`: the URLs found and
 analyzed per admission tier. Tiers listed in `coverage_expected_value_kinds`
-(about, contact, pricing) appear as zero when never found. A crawl without a
+(about_contact, pricing) appear as zero when never found. A crawl without a
 frontier, such as a sample, reports no tiers.
 
 The Overview's crawl coverage is analyzed ÷ found (`observation_count`), not ÷

@@ -185,10 +185,11 @@ async function saveSitemapInventory(ctx: SiteTaskContext, claimed: SiteTask, lis
       await insertSitemapEntries(
         trx,
         crawl,
-        chunk.map(({ item, lastmod }) => ({
+        chunk.map(({ item, lastmod, declaredKind }) => ({
           siteUrlId: ids.get(item.hash)!,
           listedUrl: item.url,
           lastmod,
+          declaredKind,
         })),
       );
     });
