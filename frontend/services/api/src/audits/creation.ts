@@ -286,68 +286,72 @@ async function persistTasks(
   const taskCredentials: Record<string, unknown> = {},
     taskReservations: Record<string, string> = {};
   const engineRoutes = { ...plan.configuration.engine_routes };
-  const inserted = [];
-  for (const [position, slot] of slots.entries()) {
-    const route = plan.routes.find((row) => row.logical_engine === slot.engine)!;
-    const prompt = snapshots.prompts[slot.prompt]!,
-      engine = snapshots.engines.get(slot.engine)!;
-    const taskId = randomUUID();
-    inserted.push({ taskId, slot, route, engine });
-    await db // NOSONAR
+  const inserted = slots.map((slot) => ({
+    taskId: randomUUID(),
+    slot,
+    route: plan.routes.find((row) => row.logical_engine === slot.engine)!,
+    engine: snapshots.engines.get(slot.engine)!,
+  }));
+  if (inserted.length)
+    await db
       .insertInto('audit_tasks')
-      .values({
-        id: taskId,
-        workspace_id: scope.workspaceId,
-        project_id: scope.projectId,
-        audit_id: auditId,
-        prompt_snapshot_id: prompt.id,
-        engine_snapshot_id: engine.id,
-        prompt_index: slot.prompt,
-        repetition: slot.repetition,
-        randomized_position: position,
-        logical_engine: slot.engine,
-        transport_provider: route.transport_provider,
-        transport_model: route.transport_model,
-        prompt_text: askedText(plan.prompts[slot.prompt]!, slot.engine),
-        idempotency_key: `${auditId}:${slot.prompt}:${slot.repetition}:${slot.engine}`,
-        max_attempts: plan.measurement.max_attempts,
-        status: 'pending_reservation',
-        available_at: at,
-        priority: 0,
-        attempt_count: 0,
-        completed_at: null,
-        lease_owner: null,
-        lease_expires_at: null,
-        heartbeat_at: null,
-        answer_text: '',
-        error_code: '',
-        error_detail: '',
-        latency_ms: null,
-        provider_metadata: null,
-        search_used: false,
-        search_events: null,
-        citations: null,
-        request_snapshot: JSON.stringify({
-          ...frozenSearch(plan, slot.engine),
-          original_prompt_id: plan.prompts[slot.prompt]!.id,
+      .values(
+        inserted.map(({ taskId, slot, route, engine }, position) => {
+          const prompt = snapshots.prompts[slot.prompt]!;
+          return {
+            id: taskId,
+            workspace_id: scope.workspaceId,
+            project_id: scope.projectId,
+            audit_id: auditId,
+            prompt_snapshot_id: prompt.id,
+            engine_snapshot_id: engine.id,
+            prompt_index: slot.prompt,
+            repetition: slot.repetition,
+            randomized_position: position,
+            logical_engine: slot.engine,
+            transport_provider: route.transport_provider,
+            transport_model: route.transport_model,
+            prompt_text: askedText(plan.prompts[slot.prompt]!, slot.engine),
+            idempotency_key: `${auditId}:${slot.prompt}:${slot.repetition}:${slot.engine}`,
+            max_attempts: plan.measurement.max_attempts,
+            status: 'pending_reservation',
+            available_at: at,
+            priority: 0,
+            attempt_count: 0,
+            completed_at: null,
+            lease_owner: null,
+            lease_expires_at: null,
+            heartbeat_at: null,
+            answer_text: '',
+            error_code: '',
+            error_detail: '',
+            latency_ms: null,
+            provider_metadata: null,
+            search_used: false,
+            search_events: null,
+            citations: null,
+            request_snapshot: JSON.stringify({
+              ...frozenSearch(plan, slot.engine),
+              original_prompt_id: plan.prompts[slot.prompt]!.id,
+            }),
+            provider_route_snapshot: null,
+            provider_submission_ref: '',
+            provider_task_id: '',
+            provider_task_submitted_at: null,
+            provider_poll_count: 0,
+            provider_connection_id: null,
+            provider_credential_revision: null,
+            finish_reason: 'unknown',
+            raw_finish_reason: null,
+            result_artifact_id: null,
+            score: null,
+            source_task_id: null,
+            created_at: at,
+            updated_at: at,
+          };
         }),
-        provider_route_snapshot: null,
-        provider_submission_ref: '',
-        provider_task_id: '',
-        provider_task_submitted_at: null,
-        provider_poll_count: 0,
-        provider_connection_id: null,
-        provider_credential_revision: null,
-        finish_reason: 'unknown',
-        raw_finish_reason: null,
-        result_artifact_id: null,
-        score: null,
-        source_task_id: null,
-        created_at: at,
-        updated_at: at,
-      })
+      )
       .execute();
-  }
   const funding = inserted.map(({ route }) =>
     taskFunding(plan.configuration.audit_scope, route.logical_engine, route.connection_id !== null),
   );
@@ -358,6 +362,7 @@ async function persistTasks(
     tasks: inserted.map((task, index) => ({ id: task.taskId, units: funding[index]!.units })),
     at,
   });
+  const engineBindings = new Map<string, Awaited<ReturnType<typeof bindTask>>>();
   for (const [index, { taskId, slot, route, engine }] of inserted.entries()) {
     const run = {
       accountId: runs.accountId,
@@ -371,12 +376,7 @@ async function persistTasks(
       .where('workspace_id', '=', scope.workspaceId)
       .where('id', '=', taskId)
       .execute();
-    await db // NOSONAR
-      .updateTable('audit_engine_snapshots')
-      .set({ connection_id: binding.connection_id, base_url: binding.base_url })
-      .where('id', '=', engine.id)
-      .where('audit_id', '=', auditId)
-      .execute();
+    engineBindings.set(engine.id, binding);
     taskCredentials[taskId] = {
       credential_source: binding.credential_source,
       connection_id: binding.connection_id,
@@ -392,6 +392,13 @@ async function persistTasks(
     };
     engineRoutes[slot.engine] = boundRoute;
   }
+  for (const [engineId, binding] of engineBindings)
+    await db // NOSONAR
+      .updateTable('audit_engine_snapshots')
+      .set({ connection_id: binding.connection_id, base_url: binding.base_url })
+      .where('id', '=', engineId)
+      .where('audit_id', '=', auditId)
+      .execute();
   return {
     engine_routes: engineRoutes,
     task_credentials: taskCredentials,
