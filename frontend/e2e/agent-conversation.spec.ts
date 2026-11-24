@@ -337,6 +337,11 @@ for (const width of [1280, 390]) {
         Math.abs(jumpBox!.x + jumpBox!.width / 2 - (composerBox!.x + composerBox!.width / 2)),
       ).toBeLessThanOrEqual(2);
       expect(jumpBox!.y + jumpBox!.height).toBeLessThanOrEqual(composerBox!.y);
+      if (surface === 'page') {
+        const below = 844 - (composerBox!.y + composerBox!.height);
+        expect(below).toBeGreaterThanOrEqual(0);
+        expect(below).toBeLessThanOrEqual(24);
+      }
       const priorReads = reads;
       current.messages.push({
         ...current.messages.at(-1)!,
