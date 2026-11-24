@@ -30,7 +30,5 @@ export async function executeInteractiveAudit(
     { env, taskScope: { workspaceId, auditId } },
   );
   const deadline = performance.now() + interactiveExecution.admissionSeconds * 1000;
-  while (!signal.aborted && performance.now() < deadline) {
-    if (!(await worker.runOnce(signal))) break;
-  }
+  await worker.drain(() => performance.now() < deadline, signal);
 }

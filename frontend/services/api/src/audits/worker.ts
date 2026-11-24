@@ -95,9 +95,8 @@ export class AuditWorker {
     if (failure) throw failure.reason;
     return tasks.length;
   }
-  async drain(canAdmit: () => boolean) {
+  async drain(canAdmit: () => boolean, signal?: AbortSignal) {
     const limit = this.#runtime.audits.worker_concurrency;
-    const windowEnd = performance.now() + this.#runtime.audits.claim_window_seconds * 1000;
     const inFlight = new Set<Promise<void>>();
     const failures: unknown[] = [];
     let claimed = 0;
@@ -113,7 +112,7 @@ export class AuditWorker {
       queued = tasks.length > 0;
       claimed += tasks.length;
       for (const task of tasks) {
-        const running: Promise<void> = this.#execute(task)
+        const running: Promise<void> = this.#execute(task, signal)
           .catch((error: unknown) => {
             failures.push(error);
           })
@@ -121,7 +120,7 @@ export class AuditWorker {
         inFlight.add(running);
       }
     };
-    const admit = () => queued && !failures.length && canAdmit() && performance.now() < windowEnd;
+    const admit = () => queued && !failures.length && !signal?.aborted && canAdmit();
     if (admit()) await refill();
     while (inFlight.size) {
       await Promise.race(inFlight); // NOSONAR
