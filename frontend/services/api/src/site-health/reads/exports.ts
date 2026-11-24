@@ -19,7 +19,6 @@ import { pages } from './pages.ts';
 
 export const VIEW_NAMES = ['pages', 'issues'] as const;
 const PAGE_COLUMNS = [
-  'site_url_id',
   'normalized_url',
   'display_url',
   'title',
@@ -33,14 +32,10 @@ const PAGE_COLUMNS = [
   'web_fundamentals_score',
   'aeo_readiness_score',
   'aeo_measurement_coverage',
-  'aeo_measurement_state',
-  'aeo_measurement_reason',
   'last_audited',
 ];
 const ISSUES_TITLE = 'Site Health — Issues';
 const ISSUE_COLUMNS = [
-  'group_id',
-  'rule_id',
   'title',
   'dimension',
   'category',
@@ -49,8 +44,6 @@ const ISSUE_COLUMNS = [
   'affected_url_count',
   'description',
   'remediation',
-  'analyzer_version',
-  'rule_version',
   'created_at',
 ];
 
@@ -99,6 +92,7 @@ export async function tableExport(db: Database, request: TableExportRequest) {
   };
 }
 
+const INTERNAL_EVIDENCE = /(?:^|_)(?:ids?|version)$|^context_sources$/u;
 const ISSUE_PAGE_COLUMNS = ['normalized_url', 'page_kind', 'value', 'value_length'];
 const VALUE_EVIDENCE: Record<AffectedPage['value']['kind'], readonly string[]> = {
   title: ['title', 'length'],
@@ -135,7 +129,7 @@ export async function issueExport(db: Database, request: ExportScope & { groupId
   const { remediation } = group.representative;
   const repeated = new Set(shown.flatMap((page) => VALUE_EVIDENCE[page.value.kind]));
   const evidenceKeys = [...new Set(shown.flatMap((page) => Object.keys(page.evidence)))]
-    .filter((key) => !repeated.has(key))
+    .filter((key) => !repeated.has(key) && !INTERNAL_EVIDENCE.test(key))
     .sort(compareText);
   const rows = shown.map((page) => ({
     normalized_url: page.normalized_url,

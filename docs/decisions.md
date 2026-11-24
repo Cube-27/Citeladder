@@ -237,6 +237,14 @@ how to add or change an entry.
   Low severity; crawl-wide findings keep a severity outside page scores, and
   diagnostics stay readings. Score cards and page scores say "N of M checks run"
   instead of "Limited evidence". Owner, 2026-11-23.
+- **Client-side rendering is an issue, not missing evidence.** A page whose
+  content the server HTML lacks is judged on that HTML: its content checks fail
+  and it scores accordingly. The wording names client-side rendering and what AI
+  crawlers see, never "needs JavaScript rendering". A check that does not fit a
+  page (no date to compare a sitemap lastmod with, a canonical naming the page
+  itself) is not a reason to call the page partly measured. Owner, 2026-11-24.
+- **Downloads carry no internal ids or versions.** CSV and Markdown exports show
+  what the screen shows: names, URLs and figures. Owner, 2026-11-24.
 - **Site Health always opens on Pages**, never switching tab on its own. Owner,
   2026-11-02.
 - **Browser Site Health reads carry no provenance id lists**; the rows keep them

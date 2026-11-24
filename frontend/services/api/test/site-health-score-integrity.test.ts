@@ -17,7 +17,7 @@ const facts = (html: string, url: string) =>
 const byRule = (rows: RuleEvaluation[]) => new Map(rows.map((row) => [row.rule_id, row]));
 
 describe('a full score needs every applicable check evaluated and passed', () => {
-  it('treats chrome-only pages that load content from external bundles as unrendered, not as defects', () => {
+  it('fails the checks a client-rendered page cannot meet in its server HTML', () => {
     const links = Array.from({ length: 40 }, (_, i) => `<a href="/c/${i}">Dept ${i} sale</a>`);
     const chrome = (main: string) =>
       analyzePage(
@@ -36,7 +36,11 @@ describe('a full score needs every applicable check evaluated and passed', () =>
       ['technical.title_present', 'technical.h1_present', 'technical.meta_description_present'].map(
         (id) => [shell.get(id)?.outcome, shell.get(id)?.reason_code],
       ),
-    ).toEqual(Array(3).fill(['unknown', 'client_rendering_required']));
+    ).toEqual([
+      ['missing', ''],
+      ['missing', 'client_rendering_required'],
+      ['missing', ''],
+    ]);
     expect(shell.get('aeo.server_rendered_content')?.outcome).toBe('missing');
 
     const thin = byRule(chrome('<h1>Capalaba</h1><p>Open today 9am</p>').evaluations);

@@ -613,13 +613,14 @@ kinds.
 
 `analysis/rules.ts` resolves applicability before outcome. The keys are
 `always`, `has_html`, `site_root`, `crawl_finalize` and the `page_kind*:` and
-`page_trait*:` prefixes; `content` excludes JS shells. Two gates turn would-be
-failures into `unknown`:
+`page_trait*:` prefixes. Two gates turn would-be failures into `unknown`:
 
 - **Purpose gate:** a check in `purpose_confirmed_check_ids` fails a product or
   category page only when the page has its own purchase control, primary price
   or captured collection items, or a structural classification. Otherwise the
-  reason is `page_kind_unconfirmed`.
+  reason is `page_kind_unconfirmed`. A listing whose result count reports zero
+  (`zero_result_count_pattern`) is an explicit empty collection, and a
+  breadcrumb trail is never a collection.
 - **Authored gate:** a check in `authored_content_check_ids` needs authored
   content, a visible byline or research context. Otherwise the reason is
   `authored_content_unconfirmed`.
@@ -652,8 +653,11 @@ Outcome normalization:
   one exception is a client-rendered shell (`client_rendering_required`): a
   page that loads script and has no H1 and fewer than
   `server_rendered_min_words` words in its main region (header, nav and footer
-  chrome excluded). It fails `aeo.server_rendered_content`, the check that
-  detects it; its content checks read `unknown`.
+  chrome excluded). Crawlers that do not run script see exactly that HTML, so
+  the shell is judged on it (owner, 2026-11-24): it fails
+  `aeo.server_rendered_content`, every `content`-keyed check fails with the
+  reason `client_rendering_required`, and the `html`-keyed checks read the
+  server HTML as it is.
 - A throwing or unmapped check is `error`.
 
 `missing` or `partial` on a visible, non-diagnostic evaluation creates an issue.
@@ -693,7 +697,8 @@ each bot's `checks` array:
 the URL the crawler reached differ in identity form (`canonicalUrl`, so query
 order and tracking keys are not a redirect); `technical.sitemap_canonical` then
 judges the reached page's canonical. `technical.sitemap_noindex` (Low) fails a
-listed page that carries noindex. The noindex itself stays the site's
+listed page that carries noindex. `technical.sitemap_lastmod` is not applicable
+on a page that shows no date to hold the lastmod against. The noindex itself stays the site's
 choice: sitemap membership is not indexing intent (Shopify lists every
 collection), so `technical.indexable` is not applicable there, and the snapshot
 gate counts that page, like a 404 or 410, as excluded. The listing is sitemap
@@ -714,7 +719,9 @@ targets, inbound links and depth, never for anchor text or main content. A
 URL is still unreachable.
 
 Canonical integrity is `not_applicable` with no declaration, `unknown` while the
-target is unresolved, `missing` for a bad, redirected, noindex or chained
+target is unresolved (a canonical that names the page itself, compared as
+`technical.sitemap_canonical` compares URLs, so a trailing slash is the same
+page, is judged on the page's own fetch), `missing` for a bad, redirected, noindex or chained
 canonical target, and a fetched but unanalyzed target is judged on its response
 alone (`target_analyzed: false`).
 

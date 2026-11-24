@@ -11,7 +11,6 @@ import { compareText, scalarText } from '../text-order.ts';
 import { onlyOf } from '../lists.ts';
 
 const columns = [
-  'audit_id',
   'prompt_index',
   'prompt_text',
   'repetition',
@@ -75,7 +74,6 @@ function csvExport(tasks: ExportTask[], audit: ExportAudit) {
     tasks.map((task) => {
       const score = record(task.score);
       return {
-        audit_id: audit.id,
         prompt_index: task.prompt_index,
         prompt_text: task.prompt_text,
         repetition: task.repetition,

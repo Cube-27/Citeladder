@@ -101,6 +101,14 @@ it('filters on the server and exports every saved matching page', async () => {
   await waitFor(() => expect(download).toHaveBeenCalledOnce());
   const exported = download.mock.calls[0]![2];
   expect(exported).toHaveLength(2);
+  expect(download.mock.calls[0]![1].slice(0, 5)).toEqual([
+    'scope',
+    'target',
+    'market',
+    'language',
+    'collected_at',
+  ]);
+  expect(download.mock.calls[0]![1]).not.toContain('call_id');
   expect(exported[0]).toContain('needle first');
   expect(exported[1]).toContain('=needle second');
   expect(requests.at(-1)?.get('search')).toBe('needle');

@@ -164,6 +164,7 @@ it('filter pages by current issue, indexability, depth and score in the list, it
     .split(/\r?\n/u)
     .slice(1)
     .map((line) => line.split(',')[0]);
-  expect(exported).toEqual((await list(seed, filters)).items.map((item) => item.site_url_id));
-  expect(exported).toEqual([home.id]);
+  const listed = (await list(seed, filters)).items;
+  expect(listed.map((item) => item.site_url_id)).toEqual([home.id]);
+  expect(exported).toEqual(listed.map((item) => item.normalized_url));
 });

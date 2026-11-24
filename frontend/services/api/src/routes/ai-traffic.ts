@@ -123,7 +123,6 @@ export const aiTrafficRoutes = [
                 'verification',
                 'verification_reason',
                 'verification_basis',
-                'batch_id',
               ]
             : [
                 'bot_id',

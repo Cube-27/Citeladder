@@ -36,7 +36,7 @@ const fixtureFacts = (name: string, url: string) =>
   extractPageFacts(fixture(name), { finalUrl: url, contentType: 'text/html' });
 
 describe('page checklist', () => {
-  it('fails a script-only shell on server-rendered content and leaves its other checks unknown', () => {
+  it('fails a script-only shell on server-rendered content and on the checks its server HTML misses', () => {
     const bootstrap = `(()=>{${'window.__app=window.__app||{};'.repeat(30)}})();`;
     const shell = (body: string) =>
       analyzePage(
@@ -55,10 +55,13 @@ describe('page checklist', () => {
     expect([rendered.outcome, rendered.evidence.word_count]).toEqual(['missing', 0]);
     expect(createsIssue(rendered)).toBe(true);
     const description = rows.get('technical.meta_description_present')!;
-    expect([description.outcome, description.reason_code]).toEqual([
-      'unknown',
+    expect(description.outcome).toBe('missing');
+    const heading = rows.get('technical.h1_present')!;
+    expect([heading.outcome, heading.reason_code]).toEqual([
+      'missing',
       'client_rendering_required',
     ]);
+    expect(rows.get('technical.title_present')!.outcome).toBe('satisfied');
     expect(page.scores.aeo_readiness_score).toBeLessThan(100);
 
     const copy = Array.from({ length: 40 }, (_, i) => `returns detail ${i}`).join(' ');
@@ -408,6 +411,14 @@ describe('page checklist', () => {
     const uncaptured = items('');
     expect(empty.empty_state).toBe(true);
     expect(uncaptured.empty_state).toBe(false);
+    const trail =
+      '<ul class="breadcrumb"><li><a href="/">Home</a></li><li><a href="/products">Products</a></li><li><a href="/brands/acme">Acme</a></li></ul>';
+    const counted = (count: number) =>
+      items(
+        `${trail}<div><span class="result-count">(${count} results)</span></div><div class="product-grid"></div>`,
+      );
+    expect(counted(0)).toEqual({ item_count: 0, empty_state: true });
+    expect(counted(10)).toEqual({ item_count: 0, empty_state: false });
   });
 
   it('separates authored offer-expiry faults from an unavailable audit time', () => {
@@ -1257,7 +1268,11 @@ describe('visibility checks', () => {
       'sitemap_lastmod_in_future',
     ]);
     expect(lastmod('last tuesday', {})).toEqual(['missing', 'sitemap_lastmod_unparseable']);
-    expect(lastmod('2026-09-01', {})).toEqual(['unknown', 'page_date_unavailable']);
+    expect(lastmod('2026-09-01', {})).toEqual(['not_applicable', 'no_content_date']);
+    expect(lastmod('2026-09-01', { modified: 'last spring' })).toEqual([
+      'unknown',
+      'content_date_unparseable',
+    ]);
     expect(lastmod(undefined, { modified: '2026-09-01' })).toEqual([
       'not_applicable',
       'no_sitemap_lastmod',

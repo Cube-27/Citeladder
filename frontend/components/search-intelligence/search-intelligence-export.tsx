@@ -46,8 +46,6 @@ export function SearchIntelligenceExport({
       signal.throwIfAborted();
       const columns = [
         ...new Set([
-          'id',
-          'call_id',
           ...(SEARCH_COLUMNS_BY_KIND[dataset.dataset_kind] ?? []).map(({ field }) => field),
           'rank_absolute',
           'cpc_currency',
@@ -56,10 +54,9 @@ export function SearchIntelligenceExport({
         ]),
       ];
       downloadCsv(
-        `search-${dataset.id}`,
-        ['snapshot', 'scope', 'target', 'market', 'language', 'collected_at', ...columns],
+        `keyword-research-${dataset.dataset_kind}`,
+        ['scope', 'target', 'market', 'language', 'collected_at', ...columns],
         exported.map((row) => [
-          dataset.id,
           searchScopeLabel(dataset.research_scope),
           dataset.target_origin,
           dataset.location_code,
