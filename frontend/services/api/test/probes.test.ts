@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { sql } from 'kysely';
+import { z } from 'zod';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { readAgentContext } from '../src/agent/context-adapter.ts';
@@ -20,7 +21,7 @@ import { setProbeSchedule } from '../src/probes/schedule.ts';
 import { probeStatus } from '../src/probes/status.ts';
 import { addMarket } from '../src/projects/markets.ts';
 import { createTheme, deleteTheme } from '../src/projects/themes.ts';
-import { managedPlan } from './audit-fixtures.ts';
+import { connectClaude, managedPlan } from './audit-fixtures.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { first, labeller, probeFixtures, type Tenant } from './probe-fixtures.ts';
 import { asOwner, testDatabase } from './support.ts';
@@ -131,7 +132,7 @@ describe('probe admission', () => {
     await managedPlan(db, t.workspaceId);
     const all = (await probeStatus(db, t, runtime)).quote;
     const engines = all.available_engines.slice(0, 2);
-    const { quote } = await probeStatus(db, t, runtime, engines);
+    const { quote } = await probeStatus(db, t, runtime, { engines });
     expect([all.engines, quote.engines, quote.available_engines]).toEqual([
       all.available_engines,
       engines,
@@ -142,25 +143,83 @@ describe('probe admission', () => {
     await expect(
       runProbe(db, t, { fingerprint: all.fingerprint, engines }, runtime),
     ).rejects.toMatchObject({ status: 409, code: 'probe_quote_changed' });
-    await expect(probeStatus(db, t, runtime, ['unknown-engine'])).rejects.toMatchObject({
-      status: 422,
-      code: 'probe_engines_unavailable',
-    });
+    const once = (await probeStatus(db, t, runtime, { engines, repetitions: 1 })).quote;
+    const per = policy.probes.repetitions;
+    expect([once.repetitions, once.answers, once.credits]).toEqual([
+      1,
+      quote.answers / per,
+      quote.credits / per,
+    ]);
+    expect(once.fingerprint).not.toBe(quote.fingerprint);
+    await expect(
+      runProbe(db, t, { fingerprint: quote.fingerprint, engines, repetitions: 1 }, runtime),
+    ).rejects.toMatchObject({ status: 409, code: 'probe_quote_changed' });
+    await expect(
+      probeStatus(db, t, runtime, { engines: ['unknown-engine'] }),
+    ).rejects.toMatchObject({ status: 422, code: 'probe_engines_unavailable' });
+    await expect(
+      probeStatus(db, t, runtime, { repetitions: policy.probes.max_repetitions + 1 }),
+    ).rejects.toMatchObject({ status: 422, code: 'probe_repetitions_invalid' });
     await expect(cancelProbe(db, t)).rejects.toMatchObject({ code: 'probe_not_running' });
     const { t: own } = await probeTenant(1_000_000);
-    const before = (await probeStatus(db, own, runtime)).quote;
-    await runProbe(db, own, { fingerprint: before.fingerprint, engines: before.engines }, runtime);
+    const before = (await probeStatus(db, own, runtime, { repetitions: 1 })).quote;
+    const [launched] = await runProbe(
+      db,
+      own,
+      { fingerprint: before.fingerprint, engines: before.engines, repetitions: 1 },
+      runtime,
+    );
     const running = await probeStatus(db, own, runtime);
-    expect([running.latest!.state, running.quote.balance]).toEqual([
-      'running',
-      before.balance! - before.credits,
-    ]);
+    const audit = await db
+      .selectFrom('audits')
+      .select('repetitions')
+      .where('id', '=', launched!)
+      .executeTakeFirstOrThrow();
+    expect([
+      running.latest!.state,
+      running.latest!.planned,
+      audit.repetitions,
+      running.quote.balance,
+    ]).toEqual(['running', before.answers, 1, before.balance! - before.credits]);
     await cancelProbe(db, own);
     const cancelled = await probeStatus(db, own, runtime);
     expect([cancelled.latest!.state, cancelled.quote.balance]).toEqual([
       'cancelled',
       before.balance,
     ]);
+  });
+
+  it('asks Claude to search the web for the objection question and every other ask as frozen', async () => {
+    const { t } = await probeTenant(1_000_000);
+    await connectClaude(db, t);
+    const { quote } = await probeStatus(db, t, runtime, { engines: ['claude', 'chatgpt'] });
+    const [auditId] = await runProbe(
+      db,
+      t,
+      { fingerprint: quote.fingerprint, engines: ['claude', 'chatgpt'] },
+      runtime,
+    );
+    const asked = await db
+      .selectFrom('audit_tasks')
+      .select(['logical_engine', 'prompt_index', 'prompt_text'])
+      .where('audit_id', '=', auditId!)
+      .where('prompt_index', '<', 2)
+      .where('repetition', '=', 1)
+      .orderBy('prompt_index')
+      .orderBy('logical_engine')
+      .execute();
+    expect(asked.map((task) => [task.prompt_index, task.logical_engine, task.prompt_text])).toEqual(
+      [
+        [0, 'chatgpt', 'What is Acme Running known for?'],
+        [0, 'claude', 'What is Acme Running known for?'],
+        [1, 'chatgpt', 'Why might someone not choose Acme Running?'],
+        [
+          1,
+          'claude',
+          'Use web search to answer this question: Why might someone not choose Acme Running?',
+        ],
+      ],
+    );
   });
 
   it('refuses probe_quote_changed, launching nothing, when the probe changed after its quote', async () => {
@@ -218,7 +277,7 @@ describe('probe admission', () => {
     const schedules = (scope: { workspaceId: string; projectId: string }) =>
       db
         .selectFrom('audit_schedules')
-        .select(['id', 'audit_scope', 'cadence', 'enabled', 'engines'])
+        .select(['id', 'audit_scope', 'cadence', 'enabled', 'engines', 'repetitions'])
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .execute();
@@ -247,7 +306,13 @@ describe('probe admission', () => {
       runtime,
     );
     const [weekly] = await schedules(t);
-    await setProbeSchedule(db, t, { cadence: 'daily', fingerprint: await fingerprint(t) }, runtime);
+    const twice = (await probeStatus(db, t, runtime, { repetitions: 2 })).quote.fingerprint;
+    await setProbeSchedule(
+      db,
+      t,
+      { cadence: 'daily', fingerprint: twice, repetitions: 2 },
+      runtime,
+    );
     expect(await schedules(t)).toEqual([
       {
         id: weekly?.id,
@@ -255,6 +320,7 @@ describe('probe admission', () => {
         cadence: 'daily',
         enabled: true,
         engines: policy.probes.engines,
+        repetitions: 2,
       },
     ]);
     await setProbeSchedule(db, t, { cadence: null }, runtime);
@@ -291,11 +357,25 @@ describe('probe labelling and reads', () => {
     ]);
   });
 
-  it('labels a probe once, scores Market and Objections, then maps the next probe onto the same groups', async () => {
+  it('labels a probe once, asking its questions together, scores Market and Objections, then maps the next probe onto the same groups', async () => {
     const { t, themeId, rivalId } = await probeTenant();
     const [firstId] = await launch(t);
     await answered(t, firstId);
-    await label(t, labeller(first));
+    const themeAsked = Promise.withResolvers<void>();
+    await label(
+      t,
+      labeller(first, async (sent) => {
+        if (sent.includes('best known for')) themeAsked.resolve();
+        else if (sent.includes('known for?')) await themeAsked.promise;
+      }),
+    );
+    const { usage } = await db
+      .selectFrom('probe_labellings')
+      .select('usage')
+      .where('launch_id', '=', await launchOf(firstId))
+      .executeTakeFirstOrThrow();
+    const timed = z.object({ calls: z.array(z.object({ latency_ms: z.number() })) });
+    expect(timed.parse(usage).calls).toHaveLength(3);
     const market = await probeMarket(db, t);
     if (market.state !== 'value') throw new Error('expected a labelled probe');
     expect(market.known_for.map(({ theme, score }) => [theme, score])).toEqual([
@@ -376,6 +456,14 @@ describe('probe labelling and reads', () => {
     ]);
     const [quoted] = objections.groups[0]?.quotes ?? [];
     expect([quoted?.run_id, quoted?.logical_engine]).toEqual([secondId, 'chatgpt']);
+    expect(objections.question).toEqual({
+      text: 'Why might someone not choose Acme Running?',
+      run_id: secondId,
+      execution_id: expect.any(String),
+    });
+    expect(objections.groups[0]?.quotes.map((quote) => quote.execution_id)).toContain(
+      objections.question?.execution_id,
+    );
     const labellings = await db
       .selectFrom('probe_labellings')
       .select('outcome')

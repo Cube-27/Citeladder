@@ -468,6 +468,47 @@ describe('leased audit worker phases', () => {
     expect(settled.map((task) => task.status).sort()).toEqual(['queued', 'succeeded', 'succeeded']);
   });
 });
+describe('audit drain refill', () => {
+  it('refills a settled slot while a long answer is still in flight', async () => {
+    const t = await seed();
+    await db
+      .updateTable('audit_tasks')
+      .set({ available_at: new Date(0) })
+      .where('audit_id', '=', t.auditId)
+      .execute();
+    const third = Promise.withResolvers<void>();
+    let calls = 0;
+    const w = new AuditWorker(
+      db,
+      { ...runtime, audits: { ...runtime.audits, worker_concurrency: 2 } },
+      auditTestKey,
+      { execution: deriveExecution, finalize: async () => {} },
+      {
+        owner: 'worker',
+        taskScope: t,
+        env: {},
+        send: async () => {
+          calls++;
+          if (calls === 1) await third.promise;
+          if (calls === 3) third.resolve();
+          return Response.json({
+            status: 'completed',
+            output: [
+              { type: 'message', content: [{ type: 'output_text', text: 'Acme Running.' }] },
+            ],
+          });
+        },
+      },
+    );
+    expect(await w.drain(() => true)).toBe(3);
+    const settled = await db
+      .selectFrom('audit_tasks')
+      .select('status')
+      .where('audit_id', '=', t.auditId)
+      .execute();
+    expect(settled.map((task) => task.status)).toEqual(['succeeded', 'succeeded', 'succeeded']);
+  });
+});
 describe('audit failure codes', () => {
   it('fit every column that records them', async () => {
     const declared = [

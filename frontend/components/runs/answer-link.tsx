@@ -1,6 +1,7 @@
 import { useState, type MouseEvent, type ReactNode } from 'react';
 
 import { AnswerDialog, type EvidenceSubject } from '@/components/runs/answer-dialog';
+import type { AnswerFilters } from '@/lib/runs/use-prompt-engine-answers';
 import {
   TextLink,
   type TextLinkText,
@@ -8,7 +9,10 @@ import {
   type TextLinkUnderline,
 } from '@/components/ui/text-link';
 
-export function useAnswerDialog(attributes = false): Readonly<{
+export function useAnswerDialog(
+  attributes = false,
+  filters?: AnswerFilters,
+): Readonly<{
   open: (subject: EvidenceSubject) => void;
   dialog: ReactNode;
 }> {
@@ -25,6 +29,7 @@ export function useAnswerDialog(attributes = false): Readonly<{
         open={opened}
         onOpenChange={setOpened}
         attributes={attributes}
+        filters={filters}
       />
     ) : null,
   };
@@ -47,16 +52,18 @@ export function AnswerLink({
   tone,
   underline,
   attributes = false,
+  filters,
   children,
 }: Readonly<{
   answer: Readonly<{ run_id: string; execution_id: string; prompt: string }>;
+  filters?: AnswerFilters;
   text?: TextLinkText;
   tone?: TextLinkTone;
   underline?: TextLinkUnderline;
   attributes?: boolean;
   children: ReactNode;
 }>) {
-  const { open, dialog } = useAnswerDialog(attributes);
+  const { open, dialog } = useAnswerDialog(attributes, filters);
   return (
     <>
       <TextLink

@@ -129,6 +129,7 @@ describe('PromptLibrary first load', () => {
       prompt_text: prompt.text,
       error_code: '',
       latency_ms: 1,
+      repetition: 1,
     });
     const ANSWER = '66666666-6666-4666-8666-666666666663';
     const read: string[] = [];

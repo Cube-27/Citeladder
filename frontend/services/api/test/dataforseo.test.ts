@@ -15,7 +15,7 @@ const request: SearchRequest = {
   device: 'desktop',
   timeout_seconds: 1,
   provider_submission_ref: 'audit:task:engine',
-  request_settings: { force_web_search: true, priority: 1 },
+  request_settings: { force_web_search: true, priority: 2 },
 };
 const client = (send: typeof fetch) =>
   createDataforseoClient(
@@ -47,17 +47,18 @@ describe('DataForSEO paid submission boundary', () => {
           os: 'windows',
           depth: 10,
           load_async_ai_overview: true,
+          priority: 2,
         },
       ]);
       expect(options?.redirect).toBe('error');
       return Response.json({
         status_code: 20000,
-        tasks: [{ id: 'paid-task', status_code: 20100, cost: 0.0012 }],
+        tasks: [{ id: 'paid-task', status_code: 20100, cost: 0.0024 }],
       });
     });
     expect(await c.submit('google_ai_overview', request)).toMatchObject({
       taskId: 'paid-task',
-      chargeMicrousd: 1200,
+      chargeMicrousd: 2400,
     });
     const urls: string[] = [];
     const paths = client(async (url) => {
@@ -76,7 +77,7 @@ describe('DataForSEO paid submission boundary', () => {
       'https://api.dataforseo.com/v3/serp/id_list',
     ]);
   });
-  it('submits Google AI Mode to its own SERP path without the organic depth settings', async () => {
+  it('submits Google AI Mode to its own SERP path on the priority queue without the organic depth settings', async () => {
     const c = client(async (url, options) => {
       expect(url).toBe('https://api.dataforseo.com/v3/serp/google/ai_mode/task_post');
       expect(JSON.parse(String(options?.body))).toEqual([
@@ -87,16 +88,17 @@ describe('DataForSEO paid submission boundary', () => {
           language_code: 'en',
           device: 'desktop',
           os: 'windows',
+          priority: 2,
         },
       ]);
       return Response.json({
         status_code: 20000,
-        tasks: [{ id: 'mode-task', status_code: 20100, cost: 0.0012 }],
+        tasks: [{ id: 'mode-task', status_code: 20100, cost: 0.0024 }],
       });
     });
     expect(await c.submit('google_ai_mode', request)).toMatchObject({
       taskId: 'mode-task',
-      chargeMicrousd: 1200,
+      chargeMicrousd: 2400,
     });
     const retrieved = client(async (url) => {
       expect(url).toBe(

@@ -36,8 +36,8 @@ export const projectKeys = {
   brandFacts: (scope: ProjectScope) => projects.read('brand-facts', scope),
   themes: (scope: ProjectScope) => projects.read('themes', scope),
   probes: (scope: ProjectScope) => projects.read('probes', scope),
-  probeQuote: (scope: ProjectScope, engines: readonly string[]) =>
-    projects.read('probes', scope, 'quote', engines),
+  probeQuote: (scope: ProjectScope, choice: { engines: readonly string[]; repetitions: number }) =>
+    projects.read('probes', scope, 'quote', choice.engines, choice.repetitions),
   probeRead: (scope: ProjectScope, view: 'market' | 'objections', basis: string) =>
     projects.read('probes', scope, view, basis),
   markets: (scope: ProjectScope) => projects.read('markets', scope),

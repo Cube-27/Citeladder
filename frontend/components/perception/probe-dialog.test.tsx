@@ -21,6 +21,7 @@ const ALL: ProbeQuote = {
   markets: [{ id: null, country_code: 'US', language_code: 'en' }],
   questions: 3,
   repetitions: 3,
+  max_repetitions: 3,
   answers: 18,
   credits: 640,
   balance: 1000,
@@ -33,15 +34,21 @@ const NARROWED: ProbeQuote = {
   credits: 270,
   fingerprint: 'claude-only',
 };
+const ONCE: ProbeQuote = {
+  ...NARROWED,
+  repetitions: 1,
+  answers: 3,
+  credits: 90,
+  fingerprint: 'claude-once',
+};
 
 afterEach(() => vi.restoreAllMocks());
 
-it('re-quotes the AI credits for the chosen engines and runs the probe on them only', async () => {
-  const get = vi
-    .spyOn(apiClient, 'get')
-    .mockImplementation(async (path) =>
-      path.includes('/probes?') ? { quote: NARROWED, latest: null, schedule: null } : {},
-    );
+it('re-quotes the AI credits for the chosen engines and repetitions and runs the probe on them only', async () => {
+  const get = vi.spyOn(apiClient, 'get').mockImplementation(async (path) => {
+    if (path.endsWith('repetitions=1')) return { quote: ONCE, latest: null, schedule: null };
+    return path.includes('/probes?') ? { quote: NARROWED, latest: null, schedule: null } : {};
+  });
   const post = vi.spyOn(apiClient, 'post').mockResolvedValue([]);
   const onClose = vi.fn();
   renderWithProviders(
@@ -52,18 +59,21 @@ it('re-quotes the AI credits for the chosen engines and runs the probe on them o
   await userEvent.click(chatgpt!);
   expect(await screen.findByText('270')).toBeInTheDocument();
   expect(get).toHaveBeenCalledWith(
-    `/projects/${SCOPE.projectId}/probes?engines=claude`,
+    `/projects/${SCOPE.projectId}/probes?engines=claude&repetitions=3`,
     expect.anything(),
   );
   await userEvent.click(claude!);
   expect(screen.getByRole('button', { name: 'Run probe' })).toBeDisabled();
   await userEvent.click(claude!);
   await waitFor(() => expect(screen.getByRole('button', { name: 'Run probe' })).toBeEnabled());
+  await userEvent.click(screen.getByRole('radio', { name: '1' }));
+  expect(await screen.findByText('90')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Run probe' })).toBeEnabled());
   await userEvent.click(screen.getByRole('button', { name: 'Run probe' }));
   await waitFor(() => expect(onClose).toHaveBeenCalled());
   expect(post).toHaveBeenCalledWith(
     `/projects/${SCOPE.projectId}/probes`,
-    { fingerprint: 'claude-only', engines: ['claude'] },
+    { fingerprint: 'claude-once', engines: ['claude'], repetitions: 1 },
     expect.anything(),
   );
 });

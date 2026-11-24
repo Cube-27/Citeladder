@@ -24,7 +24,7 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { promptHistoryHref } from '@/lib/prompts/history';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { EXECUTION_STATES, executionStatusLabel } from '@/lib/runs/status';
-import { usePromptEngineAnswers } from '@/lib/runs/use-prompt-engine-answers';
+import { usePromptEngineAnswers, type AnswerFilters } from '@/lib/runs/use-prompt-engine-answers';
 
 const loadAnswerEvidence = () => import('@/components/runs/answer-evidence');
 const AnswerEvidence = lazy(() =>
@@ -193,20 +193,21 @@ function AnswerToolbar({
           <FeatureFlags evidence={evidence} />
         </>
       ) : null}
-      {engines.options.length > 1 && engines.activeId !== null ? (
+      {engines.filters.map((filter) => (
         <FilterControls
+          key={filter.id}
           filters={[
             choiceFilter({
-              id: 'engine',
-              label: 'Engine',
-              value: engines.activeId,
-              defaultValue: engines.activeId,
-              groups: [{ options: engines.options }],
-              onChange: engines.select,
+              id: filter.id,
+              label: filter.label,
+              value: filter.value,
+              defaultValue: filter.value,
+              groups: [{ options: filter.options }],
+              onChange: filter.select,
             }),
           ]}
         />
-      ) : null}
+      ))}
       {promptId ? (
         <TextLink href={promptHistoryHref(promptId)} text="caption" className="ms-auto">
           Prompt history
@@ -222,18 +223,21 @@ export function AnswerDialog({
   onOpenChange,
   unavailable,
   attributes,
+  filters,
 }: Readonly<{
   execution: EvidenceSubject | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   unavailable?: string;
   attributes?: boolean;
+  filters?: AnswerFilters;
 }>) {
   const { workspaceId } = useProjectScope();
   const engines = usePromptEngineAnswers({
     workspaceId,
     executionId: execution?.id ?? null,
     enabled: open,
+    filters,
   });
   const evidenceQuery = useQuery({
     ...runsQueries.execution(workspaceId, engines.activeId),

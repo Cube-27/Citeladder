@@ -14,10 +14,12 @@ export const objectionGroupMergeRequestSchema = z.object({ into_id: uuid() });
 export const objectionGroupSchema = z.object({ id: uuid(), name: z.string() });
 
 const probeEnginesSchema = z.array(logicalEngineSchema).min(1).optional();
+const probeRepetitionsSchema = z.int().positive().optional();
 
 export const probeRunRequestSchema = z.object({
   fingerprint: z.string().min(1),
   engines: probeEnginesSchema,
+  repetitions: probeRepetitionsSchema,
 });
 export type ProbeRunRequest = z.infer<typeof probeRunRequestSchema>;
 
@@ -27,6 +29,7 @@ export const probeScheduleRequestSchema = z.union([
     cadence: z.enum(['daily', 'weekly']),
     fingerprint: z.string().min(1),
     engines: probeEnginesSchema,
+    repetitions: probeRepetitionsSchema,
   }),
 ]);
 export type ProbeScheduleRequest = z.infer<typeof probeScheduleRequestSchema>;
@@ -39,6 +42,7 @@ const probeQuoteSchema = z.object({
   markets: z.array(auditMarketSchema),
   questions: z.int().nonnegative(),
   repetitions: z.int().positive(),
+  max_repetitions: z.int().positive(),
   answers: z.int().nonnegative(),
   credits: z.int().nonnegative(),
   balance: z.int().nullable(),
@@ -80,6 +84,7 @@ export const probeStatusSchema = z.object({
     .nullable(),
 });
 export type ProbeStatus = z.infer<typeof probeStatusSchema>;
+export const probeRunsSchema = probeStatusSchema.omit({ quote: true });
 
 const probeBasisSchema = probeRunSchema.omit({ state: true, planned: true, failed: true });
 
@@ -149,6 +154,7 @@ export const probeObjectionsSchema = z.discriminatedUnion('state', [
     state: z.literal('value'),
     probe: probeBasisSchema,
     brand: z.string(),
+    question: z.object({ text: z.string(), run_id: uuid(), execution_id: uuid() }).nullable(),
     answers: z.int().nonnegative(),
     answered_by: z.array(logicalEngineSchema),
     average: score.nullable(),

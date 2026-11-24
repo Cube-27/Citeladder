@@ -23,11 +23,7 @@ export function ObjectionQuotesRow({
   return (
     <TableRow>
       <TableCell nested colSpan={span}>
-        <DataTable
-          label={label}
-          title={[...new Set(quotes.map(({ prompt }) => prompt))].join(' · ')}
-          columns={QUOTE_COLUMNS}
-        >
+        <DataTable label={label} columns={QUOTE_COLUMNS}>
           {quotes.map((quote, index) => (
             <TableRow key={`${quote.execution_id}:${index}`}>
               <TableCell className="whitespace-normal">

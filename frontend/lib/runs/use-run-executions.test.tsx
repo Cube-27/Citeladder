@@ -53,6 +53,7 @@ describe('useRunExecutions', () => {
             prompt_text: `asked in ${request.headers.get('x-workspace-id')}`,
             error_code: '',
             latency_ms: null,
+            repetition: 1,
           },
         ]),
       ),
@@ -91,6 +92,7 @@ describe('useRunExecutions', () => {
             prompt_text: 'Best plumber in Austin',
             error_code: '',
             latency_ms: null,
+            repetition: 1,
           },
         ]);
       }),

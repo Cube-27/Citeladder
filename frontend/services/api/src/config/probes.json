@@ -4,6 +4,7 @@
   "task_kind": "probe_labelling",
   "labelling_version": "probe-labelling-v1",
   "repetitions": 3,
+  "max_repetitions": 3,
   "engines": ["chatgpt", "claude", "gemini", "chatgpt_search", "gemini_consumer"],
   "answer_credits": {
     "chatgpt": 100,
@@ -18,11 +19,17 @@
     "objection": "Why might someone not choose {brand}?",
     "theme": "Which {category} brands in {country} are best known for {theme}?"
   },
+  "search_instruction": {
+    "engines": ["claude"],
+    "questions": ["objection"],
+    "template": "Use web search to answer this question: {question}"
+  },
   "max_answer_chars": 24000,
   "max_items_per_answer": 10,
   "max_new_groups_per_probe": 12,
   "group_name_max_chars": 120,
   "max_attempts": 2,
+  "label_concurrency": 4,
   "task_max_attempts": 3,
   "history_probes": 6,
   "max_sources_per_group": 10,

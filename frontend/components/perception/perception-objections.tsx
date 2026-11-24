@@ -4,6 +4,7 @@ import type { ProbeObjectionsValue } from '@citeladder/contracts/probes';
 
 import { ObjectionActions } from '@/components/perception/objection-actions';
 import { ObjectionQuotesRow } from '@/components/perception/objection-quotes';
+import { AnswerLink } from '@/components/runs/answer-link';
 import { Absence } from '@/components/ui/absence';
 import { buttonClasses } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -92,7 +93,7 @@ function ObjectionTable({
   return (
     <TitledSection
       title={`Why buyers might not choose ${data.brand}`}
-      description="Higher score is raised earlier"
+      description={<QuestionLink question={data.question} />}
     >
       <DataTable
         label="Objections"
@@ -178,6 +179,22 @@ function ObjectionTable({
         })}
       </DataTable>
     </TitledSection>
+  );
+}
+
+function QuestionLink({ question }: Readonly<{ question: ProbeObjectionsValue['question'] }>) {
+  if (!question) return 'Higher score is raised earlier';
+  return (
+    <>
+      <AnswerLink
+        answer={{ ...question, prompt: question.text }}
+        filters="engine_repetition"
+        text="inherit"
+      >
+        {question.text}
+      </AnswerLink>
+      {' · Higher score is raised earlier'}
+    </>
   );
 }
 

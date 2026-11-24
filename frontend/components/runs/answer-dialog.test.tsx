@@ -93,6 +93,7 @@ describe('Answer dialog', () => {
       transport_provider: 'x',
       error_code: '',
       latency_ms: 1,
+      repetition: 1,
       prompt_text: 'best plumber near me',
     };
     mswServer.use(

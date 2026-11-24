@@ -530,10 +530,14 @@ Claude route's `anthropic_thinking` (provider config) turns thinking off for
 answer capture instead of raising the budget. Provider costs and
 successful-answer billing are different projections.
 
-The audit runner lane keeps `min(worker_concurrency, RUNNER_DB_POOL_SIZE - 1)`
-tasks in flight, refilling each slot as a task settles until a claim finds
-nothing, the runner stops admitting or `claim_window_seconds` ends; it runs
-alongside Site Health rather than after its claim window. It wakes for the
+The audit runner lane keeps `min(worker_concurrency, runner_in_flight)` tasks
+in flight, refilling each slot as a task settles until a claim finds nothing or
+the runner stops admitting; it runs alongside Site Health rather than after its
+claim window. The in-flight cap is not tied to `RUNNER_DB_POOL_SIZE`: a task
+holds no connection during its provider call (invariant 15), so its short
+phase transactions queue on the pool instead. Lease recovery for other
+runners' dead leases runs in the periodic `audit-maintenance` tick, so a long
+drain does not delay it. It wakes for the
 earliest due retry, capacity wait or provider poll (`AuditQueue.nextDue`), not
 only on its idle tick. A task with a
 submitted paid search-surface request is bounded by its poll ceiling or recovery
@@ -577,8 +581,8 @@ provisioned explicitly with the credential-admin-only
 `POST /api/v1/provider-connections/{id}/provision-dataforseo-routes`; it adds missing
 routes without reactivating disabled routes or acquiring provider data.
 
-The scrapers submit the literal tracked prompt using normal-priority Standard
-tasks and collect Advanced results. ChatGPT requests web search; Gemini receives
+Every DataForSEO audit surface submits `priority` 2 (priority queue) tasks.
+The scrapers submit the literal tracked prompt as Standard tasks and collect Advanced results. ChatGPT requests web search; Gemini receives
 no ChatGPT-only settings. Every DataForSEO surface uses the project's frozen
 search context (US, English, desktop by default), validated against the location,
 language and device lists in `dataforseo.json`; unsupported contexts and over-long
@@ -796,13 +800,22 @@ customer credits. Policy, caps, the project-theme limits and the templates live 
   [the probe owner](../frontend/services/api/src/probes/); generic launch and
   schedule requests refuse the scope and only pause or resume a probe schedule. Every other audit reader selects its own
   scope (visibility, perception, run metrics and AI Traffic exclude probes).
+- **Asking.** The engine and repetition choice is part of the quote
+  fingerprint and freezes into the audit's `repetitions`; reads score the
+  answers a launch actually got. Where an engine cannot be forced to search,
+  `search_instruction` in
+  [`config/probes.json`](../frontend/services/api/src/config/probes.json)
+  wraps the question at admission, so the task's `prompt_text` records what
+  was sent while the snapshot keeps the plain question.
 - **Funding.** Probe tasks hold AI credits, shown before running and before a
   schedule turns on (the quote fingerprint); see
   [billing](billing-entitlements.md). A probe run is never repaired.
 - **Labelling.** When a launch's last run ends and any run answered, one
-  `probe_labelling` task labels every market's answers, one market per model
-  call; a later market maps onto the groups earlier ones named, so a first
-  probe groups objections once. The outcome (`labelled` or `unavailable`) is
+  `probe_labelling` task labels every market's answers, up to
+  `label_concurrency` model calls at once; only the objection calls run in
+  market order, since a later market maps onto the groups earlier ones named,
+  so a first probe groups objections once. Each call's latency is stored in the
+  labelling's `usage`. The outcome (`labelled` or `unavailable`) is
   recorded once per launch; a launch that answered nothing stays `failed`.
   A theme or group deleted while it runs reads as Other or drops.
 - **Scores.** [Position scores](../frontend/services/api/src/probes/scores.ts)

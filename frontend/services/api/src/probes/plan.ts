@@ -30,13 +30,24 @@ async function probeEngineList(
   );
 }
 
-type PlanInput = { runtime: AuditRuntime; at: Date; engines?: readonly string[] };
+export type ProbeChoice = { engines?: readonly string[]; repetitions?: number };
+type PlanInput = ProbeChoice & { runtime: AuditRuntime; at: Date };
+
+function chosenRepetitions(repetitions: number | undefined) {
+  if (repetitions === undefined) return probes.repetitions;
+  if (repetitions < 1 || repetitions > probes.max_repetitions)
+    throw new ApiError(422, `Choose between 1 and ${probes.max_repetitions} repetitions`, {
+      code: 'probe_repetitions_invalid',
+    });
+  return repetitions;
+}
 
 export async function probePlan(
   db: Database,
   scope: Scope,
-  { runtime, at, engines: picked }: PlanInput,
+  { runtime, at, engines: picked, repetitions: requested }: PlanInput,
 ) {
+  const repetitions = chosenRepetitions(requested);
   const funded = (await workspaceCredentialMode(db, scope.workspaceId)) === 'funded';
   const [usable, markets, subject, access] = await Promise.all([
     probeEngineList(db, scope, { funded, runtime, at }),
@@ -60,20 +71,20 @@ export async function probePlan(
     return engines.length ? [{ market, engines, questions: questions.map((q) => q.text) }] : [];
   });
   const questions = probeQuestions({ ...subject, country: '' }).length;
-  const asks = questions * probes.repetitions;
+  const asks = questions * repetitions;
   let credits = 0;
   for (const run of runs)
     for (const engine of run.engines) credits += asks * probeAnswerCredits(engine, !funded);
   const engines = usable.filter((engine) => runs.some((run) => run.engines.includes(engine)));
   const fingerprint = createHash('sha256')
-    .update(JSON.stringify({ funded, repetitions: probes.repetitions, runs, credits }))
+    .update(JSON.stringify({ funded, repetitions, runs, credits }))
     .digest('hex');
   return {
     funded,
     trial: access.status === 'trial_active',
     overLimit: runs.some(
       (run) =>
-        run.questions.length * probes.repetitions * run.engines.length >
+        run.questions.length * repetitions * run.engines.length >
         runtime.audits.max_tasks_per_audit,
     ),
     usable,
@@ -81,6 +92,7 @@ export async function probePlan(
     engines,
     runs,
     questions,
+    repetitions,
     answers: runs.reduce((sum, run) => sum + run.engines.length * asks, 0),
     credits,
     fingerprint,
@@ -155,12 +167,12 @@ async function heldCredits(db: Database, workspaceId: string, auditIds: readonly
 export function runProbe(
   db: Database,
   scope: Scope,
-  { fingerprint, engines }: { fingerprint: string; engines?: readonly string[] },
+  { fingerprint, ...choice }: ProbeChoice & { fingerprint: string },
   runtime: AuditRuntime,
 ) {
   return inTransaction(db, async (trx) => {
     const at = new Date();
-    const plan = runnable(await probePlan(trx, scope, { runtime, at, engines }));
+    const plan = runnable(await probePlan(trx, scope, { runtime, at, ...choice }));
     if (plan.fingerprint !== fingerprint) throw changed();
     const ids = await createAuditsInTransaction(
       trx,
@@ -171,6 +183,7 @@ export function runProbe(
         prompt_ids: [],
         engines: plan.engines,
         market_ids: plan.runs.map((run) => run.market.id),
+        repetitions: plan.repetitions,
         audit_scope: probes.audit_scope,
       },
       {},

@@ -310,7 +310,10 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
   const env = config.settings;
   const runtime = auditRuntime(env);
   const slots = Math.max(1, config.execution.poolSize - 1);
-  runtime.audits.worker_concurrency = Math.min(runtime.audits.worker_concurrency, slots);
+  runtime.audits.worker_concurrency = Math.min(
+    runtime.audits.worker_concurrency,
+    runtime.audits.runner_in_flight,
+  );
   const projections = auditProjections(db);
   const analytics = new AnalyticsWorker(db, loadWorkerSettings(env));
   const discovery = new DiscoveryWorker(db, { env });

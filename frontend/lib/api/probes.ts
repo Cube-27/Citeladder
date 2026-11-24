@@ -11,6 +11,7 @@ import {
   objectionGroupSchema as groupSchema,
   probeMarketSchema,
   probeObjectionsSchema,
+  probeRunsSchema,
   probeStatusSchema,
   type ProbeRunRequest,
   type ProbeScheduleRequest,
@@ -34,18 +35,26 @@ const EXPORT_FILES = {
   objections: 'objection-sources.csv',
 } as const satisfies Record<ProbeView, string>;
 
+export type ProbeChoice = { engines: readonly string[]; repetitions: number };
+
 const probesApi = {
-  status: async (projectId: string, engines: readonly string[], options?: ApiRequestOptions) => {
-    const query = new URLSearchParams(engines.map((engine) => ['engines', engine]));
+  status: async (projectId: string, choice: ProbeChoice | null, options?: ApiRequestOptions) => {
+    const query = new URLSearchParams([
+      ...(choice?.engines ?? []).map((engine) => ['engines', engine]),
+      ...(choice ? [['repetitions', String(choice.repetitions)]] : []),
+    ]);
     return strictValidate(
       probeStatusSchema,
-      await apiClient.get(
-        engines.length ? `${root(projectId)}?${query}` : root(projectId),
-        options,
-      ),
+      await apiClient.get(choice ? `${root(projectId)}?${query}` : root(projectId), options),
       'probes.status',
     );
   },
+  runs: async (projectId: string, options?: ApiRequestOptions) =>
+    strictValidate(
+      probeRunsSchema,
+      await apiClient.get(`${root(projectId)}/runs`, options),
+      'probes.runs',
+    ),
   cancel: async (projectId: string, options?: ApiRequestOptions) =>
     strictValidate(
       probeStatusSchema,
@@ -111,7 +120,7 @@ const probesApi = {
 const scoped = (scope: ProjectScope) => ({ workspaceId: scope.workspaceId });
 const PROBE_POLL_MS = 5000;
 
-export const probeBusy = (status: ProbeStatus | undefined) =>
+export const probeBusy = (status: Pick<ProbeStatus, 'latest'> | undefined) =>
   status?.latest?.state === 'running' || status?.latest?.state === 'labelling';
 
 export const probeBasis = (status: ProbeStatus | undefined) =>
@@ -121,14 +130,23 @@ export const probeQueries = {
   status: (scope: ProjectScope) =>
     queryOptions({
       queryKey: queryKeys.projects.probes(scope),
-      queryFn: ({ signal }) => probesApi.status(scope.projectId, [], { signal, ...scoped(scope) }),
+      queryFn: async ({ signal, client, queryKey }) => {
+        const options = { signal, ...scoped(scope) };
+        const shown = client.getQueryData<ProbeStatus>(queryKey);
+        if (shown && probeBusy(shown)) {
+          const runs = await probesApi.runs(scope.projectId, options);
+          if (runs.latest?.launch_id === shown.latest?.launch_id && probeBusy(runs))
+            return { ...shown, ...runs };
+        }
+        return probesApi.status(scope.projectId, null, options);
+      },
       refetchInterval: (query) => (probeBusy(query.state.data) ? PROBE_POLL_MS : false),
     }),
-  quote: (scope: ProjectScope, engines: readonly string[]) =>
+  quote: (scope: ProjectScope, choice: ProbeChoice) =>
     queryOptions({
-      queryKey: queryKeys.projects.probeQuote(scope, engines),
+      queryKey: queryKeys.projects.probeQuote(scope, choice),
       queryFn: ({ signal }) =>
-        probesApi.status(scope.projectId, engines, { signal, ...scoped(scope) }),
+        probesApi.status(scope.projectId, choice, { signal, ...scoped(scope) }),
       select: (status) => status.quote,
       placeholderData: keepPreviousData,
     }),
