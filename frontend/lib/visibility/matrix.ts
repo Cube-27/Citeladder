@@ -78,7 +78,8 @@ function csvNumber(value: number, metric: MatrixMetric): number {
 }
 
 export function matrixCsvMetricHeader(metric: MatrixMetric, label: string): string {
-  return metric === 'avg_position' || metric === 'sentiment' ? label : `${label} (%)`;
+  if (metric === 'avg_position') return `${label} among the brands you track`;
+  return metric === 'sentiment' ? label : `${label} (%)`;
 }
 
 export function matrixCsvRows({

@@ -9,7 +9,7 @@ import { TitledSection } from '@/components/ui/section';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { Tags } from '@/lib/icons';
-import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
+import { POSITION_HINT, SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { formatCount } from '@/lib/format';
 import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 import { READING_LABELS } from '@/lib/visibility/matrix';
@@ -25,7 +25,7 @@ const COLUMNS: readonly DataTableColumn[] = [
     width: 'metric',
     kind: 'number',
   },
-  { key: 'position', label: 'Position', width: 'figure', kind: 'number' },
+  { key: 'position', label: 'Position', hint: POSITION_HINT, width: 'figure', kind: 'number' },
   { key: 'rank', label: 'Your rank', width: 'figure', kind: 'number' },
 ];
 const VALUE_KEYS = COLUMNS.slice(1).map((column) => column.key);

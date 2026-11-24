@@ -5,10 +5,12 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
 import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
+import { InfoHint } from '@/components/ui/info-hint';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatCount, formatDisplayDate, formatMean, formatPercent } from '@/lib/format';
+import { POSITION_HINT } from '@/lib/config/visibility';
 import { ANSWER_STATES } from '@/lib/prompts/history';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import type { AnswerStates, PromptHistory, PromptMetricItem } from '@citeladder/contracts';
@@ -52,6 +54,7 @@ export function PromptKeyFigures({ history }: Readonly<{ history: PromptHistory 
     {
       key: 'position',
       label: 'Position',
+      marker: <InfoHint label="Position">{POSITION_HINT}</InfoHint>,
       value: <PositionValue latest={latest} visibility={point?.mention_rate ?? null} />,
     },
     {

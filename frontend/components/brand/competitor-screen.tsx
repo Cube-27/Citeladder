@@ -1,5 +1,6 @@
 import type { RankingRow, Visibility } from '@citeladder/contracts';
 import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { CompetitorSources, NamedInsteadOfYou } from '@/components/brand/competitor-focus-cards';
@@ -9,6 +10,7 @@ import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Button } from '@/components/ui/button';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
+import { InfoHint } from '@/components/ui/info-hint';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SectionStack } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
@@ -23,6 +25,7 @@ import {
 } from '@/components/visibility/selection-page';
 import { ApiError } from '@/lib/api/errors';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
+import { POSITION_HINT } from '@/lib/config/visibility';
 import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 import { absent, type Formatted, isAbsent } from '@/lib/format';
 import { sentimentFigureValue } from '@/lib/visibility/perception';
@@ -117,7 +120,12 @@ function CompetitorBody({
 }
 
 type Reading = { value: Formatted | null; missingLabel?: string };
-type Figure = { key: string; label: string; read: (row: RankingRow) => Reading };
+type Figure = {
+  key: string;
+  label: string;
+  marker?: ReactNode;
+  read: (row: RankingRow) => Reading;
+};
 
 const plain = (value: Formatted | null): Reading => ({ value });
 
@@ -135,6 +143,7 @@ const FIGURES: readonly Figure[] = [
   {
     key: 'position',
     label: 'Position',
+    marker: <InfoHint label="Position">{POSITION_HINT}</InfoHint>,
     read: (row) => plain(formatPositionExact(row.avg_position)),
   },
   {
@@ -166,6 +175,7 @@ function FocusFigures({
     return {
       key: figure.key,
       label: figure.label,
+      marker: figure.marker,
       ...(theirs ? figure.read(theirs) : plain(null)),
       sub: (
         <>

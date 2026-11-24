@@ -38,6 +38,7 @@ import { selectionBasis } from '@/lib/visibility/coverage';
 import { type Absent, formatCount } from '@/lib/format';
 import {
   PERCEPTION_MIN_CLASSIFIED,
+  POSITION_HINT,
   SHARE_OF_VOICE_HINT,
   VISIBILITY_METRICS,
   WIN_RATE_HINT,
@@ -115,12 +116,7 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
           {
             key: 'avg_position',
             label: 'Position',
-            marker: (
-              <InfoHint label="Position">
-                Where your brand tends to appear among the brands you track, averaged over the
-                answers that name you. A brand an answer names that you do not track is not counted.
-              </InfoHint>
-            ),
+            marker: <InfoHint label="Position">{POSITION_HINT}</InfoHint>,
             value: formatPositionExact(position),
           },
         ]),

@@ -9,6 +9,7 @@ import {
   HeatTable,
   type HeatValue,
 } from '@/components/ui/heat-table';
+import { InfoHint } from '@/components/ui/info-hint';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
@@ -16,7 +17,7 @@ import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { downloadCsv } from '@/lib/csv/download';
-import { MATRIX_DIMENSIONS, MATRIX_METRICS } from '@/lib/config/visibility';
+import { MATRIX_DIMENSIONS, MATRIX_METRICS, POSITION_HINT } from '@/lib/config/visibility';
 import { pluralCount } from '@/lib/format';
 import { setUrlParams, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
@@ -149,6 +150,7 @@ export function PerformanceMatrix({
             options={MATRIX_METRICS}
             onChange={setMetric}
           />
+          {metric === 'avg_position' ? <InfoHint label="Position">{POSITION_HINT}</InfoHint> : null}
           <span className="flex-1" />
           <Select
             ariaLabel="Rows"

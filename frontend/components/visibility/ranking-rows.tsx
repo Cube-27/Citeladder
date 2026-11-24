@@ -9,7 +9,7 @@ import { CellMeter } from '@/components/ui/meter';
 import { Absence } from '@/components/ui/absence';
 import type { RankingRow } from '@citeladder/contracts';
 import { Users } from '@/lib/icons';
-import { SHARE_OF_VOICE_HINT, WIN_RATE_HINT } from '@/lib/config/visibility';
+import { POSITION_HINT, SHARE_OF_VOICE_HINT, WIN_RATE_HINT } from '@/lib/config/visibility';
 import { percentText } from '@/lib/format';
 import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 import {
@@ -28,9 +28,6 @@ const TITLE = 'You and your competitors';
 
 const SENTIMENT_HINT =
   'Net sentiment: positive minus negative mentions, as a share of the classified mentions of each brand, from −100 to +100.';
-
-const POSITION_HINT =
-  'Where a brand tends to appear among the brands you track, averaged over the answers that name it. 1.0 means it is named first every time.';
 
 export function RankingRowsTable({
   rows,
