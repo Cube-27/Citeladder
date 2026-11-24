@@ -44,17 +44,15 @@ export type PageDownload = Readonly<{
   fields: Readonly<{ meta_description: string; json_ld: string }> | null;
 }>;
 
+const ESCAPED_LESS_THAN = String.raw`\u003c`;
+
 function headFields(fields: PageDownload['fields']): string[] {
   if (!fields) return [];
   const description = fields.meta_description.trim();
-  const jsonLd = fields.json_ld.trim();
+  const jsonLd = fields.json_ld.trim().replaceAll('<', ESCAPED_LESS_THAN);
   return [
     ...(description ? [`<meta name="description" content="${escapeHtml(description)}">`] : []),
-    ...(jsonLd
-      ? [
-          `<script type="application/ld+json">${jsonLd.replaceAll('<', String.raw`\u003c`)}</script>`,
-        ]
-      : []),
+    ...(jsonLd ? [`<script type="application/ld+json">${jsonLd}</script>`] : []),
   ];
 }
 
