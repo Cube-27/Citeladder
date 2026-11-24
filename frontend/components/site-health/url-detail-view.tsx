@@ -72,7 +72,7 @@ export function UrlDetailView({
   children?: ReactNode;
 }>) {
   const title = pageDisplayTitle(detail.title, detail.display_url);
-  useAgentPanelSeed(pageHandoff(detail));
+  useAgentPanelSeed(frame === 'drawer' ? null : pageHandoff(detail));
   const [tab, setTab] = useState<(typeof DRAWER_TABS)[number]['value']>('overview');
   const identity = (
     <PageIdentity

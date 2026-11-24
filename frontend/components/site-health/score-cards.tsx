@@ -8,6 +8,7 @@ import { BarRows, ScoreGauge, scoreTone, type BarRow } from '@/components/ui/sco
 import { SectionCard, TitledSection } from '@/components/ui/section';
 import { StatusMark } from '@/components/ui/status-mark';
 import { availabilityLabel, formatCount } from '@/lib/format';
+import { severityCount } from '@/lib/site-health/issues';
 import { formatScore, statusLabel } from '@/lib/site-health/status';
 
 type Dimension = Pick<
@@ -144,7 +145,7 @@ export function SeverityCard({
   data,
   actions,
 }: Readonly<{ data: SiteHealthOverview; actions?: ReactNode }>) {
-  const counts = SEVERITIES.map((severity) => data.severity_counts[severity.key] ?? 0);
+  const counts = SEVERITIES.map((severity) => severityCount(data.severity_counts, severity.key));
   const largest = Math.max(...counts);
   const audited = data.audited_page_count;
   const pages = (key: string, label: string, count: number): BarRow => ({
