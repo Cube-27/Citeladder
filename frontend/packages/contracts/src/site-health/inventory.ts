@@ -36,7 +36,13 @@ export const inventoryRowSchema = responseObject({
 });
 
 export const inventoryPageSchema = cursorPageSchema(inventoryRowSchema);
-export const siteCrawlListPageSchema = cursorPageSchema(siteCrawlSchema);
+export const crawlRunSchema = z.discriminatedUnion('kind', [
+  responseObject({ kind: z.literal('site') }),
+  responseObject({ kind: z.literal('pages'), page_count: z.number().int() }),
+  responseObject({ kind: z.literal('page'), site_url_id: uuid() }),
+]);
+export const siteCrawlListItemSchema = siteCrawlSchema.extend({ run: crawlRunSchema });
+export const siteCrawlListPageSchema = cursorPageSchema(siteCrawlListItemSchema);
 
 export const monitoredQuotaSchema = responseObject({
   used: z.number().int(),
@@ -62,4 +68,5 @@ export const monitoredUrlsResponseSchema = responseObject({
 
 export type InventoryPage = z.infer<typeof inventoryPageSchema>;
 export type SiteCrawlListPage = z.infer<typeof siteCrawlListPageSchema>;
+export type SiteCrawlListItem = z.infer<typeof siteCrawlListItemSchema>;
 export type MonitoredUrlsResponse = z.infer<typeof monitoredUrlsResponseSchema>;

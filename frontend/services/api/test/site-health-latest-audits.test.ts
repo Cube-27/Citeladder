@@ -1,6 +1,8 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { record } from '../src/db/json.ts';
 import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
+import { currentSiteCrawl, resolveUsableCrawl } from '../src/site-health/reads/crawl.ts';
+import { dashboard } from '../src/site-health/reads/dashboard.ts';
 import { issueHistory } from '../src/site-health/reads/issue-history.ts';
 import { issues, unfilteredIssues } from '../src/site-health/reads/issues.ts';
 import { pageDetail, pages } from '../src/site-health/reads/pages.ts';
@@ -67,6 +69,31 @@ const groups = (page: Awaited<ReturnType<typeof issues>>) =>
 async function pageCounts(seed: SiteSeed) {
   const page = await pages(db, seed.workspaceId, seed.crawlId, {}, 'url', paging);
   return page.items.map((row) => [new URL(row.normalized_url).pathname, row.issue_count]);
+}
+
+async function landAt(seed: SiteSeed, at: Date) {
+  await land(seed);
+  await db
+    .updateTable('site_page_analyses')
+    .set({ finalized_at: at })
+    .where('workspace_id', '=', seed.workspaceId)
+    .where('crawl_id', '=', seed.crawlId)
+    .where('is_current', '=', true)
+    .execute();
+}
+
+async function currentRows(seed: SiteSeed) {
+  const crawl = await currentSiteCrawl(db, seed.workspaceId, seed.projectId);
+  if (crawl === null) return null;
+  const page = await pages(db, seed.workspaceId, crawl.id, {}, 'url', paging);
+  return {
+    crawlId: crawl.id,
+    rows: page.items.map((row) => [
+      new URL(row.normalized_url).pathname,
+      row.issue_count,
+      row.last_audited,
+    ]),
+  };
 }
 
 describe("Site Health reads show each tracked page's latest audit", () => {
@@ -206,6 +233,61 @@ describe("Site Health reads show each tracked page's latest audit", () => {
       site_crawl_id: full.crawlId,
       site_rerun_id: rerun.crawlId,
     });
+  });
+
+  it('updates only the pages each later run audited, whatever its outcome', async () => {
+    const seed = await fixtures.crawl('failed');
+    const full = await crawlAt(seed, minutes(0));
+    const a = await audit(full, '/a', SITEMAP, 'missing');
+    const b = await audit(full, '/b', SITEMAP, 'missing');
+    const c = await audit(full, '/c', SITEMAP, 'missing');
+    const tracked = [a, b, c, await audit(full, '/d', SITEMAP, 'missing')];
+    await fixtures.monitor(
+      seed,
+      tracked.map((page) => page.id),
+    );
+    await landAt(full, minutes(5));
+    await fixtures.snapshot(full);
+    const fullRows = [
+      ['/a', 1, minutes(5).toISOString()],
+      ['/b', 1, minutes(5).toISOString()],
+      ['/c', 1, minutes(5).toISOString()],
+      ['/d', 1, minutes(5).toISOString()],
+    ];
+    expect(await currentRows(seed)).toEqual({ crawlId: full.crawlId, rows: fullRows });
+
+    const cancelled = await crawlAt(seed, minutes(10), { status: 'cancelled' });
+    expect(await currentRows(seed)).toEqual({ crawlId: full.crawlId, rows: fullRows });
+    const shown = await dashboard(db, seed.workspaceId, seed.projectId, null);
+    expect([shown.crawl?.id, shown.phase]).toEqual([full.crawlId, 'dashboard']);
+    const named = await resolveUsableCrawl(db, seed.workspaceId, seed.projectId, cancelled.crawlId);
+    expect(named?.id).toBe(full.crawlId);
+
+    const failed = await crawlAt(seed, minutes(20), { status: 'failed' });
+    await audit(failed, '/a', SITEMAP, 'satisfied', a.id);
+    await audit(failed, '/b', SITEMAP, 'satisfied', b.id);
+    await landAt(failed, minutes(25));
+    const failedRows = [
+      ['/a', 0, minutes(25).toISOString()],
+      ['/b', 0, minutes(25).toISOString()],
+      ['/c', 1, minutes(5).toISOString()],
+      ['/d', 1, minutes(5).toISOString()],
+    ];
+    expect(await currentRows(seed)).toEqual({ crawlId: full.crawlId, rows: failedRows });
+
+    const rerun = await crawlAt(seed, minutes(30), { rerun: true });
+    await audit(rerun, '/c', SITEMAP, 'satisfied', c.id);
+    await landAt(rerun, minutes(35));
+    expect(await currentRows(seed)).toEqual({
+      crawlId: full.crawlId,
+      rows: failedRows.with(2, ['/c', 0, minutes(35).toISOString()]),
+    });
+
+    const other = await fixtures.crawl('completed');
+    expect(await currentSiteCrawl(db, other.workspaceId, seed.projectId)).toBeNull();
+    await expect(pages(db, other.workspaceId, full.crawlId, {}, 'url', paging)).rejects.toThrow(
+      'Crawl not found',
+    );
   });
 
   it('shows each tracked page a running crawl has not reached by its earlier audit', async () => {

@@ -44,6 +44,17 @@ export async function loadProjectedCrawl(db: Database, workspaceId: string, craw
   return crawl;
 }
 
+const PUBLISHED_STATUSES = ['completed', 'partially_completed'];
+
+function siteViewSql(alias: string) {
+  const ref = (column: string) => sql.ref(alias + '.' + column);
+  return sql<boolean>`(${ref('status')} = any(${PUBLISHED_STATUSES}::text[])
+    or (${ref('status')} = 'cancelled' and exists (
+      select 1 from site_health_snapshots s
+      where s.workspace_id = ${ref('workspace_id')} and s.project_id = ${ref('project_id')}
+        and s.crawl_id = ${ref('id')})))`;
+}
+
 function siteCrawls(db: Database, workspaceId: string, projectId: string) {
   return new WorkspaceScope(workspaceId)
     .selectFrom(db, 'site_crawls')
@@ -59,7 +70,7 @@ export function currentSiteCrawlQuery(
   projectId: string,
   { completedAfter }: { completedAfter?: string } = {},
 ) {
-  let usable = siteCrawls(db, workspaceId, projectId).where('status', 'in', USABLE_CRAWL_STATUSES);
+  let usable = siteCrawls(db, workspaceId, projectId).where(siteViewSql('site_crawls'));
   if (completedAfter !== undefined)
     usable = usable.where('completed_at', '>', sql<Date>`${completedAfter}::timestamptz`);
   return usable.limit(1);
@@ -91,7 +102,7 @@ function nextSiteAudit(crawl: ViewCrawl) {
   return sql`(select min(${auditAt('n')}) from site_crawls n
     where n.workspace_id = ${crawl.workspace_id} and n.project_id = ${crawl.project_id}
       and not coalesce(n.configuration->>'page_rerun' = 'true', false)
-      and n.status = any(${USABLE_CRAWL_STATUSES}::text[])
+      and ${siteViewSql('n')}
       and (n.created_at, n.id) > (${crawl.created_at}::timestamptz, ${crawl.id}::uuid))`;
 }
 
@@ -180,7 +191,7 @@ export function viewIssuesSql(crawl: ViewCrawl, alias = 'i', view?: RawBuilder<u
 function usableSiteCrawls(db: Database, crawl: ViewCrawl) {
   return siteCrawls(db, crawl.workspace_id, crawl.project_id)
     .select(['id', 'workspace_id', 'project_id', 'configuration', 'started_at', 'created_at'])
-    .where('status', 'in', USABLE_CRAWL_STATUSES);
+    .where(siteViewSql('site_crawls'));
 }
 
 const crawlKey = (crawl: ViewCrawl) => sql`(${crawl.created_at}::timestamptz, ${crawl.id}::uuid)`;
@@ -206,7 +217,7 @@ export async function foldingSiteCrawl(db: Database, rerun: Crawl): Promise<Craw
   if (!isPageRerun(rerun)) return null;
   const crawl = await siteCrawls(db, rerun.workspace_id, rerun.project_id)
     .selectAll()
-    .where('status', 'in', USABLE_CRAWL_STATUSES)
+    .where(siteViewSql('site_crawls'))
     .where(sql<boolean>`(created_at, id) < (${rerun.created_at}::timestamptz, ${rerun.id}::uuid)`)
     .executeTakeFirst();
   return crawl ?? null;
@@ -264,7 +275,13 @@ export async function resolveUsableCrawl(
 ): Promise<Crawl | null> {
   if (crawlId === null) return currentSiteCrawl(db, workspaceId, projectId);
   const crawl = await loadProjectCrawl(db, workspaceId, projectId, crawlId);
-  return isUsableCrawl(crawl.status) ? crawl : null;
+  if (crawl.status !== 'cancelled') return isUsableCrawl(crawl.status) ? crawl : null;
+  const published = await siteCrawls(db, workspaceId, projectId)
+    .select('id')
+    .where('id', '=', crawlId)
+    .where(siteViewSql('site_crawls'))
+    .executeTakeFirst();
+  return published ? crawl : currentSiteCrawl(db, workspaceId, projectId);
 }
 
 async function loadProjectCrawl(
