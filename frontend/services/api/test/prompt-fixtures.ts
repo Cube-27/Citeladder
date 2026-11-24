@@ -260,7 +260,8 @@ export function echoDependencies({
     const named = typeof brand === 'string' && brand ? brand + ' ' : '';
     const prompts = user.slots.map((slot) => ({
       slot_id: slot.slot_id,
-      buyer_stage: String(slot.target_buyer_stage ?? 'consideration'),
+      buyer_stage:
+        typeof slot.target_buyer_stage === 'string' ? slot.target_buyer_stage : 'consideration',
       ...(write?.(slot) ?? {
         text: `Which ${named}running shoes suit ${slot.slot_id}style runners on ${slot.slot_id}grade trails?`,
         buyer_stage: 'consideration',

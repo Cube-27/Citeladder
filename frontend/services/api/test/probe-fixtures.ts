@@ -22,7 +22,7 @@ export function labeller(
   onCall: (sent: string) => Promise<void> = async () => {},
 ) {
   const fetch = vi.fn(async (_url: unknown, init?: { body?: unknown }) => {
-    const sent = String(init?.body ?? '');
+    const sent = typeof init?.body === 'string' ? init.body : '';
     await onCall(sent);
     let content = outputs.theme;
     if (sent.includes('known for?')) content = outputs.known;

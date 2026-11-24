@@ -219,7 +219,7 @@ export function competitorQueries(input: DiscoveryInput, site: ResolvedSite) {
     'giu',
   );
   const trade = (site.page?.title ?? '')
-    .split(/\s+[|–—-]\s+|\s*\|\s*|:\s+/u)
+    .split(/\||\s[–—-]\s|:\s/u)
     .map((part) => {
       const kept = part.replace(brand, ' ').replaceAll(/\s+/gu, ' ').trim();
       return kept === part.trim() || kept.split(' ').length > 1 ? kept : '';
