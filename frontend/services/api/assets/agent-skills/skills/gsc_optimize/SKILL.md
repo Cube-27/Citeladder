@@ -17,7 +17,7 @@ Either exact, evidence-linked edits to one page, or a diagnosis of which segment
 ## Where the data is
 
 - `read_performance`: totals and comparisons, or one dimension at a time (query, page, country, device). Query and page tables are independent: never combine them into page-level claims.
-- `read_query_evidence`: the queries linked to one page with their totals over a saved window from `read_demand`. Pass the page's `site_url_id`; one or two calls return every query, so do not read the daily rows unless the question is about a date.
+- `read_query_evidence`: the queries linked to one page with their totals over a saved window from `read_demand`. Pass the page's `site_url_id` and follow `next_cursor` until it is null; do not read the daily rows unless the question is about a date.
 - `read_page_text`: the page's current title, headings and copy, which before/after edits need.
 
 ## What good looks like
