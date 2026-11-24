@@ -8,6 +8,7 @@ import {
 import { connectionPoolIdentity } from '../src/providers/dataforseo-identity.ts';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { createAudits } from '../src/audits/creation.ts';
+import { policy } from '../src/config.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { AuditMaintenance } from '../src/audits/maintenance.ts';
@@ -115,14 +116,20 @@ describe('shared PostgreSQL provider capacity', () => {
       at = new Date();
     const first = { ...t.request, engine: 'google_ai_overview', transport: 'dataforseo' };
     const second = { ...first, taskId: t.tasks[1]!.id };
-    expect((await acquireCapacity(db, first, runtime, at)).acquired).toBe(true);
-    await releaseCapacity(db, first, runtime, {}, at);
+    const route = policy.providers.capacity.find(
+      (row) => row.logical_engine === first.engine && row.transport_provider === first.transport,
+    )!;
+    for (let attempt = 1; attempt <= route.capacity!; attempt++) {
+      const start = { ...first, attempt };
+      expect((await acquireCapacity(db, start, runtime, at)).acquired).toBe(true); // NOSONAR
+      await releaseCapacity(db, start, runtime, {}, at); // NOSONAR
+    }
+    const later = new Date(at.getTime() + 1000 / route.refill_tokens_per_second!);
     expect(await acquireCapacity(db, second, runtime, at)).toMatchObject({
       acquired: false,
       code: 'capacity_rate_limited',
-      availableAt: new Date(at.getTime() + 1000),
+      availableAt: later,
     });
-    const later = new Date(at.getTime() + 1000);
     expect((await acquireCapacity(db, second, runtime, later)).acquired).toBe(true);
     await releaseCapacity(
       db,
@@ -132,7 +139,12 @@ describe('shared PostgreSQL provider capacity', () => {
       later,
     );
     await releaseCapacity(db, second, runtime, { rateLimited: true, retryAfterSeconds: 0 }, later);
-    const decision = await acquireCapacity(db, { ...first, attempt: 2 }, runtime, later);
+    const decision = await acquireCapacity(
+      db,
+      { ...first, attempt: route.capacity! + 1 },
+      runtime,
+      later,
+    );
     expect(decision).toMatchObject({
       acquired: false,
       code: 'capacity_rate_limited',

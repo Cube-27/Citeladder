@@ -48,42 +48,42 @@
     {
       "logical_engine": "google_ai_overview",
       "transport_provider": "dataforseo",
-      "capacity": 1.0,
-      "refill_tokens_per_second": 1.0,
+      "capacity": 5.0,
+      "refill_tokens_per_second": 5.0,
       "max_cooldown_seconds": 60.0,
-      "max_concurrency": 2
+      "max_concurrency": 4
     },
     {
       "logical_engine": "google_ai_mode",
       "transport_provider": "dataforseo",
-      "capacity": 1.0,
-      "refill_tokens_per_second": 1.0,
+      "capacity": 5.0,
+      "refill_tokens_per_second": 5.0,
       "max_cooldown_seconds": 60.0,
-      "max_concurrency": 2
+      "max_concurrency": 4
     },
     {
       "logical_engine": "chatgpt_search",
       "transport_provider": "dataforseo",
-      "capacity": 1.0,
-      "refill_tokens_per_second": 1.0,
+      "capacity": 5.0,
+      "refill_tokens_per_second": 5.0,
       "max_cooldown_seconds": 60.0,
-      "max_concurrency": 2
+      "max_concurrency": 4
     },
     {
       "logical_engine": "gemini_consumer",
       "transport_provider": "dataforseo",
-      "capacity": 1.0,
-      "refill_tokens_per_second": 1.0,
+      "capacity": 5.0,
+      "refill_tokens_per_second": 5.0,
       "max_cooldown_seconds": 60.0,
-      "max_concurrency": 2
+      "max_concurrency": 4
     },
     {
       "logical_engine": "search_intelligence",
       "transport_provider": "dataforseo",
-      "capacity": 1.0,
-      "refill_tokens_per_second": 1.0,
+      "capacity": 5.0,
+      "refill_tokens_per_second": 5.0,
       "max_cooldown_seconds": 60.0,
-      "max_concurrency": 2
+      "max_concurrency": 4
     },
     {
       "logical_engine": "llm_scraper_reconciliation",
