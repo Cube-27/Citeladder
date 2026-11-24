@@ -1,5 +1,5 @@
 export const sourcePages = {
-  identity_version: 'citation-identity-1',
+  identity_version: 'citation-identity-2',
   inspector_version: 'source-page-inspector-1',
   extractor_version: 'source-page-extractor-1',
   presence_version: 'source-page-presence-2',
@@ -41,8 +41,9 @@ export const sourcePages = {
   heading_formats: [
     [String.raw`\bvs\.?\b|\bversus\b|\bcompared?\s+to\b`, 'comparison'],
     [String.raw`\balternatives?\b|\bcompetitors?\b`, 'comparison'],
+    [String.raw`\bpros\s+and\s+cons\b`, 'review'],
     [String.raw`\bbest\b|\btop\s+\d+\b|\b\d+\s+best\b`, 'listicle'],
-    [String.raw`\breviews?\b|\bhands[- ]on\b|\bpros\s+and\s+cons\b`, 'review'],
+    [String.raw`\breviews?\b|\bhands[- ]on\b`, 'review'],
     [String.raw`\bdirectory\b|\bprofile\b|\blistings?\b`, 'directory'],
     [String.raw`\bforum\b|\bthread\b|\bdiscussion\b`, 'discussion'],
   ] satisfies [string, string][],

@@ -77,18 +77,21 @@ function pageFormat(page: ExtractedPage, names: readonly string[]) {
   const types = new Set(
     page.facts.structured_types.map((s) => s.replace(/\/$/u, '').split('/').at(-1)!.toLowerCase()),
   );
-  const title = withoutAliases(
-    normalizeText([page.facts.title, ...page.facts.headings].join(' ')),
-    names,
-  );
-  const heading = p.heading_formats.find(([pattern]) => new RegExp(pattern, 'iu').test(title))?.[1];
+  const formatOf = (texts: string[]) => {
+    const text = withoutAliases(normalizeText(texts.join(' ')), names);
+    return p.heading_formats.find(([pattern]) => new RegExp(pattern, 'iu').test(text))?.[1];
+  };
+  const { title, headings } = page.facts;
+  const heading = formatOf([title, ...headings]);
+  const lead = formatOf([title, ...headings.slice(0, 1)]);
   const schema = p.schema_formats.find(([token]) => types.has(token));
   const headingWins =
-    heading !== undefined &&
-    heading !== schema?.[1] &&
-    p.headings_over_schema.formats.includes(heading) &&
+    lead !== undefined &&
+    lead !== schema?.[1] &&
+    p.headings_over_schema.formats.includes(lead) &&
     p.headings_over_schema.schemas.includes(schema?.[0] ?? '');
-  if (schema && !headingWins) return { format: schema[1], method: 'structured_data' };
+  if (schema && headingWins) return { format: lead, method: 'heading_evidence' };
+  if (schema) return { format: schema[1], method: 'structured_data' };
   if (heading) return { format: heading, method: 'heading_evidence' };
   return p.generic_schema_types.some((token) => types.has(token))
     ? { format: 'article', method: 'structured_data' }

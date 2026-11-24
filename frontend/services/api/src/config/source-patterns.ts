@@ -26,6 +26,17 @@ export const sourcePatterns = {
     'youtube.com',
   ],
   SOURCE_CLASS_ORDER: sourceClassSchema.options,
+  SOCIAL_PROFILE_PATHS: [
+    ['facebook.com', '^/([^/]+)'],
+    ['instagram.com', '^/([^/]+)'],
+    ['x.com', '^/([^/]+)'],
+    ['twitter.com', '^/([^/]+)'],
+    ['linkedin.com', '^/(?:company|school|showcase)/([^/]+)'],
+    ['threads.net', '^/@([^/]+)'],
+    ['threads.com', '^/@([^/]+)'],
+    ['tiktok.com', '^/@([^/]+)'],
+    ['youtube.com', '^/(?:@|c/|user/)([^/]+)'],
+  ] satisfies [string, string][],
   COMMUNITY_DOMAINS: [
     'discourse.org',
     'news.ycombinator.com',

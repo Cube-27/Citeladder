@@ -1,6 +1,9 @@
 import type { SourceClass, SourcePattern } from '@citeladder/contracts/opportunities';
 import { policy } from '../../config.ts';
-import { domainMatches, normalizeDomain } from '../domains.ts';
+import { domainMatches, normalizeDomain, siteDomain } from '../domains.ts';
+import { aliasSpellings, CONNECTOR } from '../aliases.ts';
+import { casefold } from '../../casefold.ts';
+import type { ScoringConfig } from '../scoring.ts';
 import type { CitationEvidence } from './evidence.ts';
 import { compareText } from '../../text-order.ts';
 const p = policy.opportunity.source_patterns;
@@ -16,6 +19,41 @@ export function classifySourceOrigin(domain: string): string {
   return isGoogleSearchSurface(normalized) || p.GOOGLE_OWNED_PLATFORM_DOMAINS.includes(normalized)
     ? p.SOURCE_ORIGIN_GOOGLE_OWNED
     : p.SOURCE_ORIGIN_EXTERNAL;
+}
+const compact = (value: string) => casefold(value).replaceAll(/[^\p{L}\p{N}]/gu, '');
+function profileHandle(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  const rule = p.SOCIAL_PROFILE_PATHS.find(([domain]) => domainMatches(parsed.hostname, domain));
+  const handle = rule && new RegExp(rule[1], 'u').exec(parsed.pathname)?.[1];
+  return handle ? compact(handle) : null;
+}
+function handlesOf(names: readonly string[], domains: readonly unknown[]): Set<string> {
+  const spelled = names
+    .flatMap(aliasSpellings)
+    .flatMap((words) => [
+      compact(words.join('')),
+      compact(words.filter((word) => word !== CONNECTOR).join('')),
+    ]);
+  const labels = domains.flatMap((domain) => siteDomain(domain)?.split('.')[0] ?? []);
+  return new Set([...spelled, ...labels.map(compact)].filter(Boolean));
+}
+export function profileOwner(
+  url: string,
+  config: Pick<ScoringConfig, 'brandAliases' | 'ownedDomains' | 'competitors'>,
+): { owned: boolean; competitor: string | null } {
+  const handle = profileHandle(url);
+  if (!handle) return { owned: false, competitor: null };
+  if (handlesOf(config.brandAliases, config.ownedDomains).has(handle))
+    return { owned: true, competitor: null };
+  const rival = config.competitors.find((item) =>
+    handlesOf(item.aliases, item.domains).has(handle),
+  );
+  return { owned: false, competitor: rival?.name ?? null };
 }
 export function classifySourceDomain(
   domain: string,

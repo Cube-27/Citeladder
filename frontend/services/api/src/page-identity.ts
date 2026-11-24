@@ -13,6 +13,16 @@ const IGNORED_QUERY_KEYS: ReadonlySet<string> = new Set([
   ...siteHealth.ignored_query_keys,
 ]);
 
+export function ignoredQueryKey(key: string): boolean {
+  const lower = key.toLowerCase();
+  return (
+    IGNORED_QUERY_KEYS.has(lower) ||
+    siteHealth.tracking_param_prefixes.some((prefix) => lower.startsWith(prefix))
+  );
+}
+
+export const PATH_LITERAL = /[A-Za-z0-9\-._~:@!$&'()*+,;=]/u;
+
 export function canonicalPage(input: string, origin?: string | null): string | null {
   try {
     let value = input.trim();
@@ -35,16 +45,14 @@ export function canonicalPage(input: string, origin?: string | null): string | n
     if (!siteHealth.web_fetch.ports.includes(port)) return null;
     const path = (rawPath || '/').replace(/%([0-9a-f]{2})/giu, (_match, hex: string) => {
       const char = String.fromCodePoint(Number.parseInt(hex, 16));
-      return /[a-z0-9\-._~]/iu.test(char) ? char : `%${hex.toUpperCase()}`;
+      return PATH_LITERAL.test(char) ? char : `%${hex.toUpperCase()}`;
     });
     const encoded = [...path]
       .map((char) =>
         /[A-Za-z0-9/%:@!$&'()*+,;=~._-]/u.test(char) ? char : encodeURIComponent(char),
       )
       .join('');
-    const pairs = [...parsed.searchParams].filter(
-      ([key]) => !IGNORED_QUERY_KEYS.has(key.toLowerCase()),
-    );
+    const pairs = [...parsed.searchParams].filter(([key]) => !ignoredQueryKey(key));
     pairs.sort(([ak, av], [bk, bv]) => compareIdentityText(ak, bk) || compareIdentityText(av, bv));
     const quote = (s: string) =>
       encodeURIComponent(s)

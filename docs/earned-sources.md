@@ -73,12 +73,14 @@ tasks.
 ## What a reading establishes
 
 **Page format is not publisher class.** `source_class` describes a domain and
-comes from `config/source-patterns.ts`. `page_format` describes one page. Sync
+comes from `config/source-patterns.ts`, except that a profile on a social domain
+whose handle matches the brand's or a competitor's name, alias or site label
+is that company's own. `page_format` describes one page. Sync
 derives a first verdict from the URL's shape (`url_pattern`); a reading may
 replace it with what the page says about itself, and a reading that learns
 nothing leaves it standing. A specific schema type (ItemList, FAQPage,
-VideoObject) is strongest, except that a list, comparison or review heading
-outranks ItemList or FAQPage markup that says otherwise, because sites put FAQ
+VideoObject) is strongest, except that a list, comparison or review title or
+main heading outranks ItemList or FAQPage markup that says otherwise, because sites put FAQ
 markup on lists and comparisons. The tracked brand's and competitors' names
 are removed from the title, headings and URL path first, so a name such as
 Best & Less never reads as a list. A list, comparison or review heading outranks

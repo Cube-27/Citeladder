@@ -476,10 +476,22 @@ it('serializes canonical URLs so one page has one identity', () => {
     'https://ex.com/a b?q=a b': 'https://ex.com/a%20b?q=a+b',
     'https://ex.com/a?a&b=1': 'https://ex.com/a?a=&b=1',
     'https://ex.com/p?utm_source=x': 'https://ex.com/p',
+    'https://en.wikipedia.org/wiki/Best_%26_Less': 'https://en.wikipedia.org/wiki/Best_&_Less',
+    'https://ex.com/p?sc_cid=1&SC_channel=x&utm_id=3&id=2': 'https://ex.com/p?id=2',
   };
   for (const [input, expected] of Object.entries(vectors)) {
     expect(canonicalIdentity(input).url, input).toBe(expected);
   }
+  const page = (url: string) => pageIdentity(url)?.url;
+  expect(page('https://en.wikipedia.org/wiki/Best_%26_Less')).toBe(
+    'https://en.wikipedia.org/wiki/Best_&_Less',
+  );
+  expect(page('https://bestandless.com.au/kids?sc_cid=email&utm_id=4&size=2')).toBe(
+    'https://bestandless.com.au/kids?size=2',
+  );
+  expect(page('https://www.facebook.com/bestandless')).not.toBe(
+    page('https://facebook.com/bestandless'),
+  );
 });
 it('compares owned outbound links by registrable domain, excluding the owned site', () => {
   const anchors = [
@@ -555,6 +567,12 @@ it('reads a list heading over generic Article markup and ignores nested entity t
   expect(marked('FAQPage', 'Kmart vs Target vs Big W').kind).toBe('comparison');
   expect(marked('ItemList', 'Kmart vs Target').kind).toBe('comparison');
   expect(marked('ItemList', 'Kmart review').kind).toBe('review');
+  expect(
+    format(
+      '<script type="application/ld+json">{"@type":"FAQPage"}</script><h1>Wool care</h1><h2>What is the best way to wash wool?</h2>',
+    ).kind,
+  ).toBe('reference');
+  expect(format('<h1>Best laptops: pros and cons</h1>').kind).toBe('review');
   expect(marked('FAQPage', 'Shipping questions')).toEqual({
     kind: 'reference',
     method: 'structured_data',

@@ -264,6 +264,7 @@
     "utm_source",
     "utm_term"
   ],
+  "tracking_param_prefixes": ["sc_", "utm_"],
   "ignored_query_keys": [
     "_pos",
     "_psq",

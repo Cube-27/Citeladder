@@ -1,11 +1,10 @@
 import { createHash } from 'node:crypto';
 import { getDomain } from 'tldts';
 
-import { policy } from '../config.ts';
 import { compareIdentityText } from '../analysis/comparison.ts';
+import { ignoredQueryKey, PATH_LITERAL } from '../page-identity.ts';
 import { publicUrl } from '../safe-fetch.ts';
 
-const UNRESERVED = /[A-Za-z0-9\-._~]/u;
 const PATH_SAFE = /[A-Za-z0-9/%:@!$&'()*+,;=~\-._]/u;
 const escapeByte = (char: string) => `%${char.codePointAt(0)!.toString(16).toUpperCase()}`;
 const quote = (value: string) => encodeURIComponent(value).replaceAll(/[!'()*]/gu, escapeByte);
@@ -14,7 +13,7 @@ const quotePlus = (value: string) => quote(value).replaceAll('%20', '+');
 function canonicalPath(pathname: string) {
   const decoded = pathname.replaceAll(/%([0-9a-f]{2})/giu, (_raw, hex: string) => {
     const char = String.fromCodePoint(Number.parseInt(hex, 16));
-    return UNRESERVED.test(char) ? char : `%${hex.toUpperCase()}`;
+    return PATH_LITERAL.test(char) ? char : `%${hex.toUpperCase()}`;
   });
   return Array.from(decoded, (char) => (PATH_SAFE.test(char) ? char : quote(char))).join('');
 }
@@ -23,12 +22,8 @@ export function canonicalIdentity(value: string, base?: string) {
   const url = publicUrl(value, base);
   url.hostname = url.hostname.replace(/\.$/u, '');
   url.pathname = canonicalPath(url.pathname);
-  const ignored = new Set([
-    ...policy.site_health.tracking_params,
-    ...policy.site_health.ignored_query_keys,
-  ]);
   const pairs = [...url.searchParams]
-    .filter(([key]) => !ignored.has(key.toLowerCase()))
+    .filter(([key]) => !ignoredQueryKey(key))
     .sort((a, b) => compareIdentityText(a[0], b[0]) || compareIdentityText(a[1], b[1]));
   url.search = pairs.map(([key, item]) => `${quotePlus(key)}=${quotePlus(item)}`).join('&');
   return {
