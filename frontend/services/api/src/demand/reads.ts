@@ -181,35 +181,125 @@ function invalidCursor(): never {
   });
 }
 
-export async function queryEvidencePage(
+type QueryEvidenceOptions = {
+  limit: number;
+  cursor: string | null;
+  query: string | null;
+  site_url_id: string | null;
+  resolution_outcome: string | null;
+};
+
+function cursorKey(cursor: string): unknown {
+  try {
+    return JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+  } catch {
+    return invalidCursor();
+  }
+}
+
+function evidenceRows(
   db: Database,
   scope: DemandScope,
-  options: {
-    limit: number;
-    cursor: string | null;
-    query: string | null;
-    site_url_id: string | null;
-    resolution_outcome: string | null;
-  },
+  snapshotId: string,
+  options: QueryEvidenceOptions,
 ) {
-  const snapshot = await requiredQuerySnapshot(db, scope);
   let query = new WorkspaceScope(scope.workspaceId)
     .selectFrom(db, 'query_evidence_rows')
-    .selectAll()
-    .select(isoDateText(sql.ref('date')).as('day'))
     .where('project_id', '=', scope.projectId)
-    .where('snapshot_id', '=', snapshot.id);
+    .where('snapshot_id', '=', snapshotId);
   if (options.query) query = query.where('normalized_query', '=', normalizeQuery(options.query));
   if (options.site_url_id) query = query.where('site_url_id', '=', options.site_url_id);
   if (options.resolution_outcome)
     query = query.where('resolution_outcome', '=', options.resolution_outcome);
+  return query;
+}
+
+const pageLimit = (limit: number) =>
+  Math.min(Math.max(limit, 1), policy.demand.QUERY_EVIDENCE_MAX_LIMIT);
+
+export async function queryEvidenceTotals(
+  db: Database,
+  scope: DemandScope,
+  options: QueryEvidenceOptions,
+) {
+  const snapshot = await requiredQuerySnapshot(db, scope);
+  let offset = 0;
   if (options.cursor) {
-    let key: unknown;
-    try {
-      key = JSON.parse(Buffer.from(options.cursor, 'base64url').toString('utf8'));
-    } catch {
+    const key = cursorKey(options.cursor);
+    if (
+      !Array.isArray(key) ||
+      key.length !== 2 ||
+      parseUuid(key[0]) !== snapshot.id ||
+      !Number.isSafeInteger(key[1]) ||
+      key[1] < 0
+    )
       invalidCursor();
-    }
+    offset = key[1];
+  }
+  const limit = pageLimit(options.limit);
+  const impressions = sql<number>`sum(impressions)::float8`;
+  const rows = await evidenceRows(db, scope, snapshot.id, options)
+    .select([
+      'normalized_query',
+      'observed_page_url',
+      'site_url_id',
+      'resolved_page_url',
+      'resolution_outcome',
+      impressions.as('impressions'),
+      sql<number>`sum(clicks)::float8`.as('clicks'),
+      sql<
+        number | null
+      >`(sum(position * impressions) filter (where position is not null) / nullif(sum(impressions) filter (where position is not null), 0))::float8`.as(
+        'position',
+      ),
+      sql<number>`count(distinct date)::int`.as('days'),
+    ])
+    .groupBy([
+      'normalized_query',
+      'observed_page_url',
+      'site_url_id',
+      'resolved_page_url',
+      'resolution_outcome',
+    ])
+    .orderBy(impressions, 'desc')
+    .orderBy('normalized_query')
+    .orderBy('observed_page_url')
+    .orderBy('resolution_outcome')
+    .limit(limit + 1)
+    .offset(offset)
+    .execute();
+  return {
+    snapshot,
+    items: rows.slice(0, limit).map((r) => ({
+      normalized_query: r.normalized_query,
+      observed_page_url: r.observed_page_url,
+      site_url_id: r.site_url_id,
+      resolved_page_url: r.resolved_page_url,
+      resolution_outcome: resolutionOutcome.parse(r.resolution_outcome),
+      impressions: r.impressions,
+      clicks: r.clicks,
+      ctr: r.impressions > 0 ? r.clicks / r.impressions : null,
+      position: r.position,
+      days: r.days,
+    })),
+    next_cursor:
+      rows.length > limit
+        ? Buffer.from(JSON.stringify([snapshot.id, offset + limit])).toString('base64url')
+        : null,
+  };
+}
+
+export async function queryEvidencePage(
+  db: Database,
+  scope: DemandScope,
+  options: QueryEvidenceOptions,
+) {
+  const snapshot = await requiredQuerySnapshot(db, scope);
+  let query = evidenceRows(db, scope, snapshot.id, options)
+    .selectAll()
+    .select(isoDateText(sql.ref('date')).as('day'));
+  if (options.cursor) {
+    const key = cursorKey(options.cursor);
     if (
       !Array.isArray(key) ||
       key.length !== 3 ||
@@ -221,7 +311,7 @@ export async function queryEvidencePage(
       invalidCursor();
     query = query.where(sql<boolean>`(date, id) > (${key[1]}::date, ${key[2]}::uuid)`);
   }
-  const limit = Math.min(Math.max(options.limit, 1), policy.demand.QUERY_EVIDENCE_MAX_LIMIT);
+  const limit = pageLimit(options.limit);
   const rows = await query
     .orderBy('date')
     .orderBy('id')

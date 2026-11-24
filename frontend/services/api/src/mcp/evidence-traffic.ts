@@ -10,7 +10,7 @@ import {
 import { insightsRead } from '../ai-traffic/insights.ts';
 import { pageContext, pagesRead, urlRead } from '../ai-traffic/pages.ts';
 import { readAiReferrals } from '../analytics/ai-referrals.ts';
-import { queryEvidencePage } from '../demand/reads.ts';
+import { queryEvidencePage, queryEvidenceTotals } from '../demand/reads.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';
 import { readProjectReadiness } from '../integrations/readiness.ts';
@@ -99,6 +99,17 @@ export async function performanceRead(
   };
 }
 
+async function queryEvidenceDays(...read: Parameters<typeof queryEvidencePage>) {
+  const page = await queryEvidencePage(...read);
+  return {
+    ...page,
+    items: page.items.map((row) => ({
+      ...row,
+      record_uri: `citeladder://query_row/${row.id}`,
+    })),
+  };
+}
+
 export async function queryEvidence(
   { db, scope }: ProjectRead,
   args: {
@@ -109,34 +120,41 @@ export async function queryEvidence(
     resolution_outcome?: string | null;
     cursor?: string | null;
     limit?: number | null;
+    granularity?: 'window' | 'day' | null;
   },
 ): Promise<Evidence> {
   if (args.window_end < args.window_start)
     throw new McpInputError('window_end must not precede window_start');
+  const window = { ...scope, windowStart: args.window_start, windowEnd: args.window_end };
+  const options = {
+    limit: args.limit ?? mcpPolicy.default_list_limit,
+    cursor: args.cursor ?? null,
+    query: args.query ?? null,
+    site_url_id: args.site_url_id ?? null,
+    resolution_outcome: args.resolution_outcome ?? null,
+  };
   try {
-    const page = await queryEvidencePage(
-      db,
-      { ...scope, windowStart: args.window_start, windowEnd: args.window_end },
-      {
-        limit: args.limit ?? mcpPolicy.default_list_limit,
-        cursor: args.cursor ?? null,
-        query: args.query ?? null,
-        site_url_id: args.site_url_id ?? null,
-        resolution_outcome: args.resolution_outcome ?? null,
-      },
-    );
+    const page =
+      args.granularity === 'day'
+        ? await queryEvidenceDays(db, window, options)
+        : await queryEvidenceTotals(db, window, options);
     const items = page.items.map(({ normalized_query, ...row }) => ({
       ...row,
       query: normalized_query,
-      record_uri: `citeladder://query_row/${row.id}`,
     }));
+    const { source_metric_row_ids, source_artifact_ids, ...snapshot } = page.snapshot;
     return {
-      state: page.snapshot.state,
-      snapshot: page.snapshot,
+      state: snapshot.state,
+      snapshot: {
+        ...snapshot,
+        source_metric_row_count: source_metric_row_ids.length,
+        source_artifact_count: source_artifact_ids.length,
+      },
       unsupported_dimensions: ['country', 'device', 'search_type'],
+      granularity: args.granularity ?? 'window',
       items,
       pagination: pagination(items, page.next_cursor),
-      artifact_refs: [reference('query_snapshot', page.snapshot.id)],
+      artifact_refs: [reference('query_snapshot', snapshot.id)],
     };
   } catch (error) {
     if (error instanceof ApiError && error.status === 404)

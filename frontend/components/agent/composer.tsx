@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import { IconButton } from '@/components/ui/button';
 import { ComposerFrame, PastedTextChip, RemovableChip } from '@/components/ui/chat-dock';
 import { AGENT_ATTACHMENT_ACCEPT } from '@/lib/agent/attachment-file';
-import { ArrowUp, Paperclip, RotateCcw, Square } from '@/lib/icons';
+import { CornerDownLeft, Paperclip, RotateCcw, Square } from '@/lib/icons';
 import type { ContextChip } from '@/lib/agent/handoff';
 import { AGENT_COMPOSER_MAX_ROWS } from '@/lib/config/agent';
 
@@ -99,9 +99,9 @@ export function Composer({
             skill={skill}
             disabled={menuDisabled}
           />
-          {model ? <ModelPicker state={model} disabled={menuDisabled} /> : null}
         </>
       }
+      settings={model ? <ModelPicker state={model} disabled={menuDisabled} /> : null}
       submit={
         <SubmitControl
           status={composerStatus({ pending, onStop, onRetry })}
@@ -202,7 +202,7 @@ function SubmitControl({
         <IconButton
           type="submit"
           variant="primary"
-          icon={ArrowUp}
+          icon={CornerDownLeft}
           label="Send"
           disabled={!canSend}
           pending={status === 'submitted'}

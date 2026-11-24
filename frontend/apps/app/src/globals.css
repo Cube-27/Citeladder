@@ -2008,6 +2008,9 @@ label {
   :is(.focus-input, .focus-frame) {
   background-color: var(--color-well);
 }
+:root:not([data-public-surface]) .surface-well :is(.focus-input, .focus-frame) {
+  background-color: var(--color-surface);
+}
 :root:not([data-public-surface])
   :is([data-state-frame], [data-state-block-inline]):not(
     :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip]) *

@@ -6,6 +6,8 @@ import { resolveOwnedPages } from '../src/demand/page-equivalence.ts';
 import { buildQueryEvidence } from '../src/demand/query-evidence.ts';
 import { recomputeDemand } from '../src/demand/snapshot.ts';
 import { hash } from '../src/crypto-text.ts';
+import { queryEvidence } from '../src/mcp/evidence-traffic.ts';
+import { z } from 'zod';
 import { refreshTrafficSnapshot } from '../src/traffic/snapshot.ts';
 import { enqueue, seedProject } from './referral-fixtures.ts';
 import { asOwner, Fixtures, testDatabase } from './support.ts';
@@ -318,6 +320,69 @@ describe('demand projections and admission', () => {
       body: { window_start: '2020-01-01', window_end: '2020-01-28' },
     });
     expect(unsaved.body.error.code).toBe('demand_window_not_saved');
+  });
+
+  it('gives the tool each query and page totalled over the window, with the daily rows on request and no snapshot id lists', async () => {
+    const seed = await importSeed(db, t, 'gsc_query_page_daily');
+    const page = await siteUrl(t, 'https://example.test/page');
+    const url = 'https://example.test/page';
+    await metric(db, seed, {
+      date: '2026-07-27',
+      values: ['ai software', url, '2026-07-27'],
+      metrics: { impressions: 30, clicks: 3, position: 10 },
+    });
+    await metric(db, seed, {
+      values: ['ai software', url, WINDOW[1]],
+      metrics: { impressions: 10, clicks: 1, position: 4 },
+    });
+    await metric(db, seed, {
+      values: ['other', url, WINDOW[1]],
+      metrics: { impressions: 5, clicks: 0, position: 2 },
+    });
+    await demand();
+    const read = { db, scope: { workspaceId: t.workspaceId, projectId: t.projectId }, origin: '' };
+    const window = { window_start: WINDOW[0], window_end: WINDOW[1], site_url_id: page };
+    const totals = await queryEvidence(read, { ...window, limit: 1 });
+    expect(totals.items).toEqual([
+      {
+        query: 'ai software',
+        observed_page_url: url,
+        site_url_id: page,
+        resolved_page_url: url,
+        resolution_outcome: 'exact',
+        impressions: 40,
+        clicks: 4,
+        ctr: 0.1,
+        position: 8.5,
+        days: 2,
+      },
+    ]);
+    expect(totals.snapshot).toMatchObject({ source_metric_row_count: 3 });
+    expect(totals.snapshot).not.toHaveProperty('source_metric_row_ids');
+    const rest = await queryEvidence(read, {
+      ...window,
+      limit: 1,
+      cursor: z.object({ next_cursor: z.string() }).parse(totals.pagination).next_cursor,
+    });
+    expect(rest.items).toMatchObject([{ query: 'other', impressions: 5, position: 2, days: 1 }]);
+    expect(rest.pagination).toMatchObject({ next_cursor: null });
+    const days = await queryEvidence(read, { ...window, granularity: 'day' });
+    expect(
+      z
+        .array(z.object({ query: z.string(), date: z.string(), impressions: z.number() }))
+        .parse(days.items),
+    ).toEqual([
+      { query: 'ai software', date: '2026-07-27', impressions: 30 },
+      expect.objectContaining({ date: WINDOW[1] }),
+      expect.objectContaining({ date: WINDOW[1] }),
+    ]);
+    const foreign = await tenant(db, fixtures);
+    expect(
+      await queryEvidence(
+        { ...read, scope: { workspaceId: foreign.workspaceId, projectId: foreign.projectId } },
+        window,
+      ),
+    ).toMatchObject({ state: 'unavailable' });
   });
 
   it('scopes query paging, resolution and override writes to membership/project, and validates 422 locations', async () => {

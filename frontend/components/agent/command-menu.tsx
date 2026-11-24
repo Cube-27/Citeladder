@@ -130,7 +130,7 @@ export function CommandField({
     : {};
 
   return (
-    <div className="relative min-w-0">
+    <div className="min-w-0">
       <Textarea
         ref={field}
         id={id}

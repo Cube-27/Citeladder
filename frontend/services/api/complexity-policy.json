@@ -57,7 +57,6 @@
       "services/api/src/crawl-logs/reads.ts::crawlSummary": 14,
       "services/api/src/crawl-logs/sources.ts::createSource::<anonymous>": 13,
       "services/api/src/crawl-logs/uploads.ts::completeUpload": 18,
-      "services/api/src/demand/reads.ts::queryEvidencePage": 14,
       "services/api/src/entitlements/access.ts::accessOf": 13,
       "services/api/src/entitlements/grants.ts::issueBundle": 20,
       "services/api/src/entitlements/grants.ts::issueBundle::<anonymous>::<anonymous>": 14,

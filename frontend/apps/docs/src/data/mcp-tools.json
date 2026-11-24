@@ -1071,7 +1071,7 @@
     {
       "name": "read_query_evidence",
       "title": "Read queries by page",
-      "description": "Read the Search Console queries that bring searchers to each site page, matched to pages CiteLadder crawled, for one saved window. Use it to see which queries a page ranks for, or which page answers a query; for totals and trends use read_performance, and for the search signals found in the same window use read_demand. The window must exactly match a saved one: read_demand returns it. Any other window returns unavailable exact_query_evidence_window_not_projected, which is not zero. Each row is one query, page and day: the query, the page Search Console reported, the crawled page it was matched to (site_url_id), how the match was made (resolution_outcome), and impressions, clicks and CTR. Rows come in pages; pass next_cursor for more. Country, device and search type are not broken out.",
+      "description": "Read the Search Console queries that bring searchers to each site page, matched to pages CiteLadder crawled, for one saved window. Use it to see which queries a page ranks for, or which page answers a query; for totals and trends use read_performance, and for the search signals found in the same window use read_demand. The window must exactly match a saved one: read_demand returns it. Any other window returns unavailable exact_query_evidence_window_not_projected, which is not zero. Each row is one query and page with its totals over the whole window, largest impressions first: the query, the page Search Console reported, the crawled page it was matched to (site_url_id), how the match was made (resolution_outcome), impressions, clicks, CTR (clicks divided by impressions), the impression-weighted average position and the number of days with data. Pass site_url_id to keep the queries of one page, and follow next_cursor until it is null before calling the list complete. granularity day returns the daily rows behind the totals instead, each with a citeladder:// id for fetch. Rows come in pages; pass next_cursor for more, with the same granularity and filters. Country, device and search type are not broken out.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1103,6 +1103,12 @@
             "type": "string",
             "enum": ["exact", "resolved", "ambiguous", "unresolved"],
             "description": "Keep only queries whose page match was exact, resolved (for example through a redirect or canonical), ambiguous or unresolved. All filters combine."
+          },
+          "granularity": {
+            "default": "window",
+            "description": "window (the default) totals each query and page over the window; day lists the daily rows.",
+            "type": "string",
+            "enum": ["window", "day"]
           },
           "cursor": {
             "type": "string",
