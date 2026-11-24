@@ -43,14 +43,20 @@ export function SourcePagesRow({
   label,
   pages,
   columns,
-}: Readonly<{ label: string; pages: readonly ProbePage[]; columns: readonly DataTableColumn[] }>) {
+  standing = true,
+}: Readonly<{
+  label: string;
+  pages: readonly ProbePage[];
+  columns: readonly DataTableColumn[];
+  standing?: boolean;
+}>) {
   const span = useShownSpan(columns.map((column) => column.key));
   return (
     <TableRow>
       <TableCell nested colSpan={span}>
         <DataTable
           label={label}
-          columns={PAGE_COLUMNS}
+          columns={standing ? PAGE_COLUMNS : PAGE_COLUMNS.filter(({ key }) => key !== 'mentions')}
           state={
             pages.length ? undefined : { kind: 'empty', inline: true, message: 'No pages cited.' }
           }
@@ -79,7 +85,7 @@ export function SourcePagesRow({
                   {classificationLabel(page.classification)}
                 </StatusMark>
               </TableCell>
-              <TableCell>{standingLabel(page.standing)}</TableCell>
+              {standing ? <TableCell>{standingLabel(page.standing)}</TableCell> : null}
               <TableCell numeric>{page.citations}</TableCell>
             </TableRow>
           ))}

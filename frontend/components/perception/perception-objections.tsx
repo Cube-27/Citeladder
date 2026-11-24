@@ -69,7 +69,13 @@ function Lede({ data }: Readonly<{ data: ProbeObjectionsValue }>) {
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'objection', label: 'Objection' },
-  { key: 'score', label: 'Position score', kind: 'number', width: 'metric' },
+  {
+    key: 'score',
+    label: 'Position score',
+    kind: 'number',
+    width: 'metric',
+    hint: '100 when an answer raises it first, 10 less per place, 0 when not raised. Averaged across answers.',
+  },
   { key: 'engines', label: 'Engines', kind: 'number', width: 'shortMetric' },
   { key: 'trend', label: 'Trend', sublabel: 'Recent probes', width: 'metric' },
   { key: 'sources', label: 'Sources', kind: 'number', width: 'shortMetric' },
@@ -156,6 +162,7 @@ function ObjectionTable({
                   label={`Sources behind ${group.name}`}
                   pages={group.pages}
                   columns={COLUMNS}
+                  standing={false}
                 />
               ) : null}
             </Fragment>
