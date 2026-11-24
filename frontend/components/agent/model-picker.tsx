@@ -112,7 +112,7 @@ function ChoiceMenu<Value extends string>({
           {shown ?? label}
         </Button>
       </MenuTrigger>
-      <MenuContent align="start" side="top">
+      <MenuContent align="end" side="top">
         <MenuRadioGroup value={value ?? ''}>
           {options.map((option) => (
             <MenuRadioItem

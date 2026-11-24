@@ -43,6 +43,7 @@ export {
   IconArrowLeft as ArrowLeft,
   IconArrowRight as ArrowRight,
   IconArrowUp as ArrowUp,
+  IconCornerDownLeft as CornerDownLeft,
   IconArrowUpRight as ArrowUpRight,
   IconChartBar as BarChart3,
   IconBook as BookOpen,

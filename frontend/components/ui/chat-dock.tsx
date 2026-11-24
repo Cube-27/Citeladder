@@ -56,7 +56,7 @@ export function ComposerDock({
   onJumpToLatest,
 }: Readonly<{ children: ReactNode; onJumpToLatest?: (() => void) | null }>) {
   return (
-    <div className="z-sticky relative shrink-0 pt-2 pb-4">
+    <div className="z-sticky relative shrink-0 pt-2 pb-1">
       {onJumpToLatest ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-full flex justify-center pb-2">
           <IconButton
@@ -79,6 +79,7 @@ export function ComposerFrame({
   chipsLabel,
   field,
   tools,
+  settings,
   submit,
   onFiles,
 }: Readonly<{
@@ -87,6 +88,7 @@ export function ComposerFrame({
   chipsLabel: string;
   field: ReactNode;
   tools?: ReactNode;
+  settings?: ReactNode;
   submit: ReactNode;
   onFiles?: (files: File[]) => void;
 }>) {
@@ -96,11 +98,7 @@ export function ComposerFrame({
   return (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <form // NOSONAR
-      data-dragging={dragging || undefined}
-      className={cn(
-        'focus-frame max-w-thread mx-auto grid w-full min-w-0 grid-cols-[minmax(0,1fr)] gap-1 rounded-card p-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)] data-[dragging]:border-focus',
-        FIELD_EDGE,
-      )}
+      className="max-w-thread mx-auto grid w-full min-w-0 grid-cols-[minmax(0,1fr)] gap-1"
       onDragOver={(event) => {
         if (!carriesFiles(event)) return;
         event.preventDefault();
@@ -121,15 +119,28 @@ export function ComposerFrame({
         onSubmit();
       }}
     >
-      {chips ? (
-        <ul aria-label={chipsLabel} className="flex flex-wrap gap-2">
-          {chips}
-        </ul>
-      ) : null}
-      {field}
-      <div className="flex min-h-[var(--control-md)] flex-wrap items-start gap-2">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">{tools}</div>
-        <div className="ms-auto shrink-0">{submit}</div>
+      <div
+        data-dragging={dragging || undefined}
+        className={cn(
+          'focus-frame relative flex min-w-0 items-end gap-1 rounded-card p-1 ps-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)] data-[dragging]:border-focus',
+          FIELD_EDGE,
+        )}
+      >
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+          {chips ? (
+            <ul aria-label={chipsLabel} className="flex min-w-0 flex-wrap items-center gap-2">
+              {chips}
+            </ul>
+          ) : null}
+          <div className="min-w-[min(12rem,100%)] flex-1">{field}</div>
+        </div>
+        <div className="shrink-0">{submit}</div>
+      </div>
+      <div className="flex min-h-[var(--control-md)] flex-wrap items-center gap-2">
+        <div className="flex min-w-0 items-center gap-1">{tools}</div>
+        <div className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
+          {settings}
+        </div>
       </div>
     </form>
   );

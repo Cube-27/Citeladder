@@ -329,6 +329,20 @@ filled from every page, evaluation or issue of a crawl. A nested loop over a
 crawl's pages, or a lookup led by the growing side instead of the batch. A new entitlement
 ceiling without a matching `SITE_HEALTH_SCALE_PAGES` run.
 
+### A tool result is sized for the model that reads it
+
+**Rule:** An Agent or MCP read returns rows at the grain its question needs
+(totals over a window before daily rows) and counts in place of id lists that
+grow with the data. Nothing but `items` may grow with the project.
+**Why:** 2026-11-24: `read_query_evidence` returned the snapshot's 2,181
+source row ids with every page, which alone passed `tool_result_max_chars`.
+The adapter halved `limit` down to 1, so each call gave the model one of a
+page's 415 daily rows. A Search Console turn took 35 model calls and over four
+minutes, and still answered on partial data.
+**Check:** A read that returns an owner's whole row or snapshot (`selectAll`,
+provenance arrays) to a tool. A list whose rows are per day when the skill
+asks per query or page.
+
 ### Independent awaits run together
 
 **Rule:** Run independent awaits together. A loop that must stay sequential
