@@ -2,6 +2,7 @@ import { parse as parseHost } from 'tldts';
 
 import { policy } from '../config.ts';
 import { stripTrailing } from '../text-order.ts';
+import { isHomepagePath, normalizedPath } from './routes.ts';
 import { canonicalIdentity } from './url-identity.ts';
 
 const crawl = policy.site_health.crawl;
@@ -91,8 +92,9 @@ export function listedAdmission(admission: Admission, sitemaps: readonly string[
 }
 
 function valueKind(url: string) {
-  const path = stripTrailing(new URL(url).pathname.toLowerCase(), '/') || '/';
-  if (path === '/') return 'homepage';
+  const parsed = new URL(url);
+  if (isHomepagePath(normalizedPath(parsed))) return 'homepage';
+  const path = stripTrailing(parsed.pathname.toLowerCase(), '/');
   const segments = path.split('/').filter(Boolean);
   for (const segment of segments) {
     const kind = namedKind(segment);
