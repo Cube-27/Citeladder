@@ -570,9 +570,11 @@ attempt. Known task IDs use free result polling.
 A DataForSEO refusal of the account itself (paused, unfunded or unsubscribed:
 `account_unavailable_status_codes` in `dataforseo.json`) fails that answer as
 `provider_account_unavailable` and pauses the connection for
-`DATAFORSEO_ACCOUNT_PAUSE_MINUTES` (default 60). Until then its queued answers
-fail with the same code before any provider call, other engines in the run
-continue, and the connection resumes on its own once the pause ends.
+`DATAFORSEO_ACCOUNT_PAUSE_MINUTES` (default 60). Until then its answers not yet
+submitted fail with the same code before any provider call, answers already
+submitted (and paid for) are still retrieved, and other engines in the run
+continue. The connection resumes when the pause ends, on a passing connection
+test, or when its credentials are replaced.
 
 Manual launch offers six independent engines (`config/providers.json`); saved
 schedules retain their engine IDs. One customer DataForSEO credential serves all three consumer surfaces. New and

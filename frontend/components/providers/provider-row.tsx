@@ -1,5 +1,6 @@
 import { executionFailureReason } from '@/lib/runs/status';
-import { endSentence } from '@/lib/format';
+import { endSentence, formatDisplayTimestamp } from '@/lib/format';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { useId, useState } from 'react';
 
 import { StatusMark } from '@/components/ui/status-mark';
@@ -43,6 +44,13 @@ function StatusBadge({
       </StatusMark>
     );
   }
+  if (group.engines.some((engine) => engine.pause)) {
+    return (
+      <StatusMark variant="status" value="warning">
+        Paused
+      </StatusMark>
+    );
+  }
   if (group.engines.some((engine) => engine.state === 'failed')) {
     return (
       <StatusMark variant="status" value="danger">
@@ -60,7 +68,28 @@ function StatusBadge({
   return compact ? null : <StatusMark>Not connected</StatusMark>;
 }
 
+const PAUSE_REASONS: Record<string, string> = {
+  provider_account: 'The provider refused the account. Check its funds and status.',
+  auth: 'The provider rejected the key.',
+};
+
+function PauseNotice({
+  pause,
+  reason,
+}: Readonly<{ pause: NonNullable<ProviderGroup['engines'][number]['pause']>; reason: string }>) {
+  const timeZone = useDisplayTimeZone();
+  return (
+    <p className="type-caption text-negative">
+      {pause.until ? `Paused until ${formatDisplayTimestamp(pause.until, timeZone)}.` : 'Paused.'}{' '}
+      {PAUSE_REASONS[reason] ?? ''} A passing test resumes it.
+    </p>
+  );
+}
+
 function LastFailure({ group }: Readonly<{ group: ProviderGroup }>) {
+  const paused = group.engines.find((engine) => engine.pause);
+  if (paused?.pause)
+    return <PauseNotice pause={paused.pause} reason={paused.latest_probe?.safe_reason ?? ''} />;
   const probe = group.engines.find(
     (engine) => engine.state === 'failed' && engine.latest_probe,
   )?.latest_probe;

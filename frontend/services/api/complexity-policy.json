@@ -91,7 +91,6 @@
       "services/api/src/providers/capacity.ts::acquireCapacity::<anonymous>": 13,
       "services/api/src/providers/connections.ts::replaceRoutes": 13,
       "services/api/src/providers/connections.ts::rotatedSecret": 13,
-      "services/api/src/providers/states.ts::connectionStates::<anonymous>#2": 17,
       "services/api/src/public-api/idempotency.ts::withIdempotency": 13,
       "services/api/src/routes/auth.ts::handle#16": 13,
       "services/api/src/routes/define.ts::defineRoute": 18,

@@ -106,7 +106,7 @@ async function runStep(
     engine: 'search_intelligence',
     transport: 'dataforseo',
     source: prepared.run.credential_source === 'platform' ? 'platform' : 'byok',
-    connectionId: prepared.run.connection_id,
+    connectionId: prepared.connection.id,
     ...(prepared.accountId ? { accountId: prepared.accountId } : {}),
     accountPoolIdentity: prepared.run.account_identity,
   };

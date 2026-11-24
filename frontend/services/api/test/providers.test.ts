@@ -301,7 +301,16 @@ describe('provider credential custody', () => {
       .set({ paused_at: new Date(), pause_until: null, pause_reason: 'auth_failure' })
       .where('id', '=', id)
       .execute();
-    expect(await state()).toMatchObject({ state: 'failed', safe_reason: 'auth_failure' });
+    expect(await state()).toMatchObject({
+      state: 'failed',
+      safe_reason: 'auth_failure',
+      pause: { until: null },
+    });
+    await probeConnection(db, w, id, key, settings, async () => ({
+      status: 200,
+      body: { content: [{ type: 'text', text: 'ok' }] },
+    }));
+    expect(await state()).toMatchObject({ state: 'connected', safe_reason: null, pause: null });
   });
 
   it('publishes every routed engine with its label, display order and surface kind', async () => {

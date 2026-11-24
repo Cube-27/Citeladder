@@ -155,6 +155,7 @@ async function replaceRoutes(
       .execute();
   }
 }
+export const LIFTED_PAUSE = { paused_at: null, pause_until: null, pause_reason: '' };
 async function lockWorkspace(db: Database, id: string) {
   const row = await db
     .selectFrom('workspaces')
@@ -243,6 +244,7 @@ export async function updateConnection(
                 credential_revision: randomUUID(),
                 last_tested_at: null,
                 last_test_status: '',
+                ...LIFTED_PAUSE,
               }
             : {}),
         })

@@ -8,13 +8,18 @@ import { frozenSurfaceRequest } from '../src/audits/surfaces/dataforseo.ts';
 import { llmScraperSurface } from '../src/audits/surfaces/llm-scraper.ts';
 import { commitSubmissionIntent } from '../src/audits/submission-intent.ts';
 import { AuditQueue } from '../src/queue/audit-queue.ts';
-import { createConnection, updateConnection } from '../src/providers/connections.ts';
+import {
+  createConnection,
+  deleteConnection,
+  updateConnection,
+} from '../src/providers/connections.ts';
 import { createConnectionInput, updateConnectionInput } from '../src/providers/inputs.ts';
 import { probeConnection } from '../src/providers/probes.ts';
 import { record } from '../src/db/json.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { auditTenant, auditTestKey } from './audit-fixtures.ts';
+import { searchIntelligenceRun } from './search-intelligence-fixtures.ts';
 
 const db = testDatabase(),
   fixtures = new VisibilityFixtures(db),
@@ -236,6 +241,64 @@ describe('frozen audit execution identity', () => {
         env: {},
       }),
     ).rejects.toMatchObject({ code: 'connection_changed' });
+  });
+  it('holds new submissions while the account is paused, still retrieves a submitted task, and resumes on a passing test', async () => {
+    const t = await seed(true);
+    const load = (task = t.task) =>
+      loadExecutionContext(db, task, t.task.lease_owner, runtime, auditTestKey, {
+        at: new Date(),
+        env: {},
+      });
+    await db
+      .updateTable('provider_connections')
+      .set({
+        paused_at: new Date(),
+        pause_until: new Date(Date.now() + 3_600_000),
+        pause_reason: 'provider_account',
+      })
+      .where('id', '=', t.connectionId)
+      .execute();
+    await expect(load()).rejects.toMatchObject({ code: 'provider_account_unavailable' });
+
+    await db
+      .updateTable('audit_tasks')
+      .set({ provider_task_id: 'provider-task-1' })
+      .where('id', '=', t.task.id)
+      .execute();
+    expect((await load({ ...t.task, provider_task_id: 'provider-task-1' }))?.connectionId).toBe(
+      t.connectionId,
+    );
+
+    await db
+      .updateTable('audit_tasks')
+      .set({ provider_task_id: '' })
+      .where('id', '=', t.task.id)
+      .execute();
+    await probeConnection(
+      db,
+      t.workspaceId,
+      t.connectionId,
+      auditTestKey,
+      runtime.providers,
+      async () => ({ status: 200, body: { status_code: 20000, tasks: [] } }),
+    );
+    expect((await load())?.connectionId).toBe(t.connectionId);
+  });
+  it('removes a connection that a finished Search Intelligence run used and keeps the run', async () => {
+    const t = await auditTenant(db, fixtures);
+    const runId = await searchIntelligenceRun(db, t);
+    const run = () =>
+      db
+        .selectFrom('search_intelligence_runs')
+        .select(['connection_id', 'account_identity'])
+        .where('id', '=', runId)
+        .executeTakeFirstOrThrow();
+    const used = (await run()).connection_id!;
+    await deleteConnection(db, t.workspaceId, t.userId, used);
+    expect(
+      await db.selectFrom('provider_connections').select('id').where('id', '=', used).execute(),
+    ).toEqual([]);
+    expect(await run()).toEqual({ connection_id: null, account_identity: 'account' });
   });
   it('refuses a scraper submission whose frozen request lost its scraper settings', async () => {
     const t = await seed(true);

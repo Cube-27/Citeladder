@@ -9,6 +9,7 @@ import {
   basicAuthorization,
   type Connection,
   getConnection,
+  LIFTED_PAUSE,
   requireActiveTransport,
   tenantConnections,
 } from './connections.ts';
@@ -133,7 +134,12 @@ function recordProbe(
       if (matches) {
         await trx
           .updateTable('provider_connections')
-          .set({ last_test_status: status, last_tested_at: testedAt, updated_at: testedAt })
+          .set({
+            last_test_status: status,
+            last_tested_at: testedAt,
+            updated_at: testedAt,
+            ...(status === 'ok' ? LIFTED_PAUSE : {}),
+          })
           .where('id', '=', id)
           .execute();
       }

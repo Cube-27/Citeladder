@@ -343,6 +343,7 @@ export const providerConnectionStateEntrySchema = responseObject({
   label: z.string(),
   state: providerConnectionStateSchema,
   safe_reason: z.string().nullable(),
+  pause: responseObject({ until: z.string().nullable() }).nullable(),
   grant_key: z.string(),
   latest_probe: providerProbeSchema.nullable(),
 });
