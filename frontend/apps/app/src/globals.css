@@ -1400,7 +1400,6 @@ a.focus-ring:active .type-caption {
 .surface-tray {
   --tray-radius: 14px;
   --tray-padding: 4px;
-  border: 1px solid var(--color-rule);
   border-radius: var(--tray-radius);
   background: color-mix(in oklab, var(--color-page), var(--color-ink) 3%);
   padding: var(--tray-padding);
@@ -2029,7 +2028,7 @@ label {
   :is(.surface-card, .surface-slip, .surface-lift, [data-figure-strip], [data-state-frame]):not(
     :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], [data-figure-strip]) *
   ) {
-  border-color: var(--color-rule);
+  border-color: color-mix(in oklab, var(--color-rule), transparent 50%);
   border-radius: calc(var(--tray-radius) - var(--tray-padding));
 }
 :root:not([data-public-surface])
