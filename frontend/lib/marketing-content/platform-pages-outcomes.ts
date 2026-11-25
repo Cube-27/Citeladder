@@ -151,7 +151,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Matched in every answer, ChatGPT carousels included',
-        body: 'Products are matched in every answer your project collects, including each organic ChatGPT carousel card with its price and merchant.',
+        body: 'Products are matched in every answer your project collects, including each organic ChatGPT carousel card, with its price and merchant when the card shows them.',
         points: [
           'Cards matched by link, ChatGPT’s product id or name',
           'Sponsored carousel cards kept out of the shelf',
