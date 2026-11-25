@@ -708,6 +708,8 @@
   --site-radius-inner: 4px;
   --site-radius-card: 12px;
   --site-radius-stage: 16px;
+  --site-radius-frame: 20px;
+  --site-radius-frame-inner: 14px;
   --text-heading-lg: 1.25rem;
   --text-heading-lg--line-height: 1.5rem;
   --text-site-home: 3.75rem;
@@ -762,7 +764,9 @@
   --color-site-well: oklch(97% 0 0);
   --color-site-screen: var(--color-surface);
   --color-site-shot-well: #e9eef6;
-  --color-site-shot-pad: var(--color-site-shot-well);
+  --color-site-frame-strip: oklch(93.5% 0.004 264);
+  --color-site-frame-edge: oklch(0% 0 0 / 8%);
+  --color-site-frame-card: oklch(100% 0 0);
   --color-site-stage-from: oklch(96.5% 0.022 55);
   --color-site-stage-mid: oklch(90% 0.06 50);
   --color-site-stage-to: oklch(78% 0.125 44);
@@ -823,7 +827,9 @@
   --color-site-well: oklch(21.2% 0 0);
   --color-site-screen: oklch(24.5% 0 0);
   --color-site-shot-well: var(--color-site-well);
-  --color-site-shot-pad: transparent;
+  --color-site-frame-strip: oklch(20.5% 0 0);
+  --color-site-frame-edge: oklch(100% 0 0 / 7%);
+  --color-site-frame-card: oklch(14.5% 0 0);
   --color-site-stage-from: oklch(23% 0.02 50);
   --color-site-stage-mid: oklch(29% 0.06 45);
   --color-site-stage-to: oklch(42% 0.125 40);

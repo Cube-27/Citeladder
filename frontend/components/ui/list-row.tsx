@@ -219,7 +219,7 @@ export function ItemRow({
   return (
     <li
       {...props}
-      className="phone:grid-cols-[20px_minmax(0,1fr)] grid grid-cols-[20px_minmax(0,1fr)_fit-content(40%)] items-center gap-3 py-3 @[640px]:grid-cols-[20px_minmax(0,1fr)_fit-content(40%)_auto]"
+      className="phone:grid-cols-[20px_minmax(0,1fr)] grid grid-cols-[20px_minmax(0,1fr)_fit-content(40%)] items-start gap-3 py-3 @[640px]:grid-cols-[20px_minmax(0,1fr)_fit-content(40%)_auto]"
     >
       <span className="flex size-5 items-center justify-center self-start">{icon}</span>
       <div className="grid min-w-0 gap-0.5">
@@ -237,12 +237,12 @@ export function ItemRow({
       <div
         className={textRole(
           'caption',
-          'text-ink-2 phone:col-start-2 flex min-w-0 items-center gap-2',
+          'text-ink-2 phone:col-start-2 flex min-h-5 min-w-0 items-center gap-2',
         )}
       >
         {status}
       </div>
-      <div className="col-[2/-1] flex flex-wrap items-center gap-2 @[640px]:col-auto">
+      <div className="col-[2/-1] flex flex-wrap items-center gap-2 @[640px]:col-auto @[640px]:h-5">
         {actions}
       </div>
     </li>

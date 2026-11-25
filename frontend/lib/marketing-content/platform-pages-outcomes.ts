@@ -151,7 +151,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Matched in every answer, ChatGPT carousels included',
-        body: 'Products are matched in every successful answer your project collects, from brand runs as well as shopping prompts. On ChatGPT, each organic shopping carousel card becomes a ranked slot with its title, tag, price, currency and merchant when the card carries them. On every engine, product lists and sentences in the answer text are read too. When you import or change your catalog, CiteLadder re-reads the stored answers from the last 30 days, so a new product is measured against the answers you already have.',
+        body: 'Products are matched in every answer your project collects, including each organic ChatGPT carousel card with its price and merchant.',
         points: [
           'Cards matched by link, ChatGPT’s product id or name',
           'Sponsored carousel cards kept out of the shelf',
@@ -162,7 +162,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Metrics per product, each with a definition',
-        body: 'The Products table lists your catalog, and on All products the competitor products answers name, over 7, 30 or 90 days, for one engine or prompt set if you choose. Visibility is the share of answers in scope that name the product. Win rate is how often it comes first when an answer ranks it, so it only counts answers the product appears in. Position is its average rank in those answers. Mentioned price is the median price answers quote in your catalog currency, shown beside your catalog price.',
+        body: 'Visibility, win rate, position and quoted price for each product over 7, 30 or 90 days, beside the competitor products answers name.',
         points: [
           'Appearances, where zero is a real zero',
           'Quotes in other currencies counted, not converted',
@@ -173,7 +173,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Bring your catalog in, then check it',
-        body: 'Add products from a public Shopify storefront URL, a Google Merchant Center feed file or the CSV template. You confirm the proposed category tree before anything is added, then see which rows were added, updated, unchanged or rejected, with the reason for each rejection. Edit or archive products in the app; an archived product keeps its history.',
+        body: 'Import from a Shopify storefront URL, a Merchant Center feed or a CSV, and see which rows were added, updated or rejected.',
         points: [
           'Shopify storefront by URL, with no app to install',
           'Merchant Center feed as CSV, TSV, XML or JSON',
@@ -184,7 +184,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'From the overview to a product’s Actions',
-        body: 'The Shopping overview ranks brands and products by appearances, with Share of Shelf for brands, your most and least visible products, the top merchants and the search queries behind answers that held a product. Each product’s page shows its competing products, merchants, cited sources, results per prompt and every answer it appeared in. Actions flag products that answers never mention, quote at a different price, rarely put first, or send shoppers to other merchants for.',
+        body: 'The Shopping overview ranks brands and products. Actions flag products that answers skip, misprice or rarely put first.',
         points: [
           'Brand and product rankings for the window',
           'Competing products and how often each ranked above yours',
@@ -223,15 +223,15 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
     faqs: [
       {
         q: 'Who can use Product Visibility?',
-        a: 'Projects that sell from a catalog can use products found on their site. Any project can import products from a Shopify storefront, a Merchant Center feed or a CSV file. Book a demo to check your catalog.',
+        a: 'Any project with a catalog, found on its site or imported. Book a demo to check yours.',
       },
       {
         q: 'What is share of shelf?',
-        a: 'Your share of the recognized product slots in answers: your products’ slots divided by your slots plus those of the competitors you approved. Every recognized slot counts, ranked or not, and a product holds at most one slot per answer. Position and win rate are read only from answers that list products in order.',
+        a: 'Your products’ share of the product slots in answers, counted against the competitors you approved.',
       },
       {
         q: 'Why can win rate be higher than visibility?',
-        a: 'Win rate only counts the answers that rank the product, so a product that appears in few answers can still come first in most of them. Read the two together.',
+        a: 'Win rate only counts answers that rank the product, so a rarely named product can still come first when it appears.',
       },
       {
         q: 'Does this cover every place AI shows products?',
@@ -239,15 +239,15 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Do I need a Shopify connection?',
-        a: 'No. You can import a public Shopify storefront by its URL, upload a Merchant Center feed file or a CSV, or use products found on your site. There is no Shopify app to install and no automatic sync with Shopify or Merchant Center, so import again when your catalog changes.',
+        a: 'No. Import a public storefront by URL; there is no app and no automatic sync, so import again when your catalog changes.',
       },
       {
         q: 'Does it read product ratings?',
-        a: 'No. The ChatGPT carousel cards we tested carried no ratings, so CiteLadder does not read them.',
+        a: 'No. The ChatGPT carousel cards we tested carried no ratings.',
       },
       {
         q: 'Does it show how products trend over time?',
-        a: 'No. Figures cover the window you choose, 7, 30 or 90 days, without comparisons to the previous period or charts over time.',
+        a: 'No. Figures cover the 7, 30 or 90 days you choose.',
       },
       {
         q: 'Does it report sales or revenue from AI answers?',

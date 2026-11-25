@@ -50,12 +50,11 @@ export function ScreenContentOptimization() {
         rows={fourRows(CONTENT_WORK, (row) => ({
           key: row.page,
           label: row.page,
-          secondary: row.planned ? 'Planned page' : `Page · ${row.angle}`,
-          extra: (
-            <span className="cl-vig-muted">
-              {`${pluralCount(row.sites, 'site')} · ${pluralCount(row.competitors, 'competitor')}`}
-            </span>
-          ),
+          secondary: [
+            row.planned ? 'Planned page' : row.angle,
+            pluralCount(row.sites, 'site'),
+            pluralCount(row.competitors, 'competitor'),
+          ].join(' · '),
           value: pluralCount(row.prompts, 'prompt'),
         }))}
       />

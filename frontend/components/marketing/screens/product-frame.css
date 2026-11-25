@@ -1,16 +1,10 @@
 .cl-frame {
-  --frame-pad: 24px;
+  --frame-pad: 6px;
 
   display: flex;
   flex-direction: column;
   min-width: 0;
   margin: 0;
-}
-
-@media (max-width: 767px) {
-  .cl-frame {
-    --frame-pad: 12px;
-  }
 }
 
 .cl-frame-card {
@@ -21,17 +15,9 @@
   border: 0;
   position: relative;
   isolation: isolate;
-  border-radius: var(--site-radius-stage);
-  background: var(--color-site-shot-pad, transparent);
-  box-shadow: none;
-}
-
-.cl-frame-card:has(.cl-screen--app) {
-  background: none;
-}
-
-[class].cl-fcard:has(.cl-frame) {
-  --cl-tint: var(--color-site-shot-well, var(--tint-neutral));
+  border-radius: var(--site-radius-frame);
+  background: var(--color-site-frame-strip);
+  box-shadow: inset 0 0 0 1px var(--color-site-frame-edge);
 }
 
 .cl-frame-well {
@@ -43,7 +29,7 @@
 }
 
 .cl-fcard .cl-frame-well {
-  border-radius: var(--site-radius-card);
+  border-radius: var(--site-radius-frame-inner);
 }
 
 .cl-frame--fluid {
@@ -137,14 +123,8 @@
 
 .cl-frame-card > .cl-frame-well > .cl-frame-screen {
   overflow: hidden;
-  border-radius: var(--site-radius-inner);
-  background: var(--color-site-screen, var(--color-surface));
-}
-
-@media (max-width: 767px) {
-  .cl-frame-card {
-    border-radius: var(--site-radius-card);
-  }
+  border-radius: var(--site-radius-frame-inner);
+  background: var(--color-site-frame-card);
 }
 
 .cl-frame--scale > .cl-frame-card {
@@ -154,11 +134,11 @@
 .cl-frame--scale > .cl-frame-card > .cl-frame-well {
   overflow: hidden;
   border-bottom: 0;
-  border-radius: var(--site-radius-card) var(--site-radius-card) 0 0;
+  border-radius: var(--site-radius-frame-inner) var(--site-radius-frame-inner) 0 0;
 }
 
 .cl-frame--scale > .cl-frame-card > .cl-frame-well > .cl-frame-screen {
-  border-radius: var(--site-radius-inner) var(--site-radius-inner) 0 0;
+  border-radius: var(--site-radius-frame-inner) var(--site-radius-frame-inner) 0 0;
   background: none;
   box-shadow: none;
 }
@@ -168,6 +148,16 @@
   > .cl-frame-well
   > .cl-frame-screen:has(> .cl-screen--visibility) {
   background: var(--color-paper);
+}
+
+.cl-frame--stage {
+  --frame-pad: 24px;
+}
+
+@media (max-width: 767px) {
+  .cl-frame--stage {
+    --frame-pad: 12px;
+  }
 }
 
 .cl-frame--stage > .cl-frame-card {
