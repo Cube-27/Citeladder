@@ -56,6 +56,7 @@ export function TrendChart({
   legend = true,
   eventsLabel,
   directLabels = false,
+  fallbackWidth,
 }: Readonly<{
   data: readonly TrendPoint[];
   name?: string;
@@ -70,8 +71,9 @@ export function TrendChart({
   legend?: boolean;
   eventsLabel?: string;
   directLabels?: boolean;
+  fallbackWidth?: number;
 }>) {
-  const [plotRef, width] = useChartWidth<HTMLDivElement>();
+  const [plotRef, width] = useChartWidth<HTMLDivElement>(fallbackWidth);
   const [active, setActive] = useState<number | null>(null);
   const height = CHART_HEIGHT_PX[heightRole];
   const plotted: readonly Readonly<{

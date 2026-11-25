@@ -14,8 +14,8 @@
 }
 
 .cl-fcard .cl-vig {
-  border-radius: var(--site-radius-inner);
-  background: var(--color-site-screen, var(--color-surface));
+  border-radius: var(--site-radius-frame-inner);
+  background: var(--color-site-frame-card);
 }
 
 .cl-vig p {
@@ -108,6 +108,27 @@
 
 .cl-vig-row:first-child {
   border-top: 0;
+}
+
+.cl-vig-row:has(.cl-vig-secondary) {
+  align-items: start;
+}
+
+.cl-vig-row:has(.cl-vig-secondary) > :is(.cl-vig-lead, .cl-vig-value) {
+  display: flex;
+}
+
+.cl-vig-row:has(.cl-vig-secondary) > :is(.cl-vig-lead, .cl-vig-extra, .cl-vig-value) {
+  align-items: center;
+  height: var(--text-label--line-height);
+}
+
+.cl-vig-row:has(.cl-vig-secondary) > .cl-vig-lead {
+  justify-content: center;
+}
+
+.cl-vig-row:has(.cl-vig-secondary) > .cl-vig-value {
+  justify-content: flex-end;
 }
 
 .cl-vig-lead {
@@ -316,4 +337,29 @@
   padding: 8px 12px;
   border-radius: var(--radius-md);
   background: var(--color-surface-sunken);
+}
+
+.cl-vig-trend div:has(> svg) {
+  display: contents;
+}
+
+.cl-vig-trend svg {
+  width: 100%;
+  height: auto;
+}
+
+.cl-vig-cite > * {
+  min-height: 20px;
+  gap: 4px;
+  padding-inline: 6px;
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  vertical-align: 1px;
+}
+
+.cl-vig-cite > * > span:first-child {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  background: none;
 }

@@ -189,8 +189,8 @@ export function ProviderRow({
   const toggleLabel = open ? 'Close' : closedAction;
   return (
     <Stack as="li" gap="compact">
-      <Inline gap="workspace" className="flex-wrap">
-        <Inline gap="compact" className="flex-1">
+      <Inline gap="workspace" className="flex-wrap items-start">
+        <Inline gap="compact" className="flex-1 items-start">
           <BrandMark
             name={group.label}
             logoUrl={TRANSPORT_LOGOS[group.transport]}
@@ -205,7 +205,7 @@ export function ProviderRow({
             )}
           </div>
         </Inline>
-        <Inline>
+        <Inline className="phone:h-auto h-5">
           <StatusBadge group={group} connection={state.connection} compact={compact} />
           {canManage ? (
             <Button

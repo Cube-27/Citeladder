@@ -6,7 +6,10 @@ import { ScreenDelta, ScreenSite, ScreenTable, type ScreenColumn } from './scree
 
 export const percent = (value: number) => `${value.toFixed(1)}%`;
 
-export function VisibilityTrend({ height }: Readonly<{ height?: ChartHeight }>) {
+export function VisibilityTrend({
+  height,
+  fallbackWidth,
+}: Readonly<{ height?: ChartHeight; fallbackWidth?: number }>) {
   return (
     <TrendChart
       label="Visibility by week, Acme Analytics against Northwind and Lumen"
@@ -17,6 +20,7 @@ export function VisibilityTrend({ height }: Readonly<{ height?: ChartHeight }>) 
         { label: 'Lumen', values: TREND.lumen },
       ]}
       {...(height ? { height } : {})}
+      {...(fallbackWidth ? { fallbackWidth } : {})}
       yMin={0}
       yMax={50}
       yFormat={(value) => `${value}%`}

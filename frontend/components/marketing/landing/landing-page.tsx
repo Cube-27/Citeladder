@@ -199,12 +199,7 @@ function Teams() {
       <ul className="cl-tiles cl-audience">
         {solutions.map((item) => (
           <li key={item.href}>
-            <FeatureCard
-              href={item.href}
-              linkLabel={`Explore ${item.title}`}
-              title={item.title}
-              body={item.desc}
-            />
+            <FeatureCard href={item.href} linkLabel="Explore" title={item.title} body={item.desc} />
           </li>
         ))}
       </ul>

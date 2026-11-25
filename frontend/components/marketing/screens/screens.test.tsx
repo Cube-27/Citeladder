@@ -94,10 +94,10 @@ describe('screens', () => {
     render(<ScreenContentOptimization />);
 
     expect(rowsOf('Content work, highest priority first')).toEqual([
-      'acme.com/blog/session-replay-guidePage · Session replay setup guides5 sites · 2 competitors6 prompts',
-      'Product analytics pricing comparedPlanned page4 sites · 3 competitors5 prompts',
-      'acme.com/blog/funnel-analysisPage · Funnel analysis templates3 sites · 1 competitor4 prompts',
-      'Mobile analytics SDK comparisonPlanned page3 sites · 1 competitor3 prompts',
+      'acme.com/blog/session-replay-guideSession replay setup guides · 5 sites · 2 competitors6 prompts',
+      'Product analytics pricing comparedPlanned page · 4 sites · 3 competitors5 prompts',
+      'acme.com/blog/funnel-analysisFunnel analysis templates · 3 sites · 1 competitor4 prompts',
+      'Mobile analytics SDK comparisonPlanned page · 3 sites · 1 competitor3 prompts',
     ]);
     expect(screen.getByText('5 open')).toBeVisible();
   });
