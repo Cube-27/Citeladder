@@ -9,6 +9,7 @@ import { PageLink } from '@/components/site-health/page-link';
 import { scoreUnavailableState } from '@/components/site-health/url-score-summary';
 import { Absence, printed } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
 import { StatusMark } from '@/components/ui/status-mark';
@@ -22,7 +23,7 @@ import { ICONS } from '@/lib/icons';
 import { severityCount } from '@/lib/site-health/issues';
 import { formatScore, pageStatusBadgeValue, statusLabel } from '@/lib/site-health/status';
 
-type Pane = 'overview' | 'issues' | 'actions' | 'checks' | 'in' | 'out';
+type Pane = 'overview' | 'issues' | 'actions' | 'checks' | 'in' | 'out' | 'history' | 'traffic';
 type Links = NonNullable<PageDetail['internal_links']>;
 type Neighbour = Links['top_inbound'][number];
 
@@ -33,11 +34,15 @@ export function PageDrawerView({
   detail,
   actions,
   work,
+  history,
+  traffic,
   children,
 }: Readonly<{
   detail: PageDetail;
   actions?: ReactNode;
   work: { count: number | undefined; list: ReactNode };
+  history: ReactNode;
+  traffic: ReactNode;
   children?: ReactNode;
 }>) {
   const [pane, setPane] = useState<Pane>('overview');
@@ -50,6 +55,8 @@ export function PageDrawerView({
     { value: 'checks', label: 'Checks', count: checks.length },
     { value: 'in', label: 'Linked from', count: links?.inbound_count },
     { value: 'out', label: 'Links out', count: links?.outbound_count },
+    { value: 'history', label: 'History' },
+    ...(traffic ? [{ value: 'traffic', label: 'AI traffic' } as const] : []),
   ] as const satisfies readonly { value: Pane; label: string; count?: number }[];
   return (
     <TabsRoot
@@ -103,6 +110,8 @@ export function PageDrawerView({
             crawlId={detail.crawl_id}
           />
         </TabPanel>
+        <TabPanel value="history">{history}</TabPanel>
+        <TabPanel value="traffic">{traffic}</TabPanel>
       </div>
     </TabsRoot>
   );
@@ -114,8 +123,9 @@ function Figures({ detail }: Readonly<{ detail: PageDetail }>) {
   const audited = detail.analysis_status === 'completed';
   const issueCount = (severity: 'high' | 'medium' | 'low') =>
     audited ? formatCount(severityCount(counts, severity)) : notMeasured;
-  const figures = [
+  const segments: readonly FigureSegment[] = [
     {
+      key: 'web',
       label: 'Web fundamentals',
       value:
         detail.web_fundamentals_score === null
@@ -123,29 +133,18 @@ function Figures({ detail }: Readonly<{ detail: PageDetail }>) {
           : printed(formatScore(detail.web_fundamentals_score)),
     },
     {
+      key: 'aeo',
       label: 'AEO readiness',
       value:
         detail.aeo_readiness_score === null
           ? scoreUnavailableState(detail.aeo_measurement_state, detail.aeo_measurement_reason)
           : printed(formatScore(detail.aeo_readiness_score)),
     },
-    { label: 'High', value: issueCount('high') },
-    { label: 'Medium', value: issueCount('medium') },
-    { label: 'Low', value: issueCount('low') },
+    { key: 'high', label: 'High', value: issueCount('high') },
+    { key: 'medium', label: 'Medium', value: issueCount('medium') },
+    { key: 'low', label: 'Low', value: issueCount('low') },
   ];
-  return (
-    <dl
-      aria-label="Page scores and issues"
-      className="border-rule phone:grid-cols-2 grid grid-cols-5 gap-4 border-b pb-6"
-    >
-      {figures.map((figure) => (
-        <div key={figure.label} className="min-w-0">
-          <dt className={textRole('caption', 'text-ink-2')}>{figure.label}</dt>
-          <dd className={textRole('figure', 'tabular-nums')}>{figure.value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
+  return <FigureStrip label="Page scores and issues" segments={segments} />;
 }
 
 type FactRow = { label: string; value: ReactNode };

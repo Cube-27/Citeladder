@@ -16,6 +16,7 @@ import {
   isDiscoveryTerminal,
   type SiteHealthPhase,
 } from '@/lib/site-health/status';
+import { PageTabEnd } from '@/components/templates/page-tab-end';
 import { Notice } from '@/components/ui/notice';
 import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
@@ -123,12 +124,15 @@ function DashboardNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   const timeZone = useDisplayTimeZone();
   const notice = dashboardRunNotice(crawl);
   const ranAt = crawl.completed_at ?? crawl.started_at ?? crawl.created_at;
+  if (notice) return <ProgressRow crawl={crawl} narration={notice.message} counts={[]} />;
+  const narration = `Latest crawl · ${formatDisplayTimestamp(ranAt, timeZone)}`;
   return (
-    <ProgressRow
-      crawl={crawl}
-      narration={notice?.message ?? `Latest crawl · ${formatDisplayTimestamp(ranAt, timeZone)}`}
-      counts={[]}
-    />
+    <PageTabEnd fallback={<ProgressRow crawl={crawl} narration={narration} counts={[]} />}>
+      <span className="flex min-w-0 items-center gap-2">
+        <CrawlStatusBadge crawl={crawl} />
+        <span className="min-w-0 truncate">{narration}</span>
+      </span>
+    </PageTabEnd>
   );
 }
 

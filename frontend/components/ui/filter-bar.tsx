@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
 
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import {
   MenuRadioItem,
   MenuTrigger,
 } from '@/components/ui/menu';
+import { PageFilterBandContext, PageTabEnd } from '@/components/templates/page-tab-end';
 import { X } from '@/lib/icons';
 import { batchUrlWrites } from '@/lib/navigation/url-state';
 
@@ -114,25 +115,7 @@ function Controls({
         </div>
       ) : null}
       {windowLabel || status !== undefined ? (
-        <div
-          data-strip-meta=""
-          className={`${afterView ? 'rail:-order-1 ' : ''}rail:flex-[1_1_0] rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap has-[>output:empty]:not-has-[>span]:hidden`}
-        >
-          {windowLabel ? (
-            <span className="type-caption min-w-0 shrink truncate">
-              {windowLabel}
-              {status ? ' ·' : null}
-            </span>
-          ) : null}
-          {status === undefined ? null : (
-            <output
-              aria-live="polite"
-              className="type-caption block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"
-            >
-              {status}
-            </output>
-          )}
-        </div>
+        <StripMeta windowLabel={windowLabel} status={status} afterView={afterView} />
       ) : null}
       {actions ? (
         <div className="phone:ms-0 phone:justify-start phone:flex-wrap ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2">
@@ -140,6 +123,49 @@ function Controls({
         </div>
       ) : null}
     </>
+  );
+}
+
+function StripMeta({
+  windowLabel,
+  status,
+  afterView,
+}: Readonly<{ windowLabel: string | undefined; status: ReactNode; afterView: boolean }>) {
+  const inBand = useContext(PageFilterBandContext);
+  const content = (
+    <>
+      {windowLabel ? (
+        <span className="type-caption min-w-0 shrink truncate">
+          {windowLabel}
+          {status ? ' ·' : null}
+        </span>
+      ) : null}
+      {status === undefined ? null : (
+        <output
+          aria-live="polite"
+          className="type-caption block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"
+        >
+          {status}
+        </output>
+      )}
+    </>
+  );
+  const hidden = 'has-[>output:empty]:not-has-[>span]:hidden';
+  const row = (
+    <div
+      data-strip-meta=""
+      className={`${afterView ? 'rail:-order-1 ' : ''}rail:flex-[1_1_0] rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap ${hidden}`}
+    >
+      {content}
+    </div>
+  );
+  if (!inBand) return row;
+  return (
+    <PageTabEnd fallback={row}>
+      <div data-strip-meta="" className={`flex min-w-0 items-center gap-1 ${hidden}`}>
+        {content}
+      </div>
+    </PageTabEnd>
   );
 }
 

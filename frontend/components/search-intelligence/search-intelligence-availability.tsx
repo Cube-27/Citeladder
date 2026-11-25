@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
-import { TextLink } from '@/components/ui/text-link';
 import { Database, Unplug } from '@/lib/icons';
 import type { CredentialMode } from '@/lib/api/billing';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -61,22 +60,10 @@ export function NotConnected({ funded }: Readonly<{ funded: boolean }>) {
 export function UnavailableNotice({
   data,
 }: Readonly<{ data: { connected: boolean; credential_mode: CredentialMode } }>) {
-  const canManage = useWorkspaceCapability('manage_credentials');
-  if (data.connected) return null;
-  if (data.credential_mode === 'funded')
-    return (
-      <Notice tone="negative">
-        Research is temporarily unavailable, so saved results can be read but not refreshed.
-      </Notice>
-    );
+  if (data.connected || data.credential_mode !== 'funded') return null;
   return (
     <Notice tone="negative">
-      DataForSEO is not connected, so saved results can be read but not refreshed.{' '}
-      {canManage ? (
-        <TextLink href={PROVIDER_SETTINGS}>Open provider settings</TextLink>
-      ) : (
-        'A workspace Owner or Admin can add the login.'
-      )}
+      Research is temporarily unavailable, so saved results can be read but not refreshed.
     </Notice>
   );
 }

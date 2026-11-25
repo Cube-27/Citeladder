@@ -147,35 +147,6 @@ function dataset(
   };
 }
 
-it('says when saved results can no longer be refreshed', async () => {
-  renderPage({
-    ...readiness,
-    connected: false,
-    connection_id: null,
-    datasets: [dataset('www.example.com', { summary: { organic_keywords: 12 } })],
-  });
-  expect(
-    await screen.findByText(/saved results can be read but not refreshed/),
-  ).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'Open provider settings' })).toBeInTheDocument();
-});
-
-it('tells a Member who may not add the login who can, without sending them to settings', async () => {
-  renderPage(
-    {
-      ...readiness,
-      connected: false,
-      connection_id: null,
-      datasets: [dataset('www.example.com', { summary: { organic_keywords: 12 } })],
-    },
-    'member',
-  );
-  expect(
-    await screen.findByText(/A workspace Owner or Admin can add the login\./),
-  ).toBeInTheDocument();
-  expect(screen.queryByRole('link', { name: 'Open provider settings' })).toBeNull();
-});
-
 it('never sends a managed workspace to provider settings it does not have', async () => {
   renderPage({ ...readiness, credential_mode: 'funded', connected: false, connection_id: null });
   expect(

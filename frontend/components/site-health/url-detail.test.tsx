@@ -69,8 +69,8 @@ async function openHistory(history: HttpResponseResolver) {
   );
   const user = userEvent.setup();
   renderDrawer();
-  await user.click(await screen.findByRole('button', { name: 'History' }));
-  return { user, drawer: await screen.findByRole('dialog', { name: 'Issue history' }) };
+  await user.click(await screen.findByRole('tab', { name: 'History' }));
+  return { user, drawer: await screen.findByRole('tabpanel', { name: 'History' }) };
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
@@ -156,8 +156,8 @@ describe('URL drawer', () => {
     const user = userEvent.setup();
     renderDrawer();
 
-    await user.click(await screen.findByRole('button', { name: 'History' }));
-    const drawer = await screen.findByRole('dialog', { name: 'Issue history' });
+    await user.click(await screen.findByRole('tab', { name: 'History' }));
+    const drawer = await screen.findByRole('tabpanel', { name: 'History' });
     expect(await within(drawer).findByText('Page title is missing')).toBeInTheDocument();
     expect(within(drawer).getByRole('columnheader', { name: 'Last found' })).toBeInTheDocument();
     expect(historyReads).toBe(1);
@@ -205,7 +205,7 @@ describe('URL drawer', () => {
     unmount();
 
     renderDrawer('viewer');
-    expect(await within(await opened()).findByRole('button', { name: 'History' })).toBeVisible();
+    expect(await within(await opened()).findByRole('tab', { name: 'History' })).toBeVisible();
     expect(screen.queryByRole('button', { name: /^Re-audit/ })).toBeNull();
   });
 
