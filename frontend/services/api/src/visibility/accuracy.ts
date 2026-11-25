@@ -25,6 +25,7 @@ import {
   checkedTopics,
   frozenFactCheck,
   frozenPerceptionVersions,
+  promptFactCheck,
   type FrozenFactCheck,
   type PerceptionVersions,
 } from '../perception/admission.ts';
@@ -277,6 +278,7 @@ async function selectionAnswers(
         'audit.configuration',
         'audit.market_id',
         'snapshot.text as prompt',
+        'snapshot.prompt_id',
         utcTextOf(observedAt).as('observed_at'),
       ])
       .execute()
@@ -285,7 +287,11 @@ async function selectionAnswers(
     return frozen ? [{ ...row, frozen }] : [];
   });
   const factChecked = rows.length > 0;
-  const named = rows.filter((row) => brandNamedSchema.parse(row.entity_assessments));
+  const named = rows.filter(
+    (row) =>
+      promptFactCheck(row.frozen.factCheck, row.prompt_id) &&
+      brandNamedSchema.parse(row.entity_assessments),
+  );
   const ids = named.map((row) => row.id);
   const [extracted, citations] = await Promise.all([
     claimsOf(

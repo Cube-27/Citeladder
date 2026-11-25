@@ -47,6 +47,11 @@ export const promptBulkStatusRequestSchema = z.strictObject({
 });
 export type PromptBulkStatusRequest = z.input<typeof promptBulkStatusRequestSchema>;
 
+export const factCheckPromptsRequestSchema = z.strictObject({
+  prompt_ids: z.array(uuid()),
+});
+export type FactCheckPromptsRequest = z.input<typeof factCheckPromptsRequestSchema>;
+
 export const promptBulkDeleteRequestSchema = z.strictObject({
   prompt_ids: z.array(uuid()).min(1),
 });

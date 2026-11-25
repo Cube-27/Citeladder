@@ -2528,6 +2528,7 @@ export interface Prompts {
   cohort: Generated<string>;
   created_at: Timestamp;
   enabled: boolean;
+  fact_check: boolean | null;
   generation_evidence: Json | null;
   id: string;
   intent: string;

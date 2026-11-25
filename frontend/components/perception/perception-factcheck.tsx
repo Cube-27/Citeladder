@@ -2,6 +2,7 @@ import type { AccuracyResponse } from '@citeladder/contracts/fact-checking';
 import { useState } from 'react';
 
 import { ClaimsTable } from '@/components/perception/claims-table';
+import { FactPromptsDialog } from '@/components/perception/fact-prompts-dialog';
 import { FactsImportDialog } from '@/components/perception/facts-import-dialog';
 import { FactsTable } from '@/components/perception/facts-table';
 import { Button, buttonClasses } from '@/components/ui/button';
@@ -68,11 +69,16 @@ function FactActions({
 }: Readonly<{ claims: boolean; exporting: FactViews['exporting'] }>) {
   const { notify } = useToast();
   const [importing, setImporting] = useState(false);
+  const [choosing, setChoosing] = useState(false);
   return (
     <Inline gap="item" className="shrink-0">
       <ProjectLink href="/agent/context?tab=brand-facts" className={buttonClasses('secondary')}>
         Edit facts
       </ProjectLink>
+      <Button variant="secondary" onClick={() => setChoosing(true)}>
+        Prompts
+      </Button>
+      {choosing ? <FactPromptsDialog onClose={() => setChoosing(false)} /> : null}
       <Button variant="secondary" onClick={() => setImporting(true)}>
         <Icon icon={Upload} />
         Import facts CSV

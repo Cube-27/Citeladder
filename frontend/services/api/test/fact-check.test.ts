@@ -7,6 +7,7 @@ import { admittedFactCheck } from '../src/perception/admission.ts';
 import { answerPerception } from '../src/perception/executor.ts';
 import { factVerification } from '../src/perception/fact-verification.ts';
 import { ANSWER, factCheckHarness, fakeGateway, perceptionOutput } from './fact-check-support.ts';
+import { prompt, promptSet } from './prompt-fixtures.ts';
 import { sessionToken } from './support.ts';
 import { frozen } from './visibility-read-support.ts';
 import type { Tenant } from './visibility-fixtures.ts';
@@ -145,14 +146,52 @@ describe('brand facts', () => {
     expect(forged.status).toBe(404);
   });
 
-  it('freezes only the newest confirmed revisions, and nothing outside the pilot', async () => {
+  it('lists prompts with brand questions checked by default and saves a selection within the project', async () => {
+    const setId = await promptSet(db, tenant.projectId);
+    const branded = await prompt(db, setId, 'Is Acme any good?', { branded: true });
+    const plain = await prompt(db, setId, 'Best CRM tools?');
+    await prompt(db, setId, 'Old question?', { status: 'archived' });
+    expect((await call(tenant, 'GET', '/fact-check/prompts')).status).toBe(409);
+    await enroll(tenant);
+    const listed = await call(tenant, 'GET', '/fact-check/prompts');
+    expect(listed.body.prompts).toEqual([
+      { id: branded, text: 'Is Acme any good?', topic: null, checked: true },
+      { id: plain, text: 'Best CRM tools?', topic: null, checked: false },
+    ]);
+    const saved = await call(tenant, 'PUT', '/fact-check/prompts', { prompt_ids: [plain] });
     expect(
-      await admittedFactCheck(db, {
+      (saved.body.prompts as { id: string; checked: boolean }[]).map((row) => [
+        row.id,
+        row.checked,
+      ]),
+    ).toEqual([
+      [branded, false],
+      [plain, true],
+    ]);
+    const other = await fixtures.tenant();
+    await enroll(other);
+    const forged = await call(other, 'PUT', '/fact-check/prompts', { prompt_ids: [branded] });
+    expect(forged.status).toBe(404);
+    expect((await call(other, 'GET', '/fact-check/prompts')).body.prompts).toEqual([]);
+  });
+
+  it('freezes the newest confirmed revisions and checked prompts, and nothing outside the pilot', async () => {
+    const setId = await promptSet(db, tenant.projectId);
+    const [branded, plain, chosen, dropped] = await Promise.all([
+      prompt(db, setId, 'Is Acme any good?', { branded: true }),
+      prompt(db, setId, 'Best CRM tools?'),
+      prompt(db, setId, 'Cheapest CRM?', { factCheck: true }),
+      prompt(db, setId, 'Acme vs Rival?', { branded: true, factCheck: false }),
+    ]);
+    const admit = (auditScope: string, panelPromptIds: string[]) =>
+      admittedFactCheck(db, {
         workspaceId: tenant.workspaceId,
         projectId: tenant.projectId,
-        auditScope: 'brand',
-      }),
-    ).toBeNull();
+        auditScope,
+        panelPromptIds,
+      });
+    const panel = [branded, plain, chosen, dropped];
+    expect(await admit('brand', panel)).toBeNull();
     await enroll(tenant);
     const confirmed = await confirmedFact(tenant, 'pricing', 'Pro costs $59 per month.');
     await call(tenant, 'PATCH', `/brand-facts/${confirmed}`, {
@@ -165,11 +204,7 @@ describe('brand facts', () => {
       expected_revision: 2,
       status: 'retired',
     });
-    const frozen = await admittedFactCheck(db, {
-      workspaceId: tenant.workspaceId,
-      projectId: tenant.projectId,
-      auditScope: 'brand',
-    });
+    const frozen = await admit('brand', panel);
     const newest = await db
       .selectFrom('brand_fact_revisions')
       .select('id')
@@ -177,13 +212,9 @@ describe('brand facts', () => {
       .where('revision', '=', 3)
       .executeTakeFirstOrThrow();
     expect(frozen?.facts).toEqual([{ revision_id: newest.id, topic: 'pricing' }]);
-    expect(
-      await admittedFactCheck(db, {
-        workspaceId: tenant.workspaceId,
-        projectId: tenant.projectId,
-        auditScope: 'commerce',
-      }),
-    ).toBeNull();
+    expect(frozen?.prompt_ids).toEqual([branded, chosen].sort());
+    expect(await admit('brand', [plain, dropped])).toBeNull();
+    expect(await admit('commerce', panel)).toBeNull();
   });
 });
 
@@ -421,6 +452,28 @@ describe('claim extraction and verification', () => {
     expect([claims.length, (await queued(tenant, 'fact_verification')).length]).toEqual([0, 0]);
     const accuracy = await call(tenant, 'GET', `/visibility/accuracy?audit_id=${auditId}`);
     expect(accuracy.body.state).toBe('not_enabled');
+  });
+
+  it('extracts claims only from answers to prompts chosen for fact-checking', async () => {
+    await enroll(tenant);
+    await confirmedFact(tenant, 'pricing', 'Pro costs $59 per month.');
+    const configuration = await pilotConfiguration(tenant);
+    const auditId = await fixtures.audit(tenant, { configuration });
+    const setId = await promptSet(db, tenant.projectId);
+    const unchecked = await prompt(db, setId, 'Best CRM tools?');
+    const checkedTask = await analysed(tenant, auditId);
+    await analysed(tenant, auditId, ANSWER, unchecked);
+    const perception = fakeGateway([perceptionOutput, perceptionOutput]);
+    await drain(tenant, 'answer_perception', answerPerception(perception.factory));
+    const claimed = await db
+      .selectFrom('answer_claims as claim')
+      .innerJoin('answer_perceptions as perception', 'perception.id', 'claim.perception_id')
+      .innerJoin('response_analyses as ra', 'ra.id', 'perception.analysis_id')
+      .select('ra.task_id')
+      .distinct()
+      .where('claim.workspace_id', '=', tenant.workspaceId)
+      .execute();
+    expect(claimed).toEqual([{ task_id: checkedTask }]);
   });
 
   it('ends over the cap or without a gateway as an explained unavailable outcome', async () => {
