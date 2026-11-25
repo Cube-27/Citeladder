@@ -235,7 +235,9 @@ describe('DashboardScreen', () => {
       'href',
       'https://acme.com/',
     );
-    expect(screen.getByText(/^Tracked .*· ChatGPT API, Gemini API$/u)).toBeVisible();
+    expect(screen.getByTitle('ChatGPT API, Gemini API')).toHaveTextContent(
+      'ChatGPT API, Gemini API',
+    );
     const state = within(screen.getByRole('region', { name: 'Project state' }));
     expect(state.getByText('Visibility')).toBeVisible();
     expect(state.getByText('72.5%')).toBeVisible();

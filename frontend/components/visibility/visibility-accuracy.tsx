@@ -7,7 +7,6 @@ import {
 import type { ReactNode } from 'react';
 
 import { AnswerLink } from '@/components/runs/answer-link';
-import { EngineCell } from '@/components/ui/engine-mark';
 import { Delta } from '@/components/ui/delta';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -185,6 +184,7 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
 }
 
 function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
+  const { label: engineLabel } = useEngineCatalog();
   return (
     <Stack gap="item">
       {!claims.length ? (
@@ -206,7 +206,7 @@ function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
                 >
                   {TOPIC_LABELS[claim.topic]}
                 </StatusMark>
-                <EngineCell engine={claim.logical_engine} />
+                {engineLabel(claim.logical_engine)}
                 <AnswerLink answer={claim} text="inherit" tone="muted">
                   {claim.prompt}
                 </AnswerLink>

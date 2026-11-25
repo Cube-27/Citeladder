@@ -16,7 +16,7 @@ import { pluralCount } from '@/lib/format';
 import type { CommandCenter, Project } from '@citeladder/contracts';
 import { comparisonBasis } from '@citeladder/contracts/comparison-reason';
 import { DisplayTime } from '@/components/ui/display-time';
-import { useEngineCatalog } from '@/lib/providers/engines';
+import { EngineStack } from '@/components/ui/engine-mark';
 
 import { ProjectControls } from './dashboard-controls';
 import { formatRank } from '@/lib/visibility/dashboard';
@@ -36,7 +36,6 @@ function websiteHref(website: string): string | null {
 export function ProjectMeta({ data }: Readonly<{ data: CommandCenter }>) {
   const website = data.project.website_url;
   const measurement = data.measurement;
-  const engines = useEngineCatalog();
   if (!website && !measurement) return null;
   const href = website ? websiteHref(website) : null;
   const shown = website?.replace(/^https?:\/\//i, '').replace(/\/$/, '');
@@ -57,7 +56,7 @@ export function ProjectMeta({ data }: Readonly<{ data: CommandCenter }>) {
       {measurement ? (
         <span>
           Tracked <DisplayTime value={measurement.completed_at} /> ·{' '}
-          {measurement.logical_engines.map(engines.label).join(', ')}
+          <EngineStack engines={measurement.logical_engines} />
         </span>
       ) : null}
     </Inline>

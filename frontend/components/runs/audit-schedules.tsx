@@ -29,6 +29,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
+import { EngineStack } from '@/components/ui/engine-mark';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { schedulePauseReason } from '@/lib/runs/status';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -340,7 +341,6 @@ function ScheduleRow({
   resuming: boolean;
   onResume?: () => void;
 }>) {
-  const catalog = useEngineCatalog();
   const resumable = !schedule.enabled && !finishedOnce(schedule) && onResume;
   const promptSet =
     promptSets.find((set) => set.id === schedule.prompt_set_id)?.name ?? 'Removed prompt set';
@@ -350,7 +350,7 @@ function ScheduleRow({
         <>
           <span className={textRole('emphasis')}>{cadenceLabel(schedule)}</span>
           {` · ${promptSet} · ${SCOPE_LABELS[schedule.audit_scope]} · `}
-          {schedule.engines.map(catalog.label).join(', ')}
+          <EngineStack engines={schedule.engines} />
           {marketSummary(schedule, markets)}
         </>
       }

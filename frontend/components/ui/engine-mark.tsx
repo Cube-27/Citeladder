@@ -84,3 +84,25 @@ export function EngineCell({ engine }: Readonly<{ engine: string }>) {
     </span>
   );
 }
+
+export function EngineStack({ engines }: Readonly<{ engines: readonly string[] }>) {
+  const { label } = useEngineCatalog();
+  const names = engines.map(label).join(', ');
+  const marks = [...new Set(engines.flatMap((engine) => engineMarkKey(engine) ?? []))];
+  const unmarked = engines.filter((engine) => !engineMarkKey(engine)).map(label);
+  return (
+    <span title={names} className="inline-flex items-center gap-1.5">
+      {marks.length ? (
+        <span aria-hidden className="inline-flex items-center -space-x-1">
+          {marks.map((key) => (
+            <span key={key} className="bg-panel ring-panel inline-flex rounded-full ring-2">
+              <EngineMark engine={key} placement="inline" brand />
+            </span>
+          ))}
+        </span>
+      ) : null}
+      {unmarked.length ? <span aria-hidden>{unmarked.join(', ')}</span> : null}
+      <span className="sr-only">{names}</span>
+    </span>
+  );
+}
