@@ -216,6 +216,7 @@
   --radius-control: var(--radius-md);
   --radius-card: 8px;
   --radius-overlay: 12px;
+  --radius-panel: 16px;
 
   --shadow-*: initial;
 
@@ -1395,6 +1396,11 @@ a.focus-ring:active .type-caption {
 :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
   .table-frame {
   border: 0;
+}
+
+:root:not([data-public-surface], [data-theme='dark']) [data-main-column] {
+  --color-page: var(--color-panel);
+  --color-raised: var(--color-well);
 }
 
 .surface-tray {
