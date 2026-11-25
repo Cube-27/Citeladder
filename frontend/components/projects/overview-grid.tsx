@@ -41,14 +41,18 @@ export function OverviewGrid({
       </section>
     );
   };
-  return overviewRows(widgets).map((row) =>
-    row.length === 1 ? (
-      cell(row[0])
-    ) : (
-      <AppGrid key={row.map((widget) => widget.key).join()} layout="halves">
-        {row.map(cell)}
-      </AppGrid>
-    ),
+  return (
+    <div className="grid min-w-0 gap-[var(--workspace-gap)]">
+      {overviewRows(widgets).map((row) =>
+        row.length === 1 ? (
+          cell(row[0])
+        ) : (
+          <AppGrid key={row.map((widget) => widget.key).join()} layout="halves">
+            {row.map(cell)}
+          </AppGrid>
+        ),
+      )}
+    </div>
   );
 }
 

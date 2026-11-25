@@ -2025,10 +2025,11 @@ label {
 }
 :root:not([data-public-surface])
   .surface-tray
-  :is(.surface-card, .surface-slip, .surface-lift, [data-figure-strip], [data-state-frame]):not(
+  :is(.surface-card, .surface-slip, .surface-lift, [data-figure-strip], [data-state-frame], .table-frame):not(
     :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], [data-figure-strip]) *
   ) {
-  border-color: color-mix(in oklab, var(--color-rule), transparent 50%);
+  border-color: transparent;
+  box-shadow: none;
   border-radius: calc(var(--tray-radius) - var(--tray-padding));
 }
 :root:not([data-public-surface])
