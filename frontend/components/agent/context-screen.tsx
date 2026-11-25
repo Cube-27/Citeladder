@@ -168,23 +168,23 @@ function BrandFactsSection({
   if (facts.isPending)
     return <StateBlock kind="loading" label="Loading brand facts…" shape={{ kind: 'list' }} />;
   if (!facts.isError && !facts.data?.enabled) return null;
+  if (facts.data?.enabled)
+    return (
+      <BrandFactsPanel
+        workspaceId={workspaceId}
+        projectId={projectId}
+        list={facts.data}
+        mayEdit={mayEdit}
+      />
+    );
   return (
     <SettingsGroup title="Brand facts">
-      {facts.data?.enabled ? (
-        <BrandFactsPanel
-          workspaceId={workspaceId}
-          projectId={projectId}
-          list={facts.data}
-          mayEdit={mayEdit}
-        />
-      ) : (
-        <StateBlock
-          kind="error"
-          {...readErrorProps(facts)}
-          title="Couldn't load brand facts"
-          fallback="Brand facts could not be loaded."
-        />
-      )}
+      <StateBlock
+        kind="error"
+        {...readErrorProps(facts)}
+        title="Couldn't load brand facts"
+        fallback="Brand facts could not be loaded."
+      />
     </SettingsGroup>
   );
 }
