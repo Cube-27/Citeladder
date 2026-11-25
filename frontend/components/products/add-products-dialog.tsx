@@ -139,7 +139,7 @@ function ImportResults({
               gap="compact"
               className={ledgerItemClasses('flex-wrap')}
             >
-              <span className="text-ink-tertiary tabular-nums">Row {row.row_number}</span>
+              <span className="text-ink-muted tabular-nums">Row {row.row_number}</span>
               {row.status === 'rejected' ? (
                 <StatusMark variant="status" value="danger">
                   {STATUS_LABEL[row.status]}

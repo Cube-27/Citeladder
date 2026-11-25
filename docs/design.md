@@ -204,10 +204,14 @@ One entry per family; wave 2 fills each from the layouts above.
   column pinned. Every row is one line; secondary text follows the primary
   inline (`TableCellLines`). Below 768px no column is sticky and cell text
   wraps instead of truncating (`table-phone.css`). The foot band sits inside the frame.
-- **Metric strip** (`FigureStrip`). Cells share a row equally and wrap into
-  rows of equal cells; each cell draws its dividers on its start and top
-  edge and the frame clips the outer ones, so a wrapped strip never doubles
-  a line. A score is a printed figure.
+- **Metric strip** (`FigureStrip`). One row (AR-3): cells share it equally and
+  never wrap; below 160px a cell's label takes two lines. Each cell draws its
+  divider on its start edge and the frame clips the outer one. The geometry
+  census fails a strip whose cells sit at different tops. A score is a printed
+  figure.
+- **URLs** (`UrlText`, `UrlCutParts`). A URL is cut in the middle (AR-23): the
+  last path segment stays whole when short, otherwise the last 28 characters
+  stay, and the full URL shows in the tooltip.
 - **Containers.** One section head (16/24 at 500, actions right, body 12
   below) and one surface (`SLIP_FACE`: radius 6, `panel`). Everything but a
   heading sits on a surface (AR-22): a section's bare list, facts or prose

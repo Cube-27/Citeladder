@@ -1,5 +1,6 @@
 import { BrandMark } from '@/components/ui/brand-mark';
 import { ClampText } from '@/components/ui/clamp-text';
+import { UrlText } from '@/components/ui/table';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DisplayTime } from '@/components/ui/display-time';
 import { FactList } from '@/components/ui/facts';
@@ -120,11 +121,17 @@ function CitedPage({ page }: Readonly<{ page: ContentGapEvidence['members'][numb
     : page.domain;
   return (
     <Stack as="li" gap="tight" className={ledgerItemClasses()}>
-      <ClampText tooltip={readableUrl(page.url)}>
-        <TextLink variant="external" href={page.url} text="body">
-          {page.title || readableUrl(page.url)}
+      {page.title ? (
+        <ClampText tooltip={readableUrl(page.url)}>
+          <TextLink variant="external" href={page.url} text="body">
+            {page.title}
+          </TextLink>
+        </ClampText>
+      ) : (
+        <TextLink variant="external" href={page.url} text="body" className="flex min-w-0">
+          <UrlText url={page.url} />
         </TextLink>
-      </ClampText>
+      )}
       <Inline gap="compact" className="flex-wrap">
         {classification.success ? (
           <StatusMark

@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { extname, join, relative, resolve } from 'node:path';
+import { dirname, extname, join, relative, resolve } from 'node:path';
 
+import { loadDesignSystem, undeclaredColourViolations } from './design-system-colour-tokens.mjs';
 import { textContrastViolations } from './design-system-contrast.mjs';
 import {
   appSourceViolations,
@@ -50,12 +51,17 @@ for (const path of files(root)) {
   );
 }
 
+const appCssPath = join(root, 'apps', 'app', 'src', 'app.css');
+const appCss = readFileSync(appCssPath, 'utf8');
+const designSystem = await loadDesignSystem(appCss, dirname(appCssPath));
+
 violations.push(
   ...textContrastViolations(root),
-  ...appSourceViolations(
-    readFileSync(join(root, 'apps', 'app', 'src', 'app.css'), 'utf8'),
-    scriptSources,
+  ...undeclaredColourViolations(
+    scriptSources.filter(({ label }) => /^(?:apps|components|lib)\/.+\.tsx$/.test(label)),
+    designSystem,
   ),
+  ...appSourceViolations(appCss, scriptSources),
 );
 
 if (violations.length) {

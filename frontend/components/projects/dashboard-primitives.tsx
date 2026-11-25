@@ -1,6 +1,6 @@
 import { AppGrid } from '@/components/ui/app-grid';
 import { ChartFrame } from '@/components/ui/chart-frame';
-import { ClampText } from '@/components/ui/clamp-text';
+import { ClampText, UrlCutParts } from '@/components/ui/clamp-text';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Delta } from '@/components/ui/delta';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -79,12 +79,17 @@ function MovementMeter({
   );
 }
 
-function actionScope(action: Opportunity): string {
+function ActionScope({ action, className }: Readonly<{ action: Opportunity; className: string }>) {
   const label = action.target_label;
   const echoes = label?.toLowerCase().startsWith(action.title.toLowerCase());
-  const target = label && !echoes ? readableUrl(label) : null;
   const evidence = pluralCount(action.evidence_summary.count, 'evidence item');
-  return target ? `${target} · ${evidence}` : evidence;
+  if (!label || echoes) return <ClampText className={className}>{evidence}</ClampText>;
+  return (
+    <span className={`flex ${className}`}>
+      <UrlCutParts text={readableUrl(label)} />
+      <span className="shrink-0 whitespace-pre"> · {evidence}</span>
+    </span>
+  );
 }
 
 function ActionPriority({ action }: Readonly<{ action: Opportunity }>) {
@@ -99,7 +104,7 @@ export function ActionFacts({ action }: Readonly<{ action: Opportunity }>) {
   return (
     <Inline>
       <ActionPriority action={action} />
-      <ClampText className={textRole('caption', 'min-w-0 flex-1')}>{actionScope(action)}</ClampText>
+      <ActionScope action={action} className={textRole('caption', 'min-w-0 flex-1')} />
     </Inline>
   );
 }
@@ -118,9 +123,10 @@ export function actionItem(action: Opportunity): ReorderItem {
         >
           <ClampText phoneWrap>{action.title}</ClampText>
         </TextLink>
-        <ClampText className={textRole('body', 'text-ink-2 phone:hidden min-w-0 flex-1')}>
-          {actionScope(action)}
-        </ClampText>
+        <ActionScope
+          action={action}
+          className={textRole('body', 'text-ink-2 phone:hidden min-w-0 flex-1')}
+        />
         <ActionPriority action={action} />
       </Inline>
     ),

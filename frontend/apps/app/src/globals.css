@@ -1879,7 +1879,8 @@ label {
   overflow: hidden;
 }
 [data-figure-cell] {
-  flex: 0 0 calc(100% / var(--row));
+  flex: 1 1 0;
+  min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;

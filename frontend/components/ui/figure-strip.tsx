@@ -1,14 +1,8 @@
 import { Fragment, isValidElement, type ComponentProps, type ReactNode } from 'react';
 
 import { Absence } from '@/components/ui/absence';
-import { cssVars } from '@/lib/css-vars';
 import { Delta } from '@/components/ui/delta';
-import {
-  cellWidth,
-  FIGURE_MIN_WIDTH,
-  figureRowCells,
-  useStripWidth,
-} from '@/components/ui/figure-rows';
+import { FIGURE_MIN_WIDTH, useStripWidth } from '@/components/ui/figure-rows';
 import { InfoHint } from '@/components/ui/info-hint';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -74,7 +68,7 @@ export function FigureStrip({
   textValues?: boolean;
 }>) {
   const { ref, width } = useStripWidth<HTMLDivElement>();
-  const cells = figureRowCells({ count: segments.length, width });
+  const narrow = twoLineLabels || width / segments.length < FIGURE_MIN_WIDTH;
   return (
     <div ref={ref} data-figure-strip-frame="" className="grid min-w-0 gap-4">
       {lead ? <div data-figure-lead="">{lead}</div> : null}
@@ -83,21 +77,17 @@ export function FigureStrip({
         aria-label={label}
         data-testid={testId}
         data-figure-strip=""
-        className="flex min-w-0 flex-wrap"
+        className="flex min-w-0"
       >
-        {segments.map((segment, index) => {
-          const size = cells[index] ?? 1;
-          return (
-            <FigureCell
-              key={segment.key}
-              segment={segment}
-              subLine={subLine}
-              textValues={textValues}
-              rowSize={size}
-              narrow={twoLineLabels || cellWidth(width, size) < FIGURE_MIN_WIDTH}
-            />
-          );
-        })}
+        {segments.map((segment) => (
+          <FigureCell
+            key={segment.key}
+            segment={segment}
+            subLine={subLine}
+            textValues={textValues}
+            narrow={narrow}
+          />
+        ))}
       </dl>
     </div>
   );
@@ -107,13 +97,11 @@ function FigureCell({
   segment,
   subLine,
   textValues,
-  rowSize,
   narrow,
 }: Readonly<{
   segment: FigureSegment;
   subLine: boolean;
   textValues: boolean;
-  rowSize: number;
   narrow: boolean;
 }>) {
   const pressable = Boolean(segment.onSelect);
@@ -124,7 +112,6 @@ function FigureCell({
       data-label-lines={narrow && !segment.labelHidden ? 2 : undefined}
       data-pressable={pressable || undefined}
       data-selected={segment.selected || undefined}
-      style={cssVars({ '--row': rowSize })}
       className={cn(
         'relative min-w-0',
         pressable && !segment.selected && 'hover:overlay-hover active:overlay-pressed',

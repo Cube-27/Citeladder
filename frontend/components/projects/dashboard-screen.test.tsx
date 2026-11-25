@@ -295,7 +295,9 @@ describe('DashboardScreen', () => {
       'href',
       '/actions/00000000-0000-4000-8000-0000000000d1?project=00000000-0000-4000-8000-000000000001',
     );
-    expect(ranked.getByText('/pricing · 3 evidence items')).toBeVisible();
+    expect(ranked.getByText('/pricing').parentElement).toHaveTextContent(
+      '/pricing · 3 evidence items',
+    );
     expect(ranked.getByText('High')).toBeVisible();
     expect(ranked.queryByText('7.5')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'No open actions' })).not.toBeInTheDocument();
@@ -419,7 +421,9 @@ describe('DashboardScreen', () => {
     );
     const next = within(screen.getByRole('region', { name: 'Next action' }));
     expect(next.getByText('Publish a comparison page')).toBeVisible();
-    expect(next.getByText('/pricing · 3 evidence items')).toBeVisible();
+    expect(next.getByText('/pricing').parentElement).toHaveTextContent(
+      '/pricing · 3 evidence items',
+    );
     expect(next.getByText('High')).toBeVisible();
     expect(next.getByRole('link', { name: 'Open Action' })).toHaveAttribute(
       'href',

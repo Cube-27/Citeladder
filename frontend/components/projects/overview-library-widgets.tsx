@@ -10,6 +10,7 @@ import { Inline } from '@/components/ui/layout';
 import { AreaChart } from '@/components/ui/area-chart';
 import { textRole } from '@/components/ui/typography';
 import { Absence, printed } from '@/components/ui/absence';
+import { UrlCutParts } from '@/components/ui/clamp-text';
 import { ValueLedger } from '@/components/ui/facts';
 import type { Project } from '@citeladder/contracts';
 import { isMetricsPending } from '@/lib/api/visibility-queries';
@@ -254,7 +255,11 @@ export function RetrievalWidget({ project }: Readonly<{ project: Project }>) {
               <Rows
                 rows={data.items.map((item) => ({
                   key: item.url,
-                  label: `${hostOf(item.url)}${pathOf(item.url)}`,
+                  label: (
+                    <span className="flex min-w-0">
+                      <UrlCutParts text={`${hostOf(item.url)}${pathOf(item.url)}`} />
+                    </span>
+                  ),
                   value: `${item.retrieved} read · ${item.cited} cited`,
                 }))}
               />

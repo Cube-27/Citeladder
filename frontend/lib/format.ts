@@ -287,3 +287,13 @@ export function urlCellText(value: string, origin: string | null): string {
   const path = readableUrl(value.slice(origin.length));
   return path === '' ? '/' : path;
 }
+
+const URL_SEGMENT_KEPT = 32;
+const URL_TAIL_KEPT = 28;
+
+export function urlCut(text: string): { head: string; tail: string } {
+  const slash = text.replace(/\/$/u, '').lastIndexOf('/');
+  const keepSegment = slash > 0 && text.length - slash <= URL_SEGMENT_KEPT;
+  const start = keepSegment ? slash : Math.max(0, text.length - URL_TAIL_KEPT);
+  return { head: text.slice(0, start), tail: text.slice(start) };
+}

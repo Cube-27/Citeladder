@@ -1,8 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { cssVars } from '@/lib/css-vars';
 
 import type { ChartHeight } from '@/components/ui/chart';
-import { figureRowCells, useStripWidth } from '@/components/ui/figure-rows';
 import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
 
@@ -186,12 +184,10 @@ export function TableBlocks({
 }
 
 export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
-  const { ref, width } = useStripWidth<HTMLSpanElement>();
-  const cells = figureRowCells({ count, width });
   return (
-    <span ref={ref} data-figure-strip="" className="flex min-w-0 flex-wrap">
-      {cells.map((size, index) => (
-        <span key={index} data-figure-cell="" style={cssVars({ '--row': size })}>
+    <span data-figure-strip="" className="flex min-w-0">
+      {range(count).map((index) => (
+        <span key={index} data-figure-cell="">
           <span className="flex h-4 items-center">
             <SkeletonBlock className="h-3 w-1/2" />
           </span>

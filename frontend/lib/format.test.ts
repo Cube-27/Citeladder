@@ -12,6 +12,7 @@ import {
   sharedOrigin,
   shortUrlTitle,
   urlCellText,
+  urlCut,
 } from './format';
 
 describe('readableUrl', () => {
@@ -112,5 +113,25 @@ describe('URL cells', () => {
     expect(urlCellText('https://www.shop.test.evil.test/a', origin)).toBe(
       'https://www.shop.test.evil.test/a',
     );
+  });
+});
+
+describe('urlCut', () => {
+  it.each([
+    ['https://shop.test/a/b/shoes', { head: 'https://shop.test/a/b', tail: '/shoes' }],
+    [
+      'https://shop.test/Baby/BB0554_1871652_OFF_WHITE_CLOUD_DANCER_MUMMY_DADDY_SLOGAN',
+      {
+        head: 'https://shop.test/Baby/BB0554_1871652_OFF_WHITE_CLO',
+        tail: 'UD_DANCER_MUMMY_DADDY_SLOGAN',
+      },
+    ],
+    [
+      'shop.test-with-a-very-long-host-name-and-no-path-at-all',
+      { head: 'shop.test-with-a-very-long-', tail: 'host-name-and-no-path-at-all' },
+    ],
+    ['/short', { head: '', tail: '/short' }],
+  ])('keeps the start and end of %s and cuts the middle', (text, parts) => {
+    expect(urlCut(text)).toEqual(parts);
   });
 });
