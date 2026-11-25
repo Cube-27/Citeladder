@@ -14,7 +14,7 @@ import { slipClasses } from '@/components/ui/slip';
 const HOVER_CLOSE_DELAY_MS = 160;
 
 async function handOff(client: McpClientLink): Promise<string | null> {
-  if (client.handoff === 'prefilled') return null;
+  if (client.handoff !== 'paste') return null;
   try {
     await navigator.clipboard.writeText(MCP_SERVER_URL);
     return `URL copied. In ${client.label}, add a custom connector and paste it.`;

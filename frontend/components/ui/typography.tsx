@@ -41,7 +41,10 @@ export function CodeToken({ children }: Readonly<{ children: string }>) {
   return (
     <code
       data-code-token=""
-      className={textRole('code', 'bg-well min-w-0 truncate rounded-control px-2 py-1')}
+      className={textRole(
+        'code',
+        'bg-well min-w-0 rounded-control px-2 py-1 [overflow-wrap:anywhere]',
+      )}
     >
       {children}
     </code>

@@ -14,6 +14,20 @@ it('connects Claude with the CiteLadder URL already filled in', () => {
   expect(connect).toHaveAttribute('target', '_blank');
 });
 
+it('opens the published ChatGPT plugin without asking for a pasted URL', async () => {
+  const user = userEvent.setup();
+  render(<ConnectStrip />);
+  await user.hover(screen.getByRole('link', { name: 'Connect to Claude' }));
+  const chatgpt = screen.getByRole('menuitem', { name: 'ChatGPT' });
+  expect(chatgpt).toHaveAttribute(
+    'href',
+    'https://chatgpt.com/plugins/plugin_asdk_app_6b04f8e29ee481919d3827248811c8f4',
+  );
+  chatgpt.addEventListener('click', (event) => event.preventDefault());
+  await user.click(chatgpt);
+  expect(screen.getByRole('status')).toHaveTextContent('');
+});
+
 it('offers the other assistants from the keyboard and copies the URL to paste there', async () => {
   const user = userEvent.setup();
   render(<ConnectStrip />);
@@ -23,10 +37,10 @@ it('offers the other assistants from the keyboard and copies the URL to paste th
   const items = screen.getAllByRole('menuitem');
   expect(items.map((item) => item.textContent)).toEqual(['ChatGPT', 'Gemini', 'Grok']);
 
-  await user.click(screen.getByRole('menuitem', { name: 'ChatGPT' }));
+  await user.click(screen.getByRole('menuitem', { name: 'Gemini' }));
   expect(await navigator.clipboard.readText()).toBe('https://api.citeladder.com/mcp');
   expect(screen.getByRole('status')).toHaveTextContent(
-    'URL copied. In ChatGPT, add a custom connector and paste it.',
+    'URL copied. In Gemini, add a custom connector and paste it.',
   );
 });
 

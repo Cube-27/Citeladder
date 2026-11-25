@@ -8,7 +8,7 @@ export type McpClientLink = Readonly<{
   id: McpClientId;
   label: string;
   href: string;
-  handoff: 'prefilled' | 'paste';
+  handoff: 'prefilled' | 'listing' | 'paste';
 }>;
 
 function clientLinks(serverUrl: string): readonly [McpClientLink, ...McpClientLink[]] {
@@ -20,7 +20,12 @@ function clientLinks(serverUrl: string): readonly [McpClientLink, ...McpClientLi
   }).toString();
   return [
     { id: 'claude', label: 'Claude', href: claude.href, handoff: 'prefilled' },
-    { id: 'chatgpt', label: 'ChatGPT', href: 'https://chatgpt.com/plugins', handoff: 'paste' },
+    {
+      id: 'chatgpt',
+      label: 'ChatGPT',
+      href: 'https://chatgpt.com/plugins/plugin_asdk_app_6b04f8e29ee481919d3827248811c8f4',
+      handoff: 'listing',
+    },
     { id: 'gemini', label: 'Gemini', href: 'https://gemini.google.com/apps', handoff: 'paste' },
     { id: 'grok', label: 'Grok', href: 'https://grok.com/connectors', handoff: 'paste' },
   ];

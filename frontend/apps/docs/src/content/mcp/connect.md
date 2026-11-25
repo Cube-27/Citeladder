@@ -3,7 +3,7 @@ title: 'Connection setup'
 description: 'Add CiteLadder to your AI client, approve workspace access and check which saved datasets are available.'
 group: 'Connect with MCP'
 order: 310
-updated: '2026-10-11'
+updated: '2026-11-25'
 ---
 
 Every client connects to the same hosted server:
@@ -14,7 +14,7 @@ https://api.citeladder.com/mcp
 
 The connection uses browser sign-in (OAuth) with the read scope `citeladder:read`; the connection is read-only. Do not paste a provider API key or a CiteLadder session cookie into the client.
 
-The quickest route is the **Connect** button in the CiteLadder app under **Settings → MCP connections**, or on the MCP product page. Selecting it opens Claude with CiteLadder's name and URL filled in. Hover over it to choose ChatGPT, Gemini or Grok instead; CiteLadder copies the URL for you to paste there. The steps below cover the same setup by hand.
+The quickest route is the **Connect** button in the CiteLadder app under **Settings → MCP connections**, or on the MCP product page. Selecting it opens Claude with CiteLadder's name and URL filled in. Hover over it to choose ChatGPT, which opens the CiteLadder plugin to install, or Gemini or Grok, where CiteLadder copies the URL for you to paste. The steps below cover the same setup by hand.
 
 Client menus change between versions and plans. If a label differs, look for the client's custom connector or remote MCP server setting; the URL and sign-in flow stay the same.
 
@@ -30,12 +30,10 @@ On Team and Enterprise plans, an owner may need to add the connector in admin se
 
 ### ChatGPT
 
-1. Open [chatgpt.com/plugins](https://chatgpt.com/plugins) and select **+**.
-2. Choose the option to add a custom MCP server.
-3. Enter the name **CiteLadder** and the URL, and choose **OAuth** for authentication.
-4. Acknowledge the custom server warning and select **Create**, then sign in to CiteLadder.
+1. Open the [CiteLadder plugin](https://chatgpt.com/plugins/plugin_asdk_app_6b04f8e29ee481919d3827248811c8f4) in ChatGPT.
+2. Install it, then sign in to CiteLadder.
 
-Depending on your plan, you may need to turn on developer mode first. Workspace admins can block custom servers.
+Workspace admins can limit which plugins members install.
 
 ### Gemini
 
