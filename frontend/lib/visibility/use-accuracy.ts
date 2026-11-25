@@ -2,16 +2,20 @@ import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
 
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityApi } from '@/lib/api/visibility';
-import { visibilityMutations, visibilityQueries } from '@/lib/api/visibility-queries';
+import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { PERCEPTION_PENDING_POLL_MS } from '@/lib/config/operational';
 import { saveBlob } from '@/lib/download';
 import type { SourceFilters } from '@/components/visibility/source-rows';
+import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+import { CLAIM_STATE_VIEWS } from '@/lib/visibility/accuracy';
 import {
   periodSelectionParams,
   selectionEnabled,
   selectionParams,
   type SourceQueries,
 } from '@/lib/visibility/use-source-analysis';
+
+const CLAIM_STATE_CODEC = stringUrlCodec(CLAIM_STATE_VIEWS, 'decided');
 
 type AccuracyInput = Readonly<{
   filters: Pick<SourceFilters, 'engine' | 'cohort'>;
@@ -49,6 +53,8 @@ export function useFactViews({
   open: boolean;
 }>) {
   const params = selectionParams(filters, queries);
+  const [claimState, setClaimState] = useUrlState('claim_state', CLAIM_STATE_CODEC);
+  const claimParams = { ...params, state: claimState === 'all' ? undefined : claimState };
   const enabled =
     open &&
     accuracy.data?.state === 'value' &&
@@ -63,18 +69,17 @@ export function useFactViews({
       : undefined,
   });
   const claims = useInfiniteQuery({
-    ...visibilityQueries.accuracyClaims(scope, params),
+    ...visibilityQueries.accuracyClaims(scope, claimParams),
     enabled,
   });
-  const override = useMutation(visibilityMutations.overrideVerdict(scope));
   const exporting = useMutation({
     mutationFn: async () =>
       saveBlob(
-        await visibilityApi.exportAccuracyClaims(queries.projectId, params, {
+        await visibilityApi.exportAccuracyClaims(queries.projectId, claimParams, {
           workspaceId: queries.workspaceId,
         }),
         'fact-check-claims.csv',
       ),
   });
-  return { facts, claims, override, exporting };
+  return { facts, claims, exporting, claimState, setClaimState };
 }

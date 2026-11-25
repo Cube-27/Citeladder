@@ -1,7 +1,6 @@
 import type { AccuracyResponse } from '@citeladder/contracts/fact-checking';
 import { useState } from 'react';
 
-import { ClaimsOverTime } from '@/components/perception/claims-over-time';
 import { ClaimsTable } from '@/components/perception/claims-table';
 import { FactsImportDialog } from '@/components/perception/facts-import-dialog';
 import { FactsTable } from '@/components/perception/facts-table';
@@ -36,7 +35,6 @@ export function PerceptionFactChecking({
           data={data}
           lede={<FactCheckingLede data={data} exporting={views.exporting} />}
           stateActions={<FactActions claims={false} exporting={views.exporting} />}
-          trend={<ClaimsOverTime trend={data.trend} />}
           allClaims={<ClaimsTable views={views} />}
           byFact={<FactsTable query={views.facts} />}
         />

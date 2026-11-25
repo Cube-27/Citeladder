@@ -223,7 +223,10 @@ export const visibilityMutations = {
       mutationFn: ({ verdictId, input }: { verdictId: string; input: VerdictOverrideRequest }) =>
         visibilityApi.overrideVerdict(scope.projectId, verdictId, input, scoped(scope)),
       onSuccess: (_override, _input, _result, { client }) =>
-        refreshVisibility(client, scope.projectId),
+        Promise.all([
+          refreshVisibility(client, scope.projectId),
+          client.invalidateQueries({ queryKey: queryKeys.runs.anyExecution() }),
+        ]),
     }),
 };
 

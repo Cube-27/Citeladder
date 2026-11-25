@@ -14,6 +14,7 @@ export const runKeys = {
     [...auditDetail(auditId), workspaceId] as const,
   executions: (workspaceId: string | null, auditId: string) =>
     [...auditExecutions(auditId), workspaceId] as const,
+  anyExecution: () => ['runs', 'execution'] as const,
   execution: (workspaceId: string | null, executionId: string) =>
     ['runs', 'execution', executionId, workspaceId] as const,
   estimate: (workspaceId: string | null, input: Readonly<Record<string, unknown>> | null) =>

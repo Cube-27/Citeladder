@@ -1,6 +1,6 @@
 import type { ProbeObjectionsValue } from '@citeladder/contracts/probes';
 
-import { EngineCell } from '@/components/perception/attribute-table';
+import { EngineCell } from '@/components/ui/engine-mark';
 import { AnswerLink } from '@/components/runs/answer-link';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { useShownSpan } from '@/components/ui/data-table-fit';

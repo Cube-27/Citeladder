@@ -1,4 +1,11 @@
 import type { ExecutionClaim } from '@citeladder/contracts/fact-checking';
+import { useState } from 'react';
+
+import { VerdictDialog } from '@/components/perception/verdict-dialog';
+import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { Tooltip } from '@/components/ui/tooltip';
+import { PenLine } from '@/lib/icons';
 
 import { Absence } from '@/components/ui/absence';
 import { StatusMark } from '@/components/ui/status-mark';
@@ -35,7 +42,19 @@ export function VerdictChip({
   return <Tag>{claim.status === 'verdict' ? 'Unchecked' : STATE_WORDS[claim.status]}</Tag>;
 }
 
+export function EditedMark({ edited }: Readonly<{ edited: ExecutionClaim['edited'] }>) {
+  if (!edited) return null;
+  return (
+    <Tooltip content={`Model said ${VERDICT_LABELS[edited.model_verdict]}`}>
+      <span className="inline-flex">
+        <Tag>Edited</Tag>
+      </span>
+    </Tooltip>
+  );
+}
+
 export function EvidenceClaims({ claims }: Readonly<{ claims: readonly ExecutionClaim[] }>) {
+  const [editing, setEditing] = useState<ExecutionClaim | null>(null);
   if (!claims.length) return null;
   return (
     <Stack as="section" gap="item">
@@ -51,6 +70,13 @@ export function EvidenceClaims({ claims }: Readonly<{ claims: readonly Execution
             <Inline as="span" className="flex-wrap">
               <span className={textRole('emphasis')}>“{claim.quote}”</span>
               <VerdictChip claim={claim} />
+              <EditedMark edited={claim.edited} />
+              {claim.verdict_id ? (
+                <Button variant="quiet" onClick={() => setEditing(claim)}>
+                  <Icon icon={PenLine} />
+                  Change verdict
+                </Button>
+              ) : null}
             </Inline>
             <span className="type-caption text-ink-2">
               {TOPIC_LABELS[claim.topic]}: {claim.claim}
@@ -63,6 +89,7 @@ export function EvidenceClaims({ claims }: Readonly<{ claims: readonly Execution
           </Stack>
         ))}
       </Stack>
+      {editing ? <VerdictDialog claim={editing} onClose={() => setEditing(null)} /> : null}
     </Stack>
   );
 }

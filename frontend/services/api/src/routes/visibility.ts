@@ -3,6 +3,7 @@ import {
   accuracyClaimPageSchema,
   accuracyFactListSchema,
   accuracyResponseSchema,
+  claimStateFilterSchema,
   claimVerdictSchema,
 } from '@citeladder/contracts/fact-checking';
 import {
@@ -115,6 +116,11 @@ const CLAIM_FILTERS = {
   ...PERCEPTION_SELECTION,
   topic: { scalar: { kind: 'literal', values: policy.perception.fact_check.topics } },
   verdict: { scalar: { kind: 'literal', values: claimVerdictSchema.options } },
+  state: {
+    scalar: { kind: 'literal', values: claimStateFilterSchema.options },
+    description:
+      'Only claims in this state: `decided` is supported or contradicted. Omitted: every claim.',
+  },
 } as const;
 
 const claimSelection = (
@@ -230,6 +236,7 @@ export const visibilityRoutes = [
         getAccuracyClaims(db, claimSelection(workspace.workspaceId, path.project_id, query), {
           topic: query.topic,
           verdict: query.verdict,
+          state: query.state,
           cursor: query.cursor,
           limit: query.limit,
         }),
@@ -249,6 +256,7 @@ export const visibilityRoutes = [
         accuracyClaimRows(db, claimSelection(workspace.workspaceId, path.project_id, query), {
           topic: query.topic,
           verdict: query.verdict,
+          state: query.state,
         }),
       );
       return csvDownload('fact-check-claims.csv', CLAIM_EXPORT_COLUMNS, [rows]);

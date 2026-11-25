@@ -47,15 +47,14 @@ Audits started after you confirm a fact check the factual claims answers make ab
 ## Read the Fact-checking tab
 
 - **Accuracy** is supported claims divided by claims that were supported or contradicted. **Coverage** sits beside it; claims still being checked, low-confidence claims and claims that could not be checked are counted separately and never treated as zero. Its sub-line also says how many verdicts a person edited.
-- **Claims over time** shows each run's supported, contradicted and inconclusive claims. A marker shows where a run cannot be compared with the one before.
 - **Contradicted** quotes what the answer said next to the fact it contradicts. Select a claim or its prompt to open the full answer over the page.
-- **All claims** lists every claim with its engine, the fact it was checked against and its verdict.
+- **All claims** lists supported and contradicted claims: the prompt, what the answer said, your fact, the verdict and the engine. Select the prompt or the quote to open the full answer. The **Verdict** filter shows inconclusive, not covered, low-confidence, pending or unavailable claims, or all of them; **Export claims CSV** follows it.
 - **By fact** lists each fact as the run recorded it, with its claims split by verdict and when it was last raised. A fact no answer touched reads **Not raised in any answer**, not zero.
 - **Sources cited alongside contradictions** lists domains cited in those answers. They appeared alongside the claim; the view does not show that they were its source. **By topic** and **By engine** follow.
-- **Export claims CSV** downloads the claims in your current selection.
+- **Export claims CSV** downloads the claims in your current selection and verdict filter.
 
 **Not covered** means no confirmed fact is about that point, and **inconclusive** means a related fact neither confirms nor rules it out. Neither is an error in the answer. Opinions and praise are not checked here; they appear on the Brand tab. A change to your confirmed facts or to how claims are checked starts a new comparison series.
 
 ## Change a verdict
 
-If the checker got a claim wrong, choose **Change verdict** on its row in **All claims**, pick the verdict and add an optional note. The model's verdict is kept beside yours: the claim shows **Edited**, with the model's verdict on hover, and Accuracy, its claims and By fact count your verdict. Setting it back to the model's verdict clears the mark; both changes stay in the history. **Ask Agent** on a row opens a chat about that claim.
+If the checker got a claim wrong, open its answer from **All claims** or **Contradicted**, choose **Change verdict** beside the claim under **Fact checks**, pick the verdict and add an optional note. The model's verdict is kept beside yours: the claim shows **Edited**, with the model's verdict on hover, and Accuracy, its claims and By fact count your verdict. Setting it back to the model's verdict clears the mark; both changes stay in the history.

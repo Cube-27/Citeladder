@@ -262,6 +262,17 @@ describe('claim extraction and verification', () => {
         ['not_covered', []],
       ],
     );
+    const byState = await Promise.all(
+      ['decided', 'not_covered', 'pending'].map(async (state) => {
+        const page = await call(
+          tenant,
+          'GET',
+          `/visibility/accuracy/claims?audit_id=${auditId}&state=${state}`,
+        );
+        return (page.body.items as { verdict: string | null }[]).map((row) => row.verdict);
+      }),
+    );
+    expect(byState).toEqual([['contradicted'], ['not_covered'], []]);
 
     const observedAt = (summary.body.contradicted as { observed_at: string }[])[0]!.observed_at;
     const byFact = await call(tenant, 'GET', `/visibility/accuracy/facts?audit_id=${auditId}`);

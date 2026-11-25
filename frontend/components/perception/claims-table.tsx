@@ -1,78 +1,84 @@
 import type { AccuracyClaim, AccuracyClaimPage } from '@citeladder/contracts/fact-checking';
 import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query';
-import { useState } from 'react';
 
-import { VerdictChip } from '@/components/runs/evidence-claims';
-import { VerdictDialog } from '@/components/perception/verdict-dialog';
+import { EngineCell } from '@/components/ui/engine-mark';
+import { AnswerLink } from '@/components/runs/answer-link';
+import { EditedMark, VerdictChip } from '@/components/runs/evidence-claims';
 import { Absence } from '@/components/ui/absence';
-import { Button, buttonClasses } from '@/components/ui/button';
+import { choiceFilter } from '@/components/ui/all-filters';
+import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
-import { Icon } from '@/components/ui/icon';
 import type { DataTableColumn } from '@/components/ui/data-table-columns';
 import { Inline } from '@/components/ui/layout';
-import { ProjectLink } from '@/components/ui/project-link';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { Tag } from '@/components/ui/tag';
-import { Tooltip } from '@/components/ui/tooltip';
-import { PenLine } from '@/lib/icons';
-import { agentHandoffHref } from '@/lib/agent/handoff';
-import { useEngineCatalog } from '@/lib/providers/engines';
-import { claimAgentPrompt, VERDICT_LABELS } from '@/lib/visibility/accuracy';
+import {
+  CLAIM_STATE_LABELS,
+  CLAIM_STATE_VIEWS,
+  type ClaimStateView,
+} from '@/lib/visibility/accuracy';
 import type { useFactViews } from '@/lib/visibility/use-accuracy';
 
 type Views = ReturnType<typeof useFactViews>;
 type Query = UseInfiniteQueryResult<InfiniteData<AccuracyClaimPage>>;
 
 const COLUMNS = [
-  { key: 'claim', label: 'Claim', kind: 'identity' },
-  { key: 'engine', label: 'Engine', width: 'metric' },
-  { key: 'fact', label: 'Checked against' },
+  { key: 'prompt', label: 'Prompt', kind: 'identity' },
+  { key: 'quote', label: 'Answer said' },
+  { key: 'fact', label: 'Your fact' },
   { key: 'verdict', label: 'Verdict', width: 'category' },
-  { key: 'actions', label: 'Actions', kind: 'actions' },
+  { key: 'engine', label: 'Engine', width: 'shortMetric' },
 ] as const satisfies readonly DataTableColumn[];
 
-export function ClaimsTable({ views }: Readonly<{ views: Pick<Views, 'claims' | 'override'> }>) {
-  const { claims: query, override } = views;
-  const [editing, setEditing] = useState<AccuracyClaim | null>(null);
+export function ClaimsTable({
+  views,
+}: Readonly<{ views: Pick<Views, 'claims' | 'claimState' | 'setClaimState'> }>) {
+  const { claims: query, claimState, setClaimState } = views;
   const claims = query.data?.pages.flatMap((page) => page.items) ?? [];
   return (
-    <>
-      <DataTable
-        label="All claims"
-        columns={COLUMNS}
-        rowCount={claims.length}
-        state={tableState(query, claims)}
-        footer={
-          query.hasNextPage ? (
-            <Button
-              variant="secondary"
-              pending={query.isFetchingNextPage}
-              onClick={() => void query.fetchNextPage()}
-            >
-              Show more claims
-            </Button>
-          ) : undefined
-        }
-      >
-        {claims.map((claim) => (
-          <ClaimRow
-            key={`${claim.execution_id}:${claim.claim}:${claim.quote}`}
-            claim={claim}
-            onChange={() => {
-              override.reset();
-              setEditing(claim);
-            }}
-          />
-        ))}
-      </DataTable>
-      {editing ? (
-        <VerdictDialog claim={editing} override={override} onClose={() => setEditing(null)} />
-      ) : null}
-    </>
+    <DataTable
+      label="All claims"
+      columns={COLUMNS}
+      rowCount={claims.length}
+      toolbar={{
+        filters: [
+          choiceFilter<ClaimStateView>({
+            id: 'claim-state',
+            label: 'Verdict',
+            value: claimState,
+            defaultValue: 'decided',
+            groups: [
+              {
+                options: CLAIM_STATE_VIEWS.map((value) => ({
+                  value,
+                  label: CLAIM_STATE_LABELS[value],
+                })),
+              },
+            ],
+            onChange: (value) => setClaimState(value),
+          }),
+        ],
+      }}
+      state={tableState(query, claims, claimState)}
+      footer={
+        query.hasNextPage ? (
+          <Button
+            variant="secondary"
+            pending={query.isFetchingNextPage}
+            onClick={() => void query.fetchNextPage()}
+          >
+            Show more claims
+          </Button>
+        ) : undefined
+      }
+    >
+      {claims.map((claim) => (
+        <ClaimRow key={`${claim.execution_id}:${claim.claim}:${claim.quote}`} claim={claim} />
+      ))}
+    </DataTable>
   );
 }
 
-function tableState(query: Query, claims: readonly AccuracyClaim[]) {
+function tableState(query: Query, claims: readonly AccuracyClaim[], state: ClaimStateView) {
   if (query.isPending) return { kind: 'loading', label: 'Loading claims' } as const;
   if (query.isError)
     return {
@@ -84,22 +90,35 @@ function tableState(query: Query, claims: readonly AccuracyClaim[]) {
       pending: query.isFetching,
     } as const;
   if (!claims.length)
-    return { kind: 'empty', inline: true, message: 'No claims in these answers.' } as const;
+    return {
+      kind: 'empty',
+      inline: true,
+      message:
+        state === 'all'
+          ? 'No claims in these answers.'
+          : `No ${CLAIM_STATE_LABELS[state].toLowerCase()} claims in these answers.`,
+    } as const;
   return undefined;
 }
 
-function ClaimRow({ claim, onChange }: Readonly<{ claim: AccuracyClaim; onChange: () => void }>) {
-  const { label: engineLabel } = useEngineCatalog();
-  const engine = engineLabel(claim.logical_engine);
+function ClaimRow({ claim }: Readonly<{ claim: AccuracyClaim }>) {
   const facts = claim.facts.map((fact) => fact.statement).join('; ');
   return (
     <TableRow>
       <TableCell>
-        <span className="block min-w-0 truncate" title={claim.claim}>
-          {claim.claim}
+        <span className="block min-w-0 truncate" title={claim.prompt}>
+          <AnswerLink answer={claim} text="inherit">
+            {claim.prompt}
+          </AnswerLink>
         </span>
       </TableCell>
-      <TableCell>{engine}</TableCell>
+      <TableCell>
+        <span className="block min-w-0 truncate" title={claim.quote}>
+          <AnswerLink answer={claim} text="inherit" tone="muted">
+            “{claim.quote}”
+          </AnswerLink>
+        </span>
+      </TableCell>
       <TableCell>
         {facts ? (
           <span className="text-ink-2 block min-w-0 truncate" title={facts}>
@@ -112,30 +131,11 @@ function ClaimRow({ claim, onChange }: Readonly<{ claim: AccuracyClaim; onChange
       <TableCell>
         <Inline gap="tight" className="flex-nowrap">
           <VerdictChip claim={claim} />
-          {claim.edited ? (
-            <Tooltip content={`Model said ${VERDICT_LABELS[claim.edited.model_verdict]}`}>
-              <span className="inline-flex">
-                <Tag>Edited</Tag>
-              </span>
-            </Tooltip>
-          ) : null}
+          <EditedMark edited={claim.edited} />
         </Inline>
       </TableCell>
       <TableCell>
-        <Inline className="flex-nowrap justify-end">
-          {claim.verdict_id ? (
-            <Button variant="quiet" onClick={onChange}>
-              <Icon icon={PenLine} />
-              Change verdict
-            </Button>
-          ) : null}
-          <ProjectLink
-            href={agentHandoffHref({ prompt: claimAgentPrompt(claim, engine) })}
-            className={buttonClasses('quiet')}
-          >
-            Ask Agent
-          </ProjectLink>
-        </Inline>
+        <EngineCell engine={claim.logical_engine} />
       </TableCell>
     </TableRow>
   );
