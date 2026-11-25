@@ -530,7 +530,7 @@
   text-wrap: pretty;
   --table-head-ground: #dde3ea;
   --table-ground: var(--color-surface);
-  --color-ground: #e4eaf2;
+  --color-ground: #efefef;
   --color-chrome: var(--color-ground);
   --color-panel: #ffffff;
   --color-surface: var(--color-panel);
@@ -622,7 +622,7 @@
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
-  --nav-current-fill: #d3e3fd;
+  --nav-current-fill: #e0e0e0;
   --panel-inset: 0px;
   --route-chrome-height: calc(
     2 * var(--panel-inset) + var(--masthead-block-size, var(--masthead-height)) +
