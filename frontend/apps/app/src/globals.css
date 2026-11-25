@@ -76,6 +76,7 @@
   --color-raised: var(--color-surface);
   --color-raised-2: var(--color-surface-sunken);
   --color-rule: var(--color-line);
+  --color-hairline: var(--color-line);
   --color-control-line: var(--color-line-control);
   --color-control-edge: var(--color-line);
   --color-button-from: oklch(100% 0 0);
@@ -365,6 +366,7 @@
   --table-head-ground: #262626;
   --color-thumb: var(--color-ink-2);
   --color-rule: rgb(255 255 255 / 11%);
+  --color-hairline: rgb(255 255 255 / 7%);
   --color-control-line: rgb(255 255 255 / 22%);
   --color-page: #111111;
   --color-ink: #ececec;
@@ -537,6 +539,7 @@
   --color-well: var(--color-page);
   --color-page: #f0f4f9;
   --color-rule: rgb(0 0 0 / 11%);
+  --color-hairline: rgb(0 0 0 / 7%);
   --color-control-line: rgb(0 0 0 / 22%);
   --color-focus: var(--color-accent);
   --focus-width: 1px;
@@ -1401,7 +1404,6 @@ a.focus-ring:active .type-caption {
 
 :root:not([data-public-surface], [data-theme='dark']) [data-main-column] {
   --color-page: var(--color-panel);
-  --color-raised: var(--color-well);
 }
 :root:not([data-public-surface]) [data-main-column] {
   --tray-radius: 14px;
@@ -1416,7 +1418,7 @@ a.focus-ring:active .type-caption {
   --color-tray: color-mix(in oklab, var(--color-page), var(--color-ink) 3%);
   --color-tray-inner: var(--color-raised);
   --color-tray-raised: var(--color-raised-2);
-  --table-head-ground: var(--table-ground);
+  --table-head-ground: var(--color-tray);
 }
 
 :root:not([data-public-surface])
@@ -1431,7 +1433,10 @@ a.focus-ring:active .type-caption {
   border-radius: var(--tray-radius);
   background: var(--color-tray);
   box-shadow: none;
+  outline: 1px solid var(--color-hairline);
+  outline-offset: -1px;
   padding: var(--tray-padding);
+  --table-head-ground: var(--table-ground);
 
   :root[data-theme='dark'] & {
     --color-surface: var(--color-tray-inner);
@@ -1445,6 +1450,7 @@ a.focus-ring:active .type-caption {
     margin: 0;
     border: 0;
     align-items: center;
+    flex-wrap: nowrap;
     padding: var(--tray-header-padding);
     &:has(> :is(h2, h3)) {
       align-items: flex-start;
@@ -1471,13 +1477,20 @@ a.focus-ring:active .type-caption {
   & :is(.surface-card, .surface-slip, .surface-lift, [data-figure-strip], [data-state-frame]):not(:where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-figure-strip], [data-state-frame], [data-data-table-frame], .table-frame) *) {
     border: 0;
     box-shadow: none;
+    outline: 0;
     border-radius: var(--tray-inner-radius);
     background-color: var(--color-surface);
   }
 
   & :is([data-data-table-frame], .table-frame:not([data-data-table] *)) {
     background: transparent;
+    outline: 0;
     padding: 0;
+  }
+
+  & :is([data-data-table-frame] .table-frame, .table-frame:not([data-data-table] *) > table) {
+    background: var(--table-ground);
+    clip-path: inset(0 round var(--tray-inner-radius));
   }
 }
 
@@ -1799,7 +1812,9 @@ label {
   border: 0;
   border-radius: var(--tray-radius, var(--radius-control));
   background: var(--color-tray, var(--table-head-ground));
-  padding: var(--tray-padding, 0 4px 4px);
+  outline: 1px solid var(--color-hairline);
+  outline-offset: -1px;
+  padding: 0 var(--tray-padding, 4px) var(--tray-padding, 4px);
   overflow: clip;
 }
 :root:not([data-public-surface]) .table-frame {
@@ -1809,10 +1824,9 @@ label {
 :root:not([data-public-surface]) [data-data-table-frame] .table-frame {
   border: 0;
   border-radius: 0;
-  background: var(--table-ground);
-  clip-path: inset(0 round var(--tray-inner-radius, var(--radius-mark)));
+  background: transparent;
 }
-:root:not([data-public-surface]) .table-frame:not([data-data-table] *) > table {
+:root:not([data-public-surface]) .table-frame tbody {
   clip-path: inset(0 round var(--tray-inner-radius, var(--radius-mark)));
 }
 :root:not([data-public-surface]) .table-frame thead th + th::before {
@@ -2098,6 +2112,8 @@ label {
   ) {
   border: var(--tray-padding, 1px) solid var(--color-tray, transparent);
   border-radius: var(--tray-radius, var(--radius-card));
+  outline: 1px solid var(--color-hairline);
+  outline-offset: -1px;
   background-color: var(--color-surface);
 }
 :root:not([data-public-surface])

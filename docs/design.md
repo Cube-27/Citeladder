@@ -156,7 +156,9 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   no meters, rings or bars inside a cell (AR-3). The one table with a bar in a
   cell is Perception › Brand's attributes table (AR-19).
 - **Table** (the HeroUI table): a tray body (see Containers) with the
-  pager foot on the tray; head 36 on `panel`, 12px at 500, a 16-high
+  pager foot on the tray. A titled table puts its title in the tray header
+  and its column head on `panel`; an untitled one puts the column head on
+  the tray as its header strip. Head 36, 12px at 500, a 16-high
   `rule` tick between columns; cells padded 16; rows
   44, one line each, hairline dividers, `state-hover` fill; secondary text
   inline after the primary in `ink-2`; numbers right-aligned in tabular
@@ -217,7 +219,8 @@ One entry per family; wave 2 fills each from the layouts above.
   padded 6 by 12, the title 12px at 500 in `ink-2`, actions right; below
   it the body surfaces (strip, table, slip, card) as `panel`, radius 10, no
   edge or shadow. A body with no surface is padded as a card. A surface
-  outside any tray gets a 4 tray rim. Sections sit `--section-gap` (16)
+  outside any tray gets a 4 tray rim. Trays, rims, buttons and fields carry
+  one `hairline` edge (7% ink); secondary buttons are `panel`. Sections sit `--section-gap` (16)
   apart in both directions. The tokens live on `[data-main-column]` in
   `globals.css`; change the look there, not in components. One surface
   (`SLIP_FACE`, `panel`). Everything but a

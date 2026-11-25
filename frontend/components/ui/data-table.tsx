@@ -317,9 +317,15 @@ function DataTableHeader({
       ) : null}
     </>
   );
-  if (!actions) return <header className="grid min-w-0 gap-1 pb-3">{head}</header>;
+  const tray = title ? { 'data-tray-header': '' } : {};
+  if (!actions)
+    return (
+      <header {...tray} className="grid min-w-0 gap-1 pb-3">
+        {head}
+      </header>
+    );
   return (
-    <header className="flex flex-wrap items-start justify-between gap-2 pb-3">
+    <header {...tray} className="flex flex-wrap items-start justify-between gap-2 pb-3">
       <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{head}</div>
       <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">{actions}</div>
     </header>
