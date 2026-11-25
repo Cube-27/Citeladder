@@ -13,6 +13,7 @@ import {
   MastheadPrimarySlot,
   PageEmptyOfferProvider,
 } from '@/components/ui/masthead-actions';
+import { PageFilterBandContext, PageTabEndContext } from '@/components/templates/page-tab-end';
 import { TAB_BASELINE } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
@@ -52,36 +53,41 @@ export function PageFrame({
   const hasTrail = parents.length > 0;
   const width = fill ? 'fill' : routeWidth(pathname);
   const headed = head === 'page' || hasTrail;
+  const [tabEnd, setTabEnd] = useState<HTMLElement | null>(null);
   return (
     <PageEmptyOfferProvider>
-      <div
-        data-page-width={width}
-        className={cn('flex min-w-0 flex-1 flex-col', PAGE_START[width])}
-      >
-        <PageMasthead
-          pathname={pathname}
-          title={resolved}
-          parents={parents}
-          crumb={crumb}
-          heading={!headed}
-          actions={head === 'masthead' ? actions : undefined}
-        />
-        {headed ? (
-          <PageHeading
-            title={resolved}
-            actions={head === 'page' ? actions : undefined}
-            strips={Boolean(tabs || filters)}
-            className={PAGE_COLUMN[width]}
-          />
-        ) : null}
-        {tabs || filters ? <PageStrips tabs={tabs} filters={filters} /> : null}
+      <PageTabEndContext value={tabEnd}>
         <div
-          data-page-body=""
-          className={cn('flex min-w-0 flex-1 flex-col pt-3', PAGE_COLUMN[width], 'pb-6')}
+          data-page-width={width}
+          className={cn('flex min-w-0 flex-1 flex-col', PAGE_START[width])}
         >
-          {children}
+          <PageMasthead
+            pathname={pathname}
+            title={resolved}
+            parents={parents}
+            crumb={crumb}
+            heading={!headed}
+            actions={head === 'masthead' ? actions : undefined}
+          />
+          {headed ? (
+            <PageHeading
+              title={resolved}
+              actions={head === 'page' ? actions : undefined}
+              strips={Boolean(tabs || filters)}
+              className={PAGE_COLUMN[width]}
+            />
+          ) : null}
+          {tabs || filters ? (
+            <PageStrips tabs={tabs} filters={filters} onTabEnd={setTabEnd} />
+          ) : null}
+          <div
+            data-page-body=""
+            className={cn('flex min-w-0 flex-1 flex-col pt-3', PAGE_COLUMN[width], 'pb-6')}
+          >
+            {children}
+          </div>
         </div>
-      </div>
+      </PageTabEndContext>
     </PageEmptyOfferProvider>
   );
 }
@@ -161,7 +167,12 @@ function PageHeading({
   );
 }
 
-function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>) {
+function PageStrips({
+  tabs,
+  filters,
+  onTabEnd,
+}: Pick<PageFrameSlots, 'tabs' | 'filters'> &
+  Readonly<{ onTabEnd: (slot: HTMLElement | null) => void }>) {
   const strips = useRef<HTMLDivElement>(null);
   usePublishedHeight(strips, '--strips-block-size');
   return (
@@ -172,12 +183,19 @@ function PageStrips({ tabs, filters }: Pick<PageFrameSlots, 'tabs' | 'filters'>)
     >
       {tabs ? (
         <div data-page-band="tabs" className={cn(STRIP, 'h-[var(--page-tabs-height)] items-end')}>
-          <div className={cn('flex min-w-0 flex-1 items-end', TAB_BASELINE)}>{tabs}</div>
+          <div className={cn('flex min-w-0 flex-1 items-end gap-4', TAB_BASELINE)}>
+            {tabs}
+            <div
+              ref={onTabEnd}
+              data-page-tab-end=""
+              className="type-caption text-ink-2 ms-auto flex min-w-0 items-center gap-3 self-stretch overflow-hidden whitespace-nowrap empty:hidden"
+            />
+          </div>
         </div>
       ) : null}
       {filters ? (
         <div data-page-band="filters" className={cn(STRIP, 'items-center')}>
-          {filters}
+          <PageFilterBandContext value>{filters}</PageFilterBandContext>
         </div>
       ) : null}
     </div>

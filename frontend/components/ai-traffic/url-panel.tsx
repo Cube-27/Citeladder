@@ -71,14 +71,7 @@ export function UrlPanel({
 }>) {
   const { workspaceId, projectId } = useProjectScope();
   const query = useQuery(aiTrafficQueries.url({ workspaceId, projectId }, urlHash, filters));
-  const catalog = useQuery({
-    ...aiTrafficQueries.catalog({ workspaceId, projectId }),
-    enabled: !!urlHash,
-  });
-  const botLabel = (botId: string) =>
-    catalog.data?.bots.find((bot) => bot.bot_id === botId)?.label ?? words(botId);
-  const data = query.isError ? undefined : query.data,
-    page = data?.page;
+  const page = query.isError ? undefined : query.data?.page;
   return (
     <Drawer
       open={!!urlHash}
@@ -87,27 +80,38 @@ export function UrlPanel({
       }}
       title={page ? <UrlText url={page.display_path} /> : 'Path-level AI traffic'}
     >
-      {query.isLoading ? (
-        <StateBlock
-          kind="loading"
-          label="Loading URL evidence…"
-          shape={{ kind: 'facts', rows: 5 }}
-        />
-      ) : null}
-      {query.isError ? (
-        <StateBlock
-          kind="error"
-          error={query.error}
-          title="Couldn't load this page's AI traffic"
-          fallback={READ_FAILED}
-          onRetry={() => query.refetch()}
-        />
-      ) : null}
-      {data ? (
-        <UrlEvidence data={data} projectId={projectId} botLabel={botLabel} fromRow={fromRow} />
-      ) : null}
+      {urlHash ? <UrlTraffic urlHash={urlHash} filters={filters} fromRow={fromRow} /> : null}
     </Drawer>
   );
+}
+
+export function UrlTraffic({
+  urlHash,
+  filters = {},
+  fromRow = false,
+}: Readonly<{ urlHash: string; filters?: TrafficFilters; fromRow?: boolean }>) {
+  const { workspaceId, projectId } = useProjectScope();
+  const query = useQuery(aiTrafficQueries.url({ workspaceId, projectId }, urlHash, filters));
+  const catalog = useQuery(aiTrafficQueries.catalog({ workspaceId, projectId }));
+  const botLabel = (botId: string) =>
+    catalog.data?.bots.find((bot) => bot.bot_id === botId)?.label ?? words(botId);
+  if (query.isLoading)
+    return (
+      <StateBlock kind="loading" label="Loading URL evidence…" shape={{ kind: 'facts', rows: 5 }} />
+    );
+  if (query.isError)
+    return (
+      <StateBlock
+        kind="error"
+        error={query.error}
+        title="Couldn't load this page's AI traffic"
+        fallback={READ_FAILED}
+        onRetry={() => query.refetch()}
+      />
+    );
+  return query.data ? (
+    <UrlEvidence data={query.data} projectId={projectId} botLabel={botLabel} fromRow={fromRow} />
+  ) : null;
 }
 
 type MetricRow = Readonly<{

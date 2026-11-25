@@ -52,7 +52,9 @@ export function SectionHeader({
       className={cn('flex flex-wrap items-start justify-between gap-2 not-last:mb-3', className)}
     >
       <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{children}</div>
-      <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">{actions}</div>
+      <div className="-my-1 flex min-h-[var(--control-md)] max-w-full min-w-0 flex-wrap items-center gap-2">
+        {actions}
+      </div>
     </header>
   );
 }

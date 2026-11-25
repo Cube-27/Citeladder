@@ -7,8 +7,6 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { TableCell, TableRow, TableTime } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import { Drawer } from '@/components/ui/drawer';
 import { Tooltip } from '@/components/ui/tooltip';
 import { History } from '@/lib/icons';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
@@ -19,7 +17,7 @@ import { RERUN_MAX_PRE_ACTIVE_POLLS, RERUN_POLL_INTERVAL_MS } from '@/lib/config
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
-import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
+import { UrlTraffic } from '@/components/ai-traffic/url-panel';
 import { FixUrlWithAgent, UrlActionsList, useUrlActionCount } from '@/components/agent/url-actions';
 import { PageDrawerView } from '@/components/site-health/page-drawer-view';
 import { PageOpenContext } from '@/components/site-health/page-open-context';
@@ -98,16 +96,18 @@ export function UrlDetail({
         count: actionCount,
         list: <UrlActionsList siteUrlId={siteUrlId} />,
       }}
+      history={
+        <IssueHistory
+          key={detail.last_audited ?? ''}
+          workspaceId={workspaceId}
+          crawlId={crawlId}
+          siteUrlId={siteUrlId}
+        />
+      }
+      traffic={detail.url_hash ? <UrlTraffic urlHash={detail.url_hash} /> : null}
       actions={
         <>
           <FixUrlWithAgent siteUrlId={siteUrlId} />
-          <IssueHistoryButton
-            key={`history:${crawlId}:${siteUrlId}:${detail.last_audited ?? ''}`}
-            workspaceId={workspaceId}
-            crawlId={crawlId}
-            siteUrlId={siteUrlId}
-          />
-          {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
           {canRun ? rerunAction : null}
         </>
       }
@@ -143,28 +143,6 @@ function rerunErrorMessage(error: unknown): string {
 }
 
 type HistoryTarget = Readonly<{ workspaceId: string; crawlId: string; siteUrlId: string }>;
-
-function IssueHistoryButton(target: HistoryTarget) {
-  const [open, setOpen] = useState(false);
-  const [requested, setRequested] = useState(false);
-  return (
-    <>
-      <Button
-        variant="quiet"
-        onClick={() => {
-          setRequested(true);
-          setOpen(true);
-        }}
-      >
-        <Icon icon={History} />
-        History
-      </Button>
-      <Drawer open={open} onOpenChange={setOpen} title="Issue history">
-        {requested ? <IssueHistory {...target} /> : null}
-      </Drawer>
-    </>
-  );
-}
 
 function IssueHistory({ workspaceId, crawlId, siteUrlId }: HistoryTarget) {
   const { page, table } = useCursorTableQuery({
