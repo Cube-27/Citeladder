@@ -338,3 +338,28 @@
   border-radius: var(--radius-md);
   background: var(--color-surface-sunken);
 }
+
+.cl-vig-trend div:has(> svg) {
+  display: contents;
+}
+
+.cl-vig-trend svg {
+  width: 100%;
+  height: auto;
+}
+
+.cl-vig-cite > * {
+  min-height: 20px;
+  gap: 4px;
+  padding-inline: 6px;
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  vertical-align: 1px;
+}
+
+.cl-vig-cite > * > span:first-child {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  background: none;
+}

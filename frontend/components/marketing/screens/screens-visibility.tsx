@@ -34,7 +34,11 @@ import './screen-app.css';
 
 function Cite({ index }: Readonly<{ index: number }>) {
   const source = ANSWER_SOURCES.find((entry) => entry.index === index);
-  return source ? <Citation index={source.index} domain={source.domain} own={source.own} /> : null;
+  return source ? (
+    <span className="cl-vig-cite">
+      <Citation index={source.index} domain={source.domain} own={source.own} />
+    </span>
+  ) : null;
 }
 
 export function ScreenAnswer() {
@@ -132,7 +136,9 @@ export function ScreenTrend() {
           { label: 'Position', value: '1.7', change: { value: -0.3, policy: 'lower-is-better' } },
         ]}
       />
-      <VisibilityTrend height="md" />
+      <div className="cl-vig-trend">
+        <VisibilityTrend height="md" fallbackWidth={480} />
+      </div>
     </Vignette>
   );
 }
