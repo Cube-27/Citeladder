@@ -23,6 +23,13 @@ test('a colour class naming a token the theme never declares is reported with it
       'components/example/view.tsx:1: hover:bg-pink-500 is not a declared theme colour, so it draws nothing',
     ],
   );
+  assert.deepEqual(check('const a = <p className="data-[state=open]:text-ink-tertiary" />;'), [
+    'components/example/view.tsx:1: data-[state=open]:text-ink-tertiary is not a declared theme colour, so it draws nothing',
+  ]);
+  assert.deepEqual(
+    check("const a = <p className={kind === 'text-document' ? 'text-ink' : 'text-ink-muted'} />;"),
+    [],
+  );
   assert.deepEqual(
     check(
       'const DRAW = \'stroke-dashoffset 150ms linear\';\nconst a = <p className="text-ink-muted border-2 text-center" />;',

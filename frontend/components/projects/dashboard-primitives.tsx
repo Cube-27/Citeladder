@@ -1,6 +1,7 @@
 import { AppGrid } from '@/components/ui/app-grid';
 import { ChartFrame } from '@/components/ui/chart-frame';
-import { ClampText, UrlCutParts } from '@/components/ui/clamp-text';
+import { ClampText } from '@/components/ui/clamp-text';
+import { UrlText } from '@/components/ui/table';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Delta } from '@/components/ui/delta';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -9,7 +10,7 @@ import type { ReorderItem } from '@/components/ui/reorder-list';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
 import type { CommandCenter, Opportunity } from '@citeladder/contracts';
-import { percentText, pluralCount, readableUrl } from '@/lib/format';
+import { percentText, pluralCount } from '@/lib/format';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
 import { textRole } from '@/components/ui/typography';
@@ -86,8 +87,8 @@ function ActionScope({ action, className }: Readonly<{ action: Opportunity; clas
   if (!label || echoes) return <ClampText className={className}>{evidence}</ClampText>;
   return (
     <span className={`flex ${className}`}>
-      <UrlCutParts text={readableUrl(label)} />
-      <span className="shrink-0 whitespace-pre"> · {evidence}</span>
+      <UrlText url={label} />
+      <span className="min-w-0 truncate ps-1">· {evidence}</span>
     </span>
   );
 }
