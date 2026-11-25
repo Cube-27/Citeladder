@@ -6,8 +6,17 @@ import { factVerification } from '../src/perception/fact-verification.ts';
 import { factCheckHarness, fakeGateway, perceptionOutput } from './fact-check-support.ts';
 import type { Tenant } from './visibility-fixtures.ts';
 
-const { db, fixtures, enroll, call, confirmedFact, pilotConfiguration, analysed, drain } =
-  factCheckHarness();
+const {
+  db,
+  fixtures,
+  enroll,
+  call,
+  confirmedFact,
+  checkedPrompt,
+  pilotConfiguration,
+  analysed,
+  drain,
+} = factCheckHarness();
 
 let tenant: Tenant;
 
@@ -196,6 +205,7 @@ describe('facts CSV import', () => {
       workspaceId: tenant.workspaceId,
       projectId: tenant.projectId,
       auditScope: 'brand',
+      panelPromptIds: [await checkedPrompt(tenant)],
     });
     expect(frozen?.facts.map((fact) => fact.topic)).toEqual(['pricing']);
   });

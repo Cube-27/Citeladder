@@ -28,11 +28,20 @@ const factCheckSchema = z.object({
   fact_set_hash: z.string().min(1),
   facts: z.array(z.object({ revision_id: z.uuid(), topic: factTopicSchema })).min(1),
   related_topics: z.record(z.string(), z.array(factTopicSchema)),
+  prompt_ids: z.array(z.uuid()).optional(),
 });
 export type FrozenFactCheck = z.infer<typeof factCheckSchema>;
 
 export function factScope(factCheck: FrozenFactCheck, topic: FactTopic): FactTopic[] {
   return [topic, ...(factCheck.related_topics[topic] ?? [])];
+}
+
+export function promptFactCheck(
+  factCheck: FrozenFactCheck | null,
+  promptId: string | null,
+): FrozenFactCheck | null {
+  if (!factCheck?.prompt_ids) return factCheck;
+  return promptId !== null && factCheck.prompt_ids.includes(promptId) ? factCheck : null;
 }
 
 export function checkedTopics(factCheck: FrozenFactCheck): ReadonlySet<FactTopic> {
@@ -63,10 +72,17 @@ export function admittedPerceptionVersions(input: {
 
 export async function admittedFactCheck(
   db: Database,
-  input: { workspaceId: string; projectId: string; auditScope: string },
+  input: {
+    workspaceId: string;
+    projectId: string;
+    auditScope: string;
+    panelPromptIds: readonly string[];
+  },
 ): Promise<FrozenFactCheck | null> {
   if (input.auditScope !== policy.visibility.brand_audit_scope) return null;
   if (!(await factCheckingEnabled(db, input.workspaceId))) return null;
+  const promptIds = await factCheckedPromptIds(db, input);
+  if (!promptIds.length) return null;
   const settings = policy.perception.fact_check;
   const rows = await db
     .selectFrom('brand_facts as fact')
@@ -101,7 +117,24 @@ export async function admittedFactCheck(
     fact_set_hash: createHash('sha256').update(ids.join(',')).digest('hex'),
     facts,
     related_topics: settings.related_topics,
+    prompt_ids: promptIds,
   };
+}
+
+async function factCheckedPromptIds(
+  db: Database,
+  input: { workspaceId: string; panelPromptIds: readonly string[] },
+): Promise<string[]> {
+  if (!input.panelPromptIds.length) return [];
+  const rows = await db
+    .selectFrom('prompts')
+    .select('id')
+    .where('workspace_id', '=', input.workspaceId)
+    .where('id', 'in', input.panelPromptIds)
+    .where((eb) => eb.fn.coalesce('fact_check', 'branded'), '=', true)
+    .orderBy('id')
+    .execute();
+  return rows.map((row) => row.id);
 }
 
 export function frozenFactCheck(configuration: unknown): FrozenFactCheck | null {

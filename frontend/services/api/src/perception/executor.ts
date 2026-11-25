@@ -18,6 +18,7 @@ import {
   checkedTopics,
   frozenFactCheck,
   frozenPerceptionVersions,
+  promptFactCheck,
   type FrozenFactCheck,
 } from './admission.ts';
 import { claimsOutputSchema, perceptionOutputSchema, perceptionPrompt } from './model.ts';
@@ -79,6 +80,7 @@ function loadSubject(db: Database, task: QueueTask, projectId: string) {
       'artifact.answer_text',
       'snapshot.text as prompt',
       'snapshot.cohort',
+      'snapshot.prompt_id',
     ])
     .where('ra.id', '=', analysisId)
     .where('ra.workspace_id', '=', task.workspace_id)
@@ -291,7 +293,7 @@ export function answerPerception(
     const subject = await loadSubject(db, task, projectId);
     const versions = frozenPerceptionVersions(subject.configuration);
     if (!versions || (await alreadyPerceived(db, subject, versions.extractor_version))) return;
-    const factCheck = frozenFactCheck(subject.configuration);
+    const factCheck = promptFactCheck(frozenFactCheck(subject.configuration), subject.prompt_id);
     const settle = (outcome: Outcome, call: ModelCall | null = null) => ({
       error: null,
       persist: persist({

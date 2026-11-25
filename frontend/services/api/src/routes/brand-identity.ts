@@ -8,6 +8,7 @@ import {
   brandFactImportResultSchema,
   brandFactListSchema,
   brandFactSchema,
+  factCheckPromptListSchema,
   verdictOverrideSchema,
 } from '@citeladder/contracts/fact-checking';
 import { observedCompetitorSchema } from '@citeladder/contracts/visibility';
@@ -32,8 +33,10 @@ import {
   listBrandFacts,
   updateBrandFact,
 } from '../projects/brand-facts.ts';
+import { listFactCheckPrompts, setFactCheckPrompts } from '../prompts/fact-check-prompts.ts';
 import { businessMapUpdate, readBusinessMap, updateBusinessMap } from '../projects/business-map.ts';
 import { projectThemeMergeRequestSchema } from '@citeladder/contracts/project-requests';
+import { factCheckPromptsRequestSchema } from '@citeladder/contracts/prompt-requests';
 import {
   createTheme,
   deleteTheme,
@@ -128,6 +131,25 @@ export const brandIdentityRoutes = [
       const scope = projectScopeOf(c, path.project_id);
       const input = await readBody(c, brandFactImport);
       return importBrandFacts(db, scope, c.get('user').id, input);
+    },
+  }),
+  defineGetRoute({
+    ...activeProject,
+    path: `${root}/fact-check/prompts`,
+    params: { path: projectPath, query: {} },
+    response: factCheckPromptListSchema,
+    handle: ({ c, db }, { path }) => listFactCheckPrompts(db, projectScopeOf(c, path.project_id)),
+  }),
+  definePutRoute({
+    ...activeProject,
+    path: `${root}/fact-check/prompts`,
+    capability: 'write',
+    params: { path: projectPath, query: {} },
+    body: factCheckPromptsRequestSchema,
+    response: factCheckPromptListSchema,
+    async handle({ c, db }, { path }) {
+      const input = await readBody(c, factCheckPromptsRequestSchema);
+      return setFactCheckPrompts(db, projectScopeOf(c, path.project_id), input);
     },
   }),
   definePostRoute({

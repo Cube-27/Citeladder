@@ -835,13 +835,17 @@ platform-funded like perception. The policy, topics, caps and templates are the
 [`config/perception.json`](../frontend/services/api/src/config/perception.json).
 
 - **Admission.** A brand audit in a granted workspace with at least one
-  confirmed fact freezes `fact_check`: the claim and verification versions, the
-  newest revision of each confirmed fact (topic-ordered, capped) and a hash of
-  that set. Its perception template version becomes
+  confirmed fact and one checked prompt in its panel freezes `fact_check`: the
+  claim and verification versions, the newest revision of each confirmed fact
+  (topic-ordered, capped), a hash of that set and the checked `prompt_ids`. A
+  prompt is checked when `prompts.fact_check` says so, else when it is branded
+  (brand questions by default); `PUT /projects/{id}/fact-check/prompts` sets the
+  column for every prompt in the project. An audit frozen without `prompt_ids`
+  checks every prompt. Its perception template version becomes
   `<template_version>+<claims_version>`. Editing a fact later never changes that
   audit's verdicts. Other audits are perceived exactly as before.
-- **Extraction.** The perception call of a fact-checked audit appends the
-  claims addendum to the configured templates (no extra call). The brand's
+- **Extraction.** The perception call of a fact-checked audit's checked prompt
+  appends the claims addendum to the configured templates (no extra call). The brand's
   claims must quote the brand's own passages, sit on an allowed topic and stay
   within the per-answer cap; drops are counted. Claims land in
   `answer_claims` in the perception's terminal transaction.
@@ -872,7 +876,8 @@ platform-funded like perception. The policy, topics, caps and templates are the
   `claims` field of execution evidence and `read_fact_checks` read
   `not_enabled` outside the pilot; `/visibility/accuracy/facts` reads
   `enabled: false` and `/visibility/accuracy/claims/export` an empty CSV.
-  They read the same answers Perception reads for a cohort
+  They read answers to the audit's checked prompts only, among the same answers
+  Perception reads for a cohort
   (`perception_cohorts`), so brand questions count under comparison and all:
   they are where answers state most facts about the brand. By
   fact groups verdicts on the fact revision the run froze, so editing a fact

@@ -9,7 +9,7 @@ import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
 import { admittedFactCheck, admittedPerceptionVersions } from '../src/perception/admission.ts';
 import type { answerPerception } from '../src/perception/executor.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
-import { billingAccount, grant } from './prompt-fixtures.ts';
+import { billingAccount, grant, prompt, promptSet } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -93,11 +93,23 @@ export function factCheckHarness() {
     return id;
   }
 
-  async function pilotConfiguration(owner: Tenant) {
+  const checked = new Map<string, Promise<string>>();
+  function checkedPrompt(owner: Tenant) {
+    const found = checked.get(owner.projectId);
+    if (found) return found;
+    const created = promptSet(db, owner.projectId).then((setId) =>
+      prompt(db, setId, 'best tools?', { branded: true }),
+    );
+    checked.set(owner.projectId, created);
+    return created;
+  }
+
+  async function pilotConfiguration(owner: Tenant, panelPromptIds?: string[]) {
     const factCheck = await admittedFactCheck(db, {
       workspaceId: owner.workspaceId,
       projectId: owner.projectId,
       auditScope: 'brand',
+      panelPromptIds: panelPromptIds ?? [await checkedPrompt(owner)],
     });
     return {
       brand_name: 'Acme',
@@ -110,10 +122,11 @@ export function factCheckHarness() {
     };
   }
 
-  async function analysed(owner: Tenant, auditId: string, answerText = ANSWER) {
+  async function analysed(owner: Tenant, auditId: string, answerText = ANSWER, promptId?: string) {
     const { taskId } = await fixtures.execution(owner, {
       auditId,
       answerText,
+      promptId: promptId ?? (await checkedPrompt(owner)),
       promptText: 'best tools?',
       analysis: null,
     });
@@ -181,6 +194,7 @@ export function factCheckHarness() {
     enroll,
     call,
     confirmedFact,
+    checkedPrompt,
     pilotConfiguration,
     analysed,
     drain,

@@ -11,6 +11,7 @@ import {
   brandFactImportResultSchema,
   brandFactListSchema,
   brandFactSchema,
+  factCheckPromptListSchema,
 } from '@citeladder/contracts/fact-checking';
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import {
@@ -34,6 +35,7 @@ import type {
   ProjectCreateRequest,
   ProjectUpdateRequest,
 } from '@citeladder/contracts/project-requests';
+import type { FactCheckPromptsRequest } from '@citeladder/contracts/prompt-requests';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { projectMarketSchema, type ProjectMarketCreate } from '@citeladder/contracts/markets';
 import type {
@@ -154,6 +156,18 @@ export const projectsApi = {
     );
     return strictValidate(brandFactSchema, res, 'projects.updateBrandFact');
   },
+  getFactCheckPrompts: async (projectId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get(`/projects/${projectId}/fact-check/prompts`, options);
+    return strictValidate(factCheckPromptListSchema, res, 'projects.getFactCheckPrompts');
+  },
+  setFactCheckPrompts: async (
+    projectId: string,
+    input: FactCheckPromptsRequest,
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.put(`/projects/${projectId}/fact-check/prompts`, input, options);
+    return strictValidate(factCheckPromptListSchema, res, 'projects.setFactCheckPrompts');
+  },
   importBrandFacts: async (
     projectId: string,
     input: BrandFactImportRequest,
@@ -205,6 +219,12 @@ export const projectQueries = {
     queryOptions({
       queryKey: queryKeys.projects.brandFacts(scope),
       queryFn: ({ signal }) => projectsApi.getBrandFacts(scope.projectId, scoped(scope, signal)),
+    }),
+  factCheckPrompts: (scope: ProjectScope) =>
+    queryOptions({
+      queryKey: queryKeys.projects.factCheckPrompts(scope),
+      queryFn: ({ signal }) =>
+        projectsApi.getFactCheckPrompts(scope.projectId, scoped(scope, signal)),
     }),
   markets: (scope: ProjectScope) =>
     queryOptions({
@@ -334,6 +354,13 @@ export const projectMutations = {
         projectsApi.importBrandFacts(scope.projectId, input, scoped(scope)),
       onSuccess: (_result, _input, _context, { client }) =>
         refreshBrandFacts(client, scope.projectId),
+    }),
+  setFactCheckPrompts: (scope: ProjectScope) =>
+    mutationOptions({
+      mutationFn: (input: FactCheckPromptsRequest) =>
+        projectsApi.setFactCheckPrompts(scope.projectId, input, scoped(scope)),
+      onSuccess: (list, _input, _result, { client }) =>
+        client.setQueryData(queryKeys.projects.factCheckPrompts(scope), list),
     }),
   updateBrandFact: (scope: ProjectScope) =>
     mutationOptions({

@@ -122,7 +122,13 @@ export async function prompt(
   db: Database,
   setId: string,
   text: string,
-  options: { status?: string; topicId?: string | null; createdAt?: Date } = {},
+  options: {
+    status?: string;
+    topicId?: string | null;
+    createdAt?: Date;
+    branded?: boolean;
+    factCheck?: boolean | null;
+  } = {},
 ): Promise<string> {
   const id = randomUUID();
   await db
@@ -138,7 +144,8 @@ export async function prompt(
       theme: '',
       intent: '',
       cohort: 'core',
-      branded: false,
+      branded: options.branded ?? false,
+      fact_check: options.factCheck ?? null,
       enabled: true,
       status: options.status ?? 'active',
       origin: 'manual',

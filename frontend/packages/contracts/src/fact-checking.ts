@@ -34,6 +34,17 @@ export const brandFactListSchema = responseObject({
   }),
 });
 
+export const factCheckPromptListSchema = responseObject({
+  prompts: z.array(
+    responseObject({
+      id: uuid(),
+      text: z.string(),
+      topic: z.string().nullable(),
+      checked: z.boolean(),
+    }),
+  ),
+});
+
 export const claimVerdictSchema = z.enum([
   'supported',
   'contradicted',
@@ -216,6 +227,7 @@ export type FactTopic = z.infer<typeof factTopicSchema>;
 export type FactStatus = z.infer<typeof factStatusSchema>;
 export type BrandFact = z.infer<typeof brandFactSchema>;
 export type BrandFactList = z.infer<typeof brandFactListSchema>;
+export type FactCheckPromptList = z.infer<typeof factCheckPromptListSchema>;
 export type ClaimVerdict = z.infer<typeof claimVerdictSchema>;
 export type AccuracyResponse = z.infer<typeof accuracyResponseSchema>;
 export type AccuracyCoverage = z.infer<typeof accuracyCoverageSchema>;

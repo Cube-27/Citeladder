@@ -311,11 +311,13 @@ async function loadBrandContext(
     project,
     brand,
     auditScope,
+    prompts,
   }: {
     workspaceId: string;
     project: { id: string };
     brand: { id: string } | undefined;
     auditScope: AuditInput['audit_scope'];
+    prompts: readonly FrozenPrompt[];
   },
 ) {
   const [aliases, owned, unintended, competitors, profile, factCheck] = await Promise.all([
@@ -355,7 +357,12 @@ async function loadBrandContext(
       .where('workspace_id', '=', workspaceId)
       .where('project_id', '=', project.id)
       .executeTakeFirst(),
-    admittedFactCheck(db, { workspaceId, projectId: project.id, auditScope }),
+    admittedFactCheck(db, {
+      workspaceId,
+      projectId: project.id,
+      auditScope,
+      panelPromptIds: prompts.flatMap((prompt) => (prompt.id ? [prompt.id] : [])),
+    }),
   ]);
   return { aliases, owned, unintended, competitors, profile, factCheck };
 }
@@ -511,6 +518,7 @@ export async function prepareAudit(
       project,
       brand,
       auditScope: input.audit_scope,
+      prompts,
     },
   );
   const systemInstruction = frameInstruction(mode, project);
