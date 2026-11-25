@@ -20,12 +20,7 @@ import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/iss
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
 import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
-import {
-  FixUrlWithAgent,
-  hasOpenAction,
-  UrlActionsList,
-  useUrlActions,
-} from '@/components/agent/url-actions';
+import { FixUrlWithAgent, UrlActionsList, useUrlActionCount } from '@/components/agent/url-actions';
 import { PageDrawerView } from '@/components/site-health/page-drawer-view';
 import { PageOpenContext } from '@/components/site-health/page-open-context';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -55,7 +50,7 @@ export function UrlDetail({
         preActivePollCountRef,
       ),
   });
-  const urlActions = useUrlActions(siteUrlId);
+  const actionCount = useUrlActionCount(siteUrlId);
   const rerun = useMutation(siteHealthMutations.rerunPage(workspaceId));
   const canRun = useWorkspaceCapability('run');
   const { usedUp, left } = useCrawlBudget({ workspaceId, projectId }, 'page_crawls', canRun);
@@ -100,12 +95,12 @@ export function UrlDetail({
     <PageDrawerView
       detail={detail}
       work={{
-        count: urlActions.data?.items.length,
+        count: actionCount,
         list: <UrlActionsList siteUrlId={siteUrlId} />,
       }}
       actions={
         <>
-          {hasOpenAction(urlActions.data) ? <FixUrlWithAgent siteUrlId={siteUrlId} /> : null}
+          <FixUrlWithAgent siteUrlId={siteUrlId} />
           <IssueHistoryButton
             key={`history:${crawlId}:${siteUrlId}:${detail.last_audited ?? ''}`}
             workspaceId={workspaceId}

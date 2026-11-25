@@ -16,14 +16,12 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 
 const URL_ASK = 'Fix every action on this URL, starting with the shared ones.';
 
-export function useUrlActions(siteUrlId: string) {
+function useUrlActions(siteUrlId: string) {
   return useQuery(actionsQueries.urlActions(useProjectScope(), siteUrlId));
 }
 
-export function hasOpenAction(data: ReturnType<typeof useUrlActions>['data']) {
-  return (
-    data?.items.some((item) => item.status === 'open' || item.status === 'in_progress') ?? false
-  );
+export function useUrlActionCount(siteUrlId: string) {
+  return useUrlActions(siteUrlId).data?.items.length;
 }
 
 export function UrlActionsList({ siteUrlId }: Readonly<{ siteUrlId: string }>) {
@@ -58,6 +56,9 @@ export function UrlActionsList({ siteUrlId }: Readonly<{ siteUrlId: string }>) {
 }
 
 export function FixUrlWithAgent({ siteUrlId }: Readonly<{ siteUrlId: string }>) {
+  const { data } = useUrlActions(siteUrlId);
+  const open = data?.items.some((item) => item.status === 'open' || item.status === 'in_progress');
+  if (!open) return null;
   return (
     <ProjectLink
       href={agentHandoffHref({ urlActionsSiteUrlId: siteUrlId, prompt: URL_ASK })}
