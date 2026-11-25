@@ -1527,7 +1527,7 @@ a.focus-ring:active .type-caption {
     }
     @container main (min-width: 688px) {
       &:is([data-app-grid='pair'], [data-app-grid='thirds']) {
-        --grid-gap-x: calc(2 * var(--page-section-gap));
+        --grid-gap-x: var(--page-section-gap);
         & > :nth-child(-n + 3):not(:first-child, [data-app-grid='pair'] > :nth-child(3)) {
           padding-top: 0;
         }
@@ -1535,7 +1535,7 @@ a.focus-ring:active .type-caption {
     }
     @container main (min-width: 954px) {
       &:is([data-app-grid='halves'], [data-app-grid='main-aside'], [data-app-grid='aside-main']) {
-        --grid-gap-x: calc(2 * var(--page-section-gap));
+        --grid-gap-x: var(--page-section-gap);
         & > :nth-child(2) {
           padding-top: 0;
         }
