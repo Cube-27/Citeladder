@@ -3,6 +3,7 @@ import {
   type AccuracyClaim,
   type OverrideVerdict,
 } from '@citeladder/contracts/fact-checking';
+import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -14,27 +15,29 @@ import { RadioGroup } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { humanizeApiError } from '@/lib/api/errors';
-import type { useFactViews } from '@/lib/visibility/use-accuracy';
+import { visibilityMutations } from '@/lib/api/visibility-queries';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import { VERDICT_LABELS } from '@/lib/visibility/accuracy';
 
-type Override = ReturnType<typeof useFactViews>['override'];
+type VerdictClaim = Pick<AccuracyClaim, 'quote' | 'verdict' | 'verdict_id'>;
 
 const OPTIONS = overrideVerdictSchema.options.map((value) => ({
   value,
   label: VERDICT_LABELS[value],
 }));
 
-function initialVerdict(claim: AccuracyClaim): OverrideVerdict {
+function initialVerdict(claim: VerdictClaim): OverrideVerdict {
   const current = overrideVerdictSchema.safeParse(claim.verdict);
   return current.success ? current.data : 'supported';
 }
 
 export function VerdictDialog({
   claim,
-  override,
   onClose,
-}: Readonly<{ claim: AccuracyClaim; override: Override; onClose: () => void }>) {
+}: Readonly<{ claim: VerdictClaim; onClose: () => void }>) {
   const { notify } = useToast();
+  const { workspaceId, projectId } = useProjectScope();
+  const override = useMutation(visibilityMutations.overrideVerdict({ workspaceId, projectId }));
   const [verdict, setVerdict] = useState(() => initialVerdict(claim));
   const [note, setNote] = useState('');
   const unchanged = verdict === claim.verdict;

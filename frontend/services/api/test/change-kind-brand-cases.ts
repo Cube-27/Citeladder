@@ -231,7 +231,11 @@ export function brandCases(db: Database, fixtures: SiteFixtures): Record<BrandKi
         await factChecking(t);
         return {
           scope: t,
-          payload: { topic: 'pricing', statement: 'Acme Pro costs $59 per month.' },
+          payload: {
+            topic: 'pricing',
+            statement: 'Acme Pro costs $59 per month.',
+            status: 'confirmed',
+          },
           observe: () =>
             db
               .selectFrom('brand_facts')
@@ -251,6 +255,7 @@ export function brandCases(db: Database, fixtures: SiteFixtures): Record<BrandKi
         const created = await createBrandFact(db, t, t.userId, {
           topic: 'pricing',
           statement: 'Acme Pro costs $49 per month.',
+          status: 'draft',
         });
         return {
           scope: t,

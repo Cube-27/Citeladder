@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { useEngineCatalog } from '@/lib/providers/engines';
 import { cn } from '@/lib/utils';
 
 export type EngineKey = 'chatgpt' | 'claude' | 'gemini' | 'google';
@@ -69,5 +70,17 @@ export function EngineMark({
         <path key={shape} d={shape} className={brand ? (fills[index] ?? fills[0]) : undefined} />
       ))}
     </svg>
+  );
+}
+
+export function EngineCell({ engine }: Readonly<{ engine: string }>) {
+  const label = useEngineCatalog().label(engine);
+  const key = engineMarkKey(engine);
+  if (!key) return <>{label}</>;
+  return (
+    <span title={label} className="inline-flex items-center">
+      <EngineMark engine={key} placement="inline" brand />
+      <span className="sr-only">{label}</span>
+    </span>
   );
 }

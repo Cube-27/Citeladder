@@ -1,7 +1,7 @@
 import type {
-  AccuracyClaim,
   AccuracyCoverage,
   AccuracyResponse,
+  ClaimStateFilter,
   ClaimVerdict,
   FactTopic,
 } from '@citeladder/contracts/fact-checking';
@@ -24,6 +24,27 @@ export const VERDICT_LABELS: Record<ClaimVerdict, string> = {
   contradicted: 'Contradicted',
   inconclusive: 'Inconclusive',
   not_covered: 'Not covered',
+};
+
+export const CLAIM_STATE_VIEWS = [
+  'decided',
+  'all',
+  'inconclusive',
+  'not_covered',
+  'low_confidence',
+  'pending',
+  'unavailable',
+] as const satisfies readonly (ClaimStateFilter | 'all')[];
+export type ClaimStateView = (typeof CLAIM_STATE_VIEWS)[number];
+
+export const CLAIM_STATE_LABELS: Record<ClaimStateView, string> = {
+  decided: 'Supported and contradicted',
+  all: 'All claims',
+  inconclusive: VERDICT_LABELS.inconclusive,
+  not_covered: VERDICT_LABELS.not_covered,
+  low_confidence: 'Low confidence',
+  pending: 'Still being checked',
+  unavailable: 'Unavailable',
 };
 
 export const VERDICT_TONE: Record<ClaimVerdict, SentimentValue> = {
@@ -78,41 +99,6 @@ export function accuracyStateCopy(
       return _exhaustive;
     }
   }
-}
-
-function claimStateWords(claim: Pick<AccuracyClaim, 'status' | 'verdict' | 'reason'>): string {
-  switch (claim.status) {
-    case 'verdict':
-      return claim.verdict ? VERDICT_LABELS[claim.verdict].toLowerCase() : 'not checked';
-    case 'low_confidence':
-      return 'low confidence';
-    case 'pending':
-      return 'still being checked';
-    case 'unavailable':
-      return claim.reason ? `unavailable (${REASON_SHORT[claim.reason]})` : 'unavailable';
-    default: {
-      const _exhaustive: never = claim.status;
-      return _exhaustive;
-    }
-  }
-}
-
-export function claimAgentPrompt(claim: AccuracyClaim, engine: string): string {
-  const facts = claim.facts.map((fact) => fact.statement).join('; ');
-  const verdict = claimStateWords(claim);
-  return [
-    agentAsk(claim, engine),
-    `Asked "${claim.prompt}", it said: "${claim.quote}" (claim: ${claim.claim}).`,
-    facts ? `Checked against our fact: "${facts}". Verdict: ${verdict}.` : `Verdict: ${verdict}.`,
-  ].join(' ');
-}
-
-function agentAsk(claim: Pick<AccuracyClaim, 'status' | 'verdict'>, engine: string): string {
-  const verdict = claim.status === 'verdict' ? claim.verdict : null;
-  if (verdict === 'contradicted') return `Help me correct what ${engine} says about us.`;
-  if (verdict === 'supported')
-    return `Help me keep what ${engine} gets right about us accurate where it reads.`;
-  return `Help me check what ${engine} says about us.`;
 }
 
 export function contradictedChange(

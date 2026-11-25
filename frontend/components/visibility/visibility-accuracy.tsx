@@ -7,6 +7,7 @@ import {
 import type { ReactNode } from 'react';
 
 import { AnswerLink } from '@/components/runs/answer-link';
+import { EngineCell } from '@/components/ui/engine-mark';
 import { Delta } from '@/components/ui/delta';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -50,14 +51,12 @@ export function AccuracyView({
   data,
   lede,
   stateActions,
-  trend,
   allClaims,
   byFact,
 }: Readonly<{
   data: AccuracyResponse;
   lede?: ReactNode;
   stateActions?: ReactNode;
-  trend?: ReactNode;
   allClaims: ReactNode;
   byFact: ReactNode;
 }>) {
@@ -80,7 +79,6 @@ export function AccuracyView({
   return (
     <SectionStack>
       <Headline data={data} lede={lede} />
-      {trend}
       <Section aria-label="Claims">
         <Tabs value={view} onValueChange={setView} items={CLAIM_VIEWS} ariaLabel="Claims" spaced>
           <TabPanel value="contradicted">
@@ -187,7 +185,6 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
 }
 
 function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
-  const { label: engineLabel } = useEngineCatalog();
   return (
     <Stack gap="item">
       {!claims.length ? (
@@ -209,7 +206,7 @@ function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
                 >
                   {TOPIC_LABELS[claim.topic]}
                 </StatusMark>
-                {engineLabel(claim.logical_engine)} ·{' '}
+                <EngineCell engine={claim.logical_engine} />
                 <AnswerLink answer={claim} text="inherit" tone="muted">
                   {claim.prompt}
                 </AnswerLink>

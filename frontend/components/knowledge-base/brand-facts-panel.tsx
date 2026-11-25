@@ -1,40 +1,34 @@
 import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
-import {
-  factTopicSchema,
-  type BrandFact,
-  type BrandFactList,
-  type FactTopic,
-} from '@citeladder/contracts/fact-checking';
+import type { BrandFact, BrandFactList } from '@citeladder/contracts/fact-checking';
 
-import { StatusMark } from '@/components/ui/status-mark';
-import { Tag } from '@/components/ui/tag';
-import { Button } from '@/components/ui/button';
+import { BrandFactDialog, type FactEdit } from '@/components/knowledge-base/brand-fact-dialog';
+import { Absence } from '@/components/ui/absence';
+import { Button, IconButton } from '@/components/ui/button';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { ConfirmDialog } from '@/components/ui/dialog';
+import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Icon } from '@/components/ui/icon';
-import { Input } from '@/components/ui/input';
-import { Inline } from '@/components/ui/layout';
-import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-row';
-import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { textRole } from '@/components/ui/typography';
-import { Archive, Check, Pencil, Plus, Save, X } from '@/lib/icons';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { formatCount } from '@/lib/format';
-import { projectMutations } from '@/lib/api/projects';
-import { TOPIC_LABELS } from '@/lib/visibility/accuracy';
 import { Notice } from '@/components/ui/notice';
-import { StateBlock } from '@/components/ui/state-block';
+import { StatusMark } from '@/components/ui/status-mark';
+import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import { projectMutations } from '@/lib/api/projects';
+import { shortUrlTitle } from '@/lib/format';
+import { Check, Pencil, Plus, Trash2 } from '@/lib/icons';
+import { TOPIC_LABELS } from '@/lib/visibility/accuracy';
 
-const TOPIC_OPTIONS = factTopicSchema.options.map((topic) => ({
-  value: topic,
-  label: TOPIC_LABELS[topic],
-}));
+const COLUMNS = [
+  { key: 'fact', label: 'Fact', kind: 'identity' },
+  { key: 'topic', label: 'Topic', width: 'category' },
+  { key: 'source', label: 'Source', width: 'name', priority: 'low' },
+] as const satisfies readonly DataTableColumn[];
 
-type Draft = { topic: FactTopic; statement: string; source_url: string };
-type Change = { fact: BrandFact; update: Partial<Omit<BrandFact, 'id' | 'revision'>> };
-
-const EMPTY_DRAFT: Draft = { topic: 'pricing', statement: '', source_url: '' };
+const EDIT_COLUMNS = [
+  ...COLUMNS,
+  { key: 'actions', label: 'Fact actions', kind: 'actions', hideLabel: true },
+] as const satisfies readonly DataTableColumn[];
 
 export function BrandFactsPanel({
   workspaceId,
@@ -43,259 +37,143 @@ export function BrandFactsPanel({
   mayEdit,
 }: Readonly<{ workspaceId: string; projectId: string; list: BrandFactList; mayEdit: boolean }>) {
   const scope = { workspaceId, projectId };
-  const create = useMutation(projectMutations.createBrandFact(scope));
   const change = useMutation(projectMutations.updateBrandFact(scope));
-  const addFact = (draft: Draft) =>
-    create.mutateAsync({
-      topic: draft.topic,
-      statement: draft.statement.trim(),
-      source_url: draft.source_url.trim() || null,
-    });
-  const changeFact = ({ fact, update }: Change) =>
-    change.mutateAsync({
+  const [editing, setEditing] = useState<FactEdit | null>(null);
+  const [deleting, setDeleting] = useState<BrandFact | null>(null);
+  const facts = list.facts.filter((fact) => fact.status !== 'retired');
+  const confirm = (fact: BrandFact) =>
+    change.mutate({
       factId: fact.id,
-      input: { expected_revision: fact.revision, ...update },
+      input: { expected_revision: fact.revision, status: 'confirmed' },
     });
-  const active = list.facts.filter((fact) => fact.status !== 'retired');
-  const retired = list.facts.filter((fact) => fact.status === 'retired');
   return (
     <>
-      {create.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(create.error, { action: 'add the fact' })}
-        />
-      ) : null}
-      {change.isError ? (
+      {change.isError && !deleting ? (
         <Notice
           kind="mutation"
           notice={mutationNoticeForError(change.error, { action: 'update the fact' })}
         />
       ) : null}
-      {!active.length ? (
-        <StateBlock
-          kind="empty"
-          inline
-          message="No facts yet. Add pricing, plans, integrations or other facts to check."
-        />
-      ) : (
-        <SettingRows label="Brand facts">
-          {active.map((fact) => (
-            <FactRow
-              key={fact.id}
-              fact={fact}
-              mayEdit={mayEdit}
-              maxChars={list.limits.statement_max_chars}
-              pending={change.isPending}
-              onChange={(update) => changeFact({ fact, update })}
-            />
-          ))}
-        </SettingRows>
-      )}
-      {retired.length ? (
-        <p className={textRole('caption')}>Retired facts: {formatCount(retired.length)}</p>
-      ) : null}
-      {mayEdit ? (
-        <AddFact
+      <DataTable
+        label="Brand facts"
+        columns={mayEdit ? EDIT_COLUMNS : COLUMNS}
+        rowCount={facts.length}
+        actions={
+          mayEdit ? (
+            <Button onClick={() => setEditing({ kind: 'add' })}>
+              <Icon icon={Plus} />
+              Add fact
+            </Button>
+          ) : undefined
+        }
+        state={facts.length ? undefined : { kind: 'empty', inline: true, message: 'No facts yet.' }}
+      >
+        {facts.map((fact) => (
+          <FactRow
+            key={fact.id}
+            fact={fact}
+            actions={
+              mayEdit ? (
+                <TableActionsCell>
+                  {fact.status === 'draft' ? (
+                    <IconButton
+                      icon={Check}
+                      label="Confirm fact"
+                      disabled={change.isPending}
+                      onClick={() => confirm(fact)}
+                    />
+                  ) : null}
+                  <IconButton
+                    icon={Pencil}
+                    label="Edit fact"
+                    onClick={() => setEditing({ kind: 'edit', fact })}
+                  />
+                  <IconButton
+                    icon={Trash2}
+                    label="Delete fact"
+                    onClick={() => {
+                      change.reset();
+                      setDeleting(fact);
+                    }}
+                  />
+                </TableActionsCell>
+              ) : null
+            }
+          />
+        ))}
+      </DataTable>
+      {editing ? (
+        <BrandFactDialog
+          key={editing.kind === 'edit' ? editing.fact.id : 'add'}
+          scope={scope}
+          edit={editing}
           maxChars={list.limits.statement_max_chars}
-          pending={create.isPending}
-          onAdd={addFact}
+          onClose={() => setEditing(null)}
         />
       ) : null}
+      <ConfirmDialog
+        pending={change.isPending}
+        onCancel={() => {
+          change.reset();
+          setDeleting(null);
+        }}
+        request={
+          deleting && {
+            title: 'Delete fact?',
+            body: (
+              <>
+                {change.isError ? (
+                  <Notice
+                    kind="mutation"
+                    notice={mutationNoticeForError(change.error, { action: 'delete the fact' })}
+                  />
+                ) : null}
+                {deleting.statement}
+              </>
+            ),
+            confirmLabel: 'Delete',
+            destructive: true,
+            onConfirm: () =>
+              change.mutate(
+                {
+                  factId: deleting.id,
+                  input: { expected_revision: deleting.revision, status: 'retired' },
+                },
+                { onSuccess: () => setDeleting(null) },
+              ),
+          }
+        }
+      />
     </>
   );
 }
 
-function AddFact({
-  maxChars,
-  pending,
-  onAdd,
-}: Readonly<{ maxChars: number; pending: boolean; onAdd: (draft: Draft) => Promise<unknown> }>) {
-  const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
-  const submit = async () => {
-    const sent = draft;
-    try {
-      await onAdd(sent);
-    } catch {
-      return;
-    }
-    setDraft((current) => (current === sent ? EMPTY_DRAFT : current));
-  };
-  const empty = !draft.statement.trim();
+function FactRow({ fact, actions }: Readonly<{ fact: BrandFact; actions: ReactNode }>) {
   return (
-    <form
-      aria-label="Add a fact"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (pending || empty) return;
-        void submit();
-      }}
-    >
-      <SettingRows
-        foot={
-          <Button type="submit" variant="primary" disabled={pending || empty}>
-            <Icon icon={Plus} />
-            Add draft fact
-          </Button>
-        }
-      >
-        <SettingField inline label="Topic">
-          {(props) => (
-            <Select
-              id={props.id}
-              ariaLabel="Topic"
-              value={draft.topic}
-              options={TOPIC_OPTIONS}
-              onValueChange={(topic) => setDraft({ ...draft, topic })}
-            />
-          )}
-        </SettingField>
-        <SettingField label="Fact">
-          {(props) => (
-            <Textarea
-              {...props}
-              rows={2}
-              maxLength={maxChars}
-              value={draft.statement}
-              onChange={(event) => setDraft({ ...draft, statement: event.target.value })}
-            />
-          )}
-        </SettingField>
-        <SettingField label="Source page (optional)" hint="Starts with https://">
-          {(props) => (
-            <Input
-              {...props}
-              type="url"
-              value={draft.source_url}
-              onChange={(event) => setDraft({ ...draft, source_url: event.target.value })}
-            />
-          )}
-        </SettingField>
-      </SettingRows>
-    </form>
-  );
-}
-
-function FactRow({
-  fact,
-  mayEdit,
-  maxChars,
-  pending,
-  onChange,
-}: Readonly<{
-  fact: BrandFact;
-  mayEdit: boolean;
-  maxChars: number;
-  pending: boolean;
-  onChange: (update: Change['update']) => Promise<unknown>;
-}>) {
-  const [editing, setEditing] = useState<string | null>(null);
-  return (
-    <SettingRow
-      label={
-        editing === null ? (
-          <span className={textRole('body')}>{fact.statement}</span>
-        ) : (
-          <Textarea
-            aria-label="Edit fact"
-            rows={2}
-            maxLength={maxChars}
-            value={editing}
-            onChange={(event) => setEditing(event.target.value)}
-          />
-        )
-      }
-      description={
-        <Inline as="span" gap="status">
-          <Tag>{TOPIC_LABELS[fact.topic]}</Tag>
-          {fact.status === 'confirmed' ? (
-            <StatusMark variant="status" value="success">
-              Confirmed
-            </StatusMark>
-          ) : (
-            <StatusMark variant="status" value="warning">
-              Draft
-            </StatusMark>
-          )}
-          {fact.source_url ? (
-            <span className={textRole('caption', 'min-w-0 truncate')}>{fact.source_url}</span>
-          ) : null}
-        </Inline>
-      }
-      action={
-        mayEdit ? (
-          <FactActions
-            fact={fact}
-            editing={editing}
-            pending={pending}
-            onEdit={setEditing}
-            onChange={onChange}
-          />
-        ) : undefined
-      }
-    />
-  );
-}
-
-function FactActions({
-  fact,
-  editing,
-  pending,
-  onEdit,
-  onChange,
-}: Readonly<{
-  fact: BrandFact;
-  editing: string | null;
-  pending: boolean;
-  onEdit: (draft: string | null) => void;
-  onChange: (update: Change['update']) => Promise<unknown>;
-}>) {
-  if (editing === null)
-    return (
-      <Inline as="span" className="flex-wrap">
+    <TableRow>
+      <TableCell>
+        {fact.statement}
         {fact.status === 'draft' ? (
-          <Button
-            variant="secondary"
-            disabled={pending}
-            onClick={() => void onChange({ status: 'confirmed' }).catch(() => undefined)}
-          >
-            <Icon icon={Check} />
-            Confirm
-          </Button>
+          <StatusMark variant="status" value="warning" className="ms-2">
+            Draft
+          </StatusMark>
         ) : null}
-        <Button variant="secondary" onClick={() => onEdit(fact.statement)}>
-          <Icon icon={Pencil} />
-          Edit
-        </Button>
-        <Button
-          variant="quiet"
-          disabled={pending}
-          onClick={() => void onChange({ status: 'retired' }).catch(() => undefined)}
-        >
-          <Icon icon={Archive} />
-          Retire
-        </Button>
-      </Inline>
-    );
-  return (
-    <Inline as="span" className="flex-wrap">
-      <Button variant="quiet" onClick={() => onEdit(null)}>
-        <Icon icon={X} />
-        Cancel
-      </Button>
-      <Button
-        variant="secondary"
-        disabled={pending || !editing.trim()}
-        onClick={() => {
-          onChange({ statement: editing.trim() }).then(
-            () => onEdit(null),
-            () => undefined,
-          );
-        }}
-      >
-        <Icon icon={Save} />
-        Save
-      </Button>
-    </Inline>
+      </TableCell>
+      <TableCell>{TOPIC_LABELS[fact.topic]}</TableCell>
+      <TableCell>
+        {fact.source_url ? (
+          <ExternalHttpLink
+            href={fact.source_url}
+            title={fact.source_url}
+            className="block min-w-0 truncate"
+          >
+            {shortUrlTitle(fact.source_url)}
+          </ExternalHttpLink>
+        ) : (
+          <Absence label="No source page" />
+        )}
+      </TableCell>
+      {actions}
+    </TableRow>
   );
 }

@@ -3,6 +3,7 @@ import {
   factTopicSchema,
   type AccuracyFactList,
   type AccuracyResponse,
+  type ClaimStateFilter,
   type ExecutionClaim,
 } from '@citeladder/contracts/fact-checking';
 import { marketLabel } from '@citeladder/contracts/markets';
@@ -373,13 +374,39 @@ function cursorPosition(cursor: string, fingerprint: Record<string, unknown>) {
   return { observed_at, execution_id, ordinal: offset };
 }
 
-type ClaimFilters = { topic: string | null; verdict: string | null };
+type ClaimFilters = {
+  topic: string | null;
+  verdict: string | null;
+  state: ClaimStateFilter | null;
+};
+
+function inState(status: ClaimRow['status'], state: ClaimStateFilter): boolean {
+  switch (state) {
+    case 'decided':
+      return (
+        status.kind === 'verdict' &&
+        (status.verdict === 'supported' || status.verdict === 'contradicted')
+      );
+    case 'inconclusive':
+    case 'not_covered':
+      return status.kind === 'verdict' && status.verdict === state;
+    case 'low_confidence':
+    case 'pending':
+    case 'unavailable':
+      return status.kind === state;
+    default: {
+      const unreachable: never = state;
+      return unreachable;
+    }
+  }
+}
 
 function claimFilter(filters: ClaimFilters) {
   return (claim: ClaimRow) =>
     (filters.topic === null || claim.topic === filters.topic) &&
     (filters.verdict === null ||
-      (claim.status.kind === 'verdict' && claim.status.verdict === filters.verdict));
+      (claim.status.kind === 'verdict' && claim.status.verdict === filters.verdict)) &&
+    (filters.state === null || inState(claim.status, filters.state));
 }
 
 export async function getAccuracyFacts(
@@ -457,17 +484,13 @@ export async function accuracyClaimRows(
 export async function getAccuracyClaims(
   db: Database,
   selection: RunSelection,
-  filters: {
-    topic: string | null;
-    verdict: string | null;
-    cursor: string | null;
-    limit: number;
-  },
+  filters: ClaimFilters & { cursor: string | null; limit: number },
 ) {
   const fingerprint = {
     selection: JSON.stringify(selection),
     topic: filters.topic,
     verdict: filters.verdict,
+    state: filters.state,
   };
   const after = filters.cursor ? cursorPosition(filters.cursor, fingerprint) : null;
   if (!(await factCheckingEnabled(db, selection.workspaceId)))
@@ -500,6 +523,8 @@ export async function executionClaims(
   const found = await claimsOf(db, input.workspaceId, [{ analysisId: input.analysisId, frozen }]);
   return (found.get(input.analysisId)?.claims ?? []).map((claim) => ({
     ...claimView(claim),
+    verdict_id: claim.verdictId,
+    edited: claim.edited,
     start: claim.start,
     end: claim.end,
   }));

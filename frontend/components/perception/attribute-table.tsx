@@ -9,7 +9,7 @@ import { AnswerLink } from '@/components/runs/answer-link';
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { useShownSpan } from '@/components/ui/data-table-fit';
-import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
+import { EngineCell } from '@/components/ui/engine-mark';
 import { SearchField } from '@/components/ui/search-field';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -18,7 +18,6 @@ import { Tag } from '@/components/ui/tag';
 import { textRole } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 import { optionalStringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
-import { useEngineCatalog } from '@/lib/providers/engines';
 import { cn } from '@/lib/utils';
 import {
   categoryShare,
@@ -227,17 +226,5 @@ function QuoteRows({
         </div>
       </TableCell>
     </TableRow>
-  );
-}
-
-export function EngineCell({ engine }: Readonly<{ engine: string }>) {
-  const label = useEngineCatalog().label(engine);
-  const key = engineMarkKey(engine);
-  if (!key) return <>{label}</>;
-  return (
-    <span title={label} className="inline-flex items-center">
-      <EngineMark engine={key} placement="inline" brand />
-      <span className="sr-only">{label}</span>
-    </span>
   );
 }

@@ -41,6 +41,16 @@ export const claimVerdictSchema = z.enum([
   'not_covered',
 ]);
 
+export const claimStateFilterSchema = z.enum([
+  'decided',
+  'inconclusive',
+  'not_covered',
+  'low_confidence',
+  'pending',
+  'unavailable',
+]);
+export type ClaimStateFilter = z.infer<typeof claimStateFilterSchema>;
+
 export const claimUnavailableReasonSchema = z.enum([
   'model_not_configured',
   'platform_cap',
@@ -178,8 +188,6 @@ export const executionClaimSchema = accuracyClaimSchema
     run_id: true,
     execution_id: true,
     observed_at: true,
-    verdict_id: true,
-    edited: true,
   })
   .extend({
     start: z.number().int(),

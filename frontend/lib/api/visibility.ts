@@ -27,6 +27,7 @@ import {
   accuracyFactListSchema,
   accuracyResponseSchema,
   verdictOverrideSchema,
+  type ClaimStateFilter,
 } from '@citeladder/contracts/fact-checking';
 import type { VerdictOverrideRequest } from '@citeladder/contracts/project-requests';
 import { visibilityAdsResponseSchema } from '@citeladder/contracts/visibility-ads';
@@ -165,6 +166,7 @@ export const visibilityApi = {
       audit_ids?: string[];
       engine?: string;
       cohort?: string;
+      state?: ClaimStateFilter;
       cursor?: string;
     },
     options?: ApiRequestOptions,
@@ -190,7 +192,13 @@ export const visibilityApi = {
   },
   exportAccuracyClaims: (
     projectId: string,
-    params: { audit_id?: string; audit_ids?: string[]; engine?: string; cohort?: string },
+    params: {
+      audit_id?: string;
+      audit_ids?: string[];
+      engine?: string;
+      cohort?: string;
+      state?: ClaimStateFilter;
+    },
     options?: ApiRequestOptions,
   ) =>
     apiClient.getBlob(

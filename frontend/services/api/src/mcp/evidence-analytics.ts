@@ -184,6 +184,7 @@ export async function factChecksRead(
       const page = await getAccuracyClaims(db, runs(scope, args), {
         topic: args.topic ?? null,
         verdict: args.verdict ?? null,
+        state: null,
         cursor: args.cursor ?? null,
         limit: args.limit ?? mcpPolicy.default_list_limit,
       });
