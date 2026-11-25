@@ -20,7 +20,6 @@ import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatCount, formatDisplayTimestamp } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
-import { severityCount } from '@/lib/site-health/issues';
 import { formatScore, pageStatusBadgeValue, statusLabel } from '@/lib/site-health/status';
 
 type Pane = 'overview' | 'issues' | 'actions' | 'checks' | 'in' | 'out' | 'history' | 'traffic';
@@ -118,11 +117,6 @@ export function PageDrawerView({
 }
 
 function Figures({ detail }: Readonly<{ detail: PageDetail }>) {
-  const counts: Record<string, number> = {};
-  for (const issue of detail.issues) counts[issue.severity] = (counts[issue.severity] ?? 0) + 1;
-  const audited = detail.analysis_status === 'completed';
-  const issueCount = (severity: 'high' | 'medium' | 'low') =>
-    audited ? formatCount(severityCount(counts, severity)) : notMeasured;
   const segments: readonly FigureSegment[] = [
     {
       key: 'web',
@@ -140,11 +134,8 @@ function Figures({ detail }: Readonly<{ detail: PageDetail }>) {
           ? scoreUnavailableState(detail.aeo_measurement_state, detail.aeo_measurement_reason)
           : printed(formatScore(detail.aeo_readiness_score)),
     },
-    { key: 'high', label: 'High', value: issueCount('high') },
-    { key: 'medium', label: 'Medium', value: issueCount('medium') },
-    { key: 'low', label: 'Low', value: issueCount('low') },
   ];
-  return <FigureStrip label="Page scores and issues" segments={segments} />;
+  return <FigureStrip label="Page scores" segments={segments} />;
 }
 
 type FactRow = { label: string; value: ReactNode };

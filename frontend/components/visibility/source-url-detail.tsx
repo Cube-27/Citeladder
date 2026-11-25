@@ -6,6 +6,7 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { BusyRung } from '@/components/ui/rung-meter';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Skeleton } from '@/components/ui/skeleton';
+import { UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { UsageCard } from '@/components/visibility/source-charts';
 import { SourcePrompts } from '@/components/visibility/source-prompts';
@@ -81,8 +82,8 @@ function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) 
         />
         <Stack gap="tight" className="min-w-0">
           <SectionTitle className="truncate">{title}</SectionTitle>
-          <TextLink variant="external" text="caption" href={url} className="min-w-0">
-            <span className="truncate">{url}</span>
+          <TextLink variant="external" text="caption" href={url} className="flex min-w-0">
+            <UrlText url={url} />
           </TextLink>
         </Stack>
       </Inline>

@@ -1,6 +1,7 @@
 import { AppGrid } from '@/components/ui/app-grid';
 import { ChartFrame } from '@/components/ui/chart-frame';
 import { ClampText } from '@/components/ui/clamp-text';
+import { UrlText } from '@/components/ui/table';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Delta } from '@/components/ui/delta';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -9,7 +10,7 @@ import type { ReorderItem } from '@/components/ui/reorder-list';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
 import type { CommandCenter, Opportunity } from '@citeladder/contracts';
-import { percentText, pluralCount, readableUrl } from '@/lib/format';
+import { percentText, pluralCount } from '@/lib/format';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
 import { textRole } from '@/components/ui/typography';
@@ -79,12 +80,17 @@ function MovementMeter({
   );
 }
 
-function actionScope(action: Opportunity): string {
+function ActionScope({ action, className }: Readonly<{ action: Opportunity; className: string }>) {
   const label = action.target_label;
   const echoes = label?.toLowerCase().startsWith(action.title.toLowerCase());
-  const target = label && !echoes ? readableUrl(label) : null;
   const evidence = pluralCount(action.evidence_summary.count, 'evidence item');
-  return target ? `${target} · ${evidence}` : evidence;
+  if (!label || echoes) return <ClampText className={className}>{evidence}</ClampText>;
+  return (
+    <span className={`flex ${className}`}>
+      <UrlText url={label} />
+      <span className="min-w-0 truncate ps-1">· {evidence}</span>
+    </span>
+  );
 }
 
 function ActionPriority({ action }: Readonly<{ action: Opportunity }>) {
@@ -99,7 +105,7 @@ export function ActionFacts({ action }: Readonly<{ action: Opportunity }>) {
   return (
     <Inline>
       <ActionPriority action={action} />
-      <ClampText className={textRole('caption', 'min-w-0 flex-1')}>{actionScope(action)}</ClampText>
+      <ActionScope action={action} className={textRole('caption', 'min-w-0 flex-1')} />
     </Inline>
   );
 }
@@ -118,9 +124,10 @@ export function actionItem(action: Opportunity): ReorderItem {
         >
           <ClampText phoneWrap>{action.title}</ClampText>
         </TextLink>
-        <ClampText className={textRole('body', 'text-ink-2 phone:hidden min-w-0 flex-1')}>
-          {actionScope(action)}
-        </ClampText>
+        <ActionScope
+          action={action}
+          className={textRole('body', 'text-ink-2 phone:hidden min-w-0 flex-1')}
+        />
         <ActionPriority action={action} />
       </Inline>
     ),

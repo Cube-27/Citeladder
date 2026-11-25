@@ -20,6 +20,7 @@ import { formatCount, formatPercent } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
+import { UrlText } from '@/components/ui/table';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { wellClasses } from '@/components/ui/slip';
 
@@ -76,8 +77,8 @@ export function DemandEvidenceDrawer({
             <div className={ledgerClasses()}>
               {details.pages.map((page) => (
                 <Stack key={page.url} gap="tight" className={ledgerItemClasses('type-caption')}>
-                  <div className={textRole('emphasis', 'text-ink truncate')} title={page.url}>
-                    {page.url}
+                  <div className={textRole('emphasis', 'text-ink flex min-w-0')}>
+                    <UrlText url={page.url} />
                   </div>
                   <div className="type-caption flex items-center justify-between">
                     <span>{formatCount(page.impressions)} impressions</span>

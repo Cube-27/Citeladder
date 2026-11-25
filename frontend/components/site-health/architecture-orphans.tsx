@@ -3,7 +3,8 @@ import { Stack } from '@/components/ui/layout';
 import { PageLink } from '@/components/site-health/page-link';
 import type { SiteArchitecture } from '@citeladder/contracts';
 import { ClampText } from '@/components/ui/clamp-text';
-import { formatCount, pluralCount, readableUrl } from '@/lib/format';
+import { UrlText } from '@/components/ui/table';
+import { formatCount, pluralCount } from '@/lib/format';
 import { type FigureSegment } from '@/components/ui/figure-strip';
 
 const ORPHAN_SCOPE_NOTE = 'within this crawl';
@@ -61,12 +62,16 @@ export function OrphanPageDrawer({
                   crawlId={crawlId}
                   siteUrlId={page.site_url_id}
                 >
-                  <ClampText>{page.title || page.url}</ClampText>
+                  {page.title ? <ClampText>{page.title}</ClampText> : <UrlText url={page.url} />}
                 </PageLink>
               ) : (
-                <ClampText className="type-body text-ink">{page.title || page.url}</ClampText>
+                <span className="type-body text-ink flex min-w-0">
+                  {page.title ? <ClampText>{page.title}</ClampText> : <UrlText url={page.url} />}
+                </span>
               )}
-              <ClampText className="type-caption">{readableUrl(page.url)}</ClampText>
+              <span className="type-caption flex min-w-0">
+                <UrlText url={page.url} />
+              </span>
             </Stack>
           ))}
         </Stack>

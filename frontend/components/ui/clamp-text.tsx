@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
+import { urlCut } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const cutWatchers = new WeakMap<Element, () => void>();
@@ -83,7 +84,7 @@ export function ClampText({
 }
 
 export function UrlCutParts({ text }: Readonly<{ text: string }>) {
-  const { head, tail } = splitUrlTail(text);
+  const { head, tail } = urlCut(text);
   return (
     <>
       {head ? <span className="min-w-0 truncate">{head}</span> : null}
@@ -91,13 +92,3 @@ export function UrlCutParts({ text }: Readonly<{ text: string }>) {
     </>
   );
 }
-
-function splitUrlTail(text: string): { head: string; tail: string } {
-  const cut = text.replace(/\/$/u, '').lastIndexOf('/');
-  if (cut <= 0) return { head: '', tail: text };
-  const tail = text.slice(cut);
-  if (tail.length > URL_TAIL_MAX) return { head: '', tail: text };
-  return { head: text.slice(0, cut), tail };
-}
-
-const URL_TAIL_MAX = 32;

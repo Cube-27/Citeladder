@@ -8,7 +8,7 @@ import {
 } from '@/components/site-health/page-open-context';
 import { UrlDetail } from '@/components/site-health/url-detail';
 import { Drawer } from '@/components/ui/drawer';
-import { readableUrl } from '@/lib/format';
+import { UrlText } from '@/components/ui/table';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { pageDisplayTitle } from '@/lib/site-health/status';
 
@@ -44,7 +44,7 @@ export function PageDrawerHost({
           onClosed?.();
         }}
         title={page.data ? pageDisplayTitle(page.data.title, page.data.display_url) : 'Page'}
-        description={page.data ? readableUrl(page.data.display_url) : undefined}
+        description={page.data ? <UrlText url={page.data.display_url} /> : undefined}
         width="rail"
         body="dock"
       >

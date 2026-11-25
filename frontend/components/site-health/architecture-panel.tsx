@@ -16,8 +16,7 @@ import { MeterRow } from '@/components/ui/meter';
 import { Pressable } from '@/components/ui/pressable';
 import { PageLink } from '@/components/site-health/page-link';
 import { Absence, printed } from '@/components/ui/absence';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { ChevronDown, ChevronRight, ListTree } from '@/lib/icons';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type {
@@ -266,12 +265,12 @@ function PageKindPages({
                     crawlId={crawlId}
                     siteUrlId={page.site_url_id}
                   >
-                    <ClampText lines={1}>{page.url}</ClampText>
+                    <UrlText url={page.url} />
                   </PageLink>
                 ) : (
-                  <ClampText lines={1} className="type-body text-ink">
-                    {page.url}
-                  </ClampText>
+                  <span className="type-body text-ink flex min-w-0">
+                    <UrlText url={page.url} />
+                  </span>
                 )}
               </li>
             ))}

@@ -2,6 +2,7 @@ import { PageLink } from '@/components/site-health/page-link';
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { EvidenceLine } from '@/components/site-health/issue-evidence';
 import { Inline, Stack } from '@/components/ui/layout';
+import { UrlText } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { insetClasses, ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { SiteIssue } from '@citeladder/contracts';
@@ -96,8 +97,8 @@ export function AffectedPageLink({
             <span className="type-caption shrink-0">{pageKindLabel(pageKind)}</span>
           ) : null}
         </Inline>
-        <span className="type-caption min-w-0 truncate" title={url}>
-          {url}
+        <span className="type-caption flex min-w-0">
+          <UrlText url={url} />
         </span>
       </Stack>
     </PageLink>

@@ -7,7 +7,7 @@ const CLASS_COLOUR_LITERAL = new RegExp(
   'i',
 );
 
-const textOf = (node) =>
+export const textOf = (node) =>
   node.type === 'TemplateElement' ? (node.value.cooked ?? node.value.raw) : stringValue(node);
 
 export function literalColourViolations(source, label) {

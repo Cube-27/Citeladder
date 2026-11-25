@@ -70,6 +70,7 @@ const NONE_ROLES = [
   'query-state.padding',
   'figure-target.gap',
   'figure-strip.height-spread',
+  'figure-strip.top-spread',
   'table-head.cut',
   'page.overflow-x',
 ] as const;
@@ -291,11 +292,15 @@ function measure({ route }: { route: string }) {
     add('figure-cell.height', element, element.getBoundingClientRect().height);
   }
   for (const row of all('dl[data-figure-strip]')) {
-    const heights = Array.from(row.children)
+    const cells = Array.from(row.children)
       .filter(visible)
-      .map((cell) => cell.getBoundingClientRect().height);
-    if (heights.length > 1)
+      .map((cell) => cell.getBoundingClientRect());
+    if (cells.length > 1) {
+      const heights = cells.map((cell) => cell.height);
+      const tops = cells.map((cell) => cell.top);
       add('figure-strip.height-spread', row, Math.max(...heights) - Math.min(...heights));
+      add('figure-strip.top-spread', row, Math.max(...tops) - Math.min(...tops));
+    }
   }
   for (const element of all('svg[data-icon]')) {
     const rect = element.getBoundingClientRect();
@@ -590,7 +595,7 @@ const ROUTE_GROUPS: Readonly<Record<string, readonly PageState[]>> = {
         [new RegExp(String.raw`/api/v1/audits/${run?.id}$`), run],
         [new RegExp(String.raw`/api/v1/audits/${run?.id}/executions(\?.*)?$`), []],
       ],
-      required: ['figure-cell.padding-y', 'figure-strip.height-spread'],
+      required: ['figure-cell.padding-y', 'figure-strip.height-spread', 'figure-strip.top-spread'],
     },
   ],
   'ai traffic': [

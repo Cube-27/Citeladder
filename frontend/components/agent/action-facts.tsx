@@ -10,7 +10,8 @@ import {
 } from '@/lib/agent/vocabulary';
 import type { ActionDetail, ActionStatus } from '@/lib/api/actions';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate, readableUrl } from '@/lib/format';
+import { UrlText } from '@/components/ui/table';
+import { formatDisplayDate } from '@/lib/format';
 
 const TONE: Record<ActionStatus, StateDotTone> = {
   open: 'open',
@@ -42,14 +43,23 @@ export function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
   const placement = action.target_kind === 'earned_page';
   const crawl = action.cohort?.crawl_completed_at;
   let source = sourceLabel(action);
-  if (placement && action.target_url) source = readableUrl(action.target_url);
-  else if (crawl) source = `${source} · crawl of ${formatDisplayDate(crawl, timeZone)}`;
+  if (crawl) source = `${source} · crawl of ${formatDisplayDate(crawl, timeZone)}`;
   const facts: DetailFact[] = [
     { label: 'Status', value: <StatusValue action={action} /> },
     { label: 'Impact', value: <Impact band={action.priority_band} /> },
   ];
   if (!placement) facts.push({ label: 'Scope', value: scopeLabel(action) });
-  facts.push({ label: 'Source', value: <span className="min-w-0 truncate">{source}</span> });
+  facts.push({
+    label: 'Source',
+    value:
+      placement && action.target_url ? (
+        <span className="flex min-w-0">
+          <UrlText url={action.target_url} />
+        </span>
+      ) : (
+        <span className="min-w-0 truncate">{source}</span>
+      ),
+  });
   if (!placement)
     facts.push({
       label: 'Grouping',

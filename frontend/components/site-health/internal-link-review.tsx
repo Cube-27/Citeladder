@@ -13,11 +13,12 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
+import { UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { MarkActionImplemented } from '@/components/agent/action-declaration';
 import { FileSearch } from '@/lib/icons';
-import { pluralCount, readableUrl } from '@/lib/format';
+import { pluralCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 const escapeHtml = (value: string) =>
@@ -39,9 +40,13 @@ function LinkEnd({
           className="flex w-fit max-w-full min-w-0 items-center"
           href={page.url}
         >
-          <ClampText tooltip={page.url} className="min-w-0">
-            {page.title || readableUrl(page.url)}
-          </ClampText>
+          {page.title ? (
+            <ClampText tooltip={page.url} className="min-w-0">
+              {page.title}
+            </ClampText>
+          ) : (
+            <UrlText url={page.url} />
+          )}
         </TextLink>
         {summary ? (
           <ClampText lines={2} className="type-caption">
