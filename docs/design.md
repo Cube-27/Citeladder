@@ -205,7 +205,8 @@ One entry per family; wave 2 fills each from the layouts above.
   inline (`TableCellLines`). Below 768px no column is sticky and cell text
   wraps instead of truncating (`table-phone.css`). The foot band sits inside the frame.
 - **Metric strip** (`FigureStrip`). One row (AR-3): cells share it equally and
-  never wrap; below 160px a cell's label takes two lines. Each cell draws its
+  never wrap; below 160px a cell's label takes two lines, and below 128px the
+  strip scrolls sideways. Each cell draws its
   divider on its start edge and the frame clips the outer one. The geometry
   census fails a strip whose cells sit at different tops. A score is a printed
   figure.
