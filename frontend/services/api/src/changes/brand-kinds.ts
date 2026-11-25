@@ -171,9 +171,12 @@ export const brandKinds = {
     permission: MEMBER_WRITE,
     purpose:
       'add a company fact for fact checking, only from what the person said or attached; it lands as a draft the person reviews',
-    payload: brandFactCreate,
+    payload: brandFactCreate.omit({ status: true }),
     async execute(trx, _config, actor, change, payload) {
-      await createBrandFact(trx, scopeOf(actor.workspaceId, change), actor.userId, payload);
+      await createBrandFact(trx, scopeOf(actor.workspaceId, change), actor.userId, {
+        ...payload,
+        status: 'draft',
+      });
       return { summary: 'Added the fact as a draft.' };
     },
     preview(_context, payload) {

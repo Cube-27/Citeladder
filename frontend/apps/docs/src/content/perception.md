@@ -38,7 +38,7 @@ While a probe works, the tab shows its step: asking the engines, with how many a
 
 ## Check facts in answers (pilot)
 
-In workspaces in the fact-checking pilot, **Agent → Context** lists **Brand facts**: short statements such as a plan's price, an integration or the markets you serve. **Edit facts** on the Fact-checking tab opens them. A new fact starts as a draft; only confirmed facts are used.
+In workspaces in the fact-checking pilot, **Agent → Context** lists **Brand facts**: short statements such as a plan's price, an integration or the markets you serve. **Edit facts** on the Fact-checking tab opens them. A fact you add is confirmed; imported facts start as drafts until you confirm them. Only confirmed facts are used, and **Delete** removes a fact from future checks.
 
 **Import facts CSV** on the Fact-checking tab adds facts from a file with `topic`, `statement` and an optional `source_url` column. A preview marks each row **Ready** or **Already a fact** before you import; imported facts are drafts until you confirm them, and rows that repeat an existing fact are skipped.
 

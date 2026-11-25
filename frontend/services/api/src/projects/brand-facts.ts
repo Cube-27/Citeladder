@@ -135,7 +135,7 @@ export function createBrandFact(
         topic: input.topic,
         statement: input.statement,
         source_url: input.source_url ?? null,
-        status: 'draft',
+        status: input.status,
         created_at: now,
         updated_at: now,
       })

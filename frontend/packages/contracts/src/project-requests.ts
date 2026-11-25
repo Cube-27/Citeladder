@@ -104,6 +104,7 @@ export const brandFactCreateRequestSchema = z.object({
   topic: factTopicSchema,
   statement: text().min(1),
   source_url: factSourceUrl(),
+  status: factStatusSchema.exclude(['retired']).default('draft'),
 });
 export type BrandFactCreateRequest = z.input<typeof brandFactCreateRequestSchema>;
 

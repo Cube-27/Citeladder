@@ -205,7 +205,7 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
               { name: 'app-boot', tags: ['$initial'], priority: 20 },
               {
                 name: 'ui',
-                test: /\/components\/ui\/(?!(?:area-chart|stacked-bar-chart|part-donut)\.tsx)/,
+                test: /\/components\/ui\/(?!(?:area-chart|part-donut)\.tsx)/,
                 minShareCount: 2,
                 priority: 10,
                 entriesAware: true,

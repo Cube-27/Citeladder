@@ -68,6 +68,18 @@ describe('brand facts', () => {
       statement: 'Pro costs $59 per month.',
     });
     expect(created.body).toMatchObject({ status: 'draft', revision: 1, source_url: null });
+    const typed = await call(tenant, 'POST', '/brand-facts', {
+      topic: 'plans',
+      statement: 'Teams includes 5 seats.',
+      status: 'confirmed',
+    });
+    expect(typed.body).toMatchObject({ status: 'confirmed', revision: 1 });
+    const born = await call(tenant, 'POST', '/brand-facts', {
+      topic: 'plans',
+      statement: 'Teams includes 6 seats.',
+      status: 'retired',
+    });
+    expect(born.status).toBe(422);
     const id = String(created.body.id);
     const confirmed = await call(tenant, 'PATCH', `/brand-facts/${id}`, {
       expected_revision: 1,

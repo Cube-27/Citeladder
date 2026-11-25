@@ -24,8 +24,6 @@ export const GRID_PROPS = {
 
 export const LINE_CURSOR = { stroke: 'var(--color-control-line)', strokeDasharray: '4 4' };
 
-export const BAR_CURSOR = { fill: 'var(--color-state-hover)' };
-
 export function roleColor(classes: string, prefix: 'fill' | 'stroke'): string {
   const named = (kind: string) =>
     classes.split(/\s+/).find((name) => name.startsWith(`${kind}-`) && name !== `${kind}-current`);
