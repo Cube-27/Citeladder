@@ -387,6 +387,7 @@ function SetupCard({
 }>) {
   return (
     <Section
+      variant="framed"
       data-testid="data-source-setup"
       className="mx-auto w-full max-w-[var(--container-prose)]"
     >
