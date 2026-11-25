@@ -9,6 +9,7 @@ import { renderWithProviders as raw, selectionAs, type TestRole } from '@/test/r
 import type { PageDetail } from '@citeladder/contracts';
 
 import { parseAgentHandoff } from '@/lib/agent/handoff';
+import type { Action } from '@/lib/api/actions';
 import { PageDrawerHost } from './page-drawer';
 import {
   CRAWL,
@@ -206,6 +207,78 @@ describe('URL drawer', () => {
     renderDrawer('viewer');
     expect(await within(await opened()).findByRole('button', { name: 'History' })).toBeVisible();
     expect(screen.queryByRole('button', { name: /^Re-audit/ })).toBeNull();
+  });
+
+  it('lists the actions on this URL and offers the Agent only while one is open', async () => {
+    const action = (id: string, label: string, status: Action['status']): Action => ({
+      id,
+      project_id: makeProject().id,
+      target_kind: 'issue_family',
+      target_label: label,
+      target_url: null,
+      target_prompt_id: null,
+      origin: 'evidence',
+      status,
+      measurement: null,
+      priority_score: 50,
+      priority_band: 'high',
+      families: ['site_health'],
+      approach: 'fix_technical',
+      goal: 'read_site',
+      grouping: 'aeo',
+      skill_id: 'technical_health',
+      member_count: 1,
+      declarable_member_count: 1,
+      page_count: 3,
+      summary: null,
+      handoff: { context: 'action', message: 'Fix it.' },
+      evidence_cleared_at: null,
+      created_at: '2026-11-10T10:00:00Z',
+      updated_at: '2026-11-10T10:00:00Z',
+    });
+    const OPEN_ID = '77777777-7777-4777-8777-777777777777';
+    const DISMISSED = action(
+      '88888888-8888-4888-8888-888888888888',
+      'Meta description too long',
+      'dismissed',
+    );
+    const serve = (items: Action[]) =>
+      mswServer.use(
+        ...handlers(detail()),
+        http.get(`/api/v1/projects/:projectId/urls/${URL_ID}/actions`, () =>
+          HttpResponse.json({
+            site_url_id: URL_ID,
+            url: 'https://acme.test/',
+            page_kind: 'home',
+            last_crawled_at: '2026-11-10T10:00:00Z',
+            items,
+          }),
+        ),
+      );
+    const user = userEvent.setup();
+    serve([action(OPEN_ID, 'Form controls missing accessible names', 'open'), DISMISSED]);
+    const { unmount } = renderDrawer();
+    const drawer = await opened();
+    const tab = await within(drawer).findByRole('tab', { name: /^Actions/ });
+    await waitFor(() => expect(tab).toHaveTextContent('Actions (2)'));
+    await user.click(tab);
+    const list = within(drawer).getByRole('list', { name: 'Actions on this URL' });
+    expect(
+      within(list)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href')),
+    ).toEqual([`/actions/${OPEN_ID}`, `/actions/${DISMISSED.id}`]);
+    const agent = within(drawer).getByRole('link', { name: 'Fix this URL with Agent' });
+    expect(
+      parseAgentHandoff(new URL(agent.getAttribute('href')!, 'http://x').searchParams).context,
+    ).toMatchObject({ url_actions_reference: { site_url_id: URL_ID } });
+    unmount();
+
+    serve([DISMISSED]);
+    renderDrawer();
+    const only = await within(await opened()).findByRole('tab', { name: /^Actions/ });
+    await waitFor(() => expect(only).toHaveTextContent('Actions (1)'));
+    expect(screen.queryByRole('link', { name: 'Fix this URL with Agent' })).toBeNull();
   });
 
   it('renders the placeholder (not "0 ms") for an unmeasured TTFB (B6)', async () => {
