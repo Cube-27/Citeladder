@@ -70,7 +70,6 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
     <WidgetFrame
       id="company-facts"
       title="Company facts"
-      description={facts.industry.trim() || <Absence state="not_set" label="Industry not set" />}
       link={{ href: '/agent/context', label: 'Edit in Agent context' }}
     >
       <FigureStrip

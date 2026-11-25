@@ -194,7 +194,7 @@ function ReplacingState({
   return (
     <StateHeadingLevelContext value={level}>
       {state.kind === 'empty' && state.inline ? (
-        <div className="p-4">
+        <div data-table-replacing="" className="p-4">
           <StateBlock {...state} />
         </div>
       ) : (
