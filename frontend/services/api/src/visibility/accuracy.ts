@@ -52,7 +52,13 @@ import { compareText } from '../text-order.ts';
 import { scopedSelection } from './dashboard.ts';
 import { perceptionRows } from './perception.ts';
 import { periodTrendSelection } from './runs.ts';
-import { citationsByAnalysis, evidenceScope, observedAt, type RunSelection } from './selection.ts';
+import {
+  citationsByAnalysis,
+  evidenceScope,
+  observedAt,
+  perceptionCohorts,
+  type RunSelection,
+} from './selection.ts';
 
 const settings = policy.perception.fact_check;
 const CLAIMS_CURSOR_SCOPE = 'visibility.accuracy.claims';
@@ -260,7 +266,7 @@ async function selectionAnswers(
 ) {
   const scoped = await scopedSelection(db, selection);
   const rows = (
-    await evidenceScope(db, scoped)
+    await evidenceScope(db, scoped, perceptionCohorts(scoped.cohort))
       .select([
         'ra.id',
         'ra.audit_id',

@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { scoringConfig } from '../src/analysis/scoring.ts';
 import { policy } from '../src/config.ts';
 import { createModelGateway } from '../src/models/gateway.ts';
+import { runMetered } from '../src/models/meter-scope.ts';
 import { checkedTopics, factScope, type FrozenFactCheck } from '../src/perception/admission.ts';
 import { callStructured } from '../src/perception/model-call.ts';
 import { claimsOutputSchema, perceptionPrompt } from '../src/perception/model.ts';
@@ -202,22 +203,23 @@ async function evaluate(fixture: Answer) {
       invented: 0,
     };
   const { actual } = result;
-  const matched = fixture.expected.map((expected) => {
-    const claim = actual.find((row) => row.quote.includes(expected.quote_contains));
-    return {
-      expected: expected.verdict,
-      actual: claim?.verdict ?? 'missed',
-      topic_match: claim?.topic === expected.topic,
-    };
+  const pairs = fixture.expected.map((expected) => {
+    const quoted = actual.filter((row) => row.quote.includes(expected.quote_contains));
+    return { expected, claim: quoted.find((row) => row.topic === expected.topic) ?? quoted[0] };
   });
+  const matched = pairs.map(({ expected, claim }) => ({
+    expected: expected.verdict,
+    actual: claim?.verdict ?? 'missed',
+    topic_match: claim?.topic === expected.topic,
+  }));
   const expectedQuotes = fixture.expected.map((expected) => expected.quote_contains);
   const contradicted = actual.filter((claim) => claim.verdict === 'contradicted');
+  const expectedFor = (claim: Actual) => {
+    const paired = pairs.filter((pair) => pair.claim === claim).map((pair) => pair.expected);
+    return paired.find((expected) => expected.topic === claim.topic) ?? paired[0];
+  };
   const falseContradictions = contradicted.filter(
-    (claim) =>
-      !fixture.expected.some(
-        (expected) =>
-          expected.verdict === 'contradicted' && claim.quote.includes(expected.quote_contains),
-      ),
+    (claim) => expectedFor(claim)?.verdict !== 'contradicted',
   );
   return {
     ...base,
@@ -235,7 +237,9 @@ async function evaluate(fixture: Answer) {
 
 const selected = fixtures.answers.filter((item) => !values.fixture || item.name === values.fixture);
 if (!selected.length) throw new Error(`No calibration fixture is named ${values.fixture}`);
-const records = await Promise.all(selected.map(evaluate));
+const records = await runMetered({ workspaceId: 'calibration', feature: 'fact_check' }, () =>
+  Promise.all(selected.map(evaluate)),
+);
 await appendFile(log, records.map((record) => `${JSON.stringify(record)}\n`).join(''));
 
 const sum = (pick: (record: (typeof records)[number]) => number) =>

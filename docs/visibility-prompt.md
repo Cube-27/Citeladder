@@ -846,9 +846,12 @@ platform-funded like perception. The policy, topics, caps and templates are the
   within the per-answer cap; drops are counted. Claims land in
   `answer_claims` in the perception's terminal transaction.
 - **Verification.** A claim is checked against facts on its own topic and on
-  its neighbouring topics (`related_topics`, frozen with the fact set: plans with
-  pricing and specs, availability with markets, and so on), so a claim filed
-  under an adjacent topic still meets the fact that decides it. When a
+  its neighbouring topics (`related_topics`, frozen with the fact set), so a
+  claim filed under an adjacent topic still meets the fact that decides it.
+  Specs, availability, markets and policies border each other because
+  extraction files the same assertion under any of them (a licence as specs or
+  availability, delivery as markets or policies); a narrower scope gave the same
+  claim different verdicts depending on what else its answer said. When a
   confident claim has a frozen fact in that scope, the same transaction queues
   one `fact_verification` analytics task. Its executor sends those claims and
   the scoped facts (own topics first, shared round-robin, capped, local ids)
@@ -868,7 +871,10 @@ platform-funded like perception. The policy, topics, caps and templates are the
 - **Reads.** `GET /visibility/accuracy` and `/visibility/accuracy/claims`, the
   `claims` field of execution evidence and `read_fact_checks` read
   `not_enabled` outside the pilot; `/visibility/accuracy/facts` reads
-  `enabled: false` and `/visibility/accuracy/claims/export` an empty CSV. By
+  `enabled: false` and `/visibility/accuracy/claims/export` an empty CSV.
+  They read the same answers Perception reads for a cohort
+  (`perception_cohorts`), so brand questions count under comparison and all:
+  they are where answers state most facts about the brand. By
   fact groups verdicts on the fact revision the run froze, so editing a fact
   never moves past claims; a frozen fact no verdict cites is "pending" while
   claims are still being checked, then "not raised".

@@ -321,7 +321,7 @@ describe('claim extraction and verification', () => {
     expect(forgedCsv.status).toBe(404);
   });
 
-  it('verifies a claim the extractor filed under a neighbouring topic instead of calling it not covered', async () => {
+  it('verifies a claim the extractor filed under a neighbouring topic instead of calling it not covered, and reads brand-question answers where Perception does', async () => {
     await enroll(tenant);
     await confirmedFact(tenant, 'specs', 'The Pro plan includes 50 projects.');
     const auditId = await fixtures.audit(tenant, {
@@ -357,6 +357,26 @@ describe('claim extraction and verification', () => {
         { topic: 'plans', facts: [{ statement: 'The Pro plan includes 50 projects.' }] },
       ],
     });
+    await db
+      .updateTable('response_analyses')
+      .set({ cohort: 'brand_diagnostic' })
+      .where('audit_id', '=', auditId)
+      .execute();
+    const byCohort = await Promise.all(
+      ['core', 'comparison', 'all'].map(async (cohort) => {
+        const read = await call(
+          tenant,
+          'GET',
+          `/visibility/accuracy?audit_id=${auditId}&cohort=${cohort}`,
+        );
+        return [cohort, read.body.state];
+      }),
+    );
+    expect(byCohort).toEqual([
+      ['core', 'no_facts'],
+      ['comparison', 'value'],
+      ['all', 'value'],
+    ]);
   });
 
   it('extracts no claims for an audit admitted outside the pilot', async () => {
