@@ -6,7 +6,7 @@ import { inTransaction, type Database } from '../db/database.ts';
 import { requireFlag } from '../entitlements/access.ts';
 import type { ProjectScope } from '../projects/brand-profile.ts';
 import { acquireProjectLock } from './locks.ts';
-import { scopedPrompts } from './prompts.ts';
+import { setPromptFactCheck } from './prompts.ts';
 
 export async function listFactCheckPrompts(
   db: Database,
@@ -40,18 +40,7 @@ export async function setFactCheckPrompts(
   await inTransaction(db, async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
     await requireFlag(trx, scope.workspaceId, 'fact_checking');
-    await scopedPrompts(trx, scope, input.prompt_ids);
-    const checked = new Set(input.prompt_ids);
-    await trx
-      .updateTable('prompts')
-      .set((eb) => ({
-        fact_check: checked.size ? eb('id', 'in', [...checked]).$castTo<boolean>() : false,
-      }))
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('prompt_set_id', 'in', (eb) =>
-        eb.selectFrom('prompt_sets').select('id').where('project_id', '=', scope.projectId),
-      )
-      .execute();
+    await setPromptFactCheck(trx, scope, input.prompt_ids);
   });
   return listFactCheckPrompts(db, scope);
 }

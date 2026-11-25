@@ -17,12 +17,10 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 
 type Prompt = FactCheckPromptList['prompts'][number];
 
-const NO_TOPIC = 'No topic';
-
 function byTopic(prompts: readonly Prompt[]) {
-  const groups = new Map<string, Prompt[]>();
+  const groups = new Map<string | null, Prompt[]>();
   for (const prompt of prompts) {
-    const topic = prompt.topic ?? NO_TOPIC;
+    const { topic } = prompt;
     const group = groups.get(topic);
     if (group) group.push(prompt);
     else groups.set(topic, [prompt]);
@@ -93,9 +91,9 @@ function PromptPicker({
         />
       ) : null}
       {byTopic(list.prompts).map(([topic, prompts]) => (
-        <Stack key={topic} gap="compact">
+        <Stack key={topic ?? ''} gap="compact">
           <Checkbox
-            label={<span className={textRole('label')}>{topic}</span>}
+            label={<span className={textRole('label')}>{topic ?? 'No topic'}</span>}
             checked={groupState(prompts, checked)}
             onCheckedChange={(on) =>
               toggle(

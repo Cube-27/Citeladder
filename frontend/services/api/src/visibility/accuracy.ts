@@ -92,6 +92,7 @@ function identityOf({ versions, factCheck }: Frozen) {
     factCheck.verify_template_version,
     factCheck.metrics_version,
     factCheck.fact_set_hash,
+    factCheck.prompt_ids ?? null,
   ]);
 }
 
@@ -267,7 +268,7 @@ async function selectionAnswers(
   options: { citations: boolean },
 ) {
   const scoped = await scopedSelection(db, selection);
-  const rows = (
+  const frozenRows = (
     await evidenceScope(db, scoped, perceptionCohorts(scoped.cohort))
       .select([
         'ra.id',
@@ -286,12 +287,9 @@ async function selectionAnswers(
     const frozen = frozenOf(row.configuration);
     return frozen ? [{ ...row, frozen }] : [];
   });
-  const factChecked = rows.length > 0;
-  const named = rows.filter(
-    (row) =>
-      promptFactCheck(row.frozen.factCheck, row.prompt_id) &&
-      brandNamedSchema.parse(row.entity_assessments),
-  );
+  const factChecked = frozenRows.length > 0;
+  const rows = frozenRows.filter((row) => promptFactCheck(row.frozen.factCheck, row.prompt_id));
+  const named = rows.filter((row) => brandNamedSchema.parse(row.entity_assessments));
   const ids = named.map((row) => row.id);
   const [extracted, citations] = await Promise.all([
     claimsOf(

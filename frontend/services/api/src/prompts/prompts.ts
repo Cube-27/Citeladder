@@ -135,6 +135,25 @@ export async function scopedPrompts(
   return rows;
 }
 
+export async function setPromptFactCheck(
+  db: Kysely<DB>,
+  scope: { workspaceId: string; projectId: string },
+  promptIds: readonly string[],
+): Promise<void> {
+  await scopedPrompts(db, scope, promptIds);
+  const checked = [...new Set(promptIds)];
+  await db
+    .updateTable('prompts')
+    .set((eb) => ({
+      fact_check: checked.length ? eb('id', 'in', checked).$castTo<boolean>() : false,
+    }))
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('prompt_set_id', 'in', (eb) =>
+      eb.selectFrom('prompt_sets').select('id').where('project_id', '=', scope.projectId),
+    )
+    .execute();
+}
+
 export async function topicText(
   db: Kysely<DB>,
   scope: ProjectScope,
