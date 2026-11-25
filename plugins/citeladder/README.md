@@ -6,8 +6,8 @@ account, explicit workspace consent and existing project measurements. The
 connection is read-only; changes are made in the CiteLadder app. There is no
 sample mode. The repository marketplace is
 `.agents/plugins/marketplace.json`; restart ChatGPT desktop to discover it.
-Portable clients use `mcp.json`. A registered ChatGPT connection binding must
-use its actual app ID; this package deliberately contains no invented ID.
+Portable clients use `mcp.json`. The published ChatGPT plugin is
+https://chatgpt.com/plugins/plugin_asdk_app_6b04f8e29ee481919d3827248811c8f4.
 
 Build the interactive app from `frontend` with
 `pnpm --filter @citeladder/mcp-app build`; the API Docker build performs that

@@ -3,10 +3,18 @@ title: 'Changelog'
 description: 'Product changes and what they mean for your workflow.'
 group: 'Updates'
 order: 400
-updated: '2026-11-23'
+updated: '2026-11-25'
 ---
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
+
+## November 25, 2026: CiteLadder plugin in ChatGPT
+
+CiteLadder is published as a plugin in ChatGPT. [Install it](https://chatgpt.com/plugins/plugin_asdk_app_6b04f8e29ee481919d3827248811c8f4) and sign in to CiteLadder; there is no custom server to add and no URL to paste. **Connect → ChatGPT** in **Settings → MCP connections** and on the MCP page opens the plugin.
+
+**For your team:** a custom connector already added by URL keeps working.
+
+[Connection setup](/mcp/connect/#chatgpt)
 
 ## November 23, 2026: Every Site Health check is scored
 
