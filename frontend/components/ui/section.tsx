@@ -41,7 +41,11 @@ export function SectionHeader({
 >) {
   if (!actions) {
     return (
-      <header {...props} className={cn('flex flex-col gap-1 not-last:mb-3', className)}>
+      <header
+        {...props}
+        data-tray-header=""
+        className={cn('flex flex-col gap-1 not-last:mb-3', className)}
+      >
         {children}
       </header>
     );
@@ -49,6 +53,7 @@ export function SectionHeader({
   return (
     <header
       {...props}
+      data-tray-header=""
       className={cn('flex flex-wrap items-start justify-between gap-2 not-last:mb-3', className)}
     >
       <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{children}</div>

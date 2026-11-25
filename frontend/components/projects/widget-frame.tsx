@@ -30,11 +30,7 @@ export function WidgetFrame({
   children: ReactNode;
 }>) {
   return (
-    <section
-      aria-labelledby={id}
-      data-overview-widget=""
-      className="surface-tray flex h-full min-w-0 flex-col"
-    >
+    <section aria-labelledby={id} data-overview-widget="" className="h-full min-w-0">
       <WidgetHead id={id} title={title} description={description} status={status} link={link} />
       <Stack
         gap="item"
@@ -63,9 +59,9 @@ function WidgetHead({
   link?: WidgetLink | null;
 }>) {
   return (
-    <Inline as="header" className="min-h-9 items-center justify-between px-3 py-1.5">
+    <Inline as="header" data-tray-header="" className="justify-between">
       <Inline gap="item" className="min-w-0">
-        <h2 id={id} className={textRole('label', 'text-ink-2 truncate')}>
+        <h2 id={id} className={textRole('heading', 'truncate')}>
           {title}
         </h2>
         {description ? (
@@ -75,7 +71,7 @@ function WidgetHead({
         ) : null}
       </Inline>
       {status || link ? (
-        <Inline className={textRole('label', 'text-ink-2 shrink-0')}>
+        <Inline className="shrink-0">
           {status}
           {link ? (
             <TextLink href={link.href} underline="hover">

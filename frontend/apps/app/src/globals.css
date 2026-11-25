@@ -632,7 +632,8 @@
   --modal-padding: 16px;
   --workspace-gap: 16px;
   --page-top-gap: 24px;
-  --page-section-gap: 24px;
+  --section-gap: 16px;
+  --page-section-gap: var(--section-gap);
   --flow-gap: 48px;
   --page-end-space: 33svh;
   --page-pad-inline: var(--content-gutter);
@@ -1406,53 +1407,78 @@ a.focus-ring:active .type-caption {
   --tray-radius: 14px;
   --tray-padding: 4px;
   --tray-inner-radius: calc(var(--tray-radius) - var(--tray-padding));
+  --tray-header-height: 36px;
+  --tray-header-padding: 6px 12px;
+  --tray-title-size: var(--text-label);
+  --tray-title-line-height: var(--text-label--line-height);
+  --tray-title-weight: var(--weight-medium);
+  --color-tray-title: var(--color-ink-2);
   --color-tray: color-mix(in oklab, var(--color-page), var(--color-ink) 3%);
-  --table-head-ground: var(--color-tray);
+  --color-tray-inner: var(--color-raised);
+  --color-tray-raised: var(--color-raised-2);
+  --table-head-ground: var(--table-ground);
 }
 
-:root[data-theme='dark']:not([data-public-surface]) :is(.surface-tray, :is([data-section='surface'], .surface-card):has(> header):not(:where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], .surface-tray, [data-section='surface']:has(> header)) *)) {
-  --color-surface: var(--color-raised);
-  --table-ground: var(--color-raised);
-  --color-raised: var(--color-raised-2);
-}
-:root:not([data-public-surface]) :is(.surface-tray, :is([data-section='surface'], .surface-card):has(> header):not(:where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], .surface-tray, [data-section='surface']:has(> header)) *)) {
+:root:not([data-public-surface])
+  [data-main-column]
+  :has(> [data-tray-header]):not(
+    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], :has(> [data-tray-header])) *
+  ) {
   display: flex;
   flex-direction: column;
   gap: var(--tray-padding);
+  border: 0;
   border-radius: var(--tray-radius);
   background: var(--color-tray);
+  box-shadow: none;
   padding: var(--tray-padding);
-}
-:root:not([data-public-surface]) :is(.surface-tray, :is([data-section='surface'], .surface-card):has(> header):not(:where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], .surface-tray, [data-section='surface']:has(> header)) *)) > header {
-  min-height: 36px;
-  margin: 0;
-  border: 0;
-  align-items: center;
-  padding: 6px 12px;
-  &:has(> :is(h2, h3)) {
-    align-items: flex-start;
-    justify-content: center;
+
+  :root[data-theme='dark'] & {
+    --color-surface: var(--color-tray-inner);
+    --table-ground: var(--color-tray-inner);
+    --table-head-ground: var(--color-tray-inner);
+    --color-raised: var(--color-tray-raised);
   }
-  & :is(h2, h3) {
-    font-size: var(--text-label);
-    line-height: var(--text-label--line-height);
-    font-weight: var(--weight-medium);
-    color: var(--color-ink-2);
+
+  & > [data-tray-header] {
+    min-height: var(--tray-header-height);
+    margin: 0;
+    border: 0;
+    align-items: center;
+    padding: var(--tray-header-padding);
+    &:has(> :is(h2, h3)) {
+      align-items: flex-start;
+      justify-content: center;
+    }
+    & :is(h2, h3) {
+      font-size: var(--tray-title-size);
+      line-height: var(--tray-title-line-height);
+      font-weight: var(--tray-title-weight);
+      color: var(--color-tray-title);
+    }
   }
-}
-:root:not([data-public-surface]) :is([data-section='surface'], .surface-card):has(> header):not(:where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], .surface-tray, [data-section='surface']:has(> header)) *) > :not(header, [data-data-table-frame], .table-frame, :has([data-data-table-frame], .table-frame)) {
-  border-radius: var(--tray-inner-radius);
-  background-color: var(--color-surface);
-  &:not(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-figure-strip], [data-state-frame]) {
+
+  & > :last-child {
+    flex: 1;
+  }
+
+  & > :not([data-tray-header], .surface-card, .surface-slip, .surface-lift, .surface-well, [data-figure-strip], [data-state-frame], [data-data-table-frame], .table-frame, :has(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-figure-strip], [data-state-frame], [data-data-table-frame], .table-frame)) {
+    border-radius: var(--tray-inner-radius);
+    background-color: var(--color-surface);
     padding: var(--card-padding);
   }
-}
-:root:not([data-public-surface]) :is([data-section='surface'], .surface-card):has(> header):not(:where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], .surface-tray, [data-section='surface']:has(> header)) *) > :last-child {
-  flex: 1;
-}
-:root:not([data-public-surface]) :is(.surface-tray, :is([data-section='surface'], .surface-card):has(> header):not(:where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], .surface-tray, [data-section='surface']:has(> header)) *)) :is([data-data-table-frame], .table-frame:not([data-data-table] *)) {
-  background: transparent;
-  padding: 0;
+
+  & :is(.surface-card, .surface-slip, .surface-lift, [data-figure-strip], [data-state-frame]):not(:where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-figure-strip], [data-state-frame], [data-data-table-frame], .table-frame) *) {
+    border: 0;
+    box-shadow: none;
+    border-radius: var(--tray-inner-radius);
+    background-color: var(--color-surface);
+  }
+
+  & :is([data-data-table-frame], .table-frame:not([data-data-table] *)) {
+    background: transparent;
+    padding: 0;
+  }
 }
 
 .surface-inset {
@@ -1499,7 +1525,7 @@ a.focus-ring:active .type-caption {
   [data-settings-sections] > [role='tabpanel'] {
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: var(--section-gap);
   }
   [data-settings-sections] :is(section, section.surface-section) {
     padding-top: 0;
@@ -1772,8 +1798,8 @@ label {
 :root:not([data-public-surface]) :is([data-data-table-frame], .table-frame:not([data-data-table] *)) {
   border: 0;
   border-radius: var(--tray-radius, var(--radius-control));
-  background: var(--table-head-ground);
-  padding: 0 4px 4px;
+  background: var(--color-tray, var(--table-head-ground));
+  padding: var(--tray-padding, 0 4px 4px);
   overflow: clip;
 }
 :root:not([data-public-surface]) .table-frame {
@@ -1783,9 +1809,10 @@ label {
 :root:not([data-public-surface]) [data-data-table-frame] .table-frame {
   border: 0;
   border-radius: 0;
-  background: transparent;
+  background: var(--table-ground);
+  clip-path: inset(0 round var(--tray-inner-radius, var(--radius-mark)));
 }
-:root:not([data-public-surface]) .table-frame tbody {
+:root:not([data-public-surface]) .table-frame:not([data-data-table] *) > table {
   clip-path: inset(0 round var(--tray-inner-radius, var(--radius-mark)));
 }
 :root:not([data-public-surface]) .table-frame thead th + th::before {
@@ -2072,15 +2099,6 @@ label {
   border: var(--tray-padding, 1px) solid var(--color-tray, transparent);
   border-radius: var(--tray-radius, var(--radius-card));
   background-color: var(--color-surface);
-}
-:root:not([data-public-surface])
-  :is(.surface-tray, :is([data-section='surface'], .surface-card):has(> header):not(:where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], .surface-tray, [data-section='surface']:has(> header)) *))
-  :is(.surface-card, .surface-slip, .surface-lift, [data-figure-strip], [data-state-frame], .table-frame):not(
-    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], [data-figure-strip]) *
-  ) {
-  border: 0;
-  box-shadow: none;
-  border-radius: var(--tray-inner-radius);
 }
 :root:not([data-public-surface])
   :where(.surface-card, .surface-slip, .surface-lift, [role='dialog'], [data-figure-strip], .table-frame, [data-auth-form])
