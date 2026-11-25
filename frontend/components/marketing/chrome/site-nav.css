@@ -84,7 +84,7 @@
   width: calc(var(--radix-navigation-menu-viewport-width) + 2px);
   height: calc(var(--radix-navigation-menu-viewport-height) + 2px);
   border: 1px solid var(--color-line);
-  border-radius: var(--site-radius-inner);
+  border-radius: var(--site-radius-frame-inner);
   background: var(--color-surface);
   clip-path: inset(-24px 0 0 0);
   transition:
