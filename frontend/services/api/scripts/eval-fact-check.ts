@@ -214,11 +214,12 @@ async function evaluate(fixture: Answer) {
   }));
   const expectedQuotes = fixture.expected.map((expected) => expected.quote_contains);
   const contradicted = actual.filter((claim) => claim.verdict === 'contradicted');
+  const expectedFor = (claim: Actual) => {
+    const paired = pairs.filter((pair) => pair.claim === claim).map((pair) => pair.expected);
+    return paired.find((expected) => expected.topic === claim.topic) ?? paired[0];
+  };
   const falseContradictions = contradicted.filter(
-    (claim) =>
-      !pairs.some(
-        ({ expected, claim: paired }) => expected.verdict === 'contradicted' && paired === claim,
-      ),
+    (claim) => expectedFor(claim)?.verdict !== 'contradicted',
   );
   return {
     ...base,
