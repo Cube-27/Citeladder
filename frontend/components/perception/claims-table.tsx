@@ -1,7 +1,6 @@
 import type { AccuracyClaim, AccuracyClaimPage } from '@citeladder/contracts/fact-checking';
 import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query';
 
-import { EngineCell } from '@/components/ui/engine-mark';
 import { AnswerLink } from '@/components/runs/answer-link';
 import { EditedMark, VerdictChip } from '@/components/runs/evidence-claims';
 import { Absence } from '@/components/ui/absence';
@@ -16,6 +15,7 @@ import {
   CLAIM_STATE_VIEWS,
   type ClaimStateView,
 } from '@/lib/visibility/accuracy';
+import { useEngineCatalog } from '@/lib/providers/engines';
 import type { useFactViews } from '@/lib/visibility/use-accuracy';
 
 type Views = ReturnType<typeof useFactViews>;
@@ -102,6 +102,7 @@ function tableState(query: Query, claims: readonly AccuracyClaim[], state: Claim
 }
 
 function ClaimRow({ claim }: Readonly<{ claim: AccuracyClaim }>) {
+  const { label: engineLabel } = useEngineCatalog();
   const facts = claim.facts.map((fact) => fact.statement).join('; ');
   return (
     <TableRow>
@@ -134,9 +135,7 @@ function ClaimRow({ claim }: Readonly<{ claim: AccuracyClaim }>) {
           <EditedMark edited={claim.edited} />
         </Inline>
       </TableCell>
-      <TableCell>
-        <EngineCell engine={claim.logical_engine} />
-      </TableCell>
+      <TableCell>{engineLabel(claim.logical_engine)}</TableCell>
     </TableRow>
   );
 }

@@ -221,20 +221,12 @@ describe('Fanout grouping', () => {
     expect(new URLSearchParams(window.location.search).get('group')).toBe('prompt');
   });
 
-  it('keeps a cut surface list on one line, its whole list in a tooltip and a tab stop', async () => {
+  it('shows the surfaces of a query as logos named on hover and for screen readers', () => {
     vi.spyOn(visibilityApi, 'getFanoutSummary').mockReturnValue(new Promise(() => {}));
-    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (
-      this: HTMLElement,
-    ) {
-      return this.hasAttribute('data-scroll-content') ? 0 : 1000;
-    });
-    const user = userEvent.setup();
     renderWithProviders(<Panel projectId={A} />);
 
-    const surfaces = screen.getByText('ChatGPT API');
-    expect(surfaces).toHaveAttribute('data-truncated');
-    expect(surfaces).toHaveAttribute('tabindex', '0');
-    await user.hover(surfaces);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('ChatGPT API');
+    const surfaces = screen.getByTitle('ChatGPT API');
+    expect(surfaces.querySelector('[data-engine-mark="chatgpt"]')).not.toBeNull();
+    expect(surfaces).toHaveTextContent('ChatGPT API');
   });
 });

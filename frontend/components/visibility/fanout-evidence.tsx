@@ -19,7 +19,7 @@ import { ArrowRight, Inbox, Search } from '@/lib/icons';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { useEngineCatalog } from '@/lib/providers/engines';
+import { EngineStack } from '@/components/ui/engine-mark';
 import {
   normalizeSearch,
   SEARCH_MAX_LENGTH,
@@ -392,7 +392,6 @@ function QueryRow({
   nested: boolean;
   children: ReactNode;
 }>) {
-  const { label: engineLabel } = useEngineCatalog();
   return (
     <TableRow>
       <TableCell nested={nested}>
@@ -401,7 +400,9 @@ function QueryRow({
           <ClampText>{query}</ClampText>
         </Inline>
       </TableCell>
-      <TableCell>{engines.map(engineLabel).join(', ')}</TableCell>
+      <TableCell>
+        <EngineStack engines={engines} />
+      </TableCell>
       <TableCell numeric>{occurrences}</TableCell>
       {children}
     </TableRow>
