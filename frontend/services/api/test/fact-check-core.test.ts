@@ -203,6 +203,8 @@ describe('verdict validation', () => {
       'integrations',
       'markets',
       'plans',
+      'policies',
+      'pricing',
       'specs',
     ]);
   });

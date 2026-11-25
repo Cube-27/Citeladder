@@ -123,6 +123,29 @@
           "statement": "The Monthly plan includes 2 bags per delivery."
         }
       ]
+    },
+    {
+      "brand_name": "Thriftwear",
+      "competitors": ["Budgetline"],
+      "prompt": "Where can I buy cheap kids clothes and school uniforms?",
+      "facts": [
+        {
+          "topic": "specs",
+          "statement": "Thriftwear sells women's, men's, kids' and baby clothing, underwear, school uniforms, sleepwear and homewares."
+        },
+        {
+          "topic": "markets",
+          "statement": "Thriftwear online orders deliver Australia wide."
+        },
+        {
+          "topic": "policies",
+          "statement": "Thriftwear offers a 100-Day Quality Guarantee on its products."
+        },
+        {
+          "topic": "availability",
+          "statement": "Thriftwear offers free Click & Collect on online orders."
+        }
+      ]
     }
   ],
   "answers": [
@@ -597,6 +620,54 @@
       "brand_name": "Roastery Co",
       "answer": "Bean Club costs $11 per month and integrates with PayPal. Roastery Co is also worth a look.",
       "expected": []
+    },
+    {
+      "name": "subset-range-thriftwear",
+      "brand_name": "Thriftwear",
+      "answer": "Thriftwear is a good budget option because it sells kids' clothing and school uniforms. Budgetline is another choice.",
+      "expected": [
+        {
+          "quote_contains": "kids' clothing and school uniforms",
+          "topic": "specs",
+          "verdict": "supported"
+        }
+      ]
+    },
+    {
+      "name": "delivery-elsewhere-thriftwear",
+      "brand_name": "Thriftwear",
+      "answer": "Thriftwear will send your order to any address in Australia, and Budgetline is cheaper for socks.",
+      "expected": [
+        {
+          "quote_contains": "any address in Australia",
+          "topic": "markets",
+          "verdict": "supported"
+        }
+      ]
+    },
+    {
+      "name": "guarantee-wrong-thriftwear",
+      "brand_name": "Thriftwear",
+      "answer": "Thriftwear backs its clothes with a 30-day quality guarantee, unlike Budgetline.",
+      "expected": [
+        {
+          "quote_contains": "30-day quality guarantee",
+          "topic": "policies",
+          "verdict": "contradicted"
+        }
+      ]
+    },
+    {
+      "name": "range-overreach-thriftwear",
+      "brand_name": "Thriftwear",
+      "answer": "Thriftwear also sells maternity wear, which Budgetline does not.",
+      "expected": [
+        {
+          "quote_contains": "maternity wear",
+          "topic": "specs",
+          "verdict": "inconclusive"
+        }
+      ]
     }
   ]
 }
