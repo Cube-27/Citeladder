@@ -22,7 +22,7 @@ import { ICONS } from '@/lib/icons';
 import { severityCount } from '@/lib/site-health/issues';
 import { formatScore, pageStatusBadgeValue, statusLabel } from '@/lib/site-health/status';
 
-type Pane = 'overview' | 'issues' | 'checks' | 'in' | 'out';
+type Pane = 'overview' | 'issues' | 'actions' | 'checks' | 'in' | 'out';
 type Links = NonNullable<PageDetail['internal_links']>;
 type Neighbour = Links['top_inbound'][number];
 
@@ -32,14 +32,21 @@ const notMeasured = <Absence state="not_measured" />;
 export function PageDrawerView({
   detail,
   actions,
+  work,
   children,
-}: Readonly<{ detail: PageDetail; actions?: ReactNode; children?: ReactNode }>) {
+}: Readonly<{
+  detail: PageDetail;
+  actions?: ReactNode;
+  work: { count: number | undefined; list: ReactNode };
+  children?: ReactNode;
+}>) {
   const [pane, setPane] = useState<Pane>('overview');
   const links = detail.internal_links;
   const checks = detail.evaluations.filter((evaluation) => evaluation.display_applicability);
   const items = [
     { value: 'overview', label: 'Overview' },
     { value: 'issues', label: 'Issues', count: detail.issues.length },
+    { value: 'actions', label: 'Actions', count: work.count },
     { value: 'checks', label: 'Checks', count: checks.length },
     { value: 'in', label: 'Linked from', count: links?.inbound_count },
     { value: 'out', label: 'Links out', count: links?.outbound_count },
@@ -74,6 +81,7 @@ export function PageDrawerView({
             crawlId={detail.crawl_id}
           />
         </TabPanel>
+        <TabPanel value="actions">{work.list}</TabPanel>
         <TabPanel value="checks">
           <PageChecks evaluations={detail.evaluations} />
         </TabPanel>

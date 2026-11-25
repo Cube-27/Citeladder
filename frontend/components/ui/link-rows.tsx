@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
 
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -27,13 +27,13 @@ export function LinkRows({
 export function LinkRow({
   tick,
   href,
-  state,
+  onClick,
   name,
   facts,
 }: Readonly<{
   tick?: ReactNode;
   href: string;
-  state?: unknown;
+  onClick?: MouseEventHandler<HTMLAnchorElement>;
   name: ReactNode;
   facts: readonly [ReactNode, ReactNode];
 }>) {
@@ -42,7 +42,7 @@ export function LinkRow({
       {tick ? <span className="relative z-10 flex shrink-0">{tick}</span> : null}
       <ProjectLink
         href={href}
-        state={state}
+        onClick={onClick}
         className="focus-ring rounded-mark min-w-0 flex-1 truncate before:absolute before:inset-x-0 before:inset-y-0"
       >
         {name}

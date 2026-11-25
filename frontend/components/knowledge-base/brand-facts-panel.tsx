@@ -11,6 +11,7 @@ import { ConfirmDialog } from '@/components/ui/dialog';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Icon } from '@/components/ui/icon';
 import { Notice } from '@/components/ui/notice';
+import { SettingsGroup } from '@/components/ui/setting-row';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -47,7 +48,17 @@ export function BrandFactsPanel({
       input: { expected_revision: fact.revision, status: 'confirmed' },
     });
   return (
-    <>
+    <SettingsGroup
+      title="Brand facts"
+      action={
+        mayEdit ? (
+          <Button onClick={() => setEditing({ kind: 'add' })}>
+            <Icon icon={Plus} />
+            Add fact
+          </Button>
+        ) : undefined
+      }
+    >
       {change.isError && !deleting ? (
         <Notice
           kind="mutation"
@@ -58,14 +69,6 @@ export function BrandFactsPanel({
         label="Brand facts"
         columns={mayEdit ? EDIT_COLUMNS : COLUMNS}
         rowCount={facts.length}
-        actions={
-          mayEdit ? (
-            <Button onClick={() => setEditing({ kind: 'add' })}>
-              <Icon icon={Plus} />
-              Add fact
-            </Button>
-          ) : undefined
-        }
         state={facts.length ? undefined : { kind: 'empty', inline: true, message: 'No facts yet.' }}
       >
         {facts.map((fact) => (
@@ -144,7 +147,7 @@ export function BrandFactsPanel({
           }
         }
       />
-    </>
+    </SettingsGroup>
   );
 }
 

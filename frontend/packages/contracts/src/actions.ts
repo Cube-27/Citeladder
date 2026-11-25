@@ -169,6 +169,7 @@ export const actionDeclarationSchema = responseObject({
 
 export const actionUrlSchema = responseObject({
   site_url_id: uuid(),
+  crawl_id: uuid().nullable(),
   url: z.string(),
   page_kind: z.string().nullable(),
   open_action_count: z.number().int(),

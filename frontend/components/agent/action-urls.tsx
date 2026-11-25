@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
+import { PageOpenContext, pageHref } from '@/components/site-health/page-open-context';
 import { Labelled } from '@/components/ui/reading-page';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LinkRow, LinkRows } from '@/components/ui/link-rows';
 import { textRole } from '@/components/ui/typography';
 import { WorkRowsMore } from '@/components/ui/work-rows';
-import type { FromAction } from '@/lib/agent/action-crumbs';
 import { actionTarget } from '@/lib/agent/action-title';
 import { HANDOFF_URLS_MAX } from '@/lib/agent/handoff';
 import { actionsQueries, type ActionDetail } from '@/lib/api/actions';
@@ -17,19 +17,18 @@ import { pageKindLabel } from '@/lib/site-health/page-kinds';
 export function ActionUrls({
   action,
   workspaceId,
-  from,
   ticked,
   onTick,
 }: Readonly<{
   action: ActionDetail;
   workspaceId: string;
-  from: FromAction;
   ticked: ReadonlySet<string>;
   onTick: (siteUrlId: string) => void;
 }>) {
   const first = action.urls;
   const cursor = first.next_cursor;
   const [more, setMore] = useState(false);
+  const openPage = useContext(PageOpenContext);
   const extra = useInfiniteQuery({
     ...actionsQueries.urls(workspaceId, action.id, cursor ?? ''),
     enabled: more && cursor !== null,
@@ -65,6 +64,7 @@ export function ActionUrls({
       >
         {rows.map((url) => {
           const on = ticked.has(url.site_url_id);
+          const page = url.crawl_id ? { crawlId: url.crawl_id, siteUrlId: url.site_url_id } : null;
           return (
             <LinkRow
               key={url.site_url_id}
@@ -76,8 +76,12 @@ export function ActionUrls({
                   onCheckedChange={() => onTick(url.site_url_id)}
                 />
               }
-              href={`/actions/urls/${url.site_url_id}`}
-              state={{ fromAction: from }}
+              href={page ? pageHref(page) : '/site?tab=pages'}
+              onClick={(event) => {
+                if (!page || !openPage || event.metaKey || event.ctrlKey || event.shiftKey) return;
+                event.preventDefault();
+                openPage(page);
+              }}
               name={<UrlPath url={url.url} />}
               facts={[
                 url.page_kind ? pageKindLabel(url.page_kind) : 'Not classified',

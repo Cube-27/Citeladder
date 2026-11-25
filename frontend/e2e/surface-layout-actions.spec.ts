@@ -267,6 +267,7 @@ test.describe('under a coarse pointer at 1280px', () => {
 const GROUP = action(0, 'aeo');
 const pageUrl = (index: number) => ({
   site_url_id: `55555555-5555-4555-8555-${String(index + 1).padStart(12, '0')}`,
+  crawl_id: '77777777-7777-4777-8777-777777777777',
   url: `https://acme.test/Categories/Babywear/Baby-Bodysuits/BB0${index}_OFF_WHITE`,
   page_kind: index === 0 ? 'homepage' : 'product',
   open_action_count: (index % 4) + 1,

@@ -59,6 +59,7 @@ export async function actionUrlsPage(
   const rows = await query
     .select([
       'site_urls.id as site_url_id',
+      'site_urls.last_seen_crawl_id as crawl_id',
       'site_urls.normalized_url as url',
       pageKindOf.as('page_kind'),
     ])
