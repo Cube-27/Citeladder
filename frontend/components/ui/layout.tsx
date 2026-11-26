@@ -6,6 +6,7 @@ const STACK_GAP = {
   section: 'gap-section',
   workspace: 'gap-workspace',
   compact: 'gap-compact',
+  loose: 'gap-4',
   item: 'gap-2',
   tight: 'gap-1',
   none: 'gap-0',
@@ -22,19 +23,33 @@ const STACK_ALIGN = {
 
 type StackAlign = keyof typeof STACK_ALIGN;
 
+const STACK_LIST = {
+  none: undefined,
+  decimal: 'list-inside list-decimal',
+} as const;
+
 export function Stack({
   as,
   gap = 'compact',
   align = 'stretch',
+  list = 'none',
   className,
   children,
   ...props
 }: Readonly<
-  ComponentPropsWithRef<'div'> & { as?: ElementType; gap?: StackGap; align?: StackAlign }
+  ComponentPropsWithRef<'div'> & {
+    as?: ElementType;
+    gap?: StackGap;
+    align?: StackAlign;
+    list?: keyof typeof STACK_LIST;
+  }
 >) {
   const Component = as ?? 'div';
   return (
-    <Component {...props} className={cn('grid', STACK_GAP[gap], STACK_ALIGN[align], className)}>
+    <Component
+      {...props}
+      className={cn('grid', STACK_GAP[gap], STACK_ALIGN[align], STACK_LIST[list], className)}
+    >
       {children}
     </Component>
   );
@@ -43,6 +58,8 @@ export function Stack({
 const INLINE_GAP = {
   workspace: 'gap-workspace',
   compact: 'gap-compact',
+  group: 'gap-3',
+  loose: 'gap-4',
   item: 'gap-2',
   tight: 'gap-1',
   none: 'gap-0',

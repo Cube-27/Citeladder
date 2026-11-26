@@ -1,4 +1,9 @@
-import type { ComponentPropsWithoutRef } from 'react';
+import {
+  createElement,
+  type ComponentPropsWithoutRef,
+  type ComponentPropsWithRef,
+  type Ref,
+} from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -29,6 +34,7 @@ export function textRole(role: TextRole, className?: string) {
 const ROLE_CLASSES = {
   caption: 'text-caption font-sans',
   'caption-strong': 'text-caption-strong font-sans',
+  'caption-mono': 'text-caption font-mono',
   code: 'text-code font-mono',
   body: 'text-body font-sans',
   'body-lg': 'text-body-lg font-sans',
@@ -60,9 +66,18 @@ export function toneClass(tone: TextTone | undefined) {
   return tone ? TONE_CLASSES[tone] : undefined;
 }
 
-const SECONDARY_ROLES: ReadonlySet<TypeRole> = new Set(['caption', 'caption-strong']);
+const SECONDARY_ROLES: ReadonlySet<TypeRole> = new Set([
+  'caption',
+  'caption-strong',
+  'caption-mono',
+]);
 type TextTag =
   | 'span'
+  | 'b'
+  | 'output'
+  | 'legend'
+  | 'pre'
+  | 'label'
   | 'p'
   | 'div'
   | 'h1'
@@ -75,29 +90,67 @@ type TextTag =
   | 'strong'
   | 'code';
 
+const TEXT_WRAP = {
+  anywhere: 'wrap-anywhere',
+  all: 'break-all',
+  words: 'break-words',
+  balance: 'text-balance',
+  nowrap: 'whitespace-nowrap',
+  pre: 'whitespace-pre-wrap',
+  'pre-anywhere': 'whitespace-pre-wrap wrap-anywhere',
+  truncate: 'truncate',
+} as const;
+
+const TEXT_BOX = {
+  block: 'block',
+  fit: 'w-fit',
+  fill: 'min-w-0 flex-1',
+  shrink: 'min-w-0',
+  fixed: 'shrink-0',
+} as const;
+
+const TEXT_ALIGN = {
+  start: undefined,
+  center: 'text-center',
+} as const;
+
 export function Text({
   variant,
   tone = SECONDARY_ROLES.has(variant) ? 'ink-2' : 'ink',
   as: Tag = 'span',
   numeric = false,
+  wrap,
+  box,
+  focusable = false,
+  align = 'start',
+  hideOnDesktop = false,
   children,
   ...props
 }: Readonly<
-  Omit<ComponentPropsWithoutRef<'span'>, 'className' | 'style'> & {
+  Omit<ComponentPropsWithRef<'span'>, 'className' | 'style' | 'ref'> & {
+    ref?: Ref<HTMLElement>;
     variant: TypeRole;
     tone?: TextTone;
     as?: TextTag;
     numeric?: boolean;
+    wrap?: keyof typeof TEXT_WRAP;
+    box?: keyof typeof TEXT_BOX;
+    focusable?: boolean;
+    align?: keyof typeof TEXT_ALIGN;
+    hideOnDesktop?: boolean;
   }
 >) {
-  return (
-    <Tag
-      {...props}
-      className={cn(ROLE_CLASSES[variant], TONE_CLASSES[tone], numeric && 'tabular-nums')}
-    >
-      {children}
-    </Tag>
+  const className = cn(
+    ROLE_CLASSES[variant],
+    TONE_CLASSES[tone],
+    numeric && 'tabular-nums',
+    wrap && TEXT_WRAP[wrap],
+    box && TEXT_BOX[box],
+    focusable && 'focus-ring',
+    TEXT_ALIGN[align],
+    hideOnDesktop && 'desktop:hidden',
   );
+  return createElement(Tag, { ...props, className }, children);
 }
 
 export function CodeToken({ children }: Readonly<{ children: string }>) {

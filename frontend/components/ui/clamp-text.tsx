@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
-import { toneClass, type TextTone } from '@/components/ui/typography';
+import { textRole, toneClass, type TextRole, type TextTone } from '@/components/ui/typography';
 import { urlCut } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -44,6 +44,8 @@ export function ClampText({
   lines = 1,
   tooltip,
   tone,
+  text,
+  numeric = false,
   className,
   rowTitle = false,
   phoneWrap = false,
@@ -52,6 +54,8 @@ export function ClampText({
   lines?: 1 | 2;
   tooltip?: ReactNode;
   tone?: TextTone;
+  text?: TextRole;
+  numeric?: boolean;
   className?: string;
   rowTitle?: boolean;
   phoneWrap?: boolean;
@@ -77,6 +81,8 @@ export function ClampText({
           lines === 1 ? 'truncate' : 'line-clamp-2',
           phoneWrap && 'phone:whitespace-normal phone:break-words',
           cut && 'rounded-mark',
+          text && textRole(text),
+          numeric && 'tabular-nums',
           toneClass(tone),
           className,
         )}
