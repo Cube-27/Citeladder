@@ -133,65 +133,61 @@ const RANK_COLUMNS: readonly DataTableColumn[] = [
 function RankTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
   const [open, setOpen] = useState<string | null>(null);
   return (
-    <TitledSection
+    <DataTable
       title="Your rank by theme"
       description="Position score: 100 when named first, 10 less per place, 0 when not named"
+      columns={RANK_COLUMNS}
+      state={
+        data.themes.length
+          ? undefined
+          : { kind: 'empty', inline: true, message: 'No theme answers.' }
+      }
     >
-      <DataTable
-        label="Your rank by theme"
-        columns={RANK_COLUMNS}
-        state={
-          data.themes.length
-            ? undefined
-            : { kind: 'empty', inline: true, message: 'No theme answers.' }
-        }
-      >
-        {data.themes.map((row) => {
-          const own = row.entities.find((entity) => entity.kind === 'brand');
-          const leads = row.leader.kind === 'brand' && row.leader.named;
-          const expanded = open === row.theme_id;
-          return (
-            <Fragment key={row.theme_id}>
-              <TableRow>
-                <TableCell>
-                  <ExpandToggle
-                    open={expanded}
-                    onToggle={() => setOpen(expanded ? null : row.theme_id)}
-                  >
-                    {row.theme}
-                  </ExpandToggle>
-                </TableCell>
-                <TableCell numeric>{own?.score ?? 0}</TableCell>
-                <TableCell numeric>
-                  {own?.named ? `#${row.rank} of ${row.of}` : <Absence label="Not named" />}
-                </TableCell>
-                <TableCell>
-                  {row.leader.named ? (
-                    <Inline as="span">
-                      {row.leader.name}
-                      {row.leader.kind === 'brand' ? <YouTag /> : null}
-                    </Inline>
-                  ) : (
-                    <Absence label="No brand named" />
-                  )}
-                </TableCell>
-                <TableCell numeric>
-                  <Gap leads={leads} named={row.leader.named} gap={row.gap} />
-                </TableCell>
-                <TableCell numeric>{row.sources}</TableCell>
-              </TableRow>
-              {expanded ? (
-                <SourcePagesRow
-                  label={`Sources behind ${row.theme}`}
-                  pages={row.pages}
-                  columns={RANK_COLUMNS}
-                />
-              ) : null}
-            </Fragment>
-          );
-        })}
-      </DataTable>
-    </TitledSection>
+      {data.themes.map((row) => {
+        const own = row.entities.find((entity) => entity.kind === 'brand');
+        const leads = row.leader.kind === 'brand' && row.leader.named;
+        const expanded = open === row.theme_id;
+        return (
+          <Fragment key={row.theme_id}>
+            <TableRow>
+              <TableCell>
+                <ExpandToggle
+                  open={expanded}
+                  onToggle={() => setOpen(expanded ? null : row.theme_id)}
+                >
+                  {row.theme}
+                </ExpandToggle>
+              </TableCell>
+              <TableCell numeric>{own?.score ?? 0}</TableCell>
+              <TableCell numeric>
+                {own?.named ? `#${row.rank} of ${row.of}` : <Absence label="Not named" />}
+              </TableCell>
+              <TableCell>
+                {row.leader.named ? (
+                  <Inline as="span">
+                    {row.leader.name}
+                    {row.leader.kind === 'brand' ? <YouTag /> : null}
+                  </Inline>
+                ) : (
+                  <Absence label="No brand named" />
+                )}
+              </TableCell>
+              <TableCell numeric>
+                <Gap leads={leads} named={row.leader.named} gap={row.gap} />
+              </TableCell>
+              <TableCell numeric>{row.sources}</TableCell>
+            </TableRow>
+            {expanded ? (
+              <SourcePagesRow
+                label={`Sources behind ${row.theme}`}
+                pages={row.pages}
+                columns={RANK_COLUMNS}
+              />
+            ) : null}
+          </Fragment>
+        );
+      })}
+    </DataTable>
   );
 }
 
@@ -210,29 +206,27 @@ const ENGINE_COLUMNS: readonly DataTableColumn[] = [
 function EngineTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
   const { label } = useEngineCatalog();
   return (
-    <TitledSection title="What each engine says you're known for">
-      <DataTable label="What each engine says you're known for" columns={ENGINE_COLUMNS}>
-        {data.engines.map((row) => (
-          <TableRow key={row.engine}>
-            <TableCell>{label(row.engine)}</TableCell>
-            <TableCell>
-              {row.top_themes.length ? (
-                <Inline as="span">
-                  {row.top_themes.map((theme) => (
-                    <Tag key={theme.theme_id ?? 'other'}>{theme.theme}</Tag>
-                  ))}
-                </Inline>
-              ) : (
-                <Absence label={row.answered ? 'Nothing raised' : 'No answers'} />
-              )}
-            </TableCell>
-            <TableCell numeric>
-              <RankInTopTheme rank={row.rank_in_top_theme} />
-            </TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
+    <DataTable title="What each engine says you're known for" columns={ENGINE_COLUMNS}>
+      {data.engines.map((row) => (
+        <TableRow key={row.engine}>
+          <TableCell>{label(row.engine)}</TableCell>
+          <TableCell>
+            {row.top_themes.length ? (
+              <Inline as="span">
+                {row.top_themes.map((theme) => (
+                  <Tag key={theme.theme_id ?? 'other'}>{theme.theme}</Tag>
+                ))}
+              </Inline>
+            ) : (
+              <Absence label={row.answered ? 'Nothing raised' : 'No answers'} />
+            )}
+          </TableCell>
+          <TableCell numeric>
+            <RankInTopTheme rank={row.rank_in_top_theme} />
+          </TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }
 

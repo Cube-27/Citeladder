@@ -7,7 +7,13 @@ import { AreaChart } from '@/components/ui/area-chart';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { Notice } from '@/components/ui/notice';
 import { PartDonut, type Part } from '@/components/ui/part-donut';
-import { Section, SectionHeader, SectionStack, SectionTitle } from '@/components/ui/section';
+import {
+  Section,
+  SectionContent,
+  SectionHeader,
+  SectionStack,
+  SectionTitle,
+} from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
 import { PerceptionState } from '@/components/visibility/visibility-perception';
@@ -124,7 +130,7 @@ function SentimentCard({ score }: Readonly<{ score: Score }>) {
       <SectionHeader>
         <SectionTitle level={3}>Sentiment</SectionTitle>
       </SectionHeader>
-      <div className="flex items-center justify-center">
+      <SectionContent fill>
         <PartDonut
           layout="stacked"
           label="Sentiment of classified mentions"
@@ -132,7 +138,7 @@ function SentimentCard({ score }: Readonly<{ score: Score }>) {
           total={score.classified}
           parts={parts}
         />
-      </div>
+      </SectionContent>
     </Section>
   );
 }

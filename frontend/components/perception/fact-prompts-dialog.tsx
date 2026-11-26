@@ -83,7 +83,7 @@ function PromptPicker({
   if (!list.prompts.length)
     return <StateBlock kind="empty" inline message="No active prompts in this project." />;
   return (
-    <Stack gap="workspace">
+    <>
       {save.isError ? (
         <Notice
           kind="mutation"
@@ -140,6 +140,6 @@ function PromptPicker({
           </Button>
         </span>
       </div>
-    </Stack>
+    </>
   );
 }

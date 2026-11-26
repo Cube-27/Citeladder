@@ -98,50 +98,46 @@ export function FactsImportDialog({
         )
       }
     >
-      <Stack gap="workspace">
-        {importing.isError ? (
-          <Notice tone="negative">{humanizeApiError(importing.error).message}</Notice>
-        ) : null}
-        {outcomes ? null : (
-          <Stack gap="compact">
-            <CsvImportFileInput inputRef={inputRef} onSelect={(file) => void selectFile(file)} />
-            <Button
-              variant="secondary"
-              className="justify-self-start"
-              onClick={() =>
-                downloadCsv('facts-sample.csv', FACT_CSV_COLUMNS, FACT_CSV_SAMPLE_ROWS)
-              }
-            >
-              <Icon icon={Download} />
-              Download sample CSV
-            </Button>
-          </Stack>
-        )}
-        {readError ? <Notice tone="negative">{readError}</Notice> : null}
-        {parsed?.errors.length ? <Notice tone="negative">{parsed.errors.join(' ')}</Notice> : null}
-        {parsed?.rows.length ? (
-          <CsvImportPreview
-            errorCount={parsed.rows.length - ready.length}
-            fileName={fileName}
-            rowCount={parsed.rows.length}
+      {importing.isError ? (
+        <Notice tone="negative">{humanizeApiError(importing.error).message}</Notice>
+      ) : null}
+      {outcomes ? null : (
+        <Stack gap="compact">
+          <CsvImportFileInput inputRef={inputRef} onSelect={(file) => void selectFile(file)} />
+          <Button
+            variant="secondary"
+            className="justify-self-start"
+            onClick={() => downloadCsv('facts-sample.csv', FACT_CSV_COLUMNS, FACT_CSV_SAMPLE_ROWS)}
           >
-            <DataTable label="Parsed facts" columns={PREVIEW_COLUMNS}>
-              {parsed.rows.map((row) => (
-                <TableRow key={row.line} className={row.errors.length ? 'opacity-60' : undefined}>
-                  <TableCell numeric className="text-ink-2">
-                    {row.line}
-                  </TableCell>
-                  <TableCell>{row.input.topic || <Absence state="not_set" />}</TableCell>
-                  <TableCell>{row.input.statement || <Absence state="not_set" />}</TableCell>
-                  <TableCell>
-                    <RowStatus row={row} outcome={outcomes?.get(row.line)} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </DataTable>
-          </CsvImportPreview>
-        ) : null}
-      </Stack>
+            <Icon icon={Download} />
+            Download sample CSV
+          </Button>
+        </Stack>
+      )}
+      {readError ? <Notice tone="negative">{readError}</Notice> : null}
+      {parsed?.errors.length ? <Notice tone="negative">{parsed.errors.join(' ')}</Notice> : null}
+      {parsed?.rows.length ? (
+        <CsvImportPreview
+          errorCount={parsed.rows.length - ready.length}
+          fileName={fileName}
+          rowCount={parsed.rows.length}
+        >
+          <DataTable label="Parsed facts" columns={PREVIEW_COLUMNS}>
+            {parsed.rows.map((row) => (
+              <TableRow key={row.line} className={row.errors.length ? 'opacity-60' : undefined}>
+                <TableCell numeric className="text-ink-2">
+                  {row.line}
+                </TableCell>
+                <TableCell>{row.input.topic || <Absence state="not_set" />}</TableCell>
+                <TableCell>{row.input.statement || <Absence state="not_set" />}</TableCell>
+                <TableCell>
+                  <RowStatus row={row} outcome={outcomes?.get(row.line)} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </DataTable>
+        </CsvImportPreview>
+      ) : null}
     </Dialog>
   );
 }

@@ -8,7 +8,7 @@ import { PerceptionObjections } from '@/components/perception/perception-objecti
 import { ProbeActions, ProbeEmpty } from '@/components/perception/probe-actions';
 import { ProbeDialog, type ProbeIntent } from '@/components/perception/probe-dialog';
 import { ProbeOutcome, ProbeProgress } from '@/components/perception/probe-progress';
-import { Stack } from '@/components/ui/layout';
+import { SectionStack } from '@/components/ui/section';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import {
@@ -114,10 +114,10 @@ export function PerceptionProbe({
     );
   const latest = status.data.latest;
   return (
-    <Stack gap="workspace">
+    <SectionStack>
       {latest ? <ProbeProgress scope={scope} run={latest} /> : null}
       {read}
-    </Stack>
+    </SectionStack>
   );
 }
 
@@ -136,10 +136,10 @@ function ProbeRead<Value>({
 }>) {
   if (read.isSuccess && read.data.state === 'value')
     return (
-      <Stack gap="workspace">
+      <>
         <ProbeOutcome run={status.latest} />
         {render(read.data)}
-      </Stack>
+      </>
     );
   if (read.isPending)
     return <StateBlock kind="loading" label="Loading…" shape={{ kind: 'figures' }} />;

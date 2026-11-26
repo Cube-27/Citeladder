@@ -46,6 +46,17 @@
   --panel-bottom: inherit;
 }
 
+[data-panel]:has(> [data-slot-fill]) {
+  display: flex;
+  flex-direction: column;
+}
+[data-panel]:has(> [data-slot-fill]) > * {
+  min-width: 0;
+}
+[data-slot-fill] {
+  flex: 1 1 auto;
+}
+
 [data-slot-host] {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

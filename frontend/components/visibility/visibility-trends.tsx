@@ -44,7 +44,13 @@ import {
 } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import {
+  Section,
+  SectionContent,
+  SectionHeader,
+  SectionTitle,
+  SectionToolbar,
+} from '@/components/ui/section';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 export type Metric = (typeof VISIBILITY_METRICS)[number]['value'];
@@ -66,10 +72,8 @@ export function InsightsLede({ selected }: Readonly<{ selected: Visibility }>) {
         </h2>
         {sub ? <p className={textRole('body', 'text-ink-2')}>{sub}</p> : null}
       </SectionHeader>
-      <Stack>
-        <PooledSelectionNote selected={selected} />
-        <HeadlineMetrics selected={selected} />
-      </Stack>
+      <PooledSelectionNote selected={selected} />
+      <HeadlineMetrics selected={selected} />
     </Section>
   );
 }
@@ -215,28 +219,28 @@ export function BrandTrendPanel({
     <Section aria-labelledby={titleId}>
       <SectionHeader
         actions={
-          <>
-            <SegmentedControl
-              ariaLabel="Plotted metric"
-              value={metric}
-              options={VISIBILITY_METRICS}
-              onChange={onMetric}
-            />
-            <FilterChoice
-              label="Focus"
-              value={focusedBrand ?? ALL_BRANDS}
-              defaultValue={ALL_BRANDS}
-              options={[
-                { value: ALL_BRANDS, label: 'All brands' },
-                ...brands.map((row) => ({ value: row.name, label: row.name })),
-              ]}
-              onChange={(value) => onFocus(value === ALL_BRANDS ? null : value)}
-            />
-          </>
+          <SegmentedControl
+            ariaLabel="Plotted metric"
+            value={metric}
+            options={VISIBILITY_METRICS}
+            onChange={onMetric}
+          />
         }
       >
         <SectionTitle id={titleId}>Your brand over time</SectionTitle>
       </SectionHeader>
+      <SectionToolbar>
+        <FilterChoice
+          label="Focus"
+          value={focusedBrand ?? ALL_BRANDS}
+          defaultValue={ALL_BRANDS}
+          options={[
+            { value: ALL_BRANDS, label: 'All brands' },
+            ...brands.map((row) => ({ value: row.name, label: row.name })),
+          ]}
+          onChange={(value) => onFocus(value === ALL_BRANDS ? null : value)}
+        />
+      </SectionToolbar>
       <SectionContent>
         <TrendSection query={query} metric={metric} lines={lines} keyed lonePoint="plot" />
       </SectionContent>

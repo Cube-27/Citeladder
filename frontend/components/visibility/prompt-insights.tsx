@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { BrandMark } from '@/components/ui/brand-mark';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { TitledSection } from '@/components/ui/section';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
@@ -71,78 +71,76 @@ export function CompetitorSuggestions({
   const deciding = acceptMutation.isPending || rejectMutation.isPending;
   return (
     <TitledSection title={TITLE} description={sectionDescription(tracked, limit)}>
-      <Stack>
-        {canWrite && full && rows.length > 0 ? (
-          <Notice
-            tone="info"
-            standing
-            action={
-              <Button variant="secondary" asChild>
-                <ProjectLink href="/agent/context?tab=competitors">Edit competitors</ProjectLink>
-              </Button>
-            }
-          >
-            {`Your project tracks the maximum of ${formatCount(limit)} competitors. Remove one to accept a suggestion.`}
-          </Notice>
-        ) : null}
-        <DecisionFailure mutation={acceptMutation} action="add that competitor" />
-        <DecisionFailure mutation={rejectMutation} action="reject that suggestion" />
-        <DataTable label={TITLE} columns={columns(canWrite)} state={tableState(suggestionsQuery)}>
-          {rows.map((candidate) => (
-            <TableRow key={candidate.id}>
-              <TableCell>
-                <Inline as="span">
-                  <BrandMark
-                    name={candidate.name}
-                    websiteUrl={
-                      candidate.kind === 'cited_domain' ? `https://${candidate.domain}` : null
-                    }
-                  />
-                  <TableCellLines
-                    title
-                    primary={candidate.name}
-                    secondary={candidate.kind === 'cited_domain' ? candidate.domain : undefined}
-                  />
-                </Inline>
-              </TableCell>
-              <TableCell>
-                <Tag>{FOUND_BY[candidate.kind]}</Tag>
-              </TableCell>
-              <TableCell numeric>{seenIn(candidate)}</TableCell>
-              <TableCell numeric>{engines(candidate)}</TableCell>
-              {canWrite ? (
-                <TableActionsCell>
-                  <Button
-                    variant="secondary"
-                    onClick={() =>
-                      acceptMutation.mutate(candidate.id, {
-                        onSuccess: () => notify(`${candidate.name} added to your competitors`),
-                      })
-                    }
-                    disabled={deciding || full}
-                    aria-label={`Accept ${candidate.name} as a competitor`}
-                  >
-                    Accept
-                  </Button>
-                  <Button
-                    variant="quiet"
-                    onClick={() =>
-                      rejectMutation.mutate(candidate.id, {
-                        onSuccess: () => notify(`${candidate.name} won't be suggested again`),
-                      })
-                    }
-                    disabled={deciding}
-                    aria-label={`Reject ${candidate.name} as a competitor`}
-                  >
-                    <Icon icon={X} />
-                    Reject
-                  </Button>
-                </TableActionsCell>
-              ) : null}
-            </TableRow>
-          ))}
-        </DataTable>
-      </Stack>
+      {canWrite && full && rows.length > 0 ? (
+        <Notice
+          tone="info"
+          standing
+          action={
+            <Button variant="secondary" asChild>
+              <ProjectLink href="/agent/context?tab=competitors">Edit competitors</ProjectLink>
+            </Button>
+          }
+        >
+          {`Your project tracks the maximum of ${formatCount(limit)} competitors. Remove one to accept a suggestion.`}
+        </Notice>
+      ) : null}
+      <DecisionFailure mutation={acceptMutation} action="add that competitor" />
+      <DecisionFailure mutation={rejectMutation} action="reject that suggestion" />
+      <DataTable label={TITLE} columns={columns(canWrite)} state={tableState(suggestionsQuery)}>
+        {rows.map((candidate) => (
+          <TableRow key={candidate.id}>
+            <TableCell>
+              <Inline as="span">
+                <BrandMark
+                  name={candidate.name}
+                  websiteUrl={
+                    candidate.kind === 'cited_domain' ? `https://${candidate.domain}` : null
+                  }
+                />
+                <TableCellLines
+                  title
+                  primary={candidate.name}
+                  secondary={candidate.kind === 'cited_domain' ? candidate.domain : undefined}
+                />
+              </Inline>
+            </TableCell>
+            <TableCell>
+              <Tag>{FOUND_BY[candidate.kind]}</Tag>
+            </TableCell>
+            <TableCell numeric>{seenIn(candidate)}</TableCell>
+            <TableCell numeric>{engines(candidate)}</TableCell>
+            {canWrite ? (
+              <TableActionsCell>
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    acceptMutation.mutate(candidate.id, {
+                      onSuccess: () => notify(`${candidate.name} added to your competitors`),
+                    })
+                  }
+                  disabled={deciding || full}
+                  aria-label={`Accept ${candidate.name} as a competitor`}
+                >
+                  Accept
+                </Button>
+                <Button
+                  variant="quiet"
+                  onClick={() =>
+                    rejectMutation.mutate(candidate.id, {
+                      onSuccess: () => notify(`${candidate.name} won't be suggested again`),
+                    })
+                  }
+                  disabled={deciding}
+                  aria-label={`Reject ${candidate.name} as a competitor`}
+                >
+                  <Icon icon={X} />
+                  Reject
+                </Button>
+              </TableActionsCell>
+            ) : null}
+          </TableRow>
+        ))}
+      </DataTable>
     </TitledSection>
   );
 }

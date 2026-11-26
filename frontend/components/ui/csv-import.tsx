@@ -86,7 +86,7 @@ export function CsvImportPreview({
   rowCount: number;
 }>) {
   return (
-    <div className="grid gap-2">
+    <>
       <div className="type-body text-ink-2 flex items-center gap-3">
         <span>
           Parsed <span className="text-ink">{rowCount}</span> row
@@ -99,7 +99,7 @@ export function CsvImportPreview({
           </StatusMark>
         ) : null}
       </div>
-      <div className="rounded-control max-h-85 overflow-auto">{children}</div>
-    </div>
+      {children}
+    </>
   );
 }

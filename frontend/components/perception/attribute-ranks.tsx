@@ -75,7 +75,7 @@ export function AttributeRanks({ categories }: Readonly<{ categories: readonly C
         ))}
       </ol>
       {ranked.length > SHOWN ? (
-        <span className="flex justify-center pt-2">
+        <span className="flex justify-center">
           <IconButton
             icon={all ? Minimize2 : Maximize2}
             label={all ? 'Show fewer' : `Show all ${ranked.length}`}

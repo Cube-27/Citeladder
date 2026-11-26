@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog } from '@/components/ui/dialog';
 import { FactList } from '@/components/ui/facts';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { TextLink } from '@/components/ui/text-link';
@@ -108,33 +108,31 @@ export function ProbeDialog({
         </>
       }
     >
-      <Stack gap="item">
-        {pending.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(pending.error, { action: copy.action })}
-          />
-        ) : null}
-        {short ? (
-          <Notice tone="warning" action={<TextLink href={PLANS_HREF}>See plans</TextLink>}>
-            Not enough AI credits.
-          </Notice>
-        ) : null}
-        <Blocked
-          blocked={quote.blocked}
-          connecting={connecting}
-          onConnected={() => {
-            setConnecting(false);
-            refreshProbeStatus(client, scope);
-          }}
+      {pending.isError ? (
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(pending.error, { action: copy.action })}
         />
-        {quote.blocked === null ? (
-          <QuoteFacts quote={quote} credits={copy.credits} choice={choice} />
-        ) : null}
-        {quote.blocked === null && intent?.kind === 'run' ? (
-          <WebSearchChoice checked={webSearch} onChange={setWebSearch} />
-        ) : null}
-      </Stack>
+      ) : null}
+      {short ? (
+        <Notice tone="warning" action={<TextLink href={PLANS_HREF}>See plans</TextLink>}>
+          Not enough AI credits.
+        </Notice>
+      ) : null}
+      <Blocked
+        blocked={quote.blocked}
+        connecting={connecting}
+        onConnected={() => {
+          setConnecting(false);
+          refreshProbeStatus(client, scope);
+        }}
+      />
+      {quote.blocked === null ? (
+        <QuoteFacts quote={quote} credits={copy.credits} choice={choice} />
+      ) : null}
+      {quote.blocked === null && intent?.kind === 'run' ? (
+        <WebSearchChoice checked={webSearch} onChange={setWebSearch} />
+      ) : null}
     </Dialog>
   );
 }

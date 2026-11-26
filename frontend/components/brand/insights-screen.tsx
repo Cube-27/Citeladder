@@ -40,7 +40,7 @@ export function InsightsScreen() {
       {state ? (
         <SelectionPageStateBlock state={state} queries={queries} />
       ) : (
-        <SectionStack>
+        <>
           <SelectionGate query={queries.visibilityQuery}>
             {(selected) => (
               <SectionStack aria-busy={queries.visibilityQuery.isFetching}>
@@ -79,7 +79,7 @@ export function InsightsScreen() {
             market={filters.market}
             onSelectMarket={filters.setMarket}
           />
-        </SectionStack>
+        </>
       )}
     </ReportPage>
   );

@@ -10,8 +10,7 @@ import {
   type HeatValue,
 } from '@/components/ui/heat-table';
 import { InfoHint } from '@/components/ui/info-hint';
-import { Inline, Stack } from '@/components/ui/layout';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle, SectionToolbar } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
 import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -141,46 +140,39 @@ export function PerformanceMatrix({
       <SectionHeader>
         <SectionTitle id="insights-matrix">Performance matrix</SectionTitle>
       </SectionHeader>
-      <Stack>
-        <Inline className="flex-wrap">
-          <SegmentedControl
-            ariaLabel="Matrix metric"
-            value={metric}
-            options={MATRIX_METRICS}
-            onChange={setMetric}
-          />
-          {metric === 'avg_position' ? <InfoHint label="Position">{POSITION_HINT}</InfoHint> : null}
-          <span className="flex-1" />
-          <Select
-            ariaLabel="Rows"
-            value={rows}
-            options={options(columns)}
-            onValueChange={setRows}
-          />
-          <span className={textRole('caption')}>vs</span>
-          <Select
-            ariaLabel="Columns"
-            value={columns}
-            options={options(rows)}
-            onValueChange={setColumns}
-          />
-          <Button
-            onClick={() =>
-              setUrlParams({
-                matrix_rows: rowsCodec.serialize(columns),
-                matrix_columns: columnsCodec.serialize(rows),
-              })
-            }
-          >
-            Switch axis
-          </Button>
-          <Button onClick={exportCsv} disabled={!readings.length}>
-            Export CSV
-          </Button>
-        </Inline>
-        {body()}
-        <HeatScale note="Up to 10 per axis" />
-      </Stack>
+      <SectionToolbar>
+        <SegmentedControl
+          ariaLabel="Matrix metric"
+          value={metric}
+          options={MATRIX_METRICS}
+          onChange={setMetric}
+        />
+        {metric === 'avg_position' ? <InfoHint label="Position">{POSITION_HINT}</InfoHint> : null}
+        <span className="flex-1" />
+        <Select ariaLabel="Rows" value={rows} options={options(columns)} onValueChange={setRows} />
+        <span className={textRole('caption')}>vs</span>
+        <Select
+          ariaLabel="Columns"
+          value={columns}
+          options={options(rows)}
+          onValueChange={setColumns}
+        />
+        <Button
+          onClick={() =>
+            setUrlParams({
+              matrix_rows: rowsCodec.serialize(columns),
+              matrix_columns: columnsCodec.serialize(rows),
+            })
+          }
+        >
+          Switch axis
+        </Button>
+        <Button onClick={exportCsv} disabled={!readings.length}>
+          Export CSV
+        </Button>
+      </SectionToolbar>
+      {body()}
+      <HeatScale note="Up to 10 per axis" />
     </Section>
   );
 }

@@ -86,10 +86,17 @@ export function SectionToolbar({ children }: Readonly<{ children: ReactNode }>) 
 
 export function SectionContent({
   children,
+  fill = false,
   ...props
-}: Readonly<Omit<ComponentPropsWithoutRef<'div'>, 'className'> & { children: ReactNode }>) {
+}: Readonly<
+  Omit<ComponentPropsWithoutRef<'div'>, 'className'> & { children: ReactNode; fill?: boolean }
+>) {
   return (
-    <div {...props} className="min-w-0">
+    <div
+      {...props}
+      data-slot-fill={fill ? '' : undefined}
+      className={fill ? 'grid min-w-0 place-items-center' : 'min-w-0'}
+    >
       {children}
     </div>
   );
