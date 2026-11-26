@@ -1,11 +1,10 @@
 import { Absence, printed } from '@/components/ui/absence';
-import { Icon } from '@/components/ui/icon';
+import { Checkbox } from '@/components/ui/checkbox';
 import { InfoHint } from '@/components/ui/info-hint';
 import { textRole } from '@/components/ui/typography';
 import { Spinner } from '@/components/ui/spinner';
 import type { PerformanceWindow } from '@/lib/api/performance';
 import { formatCount, formattedText } from '@/lib/format';
-import { Check } from '@/lib/icons';
 import {
   METRIC_CARDS,
   formatMetric,
@@ -62,13 +61,16 @@ export function MetricCards({
             data-on={plotted || undefined}
             className="metric-tile"
           >
-            <span className={textRole('body', 'flex min-w-0 items-center gap-2')}>
-              <span data-metric-box="" className="grid size-4.5 shrink-0 place-items-center">
-                {plotted ? <Icon icon={Check} className="size-3" /> : null}
-              </span>
-              <span className="truncate">{label}</span>
-            </span>
-            <span className={textRole('figureXl', 'tabular-nums whitespace-nowrap')}>
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <Checkbox
+                label={label}
+                checked={plotted}
+                onCheckedChange={() => onToggle(card.key)}
+                className="min-w-0"
+              />
+              <InfoHint label={`About ${label.toLowerCase()}`}>{METRIC_HELP[card.key]}</InfoHint>
+            </div>
+            <span className={textRole('figure', 'tabular-nums whitespace-nowrap')}>
               {loading ? (
                 <Spinner label="Loading" />
               ) : (
@@ -82,16 +84,6 @@ export function MetricCards({
                   : `${compareLabel}: ${formattedText(formatMetric(card.key, comparison.totals[card.key] ?? null))}`}
               </span>
             ) : null}
-            <button
-              type="button"
-              aria-pressed={plotted}
-              aria-label={`Plot ${card.label.toLowerCase()}`}
-              onClick={() => onToggle(card.key)}
-              className="focus-ring absolute inset-0"
-            />
-            <span data-metric-help="">
-              <InfoHint label={`About ${label.toLowerCase()}`}>{METRIC_HELP[card.key]}</InfoHint>
-            </span>
           </div>
         );
       })}

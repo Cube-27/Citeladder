@@ -83,6 +83,12 @@ function spreadTicks(length: number, width: number): number[] {
   return Array.from({ length: wanted }, (_, index) => Math.round(index * step));
 }
 
+function edgeAnchor(value: number, ticks: readonly number[]): 'start' | 'middle' | 'end' {
+  if (value === ticks[0]) return 'start';
+  if (value === ticks.at(-1)) return 'end';
+  return 'middle';
+}
+
 function tooltipDate(date: string | null | undefined, index: number): string {
   if (!date) return `Day ${index + 1}`;
   return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', {
@@ -99,15 +105,8 @@ export function PerformanceChart({ series }: Readonly<{ series: readonly ChartSe
     return <StateBlock kind="empty" inline message="Select a figure above to chart it." />;
   if (!plotted.length)
     return <StateBlock kind="empty" inline message="No measured days in the selected range." />;
-  const titled = plotted.length <= 2;
   return (
     <ChartFrame height="lg">
-      {titled ? (
-        <div className={textRole('caption', 'text-ink-2 flex justify-between gap-4')}>
-          <span>{plotted[0]?.label}</span>
-          <span>{plotted[1]?.label}</span>
-        </div>
-      ) : null}
       <MetricPlot plotted={plotted} />
       {plotted.map((entry) => {
         const points = chartPoints(entry);
@@ -136,6 +135,7 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
   const height = CHART_HEIGHT_PX.lg;
   const [anchor] = plotted;
   const length = Math.max(...plotted.map(positionCount));
+  const xTicks = spreadTicks(length, width);
   const axisLabels = anchor ? chartPoints(anchor).map((point) => point.axisLabel) : [];
   const rows = Array.from({ length }, (_, x) =>
     Object.fromEntries([
@@ -159,7 +159,7 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
         width={width}
         height={height}
         data={rows}
-        margin={{ top: 8, right: 24, bottom: 0, left: 24 }}
+        margin={{ top: plotted.length <= 2 ? 28 : 8, right: 0, bottom: 0, left: 0 }}
       >
         {anchor && plotted.length <= 2 ? (
           <CartesianGrid vertical={false} stroke="var(--color-rule)" yAxisId={anchor.key} />
@@ -169,10 +169,20 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
           dataKey="x"
           type="number"
           domain={[0, Math.max(1, length - 1)]}
-          ticks={spreadTicks(length, width)}
+          ticks={xTicks}
           interval={0}
-          tickFormatter={(x: number) => axisLabels[x] ?? ''}
-          padding={{ left: 8, right: 8 }}
+          tick={({ x, y, payload }) => (
+            <text
+              x={x}
+              y={y}
+              dy={12}
+              textAnchor={edgeAnchor(payload.value, xTicks)}
+              fill="var(--color-ink-2)"
+              fontSize={12}
+            >
+              {axisLabels[payload.value] ?? ''}
+            </text>
+          )}
         />
         {plotted.map((entry, index) => {
           const placement = axisPlacement(index, plotted.length);
@@ -194,6 +204,17 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
               ticks={ticks}
               domain={[ticks[0] ?? 0, ticks.at(-1) ?? 1]}
               reversed={entry.key === 'position'}
+              label={
+                placement === 'hidden'
+                  ? undefined
+                  : {
+                      value: entry.label,
+                      position: 'top',
+                      offset: 16,
+                      fill: 'var(--color-ink-2)',
+                      fontSize: 12,
+                    }
+              }
               tickFormatter={(value: number) => formatAxisTick(entry.key, value)}
             />
           );

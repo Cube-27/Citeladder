@@ -197,7 +197,7 @@ function SearchConsoleWorkspace({
             />
           </div>
         </div>
-        <section aria-label="Search Console chart" className="min-w-0 px-4 pt-6 pb-4">
+        <section aria-label="Search Console chart" className="min-w-0 px-1 pt-4 pb-3">
           <PerformanceChart series={series} />
         </section>
       </div>

@@ -718,7 +718,7 @@ describe('PerformanceScreen table interactions', () => {
     expect(await within(table).findByText('query 11')).toBeVisible();
     const sortedBy = asked.at(-1)!.split(' ')[0];
 
-    await user.click(screen.getByRole('button', { name: 'Plot impressions' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Total impressions' }));
 
     expect(await within(table).findByText('query 1')).toBeVisible();
     expect(sortedBy).toBe('-impressions');
