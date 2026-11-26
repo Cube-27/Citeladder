@@ -39,7 +39,7 @@ export function LinkRow({
 }>) {
   return (
     <li className="hover:overlay-hover px-panel-inset relative flex h-10 items-center gap-3">
-      {tick ? <span className="relative z-10 flex shrink-0">{tick}</span> : null}
+      {tick ? <span className="z-raised relative flex shrink-0">{tick}</span> : null}
       <ProjectLink
         href={href}
         onClick={onClick}

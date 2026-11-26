@@ -48,7 +48,7 @@ export function SectionHeader({
   }
   return (
     <header {...props} className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-      <div className="grid min-w-0 flex-1 basis-40 grid-cols-[minmax(0,1fr)] gap-1">{children}</div>
+      <div className="grid min-w-0 flex-1 basis-40 grid-cols-1 gap-1">{children}</div>
       <div
         data-section-actions=""
         className="min-h-control-md -my-2 flex max-w-full min-w-0 flex-wrap items-center gap-2"
@@ -212,11 +212,7 @@ export function CardGroup({
 }: Readonly<{ title: ReactNode; description?: ReactNode; id?: string; children: ReactNode }>) {
   const titleId = useId();
   return (
-    <section
-      id={id}
-      aria-labelledby={titleId}
-      className="gap-card grid min-w-0 grid-cols-[minmax(0,1fr)]"
-    >
+    <section id={id} aria-labelledby={titleId} className="gap-card grid min-w-0 grid-cols-1">
       <SectionHeader>
         <SectionTitle id={titleId}>{title}</SectionTitle>
         {description ? <SectionDescription>{description}</SectionDescription> : null}

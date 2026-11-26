@@ -249,7 +249,7 @@ export function CommandPalette({
 
           <div
             ref={listRef}
-            className="content-scroll max-h-100 min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
+            className="max-h-100 min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
           >
             {results.length === 0 ? (
               <p className="text-body text-ink-2 py-section px-4 text-center">

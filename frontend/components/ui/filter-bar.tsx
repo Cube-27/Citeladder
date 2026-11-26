@@ -17,7 +17,7 @@ import { PageFilterBandContext, PageTabEnd } from '@/components/templates/page-t
 import { X } from '@/lib/icons';
 import { batchUrlWrites } from '@/lib/navigation/url-state';
 
-export type FilterBarProps = Readonly<{
+export type TableToolbarProps = Readonly<{
   view?: ReactNode;
   lead?: ReactNode;
   search?: ReactNode;
@@ -25,6 +25,8 @@ export type FilterBarProps = Readonly<{
   status?: ReactNode;
   actions?: ReactNode;
 }>;
+
+export type FilterBarProps = Omit<TableToolbarProps, 'search'>;
 
 const ROW_ICON_CHIPS = 4;
 
@@ -45,7 +47,15 @@ function dataWindow(chips: readonly FilterDefinition[]): string | undefined {
   return period ? (period.windowLabel ?? period.valueLabel) : undefined;
 }
 
-export function FilterBar({ view, lead, ...row }: FilterBarProps) {
+export function FilterBar(props: FilterBarProps) {
+  return <ToolbarRow {...props} />;
+}
+
+export function TableToolbar(props: TableToolbarProps) {
+  return <ToolbarRow {...props} />;
+}
+
+function ToolbarRow({ view, lead, ...row }: TableToolbarProps) {
   return (
     <fieldset
       data-filter-bar=""
@@ -71,7 +81,7 @@ function Controls({
   status,
   actions,
   afterView = false,
-}: Omit<FilterBarProps, 'view' | 'lead'> & { afterView?: boolean }) {
+}: Omit<TableToolbarProps, 'view' | 'lead'> & { afterView?: boolean }) {
   const { chips, menu } = placeFilters(filters);
   const set = filters.filter((filter) => !filter.isDefault);
   const windowLabel = dataWindow(chips);

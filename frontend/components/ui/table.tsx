@@ -141,7 +141,7 @@ export function TableHead({
       className={cn(
         tableHeadClasses,
         'aria-[sort=ascending]:text-ink aria-[sort=descending]:text-ink',
-        'bg-well sticky top-0 z-10 h-table-head px-cell-x text-left align-middle',
+        'bg-well sticky top-0 z-raised h-table-head px-cell-x text-left align-middle',
         numeric && 'tabular-nums text-right',
         desktopOnly && desktopOnlyClasses,
         className,

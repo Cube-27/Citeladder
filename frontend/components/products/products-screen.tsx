@@ -3,7 +3,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { ReportPage } from '@/components/templates/report-page';
 import { Button } from '@/components/ui/button';
-import { FilterBar } from '@/components/ui/filter-bar';
+import { TableToolbar } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuCheckboxItem, MenuContent, MenuLabel, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
@@ -207,7 +207,7 @@ function ProductsContent({
     <ReportPage
       actions={header.actions}
       filters={
-        <FilterBar
+        <TableToolbar
           view={
             <SegmentedControl
               ariaLabel="Products shown"

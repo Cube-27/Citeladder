@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { DisplayTime } from '@/components/ui/display-time';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
+import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
 import { Download } from '@/lib/icons';
 import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
@@ -106,7 +106,7 @@ export function useInternalLinksBands({
 }>): Readonly<{
   read: LinksRead;
   actions: ReactNode;
-  controls: FilterBarProps | undefined;
+  controls: TableToolbarProps | undefined;
 }> {
   const read = useInternalLinks(scope, enabled);
   const { params, update } = useLinkParams();
@@ -136,7 +136,7 @@ function linksControls({
   update: ParamChange;
   links: InternalLink[];
   timeZone: string;
-}>): FilterBarProps | undefined {
+}>): TableToolbarProps | undefined {
   if (read.query.isPending) return RESERVED_CONTROLS;
   const data = read.data;
   const analysis = data?.analysis;

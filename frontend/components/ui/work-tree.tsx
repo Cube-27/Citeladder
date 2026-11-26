@@ -26,7 +26,7 @@ function CountText({ children }: Readonly<{ children: string }>) {
   );
 }
 
-type ToggleProps = Omit<PressableProps, 'children'> & { open: boolean };
+type ToggleProps = Omit<PressableProps, 'children' | 'tone'> & { open: boolean };
 
 export function TreeStatusRow({
   open,

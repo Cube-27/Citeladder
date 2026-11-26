@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
 
 import { Button, IconButton } from '@/components/ui/button';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Columns, Inline } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { X } from '@/lib/icons';
@@ -57,7 +57,7 @@ export function ProjectMarkets({
           ))}
         </SectionBleed>
       ) : null}
-      <Stack gap="item" className="grid-cols-[1fr_1fr_auto] items-end">
+      <Columns template="fields-action" gap="item" align="end">
         <MarketSelect
           ariaLabel="Market country"
           value={country}
@@ -77,7 +77,7 @@ export function ProjectMarkets({
         >
           {add.isPending ? 'Adding…' : 'Add market'}
         </Button>
-      </Stack>
+      </Columns>
       {failed ? (
         <Notice
           kind="mutation"

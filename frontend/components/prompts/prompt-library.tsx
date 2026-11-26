@@ -39,7 +39,7 @@ import {
   type PromptMeasurements,
 } from './use-latest-prompt-measurements';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
+import { FilterBar, TableToolbar, type TableToolbarProps } from '@/components/ui/filter-bar';
 
 import { PromptActions, PromptStatusTabs, promptFilterControls } from './prompt-toolbar';
 import { HeldTabRow, TabPanel, TabsRoot } from '@/components/ui/tabs';
@@ -181,8 +181,8 @@ function measuredChoicesFor({
   };
 }
 
-function libraryFilterBar(hasPrompts: boolean, controls: FilterBarProps): ReactNode {
-  return hasPrompts ? <FilterBar {...controls} /> : undefined;
+function libraryFilterBar(hasPrompts: boolean, controls: TableToolbarProps): ReactNode {
+  return hasPrompts ? <TableToolbar {...controls} /> : undefined;
 }
 
 function libraryTabs(

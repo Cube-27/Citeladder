@@ -5,7 +5,7 @@ import { PageDrawerHost } from '@/components/site-health/page-drawer';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
+import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -163,7 +163,7 @@ function usePagesToolbar({
   active: boolean;
   exportPages: ExportPages | undefined;
   filters: PageFilterParams;
-}>): FilterBarProps {
+}>): TableToolbarProps {
   const { view, setView, pageKind, setPageKind, query, setQuery } = usePagesInventoryState();
   const pageFilters = usePagesFilters({
     workspaceId: crawl.workspace_id,

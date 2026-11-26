@@ -9,7 +9,7 @@ export function ProgressMeter({ label, value }: Readonly<{ label: string; value:
   const clamped = Math.min(MAX, Math.max(0, value));
   const shown = formatPercent(clamped / MAX);
   return (
-    <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+    <div className="grid-cols-lead-body-end grid min-w-0 items-center gap-3">
       <span id={labelId} className="text-caption text-ink-2 truncate">
         {label}
       </span>

@@ -41,7 +41,7 @@ export function PageDock({ label, children }: Readonly<{ label: string; children
 }
 
 function DockLayer({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="pointer-events-none sticky bottom-5 z-10 h-0">{children}</div>;
+  return <div className="z-raised pointer-events-none sticky bottom-5 h-0">{children}</div>;
 }
 
 function DockBar({

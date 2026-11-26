@@ -188,7 +188,7 @@ function FigureLabel({ segment, subLine }: FigurePart) {
 }
 
 function pressableLayer(segment: FigureSegment) {
-  return segment.onSelect ? 'relative z-10' : undefined;
+  return segment.onSelect ? 'relative z-raised' : undefined;
 }
 
 function FigureValueLine({ segment, subLine, textValues }: FigurePart) {

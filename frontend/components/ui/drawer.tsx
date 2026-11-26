@@ -9,7 +9,7 @@ import { SurfaceContext } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
 
 const DRAWER_PANE =
-  'grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] content-start gap-panel-inset overflow-x-hidden overflow-y-auto overscroll-contain p-panel-inset';
+  'grid min-h-0 flex-1 grid-cols-1 content-start gap-panel-inset overflow-x-hidden overflow-y-auto overscroll-contain p-panel-inset';
 
 export const DRAWER_SPLIT =
   'phone:grid-cols-1 phone:grid-rows-[auto_minmax(0,1fr)] grid min-h-0 flex-1 grid-cols-[11.5rem_minmax(0,1fr)]';
@@ -71,16 +71,21 @@ export function Drawer({
   width?: keyof typeof DRAWER_WIDTH;
 }>) {
   const returnFocus = useReturnFocus(open);
-  const close = (
+  const closeButton = (
     <DialogPrimitive.Close asChild>
       <IconButton
         icon={X}
         label={closeLabel}
         tooltip={false}
         variant="secondary"
-        className={cn(CLOSE_BUTTON, hideHeader ? 'absolute top-4 right-4 z-1' : 'shrink-0')}
+        className={cn(CLOSE_BUTTON, 'shrink-0')}
       />
     </DialogPrimitive.Close>
+  );
+  const close = hideHeader ? (
+    <span className="z-base absolute top-4 right-4 flex">{closeButton}</span>
+  ) : (
+    closeButton
   );
 
   return (

@@ -322,6 +322,7 @@
   --z-index-base: 1;
   --z-index-raised: 10;
   --z-index-sticky: 20;
+  --z-index-float: 20;
   --z-index-overlay: 40;
   --z-index-modal: 50;
   --z-index-toast: 60;
@@ -362,6 +363,25 @@
   --spacing-panel-inset: 0px;
   --spacing-band: 8px;
   --spacing-flow-gap: 48px;
+  --spacing-label-column: 160px;
+
+}
+
+@theme inline {
+  --shadow-field-face: var(--shadow-field, 0 0 transparent);
+  --shadow-control-face: var(--control-face-shadow, var(--shadow-field, 0 0 transparent));
+  --color-control-face: var(--control-face, var(--color-raised));
+  --color-control-face-hover: var(--control-face-hover, var(--color-raised-2));
+  --grid-template-columns-label-value: var(--spacing-label-column) minmax(0, 1fr);
+  --grid-template-columns-fields-action: 1fr 1fr auto;
+  --grid-template-columns-lead-body-end: auto minmax(0, 1fr) auto;
+  --grid-template-columns-lead-body: auto minmax(0, 1fr);
+  --grid-template-columns-body-end: minmax(0, 1fr) auto;
+  --grid-template-columns-main-aside: minmax(0, 2fr) minmax(0, 1fr);
+  --grid-template-columns-aside-main: minmax(0, 1fr) minmax(0, 2fr);
+  --grid-template-columns-shell: var(--spacing-sidebar) minmax(0, 1fr);
+  --grid-template-columns-shell-compact: var(--spacing-sidebar-compact) minmax(0, 1fr);
+  --grid-template-columns-shell-rail: var(--spacing-sidebar-rail) minmax(0, 1fr);
 }
 
 :root {
@@ -506,6 +526,20 @@
   .edge-draft[data-draft='false']::after {
     opacity: 1;
   }
+}
+
+@utility bg-heat {
+  background: color-mix(in oklch, var(--color-accent) var(--heat-share), var(--color-panel));
+}
+@utility bg-heat-scale {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--color-accent) 4%, var(--color-panel)),
+    color-mix(in oklch, var(--color-accent) 50%, var(--color-panel))
+  );
+}
+@utility bg-hatch {
+  background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--color-rule) 6px 7px);
 }
 
 @utility overlay-hover {
@@ -1449,14 +1483,14 @@ label {
   :is(.focus-input, .focus-frame):hover:not(:focus, :focus-within, :disabled, [data-disabled]) {
   background-color: var(--color-well-hover);
 }
-:root:not([data-public-surface]):where(:not([data-theme='dark'])) .ui-button-secondary {
-  --color-raised-2: var(--color-field-hover);
+:root:not([data-public-surface]):where(:not([data-theme='dark'])) {
+  --control-face-hover: var(--color-field-hover);
 }
 :root:not([data-public-surface]) {
-  :where([data-panel], [data-panel-frame], [data-overlay], .surface-well, .menu-panel, [data-auth-form]) .ui-button-secondary {
-    --color-raised: var(--color-state-fill);
-    --color-raised-2: var(--color-state-fill-hover);
-    --shadow-field: none;
+  :is([data-panel], [data-panel-frame], [data-overlay], .surface-well, .menu-panel, [data-auth-form]) {
+    --control-face: var(--color-state-fill);
+    --control-face-hover: var(--color-state-fill-hover);
+    --control-face-shadow: none;
   }
   :is(.menu-panel, [role='listbox'], .ui-button-quiet) {
     --color-state-hover: var(--color-state-fill);

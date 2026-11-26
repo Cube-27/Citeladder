@@ -19,7 +19,7 @@ export function Card({
 }
 
 const HEADER_RULE =
-  'card-head not-last:-mx-card not-last:mb-card not-last:border-b not-last:border-rule not-last:px-card not-last:pb-card';
+  'not-last:-mx-card not-last:mb-card not-last:border-b not-last:border-rule not-last:px-card not-last:pb-card';
 
 export function CardHeader({
   children,

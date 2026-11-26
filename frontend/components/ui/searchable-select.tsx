@@ -78,10 +78,10 @@ export function SearchableSelect({
     <div ref={containerRef} className="relative">
       <ChevronDown
         aria-hidden
-        className="text-ink-2 pointer-events-none absolute top-1/2 right-3 z-1 size-3.5 -translate-y-1/2"
+        className="text-ink-2 z-base pointer-events-none absolute top-1/2 right-3 size-3.5 -translate-y-1/2"
       />
       {renderLeading && selected ? (
-        <span className="pointer-events-none absolute top-1/2 left-3 z-1 -translate-y-1/2">
+        <span className="z-base pointer-events-none absolute top-1/2 left-3 -translate-y-1/2">
           {renderLeading(selected)}
         </span>
       ) : null}
@@ -199,10 +199,10 @@ function exactOption(options: readonly SearchableSelectOption[], query: string) 
 }
 
 function optionGridClass(hasLeading: boolean, hasEnd: boolean) {
-  if (hasLeading && hasEnd) return 'grid-cols-[auto_minmax(0,1fr)_auto]';
-  if (hasLeading) return 'grid-cols-[auto_minmax(0,1fr)]';
-  if (hasEnd) return 'grid-cols-[minmax(0,1fr)_auto]';
-  return 'grid-cols-[minmax(0,1fr)]';
+  if (hasLeading && hasEnd) return 'grid-cols-lead-body-end';
+  if (hasLeading) return 'grid-cols-lead-body';
+  if (hasEnd) return 'grid-cols-body-end';
+  return 'grid-cols-1';
 }
 
 function inputText(query: string | null, selectedLabel: string | undefined, value: string) {

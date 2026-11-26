@@ -2,7 +2,7 @@ import { useContext, type ComponentProps } from 'react';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
+import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { mutedWhenMissing, TableCell, TableRow, TableTime, UrlText } from '@/components/ui/table';
@@ -84,7 +84,7 @@ export function PagesTable({
   sort?: PagesSort;
   onSortChange?: (sort: PagesSort) => void;
   state?: DataTableState;
-  toolbar?: FilterBarProps;
+  toolbar?: TableToolbarProps;
   pager?: ComponentProps<typeof DataTable>['pager'];
   pageSize?: number;
   busy?: ComponentProps<typeof DataTable>['busy'];

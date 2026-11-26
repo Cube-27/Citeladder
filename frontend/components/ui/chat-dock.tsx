@@ -37,9 +37,7 @@ export function DockedThread({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <DrawerPane label={label} scrollRef={scrollRef}>
-        <div className="gap-panel-inset grid min-w-0 grid-cols-[minmax(0,1fr)] content-start">
-          {children}
-        </div>
+        <div className="gap-panel-inset grid min-w-0 grid-cols-1 content-start">{children}</div>
       </DrawerPane>
       {dock ? (
         <div className="px-panel-inset">
@@ -99,7 +97,7 @@ export function ComposerFrame({
   return (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <form // NOSONAR
-      className="max-w-thread mx-auto grid w-full min-w-0 grid-cols-[minmax(0,1fr)] gap-1"
+      className="max-w-thread mx-auto grid w-full min-w-0 grid-cols-1 gap-1"
       onDragOver={(event) => {
         if (!carriesFiles(event)) return;
         event.preventDefault();
@@ -124,7 +122,7 @@ export function ComposerFrame({
         <div
           data-dragging={dragging || undefined}
           className={cn(
-            'focus-frame grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 rounded-card p-2 transition-[border-color,box-shadow] duration-fast data-[dragging]:border-focus',
+            'focus-frame grid min-w-0 grid-cols-1 gap-1 rounded-card p-2 transition-[border-color,box-shadow] duration-fast data-[dragging]:border-focus',
             FIELD_EDGE,
           )}
         >

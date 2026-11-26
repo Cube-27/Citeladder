@@ -9,7 +9,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
-import { FilterBar } from '@/components/ui/filter-bar';
+import { FilterBar, TableToolbar } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
 import { DemandLatentDemand } from '@/components/demand/demand-latent-demand';
@@ -177,7 +177,7 @@ export function demandControls(demand: Demand): ReactNode {
   const { snapshot, filter } = demand;
   if (!snapshot) return demand.latest.isLoading ? <FilterBar {...RESERVED_CONTROLS} /> : undefined;
   return (
-    <FilterBar
+    <TableToolbar
       view={
         <DemandSignalFilters
           activeTab={filter.activeTab}

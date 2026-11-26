@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
+import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { SearchField } from '@/components/ui/search-field';
 import { Download } from '@/lib/icons';
@@ -44,7 +44,7 @@ export function sourceTableToolbar({
   onSearch: (value: string) => void;
   rows: readonly SourceItem[];
   domain: string | null;
-}>): FilterBarProps {
+}>): TableToolbarProps {
   const onExport = () => {
     const stamp = new Date().toISOString().slice(0, 10);
     const scope = domain ? `${domain}-` : '';

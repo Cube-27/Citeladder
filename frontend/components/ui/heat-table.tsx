@@ -18,9 +18,7 @@ import type { DataAvailabilityState, Formatted } from '@/lib/format';
 import { cssVars } from '@/lib/css-vars';
 import { cn } from '@/lib/utils';
 
-const heat = (place: number) =>
-  `color-mix(in oklch, var(--color-accent) ${Math.round(4 + 46 * Math.min(1, Math.max(0, place)))}%, var(--color-panel))`;
-const HATCH = 'repeating-linear-gradient(135deg, transparent 0 6px, var(--color-rule) 6px 7px)';
+const heatShare = (place: number) => `${Math.round(4 + 46 * Math.min(1, Math.max(0, place)))}%`;
 
 export type HeatValue =
   | { kind: 'value'; text: string; detail: string | null; tint: number }
@@ -58,18 +56,15 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
                   className="p-0.5 text-center"
                 >
                   {cell.kind === 'void' ? (
-                    <div
-                      className="rounded-mark flex min-h-10 flex-col items-center justify-center"
-                      style={{ backgroundImage: HATCH }}
-                    >
+                    <div className="rounded-mark bg-hatch flex min-h-10 flex-col items-center justify-center">
                       <i className={textRole('caption')}>
                         <Absence state={cell.state} label={cell.label} />
                       </i>
                     </div>
                   ) : (
                     <div
-                      className="rounded-mark flex min-h-10 flex-col items-center justify-center"
-                      style={{ background: heat(cell.tint) }}
+                      className="rounded-mark bg-heat flex min-h-10 flex-col items-center justify-center"
+                      style={cssVars({ '--heat-share': heatShare(cell.tint) })}
                     >
                       <span className={textRole('label', 'tabular-nums')}>{cell.text}</span>
                       {cell.detail === null ? null : (
@@ -154,11 +149,7 @@ export function HeatScale({ note }: Readonly<{ note: string }>) {
     <div className={textRole('caption', 'flex items-center gap-2')}>
       <span className="flex-1">{note}</span>
       <span>Low</span>
-      <i
-        aria-hidden
-        className="h-1.5 w-30 rounded-full"
-        style={{ background: `linear-gradient(90deg, ${heat(0)}, ${heat(1)})` }}
-      />
+      <i aria-hidden className="bg-heat-scale h-1.5 w-30 rounded-full" />
       <span>High</span>
     </div>
   );

@@ -24,13 +24,6 @@ export const GRID_PROPS = {
 
 export const LINE_CURSOR = { stroke: 'var(--color-control-line)', strokeDasharray: '4 4' };
 
-export function roleColor(classes: string, prefix: 'fill' | 'stroke'): string {
-  const named = (kind: string) =>
-    classes.split(/\s+/).find((name) => name.startsWith(`${kind}-`) && name !== `${kind}-current`);
-  const role = (named(prefix) ?? named('text'))?.replace(/^[a-z]+-/, '');
-  return role ? `var(--color-${role})` : 'var(--color-well)';
-}
-
 function SeriesIndicator({ color, shape }: Readonly<{ color: string; shape?: MarkerShape }>) {
   return (
     <svg aria-hidden viewBox="-5 -5 10 10" className="size-2 shrink-0 overflow-visible">

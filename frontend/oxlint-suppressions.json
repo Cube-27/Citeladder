@@ -948,9 +948,6 @@
     }
   },
   "components/projects/project-markets.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 2
     }
@@ -1218,10 +1215,7 @@
       "count": 2
     },
     "shadcn/no-restyle": {
-      "count": 4
-    },
-    "shadcn/no-unknown-classes": {
-      "count": 1
+      "count": 3
     }
   },
   "components/site-health/changes-panel-evidence.tsx": {
@@ -1469,12 +1463,12 @@
   },
   "components/ui/app-grid.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 3
+      "count": 1
     }
   },
   "components/ui/app-shell.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 5
+      "count": 1
     },
     "shadcn/no-inline-styles": {
       "count": 2
@@ -1494,9 +1488,6 @@
     }
   },
   "components/ui/auth-showcase.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
       "count": 1
     },
@@ -1513,14 +1504,11 @@
     }
   },
   "components/ui/button.tsx": {
-    "design/colour-literal": {
-      "count": 1
-    },
     "design/reset-survivor": {
       "count": 3
     },
     "shadcn/no-arbitrary-values": {
-      "count": 2
+      "count": 1
     },
     "shadcn/no-restyle": {
       "count": 4
@@ -1531,15 +1519,7 @@
       "count": 18
     }
   },
-  "components/ui/card.tsx": {
-    "shadcn/no-unknown-classes": {
-      "count": 1
-    }
-  },
   "components/ui/chart-frame.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
       "count": 1
     },
@@ -1555,7 +1535,7 @@
   },
   "components/ui/chat-dock.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 10
+      "count": 7
     },
     "shadcn/no-restyle": {
       "count": 6
@@ -1598,9 +1578,6 @@
       "count": 3
     },
     "shadcn/no-restyle": {
-      "count": 1
-    },
-    "shadcn/no-unknown-classes": {
       "count": 1
     }
   },
@@ -1652,11 +1629,8 @@
     }
   },
   "components/ui/drawer.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
-      "count": 5
+      "count": 4
     },
     "shadcn/require-static-classes": {
       "count": 1
@@ -1669,21 +1643,13 @@
   },
   "components/ui/facts.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 3
+      "count": 2
     },
     "shadcn/require-static-classes": {
       "count": 2
     }
   },
-  "components/ui/field.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    }
-  },
   "components/ui/figure-strip.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
       "count": 1
     },
@@ -1702,17 +1668,11 @@
     }
   },
   "components/ui/filter-options.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
       "count": 1
     }
   },
   "components/ui/heat-table.tsx": {
-    "design/colour-literal": {
-      "count": 1
-    },
     "design/reset-survivor": {
       "count": 1
     },
@@ -1720,21 +1680,18 @@
       "count": 3
     },
     "shadcn/no-inline-styles": {
-      "count": 4
+      "count": 2
     },
     "shadcn/no-restyle": {
       "count": 3
     }
   },
   "components/ui/input.tsx": {
-    "design/colour-literal": {
-      "count": 2
-    },
     "design/reset-survivor": {
-      "count": 4
+      "count": 3
     },
     "shadcn/no-arbitrary-values": {
-      "count": 2
+      "count": 1
     }
   },
   "components/ui/ledger-list.tsx": {
@@ -1749,9 +1706,6 @@
     }
   },
   "components/ui/link-rows.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 4
     }
@@ -1823,7 +1777,7 @@
   },
   "components/ui/progress-meter.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 2
+      "count": 1
     },
     "shadcn/no-inline-styles": {
       "count": 1
@@ -1846,11 +1800,6 @@
     },
     "shadcn/no-restyle": {
       "count": 4
-    }
-  },
-  "components/ui/rung-meter.tsx": {
-    "design/reset-survivor": {
-      "count": 1
     }
   },
   "components/ui/rung-trail.tsx": {
@@ -1878,11 +1827,8 @@
     }
   },
   "components/ui/searchable-select.tsx": {
-    "design/reset-survivor": {
-      "count": 2
-    },
     "shadcn/no-arbitrary-values": {
-      "count": 5
+      "count": 1
     },
     "shadcn/no-restyle": {
       "count": 2
@@ -1890,7 +1836,7 @@
   },
   "components/ui/section.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 3
+      "count": 1
     }
   },
   "components/ui/select.tsx": {
@@ -1902,9 +1848,6 @@
     }
   },
   "components/ui/selection-dock.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
       "count": 1
     }
@@ -1952,9 +1895,6 @@
   "components/ui/state-block.tsx": {
     "shadcn/no-arbitrary-values": {
       "count": 3
-    },
-    "shadcn/no-unknown-classes": {
-      "count": 1
     }
   },
   "components/ui/step-chart-parts.tsx": {
@@ -1986,9 +1926,6 @@
     }
   },
   "components/ui/table.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
       "count": 5
     },
@@ -2007,9 +1944,6 @@
       "count": 6
     },
     "shadcn/no-restyle": {
-      "count": 1
-    },
-    "shadcn/no-unknown-classes": {
       "count": 1
     }
   },
@@ -2031,7 +1965,7 @@
   },
   "components/ui/textarea.tsx": {
     "design/reset-survivor": {
-      "count": 2
+      "count": 1
     },
     "shadcn/no-arbitrary-values": {
       "count": 6
@@ -2075,9 +2009,6 @@
     }
   },
   "components/ui/work-rows.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
       "count": 3
     },
@@ -2094,11 +2025,6 @@
     },
     "shadcn/require-static-classes": {
       "count": 2
-    }
-  },
-  "components/ui/workspace.tsx": {
-    "design/reset-survivor": {
-      "count": 1
     }
   },
   "components/visibility/claim-row.tsx": {

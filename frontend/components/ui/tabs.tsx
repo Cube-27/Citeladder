@@ -20,7 +20,7 @@ const TAB_STRIP =
 
 const REVEAL_PADDING = 32;
 
-const SELECTED_ITEM = '.tab-face:is([aria-selected="true"], [aria-checked="true"])';
+const SELECTED_ITEM = '[data-tab-face]:is([aria-selected="true"], [aria-checked="true"])';
 
 function useRevealSelected(selected: string | null) {
   const strip = useRef<HTMLDivElement | null>(null);
@@ -60,7 +60,7 @@ function tabFace({
   className,
 }: Readonly<{ kind: keyof typeof TAB_KIND; selected: boolean; className?: string }>) {
   return cn(
-    'tab-face focus-ring-inset text-label text-ink relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+    'focus-ring-inset text-label text-ink relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50',
     TAB_KIND[kind].base,
     selected ? cn('text-ink', TAB_KIND[kind].current) : 'text-ink-2 not-disabled:hover:text-ink',
     className,
@@ -227,6 +227,7 @@ export function HeldTabRow({
         <span
           key={label}
           data-selected={label === current || undefined}
+          data-tab-face=""
           className={tabFace({ kind: 'tab', selected: label === current })}
         >
           {label}
@@ -287,6 +288,7 @@ function TabStrip<T extends string>({
                 onIntent?.(item.value);
                 event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
               }}
+              data-tab-face=""
               className={tabFace({ kind: 'tab', selected: item.value === active })}
             >
               {item.label}
@@ -440,6 +442,7 @@ export function SegmentedControl<T extends string>({
                     if (edge) select(edge === 'first' ? 0 : options.length - 1);
                     else if (delta !== undefined) move(index, delta);
                   }}
+                  data-tab-face=""
                   className={tabFace({ kind: 'segment', selected })}
                 >
                   {option.label}
@@ -483,7 +486,12 @@ export function SegmentedAction({
   }
 >) {
   return (
-    <button {...props} type="button" className={tabFace({ kind: 'segment', selected, className })}>
+    <button
+      {...props}
+      type="button"
+      data-tab-face=""
+      className={tabFace({ kind: 'segment', selected, className })}
+    >
       <span className="inline-grid justify-items-center">
         {labels.map((reserved) => (
           <span key={reserved} aria-hidden="true" className="invisible col-start-1 row-start-1">

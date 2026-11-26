@@ -13,7 +13,7 @@ import {
   type DataTableInlineEmpty,
   type DataTableState,
 } from '@/components/ui/data-table-body';
-import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
+import { TableToolbar, type TableToolbarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
 import { Section, SectionBleed, SectionHeader, SectionToolbar } from '@/components/ui/section';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
@@ -53,7 +53,7 @@ export function DataTable({
   title?: string;
   description?: ReactNode;
   actions?: ReactNode;
-  toolbar?: FilterBarProps;
+  toolbar?: TableToolbarProps;
   columns: readonly DataTableColumn[];
   children?: ReactNode;
   rowCount?: number;
@@ -92,7 +92,7 @@ export function DataTable({
       />
       {toolbar ? (
         <SectionToolbar>
-          <FilterBar {...toolbar} />
+          <TableToolbar {...toolbar} />
         </SectionToolbar>
       ) : null}
       <HeldFootprint

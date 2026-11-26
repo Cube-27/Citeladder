@@ -50,10 +50,15 @@ const TONE_CLASSES = {
   negative: 'text-negative',
   warning: 'text-warning',
   info: 'text-info',
+  placeholder: 'text-ink-placeholder',
 } as const;
 
 type TypeRole = keyof typeof ROLE_CLASSES;
-type TextTone = keyof typeof TONE_CLASSES;
+export type TextTone = keyof typeof TONE_CLASSES;
+
+export function toneClass(tone: TextTone | undefined) {
+  return tone ? TONE_CLASSES[tone] : undefined;
+}
 
 const SECONDARY_ROLES: ReadonlySet<TypeRole> = new Set(['caption', 'caption-strong']);
 type TextTag =

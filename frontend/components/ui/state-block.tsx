@@ -162,7 +162,7 @@ function FramedState({
       ref={ref}
       data-state-block={props.kind}
       data-state-frame={framed ? '' : undefined}
-      className="state-block min-w-0"
+      className="min-w-0"
     >
       <BlockBody {...props} />
     </div>

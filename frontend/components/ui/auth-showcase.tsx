@@ -78,7 +78,7 @@ function ShotPicture({
     Object.entries(place).map(([edge, percent]) => [edge, `${percent}%`]),
   );
   return (
-    <div className={cn('absolute', over && 'z-10')} style={style}>
+    <div className={cn('absolute', over && 'z-raised')} style={style}>
       {THEMES.map(({ theme, suffix }) => (
         <picture key={theme} data-theme-art={theme} className="block">
           <source type="image/avif" srcSet={`/auth/${shot.file}${suffix}.avif`} />

@@ -54,7 +54,7 @@ function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
   return (
     <>
       {isSearchable(filter) ? (
-        <div className="bg-raised sticky top-0 z-10 pb-1">
+        <div className="bg-raised z-raised sticky top-0 pb-1">
           <SearchField
             value={query}
             onValueChange={setQuery}

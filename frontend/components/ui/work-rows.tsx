@@ -76,7 +76,7 @@ export function WorkRow({
         'border-rule hover:overlay-hover relative min-h-10 not-first:border-t',
       )}
     >
-      <td className="relative z-10 flex">{tick}</td>
+      <td className="z-raised relative flex">{tick}</td>
       <td className="flex min-w-0 items-baseline gap-2">
         <TextLink
           href={href}

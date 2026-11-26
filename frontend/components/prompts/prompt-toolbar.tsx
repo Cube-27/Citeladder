@@ -8,7 +8,7 @@ import {
   type FilterDefinition,
   type FilterIcon,
 } from '@/components/ui/all-filters';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
+import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
@@ -142,7 +142,7 @@ export function promptFilterControls({
   personas?: readonly string[];
   measured?: MeasuredChoices;
   topic?: FilterDefinition;
-}>): FilterBarProps {
+}>): TableToolbarProps {
   const patch: Patch = (part) => onFiltersChange((current) => ({ ...current, ...part }));
   return {
     search: (

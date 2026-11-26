@@ -24,7 +24,7 @@ const LIST = {
 } as const;
 
 const ROW = {
-  ruled: 'grid min-h-row grid-cols-[160px_minmax(0,1fr)] items-center gap-x-4 py-2',
+  ruled: 'grid min-h-row grid-cols-label-value items-center gap-x-4 py-2',
   inline: 'flex min-w-0 max-w-full items-center gap-2',
   spread: 'flex flex-wrap items-center justify-between gap-x-4 gap-y-1',
   columns: 'grid min-w-0 gap-1',

@@ -9,7 +9,7 @@ import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { TabRow, TabsRoot } from '@/components/ui/tabs';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
+import { TableToolbar, type TableToolbarProps } from '@/components/ui/filter-bar';
 import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-layout';
 import { PAGES_INVENTORY_URL_KEYS } from '@/components/site-health/inventory-section';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
@@ -113,7 +113,7 @@ function SiteHealthContent({
               onIntent={prefetchTab}
             />
           }
-          filters={controls ? <FilterBar {...controls} /> : undefined}
+          filters={controls ? <TableToolbar {...controls} /> : undefined}
         >
           {blocking ? (
             <SiteHealthBlocked blocking={blocking} />
@@ -188,9 +188,9 @@ function tabControls({
   tab: SiteHealthTab;
   blocking: BlockingState | null;
   crawled: boolean;
-  links: FilterBarProps | undefined;
+  links: TableToolbarProps | undefined;
   linksActions: ReactNode;
-}>): FilterBarProps | undefined {
+}>): TableToolbarProps | undefined {
   if (tab !== 'internal-links') return undefined;
   if (blocking?.kind === 'loading') return RESERVED_CONTROLS;
   if (blocking || !crawled || !links) return undefined;
