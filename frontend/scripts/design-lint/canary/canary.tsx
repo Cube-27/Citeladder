@@ -19,6 +19,9 @@ export function Canary({ tone }: { tone: string }) {
       <Stack className={tone}>dynamic</Stack>
       <Stack className="rounded-card">restyle</Stack>
       <p title={MIX}>colour</p>
+      <p className={LAYOUT[tone === 'row' ? 'row' : 'column']}>layout map</p>
     </Stack>
   );
 }
+
+const LAYOUT = { row: 'flex', column: 'grid' } as const;

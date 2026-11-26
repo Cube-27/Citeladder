@@ -62,6 +62,15 @@ themes), the app's Tailwind `@source` list, no hex in CSS, scripts or Astro
 styles outside `globals.css` and `public-surface.css`, and reports breaks of the [composition rules](#composition) as a
 warning that never fails CI (AR-25).
 
+The website (marketing and docs) composes the same primitives, and its own
+blocks are `cl-*` classes whose CSS, in the side sheets the marketing entry
+imports, reads role tokens. A variant is a data attribute or a lookup map of
+whole class names, never a class built from a template. In that CSS a
+declaration holds a token, a keyword, `0`, an opacity toggle, a percentage,
+`fr` or container and viewport units, a gradient stop or angle, or a unitless
+multiplier; anything else is a token. A dimension one block alone uses is a
+token in the `:root` block at the top of that block's sheet.
+
 ## Tokens
 
 Values live in [`globals.css`](../frontend/apps/app/src/globals.css): HeroUI's
@@ -151,6 +160,12 @@ a CSS variable for code blocks.
   (the sidebar width) goes in `@theme inline`. Inside a primitive, steps of
   the 4px scale are allowed; a screen never picks a step. Grid templates are
   `grid-cols-<role>` roles, rendered by `Columns template`.
+- **Website spacing and size:**
+  [`site-space.css`](../frontend/apps/marketing/src/site-space.css) derives
+  `--site-space-<n>` from the website's base (a quarter of it per step), so a
+  base change moves spacing with type. It also names the hairline
+  (`--site-rule`), the 44 target, the underline offsets, the reading measures
+  (`--site-measure-*`) and the grain.
 - **Motion, layering and opacity:** `duration-<role>` (fast 120, close 160,
   open 200, press 250, slide 300, plus reveal, pulse, sweep and the stagger
   steps), `ease-<role>`, `z-<role>` (base, raised, sticky, float, overlay,
