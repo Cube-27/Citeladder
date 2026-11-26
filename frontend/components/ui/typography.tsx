@@ -53,8 +53,10 @@ const TONE_CLASSES = {
   info: 'text-info',
 } as const;
 
-export type TypeRole = keyof typeof ROLE_CLASSES;
-export type TextTone = keyof typeof TONE_CLASSES;
+type TypeRole = keyof typeof ROLE_CLASSES;
+type TextTone = keyof typeof TONE_CLASSES;
+
+const SECONDARY_ROLES: ReadonlySet<TypeRole> = new Set(['caption', 'caption-strong', 'eyebrow']);
 type TextTag =
   | 'span'
   | 'p'
@@ -71,7 +73,7 @@ type TextTag =
 
 export function Text({
   variant,
-  tone = variant === 'caption' ? 'ink-2' : 'ink',
+  tone = SECONDARY_ROLES.has(variant) ? 'ink-2' : 'ink',
   as: Tag = 'span',
   numeric = false,
   children,
