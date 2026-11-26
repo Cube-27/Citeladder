@@ -1,6 +1,18 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vite-plus/test';
 
 import { cn } from './utils';
+
+const THEME = readFileSync(join(import.meta.dirname, '../apps/app/src/globals.css'), 'utf8');
+const roles = (namespace: string) => [
+  ...new Set(
+    [...THEME.matchAll(new RegExp(`--${namespace}-([a-z][a-z0-9-]*):`, 'gu'))].map(
+      (match) => match[1]!,
+    ),
+  ),
+];
 
 describe('cn', () => {
   it("lets a caller's named radius replace a primitive's, and keeps a type role beside a colour or weight", () => {
@@ -30,5 +42,25 @@ describe('cn', () => {
     );
     expect(cn('z-raised', 'z-base')).toBe('z-base');
     expect(cn('max-w-flow', 'pt-flow-gap')).toBe('max-w-flow pt-flow-gap');
+  });
+
+  it('knows every spacing, motion, layer, opacity and template role the theme declares', () => {
+    const unmerged = [
+      ...roles('spacing').map((role) => [`gap-${role}`, 'gap-0', 'gap-0']),
+      ...roles('transition-duration').map((role) => [
+        `duration-${role}`,
+        'duration-0',
+        'duration-0',
+      ]),
+      ...roles('z-index').map((role) => [`z-${role}`, 'z-0', 'z-0']),
+      ...roles('opacity').map((role) => [`opacity-${role}`, 'opacity-0', 'opacity-0']),
+      ...roles('grid-template-columns').map((role) => [
+        `grid-cols-${role}`,
+        'grid-cols-2',
+        'grid-cols-2',
+      ]),
+    ].filter(([role, step, merged]) => cn(role!, step!) !== merged);
+    expect(roles('spacing')).toContain('workspace');
+    expect(unmerged).toEqual([]);
   });
 });
