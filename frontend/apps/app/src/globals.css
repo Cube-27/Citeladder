@@ -280,6 +280,7 @@
   --radius-lg: 8px;
   --radius-full: 9999px;
   --radius-mark: 2px;
+  --radius-inner: var(--radius-sm);
   --radius-control: var(--radius-md);
   --radius-card: 8px;
   --radius-overlay: 12px;

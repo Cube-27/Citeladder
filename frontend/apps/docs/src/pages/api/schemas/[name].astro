@@ -54,7 +54,7 @@ const users = API_OPERATIONS.filter((operation) =>
   .cl-docs-schema {
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: var(--site-space-8);
     max-width: var(--container-prose);
   }
   .cl-docs-schema-type {
@@ -68,16 +68,16 @@ const users = API_OPERATIONS.filter((operation) =>
     font-size: var(--text-data);
   }
   .cl-docs-schema-sub {
-    margin: 0 0 8px;
+    margin: 0 0 var(--site-space-2);
     color: var(--text-color-ink);
     font-size: var(--text-heading);
     line-height: var(--text-heading--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
   .cl-docs-schema-users {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--site-space-1);
     padding: 0;
     margin: 0;
     list-style: none;
@@ -88,6 +88,6 @@ const users = API_OPERATIONS.filter((operation) =>
     color: var(--text-color-ink);
     text-decoration: underline;
     text-decoration-color: var(--color-control-line);
-    text-underline-offset: 2px;
+    text-underline-offset: var(--site-underline-offset-sm);
   }
 </style>
