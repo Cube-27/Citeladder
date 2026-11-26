@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Button, IconButton } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Kbd } from '@/components/ui/kbd';
 import { FileText, Search } from '@/lib/icons';
 import {
@@ -102,7 +103,7 @@ export function DocsSearchDialog() {
         onClick={(event) => show(event.currentTarget)}
         className="focus-ring cl-docs-search-trigger items-center text-left"
       >
-        <Search className="size-3.5 shrink-0" aria-hidden />
+        <Icon icon={Search} />
         <span className="min-w-0 flex-1 truncate" aria-hidden>
           Search docs
         </span>
@@ -133,7 +134,7 @@ export function DocsSearchDialog() {
           Find guides across the product, Agent and MCP.
         </p>
         <div className="palette-field cl-docs-search-field flex shrink-0 items-center">
-          <Search className="size-4 shrink-0" aria-hidden />
+          <Icon icon={Search} size="field" />
           <label htmlFor="docs-query" className="sr-only">
             Search terms
           </label>
@@ -206,7 +207,7 @@ export function DocsSearchDialog() {
                       onMouseMove={() => setActive(index)}
                       className="focus-ring cl-docs-search-option flex items-start"
                     >
-                      <FileText className="text-ink-2 mt-0.75 size-3.5 shrink-0" aria-hidden />
+                      <Icon icon={FileText} tone="ink-2" />
                       <span className="cl-docs-search-option-text flex min-w-0 flex-1 flex-col">
                         <span className="cl-docs-search-option-title truncate">
                           <Marked text={result.title} query={query} />

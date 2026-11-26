@@ -57,7 +57,7 @@ const DURATION_ROLES = [
 const twMerge = extendTailwindMerge({
   extend: {
     theme: {
-      radius: ['mark', 'control', 'card', 'overlay'],
+      radius: ['mark', 'inner', 'control', 'card', 'overlay'],
       spacing: SPACING_ROLES,
       ease: ['standard', 'resize', 'fluid', 'quad', 'menu', 'sweep'],
     },
