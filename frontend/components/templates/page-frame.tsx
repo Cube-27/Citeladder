@@ -155,7 +155,7 @@ function PageHeading({
       {actions === undefined ? null : (
         <div
           data-page-actions=""
-          className="ms-auto flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center justify-end gap-2"
+          className="ms-auto flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center justify-end gap-[var(--control-gap,8px)]"
         >
           <MastheadPrimarySlot value={primarySlot}>
             <MastheadOverflow label="Page actions">{actions}</MastheadOverflow>
