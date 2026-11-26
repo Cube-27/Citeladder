@@ -25,7 +25,7 @@ const { id } = Astro.props;
     max-width: var(--container-prose);
   }
   .cl-docs-op :global(.cl-docs-op-title) {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-size: var(--text-heading);
     line-height: var(--text-heading--line-height);
     font-weight: 500;
@@ -38,7 +38,7 @@ const { id } = Astro.props;
     min-width: 0;
   }
   .cl-docs-op :global(.cl-docs-op-code) {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-family: var(--font-mono);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
@@ -46,10 +46,10 @@ const { id } = Astro.props;
     overflow-wrap: anywhere;
   }
   .cl-docs-op :global(.cl-docs-op-param) {
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
   }
   .cl-docs-op :global(.cl-docs-op-desc) {
-    color: var(--color-ink-secondary);
+    color: var(--text-color-ink-2);
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
   }
@@ -57,18 +57,18 @@ const { id } = Astro.props;
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    color: var(--color-ink-secondary);
+    color: var(--text-color-ink-2);
     font-size: var(--text-body-sm);
     line-height: var(--text-body-sm--line-height);
   }
   .cl-docs-op :global(.cl-docs-op-auth svg) {
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
   }
   .cl-docs-op :global(.cl-docs-op-auth code) {
     padding: 1px 4px;
     border-radius: var(--radius-xs);
-    background: var(--color-surface-sunken);
-    color: var(--color-ink);
+    background: var(--color-well);
+    color: var(--text-color-ink);
     font-family: var(--font-mono);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);

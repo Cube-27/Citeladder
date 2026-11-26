@@ -8,12 +8,12 @@
   background: var(--tint-neutral);
   background-image: var(--site-well-shade);
   box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 .cl-plan--featured {
-  background: var(--color-surface);
-  box-shadow: inset 0 0 0 1px var(--color-ink);
+  background: var(--color-panel);
+  box-shadow: inset 0 0 0 1px var(--color-mark-ink);
 }
 
 .cl-plan-head {
@@ -32,7 +32,7 @@
 
 .cl-plan-name {
   margin: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-title-sm);
   font-weight: 500;
   line-height: var(--text-title-sm--line-height);
@@ -41,7 +41,7 @@
 .cl-plan-desc {
   min-height: calc(2 * var(--text-body--line-height));
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -61,7 +61,7 @@
 }
 
 .cl-plan-amount {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-site-feature);
   font-weight: 500;
   line-height: var(--text-site-feature--line-height);
@@ -69,7 +69,7 @@
 }
 
 .cl-plan-period {
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
@@ -77,7 +77,7 @@
 .cl-plan-note {
   min-height: 20px;
   margin: 0;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
@@ -91,12 +91,12 @@
   flex-direction: column;
   gap: 16px;
   padding-top: 24px;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-plan-ftitle {
   margin: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-label);
   font-weight: 400;
   line-height: var(--text-label--line-height);
@@ -196,42 +196,42 @@
 
 .cl-wtable thead th {
   padding-top: 24px;
-  border-bottom: 1px solid var(--color-line);
-  color: var(--color-ink-secondary);
+  border-bottom: 1px solid var(--color-rule);
+  color: var(--text-color-ink-2);
   font-weight: 400;
   vertical-align: bottom;
 }
 
 .cl-wtable tbody th {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-weight: 400;
 }
 
 .cl-wtable tbody td {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 .cl-wtable tbody tr + tr > * {
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-wt-group th {
   padding: 8px 20px;
-  background: var(--color-surface-sunken);
+  background: var(--color-well);
 }
 
 .cl-wtable tbody + tbody .cl-wt-group th {
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-wt-yes {
   display: inline-flex;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 .cl-wt-no {
   display: inline-flex;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
 }
 
 .cl-ptable-label {
@@ -240,7 +240,7 @@
 
 .cl-ptable-plan {
   display: block;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-title-sm);
   font-weight: 500;
   line-height: var(--text-title-sm--line-height);
@@ -249,7 +249,7 @@
 .cl-ptable-price {
   display: block;
   margin-top: 4px;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-family: var(--font-mono);
   font-size: var(--text-data);
   font-weight: 400;

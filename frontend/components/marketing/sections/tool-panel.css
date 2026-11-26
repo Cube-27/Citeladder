@@ -18,7 +18,7 @@
 
 .cl-tool-title {
   margin: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-heading-lg);
   font-weight: 500;
   line-height: var(--text-heading-lg--line-height);
@@ -27,7 +27,7 @@
 
 .cl-tool-desc {
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -46,7 +46,7 @@
   min-height: 420px;
   margin: 24px 24px 24px 0;
   border-radius: var(--site-radius-inner);
-  background: var(--color-surface);
+  background: var(--color-panel);
 }
 
 .cl-tool-preview {
@@ -63,12 +63,12 @@
   gap: 4px 12px;
   min-height: 52px;
   padding: 8px 8px 8px 20px;
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-rule);
 }
 
 .cl-tool-rtitle {
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
   font-size: var(--text-label);
   font-weight: 400;
   line-height: var(--text-label--line-height);
@@ -77,7 +77,7 @@
 .cl-tool-status {
   flex: 1 1 auto;
   min-width: 0;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
 }
@@ -95,7 +95,7 @@
   flex-direction: column;
   align-items: flex-end;
   padding-right: 4px;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
 }
@@ -129,7 +129,7 @@
   height: 100%;
   min-height: 280px;
   margin: 0;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   text-align: center;
@@ -137,7 +137,7 @@
 
 .cl-tool-hint {
   margin: 0;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   text-align: center;
@@ -182,17 +182,17 @@
 
 .cl-tool input[type='file'] {
   padding: 4px 12px 4px 4px;
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
 }
 
 .cl-tool input[type='file']::file-selector-button {
   height: calc(var(--control-md) - 10px);
   margin-right: 12px;
   padding: 0 12px;
-  border: 1px solid var(--color-line-control);
+  border: 1px solid var(--color-control-line);
   border-radius: var(--radius-sm);
-  background-color: var(--color-surface);
-  color: var(--color-ink);
+  background-color: var(--color-panel);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-body-sm);
   font-weight: 500;
@@ -213,7 +213,7 @@
 
 .cl-tool-group-hint {
   margin-bottom: 8px;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
 }

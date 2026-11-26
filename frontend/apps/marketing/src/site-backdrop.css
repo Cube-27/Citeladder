@@ -60,7 +60,7 @@
   }
 
   to {
-    border-bottom-color: var(--color-line);
+    border-bottom-color: var(--color-rule);
     background-color: var(--site-page);
   }
 }

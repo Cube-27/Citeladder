@@ -57,7 +57,7 @@ function SeriesSwatch({ tone, shape }: Readonly<{ tone: SeriesTone; shape?: Mark
           x={8}
           y={5}
           shape={shape}
-          className={cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-surface')}
+          className={cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-panel')}
         />
       </svg>
     );

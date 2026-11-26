@@ -41,7 +41,7 @@
 .cl-lhero-title {
   max-width: 1120px;
   margin: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-display);
   font-size: var(--text-site-title);
   font-weight: 400;
@@ -90,7 +90,7 @@
 .cl-phero-meta,
 .cl-lhero-note {
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }

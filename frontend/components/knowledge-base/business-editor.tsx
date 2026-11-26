@@ -164,7 +164,7 @@ function AddOffering({
           event.preventDefault();
           add();
         }}
-        className="type-body text-ink placeholder:text-ink-3 min-h-8 flex-1 bg-transparent"
+        className="type-body text-ink placeholder:text-ink-placeholder min-h-8 flex-1 bg-transparent"
       />
     </div>
   );

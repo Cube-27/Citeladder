@@ -28,7 +28,7 @@ export function FlowPage({
     <div
       className={cn(
         'text-ink grid min-h-dvh antialiased',
-        aside ? 'bg-surface desktop:grid-cols-2' : 'bg-ground',
+        aside ? 'bg-panel desktop:grid-cols-2' : 'bg-ground',
       )}
     >
       <div className="flex min-h-dvh min-w-0 flex-col">

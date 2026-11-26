@@ -106,7 +106,7 @@ export function InternalLinkReview({
               {link.placement ? (
                 <>
                   {link.placement.text.slice(0, link.placement.anchor_start)}
-                  <mark className="bg-accent-soft text-accent-text rounded-mark px-0.5">
+                  <mark className="bg-accent-wash text-accent-text rounded-mark px-0.5">
                     {link.anchor}
                   </mark>
                   {link.placement.text.slice(link.placement.anchor_start + link.anchor.length)}

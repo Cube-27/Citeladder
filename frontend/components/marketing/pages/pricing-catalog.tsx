@@ -205,7 +205,7 @@ function ByokSwitch({
         <label htmlFor={id} aria-hidden className="text-body text-ink cursor-pointer">
           {BYOK_SWITCH_LABEL}
         </label>
-        <span id={hint} className="text-body-sm text-ink-muted">
+        <span id={hint} className="text-body-sm text-ink-2">
           {BYOK_DISCLOSURE}
         </span>
       </span>

@@ -4,7 +4,7 @@
     font-size: var(--text-prose);
     line-height: var(--text-prose--line-height);
     font-weight: var(--weight-regular);
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .prose-content > :last-child {
     margin-bottom: 0;
@@ -13,7 +13,7 @@
     font-family: var(--font-sans);
     font-weight: var(--weight-medium);
     letter-spacing: 0;
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     margin: 1.5rem 0 0.75rem;
   }
   .prose-content > :where(h2, h3, h4, h5, h6):first-child {
@@ -48,10 +48,10 @@
   }
   .prose-content strong {
     font-weight: var(--weight-medium);
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .prose-content a {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     text-decoration: underline;
     text-decoration-color: var(--color-control-line);
     text-underline-offset: 2px;
@@ -63,7 +63,7 @@
     padding: 0.75rem 1rem;
     border-radius: var(--radius-control);
     background: var(--color-well);
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
   }
   .prose-content code {
     font-family: var(--font-mono);
@@ -116,12 +116,12 @@
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
     font-weight: var(--weight-medium);
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
     border-bottom: 1px solid var(--color-rule);
   }
   .prose-content td {
     padding: 0.5rem 0.75rem;
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     border-bottom: 1px solid var(--color-rule);
   }
   .prose-content tr:last-child td {

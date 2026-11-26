@@ -84,7 +84,7 @@ const described = rows.some((row) => row.description || row.values.length || row
     max-width: var(--container-prose);
   }
   .cl-docs-sub {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
     font-weight: 500;
@@ -97,7 +97,7 @@ const described = rows.some((row) => row.description || row.values.length || row
     table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0;
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-size: var(--text-body-sm);
     line-height: var(--text-body-sm--line-height);
   }
@@ -107,8 +107,8 @@ const described = rows.some((row) => row.description || row.values.length || row
   th {
     height: var(--table-header-height);
     padding: 0 12px;
-    border-bottom: 1px solid var(--color-line);
-    color: var(--color-ink-secondary);
+    border-bottom: 1px solid var(--color-rule);
+    color: var(--text-color-ink-2);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
     font-weight: 500;
@@ -117,7 +117,7 @@ const described = rows.some((row) => row.description || row.values.length || row
   }
   td {
     padding: 12px;
-    border-bottom: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-rule);
     vertical-align: top;
   }
   .cl-docs-param {
@@ -127,7 +127,7 @@ const described = rows.some((row) => row.description || row.values.length || row
     min-width: 0;
   }
   .cl-docs-param-name {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-family: var(--font-mono);
     font-size: var(--text-data);
     line-height: var(--text-data--line-height);
@@ -146,17 +146,17 @@ const described = rows.some((row) => row.description || row.values.length || row
   .cl-docs-param-tag {
     padding: 0 4px;
     border-radius: var(--radius-xs);
-    background: var(--color-surface-sunken);
-    color: var(--color-ink-secondary);
+    background: var(--color-well);
+    color: var(--text-color-ink-2);
   }
   .cl-docs-param-tag.is-required {
-    background: var(--color-negative-soft);
+    background: var(--color-negative-wash);
     color: var(--color-negative);
   }
   .cl-docs-param-meta a {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     text-decoration: underline;
-    text-decoration-color: var(--color-line-control);
+    text-decoration-color: var(--color-control-line);
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
   }
@@ -164,7 +164,7 @@ const described = rows.some((row) => row.description || row.values.length || row
     display: flex;
     flex-direction: column;
     gap: 8px;
-    color: var(--color-ink-secondary);
+    color: var(--text-color-ink-2);
     font-size: var(--text-body-sm);
     line-height: var(--text-body-sm--line-height);
   }
@@ -176,15 +176,15 @@ const described = rows.some((row) => row.description || row.values.length || row
   }
   .cl-docs-param-values-label {
     margin-right: 4px;
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
   }
   .cl-docs-param-desc code {
     padding: 1px 4px;
     border-radius: var(--radius-xs);
-    background: var(--color-surface-sunken);
-    color: var(--color-ink);
+    background: var(--color-well);
+    color: var(--text-color-ink);
     font-family: var(--font-mono);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);

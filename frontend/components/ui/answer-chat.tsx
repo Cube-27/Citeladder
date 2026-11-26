@@ -43,7 +43,7 @@ export function ChatAvatar({
       aria-hidden
       className={cn(
         'grid size-8 shrink-0 place-items-center rounded-full',
-        tone === 'you' ? 'bg-ink text-on-ink' : 'bg-well text-ink',
+        tone === 'you' ? 'bg-mark-ink text-on-ink' : 'bg-well text-ink',
       )}
     >
       {children}
@@ -106,7 +106,7 @@ export function MentionChip({
   'data-brand-chip'?: string;
 }>) {
   return (
-    <span {...data} className={cn(CHIP, 'border-accent text-ink bg-surface border-dashed')}>
+    <span {...data} className={cn(CHIP, 'border-accent text-ink bg-panel border-dashed')}>
       <span className="text-accent-text font-medium tabular-nums">
         <span className="sr-only">Position </span>
         {position}

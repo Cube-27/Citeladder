@@ -6,7 +6,7 @@
   gap: 12px;
   width: 100%;
   padding: 16px;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
@@ -37,7 +37,7 @@
 }
 
 .cl-vig-title {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-heading);
   font-weight: var(--text-heading--font-weight);
   line-height: var(--text-heading--line-height);
@@ -47,7 +47,7 @@
 .cl-vig-meta,
 .cl-vig-secondary,
 .cl-vig-muted {
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
 }
 
 .cl-vig-badge {
@@ -59,11 +59,11 @@
 
 .cl-vig .cl-vig-sentiment {
   background: var(--color-state-selected);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 .cl-vig-label {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-label);
   font-weight: 400;
   line-height: var(--text-label--line-height);
@@ -103,7 +103,7 @@
   align-items: center;
   min-height: 56px;
   padding-block: 8px;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-vig-row:first-child {
@@ -136,7 +136,7 @@
   place-items: center;
   width: 24px;
   height: 24px;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 .cl-vig-main {
@@ -151,7 +151,7 @@
 
 .cl-vig-value {
   justify-self: end;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-label);
   font-weight: 400;
   line-height: var(--text-label--line-height);
@@ -206,13 +206,13 @@
 }
 
 .cl-vig-stat-label {
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
 }
 
 .cl-vig-stat-value {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-stat);
   font-weight: var(--text-stat--font-weight);
@@ -242,7 +242,7 @@
   grid-template-rows: minmax(108px, 1fr) auto;
   grid-template-columns: 40px minmax(0, 1fr);
   row-gap: 8px;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
@@ -281,7 +281,7 @@
   justify-content: flex-start;
   gap: 12px;
   min-height: 224px;
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
 }
 
 :is(.cl-split-media, .cl-phero-media) .cl-vig-panel {
@@ -289,7 +289,7 @@
 }
 
 .cl-vig-panel strong {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-weight: 500;
 }
 
@@ -313,7 +313,7 @@
   gap: 12px;
   margin-top: auto;
   padding-top: 12px;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-vig-chips.cl-vig-foot {
@@ -325,8 +325,8 @@
   max-width: 85%;
   padding: 8px 12px;
   border-radius: var(--radius-md);
-  background: var(--color-surface-sunken);
-  color: var(--color-ink);
+  background: var(--color-well);
+  color: var(--text-color-ink);
 }
 
 .cl-vig-added {
@@ -336,7 +336,7 @@
   gap: 8px 12px;
   padding: 8px 12px;
   border-radius: var(--radius-md);
-  background: var(--color-surface-sunken);
+  background: var(--color-well);
 }
 
 .cl-vig-trend div:has(> svg) {

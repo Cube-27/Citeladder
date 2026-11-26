@@ -52,7 +52,7 @@ export function Table({
       {...region}
       ref={wrapperRef}
       className={cn(
-        'table-frame bg-surface relative w-full max-w-full min-w-0 overflow-auto [[data-public-surface]_&]:rounded-card',
+        'table-frame bg-panel relative w-full max-w-full min-w-0 overflow-auto [[data-public-surface]_&]:rounded-card',
         wrapperClassName,
       )}
     >

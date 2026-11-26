@@ -81,7 +81,7 @@ export function ArtReferrals() {
         focusable="false"
         viewBox="0 0 300 200"
         preserveAspectRatio="none"
-        className="fill-surface absolute inset-0 size-full opacity-55"
+        className="fill-panel absolute inset-0 size-full opacity-55"
       >
         <path d="M0 200V150C40 150 60 95 100 95S150 130 185 110 240 40 300 30V200Z" />
       </svg>

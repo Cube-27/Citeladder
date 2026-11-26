@@ -88,7 +88,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   }
   .cl-cpage-index-title {
     margin: 0;
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-family: var(--font-display);
     font-size: var(--text-site-section, var(--text-display-md));
     line-height: var(--text-site-section--line-height, var(--text-display-md--line-height));
@@ -98,13 +98,13 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   }
   .cl-cpage-index-desc {
     margin: 0;
-    color: var(--color-ink-secondary);
+    color: var(--text-color-ink-2);
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
   }
   .cl-cpage-index-count {
     margin: 4px 0 0;
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
     font-family: var(--font-mono);
     font-size: var(--text-data);
     line-height: var(--text-data--line-height);
@@ -113,7 +113,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     min-width: 0;
     margin: 0;
     padding: 0;
-    border-top: 1px solid var(--color-line);
+    border-top: 1px solid var(--color-rule);
     list-style: none;
   }
   .cl-cpage-index-link {
@@ -122,8 +122,8 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     align-items: start;
     gap: 8px 32px;
     padding: 24px 0;
-    border-bottom: 1px solid var(--color-line);
-    color: var(--color-ink);
+    border-bottom: 1px solid var(--color-rule);
+    color: var(--text-color-ink);
     text-decoration: none;
   }
   .cl-cpage-index-link > :not(.cl-cpage-index-arrow) {
@@ -131,7 +131,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     max-width: var(--container-prose);
   }
   .cl-cpage-index-name {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-size: var(--text-heading-lg);
     line-height: var(--text-heading-lg--line-height);
     font-weight: 500;
@@ -145,14 +145,14 @@ const { groups, as: Heading = 'h2' } = Astro.props;
       text-underline-offset: 4px;
     }
     .cl-cpage-index-link:hover .cl-cpage-index-arrow {
-      color: var(--color-ink);
+      color: var(--text-color-ink);
     }
   }
   .cl-cpage-index-body {
     display: -webkit-box;
     max-width: 640px;
     overflow: hidden;
-    color: var(--color-ink-secondary);
+    color: var(--text-color-ink-2);
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
     -webkit-box-orient: vertical;
@@ -160,7 +160,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   }
   .cl-cpage-index-meta {
     margin-top: 4px;
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
     font-size: var(--text-body-sm);
     line-height: var(--text-body-sm--line-height);
   }
@@ -172,7 +172,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     grid-column: 2;
     grid-row: 1 / span 4;
     align-self: center;
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
     transition: color var(--motion-fast) var(--ease-standard);
   }
   .cl-cpage-index-group:has(+ .cl-cpage-index-group--untitled) .cl-cpage-index-list > li:last-child > .cl-cpage-index-link {

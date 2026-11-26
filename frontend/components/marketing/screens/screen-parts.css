@@ -4,7 +4,7 @@
   gap: 8px;
   min-width: 0;
   max-width: 100%;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   vertical-align: middle;
 }
 
@@ -17,11 +17,11 @@
 
 .cl-screen-mark {
   display: inline-flex;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 .cl-screen-mark.is-off {
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
 }
 
 .cl-screen-site-text {
@@ -38,7 +38,7 @@
 }
 
 .cl-screen-stat-value {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
   font-weight: var(--text-stat--font-weight);
   font-size: var(--text-stat);
@@ -50,7 +50,7 @@
 
 .cl-screen-stat-unit {
   margin-left: 4px;
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
   font-size: var(--text-label-lg);
   line-height: var(--text-label-lg--line-height);
 }
@@ -78,7 +78,7 @@
 }
 
 .cl-screen-tabs {
-  --scroll-shade-ground: var(--color-surface);
+  --scroll-shade-ground: var(--color-panel);
 
   background: var(--color-state-hover);
 }
@@ -118,7 +118,7 @@
 
 .cl-screen-card-title {
   margin: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-label-lg);
   font-weight: var(--text-label-lg--font-weight);
   line-height: var(--text-label-lg--line-height);
@@ -126,7 +126,7 @@
 
 .cl-screen-note {
   margin: 0;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
 }

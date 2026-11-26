@@ -113,15 +113,15 @@ const hasEnd = Astro.slots.has('end');
       max-width: var(--cpage-article-width);
     }
     .cl-site .cl-cpage-article-toc .cl-toc-link {
-      color: var(--color-ink-secondary);
+      color: var(--text-color-ink-2);
       text-wrap: pretty;
     }
     .cl-site .cl-cpage-article-toc .cl-toc-link[aria-current='location'] {
-      color: var(--color-ink);
+      color: var(--text-color-ink);
     }
     @media (hover: hover) and (pointer: fine) {
       .cl-site .cl-cpage-article-toc .cl-toc-link:hover {
-        color: var(--color-ink);
+        color: var(--text-color-ink);
       }
     }
     .cl-site .cl-cpage-article-toc .cl-toc-link {
@@ -147,15 +147,15 @@ const hasEnd = Astro.slots.has('end');
       overscroll-behavior: contain;
       border-left: 0;
       background:
-        linear-gradient(var(--color-line), var(--color-line)) left / 1px 100% no-repeat,
+        linear-gradient(var(--color-rule), var(--color-rule)) left / 1px 100% no-repeat,
         linear-gradient(var(--site-page) 40%, transparent) top / 100% 32px no-repeat local,
         linear-gradient(transparent, var(--site-page) 60%) bottom / 100% 32px no-repeat local,
-        linear-gradient(color-mix(in oklch, var(--color-ink) 14%, transparent), transparent) top /
+        linear-gradient(color-mix(in oklch, var(--color-mark-ink) 14%, transparent), transparent) top /
           100% 16px no-repeat scroll,
-        linear-gradient(transparent, color-mix(in oklch, var(--color-ink) 14%, transparent)) bottom /
+        linear-gradient(transparent, color-mix(in oklch, var(--color-mark-ink) 14%, transparent)) bottom /
           100% 16px no-repeat scroll;
       scrollbar-width: thin;
-      scrollbar-color: var(--color-line-strong) transparent;
+      scrollbar-color: var(--color-rule-strong) transparent;
     }
     .cl-cpage-article--toc .cl-cpage-article-jump {
       display: none;

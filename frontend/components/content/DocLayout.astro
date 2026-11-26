@@ -106,7 +106,7 @@ const hasBar = hasToc || nav !== undefined;
     padding: 0 4px;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: var(--color-line) transparent;
+    scrollbar-color: var(--color-rule) transparent;
   }
   .cl-doc-toc {
     display: flex;
@@ -118,7 +118,7 @@ const hasBar = hasToc || nav !== undefined;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
-    scrollbar-color: var(--color-line) transparent;
+    scrollbar-color: var(--color-rule) transparent;
   }
   .cl-doc-main {
     display: flex;
@@ -140,7 +140,7 @@ const hasBar = hasToc || nav !== undefined;
     min-height: var(--control-md);
     padding: 8px 12px;
     border-radius: var(--radius-sm);
-    color: var(--color-ink-secondary);
+    color: var(--text-color-ink-2);
     font-size: var(--text-body-sm);
     line-height: var(--text-body-sm--line-height);
     text-decoration: none;
@@ -150,8 +150,8 @@ const hasBar = hasToc || nav !== undefined;
   }
   .cl-doc-link:hover,
   .cl-doc-link.is-active {
-    background: var(--color-surface-sunken);
-    color: var(--color-ink);
+    background: var(--color-well);
+    color: var(--text-color-ink);
   }
   .cl-doc-link.is-active {
     font-weight: 500;

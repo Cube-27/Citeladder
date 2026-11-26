@@ -356,7 +356,7 @@ export function Markers({
   tone: SeriesTone;
   shape?: MarkerShape;
 }>) {
-  const className = cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-surface');
+  const className = cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-panel');
   return points.map((point, index) =>
     point ? (
       <g key={`${index}-${point[0]}`} data-marker-shape={shape}>

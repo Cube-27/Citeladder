@@ -21,7 +21,7 @@
   --site-page: var(--color-site-page);
   --site-mark: var(--color-site-mark);
   --site-chip: var(--color-site-chip);
-  --site-chip-ink: var(--color-site-chip-ink);
+  --site-chip-ink: var(--text-color-site-chip-ink);
   --site-guide: var(--color-site-guide);
   --site-rule-from: var(--color-site-rule-from);
   --site-rule-to: var(--color-site-rule-to);
@@ -33,7 +33,7 @@
     0 0 / 220px 220px;
 
   background: var(--site-page);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
 }
 
@@ -85,7 +85,7 @@
 
 .cl-lead {
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-lg);
   line-height: var(--text-body-lg--line-height);
   text-wrap: pretty;
@@ -97,7 +97,7 @@
 
 .cl-body {
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
   text-wrap: pretty;
@@ -105,7 +105,7 @@
 
 .cl-note {
   margin: 0;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
@@ -123,7 +123,7 @@
   display: grid;
   grid-template-columns: 6px minmax(0, 1fr);
   gap: 12px;
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -220,7 +220,7 @@
   align-items: center;
   gap: 8px;
   border-radius: var(--radius-xs);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-label-lg);
   font-weight: 500;
   line-height: var(--text-label-lg--line-height);

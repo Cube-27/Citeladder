@@ -12,16 +12,15 @@ describe('PDF brand palette', () => {
       Object.fromEntries(Object.entries(palette).map(([tone, hex]) => [tone, channels(hex)])),
     ).toEqual({
       ink: [17, 17, 17],
-      inkSecondary: [82, 82, 82],
-      inkMuted: [82, 82, 82],
+      ink2: [82, 82, 82],
       accent: [232, 80, 26],
-      accentInk: [181, 58, 12],
-      surfaceSunken: [236, 236, 236],
-      line: [229, 229, 229],
+      accentText: [181, 58, 12],
+      well: [236, 236, 236],
+      rule: [229, 229, 229],
       negative: [196, 18, 47],
-      negativeSoft: [255, 226, 230],
+      negativeWash: [255, 226, 230],
       warning: [138, 80, 0],
-      warningSoft: [255, 240, 209],
+      warningWash: [255, 240, 209],
     });
     expect(palette.ink).toMatch(/^#[0-9a-f]{6}$/u);
   });

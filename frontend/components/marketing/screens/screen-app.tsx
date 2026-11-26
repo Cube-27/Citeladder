@@ -135,7 +135,7 @@ function ScreenSidebar({
           <span className="cl-app-ident-text">
             <span className="type-control">Acme Analytics</span>
           </span>
-          <ChevronsUpDown className="text-ink-muted size-3.5" aria-hidden />
+          <ChevronsUpDown className="text-ink-2 size-3.5" aria-hidden />
         </span>
       </div>
       <div className="cl-app-side-controls">
@@ -193,7 +193,7 @@ function ScreenMenuButton({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <ScreenButton>
       {children}
-      <ChevronDown className="text-ink-muted size-3.5" aria-hidden />
+      <ChevronDown className="text-ink-2 size-3.5" aria-hidden />
     </ScreenButton>
   );
 }

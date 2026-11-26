@@ -13,7 +13,7 @@ export const AXIS_PROPS = {
   axisLine: false,
   tickLine: false,
   tickMargin: 8,
-  tick: { fill: 'var(--color-ink-2)', fontSize: 12 },
+  tick: { fill: 'var(--text-color-ink-2)', fontSize: 12 },
 } as const;
 
 export const GRID_PROPS = {
@@ -56,7 +56,7 @@ export function ShapeMark({
 }>) {
   const paint = {
     fill: color,
-    stroke: outline ? 'var(--color-surface)' : 'none',
+    stroke: outline ? 'var(--color-panel)' : 'none',
     strokeWidth: outline ? 2 : 0,
   };
   switch (shape) {

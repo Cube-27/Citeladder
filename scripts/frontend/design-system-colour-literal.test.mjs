@@ -15,7 +15,10 @@ test('a colour literal in a JSX class or inline style skips the theme', () => {
     check('const a = <p className="text-ink bg-[var(--color-well)] rounded-[7px]" />;'),
     0,
   );
-  assert.equal(check("const a = <p style={{ color: 'var(--color-ink)', width: '13px' }} />;"), 0);
+  assert.equal(
+    check("const a = <p style={{ color: 'var(--text-color-ink)', width: '13px' }} />;"),
+    0,
+  );
   assert.equal(
     check('const a = <p className="text-[#000]" />;', 'components/example/view.test.tsx'),
     0,

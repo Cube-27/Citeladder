@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 const PLACEMENT = {
   inline: { pixels: 16, box: 'size-4 rounded-mark text-eyebrow tracking-normal', image: 'size-4' },
   row: { pixels: 20, box: 'size-5 rounded-mark text-caption', image: 'size-5' },
-  header: { pixels: 24, box: 'bg-surface size-10 rounded-control text-label-lg', image: 'size-6' },
+  header: { pixels: 24, box: 'bg-panel size-10 rounded-control text-label-lg', image: 'size-6' },
 } as const;
 
 export type BrandMarkPlacement = keyof typeof PLACEMENT;
@@ -59,7 +59,7 @@ export function BrandMark({
             'grid place-items-center font-medium uppercase',
             entity === 'site'
               ? 'border-control-line text-ink-2 rounded-mark border'
-              : 'bg-ink text-on-ink',
+              : 'bg-mark-ink text-on-ink',
             placement === 'header' ? 'size-full' : spec.image,
           )}
         >

@@ -142,7 +142,7 @@ function ImportResults({
         <SectionBleed as="ul" rows aria-label="Rows">
           {result.row_outcomes.map((row) => (
             <Inline as="li" key={row.row_number} gap="compact" className="min-w-0 flex-wrap">
-              <span className="text-ink-muted tabular-nums">Row {row.row_number}</span>
+              <span className="text-ink-2 tabular-nums">Row {row.row_number}</span>
               {row.status === 'rejected' ? (
                 <StatusMark variant="status" value="danger">
                   {STATUS_LABEL[row.status]}

@@ -102,7 +102,7 @@
 }
 
 .cl-frame-title {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
   font-weight: 500;
   font-size: var(--text-title-sm);
@@ -111,7 +111,7 @@
 
 .cl-frame-text {
   max-width: var(--container-narrow);
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -147,7 +147,7 @@
   > .cl-frame-card
   > .cl-frame-well
   > .cl-frame-screen:has(> .cl-screen--visibility) {
-  background: var(--color-paper);
+  background: var(--color-ground);
 }
 
 .cl-frame--stage {

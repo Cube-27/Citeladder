@@ -5,13 +5,13 @@ import { cn } from '@/lib/utils';
 export type BadgeTone = 'neutral' | 'accent' | 'positive' | 'negative' | 'warning' | 'info' | 'ink';
 
 const TONE: Record<BadgeTone, string> = {
-  neutral: 'bg-surface-sunken text-ink-secondary',
-  accent: 'bg-accent-soft text-accent-ink',
-  positive: 'bg-positive-soft text-positive',
-  negative: 'bg-negative-soft text-negative',
-  warning: 'bg-warning-soft text-warning',
-  info: 'bg-info-soft text-info',
-  ink: 'bg-ink text-on-ink',
+  neutral: 'bg-well text-ink-2',
+  accent: 'bg-accent-wash text-accent-text',
+  positive: 'bg-positive-wash text-positive',
+  negative: 'bg-negative-wash text-negative',
+  warning: 'bg-warning-wash text-warning',
+  info: 'bg-info-wash text-info',
+  ink: 'bg-mark-ink text-on-ink',
 };
 
 const BADGE_FACE =
