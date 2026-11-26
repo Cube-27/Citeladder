@@ -221,7 +221,7 @@ function Trust() {
       title="How CiteLadder handles your data"
       action={<SiteArrowLink href="/enterprise">Enterprise</SiteArrowLink>}
     >
-      <ul className={`cl-tiles cl-cols-${columnsFor(TRUST.length)}`}>
+      <ul className="cl-tiles" data-tile-cols={columnsFor(TRUST.length)}>
         {TRUST.map(([title, body]) => (
           <li key={title}>
             <FeatureCard title={title} body={body} />

@@ -125,7 +125,7 @@
   }
 }
 
-.cl-tiles.cl-tiles--rows:is(.cl-cols-2, .cl-cols-3, .cl-cols-4) {
+.cl-tiles.cl-tiles--rows:is([data-tile-cols='2'], [data-tile-cols='3'], [data-tile-cols='4']) {
   display: grid;
 }
 

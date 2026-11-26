@@ -43,7 +43,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
           {group.items.map((item) => (
             <li>
               <a href={item.href} class="cl-cpage-index-link focus-ring">
-                {item.eyebrow && <span class="text-kicker text-ink-2">{item.eyebrow}</span>}
+                {item.eyebrow && <span class="cl-kicker">{item.eyebrow}</span>}
                 <span class="cl-cpage-index-name">{item.title}</span>
                 {item.body && <span class="cl-cpage-index-body">{item.body}</span>}
                 {item.meta && (

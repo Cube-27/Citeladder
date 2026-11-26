@@ -148,66 +148,66 @@
   line-height: var(--text-body--line-height);
 }
 
-.cl-cols-1 {
+[data-tile-cols='1'] {
   --cols: 1;
 }
 
-.cl-cols-2 {
+[data-tile-cols='2'] {
   --cols: 2;
 }
 
-.cl-cols-3 {
+[data-tile-cols='3'] {
   --cols: 3;
 }
 
-.cl-cols-4 {
+[data-tile-cols='4'] {
   --cols: 4;
 }
 
 @media (max-width: 1279px) {
-  .cl-cols-4 {
+  [data-tile-cols='4'] {
     --cols: 2;
   }
 }
 
 @media (max-width: 899px) {
-  .cl-cols-3 {
+  [data-tile-cols='3'] {
     --cols: 1;
   }
 }
 
 @media (max-width: 767px) {
-  .cl-cols-2,
-  .cl-cols-4 {
+  [data-tile-cols='2'],
+  [data-tile-cols='4'] {
     --cols: 1;
   }
 }
 
-:is(.cl-cols-1, .cl-cols-2, .cl-cols-3, .cl-cols-4) {
+[data-tile-cols] {
   grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
 }
 
-.cl-tiles:is(.cl-cols-2, .cl-cols-3, .cl-cols-4) {
+.cl-tiles:is([data-tile-cols='2'], [data-tile-cols='3'], [data-tile-cols='4']) {
   display: flex;
   flex-wrap: wrap;
 }
 
 @media (min-width: 900px) {
-  .cl-tiles.cl-cols-3:has(> li:nth-child(5):last-child) {
+  .cl-tiles[data-tile-cols='3']:has(> li:nth-child(5):last-child) {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
-  .cl-tiles.cl-cols-3:has(> li:nth-child(5):last-child) > li {
+  .cl-tiles[data-tile-cols='3']:has(> li:nth-child(5):last-child) > li {
     grid-column: span 2;
   }
 
-  .cl-tiles.cl-cols-3:has(> li:nth-child(5):last-child) > li:nth-child(n + 4) {
+  .cl-tiles[data-tile-cols='3']:has(> li:nth-child(5):last-child) > li:nth-child(n + 4) {
     grid-column: span 3;
   }
 }
 
-.cl-tiles:is(.cl-cols-2, .cl-cols-3, .cl-cols-4) > li {
+.cl-tiles:is([data-tile-cols='2'], [data-tile-cols='3'], [data-tile-cols='4']) > li {
   flex: 0 0 calc((100% - (var(--cols) - 1) * var(--cl-list-gap)) / var(--cols));
   height: auto;
 }
@@ -308,7 +308,7 @@
   }
 }
 
-.cl-site .text-kicker:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *) {
+.cl-site .cl-kicker:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *) {
   position: relative;
   width: fit-content;
   padding: 0 var(--site-space-2);
@@ -317,7 +317,7 @@
   color: var(--site-chip-ink);
 }
 
-.cl-site .text-kicker:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *)::after {
+.cl-site .cl-kicker:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *)::after {
   position: absolute;
   top: calc(-1 * var(--site-space-1));
   right: calc(-1 * var(--site-space-1));

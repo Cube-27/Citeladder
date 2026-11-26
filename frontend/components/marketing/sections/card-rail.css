@@ -349,7 +349,7 @@
     width: auto;
   }
 
-  .cl-rail .cl-railcard-copy > .cl-eyebrow.text-kicker {
+  .cl-rail .cl-railcard-copy > .cl-eyebrow.cl-kicker {
     width: auto;
     margin: 0;
     padding: 0;
@@ -363,7 +363,7 @@
     text-transform: none;
   }
 
-  .cl-rail .cl-railcard-copy > .cl-eyebrow.text-kicker::after {
+  .cl-rail .cl-railcard-copy > .cl-eyebrow.cl-kicker::after {
     content: none;
   }
 

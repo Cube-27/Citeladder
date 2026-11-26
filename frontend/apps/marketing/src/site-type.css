@@ -137,3 +137,11 @@
     --text-site-body--line-height: calc(var(--text-site-body) + 4 * var(--type-step));
   }
 }
+
+.cl-kicker {
+  color: var(--text-color-ink-2);
+  font-size: var(--text-kicker);
+  font-weight: var(--text-kicker--font-weight);
+  line-height: var(--text-kicker--line-height);
+  letter-spacing: var(--text-kicker--letter-spacing);
+}

@@ -360,16 +360,6 @@
       "count": 1
     }
   },
-  "components/content/ArticleHeader.astro": {
-    "design/astro-class": {
-      "count": 1
-    }
-  },
-  "components/content/Toc.astro": {
-    "design/astro-class": {
-      "count": 1
-    }
-  },
   "components/demand/demand-evidence-drawer.tsx": {
     "design/plain-element": {
       "count": 11
@@ -494,11 +484,6 @@
       "count": 3
     }
   },
-  "components/marketing/chrome/SiteNav.astro": {
-    "design/astro-class": {
-      "count": 1
-    }
-  },
   "components/marketing/chrome/desktop-nav.tsx": {
     "shadcn/no-inline-styles": {
       "count": 4
@@ -507,26 +492,11 @@
       "count": 5
     }
   },
-  "components/marketing/chrome/mega-menu.tsx": {
-    "design/plain-element": {
-      "count": 2
-    }
-  },
   "components/marketing/chrome/site-footer.tsx": {
     "design/plain-element": {
       "count": 1
     },
     "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/marketing/content/AuthorCard.astro": {
-    "design/astro-class": {
-      "count": 1
-    }
-  },
-  "components/marketing/content/ContentIndex.astro": {
-    "design/astro-class": {
       "count": 1
     }
   },
@@ -545,7 +515,7 @@
   },
   "components/marketing/landing/landing-page.tsx": {
     "design/plain-element": {
-      "count": 2
+      "count": 1
     },
     "shadcn/no-restyle": {
       "count": 1
@@ -566,14 +536,9 @@
       "count": 2
     }
   },
-  "components/marketing/pages/enterprise.tsx": {
-    "design/plain-element": {
-      "count": 2
-    }
-  },
   "components/marketing/pages/platform-page.tsx": {
     "design/plain-element": {
-      "count": 2
+      "count": 1
     }
   },
   "components/marketing/pages/pricing-catalog.tsx": {
@@ -625,16 +590,8 @@
       "count": 1
     }
   },
-  "components/marketing/sections/cards.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
   "components/marketing/sections/features.tsx": {
     "design/plain-element": {
-      "count": 1
-    },
-    "shadcn/no-unknown-classes": {
       "count": 1
     }
   },
@@ -645,20 +602,12 @@
   },
   "components/marketing/sections/page-highlight.tsx": {
     "design/plain-element": {
-      "count": 2
-    }
-  },
-  "components/marketing/sections/pricing.tsx": {
-    "design/plain-element": {
-      "count": 1
-    },
-    "shadcn/no-unknown-classes": {
       "count": 1
     }
   },
   "components/marketing/sections/site-parts.tsx": {
     "design/plain-element": {
-      "count": 3
+      "count": 2
     }
   },
   "components/marketing/sections/steps-faq-cta.tsx": {

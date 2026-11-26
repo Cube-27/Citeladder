@@ -16,7 +16,6 @@ export function FeatureCard({
   title,
   body,
   points,
-  size = 'md',
   wide = false,
   text = 'body',
   as: Heading = 'h3',
@@ -27,18 +26,12 @@ export function FeatureCard({
     title: ReactNode;
     body?: ReactNode;
     points?: readonly string[];
-    size?: 'md' | 'lg';
     wide?: boolean;
     text?: 'body' | 'lead';
     as?: 'h2' | 'h3';
     media?: ReactNode;
   }>) {
-  const className = cn(
-    'cl-fcard',
-    size === 'lg' && 'cl-fcard--lg',
-    wide && 'cl-fcard--wide',
-    href && 'focus-ring',
-  );
+  const className = cn('cl-fcard', wide && 'cl-fcard--wide', href && 'focus-ring');
   const content = (
     <>
       {media}
@@ -60,7 +53,18 @@ export function FeatureCard({
   );
 }
 
-export type BentoSpan = 3 | 4 | 5 | 6 | 7 | 8 | 9 | 12;
+const BENTO_SPAN = {
+  3: 'cl-span-3',
+  4: 'cl-span-4',
+  5: 'cl-span-5',
+  6: 'cl-span-6',
+  7: 'cl-span-7',
+  8: 'cl-span-8',
+  9: 'cl-span-9',
+  12: 'cl-span-12',
+} as const;
+
+export type BentoSpan = keyof typeof BENTO_SPAN;
 
 function spanBand(span: BentoSpan): 'small' | 'medium' | 'large' {
   if (span <= 3) return 'small';
@@ -75,7 +79,7 @@ export function Bento({
       {cells.map((cell) => (
         <div
           key={cell.key}
-          className={cn('cl-bento-cell', `cl-span-${cell.span}`)}
+          className={cn('cl-bento-cell', BENTO_SPAN[cell.span])}
           data-span-band={spanBand(cell.span)}
         >
           {cell.content}
