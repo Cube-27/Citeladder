@@ -97,6 +97,7 @@
   "devDependencies": {
     "@mdn/browser-compat-data": "8.1.10",
     "@playwright/test": "^1.65.1",
+    "@shadcn/lint": "0.2.5",
     "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/jest-dom": "^8.0.0",
     "@testing-library/react": "^16.3.3",

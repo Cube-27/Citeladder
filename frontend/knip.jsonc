@@ -29,6 +29,9 @@
         "scripts/copy-wrangler-runtime.mjs",
         // Run by the root vite.config.ts pre-commit hook and the CI classifier job.
         "scripts/check-token-size.mjs",
+        // Loaded by path from vp-shared-config.ts (lint jsPlugins) and components.json (lint themes).
+        "scripts/design-lint/plugin.mjs",
+        "scripts/design-lint/*-theme.css",
       ],
       "project": [
         "apps/app/**/*.{ts,tsx}",
@@ -63,5 +66,7 @@
   "ignoreDependencies": [
     // Resolved through a computed path in check-jscpd.mjs, which static analysis cannot follow.
     "jscpd",
+    // Named only as a string in the lint config jsPlugins list.
+    "@shadcn/lint",
   ],
 }
