@@ -118,7 +118,7 @@
   color: var(--color-negative);
 }
 
-.cl-tool-actions > button {
+.cl-tool-copy-status + button {
   min-width: var(--site-space-23);
 }
 
