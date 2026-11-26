@@ -881,7 +881,7 @@
 }
 
 [data-public-surface]
-  :is([data-button-variant='secondary'], .marketing-soft-button):not(:is(.cl-screen, .cl-vig) *) {
+  :is(.ui-button-secondary, .marketing-soft-button):not(:is(.cl-screen, .cl-vig) *) {
   border-color: var(--color-line-control);
 }
 
@@ -895,7 +895,7 @@
   text-transform: none;
 }
 
-[data-public-surface] :is([data-button-variant], .focus-ring):active {
+[data-public-surface] :is(.ui-button, .focus-ring):active {
   translate: none;
 }
 
@@ -1339,32 +1339,32 @@ a.focus-ring:active .type-caption {
   }
 }
 
-[data-state-offer] [data-button-variant='secondary']:first-child {
+[data-state-offer] .ui-button-secondary:first-child {
   border-color: var(--color-primary);
   background-color: var(--color-primary);
   color: var(--color-on-primary);
 }
-[data-demoted] [data-button-variant] {
+[data-demoted] .ui-button {
   border-color: transparent;
   background-color: var(--color-raised);
   color: var(--color-ink);
 }
 :root:not([data-public-surface])
-  :is([data-button-variant='secondary'], [data-demoted] [data-button-variant])
+  :is(.ui-button-secondary, [data-demoted] .ui-button)
   svg {
   color: var(--color-ink-2);
 }
-:root:not([data-public-surface]) [data-state-offer] [data-button-variant='secondary']:first-child svg {
+:root:not([data-public-surface]) [data-state-offer] .ui-button-secondary:first-child svg {
   color: inherit;
 }
 
 :root:not([data-public-surface])
-  [data-button-variant]:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
+  .ui-button:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
   opacity: 0.5;
   box-shadow: none;
 }
 
-:root:not([data-public-surface]) [data-button-variant]::after {
+:root:not([data-public-surface]) .ui-button::after {
   content: '';
   position: absolute;
   inset-block: min(0px, calc((100% - var(--button-hit)) / 2));
@@ -1445,9 +1445,9 @@ input:is(:autofill, :-webkit-autofill) {
 }
 
 @media (forced-colors: active) {
-  [data-button-variant='primary'],
-  [data-button-variant='secondary'],
-  [data-button-variant='danger'],
+  .ui-button-primary,
+  .ui-button-secondary,
+  .ui-button-danger,
   [data-app-surface] a[aria-current='page'] {
     outline: 1px solid ButtonText;
     outline-offset: -1px;
@@ -1628,7 +1628,7 @@ label {
   .table-frame
   tbody
   td
-  :is([data-button-variant], [role='combobox']) {
+  :is(.ui-button, [role='combobox']) {
   margin-block: min(
     0px,
     calc((var(--table-row-height) - 2 * var(--table-cell-padding-y) - var(--control-md)) / 2)
@@ -1806,16 +1806,16 @@ label {
   background-color: var(--color-well-hover);
 }
 :root:not([data-public-surface]) {
-  [data-button-variant='secondary'] {
+  .ui-button-secondary {
     --color-raised: var(--color-state-fill);
     --color-raised-2: var(--color-state-fill-hover);
     --shadow-field: none;
   }
-  :is(.menu-panel, [role='listbox'], [data-button-variant='quiet']) {
+  :is(.menu-panel, [role='listbox'], .ui-button-quiet) {
     --color-state-hover: var(--color-state-fill);
     --color-state-pressed: var(--color-state-fill);
   }
-  [data-button-variant='danger'] {
+  .ui-button-danger {
     --color-raised: var(--color-negative-wash);
     --color-raised-2: oklch(from var(--color-negative-wash) calc(l - 0.02) c h);
   }

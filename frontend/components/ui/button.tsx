@@ -52,7 +52,14 @@ export function buttonClasses(
   className?: string,
   size: ButtonSize = 'md',
 ) {
-  return cn(BUTTON_BASE, BUTTON_SIZE[size], BUTTON_VARIANT[variant], className);
+  return cn(
+    'ui-button',
+    `ui-button-${variant}`,
+    BUTTON_BASE,
+    BUTTON_SIZE[size],
+    BUTTON_VARIANT[variant],
+    className,
+  );
 }
 
 export type ButtonProps = ComponentPropsWithoutRef<'button'> & {
