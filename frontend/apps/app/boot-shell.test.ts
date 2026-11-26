@@ -96,11 +96,13 @@ describe('boot-title.js', () => {
 });
 
 describe('the boot shell geometry', () => {
-  const appTokens = /:root:not\(\[data-public-surface\]\) \{([\s\S]*?)\n\}/u.exec(
-    readFileSync(join(import.meta.dirname, 'src/globals.css'), 'utf8'),
-  )?.[1];
-  const token = (name: string) =>
-    Number(new RegExp(`${name}: (\\d+)px;`, 'u').exec(appTokens ?? '')?.[1]);
+  const css = readFileSync(join(import.meta.dirname, 'src/globals.css'), 'utf8');
+  const appTokens = /:root:not\(\[data-public-surface\]\) \{([\s\S]*?)\n\}/u.exec(css)?.[1] ?? '';
+  const themeTokens = /@theme \{([\s\S]*?)\n\}/u.exec(css)?.[1] ?? '';
+  const token = (name: string) => {
+    const read = new RegExp(`${name}: (\\d+)px;`, 'u');
+    return Number((read.exec(appTokens) ?? read.exec(themeTokens))?.[1]);
+  };
   const px = (element: Element, property: 'height') =>
     Number.parseFloat(getComputedStyle(element)[property]);
 
