@@ -6,7 +6,7 @@ import { AgentTurn } from '@/components/ui/chat-dock';
 import { FoldedTrail } from '@/components/ui/rung-trail';
 import { Inline } from '@/components/ui/layout';
 import { Spinner } from '@/components/ui/spinner';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { activityLabel, activityRows, callStep, modelStepLabel } from '@/lib/agent/activity';
 import { runErrorCopy } from '@/lib/agent/vocabulary';
 import { isPageReading, runOutcome } from '@/lib/agent/run-state';
@@ -38,9 +38,11 @@ export function LiveActivity({ detail }: Readonly<{ detail: AgentChatDetail }>) 
 }
 function ReadingPage() {
   return (
-    <Inline as="span" gap="compact" className={textRole('caption')}>
-      <Spinner className="text-ink-2" />
-      <output aria-live="polite">Reading your page…</output>
+    <Inline as="span" gap="compact">
+      <Spinner tone="ink-2" />
+      <Text as="output" variant="caption" aria-live="polite">
+        Reading your page…
+      </Text>
     </Inline>
   );
 }

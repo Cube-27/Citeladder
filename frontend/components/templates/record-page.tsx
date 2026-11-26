@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 
-import { PageFrame, PageSections, type PageFrameSlots } from './page-frame';
+import { Columns, Stack } from '@/components/ui/layout';
+import { ActionBar, PageSections, RecordBody } from '@/components/ui/page-chrome';
 
-const BAR_CLEARANCE = 'calc(var(--spacing-filter-bar) + 2 * var(--spacing-gutter))';
+import { PageFrame, type PageFrameSlots } from './page-frame';
 
 export function RecordPage({
   busy,
@@ -19,34 +20,24 @@ export function RecordPage({
     actionBar?: ReactNode;
     children: ReactNode;
   }>) {
-  const hasBar = Boolean(actionBar);
   return (
     <PageFrame {...slots}>
-      <div
-        aria-busy={busy}
-        className="flex min-w-0 flex-1 flex-col"
-        style={hasBar ? { paddingBottom: BAR_CLEARANCE } : undefined}
-      >
+      <RecordBody busy={busy} clearsBar={Boolean(actionBar)}>
         <PageSections>
           {identity}
           {aside ? (
-            <div className="column-split:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-section grid min-w-0 items-start">
+            <Columns template="record" gap="section" align="start">
               <PageSections>{children}</PageSections>
-              <aside className="gap-section flex min-w-0 flex-col">{aside}</aside>
-            </div>
+              <Stack as="aside" gap="section" className="min-w-0">
+                {aside}
+              </Stack>
+            </Columns>
           ) : (
             children
           )}
         </PageSections>
-      </div>
-      {actionBar ? (
-        <div
-          data-page-band="action-bar"
-          className="bg-raised border-rule rounded-card shadow-pop z-sticky bottom-gutter mt-workspace min-h-filter-bar px-card sticky flex min-w-0 flex-nowrap items-center justify-end gap-2 border py-2"
-        >
-          {actionBar}
-        </div>
-      ) : null}
+      </RecordBody>
+      {actionBar ? <ActionBar sticky>{actionBar}</ActionBar> : null}
     </PageFrame>
   );
 }

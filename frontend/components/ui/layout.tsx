@@ -1,15 +1,24 @@
-import type { ComponentPropsWithoutRef, ComponentPropsWithRef, ElementType } from 'react';
+import type { ComponentPropsWithRef, ElementType, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
 const STACK_GAP = {
   section: 'gap-section',
+  'page-top': 'gap-page-top',
+  card: 'gap-card',
   workspace: 'gap-workspace',
   compact: 'gap-compact',
+  loose: 'gap-4',
   item: 'gap-2',
   tight: 'gap-1',
   none: 'gap-0',
 } as const;
+
+const PAD_TOP = {
+  'flow-gap': 'pt-flow-gap',
+} as const;
+
+export type Pad = Readonly<{ top?: keyof typeof PAD_TOP }>;
 
 export type StackGap = keyof typeof STACK_GAP;
 
@@ -26,15 +35,25 @@ export function Stack({
   as,
   gap = 'compact',
   align = 'stretch',
+  pad,
   className,
   children,
   ...props
 }: Readonly<
-  ComponentPropsWithRef<'div'> & { as?: ElementType; gap?: StackGap; align?: StackAlign }
+  ComponentPropsWithRef<'div'> & { as?: ElementType; gap?: StackGap; align?: StackAlign; pad?: Pad }
 >) {
   const Component = as ?? 'div';
   return (
-    <Component {...props} className={cn('grid', STACK_GAP[gap], STACK_ALIGN[align], className)}>
+    <Component
+      {...props}
+      className={cn(
+        'grid',
+        STACK_GAP[gap],
+        STACK_ALIGN[align],
+        pad?.top && PAD_TOP[pad.top],
+        className,
+      )}
+    >
       {children}
     </Component>
   );
@@ -43,6 +62,7 @@ export function Stack({
 const INLINE_GAP = {
   workspace: 'gap-workspace',
   compact: 'gap-compact',
+  group: 'gap-3',
   item: 'gap-2',
   tight: 'gap-1',
   none: 'gap-0',
@@ -83,7 +103,7 @@ export function Inline({
   children,
   ...props
 }: Readonly<
-  ComponentPropsWithoutRef<'div'> & {
+  ComponentPropsWithRef<'div'> & {
     as?: ElementType;
     gap?: InlineGap;
     align?: InlineAlign;
@@ -119,6 +139,8 @@ const COLUMN_TEMPLATE = {
   'main-aside': 'column-wide:grid-cols-main-aside',
   'aside-main': 'column-wide:grid-cols-aside-main',
   pair: 'column-split:grid-cols-2',
+  halves: 'desktop:grid-cols-2',
+  record: 'column-split:grid-cols-record',
   thirds: 'column-split:grid-cols-3',
 } as const;
 
@@ -145,7 +167,7 @@ export function Columns({
       {...props}
       data-columns={template}
       className={cn(
-        'grid grid-cols-1',
+        'grid min-w-0 grid-cols-1',
         COLUMN_TEMPLATE[template],
         STACK_GAP[gap],
         INLINE_ALIGN[align],
@@ -154,4 +176,10 @@ export function Columns({
       {children}
     </Component>
   );
+}
+
+export const THREAD_OPENING = 'max-w-thread mx-auto my-auto flex w-full flex-col gap-section';
+
+export function ThreadOpening({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className={THREAD_OPENING}>{children}</div>;
 }

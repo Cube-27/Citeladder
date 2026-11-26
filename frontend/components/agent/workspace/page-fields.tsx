@@ -1,4 +1,3 @@
-import { JUMP_LINK } from '@/components/agent/jump-link';
 import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -6,7 +5,9 @@ import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { StatusMark } from '@/components/ui/status-mark';
-import { textRole } from '@/components/ui/typography';
+import { DraftInset } from '@/components/ui/draft-sheet';
+import { Text } from '@/components/ui/typography';
+import { PaneBlock } from '@/components/ui/workspace';
 import {
   fieldReview,
   PAGE_FIELDS,
@@ -26,15 +27,25 @@ type FieldActions = Readonly<{
   onShow: (id: string) => void;
 }>;
 
-const WRAP = '[overflow-wrap:anywhere]';
-const RAW = textRole('caption', `whitespace-pre-wrap ${WRAP}`);
+function RawText({ children }: Readonly<{ children: string }>) {
+  return (
+    <Text as="pre" variant="caption-mono" wrap="pre-anywhere">
+      {children}
+    </Text>
+  );
+}
 
 function FieldText({ field, value }: Readonly<{ field: AgentPageField; value: string }>) {
   if (!value.trim()) return <Absence state="none" />;
-  if (field !== 'json_ld') return <span className={textRole('body', WRAP)}>{value}</span>;
+  if (field !== 'json_ld')
+    return (
+      <Text variant="body" wrap="anywhere">
+        {value}
+      </Text>
+    );
   return (
     <Disclosure title="Show the JSON-LD">
-      <pre className={RAW}>{value}</pre>
+      <RawText>{value}</RawText>
     </Disclosure>
   );
 }
@@ -49,22 +60,22 @@ function Proposal({
   const { replacement } = suggestion;
   if (suggestion.readiness !== 'ready' || replacement === null)
     return (
-      <Pressable className={`${JUMP_LINK} text-start`} onClick={() => onShow(suggestion.id)}>
-        <span className={textRole('caption')}>
-          {suggestion.needs_input ?? suggestion.rationale}
-        </span>
+      <Pressable look="jump" className="text-start" onClick={() => onShow(suggestion.id)}>
+        <Text variant="caption">{suggestion.needs_input ?? suggestion.rationale}</Text>
       </Pressable>
     );
   const label = pageFieldLabel(field);
   return (
-    <Stack gap="item" className="edge-draft rounded-control p-2" data-field-proposal={field}>
+    <DraftInset data-field-proposal={field}>
       {field === 'json_ld' ? (
-        <pre className={RAW}>{replacement}</pre>
+        <RawText>{replacement}</RawText>
       ) : (
-        <span className={textRole('body', WRAP)}>{replacement || 'Remove this text.'}</span>
+        <Text variant="body" wrap="anywhere">
+          {replacement || 'Remove this text.'}
+        </Text>
       )}
       {actionable ? (
-        <Inline className="flex-wrap">
+        <Inline wrap>
           <Button
             variant="primary"
             aria-label={`Accept suggestion: ${label}`}
@@ -82,7 +93,7 @@ function Proposal({
           </Button>
         </Inline>
       ) : null}
-    </Stack>
+    </DraftInset>
   );
 }
 
@@ -94,8 +105,8 @@ function FieldRow({
 }: Readonly<FieldActions & { field: AgentPageField; value: string; review: FieldReview }>) {
   return (
     <Stack as="li" gap="tight" className="min-w-0">
-      <Inline className="flex-wrap">
-        <span className={textRole('caption')}>{pageFieldLabel(field)}</span>
+      <Inline wrap>
+        <Text variant="caption">{pageFieldLabel(field)}</Text>
         {review.edited ? <StatusMark tone="positive">Edited</StatusMark> : null}
         {review.open ? <StatusMark tone="info">Suggestion</StatusMark> : null}
       </Inline>
@@ -111,12 +122,7 @@ export function PageFields({
   ...actions
 }: Readonly<FieldActions & { fields: Fields; suggestions: readonly AgentSuggestion[] }>) {
   return (
-    <Stack
-      as="ul"
-      gap="compact"
-      aria-label="Search listing"
-      className="border-rule p-card border-b"
-    >
+    <PaneBlock as="ul" aria-label="Search listing">
       {PAGE_FIELDS.map((field) => (
         <FieldRow
           key={field}
@@ -126,6 +132,6 @@ export function PageFields({
           {...actions}
         />
       ))}
-    </Stack>
+    </PaneBlock>
   );
 }

@@ -39,6 +39,16 @@ const SPACING_ROLES = [
   'target',
   'workspace',
   'label-column',
+  'turn-estimate',
+  'count-mark',
+  'title-line',
+  'page-start',
+  'page-strip',
+  'bar-clearance',
+  'rail-top',
+  'route-fill',
+  'thread-fill',
+  'flow-top',
 ];
 
 const DURATION_ROLES = [
@@ -72,6 +82,7 @@ const twMerge = extendTailwindMerge({
             'fields-action',
             'lead-body-end',
             'lead-body',
+            'record',
             'body-end',
             'main-aside',
             'aside-main',

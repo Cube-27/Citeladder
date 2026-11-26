@@ -37,6 +37,17 @@ function draftSheetClasses(state: DraftState, onPage: boolean) {
   );
 }
 
+export function DraftInset({
+  children,
+  ...props
+}: Readonly<{ children: ReactNode; 'data-field-proposal'?: string }>) {
+  return (
+    <div {...props} className="edge-draft rounded-control grid gap-2 p-2">
+      {children}
+    </div>
+  );
+}
+
 export function DraftSheet({
   title,
   state,

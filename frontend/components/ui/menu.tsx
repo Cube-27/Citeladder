@@ -63,6 +63,26 @@ export const MenuNested = createContext(false);
 export function MenuTrigger(props: Readonly<MenuPrimitive.DropdownMenuTriggerProps>) {
   return useContext(MenuNested) ? null : <MenuPrimitive.Trigger {...props} />;
 }
+export function MenuIconTrigger(
+  props: Readonly<Omit<MenuPrimitive.DropdownMenuTriggerProps, 'className' | 'asChild'>>,
+) {
+  if (useContext(MenuNested)) return null;
+  return (
+    <MenuPrimitive.Trigger
+      {...props}
+      className="focus-ring not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed rounded-control size-control-md flex shrink-0 items-center justify-center transition-colors"
+    />
+  );
+}
+
+export function MenuAlert({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <p role="alert" className="text-caption text-negative px-2 py-2">
+      {children}
+    </p>
+  );
+}
+
 export const MenuRadioGroup = MenuPrimitive.RadioGroup;
 export const MenuSub = MenuPrimitive.Sub;
 
