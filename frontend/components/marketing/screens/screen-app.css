@@ -39,6 +39,10 @@
   background: var(--color-ground);
 }
 
+.cl-screen--app th {
+  background: var(--color-page);
+}
+
 .cl-screen--app [data-button-variant='secondary'] {
   border-color: transparent;
   background: var(--color-raised);
