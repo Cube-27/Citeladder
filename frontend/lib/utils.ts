@@ -73,6 +73,8 @@ const twMerge = extendTailwindMerge({
             'lead-body-end',
             'lead-body',
             'body-end',
+            'body-field',
+            'choices',
             'main-aside',
             'aside-main',
             'shell',

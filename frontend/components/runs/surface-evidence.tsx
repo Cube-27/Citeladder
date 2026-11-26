@@ -1,10 +1,10 @@
 import { Tag } from '@/components/ui/tag';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
-import { Inline } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow, TableRowHeader } from '@/components/ui/table';
@@ -12,7 +12,6 @@ import { TextLink } from '@/components/ui/text-link';
 import { MetaFooter } from '@/components/ui/workspace';
 import type { SearchSurfaceEvidence, SurfaceEntity } from '@citeladder/contracts';
 import { Check, Link2, Minus, Users } from '@/lib/icons';
-import { cn } from '@/lib/utils';
 import { pluralCount } from '@/lib/format';
 import { StateBlock } from '@/components/ui/state-block';
 import { FigureStrip } from '@/components/ui/figure-strip';
@@ -27,13 +26,12 @@ function presenceLabel(evidence: SearchSurfaceEvidence): string {
 function SignalCell({ present, label }: Readonly<{ present: boolean; label: string }>) {
   return (
     <TableCell>
-      <Inline
-        as="span"
-        className={cn('text-body text-ink inline-flex', present ? 'text-positive' : 'text-ink-2')}
-      >
-        <Icon icon={present ? Check : Minus} />
+      <Inline as="span" className="inline-flex">
+        <Icon icon={present ? Check : Minus} tone={present ? 'positive' : 'ink-2'} />
         <span className="sr-only">{label}: </span>
-        {present ? 'Yes' : 'No'}
+        <Text variant="body" tone={present ? 'positive' : 'ink-2'}>
+          {present ? 'Yes' : 'No'}
+        </Text>
       </Inline>
     </TableCell>
   );
@@ -54,7 +52,9 @@ function EntityRow({ entity }: Readonly<{ entity: SurfaceEntity }>) {
       <SignalCell present={entity.cited} label="Cited in the references" />
       <TableCell numeric>
         {entity.mention_order === null ? (
-          <span className="text-ink-2">Not named</span>
+          <Text variant="body" tone="ink-2">
+            Not named
+          </Text>
         ) : (
           `#${entity.mention_order}`
         )}
@@ -106,11 +106,7 @@ function safeLinkUrl(value: string): string | null {
 function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links'] }>) {
   return (
     <Section>
-      <SectionHeader
-        actions={
-          <span className="text-caption text-ink-2">{pluralCount(links.length, 'link')}</span>
-        }
-      >
+      <SectionHeader actions={<Text variant="caption">{pluralCount(links.length, 'link')}</Text>}>
         <SectionTitle level={3}>Inline links</SectionTitle>
       </SectionHeader>
       {links.length === 0 ? (
@@ -126,8 +122,13 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
             const href = safeLinkUrl(link.url);
             const title = link.title || link.domain || link.url;
             return (
-              <li key={`${link.element_index}-${link.url}`} className="grid min-w-0 gap-1">
-                <ClampText phoneWrap className={textRole('body')}>
+              <Stack
+                as="li"
+                key={`${link.element_index}-${link.url}`}
+                gap="tight"
+                className="min-w-0"
+              >
+                <ClampText phoneWrap text="body">
                   {href ? (
                     <TextLink variant="external" text="body" href={href}>
                       {title}
@@ -136,10 +137,10 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
                     title
                   )}
                 </ClampText>
-                <ClampText phoneWrap className="text-caption text-ink-2">
+                <ClampText phoneWrap text="caption">
                   {link.domain}
                 </ClampText>
-              </li>
+              </Stack>
             );
           })}
         </SectionBleed>
