@@ -5,9 +5,9 @@ import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ReportPage } from '@/components/templates/report-page';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Icon } from '@/components/ui/icon';
-import { SLIP_FACE } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { AppGrid } from '@/components/ui/app-grid';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import {
   BarChart3,
   ChevronRight,
@@ -28,7 +28,6 @@ import { agentHandoffHref } from '@/lib/agent/handoff';
 import { skillGroupLabel } from '@/lib/agent/vocabulary';
 import { agentQueries, type AgentSkill } from '@/lib/api/agent';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { cn } from '@/lib/utils';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
@@ -74,7 +73,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
     groups.set(label, [...(groups.get(label) ?? []), skill]);
   }
   return (
-    <div className="min-w-0">
+    <AppGrid layout="pair">
       {[...groups].map(([group, rows]) => (
         <Section key={group} aria-label={group}>
           <SectionHeader>
@@ -82,7 +81,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
               {group} <span className="text-ink-2">({rows.length})</span>
             </SectionTitle>
           </SectionHeader>
-          <ul className={cn(SLIP_FACE, 'divide-rule divide-y overflow-hidden')}>
+          <SectionBleed as="ul" rows>
             {rows.map((skill) => (
               <SkillRow
                 key={skill.id}
@@ -90,17 +89,17 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
                 output={outputKind(skill.output_kind)?.label}
               />
             ))}
-          </ul>
+          </SectionBleed>
         </Section>
       ))}
-    </div>
+    </AppGrid>
   );
 }
 
 function SkillRow({ skill, output }: Readonly<{ skill: AgentSkill; output: string | undefined }>) {
   const detailId = useId();
   return (
-    <li className="hover:overlay-hover relative flex min-h-[var(--table-row-height)] min-w-0 items-center gap-3 px-4 py-2.5">
+    <li className="hover:overlay-hover relative flex min-h-[var(--table-row-height)] min-w-0 items-center gap-3">
       <Icon icon={OUTPUT_ICONS[skill.output_kind] ?? Sparkles} className="text-ink-2" />
       <span className={textRole('body', 'flex min-w-0 flex-1 flex-col gap-0.5')}>
         <ProjectLink
