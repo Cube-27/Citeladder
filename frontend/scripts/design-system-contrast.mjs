@@ -413,6 +413,7 @@ export function paletteAccepted(source) {
   return measure(source).accepted;
 }
 
+/** @public */
 export function tokenSource(root) {
   return TOKEN_FILES.map((file) => readFileSync(join(root, ...file.split('/')), 'utf8')).join('\n');
 }
