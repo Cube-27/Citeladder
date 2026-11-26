@@ -12,11 +12,13 @@ export function AnswerLayout({
   railLabel,
 }: Readonly<{ main: ReactNode; rail: ReactNode; railLabel: string }>) {
   return (
-    <div className="desktop:grid-cols-[minmax(0,1fr)_20rem] grid min-w-0 gap-[var(--workspace-gap)]">
-      <div className="grid min-w-0 content-start gap-[var(--workspace-gap)]">{main}</div>
+    <div className="desktop:grid-cols-[minmax(0,1fr)_20rem] grid min-w-0 gap-y-[var(--panel-inset)]">
+      <div className="desktop:pe-[var(--panel-inset)] grid min-w-0 content-start gap-[var(--panel-inset)]">
+        {main}
+      </div>
       <aside
         aria-label={railLabel}
-        className="desktop:border-s desktop:pl-4 border-rule flex min-w-0 flex-col gap-[var(--workspace-gap)]"
+        className="desktop:border-s desktop:ps-[var(--panel-inset)] border-rule flex min-w-0 flex-col gap-[var(--workspace-gap)]"
       >
         {rail}
       </aside>

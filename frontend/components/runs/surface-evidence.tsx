@@ -1,20 +1,20 @@
 import { Tag } from '@/components/ui/tag';
+import { textRole } from '@/components/ui/typography';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow, TableRowHeader } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
-import { MetaFooter, SubsectionHeader } from '@/components/ui/workspace';
-import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
+import { MetaFooter } from '@/components/ui/workspace';
 import type { SearchSurfaceEvidence, SurfaceEntity } from '@citeladder/contracts';
 import { Check, Link2, Minus, Users } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { pluralCount } from '@/lib/format';
 import { StateBlock } from '@/components/ui/state-block';
-import { wellClasses } from '@/components/ui/slip';
 import { FigureStrip } from '@/components/ui/figure-strip';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
@@ -74,7 +74,7 @@ const PRESENCE_COLUMNS: readonly DataTableColumn[] = [
 function PresenceTable({ entities }: Readonly<{ entities: readonly SurfaceEntity[] }>) {
   return (
     <DataTable
-      label="Who appeared, and how"
+      title="Who appeared, and how"
       columns={PRESENCE_COLUMNS}
       state={
         entities.length === 0
@@ -105,11 +105,12 @@ function safeLinkUrl(value: string): string | null {
 
 function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links'] }>) {
   return (
-    <Stack as="section" gap="compact">
-      <SubsectionHeader
-        title="Inline links"
-        trailing={<span className="type-caption">{pluralCount(links.length, 'link')}</span>}
-      />
+    <Section>
+      <SectionHeader
+        actions={<span className="type-caption">{pluralCount(links.length, 'link')}</span>}
+      >
+        <SectionTitle level={3}>Inline links</SectionTitle>
+      </SectionHeader>
       {links.length === 0 ? (
         <StateBlock
           kind="empty"
@@ -118,29 +119,30 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
           heading="The overview’s text carried no inline links"
         />
       ) : (
-        <LedgerList label="Inline links">
+        <SectionBleed as="ul" rows aria-label="Inline links">
           {links.map((link) => {
             const href = safeLinkUrl(link.url);
             const title = link.title || link.domain || link.url;
             return (
-              <LedgerItem
-                key={`${link.element_index}-${link.url}`}
-                title={
-                  href ? (
+              <li key={`${link.element_index}-${link.url}`} className="grid min-w-0 gap-1">
+                <ClampText phoneWrap className={textRole('body')}>
+                  {href ? (
                     <TextLink variant="external" text="body" href={href}>
                       {title}
                     </TextLink>
                   ) : (
                     title
-                  )
-                }
-                caption={link.domain}
-              />
+                  )}
+                </ClampText>
+                <ClampText phoneWrap className="type-caption">
+                  {link.domain}
+                </ClampText>
+              </li>
             );
           })}
-        </LedgerList>
+        </SectionBleed>
       )}
-    </Stack>
+    </Section>
   );
 }
 
@@ -167,8 +169,10 @@ export function SurfaceEvidence({
   const label = useEngineCatalog().label(engine);
   const shown = evidence.aio_present === true;
   return (
-    <Stack as="section" gap="workspace" className="min-w-0">
-      <SubsectionHeader title={`${label} details`} />
+    <Section>
+      <SectionHeader>
+        <SectionTitle level={3}>{`${label} details`}</SectionTitle>
+      </SectionHeader>
       <FigureStrip
         segments={[
           { key: 'overview', label: 'Overview', value: presenceLabel(evidence) },
@@ -186,20 +190,21 @@ export function SurfaceEvidence({
       />
       {shown ? (
         <>
-          <Stack as="section" gap="compact">
-            <SubsectionHeader title="Who appeared, and how" />
-            <PresenceTable entities={evidence.entities} />
-          </Stack>
+          <PresenceTable entities={evidence.entities} />
           <InlineLinks links={evidence.links} />
         </>
       ) : (
-        <div className={wellClasses('type-body text-ink-2 min-w-0')}>
-          {evidence.aio_present === false
-            ? `No ${label} appeared.`
-            : 'Search not retrieved: a measurement gap, not brand absence.'}
-        </div>
+        <StateBlock
+          kind="empty"
+          inline
+          message={
+            evidence.aio_present === false
+              ? `No ${label} appeared.`
+              : 'Search not retrieved: a measurement gap, not brand absence.'
+          }
+        />
       )}
       <SurfaceFooter evidence={evidence} />
-    </Stack>
+    </Section>
   );
 }

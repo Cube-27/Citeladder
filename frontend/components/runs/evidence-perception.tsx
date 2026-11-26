@@ -5,9 +5,9 @@ import { RailItem, RailLine, RailList, RailSection } from '@/components/ui/answe
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Label, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import type { Highlight } from '@/lib/markdown/highlight';
-import { wellClasses } from '@/components/ui/slip';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 const SENTIMENT_LABELS = {
   positive: 'Positive',
@@ -54,11 +54,13 @@ export function EvidencePerception({
 }: Readonly<{ perception: readonly ExecutionPerception[] }>) {
   if (!perception.length) return null;
   return (
-    <Stack as="section" gap="item">
-      <Label>Perception</Label>
-      <Stack as="ul" gap="item">
+    <Section>
+      <SectionHeader>
+        <SectionTitle level={3}>Perception</SectionTitle>
+      </SectionHeader>
+      <SectionBleed as="ul" rows>
         {perception.map((entity) => (
-          <Stack as="li" gap="tight" key={entity.entity} className={wellClasses('min-w-0')}>
+          <Stack as="li" gap="tight" key={entity.entity}>
             <Inline as="span" className="flex-wrap">
               <span className={textRole('emphasis')}>{entity.entity}</span>
               {entity.is_brand ? (
@@ -75,8 +77,8 @@ export function EvidencePerception({
               : null}
           </Stack>
         ))}
-      </Stack>
-    </Stack>
+      </SectionBleed>
+    </Section>
   );
 }
 
