@@ -24,7 +24,6 @@ import {
 } from './referral-details';
 import {
   Section,
-  SectionContent,
   SectionHeader,
   SectionStack,
   SectionTitle,
@@ -50,29 +49,23 @@ export function AiReferralsDashboard({
   return (
     <SectionStack aria-busy={fetching}>
       <ReferralQuality data={data} />
-      <Tabs
-        value={tab}
-        onValueChange={setTab}
-        ariaLabel="Referral views"
-        spaced
-        items={REFERRAL_VIEWS}
-      >
-        <TabPanel value="overview">
-          <SectionStack>
+      <Section>
+        <Tabs value={tab} onValueChange={setTab} ariaLabel="Referral views" items={REFERRAL_VIEWS}>
+          <TabPanel value="overview">
             <AppGrid layout="halves">
               <ReferralVolumeCard data={data} />
               <ReferralShareCard data={data} />
             </AppGrid>
             <ReferralComparison data={data} />
-          </SectionStack>
-        </TabPanel>
-        <TabPanel value="sources">
-          <SourceTotals data={data} />
-        </TabPanel>
-        <TabPanel value="landing">
-          <ReferralLandingPages data={data} />
-        </TabPanel>
-      </Tabs>
+          </TabPanel>
+          <TabPanel value="sources">
+            <SourceTotals data={data} />
+          </TabPanel>
+          <TabPanel value="landing">
+            <ReferralLandingPages data={data} />
+          </TabPanel>
+        </Tabs>
+      </Section>
     </SectionStack>
   );
 }
@@ -97,17 +90,15 @@ function TrendCard({
       <SectionHeader actions={<span className="type-caption">{badge}</span>}>
         <SectionTitle>{title}</SectionTitle>
       </SectionHeader>
-      <SectionContent>
-        <AreaChart
-          label={title}
-          name={unit}
-          data={points}
-          height="sm"
-          yMax={domainMax}
-          yFormat={formatTick}
-          you={false}
-        />
-      </SectionContent>
+      <AreaChart
+        label={title}
+        name={unit}
+        data={points}
+        height="sm"
+        yMax={domainMax}
+        yFormat={formatTick}
+        you={false}
+      />
     </Section>
   );
 }

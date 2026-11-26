@@ -24,7 +24,6 @@ import { TextLink } from '@/components/ui/text-link';
 import { Checkbox } from '@/components/ui/checkbox';
 import { GcpFields, GcpSourceSetup, GcpSteps } from './gcp-pull-setup';
 import { Notice } from '@/components/ui/notice';
-import { wellClasses } from '@/components/ui/slip';
 const SETUP_STEPS: Partial<Record<(typeof CRAWL_LOG_SETUPS)[number]['value'], string>> = {
   cloudflare_worker:
     'Deploy the downloadable template yourself. Store the token as a Worker secret, use a fail-open route, and expect partial coverage. Every routed request uses your Workers quota.',
@@ -51,7 +50,7 @@ export function CrawlLogSetup({
   if (firehose) fields = <FirehoseFields model={model} />;
   if (gcp) fields = <GcpFields model={model} />;
   return (
-    <Stack gap="section">
+    <>
       <RadioGroup
         ariaLabel="Collection method"
         value={setup}
@@ -81,7 +80,7 @@ export function CrawlLogSetup({
           };
         })}
       />
-      <Stack className={wellClasses()}>
+      <Stack>
         {steps ? <p className="type-body text-ink-2">{steps}</p> : null}
         {firehose ? <FirehoseSteps interval={model.bufferInterval} /> : null}
         {gcp ? <GcpSteps /> : null}
@@ -104,7 +103,7 @@ export function CrawlLogSetup({
         />
       ) : null}
       {setup === 'upload' ? <UploadForm model={model} /> : null}
-    </Stack>
+    </>
   );
 }
 function DeclaredFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {

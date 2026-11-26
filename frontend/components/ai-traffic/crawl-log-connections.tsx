@@ -16,7 +16,6 @@ import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { StateBlock } from '@/components/ui/state-block';
 import { ConfirmDialog, Dialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { Stack } from '@/components/ui/layout';
 import { DisplayTime } from '@/components/ui/display-time';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
@@ -167,16 +166,11 @@ function Connections({
       </Dialog>
     </>
   );
-  if (!showHeader)
-    return (
-      <Stack as="section" id="crawl-log-connections" aria-label="Crawl log connections">
-        {body}
-      </Stack>
-    );
+  if (!showHeader) return body;
   return (
     <Section id="crawl-log-connections" aria-label="Crawl log connections">
       <ConnectionsHead empty={sources.data?.items.length === 0} connect={connect} />
-      <Stack className="empty:hidden">{body}</Stack>
+      {body}
     </Section>
   );
 }
