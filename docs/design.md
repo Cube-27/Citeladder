@@ -150,11 +150,12 @@ a CSS variable for code blocks.
   the value differs. A role that must resolve under a re-pointing ancestor
   (the sidebar width) goes in `@theme inline`. Inside a primitive, steps of
   the 4px scale are allowed; a screen never picks a step. Grid templates are
-  `grid-cols-<role>` roles, rendered by `Columns template`.
+  `grid-cols-<role>` roles, rendered by `Columns template`. App CSS reads
+  `var(--spacing)` multiples and `--rule-width` for border widths.
 - **Motion, layering and opacity:** `duration-<role>` (fast 120, close 160,
   open 200, press 250, slide 300, plus reveal, pulse, sweep and the stagger
   steps), `ease-<role>`, `z-<role>` (base, raised, sticky, float, overlay,
-  modal, toast) and `opacity-<role>` (disabled 50, muted 80, ghost, hover).
+  modal, toast) and `opacity-<role>` (disabled 50, muted 80, dim 70, ghost, hover).
   `cn` knows every role, so a caller can still override one.
 - **Controls:** 36 high (HeroUI's medium); 44 below 900px or under a coarse pointer, and on
   sign-in, account and setup pages (the website's height, `control-lg`).
