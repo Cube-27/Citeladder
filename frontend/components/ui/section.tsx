@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 
 export type SectionVariant = 'surface' | 'framed';
 
-export const FRAMED_FACE = cn(SLIP_FACE, 'p-[var(--card-padding)]');
+export const FRAMED_FACE = cn(SLIP_FACE, 'overflow-clip p-[var(--card-padding)]');
 
 const SECTION_FACE: Record<SectionVariant, string> = {
   surface: '',

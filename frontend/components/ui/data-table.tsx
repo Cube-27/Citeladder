@@ -85,10 +85,7 @@ export function DataTable({
       aria-busy={busy?.active || undefined}
       data-data-table=""
       data-section={headed ? 'framed' : undefined}
-      className={cn(
-        'relative grid min-w-0 content-start',
-        headed && cn(FRAMED_FACE, 'overflow-clip'),
-      )}
+      className={cn('relative grid min-w-0 content-start', headed && FRAMED_FACE)}
     >
       {busy ? <BusyRung active={busy.active} label={busy.label} /> : null}
       <DataTableHeader
