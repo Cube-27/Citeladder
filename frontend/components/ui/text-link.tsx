@@ -19,9 +19,8 @@ const TONE: Record<TextLinkTone, string> = {
 
 const UNDERLINE = {
   prose: 'decoration-current hover:decoration-2',
-  ink: 'decoration-control-line hover:decoration-link-decoration focus-visible:decoration-link-decoration',
-  hover:
-    'text-ink decoration-transparent hover:decoration-link-decoration focus-visible:decoration-link-decoration',
+  ink: 'decoration-control-line hover:decoration-link focus-visible:decoration-link',
+  hover: 'text-ink decoration-transparent hover:decoration-link focus-visible:decoration-link',
 } as const;
 
 export type TextLinkUnderline = 'always' | 'hover';

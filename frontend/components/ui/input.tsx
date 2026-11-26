@@ -8,7 +8,7 @@ export const FIELD_EDGE =
   'bg-panel border border-transparent [[data-public-surface]_&]:bg-well shadow-[var(--shadow-field,0_0_#0000)] not-disabled:hover:bg-field-hover';
 
 const FIELD_SHAPE =
-  'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[background-color,border-color,outline-color] duration-[var(--motion-normal)]';
+  'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[background-color,border-color,outline-color] duration-150';
 
 export const FIELD_BOX = `${FIELD_EDGE} ${FIELD_SHAPE}`;
 
@@ -45,7 +45,7 @@ export function Input({
         className={cn(
           'focus-input',
           FIELD_BOX,
-          'placeholder:text-ink-3 disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:bg-raised-2 [[data-public-surface]_&]:disabled:text-ink-2 app:disabled:opacity-50',
+          'placeholder:text-ink-3 disabled:cursor-not-allowed disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-50',
           inputWidths[width],
           containerClassName,
           className,
