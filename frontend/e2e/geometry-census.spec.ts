@@ -268,7 +268,7 @@ function measure({ route }: { route: string }) {
         (element) =>
           visible(element) &&
           isContent(element) &&
-          !element.closest('svg *') &&
+          !element.closest('svg *, [data-section-actions]') &&
           getComputedStyle(element).clipPath === 'none' &&
           getComputedStyle(element).clip !== 'rect(0px, 0px, 0px, 0px)',
       )
