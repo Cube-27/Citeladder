@@ -42,7 +42,7 @@ async function openDialog() {
 
 async function figure(label: string) {
   const term = await within(screen.getByLabelText('Issue figures')).findByText(label);
-  return term.nextElementSibling?.textContent;
+  return term.closest('[data-figure-cell]')?.querySelector('dd')?.textContent;
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
