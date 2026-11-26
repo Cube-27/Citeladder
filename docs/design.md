@@ -56,9 +56,10 @@ inline `oxlint-disable` may name a `design/` or `shadcn/` rule (the comment
 check rejects it). A fixture in `frontend/scripts/design-lint/canary` must trip
 every rule (`scripts/frontend/design-lint.test.mjs`).
 
-`pnpm check:policy` adds WCAG AA contrast of token pairs (text 4.5:1, marks
-3:1, both themes), the app's Tailwind `@source` list, a hex check over CSS and
-scripts, and reports breaks of the [composition rules](#composition) as a
+`pnpm check:policy` adds WCAG AA contrast of token pairs (every
+`--text-color-*` role on the grounds of its palette at 4.5:1, marks 3:1, both
+themes), the app's Tailwind `@source` list, no hex in CSS, scripts or Astro
+styles outside `globals.css` and `public-surface.css`, and reports breaks of the [composition rules](#composition) as a
 warning that never fails CI (AR-25).
 
 ## Tokens
