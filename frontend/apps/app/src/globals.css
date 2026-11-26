@@ -104,6 +104,7 @@
   --color-data-rival-2: oklch(52.3% 0.1 244);
   --color-data-rival-3: oklch(41% 0.128 289.3);
   --color-data-rival-4: oklch(53.4% 0.0855 184.4);
+  --color-nav-ink: color-mix(in oklch, var(--color-ink) 80%, var(--color-chrome));
   --color-metric-clicks: oklch(68% 0.15 258);
   --color-metric-impressions: oklch(58% 0.16 295);
   --color-metric-ctr: oklch(62% 0.11 180);
@@ -611,6 +612,7 @@
   --mark-width: 2px;
 
   --control-md: 32px;
+  --control-md-padding: 10px;
   --control-lg: 40px;
   --control-coarse: 44px;
   --button-hit: 40px;
@@ -637,7 +639,7 @@
   --modal-padding: 16px;
   --workspace-gap: 16px;
   --page-top-gap: 24px;
-  --section-gap: 16px;
+  --section-gap: 20px;
   --page-section-gap: var(--section-gap);
   --flow-gap: 48px;
   --page-end-space: 33svh;

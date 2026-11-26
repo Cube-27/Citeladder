@@ -184,7 +184,7 @@ export function SidebarNavGroup({
 const CURRENT_FILL = 'bg-[var(--nav-current-fill)]';
 const CURRENT_TILE = cn(CURRENT_FILL, 'text-ink before:bg-accent');
 const AT_REST = 'text-ink-2 hover:overlay-hover hover:text-ink';
-const NAV_AT_REST = 'text-ink hover:overlay-hover';
+const NAV_AT_REST = 'text-nav-ink hover:overlay-hover';
 
 export function sidebarNavRowClasses(active: boolean, className?: string) {
   return cn(
