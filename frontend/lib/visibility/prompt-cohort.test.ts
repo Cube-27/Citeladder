@@ -17,6 +17,14 @@ describe('cohortUrlCodec', () => {
     expect(cohortUrlCodec(OTHER).parse(null)).toBe('core');
   });
 
+  it('uses a view’s own default over the remembered choice, and the URL over both', () => {
+    writeStoredCohort(PROJECT, 'core');
+    const codec = cohortUrlCodec(PROJECT, 'all');
+    expect(codec.parse(null)).toBe('all');
+    expect(codec.parse('comparison')).toBe('comparison');
+    expect(cohortUrlCodec(PROJECT).parse(null)).toBe('core');
+  });
+
   it('lets the URL win and always writes the value, so a copied link names its view', () => {
     writeStoredCohort(PROJECT, 'comparison');
     const codec = cohortUrlCodec(PROJECT);

@@ -134,7 +134,8 @@ export function measuredSelection({
 
 export function useVisibilityFilters({
   defaultSelection = 'run',
-}: { defaultSelection?: SelectionMode } = {}) {
+  defaultCohort,
+}: { defaultSelection?: SelectionMode; defaultCohort?: PromptCohort } = {}) {
   const [activeTab, selectTab] = useUrlState('tab', tabCodec, { clearKeys: sourceKeys });
   const [selectedRunId, setSelectedRunId] = useUrlState('run', optionalStringUrlCodec, {
     clearKeys: pageKeys,
@@ -154,7 +155,10 @@ export function useVisibilityFilters({
   });
   const [granularity, setGranularity] = useUrlState('granularity', granularityCodec);
   const { projectId } = useProjectScope();
-  const cohortCodec = useMemo(() => cohortUrlCodec(projectId), [projectId]);
+  const cohortCodec = useMemo(
+    () => cohortUrlCodec(projectId, defaultCohort),
+    [projectId, defaultCohort],
+  );
   const [cohort, setCohortUrl] = useUrlState('cohort', cohortCodec, {
     clearKeys: pageKeys,
   });

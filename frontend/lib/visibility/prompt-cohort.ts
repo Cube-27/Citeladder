@@ -20,9 +20,12 @@ function readStoredCohort(projectId: string | null): PromptCohort {
   }
 }
 
-export function cohortUrlCodec(projectId: string | null): UrlCodec<PromptCohort> {
+export function cohortUrlCodec(
+  projectId: string | null,
+  fallback?: PromptCohort,
+): UrlCodec<PromptCohort> {
   return {
-    parse: (raw) => (isPromptCohort(raw) ? raw : readStoredCohort(projectId)),
+    parse: (raw) => (isPromptCohort(raw) ? raw : (fallback ?? readStoredCohort(projectId))),
     serialize: (value) => value,
   };
 }

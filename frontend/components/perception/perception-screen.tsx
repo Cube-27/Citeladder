@@ -36,9 +36,12 @@ type Filters = ReturnType<typeof useVisibilityFilters>;
 type Queries = ReturnType<typeof useVisibilityQueries>;
 
 export function PerceptionScreen() {
-  const filters = useVisibilityFilters({ defaultSelection: 'range' });
-  const queries = useVisibilityQueries(filters, 'perception');
   const { pilot, tab, setTab, items, probe } = usePerceptionTab();
+  const filters = useVisibilityFilters({
+    defaultSelection: 'range',
+    defaultCohort: tab === 'fact-checking' ? 'all' : undefined,
+  });
+  const queries = useVisibilityQueries(filters, 'perception');
   const probeControls = useProbeControls(probe);
   const accuracy = useAccuracy({ filters, queries, pilot });
   const factViews = useFactViews({ filters, queries, accuracy, open: tab === 'fact-checking' });
