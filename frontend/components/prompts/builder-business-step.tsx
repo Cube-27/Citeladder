@@ -5,8 +5,8 @@ import {
 } from '@/components/knowledge-base/business-editor';
 import type { BusinessDraftState } from '@/components/knowledge-base/use-business-draft';
 import { Input } from '@/components/ui/input';
-import { Stack } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
+import { SectionStack } from '@/components/ui/section';
 import { SettingField, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -55,7 +55,7 @@ export function BuilderBusinessStep({
     listMax: limits.context_list_max_entries,
   };
   return (
-    <Stack gap="section">
+    <SectionStack>
       {business.save.error ? (
         <Notice
           kind="mutation"
@@ -81,6 +81,6 @@ export function BuilderBusinessStep({
           </SettingField>
         </SettingRows>
       </SettingsGroup>
-    </Stack>
+    </SectionStack>
   );
 }

@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Button, IconButton } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
+import { Section, SectionBleed, SectionStack } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { ChevronDown, Plus, RotateCcw, Sparkles, Tags, Trash2 } from '@/lib/icons';
 import { isImeComposing } from '@/lib/accessibility/ime';
@@ -85,19 +86,7 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
     setName('');
   };
   return (
-    <Stack gap="workspace" className="max-w-[var(--container-prose)]">
-      <Inline className="flex-wrap justify-end">
-        <Button
-          variant="secondary"
-          onClick={() => topics.preview.mutate()}
-          disabled={busy}
-          pending={topics.preview.isPending}
-          pendingLabel="Suggesting…"
-        >
-          <Icon icon={Sparkles} />
-          Suggest topics
-        </Button>
-      </Inline>
+    <SectionStack>
       {topics.preview.error ? (
         <GenerateErrorAlert error={topics.preview.error} action="propose topics" />
       ) : null}
@@ -108,56 +97,73 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
         />
       ) : null}
       {topics.problem ? <Notice tone="warning">{topics.problem}</Notice> : null}
-      {topics.preview.isPending ? (
-        <WorkProgress label="Topic suggestions" narration="Suggesting topics from your offerings" />
-      ) : null}
-      {topics.rows.length ? (
-        <Stack as="ul" gap="item" aria-label="Topics">
-          {topics.rows.map((row) => (
-            <TopicRowEditor
-              key={row.key}
-              row={row}
-              disabled={busy}
-              onChange={(next) => update(row.key, next)}
-              onRemove={() => remove(row)}
-            />
-          ))}
-        </Stack>
-      ) : null}
-      {topics.rows.length || topics.preview.isPending ? null : (
-        <StateBlock
-          kind="empty"
-          inline
-          icon={Tags}
-          message="No topics yet. Suggest topics from your offerings, or add one."
-        />
-      )}
-      {topics.overflow.length ? (
-        <Inline>
-          <Button variant="quiet" onClick={topics.showOverflow} disabled={busy}>
-            <Icon icon={ChevronDown} />+{topics.overflow.length} more
+      <Section>
+        <Inline className="flex-wrap justify-end">
+          <Button
+            variant="secondary"
+            onClick={() => topics.preview.mutate()}
+            disabled={busy}
+            pending={topics.preview.isPending}
+            pendingLabel="Suggesting…"
+          >
+            <Icon icon={Sparkles} />
+            Suggest topics
           </Button>
         </Inline>
-      ) : null}
-      <Inline>
-        <Input
-          aria-label="New topic name"
-          placeholder="Add a topic"
-          value={name}
-          maxLength={TOPIC_NAME_MAX}
-          disabled={busy}
-          onChange={(event) => setName(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter' || isImeComposing(event)) return;
-            event.preventDefault();
-            add();
-          }}
-        />
-        <Button variant="secondary" onClick={add} disabled={busy || !name.trim()}>
-          <Icon icon={Plus} />
-          Add
-        </Button>
-      </Inline>
-    </Stack>
+        {topics.preview.isPending ? (
+          <WorkProgress
+            label="Topic suggestions"
+            narration="Suggesting topics from your offerings"
+          />
+        ) : null}
+        {topics.rows.length ? (
+          <SectionBleed as="ul" rows aria-label="Topics">
+            {topics.rows.map((row) => (
+              <TopicRowEditor
+                key={row.key}
+                row={row}
+                disabled={busy}
+                onChange={(next) => update(row.key, next)}
+                onRemove={() => remove(row)}
+              />
+            ))}
+          </SectionBleed>
+        ) : null}
+        {topics.rows.length || topics.preview.isPending ? null : (
+          <StateBlock
+            kind="empty"
+            inline
+            icon={Tags}
+            message="No topics yet. Suggest topics from your offerings, or add one."
+          />
+        )}
+        {topics.overflow.length ? (
+          <Inline>
+            <Button variant="quiet" onClick={topics.showOverflow} disabled={busy}>
+              <Icon icon={ChevronDown} />+{topics.overflow.length} more
+            </Button>
+          </Inline>
+        ) : null}
+        <Inline>
+          <Input
+            aria-label="New topic name"
+            placeholder="Add a topic"
+            value={name}
+            maxLength={TOPIC_NAME_MAX}
+            disabled={busy}
+            onChange={(event) => setName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' || isImeComposing(event)) return;
+              event.preventDefault();
+              add();
+            }}
+          />
+          <Button variant="secondary" onClick={add} disabled={busy || !name.trim()}>
+            <Icon icon={Plus} />
+            Add
+          </Button>
+        </Inline>
+      </Section>
+    </SectionStack>
   );
 }

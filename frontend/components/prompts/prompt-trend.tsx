@@ -2,8 +2,7 @@ import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Disclosure } from '@/components/ui/disclosure';
-import { Stack } from '@/components/ui/layout';
-import { SectionContent, TitledSection } from '@/components/ui/section';
+import { TitledSection } from '@/components/ui/section';
 import { AreaChart } from '@/components/ui/area-chart';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
@@ -29,22 +28,18 @@ export function PromptTrend({ history }: Readonly<{ history: PromptHistory }>) {
   const { points } = history;
   return (
     <TitledSection title="Trend">
-      <SectionContent>
-        <Stack gap="workspace">
-          <AreaChart
-            label="Visibility over time"
-            name="Visibility"
-            data={mentionRatePoints(points, timeZone)}
-            series={[{ label: 'Owned citation rate', values: ownedCitationValues(points) }]}
-            events={implementationEvents(history.implementations, timeZone)}
-            eventsLabel="Marked implemented"
-            yMax={100}
-            yFormat={(value) => formattedText(formatWholePercent(value))}
-            lonePoint="plot"
-          />
-          <RunData points={points} />
-        </Stack>
-      </SectionContent>
+      <AreaChart
+        label="Visibility over time"
+        name="Visibility"
+        data={mentionRatePoints(points, timeZone)}
+        series={[{ label: 'Owned citation rate', values: ownedCitationValues(points) }]}
+        events={implementationEvents(history.implementations, timeZone)}
+        eventsLabel="Marked implemented"
+        yMax={100}
+        yFormat={(value) => formattedText(formatWholePercent(value))}
+        lonePoint="plot"
+      />
+      <RunData points={points} />
     </TitledSection>
   );
 }
