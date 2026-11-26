@@ -23,7 +23,7 @@ import {
 } from '@/lib/runs/launch';
 import { textRole } from '@/components/ui/typography';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
-import { wellClasses } from '@/components/ui/slip';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 type PromptSetsRead = RetryableRead & Readonly<{ status: 'pending' | 'error' | 'success' }>;
 
@@ -132,13 +132,14 @@ export function InlineProviderSetup({
 }: Readonly<{ connecting: LogicalEngine | 'any'; onClose: () => void; compact?: boolean }>) {
   const engine = connecting === 'any' ? null : connecting;
   return (
-    <Stack as="section" gap="item" aria-label="Connect a provider" className={wellClasses()}>
-      <Inline className="justify-between">
-        <p className={textRole('body', 'text-ink-2')}>Connect a provider</p>
-        <IconButton icon={X} label="Close provider setup" onClick={onClose} />
-      </Inline>
+    <Section aria-label="Connect a provider">
+      <SectionHeader
+        actions={<IconButton icon={X} label="Close provider setup" onClick={onClose} />}
+      >
+        <SectionTitle level={3}>Connect a provider</SectionTitle>
+      </SectionHeader>
       <ProviderList key={engine ?? 'any'} expandEngine={engine} compact={compact} />
-    </Stack>
+    </Section>
   );
 }
 
@@ -268,7 +269,7 @@ function RepetitionsField({
 
 function EstimateNote({ estimate }: Readonly<{ estimate: Estimate }>) {
   return (
-    <Stack gap="tight" className={wellClasses('type-caption')}>
+    <Stack gap="tight" className="type-caption">
       <span className={textRole('emphasis', 'text-ink')}>
         {estimate.execution_count} {estimate.execution_count === 1 ? 'response' : 'responses'}{' '}
         planned
@@ -359,8 +360,8 @@ export function LaunchDialogView({
         />
       }
     >
+      {launchNotice ? <Notice kind="mutation" notice={launchNotice} onRetry={onLaunch} /> : null}
       <Stack gap="workspace">
-        {launchNotice ? <Notice kind="mutation" notice={launchNotice} onRetry={onLaunch} /> : null}
         <PromptSetField
           promptSets={promptSets}
           promptSetsRead={promptSetsRead}
@@ -414,12 +415,12 @@ export function LaunchDialogView({
           ) : null}
         </ChoiceRow>
         <MarketsField markets={markets} marketIds={marketIds} setMarketIds={setMarketIds} />
-        {estimate ? <EstimateNote estimate={estimate} /> : null}
-        <p className="type-caption text-ink-2">
-          Answers that mention you or a competitor are also classified for sentiment. No credits are
-          used.
-        </p>
       </Stack>
+      {estimate ? <EstimateNote estimate={estimate} /> : null}
+      <p className="type-caption text-ink-2">
+        Answers that mention you or a competitor are also classified for sentiment. No credits are
+        used.
+      </p>
     </Dialog>
   );
 }

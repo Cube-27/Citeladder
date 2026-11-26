@@ -5,7 +5,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { choiceFilter } from '@/components/ui/all-filters';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { FilterChip } from '@/components/ui/filter-chip';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { LineDiff } from '@/components/ui/line-diff';
 import { TableCell, TableRow, TableTime } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
@@ -95,7 +95,7 @@ export function RobotsHistory({
       ),
   };
   return (
-    <Stack>
+    <>
       <DataTable
         label="robots.txt observation sequence"
         columns={COLUMNS}
@@ -129,7 +129,7 @@ export function RobotsHistory({
           after={versions.find((version) => version.value === selected.after)?.snapshot}
         />
       )}
-    </Stack>
+    </>
   );
 }
 
