@@ -95,7 +95,7 @@ export function EditorRailPanel({
         </div>
       ) : (
         <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)] py-[var(--compact-gap)]">
-          {children}
+          <SurfaceContext value="surface">{children}</SurfaceContext>
         </div>
       )}
     </section>
