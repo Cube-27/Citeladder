@@ -226,14 +226,14 @@ export function sidebarRailButtonClasses(current: boolean) {
 export function sidebarModeTrackClasses(rail: boolean) {
   return rail
     ? 'flex flex-col items-center'
-    : 'bg-state-hover rounded-control flex h-[var(--control-md)] w-full min-w-0 shrink-0 p-0.5';
+    : 'rounded-control flex h-[var(--control-md)] w-full min-w-0 shrink-0 bg-[var(--color-state-fill)] p-0.5';
 }
 
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
   if (rail) return cn(RAIL_BUTTON, current ? cn('text-ink', CURRENT_FILL) : AT_REST);
   return cn(
     'focus-ring type-label rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors',
-    current ? 'text-ink bg-raised shadow-card' : AT_REST,
+    current ? 'text-ink bg-[var(--nav-current-fill)] shadow-card' : AT_REST,
   );
 }
 

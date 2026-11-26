@@ -48,7 +48,7 @@ function MeterTrack({
       aria-valuemax={max}
       aria-valuenow={value === null ? undefined : Math.min(max, Math.max(0, value))}
       aria-valuetext={valueText}
-      className="bg-well [[data-public-surface]_&]:bg-rule rounded-mark block h-1.5 w-full overflow-hidden"
+      className="bg-well [[data-public-surface]_&]:bg-rule rounded-mark app:h-2 block h-1.5 w-full overflow-hidden"
     >
       {percent === null ? null : (
         <span className={cn(FILL_MOTION, fill)} style={{ width: `${percent}%` }} />

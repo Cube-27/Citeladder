@@ -6,7 +6,7 @@ import { ArrowRight, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 const TAG_FACE =
-  'type-caption border border-transparent bg-state-selected text-ink-2 inline-flex min-h-5 max-w-full min-w-0 shrink-0 items-center gap-0.5 rounded-mark px-1.5 normal-nums whitespace-nowrap [[data-public-surface]_&]:min-h-[var(--tag-height)] [[data-public-surface]_&]:px-2 [[data-public-surface]_&]:text-ink';
+  'type-caption border border-transparent bg-state-selected text-ink-2 inline-flex min-h-5 max-w-full min-w-0 shrink-0 items-center gap-0.5 rounded-mark px-1.5 normal-nums whitespace-nowrap [[data-public-surface]_&]:min-h-[var(--tag-height)] [[data-public-surface]_&]:px-2 [[data-public-surface]_&]:text-ink app:font-medium app:text-ink';
 
 type TagKind =
   | { kind?: 'category' | 'draft' }
@@ -80,7 +80,10 @@ export function RecordTag({
     <ProjectLink
       href={href}
       data-tag-kind="record"
-      className={cn(TAG_FACE, 'hover:overlay-hover focus-ring align-middle no-underline')}
+      className={cn(
+        TAG_FACE,
+        'hover:overlay-hover app:hover:bg-[var(--color-state-fill)] focus-ring align-middle no-underline',
+      )}
     >
       {labelKind === 'url' ? (
         <span className="flex min-w-0">

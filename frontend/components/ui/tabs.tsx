@@ -44,12 +44,12 @@ function useRevealSelected(selected: string | null) {
 
 const TAB_KIND = {
   tab: {
-    base: 'rounded-t-control min-h-[var(--control-md)] self-stretch border border-transparent px-4',
-    current: 'border-rule bg-page border-b-transparent',
+    base: 'min-h-8 self-stretch px-4',
+    current: 'shadow-[inset_0_-2px_0_var(--color-ink)]',
   },
   segment: {
-    base: 'rounded-mark min-h-[calc(var(--control-md)_-_4px)] px-3',
-    current: 'bg-raised shadow-card',
+    base: 'rounded-mark h-8 px-4',
+    current: 'bg-[var(--nav-current-fill)] shadow-card',
   },
 } as const;
 
@@ -59,7 +59,7 @@ function tabFace({
   className,
 }: Readonly<{ kind: keyof typeof TAB_KIND; selected: boolean; className?: string }>) {
   return cn(
-    'tab-face focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-[color,background-color] duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-60',
+    'tab-face focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 font-medium whitespace-nowrap transition-[color,background-color,box-shadow] duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-50',
     TAB_KIND[kind].base,
     selected ? cn('text-ink', TAB_KIND[kind].current) : 'text-ink-2 not-disabled:hover:text-ink',
     className,
@@ -398,7 +398,7 @@ export function SegmentedControl<T extends string>({
             strip.current = node;
           }}
           data-segmented-track=""
-          className={cn(TAB_STRIP, 'bg-state-hover rounded-control p-0.5', className)}
+          className={cn(TAB_STRIP, 'rounded-control bg-[var(--color-state-fill)] p-1', className)}
         >
           <div
             id={id}

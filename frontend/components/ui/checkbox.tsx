@@ -131,8 +131,8 @@ export function Checkbox({
   return (
     <label
       className={cn(
-        'text-ink inline-flex cursor-pointer items-start gap-2',
-        disabled && 'cursor-not-allowed opacity-60',
+        'text-ink inline-flex cursor-pointer items-start gap-2 app:gap-3',
+        disabled && 'cursor-not-allowed opacity-60 app:opacity-50',
         nested && 'ms-6',
         className,
       )}

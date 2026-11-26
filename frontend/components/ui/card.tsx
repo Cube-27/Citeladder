@@ -19,7 +19,7 @@ export function Card({
 }
 
 const HEADER_RULE =
-  'not-last:-mx-[var(--card-padding)] not-last:mb-[var(--card-padding)] not-last:border-b not-last:border-rule not-last:px-[var(--card-padding)] not-last:pb-[var(--card-padding)]';
+  '[[data-public-surface]_&]:not-last:-mx-[var(--card-padding)] [[data-public-surface]_&]:not-last:mb-[var(--card-padding)] [[data-public-surface]_&]:not-last:border-b [[data-public-surface]_&]:not-last:border-rule [[data-public-surface]_&]:not-last:px-[var(--card-padding)] [[data-public-surface]_&]:not-last:pb-[var(--card-padding)] app:not-last:mb-3';
 
 export function CardHeader({
   children,

@@ -60,7 +60,7 @@ function PagerSummary({
   page,
   pageCount,
 }: Readonly<{ range?: PagerRange; page?: number; pageCount?: number }>) {
-  const face = 'type-body text-ink pe-2 whitespace-nowrap tabular-nums';
+  const face = 'type-body text-ink-2 pe-2 whitespace-nowrap tabular-nums';
   if (range) {
     return (
       <output className={face}>
@@ -116,6 +116,7 @@ function PagerSteps({
       {onFirst && canPrev ? (
         <IconButton
           variant="secondary"
+          className="size-8 min-h-8"
           icon={ChevronsLeft}
           label="First page"
           tooltip={false}
@@ -125,6 +126,7 @@ function PagerSteps({
       ) : null}
       <IconButton
         variant="secondary"
+        className="size-8 min-h-8"
         icon={ChevronLeft}
         label="Previous page"
         tooltip={false}
@@ -133,6 +135,7 @@ function PagerSteps({
       />
       <IconButton
         variant="secondary"
+        className="size-8 min-h-8"
         icon={ChevronRight}
         label="Next page"
         tooltip={false}

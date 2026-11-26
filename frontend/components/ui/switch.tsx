@@ -28,7 +28,7 @@ export function Switch({
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        'press focus-ring hit-area inline-flex h-5 w-10 shrink-0 items-center rounded-full disabled:cursor-not-allowed disabled:opacity-50',
+        'press focus-ring hit-area inline-flex h-5 w-10 shrink-0 items-center rounded-full disabled:cursor-not-allowed disabled:opacity-50 app:transition-[background-color,scale] app:duration-[var(--motion-press)]',
         checked
           ? 'bg-primary not-disabled:hover:bg-primary-hover'
           : 'bg-control-line not-disabled:hover:bg-rule',
@@ -40,6 +40,7 @@ export function Switch({
         className={cn(
           'ms-0.5 h-4 w-5.5 rounded-full transition-transform duration-[var(--motion-slide)] ease-[var(--ease-fluid)]',
           checked ? 'bg-on-primary translate-x-3.5' : 'bg-thumb',
+          'app:shadow-[var(--shadow-thumb)]',
         )}
       />
     </button>
