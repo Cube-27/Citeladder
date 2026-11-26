@@ -2075,6 +2075,7 @@ label {
 .metric-tile {
   --metric: var(--color-ink-2);
   --metric-ink: var(--color-metric-ink);
+  position: relative;
   display: grid;
   align-content: start;
   gap: 4px;
@@ -2100,6 +2101,16 @@ label {
   }
   & :is(label, .type-body, .type-caption, .type-figure) {
     color: inherit;
+  }
+  & label::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    cursor: pointer;
+  }
+  & [data-metric-help] {
+    position: relative;
+    z-index: 1;
   }
   &[data-on] {
     border-color: var(--metric);

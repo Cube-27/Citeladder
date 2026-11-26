@@ -68,7 +68,9 @@ export function MetricCards({
                 onCheckedChange={() => onToggle(card.key)}
                 className="min-w-0"
               />
-              <InfoHint label={`About ${label.toLowerCase()}`}>{METRIC_HELP[card.key]}</InfoHint>
+              <span data-metric-help="">
+                <InfoHint label={`About ${label.toLowerCase()}`}>{METRIC_HELP[card.key]}</InfoHint>
+              </span>
             </div>
             <span className={textRole('figure', 'tabular-nums whitespace-nowrap')}>
               {loading ? (

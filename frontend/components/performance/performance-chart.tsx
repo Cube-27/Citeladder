@@ -1,8 +1,7 @@
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { printed } from '@/components/ui/absence';
-import { niceTicks } from '@/components/ui/area-chart-data';
-import { CHART_HEIGHT_PX, useChartWidth } from '@/components/ui/chart';
+import { CHART_HEIGHT_PX, chartTicks, useChartWidth } from '@/components/ui/chart';
 import { ChartFrame } from '@/components/ui/chart-frame';
 import { AXIS_PROPS, LINE_CURSOR } from '@/components/ui/chart-tooltip';
 import { SeriesTable, shownWith, type TrendPoint } from '@/components/ui/series-data';
@@ -81,6 +80,12 @@ function spreadTicks(length: number, width: number): number[] {
   if (length <= wanted) return Array.from({ length }, (_, index) => index);
   const step = (length - 1) / (wanted - 1);
   return Array.from({ length: wanted }, (_, index) => Math.round(index * step));
+}
+
+const AXIS_CHAR_PX = 7;
+
+function axisWidth(labels: readonly string[]): number {
+  return Math.max(...labels.map((label) => label.length), 1) * AXIS_CHAR_PX + 14;
 }
 
 function edgeAnchor(value: number, ticks: readonly number[]): 'start' | 'middle' | 'end' {
@@ -186,13 +191,11 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
         />
         {plotted.map((entry, index) => {
           const placement = axisPlacement(index, plotted.length);
-          const ticks = niceTicks({
-            values: [
-              ...entry.selected.map((point) => point.value),
-              ...comparisonValues(entry),
-            ].filter((value) => value !== null),
-            yMin: 0,
-          });
+          const values = [
+            ...entry.selected.map((point) => point.value),
+            ...comparisonValues(entry),
+          ].filter((value) => value !== null);
+          const ticks = chartTicks(0, Math.max(0, ...values), 4);
           return (
             <YAxis
               key={entry.key}
@@ -200,7 +203,8 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
               yAxisId={entry.key}
               hide={placement === 'hidden'}
               orientation={placement === 'right' ? 'right' : 'left'}
-              width="auto"
+              width={axisWidth(ticks.map((tick) => formatAxisTick(entry.key, tick)))}
+              tickMargin={4}
               ticks={ticks}
               domain={[ticks[0] ?? 0, ticks.at(-1) ?? 1]}
               reversed={entry.key === 'position'}
@@ -208,11 +212,22 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
                 placement === 'hidden'
                   ? undefined
                   : {
-                      value: entry.label,
-                      position: 'top',
-                      offset: 16,
-                      fill: 'var(--color-ink-2)',
-                      fontSize: 12,
+                      content: ({ viewBox }) =>
+                        viewBox && 'width' in viewBox ? (
+                          <text
+                            x={
+                              placement === 'left'
+                                ? viewBox.x
+                                : (viewBox.x ?? 0) + (viewBox.width ?? 0)
+                            }
+                            y={(viewBox.y ?? 0) - 14}
+                            textAnchor={placement === 'left' ? 'start' : 'end'}
+                            fill="var(--color-ink-2)"
+                            fontSize={12}
+                          >
+                            {entry.label}
+                          </text>
+                        ) : null,
                     }
               }
               tickFormatter={(value: number) => formatAxisTick(entry.key, value)}
