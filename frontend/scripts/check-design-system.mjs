@@ -78,7 +78,7 @@ composition.push(
 if (composition.length) {
   const report = compositionReport(composition);
   if (COMPOSITION_ENFORCED) violations.push(report, ...composition);
-  else console.warn(`${report}\n(warning only; see heroui-surface migrate.md)`);
+  else console.warn(`${report}\n(warning only, AR-25; rules in docs/design.md#composition)`);
 }
 
 if (violations.length) {

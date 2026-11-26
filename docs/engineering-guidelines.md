@@ -198,6 +198,20 @@ drawn sidebar is visible. In review: a `max-width` media query or
 `@container` rule under `components/marketing/screens/` that targets a
 `.cl-screen` part.
 
+### App restyles of shared primitives stay off the website
+
+**Rule:** A look change to a `components/ui` primitive the website also
+imports (button, input, select, textarea, tag, table, tabs, facts) goes
+behind the `app:` variant, or keeps the old value under
+`[[data-public-surface]_&]:`. Token values change only in the app's
+`:root:not([data-public-surface])` blocks.
+**Why:** The HeroUI move (2026-11) restyled shared controls; the review
+caught the website's tables losing their corner radius and its textareas
+their motion timing, after earlier rounds where a shared-component edit
+restyled pages nobody named.
+**Check:** In review, run `rg "components/ui/" frontend/components/marketing`
+and read every changed primitive in that list for an unscoped class change.
+
 ### Popup exits animate, eager CSS pays for itself
 
 **Rule:** Radix popups (menus, popovers, tooltips, dialogs) leave with a CSS

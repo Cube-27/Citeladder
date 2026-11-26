@@ -1,9 +1,10 @@
 # CiteLadder design
 
 The signed-in app's visual reference: tokens, layouts and one entry per
-component family. The app follows the Linear-style look the owner approved
-([AR-1 to AR-17](decisions.md#app-design-ar-owner-2026-11-20-unless-dated)): quiet greys, an inset
-content panel on tinted paper, borderless white surfaces, compact controls.
+component family. The app follows the look the owner approved
+([AR](decisions.md#app-design-ar-owner-2026-11-20-unless-dated)): HeroUI's
+tokens, surfaces and controls on CiteLadder's corner radii, an inset content
+panel on light paper, white cards with the soft card shadow.
 
 **Scope.** Tokens live in
 [`globals.css`](../frontend/apps/app/src/globals.css). The app binds its own
@@ -15,36 +16,41 @@ scope here. App code uses the app's role names, never a website role
 
 **Checks.** `pnpm check:policy` keeps three rules: no literal colours outside
 `globals.css`, WCAG AA contrast of token pairs (text 4.5:1, marks 3:1, both
-themes), and no Radix import outside `components/ui`. Everything else here is
-held by review.
+themes), and no Radix import outside `components/ui`. The same script reports
+breaks of the [composition rules](#composition) as a warning that never fails CI
+(AR-25); everything else here is held by review.
 
 ## Tokens
 
-| Token            | Dark                     | Light              | Use                                  |
-| ---------------- | ------------------------ | ------------------ | ------------------------------------ |
-| `ground`         | `#0a0a0a`                | `#e4eaf2`          | window and sidebar                   |
-| `page`           | `#111111`                | `#f0f4f9`          | the inset content panel's paper      |
-| `panel`          | `#1b1b1b`                | `#ffffff`          | surfaces on the paper, inputs        |
-| `raised`         | `#232323`                | `#ffffff`          | secondary buttons, menus             |
-| `raised-2`       | `#2e2e2e`                | `#e9eef6`          | hover and press fill, disabled field |
-| `state-hover`    | `rgb(255 255 255 / 4%)`  | `rgb(0 0 0 / 3%)`  | row and quiet-control hover          |
-| `state-selected` | `rgb(255 255 255 / 7%)`  | `rgb(0 0 0 / 6%)`  | tags, keyboard hints, value tokens   |
-| `rule`           | `rgb(255 255 255 / 11%)` | `rgb(0 0 0 / 11%)` | every hairline (the spec's `line`)   |
-| `control-line`   | `rgb(255 255 255 / 22%)` | `rgb(0 0 0 / 22%)` | checkbox and radio edge, draft edge  |
-| `ink`            | `#ececec`                | `#1d1d1d`          | text                                 |
-| `ink-2`          | `#a8a8aa`                | `#54585f`          | secondary text, icons                |
-| `accent`         | `#ff6a33`                | `#e8501a`          | "you, here" and focus                |
-| `primary`        | deep accent              | deep accent        | every action fill, white text        |
+Values live in [`globals.css`](../frontend/apps/app/src/globals.css): HeroUI's
+zinc neutrals and shadows in both themes (AR-1).
+
+| Token            | Use                                                     |
+| ---------------- | ------------------------------------------------------- |
+| `ground`         | window and sidebar                                      |
+| `page`           | the inset content panel's paper                         |
+| `panel`          | cards, overlays, controls on the paper                  |
+| `raised`         | secondary buttons, menus                                |
+| `raised-2`       | hover and press fill, disabled field                    |
+| `well`           | fields in a surface, quoted material, table group rows  |
+| `state-hover`    | row and quiet-control hover                             |
+| `state-selected` | tags, keyboard hints, value tokens                      |
+| `state-fill`     | controls in a surface, segmented tray, rail current row |
+| `rule`           | every hairline                                          |
+| `control-line`   | checkbox and radio edge, draft edge                     |
+| `ink`, `ink-2`   | text; secondary text and icons                          |
+| `accent`         | "you, here" and focus                                   |
+| `primary`        | every action fill, white text                           |
+| `shadow-card`    | page-level cards and controls on the paper; none in dark |
 
 Older role names bind onto the table so call sites keep working: `chrome` is
-`ground`, `surface` is `panel`, `well` is the `page` fill, the table tray is `#dde3ea` in light and `#262626` in dark, `chart-grid` is `rule`, `state-pressed` is `state-selected`, `on-ink` is
+`ground`, `surface` is `panel`, `chart-grid` is `rule`, `state-pressed` is `state-selected`, `on-ink` is
 `panel`. Status colours (`positive`, `negative`, `warning`, `info` and their
 `-wash` fills), `accent-text`, `accent-wash` and the data series keep their
 values in `globals.css`. A status colour appears only beside a glyph and a
 word, never as a large fill. Two exceptions (owner, 2026-11-22): a Site health
 page score, printed in `negative` below 50 and `warning` below 80, and
-Perception › Brand's sentiment donut and attribute bars (AR-19). The light surfaces are blue-tinted neutrals (owner, 2026-11-22) stepping darker in this order: `panel`, `page`,
-`raised-2`, `ground`, the table tray; the dark ones are pure neutral greys with no blue. A table's rows and inputs are `panel` in both themes. Data: `data-you` is the accent, `data-rival-1`
+Perception › Brand's sentiment donut and attribute bars (AR-19). Data: `data-you` is the accent, `data-rival-1`
 to `-4` ink then cool hues in rank order, `data-other` the grouped rest.
 
 ## Type
@@ -70,15 +76,14 @@ the job, never a size.
 ## Spacing, size and shape
 
 - **Spacing:** 2, 4, 8, 12, 16, 24, 32, 48 only.
-- **Controls:** 32 high; 44 below 900px or under a coarse pointer, and on
+- **Controls:** 36 high (HeroUI's medium); 44 below 900px or under a coarse pointer, and on
   sign-in, account and setup pages (the website's height, `control-lg`).
   Icons 14 in `ink-2` (Tabler, the `Icon` atom), centred on and no taller than
   the 14px text beside them; empty-state tiles and website wells draw larger.
   Every target is at least 24×24.
-- **Radii:** tag 4 (`rounded-mark`); control, card, table, strip, menu and
-  panel 6 (`rounded-control`, and `rounded-card` bound to it; owner,
-  2026-11-22); overlay 12 (`rounded-overlay`); `full` only for avatars, dots
-  and switch tracks.
+- **Radii** stay CiteLadder's, not HeroUI's (AR-1): tag 5 (`rounded-mark`),
+  control and menu 8 (`rounded-control`), card 10 (`rounded-card`), overlay 14
+  (`rounded-overlay`); `full` only for avatars, dots and switch tracks.
 
 ## Kept rules
 
@@ -107,9 +112,8 @@ skeleton, a flow route its plain ground. Data on screen stays while it
 refreshes.
 
 **Accessibility.** WCAG AA in both themes; meaning never by colour alone; one
-`focus` ring, never removed: a 1px accent edge with a soft accent glow (3px
-at 24%), drawn inward where a frame clips it; the edge holds 3:1 on every
-fill; all motion stops under
+`focus` ring, never removed: a 2px accent ring 2px outside the control,
+drawn inward where a frame clips it; it holds 3:1 on every fill; all motion stops under
 `prefers-reduced-motion`.
 
 ## Standard layouts
@@ -119,10 +123,9 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Shell.** Sidebar 224 on `ground` (200 below 1280), 8 padding: header row
   as tall as the page header (workspace switcher, settings icon), the
   Dashboard | Agent segmented control, 32-high nav rows (current row on a
-  `#d3e3fd` pill in light, `rgb(255 255 255 / 11%)` in dark, with a 2px accent
-  mark), 12px group labels, foot with Integrations (the collapse toggle at
+  `nav-current-fill` pill with the card shadow, and a 2px accent mark), 12px group labels, foot with Integrations (the collapse toggle at
   its end) and the account (AR-8). The main column is the inset panel: 8 from the window
-  edges (none on the sidebar side), a `rule` edge at half strength, radius 6,
+  edges (none on the sidebar side), a `rule` edge at half strength, card radius,
   `page` fill, the page's only scroller: the window never scrolls and nothing
   shows below the panel (owner, 2026-11-23). Scrollbars are the browser's thin
   bar, shown on hover. Dragging the sidebar's edge draws no line. Below 900 the panel fills the
@@ -135,16 +138,16 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   action, Search ⌘K and Ask agent at the right edge. The section is the nav
   group holding the current row, Agent, or Workspace; below 900 only the
   page shows.
-- **Tab strip** (owner, 2026-11-22), 40 high: folder tabs on a `rule`
-  baseline that runs only between the page paddings; the current tab is
-  framed in `rule` on three sides with a 6 radius on top, on `page`. The
+- **Tab strip**, 40 high: underline tabs on a `rule` baseline that runs only
+  between the page paddings; the current tab is `ink` over a 2px `ink`
+  underline (`tab-line`), the rest `ink-2`. The
   tab strip and the toolbar under it stick below the page header with 12 of
   `page` above and below them.
 - **Body.** 24 side padding (16 below 760px), 24 below; the title, tab
   strip, toolbar and content sit 12 apart, the same gap as a table's
   toolbar above its table (owner, 2026-11-22): status line,
-  then the metric strip, then sections 24 apart with no rule between them;
-  a section's head sits 12 above its body. Links carry no underline at rest,
+  then the metric strip, then cards 20 apart (`--page-section-gap`) with no
+  rule between them; a section's head is inside its card (AR-24). Links carry no underline at rest,
   only on hover and focus. Narrow pages centre the body in their column (AR-9; 1040:
   Overview, Projects, Issues, Actions, Agent, Settings, Agent context; 720:
   Billing, Pricing, Runs, and the Site Health page detail and Action detail
@@ -152,30 +155,31 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
   page-wide toolbar is the strip under the tabs, with no rule.
-- **Metric strip:** one `panel` strip with no edge or
-  shadow, radius 6, cells divided by hairlines, cell padding 10 by 16, 12px label over the value. Never cards;
+- **Metric strip:** a bleed slot of a card (on the paper it brings its own
+  card), cells divided by hairlines, padded 12 by the card inset, 12px label
+  over the value. Never one card per figure;
   no meters, rings or bars inside a cell (AR-3). The one table with a bar in a
   cell is Perception › Brand's attributes table (AR-19).
-- **Table** (the HeroUI table, owner 2026-11-22): a tray (`#dde3ea` in
-  light, `#262626` in dark), radius 6, no edge, 4 padding at the sides and
-  foot; head 36 on the tray, 12px at 500, a 16-high `rule` tick between
-  columns; the body a `panel` card, radius 4, cells padded 16; rows
-  44, one line each, hairline dividers, `state-hover` fill; secondary text
+- **Table:** a `DataTable` is always a `Section` (a card on the paper, flat in
+  a surface) whose rows bleed to the card's edges; no tray and no inner card.
+  Head band 36 on `table-head-ground`, 12px at 500, a 16-high `rule` tick
+  between columns; cells padded 12 inline and 8 block, the first and last
+  cell padded to the card inset so cell text lines up with the title and
+  actions; rows 44, one line each, hairline dividers, `state-hover` fill; secondary text
   inline after the primary in `ink-2`; numbers right-aligned in tabular
   figures; foot 40 with the count and an icon pager. The first column takes the spare width,
   the others hug their content (AR-4).
 - **Settings layout** (Settings, Agent context, Billing, Pricing): the
-  route's column holds a stack of groups 32 apart, with no rule between
-  them. Settings and Agent context list their sections in a sticky 192 rail
+  route's column holds a stack of group cards 20 apart. Settings and Agent context list their sections in a sticky 192 rail
   of sidebar rows on the column's left (`TabRail`), never a tab strip; the
   current section sits 24 beside it, at most 720 wide (Business map takes
   the rest of the column), so the header and rail never move (AR-9). A
   section stacks its groups the same way. A
-  group (`SettingsGroup`) is a heading (16/24 at 500, a status 8 after it), an
-  optional one-line 12px `ink-2` caption 4 below, the group's one action
-  right-aligned on the heading's line (secondary), then 12 below its body.
-  The body is one borderless list (`SettingRows`: radius 6, `panel`) of
-  setting rows with a hairline between them; or, for a list of things
+  group (`SettingsGroup`) is a `Section` card: its header (subheading, a
+  status 8 after it, an optional one-line 12px `ink-2` caption 4 below, the
+  group's one action right-aligned on the heading's line), then its body 16
+  below. The body is a bleed list (`SettingRows`) of setting rows with a
+  hairline between them; or, for a list of things
   (members, keys, connections, invoices, offerings), a `DataTable`. Notices
   about a group sit between its head and its body. A row (`SettingRow`) is
   padded 12 by 16, at least 52 high: a 14/500 label with an optional 12px
@@ -186,14 +190,59 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   primary Save in the frame's foot, right-aligned, disabled until something
   changed. Destructive actions (cancel plan, leave workspace, delete
   project) are danger buttons in the page's last group, never primary. Plan
-  cards are the layout's only cards: one row of equal cards (one per line
-  when they do not fit), prices in tabular figures, the current plan marked by a 2px
-  accent rule along its top and the words "Current plan". A model's
-  suggestion keeps the dashed draft edge.
+  cards are the layout's only row of cards (`CardGroup` heading over a
+  `CardRow` of equal `Section`s, one per line below 640), prices in tabular
+  figures, the current plan a `Section accent` (a 2px accent rule along its
+  top) with the words "Current plan". A model's suggestion keeps the dashed
+  draft edge.
+
+## Composition
+
+One closed set of primitives in
+[`section.tsx`](../frontend/components/ui/section.tsx) and
+[`section.css`](../frontend/components/ui/section.css), modelled on HeroUI's
+Card (owner, 2026-11-26: the same bug should show on every page, so no screen
+draws its own geometry). Every visible thing in the app's main column, drawers
+and dialogs is one of them; [`section.test.tsx`](../frontend/components/ui/section.test.tsx)
+holds the depth rules.
+
+- **Pages pass content, never geometry.** No primitive takes `className`; no
+  page adds padding, margin, border, fill, radius or shadow around one; no
+  globals rule depends on what contains what. A primitive that needs its
+  depth reads `SurfaceContext` (`useOnPage()`), never a CSS ancestor. The one
+  exception is the control face per ground (Buttons above).
+- **Depth.** `Section`, `PanelFrame`, `Drawer`, `Dialog` and `DraftSheet`
+  provide `surface`. On the paper a `Section` is a card (`panel`, card radius
+  and shadow, padded `--panel-inset` 16); inside a surface it is flat (no
+  fill, padding, radius or shadow) and its title takes the subheading role. A
+  card can never draw inside a card.
+- **Slots.** `Section` > `SectionHeader` (title, description, `actions`) >
+  `SectionToolbar` (`FilterBar` or tabs) > `SectionContent` (at the inset;
+  `fill` takes the card's spare height) > `SectionBleed` > `SectionFooter`,
+  16 apart. The header lives inside the card (AR-24); `actions` holds buttons,
+  links and a status, never a filter or tabs, and a value-setting control goes
+  in the toolbar when there is one.
+- **Bleed.** `SectionBleed` is the one full-width slot: tables, `FigureStrip`,
+  `SettingRows`, `LedgerList` and other row lists run edge to edge and pad
+  `--panel-inset` on their own edges, so row text lines up with the title.
+  A bleed that is the card's first or last slot meets that edge; otherwise it
+  draws one hairline on top, the only rule a card draws. It must be a direct
+  child of the section (tab wrappers in a surface pass through). Nothing else
+  uses negative margins. On the paper a bleed, strip, table or `StateBlock`
+  with no section around it wraps itself in one.
+- **Page body.** A `SectionStack` of page-level `Section`s, `AppGrid`s of them
+  and self-wrapping primitives, `--page-section-gap` apart; only headings, the
+  page toolbar and a `Notice` sit on the paper (AR-22).
+- **Overlays.** A drawer or dialog body is a surface at `--modal-padding` (24):
+  its sections are flat and 24 apart, tables bleed to its edges. Fields
+  inside group in one `Stack gap="workspace"`; nothing else wraps the body.
+  Overlay styling keys on `data-overlay`, never `[role=dialog]`.
+- **Never:** a card inside a card, a hand-written card face (`wellClasses` is
+  only for quoted or raw material), a table, strip or list inside
+  `SectionContent`, a `FilterBar` or tabs in header `actions`, `-mx`/`-my`
+  outside `SectionBleed`.
 
 ## Components
-
-One entry per family; wave 2 fills each from the layouts above.
 
 - **Tables.** Geometry as in Standard layouts. A page declares each
   column's kind and width role, never a pixel width; `DataTable` turns them
@@ -213,20 +262,12 @@ One entry per family; wave 2 fills each from the layouts above.
 - **URLs** (`UrlText`, `UrlCutParts`). A URL is cut in the middle (AR-23): the
   last path segment stays whole when short, otherwise the last 28 characters
   stay, and the full URL shows in the tooltip.
-- **Containers.** One section head (16/24 at 500, actions right, body 12
-  below) and one surface (`SLIP_FACE`: radius 6, `panel`). Everything but a
-  heading sits on a surface (AR-22): a section's bare list, facts or prose
-  goes in `SectionCard`, a form in `SettingRows`. Surfaces carry
-  no outer edge and no shadow (owner, 2026-11-22): on the `page` paper every
-  surface (strips, setting rows, cards, charts, a table's body on its tray)
-  is `panel`, and so are the controls on it;
-  hairlines stay only inside a surface. An input inside a surface takes
-  `well`. Only hover and selected fills, insets for quoted or raw material,
-  and overlays take another fill.
-- **Lists and rows.** A list row matches a table row: 40 high, hairlines
+- **Containers.** See [Composition](#composition): the card is `Section`, and
+  nothing else draws a card in the app.
+- **Lists and rows.** A list row matches a table row: 44 high, hairlines
   between rows, `state-hover` when it opens something.
 - **Overlays** (dialogs, drawers, command palette). `panel` with no edge,
-  radius 12 and the sheet shadow; header and body padded 24, the
+  radius 14 and the sheet shadow; header and body padded 24, the
   footer 12 by 24 under a hairline.
 - **States.** Loading draws the final geometry (a table its head over block
   rows, a strip its cells). Empty and error sit quietly inside the frame of
@@ -238,16 +279,19 @@ One entry per family; wave 2 fills each from the layouts above.
   included. Your series is the accent, drawn last; a missing period is a
   gap, never a zero. Series colours come from one map by identity
   (`SERIES_STROKE`, `SERIES_FILL`); position-coloured charts map onto it.
-- **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 32,
-  radius 6, flat; 14px icons in `ink-2` on a secondary. Secondary: `raised`
-  with no edge, `raised-2` on hover, press or open. Quiet: transparent,
-  `state-hover` fill. Primary: `primary` fill (the deep accent),
+- **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 36,
+  radius 8; 14px icons in `ink-2` on a secondary. Secondary, filter chip,
+  select trigger and field share one face per ground: on the paper `raised`
+  with the field shadow, inside a surface (card, overlay, well, menu) the
+  `state-fill` grey with no shadow. App rules key on the `ui-button-<variant>`
+  class `buttonClasses()` emits, so a link styled as a button matches. Quiet:
+  transparent, `ink`, `state-hover` fill. Primary: `primary` fill (the deep accent),
   white text, at most one per view. Danger: secondary with negative text; filled only to confirm in a
   dialog (`danger-confirm`). One disabled look for every variant. The
   website keeps its layered `.face`.
-- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 32, `panel`
-  with no edge at rest; focused, an accent edge and its
-  glow; invalid, a negative edge and a negative glow. 14px leading icon. Checkbox and radio
+- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 36, the
+  control face above with no edge at rest (`well` inside a surface); focused,
+  the focus ring; invalid, a negative edge. Disabled controls draw at 50%. 14px leading icon. Checkbox and radio
   are `panel` with a `control-line` edge, the one edged control, and a `primary` fill when on; the switch is a `primary`
   track when on, as is a picked calendar day and the setup stepper. Several short values ([`ValuesInput`](../frontend/components/ui/chip-input.tsx))
   are 24-high tokens on `state-selected`, a suggestion dashed with one accept
@@ -258,20 +302,21 @@ One entry per family; wave 2 fills each from the layouts above.
   are its sliders, 5% steps, a dot legend in the full hues under it.
 - **Selects and menus.** A select or filter trigger is a secondary button's
   face (`TRIGGER_BOX`); a typed combobox is an input. Menus, listboxes and
-  tooltips are `raised` with no edge, radius 6, 28-high rows on
-  `state-hover`.
+  tooltips are `raised` with the pop shadow, radius 8, 28-high rows on
+  `state-hover`; a select's list is at least its trigger's width.
 - **Tabs and segmented control** ([`tabs.tsx`](../frontend/components/ui/tabs.tsx)).
-  Tabs are folder tabs padded 16, the current one `ink` on `page` in a `rule` frame
-  open at the bottom, the rest `ink-2`.
-  Segmented control (and the sidebar's Dashboard | Agent): a `state-hover`
-  tray one control high with no edge, 28-high segments, the selected one a
-  `raised` pill with the card shadow.
-- **Tags and status.** Tag: 20 high, radius 4, `state-selected` fill, no edge, 12px `ink-2`; a
+  Tabs are underline tabs padded 16 at 500, the current one `ink` over a 2px
+  `ink` line, the rest `ink-2`. A panel's tabs are the slot under its header,
+  their baseline across the card; never above the card or in its actions.
+  Segmented control (and the sidebar's Dashboard | Agent): a `state-fill`
+  tray padded 4 with no edge, 32-high segments, the selected one a
+  `nav-current-fill` pill with the card shadow.
+- **Tags and status.** Tag: 20 high, radius 5, `state-selected` fill, no edge, 12px at 500 in `ink`; a
   draft is dashed; Kbd and composer chips share the face. Status
   (`StatusMark`): the tone's 6px dot and a 12px word at 500 in `ink`, 20
   high, no frame (owner, 2026-11-21); a live state draws the spinner.
   Priority's bars alone sit in a pill (radius full, `rule` edge).
-- **Navigation.** Sidebar rows: 14px icon, label, 8 apart, radius 6, `ink`
+- **Navigation.** Sidebar rows: 14px icon, label, 8 apart, radius 8, `ink`
   at rest and `state-hover` on hover; a group label folds its rows and a
   folded group still shows the current row. Collapsed (⌘\ or the toggle,
   remembered per browser) the sidebar is a 56 rail of 40 buttons, one per

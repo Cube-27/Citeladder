@@ -49,10 +49,6 @@ how to add or change an entry.
 - **Source code has no comments.** Names, types, tests and owner docs carry
   the meaning; a check enforces it and allows only machine-read directives.
   Owner, 2026-11-21 (#1136).
-- **Three design checks, no more.** No literal colours in app code, WCAG AA
-  contrast of token pairs, and no Radix import outside `components/ui`; every
-  other visual choice is the owner's, held by review. Owner, 2026-11-20
-  ([AR-6](#app-design-ar-owner-2026-11-20-unless-dated)).
 
 ## Accounts, access and sign-in
 
@@ -341,9 +337,11 @@ how to add or change an entry.
 
 [Design](design.md) holds the values; these are the rules behind them.
 
-- **AR-1 Look:** blue-tinted neutrals in light and pure neutral greys in dark, Google Sans as the sans face, an inset content panel on tinted paper, white
-  surfaces and controls with no outer border or shadow, corners at the button
-  radius, compact controls (2026-11-22). **AR-2 Text:** body and labels 14px, captions 12px, controls 32px and the page header 48px (owner, 2026-11-22).
+- **AR-1 Look:** HeroUI's tokens, surfaces and controls (neutrals, shadows,
+  control sizes, focus), keeping CiteLadder's corner radii; Google Sans as the
+  sans face and an inset content panel (2026-11-26). The HeroUI move changes
+  layout and styling only, never behaviour (2026-11-26). **AR-2 Text:** body
+  and labels 14px, captions 12px and the page header 48px (2026-11-22).
 - **AR-3 Metrics** sit in one strip with hairline dividers, never cards, with no
   meters, rings or bars in a cell. A strip is always one row, never wrapped into
   two (2026-11-25). **AR-4 Tables:** the first column takes the
@@ -352,8 +350,7 @@ how to add or change an entry.
   the defect to fix first (2026-11-23).
 - **AR-5** The line language (solid observed, dashed draft, `—` absent, printed
   `0`) and the accent meaning "you, here" stay; the accent also marks focus.
-- **AR-6** Only the three design checks under Platform remain. **AR-7** The
-  website and docs keep their look; the app's tokens are its own.
+- **AR-7** The website and docs keep their look; the app's tokens are its own.
 - **AR-8 Sidebar collapse:** the toggle sits at the end of the Integrations row
   when expanded and on its own row in the icon rail (2026-11-21).
 - **AR-9 Widths:** 1040 column for Overview, Projects, Issues, Actions, Agent,
@@ -394,6 +391,12 @@ how to add or change an entry.
   the implementer's pick).
 - **AR-23 Long URLs** are cut in the middle, keeping their start and end, on
   every screen (2026-11-25).
+- **AR-24 One composition:** every page, drawer and dialog is built from one
+  closed set of section primitives so a layout bug shows everywhere at once;
+  a section's header lives inside its card, as HeroUI's Card.Header
+  (2026-11-26).
+- **AR-25** The design-system composition check warns and never fails CI
+  (2026-11-26).
 
 ## Audit remediation (owner 2026-11-12)
 
