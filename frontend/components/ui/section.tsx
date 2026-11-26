@@ -1,4 +1,10 @@
-import { createContext, useContext, type ComponentPropsWithoutRef, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  type ComponentPropsWithoutRef,
+  type HTMLAttributes,
+  type ReactNode,
+} from 'react';
 
 import {
   SectionTitleRoleContext,
@@ -96,7 +102,7 @@ export function SectionBleed({
   as: Element = 'div',
   ...props
 }: Readonly<
-  Omit<ComponentPropsWithoutRef<'div'>, 'className'> & {
+  Omit<HTMLAttributes<HTMLElement>, 'className'> & {
     children: ReactNode;
     rows?: boolean;
     scroll?: boolean;
