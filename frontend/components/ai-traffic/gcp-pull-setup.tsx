@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Section } from '@/components/ui/section';
 import { Notice } from '@/components/ui/notice';
-import { CodeWell } from '@/components/ui/slip';
+import { CodeWell } from '@/components/ui/well';
 import { Text } from '@/components/ui/typography';
 
 type Source = z.infer<typeof crawlSourceSchema>;

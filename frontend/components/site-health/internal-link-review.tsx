@@ -7,7 +7,7 @@ import { PageOpenContext } from '@/components/site-health/page-open-context';
 import { Checkbox } from '@/components/ui/checkbox';
 
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { AnchorMark, TextWell } from '@/components/ui/slip';
+import { AnchorMark, TextWell } from '@/components/ui/well';
 import { ClampText } from '@/components/ui/clamp-text';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
