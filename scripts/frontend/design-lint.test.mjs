@@ -46,6 +46,8 @@ test('the canary trips every design rule under the shipped lint config', () => {
   assert.deepEqual(lintCanary().sort(), [
     'canary.astro:2 design/astro-class',
     'canary.astro:2 design/astro-class',
+    'canary.astro:2 design/astro-class',
+    'canary.astro:2 design/astro-class',
     'canary.tsx:10 design/plain-element',
     'canary.tsx:11 design/plain-element',
     'canary.tsx:12 design/plain-element',
