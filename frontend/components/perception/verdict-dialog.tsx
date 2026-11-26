@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
+import { Stack } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
@@ -79,23 +80,25 @@ export function VerdictDialog({
       {override.isError ? (
         <Notice tone="negative">{humanizeApiError(override.error).message}</Notice>
       ) : null}
-      <RadioGroup
-        ariaLabel="Verdict"
-        variant="inline"
-        value={verdict}
-        onValueChange={setVerdict}
-        options={OPTIONS}
-      />
-      <Field label="Note" hint="Optional">
-        {(props) => (
-          <Textarea
-            {...props}
-            rows={3}
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-          />
-        )}
-      </Field>
+      <Stack gap="workspace">
+        <RadioGroup
+          ariaLabel="Verdict"
+          variant="inline"
+          value={verdict}
+          onValueChange={setVerdict}
+          options={OPTIONS}
+        />
+        <Field label="Note" hint="Optional">
+          {(props) => (
+            <Textarea
+              {...props}
+              rows={3}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          )}
+        </Field>
+      </Stack>
     </Dialog>
   );
 }

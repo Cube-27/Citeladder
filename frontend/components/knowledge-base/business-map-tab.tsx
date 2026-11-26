@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
-import { Stack } from '@/components/ui/layout';
+import { SectionStack } from '@/components/ui/section';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -50,7 +50,7 @@ export function BusinessMapTab({
     listMax: limits.context_list_max_entries,
   };
   return (
-    <Stack gap="section">
+    <SectionStack>
       {business.save.error ? (
         <Notice
           kind="mutation"
@@ -61,7 +61,7 @@ export function BusinessMapTab({
       <OfferingsGrid {...editor} saved={map} />
       <BusinessFacts {...editor} context={profile.business_context} />
       {mayEdit ? <SaveBar business={business} /> : null}
-    </Stack>
+    </SectionStack>
   );
 }
 

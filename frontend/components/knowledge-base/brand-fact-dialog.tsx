@@ -95,13 +95,13 @@ export function BrandFactDialog({
         </>
       }
     >
+      {mutation.isError ? (
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(mutation.error, { action: 'save the fact' })}
+        />
+      ) : null}
       <Stack gap="workspace">
-        {mutation.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(mutation.error, { action: 'save the fact' })}
-          />
-        ) : null}
         <Field label="Topic">
           {(props) => (
             <Select
