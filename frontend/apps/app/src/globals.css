@@ -918,8 +918,8 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   }
 }
 
-.focus-ring[aria-current='page'] .text-caption,
-a.focus-ring:active .text-caption {
+.focus-ring[aria-current='page'] .text-caption.text-ink-2,
+a.focus-ring:active .text-caption.text-ink-2 {
   color: var(--text-color-ink);
 }
 
