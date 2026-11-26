@@ -19,13 +19,19 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
-  gap: var(--panel-inset);
+  gap: var(--card-padding);
   min-width: 0;
 }
 
 [data-panel='card'] {
   --panel-inset: var(--card-padding);
   padding: var(--panel-inset);
+}
+
+[data-panel='card'][data-accent] {
+  box-shadow:
+    inset 0 2px 0 var(--color-accent),
+    var(--shadow-card);
 }
 
 [data-panel='card'],
@@ -64,7 +70,7 @@
 [data-slot-host] {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--panel-inset);
+  gap: var(--card-padding);
   min-width: 0;
 }
 
@@ -78,4 +84,11 @@
 
 [data-bleed-rows] > * {
   padding: 12px var(--panel-inset);
+}
+
+[data-bleed] .table-frame tr > :first-child {
+  padding-inline-start: calc(var(--panel-inset) + var(--cell-indent, 0px));
+}
+[data-bleed] .table-frame tr > :last-child {
+  padding-inline-end: var(--panel-inset);
 }

@@ -217,19 +217,16 @@ export function BrandTrendPanel({
   });
   return (
     <Section aria-labelledby={titleId}>
-      <SectionHeader
-        actions={
-          <SegmentedControl
-            ariaLabel="Plotted metric"
-            value={metric}
-            options={VISIBILITY_METRICS}
-            onChange={onMetric}
-          />
-        }
-      >
+      <SectionHeader>
         <SectionTitle id={titleId}>Your brand over time</SectionTitle>
       </SectionHeader>
       <SectionToolbar>
+        <SegmentedControl
+          ariaLabel="Plotted metric"
+          value={metric}
+          options={VISIBILITY_METRICS}
+          onChange={onMetric}
+        />
         <FilterChoice
           label="Focus"
           value={focusedBrand ?? ALL_BRANDS}

@@ -73,8 +73,10 @@ export function Masthead({
           <MastheadPrimarySlot value={primarySlot}>
             <MastheadOverflow>
               {actions}
-              {search ? <div className="rail:order-1 flex flex-col">{search}</div> : null}
-              {end ? <div className="rail:order-1 flex flex-col">{end}</div> : null}
+              {search ? (
+                <div className="rail:order-1 flex flex-col empty:hidden">{search}</div>
+              ) : null}
+              {end ? <div className="rail:order-1 flex flex-col empty:hidden">{end}</div> : null}
             </MastheadOverflow>
           </MastheadPrimarySlot>
         ) : null}

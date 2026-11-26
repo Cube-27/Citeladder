@@ -70,22 +70,14 @@ function DialogHeader({
   description,
   toolbar,
   danger,
-  divided,
 }: Readonly<{
   title: ReactNode;
   description?: ReactNode;
   toolbar?: ReactNode;
   danger: boolean;
-  divided: boolean;
 }>) {
   return (
-    <header
-      className={cn(
-        'flex items-start gap-3 p-[var(--modal-padding)]',
-        !danger && 'pe-14',
-        divided && 'pb-2',
-      )}
-    >
+    <header className={cn('flex items-start gap-3 p-[var(--modal-padding)]', !danger && 'pe-14')}>
       {danger ? (
         <span className="text-negative inline-flex h-7 items-center">
           <Icon icon={AlertTriangle} className="my-0" />
@@ -155,13 +147,7 @@ export function Dialog({
             !answer && overlayWidth(danger || width === 'answer' ? 'narrow' : width),
           )}
         >
-          <DialogHeader
-            title={title}
-            description={description}
-            toolbar={toolbar}
-            danger={danger}
-            divided={children != null}
-          />
+          <DialogHeader title={title} description={description} toolbar={toolbar} danger={danger} />
           {danger ? null : (
             <DialogPrimitive.Close asChild>
               <IconButton

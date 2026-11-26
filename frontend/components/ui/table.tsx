@@ -211,7 +211,10 @@ export function TableCell({
 export function TableGroupRow({ span, children }: Readonly<{ span: number; children: ReactNode }>) {
   return (
     <TableRow>
-      <TableCell colSpan={span} className={textRole('emphasis', 'bg-well')}>
+      <TableCell
+        colSpan={span}
+        className={textRole('emphasis', 'bg-well [--table-ground:var(--color-well)]')}
+      >
         {children}
       </TableCell>
     </TableRow>

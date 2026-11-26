@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useId,
   type ComponentPropsWithoutRef,
   type HTMLAttributes,
   type ReactNode,
@@ -20,12 +21,12 @@ export const SurfaceContext = createContext<SurfaceDepth>('page');
 
 export const useOnPage = () => useContext(SurfaceContext) === 'page';
 
-type SectionProps = Omit<ComponentPropsWithoutRef<'section'>, 'className'>;
+type SectionProps = Omit<ComponentPropsWithoutRef<'section'>, 'className'> & { accent?: boolean };
 
-export function Section({ children, ...props }: Readonly<SectionProps>) {
+export function Section({ children, accent = false, ...props }: Readonly<SectionProps>) {
   const onPage = useOnPage();
   return (
-    <section {...props} data-panel={onPage ? 'card' : 'flat'}>
+    <section {...props} data-panel={onPage ? 'card' : 'flat'} data-accent={accent ? '' : undefined}>
       <SurfaceContext value="surface">
         <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
       </SurfaceContext>
@@ -48,7 +49,7 @@ export function SectionHeader({
   return (
     <header {...props} className="flex min-w-0 flex-wrap items-start justify-between gap-2">
       <div className="grid min-w-0 flex-1 basis-40 grid-cols-[minmax(0,1fr)] gap-1">{children}</div>
-      <div className="-my-1 flex min-h-[var(--control-md)] max-w-full min-w-0 flex-wrap items-center gap-2">
+      <div className="-my-2 flex min-h-[var(--control-md)] max-w-full min-w-0 flex-wrap items-center gap-2">
         {actions}
       </div>
     </header>
@@ -201,5 +202,37 @@ export function SectionStack({
     >
       {children}
     </Element>
+  );
+}
+
+export function CardGroup({
+  title,
+  description,
+  id,
+  children,
+}: Readonly<{ title: ReactNode; description?: ReactNode; id?: string; children: ReactNode }>) {
+  const titleId = useId();
+  return (
+    <section
+      id={id}
+      aria-labelledby={titleId}
+      className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-[var(--card-padding)]"
+    >
+      <SectionHeader>
+        <SectionTitle id={titleId}>{title}</SectionTitle>
+        {description ? <SectionDescription>{description}</SectionDescription> : null}
+      </SectionHeader>
+      {children}
+    </section>
+  );
+}
+
+export function CardRow({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <div className="@container min-w-0">
+      <div className="grid gap-[var(--page-section-gap)] @[640px]:auto-cols-fr @[640px]:grid-flow-col">
+        {children}
+      </div>
+    </div>
   );
 }

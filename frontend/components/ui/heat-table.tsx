@@ -11,6 +11,7 @@ import {
 import { Absence, printed } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { SkeletonBlock, SkeletonFrame } from '@/components/ui/skeleton-block';
+import { SectionBleed } from '@/components/ui/section';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import type { DataAvailabilityState, Formatted } from '@/lib/format';
@@ -91,7 +92,7 @@ const RANK_CHIP =
 const RANK_FLOOR = 'phone:min-w-[calc(10rem+var(--grid-columns)*8rem)]';
 
 function GridFloor({ columns, children }: Readonly<{ columns: number; children: ReactNode }>) {
-  return <div style={cssVars({ '--grid-columns': columns })}>{children}</div>;
+  return <SectionBleed style={cssVars({ '--grid-columns': columns })}>{children}</SectionBleed>;
 }
 
 export function GridTableSkeleton({
@@ -111,34 +112,36 @@ export function GridTableSkeleton({
       </td>
     );
   return (
-    <SkeletonFrame label={label} variant="grid">
-      <Table fixed>
-        <TableHeader>
-          <TableRow>
-            <TableHead className={variant === 'heat' ? 'w-40' : 'w-54'}>
-              <SkeletonBlock className="w-16" />
-            </TableHead>
-            {Array.from({ length: columns }, (_, index) => (
-              <TableHead key={index}>
-                <SkeletonBlock className="mx-auto w-12" />
+    <SectionBleed>
+      <SkeletonFrame label={label} variant="grid">
+        <Table fixed>
+          <TableHeader>
+            <TableRow>
+              <TableHead className={variant === 'heat' ? 'w-40' : 'w-54'}>
+                <SkeletonBlock className="w-16" />
               </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {Array.from({ length: rows }, (_, row) => (
-            <TableRow key={row}>
-              <TableRowHeader>
-                <SkeletonBlock className="w-24" />
-              </TableRowHeader>
               {Array.from({ length: columns }, (_, index) => (
-                <Fragment key={index}>{cell}</Fragment>
+                <TableHead key={index}>
+                  <SkeletonBlock className="mx-auto w-12" />
+                </TableHead>
               ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </SkeletonFrame>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: rows }, (_, row) => (
+              <TableRow key={row}>
+                <TableRowHeader>
+                  <SkeletonBlock className="w-24" />
+                </TableRowHeader>
+                {Array.from({ length: columns }, (_, index) => (
+                  <Fragment key={index}>{cell}</Fragment>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </SkeletonFrame>
+    </SectionBleed>
   );
 }
 

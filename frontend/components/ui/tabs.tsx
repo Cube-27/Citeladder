@@ -71,7 +71,7 @@ export const TAB_BASELINE = 'shadow-[inset_0_-1px_0_var(--color-rule)]';
 
 const STRIP_ROW = {
   page: 'min-h-[var(--page-tabs-height,var(--control-md))]',
-  section: TAB_BASELINE,
+  section: cn(TAB_BASELINE, 'flex w-full'),
 } as const;
 
 export const TAB_TRACK =
@@ -161,8 +161,12 @@ export function TabRow<T extends string>({ items, ariaLabel, onIntent }: TabRowP
   return <TabStrip kind="page" items={items} ariaLabel={ariaLabel} onIntent={onIntent} />;
 }
 
+const railRow = (current: boolean, onPage: boolean) =>
+  sidebarNavRowClasses(current, !onPage && current ? 'bg-state-fill shadow-none' : undefined);
+
 export function TabRail<T extends string>({ items, ariaLabel, onIntent }: TabRowProps<T>) {
   const active = useContext(ActiveTabContext);
+  const onPage = useOnPage();
   return (
     <TabsPrimitive.List aria-label={ariaLabel} className="flex min-w-0 flex-col gap-0.5">
       {items.map((item) => (
@@ -173,7 +177,7 @@ export function TabRail<T extends string>({ items, ariaLabel, onIntent }: TabRow
           onMouseEnter={() => onIntent?.(item.value)}
           onFocus={() => onIntent?.(item.value)}
           onKeyDown={pageKeyScrollsPage}
-          className={sidebarNavRowClasses(item.value === active)}
+          className={railRow(item.value === active, onPage)}
         >
           <span className="truncate">{item.label}</span>
           {item.count === undefined ? null : <ControlCount count={item.count} />}
@@ -188,6 +192,7 @@ export function HeldTabRail({
   selected,
 }: Readonly<{ labels: readonly string[]; selected?: string }>) {
   const current = selected !== undefined && labels.includes(selected) ? selected : labels[0];
+  const onPage = useOnPage();
   return (
     <div
       aria-hidden
@@ -198,7 +203,7 @@ export function HeldTabRail({
         <span
           key={label}
           data-selected={label === current || undefined}
-          className={sidebarNavRowClasses(label === current)}
+          className={railRow(label === current, onPage)}
         >
           <span className="truncate">{label}</span>
         </span>
