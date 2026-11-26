@@ -2,6 +2,7 @@ import type { UrlCodec } from '@/lib/navigation/url-state';
 
 export const PROMPT_COHORTS = ['core', 'comparison', 'all'] as const;
 export type PromptCohort = (typeof PROMPT_COHORTS)[number];
+export const FACT_CHECK_COHORT: PromptCohort = 'all';
 
 const storageKey = (projectId: string) => `citeladder.prompt-cohort.${projectId}`;
 
@@ -20,9 +21,12 @@ function readStoredCohort(projectId: string | null): PromptCohort {
   }
 }
 
-export function cohortUrlCodec(projectId: string | null): UrlCodec<PromptCohort> {
+export function cohortUrlCodec(
+  projectId: string | null,
+  fallback?: PromptCohort,
+): UrlCodec<PromptCohort> {
   return {
-    parse: (raw) => (isPromptCohort(raw) ? raw : readStoredCohort(projectId)),
+    parse: (raw) => (isPromptCohort(raw) ? raw : (fallback ?? readStoredCohort(projectId))),
     serialize: (value) => value,
   };
 }
