@@ -34,30 +34,6 @@ export function MetaFooter({
   );
 }
 
-export function SubsectionHeader({
-  title,
-  description,
-  trailing,
-  headingId,
-}: Readonly<{
-  title: ReactNode;
-  description?: ReactNode;
-  trailing?: ReactNode;
-  headingId?: string;
-}>) {
-  return (
-    <div className="grid min-w-0 gap-1">
-      <div className="flex min-w-0 items-center justify-between gap-2">
-        <span id={headingId} className={textRole('body', 'text-ink-2')}>
-          {title}
-        </span>
-        {trailing}
-      </div>
-      {description ? <p className="type-caption">{description}</p> : null}
-    </div>
-  );
-}
-
 export function EditorialSectionHeader({
   title,
   headingId,

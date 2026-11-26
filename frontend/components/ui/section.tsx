@@ -142,13 +142,6 @@ export function SectionFooter({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-export function SectionCard({
-  children,
-  ...props
-}: Readonly<Omit<ComponentPropsWithoutRef<'section'>, 'className'> & { children: ReactNode }>) {
-  return <Section {...props}>{children}</Section>;
-}
-
 export function TitledSection({
   title,
   description,

@@ -20,7 +20,7 @@ const review: ComponentProps<typeof CandidateReviewPanel>['review'] = {
 
 const selection = { picked: new Set<string>(), setPicked: vi.fn(), selected: [] };
 
-it('says it is loading, then explains an empty or expired batch', () => {
+it('says it is loading, then explains an empty or expired batch', async () => {
   const view = (loading: boolean) => (
     <CandidateReviewPanel
       review={{ ...review, isLoading: loading }}
@@ -29,7 +29,7 @@ it('says it is loading, then explains an empty or expired batch', () => {
     />
   );
   const { rerender } = render(view(true));
-  expect(screen.getByRole('status')).toHaveTextContent('Loading suggestions…');
+  expect(await screen.findByRole('status', { name: 'Loading suggestions…' })).toBeInTheDocument();
   rerender(view(false));
   expect(screen.getByText(/expired or already been reviewed/i)).toBeVisible();
 });
