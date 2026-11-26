@@ -4,16 +4,6 @@
       "count": 1
     }
   },
-  "apps/docs/src/components/DocsSearchDialog.tsx": {
-    "design/plain-element": {
-      "count": 16
-    }
-  },
-  "apps/docs/src/components/DocsSidebar.astro": {
-    "design/astro-class": {
-      "count": 1
-    }
-  },
   "components/agent/action-declaration.tsx": {
     "design/plain-element": {
       "count": 8

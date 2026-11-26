@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Button, IconButton } from '@/components/ui/button';
 import { Kbd } from '@/components/ui/kbd';
 import { FileText, Search } from '@/lib/icons';
-import { cn } from '@/lib/utils';
 import {
   groupResults,
   highlight,
@@ -101,7 +100,7 @@ export function DocsSearchDialog() {
         aria-haspopup="dialog"
         aria-keyshortcuts="Control+K Meta+K"
         onClick={(event) => show(event.currentTarget)}
-        className="focus-ring bg-panel text-ink-2 border-rule hover:border-rule-strong text-body h-control-md items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
+        className="focus-ring cl-docs-search-trigger items-center text-left"
       >
         <Search className="size-3.5 shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate" aria-hidden>
@@ -125,7 +124,7 @@ export function DocsSearchDialog() {
           setOpen(false);
           if (opener.current?.isConnected) opener.current.focus();
         }}
-        className="bg-panel text-ink shadow-pop backdrop:bg-scrim mx-auto mt-16 w-full max-w-160 flex-col overflow-hidden rounded-lg p-0 open:flex"
+        className="cl-docs-search-dialog mx-auto w-full flex-col overflow-hidden open:flex"
       >
         <h2 id="docs-search-title" className="sr-only">
           Search documentation
@@ -133,7 +132,7 @@ export function DocsSearchDialog() {
         <p id="docs-search-description" className="sr-only">
           Find guides across the product, Agent and MCP.
         </p>
-        <div className="palette-field border-rule text-ink-2 h-control-lg flex shrink-0 items-center gap-3 border-b px-4">
+        <div className="palette-field cl-docs-search-field flex shrink-0 items-center">
           <Search className="size-4 shrink-0" aria-hidden />
           <label htmlFor="docs-query" className="sr-only">
             Search terms
@@ -154,13 +153,13 @@ export function DocsSearchDialog() {
             aria-controls="docs-search-results"
             aria-autocomplete="list"
             aria-activedescendant={results.length ? optionId(cursor) : undefined}
-            className="text-site-body text-ink placeholder:text-ink-2 h-full min-w-0 flex-1 bg-transparent"
+            className="cl-docs-search-input h-full min-w-0 flex-1"
           />
           <Kbd>Esc</Kbd>
         </div>
-        <div className="h-100 min-h-0 shrink overflow-y-auto overscroll-contain p-2">
-          <div className="min-h-control-md flex items-center justify-between gap-3 px-2">
-            <output className="text-caption text-ink-2">
+        <div className="cl-docs-search-results min-h-0 shrink overflow-y-auto overscroll-contain">
+          <div className="cl-docs-search-status-row flex items-center justify-between">
+            <output className="cl-docs-search-status">
               {searchStatus(failed, entries, query, results.length)}
             </output>
             {failed && (
@@ -187,12 +186,9 @@ export function DocsSearchDialog() {
                 // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
                 role="group"
                 aria-labelledby={`docs-search-group-${groupIndex}`}
-                className="mt-2"
+                className="cl-docs-search-group"
               >
-                <p
-                  id={`docs-search-group-${groupIndex}`}
-                  className="text-caption-strong text-ink-2 px-2 py-1"
-                >
+                <p id={`docs-search-group-${groupIndex}`} className="cl-docs-search-group-label">
                   {group.label}
                 </p>
                 {group.items.map((result) => {
@@ -208,17 +204,14 @@ export function DocsSearchDialog() {
                       aria-selected={index === cursor}
                       data-active={index === cursor}
                       onMouseMove={() => setActive(index)}
-                      className={cn(
-                        'focus-ring flex h-16 items-start gap-3 rounded-sm p-3 no-underline',
-                        index === cursor && 'bg-well',
-                      )}
+                      className="focus-ring cl-docs-search-option flex items-start"
                     >
                       <FileText className="text-ink-2 mt-0.75 size-3.5 shrink-0" aria-hidden />
-                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="text-label text-ink truncate">
+                      <span className="cl-docs-search-option-text flex min-w-0 flex-1 flex-col">
+                        <span className="cl-docs-search-option-title truncate">
                           <Marked text={result.title} query={query} />
                         </span>
-                        <span className="text-body text-ink-2 truncate">
+                        <span className="cl-docs-search-option-description truncate">
                           <Marked text={result.description} query={query} />
                         </span>
                       </span>
@@ -229,12 +222,12 @@ export function DocsSearchDialog() {
             ))}
           </div>
         </div>
-        <div className="border-rule text-ink-2 text-caption flex shrink-0 items-center gap-4 border-t px-4 py-2">
-          <span className="inline-flex items-center gap-2">
+        <div className="cl-docs-search-footer flex shrink-0 items-center">
+          <span className="cl-docs-search-key inline-flex items-center">
             <Kbd keys={['↑', '↓']} />
             navigate
           </span>
-          <span className="inline-flex items-center gap-2">
+          <span className="cl-docs-search-key inline-flex items-center">
             <Kbd>↵</Kbd>
             select
           </span>
