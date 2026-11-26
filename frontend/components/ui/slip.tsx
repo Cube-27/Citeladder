@@ -17,4 +17,4 @@ export function wellClasses(className?: string) {
 export const SHEET_FACE =
   'bg-surface text-ink border-transparent rounded-overlay border shadow-sheet';
 
-export const POP_FACE = 'bg-raised text-ink border-transparent rounded-card border shadow-pop';
+export const POP_FACE = 'bg-surface text-ink border-transparent rounded-card border shadow-pop';

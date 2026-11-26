@@ -1,7 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import type { ReactNode } from 'react';
 
-import { IconButton } from '@/components/ui/button';
+import { CLOSE_BUTTON, IconButton } from '@/components/ui/button';
 import { SCRIM, useReturnFocus } from '@/components/ui/dialog';
 import { X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -50,7 +50,7 @@ export function Drawer({
         icon={X}
         label={closeLabel}
         tooltip={false}
-        className={hideHeader ? 'absolute top-3 right-3 z-1' : '-me-2 shrink-0'}
+        className={cn(CLOSE_BUTTON, hideHeader ? 'absolute top-4 right-4 z-1' : 'shrink-0')}
       />
     </DialogPrimitive.Close>
   );
@@ -83,13 +83,15 @@ export function Drawer({
               'min-h-0 flex-1',
               body === 'dock'
                 ? 'flex flex-col overflow-hidden'
-                : 'flex flex-col gap-[var(--workspace-gap)] overflow-x-hidden overflow-y-auto overscroll-contain p-[var(--card-padding)]',
+                : 'flex flex-col gap-[var(--workspace-gap)] overflow-x-hidden overflow-y-auto overscroll-contain px-[var(--modal-padding)]',
+              body !== 'dock' && (hideHeader ? 'pt-[var(--modal-padding)]' : 'pt-2'),
+              body !== 'dock' && (footer ? 'pb-0' : 'pb-[var(--modal-padding)]'),
             )}
           >
             {children}
           </div>
           {footer ? (
-            <footer className="border-rule flex items-center justify-end gap-2 border-t px-[var(--card-padding)] py-3">
+            <footer className="flex items-center justify-end gap-2 px-[var(--modal-padding)] pt-5 pb-[var(--modal-padding)]">
               {footer}
             </footer>
           ) : null}
@@ -128,7 +130,7 @@ function DrawerHeader({
     );
   }
   return (
-    <header className="border-rule flex items-start justify-between gap-4 border-b px-[var(--card-padding)] py-4">
+    <header className="flex items-start justify-between gap-4 px-[var(--modal-padding)] pt-[var(--modal-padding)] pb-2">
       <div className="min-w-0">
         {eyebrow ? <p className="type-caption-strong mb-1">{eyebrow}</p> : null}
         <DialogPrimitive.Title className="type-heading truncate">{title}</DialogPrimitive.Title>

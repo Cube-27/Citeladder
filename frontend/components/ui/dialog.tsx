@@ -3,7 +3,7 @@ import { useInsertionEffect, useRef, type ReactNode } from 'react';
 
 import { AlertTriangle, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
-import { Button, IconButton } from './button';
+import { Button, CLOSE_BUTTON, IconButton } from './button';
 import { Icon } from './icon';
 import { SHEET_FACE } from '@/components/ui/slip';
 
@@ -80,9 +80,9 @@ function DialogHeader({
   return (
     <header
       className={cn(
-        'flex items-start gap-3 p-[var(--card-padding)]',
+        'flex items-start gap-3 p-[var(--modal-padding)]',
         !danger && 'pe-14',
-        divided && 'border-rule border-b',
+        divided && 'pb-2',
       )}
     >
       {danger ? (
@@ -166,20 +166,28 @@ export function Dialog({
                 icon={X}
                 label="Close dialog"
                 tooltip={false}
-                className="absolute top-4 right-4"
+                className={cn(CLOSE_BUTTON, 'absolute top-6 right-6')}
               />
             </DialogPrimitive.Close>
           )}
           {children == null ? null : (
             <div
               data-dialog-body=""
-              className="text-ink flex min-h-0 flex-1 flex-col gap-4 overflow-auto overscroll-contain p-[var(--card-padding)]"
+              className={cn(
+                'text-ink flex min-h-0 flex-1 flex-col gap-4 overflow-auto overscroll-contain px-[var(--modal-padding)]',
+                footer ? 'pb-0' : 'pb-[var(--modal-padding)]',
+              )}
             >
               {children}
             </div>
           )}
           {footer ? (
-            <footer className="border-rule flex items-center justify-end gap-2 border-t px-[var(--card-padding)] py-3">
+            <footer
+              className={cn(
+                'flex items-center justify-end gap-2 px-[var(--modal-padding)] pb-[var(--modal-padding)]',
+                children == null ? 'pt-0' : 'pt-5',
+              )}
+            >
               {footer}
             </footer>
           ) : null}

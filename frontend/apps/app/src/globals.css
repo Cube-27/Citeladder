@@ -565,7 +565,6 @@
   --color-negative: oklch(53.3% 0.191 16);
   --color-negative-wash: oklch(94.8% 0.022 4);
   --color-negative-hover: color-mix(in oklab, var(--color-negative) 90%, white 10%);
-  --color-negative-wash-hover: color-mix(in oklab, var(--color-negative) 20%, transparent);
   --color-warning: oklch(50.8% 0.108 73.3);
   --color-warning-wash: oklch(95.9% 0.046 91);
   --color-info: oklch(49.7% 0.184 263);

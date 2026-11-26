@@ -16,18 +16,18 @@ import { Check, ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { POP_FACE } from '@/components/ui/slip';
 
-export const MENU_PANEL = cn(POP_FACE, 'menu-panel z-modal focus-ring overflow-hidden p-1');
+export const MENU_PANEL = cn(POP_FACE, 'menu-panel z-modal focus-ring overflow-hidden p-1.5');
 
 export function menuItemClasses({
   danger = false,
   className,
 }: Readonly<{ danger?: boolean; className?: string }> = {}) {
   return cn(
-    'press [--press:0.98] focus-ring type-body relative flex min-h-[var(--control-md)] w-full shrink-0 cursor-pointer items-center gap-2 rounded-mark px-2 py-1 text-left select-none',
-    'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60',
+    'press [--press:0.98] focus-ring type-body relative flex min-h-[var(--control-md)] w-full shrink-0 cursor-pointer items-center gap-2 rounded-mark px-2.5 py-1 text-left select-none',
+    'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50',
     danger
-      ? 'text-negative data-[highlighted]:bg-negative-wash hover:bg-negative-wash data-[disabled]:hover:bg-transparent [&_svg]:text-negative'
-      : 'text-ink aria-selected:overlay-selected not-aria-selected:data-[highlighted]:overlay-hover not-aria-selected:not-data-[disabled]:hover:overlay-hover',
+      ? 'text-negative data-[highlighted]:bg-[var(--color-state-fill)] hover:bg-[var(--color-state-fill)] data-[disabled]:hover:bg-transparent [&_svg]:text-negative'
+      : 'text-ink aria-selected:overlay-selected not-aria-selected:data-[highlighted]:bg-[var(--color-state-fill)] not-aria-selected:not-data-[disabled]:hover:bg-[var(--color-state-fill)]',
     className,
   );
 }
@@ -259,7 +259,7 @@ export function MenuRadioItem({
 export function MenuSeparator(
   props: Readonly<Omit<ComponentPropsWithoutRef<typeof MenuPrimitive.Separator>, 'className'>>,
 ) {
-  return <MenuPrimitive.Separator {...props} className="bg-rule -mx-1 my-1 h-px shrink-0" />;
+  return <MenuPrimitive.Separator {...props} className="bg-rule mx-[3%] my-1 h-px shrink-0" />;
 }
 
 export function MenuControlRow({
