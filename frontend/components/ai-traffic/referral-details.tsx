@@ -105,22 +105,9 @@ export function ReferralQuality({ data }: Readonly<{ data: AiReferrals }>) {
       Object.values(data.analytics_quality).flatMap((days) => days.flatMap((d) => d.flags)),
     ),
   ];
-  const landingDays = (data.analytics_quality.ga4_landing_daily ?? []).filter(
-    (q) => q.revision !== null,
-  );
-  const excluded = landingDays.length
-    ? `${formatCount(landingDays.reduce((sum, q) => sum + q.excluded_hosts, 0))} landing rows excluded for out-of-scope hosts.`
-    : 'Landing rows excluded for out-of-scope hosts: not available.';
-  return (
-    <>
-      <p className="type-caption">
-        {data.reporting_timezone ?? 'Timezone unavailable'} · {excluded}
-      </p>
-      {flags.length ? (
-        <Notice tone="info">GA4 quality: {flags.map(reasonLabel).join('; ')}.</Notice>
-      ) : null}
-    </>
-  );
+  return flags.length ? (
+    <Notice tone="info">GA4 quality: {flags.map(reasonLabel).join('; ')}.</Notice>
+  ) : null;
 }
 export function Measure({
   value,

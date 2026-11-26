@@ -1,4 +1,5 @@
 import { Fragment, useState, type ReactNode } from 'react';
+import { PageTabEnd } from '@/components/templates/page-tab-end';
 import type { z } from 'zod';
 import type { aiTrafficPagesSchema } from '@citeladder/contracts/ai-traffic';
 import { Absence } from '@/components/ui/absence';
@@ -12,14 +13,12 @@ import { SearchX } from '@/lib/icons';
 import type { TrafficPagesSort } from '@/lib/config/crawl-logs';
 import { DisplayTime } from '@/components/ui/display-time';
 import { aiTrafficQueries, type TrafficTableScope } from '@/lib/api/ai-traffic';
-import { formatCount, formatPercent, ownOrigin } from '@/lib/format';
+import { formatCount, ownOrigin } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { UrlPanel, TrafficLeg, trafficLegExplanation } from './url-panel';
 
 type PageRow = z.infer<typeof aiTrafficPagesSchema>['items'][number];
-
-const BLANK_LINE = ' ';
 
 const SORT_BY_COLUMN: Readonly<Record<string, TrafficPagesSort>> = {
   path: 'url_asc',
@@ -116,7 +115,7 @@ export function TrafficPages({
   const nothingMeasured = rows.length > 0 && columns.length === 1;
   return (
     <Stack gap="workspace">
-      <CoverageLine data={page} />
+      <InventoryDate data={page} />
       <DataTable
         label="Path-level AI traffic with separate signal units"
         columns={columns}
@@ -247,51 +246,16 @@ function TrafficPageRow({
   );
 }
 
-function CoverageLine({
+function InventoryDate({
   data,
 }: Readonly<{ data: z.infer<typeof aiTrafficPagesSchema> | undefined }>) {
-  if (!data) return <p className="type-caption">{BLANK_LINE}</p>;
-  const coverage = data.observed_crawl_coverage;
-  const disconnected = (
-    [
-      ['crawl', 'Crawler logs'],
-      ['referrals', 'Referral analytics'],
-      ['citations', 'Citation tracking'],
-    ] as const
-  ).filter(
-    ([key]) =>
-      data.items.length > 0 && data.items.every((row) => row[key].state === 'not_connected'),
-  );
-  let crawlCoverage: string | null =
-    coverage.state === 'unknown' ? 'Crawl coverage unknown' : 'Crawl coverage unavailable';
-  if (coverage.share !== null)
-    crawlCoverage = `${coverage.label}: ${formatPercent(coverage.share)}`;
-  else if (disconnected.some(([key]) => key === 'crawl')) crawlCoverage = null;
-  const segments: Array<[string, ReactNode]> = [];
-  if (disconnected.length)
-    segments.push([
-      'sources',
-      `${disconnected.map(([, label]) => label).join(', ')} not connected`,
-    ]);
-  if (crawlCoverage) segments.push(['coverage', crawlCoverage]);
-  segments.push(['pages', `${formatCount(coverage.known_pages)} known pages`]);
-  if (coverage.inventory_date)
-    segments.push([
-      'inventory',
-      <>
-        Inventory <DisplayTime value={coverage.inventory_date} dateOnly />
-      </>,
-    ]);
-  if (!coverage.inventory_complete) segments.push(['limited', 'Limited inventory']);
-  if (coverage.sample_mode) segments.push(['sampled', 'Sampled inventory']);
+  const date = data?.observed_crawl_coverage.inventory_date;
+  if (!date) return null;
   return (
-    <p className="type-caption">
-      {segments.map(([key, segment], index) => (
-        <Fragment key={key}>
-          {index ? ' · ' : null}
-          {segment}
-        </Fragment>
-      ))}
-    </p>
+    <PageTabEnd fallback={null}>
+      <span className="min-w-0 truncate">
+        Inventory <DisplayTime value={date} dateOnly />
+      </span>
+    </PageTabEnd>
   );
 }
