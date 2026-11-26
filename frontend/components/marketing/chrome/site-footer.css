@@ -1,7 +1,7 @@
 .cl-footer {
   padding: 0 0 40px;
   background: var(--site-page);
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
 }
 
 .cl-footer-top {
@@ -35,13 +35,13 @@
   margin: -4px;
   padding: 4px;
   border-radius: var(--radius-sm);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 .cl-footer-tagline {
   max-width: 320px;
   margin: 0;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -94,7 +94,7 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-md);
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   transition:
     background-color var(--motion-fast) var(--ease-standard),
     color var(--motion-fast) var(--ease-standard);
@@ -103,7 +103,7 @@
 @media (hover: hover) and (pointer: fine) {
   .cl-footer-social-link:hover {
     background: var(--color-state-hover);
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
 }
 
@@ -131,7 +131,7 @@
 
 .cl-footer-head {
   margin: 0 0 16px;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-label);
   font-weight: 500;
   line-height: var(--text-label--line-height);
@@ -154,14 +154,14 @@
   gap: 4px;
   min-height: 24px;
   border-radius: var(--radius-xs);
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   text-decoration: none;
 }
 
 .cl-footer-col a svg {
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -169,7 +169,7 @@
   .cl-footer-legal a:hover,
   .cl-footer-cookie:hover,
   .cl-footer-copy a:hover {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     text-decoration: underline;
     text-underline-offset: 3px;
   }
@@ -194,7 +194,7 @@
 
 .cl-footer-copy {
   margin: 0;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }

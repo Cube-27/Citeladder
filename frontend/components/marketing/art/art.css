@@ -9,7 +9,7 @@
 .cl-art-canvas {
   position: absolute;
   inset: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
   font-size: clamp(8px, 2.5cqi, 20px);
   line-height: 1.3;
@@ -71,7 +71,7 @@
   border-radius: var(--radius-full);
   background: var(--color-site-screen, var(--color-panel));
   box-shadow: var(--site-shadow-float);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: 1.15em;
   font-weight: 500;
   white-space: nowrap;
@@ -91,7 +91,7 @@
 
 .cl-art-pill svg[data-engine-mark],
 .cl-art-node > svg {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 .cl-art-chip {
@@ -176,7 +176,7 @@
   height: 1.5em;
   border-radius: var(--radius-full);
   background: var(--color-accent-wash);
-  color: var(--color-accent-text);
+  color: var(--text-color-accent-text);
   font-size: 0.85em;
   font-weight: 500;
 }
@@ -189,7 +189,7 @@
 }
 
 .cl-art-caption {
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: 0.95em;
 }
 

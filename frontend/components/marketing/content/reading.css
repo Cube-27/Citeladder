@@ -10,11 +10,11 @@
 
 .cl-site .cl-prose a,
 .cl-site .cl-ahead .cl-ahead-lead a {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 .cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -77,7 +77,11 @@
   scrollbar-width: auto;
   background:
     linear-gradient(to left, var(--site-page) 40%, transparent) right / 48px 100% no-repeat local,
-    linear-gradient(to left, color-mix(in oklch, var(--color-ink) 20%, transparent), transparent)
+    linear-gradient(
+        to left,
+        color-mix(in oklch, var(--color-mark-ink) 20%, transparent),
+        transparent
+      )
       right / 24px 100% no-repeat scroll;
 }
 
@@ -144,7 +148,7 @@
 .cl-site .cl-prose-table .cl-cell-source {
   display: block;
   margin-top: 4px;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   white-space: normal;
@@ -168,7 +172,7 @@
 .cl-site .cl-icite a,
 .cl-site .cl-prose .cl-icite a {
   position: relative;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   font-weight: 500;

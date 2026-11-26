@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 export type MeterTone = 'ink' | 'accent' | 'warning' | 'negative';
 
 const METER_FILL = {
-  ink: 'bg-ink',
+  ink: 'bg-mark-ink',
   accent: 'bg-data-you',
   warning: 'bg-warning',
   negative: 'bg-negative',

@@ -11,7 +11,7 @@ const TONE: Record<BadgeTone, string> = {
   negative: 'bg-negative-wash text-negative',
   warning: 'bg-warning-wash text-warning',
   info: 'bg-info-wash text-info',
-  ink: 'bg-ink text-on-ink',
+  ink: 'bg-mark-ink text-on-ink',
 };
 
 const BADGE_FACE =

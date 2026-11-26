@@ -1,12 +1,3 @@
-:root {
-  --color-metric-clicks: var(--ramp-blue-68);
-  --color-metric-impressions: var(--ramp-violet-58);
-  --color-metric-ctr: var(--ramp-teal-62);
-  --color-metric-position: var(--ramp-amber-78);
-  --color-metric-ink: var(--ramp-white);
-  --color-metric-ink-dark: var(--ramp-neutral-22);
-}
-
 .metric-tiles {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -17,8 +8,8 @@
 }
 
 .metric-tile {
-  --metric: var(--color-ink-2);
-  --metric-ink: var(--color-metric-ink);
+  --metric: var(--color-mark-ink-2);
+  --metric-ink: var(--text-color-metric-ink);
   position: relative;
   display: grid;
   align-content: start;
@@ -27,7 +18,7 @@
   padding: 12px var(--panel-inset);
   border-inline-end: 1px solid var(--color-rule);
   background: var(--color-panel);
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   &[data-metric='clicks'] {
     --metric: var(--color-metric-clicks);
   }
@@ -39,7 +30,7 @@
   }
   &[data-metric='position'] {
     --metric: var(--color-metric-position);
-    --metric-ink: var(--color-metric-ink-dark);
+    --metric-ink: var(--text-color-metric-ink-dark);
   }
   & :is(label, .type-body, .type-caption, .type-figure) {
     color: inherit;

@@ -62,7 +62,7 @@ type Line = Readonly<{
 }>;
 
 const EVENT_COLOR = {
-  panel: 'var(--color-ink-2)',
+  panel: 'var(--color-mark-ink-2)',
   model: 'var(--color-warning)',
   action: 'var(--color-positive)',
 } as const;
@@ -273,7 +273,7 @@ function AreaPlot({
                 ? {
                     value: 'No reading',
                     position: 'insideTop',
-                    fill: 'var(--color-ink-2)',
+                    fill: 'var(--text-color-ink-2)',
                     fontSize: 12,
                   }
                 : undefined

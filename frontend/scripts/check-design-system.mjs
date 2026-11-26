@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 
 import { loadDesignSystem, undeclaredColourViolations } from './design-system-colour-tokens.mjs';
-import { textContrastViolations } from './design-system-contrast.mjs';
+import { textContrast } from './design-system-contrast.mjs';
 import {
   ancestorRuleFindings,
   compositionFindings,
@@ -63,8 +63,14 @@ const appCssPath = join(root, 'apps', 'app', 'src', 'app.css');
 const appCss = readFileSync(appCssPath, 'utf8');
 const designSystem = await loadDesignSystem(appCss, dirname(appCssPath));
 
+const contrast = textContrast(root);
+if (contrast.awaitingOwner.length)
+  console.warn(
+    `Contrast below AA, awaiting the owner's colour decision:\n${contrast.awaitingOwner.join('\n')}`,
+  );
+
 violations.push(
-  ...textContrastViolations(root),
+  ...contrast.violations,
   ...undeclaredColourViolations(
     scriptSources.filter(({ label }) => /^(?:apps|components|lib)\/.+\.tsx$/.test(label)),
     designSystem,

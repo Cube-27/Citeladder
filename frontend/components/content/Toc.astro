@@ -43,7 +43,7 @@ const unbroken = (label: string) =>
     position: relative;
     display: block;
     padding: 4px 16px;
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
     font-size: var(--text-body-sm);
     line-height: var(--text-body-sm--line-height);
     text-decoration: none;
@@ -53,11 +53,11 @@ const unbroken = (label: string) =>
     padding-left: 32px;
   }
   .cl-toc-link[aria-current='location'] {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   @media (hover: hover) and (pointer: fine) {
     .cl-toc-link:hover {
-      color: var(--color-ink);
+      color: var(--text-color-ink);
     }
   }  .cl-toc-link[aria-current='location']::before {
     content: '';
@@ -66,7 +66,7 @@ const unbroken = (label: string) =>
     bottom: 0;
     left: -1px;
     width: 2px;
-    background: var(--color-ink);
+    background: var(--color-mark-ink);
   }
 </style>
 

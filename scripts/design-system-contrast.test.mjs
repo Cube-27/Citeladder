@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import {
   contrastRoles,
+  paletteAwaitingOwner,
   paletteDeclarations,
   paletteViolations,
   resolvePalette,
@@ -14,7 +15,6 @@ function palette({ ink, paper }) {
   return {
     ...Object.fromEntries(surfaces.map((token) => [token, paper])),
     ...Object.fromEntries(inks.map((token) => [token, ink])),
-    '--color-on-ink': paper,
   };
 }
 
@@ -49,32 +49,37 @@ test('a palette that meets every pair in every scope passes', () => {
 });
 
 test('a dark rebinding fails the dark scope only', () => {
-  const violations = paletteViolations(css({ dark: { '--color-ink-2': '#111111' } }));
+  const violations = paletteViolations(css({ dark: { '--text-color-ink-2': '#111111' } }));
   assert.ok(violations.length > 0);
   assert.ok(violations.every((violation) => violation.includes("data-theme='dark'")));
-  assert.ok(violations.some((violation) => violation.includes('--color-ink-2 on --color-ground')));
+  assert.ok(
+    violations.some((violation) => violation.includes('--text-color-ink-2 on --color-ground')),
+  );
 });
 
 test('an app rebinding fails the app scope it reaches and spares the website', () => {
-  const appLight = ':root:not([data-public-surface]) { --color-ink-2: #eeeeee; }';
+  const appLight = ':root:not([data-public-surface]) { --text-color-ink-2: #eeeeee; }';
   const violations = paletteViolations(css({ extra: appLight }));
   assert.ok(violations.length > 0);
   assert.ok(violations.every((violation) => violation.includes(':not([data-public-surface])')));
   assert.ok(
     violations.some((violation) =>
-      violation.includes(':root:not([data-public-surface]) --color-ink-2 on --color-ground is 1.'),
+      violation.includes(
+        ':root:not([data-public-surface]) --text-color-ink-2 on --color-ground is 1.',
+      ),
     ),
   );
 });
 
 test("the app's light rebinding reaches the app's dark unless the app's dark rebinds it", () => {
-  const appLight = ':root:not([data-public-surface]) { --color-ink-2: #555555; }';
-  const appDark = ":root[data-theme='dark']:not([data-public-surface]) { --color-ink-2: #ffffff; }";
+  const appLight = ':root:not([data-public-surface]) { --text-color-ink-2: #555555; }';
+  const appDark =
+    ":root[data-theme='dark']:not([data-public-surface]) { --text-color-ink-2: #ffffff; }";
   const unbound = paletteViolations(css({ extra: appLight }));
   assert.ok(
     unbound.some((violation) =>
       violation.includes(
-        ":root[data-theme='dark']:not([data-public-surface]) --color-ink-2 on --color-ground is 2.",
+        ":root[data-theme='dark']:not([data-public-surface]) --text-color-ink-2 on --color-ground is 2.",
       ),
     ),
   );
@@ -102,6 +107,28 @@ test("the app's series holds 3:1 in the app's palettes and is not measured on th
   );
 });
 
+test('a text role nobody listed is measured on every ground of its palette', () => {
+  const violations = paletteViolations(css({ light: { '--text-color-quiet': '#eeeeee' } }));
+  assert.ok(
+    violations.includes(
+      'apps/app/src/globals.css: :root --text-color-quiet on --color-well is 1.16:1; needs 4.5:1',
+    ),
+  );
+  assert.ok(
+    violations.includes(
+      'apps/app/src/globals.css: :root:not([data-public-surface]) --text-color-quiet on --color-raised-2 is 1.16:1; needs 4.5:1',
+    ),
+  );
+});
+
+test('a pair awaiting the owner is reported apart and does not fail', () => {
+  const source = css({ light: { '--color-metric-clicks': '#000000' } });
+  assert.ok(!paletteViolations(source).some((violation) => violation.includes('metric-clicks')));
+  assert.deepEqual(paletteAwaitingOwner(source), [
+    'apps/app/src/globals.css: :root:not([data-public-surface]) --text-color-metric-ink on --color-metric-clicks is 1.00:1; needs 4.5:1',
+  ]);
+});
+
 test('a translucent soft is composited onto the surface before measuring', () => {
   const violations = paletteViolations(
     css({ light: { '--color-positive-wash': 'rgb(0 0 0 / 90%)' } }),
@@ -116,16 +143,17 @@ test('a translucent soft is composited onto the surface before measuring', () =>
 test('oklch literals and relative colours resolve to the sRGB they render', () => {
   const source = [
     '@theme { --color-ink: oklch(17.8% 0 0); --color-hover: oklch(from var(--color-ink) l c h / 6%); }',
+    '@theme { --color-mix: color-mix(in oklch, var(--color-ink) 80%, var(--color-paper)); }',
     '@theme inline { --color-mark: var(--color-accent); }',
-    ':root { --color-accent: oklch(63.4% 0.1973 37.5); --color-rule: oklch(21% 0.01 268 / 11%); }',
+    ':root { --color-accent: oklch(63.4% 0.1973 37.5); --color-rule: oklch(21% 0.01 268 / 11%); --color-paper: oklch(96.7% 0 0); }',
     ":root[data-theme='dark'] { --color-ink: oklch(96.7% 0 0); }",
   ].join('\n');
   const light = resolvePalette(source, ':root');
   assert.deepEqual(
-    ['--color-ink', '--color-hover', '--color-mark', '--color-rule'].map((token) =>
+    ['--color-ink', '--color-hover', '--color-mark', '--color-rule', '--color-mix'].map((token) =>
       light.get(token),
     ),
-    ['#111111', 'rgb(17 17 17 / 6%)', '#e8501a', 'rgb(22 24 29 / 11%)'],
+    ['#111111', 'rgb(17 17 17 / 6%)', '#e8501a', 'rgb(22 24 29 / 11%)', '#373737'],
   );
   assert.equal(
     resolvePalette(source, ":root[data-theme='dark']").get('--color-hover'),

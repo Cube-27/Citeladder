@@ -124,7 +124,8 @@
   --ramp-zinc-39_6: oklch(39.64% 0.01 285.93);
   --ramp-zinc-47: oklch(47% 0.0138 285.94);
   --ramp-zinc-47-a50: oklch(47% 0.0138 285.94 / 50%);
-  --ramp-zinc-55_2: #71717a;
+  --ramp-zinc-52_5: oklch(52.5% 0.0137 285.9);
+  --ramp-zinc-64_5: oklch(64.5% 0.0137 285.9);
   --ramp-zinc-72: oklch(72% 0.015 286.067);
   --ramp-zinc-72-a50: oklch(72% 0.015 286.067 / 50%);
   --ramp-zinc-91_2: oklch(91.2% 0.0012 286);
@@ -274,24 +275,24 @@
   --color-panel: var(--ramp-white);
   --color-page: var(--color-panel);
   --color-well: var(--ramp-neutral-94_3);
-  --color-state-hover: oklch(from var(--color-ink) l c h / 6%);
-  --color-state-pressed: oklch(from var(--color-ink) l c h / 8%);
-  --color-state-selected: oklch(from var(--color-ink) l c h / 10%);
-  --color-state-fill: oklch(from var(--color-ink) l c h / 8%);
-  --color-state-fill-hover: oklch(from var(--color-ink) l c h / 11%);
+  --color-state-hover: oklch(from var(--color-mark-ink) l c h / 6%);
+  --color-state-pressed: oklch(from var(--color-mark-ink) l c h / 8%);
+  --color-state-selected: oklch(from var(--color-mark-ink) l c h / 10%);
+  --color-state-fill: oklch(from var(--color-mark-ink) l c h / 8%);
+  --color-state-fill-hover: oklch(from var(--color-mark-ink) l c h / 11%);
   --color-field-hover: var(--color-well);
   --color-link: currentColor;
   --color-rule: var(--ramp-neutral-92_2);
   --color-rule-strong: var(--ramp-neutral-87);
   --color-control-line: var(--ramp-neutral-61_7);
-  --color-ink: var(--ramp-neutral-17_8);
-  --color-ink-2: var(--ramp-neutral-43_9);
-  --color-ink-placeholder: var(--color-ink-2);
-  --color-on-ink: var(--ramp-white);
+  --text-color-ink: var(--ramp-neutral-17_8);
+  --text-color-ink-2: var(--ramp-neutral-43_9);
+  --text-color-ink-placeholder: var(--text-color-ink-2);
+  --text-color-on-ink: var(--ramp-white);
   --color-accent: var(--ramp-orange-63_4-h38);
-  --color-accent-text: var(--ramp-orange-52_3);
+  --text-color-accent-text: var(--ramp-orange-52_3);
   --color-accent-wash: var(--ramp-orange-94_2);
-  --color-focus: var(--color-ink);
+  --color-focus: var(--color-mark-ink);
   --color-positive: var(--ramp-teal-48_7);
   --color-positive-wash: var(--ramp-teal-94);
   --color-negative: var(--ramp-red-52_4);
@@ -301,7 +302,7 @@
   --color-info: var(--ramp-blue-50_2);
   --color-info-wash: var(--ramp-blue-94_3);
   --color-data-other: var(--ramp-neutral-81_4);
-  --color-scrim: oklch(from var(--color-ink) l c h / 32%);
+  --color-scrim: oklch(from var(--color-mark-ink) l c h / 32%);
   --color-chart-grid: var(--ramp-neutral-94_3);
   --color-raised: var(--color-panel);
   --color-raised-2: var(--color-well);
@@ -311,16 +312,28 @@
   --color-primary-from: var(--ramp-orange-54_5-h38);
   --color-primary-to: var(--ramp-orange-48_5-h38);
   --color-primary-edge: var(--ramp-orange-40_5-h38);
-  --color-on-primary: var(--ramp-white);
+  --text-color-on-primary: var(--ramp-white);
   --color-primary: var(--color-primary-from);
   --color-primary-hover: var(--color-primary-to);
   --color-thumb: var(--color-panel);
   --color-data-you: var(--color-accent);
-  --color-data-rival-1: var(--color-ink);
+  --color-data-rival-1: var(--color-mark-ink);
   --color-data-rival-2: var(--ramp-blue-52_3);
   --color-data-rival-3: var(--ramp-violet-41);
   --color-data-rival-4: var(--ramp-teal-53_4);
-  --color-nav-ink: color-mix(in oklch, var(--color-ink) 80%, var(--color-ground));
+  --text-color-nav-ink: color-mix(in oklch, var(--text-color-ink) 80%, var(--color-ground));
+  --color-mark-ink: var(--text-color-ink);
+  --color-mark-ink-2: var(--text-color-ink-2);
+  --color-thumb-checked: var(--text-color-on-primary);
+  --fill-ink: var(--text-color-ink);
+  --fill-ink-2: var(--text-color-ink-2);
+  --fill-accent-text: var(--text-color-accent-text);
+  --color-metric-clicks: var(--ramp-blue-68);
+  --color-metric-impressions: var(--ramp-violet-58);
+  --color-metric-ctr: var(--ramp-teal-62);
+  --color-metric-position: var(--ramp-amber-78);
+  --text-color-metric-ink: var(--ramp-white);
+  --text-color-metric-ink-dark: var(--ramp-neutral-22);
   --color-brand-google-blue: var(--ramp-blue-63);
   --color-brand-google-green: var(--ramp-green-64_8);
   --color-brand-google-yellow: var(--ramp-amber-83);
@@ -489,7 +502,7 @@
   --weight-regular: 400;
   --weight-medium: 500;
 
-  --scrollbar-thumb: color-mix(in oklch, var(--color-ink-2) 35%, transparent);
+  --scrollbar-thumb: color-mix(in oklch, var(--color-mark-ink-2) 35%, transparent);
 
   --shadow-button: inset 0 1px 0 var(--ramp-white-a6), 0 1px 1px var(--ramp-black-a10), 0 2px 6px -1px var(--ramp-black-a6);
   --shadow-xs: 0 0 0 1px var(--ramp-neutral-17_8-a8), 0 1px 2px var(--ramp-neutral-17_8-a6);
@@ -541,9 +554,9 @@
   --color-rule: var(--ramp-neutral-28_5);
   --color-rule-strong: var(--ramp-neutral-34_8);
   --color-control-line: var(--ramp-neutral-56);
-  --color-ink: var(--ramp-neutral-96_7);
-  --color-ink-2: var(--ramp-neutral-72_5);
-  --color-on-ink: var(--ramp-neutral-17_8);
+  --text-color-ink: var(--ramp-neutral-96_7);
+  --text-color-ink-2: var(--ramp-neutral-72_5);
+  --text-color-on-ink: var(--ramp-neutral-17_8);
   --color-face-from: color-mix(in oklch, var(--color-ground), var(--ramp-white) 4%);
   --color-face-to: var(--color-ground);
   --color-button-edge: var(--ramp-stone-31_8);
@@ -551,7 +564,7 @@
   --color-primary-to: var(--ramp-orange-48_5-h39);
   --color-primary-edge: var(--ramp-orange-40_5-h39);
   --color-accent: var(--ramp-orange-70_3-h39);
-  --color-accent-text: var(--ramp-orange-77);
+  --text-color-accent-text: var(--ramp-orange-77);
   --color-accent-wash: var(--ramp-orange-26_2);
   --color-positive: var(--ramp-teal-78_6);
   --color-positive-wash: var(--ramp-teal-27_6);
@@ -576,14 +589,15 @@
   --color-raised: var(--ramp-zinc-25_7);
   --color-raised-2: var(--ramp-slate-27_2);
   --table-head-ground: var(--ramp-zinc-25_7);
-  --color-thumb: var(--color-ink-2);
+  --color-thumb: var(--color-mark-ink-2);
   --color-rule: var(--ramp-white-a11);
   --color-control-line: var(--ramp-white-a22);
   --color-page: var(--ramp-zinc-15);
-  --color-ink: var(--ramp-neutral-99_1);
-  --color-ink-2: var(--ramp-zinc-72);
+  --text-color-ink: var(--ramp-neutral-99_1);
+  --text-color-ink-2: var(--ramp-zinc-72);
   --color-accent: var(--ramp-orange-70_31-h39);
-  --color-accent-text: var(--ramp-orange-75_3);
+  --text-color-ink-placeholder: var(--ramp-zinc-64_5);
+  --text-color-accent-text: var(--ramp-orange-75_3);
   --color-accent-wash: var(--ramp-orange-27);
   --color-positive: var(--ramp-green-81_4);
   --color-positive-wash: var(--ramp-green-27);
@@ -704,7 +718,7 @@
     --face-hover: var(--ramp-white-a5);
     --face-press: var(--ramp-black-a8);
     border-color: var(--color-primary-to);
-    color: var(--color-on-primary);
+    color: var(--text-color-on-primary);
   }
   .face-danger {
     --face-to: var(--color-face-from);
@@ -763,12 +777,12 @@
   --color-focus: var(--color-accent);
   --focus-width: 2px;
   --focus-offset: 2px;
-  --color-ink: var(--ramp-zinc-21);
-  --color-ink-2: var(--ramp-zinc-47);
-  --color-ink-placeholder: var(--ramp-zinc-55_2);
-  --color-on-ink: var(--color-panel);
+  --text-color-ink: var(--ramp-zinc-21);
+  --text-color-ink-2: var(--ramp-zinc-47);
+  --text-color-ink-placeholder: var(--ramp-zinc-52_5);
+  --text-color-on-ink: var(--color-panel);
   --color-accent: var(--ramp-orange-63_39-h38);
-  --color-accent-text: var(--ramp-orange-53_1);
+  --text-color-accent-text: var(--ramp-orange-53_1);
   --color-accent-wash: var(--ramp-orange-95);
   --color-positive: var(--ramp-green-47_1);
   --color-positive-wash: var(--ramp-green-95_2);
@@ -971,7 +985,7 @@
 :root[data-marketing-surface] {
   --color-site-mark: var(--ramp-neutral-55_6);
   --color-site-chip: var(--ramp-neutral-94_6);
-  --color-site-chip-ink: var(--ramp-neutral-26_9);
+  --text-color-site-chip-ink: var(--ramp-neutral-26_9);
   --color-site-guide: var(--ramp-neutral-43_9-a16);
   --color-site-rule-from: var(--ramp-amber-80_8-a55);
   --color-site-rule-to: var(--ramp-orange-63_4-a55);
@@ -1000,7 +1014,7 @@
   --color-site-band-warm: var(--ramp-amber-88-a35);
   --color-site-band-glow: var(--ramp-orange-86_5-a50);
   --color-site-band-scrim: var(--ramp-stone-99-a55);
-  --color-site-band-ink-secondary: var(--ramp-neutral-43_9);
+  --text-color-site-band-ink-2: var(--ramp-neutral-43_9);
   --color-site-band-line: var(--ramp-neutral-17_8-a80);
 }
 
@@ -1029,7 +1043,7 @@
   --color-well: var(--ramp-neutral-23_8);
   --color-site-mark: var(--ramp-neutral-70_8);
   --color-site-chip: var(--ramp-neutral-26_9);
-  --color-site-chip-ink: var(--ramp-neutral-92_2);
+  --text-color-site-chip-ink: var(--ramp-neutral-92_2);
   --color-site-guide: var(--ramp-white-a9);
   --color-site-rule-from: var(--ramp-orange-55-a55);
   --color-site-rule-to: var(--ramp-orange-70_3-a55);
@@ -1058,7 +1072,7 @@
   --color-site-band-warm: var(--ramp-orange-70_3-a10);
   --color-site-band-glow: var(--ramp-orange-24-a55);
   --color-site-band-scrim: var(--ramp-neutral-9-a50);
-  --color-site-band-ink-secondary: var(--ramp-neutral-88);
+  --text-color-site-band-ink-2: var(--ramp-neutral-88);
   --color-site-band-line: var(--ramp-white-a45);
 }
 
@@ -1068,7 +1082,7 @@
 }
 
 [data-public-surface] .type-eyebrow:not(:is(.cl-screen, .cl-vig) *) {
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-family: var(--font-sans);
   font-size: var(--text-label);
   font-weight: var(--weight-medium);
@@ -1123,7 +1137,7 @@
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: color-mix(in oklch, var(--color-ink-2) 50%, transparent);
+  background-color: color-mix(in oklch, var(--color-mark-ink-2) 50%, transparent);
 }
 
 html {
@@ -1158,7 +1172,7 @@ body {
   margin: 0;
   min-height: 100dvh;
   background: var(--color-ground);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
@@ -1188,7 +1202,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .type-display,
   .type-title {
     font-family: var(--font-display);
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .type-display {
     font-size: var(--text-display);
@@ -1210,7 +1224,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .type-caption {
     font-family: var(--font-sans);
     letter-spacing: 0;
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .type-heading {
     font-size: var(--text-heading);
@@ -1241,7 +1255,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
     font-weight: var(--weight-regular);
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
   }
   .type-figure-xl,
   .type-figure {
@@ -1253,14 +1267,14 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     line-height: var(--text-figure-xl--line-height);
     font-weight: var(--weight-medium);
     letter-spacing: var(--text-figure-xl--letter-spacing);
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .type-figure {
     font-size: var(--text-figure);
     line-height: var(--text-figure--line-height);
     font-weight: var(--weight-medium);
     letter-spacing: var(--text-figure--letter-spacing);
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .type-emphasis {
     font-weight: var(--weight-medium);
@@ -1268,7 +1282,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
 
   :root:not([data-public-surface]) :is(.type-caption-strong, .type-code) {
     letter-spacing: 0;
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   :root:not([data-public-surface]) .type-caption-strong {
     font-family: var(--font-sans);
@@ -1277,7 +1291,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--weight-medium);
     letter-spacing: 0;
     text-transform: none;
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
   }
   :root:not([data-public-surface]) :is(.type-figure-xl, .type-figure) {
     font-family: var(--font-sans);
@@ -1302,7 +1316,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     line-height: var(--text-page-title--line-height);
     font-weight: var(--weight-medium);
     letter-spacing: var(--text-page-title--letter-spacing);
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .type-control {
     font-family: var(--font-sans);
@@ -1318,7 +1332,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--weight-regular);
     letter-spacing: var(--text-eyebrow--letter-spacing);
     text-transform: uppercase;
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
   }
   .type-screen-label {
     font-family: var(--font-mono);
@@ -1327,7 +1341,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--weight-medium);
     letter-spacing: var(--text-screen-label--letter-spacing);
     text-transform: uppercase;
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
   }
   .type-data-sm {
     font-family: var(--font-mono);
@@ -1342,7 +1356,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
 
   .cl-mark {
     background: var(--color-accent-wash);
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     padding: 0 0.2em;
     border-radius: var(--radius-mark);
     box-decoration-break: clone;
@@ -1372,7 +1386,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--weight-medium);
     letter-spacing: normal;
     line-height: 1.25;
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
 
   p {
@@ -1427,7 +1441,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
 
 .focus-ring[aria-current='page'] .type-caption,
 a.focus-ring:active .type-caption {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 :focus-visible,
@@ -1518,18 +1532,18 @@ a.focus-ring:active .type-caption {
 :root:not([data-public-surface]) [data-state-offer] .ui-button-secondary:first-child {
   border-color: var(--color-primary);
   background-color: var(--color-primary);
-  color: var(--color-on-primary);
+  color: var(--text-color-on-primary);
 }
 [data-demoted] [data-button-variant],
 :root:not([data-public-surface]) [data-demoted] .ui-button {
   border-color: transparent;
   background-color: var(--color-raised);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 :root:not([data-public-surface])
   :is(.ui-button-secondary, [data-demoted] .ui-button)
   svg {
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
 }
 :root:not([data-public-surface]) [data-state-offer] .ui-button-secondary:first-child svg {
   color: inherit;
@@ -1592,13 +1606,13 @@ a.focus-ring:active .type-caption {
 
 ::selection {
   background: var(--color-accent-wash);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 input:is(:autofill, :-webkit-autofill) {
-  -webkit-text-fill-color: var(--color-ink);
+  -webkit-text-fill-color: var(--text-color-ink);
   box-shadow: inset 0 0 0 100vmax var(--color-panel);
-  caret-color: var(--color-ink);
+  caret-color: var(--text-color-ink);
 }
 :where([data-public-surface]) input.focus-input:is(:autofill, :-webkit-autofill):focus-visible {
   box-shadow:
@@ -1666,7 +1680,7 @@ samp {
   transform: translateY(calc(-100% - 5rem));
   border-radius: var(--radius-control);
   background: var(--color-panel);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   padding: 8px 12px;
   font-size: var(--text-label);
   font-weight: var(--weight-medium);
@@ -1725,7 +1739,7 @@ label {
   font-weight: var(--weight-medium);
   letter-spacing: normal;
   text-transform: none;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   background: var(--table-head-ground);
 }
 :root:not([data-public-surface]) .table-frame tbody > tr > * {
@@ -1735,7 +1749,7 @@ label {
   height: auto;
 }
 :root:not([data-public-surface]) .table-frame thead th:is([aria-sort], :has(button:hover)) {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 :root:not([data-public-surface]) .table-frame tbody :is(td, th) {
   font-size: var(--text-body-sm);
@@ -1946,7 +1960,7 @@ label {
   background-color: var(--color-well);
 }
 .tab-line {
-  box-shadow: inset 0 -2px 0 var(--color-ink);
+  box-shadow: inset 0 -2px 0 var(--color-mark-ink);
 }
 [role='switch'] > span {
   box-shadow: var(--shadow-thumb);

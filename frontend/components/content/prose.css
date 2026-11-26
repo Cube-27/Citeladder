@@ -1,6 +1,6 @@
 .cl-prose {
   max-width: var(--container-prose);
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
   overflow-wrap: break-word;
@@ -15,7 +15,7 @@
   margin-top: 20px;
 }
 .cl-prose :is(h2, h3, h4):not([class]) {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   text-wrap: balance;
   scroll-margin-top: calc(var(--nav-height) + 32px);
 }
@@ -49,7 +49,7 @@
   margin-top: 0;
 }
 .cl-prose a {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   text-decoration: underline;
   text-decoration-color: var(--color-control-line);
   text-decoration-thickness: 1px;
@@ -60,7 +60,7 @@
   text-decoration-color: currentColor;
 }
 .cl-prose strong {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-weight: 500;
 }
 .cl-prose :not(pre) > code {
@@ -69,7 +69,7 @@
   -webkit-box-decoration-break: clone;
   border-radius: var(--radius-xs);
   background: var(--color-well);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-mono);
   font-size: 0.875em;
 }
@@ -90,7 +90,7 @@
   margin-top: 8px;
 }
 .cl-prose li:not([class])::marker {
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
 }
 .cl-prose ol:not([class]) > li::marker {
   font-family: var(--font-mono);
@@ -103,7 +103,7 @@
 }
 .cl-prose blockquote:not([class]) p {
   margin: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-title);
   line-height: var(--text-title--line-height);
   font-weight: 400;
@@ -114,7 +114,7 @@
 .cl-prose blockquote:not([class]) :is(footer, cite) {
   display: block;
   margin-top: 12px;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-family: var(--font-mono);
   font-size: var(--text-data);
   line-height: var(--text-data--line-height);
@@ -132,7 +132,7 @@
 }
 .cl-prose figcaption:not([class]) {
   margin-top: 12px;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
@@ -149,7 +149,7 @@
 }
 .cl-prose caption:not([class]) {
   padding: 12px 16px;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
   font-weight: 500;
@@ -158,7 +158,7 @@
 .cl-prose th:not([class]) {
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-rule);
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
   font-weight: 500;
@@ -170,7 +170,7 @@
   padding: 12px 16px;
   border-top: 1px solid var(--color-rule);
   background: none;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
@@ -188,7 +188,7 @@
 .cl-prose td:not([class]):empty::after {
   content: '\2014';
   content: '\2014' / '';
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
 }
 .cl-prose sup {
   line-height: 0;
@@ -207,7 +207,7 @@
 .cl-icite a,
 .cl-prose .cl-icite a {
   padding: 0 1px;
-  color: var(--color-accent-text);
+  color: var(--text-color-accent-text);
   font-family: var(--font-mono);
   font-size: var(--text-eyebrow);
   line-height: var(--text-eyebrow--line-height);

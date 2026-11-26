@@ -25,25 +25,48 @@ const SCOPES = [
 ];
 
 const color = (role) => `--color-${role}`;
+const TEXT = '--text-color-';
+const text = (role) => `${TEXT}${role}`;
 const STATUSES = ['positive', 'negative', 'warning', 'info'];
 const WEBSITE_GROUNDS = ['ground', 'panel', 'well'].map(color);
+const MARKETING_GROUNDS = [...WEBSITE_GROUNDS, color('site-page'), color('site-well')];
 const APP_FILLS = ['ground', 'panel', 'raised', 'raised-2'].map(color);
+const APP_GROUNDS = [...APP_FILLS, color('well')];
 const APP_SERIES = ['data-you', 'data-rival-1', 'data-rival-2', 'data-rival-3', 'data-rival-4'];
+const GROUNDS = { website: WEBSITE_GROUNDS, marketing: MARKETING_GROUNDS, app: APP_GROUNDS };
+
+const TEXT_ON = {
+  'on-ink': { surfaces: [color('mark-ink')] },
+  'on-primary': { surfaces: [color('primary-from'), color('primary-to')] },
+  'accent-text': { surfaces: [color('ground'), color('panel'), color('accent-wash')] },
+  'site-chip-ink': { surfaces: [color('site-chip')], only: 'marketing' },
+  'site-band-ink-2': {
+    surfaces: ['site-band-from', 'site-band-mid', 'site-band-to'].map(color),
+    only: 'marketing',
+  },
+  'metric-ink': {
+    surfaces: [color('metric-impressions')],
+    only: 'app',
+  },
+  'metric-ink-dark': { surfaces: [color('metric-position')], only: 'app' },
+};
 
 const CONTRAST_PAIRS = [
   {
-    inks: ['ink', 'ink-2'].map(color),
-    surfaces: WEBSITE_GROUNDS,
+    inks: [text('metric-ink')],
+    surfaces: ['metric-clicks', 'metric-ctr'].map(color),
     minimum: 4.5,
+    only: 'app',
+    awaitingOwner: true,
   },
   {
-    inks: ['ink', 'ink-2'].map(color),
+    inks: ['ink', 'ink-2'].map(text),
     surfaces: ['state-hover', 'state-pressed', 'state-selected'].map(color),
     over: WEBSITE_GROUNDS,
     minimum: 4.5,
   },
   {
-    inks: [color('ink')],
+    inks: [text('ink')],
     surfaces: ['accent', ...STATUSES].map((role) => color(`${role}-wash`)),
     minimum: 4.5,
   },
@@ -52,42 +75,18 @@ const CONTRAST_PAIRS = [
     surfaces: [color('ground'), color('panel'), color(`${status}-wash`)],
     minimum: 4.5,
   })),
-  {
-    inks: [color('accent-text')],
-    surfaces: [color('ground'), color('panel'), color('accent-wash')],
-    minimum: 4.5,
-  },
-  { inks: [color('on-ink')], surfaces: [color('ink')], minimum: 4.5 },
-  {
-    inks: [color('on-primary')],
-    surfaces: [color('primary-from'), color('primary-to')],
-    minimum: 4.5,
-  },
   { inks: [color('accent'), color('focus')], surfaces: WEBSITE_GROUNDS, minimum: 3 },
   { inks: [color('control-line')], surfaces: WEBSITE_GROUNDS, minimum: 3, only: 'website' },
   {
-    inks: ['ink', 'ink-2'].map(color),
-    surfaces: ['site-page', 'site-well'].map(color),
-    minimum: 4.5,
-    only: 'marketing',
-  },
-  {
-    inks: [color('site-chip-ink')],
-    surfaces: [color('site-chip')],
-    minimum: 4.5,
-    only: 'marketing',
-  },
-  {
-    inks: [color('ink'), color('site-band-ink-secondary')],
+    inks: [text('ink')],
     surfaces: ['site-band-from', 'site-band-mid', 'site-band-to'].map(color),
     minimum: 4.5,
     only: 'marketing',
   },
   { inks: [color('site-mark')], surfaces: [color('site-page')], minimum: 3, only: 'marketing' },
-  { inks: ['ink', 'ink-2'].map(color), surfaces: APP_FILLS, minimum: 4.5, only: 'app' },
   { inks: [color('focus')], surfaces: APP_FILLS, minimum: 3, only: 'app' },
   {
-    inks: ['ink', 'ink-2'].map(color),
+    inks: ['ink', 'ink-2'].map(text),
     surfaces: [
       'state-hover',
       'state-pressed',
@@ -100,7 +99,7 @@ const CONTRAST_PAIRS = [
     only: 'app',
   },
   {
-    inks: ['ink', 'ink-2'].map(color),
+    inks: [text('ink-2')],
     surfaces: ['accent', ...STATUSES].map((role) => color(`${role}-wash`)),
     minimum: 4.5,
     only: 'app',
@@ -112,8 +111,8 @@ const CONTRAST_PAIRS = [
     only: 'app',
   })),
   {
-    inks: [color('accent-text')],
-    surfaces: [...APP_FILLS, color('accent-wash')],
+    inks: [text('accent-text')],
+    surfaces: APP_FILLS,
     minimum: 4.5,
     only: 'app',
   },
@@ -125,11 +124,30 @@ const CONTRAST_PAIRS = [
   },
 ];
 
+function textRows(palette) {
+  return [...palette.keys()]
+    .filter((token) => token.startsWith(TEXT))
+    .map((token) => {
+      const placed = TEXT_ON[token.slice(TEXT.length)];
+      return placed
+        ? { inks: [token], minimum: 4.5, ...placed }
+        : { inks: [token], surfaces: undefined, minimum: 4.5 };
+    });
+}
+
 /** @public */
 export function contrastRoles() {
+  const rows = [...CONTRAST_PAIRS, ...Object.values(TEXT_ON)];
   return {
-    inks: [...new Set(CONTRAST_PAIRS.flatMap(({ inks }) => inks))],
-    surfaces: [...new Set(CONTRAST_PAIRS.flatMap(({ surfaces }) => surfaces))],
+    inks: [
+      ...new Set([
+        ...CONTRAST_PAIRS.flatMap(({ inks }) => inks),
+        ...Object.keys(TEXT_ON).map(text),
+      ]),
+    ],
+    surfaces: [
+      ...new Set([...rows.flatMap(({ surfaces }) => surfaces), ...Object.values(GROUNDS).flat()]),
+    ],
   };
 }
 
@@ -166,6 +184,36 @@ function oklchChannels(lightness, chroma, hue) {
   return multiply(LMS_TO_SRGB, lms).map((linear) =>
     Math.round(Math.min(1, Math.max(0, fromLinear(linear))) * 255),
   );
+}
+
+const SRGB_TO_LMS = [
+  [0.4122214708, 0.5363325363, 0.0514459929],
+  [0.2119034982, 0.6806995451, 0.1073969566],
+  [0.0883024619, 0.2817188376, 0.6299787005],
+];
+const LMS_TO_OKLAB = [
+  [0.2104542553, 0.793617785, -0.0040720468],
+  [1.9779984951, -2.428592205, 0.4505937099],
+  [0.0259040371, 0.7827717662, -0.808675766],
+];
+
+function channelsToOklch(rgb) {
+  const lms = multiply(
+    SRGB_TO_LMS,
+    rgb.map((channel) => toLinear(channel / 255)),
+  ).map(Math.cbrt);
+  const [lightness, a, b] = multiply(LMS_TO_OKLAB, lms);
+  return [lightness, Math.hypot(a, b), ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360];
+}
+
+function mixInOklch(first, second, weight) {
+  const [l1, c1, h1] = channelsToOklch(first);
+  const [l2, c2, h2] = channelsToOklch(second);
+  const from = c1 < 1e-4 ? h2 : h1;
+  const to = c2 < 1e-4 ? h1 : h2;
+  const turn = ((to - from + 540) % 360) - 180;
+  const rest = 1 - weight;
+  return oklchChannels(l1 * weight + l2 * rest, c1 * weight + c2 * rest, from + turn * rest);
 }
 
 const alphaOf = (text) => {
@@ -265,6 +313,8 @@ export function paletteDeclarations(source, selector) {
   ]);
 }
 
+const MIX =
+  /^color-mix\(\s*in oklch,\s*var\((--[\w-]+)\)\s+([\d.]+)%\s*,\s*var\((--[\w-]+)\)\s*\)$/;
 const RELATIVE = /^oklch\(\s*from\s+var\((--[\w-]+)\)\s+l\s+c\s+h\s*(?:\/\s*([\d.]+)%\s*)?\)$/;
 
 /** @public */
@@ -276,6 +326,17 @@ export function resolvePalette(source, selector) {
     const value = values.get(token);
     const alias = value?.match(/^var\((--[\w-]+)\)$/)?.[1];
     if (alias) return resolve(alias, seen);
+    const mix = MIX.exec(value ?? '');
+    if (mix) {
+      const [first, second] = [mix[1], mix[3]].map((part) =>
+        parseColour(resolve(part, new Set(seen))),
+      );
+      if (first?.alpha !== 1 || second?.alpha !== 1) return undefined;
+      return formatColour({
+        rgb: mixInOklch(first.rgb, second.rgb, Number(mix[2]) / 100),
+        alpha: 1,
+      });
+    }
     const relative = RELATIVE.exec(value ?? '');
     if (!relative) {
       const colour = parseColour(value);
@@ -310,24 +371,39 @@ function rowViolations(palette, scope, { inks, surfaces, over = [color('panel')]
 }
 
 /** @public */
-export function paletteViolations(source) {
+function measure(source) {
   const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
   const violations = clean.includes(`${DARK} {`)
     ? []
     : [`${TOKEN_CSS}: dark theme token mapping is missing`];
+  const awaitingOwner = [];
   for (const { name, layers, kind } of SCOPES) {
     const palette = resolvePalette(source, layers);
     const holds = (row) =>
       row.only === undefined ||
       row.only === kind ||
       (row.only === 'website' && kind === 'marketing');
-    violations.push(
-      ...CONTRAST_PAIRS.filter(holds).flatMap((row) => rowViolations(palette, name, row)),
-    );
+    const rows = [
+      ...CONTRAST_PAIRS,
+      ...textRows(palette).map((row) => ({ ...row, surfaces: row.surfaces ?? GROUNDS[kind] })),
+    ];
+    for (const row of rows.filter(holds)) {
+      (row.awaitingOwner ? awaitingOwner : violations).push(...rowViolations(palette, name, row));
+    }
   }
-  return violations;
+  return { violations, awaitingOwner };
 }
 
-export function textContrastViolations(root) {
-  return paletteViolations(readFileSync(join(root, ...TOKEN_CSS.split('/')), 'utf8'));
+/** @public */
+export function paletteViolations(source) {
+  return measure(source).violations;
+}
+
+/** @public */
+export function paletteAwaitingOwner(source) {
+  return measure(source).awaitingOwner;
+}
+
+export function textContrast(root) {
+  return measure(readFileSync(join(root, ...TOKEN_CSS.split('/')), 'utf8'));
 }

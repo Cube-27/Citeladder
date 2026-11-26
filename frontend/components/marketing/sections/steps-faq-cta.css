@@ -21,7 +21,7 @@
 
 .cl-step-meta {
   margin: 4px 0 0;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
@@ -34,7 +34,7 @@
 
 .cl-step-title {
   margin: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-heading-lg);
   font-weight: 500;
   line-height: var(--text-heading-lg--line-height);
@@ -44,7 +44,7 @@
 .cl-step-text {
   max-width: 420px;
   margin: 0;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -108,7 +108,7 @@
   gap: 24px;
   padding: 24px 0;
   border-radius: var(--radius-xs);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-title-sm);
   font-weight: 500;
   line-height: var(--text-title-sm--line-height);
@@ -139,7 +139,7 @@
 .cl-faq-a {
   max-width: var(--container-prose);
   padding: 0 48px 24px 0;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -153,14 +153,14 @@
 }
 
 .cl-faq-a a {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
 .cl-cta {
-  --color-ink-2: var(--color-site-band-ink-secondary);
+  --text-color-ink-2: var(--text-color-site-band-ink-2);
   --color-panel: transparent;
   --color-control-line: var(--color-site-band-line);
 
@@ -174,7 +174,7 @@
   border: 0;
   background: none;
   box-shadow: none;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   text-align: center;
 }
 
@@ -219,7 +219,7 @@
 .cl-cta-title {
   max-width: 960px;
   margin: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-display);
   font-size: var(--text-site-section);
   font-weight: 400;
@@ -250,7 +250,7 @@
 
 .cl-cta-note {
   margin: 0;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }

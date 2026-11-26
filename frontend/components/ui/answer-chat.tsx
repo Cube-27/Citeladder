@@ -43,7 +43,7 @@ export function ChatAvatar({
       aria-hidden
       className={cn(
         'grid size-8 shrink-0 place-items-center rounded-full',
-        tone === 'you' ? 'bg-ink text-on-ink' : 'bg-well text-ink',
+        tone === 'you' ? 'bg-mark-ink text-on-ink' : 'bg-well text-ink',
       )}
     >
       {children}

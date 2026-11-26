@@ -41,28 +41,28 @@ const { title = 'Sources', count } = Astro.props;
   }
   .cl-sources-title {
     margin: 0;
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-size: var(--text-title);
     line-height: var(--text-title--line-height);
     font-weight: 500;
   }
   .cl-sources-count {
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
     font-family: var(--font-mono);
     font-size: var(--text-data);
     line-height: var(--text-data--line-height);
   }
   .cl-sources-icon {
     margin-left: auto;
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
     transition: transform var(--motion-fast) var(--ease-standard);
   }
   .cl-sources-details[open] .cl-sources-icon {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   @media (hover: hover) and (pointer: fine) {
     .cl-sources-summary:hover .cl-sources-icon {
-      color: var(--color-ink);
+      color: var(--text-color-ink);
     }
   }
   .cl-sources-details[open] .cl-sources-icon {
@@ -70,7 +70,7 @@ const { title = 'Sources', count } = Astro.props;
   }
   .cl-sources-notes {
     margin: 0 0 16px;
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
   }
@@ -96,7 +96,7 @@ const { title = 'Sources', count } = Astro.props;
     background: var(--color-well);
   }
   .cl-source-n {
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
     font-family: var(--font-mono);
     font-size: var(--text-data);
     line-height: var(--text-body-sm--line-height);
@@ -107,7 +107,7 @@ const { title = 'Sources', count } = Astro.props;
     flex-direction: column;
     gap: 4px;
     min-width: 0;
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-size: var(--text-body-sm);
     line-height: var(--text-body-sm--line-height);
   }
@@ -129,7 +129,7 @@ const { title = 'Sources', count } = Astro.props;
   }
   .cl-source-meta {
     margin: 0;
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
     font-family: var(--font-mono);
     font-size: var(--text-data);
     line-height: var(--text-data--line-height);

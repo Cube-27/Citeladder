@@ -13,7 +13,7 @@ export const AXIS_PROPS = {
   axisLine: false,
   tickLine: false,
   tickMargin: 8,
-  tick: { fill: 'var(--color-ink-2)', fontSize: 12 },
+  tick: { fill: 'var(--text-color-ink-2)', fontSize: 12 },
 } as const;
 
 export const GRID_PROPS = {

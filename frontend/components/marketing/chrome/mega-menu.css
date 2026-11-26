@@ -70,7 +70,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-body-sm);
   font-weight: 400;
   line-height: var(--text-body-sm--line-height);
@@ -84,11 +84,11 @@
 
 .cl-mega-ext {
   flex: none;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
 }
 
 .cl-mega-desc {
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-caption);
   font-weight: 400;
   line-height: var(--text-caption--line-height);

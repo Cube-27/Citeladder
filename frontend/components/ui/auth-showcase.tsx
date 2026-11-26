@@ -263,7 +263,7 @@ export function AuthShowcase() {
                   aria-hidden
                   className={cn(
                     'rounded-mark block h-2 transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none',
-                    current ? 'bg-ink w-5' : 'bg-control-line size-2',
+                    current ? 'bg-mark-ink w-5' : 'bg-control-line size-2',
                   )}
                 />
               </button>

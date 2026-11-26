@@ -32,7 +32,7 @@ const { label } = Astro.props;
     background: var(--color-panel);
     border: 1px solid var(--color-control-line);
     border-radius: var(--radius-md);
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
     font-weight: 500;
@@ -52,7 +52,7 @@ const { label } = Astro.props;
     white-space: nowrap;
   }
   .cl-jump :global(.cl-jump-caret) {
-    color: var(--color-ink-2);
+    color: var(--text-color-ink-2);
     transition: transform var(--motion-fast) var(--ease-standard);
   }
   .cl-jump[open] :global(.cl-jump-caret) {

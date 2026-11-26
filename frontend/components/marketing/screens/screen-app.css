@@ -6,7 +6,7 @@
   width: var(--screen-w);
   height: var(--screen-h);
   overflow: hidden;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
@@ -143,12 +143,12 @@
   height: var(--control-md);
   padding: 0 12px;
   border-radius: var(--radius-md);
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
 }
 
 .cl-app-nav-row.is-active {
   background: var(--screen-nav-current);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-weight: 500;
 }
 
@@ -164,7 +164,7 @@
 
 .cl-app-nav-icon {
   flex: none;
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
 }
 
 .cl-app-nav-row.is-active .cl-app-nav-icon {
@@ -184,7 +184,7 @@
 }
 
 .cl-app-nav-count {
-  color: var(--color-ink-2);
+  color: var(--text-color-ink-2);
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);

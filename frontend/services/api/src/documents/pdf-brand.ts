@@ -15,10 +15,10 @@ import { create as parseFont } from 'fontkit';
 import { oklchToHex } from './oklch.ts';
 
 const TOKENS = {
-  ink: '--color-ink',
-  ink2: '--color-ink-2',
+  ink: '--text-color-ink',
+  ink2: '--text-color-ink-2',
   accent: '--color-accent',
-  accentText: '--color-accent-text',
+  accentText: '--text-color-accent-text',
   well: '--color-well',
   rule: '--color-rule',
   negative: '--color-negative',

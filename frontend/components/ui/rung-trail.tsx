@@ -31,9 +31,9 @@ function rungFace(status: RungStatus) {
     case 'pending':
       return 'bg-rule';
     case 'running':
-      return 'bg-ink animate-live-rung';
+      return 'bg-mark-ink animate-live-rung';
     case 'done':
-      return 'bg-ink';
+      return 'bg-mark-ink';
     case 'failed':
       return 'bg-negative';
     case 'unavailable':

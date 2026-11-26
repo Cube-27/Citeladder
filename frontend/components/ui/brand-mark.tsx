@@ -59,7 +59,7 @@ export function BrandMark({
             'grid place-items-center font-medium uppercase',
             entity === 'site'
               ? 'border-control-line text-ink-2 rounded-mark border'
-              : 'bg-ink text-on-ink',
+              : 'bg-mark-ink text-on-ink',
             placement === 'header' ? 'size-full' : spec.image,
           )}
         >

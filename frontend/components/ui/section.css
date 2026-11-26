@@ -38,7 +38,7 @@
 [data-panel-frame] {
   border-radius: var(--radius-card);
   background-color: var(--color-panel);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   box-shadow: var(--shadow-card);
   overflow: clip;
 }
