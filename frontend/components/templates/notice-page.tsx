@@ -77,7 +77,7 @@ export function NoticePage({ heading, ...notice }: NoticeContent) {
 export function NoticeScreen(notice: NoticeContent) {
   useDocumentTitle(notice.tone === 'loading' ? undefined : notice.heading);
   return (
-    <div className="flex min-w-0 flex-col pt-[var(--flow-gap)]">
+    <div className="pt-flow-gap flex min-w-0 flex-col">
       <NoticeBlock {...notice} />
     </div>
   );

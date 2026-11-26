@@ -81,7 +81,7 @@ export function AuthRowList({ label, children }: Readonly<{ label: string; child
 }
 
 const AUTH_ROW =
-  'focus-ring-inset text-ink hover:overlay-hover rounded-control flex min-h-[var(--table-row-height)] w-full cursor-pointer items-center gap-2 px-2 text-left no-underline transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none';
+  'focus-ring-inset text-ink hover:overlay-hover rounded-control flex min-h-row w-full cursor-pointer items-center gap-2 px-2 text-left no-underline transition-colors duration-fast motion-reduce:transition-none';
 
 type RowLink = ReactElement<{ className?: string; children?: ReactNode }>;
 

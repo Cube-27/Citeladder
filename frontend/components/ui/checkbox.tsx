@@ -49,7 +49,7 @@ function CheckMark({ on }: Readonly<{ on: boolean }>) {
   );
 }
 
-const CHECK_TARGET = 'inline-flex size-[var(--target-min)] shrink-0 items-center justify-center';
+const CHECK_TARGET = 'inline-flex size-target shrink-0 items-center justify-center';
 
 function Box({
   checked,
@@ -137,7 +137,9 @@ export function Checkbox({
         className,
       )}
     >
-      <span className={cn(CHECK_TARGET, '-my-0.5 [--target-hit:var(--target-min)]')}>{box}</span>
+      <span className={cn(CHECK_TARGET, '-my-0.5 [--target-hit:var(--spacing-target)]')}>
+        {box}
+      </span>
       <span className="flex min-w-0 flex-col">
         <span className="text-body text-ink">{label}</span>
         {description != null ? <span className="text-body text-ink-2">{description}</span> : null}

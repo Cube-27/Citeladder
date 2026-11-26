@@ -25,9 +25,9 @@ export type LoadingShape =
   | Readonly<{ kind: 'thread' }>;
 
 const CHART_HEIGHT: Record<ChartHeight, string> = {
-  sm: 'h-[var(--chart-height-sm)]',
-  md: 'h-[var(--chart-height-md)]',
-  lg: 'h-[var(--chart-height-lg)]',
+  sm: 'h-chart-sm',
+  md: 'h-chart-md',
+  lg: 'h-chart-lg',
 };
 
 export function ShapeBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
@@ -73,7 +73,7 @@ function CaptionLine({ width }: Readonly<{ width: string }>) {
 
 function KeyedChartBlocks({ plot }: Readonly<{ plot: ReactNode }>) {
   return (
-    <div className="grid gap-[var(--compact-gap)]">
+    <div className="gap-compact grid">
       <div className="flex min-w-0 flex-col gap-4">
         <CaptionLine width="w-48" />
         {plot}
@@ -90,7 +90,7 @@ function TitleBlock() {
 
 export function WidgetCardBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
   return (
-    <div className="skeleton-sweep flex h-full flex-col gap-[var(--workspace-gap)]">
+    <div className="skeleton-sweep gap-workspace flex h-full flex-col">
       <span className="flex h-6 items-center">
         <TitleBlock />
       </span>
@@ -105,11 +105,7 @@ export function ReportSkeletonFrame({
   children,
 }: Readonly<{ label: string; variant: string; children: ReactNode }>) {
   return (
-    <SkeletonFrame
-      label={label}
-      variant={variant}
-      className="flex flex-col gap-[var(--page-top-gap)]"
-    >
+    <SkeletonFrame label={label} variant={variant} className="gap-page-top flex flex-col">
       <span className="flex h-4 items-center">
         <SkeletonBlock className="w-60 max-w-full" />
       </span>
@@ -171,7 +167,7 @@ export function TableBlocks({
     cn(cellWidth(columns, cell), cell >= columns - desktopOnly && 'desktop:block hidden');
   return (
     <span className="grid">
-      <span className="bg-well rounded-mark block h-[var(--table-header-height)]" />
+      <span className="bg-well rounded-mark h-table-head block" />
       {range(rows).map((row) => (
         <span key={row} className="flex h-10 items-center gap-4 px-4">
           {cells.map((cell) => (
@@ -202,7 +198,7 @@ export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
 
 function ThreadBlocks() {
   return (
-    <span className="grid gap-[var(--card-padding)] px-4">
+    <span className="gap-card grid px-4">
       <SkeletonBlock className="rounded-card ms-auto h-10 w-[45%]" />
       <span className="grid gap-2">
         <SkeletonBlock className="h-4 w-full" />
@@ -216,7 +212,7 @@ export function ComposerBlocks() {
   return (
     <span className="bg-panel border-rule rounded-card shadow-pop grid gap-1 border p-2">
       <span className="block h-[30px]" />
-      <span className="flex h-[var(--control-md)] items-center justify-end">
+      <span className="h-control-md flex items-center justify-end">
         <SkeletonBlock className="size-8 rounded-full" />
       </span>
     </span>

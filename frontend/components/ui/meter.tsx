@@ -15,7 +15,7 @@ const METER_FILL = {
 } as const satisfies Record<MeterTone, string>;
 
 const FILL_MOTION =
-  'block h-full [transition:width_var(--motion-slide)_var(--ease-standard),background-color_var(--motion-open)_var(--ease-standard)]';
+  'block h-full [transition:width_var(--transition-duration-slide)_var(--ease-standard),background-color_var(--transition-duration-open)_var(--ease-standard)]';
 
 function percentOf(value: number | null, max: number) {
   if (value === null || max <= 0) return null;

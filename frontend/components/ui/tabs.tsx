@@ -70,16 +70,16 @@ function tabFace({
 export const TAB_BASELINE = 'shadow-[inset_0_-1px_0_var(--color-rule)]';
 
 const STRIP_ROW = {
-  page: 'min-h-[var(--page-tabs-height,var(--control-md))]',
+  page: 'min-h-page-tabs',
   section: cn(TAB_BASELINE, 'flex w-full'),
 } as const;
 
 export const TAB_TRACK =
-  'inline-flex min-h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-control p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  'inline-flex min-h-control-md max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-control p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 export function tabClasses(selected: boolean, className?: string) {
   return cn(
-    'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border border-transparent px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
+    'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border border-transparent px-3 text-label whitespace-nowrap transition-[background-color,color] duration-fast focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
     selected
       ? 'bg-panel text-ink font-emphasis'
       : 'text-ink-2 not-disabled:hover:text-ink font-plain',
@@ -310,7 +310,7 @@ export function Tabs<T extends string>({
     <TabsRoot
       value={value}
       onValueChange={onValueChange}
-      className={cn(spaced && 'grid min-w-0 gap-[var(--workspace-gap)]')}
+      className={cn(spaced && 'grid min-w-0 gap-workspace')}
     >
       <TabStrip {...bar} />
       {children}

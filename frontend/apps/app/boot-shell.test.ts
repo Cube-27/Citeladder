@@ -114,10 +114,10 @@ describe('the boot shell geometry', () => {
       row: px(at('.boot-row'), 'height'),
       rowWeight: getComputedStyle(at('.boot-row')).fontWeight,
     }).toEqual({
-      masthead: token('--masthead-height'),
-      ident: token('--masthead-height'),
-      switch: token('--control-md'),
-      row: token('--nav-row-height'),
+      masthead: token('--spacing-masthead'),
+      ident: token('--spacing-masthead'),
+      switch: token('--spacing-control-md'),
+      row: token('--spacing-nav-row'),
       rowWeight: sidebarNavRowClasses(false).includes('text-body') ? '400' : '500',
     });
   });

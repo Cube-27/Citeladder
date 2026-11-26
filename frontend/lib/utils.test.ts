@@ -20,4 +20,15 @@ describe('cn', () => {
       'text-ink-2 text-screen-eyebrow',
     );
   });
+
+  it('lets a caller replace a primitive role value with another role or a step', () => {
+    expect(cn('min-h-control-md px-control-x', 'px-0')).toBe('min-h-control-md px-0');
+    expect(cn('gap-compact', 'gap-workspace')).toBe('gap-workspace');
+    expect(cn('h-control-md w-control-md', 'size-6')).toBe('size-6');
+    expect(cn('duration-fast ease-standard', 'duration-open ease-fluid')).toBe(
+      'duration-open ease-fluid',
+    );
+    expect(cn('z-raised', 'z-base')).toBe('z-base');
+    expect(cn('max-w-flow', 'pt-flow-gap')).toBe('max-w-flow pt-flow-gap');
+  });
 });

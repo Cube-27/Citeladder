@@ -233,13 +233,13 @@
   text-decoration-color: transparent;
   text-decoration-thickness: 1px;
   text-underline-offset: 4px;
-  transition: text-decoration-color var(--motion-fast) var(--ease-standard);
+  transition: text-decoration-color var(--transition-duration-fast) var(--ease-standard);
 }
 
 .cl-arrowlink-icon {
   flex-shrink: 0;
   color: var(--color-accent);
-  transition: transform var(--motion-fast) var(--ease-standard);
+  transition: transform var(--transition-duration-fast) var(--ease-standard);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -256,7 +256,7 @@
 
 @media (pointer: coarse) {
   :root[data-marketing-surface] {
-    --control-coarse: 44px;
+    --spacing-control-coarse: 44px;
   }
 
   .cl-arrowlink {

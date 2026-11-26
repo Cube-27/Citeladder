@@ -11,10 +11,7 @@ export function EditorWorkspace({ page, rail }: Readonly<{ page: ReactNode; rail
   return (
     <div
       data-editor-workspace="wide"
-      className={cn(
-        FILL,
-        'grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-[var(--workspace-gap)]',
-      )}
+      className={cn(FILL, 'grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-workspace')}
     >
       {page}
       {rail}
@@ -27,10 +24,7 @@ export function EditorStack({
   children,
 }: Readonly<{ tabs: ReactNode; children: ReactNode }>) {
   return (
-    <div
-      data-editor-workspace="narrow"
-      className={cn(FILL, 'flex flex-col gap-[var(--page-band-gap)]')}
-    >
+    <div data-editor-workspace="narrow" className={cn(FILL, 'flex flex-col gap-band')}>
       {tabs}
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </div>
@@ -44,9 +38,7 @@ export function EditorPane({
 }: Readonly<{ label: string; head?: ReactNode; children: ReactNode }>) {
   return (
     <PanelFrame as="section" aria-label={label}>
-      {head ? (
-        <div className="border-rule grid gap-2 border-b px-[var(--card-padding)] py-3">{head}</div>
-      ) : null}
+      {head ? <div className="border-rule px-card grid gap-2 border-b py-3">{head}</div> : null}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
     </PanelFrame>
   );
@@ -59,13 +51,9 @@ export function EditorRail({
 }: Readonly<{ head?: ReactNode; children: ReactNode; foot?: ReactNode }>) {
   return (
     <PanelFrame>
-      {head ? (
-        <div className="px-[var(--card-padding)] pt-[var(--card-padding)]">{head}</div>
-      ) : null}
+      {head ? <div className="px-card pt-card">{head}</div> : null}
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-      {foot ? (
-        <div className="border-rule shrink-0 border-t p-[var(--compact-gap)]">{foot}</div>
-      ) : null}
+      {foot ? <div className="border-rule p-compact shrink-0 border-t">{foot}</div> : null}
     </PanelFrame>
   );
 }
@@ -91,8 +79,8 @@ export function EditorRailPanel({
         className={cn(
           'flex min-w-0 flex-col',
           padding === 'card'
-            ? 'gap-[var(--panel-inset)] p-[var(--panel-inset)] [--panel-inset:var(--card-padding)]'
-            : 'gap-[var(--workspace-gap)] py-[var(--compact-gap)]',
+            ? 'gap-panel-inset p-panel-inset [--spacing-panel-inset:var(--spacing-card)]'
+            : 'gap-workspace py-compact',
         )}
       >
         <SurfaceContext value="surface">{children}</SurfaceContext>

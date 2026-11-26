@@ -12,13 +12,13 @@ export function AnswerLayout({
   railLabel,
 }: Readonly<{ main: ReactNode; rail: ReactNode; railLabel: string }>) {
   return (
-    <div className="desktop:grid-cols-[minmax(0,1fr)_20rem] grid min-w-0 gap-y-[var(--panel-inset)]">
-      <div className="desktop:pe-[var(--panel-inset)] grid min-w-0 content-start gap-[var(--panel-inset)]">
+    <div className="desktop:grid-cols-[minmax(0,1fr)_20rem] gap-y-panel-inset grid min-w-0">
+      <div className="desktop:pe-panel-inset gap-panel-inset grid min-w-0 content-start">
         {main}
       </div>
       <aside
         aria-label={railLabel}
-        className="desktop:border-s desktop:ps-[var(--panel-inset)] border-rule flex min-w-0 flex-col gap-[var(--workspace-gap)]"
+        className="desktop:border-s desktop:ps-panel-inset border-rule gap-workspace flex min-w-0 flex-col"
       >
         {rail}
       </aside>
@@ -28,7 +28,7 @@ export function AnswerLayout({
 
 export function ChatThread({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
-    <ol aria-label={label} className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">
+    <ol aria-label={label} className="gap-workspace flex min-w-0 flex-col">
       {children}
     </ol>
   );

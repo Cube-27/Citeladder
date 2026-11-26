@@ -92,7 +92,7 @@ function OfferingRow({
       aria-label={map.offering}
       className={cn(ROW_GRID, 'border-rule column-split:p-0 border-b p-2')}
     >
-      <div className="column-split:px-[var(--panel-inset)] column-split:py-3 flex min-w-0 items-start justify-between gap-2 px-2 pt-1">
+      <div className="column-split:px-panel-inset column-split:py-3 flex min-w-0 items-start justify-between gap-2 px-2 pt-1">
         <span className={textRole('label', 'min-w-0 break-words')}>{map.offering}</span>
         <IconButton
           icon={X}
@@ -149,7 +149,7 @@ function AddOffering({
     setName('');
   };
   return (
-    <div className="focus-frame border-rule flex min-h-10 items-center gap-2 border-t border-transparent px-[var(--panel-inset)]">
+    <div className="focus-frame border-rule px-panel-inset flex min-h-10 items-center gap-2 border-t border-transparent">
       <Icon icon={Plus} className="text-ink-2" />
       <input
         aria-label="Add offering"
@@ -203,11 +203,11 @@ export function OfferingsGrid({
           aria-hidden
           className={cn(
             ROW_GRID,
-            'border-rule column-split:grid hidden h-[var(--table-header-height)] items-center border-b bg-[var(--table-head-ground)]',
+            'border-rule column-split:grid hidden h-table-head items-center border-b bg-[var(--table-head-ground)]',
             textRole('captionStrong'),
           )}
         >
-          <span className="px-[var(--panel-inset)]">Offering</span>
+          <span className="px-panel-inset">Offering</span>
           {DIMENSIONS.map((dimension) => (
             <span key={dimension.key} className="px-3">
               {dimension.label}

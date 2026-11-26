@@ -14,11 +14,11 @@
   line-height: var(--text-body--line-height);
 }
 .page-editor .cm-editor .cm-content {
-  padding: var(--card-padding) 0;
+  padding: var(--spacing-card) 0;
   caret-color: var(--text-color-ink);
 }
 .page-editor .cm-editor .cm-line {
-  padding: 0 var(--card-padding);
+  padding: 0 var(--spacing-card);
 }
 .page-editor .cm-editor .page-editor-h1 {
   font-size: var(--text-display);

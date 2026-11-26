@@ -12,7 +12,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    height: var(--control-md);
+    height: var(--spacing-control-md);
     padding: 0 4px 0 16px;
     border-bottom: 1px solid var(--color-rule);
   }
@@ -40,7 +40,7 @@
     justify-content: center;
     gap: 4px;
     min-width: 88px;
-    height: var(--control-sm);
+    height: var(--spacing-control-sm);
     padding: 0 8px;
     border: 0;
     border-radius: var(--radius-sm);
@@ -51,8 +51,8 @@
     line-height: var(--text-label--line-height);
     font-weight: 500;
     transition:
-      background-color var(--motion-fast) var(--ease-standard),
-      color var(--motion-fast) var(--ease-standard);
+      background-color var(--transition-duration-fast) var(--ease-standard),
+      color var(--transition-duration-fast) var(--ease-standard);
   }
   @media (hover: hover) and (pointer: fine) {
     .cl-code-copy:hover {

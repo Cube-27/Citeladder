@@ -149,7 +149,7 @@ function boxClasses({
     'focus-frame relative flex w-full min-w-0 cursor-text flex-wrap items-center gap-1.5 rounded-control p-1 transition-[border-color,box-shadow]',
     accepting && 'pe-8',
     variant === 'field'
-      ? cn('min-h-[var(--control-md)]', FIELD_EDGE)
+      ? cn('min-h-control-md', FIELD_EDGE)
       : 'min-h-10 border border-transparent hover:bg-state-hover',
     disabled && 'cursor-not-allowed opacity-45',
   );

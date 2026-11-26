@@ -174,7 +174,7 @@ function useAutoplay({
 }
 
 const SHOWCASE_CONTROL =
-  'focus-ring rounded-mark grid size-6 place-items-center transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none';
+  'focus-ring rounded-mark grid size-6 place-items-center transition-colors duration-fast motion-reduce:transition-none';
 
 export function AuthShowcase() {
   const root = useRef<HTMLElement>(null);
@@ -201,7 +201,7 @@ export function AuthShowcase() {
   return (
     <aside
       ref={root}
-      className="desktop:grid bg-page rounded-card sticky top-2 my-2 me-2 hidden h-[calc(100dvh-1rem)] min-h-0 content-center gap-[var(--page-top-gap)] overflow-hidden px-[var(--content-gutter)]"
+      className="desktop:grid bg-page rounded-card gap-page-top px-gutter sticky top-2 my-2 me-2 hidden h-[calc(100dvh-1rem)] min-h-0 content-center overflow-hidden"
       aria-label="CiteLadder features"
       aria-roledescription="carousel"
     >
@@ -212,7 +212,7 @@ export function AuthShowcase() {
             <section
               key={slide.id}
               className={cn(
-                'col-start-1 row-start-1 grid justify-items-center gap-[var(--page-top-gap)] transition-opacity duration-[var(--motion-open)] motion-reduce:transition-none',
+                'col-start-1 row-start-1 grid justify-items-center gap-page-top transition-opacity duration-open motion-reduce:transition-none',
                 current ? 'visible' : 'invisible',
               )}
               style={current ? SHOWN : HIDDEN}
@@ -262,7 +262,7 @@ export function AuthShowcase() {
                 <span
                   aria-hidden
                   className={cn(
-                    'rounded-mark block h-2 transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none',
+                    'rounded-mark block h-2 transition-colors duration-fast motion-reduce:transition-none',
                     current ? 'bg-mark-ink w-5' : 'bg-control-line size-2',
                   )}
                 />

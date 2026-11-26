@@ -38,7 +38,7 @@ export function LinkRow({
   facts: readonly [ReactNode, ReactNode];
 }>) {
   return (
-    <li className="hover:overlay-hover relative flex h-10 items-center gap-3 px-[var(--panel-inset)]">
+    <li className="hover:overlay-hover px-panel-inset relative flex h-10 items-center gap-3">
       {tick ? <span className="relative z-10 flex shrink-0">{tick}</span> : null}
       <ProjectLink
         href={href}

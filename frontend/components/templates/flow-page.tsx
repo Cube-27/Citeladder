@@ -32,7 +32,7 @@ export function FlowPage({
       )}
     >
       <div className="flex min-h-dvh min-w-0 flex-col">
-        <header className="flex min-h-[var(--masthead-height)] shrink-0 items-center justify-between gap-[var(--card-padding)] px-[var(--content-gutter)]">
+        <header className="min-h-masthead gap-card px-gutter flex shrink-0 items-center justify-between">
           <span className="inline-flex">
             <FlowLogo />
           </span>
@@ -44,7 +44,7 @@ export function FlowPage({
         <main
           id="main"
           aria-label={label}
-          className="max-w-flow mx-auto flex w-full flex-1 flex-col px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] pb-[var(--flow-gap)] [--control-md:var(--control-lg)]"
+          className="max-w-flow px-gutter pb-flow-gap mx-auto flex w-full flex-1 flex-col pt-[max(var(--spacing-flow-gap),calc(20dvh-var(--spacing-masthead)))] [--spacing-control-md:var(--spacing-control-lg)]"
         >
           {aside ? (
             <div className="flex flex-col gap-4">
@@ -57,9 +57,7 @@ export function FlowPage({
           )}
         </main>
         {footer ? (
-          <footer className={textRole('caption', 'px-[var(--content-gutter)] py-4 text-center')}>
-            {footer}
-          </footer>
+          <footer className={textRole('caption', 'px-gutter py-4 text-center')}>{footer}</footer>
         ) : null}
       </div>
       {aside}
@@ -124,8 +122,8 @@ export function FlowBlock({
   const generatedId = useId();
   const headingId = titleId ?? generatedId;
   return (
-    <div className="flex flex-col gap-[var(--page-top-gap)]">
-      <section aria-labelledby={headingId} className="flex flex-col gap-[var(--page-top-gap)]">
+    <div className="gap-page-top flex flex-col">
+      <section aria-labelledby={headingId} className="gap-page-top flex flex-col">
         <FlowHead id={headingId} title={title} sub={sub} icon={icon} centered={centered} />
         {children}
       </section>

@@ -77,7 +77,7 @@ function DialogHeader({
   danger: boolean;
 }>) {
   return (
-    <header className={cn('flex items-start gap-3 p-[var(--modal-padding)]', !danger && 'pe-14')}>
+    <header className={cn('flex items-start gap-3 p-modal', !danger && 'pe-14')}>
       {danger ? (
         <span className="text-negative inline-flex h-7 items-center">
           <Icon icon={AlertTriangle} className="my-0" />
@@ -176,8 +176,8 @@ function DialogBody({ children, footer }: Readonly<{ children?: ReactNode; foote
         <div
           data-dialog-body=""
           className={cn(
-            'text-ink flex min-h-0 flex-1 flex-col gap-[var(--panel-inset)] overflow-auto overscroll-contain px-[var(--panel-inset)] [--panel-inset:var(--modal-padding)]',
-            footer ? 'pb-0' : 'pb-[var(--panel-inset)]',
+            'text-ink flex min-h-0 flex-1 flex-col gap-panel-inset overflow-auto overscroll-contain px-panel-inset [--spacing-panel-inset:var(--spacing-modal)]',
+            footer ? 'pb-0' : 'pb-panel-inset',
           )}
         >
           <SurfaceContext value="surface">{children}</SurfaceContext>
@@ -186,7 +186,7 @@ function DialogBody({ children, footer }: Readonly<{ children?: ReactNode; foote
       {footer ? (
         <footer
           className={cn(
-            'flex items-center justify-end gap-2 px-[var(--modal-padding)] pb-[var(--modal-padding)]',
+            'flex items-center justify-end gap-2 px-modal pb-modal',
             hasBody ? 'pt-5' : 'pt-0',
           )}
         >

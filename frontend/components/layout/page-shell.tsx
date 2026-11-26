@@ -43,10 +43,7 @@ export function RouteLoadingScreen() {
         <SkeletonFrame
           label="Loading…"
           variant="route"
-          className={cn(
-            'flex flex-col',
-            loading.stacked ? 'gap-[var(--workspace-gap)]' : 'gap-[var(--page-section-gap)]',
-          )}
+          className={cn('flex flex-col', loading.stacked ? 'gap-workspace' : 'gap-section')}
         >
           {loading.intro ? (
             <span data-loading-shape="intro" className="flex flex-col gap-1">

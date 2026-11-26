@@ -88,12 +88,12 @@ const hasBar = hasToc || nav !== undefined;
 <style is:global>
   .cl-doc {
     display: grid;
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    grid-template-columns: var(--spacing-sidebar) minmax(0, 1fr);
     gap: 48px;
     align-items: start;
   }
   .cl-doc--toc {
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 232px;
+    grid-template-columns: var(--spacing-sidebar) minmax(0, 1fr) 232px;
   }
   .cl-doc-rail,
   .cl-doc-toc {
@@ -137,7 +137,7 @@ const hasBar = hasToc || nav !== undefined;
   .cl-doc-link {
     display: flex;
     align-items: center;
-    min-height: var(--control-md);
+    min-height: var(--spacing-control-md);
     padding: 8px 12px;
     border-radius: var(--radius-sm);
     color: var(--text-color-ink-2);
@@ -145,8 +145,8 @@ const hasBar = hasToc || nav !== undefined;
     line-height: var(--text-body--line-height);
     text-decoration: none;
     transition:
-      background-color var(--motion-fast) var(--ease-standard),
-      color var(--motion-fast) var(--ease-standard);
+      background-color var(--transition-duration-fast) var(--ease-standard),
+      color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-doc-link:hover,
   .cl-doc-link.is-active {
@@ -167,7 +167,7 @@ const hasBar = hasToc || nav !== undefined;
   @media (max-width: 1199px) {
     .cl-doc,
     .cl-doc--toc {
-      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+      grid-template-columns: var(--spacing-sidebar) minmax(0, 1fr);
     }
     .cl-doc-toc {
       display: none;

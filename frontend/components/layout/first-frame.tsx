@@ -11,10 +11,7 @@ export function FirstFrame({ children }: Readonly<{ children?: ReactNode }>) {
   return (
     <div data-flow-frame="" className="bg-ground text-ink min-h-dvh antialiased">
       {children === undefined ? null : (
-        <main
-          id="main"
-          className="max-w-flow mx-auto w-full px-[var(--content-gutter)] pt-[var(--flow-gap)]"
-        >
+        <main id="main" className="max-w-flow px-gutter pt-flow-gap mx-auto w-full">
           {children}
         </main>
       )}

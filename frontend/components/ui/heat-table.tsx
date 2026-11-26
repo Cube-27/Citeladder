@@ -92,7 +92,7 @@ const HEAT_FLOOR =
 const HEAT_HEAD =
   'phone:whitespace-normal phone:[&>span]:flex-col phone:[&>span]:gap-1 phone:[&_.truncate]:whitespace-normal text-center';
 const RANK_CHIP =
-  'rounded-mark flex h-[var(--control-md)] items-center justify-center gap-1 overflow-hidden px-2 whitespace-nowrap phone:h-auto phone:min-h-[var(--control-md)] phone:flex-wrap phone:py-1 phone:text-center';
+  'rounded-mark flex h-control-md items-center justify-center gap-1 overflow-hidden px-2 whitespace-nowrap phone:h-auto phone:min-h-control-md phone:flex-wrap phone:py-1 phone:text-center';
 const RANK_FLOOR = 'phone:min-w-[calc(10rem+var(--grid-columns)*8rem)]';
 
 function GridFloor({ columns, children }: Readonly<{ columns: number; children: ReactNode }>) {
@@ -112,7 +112,7 @@ export function GridTableSkeleton({
       </td>
     ) : (
       <td data-tile-cell="" className="p-1">
-        <SkeletonBlock className="rounded-mark h-[var(--control-md)]" />
+        <SkeletonBlock className="rounded-mark h-control-md" />
       </td>
     );
   return (

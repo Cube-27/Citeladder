@@ -38,11 +38,11 @@ export function SidebarFrame({
     <div className="h-full overflow-hidden">
       <div
         data-sidebar-frame=""
-        className="rail:in-data-[sidebar-state=expanded]:w-[var(--sidebar-width-compact)] shell:in-data-[sidebar-state=expanded]:w-[var(--sidebar-width)] rail:in-data-[sidebar-state=collapsed]:w-[var(--sidebar-rail-width)] labelled:gap-2 flex h-full flex-col gap-1 p-2"
+        className="rail:in-data-[sidebar-state=expanded]:w-sidebar-compact shell:in-data-[sidebar-state=expanded]:w-sidebar rail:in-data-[sidebar-state=collapsed]:w-sidebar-rail labelled:gap-2 flex h-full flex-col gap-1 p-2"
       >
         <div
           data-sidebar-ident-cell=""
-          className="labelled:h-[var(--masthead-height)] labelled:flex-row flex shrink-0 flex-col items-center gap-1 in-data-[nav-drawer]:pe-10"
+          className="labelled:h-masthead labelled:flex-row flex shrink-0 flex-col items-center gap-1 in-data-[nav-drawer]:pe-10"
         >
           {ident}
         </div>
@@ -162,7 +162,7 @@ export function SidebarNavGroup({
           aria-expanded={expanded}
           aria-controls={listId}
           onClick={onToggle}
-          className="focus-ring text-caption-strong text-ink-2 hover:overlay-hover hover:text-ink rounded-control flex h-[var(--nav-row-height)] w-full min-w-0 items-center gap-2 px-2 text-left transition-colors"
+          className="focus-ring text-caption-strong text-ink-2 hover:overlay-hover hover:text-ink rounded-control h-nav-row flex w-full min-w-0 items-center gap-2 px-2 text-left transition-colors"
         >
           <span className="min-w-0 flex-1 truncate">{title}</span>
           <ChevronDown
@@ -188,7 +188,7 @@ const NAV_AT_REST = 'text-nav-ink hover:overlay-hover hover:shadow-card';
 
 export function sidebarNavRowClasses(active: boolean, className?: string) {
   return cn(
-    'focus-ring text-body text-ink rounded-control relative flex h-[var(--nav-row-height)] w-full min-w-0 shrink-0 items-center gap-2 px-2 text-left transition-colors',
+    'focus-ring text-body text-ink rounded-control relative flex h-nav-row w-full min-w-0 shrink-0 items-center gap-2 px-2 text-left transition-colors',
     active ? CURRENT_TILE : NAV_AT_REST,
     className,
   );
@@ -215,7 +215,7 @@ export function SidebarNavRowContent({
 }
 
 const RAIL_BUTTON = cn(
-  'focus-ring rounded-control relative flex size-[var(--rail-button)] shrink-0 items-center justify-center transition-colors [&_svg]:size-3.5',
+  'focus-ring rounded-control relative flex size-rail-button shrink-0 items-center justify-center transition-colors [&_svg]:size-3.5',
   'data-[state=open]:overlay-pressed',
 );
 
@@ -226,7 +226,7 @@ export function sidebarRailButtonClasses(current: boolean) {
 export function sidebarModeTrackClasses(rail: boolean) {
   return rail
     ? 'flex flex-col items-center'
-    : 'rounded-control flex h-[var(--control-md)] w-full min-w-0 shrink-0 bg-state-fill p-0.5';
+    : 'rounded-control flex h-control-md w-full min-w-0 shrink-0 bg-state-fill p-0.5';
 }
 
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
@@ -281,7 +281,7 @@ export function SidebarIdentButton({
       data-sidebar-ident=""
       aria-current={current ? 'page' : undefined}
       className={cn(
-        'focus-ring text-ink not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed disabled:text-ink-2 labelled:w-full labelled:h-[var(--control-lg)] labelled:justify-start labelled:px-2 rounded-control flex h-[var(--rail-button)] w-[var(--rail-button)] min-w-0 items-center justify-center gap-2 text-left transition-colors disabled:pointer-events-none',
+        'focus-ring text-ink not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed disabled:text-ink-2 labelled:w-full labelled:h-control-lg labelled:justify-start labelled:px-2 rounded-control flex h-rail-button w-rail-button min-w-0 items-center justify-center gap-2 text-left transition-colors disabled:pointer-events-none',
         current && CURRENT_FILL,
         className,
       )}
@@ -322,7 +322,7 @@ function SidebarCollapseToggle() {
       tooltipSide={collapsed ? 'right' : 'top'}
       aria-keyshortcuts="Meta+Backslash Control+Backslash"
       onClick={() => setSidebarCollapsed(!collapsed)}
-      className="rail:inline-flex not-labelled:size-[var(--rail-button)] hidden shrink-0 self-center in-data-[nav-drawer]:hidden"
+      className="rail:inline-flex not-labelled:size-rail-button hidden shrink-0 self-center in-data-[nav-drawer]:hidden"
     />
   );
 }

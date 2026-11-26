@@ -223,7 +223,7 @@ export function CommandPalette({
           )}
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
-          <div className="palette-field border-rule text-ink-2 flex min-h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
+          <div className="palette-field border-rule text-ink-2 min-h-control-lg flex shrink-0 items-center gap-3 border-b px-4">
             <Search className="size-3.5 shrink-0" aria-hidden />
             <input
               ref={inputRef}
@@ -252,7 +252,7 @@ export function CommandPalette({
             className="content-scroll max-h-100 min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
           >
             {results.length === 0 ? (
-              <p className="text-body text-ink-2 px-4 py-[var(--page-section-gap)] text-center">
+              <p className="text-body text-ink-2 py-section px-4 text-center">
                 {`No matches for “${query}”`}
               </p>
             ) : null}
@@ -291,7 +291,7 @@ export function CommandPalette({
                           onMouseMove={() => highlight(index)}
                           onClick={() => runCommand(command)}
                           className={cn(
-                            'press [--press:0.98] text-body text-ink flex min-h-[var(--control-md)] w-full items-center gap-2 rounded-mark px-2.5 text-left',
+                            'press [--press:0.98] text-body text-ink flex min-h-control-md w-full items-center gap-2 rounded-mark px-2.5 text-left',
                             isActive && 'overlay-hover',
                           )}
                         >

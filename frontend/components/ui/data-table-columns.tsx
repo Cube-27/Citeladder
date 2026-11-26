@@ -114,7 +114,7 @@ export function columnRules({
     const kind = KIND[columnKind(column)];
     const role = COLUMN_WIDTH[widthOf(column)];
     const pad = gutter.has(column)
-      ? `padding-inline-start:calc(var(--table-cell-padding-x) + ${GUTTER_PX}px);`
+      ? `padding-inline-start:calc(var(--spacing-cell-x) + ${GUTTER_PX}px);`
       : '';
     const size =
       role.kind === 'rest'

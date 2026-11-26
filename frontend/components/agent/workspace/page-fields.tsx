@@ -115,7 +115,7 @@ export function PageFields({
       as="ul"
       gap="compact"
       aria-label="Search listing"
-      className="border-rule border-b p-[var(--card-padding)]"
+      className="border-rule p-card border-b"
     >
       {PAGE_FIELDS.map((field) => (
         <FieldRow

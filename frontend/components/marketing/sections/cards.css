@@ -51,7 +51,7 @@
   grid-column: 2;
   align-self: center;
   color: var(--text-color-ink-2);
-  transition: color var(--motion-fast) var(--ease-standard);
+  transition: color var(--transition-duration-fast) var(--ease-standard);
 }
 
 .cl-related-row:focus-visible .cl-related-arrow {
@@ -215,8 +215,8 @@
   text-align: left;
   text-decoration: none;
   transition:
-    color var(--motion-fast) var(--ease-standard),
-    background-color var(--motion-fast) var(--ease-standard);
+    color var(--transition-duration-fast) var(--ease-standard),
+    background-color var(--transition-duration-fast) var(--ease-standard);
 }
 
 @media (hover: hover) and (pointer: fine) {

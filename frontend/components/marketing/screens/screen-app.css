@@ -20,20 +20,20 @@
 }
 
 .cl-screen--app {
-  --content-gutter: 24px;
-  --page-section-gap: 16px;
-  --workspace-gap: 12px;
-  --compact-gap: 8px;
-  --card-padding: 16px;
-  --table-row-height: var(--row-app);
-  --sidebar-width: 224px;
+  --spacing-gutter: 24px;
+  --spacing-section: 16px;
+  --spacing-workspace: 12px;
+  --spacing-compact: 8px;
+  --spacing-card: 16px;
+  --spacing-row: var(--row-app);
+  --spacing-sidebar: 224px;
   --screen-natural: 1440px;
   --screen-w: var(--screen-natural);
   --screen-h: 820px;
   --radius-card: 6px;
 
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-columns: var(--spacing-sidebar) minmax(0, 1fr);
   gap: 0;
   border-radius: var(--radius-lg);
   background: var(--color-ground);
@@ -67,7 +67,7 @@
 .cl-app-side {
   display: flex;
   flex-direction: column;
-  gap: var(--page-section-gap);
+  gap: var(--spacing-section);
   min-width: 0;
   padding: 0 12px 12px;
 }
@@ -104,7 +104,7 @@
 .cl-app-side-controls {
   display: flex;
   flex-direction: column;
-  gap: var(--page-band-gap);
+  gap: var(--spacing-band);
 }
 
 .cl-app-mode > span {
@@ -144,7 +144,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  height: var(--control-md);
+  height: var(--spacing-control-md);
   padding: 0 12px;
   border-radius: var(--radius-md);
   color: var(--text-color-ink-2);
@@ -200,7 +200,7 @@
   flex-direction: column;
   min-width: 0;
   margin: 8px 8px 0 0;
-  padding: 0 var(--content-gutter) var(--content-gutter);
+  padding: 0 var(--spacing-gutter) var(--spacing-gutter);
   border-radius: var(--radius-card) var(--radius-card) 0 0;
   background: var(--color-page);
   box-shadow: 0 0 0 1px color-mix(in oklch, var(--color-rule) 50%, transparent);
@@ -209,9 +209,9 @@
 .cl-app-header {
   justify-content: space-between;
   border-bottom: 1px solid var(--color-rule);
-  gap: var(--card-padding);
-  margin-inline: calc(var(--content-gutter) * -1);
-  padding-inline: var(--content-gutter);
+  gap: var(--spacing-card);
+  margin-inline: calc(var(--spacing-gutter) * -1);
+  padding-inline: var(--spacing-gutter);
 }
 
 .cl-app-actions,
@@ -225,15 +225,15 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--page-band-gap);
-  margin-top: var(--page-section-gap);
+  gap: var(--spacing-band);
+  margin-top: var(--spacing-section);
 }
 
 .cl-app-content {
   display: flex;
   flex-direction: column;
-  gap: var(--workspace-gap);
-  margin-top: var(--page-section-gap);
+  gap: var(--spacing-workspace);
+  margin-top: var(--spacing-section);
 }
 
 .cl-app-page > .cl-vig {
@@ -247,7 +247,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-bottom: var(--card-padding);
+  margin-bottom: var(--spacing-card);
 }
 
 .cl-app-lede > p {

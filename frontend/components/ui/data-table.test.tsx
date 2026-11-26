@@ -81,7 +81,7 @@ describe('DataTable', () => {
     expect(rule(3)).toBe(
       'text-align:end;width:1px;white-space:nowrap;min-width:calc(var(--spacing) * 16);',
     );
-    expect(rule(4)).toContain('padding-inline-start:calc(var(--table-cell-padding-x) + 12px);');
+    expect(rule(4)).toContain('padding-inline-start:calc(var(--spacing-cell-x) + 12px);');
     expect(rule(5)).toContain('text-align:end;');
     expect(rules).toContain(':nth-child(3){font-variant-numeric:tabular-nums}');
     expect(rules).toContain(':nth-child(4){font-variant-numeric:tabular-nums}');

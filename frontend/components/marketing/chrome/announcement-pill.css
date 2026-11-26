@@ -11,7 +11,7 @@
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
   text-decoration: none;
-  transition: color var(--motion-fast) var(--ease-standard);
+  transition: color var(--transition-duration-fast) var(--ease-standard);
 }
 
 .cl-announce:not(:has(.cl-announce-tag)) {

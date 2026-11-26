@@ -107,7 +107,7 @@ export function TableRow({
       {...props}
       data-pressable={pressable || undefined}
       className={cn(
-        'h-[var(--table-row-height)] transition-colors duration-[var(--motion-fast)]',
+        'h-row transition-colors duration-fast',
         pressable &&
           !highlight &&
           '[[data-public-surface]_&]:not-aria-selected:hover:overlay-hover',
@@ -141,7 +141,7 @@ export function TableHead({
       className={cn(
         tableHeadClasses,
         'aria-[sort=ascending]:text-ink aria-[sort=descending]:text-ink',
-        'bg-well sticky top-0 z-10 h-[var(--table-header-height)] px-[var(--table-cell-padding-x)] text-left align-middle',
+        'bg-well sticky top-0 z-10 h-table-head px-cell-x text-left align-middle',
         numeric && 'tabular-nums text-right',
         desktopOnly && desktopOnlyClasses,
         className,
@@ -163,7 +163,7 @@ function isPlainText(children: ReactNode) {
 
 const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
   cn(
-    'text-body text-ink px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
+    'text-body text-ink px-cell-x py-cell-y text-left align-middle',
     numeric && 'whitespace-nowrap text-right tabular-nums',
     desktopOnly && desktopOnlyClasses,
   );
@@ -198,8 +198,8 @@ export function TableCell({
       {...props}
       className={cn(
         cellClasses({ numeric, desktopOnly }),
-        nested === true && 'ps-[calc(var(--table-cell-padding-x)+16px)] [--cell-indent:16px]',
-        nested === 2 && 'ps-[calc(var(--table-cell-padding-x)+32px)] [--cell-indent:32px]',
+        nested === true && 'ps-[calc(var(--spacing-cell-x)+16px)] [--cell-indent:16px]',
+        nested === 2 && 'ps-[calc(var(--spacing-cell-x)+32px)] [--cell-indent:32px]',
         className,
       )}
     >

@@ -88,7 +88,7 @@ export function DatasetChoices({
   }));
   return (
     <TabsRoot value={current} onValueChange={setCurrent} orientation="vertical">
-      <div className="desktop:grid-cols-[11rem_minmax(0,1fr)] grid min-w-0 gap-[var(--card-padding)]">
+      <div className="desktop:grid-cols-[11rem_minmax(0,1fr)] gap-card grid min-w-0">
         <div className="desktop:block hidden min-w-0">
           <TabRail items={items} ariaLabel="Datasets for" />
         </div>

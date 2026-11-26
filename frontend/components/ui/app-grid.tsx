@@ -29,7 +29,7 @@ export function AppGrid({
     className?: string;
   }
 >) {
-  const gap = useOnPage() ? 'gap-[var(--page-section-gap)]' : 'gap-[var(--panel-inset)]';
+  const gap = useOnPage() ? 'gap-section' : 'gap-panel-inset';
   return createElement(
     as,
     {

@@ -154,7 +154,7 @@ function HeldFootprint({
   return (
     <SectionBleed>
       <div className="grid min-w-0">
-        <div className="col-start-1 row-start-1 min-w-0 px-[var(--panel-inset)] py-3">{block}</div>
+        <div className="px-panel-inset col-start-1 row-start-1 min-w-0 py-3">{block}</div>
         <div inert className="col-start-1 row-start-1 min-w-0" style={{ visibility: 'hidden' }}>
           {children}
         </div>
@@ -266,7 +266,7 @@ function DataTableFoot({
   return (
     <div
       data-data-table-foot=""
-      className="border-rule flex min-h-10 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t px-[var(--panel-inset)] py-1"
+      className="border-rule px-panel-inset flex min-h-10 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t py-1"
     >
       {footer ? (
         <div className="text-caption text-ink-2 grid min-w-0 content-center gap-1">{footer}</div>

@@ -1,5 +1,5 @@
 .cl-page-form {
-  --control-md: 44px;
+  --spacing-control-md: 44px;
 
   display: flex;
   flex-direction: column;

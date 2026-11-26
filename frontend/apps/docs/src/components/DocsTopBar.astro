@@ -141,7 +141,7 @@ const sections = [
   .cl-docs-bar-site {
     display: inline-flex;
     align-items: center;
-    height: var(--control-md);
+    height: var(--spacing-control-md);
     padding: 0 12px;
     border-radius: var(--radius-md);
     color: var(--text-color-ink-2);
@@ -151,8 +151,8 @@ const sections = [
     text-decoration: none;
     white-space: nowrap;
     transition:
-      background-color var(--motion-fast) var(--ease-standard),
-      color var(--motion-fast) var(--ease-standard);
+      background-color var(--transition-duration-fast) var(--ease-standard),
+      color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-docs-bar-site:hover {
     background: var(--color-well);
@@ -184,7 +184,7 @@ const sections = [
     font-weight: 500;
     text-decoration: none;
     white-space: nowrap;
-    transition: color var(--motion-fast) var(--ease-standard);
+    transition: color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-docs-bar-tab::before {
     position: absolute;
@@ -192,7 +192,7 @@ const sections = [
     z-index: -1;
     border-radius: var(--radius-sm);
     content: '';
-    transition: background-color var(--motion-fast) var(--ease-standard);
+    transition: background-color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-docs-bar-tab::after {
     position: absolute;
@@ -271,7 +271,7 @@ const sections = [
       display: inline-flex;
     }
     .cl-docs-bar-end :global(.cl-docs-bar-menu) {
-      width: var(--control-md);
+      width: var(--spacing-control-md);
       padding: 0;
     }
   }

@@ -52,7 +52,7 @@ const { previous, next, label = 'Adjacent articles' } = Astro.props;
     text-decoration: none;
   }
   .cl-pager-dir :global(svg) {
-    transition: transform var(--motion-fast) var(--ease-standard);
+    transition: transform var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-pager-link:hover .cl-pager-dir :global(svg) {
     transform: translateX(-4px);

@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 const CARD_FACE = 'bg-panel text-ink rounded-card';
 
-const cardClasses = () => cn('surface-card p-[var(--card-padding)]', CARD_FACE);
+const cardClasses = () => cn('surface-card p-card', CARD_FACE);
 
 export function Card({
   children,
@@ -19,7 +19,7 @@ export function Card({
 }
 
 const HEADER_RULE =
-  'card-head not-last:-mx-[var(--card-padding)] not-last:mb-[var(--card-padding)] not-last:border-b not-last:border-rule not-last:px-[var(--card-padding)] not-last:pb-[var(--card-padding)]';
+  'card-head not-last:-mx-card not-last:mb-card not-last:border-b not-last:border-rule not-last:px-card not-last:pb-card';
 
 export function CardHeader({
   children,

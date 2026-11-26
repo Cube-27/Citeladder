@@ -38,7 +38,7 @@ export function Switch({
       <span
         aria-hidden
         className={cn(
-          'ms-0.5 h-4 w-5.5 rounded-full transition-transform duration-[var(--motion-slide)] ease-[var(--ease-fluid)]',
+          'ms-0.5 h-4 w-5.5 rounded-full transition-transform duration-slide ease-fluid',
           checked ? 'bg-thumb-checked translate-x-3.5' : 'bg-thumb',
         )}
       />

@@ -14,12 +14,12 @@ const textareaClasses =
   'text-ink placeholder:text-ink-placeholder text-body block w-full rounded-control border disabled:cursor-not-allowed';
 
 const fieldClasses = cn(
-  'focus-input disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-50 field-sizing-content min-h-[calc(var(--field-min-rows)*1lh+1rem+2px)] max-h-[calc(var(--field-max-rows)*1lh+1rem+2px)] resize-none px-3 py-2 transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)] app:duration-150',
+  'focus-input disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-50 field-sizing-content min-h-[calc(var(--field-min-rows)*1lh+1rem+2px)] max-h-[calc(var(--field-max-rows)*1lh+1rem+2px)] resize-none px-3 py-2 transition-[background-color,border-color,outline-color] duration-fast app:duration-150',
   FIELD_EDGE,
 );
 
 const composerClasses =
-  'field-sizing-content min-h-[max(var(--control-md),calc(var(--field-min-rows)*1lh+0.5rem))] min-w-0 resize-none overflow-y-auto border-0 bg-transparent px-2 py-1 [overflow-wrap:anywhere] max-h-[calc(var(--field-max-rows)*1lh+0.5rem)]';
+  'field-sizing-content min-h-[max(var(--spacing-control-md),calc(var(--field-min-rows)*1lh+0.5rem))] min-w-0 resize-none overflow-y-auto border-0 bg-transparent px-2 py-1 [overflow-wrap:anywhere] max-h-[calc(var(--field-max-rows)*1lh+0.5rem)]';
 
 const sizesItself = () => globalThis.CSS?.supports('field-sizing', 'content') ?? false;
 

@@ -13,8 +13,8 @@ import { Check, ChevronLeft } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 const STEP_COLUMN = {
-  wide: 'max-w-thread mx-auto w-full px-[var(--content-gutter)]',
-  narrow: 'max-w-prose mx-auto w-full px-[var(--content-gutter)]',
+  wide: 'max-w-thread mx-auto w-full px-gutter',
+  narrow: 'max-w-prose mx-auto w-full px-gutter',
 } as const;
 
 type StepWidth = keyof typeof STEP_COLUMN;
@@ -36,7 +36,7 @@ export function SetupPage({
   return (
     <div className="bg-ground text-ink flex min-h-dvh flex-col antialiased">
       <header className="border-rule bg-ground sticky top-0 z-10 border-b">
-        <div className="grid min-h-[var(--masthead-height)] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-[var(--content-gutter)]">
+        <div className="min-h-masthead px-gutter grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4">
           <span className="inline-flex">
             <FlowLogo />
           </span>
@@ -58,7 +58,7 @@ export function SetupPage({
       <main
         id="main"
         aria-label={label}
-        className="flex flex-1 flex-col [--control-md:var(--control-lg)]"
+        className="flex flex-1 flex-col [--spacing-control-md:var(--spacing-control-lg)]"
       >
         {children}
       </main>
@@ -184,11 +184,7 @@ export function SetupStep({
 }
 
 export function StepColumns({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div className="desktop:grid-cols-2 grid min-w-0 items-start gap-[var(--card-padding)]">
-      {children}
-    </div>
-  );
+  return <div className="desktop:grid-cols-2 gap-card grid min-w-0 items-start">{children}</div>;
 }
 
 export function StepTrail(props: Readonly<Omit<ComponentProps<typeof RungTrail>, 'size'>>) {

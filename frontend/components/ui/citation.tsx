@@ -45,7 +45,7 @@ export function Citation({
     </>
   );
   const classes = cn(
-    'text-ink inline-flex min-h-[var(--control-sm)] max-w-full items-center gap-1 rounded-sm ps-1 pe-3 align-middle text-body no-underline',
+    'text-ink inline-flex min-h-control-sm max-w-full items-center gap-1 rounded-sm ps-1 pe-3 align-middle text-body no-underline',
     own ? 'bg-accent-wash' : 'bg-state-selected',
     index === undefined && 'ps-2',
   );

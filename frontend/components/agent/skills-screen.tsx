@@ -99,7 +99,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
 function SkillRow({ skill, output }: Readonly<{ skill: AgentSkill; output: string | undefined }>) {
   const detailId = useId();
   return (
-    <li className="hover:overlay-hover relative flex min-h-[var(--table-row-height)] min-w-0 items-center gap-3">
+    <li className="hover:overlay-hover min-h-row relative flex min-w-0 items-center gap-3">
       <Icon icon={OUTPUT_ICONS[skill.output_kind] ?? Sparkles} className="text-ink-2" />
       <span className={textRole('body', 'flex min-w-0 flex-1 flex-col gap-0.5')}>
         <ProjectLink

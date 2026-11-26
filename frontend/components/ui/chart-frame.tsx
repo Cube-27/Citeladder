@@ -16,9 +16,9 @@ import { ABSENCE_MARK, type Formatted, isAbsent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const FRAME_HEIGHT = {
-  sm: 'min-h-[var(--chart-height-sm)]',
-  md: 'min-h-[var(--chart-height-md)]',
-  lg: 'min-h-[var(--chart-height-lg)]',
+  sm: 'min-h-chart-sm',
+  md: 'min-h-chart-md',
+  lg: 'min-h-chart-lg',
 } as const satisfies Record<ChartHeight, string>;
 
 export function ChartFrame({

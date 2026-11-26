@@ -26,11 +26,8 @@ export function RailColumns({
   children,
 }: Readonly<{ rail: ReactNode; children: ReactNode }>) {
   return (
-    <div
-      data-section-rail=""
-      className="desktop:flex-row flex min-w-0 flex-col gap-[var(--page-top-gap)]"
-    >
-      <div className="desktop:sticky desktop:top-[calc(var(--masthead-block-size,var(--masthead-height))+var(--page-pad-block))] desktop:w-48 desktop:self-start shrink-0">
+    <div data-section-rail="" className="desktop:flex-row gap-page-top flex min-w-0 flex-col">
+      <div className="desktop:sticky desktop:top-[calc(var(--masthead-block-size,var(--spacing-masthead))+var(--spacing-page-block))] desktop:w-48 desktop:self-start shrink-0">
         {rail}
       </div>
       <div className="min-w-0 flex-1">{children}</div>

@@ -27,7 +27,7 @@ const { label } = Astro.props;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    height: var(--control-lg);
+    height: var(--spacing-control-lg);
     padding: 0 16px;
     background: var(--color-panel);
     border: 1px solid var(--color-control-line);
@@ -37,7 +37,7 @@ const { label } = Astro.props;
     line-height: var(--text-label--line-height);
     font-weight: 500;
     list-style: none;
-    transition: background-color var(--motion-fast) var(--ease-standard);
+    transition: background-color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-jump-summary::-webkit-details-marker {
     display: none;
@@ -53,7 +53,7 @@ const { label } = Astro.props;
   }
   .cl-jump :global(.cl-jump-caret) {
     color: var(--text-color-ink-2);
-    transition: transform var(--motion-fast) var(--ease-standard);
+    transition: transform var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-jump[open] :global(.cl-jump-caret) {
     transform: rotate(180deg);
@@ -74,19 +74,19 @@ const { label } = Astro.props;
     opacity: 0;
     translate: 0 var(--cl-jump-shift, -4px);
     transition:
-      opacity var(--motion-close) var(--ease-exit),
-      translate var(--motion-close) var(--ease-exit);
+      opacity var(--transition-duration-close) var(--ease-standard),
+      translate var(--transition-duration-close) var(--ease-standard);
   }
   .cl-jump::details-content {
-    transition: content-visibility var(--motion-close) allow-discrete;
+    transition: content-visibility var(--transition-duration-close) allow-discrete;
   }
   .cl-jump[open]::details-content {
-    transition-duration: var(--motion-open);
+    transition-duration: var(--transition-duration-open);
   }
   .cl-jump[open] .cl-jump-panel {
     opacity: 1;
     translate: 0;
-    transition-duration: var(--motion-open);
+    transition-duration: var(--transition-duration-open);
     transition-timing-function: var(--ease-standard);
     @starting-style {
       opacity: 0;

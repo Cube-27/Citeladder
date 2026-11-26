@@ -37,12 +37,12 @@ export function DockedThread({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <DrawerPane label={label} scrollRef={scrollRef}>
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-[var(--panel-inset)]">
+        <div className="gap-panel-inset grid min-w-0 grid-cols-[minmax(0,1fr)] content-start">
           {children}
         </div>
       </DrawerPane>
       {dock ? (
-        <div className="px-[var(--panel-inset)]">
+        <div className="px-panel-inset">
           <ComposerDock onJumpToLatest={onJumpToLatest}>{dock}</ComposerDock>
         </div>
       ) : null}
@@ -124,7 +124,7 @@ export function ComposerFrame({
         <div
           data-dragging={dragging || undefined}
           className={cn(
-            'focus-frame grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 rounded-card p-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)] data-[dragging]:border-focus',
+            'focus-frame grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 rounded-card p-2 transition-[border-color,box-shadow] duration-fast data-[dragging]:border-focus',
             FIELD_EDGE,
           )}
         >
@@ -134,7 +134,7 @@ export function ComposerFrame({
             </ul>
           ) : null}
           {field}
-          <div className="flex min-h-[var(--control-md)] flex-wrap items-center gap-2">
+          <div className="min-h-control-md flex flex-wrap items-center gap-2">
             <div className="flex min-w-0 items-center gap-1">{tools}</div>
             <div className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
               {settings}
@@ -147,7 +147,7 @@ export function ComposerFrame({
           <div
             data-dragging={dragging || undefined}
             className={cn(
-              'focus-frame relative flex min-w-0 items-end gap-1 rounded-card p-1 ps-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)] data-[dragging]:border-focus',
+              'focus-frame relative flex min-w-0 items-end gap-1 rounded-card p-1 ps-2 transition-[border-color,box-shadow] duration-fast data-[dragging]:border-focus',
               FIELD_EDGE,
             )}
           >
@@ -161,7 +161,7 @@ export function ComposerFrame({
             </div>
             <div className="shrink-0">{submit}</div>
           </div>
-          <div className="flex min-h-[var(--control-md)] flex-wrap items-center gap-2">
+          <div className="min-h-control-md flex flex-wrap items-center gap-2">
             <div className="flex min-w-0 items-center gap-1">{tools}</div>
             <div className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
               {settings}
@@ -175,7 +175,7 @@ export function ComposerFrame({
 
 export function AgentThread({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="max-w-thread mx-auto flex w-full min-w-0 flex-col gap-[var(--card-padding)] px-4">
+    <div className="max-w-thread gap-card mx-auto flex w-full min-w-0 flex-col px-4">
       {children}
     </div>
   );

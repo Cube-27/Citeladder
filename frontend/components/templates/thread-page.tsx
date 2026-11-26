@@ -38,7 +38,7 @@ export function NewChatLoading() {
   );
 }
 
-const OPENING = 'max-w-thread mx-auto my-auto flex w-full flex-col gap-[var(--page-section-gap)]';
+const OPENING = 'max-w-thread mx-auto my-auto flex w-full flex-col gap-section';
 
 export function ThreadOpening({ children }: Readonly<{ children: ReactNode }>) {
   return <div className={OPENING}>{children}</div>;
@@ -59,7 +59,7 @@ export function ThreadPage({
   }>) {
   return (
     <PageFrame {...slots} head="masthead" end="thread">
-      <div className="flex h-[calc(100dvh-var(--route-chrome-height)+var(--page-pad-block))] min-h-0 flex-col gap-[var(--workspace-gap)]">
+      <div className="gap-workspace flex h-[calc(100dvh-var(--route-chrome-height)+var(--spacing-page-block))] min-h-0 flex-col">
         <section
           ref={scrollRef}
           aria-label={scrollLabel}
@@ -68,7 +68,7 @@ export function ThreadPage({
           <div
             data-page-content=""
             data-thread=""
-            className="flex min-h-full w-full min-w-0 flex-col gap-[var(--workspace-gap)]"
+            className="gap-workspace flex min-h-full w-full min-w-0 flex-col"
           >
             {children}
           </div>

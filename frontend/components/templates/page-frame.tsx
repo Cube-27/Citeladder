@@ -35,7 +35,7 @@ export type PageFrameSlots = Readonly<{
   filters?: ReactNode;
 }>;
 
-const STRIP = 'flex min-w-0 px-[calc(var(--page-pad-inline)+var(--page-start,0px))]';
+const STRIP = 'flex min-w-0 px-[calc(var(--spacing-page-inline)+var(--page-start,0px))]';
 
 export function PageFrame({
   title,
@@ -158,16 +158,13 @@ function PageHeading({
       ref={block}
       data-page-heading=""
       className={cn(
-        'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 pt-[var(--page-pad-block)]',
+        'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 pt-page-block',
         strips && 'pb-3',
         className,
       )}
     >
       <h1
-        className={textRole(
-          'pageTitle',
-          'flex min-h-[var(--control-md)] min-w-0 items-center break-words',
-        )}
+        className={textRole('pageTitle', 'flex min-h-control-md min-w-0 items-center break-words')}
       >
         {title}
       </h1>
@@ -197,7 +194,7 @@ function PageStrips({
   return (
     <StickyBand ref={strips}>
       {tabs ? (
-        <div data-page-band="tabs" className={cn(STRIP, 'h-[var(--page-tabs-height)] items-end')}>
+        <div data-page-band="tabs" className={cn(STRIP, 'h-page-tabs items-end')}>
           <div className={cn('flex min-w-0 flex-1 items-end gap-4', TAB_BASELINE)}>
             {tabs}
             <div
@@ -240,10 +237,7 @@ export function PageSections({
   children,
 }: Readonly<{ className?: string; children: ReactNode }>) {
   return (
-    <div
-      data-page-content=""
-      className={cn('flex min-w-0 flex-col gap-[var(--page-section-gap)]', className)}
-    >
+    <div data-page-content="" className={cn('flex min-w-0 flex-col gap-section', className)}>
       {children}
     </div>
   );

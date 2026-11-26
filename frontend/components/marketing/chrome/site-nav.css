@@ -57,8 +57,8 @@
   pointer-events: none;
   transform-origin: left center;
   transition:
-    transform var(--motion-menu) var(--ease-menu),
-    opacity var(--motion-normal) var(--ease-menu);
+    transform var(--transition-duration-open) var(--ease-menu),
+    opacity var(--transition-duration-normal) var(--ease-menu);
 }
 
 .cl-navmenu-pill[data-visible] {
@@ -66,7 +66,7 @@
 }
 
 .cl-navmenu-pill[data-jump] {
-  transition: opacity var(--motion-normal) var(--ease-menu);
+  transition: opacity var(--transition-duration-normal) var(--ease-menu);
 }
 
 .cl-navmenu-stage {
@@ -76,7 +76,7 @@
 }
 
 .cl-navmenu-stage[data-slide] {
-  transition: transform var(--motion-menu) var(--ease-menu);
+  transition: transform var(--transition-duration-open) var(--ease-menu);
 }
 
 .cl-navmenu-viewport {
@@ -88,8 +88,8 @@
   background: var(--color-panel);
   clip-path: inset(-24px 0 0 0);
   transition:
-    width var(--motion-menu) var(--ease-menu),
-    height var(--motion-menu) var(--ease-menu);
+    width var(--transition-duration-open) var(--ease-menu),
+    height var(--transition-duration-open) var(--ease-menu);
 }
 
 .cl-navmenu-viewport::before {
@@ -102,11 +102,11 @@
 }
 
 .cl-navmenu-viewport[data-state='open'] {
-  animation: cl-nav-pop-in var(--motion-menu) var(--ease-menu);
+  animation: cl-nav-pop-in var(--transition-duration-open) var(--ease-menu);
 }
 
 .cl-navmenu-viewport[data-state='closed'] {
-  animation: cl-nav-pop-out var(--motion-menu-exit) var(--ease-menu) forwards;
+  animation: cl-nav-pop-out var(--transition-duration-tint) var(--ease-menu) forwards;
 }
 
 .cl-navmenu-content {
@@ -117,50 +117,50 @@
 
 .cl-navmenu-content[data-state='open'] {
   animation:
-    cl-nav-fade-in var(--motion-fast) var(--ease-standard),
-    cl-nav-unblur var(--motion-menu-blur) var(--ease-standard);
+    cl-nav-fade-in var(--transition-duration-fast) var(--ease-standard),
+    cl-nav-unblur var(--transition-duration-menu-blur) var(--ease-standard);
 }
 
 .cl-navmenu-content[data-state='closed'] {
-  animation: cl-nav-fade-out var(--motion-fast) var(--ease-standard) forwards;
+  animation: cl-nav-fade-out var(--transition-duration-fast) var(--ease-standard) forwards;
 }
 
 .cl-navmenu-content[data-motion='from-start'] {
   animation:
-    cl-nav-fade-in var(--motion-fast) var(--ease-standard),
-    cl-nav-unblur var(--motion-menu-blur) var(--ease-standard),
-    cl-nav-from-start var(--motion-menu) var(--ease-menu);
+    cl-nav-fade-in var(--transition-duration-fast) var(--ease-standard),
+    cl-nav-unblur var(--transition-duration-menu-blur) var(--ease-standard),
+    cl-nav-from-start var(--transition-duration-open) var(--ease-menu);
 }
 
 .cl-navmenu-content[data-motion='from-end'] {
   animation:
-    cl-nav-fade-in var(--motion-fast) var(--ease-standard),
-    cl-nav-unblur var(--motion-menu-blur) var(--ease-standard),
-    cl-nav-from-end var(--motion-menu) var(--ease-menu);
+    cl-nav-fade-in var(--transition-duration-fast) var(--ease-standard),
+    cl-nav-unblur var(--transition-duration-menu-blur) var(--ease-standard),
+    cl-nav-from-end var(--transition-duration-open) var(--ease-menu);
 }
 
 .cl-navmenu-content[data-motion='to-start'] {
   animation:
-    cl-nav-fade-out var(--motion-fast) var(--ease-standard) forwards,
-    cl-nav-to-start var(--motion-menu) var(--ease-menu) forwards;
+    cl-nav-fade-out var(--transition-duration-fast) var(--ease-standard) forwards,
+    cl-nav-to-start var(--transition-duration-open) var(--ease-menu) forwards;
 }
 
 .cl-navmenu-content[data-motion='to-end'] {
   animation:
-    cl-nav-fade-out var(--motion-fast) var(--ease-standard) forwards,
-    cl-nav-to-end var(--motion-menu) var(--ease-menu) forwards;
+    cl-nav-fade-out var(--transition-duration-fast) var(--ease-standard) forwards,
+    cl-nav-to-end var(--transition-duration-open) var(--ease-menu) forwards;
 }
 
 .cl-navmenu-content[data-state='open'] .cl-mega-group {
-  animation: cl-nav-rise var(--motion-menu-settle) var(--ease-menu) backwards;
+  animation: cl-nav-rise var(--transition-duration-close) var(--ease-menu) backwards;
 }
 
 .cl-navmenu-content[data-state='open'] .cl-mega-group:nth-child(2) {
-  animation-delay: var(--motion-menu-step);
+  animation-delay: var(--transition-duration-menu-step);
 }
 
 .cl-navmenu-content[data-state='open'] .cl-mega-group:nth-child(3) {
-  animation-delay: calc(var(--motion-menu-step) * 2);
+  animation-delay: calc(var(--transition-duration-menu-step) * 2);
 }
 
 @keyframes cl-nav-pop-in {
@@ -230,7 +230,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: var(--control-md);
+  height: var(--spacing-control-md);
   padding: 0 12px;
   border: 0;
   border-radius: var(--radius-md);
@@ -244,8 +244,8 @@
   white-space: nowrap;
   cursor: pointer;
   transition:
-    background-color var(--motion-fast) var(--ease-standard),
-    color var(--motion-fast) var(--ease-standard);
+    background-color var(--transition-duration-fast) var(--ease-standard),
+    color var(--transition-duration-fast) var(--ease-standard);
 }
 
 .cl-navbar-link[data-state='open'],
@@ -263,7 +263,7 @@
 .cl-navbar-link:is([aria-current='page'], [data-current])::after {
   position: absolute;
   right: 12px;
-  bottom: calc((var(--control-md) - var(--nav-height)) / 2 - 1px);
+  bottom: calc((var(--spacing-control-md) - var(--nav-height)) / 2 - 1px);
   left: 12px;
   height: 2px;
   background: var(--color-mark-ink);
@@ -283,7 +283,7 @@
 }
 
 .cl-navbar-caret {
-  transition: transform var(--motion-normal) var(--ease-standard);
+  transition: transform var(--transition-duration-normal) var(--ease-standard);
 }
 
 .cl-navbar-link[data-state='open'] .cl-navbar-caret,
@@ -307,8 +307,8 @@
 
 @media (pointer: coarse) {
   .cl-navbar .cl-navbar-end > a {
-    height: var(--control-coarse);
-    min-height: var(--control-coarse);
+    height: var(--spacing-control-coarse);
+    min-height: var(--spacing-control-coarse);
   }
 }
 
@@ -322,8 +322,8 @@
   display: none;
   align-items: center;
   justify-content: center;
-  width: var(--control-md);
-  height: var(--control-md);
+  width: var(--spacing-control-md);
+  height: var(--spacing-control-md);
   padding: 0;
   border: 0;
   border-radius: var(--radius-md);
@@ -360,9 +360,9 @@
   background: var(--site-page);
   --cl-sheet-shift: -4px;
   transition:
-    opacity var(--motion-open) var(--ease-standard),
-    translate var(--motion-open) var(--ease-standard),
-    display var(--motion-open) allow-discrete;
+    opacity var(--transition-duration-open) var(--ease-standard),
+    translate var(--transition-duration-open) var(--ease-standard),
+    display var(--transition-duration-open) allow-discrete;
 }
 
 @starting-style {
@@ -392,8 +392,8 @@
   opacity: 0;
   translate: 0 var(--cl-sheet-shift);
   pointer-events: none;
-  transition-duration: var(--motion-close);
-  transition-timing-function: var(--ease-exit);
+  transition-duration: var(--transition-duration-close);
+  transition-timing-function: var(--ease-standard);
 }
 
 .cl-sheet-row {

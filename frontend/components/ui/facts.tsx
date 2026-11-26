@@ -24,8 +24,7 @@ const LIST = {
 } as const;
 
 const ROW = {
-  ruled:
-    'grid min-h-[var(--table-row-height)] grid-cols-[160px_minmax(0,1fr)] items-center gap-x-4 py-2',
+  ruled: 'grid min-h-row grid-cols-[160px_minmax(0,1fr)] items-center gap-x-4 py-2',
   inline: 'flex min-w-0 max-w-full items-center gap-2',
   spread: 'flex flex-wrap items-center justify-between gap-x-4 gap-y-1',
   columns: 'grid min-w-0 gap-1',
@@ -47,7 +46,7 @@ const DETAIL = {
   spread: textRole('body', 'text-ink tabular-nums'),
   columns: textRole(
     'caption',
-    'flex min-h-[var(--tag-height)] min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
+    'flex min-h-tag min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
   ),
   record: 'flex min-w-0 items-center justify-between gap-3',
 } as const;
@@ -142,16 +141,13 @@ export function ValueLedger({
   return (
     <SectionBleed as="ol" rows>
       {items.map((item) => (
-        <li
-          key={item.key}
-          className="flex min-h-[var(--table-row-height)] items-center justify-between gap-2"
-        >
+        <li key={item.key} className="min-h-row flex items-center justify-between gap-2">
           <ClampText className={textRole('body', 'flex-1')}>{item.label}</ClampText>
           <span className={textRole('body', 'text-ink-2 shrink-0 tabular-nums')}>{item.value}</span>
         </li>
       ))}
       {padding.map((slot) => (
-        <li key={slot} aria-hidden className="h-[var(--table-row-height)]" />
+        <li key={slot} aria-hidden className="h-row" />
       ))}
     </SectionBleed>
   );

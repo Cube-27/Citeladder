@@ -9,14 +9,14 @@ import { SurfaceContext } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
 
 const DRAWER_PANE =
-  'grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] content-start gap-[var(--panel-inset)] overflow-x-hidden overflow-y-auto overscroll-contain p-[var(--panel-inset)]';
+  'grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] content-start gap-panel-inset overflow-x-hidden overflow-y-auto overscroll-contain p-panel-inset';
 
 export const DRAWER_SPLIT =
   'phone:grid-cols-1 phone:grid-rows-[auto_minmax(0,1fr)] grid min-h-0 flex-1 grid-cols-[11.5rem_minmax(0,1fr)]';
 
 export function DrawerNav({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="border-rule phone:border-e-0 phone:border-b border-e px-3 py-[var(--panel-inset)]">
+    <div className="border-rule phone:border-e-0 phone:border-b py-panel-inset border-e px-3">
       {children}
     </div>
   );
@@ -109,14 +109,14 @@ export function Drawer({
           />
           <div
             className={cn(
-              'flex min-h-0 flex-1 flex-col [--panel-inset:var(--modal-padding)]',
+              'flex min-h-0 flex-1 flex-col [--spacing-panel-inset:var(--spacing-modal)]',
               body === 'dock' ? 'overflow-hidden' : DRAWER_PANE,
             )}
           >
             <SurfaceContext value="surface">{children}</SurfaceContext>
           </div>
           {footer ? (
-            <footer className="border-rule flex items-center justify-end gap-2 border-t px-[var(--modal-padding)] py-3">
+            <footer className="border-rule px-modal flex items-center justify-end gap-2 border-t py-3">
               {footer}
             </footer>
           ) : null}
@@ -155,7 +155,7 @@ function DrawerHeader({
     );
   }
   return (
-    <header className="flex items-start justify-between gap-4 px-[var(--modal-padding)] pt-[var(--modal-padding)]">
+    <header className="px-modal pt-modal flex items-start justify-between gap-4">
       <div className="min-w-0">
         {eyebrow ? <p className="text-caption-strong text-ink-2 mb-1">{eyebrow}</p> : null}
         <DialogPrimitive.Title className="text-heading text-ink truncate">

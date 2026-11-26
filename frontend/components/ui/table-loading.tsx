@@ -13,7 +13,7 @@ export function ToolbarTableLoading({
       <Section>
         <SectionToolbar>
           <FilterBar
-            view={view ? <span className="block h-[var(--control-md)]" /> : undefined}
+            view={view ? <span className="h-control-md block" /> : undefined}
             search={<span />}
           />
         </SectionToolbar>

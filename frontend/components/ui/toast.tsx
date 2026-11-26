@@ -175,7 +175,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
         })}
         <ToastPrimitive.Viewport
           style={stackVars}
-          className="toast-stack focus-ring z-toast fixed top-[calc(var(--masthead-block-size,var(--masthead-height))+8px)] right-4 w-100 max-w-[calc(100vw-2rem)]"
+          className="toast-stack focus-ring z-toast fixed top-[calc(var(--masthead-block-size,var(--spacing-masthead))+8px)] right-4 w-100 max-w-[calc(100vw-2rem)]"
         />
       </ToastPrimitive.Provider>
     </ToastContext>

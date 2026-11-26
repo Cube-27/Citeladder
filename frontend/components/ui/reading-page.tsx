@@ -13,9 +13,7 @@ import { textRole, type TextRole } from '@/components/ui/typography';
 
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="flex min-h-dvh w-full min-w-0 flex-col gap-[var(--page-section-gap)] pb-[var(--page-end-space)]">
-      {children}
-    </div>
+    <div className="gap-section pb-page-end flex min-h-dvh w-full min-w-0 flex-col">{children}</div>
   );
 }
 

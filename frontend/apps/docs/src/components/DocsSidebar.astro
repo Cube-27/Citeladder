@@ -87,11 +87,11 @@ const sections: Section[] = inApi
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    height: var(--control-sm);
+    height: var(--spacing-control-sm);
     padding: 0 12px;
     border-radius: var(--radius-sm);
     list-style: none;
-    transition: background-color var(--motion-fast) var(--ease-standard);
+    transition: background-color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-docs-side-head::-webkit-details-marker {
     display: none;
@@ -101,7 +101,7 @@ const sections: Section[] = inApi
   }
   .cl-docs-side-caret {
     color: var(--text-color-ink-2);
-    transition: transform var(--motion-fast) var(--ease-standard);
+    transition: transform var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-docs-side-group:not([open]) .cl-docs-side-caret {
     transform: rotate(-90deg);
@@ -115,7 +115,7 @@ const sections: Section[] = inApi
   .cl-docs-side-title {
     display: flex;
     align-items: center;
-    height: var(--control-sm);
+    height: var(--spacing-control-sm);
     padding: 0 12px;
     border-radius: var(--radius-sm);
     color: var(--text-color-ink-2);

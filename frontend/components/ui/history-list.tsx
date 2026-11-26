@@ -56,7 +56,7 @@ export function HistoryRow({
           aria-current={active ? 'page' : undefined}
           className={cn(
             'focus-ring rounded-control relative flex min-w-0 flex-col gap-0.5 px-3 py-2 transition-colors',
-            'before:rounded-mark before:absolute before:inset-y-2 before:start-0 before:w-[var(--mark-width)]',
+            'before:rounded-mark before:absolute before:inset-y-2 before:start-0 before:w-mark',
             active ? 'text-ink before:bg-accent' : 'text-ink-2 hover:overlay-hover hover:text-ink',
           )}
         >

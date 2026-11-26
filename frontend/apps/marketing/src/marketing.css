@@ -71,7 +71,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   [data-public-surface] .marketing-cta-button svg.tabler-icon-arrow-up-right {
-    transition: transform var(--motion-slow) var(--ease-standard);
+    transition: transform var(--transition-duration-open) var(--ease-standard);
   }
 }
 

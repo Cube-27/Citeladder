@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 
 function listRowClasses({ selected = false }: Readonly<{ selected?: boolean }> = {}) {
   return cn(
-    'relative rounded-control transition-[background-color,color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
+    'relative rounded-control transition-[background-color,color] duration-fast ease-standard',
     selected
       ? 'overlay-selected text-ink'
       : 'text-ink-2 hover:overlay-hover hover:text-ink active:overlay-pressed',
@@ -135,7 +135,7 @@ export function TreeItem({
     <li
       data-tree-item=""
       className={cn(
-        'text-ink flex min-h-[var(--control-md)] min-w-0 items-center gap-2 ps-3 pe-0.5',
+        'text-ink flex min-h-control-md min-w-0 items-center gap-2 ps-3 pe-0.5',
         nested && 'ms-3',
         listRowClasses(),
       )}
@@ -168,9 +168,7 @@ export function TreeCheckOption({
   onCheckedChange: (checked: boolean) => void;
 }>) {
   return (
-    <li
-      className={cn('flex min-h-[var(--control-md)] min-w-0 items-center gap-2', treeIndent(depth))}
-    >
+    <li className={cn('flex min-h-control-md min-w-0 items-center gap-2', treeIndent(depth))}>
       <Checkbox
         label={label}
         checked={checked}

@@ -7,9 +7,6 @@
   "apps/docs/src/components/DocsSearchDialog.tsx": {
     "design/plain-element": {
       "count": 16
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 3
     }
   },
   "apps/docs/src/components/DocsSidebar.astro": {
@@ -165,9 +162,6 @@
     "design/plain-element": {
       "count": 5
     },
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 6
     }
@@ -203,7 +197,7 @@
       "count": 6
     },
     "shadcn/no-arbitrary-values": {
-      "count": 2
+      "count": 1
     },
     "shadcn/no-restyle": {
       "count": 6
@@ -425,7 +419,7 @@
       "count": 17
     },
     "shadcn/no-arbitrary-values": {
-      "count": 7
+      "count": 3
     },
     "shadcn/no-restyle": {
       "count": 1
@@ -442,18 +436,12 @@
     }
   },
   "components/layout/app-shell.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 2
     }
   },
   "components/layout/first-frame.tsx": {
     "design/plain-element": {
-      "count": 2
-    },
-    "shadcn/no-arbitrary-values": {
       "count": 2
     }
   },
@@ -473,9 +461,6 @@
   "components/layout/page-shell.tsx": {
     "design/plain-element": {
       "count": 1
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 2
     },
     "shadcn/no-restyle": {
       "count": 2
@@ -503,9 +488,6 @@
   },
   "components/layout/user-menu.tsx": {
     "design/plain-element": {
-      "count": 1
-    },
-    "shadcn/no-arbitrary-values": {
       "count": 1
     },
     "shadcn/no-restyle": {
@@ -628,9 +610,6 @@
   "components/marketing/pages/platform-page.tsx": {
     "design/plain-element": {
       "count": 2
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 1
     }
   },
   "components/marketing/pages/pricing-catalog.tsx": {
@@ -1150,7 +1129,7 @@
       "count": 6
     },
     "shadcn/no-arbitrary-values": {
-      "count": 3
+      "count": 2
     },
     "shadcn/no-restyle": {
       "count": 2
@@ -1395,7 +1374,7 @@
       "count": 13
     },
     "shadcn/no-arbitrary-values": {
-      "count": 10
+      "count": 2
     },
     "shadcn/no-restyle": {
       "count": 1
@@ -1406,7 +1385,7 @@
       "count": 8
     },
     "shadcn/no-arbitrary-values": {
-      "count": 2
+      "count": 1
     },
     "shadcn/require-static-classes": {
       "count": 1
@@ -1417,7 +1396,7 @@
       "count": 10
     },
     "shadcn/no-arbitrary-values": {
-      "count": 12
+      "count": 8
     }
   },
   "components/templates/record-page.tsx": {
@@ -1425,7 +1404,7 @@
       "count": 3
     },
     "shadcn/no-arbitrary-values": {
-      "count": 7
+      "count": 1
     },
     "shadcn/no-inline-styles": {
       "count": 1
@@ -1436,7 +1415,7 @@
       "count": 2
     },
     "shadcn/no-arbitrary-values": {
-      "count": 2
+      "count": 1
     }
   },
   "components/templates/setup-page.tsx": {
@@ -1447,7 +1426,7 @@
       "count": 2
     },
     "shadcn/no-arbitrary-values": {
-      "count": 7
+      "count": 2
     },
     "shadcn/no-inline-styles": {
       "count": 1
@@ -1458,7 +1437,7 @@
       "count": 9
     },
     "shadcn/no-arbitrary-values": {
-      "count": 5
+      "count": 1
     },
     "shadcn/require-static-classes": {
       "count": 1
@@ -1469,7 +1448,7 @@
       "count": 7
     },
     "shadcn/no-arbitrary-values": {
-      "count": 5
+      "count": 2
     },
     "shadcn/no-restyle": {
       "count": 1
@@ -1482,7 +1461,7 @@
   },
   "components/ui/answer-chat.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 10
+      "count": 4
     },
     "shadcn/no-restyle": {
       "count": 12
@@ -1490,12 +1469,12 @@
   },
   "components/ui/app-grid.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 5
+      "count": 3
     }
   },
   "components/ui/app-shell.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 9
+      "count": 5
     },
     "shadcn/no-inline-styles": {
       "count": 2
@@ -1508,7 +1487,7 @@
   },
   "components/ui/auth-shell.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 4
+      "count": 2
     },
     "shadcn/no-restyle": {
       "count": 1
@@ -1519,7 +1498,7 @@
       "count": 1
     },
     "shadcn/no-arbitrary-values": {
-      "count": 7
+      "count": 1
     },
     "shadcn/no-inline-styles": {
       "count": 5
@@ -1541,24 +1520,18 @@
       "count": 3
     },
     "shadcn/no-arbitrary-values": {
-      "count": 7
+      "count": 2
     },
     "shadcn/no-restyle": {
       "count": 4
     }
   },
   "components/ui/calendar.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 3
-    },
     "shadcn/no-restyle": {
       "count": 18
     }
   },
   "components/ui/card.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 5
-    },
     "shadcn/no-unknown-classes": {
       "count": 1
     }
@@ -1568,7 +1541,7 @@
       "count": 1
     },
     "shadcn/no-arbitrary-values": {
-      "count": 4
+      "count": 1
     },
     "shadcn/no-inline-styles": {
       "count": 2
@@ -1582,7 +1555,7 @@
   },
   "components/ui/chat-dock.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 17
+      "count": 10
     },
     "shadcn/no-restyle": {
       "count": 6
@@ -1593,7 +1566,7 @@
       "count": 2
     },
     "shadcn/no-arbitrary-values": {
-      "count": 4
+      "count": 3
     },
     "shadcn/no-inline-styles": {
       "count": 2
@@ -1604,13 +1577,10 @@
       "count": 1
     },
     "shadcn/no-arbitrary-values": {
-      "count": 2
+      "count": 1
     }
   },
   "components/ui/citation.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 11
     }
@@ -1625,7 +1595,7 @@
   },
   "components/ui/command-palette.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 6
+      "count": 3
     },
     "shadcn/no-restyle": {
       "count": 1
@@ -1636,7 +1606,7 @@
   },
   "components/ui/data-table-body.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 6
+      "count": 3
     },
     "shadcn/no-inline-styles": {
       "count": 2
@@ -1654,7 +1624,7 @@
   },
   "components/ui/data-table.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 3
+      "count": 1
     },
     "shadcn/no-inline-styles": {
       "count": 1
@@ -1663,27 +1633,19 @@
   "components/ui/date-field.tsx": {
     "design/reset-survivor": {
       "count": 1
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 1
     }
   },
   "components/ui/dialog.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 12
+      "count": 6
     },
     "shadcn/require-static-classes": {
       "count": 1
     }
   },
-  "components/ui/disclosure.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 2
-    }
-  },
   "components/ui/draft-sheet.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 2
+      "count": 1
     },
     "shadcn/require-static-classes": {
       "count": 1
@@ -1694,7 +1656,7 @@
       "count": 1
     },
     "shadcn/no-arbitrary-values": {
-      "count": 11
+      "count": 5
     },
     "shadcn/require-static-classes": {
       "count": 1
@@ -1702,12 +1664,12 @@
   },
   "components/ui/editor-workspace.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 13
+      "count": 3
     }
   },
   "components/ui/facts.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 7
+      "count": 3
     },
     "shadcn/require-static-classes": {
       "count": 2
@@ -1731,15 +1693,12 @@
   },
   "components/ui/filter-bar.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 4
+      "count": 3
     }
   },
   "components/ui/filter-chip.tsx": {
     "design/reset-survivor": {
       "count": 1
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 2
     }
   },
   "components/ui/filter-options.tsx": {
@@ -1758,18 +1717,13 @@
       "count": 1
     },
     "shadcn/no-arbitrary-values": {
-      "count": 6
+      "count": 3
     },
     "shadcn/no-inline-styles": {
       "count": 4
     },
     "shadcn/no-restyle": {
       "count": 3
-    }
-  },
-  "components/ui/history-list.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
     }
   },
   "components/ui/input.tsx": {
@@ -1780,17 +1734,12 @@
       "count": 4
     },
     "shadcn/no-arbitrary-values": {
-      "count": 5
-    }
-  },
-  "components/ui/layout.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 5
+      "count": 2
     }
   },
   "components/ui/ledger-list.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 2
+      "count": 1
     },
     "shadcn/no-restyle": {
       "count": 2
@@ -1803,16 +1752,13 @@
     "design/reset-survivor": {
       "count": 1
     },
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 4
     }
   },
   "components/ui/list-row.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 9
+      "count": 5
     },
     "shadcn/no-restyle": {
       "count": 10
@@ -1834,17 +1780,12 @@
       "count": 1
     }
   },
-  "components/ui/masthead.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 4
-    }
-  },
   "components/ui/menu.tsx": {
     "design/reset-survivor": {
       "count": 2
     },
     "shadcn/no-arbitrary-values": {
-      "count": 8
+      "count": 6
     }
   },
   "components/ui/meter.tsx": {
@@ -1862,7 +1803,7 @@
   },
   "components/ui/open-row-skeleton.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 2
+      "count": 1
     }
   },
   "components/ui/pager.tsx": {
@@ -1877,7 +1818,7 @@
   },
   "components/ui/pressable.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 3
+      "count": 1
     }
   },
   "components/ui/progress-meter.tsx": {
@@ -1892,11 +1833,6 @@
     "design/reset-survivor": {
       "count": 2
     },
-    "shadcn/no-arbitrary-values": {
-      "count": 2
-    }
-  },
-  "components/ui/reading-page.tsx": {
     "shadcn/no-arbitrary-values": {
       "count": 2
     }
@@ -1933,11 +1869,6 @@
       "count": 1
     }
   },
-  "components/ui/scroll-edges.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 3
-    }
-  },
   "components/ui/search-field.tsx": {
     "shadcn/no-arbitrary-values": {
       "count": 1
@@ -1959,7 +1890,7 @@
   },
   "components/ui/section.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 8
+      "count": 3
     }
   },
   "components/ui/select.tsx": {
@@ -1967,7 +1898,7 @@
       "count": 2
     },
     "shadcn/no-arbitrary-values": {
-      "count": 5
+      "count": 3
     }
   },
   "components/ui/selection-dock.tsx": {
@@ -1980,12 +1911,12 @@
   },
   "components/ui/sidebar.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 16
+      "count": 4
     }
   },
   "components/ui/skeleton-block.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 17
+      "count": 8
     },
     "shadcn/no-restyle": {
       "count": 3
@@ -1996,11 +1927,6 @@
   },
   "components/ui/skeleton.tsx": {
     "shadcn/require-static-classes": {
-      "count": 1
-    }
-  },
-  "components/ui/slip.tsx": {
-    "shadcn/no-arbitrary-values": {
       "count": 1
     }
   },
@@ -2046,27 +1972,16 @@
   },
   "components/ui/sticky-band.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 2
+      "count": 1
     }
   },
   "components/ui/switch.tsx": {
     "design/reset-survivor": {
       "count": 1
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 2
     }
   },
   "components/ui/table-heads.tsx": {
     "design/reset-survivor": {
-      "count": 1
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 2
-    }
-  },
-  "components/ui/table-loading.tsx": {
-    "shadcn/no-arbitrary-values": {
       "count": 1
     }
   },
@@ -2075,7 +1990,7 @@
       "count": 1
     },
     "shadcn/no-arbitrary-values": {
-      "count": 11
+      "count": 5
     },
     "shadcn/no-restyle": {
       "count": 6
@@ -2089,7 +2004,7 @@
       "count": 2
     },
     "shadcn/no-arbitrary-values": {
-      "count": 10
+      "count": 6
     },
     "shadcn/no-restyle": {
       "count": 1
@@ -2099,9 +2014,6 @@
     }
   },
   "components/ui/tag.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 15
     }
@@ -2122,7 +2034,7 @@
       "count": 2
     },
     "shadcn/no-arbitrary-values": {
-      "count": 7
+      "count": 6
     }
   },
   "components/ui/toast.tsx": {
@@ -2177,9 +2089,6 @@
     }
   },
   "components/ui/work-tree.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 7
     },
@@ -2290,7 +2199,7 @@
       "count": 2
     },
     "shadcn/no-arbitrary-values": {
-      "count": 2
+      "count": 1
     }
   },
   "lib/markdown/markdown.tsx": {

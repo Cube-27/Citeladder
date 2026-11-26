@@ -35,7 +35,7 @@
   padding: 12px;
   border-radius: var(--radius-md);
   text-decoration: none;
-  transition: background-color var(--motion-fast) var(--ease-standard);
+  transition: background-color var(--transition-duration-fast) var(--ease-standard);
 }
 
 .cl-mega-item--text {

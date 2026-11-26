@@ -113,7 +113,7 @@ function SettingsLink() {
   );
   return (
     <Tooltip content="Settings" describe={false}>
-      <Button variant="quiet" asChild className="w-[var(--control-md)] shrink-0 gap-0 px-0">
+      <Button variant="quiet" asChild className="w-control-md shrink-0 gap-0 px-0">
         <Link to={to} aria-label="Settings">
           <Icon icon={Settings} />
         </Link>

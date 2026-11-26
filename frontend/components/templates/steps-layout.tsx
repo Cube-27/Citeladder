@@ -41,7 +41,7 @@ export function StepsLayout<T extends string>({
         tabIndex={-1}
         data-quiet-focus=""
         data-page-scroller=""
-        className="desktop:flex-row relative flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--page-top-gap)] overflow-y-auto outline-none"
+        className="desktop:flex-row gap-page-top relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto outline-none"
       >
         <nav
           aria-label={label}
@@ -67,7 +67,7 @@ export function StepsLayout<T extends string>({
       </div>
       <div
         data-page-band="action-bar"
-        className="bg-raised border-rule rounded-card shadow-pop mt-[var(--workspace-gap)] flex min-h-[var(--filter-bar-height)] min-w-0 shrink-0 flex-wrap items-center gap-2 border px-[var(--card-padding)] py-2"
+        className="bg-raised border-rule rounded-card shadow-pop mt-workspace min-h-filter-bar px-card flex min-w-0 shrink-0 flex-wrap items-center gap-2 border py-2"
       >
         {footerStart}
         <span className="flex-1" />

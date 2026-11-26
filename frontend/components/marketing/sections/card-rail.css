@@ -39,7 +39,7 @@
   background: transparent;
   color: var(--text-color-ink);
   cursor: pointer;
-  transition: background-color var(--motion-fast) var(--ease-standard);
+  transition: background-color var(--transition-duration-fast) var(--ease-standard);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -69,7 +69,7 @@
   outline-offset: -1px;
   color: var(--text-color-ink);
   text-decoration: none;
-  transition: background-color var(--motion-fast) var(--ease-standard);
+  transition: background-color var(--transition-duration-fast) var(--ease-standard);
 }
 
 .cl-rail[data-ready] .cl-railcard:not([data-expanded]) {
@@ -272,8 +272,8 @@
 }
 
 .cl-rail-item {
-  --cl-card-motion: var(--motion-close);
-  --cl-card-ease: var(--ease-exit);
+  --cl-card-motion: var(--transition-duration-close);
+  --cl-card-ease: var(--ease-standard);
 
   flex: 0 0 var(--cl-card-w);
   scroll-snap-align: start;
@@ -281,7 +281,7 @@
 }
 
 .cl-rail-item:has(> [data-expanded]) {
-  --cl-card-motion: var(--motion-open);
+  --cl-card-motion: var(--transition-duration-open);
   --cl-card-ease: var(--ease-standard);
 
   flex-basis: var(--cl-open-w);

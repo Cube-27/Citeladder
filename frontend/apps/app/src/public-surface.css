@@ -70,7 +70,7 @@
 
 @media (max-width: 1279px) {
   :root[data-public-surface] {
-    --content-gutter: 24px;
+    --spacing-gutter: 24px;
   }
 }
 

@@ -1,10 +1,72 @@
 import { clsx, type ClassValue } from 'clsx';
 import { extendTailwindMerge } from 'tailwind-merge';
 
+const SPACING_ROLES = [
+  'band',
+  'card',
+  'cell-x',
+  'cell-y',
+  'chart-lg',
+  'chart-md',
+  'chart-sm',
+  'compact',
+  'control-coarse',
+  'control-lg',
+  'control-md',
+  'control-sm',
+  'control-x',
+  'filter-bar',
+  'flow-gap',
+  'gutter',
+  'mark',
+  'masthead',
+  'modal',
+  'nav-row',
+  'page-block',
+  'page-end',
+  'page-inline',
+  'page-tabs',
+  'page-top',
+  'panel-inset',
+  'rail-button',
+  'row',
+  'section',
+  'sidebar',
+  'sidebar-compact',
+  'sidebar-rail',
+  'table-head',
+  'tag',
+  'target',
+  'workspace',
+];
+
+const DURATION_ROLES = [
+  'tint',
+  'fast',
+  'normal',
+  'close',
+  'menu-blur',
+  'open',
+  'press',
+  'slide',
+  'toast',
+  'reveal',
+  'pulse',
+  'sweep',
+  'menu-step',
+  'reveal-step',
+];
+
 const twMerge = extendTailwindMerge({
   extend: {
-    theme: { radius: ['mark', 'control', 'card', 'overlay'] },
+    theme: {
+      radius: ['mark', 'control', 'card', 'overlay'],
+      spacing: SPACING_ROLES,
+      ease: ['standard', 'resize', 'fluid', 'quad', 'menu', 'sweep'],
+    },
     classGroups: {
+      duration: [{ duration: DURATION_ROLES }],
+      z: [{ z: ['base', 'raised', 'sticky', 'overlay', 'modal', 'toast'] }],
       'font-weight': [{ font: ['emphasis', 'plain'] }],
       'font-family': [{ font: ['figure'] }],
       'font-size': [

@@ -25,11 +25,11 @@ const RAISED_FACE =
   'face bg-raised border border-transparent not-disabled:hover:bg-raised-2 not-disabled:active:bg-raised-2 aria-pressed:bg-raised-2 data-[state=open]:bg-raised-2';
 
 const BUTTON_BASE =
-  'focus-ring press text-label text-ink relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-[var(--control-coarse)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
+  'focus-ring press text-label text-ink relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-control-coarse disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
 
 const BUTTON_SIZE: Record<ButtonSize, string> = {
-  md: 'min-h-[var(--control-md)] px-[var(--control-md-padding,12px)]',
-  lg: 'min-h-[var(--control-lg)] px-4',
+  md: 'min-h-control-md px-control-x',
+  lg: 'min-h-control-lg px-4',
 };
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
@@ -185,7 +185,7 @@ export function IconButton({
   className,
   ...props
 }: Readonly<IconButtonProps>) {
-  const classes = cn('w-[var(--control-md)] gap-0 px-0', className);
+  const classes = cn('w-control-md gap-0 px-0', className);
   const control = href ? (
     <Button {...props} variant={variant} className={classes} asChild>
       <IconLinkTarget href={href} label={label}>

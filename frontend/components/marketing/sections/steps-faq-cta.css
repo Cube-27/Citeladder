@@ -122,7 +122,7 @@
 
 .cl-faq-icon {
   color: var(--site-mark);
-  transition: transform var(--motion-fast) var(--ease-standard);
+  transition: transform var(--transition-duration-fast) var(--ease-standard);
 }
 
 @media (hover: hover) and (pointer: fine) {

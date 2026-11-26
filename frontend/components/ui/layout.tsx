@@ -3,9 +3,9 @@ import type { ComponentPropsWithoutRef, ComponentPropsWithRef, ElementType } fro
 import { cn } from '@/lib/utils';
 
 const STACK_GAP = {
-  section: 'gap-[var(--page-section-gap)]',
-  workspace: 'gap-[var(--workspace-gap)]',
-  compact: 'gap-[var(--compact-gap)]',
+  section: 'gap-section',
+  workspace: 'gap-workspace',
+  compact: 'gap-compact',
   item: 'gap-2',
   tight: 'gap-1',
 } as const;
@@ -28,8 +28,8 @@ export function Stack({
 }
 
 const INLINE_GAP = {
-  workspace: 'gap-[var(--workspace-gap)]',
-  compact: 'gap-[var(--compact-gap)]',
+  workspace: 'gap-workspace',
+  compact: 'gap-compact',
   item: 'gap-2',
   tight: 'gap-1',
   meta: 'flex-wrap gap-x-4 gap-y-1',

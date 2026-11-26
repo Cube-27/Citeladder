@@ -96,8 +96,8 @@
   border-radius: var(--radius-md);
   color: var(--text-color-ink-2);
   transition:
-    background-color var(--motion-fast) var(--ease-standard),
-    color var(--motion-fast) var(--ease-standard);
+    background-color var(--transition-duration-fast) var(--ease-standard),
+    color var(--transition-duration-fast) var(--ease-standard);
 }
 
 @media (hover: hover) and (pointer: fine) {

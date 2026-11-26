@@ -101,7 +101,7 @@ export function DocsSearchDialog() {
         aria-haspopup="dialog"
         aria-keyshortcuts="Control+K Meta+K"
         onClick={(event) => show(event.currentTarget)}
-        className="focus-ring bg-panel text-ink-2 border-rule hover:border-rule-strong text-body h-[var(--control-md)] items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
+        className="focus-ring bg-panel text-ink-2 border-rule hover:border-rule-strong text-body h-control-md items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
       >
         <Search className="size-3.5 shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate" aria-hidden>
@@ -133,7 +133,7 @@ export function DocsSearchDialog() {
         <p id="docs-search-description" className="sr-only">
           Find guides across the product, Agent and MCP.
         </p>
-        <div className="palette-field border-rule text-ink-2 flex h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
+        <div className="palette-field border-rule text-ink-2 h-control-lg flex shrink-0 items-center gap-3 border-b px-4">
           <Search className="size-4 shrink-0" aria-hidden />
           <label htmlFor="docs-query" className="sr-only">
             Search terms
@@ -159,7 +159,7 @@ export function DocsSearchDialog() {
           <Kbd>Esc</Kbd>
         </div>
         <div className="h-100 min-h-0 shrink overflow-y-auto overscroll-contain p-2">
-          <div className="flex min-h-[var(--control-md)] items-center justify-between gap-3 px-2">
+          <div className="min-h-control-md flex items-center justify-between gap-3 px-2">
             <output className="text-caption text-ink-2">
               {searchStatus(failed, entries, query, results.length)}
             </output>

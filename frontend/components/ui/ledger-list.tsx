@@ -57,7 +57,7 @@ export function LedgerItem({
       className={cn(
         'min-w-0',
         action === undefined ? 'grid gap-1' : 'flex items-center gap-4',
-        'hover:overlay-hover transition-colors duration-[var(--motion-fast)]',
+        'hover:overlay-hover transition-colors duration-fast',
       )}
     >
       {action === undefined ? (

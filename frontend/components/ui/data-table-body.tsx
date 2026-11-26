@@ -41,7 +41,7 @@ export function DataTableBody({
         <tr data-table-state="">
           <TableCell
             colSpan={colSpan}
-            className="h-[calc(var(--data-table-rows)*var(--table-row-height))] align-top"
+            className="h-[calc(var(--data-table-rows)*var(--spacing-row))] align-top"
             style={footprint(pageSize ?? 0)}
           >
             <InFrame>
@@ -66,7 +66,7 @@ export function DataTableBody({
           >
             <TableCell
               colSpan={colSpan}
-              className="h-[calc(var(--data-table-rows)*var(--table-row-height))]"
+              className="h-[calc(var(--data-table-rows)*var(--spacing-row))]"
             />
           </tr>
         </TableBody>
@@ -88,10 +88,10 @@ function LoadingBody({
           key={row}
           aria-hidden={row === 0 ? undefined : true}
           data-table-loading=""
-          className="h-[var(--table-row-height)]"
+          className="h-row"
         >
           {cells.map((cell) => (
-            <td key={cell} className="px-[var(--table-cell-padding-x)]">
+            <td key={cell} className="px-cell-x">
               {row === 0 && cell === 0 ? <LiveVerb label={label} /> : null}
               <SkeletonBlock className="h-3 w-3/4" />
             </td>
@@ -104,7 +104,7 @@ function LoadingBody({
 
 function InFrame({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="sticky start-[var(--panel-inset)] w-[calc(100cqi-2*var(--panel-inset))]">
+    <div className="start-panel-inset sticky w-[calc(100cqi-2*var(--spacing-panel-inset))]">
       {children}
     </div>
   );

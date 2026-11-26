@@ -127,7 +127,7 @@ export function SessionGuard({
   if (!value) {
     if (isError && httpErrorStatus(error) !== 401) {
       const notice = (
-        <div className="grid min-h-[60dvh] place-items-center p-[var(--page-section-gap)]">
+        <div className="p-section grid min-h-[60dvh] place-items-center">
           <Notice
             tone="warning"
             className="max-w-lg"
