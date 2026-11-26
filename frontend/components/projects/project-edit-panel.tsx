@@ -249,7 +249,7 @@ export function ProjectEditPanel({
         <SectionHeader
           actions={
             <>
-              <span className="type-caption">
+              <span className="text-caption text-ink-2">
                 {competitors.length} of {maximumCompetitors ?? '…'}
               </span>
               <Button

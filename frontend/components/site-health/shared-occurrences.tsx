@@ -40,7 +40,7 @@ export function SharedOccurrences({
     <Stack as="li" gap="item">
       <Stack gap="tight">
         <EvidenceLine lead={sharedEvidenceLead(entry.ruleId)} facts={entry.facts} text="body" />
-        <span className="type-caption">{sharedPagesLabel(scope)}</span>
+        <span className="text-caption text-ink-2">{sharedPagesLabel(scope)}</span>
         <AskAgentLink
           appearance="text"
           handoff={{
@@ -93,10 +93,10 @@ export function AffectedPageLink({
             {pageDisplayTitle(title, url)}
           </span>
           {pageKind ? (
-            <span className="type-caption shrink-0">{pageKindLabel(pageKind)}</span>
+            <span className="text-caption text-ink-2 shrink-0">{pageKindLabel(pageKind)}</span>
           ) : null}
         </Inline>
-        <span className="type-caption flex min-w-0">
+        <span className="text-caption text-ink-2 flex min-w-0">
           <UrlText url={url} />
         </span>
       </Stack>

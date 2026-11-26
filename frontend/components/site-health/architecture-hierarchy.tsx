@@ -141,12 +141,14 @@ function HierarchyList({
                   <UrlText url={node.url} origin={origin} />
                 </PageLink>
               ) : (
-                <span className="type-body text-ink flex min-w-0">
+                <span className="text-body text-ink flex min-w-0">
                   <UrlText url={node.url} origin={origin} />
                 </span>
               )}
               <PageKindBadge pageKind={node.page_kind} />
-              {source ? <span className="type-caption whitespace-nowrap">{source}</span> : null}
+              {source ? (
+                <span className="text-caption text-ink-2 whitespace-nowrap">{source}</span>
+              ) : null}
             </Inline>
             {childShown ? (
               <HierarchyList

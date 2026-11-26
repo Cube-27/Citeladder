@@ -45,7 +45,7 @@ export function ProjectMarkets({
       {extra.length ? (
         <SectionBleed as="ul" rows>
           {extra.map((market) => (
-            <Inline as="li" key={market.id} className="type-body text-ink-2 justify-between">
+            <Inline as="li" key={market.id} className="text-body text-ink-2 justify-between">
               <span>{market.label}</span>
               <IconButton
                 icon={X}

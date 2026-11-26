@@ -370,7 +370,7 @@ function SearchGroupRows({
       ))}
       {note ? (
         <TableRow>
-          <TableCell colSpan={COLUMNS.length} className={textRole('caption', 'text-ink-2')}>
+          <TableCell colSpan={COLUMNS.length} className="text-ink-2">
             {note}
           </TableCell>
         </TableRow>

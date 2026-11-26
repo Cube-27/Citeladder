@@ -30,9 +30,9 @@ export function BulkActions({
           <span aria-live="polite" className={textRole('body')}>
             {count ? `${count} ${noun} selected` : 'No products selected'}
           </span>
-          {hint ? <span className="type-caption">{hint}</span> : null}
+          {hint ? <span className="text-caption text-ink-2">{hint}</span> : null}
           {error ? (
-            <span role="alert" className="type-caption text-negative">
+            <span role="alert" className="text-caption text-negative">
               {humanizeApiError(error, 'Competitor discovery could not start.').message}
             </span>
           ) : null}

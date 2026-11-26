@@ -78,7 +78,7 @@ function PauseNotice({
 }: Readonly<{ pause: NonNullable<ProviderGroup['engines'][number]['pause']>; reason: string }>) {
   const timeZone = useDisplayTimeZone();
   return (
-    <p className="type-caption text-negative">
+    <p className="text-caption text-negative">
       {pause.until ? `Paused until ${formatDisplayTimestamp(pause.until, timeZone)}.` : 'Paused.'}{' '}
       {PAUSE_REASONS[reason] ?? ''} A passing test resumes it.
     </p>
@@ -94,7 +94,7 @@ function LastFailure({ group }: Readonly<{ group: ProviderGroup }>) {
   )?.latest_probe;
   if (!probe) return null;
   return (
-    <p className="type-caption text-negative">
+    <p className="text-caption text-negative">
       Last test failed.
       {probe.safe_reason
         ? ` ${endSentence(executionFailureReason(probe.safe_reason, probe.safe_reason))}`

@@ -144,7 +144,7 @@ function crawlMetric(context: MetricContext): AuditMetric {
     figure: counts ? (
       <>
         {`${formatCount(counts.analyzed)} of ${formatCount(counts.found)} `}
-        <span className="type-caption text-ink-2">pages audited</span>
+        <span className="text-caption text-ink-2">pages audited</span>
       </>
     ) : undefined,
     sub: counts?.limit ? `Plan limit ${formatCount(counts.limit)} pages` : undefined,

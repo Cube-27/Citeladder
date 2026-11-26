@@ -363,7 +363,7 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
                 <Inline
                   as="li"
                   gap="compact"
-                  className="type-body text-ink-2 justify-between"
+                  className="text-body text-ink-2 justify-between"
                   key={`${String(call.dataset_key)}:${String(call.page)}`}
                 >
                   <span>
@@ -383,7 +383,7 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
         </Section>
       ) : null}
       {review.reused_datasets.length ? (
-        <p className="type-body text-ink-2">
+        <p className="text-body text-ink-2">
           {pluralCount(review.reused_datasets.length, 'recent result')} will be reused without AI
           credits.
         </p>

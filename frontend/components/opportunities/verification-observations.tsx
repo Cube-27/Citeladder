@@ -15,7 +15,7 @@ export function VerificationObservations({
   const result = implementation?.verification_events?.at(-1)?.result;
   if (!result) return null;
   return (
-    <Stack className="type-caption">
+    <Stack className="text-caption text-ink-2">
       <ComparableMovement result={result} />
       <GapChanges result={result} />
       {showAuditLink ? (

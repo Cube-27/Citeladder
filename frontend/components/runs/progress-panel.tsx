@@ -117,7 +117,7 @@ function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: bo
   const timeZone = useDisplayTimeZone();
   return (
     <Inline className="flex-wrap">
-      <span className="type-body text-ink-2">
+      <span className="text-body text-ink-2">
         Started {formatDisplayTime(audit.created_at, timeZone)}
       </span>
       <StatusMark variant="run-status" value={AUDIT_STATES[audit.status].badge}>

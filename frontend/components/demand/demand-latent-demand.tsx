@@ -14,7 +14,7 @@ export function DemandLatentDemand({ snapshot }: Readonly<{ snapshot: DemandSnap
   const known = observed.filter((value): value is number => value !== null);
   const partial = known.length > 0 && known.length < observed.length;
   return (
-    <Inline as="span" gap="tight" className="type-caption">
+    <Inline as="span" gap="tight" className="text-caption text-ink-2">
       <Icon icon={Zap} />
       {observed.length > 0 && known.length === 0 ? (
         <>

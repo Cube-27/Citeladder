@@ -725,16 +725,6 @@
   border-color: var(--color-control-line);
 }
 
-[data-public-surface] .type-eyebrow:not(:is(.cl-screen, .cl-vig) *) {
-  color: var(--text-color-ink-2);
-  font-family: var(--font-sans);
-  font-size: var(--text-label);
-  font-weight: var(--weight-medium);
-  line-height: var(--text-label--line-height);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
 [data-public-surface] :is([data-button-variant], .focus-ring):active {
   translate: none;
 }
@@ -843,158 +833,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
 }
 
 @layer components {
-  .type-display,
-  .type-title {
-    font-family: var(--font-display);
-    color: var(--text-color-ink);
-  }
-  .type-display {
-    font-size: var(--text-display);
-    line-height: var(--text-display--line-height);
-    font-weight: var(--weight-medium);
-    letter-spacing: var(--text-display--letter-spacing);
-  }
-  .type-title {
-    font-size: var(--text-title);
-    line-height: var(--text-title--line-height);
-    font-weight: var(--weight-regular);
-    letter-spacing: 0;
-  }
-  .type-heading,
-  .type-subheading,
-  .type-body,
-  .type-label,
-  .type-prose,
-  .type-caption {
-    font-family: var(--font-sans);
-    letter-spacing: 0;
-    color: var(--text-color-ink);
-  }
-  .type-heading {
-    font-size: var(--text-heading);
-    line-height: var(--text-heading--line-height);
-    font-weight: var(--weight-medium);
-  }
-  .type-subheading {
-    font-size: var(--text-label);
-    line-height: var(--text-label--line-height);
-    font-weight: var(--weight-medium);
-  }
-  .type-body {
-    font-size: var(--text-body);
-    line-height: var(--text-body--line-height);
-    font-weight: var(--weight-regular);
-  }
-  .type-label {
-    font-size: var(--text-label);
-    line-height: var(--text-label--line-height);
-    font-weight: var(--weight-medium);
-  }
-  .type-prose {
-    font-size: var(--text-prose);
-    line-height: var(--text-prose--line-height);
-    font-weight: var(--weight-regular);
-  }
-  .type-caption {
-    font-size: var(--text-caption);
-    line-height: var(--text-caption--line-height);
-    font-weight: var(--weight-regular);
-    color: var(--text-color-ink-2);
-  }
-  .type-figure-xl,
-  .type-figure {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-  }
-  .type-figure-xl {
-    font-size: var(--text-figure-xl);
-    line-height: var(--text-figure-xl--line-height);
-    font-weight: var(--weight-medium);
-    letter-spacing: var(--text-figure-xl--letter-spacing);
-    color: var(--text-color-ink);
-  }
-  .type-figure {
-    font-size: var(--text-figure);
-    line-height: var(--text-figure--line-height);
-    font-weight: var(--weight-medium);
-    letter-spacing: var(--text-figure--letter-spacing);
-    color: var(--text-color-ink);
-  }
-
-  :root:not([data-public-surface]) :is(.type-caption-strong, .type-code) {
-    letter-spacing: 0;
-    color: var(--text-color-ink);
-  }
-  :root:not([data-public-surface]) .type-caption-strong {
-    font-family: var(--font-sans);
-    font-size: var(--text-caption);
-    line-height: var(--text-caption--line-height);
-    font-weight: var(--weight-medium);
-    letter-spacing: 0;
-    text-transform: none;
-    color: var(--text-color-ink-2);
-  }
-  :root:not([data-public-surface]) :is(.type-figure-xl, .type-figure) {
-    font-family: var(--font-sans);
-    letter-spacing: 0;
-  }
-  :root:not([data-public-surface]) .type-code {
-    font-family: var(--font-mono);
-    font-size: var(--text-code);
-    line-height: var(--text-code--line-height);
-    font-weight: var(--weight-regular);
-  }
-  .type-control-file::file-selector-button {
-    font-family: var(--font-sans);
-    font-size: var(--text-label);
-    line-height: var(--text-label--line-height);
-    font-weight: var(--weight-medium);
-  }
-
-  .type-page-title {
-    font-family: var(--font-sans);
-    font-size: var(--text-page-title);
-    line-height: var(--text-page-title--line-height);
-    font-weight: var(--weight-medium);
-    letter-spacing: var(--text-page-title--letter-spacing);
-    color: var(--text-color-ink);
-  }
-  .type-control {
-    font-family: var(--font-sans);
-    font-size: var(--text-label);
-    line-height: var(--text-label--line-height);
-    font-weight: var(--weight-regular);
-    letter-spacing: 0;
-  }
-  .type-eyebrow {
-    font-family: var(--font-mono);
-    font-size: var(--text-eyebrow);
-    line-height: var(--text-eyebrow--line-height);
-    font-weight: var(--weight-regular);
-    letter-spacing: var(--text-eyebrow--letter-spacing);
-    text-transform: uppercase;
-    color: var(--text-color-ink-2);
-  }
-  .type-screen-label {
-    font-family: var(--font-mono);
-    font-size: var(--text-screen-label);
-    line-height: var(--text-screen-label--line-height);
-    font-weight: var(--weight-medium);
-    letter-spacing: var(--text-screen-label--letter-spacing);
-    text-transform: uppercase;
-    color: var(--text-color-ink-2);
-  }
-  .type-data-sm {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-    font-size: var(--text-caption);
-    line-height: var(--text-caption--line-height);
-    font-weight: var(--weight-regular);
-    letter-spacing: 0;
-  }
-
-
-
   .cl-mark {
     background: var(--color-accent-wash);
     color: var(--text-color-ink);
@@ -1080,8 +918,8 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   }
 }
 
-.focus-ring[aria-current='page'] .type-caption,
-a.focus-ring:active .type-caption {
+.focus-ring[aria-current='page'] .text-caption,
+a.focus-ring:active .text-caption {
   color: var(--text-color-ink);
 }
 

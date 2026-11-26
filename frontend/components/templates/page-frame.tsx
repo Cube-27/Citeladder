@@ -203,7 +203,7 @@ function PageStrips({
             <div
               ref={onTabEnd}
               data-page-tab-end=""
-              className="type-caption text-ink-2 ms-auto flex min-w-0 items-center gap-3 self-stretch overflow-hidden whitespace-nowrap empty:hidden"
+              className="text-caption text-ink-2 ms-auto flex min-w-0 items-center gap-3 self-stretch overflow-hidden whitespace-nowrap empty:hidden"
             />
           </div>
         </div>

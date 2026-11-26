@@ -269,7 +269,7 @@ function PageKindPages({
                     <UrlText url={page.url} />
                   </PageLink>
                 ) : (
-                  <span className="type-body text-ink flex min-w-0">
+                  <span className="text-body text-ink flex min-w-0">
                     <UrlText url={page.url} />
                   </span>
                 )}
@@ -363,7 +363,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
               </Stack>
             </ChartFrame>
             {data.structure_depth.unmeasured_page_count > 0 ? (
-              <p className="type-caption">
+              <p className="text-caption text-ink-2">
                 {data.structure_depth.unmeasured_page_count === 1
                   ? '1 crawled page has no measured depth.'
                   : `${formatCount(data.structure_depth.unmeasured_page_count)} crawled pages have no measured depth.`}

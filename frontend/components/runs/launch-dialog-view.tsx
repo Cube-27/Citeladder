@@ -71,7 +71,7 @@ function PromptSetField({
         }
         if (promptSetsRead.status === 'success' && !promptSets.length) {
           return (
-            <p className="type-body text-ink-2">
+            <p className="text-body text-ink-2">
               No prompt set yet. Add prompts on the Prompts screen first.
             </p>
           );
@@ -166,7 +166,7 @@ function MarketsField({
           </ChoiceChip>
         ))}
       </Inline>
-      <p className="type-caption">
+      <p className="text-caption text-ink-2">
         Each market runs separately. An engine that cannot measure a market is skipped there.
       </p>
     </ChoiceRow>
@@ -269,7 +269,7 @@ function RepetitionsField({
 
 function EstimateNote({ estimate }: Readonly<{ estimate: Estimate }>) {
   return (
-    <Stack gap="tight" className="type-caption">
+    <Stack gap="tight" className="text-caption text-ink-2">
       <span className={textRole('emphasis', 'text-ink')}>
         {estimate.execution_count} {estimate.execution_count === 1 ? 'response' : 'responses'}{' '}
         planned
@@ -417,7 +417,7 @@ export function LaunchDialogView({
         <MarketsField markets={markets} marketIds={marketIds} setMarketIds={setMarketIds} />
       </Stack>
       {estimate ? <EstimateNote estimate={estimate} /> : null}
-      <p className="type-caption text-ink-2">
+      <p className="text-caption text-ink-2">
         Answers that mention you or a competitor are also classified for sentiment. No credits are
         used.
       </p>

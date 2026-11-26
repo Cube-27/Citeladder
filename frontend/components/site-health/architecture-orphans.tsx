@@ -66,18 +66,18 @@ export function OrphanPageDrawer({
                   {page.title ? <ClampText>{page.title}</ClampText> : <UrlText url={page.url} />}
                 </PageLink>
               ) : (
-                <span className="type-body text-ink flex min-w-0">
+                <span className="text-body text-ink flex min-w-0">
                   {page.title ? <ClampText>{page.title}</ClampText> : <UrlText url={page.url} />}
                 </span>
               )}
-              <span className="type-caption flex min-w-0">
+              <span className="text-caption text-ink-2 flex min-w-0">
                 <UrlText url={page.url} />
               </span>
             </Stack>
           ))}
         </SectionBleed>
         {undisclosed > 0 ? (
-          <p className="type-caption">and {formatCount(undisclosed)} more</p>
+          <p className="text-caption text-ink-2">and {formatCount(undisclosed)} more</p>
         ) : null}
       </>
     </Drawer>

@@ -31,7 +31,7 @@ function LinkedFromLine({ page }: Readonly<{ page: PageSummary }>) {
   const [first, ...rest] = page.linked_from;
   if (!first || !isFetchFailure(page.analysis_status)) return null;
   return (
-    <ClampText lines={1} className="type-caption">
+    <ClampText lines={1} className="text-caption text-ink-2">
       {rest.length
         ? `Linked from ${first.url} and ${rest.length} more`
         : `Linked from ${first.url}`}

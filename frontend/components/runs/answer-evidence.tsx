@@ -30,7 +30,7 @@ function Outcome({
       />
       <div className="min-w-0">
         <p className={textRole('body')}>{label}</p>
-        <p className="type-caption truncate" title={detail}>
+        <p className="text-caption text-ink-2 truncate" title={detail}>
           {detail}
         </p>
       </div>

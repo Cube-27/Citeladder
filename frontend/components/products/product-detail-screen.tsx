@@ -262,7 +262,7 @@ function ProductIdentity({
             <UrlText url={product.url} />
           </TextLink>
         ) : (
-          <span className="type-caption text-ink-2">{holderCaption(product)}</span>
+          <span className="text-caption text-ink-2">{holderCaption(product)}</span>
         )}
       </Inline>
       {notices}

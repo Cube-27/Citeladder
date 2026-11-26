@@ -91,7 +91,7 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
           <SectionDescription>{relevance.statement}</SectionDescription>
         ) : null}
       </SectionHeader>
-      <AppGrid as="dl" layout="thirds" className="type-caption">
+      <AppGrid as="dl" layout="thirds" className="text-caption text-ink-2">
         <div>
           <dt className="text-ink-2">Title</dt>
           <dd className={textRole('emphasis', 'tabular-nums')}>
@@ -112,7 +112,7 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
         </div>
       </AppGrid>
       {missing.length > 0 ? (
-        <p className="type-caption">
+        <p className="text-caption text-ink-2">
           <span className={textRole('body', 'text-ink-2')}>Missing from title or H1:</span>{' '}
           {missing.join(', ')}
         </p>

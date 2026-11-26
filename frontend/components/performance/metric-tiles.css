@@ -32,7 +32,7 @@
     --metric: var(--color-metric-position);
     --metric-ink: var(--text-color-metric-ink-dark);
   }
-  & :is(label, .type-body, .type-caption, .type-figure) {
+  & :is(label, .text-body, .text-caption, .text-figure) {
     color: inherit;
   }
   &:last-child {

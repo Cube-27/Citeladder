@@ -32,19 +32,19 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
               key={`${signature}:${occurrence}`}
               data-testid="root-error-row"
             >
-              <span className="type-code">{error.method}</span>
-              <ClampText className="type-body text-ink-2 flex-1">{error.target}</ClampText>
+              <span className="text-code text-ink font-mono">{error.method}</span>
+              <ClampText className="text-body text-ink-2 flex-1">{error.target}</ClampText>
               {error.error_code ? (
                 <StatusMark tone="negative">{error.error_code}</StatusMark>
               ) : null}
-              <span className="type-body text-ink-2 tabular-nums">
+              <span className="text-body text-ink-2 tabular-nums">
                 {error.status_code !== null ? (
                   `HTTP ${error.status_code}`
                 ) : (
                   <Absence state="not_measured" />
                 )}
               </span>
-              <span className="type-body text-ink-2 tabular-nums">
+              <span className="text-body text-ink-2 tabular-nums">
                 {error.latency_ms !== null && error.latency_ms > 0 ? (
                   `${formatCount(error.latency_ms)} ms`
                 ) : (

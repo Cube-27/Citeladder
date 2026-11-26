@@ -157,7 +157,7 @@ function ChangeRow({
           <StatusMark tone={CLASS_TONES[row.change_class]}>
             {CLASS_LABELS[row.change_class]}
           </StatusMark>
-          {row.expected ? <span className="type-caption">Expected</span> : null}
+          {row.expected ? <span className="text-caption text-ink-2">Expected</span> : null}
         </Inline>
       </TableCell>
       <TableCell>

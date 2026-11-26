@@ -393,7 +393,9 @@ function SiteLevelList({
               <ClampText className={textRole('body', 'min-w-0 flex-1')}>
                 {section.pathPrefix}
               </ClampText>
-              <span className="type-caption tabular-nums">{pageCountLabel(section.pageCount)}</span>
+              <span className="text-caption text-ink-2 tabular-nums">
+                {pageCountLabel(section.pageCount)}
+              </span>
             </Inline>
           ))}
         </SectionBleed>
@@ -409,7 +411,7 @@ function SiteLevelList({
               pageKind={page.pageKind}
             />
             {page.clicksFromHome === null ? null : (
-              <span className="type-caption tabular-nums">
+              <span className="text-caption text-ink-2 tabular-nums">
                 {page.clicksFromHome} clicks from the homepage
               </span>
             )}
@@ -418,7 +420,7 @@ function SiteLevelList({
       </SectionBleed>
       {hidden > 0 ? (
         <SectionFooter>
-          <p className="type-caption">
+          <p className="text-caption text-ink-2">
             Showing {evidence.pages.length} of {evidence.total} pages.
           </p>
         </SectionFooter>
@@ -452,7 +454,7 @@ function DuplicateSetList({
               {`These ${pageCountLabel(set.pageCount)} share “${set.text}”`}
             </ClampText>
             {set.pages.length < set.pageCount ? (
-              <span className="type-caption">Including:</span>
+              <span className="text-caption text-ink-2">Including:</span>
             ) : null}
             <Stack as="ul" gap="item">
               {set.pages.map((page) => (
@@ -472,7 +474,7 @@ function DuplicateSetList({
       </SectionBleed>
       {shown < evidence.total ? (
         <SectionFooter>
-          <p className="type-caption">
+          <p className="text-caption text-ink-2">
             Showing {shown} of {evidence.total} pages.
           </p>
         </SectionFooter>
@@ -506,7 +508,7 @@ function LinkTargetList({
             <ClampText className={textRole('body')}>
               {`${sitePath(target.url, origin)} → ${linkOutcomeLabel(target.outcome, origin)}`}
             </ClampText>
-            <span className="type-caption tabular-nums">
+            <span className="text-caption text-ink-2 tabular-nums">
               On {pageCountLabel(target.pageCount)}
               {hidden > 0 ? ', including:' : ':'}
             </span>

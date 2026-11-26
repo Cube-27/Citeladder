@@ -66,7 +66,8 @@ to `-4` ink then cool hues in rank order, `data-other` the grouped rest.
 ## Type
 
 Sans (Google Sans) for words and numbers alike, numbers in its tabular
-figures (dates, counts, prices, URLs too). Mono (Geist Mono) only for literal
+figures (dates, counts, prices, URLs too); the website sets its metric figures
+in mono. Mono (Geist Mono) only for literal
 code: API keys, code blocks, raw IDs and keyboard hints. Weights 400 and 500 only; the app's dark asks for every weight 50 lighter
 (350 and 450: light text on dark reads heavier), but the sans face starts at 400, so regular sans text is 400 in both themes and only 450 and the mono and display faces draw lighter. Emphasis is 500, never
 colour. Sizes are rem so they follow the reader's text size.
@@ -95,9 +96,14 @@ default weight, leading and tracking scales are switched off.
 | title, page title | 20 / 28   | 400, page title 500     |
 | figure (metric) | 20 / 28     | 500, tabular            |
 
-A call site names the job through `<Text role tone>` in
+A call site names the job through `<Text variant tone>` in
 [`typography.tsx`](../frontend/components/ui/typography.tsx) or the matching
-`text-<role>` utility, never a size, weight or line height.
+`text-<role>` utility, never a size, weight or line height. A `text-<role>`
+utility sets size, line height, weight and tracking only; the face and the ink
+come from `font-*` and `text-<ink>` beside it. A face that differs by subdomain
+is a face role each ladder sets: `font-figure` is sans in the app and mono on
+the website. `code` is a utility only in the app; the website keeps its size as
+a CSS variable for code blocks.
 
 ## Spacing, size and shape
 

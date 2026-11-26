@@ -94,7 +94,7 @@ function IssueBody({ issue, crawlId }: Readonly<{ issue: PageIssue; crawlId: str
       <IssueEvidence occurrence={issue} />
       {scores.length > 0 ? (
         <Inline as="p" className="flex-wrap">
-          <span className="type-caption">Counts toward</span>
+          <span className="text-caption text-ink-2">Counts toward</span>
           {scores.map((score) => (
             <Tag key={score}>{score}</Tag>
           ))}
@@ -118,6 +118,6 @@ function IssueBody({ issue, crawlId }: Readonly<{ issue: PageIssue; crawlId: str
 
 function Remediation({ issue }: Readonly<{ issue: PageIssue }>) {
   return issue.remediation ? (
-    <p className="type-body text-ink whitespace-pre-line">{issue.remediation}</p>
+    <p className="text-body text-ink whitespace-pre-line">{issue.remediation}</p>
   ) : null;
 }
