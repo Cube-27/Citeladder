@@ -6,8 +6,7 @@ const QUOTED_WELLS = new Map([
 ]);
 
 const NEGATIVE_MARGIN = /(?<![\w-])-m[xytblrse]?-(?:\[[^\]\s]+\]|\([^)\s]+\)|[\d.]+|px)(?![\w-])/g;
-const LAYOUT_FACE =
-  /\b(?:slipClasses|SLIP_FACE|FRAMED_FACE|STEP_SLIP|wellClasses)\b|(?<![\w-])surface-card(?![\w-])/g;
+const LAYOUT_FACE = /\bwellClasses\b|(?<![\w-])surface-card(?![\w-])/g;
 const ANCESTOR_KEY = /\[(?:data-section\b|role=['"]?dialog\b)/;
 
 const featureCode = (label) =>

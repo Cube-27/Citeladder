@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ancestorRuleFindings, compositionFindings } from './design-system-composition.mjs';
+import {
+  ancestorRuleFindings,
+  compositionFindings,
+} from '../../frontend/scripts/design-system-composition.mjs';
 
 test('flags globals rules keyed on a section or dialog ancestor, not the element itself', () => {
   const css = [
@@ -18,8 +21,8 @@ test('flags globals rules keyed on a section or dialog ancestor, not the element
 
 test('counts layout faces and negative margins in feature code only', () => {
   const source = [
-    "import { slipClasses } from '@/components/ui/slip';",
-    '<div className={slipClasses()} />',
+    "import { wellClasses } from '@/components/ui/well';",
+    '<div className={wellClasses()} />',
     '<div className="-mx-4 mx-2 -mt-[var(--x)]" />',
   ].join('\n');
   assert.deepEqual(
@@ -27,7 +30,7 @@ test('counts layout faces and negative margins in feature code only', () => {
     [
       'negative margin -mx-4 outside components/ui',
       'negative margin -mt-[var(--x)] outside components/ui',
-      'slipClasses used as a layout card',
+      'wellClasses used as a layout card',
     ],
   );
   assert.deepEqual(compositionFindings('components/ui/a.tsx', source), []);

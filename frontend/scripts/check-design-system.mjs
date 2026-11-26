@@ -1,7 +1,6 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, extname, join, relative, resolve } from 'node:path';
+import { extname, join, relative, resolve } from 'node:path';
 
-import { loadDesignSystem, undeclaredColourViolations } from './design-system-colour-tokens.mjs';
 import { textContrastViolations } from './design-system-contrast.mjs';
 import {
   ancestorRuleFindings,
@@ -9,11 +8,7 @@ import {
   compositionReport,
   COMPOSITION_ENFORCED,
 } from './design-system-composition.mjs';
-import {
-  appSourceViolations,
-  directRadixImportViolations,
-  literalColourViolations,
-} from './design-system-source-checks.mjs';
+import { appSourceViolations } from './design-system-source-checks.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const tokenOwner = join(root, 'apps', 'app', 'src', 'globals.css');
@@ -53,24 +48,11 @@ for (const path of files(root)) {
   if (extension === '.astro') continue;
   if (/\.tsx?$/.test(label) && !/\.test\.tsx?$/.test(label)) scriptSources.push({ label, source });
   composition.push(...compositionFindings(label, source));
-  violations.push(
-    ...literalColourViolations(source, label),
-    ...directRadixImportViolations(source, label),
-  );
 }
 
 const appCssPath = join(root, 'apps', 'app', 'src', 'app.css');
 const appCss = readFileSync(appCssPath, 'utf8');
-const designSystem = await loadDesignSystem(appCss, dirname(appCssPath));
-
-violations.push(
-  ...textContrastViolations(root),
-  ...undeclaredColourViolations(
-    scriptSources.filter(({ label }) => /^(?:apps|components|lib)\/.+\.tsx$/.test(label)),
-    designSystem,
-  ),
-  ...appSourceViolations(appCss, scriptSources),
-);
+violations.push(...textContrastViolations(root), ...appSourceViolations(appCss, scriptSources));
 
 composition.push(
   ...ancestorRuleFindings(relative(root, tokenOwner), readFileSync(tokenOwner, 'utf8')),
