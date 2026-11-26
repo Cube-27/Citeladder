@@ -55,7 +55,6 @@ control. `/crawler` is not published (L9).
 | L7 | Tax and GST wording | GST rate, SAC, LUT and approval reference are owner inputs with the accountant; see [payment owner requirements](razorpay-and-demo-owner-requirements.md) and the billing decision log. No tax text changes until then. |
 | L8 | Model-provider terms behind the no-training promise | Confirm, from each provider's business account settings and terms, that Anthropic, OpenAI and Google API calls are not used for training and what each retains. The pages promise no training by CiteLadder and do not promise zero retention. |
 | L9 | Publish `/crawler` | The bot's user agent `CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)` links to a page that does not exist. The draft copy (git history, Part D §8) must match the shipped robots policy (R17) before publishing. |
-| L10 | Google API Limited Use statement on `/privacy` | Publish only after the downstream use of GSC and GA4 data (Agent, MCP, exports) is verified against Google's API Services User Data Policy. |
 | L11 | Enterprise agreement package | Counsel review of the draft MSA, Order Form, Acceptable Use Policy and agreement precedence (git history, Part E); support hours and any SLA; cyber and technology E&O insurance quotes. Not needed for self-serve launch. |
 | L12 | DataForSEO processing location | DataForSEO OÜ is registered in Estonia; its server location is not published. The subprocessor row says "Estonia (provider's registered office)" until DataForSEO confirms. |
 
@@ -93,6 +92,7 @@ These keep published promises true; none needs an owner decision.
 | R18 | Google Analytics loads only after cookie consent. Cloudflare Zaraz and Google Tag Gateway are off. | Owner, 2026-10-09 and 2026-10-12 |
 | R19 | Company registration number and registered office are published. | Owner, 2026-10-12 |
 | R20 | The Privacy Policy states what CiteLadder does and has an AI assistant connections (MCP) section covering the data collected, purposes, recipients, retention (unused registrations 24 hours, prepared changes ten minutes, reconsent within 180 days, ended-connection records 180 days) and user controls, as OpenAI's plugin guidelines require. | Owner, 2026-10-14 (OpenAI plugin submission) |
+| R21 | The Privacy Policy describes the read-only Google Search Console and Google Analytics data CiteLadder imports and how it is used, and carries the Google API Services User Data Policy Limited Use statement (no transfer beyond providing features, the law or a merger; no ads, sale or generalised model training; no human reading without permission, security or legal need, or aggregation), as Google sensitive-scope verification requires. Downstream use through the Agent, MCP and exports is a user-facing feature the user requests. | Owner, 2026-11-26 (Google OAuth verification) |
 
 ## Subprocessors at a glance
 

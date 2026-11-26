@@ -4,7 +4,7 @@ import { legalSections } from './legal-text';
 export const PRIVACY_POLICY: LegalDocument = {
   path: '/privacy',
   metaTitle: 'Privacy Policy · CiteLadder',
-  updated: '2026-10-14',
+  updated: '2026-11-26',
   title: 'Privacy Policy',
   description: 'What personal data CiteLadder processes, why, and the choices you have.',
   sections: legalSections(`
@@ -43,7 +43,9 @@ We do not sell Customer Data or use it to train third-party foundation models, a
 
 ## connected-accounts | Connected Google and other accounts
 We access only the permissions and properties you authorise for an integration. Depending on what you connect, this may include search queries, pages, impressions, clicks, analytics events and associated reporting data. We may retain imported data and derived reports to provide the requested features.
-You may disconnect an integration or revoke permissions through the provider. This stops future access; it does not automatically erase imported history. You can request deletion of that history separately.
+When you connect Google Search Console or Google Analytics, we ask Google for read-only access to that product and never change anything in your Google account. We list the properties you can access so you can choose the one for your website, then import daily aggregate reports for it: search clicks, impressions, click-through rate and average position by query, page, country and date; and sessions, engaged sessions, key events and, for online stores, transactions and revenue by channel, source, referrer and landing page. Google Analytics reports are aggregates and contain no individual visitor records. We use this data only to show search and AI traffic reports in your workspace and to answer your questions about it through the Agent, the AI assistant connections you authorise and the exports you request.
+CiteLadder’s use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy (https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. We use Google user data only to provide or improve the user-facing features described here. We do not transfer it except as needed to provide those features (for example, to the AI provider that answers your request), to comply with the law, or as part of a merger, acquisition or sale of assets. We do not sell it, use it for advertising, or use it to develop, improve or train generalised AI or machine-learning models. Our staff do not read it unless you permit it, it is needed for security, the law requires it, or it has been aggregated and anonymised for internal operations.
+You may disconnect an integration in Settings or revoke permissions through the provider. Disconnecting revokes our access and stops future imports; it does not automatically erase imported history. You can request deletion of that history separately.
 
 ## recipients | Recipients and external clients
 We disclose data as needed to infrastructure, AI, research, monitoring and support providers that help us run the Service; to our payment processor; and to connected platforms under your instructions.
