@@ -397,6 +397,12 @@ how to add or change an entry.
   (2026-11-26).
 - **AR-25** The design-system composition check warns and never fails CI
   (2026-11-26).
+- **AR-26 Design values are role tokens.** A violation is anything that would
+  let a later design change drift one page: a raw value, or a page using a
+  token or primitive class directly instead of a primitive. Text roles derive
+  from one base per subdomain (app 14, website 16). A new look, even a one-off,
+  adds a role token; never a raw value. The raw-value lint fails CI from a
+  baseline that only shrinks (2026-11-26).
 
 ## Audit remediation (owner 2026-11-12)
 

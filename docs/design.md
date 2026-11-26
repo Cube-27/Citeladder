@@ -14,11 +14,47 @@ and docs (`[data-public-surface]`, `components/marketing`,
 scope here. App code uses the app's role names, never a website role
 (`paper`, `line`, `ink-secondary`, the `-soft` fills).
 
-**Checks.** `pnpm check:policy` keeps three rules: no literal colours outside
-`globals.css`, WCAG AA contrast of token pairs (text 4.5:1, marks 3:1, both
-themes), and no Radix import outside `components/ui`. The same script reports
-breaks of the [composition rules](#composition) as a warning that never fails CI
-(AR-25); everything else here is held by review.
+## Design values
+
+Every design value comes from a role token (AR-26): colour, type (size, line
+height, weight, tracking), spacing, size, radius, shadow, z-index, opacity and
+motion. A raw value, or a token class put straight on an element by a page,
+lets a later design change miss that page, so the page drifts. Atomic order:
+role tokens in [`globals.css`](../frontend/apps/app/src/globals.css), then the
+primitives in `components/ui`, which alone turn roles into classes, then
+screens, which compose primitives and pass content. A new look, even one used
+once, adds a role token (and a primitive prop if a screen needs to choose it);
+it never adds a raw value.
+
+The lint enforces this and fails CI (`vp lint`; config in
+[`vp-shared-config.ts`](../frontend/vp-shared-config.ts)):
+
+- **`shadcn/*`** ([`@shadcn/lint`](https://github.com/shadcn-ui/lint)):
+  no palette colours, no arbitrary values (class constants included), no
+  inline styles, no classes the theme cannot generate, no unreadable or
+  restyling `className` on a `components/ui` primitive. Each subdomain's
+  theme is the `components.json` nearest the file.
+- **`design/*`** (the [local plugin](../frontend/scripts/design-lint/plugin.mjs)):
+  `plain-element` (outside `components/ui`, a plain element's `className`
+  carries layout structure only: no spacing, size, colour, type, shape, effect
+  or motion class, no `textRole()` or `*Classes()` helper, nothing
+  unreadable), `reset-survivor` (`leading-<n>`, `text-<role>/<n>`, `z-<n>`,
+  `opacity-<n>`, `duration-<n>`, `delay-<n>`), `colour-literal` (a hex or
+  colour function in any string), `monochrome-colour` (`white`/`black`),
+  `surface-variant` (a `[[data-public-surface]_&]:` variant outside
+  `components/ui`) and `astro-class` (value classes in Astro markup).
+
+Existing findings sit in `frontend/oxlint-suppressions.json`, counted per file
+and rule. A new finding fails, and so does a fixed one until the file is
+pruned (`vp lint --prune-suppressions`), so the baseline only shrinks. No
+inline `oxlint-disable` may name a `design/` or `shadcn/` rule (the comment
+check rejects it). A fixture in `frontend/scripts/design-lint/canary` must trip
+every rule (`scripts/frontend/design-lint.test.mjs`).
+
+`pnpm check:policy` adds WCAG AA contrast of token pairs (text 4.5:1, marks
+3:1, both themes), the app's Tailwind `@source` list, a hex check over CSS and
+scripts, and reports breaks of the [composition rules](#composition) as a
+warning that never fails CI (AR-25).
 
 ## Tokens
 
@@ -75,7 +111,9 @@ the job, never a size.
 
 ## Spacing, size and shape
 
-- **Spacing:** 2, 4, 8, 12, 16, 24, 32, 48 only.
+- **Spacing:** the spacing roles in `globals.css` (page section gap, panel
+  inset, modal padding, gutters); inside a primitive, steps of the 4px scale.
+  A screen never picks a step.
 - **Controls:** 36 high (HeroUI's medium); 44 below 900px or under a coarse pointer, and on
   sign-in, account and setup pages (the website's height, `control-lg`).
   Icons 14 in `ink-2` (Tabler, the `Icon` atom), centred on and no taller than
