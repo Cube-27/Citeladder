@@ -41,7 +41,7 @@ const { previous, next, label = 'Adjacent articles' } = Astro.props;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     column-gap: 48px;
     max-width: var(--container-prose);
-    border-top: 1px solid var(--color-line);
+    border-top: 1px solid var(--color-rule);
   }
   .cl-pager-link {
     display: flex;
@@ -74,7 +74,7 @@ const { previous, next, label = 'Adjacent articles' } = Astro.props;
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    color: var(--color-ink-muted);
+    color: var(--color-ink-2);
     font-size: var(--text-body-sm);
     line-height: var(--text-body-sm--line-height);
   }
@@ -97,7 +97,7 @@ const { previous, next, label = 'Adjacent articles' } = Astro.props;
       grid-column: auto;
     }
     .cl-pager-link + .cl-pager-link {
-      border-top: 1px solid var(--color-line);
+      border-top: 1px solid var(--color-rule);
     }
   }
 </style>

@@ -239,7 +239,7 @@ export function CommandPalette({
               aria-activedescendant={
                 results[activeIndex] ? `${listboxId}-${results[activeIndex].id}` : undefined
               }
-              className="type-body text-ink placeholder:text-ink-3 min-w-0 flex-1 self-stretch bg-transparent"
+              className="type-body text-ink placeholder:text-ink-placeholder min-w-0 flex-1 self-stretch bg-transparent"
             />
             <Kbd>Esc</Kbd>
           </div>

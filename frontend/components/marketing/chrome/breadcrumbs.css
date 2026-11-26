@@ -17,7 +17,7 @@
   flex: none;
   align-items: center;
   gap: 8px;
-  color: var(--color-ink-muted);
+  color: var(--color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   white-space: nowrap;
@@ -36,7 +36,7 @@
 
 .cl-crumbs a {
   border-radius: var(--radius-xs);
-  color: var(--color-ink-muted);
+  color: var(--color-ink-2);
   text-decoration: none;
 }
 
@@ -49,5 +49,5 @@
 }
 
 .cl-crumbs [aria-current] {
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
 }

@@ -1,7 +1,7 @@
 .cl-footer {
   padding: 0 0 40px;
   background: var(--site-page);
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
 }
 
 .cl-footer-top {
@@ -9,7 +9,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 48px;
   padding-top: 64px;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-site-main:has(section:last-child .cl-cta) ~ .cl-footer .cl-footer-top {
@@ -41,7 +41,7 @@
 .cl-footer-tagline {
   max-width: 320px;
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -94,7 +94,7 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-md);
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   transition:
     background-color var(--motion-fast) var(--ease-standard),
     color var(--motion-fast) var(--ease-standard);
@@ -154,14 +154,14 @@
   gap: 4px;
   min-height: 24px;
   border-radius: var(--radius-xs);
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   text-decoration: none;
 }
 
 .cl-footer-col a svg {
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -182,7 +182,7 @@
   gap: 12px 24px;
   margin-top: 64px;
   padding-top: 24px;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-footer-bottom-main {
@@ -194,7 +194,7 @@
 
 .cl-footer-copy {
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }

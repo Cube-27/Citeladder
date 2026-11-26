@@ -29,9 +29,9 @@ export type Fact = { label: string; value: string | readonly string[] };
 type Chip = { label: string; x: number; width: number };
 
 const TAG_TONES: Record<Tag['tone'], { ink: Tone; fill: Tone }> = {
-  danger: { ink: 'negative', fill: 'negativeSoft' },
-  warning: { ink: 'warning', fill: 'warningSoft' },
-  neutral: { ink: 'inkSecondary', fill: 'surfaceSunken' },
+  danger: { ink: 'negative', fill: 'negativeWash' },
+  warning: { ink: 'warning', fill: 'warningWash' },
+  neutral: { ink: 'ink2', fill: 'well' },
 };
 
 export class PdfReport {
@@ -168,7 +168,7 @@ export class PdfReport {
     return this.palette[tone];
   }
 
-  private rule(y: number, tone: Tone = 'line', width = 0.6): void {
+  private rule(y: number, tone: Tone = 'rule', width = 0.6): void {
     this.document
       .moveTo(MARGIN, y)
       .lineTo(MARGIN + this.width, y)
@@ -228,9 +228,9 @@ export class PdfReport {
     const titleLines = this.wrap(title, 26, 'display', this.width);
     const contextLines = lines.flatMap((line) => this.wrap(line, 9.5, 'text', this.width));
     const height = 128 + titleLines.length * 31 + contextLines.length * 14;
-    this.document.rect(0, 0, this.document.page.width, height).fill(this.fill('surfaceSunken'));
+    this.document.rect(0, 0, this.document.page.width, height).fill(this.fill('well'));
     this.logo(MARGIN, 36, 20);
-    this.draw(eyebrow, MARGIN, 96, { size: 9, style: 'medium', tone: 'accentInk' });
+    this.draw(eyebrow, MARGIN, 96, { size: 9, style: 'medium', tone: 'accentText' });
     let baseline = 96;
     for (const line of titleLines) {
       baseline += 31;
@@ -239,7 +239,7 @@ export class PdfReport {
     baseline += 8;
     for (const line of contextLines) {
       baseline += 14;
-      this.draw(line, MARGIN, baseline, { size: 9.5, style: 'text', tone: 'inkSecondary' });
+      this.draw(line, MARGIN, baseline, { size: 9.5, style: 'text', tone: 'ink2' });
     }
     this.y = height + 22;
   }
@@ -287,7 +287,7 @@ export class PdfReport {
       lines.map(() => 13),
       14,
       ({ start, end, top, height }) => {
-        this.document.rect(MARGIN, top, this.width, height).fill(this.fill('surfaceSunken'));
+        this.document.rect(MARGIN, top, this.width, height).fill(this.fill('well'));
         lines.slice(start, end).forEach((line, index) =>
           this.draw(line, MARGIN + 12, top + 19 + index * 13, {
             size: 9,
@@ -307,7 +307,7 @@ export class PdfReport {
   }: Readonly<{ eyebrow: string; title: string; detail: string | null }>): void {
     const inner = this.width - 28;
     const titleInk: Ink = { size: 12, style: 'medium', tone: 'ink' };
-    const detailInk: Ink = { size: 9, style: 'text', tone: 'inkSecondary' };
+    const detailInk: Ink = { size: 9, style: 'text', tone: 'ink2' };
     const lines = [
       ...this.wrap(title, 12, 'medium', inner).map((text) => ({ text, ink: titleInk, step: 16 })),
       ...(detail ? this.wrap(detail, 9, 'text', inner) : []).map((text, index) => ({
@@ -321,12 +321,12 @@ export class PdfReport {
       lines.map((line) => line.step),
       42,
       ({ start, end, top, height }) => {
-        this.document.rect(MARGIN, top, this.width, height).fill(this.fill('surfaceSunken'));
+        this.document.rect(MARGIN, top, this.width, height).fill(this.fill('well'));
         if (start === 0)
           this.draw(eyebrow, MARGIN + 14, top + 22, {
             size: 8.5,
             style: 'medium',
-            tone: 'accentInk',
+            tone: 'accentText',
           });
         let baseline = top + 26;
         for (const line of lines.slice(start, end)) {
@@ -360,13 +360,13 @@ export class PdfReport {
       this.draw(this.fit(stat.label, 8.5, 'medium', width), x, top + 20, {
         size: 8.5,
         style: 'medium',
-        tone: 'inkSecondary',
+        tone: 'ink2',
       });
       const figure = this.measure(stat.value, 24, 'figureMedium');
       const size = figure > width ? Math.max(12, (24 * width) / figure) : 24;
       this.draw(stat.value, x, top + 50, { size, style: 'figureMedium', tone: 'ink' });
       notes[index]?.forEach((line, row) =>
-        this.draw(line, x, top + 66 + row * 10.5, { size: 8, style: 'text', tone: 'inkMuted' }),
+        this.draw(line, x, top + 66 + row * 10.5, { size: 8, style: 'text', tone: 'ink2' }),
       );
     });
     this.y = top + height + 4;
@@ -395,10 +395,10 @@ export class PdfReport {
         this.draw(column.header, cellX(column, column.header, 8, 'medium'), this.y + 13, {
           size: 8,
           style: 'medium',
-          tone: 'inkSecondary',
+          tone: 'ink2',
         });
       this.y += TABLE_HEADER;
-      this.rule(this.y, 'line', 0.8);
+      this.rule(this.y, 'rule', 0.8);
     };
     const wrapped = rows.map((row) => {
       if (row.length !== layout.length) throw new Error('Invalid PDF row');
@@ -430,7 +430,7 @@ export class PdfReport {
         const end = Math.min(count, start + room);
         const height = (end - start) * TABLE_LINE + CELL_Y_PAD * 2;
         if (rowIndex % 2 === 1)
-          this.document.rect(MARGIN, this.y, this.width, height).fill(this.fill('surfaceSunken'));
+          this.document.rect(MARGIN, this.y, this.width, height).fill(this.fill('well'));
         for (const { column, style, lines } of cells)
           lines
             .slice(start, end)
@@ -455,7 +455,7 @@ export class PdfReport {
     const textX = MARGIN + 26;
     const textWidth = this.width - 26 - tagColumn;
     const titleInk: Ink = { size: 10, style: 'medium', tone: 'ink' };
-    const detailInk: Ink = { size: 8.5, style: 'text', tone: 'inkMuted' };
+    const detailInk: Ink = { size: 8.5, style: 'text', tone: 'ink2' };
     for (const item of items) {
       const lines = [
         ...this.wrap(item.title, 10, 'medium', textWidth).map((text) => ({
@@ -482,7 +482,7 @@ export class PdfReport {
           this.draw(item.rank, MARGIN, top + 20, {
             size: 12,
             style: 'figureMedium',
-            tone: 'accentInk',
+            tone: 'accentText',
           });
           if (item.tag) {
             const tones = TAG_TONES[item.tag.tone];
@@ -512,7 +512,7 @@ export class PdfReport {
           this.draw(fact.label, MARGIN, top + 18, {
             size: 8.5,
             style: 'medium',
-            tone: 'inkSecondary',
+            tone: 'ink2',
           });
       };
       if (typeof fact.value === 'string') {
@@ -543,7 +543,7 @@ export class PdfReport {
                 const y = top + 7 + index * 22;
                 this.document
                   .roundedRect(valueX + chip.x, y, chip.width, 17, 8.5)
-                  .fill(this.fill('surfaceSunken'));
+                  .fill(this.fill('well'));
                 this.draw(chip.label, valueX + chip.x + 8, y + 12, {
                   size: 8.5,
                   style: 'text',
@@ -580,7 +580,7 @@ export class PdfReport {
   async save(): Promise<Uint8Array> {
     const pages = this.document.bufferedPageRange();
     const height = this.document.page.height;
-    const ink: Ink = { size: 8, style: 'text', tone: 'inkMuted' };
+    const ink: Ink = { size: 8, style: 'text', tone: 'ink2' };
     for (let index = pages.start; index < pages.start + pages.count; index++) {
       this.document.switchToPage(index);
       if (index > pages.start) this.logo(MARGIN, 28, 11);

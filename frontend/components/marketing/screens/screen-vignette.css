@@ -47,7 +47,7 @@
 .cl-vig-meta,
 .cl-vig-secondary,
 .cl-vig-muted {
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
 }
 
 .cl-vig-badge {
@@ -103,7 +103,7 @@
   align-items: center;
   min-height: 56px;
   padding-block: 8px;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-vig-row:first-child {
@@ -206,7 +206,7 @@
 }
 
 .cl-vig-stat-label {
-  color: var(--color-ink-muted);
+  color: var(--color-ink-2);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
 }
@@ -242,7 +242,7 @@
   grid-template-rows: minmax(108px, 1fr) auto;
   grid-template-columns: 40px minmax(0, 1fr);
   row-gap: 8px;
-  color: var(--color-ink-muted);
+  color: var(--color-ink-2);
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
@@ -281,7 +281,7 @@
   justify-content: flex-start;
   gap: 12px;
   min-height: 224px;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
 }
 
 :is(.cl-split-media, .cl-phero-media) .cl-vig-panel {
@@ -313,7 +313,7 @@
   gap: 12px;
   margin-top: auto;
   padding-top: 12px;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-vig-chips.cl-vig-foot {
@@ -325,7 +325,7 @@
   max-width: 85%;
   padding: 8px 12px;
   border-radius: var(--radius-md);
-  background: var(--color-surface-sunken);
+  background: var(--color-well);
   color: var(--color-ink);
 }
 
@@ -336,7 +336,7 @@
   gap: 8px 12px;
   padding: 8px 12px;
   border-radius: var(--radius-md);
-  background: var(--color-surface-sunken);
+  background: var(--color-well);
 }
 
 .cl-vig-trend div:has(> svg) {

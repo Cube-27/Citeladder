@@ -55,7 +55,7 @@ export function FilterTrigger({
             {value}
           </span>
         )}
-        <ChevronDown className="text-ink-3 size-3.5 shrink-0" aria-hidden />
+        <ChevronDown className="text-ink-placeholder size-3.5 shrink-0" aria-hidden />
       </button>
     </Tooltip>
   );

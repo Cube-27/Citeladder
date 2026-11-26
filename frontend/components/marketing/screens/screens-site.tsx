@@ -16,7 +16,7 @@ import { Vignette, VignetteRows, fourRows } from './screen-vignette';
 const SEVERITY_ICON: Readonly<Record<Severity, Readonly<{ icon: IconGlyph; tone: string }>>> = {
   High: { icon: ICONS.danger, tone: 'text-negative' },
   Medium: { icon: ICONS.warning, tone: 'text-warning' },
-  Low: { icon: Info, tone: 'text-ink-muted' },
+  Low: { icon: Info, tone: 'text-ink-2' },
 };
 
 function SeverityIcon({ severity }: Readonly<{ severity: Severity }>) {

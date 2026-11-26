@@ -12,7 +12,7 @@
 }
 
 .cl-plan--featured {
-  background: var(--color-surface);
+  background: var(--color-panel);
   box-shadow: inset 0 0 0 1px var(--color-ink);
 }
 
@@ -41,7 +41,7 @@
 .cl-plan-desc {
   min-height: calc(2 * var(--text-body--line-height));
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -69,7 +69,7 @@
 }
 
 .cl-plan-period {
-  color: var(--color-ink-muted);
+  color: var(--color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
@@ -77,7 +77,7 @@
 .cl-plan-note {
   min-height: 20px;
   margin: 0;
-  color: var(--color-ink-muted);
+  color: var(--color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
@@ -91,7 +91,7 @@
   flex-direction: column;
   gap: 16px;
   padding-top: 24px;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-plan-ftitle {
@@ -196,8 +196,8 @@
 
 .cl-wtable thead th {
   padding-top: 24px;
-  border-bottom: 1px solid var(--color-line);
-  color: var(--color-ink-secondary);
+  border-bottom: 1px solid var(--color-rule);
+  color: var(--color-ink-2);
   font-weight: 400;
   vertical-align: bottom;
 }
@@ -212,16 +212,16 @@
 }
 
 .cl-wtable tbody tr + tr > * {
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-wt-group th {
   padding: 8px 20px;
-  background: var(--color-surface-sunken);
+  background: var(--color-well);
 }
 
 .cl-wtable tbody + tbody .cl-wt-group th {
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-wt-yes {
@@ -231,7 +231,7 @@
 
 .cl-wt-no {
   display: inline-flex;
-  color: var(--color-ink-muted);
+  color: var(--color-ink-2);
 }
 
 .cl-ptable-label {
@@ -249,7 +249,7 @@
 .cl-ptable-price {
   display: block;
   margin-top: 4px;
-  color: var(--color-ink-muted);
+  color: var(--color-ink-2);
   font-family: var(--font-mono);
   font-size: var(--text-data);
   font-weight: 400;

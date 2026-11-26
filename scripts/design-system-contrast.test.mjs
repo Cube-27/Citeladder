@@ -14,7 +14,6 @@ function palette({ ink, paper }) {
   return {
     ...Object.fromEntries(surfaces.map((token) => [token, paper])),
     ...Object.fromEntries(inks.map((token) => [token, ink])),
-    '--color-ink-hover': ink,
     '--color-on-ink': paper,
   };
 }
@@ -37,11 +36,11 @@ function css({ light = {}, dark = {}, extra = '' } = {}) {
 
 test('a scope keeps an unterminated last declaration and skips nested blocks', () => {
   const declarations = paletteDeclarations(
-    ':root { --color-paper: #ffffff; @media (min-width: 1px) { --color-nested: #000000; } --color-ink-muted: #555555 }',
+    ':root { --color-ground: #ffffff; @media (min-width: 1px) { --color-nested: #000000; } --color-ink-2: #555555 }',
     ':root',
   );
-  assert.equal(declarations.get('--color-paper'), '#ffffff');
-  assert.equal(declarations.get('--color-ink-muted'), '#555555');
+  assert.equal(declarations.get('--color-ground'), '#ffffff');
+  assert.equal(declarations.get('--color-ink-2'), '#555555');
   assert.equal(declarations.has('--color-nested'), false);
 });
 
@@ -50,48 +49,43 @@ test('a palette that meets every pair in every scope passes', () => {
 });
 
 test('a dark rebinding fails the dark scope only', () => {
-  const violations = paletteViolations(css({ dark: { '--color-ink-muted': '#111111' } }));
+  const violations = paletteViolations(css({ dark: { '--color-ink-2': '#111111' } }));
   assert.ok(violations.length > 0);
   assert.ok(violations.every((violation) => violation.includes("data-theme='dark'")));
-  assert.ok(
-    violations.some((violation) => violation.includes('--color-ink-muted on --color-paper')),
-  );
+  assert.ok(violations.some((violation) => violation.includes('--color-ink-2 on --color-ground')));
 });
 
 test('an app rebinding fails the app scope it reaches and spares the website', () => {
-  const appLight = ':root:not([data-public-surface]) { --color-ink-secondary: #eeeeee; }';
+  const appLight = ':root:not([data-public-surface]) { --color-ink-2: #eeeeee; }';
   const violations = paletteViolations(css({ extra: appLight }));
   assert.ok(violations.length > 0);
   assert.ok(violations.every((violation) => violation.includes(':not([data-public-surface])')));
   assert.ok(
     violations.some((violation) =>
-      violation.includes(
-        ':root:not([data-public-surface]) --color-ink-secondary on --color-chrome is 1.',
-      ),
+      violation.includes(':root:not([data-public-surface]) --color-ink-2 on --color-ground is 1.'),
     ),
   );
 });
 
 test("the app's light rebinding reaches the app's dark unless the app's dark rebinds it", () => {
-  const appLight = ':root:not([data-public-surface]) { --color-ink-secondary: #555555; }';
-  const appDark =
-    ":root[data-theme='dark']:not([data-public-surface]) { --color-ink-secondary: #ffffff; }";
+  const appLight = ':root:not([data-public-surface]) { --color-ink-2: #555555; }';
+  const appDark = ":root[data-theme='dark']:not([data-public-surface]) { --color-ink-2: #ffffff; }";
   const unbound = paletteViolations(css({ extra: appLight }));
   assert.ok(
     unbound.some((violation) =>
       violation.includes(
-        ":root[data-theme='dark']:not([data-public-surface]) --color-ink-secondary on --color-paper is 2.",
+        ":root[data-theme='dark']:not([data-public-surface]) --color-ink-2 on --color-ground is 2.",
       ),
     ),
   );
   assert.deepEqual(paletteViolations(css({ extra: `${appLight}\n${appDark}` })), []);
 });
 
-test('a website stage holds the website palettes only, since the app has none', () => {
-  const violations = paletteViolations(css({ light: { '--color-stage-lilac': '#000000' } }));
+test('a website-only pair holds the website palettes only, since the app has none', () => {
+  const violations = paletteViolations(css({ light: { '--color-control-line': '#ffffff' } }));
   assert.ok(
     violations.includes(
-      'apps/app/src/globals.css: :root --color-ink on --color-stage-lilac is 1.00:1; needs 4.5:1',
+      'apps/app/src/globals.css: :root --color-control-line on --color-ground is 1.00:1; needs 3:1',
     ),
   );
   assert.ok(!violations.some((violation) => violation.includes('data-public-surface')));
@@ -110,11 +104,11 @@ test("the app's series holds 3:1 in the app's palettes and is not measured on th
 
 test('a translucent soft is composited onto the surface before measuring', () => {
   const violations = paletteViolations(
-    css({ light: { '--color-positive-soft': 'rgb(0 0 0 / 90%)' } }),
+    css({ light: { '--color-positive-wash': 'rgb(0 0 0 / 90%)' } }),
   );
   assert.ok(
     violations.some((violation) =>
-      violation.includes('--color-positive on --color-positive-soft is 1.'),
+      violation.includes('--color-positive on --color-positive-wash is 1.'),
     ),
   );
 });

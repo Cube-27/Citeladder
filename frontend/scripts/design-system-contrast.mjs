@@ -26,55 +26,47 @@ const SCOPES = [
 
 const color = (role) => `--color-${role}`;
 const STATUSES = ['positive', 'negative', 'warning', 'info'];
-const WEBSITE_GROUNDS = ['paper', 'chrome', 'surface', 'surface-sunken'].map(color);
+const WEBSITE_GROUNDS = ['ground', 'panel', 'well'].map(color);
 const APP_FILLS = ['ground', 'panel', 'raised', 'raised-2'].map(color);
 const APP_SERIES = ['data-you', 'data-rival-1', 'data-rival-2', 'data-rival-3', 'data-rival-4'];
 
 const CONTRAST_PAIRS = [
   {
-    inks: ['ink', 'ink-secondary', 'ink-muted'].map(color),
+    inks: ['ink', 'ink-2'].map(color),
     surfaces: WEBSITE_GROUNDS,
     minimum: 4.5,
   },
   {
-    inks: ['ink', 'ink-secondary'].map(color),
+    inks: ['ink', 'ink-2'].map(color),
     surfaces: ['state-hover', 'state-pressed', 'state-selected'].map(color),
     over: WEBSITE_GROUNDS,
     minimum: 4.5,
   },
   {
     inks: [color('ink')],
-    surfaces: ['accent', ...STATUSES].map((role) => color(`${role}-soft`)),
+    surfaces: ['accent', ...STATUSES].map((role) => color(`${role}-wash`)),
     minimum: 4.5,
-  },
-  {
-    inks: [color('ink'), color('ink-secondary')],
-    surfaces: ['stage-sky', 'stage-mint', 'stage-lilac', 'stage-peach'].map(color),
-    minimum: 4.5,
-    only: 'website',
   },
   ...STATUSES.map((status) => ({
     inks: [color(status)],
-    surfaces: [color('paper'), color('surface'), color(`${status}-soft`)],
+    surfaces: [color('ground'), color('panel'), color(`${status}-wash`)],
     minimum: 4.5,
   })),
   {
-    inks: [color('accent-ink')],
-    surfaces: [color('paper'), color('surface'), color('accent-soft')],
+    inks: [color('accent-text')],
+    surfaces: [color('ground'), color('panel'), color('accent-wash')],
     minimum: 4.5,
   },
-  { inks: [color('on-ink')], surfaces: [color('ink'), color('ink-hover')], minimum: 4.5 },
+  { inks: [color('on-ink')], surfaces: [color('ink')], minimum: 4.5 },
   {
     inks: [color('on-primary')],
     surfaces: [color('primary-from'), color('primary-to')],
     minimum: 4.5,
   },
-  { inks: [color('ink')], surfaces: [color('button-from'), color('button-to')], minimum: 4.5 },
-  { inks: [color('negative')], surfaces: [color('button-from')], minimum: 4.5 },
   { inks: [color('accent'), color('focus')], surfaces: WEBSITE_GROUNDS, minimum: 3 },
-  { inks: [color('line-control')], surfaces: WEBSITE_GROUNDS, minimum: 3, only: 'website' },
+  { inks: [color('control-line')], surfaces: WEBSITE_GROUNDS, minimum: 3, only: 'website' },
   {
-    inks: ['ink', 'ink-secondary', 'ink-muted'].map(color),
+    inks: ['ink', 'ink-2'].map(color),
     surfaces: ['site-page', 'site-well'].map(color),
     minimum: 4.5,
     only: 'marketing',
@@ -297,7 +289,7 @@ export function resolvePalette(source, selector) {
   return new Map([...values.keys()].map((token) => [token, resolve(token)]));
 }
 
-function rowViolations(palette, scope, { inks, surfaces, over = [color('surface')], minimum }) {
+function rowViolations(palette, scope, { inks, surfaces, over = [color('panel')], minimum }) {
   return over.flatMap((groundToken) =>
     surfaces.flatMap((surfaceToken) => {
       const surface = composite(palette.get(surfaceToken), palette.get(groundToken));

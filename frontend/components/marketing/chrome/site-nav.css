@@ -2,7 +2,7 @@
   position: sticky;
   z-index: var(--z-index-sticky);
   top: 0;
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-rule);
   background: var(--site-page);
 }
 
@@ -83,9 +83,9 @@
   position: relative;
   width: calc(var(--radix-navigation-menu-viewport-width) + 2px);
   height: calc(var(--radix-navigation-menu-viewport-height) + 2px);
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--color-rule);
   border-radius: var(--site-radius-frame-inner);
-  background: var(--color-surface);
+  background: var(--color-panel);
   clip-path: inset(-24px 0 0 0);
   transition:
     width var(--motion-menu) var(--ease-menu),
@@ -235,7 +235,7 @@
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-family: var(--font-sans);
   font-size: var(--text-label);
   font-weight: 400;
@@ -334,7 +334,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .cl-navbar-toggle:hover {
-    background: var(--color-surface-sunken);
+    background: var(--color-well);
   }
 }
 
@@ -384,7 +384,7 @@
 }
 
 .cl-sheet-list > li {
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-rule);
 }
 
 .cl-navbar-sheet[hidden] {

@@ -321,7 +321,7 @@ function TrendPlot({
 
 function TrendDot({ x, y, tone }: Readonly<{ x: number; y: number; tone: ChartTone }>) {
   return (
-    <circle cx={x} cy={y} r={4} strokeWidth={2} className={cn('stroke-surface', chartFill(tone))} />
+    <circle cx={x} cy={y} r={4} strokeWidth={2} className={cn('stroke-panel', chartFill(tone))} />
   );
 }
 

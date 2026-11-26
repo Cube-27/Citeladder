@@ -34,7 +34,7 @@ export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
               )}
             </li>
             <li aria-hidden className="shrink-0">
-              <ChevronRight className="text-ink-3 block size-3" />
+              <ChevronRight className="text-ink-placeholder block size-3" />
             </li>
           </Fragment>
         ))}

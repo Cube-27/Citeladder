@@ -21,7 +21,7 @@
 }
 
 .cl-screen-mark.is-off {
-  color: var(--color-ink-muted);
+  color: var(--color-ink-2);
 }
 
 .cl-screen-site-text {
@@ -50,7 +50,7 @@
 
 .cl-screen-stat-unit {
   margin-left: 4px;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-size: var(--text-label-lg);
   line-height: var(--text-label-lg--line-height);
 }
@@ -78,7 +78,7 @@
 }
 
 .cl-screen-tabs {
-  --scroll-shade-ground: var(--color-surface);
+  --scroll-shade-ground: var(--color-panel);
 
   background: var(--color-state-hover);
 }
@@ -126,7 +126,7 @@
 
 .cl-screen-note {
   margin: 0;
-  color: var(--color-ink-muted);
+  color: var(--color-ink-2);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
 }

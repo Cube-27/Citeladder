@@ -40,7 +40,7 @@
   margin-top: 20px;
   margin-bottom: 0;
   padding: 2px 0 2px 20px;
-  border-left: 2px solid var(--color-line-strong);
+  border-left: 2px solid var(--color-rule-strong);
 }
 
 .cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) blockquote:not([class]) p {
@@ -83,7 +83,7 @@
 
 @supports not selector(::-webkit-scrollbar) {
   .cl-site .cl-prose-table {
-    scrollbar-color: var(--color-line-strong) var(--color-surface-sunken);
+    scrollbar-color: var(--color-rule-strong) var(--color-well);
     scrollbar-width: thin;
   }
 }
@@ -111,12 +111,12 @@
 }
 
 .cl-site .cl-prose-table::-webkit-scrollbar-track {
-  background: var(--color-surface-sunken);
+  background: var(--color-well);
 }
 
 .cl-site .cl-prose-table::-webkit-scrollbar-thumb {
   border-radius: var(--radius-xs);
-  background: var(--color-line-strong);
+  background: var(--color-rule-strong);
 }
 
 .cl-site .cl-prose-table :is(th, td):first-child {
@@ -144,7 +144,7 @@
 .cl-site .cl-prose-table .cl-cell-source {
   display: block;
   margin-top: 4px;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   white-space: normal;
@@ -168,7 +168,7 @@
 .cl-site .cl-icite a,
 .cl-site .cl-prose .cl-icite a {
   position: relative;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   font-weight: 500;

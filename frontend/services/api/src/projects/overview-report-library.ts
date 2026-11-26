@@ -42,7 +42,7 @@ const COHORT = policy.visibility.core_cohort;
 export const heading = (report: PdfReport, key: OverviewWidgetKey) =>
   report.heading(overviewWidgetTitles[key]);
 export const quiet = (report: PdfReport, text: string) =>
-  report.text(text, { size: 9, tone: 'inkMuted' });
+  report.text(text, { size: 9, tone: 'ink2' });
 export function truncated(report: PdfReport, total: number, noun: string) {
   if (total > ROWS) quiet(report, `Showing ${ROWS} of ${plural(total, noun)}.`);
 }

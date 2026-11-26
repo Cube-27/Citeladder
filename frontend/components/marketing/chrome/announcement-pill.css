@@ -6,8 +6,8 @@
   height: 32px;
   padding: 0 12px 0 4px;
   border-radius: var(--radius-full);
-  background: var(--color-surface);
-  color: var(--color-ink-secondary);
+  background: var(--color-panel);
+  color: var(--color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   text-decoration: none;

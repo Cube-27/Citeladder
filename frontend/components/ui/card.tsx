@@ -2,7 +2,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-const CARD_FACE = 'bg-surface text-ink rounded-card';
+const CARD_FACE = 'bg-panel text-ink rounded-card';
 
 const cardClasses = () => cn('surface-card p-[var(--card-padding)]', CARD_FACE);
 

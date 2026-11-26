@@ -92,7 +92,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                     source ? (
                       <>
                         <SourceLink source={source} />
-                        <span className="text-ink-muted">
+                        <span className="text-ink-2">
                           {' '}
                           · reviewed {formatSiteDate(source.reviewedDate)}
                         </span>

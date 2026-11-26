@@ -16,12 +16,12 @@
   flex-direction: column;
   gap: 20px;
   padding-top: 24px;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-step-meta {
   margin: 4px 0 0;
-  color: var(--color-ink-muted);
+  color: var(--color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
@@ -44,7 +44,7 @@
 .cl-step-text {
   max-width: 420px;
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -54,7 +54,7 @@
 }
 
 .cl-steps--vertical .cl-step:last-child {
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-rule);
 }
 
 .cl-steps--vertical .cl-step-text {
@@ -89,16 +89,16 @@
   }
 
   .cl-steps .cl-step:last-child {
-    border-bottom: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-rule);
   }
 }
 
 .cl-faq {
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-rule);
 }
 
 .cl-faq-item {
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-rule);
 }
 
 .cl-faq-q {
@@ -139,7 +139,7 @@
 .cl-faq-a {
   max-width: var(--container-prose);
   padding: 0 48px 24px 0;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
@@ -160,10 +160,9 @@
 }
 
 .cl-cta {
-  --color-ink-secondary: var(--color-site-band-ink-secondary);
-  --color-ink-muted: var(--color-site-band-ink-secondary);
-  --color-surface: transparent;
-  --color-line-control: var(--color-site-band-line);
+  --color-ink-2: var(--color-site-band-ink-secondary);
+  --color-panel: transparent;
+  --color-control-line: var(--color-site-band-line);
 
   position: relative;
   isolation: isolate;
@@ -251,7 +250,7 @@
 
 .cl-cta-note {
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }

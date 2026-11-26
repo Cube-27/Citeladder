@@ -85,7 +85,7 @@
 
 .cl-lead {
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-size: var(--text-body-lg);
   line-height: var(--text-body-lg--line-height);
   text-wrap: pretty;
@@ -97,7 +97,7 @@
 
 .cl-body {
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
   text-wrap: pretty;
@@ -105,7 +105,7 @@
 
 .cl-note {
   margin: 0;
-  color: var(--color-ink-muted);
+  color: var(--color-ink-2);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
@@ -123,7 +123,7 @@
   display: grid;
   grid-template-columns: 6px minmax(0, 1fr);
   gap: 12px;
-  color: var(--color-ink-secondary);
+  color: var(--color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }

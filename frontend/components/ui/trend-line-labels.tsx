@@ -37,7 +37,7 @@ export function LineEndLabels({
             dominantBaseline="middle"
             paintOrder="stroke"
             strokeWidth={3}
-            className="fill-ink-2 stroke-surface text-caption"
+            className="fill-ink-2 stroke-panel text-caption"
           >
             {line.name}
           </text>

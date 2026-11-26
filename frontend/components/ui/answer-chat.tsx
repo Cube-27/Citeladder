@@ -106,7 +106,7 @@ export function MentionChip({
   'data-brand-chip'?: string;
 }>) {
   return (
-    <span {...data} className={cn(CHIP, 'border-accent text-ink bg-surface border-dashed')}>
+    <span {...data} className={cn(CHIP, 'border-accent text-ink bg-panel border-dashed')}>
       <span className="text-accent-text font-medium tabular-nums">
         <span className="sr-only">Position </span>
         {position}

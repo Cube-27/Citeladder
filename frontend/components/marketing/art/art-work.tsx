@@ -24,7 +24,7 @@ export function ArtSiteHealth() {
             r="40"
             fill="none"
             strokeWidth="11"
-            className="stroke-accent-soft"
+            className="stroke-accent-wash"
           />
           <circle
             cx="50"
@@ -84,7 +84,7 @@ export function ArtDemand() {
           preserveAspectRatio="none"
           className="min-h-0 w-full flex-1 overflow-visible"
         >
-          <path d="M0 80V62L40 56 80 60 120 38 160 30 200 8V80Z" className="fill-accent-soft" />
+          <path d="M0 80V62L40 56 80 60 120 38 160 30 200 8V80Z" className="fill-accent-wash" />
           <path
             d="M0 62L40 56 80 60 120 38 160 30 200 8"
             fill="none"

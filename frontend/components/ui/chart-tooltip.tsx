@@ -56,7 +56,7 @@ export function ShapeMark({
 }>) {
   const paint = {
     fill: color,
-    stroke: outline ? 'var(--color-surface)' : 'none',
+    stroke: outline ? 'var(--color-panel)' : 'none',
     strokeWidth: outline ? 2 : 0,
   };
   switch (shape) {
