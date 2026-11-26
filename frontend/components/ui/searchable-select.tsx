@@ -163,7 +163,7 @@ export function SearchableSelect({
                   className: cn(
                     'grid h-auto min-h-8 w-full gap-x-3 py-1.5 text-left',
                     optionGridClass(Boolean(renderLeading), Boolean(renderOptionEnd)),
-                    index === activeIndex && 'not-aria-selected:bg-[var(--color-state-fill)]',
+                    index === activeIndex && 'not-aria-selected:overlay-hover',
                   ),
                 })}
                 onMouseDown={(event) => event.preventDefault()}

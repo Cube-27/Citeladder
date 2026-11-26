@@ -5,14 +5,14 @@ import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 export const FIELD_EDGE =
-  'bg-panel border border-transparent [[data-public-surface]_&]:bg-well shadow-[var(--shadow-field,0_0_#0000)] not-disabled:hover:bg-[var(--color-field-hover,var(--color-well))]';
+  'bg-panel border border-transparent [[data-public-surface]_&]:bg-well shadow-[var(--shadow-field,0_0_#0000)] not-disabled:hover:bg-field-hover';
 
 const FIELD_SHAPE =
   'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[background-color,border-color,outline-color] duration-[var(--motion-normal)]';
 
 export const FIELD_BOX = `${FIELD_EDGE} ${FIELD_SHAPE}`;
 
-export const TRIGGER_BOX = `face bg-raised border border-transparent shadow-[var(--shadow-field,0_0_#0000)] [[data-public-surface]_&]:bg-well [[data-public-surface]_&]:hover:bg-raised-2 [[data-public-surface]_&]:data-[state=open]:bg-raised-2 app:not-disabled:hover:bg-[var(--color-field-hover)] ${FIELD_SHAPE}`;
+export const TRIGGER_BOX = `face bg-raised border border-transparent shadow-[var(--shadow-field,0_0_#0000)] [[data-public-surface]_&]:bg-well not-disabled:hover:bg-field-hover ${FIELD_SHAPE}`;
 
 const inputWidths = {
   fill: '',

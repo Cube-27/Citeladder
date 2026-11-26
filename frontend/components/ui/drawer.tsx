@@ -50,6 +50,7 @@ export function Drawer({
         icon={X}
         label={closeLabel}
         tooltip={false}
+        variant="secondary"
         className={cn(CLOSE_BUTTON, hideHeader ? 'absolute top-4 right-4 z-1' : 'shrink-0')}
       />
     </DialogPrimitive.Close>

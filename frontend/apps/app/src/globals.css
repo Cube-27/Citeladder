@@ -6,7 +6,7 @@
 @custom-variant phone (@media (max-width: 767px));
 @custom-variant labelled (&:where([data-sidebar-state="expanded"] *), &:where([data-nav-drawer] *));
 
-@custom-variant app (&:where(:root:not([data-public-surface]) *));
+@custom-variant app (&:where(:not([data-public-surface] *)));
 @custom-variant outside-main-column (&:where(:not([data-main-column] *)));
 @custom-variant column-split {
   @container main (min-width: 688px) {
@@ -43,6 +43,10 @@
   --color-state-hover: oklch(from var(--color-ink) l c h / 6%);
   --color-state-pressed: oklch(from var(--color-ink) l c h / 8%);
   --color-state-selected: oklch(from var(--color-ink) l c h / 10%);
+  --color-state-fill: oklch(from var(--color-ink) l c h / 8%);
+  --color-state-fill-hover: oklch(from var(--color-ink) l c h / 11%);
+  --color-field-hover: var(--color-well);
+  --color-link-decoration: currentColor;
   --color-stage-sky: oklch(90.8% 0.035 256);
   --color-stage-mint: oklch(92.1% 0.04 166);
   --color-stage-lilac: oklch(89.3% 0.046 298);
@@ -401,6 +405,10 @@
   --shadow-pop: inset 0 0 1px rgb(255 255 255 / 30%);
   --shadow-sheet: var(--shadow-pop);
   --color-well: oklch(27.4% 0.006 286.033);
+  --color-well-hover: oklch(30.5% 0.006 286.033);
+  --color-field-hover: oklch(23.5% 0.0059 285.89);
+  --color-link-decoration: oklch(72% 0.015 286.067 / 50%);
+  --scrollbar-thumb: oklch(99.11% 0 0 / 15%);
   --shadow-thumb: none;
 
   --weight-regular: 350;
@@ -547,7 +555,9 @@
   --color-well: oklch(94% 0.001 286.375);
   --color-page: oklch(97.02% 0 0);
   --color-rule: rgb(0 0 0 / 11%);
-  --color-field-hover: color-mix(in oklab, var(--color-panel) 90%, var(--color-ink) 2%);
+  --color-field-hover: oklch(98.6% 0.0004 286);
+  --color-well-hover: oklch(91.2% 0.0012 286);
+  --control-md-padding: 16px;
   --color-control-line: rgb(0 0 0 / 22%);
   --color-focus: var(--color-accent);
   --focus-width: 2px;
@@ -564,7 +574,6 @@
   --color-positive-wash: oklch(95.2% 0.022 160);
   --color-negative: oklch(53.3% 0.191 16);
   --color-negative-wash: oklch(94.8% 0.022 4);
-  --color-negative-hover: color-mix(in oklab, var(--color-negative) 90%, white 10%);
   --color-warning: oklch(50.8% 0.108 73.3);
   --color-warning-wash: oklch(95.9% 0.046 91);
   --color-info: oklch(49.7% 0.184 263);
@@ -578,8 +587,8 @@
   --color-state-pressed: var(--color-state-selected);
   --color-state-fill: rgb(0 0 0 / 8%);
   --color-state-fill-hover: rgb(0 0 0 / 11%);
-  --color-link-decoration: color-mix(in oklab, var(--color-ink-2) 50%, transparent);
-  --scrollbar-thumb: color-mix(in oklch, var(--color-ink) 15%, transparent);
+  --color-link-decoration: oklch(47% 0.0138 285.94 / 50%);
+  --scrollbar-thumb: oklch(21.03% 0.0059 285.89 / 15%);
   --color-scrim: rgb(0 0 0 / 50%);
   --color-chart-grid: var(--color-rule);
   --color-paper: var(--color-ground);
@@ -1917,13 +1926,46 @@ label {
   :is(.focus-input, .focus-frame) {
   background-color: var(--color-well);
 }
+.tab-line {
+  box-shadow: inset 0 -2px 0 var(--color-ink);
+}
+[role='switch'] > span {
+  box-shadow: var(--shadow-thumb);
+}
+:root:not([data-public-surface]) .card-head:not(:last-child) {
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+}
 :root:not([data-public-surface]) .surface-well :is(.focus-input, .focus-frame) {
   background-color: var(--color-surface);
 }
 :root:not([data-public-surface])
   :where(.surface-card, .surface-slip, .surface-lift, [role='dialog'], [data-figure-strip], .table-frame, [data-auth-form])
   :is(.focus-input, .focus-frame):hover:not(:focus, :focus-within, :disabled, [data-disabled]) {
-  background-color: color-mix(in oklab, var(--color-well) 96%, var(--color-ink) 4%);
+  background-color: var(--color-well-hover);
+}
+:root:not([data-public-surface]) {
+  [data-button-variant='secondary'] {
+    --color-raised: var(--color-state-fill);
+    --color-raised-2: var(--color-state-fill-hover);
+    --shadow-field: none;
+  }
+  .menu-panel,
+  [role='listbox'],
+  [data-button-variant='quiet'] {
+    --color-state-hover: var(--color-state-fill);
+    --color-state-pressed: var(--color-state-fill);
+  }
+  [data-button-variant='danger'] {
+    --color-raised: var(--color-negative-wash);
+    --color-raised-2: oklch(from var(--color-negative-wash) calc(l - 0.02) c h);
+  }
+  kbd {
+    height: 24px;
+    padding-inline: 6px;
+    font: var(--weight-medium) var(--text-caption) / var(--text-caption--line-height) var(--font-sans);
+  }
 }
 :root:not([data-public-surface])
   :is([data-state-frame], [data-state-block-inline]):not(

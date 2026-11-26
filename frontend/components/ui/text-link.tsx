@@ -17,17 +17,11 @@ const TONE: Record<TextLinkTone, string> = {
   muted: 'text-ink-2 hover:text-ink',
 };
 
-const APP_REST =
-  'app:hover:decoration-[var(--color-link-decoration)] app:focus-visible:decoration-[var(--color-link-decoration)]';
-
 const UNDERLINE = {
-  prose: cn('decoration-current hover:decoration-2', APP_REST),
-  ink: cn(
-    'decoration-control-line hover:decoration-current focus-visible:decoration-current',
-    APP_REST,
-  ),
+  prose: 'decoration-current hover:decoration-2',
+  ink: 'decoration-control-line hover:decoration-link-decoration focus-visible:decoration-link-decoration',
   hover:
-    'text-ink decoration-transparent hover:decoration-current focus-visible:decoration-current',
+    'text-ink decoration-transparent hover:decoration-link-decoration focus-visible:decoration-link-decoration',
 } as const;
 
 export type TextLinkUnderline = 'always' | 'hover';

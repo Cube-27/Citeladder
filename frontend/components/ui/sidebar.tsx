@@ -226,7 +226,7 @@ export function sidebarRailButtonClasses(current: boolean) {
 export function sidebarModeTrackClasses(rail: boolean) {
   return rail
     ? 'flex flex-col items-center'
-    : 'rounded-control flex h-[var(--control-md)] w-full min-w-0 shrink-0 bg-[var(--color-state-fill)] p-0.5';
+    : 'rounded-control flex h-[var(--control-md)] w-full min-w-0 shrink-0 bg-state-fill p-0.5';
 }
 
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {

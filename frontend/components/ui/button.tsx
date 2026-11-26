@@ -28,32 +28,24 @@ const BUTTON_BASE =
   'focus-ring press type-label relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-[var(--control-coarse)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
 
 const BUTTON_SIZE: Record<ButtonSize, string> = {
-  md: 'min-h-[var(--control-md)] px-[var(--control-md-padding,12px)] app:px-[var(--control-md-padding,16px)]',
+  md: 'min-h-[var(--control-md)] px-[var(--control-md-padding,12px)]',
   lg: 'min-h-[var(--control-lg)] px-4',
 };
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
-    'face face-primary bg-primary border border-primary text-on-primary not-disabled:hover:bg-primary-hover not-disabled:hover:border-primary-hover app:border-transparent app:not-disabled:hover:border-transparent',
-  secondary: cn(
-    RAISED_FACE,
-    'text-ink [[data-public-surface]_&]:shadow-[var(--shadow-field,0_0_#0000)] app:bg-[var(--color-state-fill)] app:not-disabled:hover:bg-[var(--color-state-fill-hover)] app:not-disabled:active:bg-[var(--color-state-fill-hover)] app:aria-pressed:bg-[var(--color-state-fill-hover)] app:data-[state=open]:bg-[var(--color-state-fill-hover)]',
-  ),
+    'face face-primary bg-primary border border-primary text-on-primary not-disabled:hover:bg-primary-hover not-disabled:hover:border-primary-hover',
+  secondary: cn(RAISED_FACE, 'text-ink shadow-[var(--shadow-field,0_0_#0000)]'),
   quiet: cn(
     'bg-transparent text-ink-2 app:text-ink border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
     HOVER_OVERLAY,
-    'app:bg-none app:not-disabled:hover:bg-[var(--color-state-fill)] app:not-disabled:active:bg-[var(--color-state-fill)] app:aria-pressed:bg-[var(--color-state-fill)] app:data-[state=open]:bg-[var(--color-state-fill)]',
   ),
-  danger: cn(
-    RAISED_FACE,
-    'face-danger text-negative [[data-public-surface]_&]:border-negative app:bg-negative-wash app:not-disabled:hover:bg-negative-wash app:not-disabled:active:bg-negative-wash app:aria-pressed:bg-negative-wash app:data-[state=open]:bg-negative-wash app:not-disabled:hover:overlay-hover',
-  ),
+  danger: cn(RAISED_FACE, 'face-danger text-negative [[data-public-surface]_&]:border-negative'),
   'danger-confirm':
-    'face face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90 app:border-transparent app:not-disabled:hover:opacity-100 app:not-disabled:hover:bg-[var(--color-negative-hover)]',
+    'face face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90',
 };
 
-export const CLOSE_BUTTON =
-  'size-6 min-h-6 pointer-coarse:min-h-6 bg-[var(--color-state-fill)] text-ink-2 [--press:0.93] not-disabled:hover:bg-[var(--color-state-fill-hover)] not-disabled:hover:text-ink';
+export const CLOSE_BUTTON = 'size-6 min-h-6 pointer-coarse:min-h-6 [--press:0.93]';
 
 export function buttonClasses(
   variant: ButtonVariant = 'secondary',

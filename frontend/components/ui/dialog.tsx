@@ -166,6 +166,7 @@ export function Dialog({
                 icon={X}
                 label="Close dialog"
                 tooltip={false}
+                variant="secondary"
                 className={cn(CLOSE_BUTTON, 'absolute top-6 right-6')}
               />
             </DialogPrimitive.Close>

@@ -80,10 +80,7 @@ export function RecordTag({
     <ProjectLink
       href={href}
       data-tag-kind="record"
-      className={cn(
-        TAG_FACE,
-        'hover:overlay-hover app:hover:bg-[var(--color-state-fill)] focus-ring align-middle no-underline',
-      )}
+      className={cn(TAG_FACE, 'hover:overlay-hover focus-ring align-middle no-underline')}
     >
       {labelKind === 'url' ? (
         <span className="flex min-w-0">
