@@ -196,51 +196,50 @@ export default function AccountSecurity() {
       <SettingsGroup title="Sign-in">
         {setup.isSuccess && <Notice tone="info">{setup.data.message}</Notice>}
         <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
-        <form noValidate onSubmit={(event) => void passwordForm.submit(event)}>
-          <SettingRows
-            foot={
-              hasPassword ? (
+        <SettingRows
+          onSubmit={(event) => void passwordForm.submit(event)}
+          foot={
+            hasPassword ? (
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={!dirty || passwordForm.change.isPending}
+              >
+                Change password and sign out
+              </Button>
+            ) : null
+          }
+        >
+          <SignInMethods security={security} />
+          {hasPassword ? (
+            <PasswordFields form={passwordForm} />
+          ) : (
+            <SettingRow
+              label="Password"
+              action={
                 <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={!dirty || passwordForm.change.isPending}
+                  variant="secondary"
+                  disabled={!security.data || setup.isPending}
+                  onClick={() => setup.mutate()}
                 >
-                  Change password and sign out
+                  Email password setup link
                 </Button>
-              ) : null
-            }
-          >
-            <SignInMethods security={security} />
-            {hasPassword ? (
-              <PasswordFields form={passwordForm} />
-            ) : (
-              <SettingRow
-                label="Password"
-                action={
-                  <Button
-                    variant="secondary"
-                    disabled={!security.data || setup.isPending}
-                    onClick={() => setup.mutate()}
-                  >
-                    Email password setup link
-                  </Button>
-                }
-              />
-            )}
-            {canLinkGoogle ? (
-              <SettingRow
-                label="Google sign-in"
-                action={
-                  <ConnectGoogle
-                    needsPassword={!current}
-                    pending={link.isPending}
-                    onConnect={() => link.mutate()}
-                  />
-                }
-              />
-            ) : null}
-          </SettingRows>
-        </form>
+              }
+            />
+          )}
+          {canLinkGoogle ? (
+            <SettingRow
+              label="Google sign-in"
+              action={
+                <ConnectGoogle
+                  needsPassword={!current}
+                  pending={link.isPending}
+                  onConnect={() => link.mutate()}
+                />
+              }
+            />
+          ) : null}
+        </SettingRows>
       </SettingsGroup>
       <SettingsGroup title="Sessions">
         <SettingRows>

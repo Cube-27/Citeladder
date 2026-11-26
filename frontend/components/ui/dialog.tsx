@@ -137,6 +137,7 @@ export function Dialog({
         <DialogPrimitive.Overlay className={cn('dialog-overlay', SCRIM)} />
         <DialogPrimitive.Content
           role={danger ? 'alertdialog' : 'dialog'}
+          data-overlay=""
           {...(description ? {} : { 'aria-describedby': undefined })}
           onOpenAutoFocus={(event) => {
             const target = leadingField(event.target);

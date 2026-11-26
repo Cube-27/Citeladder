@@ -90,6 +90,7 @@ export function Drawer({
         <DialogPrimitive.Content
           {...(description ? {} : { 'aria-describedby': undefined })}
           onCloseAutoFocus={returnFocus}
+          data-overlay=""
           data-side={side}
           className={cn(
             SHEET_FACE,

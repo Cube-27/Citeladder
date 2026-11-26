@@ -2,15 +2,12 @@ import type { ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Icon } from '@/components/ui/icon';
-import { SLIP_FACE } from '@/components/ui/slip';
+import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { textRole } from '@/components/ui/typography';
 import { CircleAlert, Info, TriangleAlert, type IconGlyph } from '@/lib/icons';
-import { cn } from '@/lib/utils';
 
 import { PageFrame } from './page-frame';
-
-export const FLOW_CARD = cn(SLIP_FACE, 'p-6');
 
 type NoticeTone = 'info' | 'warning' | 'negative' | 'loading';
 
@@ -44,10 +41,7 @@ function NoticeBlock({
   const [glyph, ink, word] = TONE[tone];
   const mark = <Icon icon={icon ?? glyph} className={ink} />;
   return (
-    <section
-      data-notice-tone={tone}
-      className={cn('flex w-full flex-col gap-4', heading && FLOW_CARD)}
-    >
+    <Section data-notice-tone={tone}>
       {label === null ? null : <p className={textRole('captionStrong')}>{label ?? word}</p>}
       <div className="flex flex-col gap-2">
         {heading ? (
@@ -66,7 +60,7 @@ function NoticeBlock({
         ) : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
-    </section>
+    </Section>
   );
 }
 

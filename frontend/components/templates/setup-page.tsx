@@ -2,10 +2,10 @@ import { useId, type ComponentProps, type ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { FlowLogo } from '@/components/templates/flow-page';
-import { FLOW_CARD } from '@/components/templates/notice-page';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { RungTrail } from '@/components/ui/rung-trail';
+import { Section } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { textRole } from '@/components/ui/typography';
@@ -169,12 +169,7 @@ export function SetupStep({
           </h1>
           {help ? <p className={textRole('body', 'text-ink-2')}>{help}</p> : null}
         </header>
-        <section
-          aria-labelledby={headingId}
-          className={cn(FLOW_CARD, 'flex min-w-0 flex-col gap-[var(--card-padding)]')}
-        >
-          {children}
-        </section>
+        <Section aria-labelledby={headingId}>{children}</Section>
       </div>
       {back || next ? (
         <footer className="border-rule bg-ground sticky bottom-0 z-10 border-t">

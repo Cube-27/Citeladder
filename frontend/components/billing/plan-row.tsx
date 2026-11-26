@@ -20,11 +20,9 @@ import { contactSalesHref } from '@/lib/config/contact-sales';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { slipClasses } from '@/components/ui/slip';
 import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { cn } from '@/lib/utils';
 
 export function PlanCard({
   name,
@@ -45,12 +43,7 @@ export function PlanCard({
     <div
       {...props}
       aria-current={current ? 'true' : undefined}
-      className={slipClasses(
-        cn(
-          'flex h-full min-w-0 flex-col gap-4',
-          current && 'shadow-[inset_0_2px_0_var(--color-accent)]',
-        ),
-      )}
+      className="flex min-w-0 flex-col gap-4"
     >
       <div className="grid min-w-0 flex-1 content-start gap-1">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -70,7 +63,9 @@ export function PlanCard({
 export function PlanCards({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="@container min-w-0">
-      <div className="grid gap-3 @[640px]:auto-cols-fr @[640px]:grid-flow-col">{children}</div>
+      <div className="grid gap-[var(--panel-inset)] @[640px]:auto-cols-fr @[640px]:grid-flow-col">
+        {children}
+      </div>
     </div>
   );
 }

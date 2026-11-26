@@ -1,8 +1,7 @@
-import { useId, type ReactNode } from 'react';
+import { useId, type HTMLAttributes, type ReactNode } from 'react';
 
 import { FieldFoot, type ControlProps } from '@/components/ui/field';
 import { Section, SectionBleed, SectionDescription, SectionHeader } from '@/components/ui/section';
-import { SLIP_FACE } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -46,21 +45,27 @@ export function SettingsGroup({
 export function SettingRows({
   label,
   foot,
+  onSubmit,
   children,
-}: Readonly<{ label?: string; foot?: ReactNode; children: ReactNode }>) {
+}: Readonly<{
+  label?: string;
+  foot?: ReactNode;
+  onSubmit?: HTMLAttributes<HTMLElement>['onSubmit'];
+  children: ReactNode;
+}>) {
   return (
-    <SectionBleed rows data-setting-rows="" aria-label={label} role={label ? 'group' : undefined}>
+    <SectionBleed
+      rows
+      as={onSubmit ? 'form' : 'div'}
+      noValidate={onSubmit ? true : undefined}
+      onSubmit={onSubmit}
+      data-setting-rows=""
+      aria-label={label}
+      role={label ? 'group' : undefined}
+    >
       {children}
       {foot ? <div className="flex flex-wrap items-center justify-end gap-2">{foot}</div> : null}
     </SectionBleed>
-  );
-}
-
-export function settingRowsClasses(className?: string) {
-  return cn(
-    SLIP_FACE,
-    'divide-rule grid min-w-0 divide-y overflow-hidden *:min-h-13 *:px-4 *:py-3',
-    className,
   );
 }
 

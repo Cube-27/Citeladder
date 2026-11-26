@@ -20,7 +20,6 @@ import { useProviderConnection } from '@/lib/providers/use-provider-connection';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { ProviderConnectionFields } from './provider-connection-fields';
-import { wellClasses } from '@/components/ui/slip';
 
 type ConnectionState = ReturnType<typeof useProviderConnection>;
 
@@ -119,7 +118,7 @@ function CredentialForm({ id, state }: Readonly<{ id: string; state: ConnectionS
   const saveVerb = configured ? 'Update' : 'Save';
   const saveLabel = saveMutation.isPending ? 'Saving & testing…' : `${saveVerb} ${noun}`;
   return (
-    <Stack gap="compact" id={id} className={wellClasses()}>
+    <Stack gap="compact" id={id}>
       <ProviderConnectionFields state={state} />
       <Inline className="flex-wrap justify-end">
         {state.connection ? (

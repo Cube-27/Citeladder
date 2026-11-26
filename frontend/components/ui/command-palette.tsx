@@ -207,6 +207,7 @@ export function CommandPalette({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className={cn('dialog-overlay', SCRIM)} />
         <DialogPrimitive.Content
+          data-overlay=""
           aria-describedby={undefined}
           onOpenAutoFocus={(event) => {
             event.preventDefault();

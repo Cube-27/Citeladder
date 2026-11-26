@@ -113,7 +113,8 @@ export function SectionBleed({
     children: ReactNode;
     rows?: boolean;
     scroll?: boolean;
-    as?: 'div' | 'ul' | 'ol' | 'dl';
+    as?: 'div' | 'ul' | 'ol' | 'dl' | 'form';
+    noValidate?: boolean;
   }
 >) {
   const bleed = (

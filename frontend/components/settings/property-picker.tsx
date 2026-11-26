@@ -170,7 +170,7 @@ export function usePropertyPicker(connection: IntegrationConnection) {
       }}
       title={`Choose a ${noun}`}
     >
-      <Stack gap="compact">
+      <>
         {!activeProject ? <Notice tone="warning">No active project.</Notice> : null}
         <DiscoveryState
           pending={discovery.isPending}
@@ -178,26 +178,27 @@ export function usePropertyPicker(connection: IntegrationConnection) {
           properties={discovery.data}
           noun={noun}
         />
-        <Stack gap="tight">
-          <PropertyOptions
-            properties={discovery.data ?? []}
-            selected={selected}
-            blocked={!activeProject || selectMutation.isPending}
-            selecting={{
-              isPending: selectMutation.isPending,
-              variables: selectMutation.variables?.property_ref,
-            }}
-            onSelect={selectProperty}
-          />
-        </Stack>
-
+        {discovery.data?.length ? (
+          <Stack gap="tight">
+            <PropertyOptions
+              properties={discovery.data ?? []}
+              selected={selected}
+              blocked={!activeProject || selectMutation.isPending}
+              selecting={{
+                isPending: selectMutation.isPending,
+                variables: selectMutation.variables?.property_ref,
+              }}
+              onSelect={selectProperty}
+            />
+          </Stack>
+        ) : null}
         {selectMutation.isError ? (
           <Notice
             kind="mutation"
             notice={mutationNoticeForError(selectMutation.error, { action: 'save the property' })}
           />
         ) : null}
-      </Stack>
+      </>
     </Dialog>
   ) : null;
 

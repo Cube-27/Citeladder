@@ -4,7 +4,7 @@ import { SettingsGroup } from '@/components/ui/setting-row';
 export function ProviderSettings() {
   return (
     <SettingsGroup title="Measurement providers">
-      <ProviderList framed />
+      <ProviderList />
     </SettingsGroup>
   );
 }

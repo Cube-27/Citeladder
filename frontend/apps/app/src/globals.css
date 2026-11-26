@@ -1300,7 +1300,7 @@ a.focus-ring:active .type-caption {
   border: 1px solid var(--color-rule);
 }
 
-:where(.surface-card, .surface-lift, .surface-well, [role='dialog']) .table-frame {
+:where(.surface-card, .surface-lift, .surface-well, [data-overlay]) .table-frame {
   border: 0;
 }
 
@@ -1331,14 +1331,6 @@ a.focus-ring:active .type-caption {
   outline-offset: calc(-1 * var(--focus-width));
 }
 
-@layer components {
-  [data-settings-sections],
-  [data-settings-sections] > [role='tabpanel'] {
-    display: flex;
-    flex-direction: column;
-    gap: var(--section-gap);
-  }
-}
 
 [data-state-offer] .ui-button-secondary:first-child {
   border-color: var(--color-primary);
@@ -1762,18 +1754,18 @@ label {
 
 :root:not([data-public-surface])
   :is(.surface-card, .surface-lift):not(
-    :where(.surface-card, .surface-lift, .surface-well, [role='dialog'], [data-panel]) *
+    :where(.surface-card, .surface-lift, .surface-well, [data-overlay], [data-panel]) *
   ) {
   border: 1px solid transparent;
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
-:root:not([data-public-surface]) :is(.surface-card, .surface-lift, .surface-well, [role='dialog'], [data-panel], .table-frame, [data-auth-form]) {
+:root:not([data-public-surface]) :is(.surface-card, .surface-lift, .surface-well, [data-overlay], [data-panel], .table-frame, [data-auth-form]) {
   --shadow-field: none;
 }
 :root:not([data-public-surface])
-  :where(.surface-card, .surface-lift, [role='dialog'], [data-panel], .table-frame, [data-auth-form])
+  :where(.surface-card, .surface-lift, [data-overlay], [data-panel], .table-frame, [data-auth-form])
   :is(.focus-input, .focus-frame) {
   background-color: var(--color-well);
 }
@@ -1787,7 +1779,7 @@ label {
   background-color: var(--color-surface);
 }
 :root:not([data-public-surface])
-  :where(.surface-card, .surface-lift, [role='dialog'], [data-panel], .table-frame, [data-auth-form])
+  :where(.surface-card, .surface-lift, [data-overlay], [data-panel], .table-frame, [data-auth-form])
   :is(.focus-input, .focus-frame):hover:not(:focus, :focus-within, :disabled, [data-disabled]) {
   background-color: var(--color-well-hover);
 }

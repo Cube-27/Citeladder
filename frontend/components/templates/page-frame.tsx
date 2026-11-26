@@ -14,6 +14,7 @@ import {
   PageEmptyOfferProvider,
 } from '@/components/ui/masthead-actions';
 import { PageFilterBandContext, PageTabEndContext } from '@/components/templates/page-tab-end';
+import { StickyBand } from '@/components/ui/sticky-band';
 import { TAB_BASELINE } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
@@ -187,11 +188,7 @@ function PageStrips({
   const strips = useRef<HTMLDivElement>(null);
   usePublishedHeight(strips, '--strips-block-size');
   return (
-    <div
-      ref={strips}
-      data-page-strips=""
-      className="bg-page z-sticky sticky top-[var(--masthead-block-size,var(--masthead-height))] -mx-[var(--page-pad-inline)] -my-3 flex min-w-0 flex-col gap-3 py-3"
-    >
+    <StickyBand ref={strips}>
       {tabs ? (
         <div data-page-band="tabs" className={cn(STRIP, 'h-[var(--page-tabs-height)] items-end')}>
           <div className={cn('flex min-w-0 flex-1 items-end gap-4', TAB_BASELINE)}>
@@ -209,7 +206,7 @@ function PageStrips({
           <PageFilterBandContext value>{filters}</PageFilterBandContext>
         </div>
       ) : null}
-    </div>
+    </StickyBand>
   );
 }
 

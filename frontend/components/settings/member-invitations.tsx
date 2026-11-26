@@ -122,23 +122,23 @@ export function InviteDialog({
               />
             )}
           </Field>
-          {error ? <Notice kind="mutation" notice={error} /> : null}
-          {issuedToken ? (
-            <Notice tone="info">
-              <Stack gap="compact" className="justify-items-start">
-                <span>
-                  {deliveryNotice(delivery)}
-                  One-time link, shown once.
-                </span>
-                <code className="type-caption min-w-0 justify-self-stretch truncate tabular-nums">
-                  {acceptanceLink(issuedToken)}
-                </code>
-                <CopyButton value={acceptanceLink(issuedToken)}>Copy link</CopyButton>
-              </Stack>
-            </Notice>
-          ) : null}
         </Stack>
       </form>
+      {error ? <Notice kind="mutation" notice={error} /> : null}
+      {issuedToken ? (
+        <Notice tone="info">
+          <Stack gap="compact" className="justify-items-start">
+            <span>
+              {deliveryNotice(delivery)}
+              One-time link, shown once.
+            </span>
+            <code className="type-caption min-w-0 justify-self-stretch truncate tabular-nums">
+              {acceptanceLink(issuedToken)}
+            </code>
+            <CopyButton value={acceptanceLink(issuedToken)}>Copy link</CopyButton>
+          </Stack>
+        </Notice>
+      ) : null}
     </Dialog>
   );
 }

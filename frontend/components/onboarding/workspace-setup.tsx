@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { SetupPage, SetupStep } from '@/components/templates/setup-page';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Stack } from '@/components/ui/layout';
 import { authQueries } from '@/lib/api/auth';
 import { useSignOutForChangedTerms } from '@/lib/auth/use-sign-out-for-changed-terms';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -84,30 +83,28 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
         }
       >
         <form id={FORM_ID} noValidate onSubmit={submit}>
-          <Stack gap="workspace">
-            <Field
-              label="Workspace name"
-              required
-              error={nameMissing ? 'Name your workspace.' : undefined}
-            >
-              {(props) => (
-                <Input
-                  {...props}
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="Acme"
-                  maxLength={255}
-                />
-              )}
-            </Field>
-            {create.error ? (
-              <Notice
-                kind="mutation"
-                notice={mutationNoticeForError(create.error, { action: 'create the workspace' })}
+          <Field
+            label="Workspace name"
+            required
+            error={nameMissing ? 'Name your workspace.' : undefined}
+          >
+            {(props) => (
+              <Input
+                {...props}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Acme"
+                maxLength={255}
               />
-            ) : null}
-          </Stack>
+            )}
+          </Field>
         </form>
+        {create.error ? (
+          <Notice
+            kind="mutation"
+            notice={mutationNoticeForError(create.error, { action: 'create the workspace' })}
+          />
+        ) : null}
       </SetupStep>
     </SetupPage>
   );
