@@ -601,10 +601,10 @@
   --text-display: 1.5rem;
   --text-display--line-height: 2rem;
 
-  --radius-mark: 4px;
-  --radius-control: 6px;
-  --radius-card: var(--radius-control);
-  --radius-overlay: 12px;
+  --radius-mark: 5px;
+  --radius-control: 8px;
+  --radius-card: 10px;
+  --radius-overlay: 14px;
   --shadow-card: 0 1px 2px oklch(21% 0.034 263 / 5%);
   --shadow-pop: 0 4px 12px oklch(21% 0.034 263 / 10%), 0 1px 2px oklch(21% 0.034 263 / 6%);
   --shadow-sheet: 0 16px 40px oklch(21% 0.034 263 / 18%);
@@ -2101,6 +2101,9 @@ label {
   }
   & :is(label, .type-body, .type-caption, .type-figure) {
     color: inherit;
+  }
+  &:first-child {
+    border-start-start-radius: var(--radius-card);
   }
   & label::after {
     content: '';
