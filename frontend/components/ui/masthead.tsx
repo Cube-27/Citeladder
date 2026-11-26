@@ -67,7 +67,7 @@ export function Masthead({
       </div>
       <div
         data-masthead-end=""
-        className="flex shrink-0 items-center gap-[var(--control-gap,8px)] [&_:is(button,a)]:shrink-0"
+        className="flex shrink-0 items-center gap-2 [&_:is(button,a)]:shrink-0"
       >
         {hasControls ? (
           <MastheadPrimarySlot value={primarySlot}>

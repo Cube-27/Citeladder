@@ -640,7 +640,6 @@
   --workspace-gap: 16px;
   --page-top-gap: 24px;
   --section-gap: 20px;
-  --control-gap: 4px;
   --page-section-gap: var(--section-gap);
   --flow-gap: 48px;
   --page-end-space: 33svh;
