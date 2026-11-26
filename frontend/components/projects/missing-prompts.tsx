@@ -26,7 +26,6 @@ export function MissingPrompts({
       id="missing-prompts"
       title="Where you're missing"
       link={rows.length > SHOWN ? { href: '/prompts', label: 'All prompts' } : null}
-      card={rows.length > 0}
     >
       <MissingBody query={query} rows={rows} />
     </WidgetFrame>

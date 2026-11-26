@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { slipClasses } from '@/components/ui/slip';
 import { useState, type ReactNode } from 'react';
 
 import { DateRangeDialog } from './date-range-dialog';
@@ -176,31 +175,28 @@ function SearchConsoleWorkspace({
   if (!available) return null;
   return (
     <Section aria-labelledby="performance-search-console">
-      <SectionHeader>
+      <SectionHeader
+        actions={
+          <FilterControls
+            align="end"
+            filters={[granularityFilter(granularity, onGranularityChange)]}
+          />
+        }
+      >
         <SectionTitle id="performance-search-console">Google Search</SectionTitle>
       </SectionHeader>
-      <div className={slipClasses('overflow-hidden p-0')}>
-        <div className="flex min-w-0 items-start justify-between gap-4">
-          <MetricCards
-            data-testid="metric-card-strip"
-            selected={selected}
-            comparison={comparison}
-            compareLabel={compareLabel}
-            active={activeMetrics}
-            onToggle={onToggleMetric}
-            loading={refreshing}
-          />
-          <div className="shrink-0 pt-4 pr-4">
-            <FilterControls
-              align="end"
-              filters={[granularityFilter(granularity, onGranularityChange)]}
-            />
-          </div>
-        </div>
-        <section aria-label="Search Console chart" className="min-w-0 px-1 pt-4 pb-3">
-          <PerformanceChart series={series} />
-        </section>
-      </div>
+      <MetricCards
+        data-testid="metric-card-strip"
+        selected={selected}
+        comparison={comparison}
+        compareLabel={compareLabel}
+        active={activeMetrics}
+        onToggle={onToggleMetric}
+        loading={refreshing}
+      />
+      <section aria-label="Search Console chart" className="min-w-0 pt-4">
+        <PerformanceChart series={series} />
+      </section>
     </Section>
   );
 }

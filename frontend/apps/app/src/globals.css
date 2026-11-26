@@ -1299,8 +1299,7 @@ a.focus-ring:active .type-caption {
   border: 1px solid var(--color-rule);
 }
 
-:where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
-  .table-frame {
+:where(.surface-card, .surface-lift, .surface-well, [role='dialog']) .table-frame {
   border: 0;
 }
 
@@ -1313,8 +1312,7 @@ a.focus-ring:active .type-caption {
   background: var(--color-well);
 }
 
-:where(.surface-card, .surface-slip, .surface-well, [data-section='framed'])
-  :is(.surface-card, .surface-slip) {
+:where(.surface-card, .surface-lift, .surface-well) :is(.surface-card, .surface-slip) {
   background: var(--color-well);
   box-shadow: none;
 }
@@ -1325,8 +1323,7 @@ a.focus-ring:active .type-caption {
   background-color: var(--color-raised);
   box-shadow: var(--shadow-card);
 }
-:where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
-  [data-section='framed'] {
+:where(.surface-card, .surface-lift, .surface-well, [role='dialog']) [data-section='framed'] {
   border: 0;
   padding: 0;
 }
@@ -1360,9 +1357,6 @@ a.focus-ring:active .type-caption {
   [data-settings-sections] :is(section, section.surface-section) {
     padding-top: 0;
     margin-block-start: 0;
-    &::before {
-      content: none;
-    }
   }
   :where(
     :is([data-page-body], [data-page-body] :is([data-rhythm-gap], [role='tabpanel']))
@@ -1619,7 +1613,7 @@ label {
   box-shadow: var(--shadow-card);
 }
 :root:not([data-public-surface]) .table-frame {
-  --table-cell-padding-x: 16px;
+  --table-cell-padding-x: calc(var(--card-padding) - 4px);
   --table-cell-padding-y: 4px;
 }
 :root:not([data-public-surface]) [data-data-table-frame] .table-frame {
@@ -1705,14 +1699,15 @@ label {
 
 :root:not([data-public-surface])
   [data-chart-frame]:not(
-    [data-chart-frame='auto'],
-    :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog']) *
+    :where(.surface-card, .surface-lift, .surface-well, [role='dialog']) *
   ) {
-  border: 1px solid transparent;
   border-radius: var(--radius-card);
-  background-color: var(--color-surface);
   padding: 12px 16px;
+  background-color: var(--color-surface);
   box-shadow: var(--shadow-card);
+  &:not([data-chart-frame='auto']) {
+    border: 1px solid transparent;
+  }
 }
 
 .table-frame tbody > tr > :is(td, th) {
@@ -1790,7 +1785,7 @@ label {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
   row-gap: 2px;
-  padding: 10px 16px;
+  padding: 10px var(--card-padding);
   box-shadow:
     -1px 0 0 var(--color-rule),
     0 -1px 0 var(--color-rule);
@@ -1907,19 +1902,19 @@ label {
 }
 
 :root:not([data-public-surface])
-  :is(.surface-card, .surface-slip, .surface-lift, [data-figure-strip]):not(
-    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], [data-figure-strip]) *
+  :is(.surface-card, .surface-lift, [data-figure-strip]):not(
+    :where(.surface-card, .surface-lift, .surface-well, [role='dialog'], [data-data-table-frame], [data-figure-strip]) *
   ) {
   border: 1px solid transparent;
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
-:root:not([data-public-surface]) :is(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip], [data-auth-form]) {
+:root:not([data-public-surface]) :is(.surface-card, .surface-lift, .surface-well, [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip], [data-auth-form]) {
   --shadow-field: none;
 }
 :root:not([data-public-surface])
-  :where(.surface-card, .surface-slip, .surface-lift, [role='dialog'], [data-figure-strip], .table-frame, [data-auth-form])
+  :where(.surface-card, .surface-lift, [role='dialog'], [data-figure-strip], .table-frame, [data-auth-form])
   :is(.focus-input, .focus-frame) {
   background-color: var(--color-well);
 }
@@ -1929,11 +1924,28 @@ label {
 [role='switch'] > span {
   box-shadow: var(--shadow-thumb);
 }
-[data-settings-group] [data-setting-rows] {
+[data-section='framed'] :is([data-data-table-frame], [data-setting-rows], :is(ol, ul).surface-lift) {
   margin-inline: calc(-1 * var(--card-padding));
+  border-inline: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
-[data-settings-group] [data-setting-rows]:last-child {
+[data-section='framed'] :is([data-setting-rows], :is(ol, ul).surface-lift) > * {
+  padding-inline: var(--card-padding);
+}
+[data-section='framed'] > :is([data-data-table-frame], [data-setting-rows]):last-child {
   margin-bottom: calc(-1 * var(--card-padding));
+}
+[data-section='framed'] [data-state-block-inline] {
+  padding-inline: 0;
+  background: none;
+}
+[data-section='framed'] [data-figure-strip] {
+  border: 0;
+  border-radius: 0;
+  & > :first-child {
+    padding-inline-start: 0;
+  }
 }
 [data-section='framed'] > header + :is(.surface-card, .surface-slip):last-child {
   padding: 0;
@@ -1942,7 +1954,7 @@ label {
   box-shadow: none;
 }
 :root:not([data-public-surface]) .card-head:not(:last-child) {
-  margin: 0 0 12px;
+  margin: 0 0 16px;
   padding: 0;
   border: 0;
 }
@@ -1950,7 +1962,7 @@ label {
   background-color: var(--color-surface);
 }
 :root:not([data-public-surface])
-  :where(.surface-card, .surface-slip, .surface-lift, [role='dialog'], [data-figure-strip], .table-frame, [data-auth-form])
+  :where(.surface-card, .surface-lift, [role='dialog'], [data-figure-strip], .table-frame, [data-auth-form])
   :is(.focus-input, .focus-frame):hover:not(:focus, :focus-within, :disabled, [data-disabled]) {
   background-color: var(--color-well-hover);
 }
@@ -1976,7 +1988,7 @@ label {
 }
 :root:not([data-public-surface])
   :is([data-state-frame], [data-state-block-inline]):not(
-    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip]) *
+    :where(.surface-card, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip]) *
   ) {
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
@@ -1984,26 +1996,17 @@ label {
 }
 :root:not([data-public-surface])
   [data-state-block-inline]:not(
-    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip]) *
+    :where(.surface-card, .surface-lift, .surface-well, [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip]) *
   ) {
   padding: 12px 16px;
 }
 :root:not([data-public-surface])
   [data-table-replacing]:not(
-    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip]) *
+    :where(.surface-card, .surface-lift, .surface-well, [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip]) *
   ) {
   padding: 0;
 }
 :root:not([data-public-surface]) :is(a, button, [role='link']):not(:hover, :focus-visible),
 :root:not([data-public-surface]) :is(a, button, [role='link']):not(:hover, :focus-visible) * {
   text-decoration-color: transparent;
-}
-:root:not([data-public-surface])
-  [data-chart-frame='auto']:not(
-    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog']) *
-  ) {
-  border-radius: var(--radius-card);
-  padding: 12px 16px;
-  background-color: var(--color-surface);
-  box-shadow: var(--shadow-card);
 }

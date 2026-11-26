@@ -85,7 +85,10 @@ export function DataTable({
       aria-busy={busy?.active || undefined}
       data-data-table=""
       data-section={headed ? 'framed' : undefined}
-      className={cn('relative grid min-w-0 content-start', headed && FRAMED_FACE)}
+      className={cn(
+        'relative grid min-w-0 content-start',
+        headed && cn(FRAMED_FACE, 'overflow-clip'),
+      )}
     >
       {busy ? <BusyRung active={busy.active} label={busy.label} /> : null}
       <DataTableHeader
@@ -267,7 +270,7 @@ function DataTableFoot({
   return (
     <div
       data-data-table-foot=""
-      className="flex min-h-10 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-1"
+      className="flex min-h-10 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-3 py-1"
     >
       {footer ? (
         <div className="type-caption grid min-w-0 content-center gap-1">{footer}</div>
@@ -325,10 +328,10 @@ function DataTableHeader({
       ) : null}
     </>
   );
-  if (!actions) return <header className="grid min-w-0 gap-1 pb-3">{head}</header>;
+  if (!actions) return <header className="grid min-w-0 gap-1 pb-4">{head}</header>;
   return (
-    <header className="flex flex-wrap items-start justify-between gap-2 pb-3">
-      <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{head}</div>
+    <header className="flex flex-wrap items-start justify-between gap-2 pb-4">
+      <div className="grid min-w-0 flex-1 basis-40 grid-cols-[minmax(0,1fr)] gap-1">{head}</div>
       <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">{actions}</div>
     </header>
   );

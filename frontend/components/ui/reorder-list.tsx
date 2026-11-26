@@ -92,16 +92,16 @@ function ReorderRow({
         if (!pending) onDropped(event.dataTransfer.getData(ROW_DRAG_TYPE));
       }}
       className={cn(
-        'group hover:overlay-hover grid min-h-10 grid-cols-[1rem_1.25rem_minmax(0,1fr)_auto] items-center gap-2 ps-2 pe-2 transition-colors',
+        'group hover:overlay-hover grid min-h-10 grid-cols-[1.25rem_minmax(0,1fr)_1rem_auto] items-center gap-2 ps-2 pe-2 transition-colors',
         dragging && 'opacity-60',
       )}
     >
+      <span className={textRole('body', 'text-ink-2 tabular-nums')}>{index + 1}</span>
+      <div className="min-w-0">{item.content}</div>
       <Icon
         icon={GripVertical}
         className="text-ink-2 cursor-grab opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
       />
-      <span className={textRole('body', 'text-ink-2 text-center tabular-nums')}>{index + 1}</span>
-      <div className="min-w-0">{item.content}</div>
       <Menu>
         <MenuTrigger asChild>
           <IconButton icon={Ellipsis} label={`Reorder ${index + 1}, ${item.name}`} />

@@ -2,8 +2,7 @@ import type { ReactNode } from 'react';
 
 import { Inline, Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
-import { SectionDescription } from '@/components/ui/section';
-import { slipClasses } from '@/components/ui/slip';
+import { FRAMED_FACE, SectionDescription } from '@/components/ui/section';
 import { StateHeadingLevelContext } from '@/components/ui/state-heading-level';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -29,7 +28,6 @@ export function WidgetFrame({
   status,
   link,
   fill = 'list',
-  card = false,
   children,
 }: Readonly<{
   id: string;
@@ -38,7 +36,6 @@ export function WidgetFrame({
   status?: ReactNode;
   link?: WidgetLink | null;
   fill?: WidgetFill;
-  card?: boolean;
   children: ReactNode;
 }>) {
   const figure = fill === 'figure';
@@ -54,7 +51,8 @@ export function WidgetFrame({
       gap="workspace"
       aria-labelledby={id}
       data-overview-widget=""
-      className="flex h-full min-w-0 flex-col"
+      data-section="framed"
+      className={cn(FRAMED_FACE, 'flex h-full min-w-0 flex-col')}
     >
       <WidgetHead
         id={id}
@@ -66,10 +64,7 @@ export function WidgetFrame({
       />
       <Stack
         gap="item"
-        className={cn(
-          fill === 'chart' ? 'min-w-0 flex-1' : 'flex min-w-0 flex-1 flex-col',
-          card && slipClasses(),
-        )}
+        className={fill === 'chart' ? 'min-w-0 flex-1' : 'flex min-w-0 flex-1 flex-col'}
       >
         <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
       </Stack>

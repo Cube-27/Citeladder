@@ -62,7 +62,7 @@ export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   const step = data.next_action;
   const listOnly = step.kind === 'opportunity' && step.href === '/actions';
   return (
-    <WidgetFrame id="next-action" title="Next action" card>
+    <WidgetFrame id="next-action" title="Next action">
       <p className={textRole('label')}>{step.title}</p>
       {nextActionEvidence(data)}
       <div>

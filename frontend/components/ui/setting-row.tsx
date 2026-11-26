@@ -30,7 +30,7 @@ export function SettingsGroup({
       aria-labelledby={region ? titleId : undefined}
       data-settings-group=""
       data-section="framed"
-      className={cn(SLIP_FACE, 'grid min-w-0 gap-3 overflow-hidden p-[var(--card-padding)]')}
+      className={cn(SLIP_FACE, 'grid min-w-0 gap-4 overflow-hidden p-[var(--card-padding)]')}
     >
       <header className="flex min-w-0 flex-wrap items-start justify-between gap-2">
         <div className="grid min-w-0 flex-1 basis-60 gap-1">
