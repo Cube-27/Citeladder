@@ -63,7 +63,7 @@ const twMerge = extendTailwindMerge({
     },
     classGroups: {
       duration: [{ duration: DURATION_ROLES }],
-      opacity: [{ opacity: ['disabled', 'muted', 'ghost', 'hover'] }],
+      opacity: [{ opacity: ['disabled', 'muted', 'dim', 'ghost', 'hover'] }],
       z: [{ z: ['base', 'raised', 'sticky', 'float', 'overlay', 'modal', 'toast'] }],
       'grid-cols': [
         {

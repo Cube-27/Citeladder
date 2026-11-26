@@ -96,3 +96,36 @@ export function ChartTooltipCard({
     </div>
   );
 }
+
+export type LineTooltipRow = Readonly<{
+  key: string;
+  name: string;
+  color: string;
+  dashed: boolean;
+  value: Formatted;
+}>;
+
+export function LineTooltipCard({
+  title,
+  rows,
+}: Readonly<{ title: string; rows: readonly LineTooltipRow[] }>) {
+  return (
+    <div className={cn(POP_FACE, 'grid min-w-56 gap-3 px-4 py-3')}>
+      <p className={textRole('emphasis', 'text-ink-2')}>{title}</p>
+      {rows.map((row) => (
+        <div key={row.key} className={textRole('body', 'flex min-w-0 items-center gap-3')}>
+          <span
+            aria-hidden
+            className={cn(
+              'border-(--swatch) w-3 shrink-0 border-t-2',
+              row.dashed && 'border-dashed',
+            )}
+            style={{ '--swatch': row.color }}
+          />
+          <span className="text-ink-2 min-w-0 flex-1 truncate">{row.name}</span>
+          <span className="text-ink font-emphasis tabular-nums">{printed(row.value)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}

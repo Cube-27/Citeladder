@@ -14,7 +14,7 @@ import { ClampText, UrlCutParts, useCut } from '@/components/ui/clamp-text';
 import type { ScrollRegionProps } from '@/components/ui/scroll-edges';
 import { Tag } from '@/components/ui/tag';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+import { textRole, toneClass, type TextTone } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import {
   type Absent,
@@ -187,12 +187,14 @@ export function TableCell({
   numeric,
   desktopOnly,
   nested,
+  tone,
   ...props
 }: Readonly<
   Omit<TdHTMLAttributes<HTMLTableCellElement>, 'children'> &
     CellOptions & {
       children?: ReactNode | Absent;
       nested?: boolean | 2;
+      tone?: TextTone;
     }
 >) {
   return (
@@ -202,6 +204,7 @@ export function TableCell({
         cellClasses({ numeric, desktopOnly }),
         nested === true && 'ps-[calc(var(--spacing-cell-x)+16px)] [--cell-indent:16px]',
         nested === 2 && 'ps-[calc(var(--spacing-cell-x)+32px)] [--cell-indent:32px]',
+        toneClass(tone),
         className,
       )}
     >

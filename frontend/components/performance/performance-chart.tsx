@@ -1,13 +1,10 @@
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
 
-import { printed } from '@/components/ui/absence';
 import { CHART_HEIGHT_PX, chartTicks, useChartWidth } from '@/components/ui/chart';
 import { ChartFrame } from '@/components/ui/chart-frame';
-import { AXIS_PROPS, LINE_CURSOR } from '@/components/ui/chart-tooltip';
+import { AXIS_PROPS, LINE_CURSOR, LineTooltipCard } from '@/components/ui/chart-tooltip';
 import { SeriesTable, shownWith, type TrendPoint } from '@/components/ui/series-data';
-import { POP_FACE } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
-import { textRole } from '@/components/ui/typography';
 import { formatWindowDate, pluralCount } from '@/lib/format';
 import {
   formatAxisTick,
@@ -15,7 +12,6 @@ import {
   type PerformanceChartPoint,
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
-import { cn } from '@/lib/utils';
 
 const METRIC_COLOR: Record<PerformanceMetricKey, string> = {
   clicks: 'var(--color-metric-clicks)',
@@ -158,7 +154,6 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
       role="group"
       aria-label={`${plotted.map((entry) => entry.label).join(', ')} by day`}
       className="w-full"
-      style={{ height }}
     >
       <LineChart
         width={width}
@@ -303,22 +298,5 @@ function MetricTip({
         ]
       : []),
   ]);
-  return (
-    <div className={cn(POP_FACE, 'grid min-w-56 gap-3 px-4 py-3')}>
-      <p className={textRole('emphasis', 'text-ink-2')}>
-        {tooltipDate(anchor?.selected[index]?.date, index)}
-      </p>
-      {rows.map((row) => (
-        <div key={row.key} className={textRole('body', 'flex min-w-0 items-center gap-3')}>
-          <span
-            aria-hidden
-            className={cn('w-3 shrink-0 border-t-2', row.dashed && 'border-dashed')}
-            style={{ borderColor: row.color }}
-          />
-          <span className="text-ink-2 min-w-0 flex-1 truncate">{row.name}</span>
-          <span className="text-ink font-emphasis tabular-nums">{printed(row.value)}</span>
-        </div>
-      ))}
-    </div>
-  );
+  return <LineTooltipCard title={tooltipDate(anchor?.selected[index]?.date, index)} rows={rows} />;
 }

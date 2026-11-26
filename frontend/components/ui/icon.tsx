@@ -19,12 +19,14 @@ export function Icon({
   label,
   tone,
   muted = false,
+  dim = false,
   className,
 }: Readonly<{
   icon: IconGlyph | BrandGlyph;
   label?: string;
   tone?: TextTone;
   muted?: boolean;
+  dim?: boolean;
   className?: string;
 }>) {
   return (
@@ -34,6 +36,7 @@ export function Icon({
         'my-0.75 size-3.5 shrink-0',
         toneClass(tone),
         muted && 'opacity-muted',
+        dim && 'opacity-dim',
         className,
       )}
       aria-hidden={label ? undefined : true}

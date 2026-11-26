@@ -279,6 +279,7 @@
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-full: 9999px;
+  --rule-width: 1px;
   --radius-mark: 2px;
   --radius-control: var(--radius-md);
   --radius-card: 8px;
@@ -320,6 +321,7 @@
 
   --opacity-disabled: 50%;
   --opacity-muted: 80%;
+  --opacity-dim: 70%;
   --opacity-ghost: 40%;
   --opacity-hover: 90%;
 
