@@ -39,7 +39,7 @@ export function FilterTrigger({
           TRIGGER_BOX,
           'focus-input flex w-auto max-w-full min-w-0 shrink-0 items-center text-left',
           'press',
-          'disabled:cursor-not-allowed disabled:opacity-45',
+          'disabled:cursor-not-allowed disabled:opacity-50',
           iconOnly ? 'gap-1 px-0 pe-2' : 'gap-2 ps-3 pe-2',
           className,
         )}
@@ -55,7 +55,7 @@ export function FilterTrigger({
             {value}
           </span>
         )}
-        <ChevronDown className="text-ink-2 size-3.5 shrink-0" aria-hidden />
+        <ChevronDown className="text-ink-3 size-3.5 shrink-0" aria-hidden />
       </button>
     </Tooltip>
   );
@@ -122,7 +122,7 @@ export function FilterChip({
 export function ValueChip({ filter }: Readonly<{ filter: FilterDefinition }>) {
   return (
     <Tooltip content={filter.label}>
-      <span className="face bg-raised rounded-control type-body text-ink inline-flex min-h-[var(--control-md)] max-w-full min-w-0 shrink-0 items-center gap-1 border border-transparent ps-3 pe-1">
+      <span className="rounded-control type-body text-ink inline-flex min-h-[var(--control-md)] max-w-full min-w-0 shrink-0 items-center gap-1 border border-transparent bg-[var(--color-state-fill)] ps-3 pe-1">
         <span className="min-w-0 truncate">{filter.valueLabel}</span>
         <button
           type="button"

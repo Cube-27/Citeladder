@@ -6,6 +6,7 @@
 @custom-variant phone (@media (max-width: 767px));
 @custom-variant labelled (&:where([data-sidebar-state="expanded"] *), &:where([data-nav-drawer] *));
 
+@custom-variant app (&:where(:root:not([data-public-surface]) *));
 @custom-variant outside-main-column (&:where(:not([data-main-column] *)));
 @custom-variant column-split {
   @container main (min-width: 688px) {
@@ -1919,6 +1920,11 @@ label {
 }
 :root:not([data-public-surface]) .surface-well :is(.focus-input, .focus-frame) {
   background-color: var(--color-surface);
+}
+:root:not([data-public-surface])
+  :where(.surface-card, .surface-slip, .surface-lift, [role='dialog'], [data-figure-strip], .table-frame, [data-auth-form])
+  :is(.focus-input, .focus-frame):hover:not(:focus, :focus-within, :disabled, [data-disabled]) {
+  background-color: color-mix(in oklab, var(--color-well) 96%, var(--color-ink) 4%);
 }
 :root:not([data-public-surface])
   :is([data-state-frame], [data-state-block-inline]):not(

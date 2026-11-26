@@ -10,6 +10,9 @@
   --popup-scale: 0.9;
   transform-origin: var(--radix-popper-transform-origin, var(--popup-origin, center));
 }
+.menu-panel[role='listbox'][class] {
+  --popup-scale: 0.95;
+}
 @keyframes popup-in {
   from {
     opacity: 0;
