@@ -35,7 +35,7 @@ const BUTTON_SIZE: Record<ButtonSize, string> = {
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
     'face face-primary bg-primary border border-primary text-on-primary not-disabled:hover:bg-primary-hover not-disabled:hover:border-primary-hover',
-  secondary: cn(RAISED_FACE, 'text-ink'),
+  secondary: cn(RAISED_FACE, 'text-ink shadow-[var(--shadow-field,0_0_#0000)]'),
   quiet: cn(
     'bg-transparent text-ink-2 border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
     HOVER_OVERLAY,

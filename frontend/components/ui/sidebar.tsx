@@ -181,15 +181,14 @@ export function SidebarNavGroup({
   );
 }
 
-const CURRENT_FILL = 'bg-[var(--nav-current-fill)]';
-const CURRENT_TILE = cn(CURRENT_FILL, 'text-ink before:bg-accent');
+const CURRENT_FILL = 'bg-[var(--nav-current-fill)] shadow-card';
+const CURRENT_TILE = cn(CURRENT_FILL, 'text-ink');
 const AT_REST = 'text-ink-2 hover:overlay-hover hover:text-ink';
 const NAV_AT_REST = 'text-nav-ink hover:overlay-hover';
 
 export function sidebarNavRowClasses(active: boolean, className?: string) {
   return cn(
     'focus-ring type-label rounded-control relative flex font-normal h-[var(--nav-row-height)] w-full min-w-0 shrink-0 items-center gap-2 px-2 text-left transition-colors',
-    'before:rounded-mark before:absolute before:inset-y-2 before:start-0 before:w-[var(--mark-width)]',
     active ? CURRENT_TILE : NAV_AT_REST,
     className,
   );
@@ -217,7 +216,6 @@ export function SidebarNavRowContent({
 
 const RAIL_BUTTON = cn(
   'focus-ring rounded-control relative flex size-[var(--rail-button)] shrink-0 items-center justify-center transition-colors [&_svg]:size-3.5',
-  'before:rounded-mark before:absolute before:inset-y-2.5 before:start-0 before:w-[var(--mark-width)]',
   'data-[state=open]:overlay-pressed',
 );
 

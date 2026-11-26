@@ -1,6 +1,5 @@
 @import 'tailwindcss' source(none);
 @import './globals.css';
-@import './surface-heroui.css';
 
 @source '../../../apps/app/src';
 @source '../../../components/agent';

@@ -390,8 +390,11 @@
   --nav-current-fill: rgb(255 255 255 / 11%);
   --color-scrim: oklch(0% 0 0 / 60%);
   --shadow-card: none;
-  --shadow-pop: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 4px 12px oklch(0% 0 0 / 30%);
-  --shadow-sheet: inset 0 1px 0 oklch(100% 0 0 / 5%), 0 16px 40px oklch(0% 0 0 / 45%);
+  --shadow-field: none;
+  --shadow-pop: inset 0 0 1px rgb(255 255 255 / 30%);
+  --shadow-sheet: var(--shadow-pop);
+  --color-well: var(--color-page);
+  --color-field-edge-hover: rgb(255 255 255 / 10%);
 
   --weight-regular: 350;
   --weight-medium: 450;
@@ -526,17 +529,18 @@
 
 :root:not([data-public-surface]) {
   text-wrap: pretty;
-  --table-head-ground: #dde3ea;
+  --table-head-ground: oklch(95.24% 0.0013 286.37);
   --table-ground: var(--color-surface);
-  --color-ground: #e4eaf2;
+  --color-ground: oklch(95.24% 0.0013 286.37);
   --color-chrome: var(--color-ground);
   --color-panel: #ffffff;
   --color-surface: var(--color-panel);
   --color-raised: var(--color-panel);
-  --color-raised-2: #e9eef6;
-  --color-well: var(--color-page);
-  --color-page: #f0f4f9;
+  --color-raised-2: oklch(95.24% 0.0013 286.37);
+  --color-well: oklch(94% 0.001 286.375);
+  --color-page: oklch(97.02% 0 0);
   --color-rule: rgb(0 0 0 / 11%);
+  --color-field-edge-hover: rgb(0 0 0 / 10%);
   --color-control-line: rgb(0 0 0 / 22%);
   --color-focus: var(--color-accent);
   --focus-width: 1px;
@@ -600,9 +604,10 @@
   --radius-control: 8px;
   --radius-card: 10px;
   --radius-overlay: 14px;
-  --shadow-card: 0 1px 2px oklch(21% 0.034 263 / 5%);
-  --shadow-pop: 0 4px 12px oklch(21% 0.034 263 / 10%), 0 1px 2px oklch(21% 0.034 263 / 6%);
-  --shadow-sheet: 0 16px 40px oklch(21% 0.034 263 / 18%);
+  --shadow-card: 0 2px 4px rgb(0 0 0 / 4%), 0 1px 2px rgb(0 0 0 / 6%), 0 0 1px rgb(0 0 0 / 6%);
+  --shadow-field: var(--shadow-card);
+  --shadow-pop: 0 2px 8px rgb(0 0 0 / 6%), 0 -6px 12px rgb(0 0 0 / 3%), 0 14px 28px rgb(0 0 0 / 8%);
+  --shadow-sheet: var(--shadow-pop);
   --mark-width: 2px;
 
   --control-md: 32px;
@@ -619,7 +624,7 @@
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
-  --nav-current-fill: #d3e3fd;
+  --nav-current-fill: var(--color-panel);
   --panel-inset: 0px;
   --route-chrome-height: calc(
     2 * var(--panel-inset) + var(--masthead-block-size, var(--masthead-height)) +
@@ -1132,110 +1137,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     letter-spacing: 0;
   }
 
-  .prose-content {
-    font-family: var(--font-sans);
-    font-size: var(--text-prose);
-    line-height: var(--text-prose--line-height);
-    font-weight: var(--weight-regular);
-    color: var(--color-ink);
-  }
-  .prose-content > :last-child { margin-bottom: 0; }
-  .prose-content :where(h2, h3, h4, h5, h6) {
-    font-family: var(--font-sans);
-    font-weight: var(--weight-medium);
-    letter-spacing: 0;
-    color: var(--color-ink);
-    margin: 1.5rem 0 0.75rem;
-  }
-  .prose-content > :where(h2, h3, h4, h5, h6):first-child { margin-top: 0; }
-  .prose-content h2 { font-size: var(--text-heading); line-height: var(--text-heading--line-height); }
-  .prose-content h3 { font-size: var(--text-label); line-height: var(--text-label--line-height); }
-  .prose-content :where(h4, h5, h6) { font-size: var(--text-label); line-height: var(--text-label--line-height); }
-  .prose-content :where(p, ul, ol, pre, table, blockquote) { margin: 0 0 1rem; }
-  .prose-content :where(ul, ol) { margin-left: 1.5rem; }
-  .prose-content ul { list-style: disc; }
-  .prose-content ol { list-style: decimal; }
-  .prose-content li + li { margin-top: 0.5rem; }
-  .prose-content strong { font-weight: var(--weight-medium); color: var(--color-ink); }
-  .prose-content a {
-    color: var(--color-ink);
-    text-decoration: underline;
-    text-decoration-color: var(--color-control-line);
-    text-underline-offset: 2px;
-  }
-  .prose-content a:hover { text-decoration-color: currentColor; }
-  .prose-content blockquote {
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius-control);
-    background: var(--color-well);
-    color: var(--color-ink-2);
-  }
-  .prose-content code {
-    font-family: var(--font-mono);
-    font-size: var(--text-data-sm);
-    line-height: var(--text-data-sm--line-height);
-    padding: 0.125rem 0.25rem;
-    border-radius: var(--radius-mark);
-    background: var(--color-well);
-  }
-  .prose-content pre {
-    max-width: 100%;
-    white-space: pre-wrap;
-    padding: 1rem;
-    border-radius: var(--radius-control);
-    background: var(--color-well);
-    font-family: var(--font-mono);
-    font-size: var(--text-data);
-    line-height: var(--text-data--line-height);
-  }
-  .prose-content pre code { padding: 0; background: transparent; font-size: inherit; line-height: inherit; }
-  .prose-content .prose-table-frame {
-    max-width: 100%;
-    margin: 0 0 1rem;
-    border: 1px solid var(--color-rule);
-    border-radius: var(--radius-control);
-  }
-  .prose-content .prose-table-frame table { margin: 0; }
-  :root:not([data-public-surface]) [data-turn-rail] .prose-table-frame {
-    border-radius: var(--radius-card);
-  }
-  .prose-content table {
-    width: max-content;
-    min-width: 100%;
-    table-layout: auto;
-    border-collapse: collapse;
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
-  }
-  .prose-content th {
-    padding: 0.5rem 0.75rem;
-    text-align: left;
-    font-family: var(--font-sans);
-    font-size: var(--text-caption);
-    line-height: var(--text-caption--line-height);
-    font-weight: var(--weight-medium);
-    color: var(--color-ink-2);
-    border-bottom: 1px solid var(--color-rule);
-  }
-  .prose-content td {
-    padding: 0.5rem 0.75rem;
-    color: var(--color-ink);
-    border-bottom: 1px solid var(--color-rule);
-  }
-  .prose-content tr:last-child td { border-bottom: 0; }
-  .prose-content :is(th, td) {
-    min-width: 8rem;
-    max-width: 28rem;
-    overflow-wrap: normal;
-    vertical-align: top;
-  }
-  .prose-compact { font-size: var(--text-body-sm); line-height: var(--text-body-sm--line-height); }
-  .prose-compact :where(h2, h3, h4, h5, h6) { margin: 1rem 0 0.5rem; }
-  .prose-compact h2 { font-size: var(--text-heading); line-height: var(--text-heading--line-height); }
-  .prose-compact :is(h3, h4, h5, h6) { font-size: var(--text-label); line-height: var(--text-label--line-height); }
-  .prose-compact :where(p, ul, ol, pre, table, blockquote) { margin-bottom: 0.75rem; }
-  .prose-compact pre { padding: 0.75rem; }
-  .prose-compact :is(th, td) { padding: 0.5rem 0.75rem; }
 
 
   .cl-mark {
@@ -1509,19 +1410,6 @@ a.focus-ring:active .type-caption {
   }
   [data-rhythm-gap='tight'] > * {
     --rhythm-gap-above: 4px;
-  }
-
-  [data-sidebar-ident][aria-current='page'] {
-    position: relative;
-  }
-  [data-sidebar-ident][aria-current='page']::before {
-    content: '';
-    position: absolute;
-    inset-block: 8px;
-    inset-inline-start: 0;
-    width: var(--mark-width);
-    border-radius: var(--radius-mark);
-    background: var(--color-accent);
   }
 }
 
@@ -1810,12 +1698,14 @@ label {
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
   padding: 12px 16px;
+  box-shadow: var(--shadow-card);
 }
 :root:not([data-public-surface])
   :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
   [data-chart-frame] {
   border: 0;
   padding: 0;
+  box-shadow: none;
 }
 
 .table-frame tbody > tr > :is(td, th) {
@@ -2016,6 +1906,10 @@ label {
   border: 1px solid transparent;
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+:root:not([data-public-surface]) :is(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip], [data-auth-form]) {
+  --shadow-field: none;
 }
 :root:not([data-public-surface])
   :where(.surface-card, .surface-slip, .surface-lift, [role='dialog'], [data-figure-strip], .table-frame, [data-auth-form])
@@ -2031,6 +1925,7 @@ label {
   ) {
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 :root:not([data-public-surface])
   [data-state-block-inline]:not(
@@ -2055,4 +1950,5 @@ label {
   border-radius: var(--radius-card);
   padding: 12px 16px;
   background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
