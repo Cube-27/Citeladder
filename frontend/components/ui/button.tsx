@@ -25,7 +25,7 @@ const RAISED_FACE =
   'face bg-raised border border-transparent not-disabled:hover:bg-raised-2 not-disabled:active:bg-raised-2 aria-pressed:bg-raised-2 data-[state=open]:bg-raised-2';
 
 const BUTTON_BASE =
-  'focus-ring press text-label text-ink relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-control-coarse disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
+  'focus-ring press text-label text-ink relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-control-coarse disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-disabled [[data-public-surface]_&]:aria-disabled:opacity-disabled';
 
 const BUTTON_SIZE: Record<ButtonSize, string> = {
   md: 'min-h-control-md px-control-x',
@@ -43,7 +43,7 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   ),
   danger: cn(RAISED_FACE, 'face-danger text-negative [[data-public-surface]_&]:border-negative'),
   'danger-confirm':
-    'face face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90',
+    'face face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-hover',
 };
 
 export const CLOSE_BUTTON = 'size-6 min-h-6 pointer-coarse:min-h-6 [--press:0.93]';

@@ -151,7 +151,7 @@ function boxClasses({
     variant === 'field'
       ? cn('min-h-control-md', FIELD_EDGE)
       : 'min-h-10 border border-transparent hover:bg-state-hover',
-    disabled && 'cursor-not-allowed opacity-45',
+    disabled && 'cursor-not-allowed opacity-disabled',
   );
 }
 

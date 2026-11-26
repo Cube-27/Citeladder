@@ -42,15 +42,11 @@ const SPACING_ROLES = [
 ];
 
 const DURATION_ROLES = [
-  'tint',
   'fast',
-  'normal',
   'close',
-  'menu-blur',
   'open',
   'press',
   'slide',
-  'toast',
   'reveal',
   'pulse',
   'sweep',
@@ -67,6 +63,7 @@ const twMerge = extendTailwindMerge({
     },
     classGroups: {
       duration: [{ duration: DURATION_ROLES }],
+      opacity: [{ opacity: ['disabled', 'muted', 'ghost', 'hover'] }],
       z: [{ z: ['base', 'raised', 'sticky', 'float', 'overlay', 'modal', 'toast'] }],
       'grid-cols': [
         {

@@ -107,7 +107,7 @@ export function SplitBar({
         onPointerCancel={() => (dragging.current = null)}
         className={cn(
           'relative flex h-6 min-w-0 touch-none select-none',
-          disabled ? 'opacity-45' : 'cursor-pointer',
+          disabled ? 'opacity-disabled' : 'cursor-pointer',
         )}
       >
         <div aria-hidden className="rounded-control flex min-w-0 flex-1 overflow-hidden">

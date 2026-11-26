@@ -295,15 +295,11 @@
   --container-form: 640px;
   --container-flow: 480px;
 
-  --transition-duration-tint: 100ms;
   --transition-duration-fast: 120ms;
-  --transition-duration-normal: 150ms;
   --transition-duration-close: 160ms;
-  --transition-duration-menu-blur: 180ms;
   --transition-duration-open: 200ms;
   --transition-duration-press: 250ms;
   --transition-duration-slide: 300ms;
-  --transition-duration-toast: 350ms;
   --transition-duration-reveal: 700ms;
   --transition-duration-pulse: 1200ms;
   --transition-duration-sweep: 2s;
@@ -318,6 +314,11 @@
   --default-transition-duration: var(--transition-duration-fast);
   --default-transition-timing-function: var(--ease-standard);
   --animate-live-rung: live-rung var(--transition-duration-pulse) ease-in-out infinite;
+
+  --opacity-disabled: 50%;
+  --opacity-muted: 80%;
+  --opacity-ghost: 40%;
+  --opacity-hover: 90%;
 
   --z-index-base: 1;
   --z-index-raised: 10;
@@ -1412,10 +1413,10 @@ label {
   .press {
     transition:
       scale var(--transition-duration-press) ease,
-      background-color var(--transition-duration-tint),
-      color var(--transition-duration-tint),
-      border-color var(--transition-duration-tint),
-      box-shadow var(--transition-duration-tint);
+      background-color var(--transition-duration-fast),
+      color var(--transition-duration-fast),
+      border-color var(--transition-duration-fast),
+      box-shadow var(--transition-duration-fast);
     transition-timing-function: var(--ease-standard);
   }
   @media (prefers-reduced-motion: no-preference) {
@@ -1427,7 +1428,7 @@ label {
 }
 
 :is([aria-haspopup], [role='combobox']) .tabler-icon-chevron-down {
-  transition: rotate var(--transition-duration-normal) var(--ease-standard);
+  transition: rotate var(--transition-duration-fast) var(--ease-standard);
 }
 :root:not([data-public-surface]) :is([aria-haspopup], [role='combobox'])[aria-expanded='true'] .tabler-icon-chevron-down {
   rotate: 180deg;

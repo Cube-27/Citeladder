@@ -215,7 +215,7 @@ export function RankTable({
                             <span className="phone:whitespace-normal min-w-0 truncate">
                               {chip.name}
                             </span>
-                            <span className="opacity-80">{printed(chip.detail)}</span>
+                            <span className="opacity-muted">{printed(chip.detail)}</span>
                           </div>
                         ) : null}
                       </td>

@@ -63,7 +63,7 @@ export function RadioGroup<T extends string>({
             key={option.value}
             className={cn(
               'text-ink inline-flex cursor-pointer items-start gap-2',
-              option.disabled && 'cursor-not-allowed opacity-60',
+              option.disabled && 'cursor-not-allowed opacity-disabled',
             )}
           >
             <RadioGroupPrimitive.Item
@@ -100,7 +100,7 @@ function RadioCard<T extends string>({
         'text-ink bg-panel flex cursor-pointer items-start gap-2 rounded-control border border-transparent p-4',
         selected && 'bg-state-fill',
         !selected && !option.disabled && 'hover:bg-state-fill-hover',
-        option.disabled && 'cursor-not-allowed opacity-50',
+        option.disabled && 'cursor-not-allowed opacity-disabled',
       )}
     >
       <RadioGroupPrimitive.Item

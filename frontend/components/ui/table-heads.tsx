@@ -75,7 +75,7 @@ export function SortableTableHead({
         <ArrowDown
           className={cn(
             'size-3 shrink-0 transition-transform',
-            active ? !descending && 'rotate-180' : 'opacity-0 group-hover:opacity-50',
+            active ? !descending && 'rotate-180' : 'opacity-0 group-hover:opacity-disabled',
           )}
           aria-hidden
         />

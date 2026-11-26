@@ -1504,9 +1504,6 @@
     }
   },
   "components/ui/button.tsx": {
-    "design/reset-survivor": {
-      "count": 3
-    },
     "shadcn/no-arbitrary-values": {
       "count": 1
     },
@@ -1542,9 +1539,6 @@
     }
   },
   "components/ui/checkbox.tsx": {
-    "design/reset-survivor": {
-      "count": 2
-    },
     "shadcn/no-arbitrary-values": {
       "count": 3
     },
@@ -1553,9 +1547,6 @@
     }
   },
   "components/ui/chip-input.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
       "count": 1
     }
@@ -1604,11 +1595,6 @@
       "count": 1
     },
     "shadcn/no-inline-styles": {
-      "count": 1
-    }
-  },
-  "components/ui/date-field.tsx": {
-    "design/reset-survivor": {
       "count": 1
     }
   },
@@ -1662,20 +1648,12 @@
       "count": 3
     }
   },
-  "components/ui/filter-chip.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    }
-  },
   "components/ui/filter-options.tsx": {
     "shadcn/no-arbitrary-values": {
       "count": 1
     }
   },
   "components/ui/heat-table.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
       "count": 3
     },
@@ -1687,9 +1665,6 @@
     }
   },
   "components/ui/input.tsx": {
-    "design/reset-survivor": {
-      "count": 3
-    },
     "shadcn/no-arbitrary-values": {
       "count": 1
     }
@@ -1735,9 +1710,6 @@
     }
   },
   "components/ui/menu.tsx": {
-    "design/reset-survivor": {
-      "count": 2
-    },
     "shadcn/no-arbitrary-values": {
       "count": 6
     }
@@ -1784,17 +1756,11 @@
     }
   },
   "components/ui/radio-group.tsx": {
-    "design/reset-survivor": {
-      "count": 2
-    },
     "shadcn/no-arbitrary-values": {
       "count": 2
     }
   },
   "components/ui/reorder-list.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
       "count": 1
     },
@@ -1840,9 +1806,6 @@
     }
   },
   "components/ui/select.tsx": {
-    "design/reset-survivor": {
-      "count": 2
-    },
     "shadcn/no-arbitrary-values": {
       "count": 3
     }
@@ -1874,9 +1837,6 @@
     }
   },
   "components/ui/split-bar.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
       "count": 1
     },
@@ -1915,16 +1875,6 @@
       "count": 1
     }
   },
-  "components/ui/switch.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    }
-  },
-  "components/ui/table-heads.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    }
-  },
   "components/ui/table.tsx": {
     "shadcn/no-arbitrary-values": {
       "count": 5
@@ -1937,9 +1887,6 @@
     }
   },
   "components/ui/tabs.tsx": {
-    "design/reset-survivor": {
-      "count": 2
-    },
     "shadcn/no-arbitrary-values": {
       "count": 6
     },
@@ -1964,9 +1911,6 @@
     }
   },
   "components/ui/textarea.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-arbitrary-values": {
       "count": 6
     }
@@ -1985,9 +1929,6 @@
     }
   },
   "components/ui/trend-chart.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
     "shadcn/no-inline-styles": {
       "count": 1
     }

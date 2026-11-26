@@ -39,7 +39,7 @@ export function FilterTrigger({
           TRIGGER_BOX,
           'focus-input flex w-auto max-w-full min-w-0 shrink-0 items-center text-left',
           'press',
-          'disabled:cursor-not-allowed disabled:opacity-50',
+          'disabled:cursor-not-allowed disabled:opacity-disabled',
           iconOnly ? 'gap-1 px-0 pe-2' : 'gap-2 ps-control-x pe-2',
           className,
         )}

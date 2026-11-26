@@ -58,7 +58,7 @@
   transform-origin: left center;
   transition:
     transform var(--transition-duration-open) var(--ease-menu),
-    opacity var(--transition-duration-normal) var(--ease-menu);
+    opacity var(--transition-duration-fast) var(--ease-menu);
 }
 
 .cl-navmenu-pill[data-visible] {
@@ -66,7 +66,7 @@
 }
 
 .cl-navmenu-pill[data-jump] {
-  transition: opacity var(--transition-duration-normal) var(--ease-menu);
+  transition: opacity var(--transition-duration-fast) var(--ease-menu);
 }
 
 .cl-navmenu-stage {
@@ -106,7 +106,7 @@
 }
 
 .cl-navmenu-viewport[data-state='closed'] {
-  animation: cl-nav-pop-out var(--transition-duration-tint) var(--ease-menu) forwards;
+  animation: cl-nav-pop-out var(--transition-duration-fast) var(--ease-menu) forwards;
 }
 
 .cl-navmenu-content {
@@ -118,7 +118,7 @@
 .cl-navmenu-content[data-state='open'] {
   animation:
     cl-nav-fade-in var(--transition-duration-fast) var(--ease-standard),
-    cl-nav-unblur var(--transition-duration-menu-blur) var(--ease-standard);
+    cl-nav-unblur var(--transition-duration-close) var(--ease-standard);
 }
 
 .cl-navmenu-content[data-state='closed'] {
@@ -128,14 +128,14 @@
 .cl-navmenu-content[data-motion='from-start'] {
   animation:
     cl-nav-fade-in var(--transition-duration-fast) var(--ease-standard),
-    cl-nav-unblur var(--transition-duration-menu-blur) var(--ease-standard),
+    cl-nav-unblur var(--transition-duration-close) var(--ease-standard),
     cl-nav-from-start var(--transition-duration-open) var(--ease-menu);
 }
 
 .cl-navmenu-content[data-motion='from-end'] {
   animation:
     cl-nav-fade-in var(--transition-duration-fast) var(--ease-standard),
-    cl-nav-unblur var(--transition-duration-menu-blur) var(--ease-standard),
+    cl-nav-unblur var(--transition-duration-close) var(--ease-standard),
     cl-nav-from-end var(--transition-duration-open) var(--ease-menu);
 }
 
@@ -283,7 +283,7 @@
 }
 
 .cl-navbar-caret {
-  transition: transform var(--transition-duration-normal) var(--ease-standard);
+  transition: transform var(--transition-duration-fast) var(--ease-standard);
 }
 
 .cl-navbar-link[data-state='open'] .cl-navbar-caret,

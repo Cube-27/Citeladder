@@ -93,7 +93,7 @@ function ReorderRow({
       }}
       className={cn(
         'group hover:overlay-hover grid min-h-10 grid-cols-[1.25rem_minmax(0,1fr)_1rem_auto] items-center gap-2 transition-colors',
-        dragging && 'opacity-60',
+        dragging && 'opacity-disabled',
       )}
     >
       <span className={textRole('body', 'text-ink-2 tabular-nums')}>{index + 1}</span>

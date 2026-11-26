@@ -60,7 +60,7 @@ function tabFace({
   className,
 }: Readonly<{ kind: keyof typeof TAB_KIND; selected: boolean; className?: string }>) {
   return cn(
-    'focus-ring-inset text-label text-ink relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+    'focus-ring-inset text-label text-ink relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-disabled',
     TAB_KIND[kind].base,
     selected ? cn('text-ink', TAB_KIND[kind].current) : 'text-ink-2 not-disabled:hover:text-ink',
     className,
@@ -79,7 +79,7 @@ export const TAB_TRACK =
 
 export function tabClasses(selected: boolean, className?: string) {
   return cn(
-    'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border border-transparent px-3 text-label whitespace-nowrap transition-[background-color,color] duration-fast focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
+    'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border border-transparent px-3 text-label whitespace-nowrap transition-[background-color,color] duration-fast focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-disabled',
     selected
       ? 'bg-panel text-ink font-emphasis'
       : 'text-ink-2 not-disabled:hover:text-ink font-plain',

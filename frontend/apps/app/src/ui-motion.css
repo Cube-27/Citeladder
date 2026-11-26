@@ -28,10 +28,10 @@
   }
 }
 :is(.tooltip-panel[data-state$='open'], .menu-panel:is([data-state$='open'], [data-open])) {
-  animation: popup-in var(--transition-duration-normal) ease;
+  animation: popup-in var(--transition-duration-fast) ease;
 }
 :is(.menu-panel, .tooltip-panel)[data-state='closed'] {
-  animation: popup-out var(--transition-duration-tint) var(--ease-standard) both;
+  animation: popup-out var(--transition-duration-fast) var(--ease-standard) both;
 }
 [data-selection-dock] {
   --popup-from: -50% 8px;
@@ -55,14 +55,14 @@
   scale: var(--toast-scale);
   transform-origin: top;
   transition-property: translate, scale;
-  transition-duration: var(--transition-duration-toast);
+  transition-duration: var(--transition-duration-slide);
   transition-timing-function: var(--ease-fluid);
 }
 .toast-panel:not([data-front]) {
   height: var(--front-height, auto);
 }
 .toast-panel > * {
-  transition: opacity var(--transition-duration-normal) var(--ease-fluid);
+  transition: opacity var(--transition-duration-fast) var(--ease-fluid);
 }
 .toast-stack .toast-panel:not([data-front]) > * {
   opacity: 0;
@@ -112,13 +112,13 @@
   --popup-scale: 1.05;
 }
 .dialog-overlay[data-state='open'] {
-  animation: popup-in var(--transition-duration-normal) var(--ease-standard) both;
+  animation: popup-in var(--transition-duration-fast) var(--ease-standard) both;
 }
 .dialog-panel[data-state='open'] {
   animation: popup-in var(--transition-duration-press) var(--ease-quad) both;
 }
 :is(.dialog-overlay, .dialog-panel)[data-state='closed'] {
-  animation: popup-out var(--transition-duration-tint) var(--ease-standard) both;
+  animation: popup-out var(--transition-duration-fast) var(--ease-standard) both;
 }
 
 .drawer-panel {

@@ -14,7 +14,7 @@ const textareaClasses =
   'text-ink placeholder:text-ink-placeholder text-body block w-full rounded-control border disabled:cursor-not-allowed';
 
 const fieldClasses = cn(
-  'focus-input disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-50 field-sizing-content min-h-[calc(var(--field-min-rows)*1lh+1rem+2px)] max-h-[calc(var(--field-max-rows)*1lh+1rem+2px)] resize-none px-3 py-2 transition-[background-color,border-color,outline-color] duration-fast app:duration-normal',
+  'focus-input disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-disabled field-sizing-content min-h-[calc(var(--field-min-rows)*1lh+1rem+2px)] max-h-[calc(var(--field-max-rows)*1lh+1rem+2px)] resize-none px-3 py-2 transition-[background-color,border-color,outline-color] duration-fast app:duration-fast',
   FIELD_EDGE,
 );
 

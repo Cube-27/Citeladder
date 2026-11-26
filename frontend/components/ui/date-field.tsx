@@ -39,7 +39,7 @@ export function DateField({
       className={cn(
         'focus-frame flex items-center gap-2 pe-1',
         FIELD_BOX,
-        disabled && 'cursor-not-allowed opacity-60',
+        disabled && 'cursor-not-allowed opacity-disabled',
         className,
       )}
     >
