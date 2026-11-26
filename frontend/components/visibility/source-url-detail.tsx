@@ -4,7 +4,7 @@ import { FigureStrip } from '@/components/ui/figure-strip';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { BusyRung } from '@/components/ui/rung-meter';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionStack, SectionTitle } from '@/components/ui/section';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
@@ -37,22 +37,20 @@ export function SourceUrlDetail({
   const title = data?.title?.trim() || pathOf(url);
 
   return (
-    <Stack gap="workspace">
+    <SectionStack>
       <Section aria-busy={query.isFetching}>
         <BusyRung active={query.isFetching} label="Updating source" />
         <PageIdentity title={title} url={url} />
-        <SectionContent>
-          {query.isError ? (
-            <Notice
-              kind="read"
-              {...readErrorProps(query)}
-              title="Couldn't load this source"
-              fallback="The request failed or timed out."
-            />
-          ) : null}
-          {pending ? <Skeleton variant="facts" /> : null}
-          {data ? <Overview data={data} /> : null}
-        </SectionContent>
+        {query.isError ? (
+          <Notice
+            kind="read"
+            {...readErrorProps(query)}
+            title="Couldn't load this source"
+            fallback="The request failed or timed out."
+          />
+        ) : null}
+        {pending ? <Skeleton variant="facts" /> : null}
+        {data ? <Overview data={data} /> : null}
       </Section>
 
       <UsageCard dimension="url" query={usage} heading="Retrievals over time" />
@@ -65,7 +63,7 @@ export function SourceUrlDetail({
       <SourceUrlPageCard url={url} page={data?.page} loading={pending} />
 
       <SourcePrompts filters={filters} queries={queries} url={url} />
-    </Stack>
+    </SectionStack>
   );
 }
 

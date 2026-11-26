@@ -9,7 +9,6 @@ import type { EvidenceSubject } from '@/components/runs/answer-dialog';
 import { useAnswerDialog } from '@/components/runs/answer-link';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
-import { TitledSection } from '@/components/ui/section';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -62,19 +61,17 @@ export function SourcePrompts({
 
   return (
     <>
-      <TitledSection title="Prompts">
-        <DataTable
-          label="Prompts"
-          columns={COLUMNS}
-          state={promptsState(query)}
-          busy={{ active: query.isFetching, label: 'Updating prompts' }}
-          footer={query.data?.truncated ? `Newest ${EVIDENCE_LIMIT} shown` : null}
-        >
-          {(query.data?.items ?? []).map((item) => (
-            <PromptRow key={item.analysis_id} item={item} onOpenAnswer={answerDialog.open} />
-          ))}
-        </DataTable>
-      </TitledSection>
+      <DataTable
+        title="Prompts"
+        columns={COLUMNS}
+        state={promptsState(query)}
+        busy={{ active: query.isFetching, label: 'Updating prompts' }}
+        footer={query.data?.truncated ? `Newest ${EVIDENCE_LIMIT} shown` : null}
+      >
+        {(query.data?.items ?? []).map((item) => (
+          <PromptRow key={item.analysis_id} item={item} onOpenAnswer={answerDialog.open} />
+        ))}
+      </DataTable>
       {answerDialog.dialog}
     </>
   );

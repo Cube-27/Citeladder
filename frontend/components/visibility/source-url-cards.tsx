@@ -4,7 +4,7 @@ import type { z } from 'zod';
 import { StatusMark } from '@/components/ui/status-mark';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
@@ -13,7 +13,7 @@ import { Bot } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { count } from '@/lib/visibility/sources';
 import { StateBlock } from '@/components/ui/state-block';
-import { SectionCard, TitledSection } from '@/components/ui/section';
+import { SectionBleed, TitledSection } from '@/components/ui/section';
 
 type UrlDetail = z.infer<typeof visibilitySourceUrlSchema>;
 
@@ -33,11 +33,9 @@ function ListSection({
   return (
     <TitledSection title={title}>
       {errored ? null : (
-        <SectionCard>
-          <SectionBody loading={loading} empty={empty}>
-            {children}
-          </SectionBody>
-        </SectionCard>
+        <SectionBody loading={loading} empty={empty}>
+          {children}
+        </SectionBody>
       )}
     </TitledSection>
   );
@@ -89,16 +87,14 @@ export function EnginesCard({
     };
   }
   return (
-    <TitledSection title="Retrievals by engine">
-      <DataTable label="Retrievals by engine" columns={ENGINE_COLUMNS} state={state}>
-        {rows.map((row) => (
-          <TableRow key={row.logical_engine}>
-            <TableCell>{catalog.label(row.logical_engine)}</TableCell>
-            <TableCell numeric>{count(row.retrievals) ?? <Absence />}</TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
+    <DataTable title="Retrievals by engine" columns={ENGINE_COLUMNS} state={state}>
+      {rows.map((row) => (
+        <TableRow key={row.logical_engine}>
+          <TableCell>{catalog.label(row.logical_engine)}</TableCell>
+          <TableCell numeric>{count(row.retrievals) ?? <Absence />}</TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }
 
@@ -124,7 +120,7 @@ export function BrandsCard({
       empty="No tracked brand was named in the answers citing this URL."
     >
       {brands?.length ? (
-        <Stack as="ul" gap="item">
+        <SectionBleed as="ul" rows>
           {brands.map((brand) => (
             <Inline as="li" key={`${brand.kind}:${brand.name}`}>
               <BrandMark name={brand.name} logoUrl={brand.logo_url} websiteUrl={brand.website} />
@@ -138,7 +134,7 @@ export function BrandsCard({
               </StatusMark>
             </Inline>
           ))}
-        </Stack>
+        </SectionBleed>
       ) : null}
     </ListSection>
   );

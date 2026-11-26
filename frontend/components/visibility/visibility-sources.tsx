@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { AppGrid } from '@/components/ui/app-grid';
 import type { DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
-import { Stack } from '@/components/ui/layout';
+import { SectionStack } from '@/components/ui/section';
 import { TopMoversCard, useSourceMovers } from '@/components/visibility/source-movers';
 import { NearMissTable, useSourceNearMisses } from '@/components/visibility/source-near-misses';
 import { sourceTableToolbar } from '@/components/visibility/source-toolbar';
@@ -150,7 +150,7 @@ function SourcesPanel({
   const tableAnswered = answered(readNotCited ? nearMissQuery : sourceQuery);
 
   return (
-    <Stack gap="workspace">
+    <SectionStack>
       {readNotCited ? (
         <NearMissTable
           query={nearMissQuery}
@@ -203,7 +203,7 @@ function SourcesPanel({
           <TopMoversCard dimension={dimension} query={moversQuery} comparable={comparable} />
         </>
       ) : null}
-    </Stack>
+    </SectionStack>
   );
 }
 

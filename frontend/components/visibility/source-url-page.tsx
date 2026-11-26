@@ -4,10 +4,10 @@ import { Absence } from '@/components/ui/absence';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { ClampText } from '@/components/ui/clamp-text';
+import { StateBlock } from '@/components/ui/state-block';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
-import { Skeleton } from '@/components/ui/skeleton';
 import { TableCell, TableRow } from '@/components/ui/table';
 import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
 import { urlTypeLabel } from '@citeladder/contracts/page-labels';
@@ -38,7 +38,7 @@ export function SourceUrlPageCard({
   loading,
 }: Readonly<{ url: string; page: Page | null | undefined; loading: boolean }>) {
   const marks = useBrandMarks();
-  if (loading) return <Skeleton variant="facts" />;
+  if (loading) return <StateBlock kind="loading" shape={{ kind: 'facts' }} />;
   if (page === undefined) return null;
   const standing = page?.standing ?? 'untracked';
   if (standing === 'competitor') return null;

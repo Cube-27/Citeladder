@@ -1,15 +1,13 @@
+import { useId } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { z } from 'zod';
 
-import { AppGrid } from '@/components/ui/app-grid';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
-import { TitledSection } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Delta } from '@/components/ui/delta';
-import { Stack } from '@/components/ui/layout';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import { TrendingUp } from '@/lib/icons';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -103,40 +101,38 @@ function MoverTable({
   busy: boolean;
 }>) {
   return (
-    <TitledSection title={title}>
-      <DataTable
-        label={title}
-        columns={MOVER_COLUMNS}
-        pageSize={MOVER_ROWS}
-        rowCount={movers.length}
-        busy={{ active: busy, label: 'Updating top movers' }}
-        state={
-          state ??
-          (movers.length
-            ? undefined
-            : {
-                kind: 'empty',
-                headingLevel: 3,
-                icon: TrendingUp,
-                heading: 'No source moved this way',
-              })
-        }
-      >
-        {movers.map((mover) => (
-          <TableRow key={mover.key}>
-            <TableCell>
-              <ClampText lines={1}>{dimension === 'url' ? pathOf(mover.key) : mover.key}</ClampText>
-            </TableCell>
-            <TableCell numeric className="text-ink-2">
-              {`${percent(mover.previous_share)} → ${percent(mover.current_share)}`}
-            </TableCell>
-            <TableCell numeric>
-              <Delta value={mover.delta} policy="neutral" unit=" pp" />
-            </TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
+    <DataTable
+      title={title}
+      columns={MOVER_COLUMNS}
+      pageSize={MOVER_ROWS}
+      rowCount={movers.length}
+      busy={{ active: busy, label: 'Updating top movers' }}
+      state={
+        state ??
+        (movers.length
+          ? undefined
+          : {
+              kind: 'empty',
+              headingLevel: 3,
+              icon: TrendingUp,
+              heading: 'No source moved this way',
+            })
+      }
+    >
+      {movers.map((mover) => (
+        <TableRow key={mover.key}>
+          <TableCell>
+            <ClampText lines={1}>{dimension === 'url' ? pathOf(mover.key) : mover.key}</ClampText>
+          </TableCell>
+          <TableCell numeric className="text-ink-2">
+            {`${percent(mover.previous_share)} → ${percent(mover.current_share)}`}
+          </TableCell>
+          <TableCell numeric>
+            <Delta value={mover.delta} policy="neutral" unit=" pp" />
+          </TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }
 
@@ -150,14 +146,15 @@ export function TopMoversCard({
   comparable: boolean;
 }>) {
   const state = moversState(query, comparable);
+  const titleId = useId();
   const shared = { dimension, state, busy: query.isFetching };
   return (
-    <Stack as="section" aria-label="Top movers">
-      <EditorialSectionHeader title="Top movers" />
-      <AppGrid layout="halves">
-        <MoverTable title="Rising" movers={query.data?.risers ?? []} {...shared} />
-        <MoverTable title="Falling" movers={query.data?.fallers ?? []} {...shared} />
-      </AppGrid>
-    </Stack>
+    <Section aria-labelledby={titleId}>
+      <SectionHeader>
+        <SectionTitle id={titleId}>Top movers</SectionTitle>
+      </SectionHeader>
+      <MoverTable title="Rising" movers={query.data?.risers ?? []} {...shared} />
+      <MoverTable title="Falling" movers={query.data?.fallers ?? []} {...shared} />
+    </Section>
   );
 }
