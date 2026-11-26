@@ -201,8 +201,8 @@ function MeasurementValue({
 }
 
 const SCORE_TONE = {
-  low: 'text-negative font-medium',
-  mid: 'text-warning font-medium',
+  low: 'text-negative font-emphasis',
+  mid: 'text-warning font-emphasis',
   high: undefined,
 } satisfies Record<ScoreBand, string | undefined>;
 

@@ -96,7 +96,7 @@ export function ChartTooltipCard({
           <SeriesIndicator color={row.color} shape={row.shape} />
           {row.mark}
           <span className="text-ink-2 min-w-0 flex-1 truncate">{row.name}</span>
-          <span className="text-ink font-medium tabular-nums">{printed(row.value)}</span>
+          <span className="text-ink font-emphasis tabular-nums">{printed(row.value)}</span>
         </div>
       ))}
       {note ? <p className={textRole('caption', 'text-warning')}>{note}</p> : null}

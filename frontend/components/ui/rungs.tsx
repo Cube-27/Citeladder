@@ -21,7 +21,7 @@ export function Rungs({
           />
         ))}
       </span>
-      <span className={showLabel ? 'text-body-sm text-ink-2' : 'sr-only'}>{text}</span>
+      <span className={showLabel ? 'text-body text-ink-2' : 'sr-only'}>{text}</span>
     </span>
   );
 }

@@ -62,13 +62,26 @@ for (const path of files(root)) {
 const appCssPath = join(root, 'apps', 'app', 'src', 'app.css');
 const appCss = readFileSync(appCssPath, 'utf8');
 const designSystem = await loadDesignSystem(appCss, dirname(appCssPath));
+const siteCssPath = join(root, 'apps', 'marketing', 'src', 'marketing.css');
+const siteDesignSystem = await loadDesignSystem(
+  readFileSync(siteCssPath, 'utf8'),
+  dirname(siteCssPath),
+);
+const SITE_SOURCE = /^(?:apps\/(?:marketing|docs)|components\/(?:marketing|content))\//;
+const tsxSources = scriptSources.filter(({ label }) =>
+  /^(?:apps|components|lib)\/.+\.tsx$/.test(label),
+);
 
 const contrast = textContrast(root);
 violations.push(
   ...contrast.violations,
   ...undeclaredColourViolations(
-    scriptSources.filter(({ label }) => /^(?:apps|components|lib)\/.+\.tsx$/.test(label)),
+    tsxSources.filter(({ label }) => !SITE_SOURCE.test(label)),
     designSystem,
+  ),
+  ...undeclaredColourViolations(
+    tsxSources.filter(({ label }) => SITE_SOURCE.test(label)),
+    siteDesignSystem,
   ),
   ...appSourceViolations(appCss, scriptSources),
 );

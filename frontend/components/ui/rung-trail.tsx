@@ -138,7 +138,7 @@ const ROW_SIZE = {
     railTop: 'top-3',
     bridge: 'bottom-0',
     gap: 'pb-3',
-    label: (running: boolean) => textRole('prose', cn('leading-6', running && 'type-emphasis')),
+    label: (running: boolean) => textRole(running ? 'heading' : 'bodyLg'),
   },
 } as const satisfies Record<RowSize, unknown>;
 

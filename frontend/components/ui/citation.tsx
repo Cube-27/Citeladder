@@ -23,7 +23,7 @@ export function Citation({
       {index === undefined ? null : (
         <span
           className={cn(
-            'inline-grid min-h-5 min-w-5 place-items-center rounded-full px-1 text-eyebrow tabular-nums font-normal tracking-normal',
+            'inline-grid min-h-5 min-w-5 place-items-center rounded-full px-1 text-caption tabular-nums',
             'bg-panel',
             own ? 'text-accent-text' : 'text-ink-2',
           )}
@@ -45,7 +45,7 @@ export function Citation({
     </>
   );
   const classes = cn(
-    'text-ink inline-flex min-h-[var(--control-sm)] max-w-full items-center gap-1 rounded-sm ps-1 pe-3 align-middle text-body-sm no-underline',
+    'text-ink inline-flex min-h-[var(--control-sm)] max-w-full items-center gap-1 rounded-sm ps-1 pe-3 align-middle text-body no-underline',
     own ? 'bg-accent-wash' : 'bg-state-selected',
     index === undefined && 'ps-2',
   );

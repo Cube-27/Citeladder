@@ -18,8 +18,8 @@
   align-items: center;
   gap: 8px;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   white-space: nowrap;
 }
 

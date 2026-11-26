@@ -41,8 +41,8 @@
   max-width: 480px;
   margin: 0;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 .cl-page-hl-stats {
@@ -120,8 +120,8 @@
 
 .cl-page-hl-sub {
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-page-hl-action {
@@ -154,9 +154,9 @@
 .cl-page-hl-step {
   margin: 0;
   color: var(--text-color-ink);
-  font-size: var(--text-body);
+  font-size: var(--text-site-body);
   font-weight: 500;
-  line-height: var(--text-body--line-height);
+  line-height: var(--text-site-body--line-height);
 }
 
 @media (max-width: 767px) {

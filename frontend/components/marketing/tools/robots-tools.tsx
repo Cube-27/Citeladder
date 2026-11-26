@@ -76,7 +76,7 @@ export function RobotsGenerator({ bots }: Readonly<{ bots: ToolBot[] }>) {
         }}
       >
         <fieldset className="flex flex-col gap-1">
-          <legend className="text-body-sm text-ink mb-2">Block selected crawlers</legend>
+          <legend className="text-body text-ink mb-2">Block selected crawlers</legend>
           <p className="cl-tool-group-hint">
             Unchecked crawlers follow the general path rules below. Search and training permissions
             are separate choices.

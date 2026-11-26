@@ -51,8 +51,8 @@
 .cl-screen-stat-unit {
   margin-left: 4px;
   color: var(--text-color-ink-2);
-  font-size: var(--text-label-lg);
-  line-height: var(--text-label-lg--line-height);
+  font-size: var(--text-heading);
+  line-height: var(--text-heading--line-height);
 }
 
 .cl-screen-kpis {
@@ -119,9 +119,9 @@
 .cl-screen-card-title {
   margin: 0;
   color: var(--text-color-ink);
-  font-size: var(--text-label-lg);
-  font-weight: var(--text-label-lg--font-weight);
-  line-height: var(--text-label-lg--line-height);
+  font-size: var(--text-heading);
+  font-weight: var(--text-heading--font-weight);
+  line-height: var(--text-heading--line-height);
 }
 
 .cl-screen-note {

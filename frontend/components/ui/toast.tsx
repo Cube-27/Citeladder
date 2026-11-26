@@ -146,12 +146,12 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                   <Icon className="size-3.5" aria-hidden />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <ToastPrimitive.Title className="text-body-sm text-ink font-medium">
+                  <ToastPrimitive.Title className="text-label text-ink">
                     <span className="sr-only">{`${word}: `}</span>
                     {message.title}
                   </ToastPrimitive.Title>
                   {message.description ? (
-                    <ToastPrimitive.Description className="text-body-sm text-ink-2 mt-0.5">
+                    <ToastPrimitive.Description className="text-body text-ink-2 mt-0.5">
                       {message.description}
                     </ToastPrimitive.Description>
                   ) : null}

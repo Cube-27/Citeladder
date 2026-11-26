@@ -150,7 +150,7 @@ function StackedKey({
             className={cn('rounded-full size-2 shrink-0', row.ink?.fill ?? 'bg-well')}
           />
           {row.label}
-          <span className="text-ink font-medium tabular-nums">{format(row.value)}</span>
+          <span className="text-ink font-emphasis tabular-nums">{format(row.value)}</span>
         </li>
       ))}
     </ul>

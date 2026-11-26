@@ -10,8 +10,8 @@
 }
 .page-editor .cm-editor .cm-scroller {
   font-family: var(--font-sans);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 .page-editor .cm-editor .cm-content {
   padding: var(--card-padding) 0;
@@ -21,8 +21,8 @@
   padding: 0 var(--card-padding);
 }
 .page-editor .cm-editor .page-editor-h1 {
-  font-size: var(--text-display-sm, 1.5rem);
-  line-height: var(--text-display-sm--line-height, 2rem);
+  font-size: var(--text-display);
+  line-height: var(--text-display--line-height);
 }
 .page-editor .cm-editor .page-editor-h2 {
   font-size: var(--text-title);

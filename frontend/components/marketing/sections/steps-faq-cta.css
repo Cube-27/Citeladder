@@ -22,8 +22,8 @@
 .cl-step-meta {
   margin: 4px 0 0;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-step-body {
@@ -45,8 +45,8 @@
   max-width: 420px;
   margin: 0;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 .cl-steps--vertical .cl-step {
@@ -140,8 +140,8 @@
   max-width: var(--container-prose);
   padding: 0 48px 24px 0;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 .cl-faq-a p {
@@ -251,8 +251,8 @@
 .cl-cta-note {
   margin: 0;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 @media (max-width: 1023px) {

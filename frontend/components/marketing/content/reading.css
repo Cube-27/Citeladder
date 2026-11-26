@@ -15,8 +15,8 @@
 
 .cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) {
   color: var(--text-color-ink);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 .cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) h2:not([class]) {
@@ -44,8 +44,8 @@
 }
 
 .cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) blockquote:not([class]) p {
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 .cl-site .cl-prose ol:not([class]) > li::marker {
@@ -149,8 +149,8 @@
   display: block;
   margin-top: 4px;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   white-space: normal;
 }
 

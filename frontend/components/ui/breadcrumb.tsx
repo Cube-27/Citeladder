@@ -25,7 +25,7 @@ export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
                   href={part.href}
                   state={part.state}
                   onClick={part.onClick}
-                  className="hover:text-ink focus-ring rounded-mark block min-h-6 max-w-68 min-w-6 truncate px-1 py-0.5 font-medium hover:underline"
+                  className="hover:text-ink focus-ring rounded-mark font-emphasis block min-h-6 max-w-68 min-w-6 truncate px-1 py-0.5 hover:underline"
                 >
                   {part.label}
                 </ProjectLink>

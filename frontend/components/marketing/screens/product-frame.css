@@ -89,8 +89,8 @@
   .cl-frame-screen {
     --text-body-lg: 1.125rem;
     --text-body-lg--line-height: 1.875rem;
-    --text-body: 1rem;
-    --text-body--line-height: 1.625rem;
+    --text-site-body: 1rem;
+    --text-site-body--line-height: 1.625rem;
   }
 }
 
@@ -112,8 +112,8 @@
 .cl-frame-text {
   max-width: var(--container-narrow);
   color: var(--text-color-ink-2);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 .cl-frame-card > .cl-frame-well {

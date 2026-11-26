@@ -35,7 +35,7 @@ function roundedChange(value: number, precision: number) {
 }
 
 const DELTA_FACE =
-  'type-caption inline-flex items-baseline gap-1 font-medium tabular-nums whitespace-nowrap [[data-public-surface]_&]:font-mono [[data-public-surface]_&]:font-normal';
+  'type-caption inline-flex items-baseline gap-1 font-emphasis tabular-nums whitespace-nowrap [[data-public-surface]_&]:font-mono [[data-public-surface]_&]:font-plain';
 
 const SIGN = { up: '+', down: '−', flat: '±' } as const satisfies Record<Direction, string>;
 
@@ -84,7 +84,7 @@ export function Delta({
           </span>
         </>
       )}
-      {context ? <span className="text-ink-2 ms-0.5 font-normal">{context}</span> : null}
+      {context ? <span className="text-ink-2 font-plain ms-0.5">{context}</span> : null}
       {spokenContext ? <span className="sr-only">{` ${spokenContext}`}</span> : null}
     </span>
   );

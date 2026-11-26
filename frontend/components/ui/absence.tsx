@@ -35,7 +35,7 @@ export function Absence({
       {...props}
       data-absence={state}
       title={reason ? undefined : word}
-      className={cn('text-ink-2 font-normal whitespace-nowrap', className)}
+      className={cn('text-ink-2 font-plain whitespace-nowrap', className)}
     >
       <span aria-hidden>{ABSENCE_MARK}</span>
       <span className="sr-only">{word}</span>

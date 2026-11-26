@@ -34,7 +34,7 @@ const ROW = {
 } as const;
 
 const TERM = {
-  ruled: 'text-body-sm text-ink-2',
+  ruled: 'text-body text-ink-2',
   inline: textRole('body', 'text-ink-2 shrink-0'),
   spread: textRole('body', 'text-ink-2'),
   columns: textRole('body', 'text-ink-2'),
@@ -42,7 +42,7 @@ const TERM = {
 } as const;
 
 const DETAIL = {
-  ruled: 'text-body-sm text-ink min-w-0 tabular-nums',
+  ruled: 'text-body text-ink min-w-0 tabular-nums',
   inline: textRole('body', 'text-ink-2 min-w-0'),
   spread: textRole('body', 'text-ink tabular-nums'),
   columns: textRole(

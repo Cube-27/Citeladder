@@ -83,7 +83,7 @@ export function AssistantMessage({
 
 export function YouMark() {
   return (
-    <span className="bg-accent-wash text-accent-text rounded-mark text-eyebrow px-1 font-medium">
+    <span className="bg-accent-wash text-accent-text rounded-mark text-eyebrow font-emphasis px-1">
       You
     </span>
   );
@@ -107,12 +107,12 @@ export function MentionChip({
 }>) {
   return (
     <span {...data} className={cn(CHIP, 'border-accent text-ink bg-panel border-dashed')}>
-      <span className="text-accent-text font-medium tabular-nums">
+      <span className="text-accent-text font-emphasis tabular-nums">
         <span className="sr-only">Position </span>
         {position}
       </span>
       {mark}
-      <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{children}</span>
+      <span className="font-emphasis min-w-0 [overflow-wrap:anywhere]">{children}</span>
       {you ? <YouMark /> : null}
     </span>
   );

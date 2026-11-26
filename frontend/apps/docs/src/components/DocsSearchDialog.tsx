@@ -101,7 +101,7 @@ export function DocsSearchDialog() {
         aria-haspopup="dialog"
         aria-keyshortcuts="Control+K Meta+K"
         onClick={(event) => show(event.currentTarget)}
-        className="focus-ring bg-panel text-ink-2 border-rule hover:border-rule-strong text-body-sm h-[var(--control-md)] items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
+        className="focus-ring bg-panel text-ink-2 border-rule hover:border-rule-strong text-body h-[var(--control-md)] items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
       >
         <Search className="size-3.5 shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate" aria-hidden>
@@ -154,7 +154,7 @@ export function DocsSearchDialog() {
             aria-controls="docs-search-results"
             aria-autocomplete="list"
             aria-activedescendant={results.length ? optionId(cursor) : undefined}
-            className="text-body text-ink placeholder:text-ink-2 h-full min-w-0 flex-1 bg-transparent"
+            className="text-site-body text-ink placeholder:text-ink-2 h-full min-w-0 flex-1 bg-transparent"
           />
           <Kbd>Esc</Kbd>
         </div>
@@ -191,7 +191,7 @@ export function DocsSearchDialog() {
               >
                 <p
                   id={`docs-search-group-${groupIndex}`}
-                  className="text-caption text-ink-2 px-2 py-1 font-medium"
+                  className="text-caption-strong text-ink-2 px-2 py-1"
                 >
                   {group.label}
                 </p>
@@ -215,10 +215,10 @@ export function DocsSearchDialog() {
                     >
                       <FileText className="text-ink-2 mt-0.75 size-3.5 shrink-0" aria-hidden />
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="text-body-sm text-ink truncate font-medium">
+                        <span className="text-label text-ink truncate">
                           <Marked text={result.title} query={query} />
                         </span>
-                        <span className="text-body-sm text-ink-2 truncate">
+                        <span className="text-body text-ink-2 truncate">
                           <Marked text={result.description} query={query} />
                         </span>
                       </span>

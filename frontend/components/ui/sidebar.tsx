@@ -188,7 +188,7 @@ const NAV_AT_REST = 'text-nav-ink hover:overlay-hover hover:shadow-card';
 
 export function sidebarNavRowClasses(active: boolean, className?: string) {
   return cn(
-    'focus-ring type-label rounded-control relative flex font-normal h-[var(--nav-row-height)] w-full min-w-0 shrink-0 items-center gap-2 px-2 text-left transition-colors',
+    'focus-ring type-body rounded-control relative flex h-[var(--nav-row-height)] w-full min-w-0 shrink-0 items-center gap-2 px-2 text-left transition-colors',
     active ? CURRENT_TILE : NAV_AT_REST,
     className,
   );

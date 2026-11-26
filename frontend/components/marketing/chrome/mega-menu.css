@@ -71,9 +71,9 @@
   align-items: center;
   gap: 4px;
   color: var(--text-color-ink);
-  font-size: var(--text-body-sm);
+  font-size: var(--text-body);
   font-weight: 400;
-  line-height: var(--text-body-sm--line-height);
+  line-height: var(--text-body--line-height);
   white-space: nowrap;
 }
 

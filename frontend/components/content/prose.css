@@ -1,8 +1,8 @@
 .cl-prose {
   max-width: var(--container-prose);
   color: var(--text-color-ink-2);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
   overflow-wrap: break-word;
 }
 .cl-prose > * {
@@ -133,8 +133,8 @@
 .cl-prose figcaption:not([class]) {
   margin-top: 12px;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 .cl-prose-table {
   overflow-x: auto;
@@ -144,8 +144,8 @@
 .cl-prose table:not([class]) {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 .cl-prose caption:not([class]) {
   padding: 12px 16px;
@@ -222,8 +222,8 @@
 }
 
 .cl-prose--docs {
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 .cl-prose--docs > * + * {
   margin-top: 20px;
@@ -257,8 +257,8 @@
   border-left: 2px solid var(--color-rule-strong);
 }
 .cl-prose--docs blockquote:not([class]) p {
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 .cl-prose--docs > .cl-code {
   margin-top: 20px;

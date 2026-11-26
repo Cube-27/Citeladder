@@ -1,9 +1,9 @@
 .cl-site {
   --text-eyebrow: var(--text-caption);
-  --text-eyebrow--line-height: var(--text-body-sm--line-height);
-  --text-caption--line-height: var(--text-body-sm--line-height);
+  --text-eyebrow--line-height: var(--text-body--line-height);
+  --text-caption--line-height: var(--text-body--line-height);
   --text-data: var(--text-caption);
-  --text-code: var(--text-body-sm);
+  --text-code: var(--text-body);
   --text-title-sm--line-height: 1.75rem;
   --text-display-sm: var(--text-title);
   --text-display-sm--line-height: var(--text-title--line-height);
@@ -98,16 +98,16 @@
 .cl-body {
   margin: 0;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
   text-wrap: pretty;
 }
 
 .cl-note {
   margin: 0;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-checks {
@@ -124,8 +124,8 @@
   grid-template-columns: 6px minmax(0, 1fr);
   gap: 12px;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 .cl-checks-mark {
@@ -140,8 +140,8 @@
 }
 
 .cl-checks--sm li {
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-cols-1 {
@@ -221,9 +221,9 @@
   gap: 8px;
   border-radius: var(--radius-xs);
   color: var(--text-color-ink);
-  font-size: var(--text-label-lg);
+  font-size: var(--text-heading);
   font-weight: 500;
-  line-height: var(--text-label-lg--line-height);
+  line-height: var(--text-heading--line-height);
   text-decoration: none;
 }
 

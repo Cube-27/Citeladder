@@ -218,7 +218,7 @@ export function ChipInput({
 }: Readonly<Omit<Parameters<typeof ValuesInput>[0], 'variant' | 'separates'>>) {
   return (
     <fieldset className="flex min-w-0 flex-col gap-2">
-      <legend className="text-body-sm text-ink mb-2">{label}</legend>
+      <legend className="text-body text-ink mb-2">{label}</legend>
       <ValuesInput label={label} max={max} {...input} />
       {max !== undefined ? (
         <span

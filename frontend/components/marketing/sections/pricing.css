@@ -39,11 +39,11 @@
 }
 
 .cl-plan-desc {
-  min-height: calc(2 * var(--text-body--line-height));
+  min-height: calc(2 * var(--text-site-body--line-height));
   margin: 0;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 .cl-plan-pricing {
@@ -70,16 +70,16 @@
 
 .cl-plan-period {
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-plan-note {
   min-height: 20px;
   margin: 0;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-plan-cta > * {
@@ -124,8 +124,8 @@
 }
 
 #your-keys .cl-shead-lead {
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 .cl-wtable {
@@ -187,8 +187,8 @@
 .cl-wtable th,
 .cl-wtable td {
   padding: 16px 20px;
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   text-align: left;
   vertical-align: top;
   font-variant-numeric: tabular-nums;

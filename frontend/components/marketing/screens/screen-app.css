@@ -8,8 +8,8 @@
   overflow: hidden;
   color: var(--text-color-ink);
   font-family: var(--font-sans);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   text-align: left;
 }
 
@@ -135,8 +135,8 @@
   height: 28px;
   margin: 0;
   padding: 0 12px;
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-app-nav-row {

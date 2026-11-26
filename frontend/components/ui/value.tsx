@@ -8,7 +8,7 @@ type ValueText = 'figure' | 'body';
 
 const SLOT: Record<ValueText, string> = {
   figure: 'min-h-[var(--text-figure--line-height)]',
-  body: 'min-h-[var(--text-body-sm--line-height)]',
+  body: 'min-h-[var(--text-body--line-height)]',
 };
 
 export type ValueProps = Readonly<{

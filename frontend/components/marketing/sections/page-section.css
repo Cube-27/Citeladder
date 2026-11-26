@@ -85,8 +85,8 @@
 }
 
 .cl-page-section--aside.cl-page-section--compact .cl-shead-lead {
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 @media (max-width: 1023px) {

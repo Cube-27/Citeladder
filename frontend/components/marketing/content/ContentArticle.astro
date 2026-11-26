@@ -125,7 +125,7 @@ const hasEnd = Astro.slots.has('end');
       }
     }
     .cl-site .cl-cpage-article-toc .cl-toc-link {
-      line-height: var(--text-body-sm--line-height);
+      line-height: var(--text-body--line-height);
     }
     .cl-cpage-article-toc {
       display: flex;
@@ -186,11 +186,11 @@ const hasEnd = Astro.slots.has('end');
   .cl-cpage-article [data-callout-tone] {
     gap: 16px;
     padding: 20px 24px;
-    font-size: var(--text-body);
-    line-height: var(--text-body--line-height);
+    font-size: var(--text-site-body);
+    line-height: var(--text-site-body--line-height);
   }
   .cl-cpage-article [data-callout-tone] > span:first-child {
-    height: var(--text-body--line-height);
+    height: var(--text-site-body--line-height);
   }
   @media (max-width: 767px) {
     .cl-cpage-article [data-callout-tone] {

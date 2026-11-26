@@ -63,7 +63,7 @@ export function Field({
       data-form-field=""
       className={cn('flex min-w-0 flex-col gap-1 [[data-public-surface]_&]:gap-2', className)}
     >
-      <label htmlFor={id} className="type-label [[data-public-surface]_&]:font-normal">
+      <label htmlFor={id} className="type-label [[data-public-surface]_&]:font-plain">
         {name}
       </label>
       {control}

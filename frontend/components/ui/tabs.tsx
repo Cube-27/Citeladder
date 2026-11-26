@@ -60,7 +60,7 @@ function tabFace({
   className,
 }: Readonly<{ kind: keyof typeof TAB_KIND; selected: boolean; className?: string }>) {
   return cn(
-    'tab-face focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+    'tab-face focus-ring-inset type-label relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50',
     TAB_KIND[kind].base,
     selected ? cn('text-ink', TAB_KIND[kind].current) : 'text-ink-2 not-disabled:hover:text-ink',
     className,
@@ -81,8 +81,8 @@ export function tabClasses(selected: boolean, className?: string) {
   return cn(
     'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border border-transparent px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
     selected
-      ? 'bg-panel text-ink font-medium'
-      : 'text-ink-2 not-disabled:hover:text-ink font-normal',
+      ? 'bg-panel text-ink font-emphasis'
+      : 'text-ink-2 not-disabled:hover:text-ink font-plain',
     className,
   );
 }
@@ -444,7 +444,7 @@ export function SegmentedControl<T extends string>({
                 >
                   {option.label}
                   {option.detail ? (
-                    <span className="text-ink-2 font-normal">{` · ${option.detail}`}</span>
+                    <span className="text-ink-2 font-plain">{` · ${option.detail}`}</span>
                   ) : null}
                   {option.count === undefined ? null : (
                     <ControlCount count={option.count} upTo={option.countUpTo} />

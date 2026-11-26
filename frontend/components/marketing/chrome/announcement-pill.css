@@ -8,8 +8,8 @@
   border-radius: var(--radius-full);
   background: var(--color-panel);
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   text-decoration: none;
   transition: color var(--motion-fast) var(--ease-standard);
 }

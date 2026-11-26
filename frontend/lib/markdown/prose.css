@@ -67,8 +67,8 @@
   }
   .prose-content code {
     font-family: var(--font-mono);
-    font-size: var(--text-data-sm);
-    line-height: var(--text-data-sm--line-height);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
     padding: 0.125rem 0.25rem;
     border-radius: var(--radius-mark);
     background: var(--color-well);
@@ -80,8 +80,8 @@
     border-radius: var(--radius-control);
     background: var(--color-well);
     font-family: var(--font-mono);
-    font-size: var(--text-data);
-    line-height: var(--text-data--line-height);
+    font-size: var(--text-code);
+    line-height: var(--text-code--line-height);
   }
   .prose-content pre code {
     padding: 0;
@@ -106,8 +106,8 @@
     min-width: 100%;
     table-layout: auto;
     border-collapse: collapse;
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
   }
   .prose-content th {
     padding: 0.5rem 0.75rem;
@@ -134,8 +134,8 @@
     vertical-align: top;
   }
   .prose-compact {
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
   }
   .prose-compact :where(h2, h3, h4, h5, h6) {
     margin: 1rem 0 0.5rem;

@@ -343,95 +343,11 @@
   --color-brand-gemini: var(--ramp-brand-gemini);
 
   --text-*: initial;
-  --text-display-lg: 2rem;
-  --text-display-lg--line-height: 2.375rem;
-  --text-display-lg--font-weight: 400;
-  --text-display-lg--letter-spacing: -0.01em;
-  --text-display-md: 1.75rem;
-  --text-display-md--line-height: 2.125rem;
-  --text-display-md--font-weight: 400;
-  --text-display-md--letter-spacing: -0.01em;
-  --text-display-sm: 1.5rem;
-  --text-display-sm--line-height: 2rem;
-  --text-display-sm--font-weight: 500;
-  --text-display-sm--letter-spacing: -0.01em;
-  --text-page-title: 1.25rem;
-  --text-page-title--line-height: 1.75rem;
-  --text-page-title--font-weight: 500;
-  --text-page-title--letter-spacing: -0.01em;
-  --text-title: 1.375rem;
-  --text-title--line-height: 1.75rem;
-  --text-title--font-weight: 400;
-  --text-title-sm: 1.125rem;
-  --text-title-sm--line-height: 1.5rem;
-  --text-title-sm--font-weight: 400;
-  --text-stat: 1.75rem;
-  --text-stat--line-height: 2.25rem;
-  --text-stat--font-weight: 500;
-  --text-stat--letter-spacing: -0.02em;
-  --text-lead: 1.25rem;
-  --text-lead--line-height: 1.875rem;
-  --text-lead--font-weight: 400;
-  --text-body-lg: 1.125rem;
-  --text-body-lg--line-height: 1.875rem;
-  --text-body-lg--font-weight: 400;
-  --text-body: 1rem;
-  --text-body--line-height: 1.625rem;
-  --text-body--font-weight: 400;
-  --text-body-sm: 0.875rem;
-  --text-body-sm--line-height: 1.25rem;
-  --text-body-sm--font-weight: 400;
-  --text-label: 0.875rem;
-  --text-label--line-height: 1.25rem;
-  --text-label--font-weight: 500;
-  --text-label-lg: 1rem;
-  --text-label-lg--line-height: 1.5rem;
-  --text-label-lg--font-weight: 500;
-  --text-heading: 1rem;
-  --text-heading--line-height: 1.5rem;
-  --text-heading--font-weight: 500;
-  --text-heading-lg: 1.375rem;
-  --text-heading-lg--line-height: 1.75rem;
-  --text-heading-lg--font-weight: 500;
-  --text-heading-lg--letter-spacing: -0.01em;
-  --text-caption: 0.75rem;
-  --text-caption--line-height: 1rem;
-  --text-caption--font-weight: 400;
-  --text-eyebrow: 0.75rem;
-  --text-eyebrow--line-height: 1rem;
-  --text-eyebrow--font-weight: 500;
-  --text-eyebrow--letter-spacing: 0.08em;
-  --text-data: 0.8125rem;
-  --text-data--line-height: 1.25rem;
-  --text-data--font-weight: 400;
-  --text-code: 0.8125rem;
-  --text-code--line-height: 1.375rem;
-  --text-code--font-weight: 400;
-  --text-display: 1.75rem;
-  --text-display--line-height: 2.25rem;
-  --text-display--font-weight: 500;
-  --text-display--letter-spacing: -0.01em;
-  --text-subheading: 0.875rem;
-  --text-subheading--line-height: 1.25rem;
-  --text-subheading--font-weight: 500;
-  --text-prose: 1rem;
-  --text-prose--line-height: 1.625rem;
-  --text-prose--font-weight: 400;
-  --text-screen-label: 0.75rem;
-  --text-screen-label--line-height: 1rem;
-  --text-screen-label--font-weight: 500;
-  --text-screen-label--letter-spacing: 0.06em;
-  --text-figure-xl: 2.5rem;
-  --text-figure-xl--line-height: 2.75rem;
-  --text-figure-xl--font-weight: 500;
-  --text-figure-xl--letter-spacing: -0.02em;
-  --text-figure: 1.5rem;
-  --text-figure--line-height: 2rem;
-  --text-figure--font-weight: 500;
-  --text-figure--letter-spacing: -0.01em;
-  --text-data-sm: 0.75rem;
-  --text-data-sm--line-height: 1rem;
-  --text-data-sm--font-weight: 400;
+  --font-weight-*: initial;
+  --font-weight-plain: var(--weight-regular);
+  --font-weight-emphasis: var(--weight-medium);
+  --leading-*: initial;
+  --tracking-*: initial;
 
   --spacing: 4px;
 
@@ -630,33 +546,6 @@
 
   --weight-regular: 350;
   --weight-medium: 450;
-  --font-weight-normal: 350;
-  --font-weight-medium: 450;
-  --text-display-lg--font-weight: 350;
-  --text-display-md--font-weight: 350;
-  --text-display-sm--font-weight: 450;
-  --text-page-title--font-weight: 450;
-  --text-title--font-weight: 350;
-  --text-title-sm--font-weight: 350;
-  --text-stat--font-weight: 450;
-  --text-lead--font-weight: 350;
-  --text-body-lg--font-weight: 350;
-  --text-body--font-weight: 350;
-  --text-body-sm--font-weight: 350;
-  --text-label--font-weight: 450;
-  --text-label-lg--font-weight: 450;
-  --text-heading--font-weight: 450;
-  --text-heading-lg--font-weight: 450;
-  --text-caption--font-weight: 350;
-  --text-eyebrow--font-weight: 450;
-  --text-data--font-weight: 350;
-  --text-code--font-weight: 350;
-  --text-display--font-weight: 450;
-  --text-subheading--font-weight: 450;
-  --text-prose--font-weight: 350;
-  --text-figure-xl--font-weight: 450;
-  --text-figure--font-weight: 450;
-  --text-data-sm--font-weight: 350;
 }
 
 @utility shadow-xs {
@@ -807,21 +696,6 @@
   --color-chart-grid: var(--color-rule);
   --color-rule-strong: var(--color-control-line);
 
-  --text-title: 1.25rem;
-  --text-title--line-height: 1.75rem;
-  --text-heading: 1rem;
-  --text-heading--line-height: 1.5rem;
-  --text-figure-xl: 2rem;
-  --text-figure-xl--line-height: 2.5rem;
-  --text-figure: 1.25rem;
-  --text-figure--line-height: 1.75rem;
-  --text-code: 0.75rem;
-  --text-code--line-height: 1rem;
-  --text-data: 0.75rem;
-  --text-data--line-height: 1rem;
-  --text-display: 1.5rem;
-  --text-display--line-height: 2rem;
-
   --radius-mark: 5px;
   --radius-control: 8px;
   --radius-card: 10px;
@@ -939,33 +813,6 @@
   --site-radius-stage: 16px;
   --site-radius-frame: 20px;
   --site-radius-frame-inner: 14px;
-  --text-heading-lg: 1.25rem;
-  --text-heading-lg--line-height: 1.5rem;
-  --text-site-home: 3.75rem;
-  --text-site-home--line-height: 4rem;
-  --text-site-title: 3rem;
-  --text-site-title--line-height: 3.25rem;
-  --text-site-section: 2rem;
-  --text-site-section--line-height: 2.5rem;
-  --text-site-feature: 1.5rem;
-  --text-site-feature--line-height: 1.875rem;
-}
-
-@media (max-width: 767px) {
-  [data-marketing-surface] {
-    --text-site-home: 2rem;
-    --text-site-home--line-height: 2.5rem;
-    --text-site-title: 2rem;
-    --text-site-title--line-height: 2.5rem;
-    --text-site-section: 1.5rem;
-    --text-site-section--line-height: 2rem;
-    --text-site-feature: 1.25rem;
-    --text-site-feature--line-height: 1.75rem;
-    --text-body-lg: 1rem;
-    --text-body-lg--line-height: 1.625rem;
-    --text-body: 0.875rem;
-    --text-body--line-height: 1.375rem;
-  }
 }
 
 :root[data-public-surface]:not([data-theme='dark']) {
@@ -1174,8 +1021,8 @@ body {
   background: var(--color-ground);
   color: var(--text-color-ink);
   font-family: var(--font-sans);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   font-weight: var(--weight-regular);
   letter-spacing: normal;
   font-optical-sizing: auto;
@@ -1232,13 +1079,13 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--weight-medium);
   }
   .type-subheading {
-    font-size: var(--text-subheading);
-    line-height: var(--text-subheading--line-height);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
     font-weight: var(--weight-medium);
   }
   .type-body {
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
     font-weight: var(--weight-regular);
   }
   .type-label {
@@ -1275,9 +1122,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--weight-medium);
     letter-spacing: var(--text-figure--letter-spacing);
     color: var(--text-color-ink);
-  }
-  .type-emphasis {
-    font-weight: var(--weight-medium);
   }
 
   :root:not([data-public-surface]) :is(.type-caption-strong, .type-code) {
@@ -1346,8 +1190,8 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .type-data-sm {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-    font-size: var(--text-data-sm);
-    line-height: var(--text-data-sm--line-height);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
     font-weight: var(--weight-regular);
     letter-spacing: 0;
   }
@@ -1752,8 +1596,8 @@ label {
   color: var(--text-color-ink);
 }
 :root:not([data-public-surface]) .table-frame tbody :is(td, th) {
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 :root:not([data-public-surface]) .table-frame td.tabular-nums {
   font-variant-numeric: tabular-nums;
@@ -1861,8 +1705,8 @@ label {
   min-height: var(--text-figure--line-height);
 }
 [data-figure-value] [data-absence] {
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   font-weight: var(--weight-regular);
 }
 [data-figure-block] {

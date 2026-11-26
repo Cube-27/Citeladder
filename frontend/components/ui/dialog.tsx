@@ -87,7 +87,7 @@ function DialogHeader({
         <DialogPrimitive.Title className="type-heading text-balance">{title}</DialogPrimitive.Title>
         {description ? (
           <DialogPrimitive.Description asChild>
-            <div className="text-body-sm text-ink-2 mt-1">{description}</div>
+            <div className="text-body text-ink-2 mt-1">{description}</div>
           </DialogPrimitive.Description>
         ) : null}
         {toolbar ? (

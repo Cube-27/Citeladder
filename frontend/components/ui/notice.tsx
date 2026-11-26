@@ -121,7 +121,7 @@ function MessageNoticeView({
       </span>
       <div className="flex min-w-0 flex-col gap-1">
         {title != null ? (
-          <p className="type-emphasis">
+          <p className="font-emphasis">
             {word}
             {title}
           </p>

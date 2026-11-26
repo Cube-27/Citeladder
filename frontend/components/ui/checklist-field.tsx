@@ -25,14 +25,14 @@ export function FieldGroup({
     <fieldset aria-labelledby={labelId} className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
       <div className="flex flex-col gap-1">
         <div className="flex items-baseline justify-between gap-3">
-          <span id={labelId} className="text-body-sm text-ink">
+          <span id={labelId} className="text-body text-ink">
             {label}
           </span>
           {count ? (
             <span className="text-caption text-ink-2 whitespace-nowrap tabular-nums">{count}</span>
           ) : null}
         </div>
-        {help ? <p className="text-body-sm text-ink-2">{help}</p> : null}
+        {help ? <p className="text-body text-ink-2">{help}</p> : null}
       </div>
       {children}
       {note ? <p className="text-caption text-warning">{note}</p> : null}
@@ -93,7 +93,7 @@ export function ChecklistField<K extends string>({
   return (
     <FieldGroup label={label} help={help} count={count} note={note}>
       {items.length === 0 ? (
-        <p className="text-body-sm text-ink-2">{empty}</p>
+        <p className="text-body text-ink-2">{empty}</p>
       ) : (
         <ul className="bg-panel divide-rule rounded-control divide-y border border-transparent">
           {items.map((item) =>
