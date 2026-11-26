@@ -363,7 +363,7 @@
 }
 
 :root[data-theme='dark']:not([data-public-surface]) {
-  --color-ground: #0c0c0c;
+  --color-ground: #0f0f0f;
   --color-panel: #202020;
   --color-raised: #2a2a2a;
   --color-raised-2: #373737;
