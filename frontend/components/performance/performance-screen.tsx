@@ -179,7 +179,7 @@ function SearchConsoleWorkspace({
       <SectionHeader>
         <SectionTitle id="performance-search-console">Google Search</SectionTitle>
       </SectionHeader>
-      <div className={slipClasses('metric-board overflow-hidden p-0')}>
+      <div className={slipClasses('overflow-hidden p-0')}>
         <div className="flex min-w-0 items-start justify-between gap-4">
           <MetricCards
             data-testid="metric-card-strip"
