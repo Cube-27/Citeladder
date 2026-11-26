@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { PageOpenContext } from '@/components/site-health/page-open-context';
 import { Checkbox } from '@/components/ui/checkbox';
 
-import { settingRowsClasses } from '@/components/ui/setting-row';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { wellClasses } from '@/components/ui/slip';
 import { ClampText } from '@/components/ui/clamp-text';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -15,7 +15,6 @@ import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { MarkActionImplemented } from '@/components/agent/action-declaration';
 import { FileSearch } from '@/lib/icons';
 import { pluralCount } from '@/lib/format';
@@ -90,17 +89,19 @@ export function InternalLinkReview({
       title="Review internal link"
     >
       {link ? (
-        <Stack gap="section">
-          <div className={settingRowsClasses()}>
+        <>
+          <SectionBleed rows>
             <LinkEnd label="From" page={link.source} />
             <LinkEnd
               label="To"
               page={link.target}
               note={inboundNote(link.target.contextual_inbound)}
             />
-          </div>
-          <Stack as="section">
-            <EditorialSectionHeader title={link.placement ? 'Where it goes' : 'Anchor text'} />
+          </SectionBleed>
+          <Section>
+            <SectionHeader>
+              <SectionTitle>{link.placement ? 'Where it goes' : 'Anchor text'}</SectionTitle>
+            </SectionHeader>
             <p className={wellClasses('type-body text-ink')}>
               {link.placement ? (
                 <>
@@ -114,7 +115,7 @@ export function InternalLinkReview({
                 link.anchor
               )}
             </p>
-          </Stack>
+          </Section>
           <Stack gap="item">
             <Inline className="flex-wrap">
               <CopyButton
@@ -151,7 +152,7 @@ export function InternalLinkReview({
             workspaceId={workspaceId}
             stale={stale}
           />
-        </Stack>
+        </>
       ) : null}
     </Drawer>
   );
@@ -180,8 +181,10 @@ function LinkDeclaration({
   const related = links.filter((item) => item.source.site_url_id === link.source.site_url_id);
   const selectedIds = new Set(selected);
   return (
-    <Stack as="section">
-      <EditorialSectionHeader title="Which links are live on this page?" />
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Which links are live on this page?</SectionTitle>
+      </SectionHeader>
       {related.map((item) => (
         <Checkbox
           key={item.id}
@@ -201,6 +204,6 @@ function LinkDeclaration({
         recommendationIds={selected}
         disabled={!selected.length}
       />
-    </Stack>
+    </Section>
   );
 }

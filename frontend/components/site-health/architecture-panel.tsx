@@ -33,6 +33,7 @@ import {
   SectionContent,
   SectionDescription,
   SectionHeader,
+  SectionStack,
   SectionTitle,
 } from '@/components/ui/section';
 import { ChartFrame } from '@/components/ui/chart-frame';
@@ -126,7 +127,7 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
   );
 
   return (
-    <Stack gap="workspace" className="min-w-0" data-testid="site-architecture">
+    <SectionStack data-testid="site-architecture">
       <ArchitectureEvidence data={data} />
       <PageKindTable
         pageKinds={pageKinds}
@@ -136,7 +137,7 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
         reasons={data.coverage_reasons}
       />
       <HierarchyCard nodes={data.nodes} crawlId={data.crawl_id} />
-    </Stack>
+    </SectionStack>
   );
 }
 
@@ -307,36 +308,34 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
         >
           <SectionTitle>Internal linking</SectionTitle>
         </SectionHeader>
-        <SectionContent>
-          <FigureStrip
-            segments={[
-              {
-                key: 'content-links',
-                label: 'In-content links',
-                value: linking.content_link_count,
-                sub: `${formatCount(linking.internal_link_count)} including menus`,
-              },
-              {
-                key: 'incoming',
-                label: 'Have incoming links',
-                value: linkedShare === null ? null : formatPercent(linkedShare),
-                sub: `${formatCount(linking.pages_with_incoming_count)} pages crawled`,
-              },
-              orphanSegment({
-                pages: linking.orphan_pages,
-                total: linking.orphan_page_count,
-                onOpen: () => setOrphansOpen(true),
-              }),
-            ]}
-          />
-          <OrphanPageDrawer
-            pages={linking.orphan_pages}
-            total={linking.orphan_page_count}
-            crawlId={data.crawl_id}
-            open={orphansOpen}
-            onOpenChange={setOrphansOpen}
-          />
-        </SectionContent>
+        <FigureStrip
+          segments={[
+            {
+              key: 'content-links',
+              label: 'In-content links',
+              value: linking.content_link_count,
+              sub: `${formatCount(linking.internal_link_count)} including menus`,
+            },
+            {
+              key: 'incoming',
+              label: 'Have incoming links',
+              value: linkedShare === null ? null : formatPercent(linkedShare),
+              sub: `${formatCount(linking.pages_with_incoming_count)} pages crawled`,
+            },
+            orphanSegment({
+              pages: linking.orphan_pages,
+              total: linking.orphan_page_count,
+              onOpen: () => setOrphansOpen(true),
+            }),
+          ]}
+        />
+        <OrphanPageDrawer
+          pages={linking.orphan_pages}
+          total={linking.orphan_page_count}
+          crawlId={data.crawl_id}
+          open={orphansOpen}
+          onOpenChange={setOrphansOpen}
+        />
       </Section>
       <Section>
         <SectionHeader>

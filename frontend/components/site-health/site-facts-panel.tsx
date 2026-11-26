@@ -4,7 +4,7 @@ import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Disclosure } from '@/components/ui/disclosure';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
@@ -24,13 +24,7 @@ import {
 } from '@/lib/site-health/site-facts';
 import { RobotsHistory } from './robots-history';
 import { Notice } from '@/components/ui/notice';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 export function SiteFactsPanel({
   crawl,
@@ -60,7 +54,7 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
   let llmsStatus = 'not fetched';
   if (view.llms_txt.fetched) llmsStatus = view.llms_txt.present ? 'present' : 'absent';
   return (
-    <Section className="min-w-0">
+    <Section>
       <SectionHeader
         actions={
           <Button variant="secondary" asChild>
@@ -83,38 +77,34 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
           {llmsStatus}
         </SectionDescription>
       </SectionHeader>
-      <SectionContent>
-        <Stack gap="workspace" className="min-w-0">
-          {unknown ? <Notice tone="warning">robots.txt could not be read.</Notice> : null}
-          <Disclosure title={crawlerSummary(view)}>
-            <CrawlerTable
-              view={view}
-              purposes={purposes}
-              purpose={purpose}
-              filter={choiceFilter({
-                id: 'purpose',
-                label: 'Purpose',
-                value: purpose,
-                defaultValue: 'all',
-                groups: [
-                  {
-                    options: [
-                      { value: 'all', label: 'All purposes' },
-                      ...purposes.map((value) => ({ value, label: crawlerPurposeLabels[value] })),
-                    ],
-                  },
+      {unknown ? <Notice tone="warning">robots.txt could not be read.</Notice> : null}
+      <Disclosure title={crawlerSummary(view)}>
+        <CrawlerTable
+          view={view}
+          purposes={purposes}
+          purpose={purpose}
+          filter={choiceFilter({
+            id: 'purpose',
+            label: 'Purpose',
+            value: purpose,
+            defaultValue: 'all',
+            groups: [
+              {
+                options: [
+                  { value: 'all', label: 'All purposes' },
+                  ...purposes.map((value) => ({ value, label: crawlerPurposeLabels[value] })),
                 ],
-                onChange: setPurpose,
-              })}
-            />
-          </Disclosure>
-          <Disclosure title="robots.txt history" onOpenChange={setHistoryOpen}>
-            {historyOpen ? (
-              <RobotsHistory workspaceId={crawl.workspace_id} projectId={crawl.project_id} />
-            ) : null}
-          </Disclosure>
-        </Stack>
-      </SectionContent>
+              },
+            ],
+            onChange: setPurpose,
+          })}
+        />
+      </Disclosure>
+      <Disclosure title="robots.txt history" onOpenChange={setHistoryOpen}>
+        {historyOpen ? (
+          <RobotsHistory workspaceId={crawl.workspace_id} projectId={crawl.project_id} />
+        ) : null}
+      </Disclosure>
     </Section>
   );
 }

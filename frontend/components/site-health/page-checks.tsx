@@ -1,6 +1,5 @@
 import { DataTable } from '@/components/ui/data-table';
 import type { DataTableColumn } from '@/components/ui/data-table';
-import { Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
@@ -111,7 +110,7 @@ export function PageChecks({ evaluations }: Readonly<{ evaluations: readonly Eva
   return groups.length === 0 ? (
     <StateBlock kind="empty" inline message="No checks." />
   ) : (
-    <Stack gap="workspace">
+    <>
       {groups.map((group) => (
         <DataTable
           key={group.title}
@@ -130,6 +129,6 @@ export function PageChecks({ evaluations }: Readonly<{ evaluations: readonly Eva
           ))}
         </DataTable>
       ))}
-    </Stack>
+    </>
   );
 }

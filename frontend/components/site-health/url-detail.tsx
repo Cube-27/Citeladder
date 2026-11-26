@@ -24,6 +24,7 @@ import { PageOpenContext } from '@/components/site-health/page-open-context';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
+import { DrawerPane } from '@/components/ui/drawer';
 import { StateBlock } from '@/components/ui/state-block';
 
 const HISTORY_LIMIT = 25;
@@ -66,20 +67,24 @@ export function UrlDetail({
 
   if (detailQuery.isLoading)
     return (
-      <StateBlock
-        kind="loading"
-        label="Loading page detail…"
-        shape={{ kind: 'facts', rows: 3, tagRows: [1] }}
-      />
+      <DrawerPane>
+        <StateBlock
+          kind="loading"
+          label="Loading page detail…"
+          shape={{ kind: 'facts', rows: 3, tagRows: [1] }}
+        />
+      </DrawerPane>
     );
   if (detailQuery.isError || !detailQuery.data)
     return (
-      <StateBlock
-        kind="error"
-        {...readErrorProps(detailQuery)}
-        fallback="Couldn't load this page. It may not exist in this crawl."
-        title="Couldn't load this page"
-      />
+      <DrawerPane>
+        <StateBlock
+          kind="error"
+          {...readErrorProps(detailQuery)}
+          fallback="Couldn't load this page. It may not exist in this crawl."
+          title="Couldn't load this page"
+        />
+      </DrawerPane>
     );
   const detail = detailQuery.data;
   const rerunButton = (

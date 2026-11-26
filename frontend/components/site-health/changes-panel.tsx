@@ -1,11 +1,12 @@
 import { z } from 'zod';
+import { SectionStack } from '@/components/ui/section';
 import { useState } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { GitCompare } from '@/lib/icons';
 import { readableUrl, sharedOrigin } from '@/lib/format';
@@ -77,7 +78,7 @@ export function ChangesPanel({
   const summaryState = comparisonState(summary, pairAvailable);
   const origin = sharedOrigin(page?.items.map((row) => row.normalized_url) ?? []);
   return (
-    <Stack gap="workspace" className="min-w-0" data-testid="website-changes">
+    <SectionStack data-testid="website-changes">
       <CrawlHistory workspaceId={workspaceId} projectId={projectId} />
       {summary.isPending ? (
         <StateBlock
@@ -119,7 +120,7 @@ export function ChangesPanel({
         crawlBId={summary.data?.crawl_b_id ?? null}
         onClose={() => setSelected(undefined)}
       />
-    </Stack>
+    </SectionStack>
   );
 }
 

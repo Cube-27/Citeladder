@@ -11,7 +11,7 @@ import { readErrorProps } from '@/components/ui/notice';
 import { PartDonut } from '@/components/ui/part-donut';
 import { ProjectLink } from '@/components/ui/project-link';
 import { BarRows } from '@/components/ui/score-gauge';
-import { SectionCard, TitledSection } from '@/components/ui/section';
+import { TitledSection } from '@/components/ui/section';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -98,18 +98,16 @@ export function PageKindsCard({ summary }: Readonly<{ summary: SiteScoreSummary 
   const audited = parts.reduce((sum, part) => sum + part.value, 0);
   return (
     <TitledSection title="Audited pages by kind">
-      <SectionCard>
-        {parts.length === 0 ? (
-          <StateBlock kind="empty" inline message="Pages not classified yet." />
-        ) : (
-          <PartDonut
-            label="Audited pages by kind"
-            parts={parts}
-            total={audited}
-            remainderLabel="Other kinds"
-          />
-        )}
-      </SectionCard>
+      {parts.length === 0 ? (
+        <StateBlock kind="empty" inline message="Pages not classified yet." />
+      ) : (
+        <PartDonut
+          label="Audited pages by kind"
+          parts={parts}
+          total={audited}
+          remainderLabel="Other kinds"
+        />
+      )}
     </TitledSection>
   );
 }
@@ -125,29 +123,25 @@ export function KnownUrlsCard({ summary }: Readonly<{ summary: SiteScoreSummary 
   const strata = [...weighting.strata].sort((a, b) => b.known_url_count - a.known_url_count);
   return (
     <TitledSection title="Known URLs">
-      <SectionCard>
-        <Stack gap="item">
-          <Inline className="items-baseline">
-            <span className={textRole('figure')}>{formatCount(weighting.known_url_count)}</span>
-            <span className={textRole('caption')}>
-              {formatCount(summary.analyzed_count)} sampled
-            </span>
-          </Inline>
-          <BarRows
-            label="Known URLs by page kind"
-            rows={strata.map((row) => ({
-              key: row.page_kind,
-              label: pageKindLabel(row.page_kind),
-              figure: compactCount(row.known_url_count),
-              share:
-                weighting.known_url_count > 0
-                  ? row.known_url_count / weighting.known_url_count
-                  : null,
-              tone: 'info',
-            }))}
-          />
-        </Stack>
-      </SectionCard>
+      <Stack gap="item">
+        <Inline className="items-baseline">
+          <span className={textRole('figure')}>{formatCount(weighting.known_url_count)}</span>
+          <span className={textRole('caption')}>{formatCount(summary.analyzed_count)} sampled</span>
+        </Inline>
+        <BarRows
+          label="Known URLs by page kind"
+          rows={strata.map((row) => ({
+            key: row.page_kind,
+            label: pageKindLabel(row.page_kind),
+            figure: compactCount(row.known_url_count),
+            share:
+              weighting.known_url_count > 0
+                ? row.known_url_count / weighting.known_url_count
+                : null,
+            tone: 'info',
+          }))}
+        />
+      </Stack>
     </TitledSection>
   );
 }

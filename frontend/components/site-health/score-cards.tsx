@@ -5,7 +5,7 @@ import type { SiteHealthOverview } from '@citeladder/contracts';
 import { Absence, printed } from '@/components/ui/absence';
 import { Stack } from '@/components/ui/layout';
 import { BarRows, ScoreGauge, scoreTone, type BarRow } from '@/components/ui/score-gauge';
-import { SectionCard, TitledSection } from '@/components/ui/section';
+import { TitledSection } from '@/components/ui/section';
 import { StatusMark } from '@/components/ui/status-mark';
 import { textRole } from '@/components/ui/typography';
 import { availabilityLabel, formatCount } from '@/lib/format';
@@ -103,16 +103,14 @@ export function ScoreCard({
 }>) {
   return (
     <TitledSection title={title} actions={actions}>
-      <SectionCard>
-        <Stack gap="item">
-          <ScoreGauge
-            label={title}
-            score={score}
-            absent={state === 'not_measured' ? undefined : measurementLabel(state)}
-          />
-          <BarRows label={`${title} breakdown`} rows={rows} />
-        </Stack>
-      </SectionCard>
+      <Stack gap="item">
+        <ScoreGauge
+          label={title}
+          score={score}
+          absent={state === 'not_measured' ? undefined : measurementLabel(state)}
+        />
+        <BarRows label={`${title} breakdown`} rows={rows} />
+      </Stack>
     </TitledSection>
   );
 }
@@ -176,32 +174,30 @@ export function SeverityCard({
   });
   return (
     <TitledSection title="Issues by severity" actions={actions}>
-      <SectionCard>
-        <Stack gap="item">
-          <span className={textRole('figure')}>{formatCount(data.issue_count)}</span>
-          <BarRows
-            label="Issues by severity"
-            rows={SEVERITIES.map((severity, index) => ({
-              key: severity.key,
-              label: (
-                <StatusMark variant="severity" value={severity.key}>
-                  {severity.label}
-                </StatusMark>
-              ),
-              figure: formatCount(counts[index]!),
-              share: largest > 0 ? counts[index]! / largest : null,
-              tone: severity.tone,
-            }))}
-          />
-          <BarRows
-            label="Pages affected"
-            rows={[
-              pages('technical', 'Technical pages', data.technical_defect_affected_page_count),
-              pages('aeo', 'AEO gap pages', data.aeo_readiness_gap_affected_page_count),
-            ]}
-          />
-        </Stack>
-      </SectionCard>
+      <Stack gap="item">
+        <span className={textRole('figure')}>{formatCount(data.issue_count)}</span>
+        <BarRows
+          label="Issues by severity"
+          rows={SEVERITIES.map((severity, index) => ({
+            key: severity.key,
+            label: (
+              <StatusMark variant="severity" value={severity.key}>
+                {severity.label}
+              </StatusMark>
+            ),
+            figure: formatCount(counts[index]!),
+            share: largest > 0 ? counts[index]! / largest : null,
+            tone: severity.tone,
+          }))}
+        />
+        <BarRows
+          label="Pages affected"
+          rows={[
+            pages('technical', 'Technical pages', data.technical_defect_affected_page_count),
+            pages('aeo', 'AEO gap pages', data.aeo_readiness_gap_affected_page_count),
+          ]}
+        />
+      </Stack>
     </TitledSection>
   );
 }

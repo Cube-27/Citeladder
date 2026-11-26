@@ -10,7 +10,6 @@ import { TabRow, TabsRoot } from '@/components/ui/tabs';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
-import { Stack } from '@/components/ui/layout';
 import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-layout';
 import { PAGES_INVENTORY_URL_KEYS } from '@/components/site-health/inventory-section';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
@@ -119,7 +118,7 @@ function SiteHealthContent({
           {blocking ? (
             <SiteHealthBlocked blocking={blocking} />
           ) : (
-            <Stack gap="workspace" className="min-w-0" data-regular-table-text="">
+            <>
               <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
               {schedule.notice}
               <FullCrawlsUsedUp scope={{ workspaceId, projectId }} allowed={mutationsAllowed} />
@@ -149,7 +148,7 @@ function SiteHealthContent({
                   allowed={mutationsAllowed}
                 />
               )}
-            </Stack>
+            </>
           )}
         </ReportPage>
       </TabsRoot>
@@ -217,10 +216,10 @@ function SiteHealthBlocked({ blocking }: Readonly<{ blocking: BlockingState }>) 
       return blocking.node;
     case 'loading':
       return (
-        <Stack gap="workspace" className="min-w-0">
+        <>
           <StateBlock kind="loading" label={blocking.label} shape={{ kind: 'figures' }} />
           <StateBlock kind="loading" label={blocking.label} shape={{ kind: 'table' }} />
-        </Stack>
+        </>
       );
     default: {
       const exhaustive: never = blocking;

@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
-import { Stack } from '@/components/ui/layout';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -278,7 +277,7 @@ function ScoredInventoryState({
 
   return (
     <PageDrawerHost workspaceId={crawl.workspace_id}>
-      <Stack>
+      <>
         <RootErrorsBlock errors={rootErrors} />
         <PagesTable
           toolbar={toolbar}
@@ -290,7 +289,7 @@ function ScoredInventoryState({
           pager={table.pager}
           busy={table.busy}
         />
-      </Stack>
+      </>
     </PageDrawerHost>
   );
 }
