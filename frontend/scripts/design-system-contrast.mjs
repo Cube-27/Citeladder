@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const TOKEN_CSS = 'apps/app/src/globals.css';
+export const TOKEN_FILES = [TOKEN_CSS, 'apps/app/src/public-surface.css'];
 const LIGHT = ':root';
 const DARK = ":root[data-theme='dark']";
 const APP_LIGHT = ':root:not([data-public-surface])';
@@ -412,6 +413,10 @@ export function paletteAccepted(source) {
   return measure(source).accepted;
 }
 
+export function tokenSource(root) {
+  return TOKEN_FILES.map((file) => readFileSync(join(root, ...file.split('/')), 'utf8')).join('\n');
+}
+
 export function textContrast(root) {
-  return measure(readFileSync(join(root, ...TOKEN_CSS.split('/')), 'utf8'));
+  return measure(tokenSource(root));
 }

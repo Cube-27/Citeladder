@@ -10,6 +10,7 @@
   {
     "sources": [
       "frontend/apps/app/src/globals.css",
+      "frontend/apps/app/src/public-surface.css",
       "frontend/apps/marketing/src/site-base.css",
       "frontend/components/marketing/**/*.css"
     ],
@@ -108,6 +109,7 @@
     "sources": [
       "frontend/apps/marketing/**",
       "frontend/apps/app/src/globals.css",
+      "frontend/apps/app/src/public-surface.css",
       "frontend/components/marketing/**",
       "frontend/lib/marketing-content/**",
       "frontend/lib/consent/**",

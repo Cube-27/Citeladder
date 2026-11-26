@@ -1,5 +1,6 @@
 @import 'tailwindcss' source(none);
 @import '../../app/src/globals.css';
+@import '../../app/src/public-surface.css';
 
 @source '../../marketing/src';
 @source '../../../components/marketing';
