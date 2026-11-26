@@ -1,5 +1,5 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 
 import { CLOSE_BUTTON, IconButton } from '@/components/ui/button';
 import { SCRIM, useReturnFocus } from '@/components/ui/dialog';
@@ -9,7 +9,7 @@ import { SurfaceContext } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
 
 const DRAWER_PANE =
-  'grid min-h-0 grid-cols-[minmax(0,1fr)] content-start gap-[var(--panel-inset)] overflow-x-hidden overflow-y-auto overscroll-contain p-[var(--panel-inset)]';
+  'grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] content-start gap-[var(--panel-inset)] overflow-x-hidden overflow-y-auto overscroll-contain p-[var(--panel-inset)]';
 
 export const DRAWER_SPLIT =
   'phone:grid-cols-1 phone:grid-rows-[auto_minmax(0,1fr)] grid min-h-0 flex-1 grid-cols-[11.5rem_minmax(0,1fr)]';
@@ -22,8 +22,16 @@ export function DrawerNav({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-export function DrawerPane({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className={DRAWER_PANE}>{children}</div>;
+export function DrawerPane({
+  children,
+  label,
+  scrollRef,
+}: Readonly<{ children: ReactNode; label?: string; scrollRef?: RefObject<HTMLElement | null> }>) {
+  return (
+    <section ref={scrollRef} aria-label={label} className={DRAWER_PANE}>
+      {children}
+    </section>
+  );
 }
 
 const DRAWER_WIDTH = {

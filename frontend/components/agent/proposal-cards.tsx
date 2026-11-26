@@ -8,7 +8,7 @@ import {
 import { ChangeProposalCard } from '@/components/agent/change-proposal-card';
 import { ActionButton } from '@/components/ui/actions';
 import { DraftSheet } from '@/components/ui/draft-sheet';
-import { Stack } from '@/components/ui/layout';
+import { SectionStack } from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
 import type { AgentChatDetail, AgentMessage } from '@/lib/api/agent';
 import { actionsQueries, type ActionDetail } from '@/lib/api/actions';
@@ -34,7 +34,7 @@ export function ProposalCards({
 }>) {
   if (proposals.length === 0) return null;
   return (
-    <Stack gap="compact">
+    <SectionStack>
       {proposals.map((proposal) => {
         switch (proposal.kind) {
           case 'declaration': {
@@ -64,7 +64,7 @@ export function ProposalCards({
           }
         }
       })}
-    </Stack>
+    </SectionStack>
   );
 }
 

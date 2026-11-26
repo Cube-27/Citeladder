@@ -1173,8 +1173,9 @@ html[data-public-surface]:not([data-marketing-surface]) body {
 .page-editor .cm-editor .cm-content:focus-visible {
   outline-offset: -2px;
 }
-.suggestion-card[aria-current='true'] {
+[data-draft-state][aria-current='true'] {
   border-color: var(--color-focus);
+  background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
 }
 
 @layer base {

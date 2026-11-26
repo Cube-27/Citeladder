@@ -49,7 +49,7 @@ export function OutputCanvas({
   const titled = sections.filter((section) => section.heading !== null);
   const knownHosts = useAgentLinkHosts(revision.web_sources);
   return (
-    <Stack gap="workspace">
+    <>
       {titled.length >= CONTENTS_MIN_SECTIONS ? (
         <Stack as="nav" gap="tight" aria-label="Contents">
           <span className={textRole('body', 'text-ink-2')}>Contents</span>
@@ -100,7 +100,7 @@ export function OutputCanvas({
           }
         />
       ))}
-    </Stack>
+    </>
   );
 }
 

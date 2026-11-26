@@ -65,7 +65,7 @@ export function OutputPane({
     />
   );
   return (
-    <DraftSheet as="div" {...revisionDraft(revision)} className="min-w-0">
+    <DraftSheet as="div" {...revisionDraft(revision)}>
       <Stack
         as="section"
         gap="compact"
@@ -120,14 +120,13 @@ export function OutputPane({
           value={tab}
           onValueChange={setTab}
           ariaLabel="Output views"
-          spaced
           items={[
             { value: 'output', label: 'Document' },
             { value: 'sources', label: 'Sources' },
             { value: 'history', label: 'History' },
           ]}
         >
-          <TabPanel value="output" className="min-w-0">
+          <TabPanel value="output">
             {draft ? (
               <OutputEditor
                 workspaceId={workspaceId}

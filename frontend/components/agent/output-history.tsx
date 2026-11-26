@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
+import { SectionBleed } from '@/components/ui/section';
 import { LineDiff } from '@/components/ui/line-diff';
 import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { Eye, EyeOff, GitCompare } from '@/lib/icons';
 import { diffLines } from '@/lib/agent/diff';
 import { agentWriteFailure } from '@/lib/agent/errors';
@@ -52,13 +52,13 @@ export function OutputHistory({
   const toggle = (id: string, mode: 'view' | 'compare') =>
     setViewing((open) => (open?.id === id && open.mode === mode ? null : { id, mode }));
   return (
-    <Stack gap="compact">
+    <>
       {restore.isError ? (
         <Notice kind="mutation" notice={agentWriteFailure(restore.error, 'restore the revision')} />
       ) : null}
-      <ol aria-label="Revisions" className={ledgerClasses()}>
+      <SectionBleed as="ol" rows aria-label="Revisions">
         {revisions.map((revision) => (
-          <Stack as="li" key={revision.id} className={ledgerItemClasses()}>
+          <Stack as="li" key={revision.id}>
             <RevisionRow
               revision={revision}
               latest={revision.id === latestRevisionId}
@@ -76,8 +76,8 @@ export function OutputHistory({
             />
           </Stack>
         ))}
-      </ol>
-    </Stack>
+      </SectionBleed>
+    </>
   );
 }
 

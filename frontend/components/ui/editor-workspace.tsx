@@ -1,6 +1,7 @@
 import type { ReactNode, RefObject } from 'react';
 
 import { cn } from '@/lib/utils';
+import { SurfaceContext } from '@/components/ui/section';
 import { SLIP_FACE } from '@/components/ui/slip';
 
 const FILL = 'h-[calc(100dvh-var(--route-chrome-height))] min-h-0';
@@ -88,14 +89,15 @@ export function EditorRailPanel({
       aria-label={label}
       className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
     >
-      <div
-        className={cn(
-          'flex min-w-0 flex-col gap-[var(--workspace-gap)]',
-          padding === 'card' ? 'p-[var(--card-padding)]' : 'py-[var(--compact-gap)]',
-        )}
-      >
-        {children}
-      </div>
+      {padding === 'card' ? (
+        <div className="flex min-w-0 flex-col gap-[var(--panel-inset)] p-[var(--panel-inset)] [--panel-inset:var(--card-padding)]">
+          <SurfaceContext value="surface">{children}</SurfaceContext>
+        </div>
+      ) : (
+        <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)] py-[var(--compact-gap)]">
+          {children}
+        </div>
+      )}
     </section>
   );
 }
