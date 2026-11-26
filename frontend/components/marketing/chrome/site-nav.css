@@ -48,6 +48,8 @@
 
 .cl-navmenu-pill {
   position: absolute;
+  width: var(--pill-base);
+  transform: translateX(var(--pill-x)) scaleX(var(--pill-scale));
   z-index: -1;
   inset-block: 0;
   left: 0;
@@ -71,6 +73,7 @@
 
 .cl-navmenu-stage {
   position: absolute;
+  transform: translateX(var(--stage-shift));
   top: calc(100% + var(--site-space-6));
   left: 0;
 }
@@ -81,6 +84,7 @@
 
 .cl-navmenu-viewport {
   position: relative;
+  transform-origin: var(--stage-origin) 0;
   width: calc(var(--radix-navigation-menu-viewport-width) + var(--site-space-0_5));
   height: calc(var(--radix-navigation-menu-viewport-height) + var(--site-space-0_5));
   border: var(--site-rule) solid var(--color-rule);

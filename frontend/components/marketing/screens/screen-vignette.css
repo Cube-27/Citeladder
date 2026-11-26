@@ -61,11 +61,6 @@
   min-height: var(--site-space-6);
 }
 
-.cl-vig .cl-vig-sentiment {
-  background: var(--color-state-selected);
-  color: var(--text-color-ink);
-}
-
 .cl-vig-label {
   color: var(--text-color-ink);
   font-size: var(--text-label);
@@ -188,6 +183,7 @@
 
 .cl-vig-bar > span {
   display: block;
+  width: var(--vig-share);
   height: 100%;
 }
 
@@ -260,12 +256,15 @@
 
 .cl-vig-yaxis > span {
   position: absolute;
+  top: var(--vig-y);
   left: 0;
   transform: translateY(-50%);
 }
 
 .cl-vig-dot {
   position: absolute;
+  top: var(--vig-y);
+  left: var(--vig-x);
   width: var(--site-space-2);
   height: var(--site-space-2);
   border-radius: var(--radius-full);
@@ -366,4 +365,29 @@
   min-height: 0;
   padding: 0;
   background: none;
+}
+
+.cl-vig-series-fill {
+  background-color: var(--color-data-you);
+  fill: var(--color-data-you);
+}
+
+.cl-vig-series-stroke {
+  stroke: var(--color-data-you);
+}
+
+.cl-vig-gridline {
+  stroke: var(--color-chart-grid);
+}
+
+[data-severity='High'] {
+  color: var(--color-negative);
+}
+
+[data-severity='Medium'] {
+  color: var(--color-warning);
+}
+
+[data-severity='Low'] {
+  color: var(--text-color-ink-2);
 }

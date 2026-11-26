@@ -195,7 +195,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         lead={page.lead}
         actions={
           page.cta === 'mcp' ? (
-            <div className="bg-panel text-ink rounded-card p-card w-fit max-w-full border border-transparent">
+            <div className="cl-connect-panel">
               <ConnectStrip />
             </div>
           ) : (

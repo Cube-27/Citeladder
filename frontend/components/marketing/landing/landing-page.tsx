@@ -146,12 +146,12 @@ function IntegrationLogo({ mark }: Readonly<{ mark: IntegrationMark }>) {
           height={36}
           loading="lazy"
           decoding="async"
-          className="size-9 object-contain"
+          className="cl-integration-logo-image"
         />
       );
     case 'icon': {
       const Icon = mark.icon;
-      return <Icon className="text-ink size-9" aria-hidden />;
+      return <Icon className="size-9" aria-hidden />;
     }
     default: {
       const exhaustive: never = mark;

@@ -82,7 +82,7 @@
   gap: var(--site-space-4) var(--site-space-6);
 }
 
-.cl-screen-tabs {
+[data-screen-tabs] {
   --scroll-shade-ground: var(--color-panel);
 
   background: var(--color-state-hover);
@@ -153,4 +153,31 @@
 
 .cl-screen-cols > * {
   min-width: 0;
+}
+
+.cl-screen-label {
+  color: var(--text-color-ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-screen-label);
+  font-weight: var(--text-screen-label--font-weight);
+  line-height: var(--text-screen-label--line-height);
+  letter-spacing: var(--text-screen-label--letter-spacing);
+  text-transform: uppercase;
+}
+
+.cl-screen-eyebrow {
+  color: var(--text-color-ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-screen-eyebrow);
+  font-weight: var(--text-screen-eyebrow--font-weight);
+  line-height: var(--text-screen-eyebrow--line-height);
+  letter-spacing: var(--text-screen-eyebrow--letter-spacing);
+  text-transform: uppercase;
+}
+
+.cl-screen-card-body {
+  display: grid;
+  row-gap: var(--site-space-6);
+  min-width: 0;
+  color: var(--text-color-ink);
 }

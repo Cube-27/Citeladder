@@ -122,8 +122,9 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
             data-visible={pill.visible ? '' : undefined}
             data-jump={pill.jump ? '' : undefined}
             style={{
-              width: PILL_BASE_WIDTH,
-              transform: `translateX(${pill.x}px) scaleX(${pill.width / PILL_BASE_WIDTH})`,
+              '--pill-base': `${PILL_BASE_WIDTH}px`,
+              '--pill-x': `${pill.x}px`,
+              '--pill-scale': pill.width / PILL_BASE_WIDTH,
             }}
           />
           {NAV_DROPS.map((drop) => (
@@ -167,12 +168,12 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
         <div
           className="cl-navmenu-stage"
           data-slide={stage.slide ? '' : undefined}
-          style={{ transform: `translateX(${stage.shift}px)` }}
+          style={{
+            '--stage-shift': `${stage.shift}px`,
+            '--stage-origin': `${stage.origin}px`,
+          }}
         >
-          <Viewport
-            className="cl-navmenu-viewport"
-            style={{ transformOrigin: `${stage.origin}px 0` }}
-          />
+          <Viewport className="cl-navmenu-viewport" />
         </div>
       </div>
     </Root>

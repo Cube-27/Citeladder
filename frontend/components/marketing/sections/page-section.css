@@ -110,3 +110,14 @@
     gap: var(--site-space-8);
   }
 }
+
+.cl-callout-copy {
+  display: block;
+  max-width: var(--container-copy);
+}
+
+.cl-source-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--site-space-6);
+}

@@ -63,7 +63,7 @@ export function CompareIndex() {
 
       <PageSection spacing="compact" label="Comparisons" labelHeading>
         <Callout tone="neutral">
-          <span className="max-w-copy block">
+          <span className="cl-callout-copy">
             Published by CiteLadder. These are vendor-authored comparisons, not independent
             rankings. Product scope, plans and availability can change; use the linked official
             sources when evaluating a purchase.

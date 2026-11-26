@@ -279,3 +279,27 @@
     background: var(--tint-neutral);
   }
 }
+
+.cl-plans-stack {
+  display: grid;
+  gap: var(--site-space-6);
+}
+
+.cl-plans-note {
+  max-width: var(--container-md);
+}
+
+.cl-byok {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--site-space-3);
+  max-width: var(--container-xl);
+}
+
+.cl-byok-label {
+  color: var(--text-color-ink);
+  font-size: var(--text-site-body);
+  font-weight: var(--text-site-body--font-weight);
+  line-height: var(--text-site-body--line-height);
+  cursor: pointer;
+}

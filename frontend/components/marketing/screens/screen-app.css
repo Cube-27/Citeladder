@@ -147,7 +147,9 @@
   height: var(--site-space-7);
   margin: 0;
   padding: 0 var(--site-space-3);
+  color: var(--text-color-ink-2);
   font-size: var(--text-body);
+  font-weight: var(--text-body--font-weight);
   line-height: var(--text-body--line-height);
 }
 
@@ -160,6 +162,9 @@
   padding: 0 var(--site-space-3);
   border-radius: var(--radius-md);
   color: var(--text-color-ink-2);
+  font-size: var(--text-body);
+  font-weight: var(--text-body--font-weight);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-app-nav-row.is-active {
@@ -178,12 +183,12 @@
   content: '';
 }
 
-.cl-app-nav-icon {
+.cl-app-nav-row > svg {
   flex: none;
   color: var(--text-color-ink-2);
 }
 
-.cl-app-nav-row.is-active .cl-app-nav-icon {
+.cl-app-nav-row.is-active > svg {
   color: var(--color-accent);
 }
 

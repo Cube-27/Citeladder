@@ -177,3 +177,9 @@
     --ifield-row: var(--ifield-row-compact);
   }
 }
+
+.cl-integration-logo-image {
+  width: var(--site-space-9);
+  height: var(--site-space-9);
+  object-fit: contain;
+}

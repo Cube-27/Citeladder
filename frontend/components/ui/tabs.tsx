@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
   type ButtonHTMLAttributes,
+  type ComponentPropsWithoutRef,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
@@ -74,16 +75,39 @@ const STRIP_ROW = {
   section: cn(TAB_BASELINE, 'flex w-full'),
 } as const;
 
-export const TAB_TRACK =
+const TAB_TRACK =
   'inline-flex min-h-control-md max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-control p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
-export function tabClasses(selected: boolean, className?: string) {
-  return cn(
-    'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border border-transparent px-3 text-label whitespace-nowrap transition-[background-color,color] duration-fast focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-disabled',
-    selected
-      ? 'bg-panel text-ink font-emphasis'
-      : 'text-ink-2 not-disabled:hover:text-ink font-plain',
-    className,
+const TAB_FACE =
+  'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border border-transparent px-3 text-label whitespace-nowrap transition-[background-color,color] duration-fast focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-disabled';
+
+const TAB_FACE_STATE = {
+  selected: 'bg-panel text-ink font-emphasis',
+  idle: 'text-ink-2 not-disabled:hover:text-ink font-plain',
+} as const;
+
+export function TabTrackFace({
+  items,
+  selected,
+  ...props
+}: Readonly<
+  Omit<ComponentPropsWithoutRef<'span'>, 'className' | 'style' | 'children'> & {
+    items: readonly Readonly<{ label: string; count?: number }>[];
+    selected: string;
+  }
+>) {
+  return (
+    <span {...props} className={TAB_TRACK}>
+      {items.map((item) => (
+        <span
+          key={item.label}
+          className={cn(TAB_FACE, TAB_FACE_STATE[item.label === selected ? 'selected' : 'idle'])}
+        >
+          {item.label}
+          {item.count === undefined ? null : <ControlCount count={item.count} />}
+        </span>
+      ))}
+    </span>
   );
 }
 

@@ -172,3 +172,13 @@
     animation-delay: calc(var(--transition-duration-reveal-step) * 4);
   }
 }
+
+.cl-connect-panel {
+  width: fit-content;
+  max-width: 100%;
+  padding: var(--spacing-card);
+  border: var(--site-rule) solid transparent;
+  border-radius: var(--radius-card);
+  background: var(--color-panel);
+  color: var(--text-color-ink);
+}

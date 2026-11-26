@@ -145,3 +145,7 @@
   line-height: var(--text-kicker--line-height);
   letter-spacing: var(--text-kicker--letter-spacing);
 }
+
+.cl-muted {
+  color: var(--text-color-ink-2);
+}

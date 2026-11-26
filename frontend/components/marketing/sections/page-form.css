@@ -131,3 +131,8 @@
 .cl-page-form :is(.cl-page-form-head, .cl-page-form-foot) {
   border-color: var(--color-site-form-rule);
 }
+
+.cl-form-aside {
+  display: grid;
+  gap: var(--site-space-6);
+}

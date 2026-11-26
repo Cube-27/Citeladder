@@ -7,6 +7,17 @@ function calleeName(callee) {
   return '';
 }
 
+const WRAPPERS = new Set([
+  'TSAsExpression',
+  'TSSatisfiesExpression',
+  'TSNonNullExpression',
+  'ParenthesizedExpression',
+]);
+
+function unwrap(node) {
+  return node && WRAPPERS.has(node.type) ? unwrap(node.expression) : node;
+}
+
 export function classValues(node, constants) {
   const result = { strings: [], roles: [], helpers: [], unreadable: [] };
   const visit = (current, hops) => {
@@ -54,7 +65,9 @@ export function classValues(node, constants) {
         return result.unreadable.push(current.name);
       }
       case 'MemberExpression': {
-        const object = current.object.type === 'Identifier' && constants.get(current.object.name);
+        const object = unwrap(
+          current.object.type === 'Identifier' && constants.get(current.object.name),
+        );
         if (object?.type === 'ObjectExpression' && hops < MAX_HOPS) {
           const key = current.computed ? null : current.property.name;
           const match = object.properties.find(

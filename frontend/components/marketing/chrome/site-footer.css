@@ -247,3 +247,8 @@
     flex-direction: column;
   }
 }
+
+.cl-footer-social-icon {
+  width: var(--site-space-4);
+  height: var(--site-space-4);
+}

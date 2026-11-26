@@ -40,7 +40,7 @@ export function FeatureCard({
         <Heading className="cl-fcard-title">{title}</Heading>
         {body && <p className="cl-fcard-text">{body}</p>}
         {points && points.length > 0 && <CheckList items={points} small={text === 'body'} />}
-        {href && <SiteArrowLink className="cl-fcard-more">{linkLabel}</SiteArrowLink>}
+        {href && <SiteArrowLink inCard>{linkLabel}</SiteArrowLink>}
       </div>
     </>
   );

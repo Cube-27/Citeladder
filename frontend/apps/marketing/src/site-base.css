@@ -274,6 +274,7 @@
 }
 
 .cl-site-main {
+  z-index: var(--z-index-base);
   padding-bottom: var(--site-space-24);
   background: var(--site-page);
 }
@@ -346,4 +347,11 @@
 .cl-tiles > li {
   display: grid;
   min-width: 0;
+}
+
+.cl-inline-link {
+  color: var(--text-color-ink);
+  text-decoration-line: underline;
+  text-decoration-color: var(--color-control-line);
+  text-underline-offset: var(--site-underline-offset-sm);
 }
