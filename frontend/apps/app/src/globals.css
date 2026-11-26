@@ -881,7 +881,7 @@
 }
 
 [data-public-surface]
-  :is(.ui-button-secondary, .marketing-soft-button):not(:is(.cl-screen, .cl-vig) *) {
+  :is([data-button-variant='secondary'], .marketing-soft-button):not(:is(.cl-screen, .cl-vig) *) {
   border-color: var(--color-line-control);
 }
 
@@ -895,7 +895,7 @@
   text-transform: none;
 }
 
-[data-public-surface] :is(.ui-button, .focus-ring):active {
+[data-public-surface] :is([data-button-variant], .focus-ring):active {
   translate: none;
 }
 
@@ -1332,12 +1332,14 @@ a.focus-ring:active .type-caption {
 }
 
 
-[data-state-offer] .ui-button-secondary:first-child {
+[data-state-offer] [data-button-variant='secondary']:first-child,
+:root:not([data-public-surface]) [data-state-offer] .ui-button-secondary:first-child {
   border-color: var(--color-primary);
   background-color: var(--color-primary);
   color: var(--color-on-primary);
 }
-[data-demoted] .ui-button {
+[data-demoted] [data-button-variant],
+:root:not([data-public-surface]) [data-demoted] .ui-button {
   border-color: transparent;
   background-color: var(--color-raised);
   color: var(--color-ink);
@@ -1438,9 +1440,10 @@ input:is(:autofill, :-webkit-autofill) {
 }
 
 @media (forced-colors: active) {
-  .ui-button-primary,
-  .ui-button-secondary,
-  .ui-button-danger,
+  [data-button-variant='primary'],
+  [data-button-variant='secondary'],
+  [data-button-variant='danger'],
+  :root:not([data-public-surface]) :is(.ui-button-primary, .ui-button-secondary, .ui-button-danger),
   [data-app-surface] a[aria-current='page'] {
     outline: 1px solid ButtonText;
     outline-offset: -1px;
@@ -1519,7 +1522,7 @@ label {
 }
 
 :root:not([data-public-surface]) .table-frame {
-  --table-cell-padding-y: 4px;
+  --table-cell-padding-y: 10px;
   border: 0;
 }
 :root:not([data-public-surface]) .table-frame thead th + th::before {
@@ -1776,6 +1779,9 @@ label {
 }
 :root:not([data-public-surface]) {
   .ui-button-secondary {
+    --color-raised-2: var(--color-field-hover);
+  }
+  :where([data-panel], [data-panel-frame], [data-overlay], .surface-well, .menu-panel, [data-auth-form]) .ui-button-secondary {
     --color-raised: var(--color-state-fill);
     --color-raised-2: var(--color-state-fill-hover);
     --shadow-field: none;
