@@ -12,10 +12,6 @@ export function ledgerItemClasses(className?: string) {
   return cn('min-w-0 py-3 first:pt-0 last:pb-0', className);
 }
 
-export function insetClasses(className?: string) {
-  return cn('surface-inset grid min-w-0 gap-1 rounded-control px-4 py-3', className);
-}
-
 export function treeBranchClasses(className?: string) {
   return cn('border-rule grid min-w-0 gap-2 border-l pl-4', className);
 }

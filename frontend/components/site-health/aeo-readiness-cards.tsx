@@ -24,6 +24,13 @@ const READABLE_CHECKS: ReadonlyArray<{ rule: string; label: string }> = [
   { rule: 'aeo.product_evidence_facts', label: 'Product reviews, specs, materials' },
 ];
 
+const READABLE_COLUMNS: readonly DataTableColumn[] = [
+  { key: 'check', label: 'Check', kind: 'identity' },
+  { key: 'share', label: 'Share passing', hideLabel: true },
+  { key: 'passing', label: 'Passing', kind: 'number', width: 'figure' },
+  { key: 'failing', label: 'Failing', kind: 'number', width: 'figure' },
+];
+
 const failingPages = (check: ReadinessCheck) => check.missing_count + check.partial_count;
 
 export function ReadableCard({
@@ -44,48 +51,20 @@ export function ReadableCard({
       {rows.length === 0 ? (
         <StateBlock kind="empty" inline message="No page checks were resolved in this crawl." />
       ) : (
-        <table className="w-full">
-          <caption className="sr-only">Pages passing and failing each check</caption>
-          <thead>
-            <tr className={textRole('caption', 'text-ink-2')}>
-              <th scope="col" className="pb-2 text-left font-medium">
-                Check
-              </th>
-              <th scope="col">
-                <span className="sr-only">Share passing</span>
-              </th>
-              <th scope="col" className="w-16 pb-2 text-right font-medium">
-                Passing
-              </th>
-              <th scope="col" className="w-16 pb-2 text-right font-medium">
-                Failing
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.rule} className="border-rule h-10 border-t">
-                <th scope="row" className={textRole('body', 'pr-3 text-left font-normal')}>
-                  {row.label}
-                </th>
-                <td className="w-2/5 pr-3">
-                  <SplitBar passing={row.passing} failing={row.failing} />
-                </td>
-                <td className={textRole('body', 'text-right tabular-nums')}>
-                  {formatCount(row.passing)}
-                </td>
-                <td
-                  className={textRole(
-                    'body',
-                    cn('text-right tabular-nums', row.failing > 0 && 'text-negative'),
-                  )}
-                >
-                  {formatCount(row.failing)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable label="Pages passing and failing each check" columns={READABLE_COLUMNS}>
+          {rows.map((row) => (
+            <TableRow key={row.rule}>
+              <TableCell>{row.label}</TableCell>
+              <TableCell>
+                <SplitBar passing={row.passing} failing={row.failing} />
+              </TableCell>
+              <TableCell numeric>{formatCount(row.passing)}</TableCell>
+              <TableCell numeric className={row.failing > 0 ? 'text-negative' : undefined}>
+                {formatCount(row.failing)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </DataTable>
       )}
     </TitledSection>
   );

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { Stack } from '@/components/ui/layout';
 import { Drawer } from '@/components/ui/drawer';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -182,7 +183,7 @@ export function SearchIntelligenceReviewDrawer({
       {review ? (
         <ReviewSummary review={review} />
       ) : (
-        <>
+        <Stack gap="workspace">
           <Field label="Market">
             {(field) => (
               <Select
@@ -239,7 +240,7 @@ export function SearchIntelligenceReviewDrawer({
               saveDefaults: setSaveDefaults,
             }}
           />
-        </>
+        </Stack>
       )}
     </Drawer>
   );
