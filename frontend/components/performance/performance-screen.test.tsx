@@ -311,7 +311,7 @@ describe('PerformanceScreen evidence states', () => {
     expect(await screen.findByTestId('readiness-ladder')).toBeVisible();
   });
 
-  it('states the covered history on the Google Search card, with no notice for flagged days', async () => {
+  it('shows the data-through date without a covered-history subtitle, with no notice for flagged days', async () => {
     const covered = {
       earliest_date: '2026-08-01',
       latest_date: '2026-08-28',
@@ -337,10 +337,8 @@ describe('PerformanceScreen evidence states', () => {
     );
 
     renderPerformance();
-    expect(await screen.findByTestId('performance-coverage')).toHaveTextContent(
-      'Aug 1, 2026 – Aug 28, 2026 · 28 days',
-    );
-    expect(screen.getByText('Data through Aug 28, 2026')).toBeVisible();
+    expect(await screen.findByText('Data through Aug 28, 2026')).toBeVisible();
+    expect(screen.queryByText('Aug 1, 2026 – Aug 28, 2026 · 28 days')).toBeNull();
     expect(screen.queryByTestId('performance-status')).toBeNull();
   });
 

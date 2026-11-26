@@ -32,9 +32,9 @@ describe('usePerformanceSelection', () => {
       ['clicks', 'impressions'],
     ],
     [
-      '?range=forever&compare=never&metrics=position,bogus,ctr',
+      '?range=forever&compare=never&metrics=position,bogus,ctr,position',
       { range: 'last_synced', from: '', to: '', compare: 'none', compareFrom: '', compareTo: '' },
-      ['ctr', 'position'],
+      ['position', 'ctr'],
     ],
     [
       '?metrics=bogus',
@@ -47,16 +47,20 @@ describe('usePerformanceSelection', () => {
     expect([...result.current.activeMetrics]).toEqual(metrics);
   });
 
-  it('writes metrics in card order, omits the landing pair and keeps the last metric', () => {
+  it('writes metrics in selection order, omits the landing pair and keeps the last metric', () => {
     const { result } = open('');
     act(() => result.current.toggleMetric('position'));
     act(() => result.current.toggleMetric('ctr'));
-    expect(param('metrics')).toBe('clicks,impressions,ctr,position');
+    expect(param('metrics')).toBe('clicks,impressions,position,ctr');
 
     act(() => result.current.toggleMetric('ctr'));
     act(() => result.current.toggleMetric('position'));
     expect(param('metrics')).toBeNull();
 
+    act(() => result.current.toggleMetric('clicks'));
+    act(() => result.current.toggleMetric('clicks'));
+    expect([...result.current.activeMetrics]).toEqual(['impressions', 'clicks']);
+    expect(param('metrics')).toBe('impressions,clicks');
     act(() => result.current.toggleMetric('clicks'));
     act(() => result.current.toggleMetric('impressions'));
     expect([...result.current.activeMetrics]).toEqual(['impressions']);
