@@ -1,4 +1,10 @@
-import { useContext, type ComponentPropsWithoutRef, type ReactNode } from 'react';
+import {
+  Children,
+  isValidElement,
+  useContext,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+} from 'react';
 
 import { SLIP_FACE, slipClasses } from '@/components/ui/slip';
 import {
@@ -10,15 +16,17 @@ import { cn } from '@/lib/utils';
 
 export type SectionVariant = 'surface' | 'framed';
 
+export const FRAMED_FACE = cn(SLIP_FACE, 'p-[var(--card-padding)]');
+
 const SECTION_FACE: Record<SectionVariant, string> = {
   surface: '',
-  framed: cn(SLIP_FACE, 'p-[var(--card-padding)]'),
+  framed: FRAMED_FACE,
 };
 
 export function Section({
   children,
   className,
-  variant = 'surface',
+  variant = headedVariant(children),
   ...props
 }: Readonly<ComponentPropsWithoutRef<'section'> & { variant?: SectionVariant }>) {
   return (
@@ -30,6 +38,14 @@ export function Section({
       <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
     </section>
   );
+}
+
+function headedVariant(children: ReactNode): SectionVariant {
+  return Children.toArray(children).some(
+    (child) => isValidElement(child) && child.type === SectionHeader,
+  )
+    ? 'framed'
+    : 'surface';
 }
 
 export function SectionHeader({
@@ -116,7 +132,7 @@ export function TitledSection({
   title,
   description,
   actions,
-  variant,
+  variant = 'framed',
   children,
   className,
 }: Readonly<{

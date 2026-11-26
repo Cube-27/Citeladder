@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/data-table-body';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
+import { FRAMED_FACE } from '@/components/ui/section';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
@@ -26,6 +27,7 @@ import {
   type HeadingLevel,
 } from '@/components/ui/state-heading-level';
 
+import { cn } from '@/lib/utils';
 import './data-table.css';
 
 export type { DataTableColumn, DataTableSelection, DataTableState };
@@ -75,13 +77,15 @@ export function DataTable({
   const paging = pagingLayout(pager, pageSize, reserveRows);
   const scroll = useScrollFrame({ label: parts.regionLabel, start: false });
   const replacing = replacingState(state);
+  const headed = Boolean(title || toolbar || description || actions);
   return (
     <section
       aria-labelledby={parts.naming.ariaLabelledBy}
       aria-label={parts.naming.ariaLabel}
       aria-busy={busy?.active || undefined}
       data-data-table=""
-      className="relative grid min-w-0 content-start"
+      data-section={headed ? 'framed' : undefined}
+      className={cn('relative grid min-w-0 content-start', headed && FRAMED_FACE)}
     >
       {busy ? <BusyRung active={busy.active} label={busy.label} /> : null}
       <DataTableHeader
@@ -315,7 +319,7 @@ function DataTableHeader({
     <>
       <TitleRow title={title} headingId={headingId} level={level} toolbar={toolbar} />
       {description ? (
-        <p data-data-table-description="" className="type-caption max-w-[72ch]">
+        <p data-data-table-description="" className="type-body text-ink-2 max-w-[72ch]">
           {description}
         </p>
       ) : null}

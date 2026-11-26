@@ -29,20 +29,21 @@ export function SettingsGroup({
       id={id}
       aria-labelledby={region ? titleId : undefined}
       data-settings-group=""
-      className="grid min-w-0 gap-3"
+      data-section="framed"
+      className={cn(SLIP_FACE, 'grid min-w-0 gap-3 overflow-hidden p-[var(--card-padding)]')}
     >
       <header className="flex min-w-0 flex-wrap items-start justify-between gap-2">
         <div className="grid min-w-0 flex-1 basis-60 gap-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h2
               id={titleId}
-              className={textRole('heading', 'flex min-w-0 items-center gap-2 break-words')}
+              className={textRole('subheading', 'flex min-w-0 items-center gap-2 break-words')}
             >
               {title}
             </h2>
             {status}
           </div>
-          {description ? <p className={textRole('caption')}>{description}</p> : null}
+          {description ? <p className={textRole('body', 'text-ink-2')}>{description}</p> : null}
         </div>
         {action ? <div className="flex flex-wrap items-center gap-2">{action}</div> : null}
       </header>

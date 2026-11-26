@@ -1703,7 +1703,11 @@ label {
   padding: 16px;
 }
 
-:root:not([data-public-surface]) [data-chart-frame]:not([data-chart-frame='auto']) {
+:root:not([data-public-surface])
+  [data-chart-frame]:not(
+    [data-chart-frame='auto'],
+    :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog']) *
+  ) {
   border: 1px solid transparent;
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
@@ -1931,6 +1935,18 @@ label {
 }
 [role='switch'] > span {
   box-shadow: var(--shadow-thumb);
+}
+[data-settings-group] [data-setting-rows] {
+  margin-inline: calc(-1 * var(--card-padding));
+}
+[data-settings-group] [data-setting-rows]:last-child {
+  margin-bottom: calc(-1 * var(--card-padding));
+}
+[data-section='framed'] > header + :is(.surface-card, .surface-slip):last-child {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
 }
 :root:not([data-public-surface]) .card-head:not(:last-child) {
   margin: 0 0 12px;

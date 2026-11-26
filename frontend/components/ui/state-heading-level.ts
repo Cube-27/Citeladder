@@ -4,4 +4,4 @@ export type HeadingLevel = 1 | 2 | 3;
 
 export const StateHeadingLevelContext = createContext<HeadingLevel>(2);
 
-export const SectionTitleRoleContext = createContext<'heading' | 'subheading'>('heading');
+export const SectionTitleRoleContext = createContext<'heading' | 'subheading'>('subheading');

@@ -174,7 +174,7 @@ function Connections({
       </Stack>
     );
   return (
-    <Section id="crawl-log-connections" aria-label="Crawl log connections">
+    <Section variant="framed" id="crawl-log-connections" aria-label="Crawl log connections">
       <ConnectionsHead empty={sources.data?.items.length === 0} connect={connect} />
       <Stack className="empty:hidden">{body}</Stack>
     </Section>
