@@ -20,7 +20,7 @@ import { SearchIntelligenceOverview } from '@/components/search-intelligence/sea
 import { referringLists } from './search-intelligence-format';
 import { NoAnalysisYet, NotConnected, UnavailableNotice } from './search-intelligence-availability';
 import { Icon } from '@/components/ui/icon';
-import { Section } from '@/components/ui/section';
+import { Section, SectionStack } from '@/components/ui/section';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RunNotice } from './search-intelligence-runs';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,6 @@ import { Drawer } from '@/components/ui/drawer';
 import { TextLink } from '@/components/ui/text-link';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { savedViewFilters, scopeControls } from './search-intelligence-scope';
-import { Stack } from '@/components/ui/layout';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import {
   searchIntelligenceMutations,
@@ -113,9 +112,9 @@ export function SearchIntelligencePage() {
         filters={tab === 'demand' ? demandControls(demand) : research.filters}
       >
         <TabPanel value="demand" className="min-w-0">
-          <Stack gap="section">
+          <SectionStack>
             <DemandPanel demand={demand} />
-          </Stack>
+          </SectionStack>
         </TabPanel>
         {tab === 'demand' ? null : research.body}
         {research.overlays}
@@ -313,7 +312,7 @@ function researchView({
         />
       ),
     body: (
-      <Stack gap="workspace" className="min-w-0">
+      <SectionStack>
         <UnavailableNotice data={loaded} />
         <RunNotice
           run={loaded.latest_run}
@@ -332,7 +331,7 @@ function researchView({
             onOpen={onOpen}
           />
         )}
-      </Stack>
+      </SectionStack>
     ),
   };
 }

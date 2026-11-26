@@ -1,58 +1,58 @@
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useId,
+  type ComponentPropsWithoutRef,
+  type HTMLAttributes,
+  type ReactNode,
+} from 'react';
 
-import { SLIP_FACE, slipClasses } from '@/components/ui/slip';
-import { StateHeadingLevelContext } from '@/components/ui/state-heading-level';
+import {
+  SectionTitleRoleContext,
+  StateHeadingLevelContext,
+} from '@/components/ui/state-heading-level';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
+import './section.css';
 
-export type SectionVariant = 'surface' | 'framed';
+export type SurfaceDepth = 'page' | 'surface';
 
-const SECTION_FACE: Record<SectionVariant, string> = {
-  surface: '',
-  framed: cn(SLIP_FACE, 'p-[var(--card-padding)]'),
-};
+export const SurfaceContext = createContext<SurfaceDepth>('page');
 
-export function Section({
-  children,
-  className,
-  variant = 'surface',
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'section'> & { variant?: SectionVariant }>) {
+export const useOnPage = () => useContext(SurfaceContext) === 'page';
+
+type SectionProps = Omit<ComponentPropsWithoutRef<'section'>, 'className'> & { accent?: boolean };
+
+export function Section({ children, accent = false, ...props }: Readonly<SectionProps>) {
+  const onPage = useOnPage();
   return (
-    <section
-      {...props}
-      data-section={variant}
-      className={cn('surface-section min-w-0', SECTION_FACE[variant], className)}
-    >
-      <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
+    <section {...props} data-panel={onPage ? 'card' : 'flat'} data-accent={accent ? '' : undefined}>
+      <SurfaceContext value="surface">
+        <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
+      </SurfaceContext>
     </section>
   );
 }
 
 export function SectionHeader({
   children,
-  className,
   actions,
   ...props
-}: Readonly<
-  ComponentPropsWithoutRef<'header'> & {
-    actions?: ReactNode;
-  }
->) {
+}: Readonly<Omit<ComponentPropsWithoutRef<'header'>, 'className'> & { actions?: ReactNode }>) {
   if (!actions) {
     return (
-      <header {...props} className={cn('flex flex-col gap-1 not-last:mb-3', className)}>
+      <header {...props} className="grid min-w-0 gap-1">
         {children}
       </header>
     );
   }
   return (
-    <header
-      {...props}
-      className={cn('flex flex-wrap items-start justify-between gap-2 not-last:mb-3', className)}
-    >
-      <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{children}</div>
-      <div className="-my-1 flex min-h-[var(--control-md)] max-w-full min-w-0 flex-wrap items-center gap-2">
+    <header {...props} className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+      <div className="grid min-w-0 flex-1 basis-40 grid-cols-[minmax(0,1fr)] gap-1">{children}</div>
+      <div
+        data-section-actions=""
+        className="-my-2 flex min-h-[var(--control-md)] max-w-full min-w-0 flex-wrap items-center gap-2"
+      >
         {actions}
       </div>
     </header>
@@ -67,7 +67,7 @@ export function SectionTitle({
 }: Readonly<ComponentPropsWithoutRef<'h2'> & { level?: 2 | 3 }>) {
   const Heading = level === 2 ? 'h2' : 'h3';
   return (
-    <Heading {...props} className={textRole('heading', className)}>
+    <Heading {...props} className={textRole(useContext(SectionTitleRoleContext), className)}>
       {children}
     </Heading>
   );
@@ -75,37 +75,92 @@ export function SectionTitle({
 
 export function SectionDescription({
   children,
-  className,
   ...props
-}: Readonly<ComponentPropsWithoutRef<'p'>>) {
+}: Readonly<Omit<ComponentPropsWithoutRef<'p'>, 'className'>>) {
   return (
-    <p {...props} className={textRole('body', cn('text-ink-2 max-w-[72ch]', className))}>
+    <p {...props} className={textRole('body', 'text-ink-2 max-w-[72ch]')}>
       {children}
     </p>
   );
 }
 
+export function SectionToolbar({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className="flex min-w-0 flex-wrap items-center gap-2">{children}</div>;
+}
+
 export function SectionContent({
   children,
-  className,
+  fill = false,
   ...props
-}: Readonly<ComponentPropsWithoutRef<'div'> & { children: ReactNode }>) {
+}: Readonly<
+  Omit<ComponentPropsWithoutRef<'div'>, 'className'> & { children: ReactNode; fill?: boolean }
+>) {
   return (
-    <div {...props} className={className}>
+    <div
+      {...props}
+      data-slot-fill={fill ? '' : undefined}
+      className={fill ? 'grid min-w-0 place-items-center' : 'min-w-0'}
+    >
       {children}
     </div>
   );
 }
 
-export function SectionCard({
+export function SectionBleed({
   children,
-  className,
+  rows = false,
+  scroll = false,
+  as: Element = 'div',
   ...props
-}: Readonly<ComponentPropsWithoutRef<'div'> & { children: ReactNode }>) {
-  return (
-    <div {...props} className={slipClasses(cn('min-w-0', className))}>
+}: Readonly<
+  Omit<HTMLAttributes<HTMLElement>, 'className'> & {
+    children: ReactNode;
+    rows?: boolean;
+    scroll?: boolean;
+    as?: 'div' | 'ul' | 'ol' | 'dl' | 'form';
+    noValidate?: boolean;
+  }
+>) {
+  const bleed = (
+    <Element
+      {...props}
+      data-bleed=""
+      data-bleed-rows={rows ? '' : undefined}
+      className={cn(
+        rows && 'divide-rule grid divide-y',
+        scroll && 'max-h-64 overflow-y-auto overscroll-contain',
+      )}
+    >
       {children}
-    </div>
+    </Element>
+  );
+  return useOnPage() ? <Section>{bleed}</Section> : bleed;
+}
+
+export function PanelFrame({
+  as: Element = 'div',
+  children,
+  ...props
+}: Readonly<
+  Omit<HTMLAttributes<HTMLElement>, 'className'> & {
+    as?: 'div' | 'section';
+    children: ReactNode;
+  }
+>) {
+  return (
+    <Element {...props} data-panel-frame="" className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <SurfaceContext value="surface">{children}</SurfaceContext>
+    </Element>
+  );
+}
+
+export function SectionFooter({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SectionBleed>
+      <div className="flex min-h-10 min-w-0 flex-wrap items-center justify-end gap-2 px-[var(--panel-inset)] py-1">
+        {children}
+      </div>
+    </SectionBleed>
   );
 }
 
@@ -113,19 +168,15 @@ export function TitledSection({
   title,
   description,
   actions,
-  variant,
   children,
-  className,
 }: Readonly<{
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
-  variant?: SectionVariant;
   children: ReactNode;
-  className?: string;
 }>) {
   return (
-    <Section variant={variant} className={className}>
+    <Section>
       <SectionHeader actions={actions}>
         <SectionTitle>{title}</SectionTitle>
         {description ? <SectionDescription>{description}</SectionDescription> : null}
@@ -137,15 +188,54 @@ export function TitledSection({
 
 export function SectionStack({
   children,
+  label,
   ...props
-}: Readonly<{ children: ReactNode; 'aria-busy'?: boolean }>) {
+}: Readonly<{
+  children: ReactNode;
+  label?: string;
+  'aria-busy'?: boolean;
+  'data-testid'?: string;
+}>) {
+  const Element = label ? 'section' : 'div';
   return (
-    <div
+    <Element
       {...props}
-      data-rhythm-gap="section"
+      aria-label={label}
       className="flex min-w-0 flex-col gap-[var(--page-section-gap)]"
     >
       {children}
+    </Element>
+  );
+}
+
+export function CardGroup({
+  title,
+  description,
+  id,
+  children,
+}: Readonly<{ title: ReactNode; description?: ReactNode; id?: string; children: ReactNode }>) {
+  const titleId = useId();
+  return (
+    <section
+      id={id}
+      aria-labelledby={titleId}
+      className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-[var(--card-padding)]"
+    >
+      <SectionHeader>
+        <SectionTitle id={titleId}>{title}</SectionTitle>
+        {description ? <SectionDescription>{description}</SectionDescription> : null}
+      </SectionHeader>
+      {children}
+    </section>
+  );
+}
+
+export function CardRow({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <div className="@container min-w-0">
+      <div className="grid gap-[var(--page-section-gap)] @[640px]:auto-cols-fr @[640px]:grid-flow-col">
+        {children}
+      </div>
     </div>
   );
 }

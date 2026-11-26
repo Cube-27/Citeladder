@@ -3,10 +3,9 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import type { Visibility } from '@citeladder/contracts';
 import { isMetricsPending } from '@/lib/api/visibility-queries';
-import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { BusyRung } from '@/components/ui/rung-meter';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SectionStack } from '@/components/ui/section';
 import { StateBlock, screenState } from '@/components/ui/state-block';
 
 function isMeasured(data: Visibility | null): data is Visibility {
@@ -66,10 +65,10 @@ export function AnalysisRead<T>({
     );
   if (ready === undefined)
     return (
-      <Stack gap="workspace" aria-busy>
-        <Skeleton variant="list" />
-        <Skeleton variant="chart" />
-      </Stack>
+      <SectionStack aria-busy>
+        <StateBlock kind="loading" shape={{ kind: 'list' }} />
+        <StateBlock kind="loading" shape={{ kind: 'chart' }} />
+      </SectionStack>
     );
   return (
     <div className="relative">

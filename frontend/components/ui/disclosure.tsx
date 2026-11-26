@@ -19,7 +19,7 @@ export function Disclosure({
       <summary
         className={textRole(
           'body',
-          'text-ink-2 focus-ring hover:text-ink hover:overlay-hover flex min-h-[var(--target-min)] w-fit cursor-pointer items-center gap-2 rounded-control px-2 transition-colors duration-[var(--motion-fast)] [&::-webkit-details-marker]:hidden',
+          'text-ink-2 focus-ring hover:text-ink flex min-h-[var(--target-min)] w-fit cursor-pointer items-center gap-2 rounded-control transition-colors duration-[var(--motion-fast)] [&::-webkit-details-marker]:hidden',
         )}
       >
         {title}

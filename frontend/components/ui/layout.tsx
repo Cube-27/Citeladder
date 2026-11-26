@@ -21,7 +21,7 @@ export function Stack({
 }: Readonly<ComponentPropsWithRef<'div'> & { as?: ElementType; gap?: StackGap }>) {
   const Component = as ?? 'div';
   return (
-    <Component {...props} data-rhythm-gap={gap} className={cn('grid', STACK_GAP[gap], className)}>
+    <Component {...props} className={cn('grid', STACK_GAP[gap], className)}>
       {children}
     </Component>
   );

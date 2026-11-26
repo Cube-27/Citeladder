@@ -8,6 +8,7 @@ import type {
 } from '@citeladder/contracts/overview';
 import { PageSections } from '@/components/templates/page-frame';
 import { AppGrid } from '@/components/ui/app-grid';
+import { Section } from '@/components/ui/section';
 import {
   ReportSkeletonFrame,
   WidgetCardBlocks,
@@ -61,9 +62,9 @@ export function OverviewLoading({ widgets }: Readonly<{ widgets?: readonly Overv
   const cached = useCachedWidgets();
   const shown = widgets ?? cached ?? DEFAULT_WIDGETS;
   const block = (widget: OverviewWidget) => (
-    <section key={widget.key} data-loading-widget={widget.key} className="min-w-0">
+    <Section key={widget.key} data-loading-widget={widget.key}>
       <WidgetCardBlocks shape={WIDGET_SHAPES[widget.key]} />
-    </section>
+    </Section>
   );
   return (
     <ReportSkeletonFrame label="Loading the Overview" variant="overview">

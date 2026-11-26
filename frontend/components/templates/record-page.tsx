@@ -30,14 +30,9 @@ export function RecordPage({
         <PageSections>
           {identity}
           {aside ? (
-            <div className="column-split:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] grid min-w-0 items-start gap-[var(--workspace-gap)]">
+            <div className="column-split:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] grid min-w-0 items-start gap-[var(--page-section-gap)]">
               <PageSections>{children}</PageSections>
-              <aside
-                data-rhythm-gap="workspace"
-                className="flex min-w-0 flex-col gap-[var(--workspace-gap)]"
-              >
-                {aside}
-              </aside>
+              <aside className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">{aside}</aside>
             </div>
           ) : (
             children

@@ -96,13 +96,13 @@ function ProjectsField({
 
 function CreatedKey({ secret }: Readonly<{ secret: string }>) {
   return (
-    <Stack gap="compact">
+    <>
       <Notice tone="warning">Shown once.</Notice>
-      <code className="type-code break-all">{secret}</code>
-      <div>
+      <Stack gap="compact" className="justify-items-start">
+        <code className="type-code break-all">{secret}</code>
         <CopyButton value={secret}>Copy key</CopyButton>
-      </div>
-    </Stack>
+      </Stack>
+    </>
   );
 }
 
@@ -250,35 +250,37 @@ export function CreateKeyDialog({
       {created ? (
         <CreatedKey secret={created.secret} />
       ) : (
-        <Stack gap="compact">
-          <Field label="Name" required>
-            {(props) => (
-              <Input
-                {...props}
-                value={name}
-                maxLength={80}
-                onChange={(event) => setName(event.target.value)}
-              />
-            )}
-          </Field>
-          <AccessField value={access} onChange={setAccess} mayWrite={mayWrite} />
-          <ProjectsField value={projectIds} onChange={setProjectIds} />
-          <ExpiryFields
-            today={today}
-            timeZone={timeZone}
-            choice={expiryChoice}
-            onChoice={setExpiryChoice}
-            customDay={customDay}
-            onCustomDay={setCustomDay}
-            error={expiry.kind === 'invalid' ? expiry.message : undefined}
-          />
+        <>
+          <Stack gap="workspace">
+            <Field label="Name" required>
+              {(props) => (
+                <Input
+                  {...props}
+                  value={name}
+                  maxLength={80}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              )}
+            </Field>
+            <AccessField value={access} onChange={setAccess} mayWrite={mayWrite} />
+            <ProjectsField value={projectIds} onChange={setProjectIds} />
+            <ExpiryFields
+              today={today}
+              timeZone={timeZone}
+              choice={expiryChoice}
+              onChoice={setExpiryChoice}
+              customDay={customDay}
+              onCustomDay={setCustomDay}
+              error={expiry.kind === 'invalid' ? expiry.message : undefined}
+            />
+          </Stack>
           {create.isError ? (
             <Notice
               kind="mutation"
               notice={mutationNoticeForError(create.error, { action: 'create the API key' })}
             />
           ) : null}
-        </Stack>
+        </>
       )}
     </Dialog>
   );

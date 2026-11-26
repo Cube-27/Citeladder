@@ -1,19 +1,19 @@
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { Absence } from '@/components/ui/absence';
+import { SectionBleed } from '@/components/ui/section';
 import { StatusMark } from '@/components/ui/status-mark';
 import { ClampText } from '@/components/ui/clamp-text';
 import { formatCount } from '@/lib/format';
 import type { RootError } from '@citeladder/contracts';
 import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 
 export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
   if (errors.length === 0) return null;
   const keyOccurrences = new Map<string, number>();
   return (
-    <Stack gap="item" data-testid="root-errors-block">
+    <>
       <p className={textRole('body', 'text-ink-2')}>The start URL could not be fetched.</p>
-      <ul className={ledgerClasses()}>
+      <SectionBleed as="ul" rows data-testid="root-errors-block">
         {errors.map((error) => {
           const signature = JSON.stringify([
             error.method,
@@ -31,7 +31,6 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
               gap="meta"
               key={`${signature}:${occurrence}`}
               data-testid="root-error-row"
-              className={ledgerItemClasses()}
             >
               <span className="type-code">{error.method}</span>
               <ClampText className="type-body text-ink-2 flex-1">{error.target}</ClampText>
@@ -55,7 +54,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
             </Inline>
           );
         })}
-      </ul>
-    </Stack>
+      </SectionBleed>
+    </>
   );
 }

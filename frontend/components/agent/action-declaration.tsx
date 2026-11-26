@@ -157,23 +157,23 @@ export function useMarkImplemented({
             />
           )}
         </Field>
-        <MeasurementPreview action={action} />
-        {recommendationIds ? (
-          <p className={textRole('body', 'text-ink-2')}>
-            Measures only these {recommendationIds.length} links and the page&apos;s other findings.
-            Declared once.
-          </p>
-        ) : null}
-        {declare.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(declare.error, {
-              action: 'declare this Action implemented',
-            })}
-            onRetry={submit}
-          />
-        ) : null}
       </Stack>
+      <MeasurementPreview action={action} />
+      {recommendationIds ? (
+        <p className={textRole('body', 'text-ink-2')}>
+          Measures only these {recommendationIds.length} links and the page&apos;s other findings.
+          Declared once.
+        </p>
+      ) : null}
+      {declare.isError ? (
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(declare.error, {
+            action: 'declare this Action implemented',
+          })}
+          onRetry={submit}
+        />
+      ) : null}
     </Dialog>
   );
   return { start, dialog };

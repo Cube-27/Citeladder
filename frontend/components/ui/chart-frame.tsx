@@ -8,6 +8,7 @@ import {
   type MarkerShape,
   type SeriesTone,
 } from '@/components/ui/step-chart-parts';
+import { Section, useOnPage } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
 import { InfoHint } from '@/components/ui/info-hint';
 import { textRole } from '@/components/ui/typography';
@@ -29,7 +30,7 @@ export function ChartFrame({
   summary?: string;
   children: ReactNode;
 }>) {
-  return (
+  const frame = (
     <div
       data-chart-frame={height ?? 'auto'}
       className={cn('grid min-w-0 *:min-w-0', height && FRAME_HEIGHT[height])}
@@ -38,6 +39,7 @@ export function ChartFrame({
       {children}
     </div>
   );
+  return useOnPage() ? <Section>{frame}</Section> : frame;
 }
 
 function SeriesSwatch({ tone, shape }: Readonly<{ tone: SeriesTone; shape?: MarkerShape }>) {

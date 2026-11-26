@@ -3,7 +3,7 @@ import type { PerceptionResponse } from '@citeladder/contracts/visibility-percep
 import { AttributeTable } from '@/components/perception/attribute-table';
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { Stack } from '@/components/ui/layout';
+import { Section, SectionToolbar } from '@/components/ui/section';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
@@ -48,16 +48,17 @@ export function PerceptionBreakdown({
   const view = views.includes(requested) ? requested : views[0];
   if (!view) return null;
   return (
-    <Stack as="section" aria-label="Breakdown" gap="item">
-      <SegmentedControl
-        value={view}
-        onChange={setView}
-        ariaLabel="Break perception down"
-        options={views.map((value) => ({ value, label: VIEW_LABEL[value] }))}
-        className="justify-self-start"
-      />
+    <Section aria-label="Breakdown">
+      <SectionToolbar>
+        <SegmentedControl
+          value={view}
+          onChange={setView}
+          ariaLabel="Break perception down"
+          options={views.map((value) => ({ value, label: VIEW_LABEL[value] }))}
+        />
+      </SectionToolbar>
       <BreakdownView view={view} data={data} categories={categories} />
-    </Stack>
+    </Section>
   );
 }
 

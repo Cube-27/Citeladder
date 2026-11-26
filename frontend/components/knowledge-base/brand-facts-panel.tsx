@@ -10,6 +10,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Icon } from '@/components/ui/icon';
+import { Inline } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
 import { SettingsGroup } from '@/components/ui/setting-row';
 import { StatusMark } from '@/components/ui/status-mark';
@@ -155,12 +156,14 @@ function FactRow({ fact, actions }: Readonly<{ fact: BrandFact; actions: ReactNo
   return (
     <TableRow>
       <TableCell>
-        {fact.statement}
-        {fact.status === 'draft' ? (
-          <StatusMark variant="status" value="warning" className="ms-2">
-            Draft
-          </StatusMark>
-        ) : null}
+        <Inline as="span" className="flex-wrap">
+          {fact.statement}
+          {fact.status === 'draft' ? (
+            <StatusMark variant="status" value="warning">
+              Draft
+            </StatusMark>
+          ) : null}
+        </Inline>
       </TableCell>
       <TableCell>{TOPIC_LABELS[fact.topic]}</TableCell>
       <TableCell>

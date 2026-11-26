@@ -17,7 +17,6 @@ import { TrafficOverview, TrafficCrawlers, TrafficActivity } from './traffic-vie
 import { overviewStarted } from './overview-signals';
 import { TrafficSetupState } from './traffic-setup';
 import { useSourceStep, type SourceStep } from '@/components/integrations/data-sources';
-import { Stack } from '@/components/ui/layout';
 import { TrafficPages } from './pages-view';
 import { CrawlLogAvailabilityNotice } from './crawl-log-availability';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -110,10 +109,8 @@ function TrafficDataView({
   if (tab === 'overview' && summary.isLoading)
     return (
       <ReportPage {...frame}>
-        <Stack gap="workspace" className="min-w-0">
-          <StateBlock kind="loading" label="Loading AI traffic…" shape={{ kind: 'figures' }} />
-          <StateBlock kind="loading" label="Loading AI traffic…" shape={{ kind: 'chart' }} />
-        </Stack>
+        <StateBlock kind="loading" label="Loading AI traffic…" shape={{ kind: 'figures' }} />
+        <StateBlock kind="loading" label="Loading AI traffic…" shape={{ kind: 'chart' }} />
       </ReportPage>
     );
   if (tab === 'overview' && summary.isError)

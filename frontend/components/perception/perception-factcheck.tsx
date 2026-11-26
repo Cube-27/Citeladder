@@ -5,12 +5,13 @@ import { ClaimsTable } from '@/components/perception/claims-table';
 import { FactPromptsDialog } from '@/components/perception/fact-prompts-dialog';
 import { FactsImportDialog } from '@/components/perception/facts-import-dialog';
 import { FactsTable } from '@/components/perception/facts-table';
-import { Button, buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { useToast } from '@/components/ui/toast';
 import { Download, Upload } from '@/lib/icons';
 import { humanizeApiError } from '@/lib/api/errors';
 import { Inline } from '@/components/ui/layout';
+import { SectionHeader } from '@/components/ui/section';
 import { ProjectLink } from '@/components/ui/project-link';
 import { textRole } from '@/components/ui/typography';
 import { AnalysisRead } from '@/components/visibility/selection-gate';
@@ -54,12 +55,13 @@ function FactCheckingLede({
   exporting,
 }: Readonly<{ data: AccuracyResponse; exporting: FactViews['exporting'] }>) {
   return (
-    <Inline className="items-start justify-between">
+    <SectionHeader
+      actions={<FactActions claims={data.score.coverage.claims > 0} exporting={exporting} />}
+    >
       <h2 className={textRole('heading')}>
         {contradictedHeadline(data.score.coverage.contradicted)}
       </h2>
-      <FactActions claims={data.score.coverage.claims > 0} exporting={exporting} />
-    </Inline>
+    </SectionHeader>
   );
 }
 
@@ -71,10 +73,10 @@ function FactActions({
   const [importing, setImporting] = useState(false);
   const [choosing, setChoosing] = useState(false);
   return (
-    <Inline gap="item" className="shrink-0">
-      <ProjectLink href="/agent/context?tab=brand-facts" className={buttonClasses('secondary')}>
-        Edit facts
-      </ProjectLink>
+    <Inline gap="item">
+      <Button variant="secondary" asChild>
+        <ProjectLink href="/agent/context?tab=brand-facts">Edit facts</ProjectLink>
+      </Button>
       <Button variant="secondary" onClick={() => setChoosing(true)}>
         Prompts
       </Button>

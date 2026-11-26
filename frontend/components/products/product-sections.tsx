@@ -272,7 +272,7 @@ export function Answers({ detail }: Readonly<{ detail: CommerceProductDetail }>)
             <TableActionsCell>
               <IconButton
                 icon={FileSearch}
-                variant="secondary"
+                variant="quiet"
                 onClick={() => answerDialog.open({ id: row.task_id, prompt_text: row.prompt_text })}
                 label={`Open the answer to ${row.prompt_text}`}
               />

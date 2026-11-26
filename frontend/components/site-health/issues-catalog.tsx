@@ -21,8 +21,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { SubmittedSearch } from '@/components/site-health/submitted-search';
 import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { TableGroupRow } from '@/components/ui/table';
 import { statusLabel } from '@/lib/site-health/status';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { ICONS } from '@/lib/icons';
@@ -153,11 +152,7 @@ export function IssuesCatalog({
       >
         {issueGroups(rows).map((group) => (
           <Fragment key={group.label}>
-            <TableRow>
-              <TableCell colSpan={ISSUE_COLUMNS.length} className={textRole('emphasis', 'bg-well')}>
-                {group.label}
-              </TableCell>
-            </TableRow>
+            <TableGroupRow span={ISSUE_COLUMNS.length}>{group.label}</TableGroupRow>
             {group.issues.map((issue) => (
               <CatalogRow key={issue.group_id} issue={issue} onOpen={catalog.selectIssue} />
             ))}

@@ -704,7 +704,9 @@ describe('AI Traffic state and navigation', () => {
     );
     expect(record('Crawler requests')).toBeUndefined();
     expect(
-      within(panel).getByRole('heading', { name: 'First and last observations' }).parentElement,
+      within(panel)
+        .getByRole('heading', { name: 'First and last observations' })
+        .closest('section'),
     ).toHaveTextContent('First and last observations—None');
     mswServer.use(
       http.get(

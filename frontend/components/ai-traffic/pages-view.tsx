@@ -6,7 +6,6 @@ import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow, TableTime, UrlText } from '@/components/ui/table';
-import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { SearchX } from '@/lib/icons';
@@ -114,7 +113,7 @@ export function TrafficPages({
   const columns = measuredPageColumns(pageColumns(sort, onSort), rows);
   const nothingMeasured = rows.length > 0 && columns.length === 1;
   return (
-    <Stack gap="workspace">
+    <>
       <InventoryDate data={page} />
       <DataTable
         label="Path-level AI traffic with separate signal units"
@@ -136,7 +135,7 @@ export function TrafficPages({
           bot_id: filters.bot_id,
         }}
       />
-    </Stack>
+    </>
   );
 }
 

@@ -3,7 +3,7 @@ import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { IconButton } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
-import { SLIP_FACE } from '@/components/ui/slip';
+import { SectionBleed } from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
 import { Ellipsis, GripVertical } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -36,7 +36,7 @@ export function ReorderList({
       onMove(from, to);
   };
   return (
-    <ol className={cn(SLIP_FACE, 'divide-rule m-0 list-none divide-y overflow-hidden p-0')}>
+    <SectionBleed as="ol" rows>
       {items.map((item, index) => (
         <ReorderRow
           key={item.key}
@@ -48,7 +48,7 @@ export function ReorderList({
           onDropped={(dropped) => moveDropped(dropped, index)}
         />
       ))}
-    </ol>
+    </SectionBleed>
   );
 }
 
@@ -92,16 +92,16 @@ function ReorderRow({
         if (!pending) onDropped(event.dataTransfer.getData(ROW_DRAG_TYPE));
       }}
       className={cn(
-        'group hover:overlay-hover grid min-h-10 grid-cols-[1rem_1.25rem_minmax(0,1fr)_auto] items-center gap-2 ps-2 pe-2 transition-colors',
+        'group hover:overlay-hover grid min-h-10 grid-cols-[1.25rem_minmax(0,1fr)_1rem_auto] items-center gap-2 transition-colors',
         dragging && 'opacity-60',
       )}
     >
+      <span className={textRole('body', 'text-ink-2 tabular-nums')}>{index + 1}</span>
+      <div className="min-w-0">{item.content}</div>
       <Icon
         icon={GripVertical}
         className="text-ink-2 cursor-grab opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
       />
-      <span className={textRole('body', 'text-ink-2 text-center tabular-nums')}>{index + 1}</span>
-      <div className="min-w-0">{item.content}</div>
       <Menu>
         <MenuTrigger asChild>
           <IconButton icon={Ellipsis} label={`Reorder ${index + 1}, ${item.name}`} />

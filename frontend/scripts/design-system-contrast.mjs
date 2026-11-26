@@ -96,7 +96,13 @@ const CONTRAST_PAIRS = [
   { inks: [color('focus')], surfaces: APP_FILLS, minimum: 3, only: 'app' },
   {
     inks: ['ink', 'ink-2'].map(color),
-    surfaces: ['state-hover', 'state-pressed', 'state-selected'].map(color),
+    surfaces: [
+      'state-hover',
+      'state-pressed',
+      'state-selected',
+      'state-fill',
+      'state-fill-hover',
+    ].map(color),
     over: ['ground', 'panel', 'raised'].map(color),
     minimum: 4.5,
     only: 'app',

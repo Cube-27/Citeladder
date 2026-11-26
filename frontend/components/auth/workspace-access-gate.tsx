@@ -218,19 +218,21 @@ function AccessEnded({
             </Button>
           </>
         }
+        panels={
+          activeWorkspaceId && canRestore ? (
+            <LazyIsland
+              loading={<StateBlock kind="loading" shape={{ kind: 'list' }} />}
+              failed={
+                <IslandUnavailable message="Couldn't load plans. Reload the page to try again." />
+              }
+              label="restore-plan"
+              defects="surface"
+            >
+              <RestorePlan workspaceId={activeWorkspaceId} />
+            </LazyIsland>
+          ) : null
+        }
       >
-        {activeWorkspaceId && canRestore ? (
-          <LazyIsland
-            loading={<StateBlock kind="loading" shape={{ kind: 'list' }} />}
-            failed={
-              <IslandUnavailable message="Couldn't load plans. Reload the page to try again." />
-            }
-            label="restore-plan"
-            defects="surface"
-          >
-            <RestorePlan workspaceId={activeWorkspaceId} />
-          </LazyIsland>
-        ) : null}
         {workspaces
           .filter((workspace) => workspace.id !== activeWorkspaceId)
           .map((workspace) => (

@@ -1,0 +1,94 @@
+@property --panel-top {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --panel-bottom {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+:root {
+  --panel-inset: var(--card-padding);
+}
+
+[data-panel] {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--card-padding);
+  min-width: 0;
+}
+
+[data-panel='card'] {
+  --panel-inset: var(--card-padding);
+  padding: var(--panel-inset);
+}
+
+[data-panel='card'][data-accent] {
+  box-shadow:
+    inset 0 2px 0 var(--color-accent),
+    var(--shadow-card);
+}
+
+[data-panel='card'],
+[data-panel-frame] {
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-card);
+  overflow: clip;
+}
+
+[data-panel='card'] > :nth-child(1 of :not([data-rung], [hidden])) {
+  --panel-top: 1;
+}
+[data-panel='card'] > :nth-last-child(1 of :not([data-rung], [hidden])) {
+  --panel-bottom: 1;
+}
+:is([data-panel='flat'], [data-slot-host]) > :nth-child(1 of :not([data-rung], [hidden])) {
+  --panel-top: inherit;
+}
+:is([data-panel='flat'], [data-slot-host]) > :nth-last-child(1 of :not([data-rung], [hidden])) {
+  --panel-bottom: inherit;
+}
+
+[data-panel]:has(> [data-slot-fill]) {
+  display: flex;
+  flex-direction: column;
+}
+[data-panel]:has(> [data-slot-fill]) > * {
+  min-width: 0;
+}
+[data-slot-fill] {
+  flex: 1 1 auto;
+}
+
+[data-slot-host] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--card-padding);
+  min-width: 0;
+}
+
+[data-bleed] {
+  min-width: 0;
+  margin-inline: calc(-1 * var(--panel-inset));
+  margin-top: calc(var(--panel-top) * -1 * var(--panel-inset));
+  margin-bottom: calc(var(--panel-bottom) * -1 * var(--panel-inset));
+  border-top: calc((1 - var(--panel-top)) * 1px) solid var(--color-rule);
+}
+
+[data-bleed-rows] > * {
+  padding: 12px var(--panel-inset);
+}
+
+[data-bleed] .table-frame tr > :first-child {
+  padding-inline-start: calc(var(--panel-inset) + var(--cell-indent, 0px));
+}
+[data-bleed] .table-frame tr > :last-child:not([data-tile-cell]) {
+  padding-inline-end: var(--panel-inset);
+}

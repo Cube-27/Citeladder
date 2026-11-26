@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
 
 import { IconButton } from '@/components/ui/button';
-import { Card, CardHeader } from '@/components/ui/card';
+import { Section, SectionToolbar } from '@/components/ui/section';
 import { InfoHint } from '@/components/ui/info-hint';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
@@ -41,21 +41,18 @@ export function AttributeRanks({ categories }: Readonly<{ categories: readonly C
   const shown = all ? ranked : ranked.slice(0, SHOWN);
   const most = ranked[0]?.[order] ?? 1;
   return (
-    <Card aria-label="Ranked attributes" className="flex min-w-0 flex-col">
-      <CardHeader
-        className="flex-row items-center"
-        actions={<span className={textRole('caption', 'text-ink-2')}>Points</span>}
-      >
-        <span className="flex items-center gap-2">
-          <SegmentedControl
-            value={order}
-            onChange={setOrder}
-            ariaLabel="Order attributes"
-            options={orders.map((value) => ({ value, label: ORDER_LABEL[value] }))}
-          />
-          <InfoHint label="About attributes">Labelled points per category</InfoHint>
-        </span>
-      </CardHeader>
+    <Section aria-label="Ranked attributes">
+      <SectionToolbar>
+        <SegmentedControl
+          value={order}
+          onChange={setOrder}
+          ariaLabel="Order attributes"
+          options={orders.map((value) => ({ value, label: ORDER_LABEL[value] }))}
+        />
+        <InfoHint label="About attributes">Labelled points per category</InfoHint>
+        <span className="flex-1" />
+        <span className={textRole('caption', 'text-ink-2')}>Points</span>
+      </SectionToolbar>
       <ol className="grid gap-1">
         {shown.map((category) => (
           <li
@@ -78,7 +75,7 @@ export function AttributeRanks({ categories }: Readonly<{ categories: readonly C
         ))}
       </ol>
       {ranked.length > SHOWN ? (
-        <span className="flex justify-center pt-2">
+        <span className="flex justify-center">
           <IconButton
             icon={all ? Minimize2 : Maximize2}
             label={all ? 'Show fewer' : `Show all ${ranked.length}`}
@@ -86,6 +83,6 @@ export function AttributeRanks({ categories }: Readonly<{ categories: readonly C
           />
         </span>
       ) : null}
-    </Card>
+    </Section>
   );
 }

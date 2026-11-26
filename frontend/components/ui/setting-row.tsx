@@ -1,8 +1,7 @@
-import { useId, type ReactNode } from 'react';
+import { useId, type HTMLAttributes, type ReactNode } from 'react';
 
 import { FieldFoot, type ControlProps } from '@/components/ui/field';
-import { SLIP_FACE } from '@/components/ui/slip';
-import { StateHeadingLevelContext } from '@/components/ui/state-heading-level';
+import { Section, SectionBleed, SectionDescription, SectionHeader } from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -25,55 +24,48 @@ export function SettingsGroup({
 }>) {
   const titleId = useId();
   return (
-    <section
-      id={id}
-      aria-labelledby={region ? titleId : undefined}
-      data-settings-group=""
-      className="grid min-w-0 gap-3"
-    >
-      <header className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-        <div className="grid min-w-0 flex-1 basis-60 gap-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h2
-              id={titleId}
-              className={textRole('heading', 'flex min-w-0 items-center gap-2 break-words')}
-            >
-              {title}
-            </h2>
-            {status}
-          </div>
-          {description ? <p className={textRole('caption')}>{description}</p> : null}
+    <Section id={id} aria-labelledby={region ? titleId : undefined} data-settings-group="">
+      <SectionHeader actions={action}>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <h2
+            id={titleId}
+            className={textRole('subheading', 'flex min-w-0 items-center gap-2 break-words')}
+          >
+            {title}
+          </h2>
+          {status}
         </div>
-        {action ? <div className="flex flex-wrap items-center gap-2">{action}</div> : null}
-      </header>
-      <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
-    </section>
+        {description ? <SectionDescription>{description}</SectionDescription> : null}
+      </SectionHeader>
+      {children}
+    </Section>
   );
 }
 
 export function SettingRows({
   label,
   foot,
+  onSubmit,
   children,
-}: Readonly<{ label?: string; foot?: ReactNode; children: ReactNode }>) {
+}: Readonly<{
+  label?: string;
+  foot?: ReactNode;
+  onSubmit?: HTMLAttributes<HTMLElement>['onSubmit'];
+  children: ReactNode;
+}>) {
   return (
-    <div
+    <SectionBleed
+      rows
+      as={onSubmit ? 'form' : 'div'}
+      noValidate={onSubmit ? true : undefined}
+      onSubmit={onSubmit}
       data-setting-rows=""
       aria-label={label}
       role={label ? 'group' : undefined}
-      className={settingRowsClasses()}
     >
       {children}
       {foot ? <div className="flex flex-wrap items-center justify-end gap-2">{foot}</div> : null}
-    </div>
-  );
-}
-
-export function settingRowsClasses(className?: string) {
-  return cn(
-    SLIP_FACE,
-    'divide-rule grid min-w-0 divide-y overflow-hidden *:min-h-13 *:px-4 *:py-3',
-    className,
+    </SectionBleed>
   );
 }
 
@@ -94,7 +86,7 @@ export function SettingRow({
 }>) {
   const hasValue = value !== undefined && value !== null;
   return (
-    <div data-setting-row="" className="grid min-w-0 content-center gap-3">
+    <div data-setting-row="" className="grid min-h-13 min-w-0 content-center gap-3">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <RowName label={label} description={description} />
         {hasValue || action ? (
@@ -144,8 +136,8 @@ export function SettingField({
       data-setting-row=""
       className={
         inline
-          ? 'flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-2'
-          : 'grid min-w-0 gap-2'
+          ? 'flex min-h-13 min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-2'
+          : 'grid min-h-13 min-w-0 gap-2'
       }
     >
       <div className="grid min-w-0 flex-1 basis-60 content-start gap-0.5">

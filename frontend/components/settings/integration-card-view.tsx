@@ -15,12 +15,8 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { GoogleMark } from '@/components/ui/google-glyph';
-import {
-  SettingRow,
-  SettingRows,
-  SettingsGroup,
-  settingRowsClasses,
-} from '@/components/ui/setting-row';
+import { SectionBleed } from '@/components/ui/section';
+import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import {
   integrationsApi,
   integrationsMutations,
@@ -215,11 +211,11 @@ function ConnectedCard({
         action={actions}
       >
         <GrantAlert family={family} status={grant.status} />
-        <ul className={settingRowsClasses('@container')}>
+        <SectionBleed as="ul" rows>
           {grant.connections.map((connection) => (
             <ConnectionRow key={connection.id} connection={connection} grant={grant} />
           ))}
-        </ul>
+        </SectionBleed>
       </SettingsGroup>
     </div>
   );

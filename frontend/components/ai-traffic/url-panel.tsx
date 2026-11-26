@@ -11,7 +11,7 @@ import { formatCount, formatWindowDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { TextLink } from '@/components/ui/text-link';
-import { Stack } from '@/components/ui/layout';
+import { SectionBleed, TitledSection } from '@/components/ui/section';
 import { Tooltip } from '@/components/ui/tooltip';
 import { UrlText } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
@@ -177,7 +177,7 @@ function UrlEvidence({
     },
   ];
   return (
-    <Stack gap="workspace">
+    <>
       <p className={textRole('caption')}>
         {formatWindowDate(data.window_start)} – {formatWindowDate(data.window_end)} · Path-level
         identity
@@ -219,7 +219,7 @@ function UrlEvidence({
           'Inventory unavailable'
         )}
       </p>
-    </Stack>
+    </>
   );
 }
 
@@ -250,21 +250,20 @@ function Observations({
     })),
   ];
   return (
-    <Stack gap="tight">
-      <h3 className={textRole('subheading')}>First and last observations</h3>
+    <TitledSection title="First and last observations">
       {rows.length ? (
-        <ul className="grid">
+        <SectionBleed as="ul" rows>
           {rows.map((row) => (
-            <li key={row.key} className="flex min-h-8 items-center justify-between gap-4">
+            <li key={row.key} className="flex items-center justify-between gap-4">
               <span className={textRole('body', 'min-w-0 truncate')}>{row.name}</span>
               <span className={textRole('caption', 'shrink-0 tabular-nums')}>{row.detail}</span>
             </li>
           ))}
-        </ul>
+        </SectionBleed>
       ) : (
         <Absence state="none" />
       )}
-    </Stack>
+    </TitledSection>
   );
 }
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { SectionBleed } from '@/components/ui/section';
 import { ClampText } from '@/components/ui/clamp-text';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
@@ -13,11 +14,10 @@ export function LedgerList({
   ordered?: boolean;
   children: ReactNode;
 }>) {
-  const List = ordered ? 'ol' : 'ul';
   return (
-    <List aria-label={label} data-ledger-list="" className="grid min-w-0">
+    <SectionBleed as={ordered ? 'ol' : 'ul'} rows aria-label={label}>
       {children}
-    </List>
+    </SectionBleed>
   );
 }
 
@@ -54,9 +54,8 @@ export function LedgerItem({
   );
   return (
     <li
-      data-ledger-item=""
       className={cn(
-        '-mx-3 min-w-0 px-3 py-2',
+        'min-w-0',
         action === undefined ? 'grid gap-1' : 'flex items-center gap-4',
         'hover:overlay-hover transition-colors duration-[var(--motion-fast)]',
       )}

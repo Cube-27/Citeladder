@@ -6,7 +6,6 @@ import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { Inline } from '@/components/ui/layout';
-import { TitledSection } from '@/components/ui/section';
 import type { Audit } from '@citeladder/contracts';
 import { marketLabel } from '@citeladder/contracts/markets';
 import { Play } from '@/lib/icons';
@@ -87,58 +86,54 @@ export function RunsTable({
     setSort(sort.key === key ? { key, descending: !sort.descending } : { key, descending: true });
 
   return (
-    <TitledSection
+    <DataTable
       title="All runs"
       actions={
         <Inline as="output" className="type-caption">
           {status}
         </Inline>
       }
+      columns={runsColumns(sort, onSort)}
+      pageSize={PAGE_SIZE}
+      rowCount={pagedAudits.length}
+      state={
+        audits.length === 0
+          ? { kind: 'empty', headingLevel: 3, icon: Play, heading: emptyHeading }
+          : undefined
+      }
+      pager={{
+        range: { from, to, total: sorted.length, noun: 'runs' },
+        ...pageNumberControls(page, pageCount, setPage),
+      }}
     >
-      <DataTable
-        label="All runs"
-        columns={runsColumns(sort, onSort)}
-        pageSize={PAGE_SIZE}
-        rowCount={pagedAudits.length}
-        state={
-          audits.length === 0
-            ? { kind: 'empty', headingLevel: 3, icon: Play, heading: emptyHeading }
-            : undefined
-        }
-        pager={{
-          range: { from, to, total: sorted.length, noun: 'runs' },
-          ...pageNumberControls(page, pageCount, setPage),
-        }}
-      >
-        {pagedAudits.map((audit, index) => (
-          <TableRow key={audit.id}>
-            <TableCell>
-              <TableCellLines
-                title
-                primary={
-                  <TextLink href={`/runs/${audit.id}`} underline="hover">
-                    {runTitle(audit, timeZone)}
-                  </TextLink>
-                }
-                secondary={runCaption({
-                  audit,
-                  timeZone,
-                  launchAbove: sort.key === 'created' && sameLaunch(audit, pagedAudits[index - 1]),
-                })}
-              />
-            </TableCell>
-            <TableCell>
-              <StatusMark variant="run-status" value={AUDIT_STATES[audit.status].badge}>
-                {AUDIT_STATES[audit.status].label}
-              </StatusMark>
-            </TableCell>
-            <TableCell numeric>{formatCount(audit.requested_count)}</TableCell>
-            <TableCell numeric>{formatCount(audit.completed_count)}</TableCell>
-            <TableCell numeric>{formatCount(audit.failed_count)}</TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
+      {pagedAudits.map((audit, index) => (
+        <TableRow key={audit.id}>
+          <TableCell>
+            <TableCellLines
+              title
+              primary={
+                <TextLink href={`/runs/${audit.id}`} underline="hover">
+                  {runTitle(audit, timeZone)}
+                </TextLink>
+              }
+              secondary={runCaption({
+                audit,
+                timeZone,
+                launchAbove: sort.key === 'created' && sameLaunch(audit, pagedAudits[index - 1]),
+              })}
+            />
+          </TableCell>
+          <TableCell>
+            <StatusMark variant="run-status" value={AUDIT_STATES[audit.status].badge}>
+              {AUDIT_STATES[audit.status].label}
+            </StatusMark>
+          </TableCell>
+          <TableCell numeric>{formatCount(audit.requested_count)}</TableCell>
+          <TableCell numeric>{formatCount(audit.completed_count)}</TableCell>
+          <TableCell numeric>{formatCount(audit.failed_count)}</TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }
 

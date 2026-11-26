@@ -6,8 +6,7 @@ import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/market
 import { Button, IconButton } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
-import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { X } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
@@ -37,16 +36,16 @@ export function ProjectMarkets({
   const extra = markets.filter((market) => !market.is_default);
   const failed = add.error ?? remove.error;
   return (
-    <Stack as="section" gap="compact" aria-label="Additional markets">
-      <p className={textRole('body', 'text-ink-2')}>Additional markets</p>
+    <Section aria-labelledby="additional-markets">
+      <SectionHeader>
+        <SectionTitle id="additional-markets" level={3}>
+          Additional markets
+        </SectionTitle>
+      </SectionHeader>
       {extra.length ? (
-        <ul className={ledgerClasses()}>
+        <SectionBleed as="ul" rows>
           {extra.map((market) => (
-            <Inline
-              as="li"
-              key={market.id}
-              className={ledgerItemClasses('type-body text-ink-2 justify-between')}
-            >
+            <Inline as="li" key={market.id} className="type-body text-ink-2 justify-between">
               <span>{market.label}</span>
               <IconButton
                 icon={X}
@@ -56,7 +55,7 @@ export function ProjectMarkets({
               />
             </Inline>
           ))}
-        </ul>
+        </SectionBleed>
       ) : null}
       <Stack gap="item" className="grid-cols-[1fr_1fr_auto] items-end">
         <MarketSelect
@@ -87,6 +86,6 @@ export function ProjectMarkets({
           })}
         />
       ) : null}
-    </Stack>
+    </Section>
   );
 }

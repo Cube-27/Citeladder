@@ -106,10 +106,9 @@ export function PromptFormDialog({
         </>
       }
     >
+      {error ? <Notice kind="mutation" notice={error} /> : null}
       <form noValidate onSubmit={submit}>
         <Stack gap="workspace">
-          {error ? <Notice kind="mutation" notice={error} /> : null}
-
           <Field label="Topic">
             {(props) => (
               <Controller

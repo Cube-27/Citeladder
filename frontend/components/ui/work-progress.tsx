@@ -14,7 +14,7 @@ export function WorkProgress({
   action,
 }: Readonly<{ label: string; narration: string; meter?: WorkMeter | null; action?: ReactNode }>) {
   return (
-    <Section variant="framed" aria-label={label}>
+    <Section aria-label={label}>
       <Stack gap="item">
         <Inline className="flex-wrap justify-between">
           <Inline>

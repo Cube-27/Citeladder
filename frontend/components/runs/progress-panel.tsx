@@ -208,7 +208,7 @@ export function ProgressPanel({
   const polling = AUDIT_STATES[audit.status].active;
 
   return (
-    <Stack gap="workspace">
+    <>
       <ProgressMetrics
         audit={audit}
         lead={
@@ -230,6 +230,6 @@ export function ProgressPanel({
         rerunNotice={rerunNotice}
         onRerunRetry={onRerunRetry}
       />
-    </Stack>
+    </>
   );
 }

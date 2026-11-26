@@ -9,7 +9,6 @@ import { CodeToken, textRole } from '@/components/ui/typography';
 import { ChevronDown, ExternalLink } from '@/lib/icons';
 import { MCP_CLIENT_LINKS, MCP_SERVER_URL, type McpClientLink } from '@/lib/config/mcp-clients';
 import { cn } from '@/lib/utils';
-import { slipClasses } from '@/components/ui/slip';
 
 const HOVER_CLOSE_DELAY_MS = 160;
 
@@ -79,7 +78,7 @@ export function ConnectStrip({
       as="section"
       gap="compact"
       aria-label="Connect CiteLadder to an AI assistant"
-      className={cn(!inApp && slipClasses(), 'w-fit max-w-full flex-wrap')}
+      className="w-fit max-w-full flex-wrap"
     >
       <Menu open={menu.open} onOpenChange={menu.setOpen} modal={false}>
         <MenuTrigger asChild>

@@ -11,7 +11,6 @@ import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { Tooltip } from '@/components/ui/tooltip';
 import { DataTable } from '@/components/ui/data-table';
 import { CONTRADICTED_COLUMNS, ClaimRow, claimKey } from './claim-row';
-import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
@@ -28,7 +27,7 @@ import {
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatPercent, percentText } from '@/lib/format';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionContent, TitledSection, SectionStack } from '@/components/ui/section';
+import { Section, SectionStack } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 type ClaimView = 'contradicted' | 'all-claims' | 'by-fact';
@@ -60,24 +59,21 @@ export function AccuracyView({
   const { label: engineLabel } = useEngineCatalog();
   const [view, setView] = useUrlState('claims', CLAIM_VIEW_CODEC, { history: 'replace' });
   if (data.state !== 'value') {
-    const state = (
-      <AccuracyState state={data.state} reason={data.reason} coverage={data.score.coverage} />
-    );
     const actionable = data.state === 'no_facts' || data.state === 'no_claims';
-    return actionable && stateActions ? (
-      <Stack gap="item">
-        <Inline className="justify-end">{stateActions}</Inline>
-        {state}
-      </Stack>
-    ) : (
-      state
+    return (
+      <AccuracyState
+        state={data.state}
+        reason={data.reason}
+        coverage={data.score.coverage}
+        action={actionable ? stateActions : undefined}
+      />
     );
   }
   return (
     <SectionStack>
       <Headline data={data} lede={lede} />
       <Section aria-label="Claims">
-        <Tabs value={view} onValueChange={setView} items={CLAIM_VIEWS} ariaLabel="Claims" spaced>
+        <Tabs value={view} onValueChange={setView} items={CLAIM_VIEWS} ariaLabel="Claims">
           <TabPanel value="contradicted">
             <ContradictedClaims claims={data.contradicted} />
           </TabPanel>
@@ -101,10 +97,12 @@ function AccuracyState({
   state,
   reason,
   coverage,
+  action,
 }: Readonly<{
   state: Exclude<AccuracyResponse['state'], 'value'>;
   reason: AccuracyResponse['reason'];
   coverage?: AccuracyCoverage;
+  action?: ReactNode;
 }>) {
   const copy = accuracyStateCopy(state, reason);
   const counted = coverage?.claims ? accuracyCoverageLine(coverage) : null;
@@ -115,6 +113,7 @@ function AccuracyState({
       icon={ShieldCheck}
       heading={copy.heading}
       description={[copy.description, counted].filter(Boolean).join(' ') || undefined}
+      action={action}
     />
   );
 }
@@ -129,54 +128,50 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
   const { coverage } = data.score;
   return (
     <Section>
-      <SectionContent>
-        <Stack gap="item">
-          {lede}
-          <FigureStrip
-            label="Fact checks"
-            subLine
-            segments={[
-              {
-                key: 'claims',
-                label: 'Claims',
-                value: String(coverage.claims),
-              },
-              {
-                key: 'contradicted',
-                label: 'Contradicted',
-                value: String(coverage.contradicted),
-                delta: (
-                  <Delta
-                    value={contradictedChange(data)}
-                    policy="lower-is-better"
-                    precision={0}
-                    context="vs previous"
-                  />
-                ),
-              },
-              { key: 'supported', label: 'Supported', value: String(coverage.supported) },
-              {
-                key: 'accuracy',
-                label: 'Accuracy',
-                value: data.score.accuracy === null ? null : percentText(data.score.accuracy),
-                missingState: 'unavailable',
-                sub: (
-                  <Tooltip content="Verdicts a person changed">
-                    <span>{coverage.edited} edited</span>
-                  </Tooltip>
-                ),
-              },
-              {
-                key: 'not_checked',
-                label: 'Not checked',
-                value: String(coverage.inconclusive + coverage.not_covered),
-                sub: `${coverage.inconclusive} ${VERDICT_LABELS.inconclusive.toLowerCase()} · ${coverage.not_covered} ${VERDICT_LABELS.not_covered.toLowerCase()}`,
-              },
-            ]}
-          />
-          <CoverageNote coverage={coverage} />
-        </Stack>
-      </SectionContent>
+      {lede}
+      <FigureStrip
+        label="Fact checks"
+        subLine
+        segments={[
+          {
+            key: 'claims',
+            label: 'Claims',
+            value: String(coverage.claims),
+          },
+          {
+            key: 'contradicted',
+            label: 'Contradicted',
+            value: String(coverage.contradicted),
+            delta: (
+              <Delta
+                value={contradictedChange(data)}
+                policy="lower-is-better"
+                precision={0}
+                context="vs previous"
+              />
+            ),
+          },
+          { key: 'supported', label: 'Supported', value: String(coverage.supported) },
+          {
+            key: 'accuracy',
+            label: 'Accuracy',
+            value: data.score.accuracy === null ? null : percentText(data.score.accuracy),
+            missingState: 'unavailable',
+            sub: (
+              <Tooltip content="Verdicts a person changed">
+                <span>{coverage.edited} edited</span>
+              </Tooltip>
+            ),
+          },
+          {
+            key: 'not_checked',
+            label: 'Not checked',
+            value: String(coverage.inconclusive + coverage.not_covered),
+            sub: `${coverage.inconclusive} ${VERDICT_LABELS.inconclusive.toLowerCase()} · ${coverage.not_covered} ${VERDICT_LABELS.not_covered.toLowerCase()}`,
+          },
+        ]}
+      />
+      <CoverageNote coverage={coverage} />
     </Section>
   );
 }
@@ -213,60 +208,56 @@ function BreakdownTable({
 }>) {
   if (!rows.length) return null;
   return (
-    <TitledSection title={title}>
-      <DataTable
-        label={title}
-        columns={[
-          { key: 'key', label: column },
-          { key: 'claims', label: 'Claims', width: 'figure', kind: 'number' },
-          { key: 'supported', label: VERDICT_LABELS.supported, width: 'figure', kind: 'number' },
-          {
-            key: 'contradicted',
-            label: VERDICT_LABELS.contradicted,
-            width: 'figure',
-            kind: 'number',
-          },
-          { key: 'accuracy', label: 'Accuracy', width: 'figure', kind: 'number' },
-        ]}
-      >
-        {rows.map((row) => (
-          <TableRow key={row.key}>
-            <TableCell>{label(row.key)}</TableCell>
-            <TableCell numeric>{row.score.coverage.claims}</TableCell>
-            <TableCell numeric>{row.score.coverage.supported}</TableCell>
-            <TableCell numeric>{row.score.coverage.contradicted}</TableCell>
-            <TableCell numeric>{formatPercent(row.score.accuracy)}</TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
+    <DataTable
+      title={title}
+      columns={[
+        { key: 'key', label: column },
+        { key: 'claims', label: 'Claims', width: 'figure', kind: 'number' },
+        { key: 'supported', label: VERDICT_LABELS.supported, width: 'figure', kind: 'number' },
+        {
+          key: 'contradicted',
+          label: VERDICT_LABELS.contradicted,
+          width: 'figure',
+          kind: 'number',
+        },
+        { key: 'accuracy', label: 'Accuracy', width: 'figure', kind: 'number' },
+      ]}
+    >
+      {rows.map((row) => (
+        <TableRow key={row.key}>
+          <TableCell>{label(row.key)}</TableCell>
+          <TableCell numeric>{row.score.coverage.claims}</TableCell>
+          <TableCell numeric>{row.score.coverage.supported}</TableCell>
+          <TableCell numeric>{row.score.coverage.contradicted}</TableCell>
+          <TableCell numeric>{formatPercent(row.score.accuracy)}</TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }
 
 function CitedTable({ cited }: Readonly<{ cited: AccuracyResponse['cited_alongside'] }>) {
   return (
-    <TitledSection title="Sources cited alongside contradictions">
-      <DataTable
-        label="Sources cited alongside contradictions"
-        columns={[
-          { key: 'domain', label: 'Domain' },
-          { key: 'answers', label: 'Answers', width: 'figure', kind: 'number' },
-        ]}
-        state={
-          cited.length
-            ? undefined
-            : { kind: 'empty', inline: true, message: 'No sources cited alongside contradictions.' }
-        }
-      >
-        {cited.map((row) => (
-          <TableRow key={row.domain}>
-            <TableCell>
-              <ClampText>{row.domain}</ClampText>
-            </TableCell>
-            <TableCell numeric>{row.answers}</TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
+    <DataTable
+      title="Sources cited alongside contradictions"
+      columns={[
+        { key: 'domain', label: 'Domain' },
+        { key: 'answers', label: 'Answers', width: 'figure', kind: 'number' },
+      ]}
+      state={
+        cited.length
+          ? undefined
+          : { kind: 'empty', inline: true, message: 'No sources cited alongside contradictions.' }
+      }
+    >
+      {cited.map((row) => (
+        <TableRow key={row.domain}>
+          <TableCell>
+            <ClampText>{row.domain}</ClampText>
+          </TableCell>
+          <TableCell numeric>{row.answers}</TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }

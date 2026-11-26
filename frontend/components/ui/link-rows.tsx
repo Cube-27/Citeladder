@@ -2,7 +2,7 @@ import type { MouseEventHandler, ReactNode } from 'react';
 
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
-import { ROWS_SHELL } from '@/components/ui/work-rows';
+import { SectionBleed } from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
 import { ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -15,12 +15,12 @@ export function LinkRows({
   more,
 }: Readonly<{ label: string; children: ReactNode; more?: ReactNode }>) {
   return (
-    <div className={ROWS_SHELL}>
+    <SectionBleed>
       <ul aria-label={label} className="divide-rule divide-y">
         {children}
       </ul>
       {more}
-    </div>
+    </SectionBleed>
   );
 }
 
@@ -38,7 +38,7 @@ export function LinkRow({
   facts: readonly [ReactNode, ReactNode];
 }>) {
   return (
-    <li className="hover:overlay-hover relative flex h-10 items-center gap-3 px-4">
+    <li className="hover:overlay-hover relative flex h-10 items-center gap-3 px-[var(--panel-inset)]">
       {tick ? <span className="relative z-10 flex shrink-0">{tick}</span> : null}
       <ProjectLink
         href={href}

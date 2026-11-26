@@ -4,7 +4,6 @@ import { EvidenceLine } from '@/components/site-health/issue-evidence';
 import { Inline, Stack } from '@/components/ui/layout';
 import { UrlText } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { insetClasses, ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { SiteIssue } from '@citeladder/contracts';
 import { issueTitle } from '@/lib/site-health/issues';
 import {
@@ -38,8 +37,8 @@ export function SharedOccurrences({
   scope: SharedScope;
 }>) {
   return (
-    <Stack as="li" gap="workspace" className={ledgerItemClasses()}>
-      <div className={insetClasses()}>
+    <Stack as="li" gap="item">
+      <Stack gap="tight">
         <EvidenceLine lead={sharedEvidenceLead(entry.ruleId)} facts={entry.facts} text="body" />
         <span className="type-caption">{sharedPagesLabel(scope)}</span>
         <AskAgentLink
@@ -52,10 +51,10 @@ export function SharedOccurrences({
         >
           Ask agent about these pages
         </AskAgentLink>
-      </div>
-      <ul className={ledgerClasses()}>
+      </Stack>
+      <Stack as="ul" gap="item">
         {entry.occurrences.map((occurrence) => (
-          <li key={occurrence.occurrence_id} className={ledgerItemClasses()}>
+          <li key={occurrence.occurrence_id} className="flex min-h-6 min-w-0 items-center">
             <AffectedPageLink
               crawlId={crawlId}
               siteUrlId={occurrence.site_url_id}
@@ -65,7 +64,7 @@ export function SharedOccurrences({
             />
           </li>
         ))}
-      </ul>
+      </Stack>
     </Stack>
   );
 }

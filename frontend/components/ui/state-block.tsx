@@ -3,6 +3,7 @@ import { useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { usePageEmptyOfferRegister } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
+import { Section, useOnPage } from '@/components/ui/section';
 import { ShapeBlocks, SkeletonFrame, type LoadingShape } from '@/components/ui/skeleton-block';
 import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
 import { textRole } from '@/components/ui/typography';
@@ -127,14 +128,35 @@ export function screenState<T, M extends T>(
 }
 
 export function StateBlock(props: StateBlockProps) {
-  if (props.kind === 'empty' && props.inline) return <InlineEmptyView {...props} />;
-  return <FramedState {...props} />;
+  const onPage = useOnPage();
+  const level = useContext(StateHeadingLevelContext);
+  const block =
+    props.kind === 'empty' && props.inline ? (
+      <InlineEmptyView {...props} />
+    ) : (
+      <FramedState {...props} onPage={onPage} />
+    );
+  if (!onPage || !framedKind(props)) return block;
+  return (
+    <Section>
+      <StateHeadingLevelContext value={level}>{block}</StateHeadingLevelContext>
+    </Section>
+  );
 }
 
-function FramedState(props: Exclude<StateBlockProps, InlineEmpty>) {
+const framedKind = (props: StateBlockProps) =>
+  props.kind !== 'error' && !(props.kind === 'loading' && isFigures(props.shape));
+
+function FramedState({
+  onPage,
+  ...props
+}: Exclude<StateBlockProps, InlineEmpty> & Readonly<{ onPage: boolean }>) {
   const ref = useRef<HTMLDivElement>(null);
-  usePageOffer(ref, (props.kind === 'empty' || props.kind === 'not_measured') && !!props.action);
-  const framed = props.kind !== 'error' && !(props.kind === 'loading' && isFigures(props.shape));
+  usePageOffer(
+    ref,
+    onPage && (props.kind === 'empty' || props.kind === 'not_measured') && !!props.action,
+  );
+  const framed = framedKind(props);
   return (
     <div
       ref={ref}
@@ -147,14 +169,11 @@ function FramedState(props: Exclude<StateBlockProps, InlineEmpty>) {
   );
 }
 
-const STATE_CONTAINERS =
-  ".surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table]";
-
 function usePageOffer(ref: Readonly<{ current: HTMLElement | null }>, offers: boolean) {
   const register = usePageEmptyOfferRegister();
   useLayoutEffect(() => {
     const node = ref.current;
-    if (!offers || !node || node.closest(STATE_CONTAINERS)) return;
+    if (!offers || !node) return;
     node.dataset.stateOffer = '';
     const release = register?.();
     return () => {
@@ -171,10 +190,7 @@ function InlineEmptyView({ message, icon: Glyph, action, compact = false }: Inli
     <div
       data-state-block="empty"
       data-state-block-inline=""
-      className={cn(
-        textRole('body', 'text-ink-2 flex min-w-0 items-center gap-2'),
-        !compact && 'bg-well rounded-control px-3 py-2',
-      )}
+      className={cn(textRole('body', 'text-ink-2 flex min-w-0 items-center gap-2'))}
     >
       {Glyph ? <Glyph className="size-3.5 shrink-0" aria-hidden /> : null}
       <p className={cn('min-w-0 flex-1', compact && 'truncate')}>{message}</p>

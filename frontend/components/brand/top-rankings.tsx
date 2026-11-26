@@ -5,7 +5,6 @@ import type { VisibilityMatrix } from '@citeladder/contracts/visibility-matrix';
 import { Absence } from '@/components/ui/absence';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { GridTableSkeleton, RankLegend, RankTable } from '@/components/ui/heat-table';
-import { Stack } from '@/components/ui/layout';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
 import { MATRIX_DIMENSIONS, RANKING_DIMENSIONS } from '@/lib/config/visibility';
@@ -78,19 +77,17 @@ export function TopRankings({
       >
         <SectionTitle id="insights-rankings">Top rankings</SectionTitle>
       </SectionHeader>
-      <Stack>
-        {matrixBodyState(
-          query,
-          'rankings',
-          <GridTableSkeleton
-            label="Loading the rankings…"
-            variant="rank"
-            rows={pendingAxisLength(selected, by)}
-            columns={PLACES}
-          />,
-        ) ?? body()}
-        <RankLegend />
-      </Stack>
+      {matrixBodyState(
+        query,
+        'rankings',
+        <GridTableSkeleton
+          label="Loading the rankings…"
+          variant="rank"
+          rows={pendingAxisLength(selected, by)}
+          columns={PLACES}
+        />,
+      ) ?? body()}
+      <RankLegend />
     </Section>
   );
 }

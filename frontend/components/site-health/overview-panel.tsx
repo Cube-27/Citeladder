@@ -1,9 +1,9 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { SectionStack } from '@/components/ui/section';
 import { useState } from 'react';
 
 import { OverviewDetails } from './overview-details';
 import { OverviewMetricCards } from './overview-metrics';
-import { Stack } from '@/components/ui/layout';
 import { httpErrorStatus } from '@/lib/api/client';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
@@ -35,14 +35,14 @@ export function OverviewPanel({
   const data = overview.data;
   if (useAwaitingFirstSnapshot(terminal && overview.isPending))
     return (
-      <Stack gap="workspace" className="min-w-0" data-testid="site-health-overview">
+      <SectionStack data-testid="site-health-overview">
         <StateBlock kind="loading" label="Loading Overview" shape={{ kind: 'figures' }} />
         <StateBlock kind="loading" label="Loading Overview details" shape={PILLAR_TABLE} />
-      </Stack>
+      </SectionStack>
     );
   const summary = dashboard?.score_summary ?? crawl?.score_summary ?? null;
   return (
-    <Stack gap="workspace" className="min-w-0" data-testid="site-health-overview">
+    <SectionStack data-testid="site-health-overview">
       {data ? (
         <OverviewDetails
           data={data}
@@ -56,7 +56,7 @@ export function OverviewPanel({
           {terminal ? <OverviewReadState overview={overview} /> : null}
         </>
       )}
-    </Stack>
+    </SectionStack>
   );
 }
 

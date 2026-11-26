@@ -1,4 +1,5 @@
 import { Drawer } from '@/components/ui/drawer';
+import { SectionBleed } from '@/components/ui/section';
 import { Stack } from '@/components/ui/layout';
 import { PageLink } from '@/components/site-health/page-link';
 import type { SiteArchitecture } from '@citeladder/contracts';
@@ -51,8 +52,8 @@ export function OrphanPageDrawer({
       title="Orphaned pages"
       closeLabel="Close orphaned pages"
     >
-      <Stack gap="section">
-        <Stack as="ul">
+      <>
+        <SectionBleed as="ul" rows>
           {pages.map((page) => (
             <Stack as="li" gap="tight" key={page.site_url_id} className="min-w-0">
               {crawlId ? (
@@ -74,11 +75,11 @@ export function OrphanPageDrawer({
               </span>
             </Stack>
           ))}
-        </Stack>
+        </SectionBleed>
         {undisclosed > 0 ? (
           <p className="type-caption">and {formatCount(undisclosed)} more</p>
         ) : null}
-      </Stack>
+      </>
     </Drawer>
   );
 }

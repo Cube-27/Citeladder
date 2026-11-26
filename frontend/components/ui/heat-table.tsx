@@ -11,6 +11,7 @@ import {
 import { Absence, printed } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { SkeletonBlock, SkeletonFrame } from '@/components/ui/skeleton-block';
+import { SectionBleed } from '@/components/ui/section';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import type { DataAvailabilityState, Formatted } from '@/lib/format';
@@ -40,7 +41,7 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
           <TableRow>
             <TableHead className="w-40">{corner}</TableHead>
             {columns.map((column) => (
-              <TableHead key={column.key} className={HEAT_HEAD}>
+              <TableHead key={column.key} data-tile-cell="" className={HEAT_HEAD}>
                 {column.header}
               </TableHead>
             ))}
@@ -51,7 +52,11 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
             <TableRow key={row.key}>
               <TableRowHeader>{row.header}</TableRowHeader>
               {row.cells.map((cell, index) => (
-                <td key={columns[index]?.key ?? index} className="p-0.5 text-center">
+                <td
+                  key={columns[index]?.key ?? index}
+                  data-tile-cell=""
+                  className="p-0.5 text-center"
+                >
                   {cell.kind === 'void' ? (
                     <div
                       className="rounded-mark flex min-h-10 flex-col items-center justify-center"
@@ -91,7 +96,7 @@ const RANK_CHIP =
 const RANK_FLOOR = 'phone:min-w-[calc(10rem+var(--grid-columns)*8rem)]';
 
 function GridFloor({ columns, children }: Readonly<{ columns: number; children: ReactNode }>) {
-  return <div style={cssVars({ '--grid-columns': columns })}>{children}</div>;
+  return <SectionBleed style={cssVars({ '--grid-columns': columns })}>{children}</SectionBleed>;
 }
 
 export function GridTableSkeleton({
@@ -102,43 +107,45 @@ export function GridTableSkeleton({
 }: Readonly<{ label: string; rows: number; columns: number; variant: 'heat' | 'rank' }>) {
   const cell =
     variant === 'heat' ? (
-      <td className="p-0.5">
+      <td data-tile-cell="" className="p-0.5">
         <SkeletonBlock className="rounded-mark h-10 min-h-10" />
       </td>
     ) : (
-      <td className="p-1">
+      <td data-tile-cell="" className="p-1">
         <SkeletonBlock className="rounded-mark h-[var(--control-md)]" />
       </td>
     );
   return (
-    <SkeletonFrame label={label} variant="grid">
-      <Table fixed>
-        <TableHeader>
-          <TableRow>
-            <TableHead className={variant === 'heat' ? 'w-40' : 'w-54'}>
-              <SkeletonBlock className="w-16" />
-            </TableHead>
-            {Array.from({ length: columns }, (_, index) => (
-              <TableHead key={index}>
-                <SkeletonBlock className="mx-auto w-12" />
+    <SectionBleed>
+      <SkeletonFrame label={label} variant="grid">
+        <Table fixed>
+          <TableHeader>
+            <TableRow>
+              <TableHead className={variant === 'heat' ? 'w-40' : 'w-54'}>
+                <SkeletonBlock className="w-16" />
               </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {Array.from({ length: rows }, (_, row) => (
-            <TableRow key={row}>
-              <TableRowHeader>
-                <SkeletonBlock className="w-24" />
-              </TableRowHeader>
               {Array.from({ length: columns }, (_, index) => (
-                <Fragment key={index}>{cell}</Fragment>
+                <TableHead key={index}>
+                  <SkeletonBlock className="mx-auto w-12" />
+                </TableHead>
               ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </SkeletonFrame>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: rows }, (_, row) => (
+              <TableRow key={row}>
+                <TableRowHeader>
+                  <SkeletonBlock className="w-24" />
+                </TableRowHeader>
+                {Array.from({ length: columns }, (_, index) => (
+                  <Fragment key={index}>{cell}</Fragment>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </SkeletonFrame>
+    </SectionBleed>
   );
 }
 
@@ -184,7 +191,7 @@ export function RankTable({
           <TableRow>
             <TableHead className="phone:w-40 w-54">{corner}</TableHead>
             {columns.map((index) => (
-              <TableHead key={index} className="text-center">
+              <TableHead key={index} data-tile-cell="" className="text-center">
                 #{index + 1}
               </TableHead>
             ))}
@@ -196,14 +203,14 @@ export function RankTable({
               <TableRowHeader>{row.header}</TableRowHeader>
               {row.chips.length === 0
                 ? columns.map((index) => (
-                    <td key={index} className="p-1 text-center">
+                    <td key={index} data-tile-cell="" className="p-1 text-center">
                       {row.empty}
                     </td>
                   ))
                 : columns.map((index) => {
                     const chip = row.chips[index];
                     return (
-                      <td key={chip?.key ?? index} className="p-1">
+                      <td key={chip?.key ?? index} data-tile-cell="" className="p-1">
                         {chip ? (
                           <div
                             className={cn(

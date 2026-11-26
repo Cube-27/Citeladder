@@ -105,25 +105,23 @@ export function CsvImportDialog({
         </>
       }
     >
-      <Stack gap="workspace">
-        {error ? <Notice kind="mutation" notice={error} /> : null}
+      {error ? <Notice kind="mutation" notice={error} /> : null}
 
-        <Stack gap="compact">
-          <CsvImportFileInput inputRef={inputRef} onSelect={(file) => void selectFile(file)} />
-          <Button variant="secondary" className="justify-self-start" onClick={downloadSample}>
-            <Icon icon={Download} />
-            Download sample CSV
-          </Button>
-        </Stack>
-
-        {readError ? <Notice tone="negative">{readError}</Notice> : null}
-
-        {parsed && parsed.errors.length > 0 ? (
-          <Notice tone="negative">{parsed.errors.join(' ')}</Notice>
-        ) : null}
-
-        {parsed ? <ParsedRows parsed={parsed} fileName={fileName} /> : null}
+      <Stack gap="compact">
+        <CsvImportFileInput inputRef={inputRef} onSelect={(file) => void selectFile(file)} />
+        <Button variant="secondary" className="justify-self-start" onClick={downloadSample}>
+          <Icon icon={Download} />
+          Download sample CSV
+        </Button>
       </Stack>
+
+      {readError ? <Notice tone="negative">{readError}</Notice> : null}
+
+      {parsed && parsed.errors.length > 0 ? (
+        <Notice tone="negative">{parsed.errors.join(' ')}</Notice>
+      ) : null}
+
+      {parsed ? <ParsedRows parsed={parsed} fileName={fileName} /> : null}
     </Dialog>
   );
 }

@@ -91,7 +91,7 @@ export function Calendar({
           type="button"
           aria-label="Previous month"
           onClick={() => setMonth((current) => addMonths(current, -1))}
-          className="enabled:hover:overlay-hover enabled:active:overlay-pressed rounded-control inline-flex size-[var(--control-md)] items-center justify-center"
+          className="rounded-control enabled:hover:bg-state-fill enabled:active:bg-state-fill-hover inline-flex size-[var(--control-md)] items-center justify-center"
         >
           <ChevronLeft className="size-3.5" aria-hidden />
         </Pressable>
@@ -102,7 +102,7 @@ export function Calendar({
           type="button"
           aria-label="Next month"
           onClick={() => setMonth((current) => addMonths(current, 1))}
-          className="enabled:hover:overlay-hover enabled:active:overlay-pressed rounded-control inline-flex size-[var(--control-md)] items-center justify-center"
+          className="rounded-control enabled:hover:bg-state-fill enabled:active:bg-state-fill-hover inline-flex size-[var(--control-md)] items-center justify-center"
         >
           <ChevronRight className="size-3.5" aria-hidden />
         </Pressable>
@@ -139,7 +139,7 @@ export function Calendar({
                         'type-body text-ink inline-flex size-[var(--control-md)] items-center justify-center rounded-control tabular-nums transition-colors',
                         isSelected
                           ? 'bg-primary text-on-primary enabled:hover:bg-primary-hover enabled:active:bg-primary-hover'
-                          : 'enabled:hover:overlay-hover enabled:active:overlay-pressed',
+                          : 'enabled:hover:bg-state-fill enabled:active:bg-state-fill-hover',
                         outside && !isSelected && 'text-ink-2',
                       )}
                     >

@@ -11,6 +11,7 @@ import {
 import {
   columnRules,
   fitFloor,
+  isFlexible,
   SELECT_WIDTH,
   withEdges,
   type DataTableColumn,
@@ -20,6 +21,20 @@ export type FitColumn = Readonly<{ floor: number; low: boolean }>;
 
 const tableFloor = (columns: readonly FitColumn[], select: number) =>
   columns.reduce((sum, column) => sum + column.floor, select);
+
+export function fitFloors({
+  probe,
+  rendered,
+  flexible,
+}: Readonly<{
+  probe: readonly number[];
+  rendered: readonly (number | undefined)[];
+  flexible: readonly boolean[];
+}>): number[] {
+  return probe.map((floor, index) =>
+    flexible[index] ? floor : Math.max(floor, rendered[index] ?? 0),
+  );
+}
 
 export function hiddenLowColumns({
   columns,
@@ -54,6 +69,7 @@ export function useFittedColumns({
   const frameRef = useRef<HTMLDivElement>(null);
   const probeRef = useRef<HTMLDivElement>(null);
   const [hidden, setHidden] = useState<readonly number[]>([]);
+  const hiddenRef = useRef<readonly number[]>([]);
   const hasLow = columns.some((column) => column.priority === 'low');
 
   useLayoutEffect(() => {
@@ -63,20 +79,37 @@ export function useFittedColumns({
       setHidden((previous) => (previous.length ? [] : previous));
       return;
     }
+    const rendered = new Map<string, number>();
     const update = () => {
-      const width = frame.getBoundingClientRect().width;
-      if (width === 0) return;
+      const style = getComputedStyle(frame);
+      const width =
+        frame.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      if (width <= 0) return;
       const [select = 0, ...floors] = [...probe.children].map(
         (child) => child.getBoundingClientRect().width,
       );
+      const heads = frame.querySelector('thead tr')?.children;
+      const offset = selection ? 1 : 0;
+      columns
+        .filter((_, index) => !hiddenRef.current.includes(index))
+        .forEach((column, at) => {
+          const head = heads?.item(at + offset)?.getBoundingClientRect().width;
+          if (head) rendered.set(column.key, head);
+        });
+      const fitted = fitFloors({
+        probe: floors,
+        rendered: columns.map((column) => rendered.get(column.key)),
+        flexible: columns.map(isFlexible),
+      });
       const next = hiddenLowColumns({
         columns: columns.map((column, index) => ({
-          floor: floors[index] ?? 0,
+          floor: fitted[index] ?? 0,
           low: column.priority === 'low',
         })),
         select: selection ? select : 0,
         frame: width,
       });
+      hiddenRef.current = next;
       setHidden((previous) => (sameList(previous, next) ? previous : next));
     };
     update();

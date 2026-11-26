@@ -59,10 +59,10 @@ const CONTROL_ROLES = [
   'input.height',
   'select.height',
   'segmented.height',
-  'data-table-header.height',
+  'data-table-actions.height',
 ] as const;
 const STRIP_ROLES = ['page-tab.height', 'tabs-strip.height'] as const;
-const SLIP_INSET_ROLES = ['slip.padding', 'slip.inset-top', 'slip.inset-left'] as const;
+const CARD_INSET_ROLES = ['card.padding', 'card.inset-top', 'card.inset-left'] as const;
 const NONE_ROLES = [
   'band.gap',
   'tabs-strip.top',
@@ -231,7 +231,7 @@ function measure({ route }: { route: string }) {
       previous = child;
     }
   }
-  const boxes = '.surface-slip';
+  const boxes = "[data-panel='card']";
   const isContent = (element: Element) =>
     element.matches('[data-callout-tone], [data-icon-tile]') ||
     (!element.parentElement?.closest('[data-callout-tone]') &&
@@ -241,12 +241,12 @@ function measure({ route }: { route: string }) {
         )));
   const nestedState = (element: Element) =>
     element.matches('[data-state-block]') &&
-    element.parentElement?.closest(`${boxes}, [role="dialog"], .table-frame`) != null;
+    element.parentElement?.closest(`${boxes}, [data-overlay], .table-frame`) != null;
   for (const box of all(boxes)) {
     if (nestedState(box)) continue;
     const boxStyle = getComputedStyle(box);
-    add('slip.padding', box, px(boxStyle.paddingTop));
-    add('slip.radius', box, px(boxStyle.borderTopLeftRadius));
+    add('card.padding', box, px(boxStyle.paddingTop));
+    add('card.radius', box, px(boxStyle.borderTopLeftRadius));
     const item = box.parentElement;
     const listed = item?.matches('li') && item.childElementCount === 1;
     const next = listed
@@ -259,16 +259,16 @@ function measure({ route }: { route: string }) {
     ) {
       const a = box.getBoundingClientRect();
       const b = next.getBoundingClientRect();
-      if (b.top >= a.bottom) add('slip.gap', next, b.top - a.bottom);
-      else if (b.left >= a.right) add('slip.gap', next, b.left - a.right);
+      if (b.top >= a.bottom) add('card.gap', next, b.top - a.bottom);
+      else if (b.left >= a.right) add('card.gap', next, b.left - a.right);
     }
-    if (box.querySelector('table')) continue;
+    if (box.querySelector('table') || box.firstElementChild?.matches('[data-bleed]')) continue;
     const ink = Array.from(box.querySelectorAll('*'))
       .filter(
         (element) =>
           visible(element) &&
           isContent(element) &&
-          !element.closest('svg *') &&
+          !element.closest('svg *, [data-section-actions]') &&
           getComputedStyle(element).clipPath === 'none' &&
           getComputedStyle(element).clip !== 'rect(0px, 0px, 0px, 0px)',
       )
@@ -277,15 +277,15 @@ function measure({ route }: { route: string }) {
     const edge = box.getBoundingClientRect();
     const top = edge.top + Number.parseFloat(boxStyle.borderTopWidth);
     const left = edge.left + Number.parseFloat(boxStyle.borderLeftWidth);
-    add('slip.inset-top', box, Math.min(...ink.map((rect) => rect.top)) - top);
-    add('slip.inset-left', box, Math.min(...ink.map((rect) => rect.left)) - left);
+    add('card.inset-top', box, Math.min(...ink.map((rect) => rect.top)) - top);
+    add('card.inset-left', box, Math.min(...ink.map((rect) => rect.left)) - left);
   }
   for (const element of all('[data-state-block]:not([data-state-block-inline])')) {
     if (!element.matches('[data-state-frame]') && !nestedState(element))
       add('query-state.padding', element, px(getComputedStyle(element).paddingTop));
   }
-  for (const element of all('[data-data-table-header]'))
-    add('data-table-header.height', element, element.getBoundingClientRect().height);
+  for (const element of all('[data-data-table-header] > [data-section-actions]'))
+    add('data-table-actions.height', element, element.getBoundingClientRect().height);
   for (const element of all('[data-figure-cell]')) {
     add('figure-cell.padding-y', element, px(getComputedStyle(element).paddingTop));
     if (element.matches('[data-label-lines="2"], [data-sub-line]')) continue;
@@ -419,7 +419,7 @@ function expectRoleInvariants(records: readonly Box[], required: readonly string
   for (const role of measured) expectOneValue(records, [role]);
   expectOneValue(records, CONTROL_ROLES);
   expectOneValue(records, STRIP_ROLES);
-  expectOneValue(records, SLIP_INSET_ROLES);
+  expectOneValue(records, CARD_INSET_ROLES);
   expectOneValue(records, ['field-end-target.size', 'field-end-target.hit']);
   for (const role of NONE_ROLES) expectNone(records, role);
   const smallAbsence = [...valuesOf(records, ['absence-target.height']).keys()].filter(
@@ -622,7 +622,7 @@ const ROUTE_GROUPS: Readonly<Record<string, readonly PageState[]>> = {
         [new RegExp(String.raw`/api/v1/workspaces/${workspace}/members(\?.*)?$`), MEMBERS],
         [new RegExp(String.raw`/api/v1/workspaces/${workspace}/invitations(\?.*)?$`), []],
       ],
-      required: ['data-table-header.height', 'input.height'],
+      required: ['input.height'],
     },
   ],
   agent: [

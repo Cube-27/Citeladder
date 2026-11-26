@@ -4,7 +4,7 @@ import {
   SiteHealthView,
 } from '@/components/agent/thread-views-data';
 import { RankingView, SourcesView, TrendView } from '@/components/agent/thread-views-visibility';
-import { Stack } from '@/components/ui/layout';
+import { SectionStack } from '@/components/ui/section';
 import type { AgentMessage } from '@/lib/api/agent';
 
 type View = AgentMessage['views'][number];
@@ -34,10 +34,10 @@ function ThreadView({ scope, view }: Readonly<{ scope: Scope; view: View }>) {
 export function ThreadViews({ scope, views }: Readonly<{ scope: Scope; views: readonly View[] }>) {
   if (views.length === 0) return null;
   return (
-    <Stack gap="workspace" className="min-w-0">
+    <SectionStack>
       {views.map((view) => (
         <ThreadView key={JSON.stringify(view)} scope={scope} view={view} />
       ))}
-    </Stack>
+    </SectionStack>
   );
 }

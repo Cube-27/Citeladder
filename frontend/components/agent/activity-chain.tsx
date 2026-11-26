@@ -1,17 +1,27 @@
 import { FoldedTrail, type TrailStep } from '@/components/ui/rung-trail';
-import { STEP_SLIP } from '@/components/ui/slip';
+import type { ReactNode } from 'react';
+
+import { Section, SectionContent } from '@/components/ui/section';
 import { activityLabel, activitySummary, type ActivityRow } from '@/lib/agent/activity';
 
 export function ActivityChain({ rows }: Readonly<{ rows: readonly ActivityRow[] }>) {
   if (rows.length === 0) return null;
   return (
-    <div className={STEP_SLIP}>
+    <ActivityPanel>
       <FoldedTrail
         summary={activitySummary(rows)}
         label="Agent activity"
         steps={activitySteps(rows)}
       />
-    </div>
+    </ActivityPanel>
+  );
+}
+
+export function ActivityPanel({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <Section>
+      <SectionContent>{children}</SectionContent>
+    </Section>
   );
 }
 

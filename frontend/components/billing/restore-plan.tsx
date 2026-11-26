@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { ChoosePlan, subscribeWith } from '@/components/billing/choose-plan';
 import { PurchaseReview } from '@/components/billing/purchase-review';
-import { Stack } from '@/components/ui/layout';
 import { emptyBillingCustomerDetails } from '@/lib/api/billing';
 import { catalogItemName } from '@/lib/billing/catalog';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
@@ -36,7 +35,7 @@ export function RestorePlan({ workspaceId }: Readonly<{ workspaceId: string }>) 
   if (!catalog)
     return <StateBlock kind="loading" label="Loading plans…" shape={{ kind: 'list' }} />;
   return (
-    <Stack gap="workspace">
+    <>
       <CheckoutStatus checkout={checkout} />
       <PurchaseReview
         checkout={checkout}
@@ -54,6 +53,6 @@ export function RestorePlan({ workspaceId }: Readonly<{ workspaceId: string }>) 
         setDetails={setDetails}
         subscribe={subscribeWith(checkout, country)}
       />
-    </Stack>
+    </>
   );
 }

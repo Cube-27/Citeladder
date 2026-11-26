@@ -31,6 +31,7 @@ import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
+import { SectionStack } from '@/components/ui/section';
 
 function visibleTabs(hasWorkspace: boolean, managesCredentials: boolean, managed: boolean) {
   return SETTINGS_TABS.filter(
@@ -159,20 +160,24 @@ export function SettingsScreen() {
     <TabsRoot value={activeTab} onValueChange={setActiveTab} orientation="vertical">
       <SettingsPage rail={<TabRail items={tabs} ariaLabel="Settings sections" />}>
         <TabPanel value="account" forceMount className="data-[state=inactive]:hidden">
-          <SettingsGroup title="Profile">
-            <SettingRows>
-              <SettingRow label={user.email} action={<Avatar name={user.email} />} />
-              {createdLabel ? <SettingRow label="Account created" value={createdLabel} /> : null}
-              {updatedLabel ? <SettingRow label="Last updated" value={updatedLabel} /> : null}
-            </SettingRows>
-          </SettingsGroup>
-          <TimeZoneSetting />
-          <AccountSecurity />
+          <SectionStack>
+            <SettingsGroup title="Profile">
+              <SettingRows>
+                <SettingRow label={user.email} action={<Avatar name={user.email} />} />
+                {createdLabel ? <SettingRow label="Account created" value={createdLabel} /> : null}
+                {updatedLabel ? <SettingRow label="Last updated" value={updatedLabel} /> : null}
+              </SettingRows>
+            </SettingsGroup>
+            <TimeZoneSetting />
+            <AccountSecurity />
+          </SectionStack>
         </TabPanel>
 
         <TabPanel value="workspace" forceMount className="data-[state=inactive]:hidden">
-          <WorkspacePanel />
-          <ProjectDeletionControls />
+          <SectionStack>
+            <WorkspacePanel />
+            <ProjectDeletionControls />
+          </SectionStack>
         </TabPanel>
 
         <TabPanel value="providers" forceMount className="data-[state=inactive]:hidden">
@@ -180,13 +185,19 @@ export function SettingsScreen() {
         </TabPanel>
 
         <TabPanel value="integrations">
-          <IntegrationSettings />
+          <SectionStack>
+            <IntegrationSettings />
+          </SectionStack>
         </TabPanel>
         <TabPanel value="connections">
-          <McpConnections />
+          <SectionStack>
+            <McpConnections />
+          </SectionStack>
         </TabPanel>
         <TabPanel value="api-keys">
-          <ApiKeys />
+          <SectionStack>
+            <ApiKeys />
+          </SectionStack>
         </TabPanel>
       </SettingsPage>
     </TabsRoot>

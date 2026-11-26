@@ -2,7 +2,8 @@ import { useState, type ReactNode } from 'react';
 
 import { BillingCountryInput } from '@/components/billing/billing-account-details';
 import { BillingDetailsForm } from '@/components/billing/billing-details-form';
-import { PlanCards, PlanRow } from '@/components/billing/plan-row';
+import { PlanRow } from '@/components/billing/plan-row';
+import { CardGroup, CardRow } from '@/components/ui/section';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -96,7 +97,7 @@ export function ChoosePlan({
       </SettingsGroup>
     );
   return (
-    <SettingsGroup id="choose-plan" title="Choose a plan">
+    <CardGroup id="choose-plan" title="Choose a plan">
       <SettingRows label="Billing details">
         <SettingRow
           label="Provider keys"
@@ -113,7 +114,7 @@ export function ChoosePlan({
         <BillingCountryInput country={country} setCountry={setCountry} />
         <BillingDetailsForm country={country} details={details} setDetails={setDetails} />
       </SettingRows>
-      <PlanCards>
+      <CardRow>
         {catalog.plans.map((plan) => (
           <PlanRow
             key={plan.key}
@@ -130,7 +131,7 @@ export function ChoosePlan({
             }}
           />
         ))}
-      </PlanCards>
-    </SettingsGroup>
+      </CardRow>
+    </CardGroup>
   );
 }

@@ -1,13 +1,19 @@
 import { useId, type ReactNode } from 'react';
 
-import { slipClasses } from '@/components/ui/slip';
+import { Stack } from '@/components/ui/layout';
+import {
+  Section,
+  SectionBleed,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 import { textRole, type TextRole } from '@/components/ui/typography';
-
-const READING_CARD = slipClasses('flex min-w-0 flex-col gap-3');
 
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="flex min-h-dvh w-full min-w-0 flex-col pb-[var(--page-end-space)]">
+    <div className="flex min-h-dvh w-full min-w-0 flex-col gap-[var(--page-section-gap)] pb-[var(--page-end-space)]">
       {children}
     </div>
   );
@@ -17,7 +23,7 @@ export function ReadingTools({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="flex flex-wrap gap-2">{children}</div>;
 }
 
-export const READING_SECTION_TITLE = 'label' satisfies TextRole;
+export const READING_SECTION_TITLE = 'subheading' satisfies TextRole;
 
 export function Labelled({
   title,
@@ -32,13 +38,19 @@ export function Labelled({
 }>) {
   const id = useId();
   return (
-    <section aria-labelledby={id} className="mt-6 flex min-w-0 flex-col gap-2">
-      <h2 id={id} className={textRole(READING_SECTION_TITLE)}>
-        {title}
-      </h2>
-      {bare ? children : <div className={READING_CARD}>{children}</div>}
-      {caption ? <p className={textRole('caption', 'text-ink-2')}>{caption}</p> : null}
-    </section>
+    <Section aria-labelledby={id}>
+      <SectionHeader>
+        <SectionTitle id={id}>{title}</SectionTitle>
+        {caption ? <SectionDescription>{caption}</SectionDescription> : null}
+      </SectionHeader>
+      {bare ? (
+        children
+      ) : (
+        <SectionContent>
+          <Stack gap="item">{children}</Stack>
+        </SectionContent>
+      )}
+    </Section>
   );
 }
 
@@ -51,11 +63,11 @@ export type DetailFact = Readonly<{ label: string; value: ReactNode }>;
 export function DetailsFacts({ facts }: Readonly<{ facts: readonly DetailFact[] }>) {
   const id = useId();
   return (
-    <section aria-labelledby={id} className="mt-6 flex flex-col gap-2">
-      <h2 id={id} className={textRole(READING_SECTION_TITLE)}>
-        Details
-      </h2>
-      <dl className={READING_CARD}>
+    <Section aria-labelledby={id}>
+      <SectionHeader>
+        <SectionTitle id={id}>Details</SectionTitle>
+      </SectionHeader>
+      <SectionBleed as="dl" rows>
         {facts.map((fact) => (
           <div key={fact.label} className="flex">
             <dt className={textRole('body', 'text-ink-2 w-30 shrink-0')}>{fact.label}</dt>
@@ -64,8 +76,8 @@ export function DetailsFacts({ facts }: Readonly<{ facts: readonly DetailFact[] 
             </dd>
           </div>
         ))}
-      </dl>
-    </section>
+      </SectionBleed>
+    </Section>
   );
 }
 

@@ -11,10 +11,10 @@ import { Absence } from '@/components/ui/absence';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Label, textRole } from '@/components/ui/typography';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { textRole } from '@/components/ui/typography';
 import type { Highlight } from '@/lib/markdown/highlight';
 import { TOPIC_LABELS, VERDICT_LABELS, VERDICT_TONE } from '@/lib/visibility/accuracy';
-import { wellClasses } from '@/components/ui/slip';
 
 export function claimHighlights(claims: readonly ExecutionClaim[]): Highlight[] {
   return claims.flatMap((claim): Highlight[] => {
@@ -57,16 +57,13 @@ export function EvidenceClaims({ claims }: Readonly<{ claims: readonly Execution
   const [editing, setEditing] = useState<ExecutionClaim | null>(null);
   if (!claims.length) return null;
   return (
-    <Stack as="section" gap="item">
-      <Label>Fact checks</Label>
-      <Stack as="ul" gap="item">
+    <Section>
+      <SectionHeader>
+        <SectionTitle level={3}>Fact checks</SectionTitle>
+      </SectionHeader>
+      <SectionBleed as="ul" rows>
         {claims.map((claim) => (
-          <Stack
-            as="li"
-            gap="tight"
-            key={`${claim.start}:${claim.end}:${claim.topic}`}
-            className={wellClasses('min-w-0')}
-          >
+          <Stack as="li" gap="tight" key={`${claim.start}:${claim.end}:${claim.topic}`}>
             <Inline as="span" className="flex-wrap">
               <span className={textRole('emphasis')}>“{claim.quote}”</span>
               <VerdictChip claim={claim} />
@@ -88,8 +85,8 @@ export function EvidenceClaims({ claims }: Readonly<{ claims: readonly Execution
             ))}
           </Stack>
         ))}
-      </Stack>
+      </SectionBleed>
       {editing ? <VerdictDialog claim={editing} onClose={() => setEditing(null)} /> : null}
-    </Stack>
+    </Section>
   );
 }

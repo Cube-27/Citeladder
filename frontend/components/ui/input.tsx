@@ -4,14 +4,15 @@ import { Icon } from '@/components/ui/icon';
 import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-export const FIELD_EDGE = 'bg-panel border border-transparent [[data-public-surface]_&]:bg-well';
+export const FIELD_EDGE =
+  'bg-panel border border-transparent [[data-public-surface]_&]:bg-well app:shadow-[var(--shadow-field,0_0_#0000)] app:not-disabled:hover:bg-field-hover';
 
 const FIELD_SHAPE =
-  'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)]';
+  'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)] app:duration-150';
 
 export const FIELD_BOX = `${FIELD_EDGE} ${FIELD_SHAPE}`;
 
-export const TRIGGER_BOX = `face bg-raised border border-transparent [[data-public-surface]_&]:bg-well hover:bg-raised-2 data-[state=open]:bg-raised-2 ${FIELD_SHAPE}`;
+export const TRIGGER_BOX = `face bg-raised border border-transparent [[data-public-surface]_&]:bg-well hover:bg-raised-2 data-[state=open]:bg-raised-2 app:shadow-[var(--shadow-field,0_0_#0000)] app:not-disabled:hover:bg-field-hover ${FIELD_SHAPE}`;
 
 const inputWidths = {
   fill: '',
@@ -44,7 +45,7 @@ export function Input({
         className={cn(
           'focus-input',
           FIELD_BOX,
-          'placeholder:text-ink-3 disabled:cursor-not-allowed disabled:bg-raised-2 disabled:text-ink-2',
+          'placeholder:text-ink-3 disabled:cursor-not-allowed disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-50',
           inputWidths[width],
           containerClassName,
           className,
@@ -60,7 +61,7 @@ export function Input({
       className={cn(
         'focus-frame flex items-center gap-2',
         FIELD_BOX,
-        props.disabled && 'cursor-not-allowed opacity-60',
+        props.disabled && 'cursor-not-allowed opacity-60 app:opacity-50',
         endContentFlush && 'pe-1',
         containerClassName,
       )}

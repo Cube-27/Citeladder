@@ -20,11 +20,10 @@ import { contactSalesHref } from '@/lib/config/contact-sales';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { slipClasses } from '@/components/ui/slip';
+import { Section } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { cn } from '@/lib/utils';
 
 export function PlanCard({
   name,
@@ -42,16 +41,7 @@ export function PlanCard({
   'data-tier'?: string;
 }>) {
   return (
-    <div
-      {...props}
-      aria-current={current ? 'true' : undefined}
-      className={slipClasses(
-        cn(
-          'flex h-full min-w-0 flex-col gap-4',
-          current && 'shadow-[inset_0_2px_0_var(--color-accent)]',
-        ),
-      )}
-    >
+    <Section {...props} accent={current} aria-current={current ? 'true' : undefined}>
       <div className="grid min-w-0 flex-1 content-start gap-1">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <span className={textRole('label')}>{name}</span>
@@ -60,18 +50,8 @@ export function PlanCard({
         <span className={textRole('body', 'tabular-nums')}>{price}</span>
         {children}
       </div>
-      {controls ? (
-        <div className="flex flex-wrap items-center justify-end gap-2">{controls}</div>
-      ) : null}
-    </div>
-  );
-}
-
-export function PlanCards({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div className="@container min-w-0">
-      <div className="grid gap-3 @[640px]:auto-cols-fr @[640px]:grid-flow-col">{children}</div>
-    </div>
+      {controls ? <div className="flex flex-wrap items-center gap-2">{controls}</div> : null}
+    </Section>
   );
 }
 

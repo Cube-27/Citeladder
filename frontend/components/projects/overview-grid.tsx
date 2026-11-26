@@ -23,7 +23,7 @@ export function OverviewGrid({
   const cell = (widget: OverviewWidget) => {
     const index = widgets.indexOf(widget);
     return (
-      <section key={widget.key} data-widget={widget.key} className="relative min-w-0">
+      <section key={widget.key} data-widget={widget.key} className="relative grid min-w-0">
         {render(widget)}
         {editing ? (
           <WidgetControls

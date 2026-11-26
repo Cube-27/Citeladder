@@ -11,12 +11,14 @@ import { Absence, printed } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { FactList } from '@/components/ui/facts';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
+import { DRAWER_SPLIT, DrawerNav, DrawerPane } from '@/components/ui/drawer';
+import { TitledSection } from '@/components/ui/section';
+import { SectionTitleRoleContext } from '@/components/ui/state-heading-level';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
-import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatCount, formatDisplayTimestamp } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
@@ -58,60 +60,55 @@ export function PageDrawerView({
     ...(traffic ? [{ value: 'traffic', label: 'AI traffic' } as const] : []),
   ] as const satisfies readonly { value: Pane; label: string; count?: number }[];
   return (
-    <TabsRoot
-      value={pane}
-      onValueChange={setPane}
-      orientation="vertical"
-      className="phone:grid-cols-1 grid min-h-0 flex-1 grid-cols-[11.5rem_minmax(0,1fr)]"
-    >
-      <div className="border-rule phone:border-r-0 phone:border-b border-r p-3">
+    <TabsRoot value={pane} onValueChange={setPane} orientation="vertical" className={DRAWER_SPLIT}>
+      <DrawerNav>
         <TabRail items={items} ariaLabel="Page sections" />
-      </div>
-      <div className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain p-6">
-        <Stack gap="item" className="mb-6 empty:hidden">
-          {actions ? <Inline className="flex-wrap justify-end">{actions}</Inline> : null}
-          {children}
-        </Stack>
-        <TabPanel value="overview">
-          <Stack gap="workspace">
+      </DrawerNav>
+      <DrawerPane>
+        <SectionTitleRoleContext value="subheading">
+          <div className="grid min-w-0 gap-2 empty:hidden">
+            {actions ? <Inline className="flex-wrap justify-end">{actions}</Inline> : null}
+            {children}
+          </div>
+          <TabPanel value="overview">
             <Figures detail={detail} />
             <FactSection title="URL" facts={urlFacts(detail, useDisplayTimeZone())} />
             <FactSection title="Server HTML" facts={htmlFacts(detail)} />
             <FactSection title="Delivery" facts={deliveryFacts(detail)} />
-          </Stack>
-        </TabPanel>
-        <TabPanel value="issues">
-          <PageIssues
-            issues={detail.issues}
-            audited={detail.analysis_status === 'completed'}
-            crawlId={detail.crawl_id}
-          />
-        </TabPanel>
-        <TabPanel value="actions">{work.list}</TabPanel>
-        <TabPanel value="checks">
-          <PageChecks evaluations={detail.evaluations} />
-        </TabPanel>
-        <TabPanel value="in">
-          <LinkTable
-            label="Linked from"
-            first="Source page"
-            rows={links?.top_inbound}
-            total={links?.inbound_count}
-            crawlId={detail.crawl_id}
-          />
-        </TabPanel>
-        <TabPanel value="out">
-          <LinkTable
-            label="Links out"
-            first="Destination"
-            rows={links?.top_outbound}
-            total={links?.outbound_count}
-            crawlId={detail.crawl_id}
-          />
-        </TabPanel>
-        <TabPanel value="history">{history}</TabPanel>
-        <TabPanel value="traffic">{traffic}</TabPanel>
-      </div>
+          </TabPanel>
+          <TabPanel value="issues">
+            <PageIssues
+              issues={detail.issues}
+              audited={detail.analysis_status === 'completed'}
+              crawlId={detail.crawl_id}
+            />
+          </TabPanel>
+          <TabPanel value="actions">{work.list}</TabPanel>
+          <TabPanel value="checks">
+            <PageChecks evaluations={detail.evaluations} />
+          </TabPanel>
+          <TabPanel value="in">
+            <LinkTable
+              label="Linked from"
+              first="Source page"
+              rows={links?.top_inbound}
+              total={links?.inbound_count}
+              crawlId={detail.crawl_id}
+            />
+          </TabPanel>
+          <TabPanel value="out">
+            <LinkTable
+              label="Links out"
+              first="Destination"
+              rows={links?.top_outbound}
+              total={links?.outbound_count}
+              crawlId={detail.crawl_id}
+            />
+          </TabPanel>
+          <TabPanel value="history">{history}</TabPanel>
+          <TabPanel value="traffic">{traffic}</TabPanel>
+        </SectionTitleRoleContext>
+      </DrawerPane>
     </TabsRoot>
   );
 }
@@ -142,10 +139,9 @@ type FactRow = { label: string; value: ReactNode };
 
 function FactSection({ title, facts }: Readonly<{ title: string; facts: readonly FactRow[] }>) {
   return (
-    <section className="min-w-0">
-      <h3 className={textRole('subheading', 'mb-3')}>{title}</h3>
+    <TitledSection title={title}>
       <FactList layout="ruled" label={title} facts={facts} />
-    </section>
+    </TitledSection>
   );
 }
 
@@ -267,50 +263,48 @@ function LinkTable({
 }>) {
   const shown = rows ?? [];
   return (
-    <Stack gap="item">
-      <DataTable
-        label={label}
-        columns={linkColumns(first)}
-        state={
-          shown.length === 0
-            ? {
-                kind: 'empty',
-                icon: ICONS.siteHealth,
-                headingLevel: 3,
-                heading: rows ? 'No links found' : "Internal links weren't counted for this page",
-              }
-            : undefined
-        }
-      >
-        {shown.map((row) => (
-          <TableRow key={row.url}>
-            <TableCell>
-              {row.site_url_id ? (
-                <PageLink
-                  text="body"
-                  underline="hover"
-                  crawlId={crawlId}
-                  siteUrlId={row.site_url_id}
-                  className="flex min-w-0 items-center"
-                >
-                  <UrlText url={row.url} />
-                </PageLink>
-              ) : (
+    <DataTable
+      label={label}
+      columns={linkColumns(first)}
+      footer={
+        total !== undefined && total > shown.length && shown.length > 0
+          ? `Showing ${formatCount(shown.length)} of ${formatCount(total)}`
+          : undefined
+      }
+      state={
+        shown.length === 0
+          ? {
+              kind: 'empty',
+              icon: ICONS.siteHealth,
+              headingLevel: 3,
+              heading: rows ? 'No links found' : "Internal links weren't counted for this page",
+            }
+          : undefined
+      }
+    >
+      {shown.map((row) => (
+        <TableRow key={row.url}>
+          <TableCell>
+            {row.site_url_id ? (
+              <PageLink
+                text="body"
+                underline="hover"
+                crawlId={crawlId}
+                siteUrlId={row.site_url_id}
+                className="flex min-w-0 items-center"
+              >
                 <UrlText url={row.url} />
-              )}
-            </TableCell>
-            <TableCell numeric>{formatCount(row.anchor_count)}</TableCell>
-            <TableCell className="whitespace-nowrap">
-              {row.main_content ? 'Main content' : 'Navigation or footer'}
-            </TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
-      {total !== undefined && total > shown.length && shown.length > 0 ? (
-        <p className={textRole('caption', 'text-ink-2')}>
-          Showing {formatCount(shown.length)} of {formatCount(total)}
-        </p>
-      ) : null}
-    </Stack>
+              </PageLink>
+            ) : (
+              <UrlText url={row.url} />
+            )}
+          </TableCell>
+          <TableCell numeric>{formatCount(row.anchor_count)}</TableCell>
+          <TableCell className="whitespace-nowrap">
+            {row.main_content ? 'Main content' : 'Navigation or footer'}
+          </TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }

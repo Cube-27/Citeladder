@@ -35,7 +35,7 @@ export function ProjectThemesPanel({
       />
     );
   return (
-    <div className="grid min-w-0 gap-3">
+    <>
       {failed ? (
         <Notice
           kind="mutation"
@@ -65,6 +65,6 @@ export function ProjectThemesPanel({
           />
         ) : null}
       </SettingRows>
-    </div>
+    </>
   );
 }

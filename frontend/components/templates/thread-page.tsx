@@ -28,11 +28,7 @@ export function ThreadPageLoading({ label = 'Loading the chat…' }: Readonly<{ 
 export function NewChatLoading() {
   return (
     <ThreadPage>
-      <SkeletonFrame
-        label="Loading the Agent…"
-        variant="new-chat"
-        className="max-w-thread mx-auto my-auto flex w-full flex-col gap-[var(--page-section-gap)]"
-      >
+      <SkeletonFrame label="Loading the Agent…" variant="new-chat" className={OPENING}>
         <span className="flex h-7 items-center justify-center">
           <SkeletonBlock className="h-5 w-60 max-w-full" />
         </span>
@@ -40,6 +36,12 @@ export function NewChatLoading() {
       </SkeletonFrame>
     </ThreadPage>
   );
+}
+
+const OPENING = 'max-w-thread mx-auto my-auto flex w-full flex-col gap-[var(--page-section-gap)]';
+
+export function ThreadOpening({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className={OPENING}>{children}</div>;
 }
 
 export function ThreadPage({
@@ -56,12 +58,12 @@ export function ThreadPage({
     children: ReactNode;
   }>) {
   return (
-    <PageFrame {...slots} head="masthead">
-      <div className="-mb-[var(--page-pad-block)] flex h-[calc(100dvh-var(--route-chrome-height)+var(--page-pad-block))] min-h-0 flex-col gap-[var(--workspace-gap)]">
+    <PageFrame {...slots} head="masthead" end="thread">
+      <div className="flex h-[calc(100dvh-var(--route-chrome-height)+var(--page-pad-block))] min-h-0 flex-col gap-[var(--workspace-gap)]">
         <section
           ref={scrollRef}
           aria-label={scrollLabel}
-          className="-m-1 min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-contain p-1"
+          className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-contain p-1"
         >
           <div
             data-page-content=""
@@ -71,7 +73,7 @@ export function ThreadPage({
             {children}
           </div>
         </section>
-        {composer ? <div className="w-full min-w-0">{composer}</div> : null}
+        {composer ? <div className="w-full min-w-0 px-1">{composer}</div> : null}
       </div>
     </PageFrame>
   );

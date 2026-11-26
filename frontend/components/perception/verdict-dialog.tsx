@@ -77,10 +77,10 @@ export function VerdictDialog({
         </>
       }
     >
+      {override.isError ? (
+        <Notice tone="negative">{humanizeApiError(override.error).message}</Notice>
+      ) : null}
       <Stack gap="workspace">
-        {override.isError ? (
-          <Notice tone="negative">{humanizeApiError(override.error).message}</Notice>
-        ) : null}
         <RadioGroup
           ariaLabel="Verdict"
           variant="inline"

@@ -9,9 +9,7 @@ import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
 import { FilterControls } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
-import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import { Skeleton } from '@/components/ui/skeleton';
 import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
@@ -45,13 +43,7 @@ function answerTitle(subject: EvidenceSubject | null): ReactNode {
 }
 
 function AnswerLoading() {
-  return (
-    <Stack gap="workspace" aria-label="Loading the answer">
-      <Skeleton lines={1} />
-      <Skeleton lines={3} />
-      <Skeleton variant="facts" />
-    </Stack>
-  );
+  return <StateBlock kind="loading" label="Loading the answer" shape={{ kind: 'facts' }} />;
 }
 
 function flagOf(code: string): string | null {

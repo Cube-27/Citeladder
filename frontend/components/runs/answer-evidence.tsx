@@ -10,10 +10,8 @@ import {
 import { SurfaceEvidence } from '@/components/runs/surface-evidence';
 import { AnswerLayout } from '@/components/ui/answer-chat';
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
-import { wellClasses } from '@/components/ui/slip';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
-import { SubsectionHeader } from '@/components/ui/workspace';
 import type { ExecutionEvidence } from '@citeladder/contracts';
 import { CheckCircle2, XCircle } from '@/lib/icons';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -25,7 +23,7 @@ function Outcome({
   passed,
 }: Readonly<{ label: string; detail: string; passed: boolean }>) {
   return (
-    <Inline className={wellClasses('min-w-0 items-start')}>
+    <li className="flex min-w-0 items-start gap-2">
       <Icon
         icon={passed ? CheckCircle2 : XCircle}
         className={passed ? 'text-positive' : 'text-ink-2'}
@@ -36,7 +34,7 @@ function Outcome({
           {detail}
         </p>
       </div>
-    </Inline>
+    </li>
   );
 }
 
@@ -71,9 +69,11 @@ function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }
       : 'No configured competitors appeared';
 
   return (
-    <Stack as="section">
-      <SubsectionHeader title="Why it scored this way" />
-      <Stack className="phone:grid-cols-1 desktop:grid-cols-4 grid-cols-2">
+    <Section>
+      <SectionHeader>
+        <SectionTitle level={3}>Why it scored this way</SectionTitle>
+      </SectionHeader>
+      <SectionBleed as="ul" rows>
         <Outcome
           label="Brand detected"
           detail={brandOutcomeDetail(evidence)}
@@ -94,8 +94,8 @@ function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }
           detail={competitorDetail}
           passed={evidence.competitors_mentioned.length === 0}
         />
-      </Stack>
-    </Stack>
+      </SectionBleed>
+    </Section>
   );
 }
 

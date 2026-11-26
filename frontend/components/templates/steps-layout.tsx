@@ -39,6 +39,7 @@ export function StepsLayout<T extends string>({
       <div
         ref={scroller}
         tabIndex={-1}
+        data-quiet-focus=""
         data-page-scroller=""
         className="desktop:flex-row relative flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--page-top-gap)] overflow-y-auto outline-none"
       >

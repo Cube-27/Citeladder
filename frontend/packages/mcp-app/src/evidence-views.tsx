@@ -19,7 +19,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { SectionHeader, SectionTitle } from '@/components/ui/section';
 import type { AppState, Controller } from './controller';
 import { formattedText } from '@/lib/format';
 import { moment, rate } from './format';
@@ -169,7 +169,9 @@ export function SiteHealthView({ state, controller }: Props) {
   const site = parsed.data;
   return (
     <div className="space-y-4">
-      <EditorialSectionHeader title="Persisted Site Health" />
+      <SectionHeader>
+        <SectionTitle>Persisted Site Health</SectionTitle>
+      </SectionHeader>
       <p className={textRole('body', 'text-ink-2')}>
         Web fundamentals: {site.scores.web_fundamentals ?? 'Unavailable'} · AEO readiness:{' '}
         {site.scores.aeo_readiness ?? 'Unavailable'} · measurement coverage:{' '}

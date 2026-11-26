@@ -5,9 +5,9 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { DisplayTime } from '@/components/ui/display-time';
 import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
+import { SectionBleed } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { ActionDetail } from '@/lib/api/actions';
 import { formatCount, pluralCount, readableUrl } from '@/lib/format';
 import { promptHistoryHref } from '@/lib/prompts/history';
@@ -28,13 +28,13 @@ export function contentGapMembers(action: ActionDetail): GapMember[] {
 
 export function ContentGapWhy({ members }: Readonly<{ members: readonly GapMember[] }>) {
   return (
-    <ul className={ledgerClasses()}>
+    <SectionBleed as="ul" rows>
       {members.map((member) => (
-        <li key={member.id} className={ledgerItemClasses()}>
+        <li key={member.id} className="min-w-0">
           <GapAngle evidence={member.evidence} />
         </li>
       ))}
-    </ul>
+    </SectionBleed>
   );
 }
 
@@ -73,11 +73,11 @@ export function GapEvidence({ evidence }: Readonly<{ evidence: ContentGapEvidenc
       />
       <Stack as="section" gap="tight" aria-label="Cited pages">
         <span className={textRole('body', 'text-ink-2')}>Cited pages</span>
-        <ul className={ledgerClasses()}>
+        <Stack as="ul" gap="item">
           {evidence.members.map((page) => (
             <CitedPage key={page.url} page={page} />
           ))}
-        </ul>
+        </Stack>
         {evidence.member_count > evidence.members.length ? (
           <span className={textRole('caption')}>
             The {formatCount(evidence.members.length)} most cited of{' '}
@@ -120,7 +120,7 @@ function CitedPage({ page }: Readonly<{ page: ContentGapEvidence['members'][numb
     ? `${page.matched_competitor} (${page.domain})`
     : page.domain;
   return (
-    <Stack as="li" gap="tight" className={ledgerItemClasses()}>
+    <Stack as="li" gap="tight" className="min-w-0">
       {page.title ? (
         <ClampText tooltip={readableUrl(page.url)}>
           <TextLink variant="external" href={page.url} text="body">

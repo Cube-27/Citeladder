@@ -5,6 +5,8 @@ import { ActionButton, ACTIONS } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
+import { Stack } from '@/components/ui/layout';
+import { SectionContent } from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
 import { ArrowRight } from '@/lib/icons';
 import { pluralCount } from '@/lib/format';
@@ -62,21 +64,25 @@ export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   const step = data.next_action;
   const listOnly = step.kind === 'opportunity' && step.href === '/actions';
   return (
-    <WidgetFrame id="next-action" title="Next action" card>
-      <p className={textRole('label')}>{step.title}</p>
-      {nextActionEvidence(data)}
-      <div>
-        {step.kind === 'opportunity' && !listOnly ? (
-          <ActionButton action="openAction" href={step.href} />
-        ) : (
-          <Button asChild variant="secondary">
-            <ProjectLink href={step.href}>
-              {listOnly ? 'Open Actions' : NEXT_ACTION_LINK[step.kind]}
-              <Icon icon={ArrowRight} />
-            </ProjectLink>
-          </Button>
-        )}
-      </div>
+    <WidgetFrame id="next-action" title="Next action">
+      <SectionContent>
+        <Stack gap="item">
+          <p className={textRole('label')}>{step.title}</p>
+          {nextActionEvidence(data)}
+          <div>
+            {step.kind === 'opportunity' && !listOnly ? (
+              <ActionButton action="openAction" href={step.href} />
+            ) : (
+              <Button asChild variant="secondary">
+                <ProjectLink href={step.href}>
+                  {listOnly ? 'Open Actions' : NEXT_ACTION_LINK[step.kind]}
+                  <Icon icon={ArrowRight} />
+                </ProjectLink>
+              </Button>
+            )}
+          </div>
+        </Stack>
+      </SectionContent>
     </WidgetFrame>
   );
 }

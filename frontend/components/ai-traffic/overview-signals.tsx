@@ -17,7 +17,6 @@ import {
 import type { SourceStep } from '@/components/integrations/data-sources';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
-import { Stack } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
 import { StateBlock } from '@/components/ui/state-block';
 import { InfoHint } from '@/components/ui/info-hint';
@@ -25,7 +24,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
-import { TitledSection } from '@/components/ui/section';
+import { Section, TitledSection } from '@/components/ui/section';
 import { TableCell, TableRow } from '@/components/ui/table';
 
 type Overview = z.infer<typeof aiTrafficOverviewSchema>;
@@ -57,9 +56,9 @@ export function OverviewFigures({
   const crawlMissing =
     crawlAvailable && data.crawl.connection === 'not_connected' && onConnectCrawl !== undefined;
   return (
-    <Stack gap="workspace" className="min-w-0">
+    <>
       <CrawlProcessed crawl={data.crawl} available={crawlAvailable} />
-      <Stack gap="compact">
+      <Section>
         <FigureStrip
           label="AI traffic key figures"
           segments={[
@@ -90,8 +89,8 @@ export function OverviewFigures({
             action={<ActionButton action="connectCrawlLogs" onClick={onConnectCrawl} />}
           />
         ) : null}
-      </Stack>
-    </Stack>
+      </Section>
+    </>
   );
 }
 

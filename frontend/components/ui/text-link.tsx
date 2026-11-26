@@ -17,17 +17,10 @@ const TONE: Record<TextLinkTone, string> = {
   muted: 'text-ink-2 hover:text-ink',
 };
 
-const APP_REST =
-  '[:root:not([data-public-surface])_&]:hover:decoration-current [:root:not([data-public-surface])_&]:focus-visible:decoration-current';
-
 const UNDERLINE = {
-  prose: cn('decoration-current hover:decoration-2', APP_REST),
-  ink: cn(
-    'decoration-control-line hover:decoration-current focus-visible:decoration-current',
-    APP_REST,
-  ),
-  hover:
-    'text-ink decoration-transparent hover:decoration-current focus-visible:decoration-current',
+  prose: 'decoration-current hover:decoration-2',
+  ink: 'decoration-control-line hover:decoration-link focus-visible:decoration-link',
+  hover: 'text-ink decoration-transparent hover:decoration-link focus-visible:decoration-link',
 } as const;
 
 export type TextLinkUnderline = 'always' | 'hover';
@@ -43,7 +36,7 @@ function textLinkClasses({
   underline,
 }: Readonly<{ tone: TextLinkTone; text: TextLinkText; underline: TextLinkUnderline }>) {
   const recipe = cn(
-    'focus-ring rounded-mark underline decoration-1 underline-offset-3 transition-[color,text-decoration-color]',
+    'focus-ring rounded-mark underline decoration-1 underline-offset-3 app:decoration-[1.5px] app:underline-offset-4 transition-[color,text-decoration-color]',
     lineClasses(tone, underline),
   );
   return text === 'inherit' ? recipe : textRole(text, recipe);

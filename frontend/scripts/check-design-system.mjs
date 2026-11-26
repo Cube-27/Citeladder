@@ -4,6 +4,12 @@ import { dirname, extname, join, relative, resolve } from 'node:path';
 import { loadDesignSystem, undeclaredColourViolations } from './design-system-colour-tokens.mjs';
 import { textContrastViolations } from './design-system-contrast.mjs';
 import {
+  ancestorRuleFindings,
+  compositionFindings,
+  compositionReport,
+  COMPOSITION_ENFORCED,
+} from './design-system-composition.mjs';
+import {
   appSourceViolations,
   directRadixImportViolations,
   literalColourViolations,
@@ -23,6 +29,7 @@ const ignored = new Set([
 const RAW_HEX = /(?<![\w-])#[0-9a-f]{3,8}(?![\w-])/i;
 const violations = [];
 const scriptSources = [];
+const composition = [];
 
 function files(directory) {
   return readdirSync(directory).flatMap((name) => {
@@ -45,6 +52,7 @@ for (const path of files(root)) {
     violations.push(`${label}: raw colour outside ${relative(root, tokenOwner)}`);
   if (extension === '.astro') continue;
   if (/\.tsx?$/.test(label) && !/\.test\.tsx?$/.test(label)) scriptSources.push({ label, source });
+  composition.push(...compositionFindings(label, source));
   violations.push(
     ...literalColourViolations(source, label),
     ...directRadixImportViolations(source, label),
@@ -63,6 +71,15 @@ violations.push(
   ),
   ...appSourceViolations(appCss, scriptSources),
 );
+
+composition.push(
+  ...ancestorRuleFindings(relative(root, tokenOwner), readFileSync(tokenOwner, 'utf8')),
+);
+if (composition.length) {
+  const report = compositionReport(composition);
+  if (COMPOSITION_ENFORCED) violations.push(report, ...composition);
+  else console.warn(`${report}\n(warning only, AR-25; rules in docs/design.md#composition)`);
+}
 
 if (violations.length) {
   console.error(violations.join('\n'));

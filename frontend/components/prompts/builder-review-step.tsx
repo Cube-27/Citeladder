@@ -4,8 +4,8 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
 import { FactList } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { Inline } from '@/components/ui/layout';
+import { Section, SectionHeader, SectionStack, SectionTitle } from '@/components/ui/section';
 import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
 import type { PromptCandidate, Topic } from '@citeladder/contracts';
 import { Sparkles } from '@/lib/icons';
@@ -80,16 +80,20 @@ export function RunCoverage({
       value: <CoverageValue row={row} disabled={disabled} onMore={() => onGenerate(more(row))} />,
     }));
   return (
-    <Stack gap="workspace">
-      <Stack gap="compact">
-        <h3 className={textRole('subheading')}>Coverage by topic</h3>
+    <Section>
+      <Section>
+        <SectionHeader>
+          <SectionTitle level={3}>Coverage by topic</SectionTitle>
+        </SectionHeader>
         <FactList layout="spread" facts={facts(byTopic, (row) => moreForTopic(request, row))} />
-      </Stack>
-      <Stack gap="compact">
-        <h3 className={textRole('subheading')}>Coverage by segment</h3>
+      </Section>
+      <Section>
+        <SectionHeader>
+          <SectionTitle level={3}>Coverage by segment</SectionTitle>
+        </SectionHeader>
         <FactList layout="spread" facts={facts(bySegment, (row) => moreForSegment(request, row))} />
-      </Stack>
-    </Stack>
+      </Section>
+    </Section>
   );
 }
 
@@ -99,10 +103,10 @@ export function BuilderReviewStep({
   review,
 }: Readonly<{ notices: ReactNode; coverage: ReactNode; review: ReactNode }>) {
   return (
-    <Stack gap="section">
+    <SectionStack>
       {notices}
       {coverage}
       {review}
-    </Stack>
+    </SectionStack>
   );
 }

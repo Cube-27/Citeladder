@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { slipClasses } from '@/components/ui/slip';
 import { useState, type ReactNode } from 'react';
 
 import { DateRangeDialog } from './date-range-dialog';
@@ -22,7 +21,6 @@ import { usePerformanceSync } from './use-performance-sync';
 import { useRangeProjection } from './use-range-projection';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { ReportPage } from '@/components/templates/report-page';
-import { Stack } from '@/components/ui/layout';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FilterBar, FilterControls, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -114,14 +112,12 @@ function performanceCoverage(
 
 function FirstUseEmptyState({ action }: Readonly<{ action: ReactNode }>) {
   return (
-    <Section>
-      <StateBlock
-        kind="empty"
-        icon={ChartNoAxesColumn}
-        heading="No Search Console history yet"
-        action={action}
-      />
-    </Section>
+    <StateBlock
+      kind="empty"
+      icon={ChartNoAxesColumn}
+      heading="No Search Console history yet"
+      action={action}
+    />
   );
 }
 
@@ -133,20 +129,12 @@ function PerformanceEmptyState({
   if (failed) return null;
   if (projecting) {
     return (
-      <Section>
-        <StateBlock
-          kind="empty"
-          icon={ChartNoAxesColumn}
-          heading="Building this performance range"
-        />
-      </Section>
+      <StateBlock kind="empty" icon={ChartNoAxesColumn} heading="Building this performance range" />
     );
   }
   if (data.coverage.covered_days === 0 && data.selected.snapshot_id === null) return null;
   return (
-    <Section>
-      <StateBlock kind="empty" icon={ChartNoAxesColumn} heading="No performance evidence here" />
-    </Section>
+    <StateBlock kind="empty" icon={ChartNoAxesColumn} heading="No performance evidence here" />
   );
 }
 
@@ -176,31 +164,28 @@ function SearchConsoleWorkspace({
   if (!available) return null;
   return (
     <Section aria-labelledby="performance-search-console">
-      <SectionHeader>
+      <SectionHeader
+        actions={
+          <FilterControls
+            align="end"
+            filters={[granularityFilter(granularity, onGranularityChange)]}
+          />
+        }
+      >
         <SectionTitle id="performance-search-console">Google Search</SectionTitle>
       </SectionHeader>
-      <div className={slipClasses('overflow-hidden p-0')}>
-        <div className="flex min-w-0 items-start justify-between gap-4">
-          <MetricCards
-            data-testid="metric-card-strip"
-            selected={selected}
-            comparison={comparison}
-            compareLabel={compareLabel}
-            active={activeMetrics}
-            onToggle={onToggleMetric}
-            loading={refreshing}
-          />
-          <div className="shrink-0 pt-4 pr-4">
-            <FilterControls
-              align="end"
-              filters={[granularityFilter(granularity, onGranularityChange)]}
-            />
-          </div>
-        </div>
-        <section aria-label="Search Console chart" className="min-w-0 px-1 pt-4 pb-3">
-          <PerformanceChart series={series} />
-        </section>
-      </div>
+      <MetricCards
+        data-testid="metric-card-strip"
+        selected={selected}
+        comparison={comparison}
+        compareLabel={compareLabel}
+        active={activeMetrics}
+        onToggle={onToggleMetric}
+        loading={refreshing}
+      />
+      <section aria-label="Search Console chart" className="min-w-0">
+        <PerformanceChart series={series} />
+      </section>
     </Section>
   );
 }
@@ -271,10 +256,8 @@ function PerformanceLoading() {
         <SectionHeader>
           <SectionTitle id="performance-search-console-loading">Google Search</SectionTitle>
         </SectionHeader>
-        <Stack gap="workspace">
-          <Skeleton variant="stat" count={4} label="Loading performance" />
-          <Skeleton variant="chart" height="md" />
-        </Stack>
+        <Skeleton variant="stat" count={4} label="Loading performance" />
+        <Skeleton variant="chart" height="md" />
       </Section>
     </ReportPage>
   );
@@ -364,7 +347,7 @@ export function PerformanceScreen() {
         )
       }
     >
-      <Stack gap="workspace">
+      <>
         <DataSourceSetup
           required={['gsc']}
           optional={['ga4', 'bing']}
@@ -447,7 +430,7 @@ export function PerformanceScreen() {
             windowLength(selectedWindow) || 1,
           )}
         />
-      </Stack>
+      </>
     </ReportPage>
   );
 }

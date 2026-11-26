@@ -1,10 +1,10 @@
 import { useState } from 'react';
 
-import { PlanCard, PlanCards } from '@/components/billing/plan-row';
+import { PlanCard } from '@/components/billing/plan-row';
+import { CardGroup, CardRow } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Dialog } from '@/components/ui/dialog';
-import { SettingsGroup } from '@/components/ui/setting-row';
 import { textRole } from '@/components/ui/typography';
 import type {
   BillingCatalog,
@@ -75,7 +75,7 @@ export function PlanChanges({
     return option ? [{ plan, option }] : [];
   });
   return (
-    <SettingsGroup
+    <CardGroup
       id="change-plan"
       title="Change plan"
       description="Upgrades are prorated and start once paid. Downgrades start at renewal, with no refund."
@@ -88,7 +88,7 @@ export function PlanChanges({
           })}
         />
       ) : null}
-      <PlanCards>
+      <CardRow>
         {cards.map(({ plan, option }) => (
           <PlanCard
             key={plan.key}
@@ -108,7 +108,7 @@ export function PlanChanges({
             }
           />
         ))}
-      </PlanCards>
+      </CardRow>
       {options.some((option) => option.direction === 'upgrade' && !checkoutOpen(option.plan)) ? (
         <p className={textRole('caption')}>Upgrades unavailable: checkout is closed.</p>
       ) : null}
@@ -140,7 +140,7 @@ export function PlanChanges({
           {currentPlan.name} continues to the end of this period. No refund.
         </p>
       </Dialog>
-    </SettingsGroup>
+    </CardGroup>
   );
 }
 

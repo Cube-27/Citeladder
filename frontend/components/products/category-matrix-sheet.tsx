@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
-import { Stack } from '@/components/ui/layout';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { textRole } from '@/components/ui/typography';
 import { commerceMutations } from '@/lib/api/commerce';
@@ -65,8 +65,10 @@ export function CategoryMatrixSheet({
     );
   const list = (title: string, items: readonly BuyerPrompt[]) =>
     items.length ? (
-      <Stack>
-        <h3 className={textRole('subheading')}>{title}</h3>
+      <Section>
+        <SectionHeader>
+          <SectionTitle level={3}>{title}</SectionTitle>
+        </SectionHeader>
         <LedgerList>
           {items.map((row) => (
             <LedgerItem
@@ -83,7 +85,7 @@ export function CategoryMatrixSheet({
             />
           ))}
         </LedgerList>
-      </Stack>
+      </Section>
     ) : null;
   return (
     <Drawer
@@ -103,7 +105,7 @@ export function CategoryMatrixSheet({
         ) : undefined
       }
     >
-      <Stack>
+      <>
         {generate.isError ? (
           <Notice
             kind="mutation"
@@ -124,7 +126,7 @@ export function CategoryMatrixSheet({
         {list('Buyer contexts × stages', coverage.organic)}
         {list('Branded comparisons', coverage.branded)}
         {list('Other prompts', coverage.other)}
-      </Stack>
+      </>
     </Drawer>
   );
 }

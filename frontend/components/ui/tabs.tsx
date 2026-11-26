@@ -10,6 +10,7 @@ import {
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 
 import { ScrollFrame } from '@/components/ui/scroll-edges';
+import { useOnPage } from '@/components/ui/section';
 import { sidebarNavRowClasses } from '@/components/ui/sidebar';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -44,12 +45,12 @@ function useRevealSelected(selected: string | null) {
 
 const TAB_KIND = {
   tab: {
-    base: 'rounded-t-control min-h-[var(--control-md)] self-stretch border border-transparent px-4',
-    current: 'border-rule bg-page border-b-transparent',
+    base: 'min-h-8 self-stretch px-4',
+    current: 'tab-line',
   },
   segment: {
-    base: 'rounded-mark min-h-[calc(var(--control-md)_-_4px)] px-3',
-    current: 'bg-raised shadow-card',
+    base: 'rounded-mark h-7 px-4',
+    current: 'bg-[var(--nav-current-fill)] shadow-card',
   },
 } as const;
 
@@ -59,7 +60,7 @@ function tabFace({
   className,
 }: Readonly<{ kind: keyof typeof TAB_KIND; selected: boolean; className?: string }>) {
   return cn(
-    'tab-face focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-[color,background-color] duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-60',
+    'tab-face focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50',
     TAB_KIND[kind].base,
     selected ? cn('text-ink', TAB_KIND[kind].current) : 'text-ink-2 not-disabled:hover:text-ink',
     className,
@@ -70,7 +71,7 @@ export const TAB_BASELINE = 'shadow-[inset_0_-1px_0_var(--color-rule)]';
 
 const STRIP_ROW = {
   page: 'min-h-[var(--page-tabs-height,var(--control-md))]',
-  section: TAB_BASELINE,
+  section: cn(TAB_BASELINE, 'flex w-full'),
 } as const;
 
 export const TAB_TRACK =
@@ -136,12 +137,14 @@ export function TabsRoot<T extends string>({
   className?: string;
   children: ReactNode;
 }>) {
+  const inPanel = !useOnPage();
   return (
     <ActiveTabContext value={value}>
       <TabsPrimitive.Root
         value={value}
         onValueChange={(next) => onValueChange(next as T)}
         orientation={orientation}
+        data-slot-host={inPanel && orientation !== 'vertical' ? '' : undefined}
         className={className}
       >
         {children}
@@ -158,8 +161,12 @@ export function TabRow<T extends string>({ items, ariaLabel, onIntent }: TabRowP
   return <TabStrip kind="page" items={items} ariaLabel={ariaLabel} onIntent={onIntent} />;
 }
 
+const railRow = (current: boolean, onPage: boolean) =>
+  sidebarNavRowClasses(current, !onPage && current ? 'bg-state-fill shadow-none' : undefined);
+
 export function TabRail<T extends string>({ items, ariaLabel, onIntent }: TabRowProps<T>) {
   const active = useContext(ActiveTabContext);
+  const onPage = useOnPage();
   return (
     <TabsPrimitive.List aria-label={ariaLabel} className="flex min-w-0 flex-col gap-0.5">
       {items.map((item) => (
@@ -170,7 +177,7 @@ export function TabRail<T extends string>({ items, ariaLabel, onIntent }: TabRow
           onMouseEnter={() => onIntent?.(item.value)}
           onFocus={() => onIntent?.(item.value)}
           onKeyDown={pageKeyScrollsPage}
-          className={sidebarNavRowClasses(item.value === active)}
+          className={railRow(item.value === active, onPage)}
         >
           <span className="truncate">{item.label}</span>
           {item.count === undefined ? null : <ControlCount count={item.count} />}
@@ -185,6 +192,7 @@ export function HeldTabRail({
   selected,
 }: Readonly<{ labels: readonly string[]; selected?: string }>) {
   const current = selected !== undefined && labels.includes(selected) ? selected : labels[0];
+  const onPage = useOnPage();
   return (
     <div
       aria-hidden
@@ -195,7 +203,7 @@ export function HeldTabRail({
         <span
           key={label}
           data-selected={label === current || undefined}
-          className={sidebarNavRowClasses(label === current)}
+          className={railRow(label === current, onPage)}
         >
           <span className="truncate">{label}</span>
         </span>
@@ -322,11 +330,13 @@ export function TabPanel({
   forceMount?: true;
 }>) {
   const activeValue = useContext(ActiveTabContext);
+  const inPanel = !useOnPage();
   return (
     <TabsPrimitive.Content
       value={value}
       forceMount={forceMount}
       hidden={activeValue !== value}
+      data-slot-host={inPanel ? '' : undefined}
       tabIndex={-1}
       className={cn('outline-none', className)}
     >
@@ -398,7 +408,7 @@ export function SegmentedControl<T extends string>({
             strip.current = node;
           }}
           data-segmented-track=""
-          className={cn(TAB_STRIP, 'bg-state-hover rounded-control p-0.5', className)}
+          className={cn(TAB_STRIP, 'rounded-control bg-state-fill p-1', className)}
         >
           <div
             id={id}

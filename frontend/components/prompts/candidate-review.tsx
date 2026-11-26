@@ -4,7 +4,6 @@ import { useId, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow, TableSelectCell } from '@/components/ui/table';
 import type { PromptCandidate, PromptSet, Topic } from '@citeladder/contracts';
 import { X } from '@/lib/icons';
@@ -12,6 +11,7 @@ import { promptsQueries } from '@/lib/api/prompts';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { qualityFlagLabel, qualityStatusLabel } from '@/lib/prompts/candidate-quality';
 import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
+import { StateBlock } from '@/components/ui/state-block';
 import { Notice } from '@/components/ui/notice';
 import { pluralCount } from '@/lib/format';
 import { PROMPT_BUILDER_REVIEW_HREF } from '@/lib/prompts/routes';
@@ -67,7 +67,7 @@ export function CandidateReview({
     });
 
   return (
-    <Stack gap="compact" className="min-w-0">
+    <>
       {error ? <Notice tone="negative">{error}</Notice> : null}
       {notice ? <Notice tone="positive">{notice}</Notice> : null}
       <DataTable
@@ -128,7 +128,7 @@ export function CandidateReview({
           );
         })}
       </DataTable>
-    </Stack>
+    </>
   );
 }
 
@@ -147,7 +147,8 @@ export function CandidateReviewPanel({
   setsError?: boolean;
   retrySets?: () => void;
 }>) {
-  if (setsLoading || review.isLoading) return <output>Loading suggestions…</output>;
+  if (setsLoading || review.isLoading)
+    return <StateBlock kind="loading" label="Loading suggestions…" shape={{ kind: 'table' }} />;
   if (setsError || review.loadError)
     return (
       <Notice tone="negative">

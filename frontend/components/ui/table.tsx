@@ -52,7 +52,7 @@ export function Table({
       {...region}
       ref={wrapperRef}
       className={cn(
-        'table-frame bg-surface relative w-full max-w-full min-w-0 overflow-auto rounded-card',
+        'table-frame bg-surface relative w-full max-w-full min-w-0 overflow-auto [[data-public-surface]_&]:rounded-card',
         wrapperClassName,
       )}
     >
@@ -198,13 +198,26 @@ export function TableCell({
       {...props}
       className={cn(
         cellClasses({ numeric, desktopOnly }),
-        nested === true && 'ps-[calc(var(--table-cell-padding-x)+16px)]',
-        nested === 2 && 'ps-[calc(var(--table-cell-padding-x)+32px)]',
+        nested === true && 'ps-[calc(var(--table-cell-padding-x)+16px)] [--cell-indent:16px]',
+        nested === 2 && 'ps-[calc(var(--table-cell-padding-x)+32px)] [--cell-indent:32px]',
         className,
       )}
     >
       <CellContent numeric={numeric}>{children}</CellContent>
     </td>
+  );
+}
+
+export function TableGroupRow({ span, children }: Readonly<{ span: number; children: ReactNode }>) {
+  return (
+    <TableRow>
+      <TableCell
+        colSpan={span}
+        className={textRole('emphasis', 'bg-well [--table-ground:var(--color-well)]')}
+      >
+        {children}
+      </TableCell>
+    </TableRow>
   );
 }
 

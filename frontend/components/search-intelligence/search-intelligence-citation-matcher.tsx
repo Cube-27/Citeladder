@@ -4,8 +4,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Inline, Stack } from '@/components/ui/layout';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { Inline } from '@/components/ui/layout';
+import { SectionBleed } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
@@ -94,7 +94,7 @@ export function SearchIntelligenceCitationMatcher({
       current.includes(auditId) ? current.filter((id) => id !== auditId) : [...current, auditId],
     );
   return (
-    <Stack gap="compact">
+    <>
       {derive.isError ? (
         <Notice
           kind="mutation"
@@ -109,13 +109,13 @@ export function SearchIntelligenceCitationMatcher({
           options={lists.map((dataset) => ({ value: dataset.id, label: dataset.target_hostname }))}
         />
       ) : null}
-      <div className={ledgerClasses('max-h-64 overflow-y-auto')}>
+      <SectionBleed rows scroll>
         {answered.map((audit) => (
           <Inline
             as="label"
             key={audit.id}
             gap="compact"
-            className={ledgerItemClasses('type-body text-ink-2 justify-between')}
+            className="type-body text-ink-2 justify-between"
           >
             <Checkbox
               checked={selectedAudits.includes(audit.id)}
@@ -125,7 +125,7 @@ export function SearchIntelligenceCitationMatcher({
             <span className="text-ink-2">{pluralCount(audit.completed_count, 'answer')}</span>
           </Inline>
         ))}
-      </div>
+      </SectionBleed>
       <Inline gap="compact" className="flex-wrap">
         <Button
           variant="primary"
@@ -138,6 +138,6 @@ export function SearchIntelligenceCitationMatcher({
           {comparedAgainst(referring.unique_rows_saved, referring.provider_total)}
         </span>
       </Inline>
-    </Stack>
+    </>
   );
 }

@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { ReportPage } from '@/components/templates/report-page';
 import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
-import { SectionStack } from '@/components/ui/section';
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { CompetitorSuggestions } from '@/components/visibility/prompt-insights';
 import { RankingRowsPending, RankingRowsTable } from '@/components/visibility/ranking-rows';
@@ -47,7 +46,7 @@ export function CompetitorsScreen() {
       {state && state !== 'loading' ? (
         <SelectionPageStateBlock state={state} queries={queries} />
       ) : (
-        <SectionStack>
+        <>
           <SelectionGate
             query={queries.visibilityQuery}
             pending={<RankingRowsPending brands={project.competitors.length + 1} />}
@@ -64,7 +63,7 @@ export function CompetitorsScreen() {
             tracked={project.competitors.length}
             suggestionsQuery={suggestions}
           />
-        </SectionStack>
+        </>
       )}
     </ReportPage>
   );

@@ -1,16 +1,15 @@
 import type { ReactNode } from 'react';
 
 import { Pressable } from '@/components/ui/pressable';
+import { SectionBleed, useOnPage } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
-export const ROWS_SHELL =
-  'surface-lift border-transparent rounded-card bg-surface overflow-clip border';
-
 const GRID =
-  'grid grid-cols-[20px_1fr_120px] phone:grid-cols-[20px_1fr_88px] desktop:grid-cols-[20px_1fr_92px_120px_110px] items-center gap-3 phone:gap-2 px-4 phone:px-3';
+  'grid grid-cols-[20px_1fr_120px] phone:grid-cols-[20px_1fr_88px] desktop:grid-cols-[20px_1fr_92px_120px_110px] items-center gap-3 phone:gap-2';
 const WIDE = 'hidden desktop:block';
+const PAD = 'px-4 phone:px-3';
 
 export function WorkRows({
   label,
@@ -24,14 +23,16 @@ export function WorkRows({
   more?: ReactNode;
 }>) {
   const [title, scope, impact, source] = heads;
-  return (
-    <div className={ROWS_SHELL}>
+  const onPage = useOnPage();
+  const body = (
+    <>
       <table aria-label={label} className="block w-full">
         <thead className="block">
           <tr
             className={cn(
               GRID,
-              textRole('captionStrong', 'text-ink-2 bg-well border-rule h-8 border-b'),
+              onPage && cn(PAD, 'bg-well'),
+              textRole('captionStrong', 'text-ink-2 border-rule h-8 border-b'),
             )}
           >
             <th aria-label="Select" />
@@ -44,8 +45,9 @@ export function WorkRows({
         <tbody className="block">{children}</tbody>
       </table>
       {more}
-    </div>
+    </>
   );
+  return onPage ? <SectionBleed>{body}</SectionBleed> : <div className="min-w-0">{body}</div>;
 }
 
 export function WorkRow({
@@ -65,9 +67,14 @@ export function WorkRow({
   impact: ReactNode;
   source: string;
 }>) {
+  const onPage = useOnPage();
   return (
     <tr
-      className={cn(GRID, 'border-rule hover:overlay-hover relative min-h-10 not-first:border-t')}
+      className={cn(
+        GRID,
+        onPage && PAD,
+        'border-rule hover:overlay-hover relative min-h-10 not-first:border-t',
+      )}
     >
       <td className="relative z-10 flex">{tick}</td>
       <td className="flex min-w-0 items-baseline gap-2">

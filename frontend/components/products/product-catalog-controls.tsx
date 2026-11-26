@@ -83,6 +83,13 @@ function ProductEditDrawer({
         </>
       }
     >
+      {invalid ? <Notice tone="negative">{invalid}</Notice> : null}
+      {save.error ? (
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(save.error, { action: 'save the product' })}
+        />
+      ) : null}
       <form
         noValidate
         onSubmit={(event) => {
@@ -91,13 +98,6 @@ function ProductEditDrawer({
         }}
       >
         <Stack gap="workspace">
-          {invalid ? <Notice tone="negative">{invalid}</Notice> : null}
-          {save.error ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(save.error, { action: 'save the product' })}
-            />
-          ) : null}
           {TEXT_FIELDS.map((field) => (
             <Field
               key={field.key}
@@ -204,7 +204,7 @@ export function ProductCatalogControls({
   }
   const notices =
     archived || lifecycle.error ? (
-      <Stack gap="compact">
+      <>
         {archived ? (
           <Notice
             tone="warning"
@@ -226,7 +226,7 @@ export function ProductCatalogControls({
             })}
           />
         ) : null}
-      </Stack>
+      </>
     ) : null;
   const actions = (
     <>

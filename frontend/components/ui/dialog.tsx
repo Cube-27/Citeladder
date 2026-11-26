@@ -3,8 +3,9 @@ import { useInsertionEffect, useRef, type ReactNode } from 'react';
 
 import { AlertTriangle, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
-import { Button, IconButton } from './button';
+import { Button, CLOSE_BUTTON, IconButton } from './button';
 import { Icon } from './icon';
+import { SurfaceContext } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
 
 export const SCRIM = 'bg-scrim z-overlay fixed inset-0';
@@ -69,22 +70,14 @@ function DialogHeader({
   description,
   toolbar,
   danger,
-  divided,
 }: Readonly<{
   title: ReactNode;
   description?: ReactNode;
   toolbar?: ReactNode;
   danger: boolean;
-  divided: boolean;
 }>) {
   return (
-    <header
-      className={cn(
-        'flex items-start gap-3 p-[var(--card-padding)]',
-        !danger && 'pe-14',
-        divided && 'border-rule border-b',
-      )}
-    >
+    <header className={cn('flex items-start gap-3 p-[var(--modal-padding)]', !danger && 'pe-14')}>
       {danger ? (
         <span className="text-negative inline-flex h-7 items-center">
           <Icon icon={AlertTriangle} className="my-0" />
@@ -136,6 +129,7 @@ export function Dialog({
         <DialogPrimitive.Overlay className={cn('dialog-overlay', SCRIM)} />
         <DialogPrimitive.Content
           role={danger ? 'alertdialog' : 'dialog'}
+          data-overlay=""
           {...(description ? {} : { 'aria-describedby': undefined })}
           onOpenAutoFocus={(event) => {
             const target = leadingField(event.target);
@@ -153,39 +147,51 @@ export function Dialog({
             !answer && overlayWidth(danger || width === 'answer' ? 'narrow' : width),
           )}
         >
-          <DialogHeader
-            title={title}
-            description={description}
-            toolbar={toolbar}
-            danger={danger}
-            divided={children != null}
-          />
+          <DialogHeader title={title} description={description} toolbar={toolbar} danger={danger} />
           {danger ? null : (
             <DialogPrimitive.Close asChild>
               <IconButton
                 icon={X}
                 label="Close dialog"
                 tooltip={false}
-                className="absolute top-4 right-4"
+                variant="secondary"
+                className={cn(CLOSE_BUTTON, 'absolute top-6 right-6')}
               />
             </DialogPrimitive.Close>
           )}
-          {children == null ? null : (
-            <div
-              data-dialog-body=""
-              className="text-ink flex min-h-0 flex-1 flex-col gap-4 overflow-auto overscroll-contain p-[var(--card-padding)]"
-            >
-              {children}
-            </div>
-          )}
-          {footer ? (
-            <footer className="border-rule flex items-center justify-end gap-2 border-t px-[var(--card-padding)] py-3">
-              {footer}
-            </footer>
-          ) : null}
+          <DialogBody footer={footer}>{children}</DialogBody>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+  );
+}
+
+function DialogBody({ children, footer }: Readonly<{ children?: ReactNode; footer?: ReactNode }>) {
+  const hasBody = children != null;
+  return (
+    <>
+      {hasBody ? (
+        <div
+          data-dialog-body=""
+          className={cn(
+            'text-ink flex min-h-0 flex-1 flex-col gap-[var(--panel-inset)] overflow-auto overscroll-contain px-[var(--panel-inset)] [--panel-inset:var(--modal-padding)]',
+            footer ? 'pb-0' : 'pb-[var(--panel-inset)]',
+          )}
+        >
+          <SurfaceContext value="surface">{children}</SurfaceContext>
+        </div>
+      ) : null}
+      {footer ? (
+        <footer
+          className={cn(
+            'flex items-center justify-end gap-2 px-[var(--modal-padding)] pb-[var(--modal-padding)]',
+            hasBody ? 'pt-5' : 'pt-0',
+          )}
+        >
+          {footer}
+        </footer>
+      ) : null}
+    </>
   );
 }
 

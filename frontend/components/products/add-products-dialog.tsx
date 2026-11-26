@@ -14,7 +14,13 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { TreeCheckOption, TreeList } from '@/components/ui/list-row';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import {
+  Section,
+  SectionBleed,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 import { X } from '@/lib/icons';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -85,17 +91,19 @@ function CategoryReview({
 }>) {
   const leftOut = leftOutCategories(stage.categories, unticked);
   return (
-    <Stack>
+    <>
       <p className={textRole('body', 'text-ink-2')}>
         {pluralCount(stage.products, 'product')} ready from {stage.source_label}
         {stage.rejected ? `; ${pluralCount(stage.rejected, 'row')} cannot be imported` : ''}.
       </p>
       {stage.categories.length ? (
-        <Stack gap="compact">
-          <h3 className={textRole('subheading')}>Categories</h3>
-          <p className={textRole('body', 'text-ink-2')}>
-            Clear a category to leave it and the categories under it out of your catalog.
-          </p>
+        <Section>
+          <SectionHeader>
+            <SectionTitle level={3}>Categories</SectionTitle>
+            <SectionDescription>
+              Clear a category to leave it and the categories under it out of your catalog.
+            </SectionDescription>
+          </SectionHeader>
           <TreeList label="Proposed categories">
             {stage.categories.map((node) => (
               <TreeCheckOption
@@ -109,11 +117,11 @@ function CategoryReview({
               />
             ))}
           </TreeList>
-        </Stack>
+        </Section>
       ) : (
         <p className={textRole('body', 'text-ink-2')}>The file names no categories.</p>
       )}
-    </Stack>
+    </>
   );
 }
 
@@ -122,7 +130,7 @@ function ImportResults({
   repeated,
 }: Readonly<{ result: CatalogImport; repeated: boolean }>) {
   return (
-    <Stack>
+    <>
       {repeated ? (
         <Notice tone="info">This content was imported before; these are its results.</Notice>
       ) : null}
@@ -131,14 +139,9 @@ function ImportResults({
         {result.rejected} rejected
       </p>
       {result.row_outcomes.length ? (
-        <ul className={ledgerClasses()} aria-label="Rows">
+        <SectionBleed as="ul" rows aria-label="Rows">
           {result.row_outcomes.map((row) => (
-            <Inline
-              as="li"
-              key={row.row_number}
-              gap="compact"
-              className={ledgerItemClasses('flex-wrap')}
-            >
+            <Inline as="li" key={row.row_number} gap="compact" className="min-w-0 flex-wrap">
               <span className="text-ink-muted tabular-nums">Row {row.row_number}</span>
               {row.status === 'rejected' ? (
                 <StatusMark variant="status" value="danger">
@@ -150,9 +153,9 @@ function ImportResults({
               {row.detail ? <span className="text-ink-2">{row.detail}</span> : null}
             </Inline>
           ))}
-        </ul>
+        </SectionBleed>
       ) : null}
-    </Stack>
+    </>
   );
 }
 
@@ -176,14 +179,8 @@ function SourceStep({
   stageError: Error | null;
 }>) {
   return (
-    <Stack>
-      <Tabs
-        items={SOURCES}
-        ariaLabel="Product source"
-        value={source}
-        onValueChange={onSource}
-        spaced
-      >
+    <>
+      <Tabs items={SOURCES} ariaLabel="Product source" value={source} onValueChange={onSource}>
         <TabPanel value="shopify">
           <Field label="Store domain" hint="Your domain or .myshopify.com address">
             {(props) => (
@@ -227,7 +224,7 @@ function SourceStep({
           notice={mutationNoticeForError(stageError, { action: 'read the products' })}
         />
       ) : null}
-    </Stack>
+    </>
   );
 }
 
@@ -328,7 +325,7 @@ export function AddProductsDialog({
     );
   } else if (staged) {
     body = (
-      <Stack>
+      <>
         <CategoryReview stage={staged} unticked={unticked} onToggle={toggle} />
         {apply.error ? (
           <Notice
@@ -336,7 +333,7 @@ export function AddProductsDialog({
             notice={mutationNoticeForError(apply.error, { action: 'import the products' })}
           />
         ) : null}
-      </Stack>
+      </>
     );
     footer = (
       <>

@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { activitySteps } from '@/components/agent/activity-chain';
+import { ActivityPanel, activitySteps } from '@/components/agent/activity-chain';
 import { LiveReply } from '@/components/agent/live-reply';
 import { AgentTurn } from '@/components/ui/chat-dock';
 import { FoldedTrail } from '@/components/ui/rung-trail';
 import { Inline } from '@/components/ui/layout';
-import { STEP_SLIP } from '@/components/ui/slip';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
 import { activityLabel, activityRows, callStep, modelStepLabel } from '@/lib/agent/activity';
@@ -61,14 +60,14 @@ function RunningTurn({
   const seconds = useElapsedSeconds(live?.startedAt ?? Date.parse(run.created_at));
   return (
     <AgentTurn inProgress>
-      <div className={STEP_SLIP}>
+      <ActivityPanel>
         <FoldedTrail
           live={{ status, seconds }}
           label="Agent activity"
           steps={activitySteps(rows)}
           empty="Nothing read yet."
         />
-      </div>
+      </ActivityPanel>
       <LiveReply live={live} />
     </AgentTurn>
   );

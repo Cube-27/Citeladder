@@ -9,6 +9,7 @@ import {
 
 import { IconButton } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
+import { DrawerPane } from '@/components/ui/drawer';
 import { Icon } from '@/components/ui/icon';
 import { FIELD_EDGE } from '@/components/ui/input';
 import { LogoMark } from '@/components/ui/logo-mark';
@@ -35,15 +36,13 @@ export function DockedThread({
 }>) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <section
-        ref={scrollRef}
-        aria-label={label}
-        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-[var(--modal-padding)]"
-      >
-        <div className="flex min-h-full min-w-0 flex-col gap-4 py-4">{children}</div>
-      </section>
+      <DrawerPane label={label} scrollRef={scrollRef}>
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-[var(--panel-inset)]">
+          {children}
+        </div>
+      </DrawerPane>
       {dock ? (
-        <div className="px-[var(--modal-padding)]">
+        <div className="px-[var(--panel-inset)]">
           <ComposerDock onJumpToLatest={onJumpToLatest}>{dock}</ComposerDock>
         </div>
       ) : null}

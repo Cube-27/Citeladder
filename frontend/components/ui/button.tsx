@@ -35,9 +35,9 @@ const BUTTON_SIZE: Record<ButtonSize, string> = {
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
     'face face-primary bg-primary border border-primary text-on-primary not-disabled:hover:bg-primary-hover not-disabled:hover:border-primary-hover',
-  secondary: cn(RAISED_FACE, 'text-ink'),
+  secondary: cn(RAISED_FACE, 'text-ink app:shadow-[var(--shadow-field,0_0_#0000)]'),
   quiet: cn(
-    'bg-transparent text-ink-2 border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
+    'bg-transparent text-ink-2 app:text-ink border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
     HOVER_OVERLAY,
   ),
   danger: cn(RAISED_FACE, 'face-danger text-negative [[data-public-surface]_&]:border-negative'),
@@ -45,12 +45,21 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
     'face face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90',
 };
 
+export const CLOSE_BUTTON = 'size-6 min-h-6 pointer-coarse:min-h-6 [--press:0.93]';
+
 export function buttonClasses(
   variant: ButtonVariant = 'secondary',
   className?: string,
   size: ButtonSize = 'md',
 ) {
-  return cn(BUTTON_BASE, BUTTON_SIZE[size], BUTTON_VARIANT[variant], className);
+  return cn(
+    'ui-button',
+    `ui-button-${variant}`,
+    BUTTON_BASE,
+    BUTTON_SIZE[size],
+    BUTTON_VARIANT[variant],
+    className,
+  );
 }
 
 export type ButtonProps = ComponentPropsWithoutRef<'button'> & {

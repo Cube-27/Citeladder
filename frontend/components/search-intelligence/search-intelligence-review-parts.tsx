@@ -17,7 +17,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { formatCount, formattedText, pluralCount } from '@/lib/format';
 import { isRecord } from '@/lib/utils';
 import type { SearchDatasetSelectionRequest } from '@citeladder/contracts/search-intelligence-requests';
@@ -33,7 +33,6 @@ import {
   selectionKey,
 } from './search-intelligence-review-selection';
 import { Notice } from '@/components/ui/notice';
-import { wellClasses } from '@/components/ui/slip';
 
 export type Advanced = {
   researchScope: ResearchScope;
@@ -105,7 +104,7 @@ export function DatasetChoices({
           />
         </div>
         {targets.map(({ value, options }) => (
-          <TabPanel key={value} value={value} className={wellClasses('min-w-0')}>
+          <TabPanel key={value} value={value}>
             <DatasetRows options={options} {...picks} />
           </TabPanel>
         ))}
@@ -326,9 +325,11 @@ function hostOf(target: unknown): string {
 export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceRun }>) {
   const scope = review.frozen_scope.research_scope;
   return (
-    <Stack gap="workspace">
-      <Stack as="section" gap="compact">
-        <h3 className={textRole('heading')}>What will be fetched</h3>
+    <>
+      <Section>
+        <SectionHeader>
+          <SectionTitle level={3}>What will be fetched</SectionTitle>
+        </SectionHeader>
         <FigureStrip
           segments={[
             { key: 'requests', label: 'Requests', value: formatCount(review.planned_calls) },
@@ -348,11 +349,13 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
             ? 'Held from your AI credits; only successful requests are charged, never above the estimate.'
             : 'Billed to your DataForSEO account.'}
         </p>
-      </Stack>
+      </Section>
       {review.call_plan.length ? (
-        <Stack as="section" gap="compact">
-          <h3 className={textRole('heading')}>Requests</h3>
-          <ul className={ledgerClasses('type-body text-ink-2')}>
+        <Section>
+          <SectionHeader>
+            <SectionTitle level={3}>Requests</SectionTitle>
+          </SectionHeader>
+          <SectionBleed as="ul" rows>
             {review.call_plan.map((call) => {
               const target = hostOf(call.target),
                 comparison = hostOf(call.comparison);
@@ -360,7 +363,7 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
                 <Inline
                   as="li"
                   gap="compact"
-                  className={ledgerItemClasses('justify-between')}
+                  className="type-body text-ink-2 justify-between"
                   key={`${String(call.dataset_key)}:${String(call.page)}`}
                 >
                   <span>
@@ -376,8 +379,8 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
                 </Inline>
               );
             })}
-          </ul>
-        </Stack>
+          </SectionBleed>
+        </Section>
       ) : null}
       {review.reused_datasets.length ? (
         <p className="type-body text-ink-2">
@@ -385,6 +388,6 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
           credits.
         </p>
       ) : null}
-    </Stack>
+    </>
   );
 }

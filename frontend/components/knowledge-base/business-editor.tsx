@@ -6,8 +6,8 @@ import { Icon } from '@/components/ui/icon';
 import { Notice } from '@/components/ui/notice';
 import { Tag } from '@/components/ui/tag';
 import { Select } from '@/components/ui/select';
+import { SectionBleed } from '@/components/ui/section';
 import { SettingsGroup } from '@/components/ui/setting-row';
-import { SLIP_FACE } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
 import type { BusinessMap } from '@citeladder/contracts';
 import { Check, Plus, X } from '@/lib/icons';
@@ -92,7 +92,7 @@ function OfferingRow({
       aria-label={map.offering}
       className={cn(ROW_GRID, 'border-rule column-split:p-0 border-b p-2')}
     >
-      <div className="column-split:px-4 column-split:py-3 flex min-w-0 items-start justify-between gap-2 px-2 pt-1">
+      <div className="column-split:px-[var(--panel-inset)] column-split:py-3 flex min-w-0 items-start justify-between gap-2 px-2 pt-1">
         <span className={textRole('label', 'min-w-0 break-words')}>{map.offering}</span>
         <IconButton
           icon={X}
@@ -149,7 +149,7 @@ function AddOffering({
     setName('');
   };
   return (
-    <div className="focus-frame border-rule flex min-h-10 items-center gap-2 border-t border-transparent px-4">
+    <div className="focus-frame border-rule flex min-h-10 items-center gap-2 border-t border-transparent px-[var(--panel-inset)]">
       <Icon icon={Plus} className="text-ink-2" />
       <input
         aria-label="Add offering"
@@ -198,16 +198,16 @@ export function OfferingsGrid({
         </span>
       }
     >
-      <div className={cn(SLIP_FACE, 'min-w-0 overflow-hidden')}>
+      <SectionBleed>
         <div
           aria-hidden
           className={cn(
             ROW_GRID,
-            'bg-well border-rule column-split:grid hidden h-[var(--table-header-height)] items-center border-b',
+            'border-rule column-split:grid hidden h-[var(--table-header-height)] items-center border-b bg-[var(--table-head-ground)]',
             textRole('captionStrong'),
           )}
         >
-          <span className="px-4">Offering</span>
+          <span className="px-[var(--panel-inset)]">Offering</span>
           {DIMENSIONS.map((dimension) => (
             <span key={dimension.key} className="px-3">
               {dimension.label}
@@ -237,7 +237,7 @@ export function OfferingsGrid({
           </ul>
         ) : null}
         <AddOffering disabled={disabled} onAdd={add} />
-      </div>
+      </SectionBleed>
     </SettingsGroup>
   );
 }
@@ -255,7 +255,7 @@ function FactRow({
   children,
 }: Readonly<{ label: string; count?: string; children: ReactNode }>) {
   return (
-    <div className="column-split:grid-cols-[10.5rem_minmax(0,1fr)] grid min-w-0 items-start gap-x-3 gap-y-1 px-4 py-2">
+    <div className="column-split:grid-cols-[10.5rem_minmax(0,1fr)] grid min-w-0 items-start gap-x-3 gap-y-1">
       <div className="column-split:pt-2.5">
         <p className={textRole('label')}>{label}</p>
         {count ? <p className={textRole('caption', 'tabular-nums')}>{count}</p> : null}
@@ -279,7 +279,7 @@ export function BusinessFacts({
     onChange({ ...draft, suggested: draft.suggested.filter((item) => item !== key) });
   return (
     <SettingsGroup title="Business">
-      <div className={cn(SLIP_FACE, 'divide-rule min-w-0 divide-y')}>
+      <SectionBleed rows>
         {lists.map((list) => (
           <FactRow
             key={list.key}
@@ -327,7 +327,7 @@ export function BusinessFacts({
             ) : null}
           </div>
         </FactRow>
-      </div>
+      </SectionBleed>
     </SettingsGroup>
   );
 }

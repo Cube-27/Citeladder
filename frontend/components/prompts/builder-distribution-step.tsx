@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
+import { SectionStack } from '@/components/ui/section';
 import { SettingField, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { SplitBar } from '@/components/ui/split-bar';
 import { StateBlock } from '@/components/ui/state-block';
@@ -223,7 +224,7 @@ export function BuilderDistributionStep({
 >) {
   const { settings, onChange, limits } = props;
   return (
-    <Stack gap="section" className="max-w-[var(--container-prose)]">
+    <SectionStack>
       {notices}
       <SettingsGroup title="What to generate">
         <SegmentedControl<GenerationMode>
@@ -249,7 +250,7 @@ export function BuilderDistributionStep({
       ) : (
         <MarketSettings {...props} />
       )}
-    </Stack>
+    </SectionStack>
   );
 }
 
@@ -333,7 +334,7 @@ function MarketSettings({
       </SettingsGroup>
       <SettingsGroup title="Search data">
         {seeds.data ? (
-          <Stack gap="compact">
+          <>
             <SegmentedControl<SeedChoice>
               ariaLabel="Search data source"
               value={seedSourceOf(settings, seeds.data)}
@@ -341,7 +342,7 @@ function MarketSettings({
               onChange={(seedSource) => onChange({ ...settings, seedSource, unticked: new Set() })}
             />
             <SeedList seeds={seeds.data} settings={settings} topics={topics} onChange={onChange} />
-          </Stack>
+          </>
         ) : (
           seeds.status
         )}

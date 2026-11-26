@@ -50,7 +50,6 @@ export function PerformanceBreakdowns({
             onValueChange={onDimensionChange}
             items={DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
             ariaLabel="Performance breakdowns"
-            spaced
             onIntent={(next) => {
               if (!unavailableDimensions.includes(next))
                 warm({ snapshotId, compareSnapshotId }, next);

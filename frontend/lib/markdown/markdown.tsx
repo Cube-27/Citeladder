@@ -18,6 +18,7 @@ import { InlineFigure } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 import { highlightPlugin, type Highlight } from './highlight';
+import './prose.css';
 import { phraseChipsPlugin } from './phrase-chips';
 import { leavesForUnknownHost, safeUrlTransform } from './safe-url';
 

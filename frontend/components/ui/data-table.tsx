@@ -15,12 +15,17 @@ import {
 } from '@/components/ui/data-table-body';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
+import { Section, SectionBleed, SectionHeader, SectionToolbar } from '@/components/ui/section';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { StateBlock } from '@/components/ui/state-block';
-import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
+import {
+  SectionTitleRoleContext,
+  StateHeadingLevelContext,
+  type HeadingLevel,
+} from '@/components/ui/state-heading-level';
 
 import './data-table.css';
 
@@ -72,25 +77,31 @@ export function DataTable({
   const scroll = useScrollFrame({ label: parts.regionLabel, start: false });
   const replacing = replacingState(state);
   return (
-    <section
+    <Section
       aria-labelledby={parts.naming.ariaLabelledBy}
       aria-label={parts.naming.ariaLabel}
       aria-busy={busy?.active || undefined}
       data-data-table=""
-      className="relative grid min-w-0 content-start"
     >
-      {busy ? <BusyRung active={busy.active} label={busy.label} /> : null}
       <DataTableHeader
         title={title}
         headingId={headingId}
         level={level}
-        toolbar={toolbar}
         description={description}
         actions={actions}
       />
-      <HeldFootprint state={replacing} level={stateLevel(title, level)} held={reserveRows}>
+      {toolbar ? (
+        <SectionToolbar>
+          <FilterBar {...toolbar} />
+        </SectionToolbar>
+      ) : null}
+      <HeldFootprint
+        state={replacing}
+        level={stateLevel(title, level)}
+        held={reserveRows}
+        dropped={dropsTable(replacing, reserveRows)}
+      >
         <DataTableFrame
-          hidden={dropsTable(replacing, reserveRows)}
           scroll={scroll}
           naming={parts.naming}
           pinned={parts.pinned}
@@ -114,7 +125,8 @@ export function DataTable({
           </DataTableBody>
         </DataTableFrame>
       </HeldFootprint>
-    </section>
+      {busy ? <BusyRung active={busy.active} label={busy.label} /> : null}
+    </Section>
   );
 }
 
@@ -122,11 +134,13 @@ function HeldFootprint({
   state,
   level,
   held,
+  dropped,
   children,
 }: Readonly<{
   state: ComponentProps<typeof StateBlock> | null;
   level: HeadingLevel;
   held: boolean;
+  dropped: boolean;
   children: ReactNode;
 }>) {
   const block = state ? <ReplacingState state={state} level={level} /> : null;
@@ -134,16 +148,18 @@ function HeldFootprint({
     return (
       <>
         {block}
-        {children}
+        <SectionBleed hidden={dropped}>{children}</SectionBleed>
       </>
     );
   return (
-    <div className="grid min-w-0">
-      <div className="col-start-1 row-start-1 min-w-0">{block}</div>
-      <div inert className="col-start-1 row-start-1 min-w-0" style={{ visibility: 'hidden' }}>
-        {children}
+    <SectionBleed>
+      <div className="grid min-w-0">
+        <div className="col-start-1 row-start-1 min-w-0 px-[var(--panel-inset)] py-3">{block}</div>
+        <div inert className="col-start-1 row-start-1 min-w-0" style={{ visibility: 'hidden' }}>
+          {children}
+        </div>
       </div>
-    </div>
+    </SectionBleed>
   );
 }
 
@@ -193,19 +209,12 @@ function ReplacingState({
 }: Readonly<{ state: ComponentProps<typeof StateBlock>; level: HeadingLevel }>) {
   return (
     <StateHeadingLevelContext value={level}>
-      {state.kind === 'empty' && state.inline ? (
-        <div data-table-replacing="" className="p-4">
-          <StateBlock {...state} />
-        </div>
-      ) : (
-        <StateBlock {...state} />
-      )}
+      <StateBlock {...state} />
     </StateHeadingLevelContext>
   );
 }
 
 function DataTableFrame({
-  hidden,
   scroll,
   naming,
   pinned,
@@ -215,7 +224,6 @@ function DataTableFrame({
   foot,
   children,
 }: Readonly<{
-  hidden: boolean;
   scroll: ScrollFrameState;
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
   pinned: 1 | 2;
@@ -232,7 +240,6 @@ function DataTableFrame({
       data-data-table-frame=""
       data-table-scope={scope}
       data-pinned={pinned}
-      hidden={hidden}
       className="relative isolate min-w-0"
     >
       {probe}
@@ -259,7 +266,7 @@ function DataTableFoot({
   return (
     <div
       data-data-table-foot=""
-      className="flex min-h-10 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-1"
+      className="border-rule flex min-h-10 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t px-[var(--panel-inset)] py-1"
     >
       {footer ? (
         <div className="type-caption grid min-w-0 content-center gap-1">{footer}</div>
@@ -295,64 +302,30 @@ function DataTableHeader({
   title,
   headingId,
   level,
-  toolbar,
   description,
   actions,
 }: Readonly<{
   title?: string;
   headingId: string;
   level: HeadingLevel;
-  toolbar?: FilterBarProps;
   description?: ReactNode;
   actions?: ReactNode;
 }>) {
-  if (!title && !toolbar && !description && !actions) return null;
-  const head = (
-    <>
-      <TitleRow title={title} headingId={headingId} level={level} toolbar={toolbar} />
-      {description ? (
-        <p data-data-table-description="" className="type-caption max-w-[72ch]">
-          {description}
-        </p>
-      ) : null}
-    </>
-  );
-  if (!actions) return <header className="grid min-w-0 gap-1 pb-3">{head}</header>;
-  return (
-    <header className="flex flex-wrap items-start justify-between gap-2 pb-3">
-      <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{head}</div>
-      <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">{actions}</div>
-    </header>
-  );
-}
-
-function TitleRow({
-  title,
-  headingId,
-  level,
-  toolbar,
-}: Readonly<{
-  title?: string;
-  headingId: string;
-  level: HeadingLevel;
-  toolbar?: FilterBarProps;
-}>) {
+  const role = useContext(SectionTitleRoleContext);
+  if (!title && !description && !actions) return null;
   const Heading = level === 3 ? 'h3' : 'h2';
   return (
-    <div
-      data-data-table-header=""
-      className="rail:flex-row rail:items-center flex min-h-[var(--control-md)] min-w-0 flex-col items-stretch gap-2"
-    >
+    <SectionHeader data-data-table-header="" actions={actions}>
       {title ? (
-        <Heading id={headingId} className={textRole('heading', 'min-w-0 shrink-0 truncate')}>
+        <Heading id={headingId} className={textRole(role, 'min-w-0 truncate')}>
           {title}
         </Heading>
       ) : null}
-      {toolbar ? (
-        <div className="min-w-0 flex-1">
-          <FilterBar {...toolbar} />
-        </div>
+      {description ? (
+        <p data-data-table-description="" className="type-body text-ink-2 max-w-[72ch]">
+          {description}
+        </p>
       ) : null}
-    </div>
+    </SectionHeader>
   );
 }

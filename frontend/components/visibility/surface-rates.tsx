@@ -1,16 +1,17 @@
+import { useId } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { BusyRung } from '@/components/ui/rung-meter';
 import { Absence } from '@/components/ui/absence';
 import { BrandMark } from '@/components/ui/brand-mark';
-import { Inline, Stack } from '@/components/ui/layout';
-import { SubsectionHeader } from '@/components/ui/workspace';
-import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
+import { ClampText } from '@/components/ui/clamp-text';
+import { Inline } from '@/components/ui/layout';
+import { textRole } from '@/components/ui/typography';
 import { formatPercent } from '@/lib/format';
 import type { AioRate, SurfaceRates } from '@citeladder/contracts';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 const DENOMINATOR_COPY: Record<string, string> = {
@@ -38,15 +39,22 @@ function rateStat({
 }
 
 function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_mention_rates'] }>) {
+  const titleId = useId();
   if (rates.length === 0) return null;
   return (
-    <Stack as="section" gap="item">
-      <SubsectionHeader title="Competitors, when an overview appeared" />
-      <LedgerList label="Competitors, when an overview appeared">
+    <Section aria-labelledby={titleId}>
+      <SectionHeader>
+        <SectionTitle level={3} id={titleId}>
+          Competitors, when an overview appeared
+        </SectionTitle>
+      </SectionHeader>
+      <SectionBleed as="ul" rows>
         {rates.map((entry) => (
-          <LedgerItem
+          <li
             key={entry.name}
-            title={
+            className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+          >
+            <ClampText phoneWrap className={textRole('body', 'flex-[1_1_15rem]')}>
               <Inline as="span">
                 <BrandMark
                   name={entry.name}
@@ -55,9 +63,9 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
                 />
                 {entry.name}
               </Inline>
-            }
-            meta={
-              entry.rate.value === null ? (
+            </ClampText>
+            <div className="flex shrink-0 items-center gap-2">
+              {entry.rate.value === null ? (
                 <Absence state="unavailable" className="type-body text-ink-2" />
               ) : (
                 <>
@@ -66,12 +74,12 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
                     {`${entry.rate.numerator} of ${entry.rate.denominator}`}
                   </span>
                 </>
-              )
-            }
-          />
+              )}
+            </div>
+          </li>
         ))}
-      </LedgerList>
-    </Stack>
+      </SectionBleed>
+    </Section>
   );
 }
 
@@ -98,36 +106,32 @@ export function SurfaceRatesPanel({
       />
     );
   return (
-    <Section className="relative" aria-busy={query.isFetching}>
+    <Section aria-busy={query.isFetching}>
       <BusyRung active={query.isFetching} label={`Updating ${engineLabel} rates`} />
       <SectionHeader>
         <SectionTitle>{engineLabel}</SectionTitle>
       </SectionHeader>
-      <SectionContent>
-        <Stack gap="workspace">
-          <FigureStrip
-            segments={[
-              rateStat({ key: 'trigger', label: 'Shown', rate: data.trigger_rate }),
-              rateStat({
-                key: 'named',
-                label: 'Named, when shown',
-                rate: data.brand_mention_rate_when_present,
-              }),
-              rateStat({
-                key: 'overall',
-                label: 'Overall visibility',
-                rate: data.overall_brand_visibility,
-              }),
-              rateStat({
-                key: 'cited',
-                label: 'Your site cited',
-                rate: data.owned_citation_rate_when_present,
-              }),
-            ]}
-          />
-          <CompetitorRates rates={data.competitor_mention_rates} />
-        </Stack>
-      </SectionContent>
+      <FigureStrip
+        segments={[
+          rateStat({ key: 'trigger', label: 'Shown', rate: data.trigger_rate }),
+          rateStat({
+            key: 'named',
+            label: 'Named, when shown',
+            rate: data.brand_mention_rate_when_present,
+          }),
+          rateStat({
+            key: 'overall',
+            label: 'Overall visibility',
+            rate: data.overall_brand_visibility,
+          }),
+          rateStat({
+            key: 'cited',
+            label: 'Your site cited',
+            rate: data.owned_citation_rate_when_present,
+          }),
+        ]}
+      />
+      <CompetitorRates rates={data.competitor_mention_rates} />
     </Section>
   );
 }

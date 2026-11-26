@@ -194,7 +194,15 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         crumbs={[{ label: 'Home', href: '/' }, { label: 'Platform' }, { label }]}
         title={page.heading}
         lead={page.lead}
-        actions={page.cta === 'mcp' ? <ConnectStrip /> : <PlatformActions cta={page.cta} />}
+        actions={
+          page.cta === 'mcp' ? (
+            <div className="bg-surface text-ink rounded-card w-fit max-w-full border border-transparent p-[var(--card-padding)]">
+              <ConnectStrip />
+            </div>
+          ) : (
+            <PlatformActions cta={page.cta} />
+          )
+        }
         meta={page.note}
       >
         <CatalogFrame screen={page.screen} />

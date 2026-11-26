@@ -11,6 +11,7 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
+import { Section } from '@/components/ui/section';
 import { Notice } from '@/components/ui/notice';
 import { wellClasses } from '@/components/ui/slip';
 
@@ -160,7 +161,7 @@ function SinkFilterUpdate({
 }>) {
   const { confirmFilter } = useGcpPullActions(projectId, workspaceId);
   return (
-    <Stack as="section" aria-label={`Sink filter update for ${source.host}`}>
+    <Section aria-label={`Sink filter update for ${source.host}`}>
       <Notice tone="warning">Update your sink filter. Until then, coverage stays partial.</Notice>
       <CodeText label="Copy filter" value={gcp.log_filter} />
       {canManage ? (
@@ -182,6 +183,6 @@ function SinkFilterUpdate({
           onRetry={() => confirmFilter.mutate(source.id)}
         />
       ) : null}
-    </Stack>
+    </Section>
   );
 }

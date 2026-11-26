@@ -207,6 +207,7 @@ export function CommandPalette({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className={cn('dialog-overlay', SCRIM)} />
         <DialogPrimitive.Content
+          data-overlay=""
           aria-describedby={undefined}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
@@ -290,7 +291,7 @@ export function CommandPalette({
                           onMouseMove={() => highlight(index)}
                           onClick={() => runCommand(command)}
                           className={cn(
-                            'press [--press:0.98] type-body text-ink flex min-h-[var(--control-md)] w-full items-center gap-2 rounded-mark px-2 text-left',
+                            'press [--press:0.98] type-body text-ink flex min-h-[var(--control-md)] w-full items-center gap-2 rounded-mark px-2.5 text-left',
                             isActive && 'overlay-hover',
                           )}
                         >

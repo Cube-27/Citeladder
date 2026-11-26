@@ -4,7 +4,7 @@ import type { ProbeMarketValue } from '@citeladder/contracts/probes';
 
 import { entityKey } from '@/components/perception/brand-radar';
 import { HeatScale, HeatTable, type HeatValue } from '@/components/ui/heat-table';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { YouTag } from '@/components/ui/table';
@@ -31,7 +31,7 @@ export function ThemeComparison({ themes }: Readonly<{ themes: readonly Theme[] 
         </SectionDescription>
       </SectionHeader>
       {themes.length ? (
-        <Stack gap="item">
+        <>
           <HeatTable
             labelledBy={titleId}
             corner="Theme"
@@ -51,7 +51,7 @@ export function ThemeComparison({ themes }: Readonly<{ themes: readonly Theme[] 
             }))}
           />
           <HeatScale note="100 when named first, 10 less per place" />
-        </Stack>
+        </>
       ) : (
         <StateBlock kind="empty" inline message="No theme answers." />
       )}

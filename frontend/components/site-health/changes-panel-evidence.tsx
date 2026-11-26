@@ -2,10 +2,11 @@ import type { ChangeObservation } from '@citeladder/contracts';
 
 import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { PageLink } from '@/components/site-health/page-link';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader, treeBranchClasses } from '@/components/ui/workspace';
+import { treeBranchClasses } from '@/components/ui/workspace';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import {
   CHANGE_EVIDENCE_DEPTH_LIMIT,
   CHANGE_EVIDENCE_LIMIT,
@@ -121,12 +122,14 @@ function ChangeRecord({ value, depth }: Readonly<{ value: object; depth: number 
 
 function EvidenceValue({ heading, value }: Readonly<{ heading: string; value: unknown }>) {
   return (
-    <Stack as="section" aria-label={heading}>
-      <EditorialSectionHeader title={heading} />
+    <Section aria-label={heading}>
+      <SectionHeader>
+        <SectionTitle>{heading}</SectionTitle>
+      </SectionHeader>
       <div className={textRole('body', 'text-ink-2 [overflow-wrap:anywhere]')}>
         <ChangeValue value={value} />
       </div>
-    </Stack>
+    </Section>
   );
 }
 
@@ -136,8 +139,10 @@ function EvidenceSources({
   crawlBId,
 }: Readonly<{ row: ChangeObservation; crawlAId: string | null; crawlBId: string | null }>) {
   return (
-    <Stack as="section" aria-label="Page evidence">
-      <EditorialSectionHeader title="Page evidence" />
+    <Section aria-label="Page evidence">
+      <SectionHeader>
+        <SectionTitle>Page evidence</SectionTitle>
+      </SectionHeader>
       <Inline className="flex-wrap">
         {crawlAId && row.source_analysis_a_id ? (
           <PageLink text="body" crawlId={crawlAId} siteUrlId={row.site_url_id}>
@@ -162,7 +167,7 @@ function EvidenceSources({
           </CopyButton>
         </Inline>
       ) : null}
-    </Stack>
+    </Section>
   );
 }
 
@@ -186,11 +191,11 @@ export function ChangeEvidenceDrawer({
       title="Change evidence"
     >
       {row ? (
-        <Stack gap="section">
+        <>
           <EvidenceValue heading="Before" value={row.before_value} />
           <EvidenceValue heading="After" value={row.after_value} />
           <EvidenceSources row={row} crawlAId={crawlAId} crawlBId={crawlBId} />
-        </Stack>
+        </>
       ) : null}
     </Drawer>
   );

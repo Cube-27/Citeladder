@@ -79,7 +79,7 @@ export function Select<T extends string>({
         className={cn(
           'focus-input press',
           TRIGGER_BOX,
-          'data-[placeholder]:text-ink-3 flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-60',
+          'data-[placeholder]:text-ink-3 flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-60 app:disabled:opacity-50',
           className,
         )}
       >
@@ -87,7 +87,7 @@ export function Select<T extends string>({
           <SelectPrimitive.Value placeholder={placeholder} />
         </span>
         <SelectPrimitive.Icon asChild>
-          <ChevronDown className="text-ink-2 size-3.5 shrink-0" aria-hidden />
+          <ChevronDown className="text-ink-2 app:text-ink-3 size-3.5 shrink-0" aria-hidden />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
@@ -97,7 +97,7 @@ export function Select<T extends string>({
           collisionPadding={8}
           className={cn(
             MENU_PANEL,
-            'max-h-[min(18.5rem,var(--radix-select-content-available-height))] min-w-[max(15rem,var(--radix-select-trigger-width))]',
+            'max-h-[min(18.5rem,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] [[data-public-surface]_&]:min-w-[max(15rem,var(--radix-select-trigger-width))]',
           )}
         >
           <SelectPrimitive.ScrollUpButton className="text-ink-2 flex h-[var(--control-md)] items-center justify-center">

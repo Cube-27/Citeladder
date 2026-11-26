@@ -6,9 +6,8 @@ import { isOneOf } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Section } from '@/components/ui/section';
+import { Section, SectionStack } from '@/components/ui/section';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { Stack } from '@/components/ui/layout';
 import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager';
 import { TableCell, TableCellLines, TableRow, UrlText } from '@/components/ui/table';
 import { PageLink } from '@/components/site-health/page-link';
@@ -41,7 +40,7 @@ export function InternalLinksPanel({
   );
   const selected = analysis?.recommendations.find((link) => link.id === params.link);
   return (
-    <Stack gap="workspace" className="min-w-0">
+    <SectionStack>
       <Notices read={read} />
       {analysis ? (
         <LinksResult analysis={analysis} links={links} onSelect={(id) => update('link', id)} />
@@ -58,7 +57,7 @@ export function InternalLinksPanel({
           onClose={() => update('link', '')}
         />
       ) : null}
-    </Stack>
+    </SectionStack>
   );
 }
 

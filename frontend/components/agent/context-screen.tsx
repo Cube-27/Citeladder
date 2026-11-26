@@ -26,6 +26,7 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useBrandFacts } from '@/lib/project/use-brand-facts';
 import { StateBlock } from '@/components/ui/state-block';
+import { SectionStack } from '@/components/ui/section';
 import { SettingsGroup } from '@/components/ui/setting-row';
 
 type ProfileRead = UseQueryResult<BrandProfile>;
@@ -142,7 +143,7 @@ function BrandFactsTab({
 }>) {
   const mayEdit = useWorkspaceCapability('write');
   return (
-    <>
+    <SectionStack>
       <BrandAliasesPanel project={project} mayEdit={mayEdit} />
       <BrandFactsSection
         facts={facts}
@@ -150,7 +151,7 @@ function BrandFactsTab({
         projectId={project.id}
         mayEdit={mayEdit}
       />
-    </>
+    </SectionStack>
   );
 }
 

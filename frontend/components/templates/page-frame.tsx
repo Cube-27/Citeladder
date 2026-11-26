@@ -14,6 +14,7 @@ import {
   PageEmptyOfferProvider,
 } from '@/components/ui/masthead-actions';
 import { PageFilterBandContext, PageTabEndContext } from '@/components/templates/page-tab-end';
+import { StickyBand } from '@/components/ui/sticky-band';
 import { TAB_BASELINE } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
@@ -45,8 +46,15 @@ export function PageFrame({
   filters,
   fill,
   head = 'page',
+  end = 'page',
   children,
-}: PageFrameSlots & Readonly<{ fill?: true; head?: 'page' | 'masthead'; children: ReactNode }>) {
+}: PageFrameSlots &
+  Readonly<{
+    fill?: true;
+    head?: 'page' | 'masthead';
+    end?: 'page' | 'thread';
+    children: ReactNode;
+  }>) {
   const pathname = useLocation().pathname ?? '';
   const resolved = useRouteTitle(title, pathname);
   const parents = trail ?? routeTrail(pathname);
@@ -82,7 +90,11 @@ export function PageFrame({
           ) : null}
           <div
             data-page-body=""
-            className={cn('flex min-w-0 flex-1 flex-col pt-3', PAGE_COLUMN[width], 'pb-6')}
+            className={cn(
+              'flex min-w-0 flex-1 flex-col pt-3',
+              PAGE_COLUMN[width],
+              end === 'thread' ? 'pb-1' : 'pb-6',
+            )}
           >
             {children}
           </div>
@@ -151,11 +163,18 @@ function PageHeading({
         className,
       )}
     >
-      <h1 className={textRole('pageTitle', 'min-w-0 break-words')}>{title}</h1>
+      <h1
+        className={textRole(
+          'pageTitle',
+          'flex min-h-[var(--control-md)] min-w-0 items-center break-words',
+        )}
+      >
+        {title}
+      </h1>
       {actions === undefined ? null : (
         <div
           data-page-actions=""
-          className="ms-auto flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center justify-end gap-2"
+          className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2"
         >
           <MastheadPrimarySlot value={primarySlot}>
             <MastheadOverflow label="Page actions">{actions}</MastheadOverflow>
@@ -176,11 +195,7 @@ function PageStrips({
   const strips = useRef<HTMLDivElement>(null);
   usePublishedHeight(strips, '--strips-block-size');
   return (
-    <div
-      ref={strips}
-      data-page-strips=""
-      className="bg-page z-sticky sticky top-[var(--masthead-block-size,var(--masthead-height))] -mx-[var(--page-pad-inline)] -my-3 flex min-w-0 flex-col gap-3 py-3"
-    >
+    <StickyBand ref={strips}>
       {tabs ? (
         <div data-page-band="tabs" className={cn(STRIP, 'h-[var(--page-tabs-height)] items-end')}>
           <div className={cn('flex min-w-0 flex-1 items-end gap-4', TAB_BASELINE)}>
@@ -198,7 +213,7 @@ function PageStrips({
           <PageFilterBandContext value>{filters}</PageFilterBandContext>
         </div>
       ) : null}
-    </div>
+    </StickyBand>
   );
 }
 
@@ -227,7 +242,6 @@ export function PageSections({
   return (
     <div
       data-page-content=""
-      data-rhythm-gap="section"
       className={cn('flex min-w-0 flex-col gap-[var(--page-section-gap)]', className)}
     >
       {children}

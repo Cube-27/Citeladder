@@ -2,26 +2,12 @@ import { useId, type ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Icon } from '@/components/ui/icon';
-import { LogoMark } from '@/components/ui/logo-mark';
+import { FlowLogo } from '@/components/ui/flow-logo';
+import { Section } from '@/components/ui/section';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { textRole } from '@/components/ui/typography';
 import type { IconGlyph } from '@/lib/icons';
-import { websiteHref } from '@/lib/config/app-link';
 import { cn } from '@/lib/utils';
-
-import { FLOW_CARD } from './notice-page';
-
-export function FlowLogo() {
-  return (
-    <a
-      href={websiteHref('/')}
-      aria-label="CiteLadder home"
-      className="focus-ring text-ink rounded-control -ms-1 inline-flex p-1"
-    >
-      <LogoMark size={22} />
-    </a>
-  );
-}
 
 export function FlowPage({
   label,
@@ -60,10 +46,15 @@ export function FlowPage({
           aria-label={label}
           className="max-w-flow mx-auto flex w-full flex-1 flex-col px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] pb-[var(--flow-gap)] [--control-md:var(--control-lg)]"
         >
-          <div className={cn(!aside && FLOW_CARD, 'flex flex-col gap-4')}>
-            {kicker === null ? null : <p className={textRole('captionStrong')}>{kicker}</p>}
-            <div className="flex flex-col">{children}</div>
-          </div>
+          {aside ? (
+            <div className="flex flex-col gap-4">
+              <FlowCardBody kicker={kicker}>{children}</FlowCardBody>
+            </div>
+          ) : (
+            <Section>
+              <FlowCardBody kicker={kicker}>{children}</FlowCardBody>
+            </Section>
+          )}
         </main>
         {footer ? (
           <footer className={textRole('caption', 'px-[var(--content-gutter)] py-4 text-center')}>
@@ -73,6 +64,18 @@ export function FlowPage({
       </div>
       {aside}
     </div>
+  );
+}
+
+function FlowCardBody({
+  kicker,
+  children,
+}: Readonly<{ kicker: string | null; children: ReactNode }>) {
+  return (
+    <>
+      {kicker === null ? null : <p className={textRole('captionStrong')}>{kicker}</p>}
+      <div className="flex flex-col">{children}</div>
+    </>
   );
 }
 

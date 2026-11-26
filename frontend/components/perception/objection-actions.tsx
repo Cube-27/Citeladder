@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Button, IconButton } from '@/components/ui/button';
 import { ConfirmDialog, Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Stack } from '@/components/ui/layout';
 import {
   Menu,
   MenuContent,
@@ -99,19 +98,17 @@ export function ObjectionActions({
           </>
         }
       >
-        <Stack gap="item">
-          {rename.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(rename.error, { action: 'rename the objection' })}
-            />
-          ) : null}
-          <Input
-            aria-label="Objection name"
-            value={renaming ?? ''}
-            onChange={(event) => setRenaming(event.target.value)}
+        {rename.isError ? (
+          <Notice
+            kind="mutation"
+            notice={mutationNoticeForError(rename.error, { action: 'rename the objection' })}
           />
-        </Stack>
+        ) : null}
+        <Input
+          aria-label="Objection name"
+          value={renaming ?? ''}
+          onChange={(event) => setRenaming(event.target.value)}
+        />
       </Dialog>
       <ConfirmDialog
         pending={remove.isPending}

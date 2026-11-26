@@ -7,6 +7,7 @@ import type {
 import { ExpandToggle } from '@/components/perception/probe-sources';
 import { AnswerLink } from '@/components/runs/answer-link';
 import { Absence } from '@/components/ui/absence';
+import { SectionToolbar } from '@/components/ui/section';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { useShownSpan } from '@/components/ui/data-table-fit';
 import { EngineCell } from '@/components/ui/engine-mark';
@@ -68,8 +69,8 @@ export function AttributeTable({ categories }: Readonly<{ categories: readonly C
   ];
   const narrowed = Boolean(query.trim()) || side !== 'all';
   return (
-    <div className="grid min-w-0 gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <>
+      <SectionToolbar>
         <SearchField
           value={query}
           onValueChange={setQuery}
@@ -78,7 +79,7 @@ export function AttributeTable({ categories }: Readonly<{ categories: readonly C
           className="phone:w-full w-60"
         />
         <SegmentedControl value={side} onChange={setSide} options={SIDES} ariaLabel="Side" />
-      </div>
+      </SectionToolbar>
       <DataTable
         label="Attributes"
         columns={columns}
@@ -105,7 +106,7 @@ export function AttributeTable({ categories }: Readonly<{ categories: readonly C
           />
         ))}
       </DataTable>
-    </div>
+    </>
   );
 }
 

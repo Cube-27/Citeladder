@@ -9,6 +9,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -30,7 +31,6 @@ import {
 import { pluralCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, type NoticeTone } from '@/components/ui/notice';
-import { wellClasses } from '@/components/ui/slip';
 import { DraftSheet, type DraftState } from '@/components/ui/draft-sheet';
 
 type Filter = 'open' | 'applied' | 'dismissed';
@@ -214,7 +214,6 @@ function SuggestionCard({
       aria-current={selected || undefined}
       state={SUGGESTION_STATE[suggestion.status]}
       marker={suggestion.status === 'stale' ? 'Out of date' : undefined}
-      className="suggestion-card"
     >
       <Inline className="flex-wrap">
         <StatusMark tone={suggestion.readiness === 'needs_input' ? 'warning' : 'info'}>
@@ -262,13 +261,15 @@ function CoverageGaps({
 }>) {
   if (gaps.length === 0) return null;
   return (
-    <Stack as="section" gap="compact" aria-labelledby="coverage-gaps">
-      <h3 id="coverage-gaps" className={textRole('subheading')}>
-        Coverage gaps
-      </h3>
-      <Stack as="ul" gap="compact">
+    <Section aria-labelledby="coverage-gaps">
+      <SectionHeader>
+        <SectionTitle id="coverage-gaps" level={3}>
+          Coverage gaps
+        </SectionTitle>
+      </SectionHeader>
+      <SectionBleed as="ul" rows>
         {gaps.map(({ id, evidence }) => (
-          <Stack as="li" key={id} gap="item" className={wellClasses()}>
+          <Stack as="li" key={id} gap="item">
             <p className={textRole('body')}>{evidence.angle_label}</p>
             <Disclosure title="Evidence">
               <GapEvidence evidence={evidence} />
@@ -290,8 +291,8 @@ function CoverageGaps({
             ) : null}
           </Stack>
         ))}
-      </Stack>
-    </Stack>
+      </SectionBleed>
+    </Section>
   );
 }
 
@@ -413,7 +414,7 @@ export function SuggestionsPanel({
   const disabled = locked !== null || changes.pending;
   const ready = page.items.some((item) => item.status === 'open' && item.readiness === 'ready');
   return (
-    <Stack gap="workspace">
+    <>
       <SegmentedControl
         ariaLabel="Show suggestions"
         value={filter}
@@ -430,9 +431,9 @@ export function SuggestionsPanel({
         <p className={textRole('body', 'text-ink-2')}>{EMPTY[filter]}</p>
       ) : null}
       {groupByPassage(items, body).map((group) => (
-        <Stack as="section" key={group.key} gap="item" aria-label={`Passage: ${group.label}`}>
+        <Section key={group.key} aria-label={`Passage: ${group.label}`}>
           <p className={textRole('caption', '[overflow-wrap:anywhere]')}>{group.label}</p>
-          <Stack as="ul" gap="compact">
+          <SectionBleed as="ul" rows>
             {group.items.map((suggestion) => (
               <SuggestionCard
                 key={suggestion.id}
@@ -445,8 +446,8 @@ export function SuggestionsPanel({
                 onAddToContext={onAddToContext}
               />
             ))}
-          </Stack>
-        </Stack>
+          </SectionBleed>
+        </Section>
       ))}
       {canChange && filter === 'open' ? (
         <BulkActions open={counts.open} ready={ready} disabled={disabled} changes={changes} />
@@ -457,6 +458,6 @@ export function SuggestionsPanel({
         </p>
       ) : null}
       <CoverageGaps gaps={gaps} onAddToContext={canChange ? onAddToContext : undefined} />
-    </Stack>
+    </>
   );
 }
