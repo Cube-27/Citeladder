@@ -4,6 +4,11 @@
   --shadow-pop: 0 2px 8px rgb(0 0 0 / 6%), 0 -6px 12px rgb(0 0 0 / 3%), 0 14px 28px rgb(0 0 0 / 8%);
   --shadow-sheet: var(--shadow-pop);
   --color-field-edge-hover: rgb(0 0 0 / 10%);
+  --color-page: oklch(97.02% 0 0);
+  --color-ground: oklch(95.24% 0.0013 286.37);
+  --table-head-ground: oklch(95.24% 0.0013 286.37);
+  --color-well: oklch(94% 0.001 286.375);
+  --color-raised-2: oklch(95.24% 0.0013 286.37);
 }
 
 :root[data-theme='dark']:not([data-public-surface]) {
@@ -12,6 +17,7 @@
   --shadow-pop: inset 0 0 1px rgb(255 255 255 / 30%);
   --shadow-sheet: var(--shadow-pop);
   --color-field-edge-hover: rgb(255 255 255 / 10%);
+  --color-well: var(--color-page);
 }
 
 :root:not([data-public-surface])
