@@ -42,7 +42,7 @@ import {
   loadedPageCount,
   type OccurrenceEntry,
 } from '@/lib/site-health/occurrence-groups';
-import { pageKindLabel } from '@/lib/site-health/page-kinds';
+import { FigureStrip } from '@/components/ui/figure-strip';
 import { ClampText } from '@/components/ui/clamp-text';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -59,6 +59,22 @@ export type IssueHead = Pick<
   | 'affected_url_count'
 > &
   Partial<Pick<SiteIssue, 'page_kinds'>>;
+
+function IssueBrief({ issue }: Readonly<{ issue: IssueHead }>) {
+  if (!issue.description && !issue.remediation) return null;
+  return (
+    <SectionCard>
+      <Stack gap="item">
+        {issue.description ? (
+          <p className={textRole('body', 'max-w-prose')}>{issue.description}</p>
+        ) : null}
+        {issue.remediation ? (
+          <p className={textRole('body', 'max-w-prose whitespace-pre-line')}>{issue.remediation}</p>
+        ) : null}
+      </Stack>
+    </SectionCard>
+  );
+}
 
 export function IssuePage({
   issue,
@@ -125,19 +141,10 @@ export function IssuePage({
       >
         <Stack as="section" aria-label={title} gap="workspace" className="min-w-0">
           <TitledSection title={title} actions={<IssueSeverityMark issue={issue} />}>
-            <SectionCard>
-              <Stack gap="item">
-                {issue.description ? (
-                  <p className={textRole('body', 'max-w-prose')}>{issue.description}</p>
-                ) : null}
-                {issue.remediation ? (
-                  <p className={textRole('body', 'max-w-prose whitespace-pre-line')}>
-                    {issue.remediation}
-                  </p>
-                ) : null}
-                <IssueFigures issue={issue} audited={audited} progress={progress} />
-              </Stack>
-            </SectionCard>
+            <Stack gap="workspace">
+              <IssueBrief issue={issue} />
+              <IssueFigures issue={issue} audited={audited} progress={progress} />
+            </Stack>
           </TitledSection>
           {pageLevel ? (
             <IssueUrlTable
@@ -178,7 +185,7 @@ export function IssuePage({
 }
 
 type FigureFacts = Pick<IssueHead, 'affected_url_count'> &
-  Partial<Pick<SiteIssue, 'new_url_count' | 'resolved_url_count' | 'page_kinds'>>;
+  Partial<Pick<SiteIssue, 'new_url_count' | 'resolved_url_count'>>;
 
 function IssueFigures({
   issue,
@@ -193,7 +200,6 @@ function IssueFigures({
 }>) {
   const count = (value: number | null | undefined) =>
     value === null || value === undefined ? <Absence state="not_measured" /> : formatCount(value);
-  const kinds = issue.page_kinds ?? [];
   const figures = [
     { label: 'Affected pages', value: formatCount(issue.affected_url_count) },
     {
@@ -215,24 +221,12 @@ function IssueFigures({
               ]),
         ]
       : []),
-    ...(kinds.length > 0
-      ? [{ label: 'Page kinds', value: kinds.map(pageKindLabel).join(', '), text: true }]
-      : []),
   ];
   return (
-    <dl
-      aria-label="Issue figures"
-      className="border-rule flex min-w-0 flex-wrap gap-x-10 gap-y-4 border-t pt-4"
-    >
-      {figures.map((figure) => (
-        <div key={figure.label} className="min-w-0">
-          <dt className={textRole('caption', 'text-ink-2')}>{figure.label}</dt>
-          <dd className={textRole('text' in figure ? 'emphasis' : 'figure', 'tabular-nums')}>
-            {figure.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <FigureStrip
+      label="Issue figures"
+      segments={figures.map((figure) => ({ key: figure.label, ...figure }))}
+    />
   );
 }
 

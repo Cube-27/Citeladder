@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { slipClasses } from '@/components/ui/slip';
 import { useState, type ReactNode } from 'react';
 
 import { DateRangeDialog } from './date-range-dialog';
@@ -11,9 +12,9 @@ import {
   performanceNotices,
   ProjectionFailure,
 } from './performance-chrome';
-import { Ga4SummaryRow, MetricCards, MetricDefinitions } from './metric-cards';
+import { Ga4SummaryRow, MetricCards } from './metric-cards';
 import { PerformanceBreakdowns } from './performance-breakdowns';
-import { METRIC_MARKS, PerformanceChart, type ChartSeries } from './performance-chart';
+import { PerformanceChart, type ChartSeries } from './performance-chart';
 import { ReadinessLadder, useProjectReadiness } from './readiness-ladder';
 import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 import { usePerformanceSelection } from './use-performance-selection';
@@ -22,10 +23,9 @@ import { useRangeProjection } from './use-range-projection';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { ReportPage } from '@/components/templates/report-page';
 import { Stack } from '@/components/ui/layout';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { FilterBar, FilterControls, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatWindowDate, pluralCount } from '@/lib/format';
 import { ChartNoAxesColumn } from '@/lib/icons';
 import { integrationsQueries } from '@/lib/api/integrations';
 import {
@@ -55,13 +55,14 @@ function chartSeries(
   comparison: PerformanceDashboard['comparison'],
   active: ReadonlySet<PerformanceMetricKey>,
 ): ChartSeries[] {
-  return METRIC_CARDS.filter((card) => active.has(card.key)).map((card) => ({
-    key: card.key,
-    label: card.label,
-    mark: METRIC_MARKS[card.key],
-    selected: toChartPoints(selected.series[card.key]),
-    comparison: comparison ? toChartPoints(comparison.series[card.key]) : null,
-  }));
+  return [...active]
+    .flatMap((key) => METRIC_CARDS.filter((card) => card.key === key))
+    .map((card) => ({
+      key: card.key,
+      label: card.label,
+      selected: toChartPoints(selected.series[card.key]),
+      comparison: comparison ? toChartPoints(comparison.series[card.key]) : null,
+    }));
 }
 
 function compareLabel(selection: RangeSelection): string {
@@ -111,13 +112,6 @@ function performanceCoverage(
   };
 }
 
-function coverageSummary(coverage: PerformanceDashboard['coverage']): string | null {
-  if (!coverage.earliest_date || !coverage.latest_date) return null;
-  return `${formatWindowDate(coverage.earliest_date)} – ${formatWindowDate(
-    coverage.latest_date,
-  )} · ${pluralCount(coverage.covered_days, 'day')}`;
-}
-
 function FirstUseEmptyState({ action }: Readonly<{ action: ReactNode }>) {
   return (
     <Section>
@@ -160,51 +154,53 @@ function SearchConsoleWorkspace({
   available,
   selected,
   comparison,
-  selectedLabel,
   compareLabel,
   activeMetrics,
   onToggleMetric,
   series,
   refreshing,
-  coverage,
+  granularity,
+  onGranularityChange,
 }: Readonly<{
   available: boolean;
   selected: PerformanceDashboard['selected'];
   comparison: PerformanceDashboard['comparison'];
-  selectedLabel: string;
   compareLabel: string;
   activeMetrics: ReadonlySet<PerformanceMetricKey>;
   onToggleMetric: (metric: PerformanceMetricKey) => void;
   series: ChartSeries[];
   refreshing: boolean;
-  coverage: string | null;
+  granularity: PerformanceGranularity;
+  onGranularityChange: (next: PerformanceGranularity) => void;
 }>) {
   if (!available) return null;
   return (
     <Section aria-labelledby="performance-search-console">
-      <SectionHeader actions={<MetricDefinitions />}>
+      <SectionHeader>
         <SectionTitle id="performance-search-console">Google Search</SectionTitle>
-        {coverage ? (
-          <SectionDescription data-testid="performance-coverage">{coverage}</SectionDescription>
-        ) : null}
       </SectionHeader>
-      <Stack gap="workspace" className="min-w-0">
-        <MetricCards
-          data-testid="metric-card-strip"
-          className="min-w-0"
-          selected={selected}
-          comparison={comparison}
-          compareLabel={compareLabel}
-          selectedLabel={selectedLabel}
-          active={activeMetrics}
-          onToggle={onToggleMetric}
-          marks={METRIC_MARKS}
-          loading={refreshing}
-        />
-        <Section aria-label="Search Console chart">
+      <div className={slipClasses('overflow-hidden p-0')}>
+        <div className="flex min-w-0 items-start justify-between gap-4">
+          <MetricCards
+            data-testid="metric-card-strip"
+            selected={selected}
+            comparison={comparison}
+            compareLabel={compareLabel}
+            active={activeMetrics}
+            onToggle={onToggleMetric}
+            loading={refreshing}
+          />
+          <div className="shrink-0 pt-4 pr-4">
+            <FilterControls
+              align="end"
+              filters={[granularityFilter(granularity, onGranularityChange)]}
+            />
+          </div>
+        </div>
+        <section aria-label="Search Console chart" className="min-w-0 px-1 pt-4 pb-3">
           <PerformanceChart series={series} />
-        </Section>
-      </Stack>
+        </section>
+      </div>
     </Section>
   );
 }
@@ -243,9 +239,6 @@ function performanceControls({
   onSelectRange,
   onOpenDialog,
   onReset,
-  hasChart,
-  granularity,
-  onGranularityChange,
   windowLabel,
   latestDate,
 }: Readonly<{
@@ -253,9 +246,6 @@ function performanceControls({
   onSelectRange: (selection: RangeSelection) => void;
   onOpenDialog: (tab: 'filter' | 'compare') => void;
   onReset: () => void;
-  hasChart: boolean;
-  granularity: PerformanceGranularity;
-  onGranularityChange: (next: PerformanceGranularity) => void;
   windowLabel: string;
   latestDate: string | null;
 }>): FilterBarProps {
@@ -270,7 +260,6 @@ function performanceControls({
         onReset={onReset}
       />
     ),
-    filters: hasChart ? [granularityFilter(granularity, onGranularityChange)] : undefined,
     status: <PerformanceWindowCaption label={windowLabel} latestDate={latestDate} />,
   };
 }
@@ -368,9 +357,6 @@ export function PerformanceScreen() {
                 setDialogOpen(true);
               },
               onReset: resetFilters,
-              hasChart: evidence.hasSearchConsoleTotals,
-              granularity,
-              onGranularityChange: setGranularity,
               windowLabel: selectedLabel,
               latestDate: data.coverage.latest_date,
             })}
@@ -414,13 +400,13 @@ export function PerformanceScreen() {
               available={evidence.hasSearchConsoleTotals}
               selected={selectedWindow}
               comparison={comparisonWindow}
-              selectedLabel={selectedLabel}
               compareLabel={comparisonLabel}
               activeMetrics={activeMetrics}
               onToggleMetric={toggleMetric}
               series={series}
               refreshing={refreshing}
-              coverage={coverageSummary(data.coverage)}
+              granularity={granularity}
+              onGranularityChange={setGranularity}
             />
             <Ga4Workspace
               available={evidence.hasGa4}

@@ -594,34 +594,4 @@ describe('IssuesCatalog', () => {
     await user.click(screen.getByRole('button', { name: 'Previous page' }));
     await waitFor(() => expect(currentUrl()).not.toContain('cursor='));
   });
-
-  it('says which page types an issue affects, and nothing when it spans none', async () => {
-    serveIssues([
-      issue({ page_kinds: ['product', 'category'] }),
-      issue({ group_id: OTHER, title: 'Canonical tag is missing', page_kinds: [] }),
-    ]);
-    mswServer.use(
-      http.get(`${ISSUES}/${OTHER}`, () =>
-        HttpResponse.json(issueDetail({ group_id: OTHER, title: 'Canonical tag is missing' })),
-      ),
-    );
-    const user = userEvent.setup();
-    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-
-    const typed = await openIssue(user, 'WebSite schema is missing');
-    expect(within(typed).getByText('Page kinds').nextElementSibling?.textContent).toBe(
-      'Product, Category',
-    );
-    expect(typed.querySelector('dl')).toHaveTextContent('Affected pages32');
-    expect(within(typed).getByText('High')).toBeInTheDocument();
-    await user.click(
-      within(await screen.findByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', {
-        name: 'Issues',
-      }),
-    );
-    await waitFor(() => expect(currentUrl()).not.toContain('issue='));
-
-    const untyped = await openIssue(user, 'Canonical tag is missing');
-    expect(within(untyped).queryByText('Page kinds')).toBeNull();
-  });
 });

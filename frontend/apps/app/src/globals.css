@@ -104,6 +104,7 @@
   --color-data-rival-2: oklch(52.3% 0.1 244);
   --color-data-rival-3: oklch(41% 0.128 289.3);
   --color-data-rival-4: oklch(53.4% 0.0855 184.4);
+  --color-nav-ink: color-mix(in oklch, var(--color-ink) 80%, var(--color-chrome));
   --color-brand-google-blue: oklch(63% 0.18 260);
   --color-brand-google-green: oklch(64.8% 0.1603 148.5);
   --color-brand-google-yellow: oklch(83.04% 0.1698 84);
@@ -357,15 +358,15 @@
 }
 
 :root[data-theme='dark']:not([data-public-surface]) {
-  --color-ground: #0a0a0a;
-  --color-panel: #1b1b1b;
-  --color-raised: #232323;
-  --color-raised-2: #2e2e2e;
-  --table-head-ground: #262626;
+  --color-ground: #0f0f0f;
+  --color-panel: #202020;
+  --color-raised: #2a2a2a;
+  --color-raised-2: #373737;
+  --table-head-ground: #2e2e2e;
   --color-thumb: var(--color-ink-2);
   --color-rule: rgb(255 255 255 / 11%);
   --color-control-line: rgb(255 255 255 / 22%);
-  --color-page: #111111;
+  --color-page: #141414;
   --color-ink: #ececec;
   --color-ink-2: #a8a8aa;
   --color-ink-hover: oklch(85% 0 0);
@@ -595,10 +596,10 @@
   --text-display: 1.5rem;
   --text-display--line-height: 2rem;
 
-  --radius-mark: 4px;
-  --radius-control: 6px;
-  --radius-card: var(--radius-control);
-  --radius-overlay: 12px;
+  --radius-mark: 5px;
+  --radius-control: 8px;
+  --radius-card: 10px;
+  --radius-overlay: 14px;
   --shadow-card: 0 1px 2px oklch(21% 0.034 263 / 5%);
   --shadow-pop: 0 4px 12px oklch(21% 0.034 263 / 10%), 0 1px 2px oklch(21% 0.034 263 / 6%);
   --shadow-sheet: 0 16px 40px oklch(21% 0.034 263 / 18%);
@@ -631,7 +632,8 @@
   --modal-padding: 16px;
   --workspace-gap: 16px;
   --page-top-gap: 24px;
-  --page-section-gap: 24px;
+  --section-gap: 20px;
+  --page-section-gap: var(--section-gap);
   --flow-gap: 48px;
   --page-end-space: 33svh;
   --page-pad-inline: var(--content-gutter);
@@ -1441,7 +1443,7 @@ a.focus-ring:active .type-caption {
   [data-settings-sections] > [role='tabpanel'] {
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: var(--section-gap);
   }
   [data-settings-sections] :is(section, section.surface-section) {
     padding-top: 0;
@@ -1469,7 +1471,7 @@ a.focus-ring:active .type-caption {
     }
     @container main (min-width: 688px) {
       &:is([data-app-grid='pair'], [data-app-grid='thirds']) {
-        --grid-gap-x: calc(2 * var(--page-section-gap));
+        --grid-gap-x: var(--page-section-gap);
         & > :nth-child(-n + 3):not(:first-child, [data-app-grid='pair'] > :nth-child(3)) {
           padding-top: 0;
         }
@@ -1477,7 +1479,7 @@ a.focus-ring:active .type-caption {
     }
     @container main (min-width: 954px) {
       &:is([data-app-grid='halves'], [data-app-grid='main-aside'], [data-app-grid='aside-main']) {
-        --grid-gap-x: calc(2 * var(--page-section-gap));
+        --grid-gap-x: var(--page-section-gap);
         & > :nth-child(2) {
           padding-top: 0;
         }

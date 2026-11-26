@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
-import { METRIC_MARKS, PerformanceChart, type ChartSeries } from './performance-chart';
+import { axisPlacement, PerformanceChart, type ChartSeries } from './performance-chart';
 
 const day = (index: number, date: string | null, value: number | null) => ({
   index,
@@ -12,7 +12,6 @@ const day = (index: number, date: string | null, value: number | null) => ({
 const clicks: ChartSeries = {
   key: 'clicks',
   label: 'Clicks',
-  mark: METRIC_MARKS.clicks,
   selected: [day(1, '2026-07-01', 12), day(2, '2026-07-02', null), day(3, '2026-07-03', 30)],
   comparison: [day(1, '2026-06-01', 10), day(2, '2026-06-02', 14), day(3, '2026-06-03', null)],
 };
@@ -20,7 +19,6 @@ const clicks: ChartSeries = {
 const position: ChartSeries = {
   key: 'position',
   label: 'Average position',
-  mark: METRIC_MARKS.position,
   selected: [day(1, '2026-07-01', 8.4), day(2, '2026-07-02', 7.25), day(3, '2026-07-03', 6)],
   comparison: null,
 };
@@ -31,7 +29,7 @@ const rows = (name: string) =>
     .map((row) => row.textContent);
 
 describe('PerformanceChart', () => {
-  it('draws one chart per metric on its own scale, naming each comparison day and a missing bucket', () => {
+  it('reads each plotted metric on its own scale, naming each comparison day and a missing bucket', () => {
     render(<PerformanceChart series={[clicks, position]} />);
     expect(rows('Clicks over 3 days, with comparison period')).toEqual([
       'SeriesJul 1, 2026 · vs Jun 1, 2026Jul 2, 2026 · vs Jun 2, 2026Jul 3, 2026 · vs Jun 3, 2026',
@@ -62,6 +60,20 @@ describe('PerformanceChart', () => {
       'Clicks (comparison)1014',
     ]);
   });
+
+  it.each([
+    [1, ['left']],
+    [2, ['left', 'right']],
+    [3, ['hidden', 'hidden', 'hidden']],
+    [4, ['hidden', 'hidden', 'hidden', 'hidden']],
+  ])(
+    'anchors the first metric on the left axis, the second on the right, and hides both for %i metrics',
+    (count, placements) => {
+      expect(Array.from({ length: count }, (_, index) => axisPlacement(index, count))).toEqual(
+        placements,
+      );
+    },
+  );
 
   it('states which absence it is when nothing can be plotted', () => {
     const { rerender } = render(<PerformanceChart series={[]} />);

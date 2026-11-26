@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { PageTabEnd } from '@/components/templates/page-tab-end';
 import type { z } from 'zod';
 import type { aiTrafficOverviewSchema, crawlSummarySchema } from '@citeladder/contracts/ai-traffic';
 import {
@@ -57,7 +58,7 @@ export function OverviewFigures({
     crawlAvailable && data.crawl.connection === 'not_connected' && onConnectCrawl !== undefined;
   return (
     <Stack gap="workspace" className="min-w-0">
-      <CrawlNotes crawl={data.crawl} available={crawlAvailable} />
+      <CrawlProcessed crawl={data.crawl} available={crawlAvailable} />
       <Stack gap="compact">
         <FigureStrip
           label="AI traffic key figures"
@@ -285,25 +286,17 @@ function citationFigure(citations: Overview['citations']): FigureSegment {
   };
 }
 
-const COVERAGE_NOTE: Partial<Record<CrawlSummary['coverage'], string>> = {
-  partial: 'Coverage is incomplete.',
-  declared_complete: 'Complete within the reported file scan.',
-};
-
-function CrawlNotes({ crawl, available }: Readonly<{ crawl: CrawlSummary; available: boolean }>) {
-  if (!available) return null;
-  const coverage = COVERAGE_NOTE[crawl.coverage] ?? null;
-  if (!coverage && !crawl.last_processed_at) return null;
+function CrawlProcessed({
+  crawl,
+  available,
+}: Readonly<{ crawl: CrawlSummary; available: boolean }>) {
+  if (!available || !crawl.last_processed_at) return null;
   return (
-    <p className="type-body text-ink-2 min-w-0">
-      {coverage}
-      {coverage && crawl.last_processed_at ? ' ' : null}
-      {crawl.last_processed_at ? (
-        <>
-          {crawl.reporting_timezone} · Processed <DisplayTime value={crawl.last_processed_at} />.
-        </>
-      ) : null}
-    </p>
+    <PageTabEnd fallback={null}>
+      <span className="min-w-0 truncate">
+        Processed <DisplayTime value={crawl.last_processed_at} />
+      </span>
+    </PageTabEnd>
   );
 }
 

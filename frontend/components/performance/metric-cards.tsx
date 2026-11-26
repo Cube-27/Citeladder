@@ -1,17 +1,17 @@
-import { SERIES_FILL, SERIES_STROKE } from '@/components/ui/step-chart-parts';
-import { cn } from '@/lib/utils';
-import { Absence } from '@/components/ui/absence';
+import { Absence, printed } from '@/components/ui/absence';
+import { Checkbox } from '@/components/ui/checkbox';
 import { InfoHint } from '@/components/ui/info-hint';
+import { textRole } from '@/components/ui/typography';
+import { Spinner } from '@/components/ui/spinner';
 import type { PerformanceWindow } from '@/lib/api/performance';
-import { formatCount } from '@/lib/format';
+import { formatCount, formattedText } from '@/lib/format';
 import {
   METRIC_CARDS,
   formatMetric,
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
 import { FigureStrip } from '@/components/ui/figure-strip';
-
-import type { MetricMark } from './performance-chart';
+import './metric-tiles.css';
 
 const METRIC_HELP: Record<PerformanceMetricKey, string> = {
   clicks: 'Total clicks from Google Search results',
@@ -20,89 +20,76 @@ const METRIC_HELP: Record<PerformanceMetricKey, string> = {
   position: 'Average ranking position in Google Search results',
 };
 
-function metricComparison(
-  metricKey: PerformanceMetricKey,
-  comparison: PerformanceWindow,
-  compareLabel: string,
-) {
-  return {
-    label:
-      comparison.evidence_state === 'not_run' ? `${compareLabel} (not imported)` : compareLabel,
-    value: formatMetric(metricKey, comparison.totals[metricKey] ?? null),
-  };
-}
-
-function MetricMarker({ mark, plotted }: Readonly<{ mark: MetricMark; plotted: boolean }>) {
-  return (
-    <svg aria-hidden width={12} height={12} viewBox="0 0 12 12" className="shrink-0">
-      <circle
-        cx={6}
-        cy={6}
-        r={5}
-        strokeWidth={2}
-        fill={plotted ? undefined : 'none'}
-        className={cn(SERIES_STROKE[mark.tone], plotted && SERIES_FILL[mark.tone])}
-      />
-    </svg>
-  );
-}
-
-export function MetricDefinitions() {
-  return (
-    <InfoHint label="What these metrics mean">
-      {METRIC_CARDS.map((card) => (
-        <span key={card.key} className="block">{`${card.label}: ${METRIC_HELP[card.key]}.`}</span>
-      ))}
-    </InfoHint>
-  );
-}
+const TILE_LABEL: Record<PerformanceMetricKey, string> = {
+  clicks: 'Total clicks',
+  impressions: 'Total impressions',
+  ctr: 'Average CTR',
+  position: 'Average position',
+};
 
 export function MetricCards({
   selected,
   comparison,
-  selectedLabel,
   compareLabel,
   active,
   onToggle,
-  marks,
   loading = false,
-  className,
   'data-testid': testId,
 }: Readonly<{
   selected: PerformanceWindow;
   comparison: PerformanceWindow | null;
-  selectedLabel: string;
   compareLabel: string;
   active: ReadonlySet<PerformanceMetricKey>;
   onToggle: (key: PerformanceMetricKey) => void;
-  marks: Record<PerformanceMetricKey, MetricMark>;
   loading?: boolean;
-  className?: string;
   'data-testid'?: string;
 }>) {
   return (
-    <div className={className}>
-      <FigureStrip
-        label="Search Console metrics"
-        testId={testId}
-        segments={METRIC_CARDS.map((card) => {
-          const plotted = active.has(card.key);
-          return {
-            key: card.key,
-            label: card.label,
-            caption: comparison ? selectedLabel : undefined,
-            value: formatMetric(card.key, selected.totals[card.key] ?? null),
-            loading,
-            comparison: comparison
-              ? metricComparison(card.key, comparison, compareLabel)
-              : undefined,
-            marker: <MetricMarker mark={marks[card.key]} plotted={plotted} />,
-            onSelect: () => onToggle(card.key),
-            actionLabel: `Plot ${card.label.toLowerCase()}`,
-            selected: plotted,
-          };
-        })}
-      />
+    <div
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+      role="group"
+      aria-label="Search Console metrics"
+      data-testid={testId}
+      className="metric-tiles"
+    >
+      {METRIC_CARDS.map((card) => {
+        const plotted = active.has(card.key);
+        const label = TILE_LABEL[card.key];
+        return (
+          <div
+            key={card.key}
+            data-metric={card.key}
+            data-on={plotted || undefined}
+            className="metric-tile"
+          >
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <Checkbox
+                label={label}
+                checked={plotted}
+                onCheckedChange={() => onToggle(card.key)}
+                className="min-w-0"
+              />
+              <span data-metric-help="">
+                <InfoHint label={`About ${label.toLowerCase()}`}>{METRIC_HELP[card.key]}</InfoHint>
+              </span>
+            </div>
+            <span className={textRole('figure', 'tabular-nums whitespace-nowrap')}>
+              {loading ? (
+                <Spinner label="Loading" />
+              ) : (
+                printed(formatMetric(card.key, selected.totals[card.key] ?? null))
+              )}
+            </span>
+            {comparison ? (
+              <span className={textRole('caption', 'truncate tabular-nums')}>
+                {comparison.evidence_state === 'not_run'
+                  ? `${compareLabel} (not imported)`
+                  : `${compareLabel}: ${formattedText(formatMetric(card.key, comparison.totals[card.key] ?? null))}`}
+              </span>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -52,13 +52,16 @@ const dateCodec: UrlCodec<string> = {
 
 const metricsCodec: UrlCodec<readonly PerformanceMetricKey[]> = {
   parse: (raw) => {
-    const keys = METRIC_KEYS.filter((key) => raw?.split(',').includes(key));
+    const keys = [
+      ...new Set(
+        (raw?.split(',') ?? []).flatMap((part) => METRIC_KEYS.filter((key) => key === part)),
+      ),
+    ];
     return keys.length > 0 ? keys : DEFAULT_METRICS;
   },
   serialize: (keys) => {
-    const ordered = METRIC_KEYS.filter((key) => keys.includes(key));
-    const landing = ordered.join(',') === DEFAULT_METRICS.join(',');
-    return landing ? null : ordered.join(',');
+    const written = keys.join(',');
+    return written === DEFAULT_METRICS.join(',') ? null : written;
   },
 };
 

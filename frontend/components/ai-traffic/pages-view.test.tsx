@@ -115,7 +115,6 @@ it('keeps inventory, zero, partial values and distinct unavailable reasons reada
   expect(within(row).getAllByRole('cell').at(-1)?.textContent).toBe('—Unavailable');
   const second = screen.getByRole('row', { name: /\/second/ });
   expect(within(second).getAllByRole('cell').at(-1)?.textContent).toBe('0 / —Unavailable');
-  expect(screen.getByText(/Crawl coverage unknown · 200 known pages/)).toBeVisible();
 });
 
 it('leaves out a column no row measures, and gives way to one state when none is', async () => {
@@ -173,7 +172,6 @@ it('keeps the rows and the pager on screen while the next page loads', async () 
   await user.click(screen.getByRole('button', { name: 'Next page' }));
   await waitFor(() => expect(asked).toEqual(['first:10', 'page-2:10']));
   expect(within(table).getByRole('row', { name: /first-10\b/ })).toBeVisible();
-  expect(screen.getByText(/Crawl coverage unknown · 200 known pages/)).toBeVisible();
   expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
   expect(screen.queryByText('Loading paths…')).not.toBeInTheDocument();
 
