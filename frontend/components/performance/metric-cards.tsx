@@ -11,6 +11,7 @@ import {
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
 import { FigureStrip } from '@/components/ui/figure-strip';
+import './metric-tiles.css';
 
 const METRIC_HELP: Record<PerformanceMetricKey, string> = {
   clicks: 'Total clicks from Google Search results',

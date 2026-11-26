@@ -60,6 +60,22 @@ export type IssueHead = Pick<
 > &
   Partial<Pick<SiteIssue, 'page_kinds'>>;
 
+function IssueBrief({ issue }: Readonly<{ issue: IssueHead }>) {
+  if (!issue.description && !issue.remediation) return null;
+  return (
+    <SectionCard>
+      <Stack gap="item">
+        {issue.description ? (
+          <p className={textRole('body', 'max-w-prose')}>{issue.description}</p>
+        ) : null}
+        {issue.remediation ? (
+          <p className={textRole('body', 'max-w-prose whitespace-pre-line')}>{issue.remediation}</p>
+        ) : null}
+      </Stack>
+    </SectionCard>
+  );
+}
+
 export function IssuePage({
   issue,
   scope,
@@ -126,20 +142,7 @@ export function IssuePage({
         <Stack as="section" aria-label={title} gap="workspace" className="min-w-0">
           <TitledSection title={title} actions={<IssueSeverityMark issue={issue} />}>
             <Stack gap="workspace">
-              {issue.description || issue.remediation ? (
-                <SectionCard>
-                  <Stack gap="item">
-                    {issue.description ? (
-                      <p className={textRole('body', 'max-w-prose')}>{issue.description}</p>
-                    ) : null}
-                    {issue.remediation ? (
-                      <p className={textRole('body', 'max-w-prose whitespace-pre-line')}>
-                        {issue.remediation}
-                      </p>
-                    ) : null}
-                  </Stack>
-                </SectionCard>
-              ) : null}
+              <IssueBrief issue={issue} />
               <IssueFigures issue={issue} audited={audited} progress={progress} />
             </Stack>
           </TitledSection>
