@@ -18,11 +18,12 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { SectionHeader, SectionTitle } from '@/components/ui/section';
 import type { AppState, Controller } from './controller';
 import { formattedText } from '@/lib/format';
 import { moment, rate } from './format';
+import { Stack } from '@/components/ui/layout';
 
 type Props = Readonly<{ state: AppState; controller: Controller }>;
 
@@ -49,30 +50,32 @@ export function SourcesView({
   if (!parsed.success) {
     const missing = notYetMeasuredMessage(state.result?.evidence);
     return (
-      <p role={missing ? undefined : 'alert'} className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2" role={missing ? undefined : 'alert'}>
         {missing ?? 'Source evidence is unavailable for the selected audit. Retry or reconnect.'}
-      </p>
+      </Text>
     );
   }
   const data = parsed.data;
   return (
-    <div className="space-y-4">
-      <Select
-        ariaLabel="Source grouping"
-        value={selection.level}
-        options={[
-          { value: 'domain', label: 'Domains' },
-          { value: 'url', label: 'URLs' },
-        ]}
-        onValueChange={(level) =>
-          void controller.select({ ...selection, level, domain: null, cursor: null })
-        }
-      />
-      <p className={textRole('caption')}>
+    <Stack gap="loose">
+      <div>
+        <Select
+          ariaLabel="Source grouping"
+          value={selection.level}
+          options={[
+            { value: 'domain', label: 'Domains' },
+            { value: 'url', label: 'URLs' },
+          ]}
+          onValueChange={(level) =>
+            void controller.select({ ...selection, level, domain: null, cursor: null })
+          }
+        />
+      </div>
+      <Text as="p" variant="caption">
         {data.coverage.responses} responses · {data.coverage.prompts} prompts ·{' '}
         {data.coverage.citations} citations. Citation rate uses responses where the source was
         retrieved; citation share uses citations. These denominators differ.
-      </p>
+      </Text>
       <Table>
         <TableHeader>
           <TableRow>
@@ -113,36 +116,44 @@ export function SourcesView({
         </TableBody>
       </Table>
       {!data.items.length && (
-        <p className={textRole('body', 'text-ink-2')}>No citations observed in this selection.</p>
+        <Text as="p" variant="body" tone="ink-2">
+          No citations observed in this selection.
+        </Text>
       )}
       {data.pagination.next_cursor && (
-        <Button
-          variant="secondary"
-          onClick={() =>
-            void controller.select({ ...selection, cursor: data.pagination.next_cursor })
-          }
-        >
-          Next sources
-        </Button>
-      )}
-      <p className={textRole('caption')}>
-        Names in cited answers are co-occurrence, not proof of presence on the publisher page.
-      </p>
-      {state.answers.map((answer) => (
-        <article key={answer.task_id} className="space-y-2">
-          <h3 className={textRole('subheading')}>{answer.prompt_text}</h3>
-          <p className={textRole('body', 'text-ink-2')}>
-            {answer.answer_text ?? 'Fetch the referenced answer for its retained text.'}
-          </p>
-          <p className={textRole('caption')}>
-            {answer.logical_engine} · {moment(answer.completed_at)}
-          </p>
-          <Button variant="quiet" onClick={() => void controller.fetchAnswer(answer.record_uri)}>
-            Read retained answer
+        <div>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              void controller.select({ ...selection, cursor: data.pagination.next_cursor })
+            }
+          >
+            Next sources
           </Button>
-        </article>
+        </div>
+      )}
+      <Text as="p" variant="caption">
+        Names in cited answers are co-occurrence, not proof of presence on the publisher page.
+      </Text>
+      {state.answers.map((answer) => (
+        <Stack as="article" gap="item" key={answer.task_id}>
+          <Text as="h3" variant="label">
+            {answer.prompt_text}
+          </Text>
+          <Text as="p" variant="body" tone="ink-2">
+            {answer.answer_text ?? 'Fetch the referenced answer for its retained text.'}
+          </Text>
+          <Text as="p" variant="caption">
+            {answer.logical_engine} · {moment(answer.completed_at)}
+          </Text>
+          <div>
+            <Button variant="quiet" onClick={() => void controller.fetchAnswer(answer.record_uri)}>
+              Read retained answer
+            </Button>
+          </div>
+        </Stack>
       ))}
-    </div>
+    </Stack>
   );
 }
 
@@ -159,123 +170,139 @@ export function SiteHealthView({ state, controller }: Props) {
       .extend({ reason: z.literal('no_site_snapshot') })
       .safeParse(state.result?.evidence);
     return (
-      <p role={missing.success ? undefined : 'alert'} className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2" role={missing.success ? undefined : 'alert'}>
         {missing.success
           ? 'No persisted Site Health snapshot. Start a crawl in CiteLadder, then return.'
           : 'Site Health evidence is unavailable. Retry or reconnect.'}
-      </p>
+      </Text>
     );
   }
   const site = parsed.data;
   return (
-    <div className="space-y-4">
+    <Stack gap="loose">
       <SectionHeader>
         <SectionTitle>Persisted Site Health</SectionTitle>
       </SectionHeader>
-      <p className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2">
         Web fundamentals: {site.scores.web_fundamentals ?? 'Unavailable'} · AEO readiness:{' '}
         {site.scores.aeo_readiness ?? 'Unavailable'} · measurement coverage:{' '}
         {formattedText(rate(site.scores.aeo_measurement_coverage))}
-      </p>
-      <p className={textRole('caption')}>
+      </Text>
+      <Text as="p" variant="caption">
         Observed {moment(site.observed_at)} · {site.coverage.analyzed_urls} analyzed /{' '}
         {site.coverage.selected_urls} selected URLs
-      </p>
-      <p className={textRole('caption')}>
+      </Text>
+      <Text as="p" variant="caption">
         {Object.entries(site.measurement_states)
           .map(([kind, value]) => `${kind}: ${value}`)
           .join(' · ')}
-      </p>
-      <p className={textRole('caption')}>
+      </Text>
+      <Text as="p" variant="caption">
         Incomplete coverage is partial evidence. This snapshot has no historical period filter.
         Actions are current and may refer to different evidence than this snapshot.
-      </p>
+      </Text>
       <Disclosure title="Processing versions">
-        <dl className={textRole('caption', 'space-y-2 break-all')}>
+        <Stack as="dl" gap="item">
           {Object.entries(site.versions).map(([kind, version]) => (
             <div key={kind}>
-              <dt>{kind.replaceAll('_', ' ')} version</dt>
-              <dd>{version ?? 'Not recorded'}</dd>
+              <Text as="dt" variant="caption" wrap="all">
+                {kind.replaceAll('_', ' ')} version
+              </Text>
+              <Text as="dd" variant="caption" wrap="all">
+                {version ?? 'Not recorded'}
+              </Text>
             </div>
           ))}
-        </dl>
+        </Stack>
       </Disclosure>
-      <Button
-        variant="secondary"
-        disabled={loadingFindings}
-        onClick={() => {
-          setFindings(null);
-          setLoadingFindings(true);
-          setFindingsError(false);
-          void controller
-            .siteFindings()
-            .then(setFindings)
-            .catch(() => setFindingsError(true))
-            .finally(() => setLoadingFindings(false));
-        }}
-      >
-        Read current Actions
-      </Button>
-      <Button
-        variant="secondary"
-        disabled={loadingPages}
-        onClick={() => {
-          setPages([]);
-          setPagesError(false);
-          setLoadingPages(true);
-          void controller
-            .sitePages(site.crawl_id)
-            .then(setPages)
-            .catch(() => setPagesError(true))
-            .finally(() => setLoadingPages(false));
-        }}
-      >
-        Read pages from this crawl
-      </Button>
+      <div>
+        <Button
+          variant="secondary"
+          disabled={loadingFindings}
+          onClick={() => {
+            setFindings(null);
+            setLoadingFindings(true);
+            setFindingsError(false);
+            void controller
+              .siteFindings()
+              .then(setFindings)
+              .catch(() => setFindingsError(true))
+              .finally(() => setLoadingFindings(false));
+          }}
+        >
+          Read current Actions
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={loadingPages}
+          onClick={() => {
+            setPages([]);
+            setPagesError(false);
+            setLoadingPages(true);
+            void controller
+              .sitePages(site.crawl_id)
+              .then(setPages)
+              .catch(() => setPagesError(true))
+              .finally(() => setLoadingPages(false));
+          }}
+        >
+          Read pages from this crawl
+        </Button>
+      </div>
       {findingsError && (
-        <p role="alert" className={textRole('body', 'text-ink-2')}>
+        <Text as="p" variant="body" tone="ink-2" role="alert">
           Actions are unavailable. Retry or reconnect.
-        </p>
+        </Text>
       )}
       {pagesError && (
-        <p role="alert" className={textRole('body', 'text-ink-2')}>
+        <Text as="p" variant="body" tone="ink-2" role="alert">
           Page evidence is unavailable. Retry or reconnect.
-        </p>
+        </Text>
       )}
-      {loadingPages && <output>Loading persisted pages…</output>}
-      {loadingFindings && <output>Loading Actions…</output>}
+      {(loadingPages || loadingFindings) && (
+        <div>
+          {loadingPages && <output>Loading persisted pages…</output>}
+          {loadingFindings && <output>Loading Actions…</output>}
+        </div>
+      )}
       {findings?.state === 'unavailable' && (
-        <output className={textRole('body', 'text-ink-2 block')}>
+        <Text as="output" variant="body" tone="ink-2" box="block">
           Actions are unavailable. Retry or reconnect.
-        </output>
+        </Text>
       )}
       {findings?.state === 'available' && !findings.items.length && (
-        <output className={textRole('body', 'text-ink-2 block')}>
+        <Text as="output" variant="body" tone="ink-2" box="block">
           No open Actions for this project.
-        </output>
+        </Text>
       )}
       {(findings?.state === 'available' ? findings.items : []).map((action) => (
         <article key={action.id}>
-          <h3 className={textRole('subheading', 'truncate')} title={action.target_label}>
+          <Text as="h3" variant="label" wrap="truncate" title={action.target_label}>
             {action.target_label}
-          </h3>
-          {action.approach && <p className={textRole('body', 'text-ink-2')}>{action.approach}</p>}
-          <p className={textRole('caption', 'truncate')} title={action.target_url ?? undefined}>
+          </Text>
+          {action.approach && (
+            <Text as="p" variant="body" tone="ink-2">
+              {action.approach}
+            </Text>
+          )}
+          <Text as="p" variant="caption" wrap="truncate" title={action.target_url ?? undefined}>
             {action.status.replaceAll('_', ' ')}
             {action.target_url && ` · ${action.target_url}`}
-          </p>
+          </Text>
         </article>
       ))}
       {pages.map((page) => (
         <article key={page.site_url_id}>
-          <h3 className={textRole('subheading', 'truncate')} title={page.url}>
+          <Text as="h3" variant="label" wrap="truncate" title={page.url}>
             {page.url}
-          </h3>
+          </Text>
           {page.title && page.title !== page.url && (
-            <p className={textRole('caption')}>{page.title}</p>
+            <Text as="p" variant="caption">
+              {page.title}
+            </Text>
           )}
         </article>
       ))}
-    </div>
+    </Stack>
   );
 }

@@ -83,7 +83,6 @@ export function ChoosePlan({
           action={
             <Button asChild>
               <ExternalHttpLink
-                className="no-underline"
                 href={contactSalesHref(
                   catalog.support_contact?.contact_url ?? null,
                   new URL(websiteHref('/contact'), 'https://citeladder.com').href,

@@ -2,7 +2,7 @@ import type { BillingEntitlement } from '@/lib/api/billing';
 
 import { Input } from '@/components/ui/input';
 import { SettingField } from '@/components/ui/setting-row';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
 
 export function BillingCountryInput({
@@ -32,7 +32,7 @@ export function SubscriptionDetail({
 }>) {
   if (!subscription) return null;
   return (
-    <p className={textRole('caption')}>
+    <Text as="p" variant="caption">
       Subscription: {subscription.status.replaceAll('_', ' ')}
       {periodEnd ? (
         <>
@@ -41,6 +41,6 @@ export function SubscriptionDetail({
           <DisplayTime value={periodEnd} dateOnly />.
         </>
       ) : null}
-    </p>
+    </Text>
   );
 }

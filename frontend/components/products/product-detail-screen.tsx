@@ -49,6 +49,7 @@ import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 import type { LoadingShape } from '@/components/ui/skeleton-block';
+import { Text } from '@/components/ui/typography';
 
 const PRODUCT_IDENTITY = { kind: 'facts', rows: 1 } satisfies LoadingShape;
 
@@ -262,7 +263,7 @@ function ProductIdentity({
             <UrlText url={product.url} />
           </TextLink>
         ) : (
-          <span className="text-caption text-ink-2">{holderCaption(product)}</span>
+          <Text variant="caption">{holderCaption(product)}</Text>
         )}
       </Inline>
       {notices}

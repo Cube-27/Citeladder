@@ -17,7 +17,7 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { PasswordField, type PasswordFieldProps } from '@/components/ui/password-field';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { authApi } from '@/lib/api/auth';
 import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { ApiError } from '@/lib/api/errors';
@@ -186,7 +186,7 @@ export function AuthFormShell({
       after={
         <>
           {showFooter ? (
-            <p className={textRole('body', 'text-ink-2')}>
+            <Text as="p" variant="body" tone="ink-2">
               {footerPrompt}{' '}
               <TextLink asChild text="inherit">
                 {switching ? (
@@ -195,7 +195,7 @@ export function AuthFormShell({
                   <Link to={footerHref}>{footerLabel}</Link>
                 )}
               </TextLink>
-            </p>
+            </Text>
           ) : null}
           {consent.terms ? (
             <TermsNotice id={consent.noticeId} signup={consent.terms.signup} />

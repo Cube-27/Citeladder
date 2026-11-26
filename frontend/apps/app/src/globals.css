@@ -320,6 +320,7 @@
 
   --opacity-disabled: 50%;
   --opacity-muted: 80%;
+  --opacity-dim: 70%;
   --opacity-ghost: 40%;
   --opacity-hover: 90%;
 
@@ -368,6 +369,8 @@
   --spacing-band: 8px;
   --spacing-flow-gap: 48px;
   --spacing-label-column: 160px;
+  --spacing-quote-grid: 768px;
+  --spacing-notice-fill: 60dvh;
 
 }
 
@@ -381,6 +384,11 @@
   --grid-template-columns-lead-body-end: auto minmax(0, 1fr) auto;
   --grid-template-columns-lead-body: auto minmax(0, 1fr);
   --grid-template-columns-body-end: minmax(0, 1fr) auto;
+  --grid-template-columns-body-field: minmax(0, 1fr) calc(var(--spacing) * 24);
+  --grid-template-columns-choices: auto auto;
+  --grid-template-columns-offering-map: minmax(calc(var(--spacing) * 36), 22%) repeat(3, minmax(0, 1fr)) calc(var(--spacing) * 9);
+  --grid-template-columns-bar-figure: minmax(0, 1fr) calc(var(--spacing) * 14);
+  --grid-template-columns-quotes: minmax(calc(var(--spacing) * 36), calc(var(--spacing) * 48)) minmax(calc(var(--spacing) * 64), 1fr) calc(var(--spacing) * 24) calc(var(--spacing) * 16) minmax(calc(var(--spacing) * 36), calc(var(--spacing) * 56));
   --grid-template-columns-main-aside: minmax(0, 2fr) minmax(0, 1fr);
   --grid-template-columns-aside-main: minmax(0, 1fr) minmax(0, 2fr);
   --grid-template-columns-shell: var(--spacing-sidebar) minmax(0, 1fr);

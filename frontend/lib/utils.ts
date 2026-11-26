@@ -39,6 +39,8 @@ const SPACING_ROLES = [
   'target',
   'workspace',
   'label-column',
+  'quote-grid',
+  'notice-fill',
 ];
 
 const DURATION_ROLES = [
@@ -63,7 +65,7 @@ const twMerge = extendTailwindMerge({
     },
     classGroups: {
       duration: [{ duration: DURATION_ROLES }],
-      opacity: [{ opacity: ['disabled', 'muted', 'ghost', 'hover'] }],
+      opacity: [{ opacity: ['disabled', 'muted', 'dim', 'ghost', 'hover'] }],
       z: [{ z: ['base', 'raised', 'sticky', 'float', 'overlay', 'modal', 'toast'] }],
       'grid-cols': [
         {
@@ -73,6 +75,11 @@ const twMerge = extendTailwindMerge({
             'lead-body-end',
             'lead-body',
             'body-end',
+            'body-field',
+            'choices',
+            'bar-figure',
+            'offering-map',
+            'quotes',
             'main-aside',
             'aside-main',
             'shell',

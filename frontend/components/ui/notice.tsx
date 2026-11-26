@@ -208,3 +208,7 @@ function withReference(action: ReactNode, requestId: string | undefined): ReactN
     </>
   );
 }
+
+export function NoticeFrame({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className="p-section min-h-notice-fill grid place-items-center">{children}</div>;
+}

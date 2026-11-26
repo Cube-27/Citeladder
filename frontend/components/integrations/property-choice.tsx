@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { List, RefreshCw } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
@@ -209,12 +209,12 @@ function PropertyList({
         return (
           <Inline as="li" key={property.property_ref} gap="compact">
             <span className="min-w-0 flex-1">
-              <span className={textRole('body', 'text-ink-2 block truncate')}>
+              <Text variant="body" tone="ink-2" box="block" wrap="truncate">
                 {property.label}
-              </span>
-              <span className="text-caption text-ink-2 block truncate">
+              </Text>
+              <Text variant="caption" box="block" wrap="truncate">
                 {foreign ? 'Belongs to a different site' : property.property_ref}
-              </span>
+              </Text>
             </span>
             <Button
               variant="secondary"

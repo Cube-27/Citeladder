@@ -6,7 +6,6 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
 import { endSentence, formatCount } from '@/lib/format';
 import { promptHistoryHref } from '@/lib/prompts/history';
 
@@ -98,7 +97,7 @@ export function NamedInsteadOfYou({ focus }: Readonly<{ focus: CompetitorFocus }
             </ClampText>
           </TableCell>
           <TableCell>
-            <ClampText lines={1} className={textRole('body', 'text-ink-2')}>
+            <ClampText lines={1} text="body" tone="ink-2">
               {row.topic}
             </ClampText>
           </TableCell>

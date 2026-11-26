@@ -12,7 +12,7 @@ import { readErrorProps } from '@/components/ui/notice';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import type {
   VisibilityEvidenceResponse,
@@ -27,7 +27,11 @@ import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
 import { EVIDENCE_LIMIT } from '@/lib/visibility/use-visibility-dashboard';
 
 function ObservedNone() {
-  return <span className={textRole('caption', 'tabular-nums')}>0</span>;
+  return (
+    <Text variant="caption" numeric>
+      0
+    </Text>
+  );
 }
 
 const MAX_CHIPS = 3;
@@ -208,7 +212,9 @@ function ChipRow({ children, overflow }: Readonly<{ children: ReactNode; overflo
     <Inline as="span" gap="tight">
       {children}
       {overflow > 0 ? (
-        <span className={textRole('caption', 'text-ink-2 tabular-nums')}>+{overflow}</span>
+        <Text variant="caption" numeric>
+          +{overflow}
+        </Text>
       ) : null}
     </Inline>
   );

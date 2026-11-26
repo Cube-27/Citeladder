@@ -1,9 +1,4 @@
 {
-  "apps/app/src/route-error.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
   "apps/docs/src/components/DocsSearchDialog.tsx": {
     "design/plain-element": {
       "count": 16
@@ -282,84 +277,6 @@
       "count": 1
     }
   },
-  "components/auth/auth-form.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/billing/billing-account-details.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/billing/billing-policies.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/billing/billing-screen.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/billing/choose-plan.tsx": {
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/billing/current-plan.tsx": {
-    "design/plain-element": {
-      "count": 2
-    }
-  },
-  "components/billing/extra-purchases.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/billing/invoice-history.tsx": {
-    "shadcn/require-static-classes": {
-      "count": 1
-    }
-  },
-  "components/billing/plan-changes.tsx": {
-    "design/plain-element": {
-      "count": 2
-    }
-  },
-  "components/billing/plan-row.tsx": {
-    "design/plain-element": {
-      "count": 7
-    }
-  },
-  "components/billing/pricing-route.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/billing/purchase-review.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/billing/quote-summary.tsx": {
-    "design/plain-element": {
-      "count": 1
-    },
-    "shadcn/no-restyle": {
-      "count": 2
-    }
-  },
-  "components/brand/competitor-focus-cards.tsx": {
-    "shadcn/require-static-classes": {
-      "count": 1
-    }
-  },
-  "components/brand/performance-matrix.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
   "components/content/ArticleHeader.astro": {
     "design/astro-class": {
       "count": 1
@@ -394,45 +311,6 @@
   "components/demand/demand-signal-table.tsx": {
     "shadcn/no-restyle": {
       "count": 2
-    }
-  },
-  "components/integrations/data-source-setup.tsx": {
-    "design/plain-element": {
-      "count": 5
-    },
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/integrations/property-choice.tsx": {
-    "design/plain-element": {
-      "count": 2
-    }
-  },
-  "components/knowledge-base/brand-facts-panel.tsx": {
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/knowledge-base/business-editor.tsx": {
-    "design/plain-element": {
-      "count": 17
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 2
-    },
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/knowledge-base/business-map-tab.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/knowledge-base/editable-names.tsx": {
-    "design/plain-element": {
-      "count": 1
     }
   },
   "components/layout/app-shell.tsx": {
@@ -740,90 +618,11 @@
     }
   },
   "components/mcp/connect-strip.tsx": {
-    "design/plain-element": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
-      "count": 4
+      "count": 2
     },
     "shadcn/no-unknown-classes": {
       "count": 2
-    }
-  },
-  "components/opportunities/verification-observations.tsx": {
-    "design/plain-element": {
-      "count": 1
-    },
-    "shadcn/no-restyle": {
-      "count": 2
-    }
-  },
-  "components/perception/attribute-ranks.tsx": {
-    "design/plain-element": {
-      "count": 7
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
-    "shadcn/no-inline-styles": {
-      "count": 1
-    }
-  },
-  "components/perception/attribute-table.tsx": {
-    "design/plain-element": {
-      "count": 8
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 2
-    },
-    "shadcn/no-inline-styles": {
-      "count": 2
-    },
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/perception/brand-radar.tsx": {
-    "design/plain-element": {
-      "count": 5
-    }
-  },
-  "components/perception/fact-prompts-dialog.tsx": {
-    "design/plain-element": {
-      "count": 4
-    }
-  },
-  "components/perception/facts-import-dialog.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
-    "shadcn/no-restyle": {
-      "count": 2
-    }
-  },
-  "components/perception/perception-breakdown.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/perception/perception-factcheck.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/perception/perception-objections.tsx": {
-    "shadcn/require-static-classes": {
-      "count": 1
-    }
-  },
-  "components/perception/probe-lede.tsx": {
-    "design/plain-element": {
-      "count": 2
-    }
-  },
-  "components/perception/probe-sources.tsx": {
-    "shadcn/no-restyle": {
-      "count": 1
     }
   },
   "components/performance/date-range-dialog.tsx": {
@@ -860,152 +659,6 @@
   "components/performance/readiness-ladder.tsx": {
     "design/plain-element": {
       "count": 1
-    }
-  },
-  "components/products/add-products-dialog.tsx": {
-    "design/plain-element": {
-      "count": 7
-    }
-  },
-  "components/products/bulk-actions.tsx": {
-    "design/plain-element": {
-      "count": 3
-    }
-  },
-  "components/products/category-matrix-sheet.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/products/product-detail-screen.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/products/products-screen.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/products/products-table.tsx": {
-    "design/plain-element": {
-      "count": 4
-    }
-  },
-  "components/projects/dashboard-controls.tsx": {
-    "design/plain-element": {
-      "count": 1
-    },
-    "design/reset-survivor": {
-      "count": 1
-    },
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/projects/dashboard-primitives.tsx": {
-    "design/plain-element": {
-      "count": 3
-    },
-    "shadcn/require-static-classes": {
-      "count": 2
-    }
-  },
-  "components/projects/dashboard-sections.tsx": {
-    "shadcn/require-static-classes": {
-      "count": 2
-    }
-  },
-  "components/projects/mention-rule-fields.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/projects/next-action-card.tsx": {
-    "design/plain-element": {
-      "count": 4
-    }
-  },
-  "components/projects/overview-library-widgets.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/projects/overview-start.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/projects/project-edit-panel.tsx": {
-    "design/plain-element": {
-      "count": 1
-    },
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/projects/project-markets.tsx": {
-    "shadcn/no-restyle": {
-      "count": 2
-    }
-  },
-  "components/prompts/builder-distribution-step.tsx": {
-    "design/plain-element": {
-      "count": 4
-    }
-  },
-  "components/prompts/builder-review-step.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/prompts/candidate-review.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/prompts/cited-domain-marks.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/prompts/csv-import-dialog.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
-    "shadcn/no-restyle": {
-      "count": 2
-    }
-  },
-  "components/prompts/prompt-bulk-bar.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/prompts/prompt-past-answers.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/prompts/prompt-table.tsx": {
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/prompts/prompt-toolbar.tsx": {
-    "design/reset-survivor": {
-      "count": 1
-    },
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/providers/provider-row.tsx": {
-    "design/plain-element": {
-      "count": 4
     }
   },
   "components/runs/answer-evidence.tsx": {
@@ -1127,60 +780,6 @@
     },
     "shadcn/no-restyle": {
       "count": 2
-    }
-  },
-  "components/settings/accept-invitation-screen.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/settings/api-key-dialog.tsx": {
-    "design/plain-element": {
-      "count": 5
-    }
-  },
-  "components/settings/api-keys.tsx": {
-    "design/plain-element": {
-      "count": 5
-    },
-    "shadcn/require-static-classes": {
-      "count": 1
-    }
-  },
-  "components/settings/backfill-progress.tsx": {
-    "design/plain-element": {
-      "count": 3
-    }
-  },
-  "components/settings/integration-connection-row.tsx": {
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/settings/mcp-connections.tsx": {
-    "design/plain-element": {
-      "count": 2
-    },
-    "shadcn/require-static-classes": {
-      "count": 1
-    }
-  },
-  "components/settings/member-invitations.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/settings/property-picker.tsx": {
-    "design/plain-element": {
-      "count": 1
-    },
-    "shadcn/require-static-classes": {
-      "count": 1
-    }
-  },
-  "components/settings/settings-screen.tsx": {
-    "design/plain-element": {
-      "count": 1
     }
   },
   "components/site-health/aeo-readiness-cards.tsx": {
@@ -1922,12 +1521,6 @@
   "components/ui/typography.tsx": {
     "shadcn/no-arbitrary-values": {
       "count": 1
-    },
-    "shadcn/no-restyle": {
-      "count": 1
-    },
-    "shadcn/require-static-classes": {
-      "count": 2
     }
   },
   "components/ui/value.tsx": {
@@ -1952,125 +1545,6 @@
     },
     "shadcn/require-static-classes": {
       "count": 2
-    }
-  },
-  "components/visibility/claim-row.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/visibility/fanout-evidence.tsx": {
-    "shadcn/no-restyle": {
-      "count": 2
-    },
-    "shadcn/require-static-classes": {
-      "count": 1
-    }
-  },
-  "components/visibility/fanout-totals.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/visibility/named-brand-marks.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/visibility/ranking-rows.tsx": {
-    "shadcn/require-static-classes": {
-      "count": 1
-    }
-  },
-  "components/visibility/sentiment-value.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/visibility/source-movers.tsx": {
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/visibility/source-prompts.tsx": {
-    "design/plain-element": {
-      "count": 2
-    }
-  },
-  "components/visibility/source-rows.tsx": {
-    "shadcn/no-restyle": {
-      "count": 1
-    },
-    "shadcn/require-static-classes": {
-      "count": 1
-    }
-  },
-  "components/visibility/source-url-detail.tsx": {
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/visibility/surface-rates.tsx": {
-    "design/plain-element": {
-      "count": 4
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
-    "shadcn/no-restyle": {
-      "count": 2
-    },
-    "shadcn/require-static-classes": {
-      "count": 1
-    }
-  },
-  "components/visibility/visibility-accuracy.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/visibility/visibility-ads.tsx": {
-    "design/plain-element": {
-      "count": 2
-    },
-    "shadcn/require-static-classes": {
-      "count": 2
-    }
-  },
-  "components/visibility/visibility-by-topic.tsx": {
-    "design/plain-element": {
-      "count": 1
-    }
-  },
-  "components/visibility/visibility-trends.tsx": {
-    "design/plain-element": {
-      "count": 3
-    }
-  },
-  "lib/auth/session-guard.tsx": {
-    "design/plain-element": {
-      "count": 2
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    }
-  },
-  "lib/markdown/markdown.tsx": {
-    "design/plain-element": {
-      "count": 2
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 2
-    }
-  },
-  "packages/mcp-app/src/analytics.tsx": {
-    "design/plain-element": {
-      "count": 21
-    }
-  },
-  "packages/mcp-app/src/evidence-views.tsx": {
-    "design/plain-element": {
-      "count": 25
     }
   }
 }
