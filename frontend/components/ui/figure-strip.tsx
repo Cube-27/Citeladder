@@ -4,6 +4,7 @@ import { Absence } from '@/components/ui/absence';
 import { Delta } from '@/components/ui/delta';
 import { FIGURE_MIN_WIDTH, useStripWidth } from '@/components/ui/figure-rows';
 import { InfoHint } from '@/components/ui/info-hint';
+import { Section, SectionBleed, useOnPage } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import {
@@ -67,30 +68,34 @@ export function FigureStrip({
   twoLineLabels?: boolean;
   textValues?: boolean;
 }>) {
-  const { ref, width } = useStripWidth<HTMLDivElement>();
+  const { ref, width } = useStripWidth<HTMLDListElement>();
   const narrow = twoLineLabels || width / segments.length < FIGURE_MIN_WIDTH;
-  return (
-    <div ref={ref} data-figure-strip-frame="" className="grid min-w-0 gap-4">
+  const content = (
+    <>
       {lead ? <div data-figure-lead="">{lead}</div> : null}
-      <dl // NOSONAR
-        role={label ? 'group' : undefined}
-        aria-label={label}
-        data-testid={testId}
-        data-figure-strip=""
-        className="flex min-w-0"
-      >
-        {segments.map((segment) => (
-          <FigureCell
-            key={segment.key}
-            segment={segment}
-            subLine={subLine}
-            textValues={textValues}
-            narrow={narrow}
-          />
-        ))}
-      </dl>
-    </div>
+      <SectionBleed>
+        <dl // NOSONAR
+          ref={ref}
+          role={label ? 'group' : undefined}
+          aria-label={label}
+          data-testid={testId}
+          data-figure-strip=""
+          className="flex min-w-0"
+        >
+          {segments.map((segment) => (
+            <FigureCell
+              key={segment.key}
+              segment={segment}
+              subLine={subLine}
+              textValues={textValues}
+              narrow={narrow}
+            />
+          ))}
+        </dl>
+      </SectionBleed>
+    </>
   );
+  return useOnPage() ? <Section>{content}</Section> : content;
 }
 
 function FigureCell({

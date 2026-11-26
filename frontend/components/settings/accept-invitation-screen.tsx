@@ -96,7 +96,7 @@ function InvitationDeadEnd({
 }: Readonly<{ heading: string; description: string; reference?: string; onLeave: () => void }>) {
   useDocumentTitle(heading);
   return (
-    <Stack gap="item" data-section="framed" className="min-w-0 justify-items-center">
+    <Stack gap="item" className="min-w-0 justify-items-center">
       <StateBlock
         kind="empty"
         icon={Link2Off}

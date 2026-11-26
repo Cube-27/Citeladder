@@ -38,7 +38,7 @@ export function SourceUrlDetail({
 
   return (
     <Stack gap="workspace">
-      <Section variant="framed" className="relative" aria-busy={query.isFetching}>
+      <Section aria-busy={query.isFetching}>
         <BusyRung active={query.isFetching} label="Updating source" />
         <PageIdentity title={title} url={url} />
         <SectionContent>

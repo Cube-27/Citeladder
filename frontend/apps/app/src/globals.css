@@ -1312,21 +1312,9 @@ a.focus-ring:active .type-caption {
   background: var(--color-well);
 }
 
-:where(.surface-card, .surface-lift, .surface-well) :is(.surface-card, .surface-slip) {
+:where(.surface-card, .surface-lift, .surface-well, [data-panel]) :is(.surface-card, .surface-slip) {
   background: var(--color-well);
   box-shadow: none;
-}
-:root:not([data-public-surface])
-  [role='dialog']
-  :is(.surface-card, .surface-slip, [data-figure-strip]):not(:where(.surface-card, .surface-slip, .surface-well) *) {
-  border-color: transparent;
-  background-color: var(--color-raised);
-  box-shadow: var(--shadow-card);
-}
-:where(.surface-card, .surface-lift, .surface-well, [role='dialog']) [data-section='framed'] {
-  border: 0;
-  padding: 0;
-  overflow: visible;
 }
 
 
@@ -1342,80 +1330,12 @@ a.focus-ring:active .type-caption {
   outline-offset: calc(-1 * var(--focus-width));
 }
 
-@property --rhythm-gap-above {
-  syntax: '<length>';
-  inherits: false;
-  initial-value: 0px;
-}
-
 @layer components {
   [data-settings-sections],
   [data-settings-sections] > [role='tabpanel'] {
     display: flex;
     flex-direction: column;
     gap: var(--section-gap);
-  }
-  [data-settings-sections] :is(section, section.surface-section) {
-    padding-top: 0;
-    margin-block-start: 0;
-  }
-  :where(
-    :is([data-page-body], [data-page-body] :is([data-rhythm-gap], [role='tabpanel']))
-      > :is(section, [data-app-grid]:has(> section)):not(:has([data-figure-strip]:last-child))
-      + :is(section:not(.surface-section), [data-app-grid]:has(> section)):not(:is(section, .surface-card, .surface-slip) *),
-    :is([data-page-body], [data-page-body] :is([data-rhythm-gap], [role='tabpanel']))
-      > [data-app-grid]:has(> section):not(:is(section, .surface-card, .surface-slip) *)
-      > * + *
-  ) {
-    padding-top: max(0px, calc(var(--page-section-gap) - var(--rhythm-gap-above)));
-  }
-  :is([data-page-body], [data-page-body] :is([data-rhythm-gap], [role='tabpanel']))
-    > [data-app-grid]:has(> section):not(:is(section, .surface-card, .surface-slip) *) {
-    --grid-gap-y: var(--page-section-gap);
-    & > * {
-      --grid-gap-x: initial;
-      --grid-gap-y: initial;
-    }
-    @container main (min-width: 688px) {
-      &:is([data-app-grid='pair'], [data-app-grid='thirds']) {
-        --grid-gap-x: var(--page-section-gap);
-        & > :nth-child(-n + 3):not(:first-child, [data-app-grid='pair'] > :nth-child(3)) {
-          padding-top: 0;
-        }
-      }
-    }
-    @container main (min-width: 954px) {
-      &:is([data-app-grid='halves'], [data-app-grid='main-aside'], [data-app-grid='aside-main']) {
-        --grid-gap-x: var(--page-section-gap);
-        & > :nth-child(2) {
-          padding-top: 0;
-        }
-      }
-    }
-  }
-  .surface-section {
-    --section-above: var(--page-section-gap);
-  }
-  .surface-section:not(:first-child) {
-    margin-block-start: max(0px, calc(var(--section-above) - var(--rhythm-gap-above)));
-  }
-  [data-app-grid] > .surface-section:not(:first-child) {
-    margin-block-start: 0;
-  }
-  [data-rhythm-gap='section'] > * {
-    --rhythm-gap-above: var(--page-section-gap);
-  }
-  [data-rhythm-gap='workspace'] > * {
-    --rhythm-gap-above: var(--workspace-gap);
-  }
-  [data-rhythm-gap='compact'] > * {
-    --rhythm-gap-above: var(--compact-gap);
-  }
-  [data-rhythm-gap='item'] > * {
-    --rhythm-gap-above: 8px;
-  }
-  [data-rhythm-gap='tight'] > * {
-    --rhythm-gap-above: 4px;
   }
 }
 
@@ -1605,25 +1525,9 @@ label {
   }
 }
 
-:root:not([data-public-surface]) :where([data-data-table-frame], .table-frame:not([data-data-table] *)) {
-  border: 0;
-  border-radius: var(--radius-control);
-  background: var(--table-head-ground);
-  padding: 0 4px 4px;
-  overflow: clip;
-  box-shadow: var(--shadow-card);
-}
 :root:not([data-public-surface]) .table-frame {
-  --table-cell-padding-x: calc(var(--card-padding) - 4px);
   --table-cell-padding-y: 4px;
-}
-:root:not([data-public-surface]) [data-data-table-frame] .table-frame {
   border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-:root:not([data-public-surface]) .table-frame tbody {
-  clip-path: inset(0 round var(--radius-mark));
 }
 :root:not([data-public-surface]) .table-frame thead th + th::before {
   content: '';
@@ -1679,36 +1583,9 @@ label {
 }
 
 :root:not([data-public-surface]) [data-state-frame] {
-  --state-title-gap: 16px;
-  --state-action-gap: 16px;
-  padding: 24px;
-}
-:root:not([data-public-surface])
-  :where(
-    .surface-card,
-    .surface-slip,
-    .surface-well,
-    [data-section='framed'],
-    [role='dialog'],
-    [data-data-table]
-  )
-  [data-state-frame] {
   --state-title-gap: 8px;
   --state-action-gap: 12px;
   padding: 16px;
-}
-
-:root:not([data-public-surface])
-  [data-chart-frame]:not(
-    :where(.surface-card, .surface-lift, .surface-well, [role='dialog']) *
-  ) {
-  border-radius: var(--radius-card);
-  padding: 12px 16px;
-  background-color: var(--color-surface);
-  box-shadow: var(--shadow-card);
-  &:not([data-chart-frame='auto']) {
-    border: 1px solid transparent;
-  }
 }
 
 .table-frame tbody > tr > :is(td, th) {
@@ -1775,8 +1652,6 @@ label {
 }
 
 [data-figure-strip] {
-  border: 1px solid var(--color-rule);
-  border-radius: var(--radius-card);
   overflow: auto hidden;
 }
 [data-figure-cell] {
@@ -1786,7 +1661,7 @@ label {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
   row-gap: 2px;
-  padding: 10px var(--card-padding);
+  padding: 12px var(--panel-inset);
   box-shadow:
     -1px 0 0 var(--color-rule),
     0 -1px 0 var(--color-rule);
@@ -1898,24 +1773,21 @@ label {
   outline-offset: calc(-1 * var(--focus-width, 2px));
 }
 
-[data-regular-table-text] tbody :not([data-button-variant], [data-button-variant] *) {
-  font-weight: var(--weight-regular);
-}
 
 :root:not([data-public-surface])
-  :is(.surface-card, .surface-lift, [data-figure-strip]):not(
-    :where(.surface-card, .surface-lift, .surface-well, [role='dialog'], [data-data-table-frame], [data-figure-strip]) *
+  :is(.surface-card, .surface-lift):not(
+    :where(.surface-card, .surface-lift, .surface-well, [role='dialog'], [data-panel]) *
   ) {
   border: 1px solid transparent;
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
-:root:not([data-public-surface]) :is(.surface-card, .surface-lift, .surface-well, [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip], [data-auth-form]) {
+:root:not([data-public-surface]) :is(.surface-card, .surface-lift, .surface-well, [role='dialog'], [data-panel], .table-frame, [data-auth-form]) {
   --shadow-field: none;
 }
 :root:not([data-public-surface])
-  :where(.surface-card, .surface-lift, [role='dialog'], [data-figure-strip], .table-frame, [data-auth-form])
+  :where(.surface-card, .surface-lift, [role='dialog'], [data-panel], .table-frame, [data-auth-form])
   :is(.focus-input, .focus-frame) {
   background-color: var(--color-well);
 }
@@ -1925,44 +1797,11 @@ label {
 [role='switch'] > span {
   box-shadow: var(--shadow-thumb);
 }
-[data-section='framed'] :is([data-data-table-frame], [data-setting-rows], :is(ol, ul).surface-lift) {
-  margin-inline: calc(-1 * var(--card-padding));
-  border-inline: 0;
-  border-radius: 0;
-  box-shadow: none;
-}
-[data-section='framed'] :is([data-setting-rows], :is(ol, ul).surface-lift) > * {
-  padding-inline: var(--card-padding);
-}
-[data-section='framed'] > [data-setting-rows]:last-child {
-  margin-bottom: calc(-1 * var(--card-padding));
-}
-[data-section='framed'] [data-state-block-inline] {
-  padding-inline: 0;
-  background: none;
-}
-[data-section='framed'] [data-figure-strip] {
-  border: 0;
-  & > :first-child {
-    padding-inline-start: 0;
-  }
-}
-[data-section='framed'] > header + :is(.surface-card, .surface-slip):last-child {
-  padding: 0;
-  border: 0;
-  background: none;
-  box-shadow: none;
-}
-:root:not([data-public-surface]) .card-head:not(:last-child) {
-  margin: 0 0 16px;
-  padding: 0;
-  border: 0;
-}
 :root:not([data-public-surface]) .surface-well :is(.focus-input, .focus-frame) {
   background-color: var(--color-surface);
 }
 :root:not([data-public-surface])
-  :where(.surface-card, .surface-lift, [role='dialog'], [data-figure-strip], .table-frame, [data-auth-form])
+  :where(.surface-card, .surface-lift, [role='dialog'], [data-panel], .table-frame, [data-auth-form])
   :is(.focus-input, .focus-frame):hover:not(:focus, :focus-within, :disabled, [data-disabled]) {
   background-color: var(--color-well-hover);
 }
@@ -1985,26 +1824,6 @@ label {
     padding-inline: 6px;
     font: var(--weight-medium) var(--text-caption) / var(--text-caption--line-height) var(--font-sans);
   }
-}
-:root:not([data-public-surface])
-  :is([data-state-frame], [data-state-block-inline]):not(
-    :where(.surface-card, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip]) *
-  ) {
-  border-radius: var(--radius-card);
-  background-color: var(--color-surface);
-  box-shadow: var(--shadow-card);
-}
-:root:not([data-public-surface])
-  [data-state-block-inline]:not(
-    :where(.surface-card, .surface-lift, .surface-well, [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip]) *
-  ) {
-  padding: 12px 16px;
-}
-:root:not([data-public-surface])
-  [data-table-replacing]:not(
-    :where(.surface-card, .surface-lift, .surface-well, [role='dialog'], [data-data-table-frame], .table-frame, [data-figure-strip]) *
-  ) {
-  padding: 0;
 }
 :root:not([data-public-surface]) :is(a, button, [role='link']):not(:hover, :focus-visible),
 :root:not([data-public-surface]) :is(a, button, [role='link']):not(:hover, :focus-visible) * {

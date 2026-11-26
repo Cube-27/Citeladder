@@ -2,11 +2,9 @@ import type { ReactNode } from 'react';
 
 import { Inline, Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
-import { FRAMED_FACE, SectionDescription } from '@/components/ui/section';
-import { StateHeadingLevelContext } from '@/components/ui/state-heading-level';
+import { Section, SectionDescription } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { cn } from '@/lib/utils';
 
 export type WidgetLink = Readonly<{ href: string; label: string; name?: string }>;
 
@@ -46,14 +44,7 @@ export function WidgetFrame({
     </TextLink>
   ) : null;
   return (
-    <Stack
-      as="section"
-      gap="workspace"
-      aria-labelledby={id}
-      data-overview-widget=""
-      data-section="framed"
-      className={cn(FRAMED_FACE, 'flex h-full min-w-0 flex-col')}
-    >
+    <Section aria-labelledby={id} data-overview-widget="">
       <WidgetHead
         id={id}
         title={title}
@@ -62,14 +53,9 @@ export function WidgetFrame({
         link={figure ? null : linkElement}
         figure={figure}
       />
-      <Stack
-        gap="item"
-        className={fill === 'chart' ? 'min-w-0 flex-1' : 'flex min-w-0 flex-1 flex-col'}
-      >
-        <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
-      </Stack>
+      <Stack gap="item">{children}</Stack>
       {figure && linkElement ? <Inline>{linkElement}</Inline> : null}
-    </Stack>
+    </Section>
   );
 }
 

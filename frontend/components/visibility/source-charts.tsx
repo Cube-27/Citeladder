@@ -26,7 +26,7 @@ export function UsageCard({
   const urls = dimension === 'url';
   const title = heading ?? (urls ? 'Source usage by URL' : 'Source usage by domain');
   return (
-    <Section className="relative">
+    <Section>
       <BusyRung active={query.isFetching} label="Updating usage" />
       <SectionHeader>
         <SectionTitle>{title}</SectionTitle>
@@ -157,7 +157,7 @@ export function TypesCard({
   query: ReadState;
 }>) {
   return (
-    <Section className="relative">
+    <Section>
       <BusyRung active={query.isFetching} label="Updating source types" />
       <SectionHeader>
         <SectionTitle>Source types</SectionTitle>

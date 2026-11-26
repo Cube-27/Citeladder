@@ -98,7 +98,7 @@ export function SurfaceRatesPanel({
       />
     );
   return (
-    <Section className="relative" aria-busy={query.isFetching}>
+    <Section aria-busy={query.isFetching}>
       <BusyRung active={query.isFetching} label={`Updating ${engineLabel} rates`} />
       <SectionHeader>
         <SectionTitle>{engineLabel}</SectionTitle>

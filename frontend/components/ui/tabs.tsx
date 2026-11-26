@@ -10,6 +10,7 @@ import {
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 
 import { ScrollFrame } from '@/components/ui/scroll-edges';
+import { useOnPage } from '@/components/ui/section';
 import { sidebarNavRowClasses } from '@/components/ui/sidebar';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -136,12 +137,14 @@ export function TabsRoot<T extends string>({
   className?: string;
   children: ReactNode;
 }>) {
+  const inPanel = !useOnPage();
   return (
     <ActiveTabContext value={value}>
       <TabsPrimitive.Root
         value={value}
         onValueChange={(next) => onValueChange(next as T)}
         orientation={orientation}
+        data-slot-host={inPanel && orientation !== 'vertical' ? '' : undefined}
         className={className}
       >
         {children}
@@ -322,11 +325,13 @@ export function TabPanel({
   forceMount?: true;
 }>) {
   const activeValue = useContext(ActiveTabContext);
+  const inPanel = !useOnPage();
   return (
     <TabsPrimitive.Content
       value={value}
       forceMount={forceMount}
       hidden={activeValue !== value}
+      data-slot-host={inPanel ? '' : undefined}
       tabIndex={-1}
       className={cn('outline-none', className)}
     >

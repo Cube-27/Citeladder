@@ -1,5 +1,6 @@
 import { createElement, type HTMLAttributes } from 'react';
 
+import { useOnPage } from '@/components/ui/section';
 import { cn } from '@/lib/utils';
 
 const LAYOUT = {
@@ -28,16 +29,13 @@ export function AppGrid({
     className?: string;
   }
 >) {
+  const gap = useOnPage() ? 'gap-[var(--page-section-gap)]' : 'gap-[var(--panel-inset)]';
   return createElement(
     as,
     {
       ...props,
       'data-app-grid': layout,
-      className: cn(
-        'grid min-w-0 grid-cols-1 gap-x-[var(--grid-gap-x,var(--workspace-gap))] gap-y-[var(--grid-gap-y,var(--workspace-gap))] *:min-w-0',
-        LAYOUT[layout],
-        className,
-      ),
+      className: cn('grid min-w-0 grid-cols-1 *:min-w-0', gap, LAYOUT[layout], className),
     },
     children,
   );

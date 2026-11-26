@@ -4,14 +4,12 @@ import { AttributeRanks } from '@/components/perception/attribute-ranks';
 import { PerceptionBreakdown } from '@/components/perception/perception-breakdown';
 import { AppGrid } from '@/components/ui/app-grid';
 import { AreaChart } from '@/components/ui/area-chart';
-import { Card, CardHeader } from '@/components/ui/card';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { Notice } from '@/components/ui/notice';
 import { PartDonut, type Part } from '@/components/ui/part-donut';
-import { SectionStack } from '@/components/ui/section';
+import { Section, SectionHeader, SectionStack, SectionTitle } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
 import { PerceptionState } from '@/components/visibility/visibility-perception';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { availabilityLabel, formatDisplayDate } from '@/lib/format';
@@ -122,11 +120,11 @@ function SentimentCard({ score }: Readonly<{ score: Score }>) {
     ] satisfies Part[]
   ).filter((part) => part.value > 0);
   return (
-    <Card aria-label="Sentiment" className="flex min-w-0 flex-col">
-      <CardHeader>
-        <h3 className={textRole('subheading')}>Sentiment</h3>
-      </CardHeader>
-      <div className="flex flex-1 items-center justify-center">
+    <Section aria-label="Sentiment">
+      <SectionHeader>
+        <SectionTitle level={3}>Sentiment</SectionTitle>
+      </SectionHeader>
+      <div className="flex items-center justify-center">
         <PartDonut
           layout="stacked"
           label="Sentiment of classified mentions"
@@ -135,17 +133,17 @@ function SentimentCard({ score }: Readonly<{ score: Score }>) {
           parts={parts}
         />
       </div>
-    </Card>
+    </Section>
   );
 }
 
 function SentimentTrend({ trend }: Readonly<{ trend: PerceptionResponse['trend'] }>) {
   const timeZone = useDisplayTimeZone();
   return (
-    <Card aria-label="Net sentiment">
-      <CardHeader>
-        <h3 className={textRole('subheading')}>Net sentiment</h3>
-      </CardHeader>
+    <Section aria-label="Net sentiment">
+      <SectionHeader>
+        <SectionTitle level={3}>Net sentiment</SectionTitle>
+      </SectionHeader>
       <AreaChart
         label="Net sentiment over time"
         name="Net sentiment"
@@ -155,6 +153,6 @@ function SentimentTrend({ trend }: Readonly<{ trend: PerceptionResponse['trend']
         yMax={100}
         yFormat={(value) => formatNet(value) ?? ''}
       />
-    </Card>
+    </Section>
   );
 }

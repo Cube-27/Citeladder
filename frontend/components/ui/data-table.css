@@ -2,6 +2,13 @@
   --data-table-identity-min: 25ch;
 }
 
+[data-data-table-frame] .table-frame tr > :first-child {
+  padding-inline-start: calc(var(--panel-inset) + var(--cell-indent, 0px));
+}
+[data-data-table-frame] .table-frame tr > :last-child {
+  padding-inline-end: var(--panel-inset);
+}
+
 @media (min-width: 768px) {
   [data-pinned] .table-frame tr > :nth-child(1),
   [data-pinned='2'] .table-frame tr > :nth-child(2) {

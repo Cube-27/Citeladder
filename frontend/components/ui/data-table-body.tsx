@@ -104,7 +104,7 @@ function LoadingBody({
 
 function InFrame({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="sticky start-[var(--table-cell-padding-x)] w-[calc(100cqi-2*var(--table-cell-padding-x))]">
+    <div className="sticky start-[var(--panel-inset)] w-[calc(100cqi-2*var(--panel-inset))]">
       {children}
     </div>
   );

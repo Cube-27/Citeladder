@@ -386,11 +386,7 @@ function SetupCard({
   startConnect: (family: GrantFamily) => void;
 }>) {
   return (
-    <Section
-      variant="framed"
-      data-testid="data-source-setup"
-      className="mx-auto w-full max-w-[var(--container-prose)]"
-    >
+    <Section data-testid="data-source-setup">
       <SectionHeader>
         <SectionTitle>
           {sources.error ? 'Data sources' : setupTitle(required, sources.steps, title)}

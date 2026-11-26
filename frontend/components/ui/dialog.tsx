@@ -5,6 +5,7 @@ import { AlertTriangle, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { Button, CLOSE_BUTTON, IconButton } from './button';
 import { Icon } from './icon';
+import { SurfaceContext } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
 
 export const SCRIM = 'bg-scrim z-overlay fixed inset-0';
@@ -175,11 +176,11 @@ export function Dialog({
             <div
               data-dialog-body=""
               className={cn(
-                'text-ink flex min-h-0 flex-1 flex-col gap-4 overflow-auto overscroll-contain px-[var(--modal-padding)]',
-                footer ? 'pb-0' : 'pb-[var(--modal-padding)]',
+                'text-ink flex min-h-0 flex-1 flex-col gap-[var(--panel-inset)] overflow-auto overscroll-contain px-[var(--panel-inset)] [--panel-inset:var(--modal-padding)]',
+                footer ? 'pb-0' : 'pb-[var(--panel-inset)]',
               )}
             >
-              {children}
+              <SurfaceContext value="surface">{children}</SurfaceContext>
             </div>
           )}
           {footer ? (

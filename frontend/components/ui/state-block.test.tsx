@@ -8,6 +8,7 @@ import { ApiError } from '@/lib/api/errors';
 
 import { Button } from './button';
 import { Card } from './card';
+import { Section } from './section';
 import { Masthead } from './masthead';
 import { MastheadPrimary, PageEmptyOfferProvider } from './masthead-actions';
 import { StateBlock, screenState } from './state-block';
@@ -137,7 +138,7 @@ describe('StateBlock empty states', () => {
     const { rerender } = render(view(empty));
     expect([offered(), demoted()]).toEqual([true, true]);
 
-    rerender(view(<Card>{empty}</Card>));
+    rerender(view(<Section>{empty}</Section>));
     expect([offered(), demoted()]).toEqual([false, false]);
 
     rerender(view(empty));

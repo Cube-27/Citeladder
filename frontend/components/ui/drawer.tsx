@@ -5,7 +5,26 @@ import { CLOSE_BUTTON, IconButton } from '@/components/ui/button';
 import { SCRIM, useReturnFocus } from '@/components/ui/dialog';
 import { X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import { SurfaceContext } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
+
+const DRAWER_PANE =
+  'grid min-h-0 grid-cols-[minmax(0,1fr)] content-start gap-[var(--panel-inset)] overflow-x-hidden overflow-y-auto overscroll-contain p-[var(--panel-inset)]';
+
+export const DRAWER_SPLIT =
+  'phone:grid-cols-1 phone:grid-rows-[auto_minmax(0,1fr)] grid min-h-0 flex-1 grid-cols-[11.5rem_minmax(0,1fr)]';
+
+export function DrawerNav({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <div className="border-rule phone:border-e-0 phone:border-b border-e px-3 py-[var(--panel-inset)]">
+      {children}
+    </div>
+  );
+}
+
+export function DrawerPane({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className={DRAWER_PANE}>{children}</div>;
+}
 
 const DRAWER_WIDTH = {
   narrow: 'max-w-narrow',
@@ -81,18 +100,14 @@ export function Drawer({
           />
           <div
             className={cn(
-              'min-h-0 flex-1',
-              body === 'dock'
-                ? 'flex flex-col overflow-hidden'
-                : 'flex flex-col gap-[var(--workspace-gap)] overflow-x-hidden overflow-y-auto overscroll-contain px-[var(--modal-padding)]',
-              body !== 'dock' && (hideHeader ? 'pt-[var(--modal-padding)]' : 'pt-2'),
-              body !== 'dock' && (footer ? 'pb-0' : 'pb-[var(--modal-padding)]'),
+              'flex min-h-0 flex-1 flex-col [--panel-inset:var(--modal-padding)]',
+              body === 'dock' ? 'overflow-hidden' : DRAWER_PANE,
             )}
           >
-            {children}
+            <SurfaceContext value="surface">{children}</SurfaceContext>
           </div>
           {footer ? (
-            <footer className="flex items-center justify-end gap-2 px-[var(--modal-padding)] pt-5 pb-[var(--modal-padding)]">
+            <footer className="border-rule flex items-center justify-end gap-2 border-t px-[var(--modal-padding)] py-3">
               {footer}
             </footer>
           ) : null}
@@ -131,7 +146,7 @@ function DrawerHeader({
     );
   }
   return (
-    <header className="flex items-start justify-between gap-4 px-[var(--modal-padding)] pt-[var(--modal-padding)] pb-2">
+    <header className="flex items-start justify-between gap-4 px-[var(--modal-padding)] pt-[var(--modal-padding)]">
       <div className="min-w-0">
         {eyebrow ? <p className="type-caption-strong mb-1">{eyebrow}</p> : null}
         <DialogPrimitive.Title className="type-heading truncate">{title}</DialogPrimitive.Title>
