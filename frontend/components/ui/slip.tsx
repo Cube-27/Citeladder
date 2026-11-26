@@ -23,3 +23,11 @@ export const SHEET_FACE =
 
 export const POP_FACE =
   'bg-raised app:bg-panel text-ink border-transparent rounded-card border shadow-pop';
+
+export function TextWell({ children }: Readonly<{ children: ReactNode }>) {
+  return <p className={wellClasses('text-body text-ink')}>{children}</p>;
+}
+
+export function AnchorMark({ children }: Readonly<{ children: ReactNode }>) {
+  return <mark className="bg-accent-wash text-accent-text rounded-mark px-0.5">{children}</mark>;
+}

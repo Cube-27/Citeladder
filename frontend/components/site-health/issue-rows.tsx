@@ -56,10 +56,8 @@ export function IssueRow({
       <TableCell className="whitespace-nowrap">
         <IssueSeverityMark issue={issue} />
       </TableCell>
-      <TableCell numeric className="tabular-nums">
-        {formatCount(issue.affected_url_count)}
-      </TableCell>
-      <TableCell numeric className="tabular-nums">
+      <TableCell numeric>{formatCount(issue.affected_url_count)}</TableCell>
+      <TableCell numeric>
         <Delta
           value={netChange(issue)}
           policy="lower-is-better"
@@ -67,12 +65,8 @@ export function IssueRow({
           missingReason="No earlier crawl to compare"
         />
       </TableCell>
-      <TableCell numeric className="tabular-nums">
-        {sinceLastCrawl(issue.new_url_count)}
-      </TableCell>
-      <TableCell numeric className="tabular-nums">
-        {sinceLastCrawl(issue.resolved_url_count)}
-      </TableCell>
+      <TableCell numeric>{sinceLastCrawl(issue.new_url_count)}</TableCell>
+      <TableCell numeric>{sinceLastCrawl(issue.resolved_url_count)}</TableCell>
     </TableRow>
   );
 }

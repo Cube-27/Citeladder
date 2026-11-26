@@ -99,6 +99,7 @@ const TEXT_WRAP = {
   pre: 'whitespace-pre-wrap',
   'pre-anywhere': 'whitespace-pre-wrap wrap-anywhere',
   truncate: 'truncate',
+  lines: 'whitespace-pre-line',
 } as const;
 
 const TEXT_BOX = {
@@ -108,6 +109,9 @@ const TEXT_BOX = {
   shrink: 'min-w-0',
   fixed: 'shrink-0',
   row: 'flex min-w-0',
+  inline: 'inline',
+  prose: 'max-w-prose',
+  clip: 'min-w-0 overflow-hidden',
 } as const;
 
 const TEXT_ALIGN = {

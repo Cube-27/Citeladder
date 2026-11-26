@@ -385,6 +385,8 @@
   --grid-template-columns-body-end: minmax(0, 1fr) auto;
   --grid-template-columns-body-field: minmax(0, 1fr) calc(var(--spacing) * 24);
   --grid-template-columns-choices: auto auto;
+  --grid-template-columns-drawer-split: calc(var(--spacing) * 46) minmax(0, 1fr);
+  --grid-template-rows-drawer-split: auto minmax(0, 1fr);
   --grid-template-columns-main-aside: minmax(0, 2fr) minmax(0, 1fr);
   --grid-template-columns-aside-main: minmax(0, 1fr) minmax(0, 2fr);
   --grid-template-columns-shell: var(--spacing-sidebar) minmax(0, 1fr);

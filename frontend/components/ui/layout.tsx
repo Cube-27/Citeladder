@@ -1,12 +1,13 @@
-import type { ComponentPropsWithoutRef, ComponentPropsWithRef, ElementType } from 'react';
+import type { ComponentPropsWithRef, ElementType } from 'react';
 
 import { cn } from '@/lib/utils';
 
 const STACK_GAP = {
   section: 'gap-section',
-  workspace: 'gap-workspace',
   card: 'gap-card',
+  workspace: 'gap-workspace',
   compact: 'gap-compact',
+  group: 'gap-3',
   loose: 'gap-4',
   choices: 'gap-x-4 gap-y-2',
   item: 'gap-2',
@@ -102,7 +103,7 @@ export function Inline({
   children,
   ...props
 }: Readonly<
-  ComponentPropsWithoutRef<'div'> & {
+  ComponentPropsWithRef<'div'> & {
     as?: ElementType;
     gap?: InlineGap;
     align?: InlineAlign;

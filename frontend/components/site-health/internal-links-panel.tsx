@@ -29,6 +29,7 @@ import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 import { SearchField } from '@/components/ui/search-field';
 import { ExportAction } from '@/components/ui/export-action';
 import { downloadInternalLinksCsv } from '@/lib/site-health/internal-link-csv';
+import { Text } from '@/components/ui/typography';
 
 export function InternalLinksPanel({
   read,
@@ -138,11 +139,11 @@ function LinksResult({
   if (isRunning(analysis.state) && !analysis.recommendations.length)
     return (
       <Section>
-        <output className="text-body text-ink-2">
+        <Text as="output" variant="body" tone="ink-2">
           {summary
             ? `Checking related pages… ${formatCount(summary.candidates - summary.pending)} of ${formatCount(summary.candidates)} page pairs done.`
             : 'Checking related pages…'}
-        </output>
+        </Text>
       </Section>
     );
   return (
@@ -170,10 +171,10 @@ function LinksBody({
   return (
     <>
       {isRunning(analysis.state) && summary ? (
-        <output className="text-caption text-ink-2">
+        <Text as="output" variant="caption">
           {formatCount(summary.candidates - summary.pending)} of {formatCount(summary.candidates)}{' '}
           page pairs checked
-        </output>
+        </Text>
       ) : null}
       <LinksTable
         links={links}

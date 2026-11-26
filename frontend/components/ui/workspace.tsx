@@ -1,10 +1,22 @@
-import type { ReactNode } from 'react';
+import type { ElementType, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 import { POP_FACE } from '@/components/ui/slip';
 
 export function treeBranchClasses(className?: string) {
   return cn('border-rule grid min-w-0 gap-2 border-l pl-4', className);
+}
+
+export function TreeBranch({
+  as: Component = 'ul',
+  'aria-label': label,
+  children,
+}: Readonly<{ as?: ElementType; 'aria-label'?: string; children: ReactNode }>) {
+  return (
+    <Component aria-label={label} className={treeBranchClasses()}>
+      {children}
+    </Component>
+  );
 }
 
 export function MetaFooter({

@@ -100,8 +100,11 @@ export function TableRow({
   className,
   highlight,
   focusable = false,
+  well = false,
   ...props
-}: Readonly<HTMLAttributes<HTMLTableRowElement> & { highlight?: boolean; focusable?: boolean }>) {
+}: Readonly<
+  HTMLAttributes<HTMLTableRowElement> & { highlight?: boolean; focusable?: boolean; well?: boolean }
+>) {
   const pressable = props.onClick !== undefined;
   return (
     <tr
@@ -115,6 +118,7 @@ export function TableRow({
         '[[data-public-surface]_&]:aria-selected:overlay-selected',
         highlight && '[[data-public-surface]_&]:bg-accent-wash',
         focusable && 'focus-ring',
+        well && 'bg-well hover:bg-well',
         className,
       )}
       data-you={highlight || undefined}
@@ -178,8 +182,8 @@ function CellContent({
   return !numeric && isPlainText(children) ? <ClampText>{children}</ClampText> : children;
 }
 
-export const mutedWhenMissing = (value: number | null) =>
-  value === null ? 'text-ink-2' : undefined;
+export const mutedWhenMissing = (value: number | null): TextTone | undefined =>
+  value === null ? 'ink-2' : undefined;
 
 export function TableCell({
   children,

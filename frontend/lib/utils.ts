@@ -75,6 +75,7 @@ const twMerge = extendTailwindMerge({
             'body-end',
             'body-field',
             'choices',
+            'drawer-split',
             'main-aside',
             'aside-main',
             'shell',

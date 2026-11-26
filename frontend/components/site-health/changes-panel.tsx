@@ -20,6 +20,7 @@ import { CrawlHistory } from './crawl-history';
 import { readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 import { FigureStrip } from '@/components/ui/figure-strip';
+import { Text } from '@/components/ui/typography';
 
 const classCountsSchema = z.record(z.string(), z.number());
 
@@ -157,7 +158,7 @@ function ChangeRow({
           <StatusMark tone={CLASS_TONES[row.change_class]}>
             {CLASS_LABELS[row.change_class]}
           </StatusMark>
-          {row.expected ? <span className="text-caption text-ink-2">Expected</span> : null}
+          {row.expected ? <Text variant="caption">Expected</Text> : null}
         </Inline>
       </TableCell>
       <TableCell>
