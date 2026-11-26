@@ -93,7 +93,7 @@ export function ExecutionsTable({
                 {execution.status === 'succeeded' ? (
                   <IconButton
                     icon={FileSearch}
-                    variant="secondary"
+                    variant="quiet"
                     onClick={() => onSelectEvidence(execution)}
                     label={`View evidence for ${prompt}, ${engines.label(execution.logical_engine)}`}
                   />
