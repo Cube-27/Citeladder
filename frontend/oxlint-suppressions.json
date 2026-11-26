@@ -494,39 +494,6 @@
       "count": 3
     }
   },
-  "components/marketing/art/art-parts.tsx": {
-    "design/plain-element": {
-      "count": 4
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    }
-  },
-  "components/marketing/art/art-visibility.tsx": {
-    "design/plain-element": {
-      "count": 6
-    },
-    "design/reset-survivor": {
-      "count": 1
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 40
-    },
-    "shadcn/no-restyle": {
-      "count": 1
-    }
-  },
-  "components/marketing/art/art-work.tsx": {
-    "design/plain-element": {
-      "count": 9
-    },
-    "design/reset-survivor": {
-      "count": 1
-    },
-    "shadcn/no-arbitrary-values": {
-      "count": 54
-    }
-  },
   "components/marketing/chrome/SiteNav.astro": {
     "design/astro-class": {
       "count": 1
