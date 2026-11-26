@@ -93,18 +93,12 @@ type TextTag =
 const TEXT_WRAP = {
   anywhere: 'wrap-anywhere',
   all: 'break-all',
-  words: 'break-words',
-  balance: 'text-balance',
   nowrap: 'whitespace-nowrap',
-  pre: 'whitespace-pre-wrap',
-  'pre-anywhere': 'whitespace-pre-wrap wrap-anywhere',
   truncate: 'truncate',
   lines: 'whitespace-pre-line',
 } as const;
 
 const TEXT_BOX = {
-  block: 'block',
-  fit: 'w-fit',
   fill: 'min-w-0 flex-1',
   shrink: 'min-w-0',
   fixed: 'shrink-0',
