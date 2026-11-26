@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { Icon } from '@/components/ui/icon';
-import { SLIP_FACE } from '@/components/ui/slip';
+import { SectionBleed } from '@/components/ui/section';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
 import { Check, ChevronRight, CircleHelp, X } from '@/lib/icons';
@@ -223,10 +223,7 @@ export function SetupSteps({
   label,
 }: Readonly<{ steps: readonly SetupStep[]; label: string }>) {
   return (
-    <ol
-      aria-label={label}
-      className={cn(SLIP_FACE, 'divide-rule m-0 list-none divide-y overflow-hidden p-0')}
-    >
+    <SectionBleed as="ol" rows aria-label={label}>
       {steps.map((step) => {
         const current = step.state === 'next' || step.state === 'running';
         return (
@@ -234,7 +231,7 @@ export function SetupSteps({
             key={step.id}
             aria-current={current ? 'step' : undefined}
             data-setup-step={step.state}
-            className="relative flex min-h-10 min-w-0 items-center gap-2 px-4"
+            className="relative flex min-h-10 min-w-0 items-center gap-2"
           >
             {current ? (
               <span
@@ -264,7 +261,7 @@ export function SetupSteps({
           </li>
         );
       })}
-    </ol>
+    </SectionBleed>
   );
 }
 

@@ -1,23 +1,19 @@
 import type { ReactNode } from 'react';
 
-import { Inline, Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
-import { Section, SectionDescription } from '@/components/ui/section';
+import { Inline } from '@/components/ui/layout';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
 
 export type WidgetLink = Readonly<{ href: string; label: string; name?: string }>;
 
 type WidgetFill = 'figure' | 'chart' | 'list';
-
-type WidgetHeadProps = Readonly<{
-  id: string;
-  title: ReactNode;
-  description?: ReactNode;
-  status?: ReactNode;
-  link: ReactNode;
-  figure: boolean;
-}>;
 
 export function WidgetFrame({
   id,
@@ -43,51 +39,37 @@ export function WidgetFrame({
       {link.label}
     </TextLink>
   ) : null;
+  const headLink = figure ? null : linkElement;
   return (
     <Section aria-labelledby={id} data-overview-widget="">
-      <WidgetHead
-        id={id}
-        title={title}
-        description={description}
-        status={status}
-        link={figure ? null : linkElement}
-        figure={figure}
-      />
-      <Stack gap="item">{children}</Stack>
-      {figure && linkElement ? <Inline>{linkElement}</Inline> : null}
+      <SectionHeader
+        actions={
+          status || headLink ? (
+            <>
+              {status}
+              {headLink}
+            </>
+          ) : undefined
+        }
+      >
+        {figure ? (
+          <Inline gap="item">
+            <SectionTitle id={id}>{title}</SectionTitle>
+            {description ? (
+              <InfoHint label={typeof title === 'string' ? `About ${title}` : 'About this card'}>
+                {description}
+              </InfoHint>
+            ) : null}
+          </Inline>
+        ) : (
+          <>
+            <SectionTitle id={id}>{title}</SectionTitle>
+            {description ? <SectionDescription>{description}</SectionDescription> : null}
+          </>
+        )}
+      </SectionHeader>
+      {children}
+      {figure && linkElement ? <SectionContent>{linkElement}</SectionContent> : null}
     </Section>
-  );
-}
-
-function WidgetHead({ id, title, description, status, link, figure }: WidgetHeadProps) {
-  const heading = (
-    <h2 id={id} className={textRole('heading', 'truncate')}>
-      {title}
-    </h2>
-  );
-  return (
-    <Inline as="header" className="items-start justify-between">
-      {figure ? (
-        <Inline gap="item" className="min-w-0">
-          {heading}
-          {description ? (
-            <InfoHint label={typeof title === 'string' ? `About ${title}` : 'About this card'}>
-              {description}
-            </InfoHint>
-          ) : null}
-        </Inline>
-      ) : (
-        <Stack gap="tight" className="min-w-0">
-          {heading}
-          {description ? <SectionDescription>{description}</SectionDescription> : null}
-        </Stack>
-      )}
-      {status || link ? (
-        <Inline className="shrink-0">
-          {status}
-          {link}
-        </Inline>
-      ) : null}
-    </Inline>
   );
 }

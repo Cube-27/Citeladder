@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { ClampText } from '@/components/ui/clamp-text';
 import { textRole } from '@/components/ui/typography';
-import { ledgerClasses } from '@/components/ui/workspace';
+import { SectionBleed } from '@/components/ui/section';
 import { cn } from '@/lib/utils';
 
 export type Fact = Readonly<{
@@ -140,19 +140,19 @@ export function ValueLedger({
     (_, offset) => `slot-${items.length + offset}`,
   );
   return (
-    <ol className={ledgerClasses()}>
+    <SectionBleed as="ol" rows>
       {items.map((item) => (
         <li
           key={item.key}
-          className="flex min-h-[var(--control-md)] items-center justify-between gap-2"
+          className="flex min-h-[var(--table-row-height)] items-center justify-between gap-2"
         >
           <ClampText className={textRole('body', 'flex-1')}>{item.label}</ClampText>
           <span className={textRole('body', 'text-ink-2 shrink-0 tabular-nums')}>{item.value}</span>
         </li>
       ))}
       {padding.map((slot) => (
-        <li key={slot} aria-hidden className="h-[var(--control-md)]" />
+        <li key={slot} aria-hidden className="h-[var(--table-row-height)]" />
       ))}
-    </ol>
+    </SectionBleed>
   );
 }
