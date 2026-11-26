@@ -6,12 +6,11 @@ import {
 } from '@citeladder/contracts/fact-checking';
 import type { ReactNode } from 'react';
 
-import { AnswerLink } from '@/components/runs/answer-link';
 import { Delta } from '@/components/ui/delta';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { Tooltip } from '@/components/ui/tooltip';
-import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable } from '@/components/ui/data-table';
+import { CONTRADICTED_COLUMNS, ClaimRow, claimKey } from './claim-row';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -25,7 +24,6 @@ import {
   contradictedChange,
   TOPIC_LABELS,
   VERDICT_LABELS,
-  VERDICT_TONE,
 } from '@/lib/visibility/accuracy';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatPercent, percentText } from '@/lib/format';
@@ -184,38 +182,21 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
 }
 
 function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
-  const { label: engineLabel } = useEngineCatalog();
   return (
-    <Stack gap="item">
-      {!claims.length ? (
-        <StateBlock kind="empty" inline message="No contradicted claims in these answers." />
-      ) : (
-        <Stack as="ul">
-          {claims.map((claim) => (
-            <Stack as="li" gap="tight" key={`${claim.execution_id}:${claim.quote}`}>
-              <AnswerLink answer={claim}>“{claim.quote}”</AnswerLink>
-              {claim.facts.map((fact) => (
-                <span key={fact.statement} className="type-caption text-ink-2">
-                  Your fact: {fact.statement}
-                </span>
-              ))}
-              <Inline as="span" className={textRole('caption', 'text-ink-2 flex-wrap')}>
-                <StatusMark
-                  variant="sentiment"
-                  value={claim.verdict ? VERDICT_TONE[claim.verdict] : 'neutral'}
-                >
-                  {TOPIC_LABELS[claim.topic]}
-                </StatusMark>
-                {engineLabel(claim.logical_engine)}
-                <AnswerLink answer={claim} text="inherit" tone="muted">
-                  {claim.prompt}
-                </AnswerLink>
-              </Inline>
-            </Stack>
-          ))}
-        </Stack>
-      )}
-    </Stack>
+    <DataTable
+      label="Contradicted claims"
+      columns={CONTRADICTED_COLUMNS}
+      rowCount={claims.length}
+      state={
+        claims.length
+          ? undefined
+          : { kind: 'empty', inline: true, message: 'No contradicted claims in these answers.' }
+      }
+    >
+      {claims.map((claim) => (
+        <ClaimRow key={claimKey(claim)} claim={claim} facet="topic" />
+      ))}
+    </DataTable>
   );
 }
 
