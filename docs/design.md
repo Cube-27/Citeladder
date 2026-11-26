@@ -37,14 +37,14 @@ held by review.
 | `primary`        | deep accent              | deep accent        | every action fill, white text        |
 
 Older role names bind onto the table so call sites keep working: `chrome` is
-`ground`, `surface` is `panel`, `well` is the `page` fill, `chart-grid` is `rule`, `state-pressed` is `state-selected`, `on-ink` is
+`ground`, `surface` is `panel`, `well` is the `page` fill, the table tray is `#dde3ea` in light and `#262626` in dark, `chart-grid` is `rule`, `state-pressed` is `state-selected`, `on-ink` is
 `panel`. Status colours (`positive`, `negative`, `warning`, `info` and their
 `-wash` fills), `accent-text`, `accent-wash` and the data series keep their
 values in `globals.css`. A status colour appears only beside a glyph and a
 word, never as a large fill. Two exceptions (owner, 2026-11-22): a Site health
 page score, printed in `negative` below 50 and `warning` below 80, and
-Perception › Brand's sentiment donut and attribute bars (AR-19). The sidebar `ground` (#efefef) and its current-item fill (#e0e0e0) are neutral grey (owner, 2026-11-25); the other light surfaces are blue-tinted neutrals (owner, 2026-11-22) stepping darker in this order: `panel`, `page`,
-`raised-2`, `ground`; inside the app panel `page` is `panel` in light theme and the tray is `page` mixed with 3% `ink`; the dark ones are pure neutral greys with no blue. A table's rows and inputs are `panel` in both themes. Data: `data-you` is the accent, `data-rival-1`
+Perception › Brand's sentiment donut and attribute bars (AR-19). The light surfaces are blue-tinted neutrals (owner, 2026-11-22) stepping darker in this order: `panel`, `page`,
+`raised-2`, `ground`, the table tray; the dark ones are pure neutral greys with no blue. A table's rows and inputs are `panel` in both themes. Data: `data-you` is the accent, `data-rival-1`
 to `-4` ink then cool hues in rank order, `data-other` the grouped rest.
 
 ## Type
@@ -152,20 +152,20 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
   page-wide toolbar is the strip under the tabs, with no rule.
-- **Metric strip:** one `panel` tray body (see Containers), cells divided by hairlines, cell padding 10 by 16, 12px label over the value. Never cards;
+- **Metric strip:** one `panel` strip with no edge or
+  shadow, radius 6, cells divided by hairlines, cell padding 10 by 16, 12px label over the value. Never cards;
   no meters, rings or bars inside a cell (AR-3). The one table with a bar in a
   cell is Perception › Brand's attributes table (AR-19).
-- **Table** (the HeroUI table): a tray body (see Containers) with the
-  pager foot on the tray. A titled table puts its title in the tray header
-  and its column head on `panel`; an untitled one puts the column head on
-  the tray as its header strip. Head 36, 12px at 500, a 16-high
-  `rule` tick between columns; cells padded 16; rows
+- **Table** (the HeroUI table, owner 2026-11-22): a tray (`#dde3ea` in
+  light, `#262626` in dark), radius 6, no edge, 4 padding at the sides and
+  foot; head 36 on the tray, 12px at 500, a 16-high `rule` tick between
+  columns; the body a `panel` card, radius 4, cells padded 16; rows
   44, one line each, hairline dividers, `state-hover` fill; secondary text
   inline after the primary in `ink-2`; numbers right-aligned in tabular
   figures; foot 40 with the count and an icon pager. The first column takes the spare width,
   the others hug their content (AR-4).
 - **Settings layout** (Settings, Agent context, Billing, Pricing): the
-  route's column holds a stack of tray groups one section gap apart, with no rule between
+  route's column holds a stack of groups 32 apart, with no rule between
   them. Settings and Agent context list their sections in a sticky 192 rail
   of sidebar rows on the column's left (`TabRail`), never a tab strip; the
   current section sits 24 beside it, at most 720 wide (Business map takes
@@ -213,17 +213,8 @@ One entry per family; wave 2 fills each from the layouts above.
 - **URLs** (`UrlText`, `UrlCutParts`). A URL is cut in the middle (AR-23): the
   last path segment stays whole when short, otherwise the last 28 characters
   stay, and the full URL shows in the tooltip.
-- **Containers** (owner, 2026-11-25): one tray role. A section, settings
-  group, card or Overview widget whose header carries `data-tray-header`
-  is a tray: `--color-tray` fill, radius 14, 4 padding; its header 36 high,
-  padded 6 by 12, the title 12px at 500 in `ink-2`, actions right; below
-  it the body surfaces (strip, table, slip, card) as `panel`, radius 10, no
-  edge or shadow. A body with no surface is padded as a card. A surface
-  outside any tray gets a 4 tray rim. Trays, rims, buttons and fields carry
-  one `hairline` edge (7% ink); secondary buttons are `panel`. Sections sit `--section-gap` (16)
-  apart in both directions. The tokens live on `[data-main-column]` in
-  `globals.css`; change the look there, not in components. One surface
-  (`SLIP_FACE`, `panel`). Everything but a
+- **Containers.** One section head (16/24 at 500, actions right, body 12
+  below) and one surface (`SLIP_FACE`: radius 6, `panel`). Everything but a
   heading sits on a surface (AR-22): a section's bare list, facts or prose
   goes in `SectionCard`, a form in `SettingRows`. Surfaces carry
   no outer edge and no shadow (owner, 2026-11-22): on the `page` paper every

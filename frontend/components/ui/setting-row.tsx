@@ -31,10 +31,7 @@ export function SettingsGroup({
       data-settings-group=""
       className="grid min-w-0 gap-3"
     >
-      <header
-        data-tray-header=""
-        className="flex min-w-0 flex-wrap items-start justify-between gap-2"
-      >
+      <header className="flex min-w-0 flex-wrap items-start justify-between gap-2">
         <div className="grid min-w-0 flex-1 basis-60 gap-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h2

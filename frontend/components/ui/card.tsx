@@ -33,11 +33,7 @@ export function CardHeader({
 >) {
   if (!actions) {
     return (
-      <header
-        {...props}
-        data-tray-header=""
-        className={cn('flex flex-col gap-1', HEADER_RULE, className)}
-      >
+      <header {...props} className={cn('flex flex-col gap-1', HEADER_RULE, className)}>
         {children}
       </header>
     );
@@ -45,7 +41,6 @@ export function CardHeader({
   return (
     <header
       {...props}
-      data-tray-header=""
       className={cn('flex flex-wrap items-start justify-between gap-2', HEADER_RULE, className)}
     >
       <div className="grid min-w-0 flex-1 basis-60 gap-1">{children}</div>

@@ -198,7 +198,7 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
     : null;
   const note = basis?.kind === 'matched_subset' ? basis.note : undefined;
   return (
-    <WidgetFrame id="project-state" title="Project state">
+    <WidgetFrame id="project-state" title="Project state" fill="figure">
       <FigureStrip
         segments={[
           {
@@ -251,7 +251,7 @@ export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
     <WidgetFrame
       id="movement"
       title="Movement"
-      chart={data.movements.length > 0}
+      fill={data.movements.length ? 'chart' : 'list'}
       card={data.movements.length > 0}
     >
       {data.movements.length ? (

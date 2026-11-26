@@ -4,14 +4,14 @@ import { Icon } from '@/components/ui/icon';
 import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-export const FIELD_EDGE = 'bg-panel border border-hairline [[data-public-surface]_&]:bg-well';
+export const FIELD_EDGE = 'bg-panel border border-transparent [[data-public-surface]_&]:bg-well';
 
 const FIELD_SHAPE =
   'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)]';
 
 export const FIELD_BOX = `${FIELD_EDGE} ${FIELD_SHAPE}`;
 
-export const TRIGGER_BOX = `face bg-raised border border-hairline [[data-public-surface]_&]:bg-well hover:bg-raised-2 data-[state=open]:bg-raised-2 ${FIELD_SHAPE}`;
+export const TRIGGER_BOX = `face bg-raised border border-transparent [[data-public-surface]_&]:bg-well hover:bg-raised-2 data-[state=open]:bg-raised-2 ${FIELD_SHAPE}`;
 
 const inputWidths = {
   fill: '',

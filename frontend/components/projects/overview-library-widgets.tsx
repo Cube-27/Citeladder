@@ -44,16 +44,19 @@ import { WidgetFrame } from './widget-frame';
 function WidgetCard({
   id,
   href,
+  fill,
   children,
 }: Readonly<{
   id: OverviewWidgetKey;
   href: string;
+  fill?: 'figure';
   children: ReactNode;
 }>) {
   return (
     <WidgetFrame
       id={`widget-${id}`}
       title={overviewWidgetTitles[id]}
+      fill={fill}
       link={{ href, label: 'Open', name: overviewWidgetTitles[id] }}
     >
       {children}
@@ -277,7 +280,7 @@ export function PerceptionWidget({ project }: Readonly<{ project: Project }>) {
       </WidgetCard>
     );
   return (
-    <WidgetCard id="perception" href="/perception">
+    <WidgetCard id="perception" href="/perception" fill="figure">
       <Loaded
         widget="perception"
         query={perception}
@@ -317,7 +320,7 @@ export function PerceptionWidget({ project }: Readonly<{ project: Project }>) {
 export function AiTrafficWidget({ project }: Readonly<{ project: Project }>) {
   const query = useTrafficOverview(project);
   return (
-    <WidgetCard id="ai_traffic" href="/ai-traffic">
+    <WidgetCard id="ai_traffic" href="/ai-traffic" fill="figure">
       <Loaded
         widget="ai_traffic"
         query={query}
@@ -352,7 +355,7 @@ export function AiTrafficWidget({ project }: Readonly<{ project: Project }>) {
 export function SearchConsoleWidget({ project }: Readonly<{ project: Project }>) {
   const query = useSearchPerformance(project);
   return (
-    <WidgetCard id="search_console" href="/performance">
+    <WidgetCard id="search_console" href="/performance" fill="figure">
       <Loaded
         widget="search_console"
         query={query}

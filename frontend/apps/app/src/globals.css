@@ -76,7 +76,6 @@
   --color-raised: var(--color-surface);
   --color-raised-2: var(--color-surface-sunken);
   --color-rule: var(--color-line);
-  --color-hairline: var(--color-line);
   --color-control-line: var(--color-line-control);
   --color-control-edge: var(--color-line);
   --color-button-from: oklch(100% 0 0);
@@ -217,7 +216,6 @@
   --radius-control: var(--radius-md);
   --radius-card: 8px;
   --radius-overlay: 12px;
-  --radius-panel: 16px;
 
   --shadow-*: initial;
 
@@ -366,7 +364,6 @@
   --table-head-ground: #262626;
   --color-thumb: var(--color-ink-2);
   --color-rule: rgb(255 255 255 / 11%);
-  --color-hairline: rgb(255 255 255 / 7%);
   --color-control-line: rgb(255 255 255 / 22%);
   --color-page: #111111;
   --color-ink: #ececec;
@@ -528,19 +525,17 @@
 
 :root:not([data-public-surface]) {
   text-wrap: pretty;
-  --table-head-ground: #e6e6e6;
-  --table-head-rule: transparent;
+  --table-head-ground: #dde3ea;
   --table-ground: var(--color-surface);
-  --color-ground: #efefef;
+  --color-ground: #e4eaf2;
   --color-chrome: var(--color-ground);
   --color-panel: #ffffff;
   --color-surface: var(--color-panel);
   --color-raised: var(--color-panel);
-  --color-raised-2: #ededed;
+  --color-raised-2: #e9eef6;
   --color-well: var(--color-page);
-  --color-page: #f3f3f3;
+  --color-page: #f0f4f9;
   --color-rule: rgb(0 0 0 / 11%);
-  --color-hairline: rgb(0 0 0 / 7%);
   --color-control-line: rgb(0 0 0 / 22%);
   --color-focus: var(--color-accent);
   --focus-width: 1px;
@@ -550,7 +545,7 @@
   --color-ink: #1d1d1d;
   --color-ink-2: #54585f;
   --color-ink-3: #71717a;
-  --color-ink-hover: oklch(32% 0 0);
+  --color-ink-hover: oklch(32% 0.015 264);
   --color-on-ink: var(--color-panel);
   --color-accent: #e8501a;
   --color-accent-text: oklch(53.1% 0.168 37.6);
@@ -623,7 +618,7 @@
   --sidebar-width-compact: 200px;
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
-  --nav-current-fill: #e0e0e0;
+  --nav-current-fill: #d3e3fd;
   --panel-inset: 0px;
   --route-chrome-height: calc(
     2 * var(--panel-inset) + var(--masthead-block-size, var(--masthead-height)) +
@@ -1403,99 +1398,6 @@ a.focus-ring:active .type-caption {
   border: 0;
 }
 
-:root:not([data-public-surface], [data-theme='dark']) [data-main-column] {
-  --color-page: var(--color-panel);
-}
-:root:not([data-public-surface]) [data-main-column] {
-  --tray-radius: 14px;
-  --tray-padding: 4px;
-  --tray-inner-radius: calc(var(--tray-radius) - var(--tray-padding));
-  --tray-header-height: 36px;
-  --tray-header-padding: 6px 12px;
-  --tray-title-size: var(--text-label);
-  --tray-title-line-height: var(--text-label--line-height);
-  --tray-title-weight: var(--weight-medium);
-  --color-tray-title: var(--color-ink-2);
-  --color-tray: color-mix(in oklab, var(--color-page), var(--color-ink) 3%);
-  --color-tray-inner: var(--color-raised);
-  --color-tray-raised: var(--color-raised-2);
-  --table-head-ground: var(--color-tray);
-}
-
-:root:not([data-public-surface])
-  [data-main-column]
-  :has(> [data-tray-header]):not(
-    :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], :has(> [data-tray-header])) *
-  ) {
-  display: flex;
-  flex-direction: column;
-  gap: var(--tray-padding);
-  border: 0;
-  border-radius: var(--tray-radius);
-  background: var(--color-tray);
-  box-shadow: none;
-  outline: 1px solid var(--color-hairline);
-  outline-offset: -1px;
-  padding: var(--tray-padding);
-  --table-head-ground: var(--table-ground);
-  --table-head-rule: var(--color-rule);
-
-  :root[data-theme='dark'] & {
-    --color-surface: var(--color-tray-inner);
-    --table-ground: var(--color-tray-inner);
-    --table-head-ground: var(--color-tray-inner);
-    --color-raised: var(--color-tray-raised);
-  }
-
-  & > [data-tray-header] {
-    min-height: var(--tray-header-height);
-    margin: 0;
-    border: 0;
-    align-items: center;
-    flex-wrap: nowrap;
-    padding: var(--tray-header-padding);
-    &:has(> :is(h2, h3)) {
-      align-items: flex-start;
-      justify-content: center;
-    }
-    & :is(h2, h3) {
-      font-size: var(--tray-title-size);
-      line-height: var(--tray-title-line-height);
-      font-weight: var(--tray-title-weight);
-      color: var(--color-tray-title);
-    }
-  }
-
-  & > :last-child {
-    flex: 1;
-  }
-
-  & > :not([data-tray-header], .surface-card, .surface-slip, .surface-lift, .surface-well, [data-figure-strip], [data-state-frame], [data-data-table-frame], .table-frame, :has(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-figure-strip], [data-state-frame], [data-data-table-frame], .table-frame)) {
-    border-radius: var(--tray-inner-radius);
-    background-color: var(--color-surface);
-    padding: var(--card-padding);
-  }
-
-  & :is(.surface-card, .surface-slip, .surface-lift, [data-figure-strip], [data-state-frame]):not(:where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-figure-strip], [data-state-frame], [data-data-table-frame], .table-frame) *) {
-    border: 0;
-    box-shadow: none;
-    outline: 0;
-    border-radius: var(--tray-inner-radius);
-    background-color: var(--color-surface);
-  }
-
-  & :is([data-data-table-frame], .table-frame:not([data-data-table] *)) {
-    background: transparent;
-    outline: 0;
-    padding: 0;
-  }
-
-  & :is([data-data-table-frame] .table-frame, .table-frame:not([data-data-table] *) > table) {
-    background: var(--table-ground);
-    clip-path: inset(0 round var(--tray-inner-radius));
-  }
-}
-
 .surface-inset {
   border: 1px solid var(--color-rule);
   background: var(--color-surface);
@@ -1812,11 +1714,9 @@ label {
 
 :root:not([data-public-surface]) :is([data-data-table-frame], .table-frame:not([data-data-table] *)) {
   border: 0;
-  border-radius: var(--tray-radius, var(--radius-control));
-  background: var(--color-tray, var(--table-head-ground));
-  outline: 1px solid var(--color-hairline);
-  outline-offset: -1px;
-  padding: 0 var(--tray-padding, 4px) var(--tray-padding, 4px);
+  border-radius: var(--radius-control);
+  background: var(--table-head-ground);
+  padding: 0 4px 4px;
   overflow: clip;
 }
 :root:not([data-public-surface]) .table-frame {
@@ -1829,7 +1729,7 @@ label {
   background: transparent;
 }
 :root:not([data-public-surface]) .table-frame tbody {
-  clip-path: inset(0 round var(--tray-inner-radius, var(--radius-mark)));
+  clip-path: inset(0 round var(--radius-mark));
 }
 :root:not([data-public-surface]) .table-frame thead th + th::before {
   content: '';
@@ -1851,7 +1751,6 @@ label {
   text-transform: none;
   color: var(--color-ink-2);
   background: var(--table-head-ground);
-  box-shadow: inset 0 -1px var(--table-head-rule);
 }
 :root:not([data-public-surface]) .table-frame tbody > tr > * {
   background-color: var(--table-ground);
@@ -2113,10 +2012,8 @@ label {
   :is(.surface-card, .surface-slip, .surface-lift, [data-figure-strip]):not(
     :where(.surface-card, .surface-slip, .surface-lift, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table-frame], [data-figure-strip]) *
   ) {
-  border: var(--tray-padding, 1px) solid var(--color-tray, transparent);
-  border-radius: var(--tray-radius, var(--radius-card));
-  outline: 1px solid var(--color-hairline);
-  outline-offset: -1px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-card);
   background-color: var(--color-surface);
 }
 :root:not([data-public-surface])

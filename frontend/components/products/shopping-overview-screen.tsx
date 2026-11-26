@@ -236,11 +236,23 @@ function MerchantTable({ rows }: Readonly<{ rows: Overview['merchants'] }>) {
   );
 }
 
+function fanoutCoverage(fanout: Overview['fanout']) {
+  const unknown = fanout.answers - fanout.answers_with_queries - fanout.answers_without_search;
+  const parts = [
+    pluralCount(fanout.answers, 'answer'),
+    `${formatCount(fanout.answers_with_queries)} with queries`,
+    `${formatCount(fanout.answers_without_search)} without a search`,
+    ...(unknown ? [`${formatCount(unknown)} unknown`] : []),
+  ];
+  return parts.join(' · ');
+}
+
 function FanoutTable({ fanout }: Readonly<{ fanout: Overview['fanout'] }>) {
   const empty = emptyTable('No fan-out queries yet');
   return (
     <DataTable
       title="Top fan-out queries"
+      description={fanout.answers ? fanoutCoverage(fanout) : undefined}
       columns={[
         { key: 'query', label: 'Query', kind: 'identity' },
         { key: 'answers', label: 'Answers', kind: 'number' },

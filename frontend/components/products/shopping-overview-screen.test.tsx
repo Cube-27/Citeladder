@@ -158,6 +158,7 @@ describe('Shopping overview', () => {
       '1',
     ]);
     const fanout = table('Top fan-out queries');
+    expect(fanout).toHaveTextContent('3 answers · 1 with queries · 1 without a search · 1 unknown');
     expect(rowCells(fanout, 'best road running shoes')).toEqual(['best road running shoes', '2']);
     expect(screen.queryByText('Category shelf')).not.toBeInTheDocument();
   });
@@ -202,7 +203,7 @@ describe('Shopping overview', () => {
     const merchants = await screen.findByRole('region', { name: 'Top merchants' });
     expect(merchants).toHaveTextContent('No merchant yet');
     expect(within(merchants).queryByRole('columnheader')).not.toBeInTheDocument();
-    expect(table('Top fan-out queries')).toHaveTextContent('No fan-out queries yet');
+    expect(table('Top fan-out queries')).toHaveTextContent('3 answers · 0 with queries');
   });
 
   it('reads the category shelf from its latest Commerce run', async () => {
