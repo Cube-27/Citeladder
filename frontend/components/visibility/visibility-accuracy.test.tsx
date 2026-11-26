@@ -62,7 +62,9 @@ describe('AccuracyView', () => {
       'href',
       `/runs/${RUN}?execution=${EXECUTION}`,
     );
-    expect(screen.getByText('Your fact: Pro costs $59 per month.')).toBeInTheDocument();
+    const row = screen.getByRole('row', { name: /Acme Pro costs \$49 per month/ });
+    expect(within(row).getByText('Pro costs $59 per month.')).toBeInTheDocument();
+    expect(within(row).getByText('Pricing')).toBeInTheDocument();
   });
 
   it('shows the edited count and both unchecked findings on visible lines', () => {
