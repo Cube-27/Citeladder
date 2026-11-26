@@ -6,13 +6,11 @@ import {
 } from '@citeladder/contracts/fact-checking';
 import type { ReactNode } from 'react';
 
-import { AnswerLink } from '@/components/runs/answer-link';
 import { Delta } from '@/components/ui/delta';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { Tooltip } from '@/components/ui/tooltip';
-import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable } from '@/components/ui/data-table';
-import { Inline, Stack } from '@/components/ui/layout';
+import { CONTRADICTED_COLUMNS, ClaimRow, claimKey } from './claim-row';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
@@ -25,12 +23,11 @@ import {
   contradictedChange,
   TOPIC_LABELS,
   VERDICT_LABELS,
-  VERDICT_TONE,
 } from '@/lib/visibility/accuracy';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatPercent, percentText } from '@/lib/format';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionBleed, SectionStack } from '@/components/ui/section';
+import { Section, SectionStack } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 type ClaimView = 'contradicted' | 'all-claims' | 'by-fact';
@@ -180,34 +177,21 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
 }
 
 function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
-  const { label: engineLabel } = useEngineCatalog();
-  if (!claims.length)
-    return <StateBlock kind="empty" inline message="No contradicted claims in these answers." />;
   return (
-    <SectionBleed as="ul" rows>
+    <DataTable
+      label="Contradicted claims"
+      columns={CONTRADICTED_COLUMNS}
+      rowCount={claims.length}
+      state={
+        claims.length
+          ? undefined
+          : { kind: 'empty', inline: true, message: 'No contradicted claims in these answers.' }
+      }
+    >
       {claims.map((claim) => (
-        <Stack as="li" gap="tight" key={`${claim.execution_id}:${claim.quote}`}>
-          <AnswerLink answer={claim}>“{claim.quote}”</AnswerLink>
-          {claim.facts.map((fact) => (
-            <span key={fact.statement} className="type-caption text-ink-2">
-              Your fact: {fact.statement}
-            </span>
-          ))}
-          <Inline as="span" className={textRole('caption', 'text-ink-2 flex-wrap')}>
-            <StatusMark
-              variant="sentiment"
-              value={claim.verdict ? VERDICT_TONE[claim.verdict] : 'neutral'}
-            >
-              {TOPIC_LABELS[claim.topic]}
-            </StatusMark>
-            {engineLabel(claim.logical_engine)}
-            <AnswerLink answer={claim} text="inherit" tone="muted">
-              {claim.prompt}
-            </AnswerLink>
-          </Inline>
-        </Stack>
+        <ClaimRow key={claimKey(claim)} claim={claim} facet="topic" />
       ))}
-    </SectionBleed>
+    </DataTable>
   );
 }
 
