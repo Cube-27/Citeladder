@@ -1,4 +1,4 @@
-import type { ComponentPropsWithRef, ElementType, ReactNode } from 'react';
+import type { ComponentPropsWithRef, ElementType } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -176,10 +176,4 @@ export function Columns({
       {children}
     </Component>
   );
-}
-
-export const THREAD_OPENING = 'max-w-thread mx-auto my-auto flex w-full flex-col gap-section';
-
-export function ThreadOpening({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className={THREAD_OPENING}>{children}</div>;
 }

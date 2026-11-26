@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 
 import { Columns, Stack } from '@/components/ui/layout';
-import { ActionBar, PageSections, RecordBody } from '@/components/ui/page-chrome';
+import { PageSections } from '@/components/ui/page-chrome';
+import { ActionBar, RecordBody } from '@/components/ui/record-chrome';
 
 import { PageFrame, type PageFrameSlots } from './page-frame';
 

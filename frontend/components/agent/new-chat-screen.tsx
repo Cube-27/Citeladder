@@ -12,7 +12,7 @@ import { useCreateChat } from '@/components/agent/use-chat-turns';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { useHandoffScope } from '@/components/agent/handoff-scope';
 import { ThreadPage } from '@/components/templates/thread-page';
-import { ThreadOpening } from '@/components/ui/layout';
+import { ThreadOpening } from '@/components/ui/thread-opening';
 import { Stack } from '@/components/ui/layout';
 import { Text } from '@/components/ui/typography';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';

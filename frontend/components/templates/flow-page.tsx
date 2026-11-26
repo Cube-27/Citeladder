@@ -1,7 +1,8 @@
 import { useId, type ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
-import { FlowBar, FlowFooter, FlowMain, PageGround } from '@/components/ui/flow-frame';
+import { FlowBar, FlowFooter } from '@/components/ui/flow-chrome';
+import { FlowMain, PageGround } from '@/components/ui/flow-frame';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { Section } from '@/components/ui/section';

@@ -6,7 +6,7 @@ import {
   StepsNav,
   StepsRowMark,
   StepsScroller,
-} from '@/components/ui/page-chrome';
+} from '@/components/ui/record-chrome';
 import { Pressable } from '@/components/ui/pressable';
 import { SidebarRowFace, SidebarRowLabel } from '@/components/ui/sidebar';
 import { Check } from '@/lib/icons';

@@ -3,7 +3,6 @@ import { useId, type ComponentProps, type ReactNode } from 'react';
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import {
-  PageGround,
   SetupBar,
   SetupMain,
   SetupStepMark,
@@ -11,7 +10,8 @@ import {
   StepConnector,
   StepFootBar,
   type StepWidth,
-} from '@/components/ui/flow-frame';
+} from '@/components/ui/flow-chrome';
+import { PageGround } from '@/components/ui/flow-frame';
 import { Icon } from '@/components/ui/icon';
 import { Columns, Inline, Stack } from '@/components/ui/layout';
 import { RungTrail } from '@/components/ui/rung-trail';

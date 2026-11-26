@@ -296,8 +296,10 @@ holds the depth rules.
   the link components). Template chrome (page width, heading row, tab and
   filter bands, thread and setup frames) lives in
   [`page-chrome.tsx`](../frontend/components/ui/page-chrome.tsx) and
-  [`flow-frame.tsx`](../frontend/components/ui/flow-frame.tsx); templates
-  compose it and hold no classes. `Stack` and `Inline` still accept
+  [`flow-frame.tsx`](../frontend/components/ui/flow-frame.tsx), which boot
+  screens import, and in `flow-chrome.tsx` and `record-chrome.tsx`, which
+  only lazy routes import: a module a boot file imports ships whole in the
+  eager bundle. Templates compose them and hold no classes. `Stack` and `Inline` still accept
   `className` until the screen batches move their callers to props;
   restyling any other primitive through `className` is a lint finding.
   No page adds padding, margin, border, fill, radius or shadow around one; no

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import type { ChartHeight } from '@/components/ui/chart';
-import { THREAD_OPENING } from '@/components/ui/layout';
+import { THREAD_OPENING } from '@/components/ui/thread-opening';
 import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
 
