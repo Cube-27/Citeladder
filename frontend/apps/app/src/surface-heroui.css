@@ -9,6 +9,7 @@
   --table-head-ground: oklch(95.24% 0.0013 286.37);
   --color-well: oklch(94% 0.001 286.375);
   --color-raised-2: oklch(95.24% 0.0013 286.37);
+  --nav-current-fill: var(--color-panel);
 }
 
 :root[data-theme='dark']:not([data-public-surface]) {
@@ -83,4 +84,13 @@
     [aria-invalid='true']
   ) {
   border-color: var(--color-field-edge-hover);
+}
+
+:root:not([data-public-surface]) .bg-\[var\(--nav-current-fill\)\] {
+  box-shadow: var(--shadow-card);
+}
+
+:root:not([data-public-surface])
+  :is(.bg-\[var\(--nav-current-fill\)\], [data-sidebar-ident][aria-current='page'])::before {
+  background: transparent;
 }
