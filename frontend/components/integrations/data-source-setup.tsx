@@ -17,7 +17,6 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { InlineFigure, textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import {
   integrationsApi,
   refreshImportedReads,
@@ -32,7 +31,7 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 import { usePropertyChoice } from './property-choice';
 import { oauthErrorMessage, useDataSources, type SourceStep } from './data-sources';
 import { Notice } from '@/components/ui/notice';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 
 function useOAuthReturn() {
@@ -96,7 +95,7 @@ function RowFrame({
   children?: ReactNode;
 }>) {
   return (
-    <Stack as="li" gap="compact" className={ledgerItemClasses()}>
+    <Stack as="li" gap="compact">
       <Inline
         gap="compact"
         className="desktop:flex-row desktop:items-center flex-col items-stretch"
@@ -392,46 +391,44 @@ function SetupCard({
           {sources.error ? 'Data sources' : setupTitle(required, sources.steps, title)}
         </SectionTitle>
       </SectionHeader>
-      <Stack gap="compact">
-        {oauth.error ? <Notice tone="negative">{oauthErrorMessage(oauth.error)}</Notice> : null}
-        {oauth.connected ? (
-          <Notice tone="positive">{FAMILY_META[oauth.connected].title} connected.</Notice>
-        ) : null}
-        {sources.error ? (
-          <Notice
-            kind="read"
-            title="Couldn't load your data sources"
-            error={sources.error}
-            fallback="Couldn't load your data sources. The request failed or timed out."
-            onRetry={sources.retry}
-          />
-        ) : (
-          <ul className={ledgerClasses()}>
-            {rows.map((row) =>
-              row.kind === 'connect' ? (
-                <ConnectRow
-                  key={`connect-${row.family}`}
-                  family={row.family}
-                  providers={row.providers}
-                  required={row.providers.some((provider) => required.includes(provider))}
-                  canManage={canManage}
-                  startConnect={startConnect}
-                />
-              ) : (
-                <SourceRow
-                  key={row.provider}
-                  provider={row.provider}
-                  step={row.step}
-                  projectId={projectId}
-                  canManage={canManage}
-                  autoStart={oauth.connected === GRANT_FAMILY[row.provider]}
-                  startConnect={startConnect}
-                />
-              ),
-            )}
-          </ul>
-        )}
-      </Stack>
+      {oauth.error ? <Notice tone="negative">{oauthErrorMessage(oauth.error)}</Notice> : null}
+      {oauth.connected ? (
+        <Notice tone="positive">{FAMILY_META[oauth.connected].title} connected.</Notice>
+      ) : null}
+      {sources.error ? (
+        <Notice
+          kind="read"
+          title="Couldn't load your data sources"
+          error={sources.error}
+          fallback="Couldn't load your data sources. The request failed or timed out."
+          onRetry={sources.retry}
+        />
+      ) : (
+        <SectionBleed as="ul" rows>
+          {rows.map((row) =>
+            row.kind === 'connect' ? (
+              <ConnectRow
+                key={`connect-${row.family}`}
+                family={row.family}
+                providers={row.providers}
+                required={row.providers.some((provider) => required.includes(provider))}
+                canManage={canManage}
+                startConnect={startConnect}
+              />
+            ) : (
+              <SourceRow
+                key={row.provider}
+                provider={row.provider}
+                step={row.step}
+                projectId={projectId}
+                canManage={canManage}
+                autoStart={oauth.connected === GRANT_FAMILY[row.provider]}
+                startConnect={startConnect}
+              />
+            ),
+          )}
+        </SectionBleed>
+      )}
     </Section>
   );
 }

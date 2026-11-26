@@ -1,11 +1,9 @@
 import type { ReactNode, RefObject } from 'react';
 
 import { cn } from '@/lib/utils';
-import { SurfaceContext } from '@/components/ui/section';
-import { SLIP_FACE } from '@/components/ui/slip';
+import { PanelFrame, SurfaceContext } from '@/components/ui/section';
 
 const FILL = 'h-[calc(100dvh-var(--route-chrome-height))] min-h-0';
-const COLUMN = cn('surface-card', SLIP_FACE, 'flex min-h-0 min-w-0 flex-col overflow-hidden');
 
 export const EDITOR_RAIL_TAB = 'flex min-h-0 flex-1 flex-col';
 
@@ -45,12 +43,12 @@ export function EditorPane({
   children,
 }: Readonly<{ label: string; head?: ReactNode; children: ReactNode }>) {
   return (
-    <section aria-label={label} className={cn(COLUMN, 'flex-1')}>
+    <PanelFrame as="section" aria-label={label}>
       {head ? (
         <div className="border-rule grid gap-2 border-b px-[var(--card-padding)] py-3">{head}</div>
       ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
-    </section>
+    </PanelFrame>
   );
 }
 
@@ -60,7 +58,7 @@ export function EditorRail({
   foot,
 }: Readonly<{ head?: ReactNode; children: ReactNode; foot?: ReactNode }>) {
   return (
-    <div className={cn(COLUMN, 'flex-1')}>
+    <PanelFrame>
       {head ? (
         <div className="px-[var(--card-padding)] pt-[var(--card-padding)]">{head}</div>
       ) : null}
@@ -68,7 +66,7 @@ export function EditorRail({
       {foot ? (
         <div className="border-rule shrink-0 border-t p-[var(--compact-gap)]">{foot}</div>
       ) : null}
-    </div>
+    </PanelFrame>
   );
 }
 

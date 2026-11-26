@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { AreaChart } from '@/components/ui/area-chart';
 import { Label, Metric, textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { SectionHeader, SectionTitle } from '@/components/ui/section';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
 import { Absence, printed } from '@/components/ui/absence';
 import { absent } from '@/lib/format';
@@ -107,7 +107,9 @@ function Overview({
               .join(' · ')
           : 'Model and retrieval provenance unavailable'}
       </p>
-      <EditorialSectionHeader title="Brand and competitors" />
+      <SectionHeader>
+        <SectionTitle>Brand and competitors</SectionTitle>
+      </SectionHeader>
       <Table>
         <TableHeader>
           <TableRow>

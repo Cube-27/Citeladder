@@ -1,13 +1,5 @@
 import { cn } from '@/lib/utils';
 
-export const FRAME_FACE = 'surface-lift border border-transparent rounded-card';
-
-export const SLIP_FACE = cn('bg-surface text-ink', FRAME_FACE);
-
-export function slipClasses(className?: string) {
-  return cn('surface-slip p-[var(--card-padding)]', SLIP_FACE, className);
-}
-
 export function wellClasses(className?: string) {
   return cn('surface-well bg-well rounded-control p-[var(--card-padding)]', className);
 }

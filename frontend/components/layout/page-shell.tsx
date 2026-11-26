@@ -11,7 +11,7 @@ import { TextLineSkeleton } from '@/components/ui/loading-parts';
 import { RailColumns } from '@/components/templates/settings-page';
 import { HeldTabRail, HeldTabRow } from '@/components/ui/tabs';
 import { ShapeBlocks, SkeletonFrame, type LoadingShape } from '@/components/ui/skeleton-block';
-import { FRAME_FACE } from '@/components/ui/slip';
+import { Section, SectionBleed } from '@/components/ui/section';
 import { routeLoading } from '@/lib/navigation/app-routes';
 import type { HeldTabs, RouteLoading } from '@/lib/navigation/route-types';
 import { cn } from '@/lib/utils';
@@ -116,27 +116,19 @@ function RouteTabs({ tabs, search }: Readonly<{ tabs: HeldTabs; search: string }
 function ShapeBox({ shape }: Readonly<{ shape: LoadingShape }>) {
   const blocks = <ShapeBlocks shape={shape} />;
   switch (shape.kind) {
-    case 'figures':
     case 'thread':
-    case 'facts':
-    case 'list':
       return (
         <div data-loading-shape={shape.kind} className="min-w-0">
           {blocks}
         </div>
       );
     case 'table':
-      return (
-        <div data-loading-shape={shape.kind} className={cn(FRAME_FACE, 'min-w-0 overflow-hidden')}>
-          {blocks}
-        </div>
-      );
+      return <SectionBleed data-loading-shape={shape.kind}>{blocks}</SectionBleed>;
+    case 'figures':
+    case 'facts':
+    case 'list':
     case 'chart':
-      return (
-        <div data-loading-shape={shape.kind} className={cn(FRAME_FACE, 'min-w-0 px-4 py-3')}>
-          {blocks}
-        </div>
-      );
+      return <Section data-loading-shape={shape.kind}>{blocks}</Section>;
     default: {
       const exhaustive: never = shape;
       return exhaustive;

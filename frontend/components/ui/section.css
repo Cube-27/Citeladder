@@ -26,6 +26,10 @@
 [data-panel='card'] {
   --panel-inset: var(--card-padding);
   padding: var(--panel-inset);
+}
+
+[data-panel='card'],
+[data-panel-frame] {
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
   color: var(--color-ink);

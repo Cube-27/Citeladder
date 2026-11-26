@@ -133,6 +133,23 @@ export function SectionBleed({
   return useOnPage() ? <Section>{bleed}</Section> : bleed;
 }
 
+export function PanelFrame({
+  as: Element = 'div',
+  children,
+  ...props
+}: Readonly<
+  Omit<HTMLAttributes<HTMLElement>, 'className'> & {
+    as?: 'div' | 'section';
+    children: ReactNode;
+  }
+>) {
+  return (
+    <Element {...props} data-panel-frame="" className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <SurfaceContext value="surface">{children}</SurfaceContext>
+    </Element>
+  );
+}
+
 export function SectionFooter({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <SectionBleed>

@@ -1,12 +1,10 @@
 import type { ReactNode } from 'react';
 
 import { Pressable } from '@/components/ui/pressable';
-import { useOnPage } from '@/components/ui/section';
+import { SectionBleed, useOnPage } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
-
-const ROWS_SHELL = 'surface-lift border-transparent rounded-card bg-surface overflow-clip border';
 
 const GRID =
   'grid grid-cols-[20px_1fr_120px] phone:grid-cols-[20px_1fr_88px] desktop:grid-cols-[20px_1fr_92px_120px_110px] items-center gap-3 phone:gap-2 px-4 phone:px-3';
@@ -24,8 +22,9 @@ export function WorkRows({
   more?: ReactNode;
 }>) {
   const [title, scope, impact, source] = heads;
-  return (
-    <div className={useOnPage() ? ROWS_SHELL : 'min-w-0'}>
+  const onPage = useOnPage();
+  const body = (
+    <>
       <table aria-label={label} className="block w-full">
         <thead className="block">
           <tr
@@ -44,8 +43,9 @@ export function WorkRows({
         <tbody className="block">{children}</tbody>
       </table>
       {more}
-    </div>
+    </>
   );
+  return onPage ? <SectionBleed>{body}</SectionBleed> : <div className="min-w-0">{body}</div>;
 }
 
 export function WorkRow({
