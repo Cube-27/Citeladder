@@ -1934,7 +1934,7 @@ label {
 [data-section='framed'] :is([data-setting-rows], :is(ol, ul).surface-lift) > * {
   padding-inline: var(--card-padding);
 }
-[data-section='framed'] > :is([data-data-table-frame], [data-setting-rows]):last-child {
+[data-section='framed'] > [data-setting-rows]:last-child {
   margin-bottom: calc(-1 * var(--card-padding));
 }
 [data-section='framed'] [data-state-block-inline] {
