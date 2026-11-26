@@ -42,7 +42,7 @@
 }
 
 .cl-step-text {
-  max-width: 420px;
+  max-width: var(--site-measure-2xs);
   margin: 0;
   color: var(--text-color-ink-2);
   font-size: var(--text-site-body);
@@ -161,7 +161,6 @@
 
 .cl-cta {
   --text-color-ink-2: var(--text-color-site-band-ink-2);
-  --color-panel: transparent;
   --color-control-line: var(--color-site-band-line);
 
   position: relative;
@@ -205,7 +204,7 @@
   background: var(--site-noise);
   content: '';
   mix-blend-mode: overlay;
-  opacity: 0.6;
+  opacity: var(--site-band-grain);
   pointer-events: none;
 }
 
@@ -217,19 +216,19 @@
 }
 
 .cl-cta-title {
-  max-width: 960px;
+  max-width: var(--site-measure-2xl);
   margin: 0;
   color: var(--text-color-ink);
   font-family: var(--font-display);
   font-size: var(--text-site-section);
-  font-weight: var(--weight-regular);
+  font-weight: var(--text-site-section--font-weight);
   line-height: var(--text-site-section--line-height);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--text-site-section--letter-spacing);
   text-wrap: balance;
 }
 
 .cl-cta-lead {
-  max-width: 560px;
+  max-width: var(--site-measure-md);
   margin: 0;
   text-wrap: balance;
 }

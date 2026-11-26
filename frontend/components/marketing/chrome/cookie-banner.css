@@ -1,8 +1,8 @@
 .cl-cookie {
-  --cl-cookie-shift: 4px;
+  --cl-cookie-shift: var(--site-space-1);
 
   position: fixed;
-  z-index: calc(var(--z-index-sticky) - 1);
+  z-index: var(--site-z-banner);
   right: 0;
   bottom: 0;
   left: 0;

@@ -1,7 +1,11 @@
+:root {
+  --prose-cell-min: 144px;
+}
+
 @import '../../content/prose.css';
 
 .cl-site .cl-prose > :is(p, ul, ol, h2, h3, h4, blockquote, dl) {
-  max-width: 65ch;
+  max-width: var(--site-measure-prose);
 }
 
 .cl-site .cl-cpage-article .cl-prose > :is(p, ul, ol, h2, h3, h4, blockquote, dl) {
@@ -22,9 +26,9 @@
 .cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) h2:not([class]) {
   font-family: var(--font-display);
   font-size: var(--text-site-section);
-  font-weight: var(--weight-regular);
+  font-weight: var(--text-site-section--font-weight);
   line-height: var(--text-site-section--line-height);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--text-site-section--letter-spacing);
   text-wrap: balance;
 }
 
@@ -76,13 +80,10 @@
   scrollbar-color: auto;
   scrollbar-width: auto;
   background:
-    linear-gradient(to left, var(--site-page) 40%, transparent) right / 48px 100% no-repeat local,
-    linear-gradient(
-        to left,
-        color-mix(in oklch, var(--color-mark-ink) 20%, transparent),
-        transparent
-      )
-      right / 24px 100% no-repeat scroll;
+    linear-gradient(to left, var(--site-page) 40%, transparent) right / var(--site-space-12) 100%
+      no-repeat local,
+    linear-gradient(to left, var(--color-site-scroll-shade-strong), transparent) right /
+      var(--site-space-6) 100% no-repeat scroll;
 }
 
 @supports not selector(::-webkit-scrollbar) {
@@ -93,7 +94,7 @@
 }
 
 .cl-site .cl-prose > .cl-prose-table {
-  min-width: min(100%, 65ch);
+  min-width: min(100%, var(--site-measure-prose));
 }
 
 .cl-site .cl-cpage-article .cl-prose > .cl-prose-table {
@@ -137,7 +138,7 @@
 }
 
 .cl-site .cl-prose-table td:not([data-fit], [data-numeric]) {
-  min-width: 144px;
+  min-width: var(--prose-cell-min);
 }
 
 .cl-site .cl-prose-table th[data-numeric]:not([data-fit]) {
@@ -184,7 +185,7 @@
 .cl-site .cl-prose .cl-icite a:focus-visible {
   text-decoration: underline;
   text-decoration-thickness: var(--site-rule);
-  text-underline-offset: 2px;
+  text-underline-offset: var(--site-underline-offset-sm);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -192,7 +193,7 @@
   .cl-site .cl-prose .cl-icite a:hover {
     text-decoration: underline;
     text-decoration-thickness: var(--site-rule);
-    text-underline-offset: 2px;
+    text-underline-offset: var(--site-underline-offset-sm);
   }
 }
 

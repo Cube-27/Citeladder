@@ -5,7 +5,7 @@
     var(--site-well-shade),
     radial-gradient(120% 120% at 50% 40%, transparent 50%, var(--site-band-vignette)),
     var(--tint-neutral);
-  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
+  box-shadow: inset 0 0 0 var(--site-rule) var(--color-site-well-edge);
   container-type: inline-size;
 }
 
@@ -27,7 +27,7 @@
 }
 
 .cl-page-hl-title {
-  max-width: 560px;
+  max-width: var(--site-measure-md);
   margin: 0;
   color: var(--text-color-ink);
   font-size: var(--text-display-md);
@@ -38,7 +38,7 @@
 }
 
 .cl-page-hl-text {
-  max-width: 480px;
+  max-width: var(--site-measure-xs);
   margin: 0;
   color: var(--text-color-ink-2);
   font-size: var(--text-site-body);

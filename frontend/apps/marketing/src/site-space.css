@@ -31,5 +31,29 @@
   --site-rule: 1px;
   --site-rule-thick: 2px;
   --site-target: 44px;
+  --site-underline-offset-sm: 2px;
   --site-underline-offset: 3px;
+  --site-underline-offset-lg: 4px;
+
+  --site-measure-3xs: 320px;
+  --site-measure-2xs: 420px;
+  --site-measure-xs: 480px;
+  --site-measure-sm: 520px;
+  --site-measure-md: 560px;
+  --site-measure-lg: 640px;
+  --site-measure-xl: 760px;
+  --site-measure-2xl: 960px;
+  --site-measure-3xl: 1120px;
+  --site-measure-note: 44ch;
+  --site-measure-lead: 62ch;
+  --site-measure-prose: 65ch;
+
+  --site-grain: 0.05;
+  --site-band-grain: 0.6;
+  --site-noise-tile: 220px;
+  --site-z-banner: calc(var(--z-index-sticky) - 1);
+}
+
+:root[data-theme='dark'] {
+  --site-grain: 0.07;
 }

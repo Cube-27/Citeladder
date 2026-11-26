@@ -1,3 +1,11 @@
+:root {
+  --rail-card-height: 460px;
+  --rail-open-max: 720px;
+  --rail-page-width: 1000px;
+  --rail-page-zoom: 0.7;
+  --rail-shot-radius: 10px;
+}
+
 .cl-rail {
   container-type: inline-size;
   display: flex;
@@ -55,14 +63,14 @@
 
 .cl-railcard {
   --cl-tint: var(--color-site-frame-card);
-  --cl-card-h: 460px;
+  --cl-card-h: var(--rail-card-height);
 
   position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  border: 6px solid var(--color-site-frame-strip);
+  border: var(--site-space-1_5) solid var(--color-site-frame-strip);
   border-radius: var(--site-radius-frame);
   background: var(--cl-tint);
   outline: var(--site-rule) solid var(--color-site-frame-edge);
@@ -83,12 +91,12 @@
 
 @media (hover: hover) and (pointer: fine) {
   .cl-rail[data-ready] .cl-railcard:not([data-expanded]):hover {
-    background-color: color-mix(in oklch, var(--color-mark-ink) 5%, var(--cl-tint));
+    background-color: var(--color-site-frame-card-hover);
   }
 
   .cl-railcard-link:hover {
     text-decoration: underline;
-    text-underline-offset: 4px;
+    text-underline-offset: var(--site-underline-offset-lg);
   }
 }
 .cl-railcard-head {
@@ -176,7 +184,7 @@
 }
 
 .cl-railcard-shot .cl-frame-card {
-  border-radius: 10px;
+  border-radius: var(--rail-shot-radius);
 }
 
 .cl-railcard-shot {
@@ -191,7 +199,7 @@
   top: var(--site-space-25);
   bottom: var(--site-space-6);
   left: calc(var(--cl-open-w) / 2 + var(--site-space-4));
-  width: 1000px;
+  width: var(--rail-page-width);
   overflow: hidden;
 }
 
@@ -201,8 +209,8 @@
 }
 
 .cl-railcard-page .cl-screen {
-  height: calc((var(--cl-card-h) - var(--site-space-31)) / 0.7);
-  zoom: 0.7;
+  height: calc((var(--cl-card-h) - var(--site-space-31)) / var(--rail-page-zoom));
+  zoom: var(--rail-page-zoom);
 }
 
 .cl-railcard-more {
@@ -212,7 +220,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--site-space-6);
-  width: min(420px, calc(var(--cl-open-w) / 2 - var(--site-space-14)));
+  width: min(var(--site-measure-2xs), calc(var(--cl-open-w) / 2 - var(--site-space-14)));
 }
 
 .cl-railcard .cl-railcard-more > a {
@@ -220,7 +228,7 @@
 }
 
 .cl-railcard-body {
-  max-width: 420px;
+  max-width: var(--site-measure-2xs);
   margin: 0;
   color: var(--text-color-ink-2);
   font-size: var(--text-site-body);
@@ -244,9 +252,9 @@
 }
 
 .cl-rail-track {
-  --cl-rail-gap: 24px;
+  --cl-rail-gap: var(--site-space-6);
   --cl-card-w: calc((100cqw - 2 * var(--cl-rail-gap)) / 3);
-  --cl-open-w: min(720px, 100cqw);
+  --cl-open-w: min(var(--rail-open-max), 100cqw);
 
   container-type: inline-size;
   display: flex;

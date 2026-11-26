@@ -1,3 +1,9 @@
+:root {
+  --tool-result-min: 420px;
+  --tool-result-min-narrow: 360px;
+  --tool-empty-min: 280px;
+}
+
 .cl-tool {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
@@ -6,7 +12,7 @@
   border-radius: var(--site-radius-card);
   background: var(--tint-neutral);
   background-image: var(--site-well-shade);
-  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
+  box-shadow: inset 0 0 0 var(--site-rule) var(--color-site-well-edge);
 }
 
 .cl-tool-form {
@@ -43,7 +49,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 420px;
+  min-height: var(--tool-result-min);
   margin: var(--site-space-6) var(--site-space-6) var(--site-space-6) 0;
   border-radius: var(--site-radius-inner);
   background: var(--color-panel);
@@ -54,7 +60,7 @@
   border-radius: var(--site-radius-inner);
   background: var(--tint-neutral);
   background-image: var(--site-well-shade);
-  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
+  box-shadow: inset 0 0 0 var(--site-rule) var(--color-site-well-edge);
 }
 
 .cl-tool-bar {
@@ -127,7 +133,7 @@
   display: grid;
   place-items: center;
   height: 100%;
-  min-height: 280px;
+  min-height: var(--tool-empty-min);
   margin: 0;
   color: var(--text-color-ink-2);
   font-size: var(--text-body);
@@ -159,7 +165,7 @@
   }
 
   .cl-tool-result {
-    min-height: 360px;
+    min-height: var(--tool-result-min-narrow);
     margin: 0 var(--site-space-4) var(--site-space-4);
   }
 

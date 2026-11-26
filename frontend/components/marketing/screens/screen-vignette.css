@@ -1,3 +1,7 @@
+:root {
+  --vig-panel-min: 224px;
+}
+
 .cl-vig {
   container-type: inline-size;
   display: flex;
@@ -280,7 +284,7 @@
   flex: 1;
   justify-content: flex-start;
   gap: var(--site-space-3);
-  min-height: 224px;
+  min-height: var(--vig-panel-min);
   color: var(--text-color-ink-2);
 }
 

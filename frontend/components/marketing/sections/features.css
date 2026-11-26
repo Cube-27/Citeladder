@@ -1,3 +1,7 @@
+:root {
+  --split-screen-width: 440px;
+}
+
 .cl-fcard {
   --cl-tint: var(--tint-neutral);
 
@@ -8,7 +12,7 @@
   border-radius: var(--site-radius-card);
   background: var(--cl-tint);
   background-image: var(--site-well-shade);
-  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
+  box-shadow: inset 0 0 0 var(--site-rule) var(--color-site-well-edge);
   color: var(--text-color-ink);
   text-decoration: none;
   transition: background-color var(--transition-duration-fast) var(--ease-standard);
@@ -16,7 +20,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   a.cl-fcard:hover {
-    background-color: color-mix(in oklch, var(--color-mark-ink) 5%, var(--cl-tint));
+    background-color: var(--color-site-well-hover);
   }
 }
 
@@ -24,7 +28,7 @@
   padding: var(--site-space-1_5);
   border-radius: var(--site-radius-frame);
   background: var(--color-site-frame-strip);
-  box-shadow: inset 0 0 0 1px var(--color-site-frame-edge);
+  box-shadow: inset 0 0 0 var(--site-rule) var(--color-site-frame-edge);
 }
 
 .cl-fcard:not(a):not(:has(> .cl-frame)) {
@@ -81,7 +85,7 @@
 }
 
 .cl-fcard-text {
-  max-width: 520px;
+  max-width: var(--site-measure-sm);
   margin: 0;
   color: var(--text-color-ink-2);
   font-size: var(--text-site-body);
@@ -99,7 +103,7 @@
 
 @media (min-width: 1024px) {
   .cl-fcard--wide .cl-fcard-body > :is(.cl-fcard-title, .cl-fcard-text) {
-    max-width: 65ch;
+    max-width: var(--site-measure-prose);
   }
 
   .cl-fcard--wide .cl-fcard-body > .cl-checks {
@@ -203,7 +207,7 @@
     .cl-audience a.cl-fcard:hover .cl-fcard-title {
       text-decoration: underline;
       text-decoration-thickness: var(--site-rule);
-      text-underline-offset: 4px;
+      text-underline-offset: var(--site-underline-offset-lg);
     }
   }
 }
@@ -244,7 +248,7 @@
     .cl-audience a.cl-fcard:hover .cl-fcard-title {
       text-decoration: underline;
       text-decoration-thickness: var(--site-rule);
-      text-underline-offset: 4px;
+      text-underline-offset: var(--site-underline-offset-lg);
     }
   }
 }
@@ -369,9 +373,9 @@
   color: var(--text-color-ink);
   font-family: var(--font-display);
   font-size: var(--text-site-section);
-  font-weight: var(--weight-regular);
+  font-weight: var(--text-site-section--font-weight);
   line-height: var(--text-site-section--line-height);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--text-site-section--letter-spacing);
   text-wrap: balance;
 }
 
@@ -418,8 +422,8 @@
   }
 
   .cl-split-media .cl-frame--fluid .cl-frame-screen > * {
-    width: 440px;
-    zoom: min(1, tan(atan2(100cqi, 440px)));
+    width: var(--split-screen-width);
+    zoom: min(1, tan(atan2(100cqi, var(--split-screen-width))));
   }
 }
 

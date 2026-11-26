@@ -5,19 +5,19 @@
   --text-caption--line-height: var(--text-body--line-height);
   --text-data: var(--text-caption);
   --text-code: var(--text-body);
-  --text-title-sm--line-height: 1.75rem;
+  --text-title-sm--line-height: calc(var(--text-title-sm) + 5 * var(--type-step));
   --text-display-sm: var(--text-title);
   --text-display-sm--line-height: var(--text-title--line-height);
   --text-display-lg: var(--text-display-md);
   --text-display-lg--line-height: var(--text-display-md--line-height);
   --text-lead: var(--text-body-lg);
   --text-lead--line-height: var(--text-body-lg--line-height);
-  --text-title: 1.25rem;
-  --text-title--line-height: 1.5rem;
-  --text-stat: 1.5rem;
-  --text-stat--line-height: 2rem;
-  --text-display-md: 1.5rem;
-  --text-display-md--line-height: 1.875rem;
+  --text-title: calc(var(--type-base) + 2 * var(--type-step));
+  --text-title--line-height: calc(var(--text-title) + 2 * var(--type-step));
+  --text-stat: calc(var(--type-base) + 4 * var(--type-step));
+  --text-stat--line-height: calc(var(--text-stat) + 4 * var(--type-step));
+  --text-display-md: calc(var(--type-base) + 4 * var(--type-step));
+  --text-display-md--line-height: calc(var(--text-display-md) + 3 * var(--type-step));
 
   --site-page: var(--color-site-page);
   --site-mark: var(--color-site-mark);
@@ -31,8 +31,10 @@
   --site-band-vignette: var(--color-site-vignette);
 
   --site-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1.1 1.1 1.1 0 -1.15 1.1 1.1 1.1 0 -1.15 1.1 1.1 1.1 0 -1.15 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")
-    0 0 / 220px 220px;
+    0 0 / var(--site-noise-tile) var(--site-noise-tile);
+}
 
+.cl-site {
   background: var(--site-page);
   color: var(--text-color-ink);
   font-family: var(--font-sans);
@@ -40,7 +42,7 @@
 
 @media (min-width: 768px) {
   .cl-site {
-    --text-site-section--line-height: 2.25rem;
+    --text-site-section--line-height: calc(var(--text-site-section) + 2 * var(--type-step));
   }
 }
 
@@ -233,7 +235,7 @@
   text-decoration-line: underline;
   text-decoration-color: transparent;
   text-decoration-thickness: var(--site-rule);
-  text-underline-offset: 4px;
+  text-underline-offset: var(--site-underline-offset-lg);
   transition: text-decoration-color var(--transition-duration-fast) var(--ease-standard);
 }
 
@@ -277,7 +279,11 @@
 }
 
 .cl-site-main::before {
-  --guide: repeating-linear-gradient(180deg, var(--site-guide) 0 4px, transparent 4px 12px);
+  --guide: repeating-linear-gradient(
+    180deg,
+    var(--site-guide) 0 var(--site-space-1),
+    transparent var(--site-space-1) var(--site-space-3)
+  );
 
   content: '';
   position: absolute;
@@ -328,7 +334,7 @@
 }
 
 .cl-tiles {
-  --cl-list-gap: 16px;
+  --cl-list-gap: var(--site-space-4);
 
   display: grid;
   gap: var(--cl-list-gap);

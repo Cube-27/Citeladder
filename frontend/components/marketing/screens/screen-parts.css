@@ -1,3 +1,8 @@
+:root {
+  --screen-col-lg: 160px;
+  --screen-col-xl: 200px;
+}
+
 .cl-screen-site {
   display: inline-flex;
   align-items: center;
@@ -96,11 +101,11 @@
 }
 
 .cl-screen-col--lg {
-  width: 160px;
+  width: var(--screen-col-lg);
 }
 
 .cl-screen-col--xl {
-  width: 200px;
+  width: var(--screen-col-xl);
 }
 
 .cl-screen-cell {

@@ -1,3 +1,12 @@
+:root {
+  --screen-app-width: 1440px;
+  --screen-app-height: 820px;
+  --screen-app-overview-height: 860px;
+  --screen-app-sidebar: 224px;
+  --screen-visibility-width: 1200px;
+  --screen-visibility-height: 704px;
+}
+
 .cl-screen {
   position: relative;
   display: flex;
@@ -14,24 +23,27 @@
 }
 
 .cl-screen--visibility {
-  --screen-natural: 1200px;
+  --screen-natural: var(--screen-visibility-width);
   --screen-w: var(--screen-natural);
-  --screen-h: 704px;
+  --screen-h: var(--screen-visibility-height);
 }
 
 .cl-screen--app {
-  --spacing-gutter: 24px;
-  --spacing-section: 16px;
-  --spacing-workspace: 12px;
-  --spacing-compact: 8px;
-  --spacing-card: 16px;
+  --spacing-gutter: var(--site-space-6);
+  --spacing-section: var(--site-space-4);
+  --spacing-workspace: var(--site-space-3);
+  --spacing-compact: var(--site-space-2);
+  --spacing-card: var(--site-space-4);
   --spacing-row: var(--row-app);
-  --spacing-sidebar: 224px;
-  --screen-natural: 1440px;
+  --spacing-sidebar: var(--screen-app-sidebar);
+  --screen-natural: var(--screen-app-width);
   --screen-w: var(--screen-natural);
-  --screen-h: 820px;
-  --radius-card: 6px;
+  --screen-h: var(--screen-app-height);
+  --radius-card: var(--radius-md);
+  --screen-page-edge: color-mix(in oklch, var(--color-rule) 50%, transparent);
+}
 
+.cl-screen--app {
   display: grid;
   grid-template-columns: var(--spacing-sidebar) minmax(0, 1fr);
   gap: 0;
@@ -55,7 +67,7 @@
 }
 
 .cl-screen--app-overview {
-  --screen-h: 860px;
+  --screen-h: var(--screen-app-overview-height);
 }
 
 .cl-screen--app .text-page-title {
@@ -203,7 +215,7 @@
   padding: 0 var(--spacing-gutter) var(--spacing-gutter);
   border-radius: var(--radius-card) var(--radius-card) 0 0;
   background: var(--color-page);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--color-rule) 50%, transparent);
+  box-shadow: 0 0 0 var(--site-rule) var(--screen-page-edge);
 }
 
 .cl-app-header {
@@ -238,7 +250,7 @@
 
 .cl-app-page > .cl-vig {
   flex: none;
-  max-width: 760px;
+  max-width: var(--site-measure-xl);
   border-radius: var(--radius-card);
   background: var(--color-panel);
 }

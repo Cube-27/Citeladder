@@ -43,8 +43,11 @@ const hasEnd = Astro.slots.has('end');
 </div>
 
 <style is:global>
+  :root {
+    --cpage-toc-width: 280px;
+  }
   .cl-cpage-article {
-    --cpage-article-width: 640px;
+    --cpage-article-width: var(--site-measure-lg);
     padding-top: var(--site-space-16);
   }
   .cl-cpage-article-grid {
@@ -94,7 +97,6 @@ const hasEnd = Astro.slots.has('end');
   }
   @media (min-width: 1280px) {
     .cl-cpage-article--toc .cl-cpage-article-grid {
-      --cpage-toc-width: 280px;
       grid-template-columns:
         var(--cpage-toc-width) minmax(0, var(--cpage-article-width))
         minmax(0, 1fr);
@@ -147,13 +149,13 @@ const hasEnd = Astro.slots.has('end');
       overscroll-behavior: contain;
       border-left: 0;
       background:
-        linear-gradient(var(--color-rule), var(--color-rule)) left / 1px 100% no-repeat,
-        linear-gradient(var(--site-page) 40%, transparent) top / 100% 32px no-repeat local,
-        linear-gradient(transparent, var(--site-page) 60%) bottom / 100% 32px no-repeat local,
-        linear-gradient(color-mix(in oklch, var(--color-mark-ink) 14%, transparent), transparent) top /
-          100% 16px no-repeat scroll,
-        linear-gradient(transparent, color-mix(in oklch, var(--color-mark-ink) 14%, transparent)) bottom /
-          100% 16px no-repeat scroll;
+        linear-gradient(var(--color-rule), var(--color-rule)) left / var(--site-rule) 100% no-repeat,
+        linear-gradient(var(--site-page) 40%, transparent) top / 100% var(--site-space-8) no-repeat local,
+        linear-gradient(transparent, var(--site-page) 60%) bottom / 100% var(--site-space-8) no-repeat local,
+        linear-gradient(var(--color-site-scroll-shade), transparent) top /
+          100% var(--site-space-4) no-repeat scroll,
+        linear-gradient(transparent, var(--color-site-scroll-shade)) bottom /
+          100% var(--site-space-4) no-repeat scroll;
       scrollbar-width: thin;
       scrollbar-color: var(--color-rule-strong) transparent;
     }

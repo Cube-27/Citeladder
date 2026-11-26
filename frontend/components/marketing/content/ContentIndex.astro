@@ -93,7 +93,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     font-size: var(--text-site-section, var(--text-display-md));
     line-height: var(--text-site-section--line-height, var(--text-display-md--line-height));
     font-weight: var(--weight-regular);
-    letter-spacing: -0.01em;
+    letter-spacing: var(--text-site-section--letter-spacing, var(--text-display-md--letter-spacing));
     text-wrap: balance;
   }
   .cl-cpage-index-desc {
@@ -142,7 +142,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     .cl-cpage-index-link:hover .cl-cpage-index-name {
       text-decoration: underline;
       text-decoration-thickness: var(--site-rule);
-      text-underline-offset: 4px;
+      text-underline-offset: var(--site-underline-offset-lg);
     }
     .cl-cpage-index-link:hover .cl-cpage-index-arrow {
       color: var(--text-color-ink);
@@ -150,7 +150,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   }
   .cl-cpage-index-body {
     display: -webkit-box;
-    max-width: 640px;
+    max-width: var(--site-measure-lg);
     overflow: hidden;
     color: var(--text-color-ink-2);
     font-size: var(--text-site-body);
@@ -180,7 +180,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   }
   @media (min-width: 1024px) {
     .cl-cpage-index-link:has(.cl-cpage-index-meta) {
-      grid-template-columns: 320px minmax(0, 1fr) var(--site-space-5);
+      grid-template-columns: var(--site-measure-3xs) minmax(0, 1fr) var(--site-space-5);
     }
     .cl-cpage-index-link:has(.cl-cpage-index-meta) > :not(.cl-cpage-index-arrow) {
       grid-column: 2;

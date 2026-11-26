@@ -6,8 +6,6 @@
 }
 
 .cl-site-backdrop > div {
-  --lb-grain: 0.05;
-
   position: sticky;
   top: 0;
   height: 100vh;
@@ -24,17 +22,13 @@
     var(--color-site-hero-base);
 }
 
-:root[data-theme='dark'] .cl-site-backdrop > div {
-  --lb-grain: 0.07;
-}
-
 .cl-site-backdrop > div::after {
   position: absolute;
   inset: 0;
   content: '';
   background: var(--site-noise);
   mix-blend-mode: overlay;
-  opacity: var(--lb-grain);
+  opacity: var(--site-grain);
 }
 
 .cl-site-main:has(.cl-cta) {

@@ -52,7 +52,7 @@
   inset-block: 0;
   left: 0;
   border-radius: var(--radius-md);
-  background: color-mix(in oklch, var(--color-mark-ink) 5%, transparent);
+  background: var(--color-site-hover-wash);
   opacity: 0;
   pointer-events: none;
   transform-origin: left center;
@@ -417,7 +417,7 @@
 
 .cl-sheet-row[aria-current='page'] {
   text-decoration: underline;
-  text-underline-offset: 4px;
+  text-underline-offset: var(--site-underline-offset-lg);
 }
 
 .cl-sheet-subgroup {
@@ -453,7 +453,7 @@
 
 .cl-sheet-subrow[aria-current='page'] {
   text-decoration: underline;
-  text-underline-offset: 4px;
+  text-underline-offset: var(--site-underline-offset-lg);
 }
 
 .cl-sheet-foot {
