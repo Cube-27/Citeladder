@@ -163,11 +163,18 @@ function PageHeading({
         className,
       )}
     >
-      <h1 className={textRole('pageTitle', 'min-w-0 break-words')}>{title}</h1>
+      <h1
+        className={textRole(
+          'pageTitle',
+          'flex min-h-[var(--control-md)] min-w-0 items-center break-words',
+        )}
+      >
+        {title}
+      </h1>
       {actions === undefined ? null : (
         <div
           data-page-actions=""
-          className="ms-auto flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center justify-end gap-2"
+          className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2"
         >
           <MastheadPrimarySlot value={primarySlot}>
             <MastheadOverflow label="Page actions">{actions}</MastheadOverflow>

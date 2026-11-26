@@ -2,25 +2,12 @@ import { useId, type ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Icon } from '@/components/ui/icon';
-import { LogoMark } from '@/components/ui/logo-mark';
+import { FlowLogo } from '@/components/ui/flow-logo';
 import { Section } from '@/components/ui/section';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { textRole } from '@/components/ui/typography';
 import type { IconGlyph } from '@/lib/icons';
-import { websiteHref } from '@/lib/config/app-link';
 import { cn } from '@/lib/utils';
-
-export function FlowLogo() {
-  return (
-    <a
-      href={websiteHref('/')}
-      aria-label="CiteLadder home"
-      className="focus-ring text-ink rounded-control inline-flex"
-    >
-      <LogoMark size={22} />
-    </a>
-  );
-}
 
 export function FlowPage({
   label,

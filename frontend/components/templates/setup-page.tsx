@@ -1,7 +1,7 @@
 import { useId, type ComponentProps, type ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
-import { FlowLogo } from '@/components/templates/flow-page';
+import { FlowLogo } from '@/components/ui/flow-logo';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { RungTrail } from '@/components/ui/rung-trail';

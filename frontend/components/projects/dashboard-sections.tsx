@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Delta } from '@/components/ui/delta';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
+import { Section } from '@/components/ui/section';
 import { ReorderList } from '@/components/ui/reorder-list';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -40,26 +41,28 @@ export function ProjectMeta({ data }: Readonly<{ data: CommandCenter }>) {
   const href = website ? websiteHref(website) : null;
   const shown = website?.replace(/^https?:\/\//i, '').replace(/\/$/, '');
   return (
-    <Inline as="p" gap="meta" className={textRole('caption')}>
-      {href ? (
-        <TextLink variant="external" text="caption" tone="muted" href={href} className="min-w-0">
+    <Section>
+      <Inline as="p" gap="meta" className={textRole('caption')}>
+        {href ? (
+          <TextLink variant="external" text="caption" tone="muted" href={href} className="min-w-0">
+            <span className="truncate" title={shown}>
+              {shown}
+            </span>
+          </TextLink>
+        ) : null}
+        {website && !href ? (
           <span className="truncate" title={shown}>
             {shown}
           </span>
-        </TextLink>
-      ) : null}
-      {website && !href ? (
-        <span className="truncate" title={shown}>
-          {shown}
-        </span>
-      ) : null}
-      {measurement ? (
-        <span>
-          Tracked <DisplayTime value={measurement.completed_at} /> ·{' '}
-          <EngineStack engines={measurement.logical_engines} />
-        </span>
-      ) : null}
-    </Inline>
+        ) : null}
+        {measurement ? (
+          <span>
+            Tracked <DisplayTime value={measurement.completed_at} /> ·{' '}
+            <EngineStack engines={measurement.logical_engines} />
+          </span>
+        ) : null}
+      </Inline>
+    </Section>
   );
 }
 
