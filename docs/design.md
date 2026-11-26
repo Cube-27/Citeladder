@@ -68,17 +68,33 @@ code: API keys, code blocks, raw IDs and keyboard hints. Weights 400 and 500 onl
 (350 and 450: light text on dark reads heavier), but the sans face starts at 400, so regular sans text is 400 in both themes and only 450 and the mono and display faces draw lighter. Emphasis is 500, never
 colour. Sizes are rem so they follow the reader's text size.
 
-| Role            | Size / line | Weight                  |
+Every size and line height derives from one base and one step per subdomain:
+the app's base is 14 and the website's is 16, both with a 2px step (owner,
+2026-11-26). A role's size is the base plus whole steps, and its line height is
+the size plus whole steps, so a change to the base moves every role together.
+The app ladder lives in
+[`app-type.css`](../frontend/apps/app/src/app-type.css), shared by the app and
+the MCP app. The website ladder lives in
+[`site-type.css`](../frontend/apps/marketing/src/site-type.css), shared by
+marketing and docs. Each entry stylesheet sets `--type-base` and `--type-step`.
+A role name means the same job on both ladders: `body` is UI text at 14 on both,
+and the website's 16px reading copy is `site-body`. Weights come only from
+`--weight-regular` and `--weight-medium`; the app's dark theme re-points those
+two. `font-emphasis` and `font-plain` are the only weight utilities. Tailwind's
+default weight, leading and tracking scales are switched off.
+
+| App role        | Size / line | Weight                  |
 | --------------- | ----------- | ----------------------- |
 | body, label     | 14 / 20     | 400, label 500          |
-| caption         | 12 / 16     | 400                     |
+| caption, code   | 12 / 16     | 400                     |
 | heading         | 16 / 24     | 500                     |
-| page title      | 14 / 20     | 500, in the page header |
+| prose           | 16 / 26     | 400                     |
+| title, page title | 20 / 28   | 400, page title 500     |
 | figure (metric) | 20 / 28     | 500, tabular            |
 
-The roles are the closed set in
-[`typography.tsx`](../frontend/components/ui/typography.tsx); a call site names
-the job, never a size.
+A call site names the job through `<Text role tone>` in
+[`typography.tsx`](../frontend/components/ui/typography.tsx) or the matching
+`text-<role>` utility, never a size, weight or line height.
 
 ## Spacing, size and shape
 
