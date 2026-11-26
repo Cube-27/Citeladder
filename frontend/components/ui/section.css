@@ -89,6 +89,6 @@
 [data-bleed] .table-frame tr > :first-child {
   padding-inline-start: calc(var(--panel-inset) + var(--cell-indent, 0px));
 }
-[data-bleed] .table-frame tr > :last-child {
+[data-bleed] .table-frame tr > :last-child:not([data-tile-cell]) {
   padding-inline-end: var(--panel-inset);
 }

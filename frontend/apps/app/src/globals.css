@@ -1522,7 +1522,7 @@ label {
 }
 
 :root:not([data-public-surface]) .table-frame {
-  --table-cell-padding-y: 10px;
+  --table-cell-padding-y: 8px;
   border: 0;
 }
 :root:not([data-public-surface]) .table-frame thead th + th::before {
@@ -1777,10 +1777,10 @@ label {
   :is(.focus-input, .focus-frame):hover:not(:focus, :focus-within, :disabled, [data-disabled]) {
   background-color: var(--color-well-hover);
 }
+:root:not([data-public-surface]):where(:not([data-theme='dark'])) .ui-button-secondary {
+  --color-raised-2: var(--color-field-hover);
+}
 :root:not([data-public-surface]) {
-  .ui-button-secondary {
-    --color-raised-2: var(--color-field-hover);
-  }
   :where([data-panel], [data-panel-frame], [data-overlay], .surface-well, .menu-panel, [data-auth-form]) .ui-button-secondary {
     --color-raised: var(--color-state-fill);
     --color-raised-2: var(--color-state-fill-hover);

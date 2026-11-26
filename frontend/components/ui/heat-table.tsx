@@ -41,7 +41,7 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
           <TableRow>
             <TableHead className="w-40">{corner}</TableHead>
             {columns.map((column) => (
-              <TableHead key={column.key} className={HEAT_HEAD}>
+              <TableHead key={column.key} data-tile-cell="" className={HEAT_HEAD}>
                 {column.header}
               </TableHead>
             ))}
@@ -52,7 +52,11 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
             <TableRow key={row.key}>
               <TableRowHeader>{row.header}</TableRowHeader>
               {row.cells.map((cell, index) => (
-                <td key={columns[index]?.key ?? index} className="p-0.5 text-center">
+                <td
+                  key={columns[index]?.key ?? index}
+                  data-tile-cell=""
+                  className="p-0.5 text-center"
+                >
                   {cell.kind === 'void' ? (
                     <div
                       className="rounded-mark flex min-h-10 flex-col items-center justify-center"
@@ -103,11 +107,11 @@ export function GridTableSkeleton({
 }: Readonly<{ label: string; rows: number; columns: number; variant: 'heat' | 'rank' }>) {
   const cell =
     variant === 'heat' ? (
-      <td className="p-0.5">
+      <td data-tile-cell="" className="p-0.5">
         <SkeletonBlock className="rounded-mark h-10 min-h-10" />
       </td>
     ) : (
-      <td className="p-1">
+      <td data-tile-cell="" className="p-1">
         <SkeletonBlock className="rounded-mark h-[var(--control-md)]" />
       </td>
     );
@@ -187,7 +191,7 @@ export function RankTable({
           <TableRow>
             <TableHead className="phone:w-40 w-54">{corner}</TableHead>
             {columns.map((index) => (
-              <TableHead key={index} className="text-center">
+              <TableHead key={index} data-tile-cell="" className="text-center">
                 #{index + 1}
               </TableHead>
             ))}
@@ -199,14 +203,14 @@ export function RankTable({
               <TableRowHeader>{row.header}</TableRowHeader>
               {row.chips.length === 0
                 ? columns.map((index) => (
-                    <td key={index} className="p-1 text-center">
+                    <td key={index} data-tile-cell="" className="p-1 text-center">
                       {row.empty}
                     </td>
                   ))
                 : columns.map((index) => {
                     const chip = row.chips[index];
                     return (
-                      <td key={chip?.key ?? index} className="p-1">
+                      <td key={chip?.key ?? index} data-tile-cell="" className="p-1">
                         {chip ? (
                           <div
                             className={cn(

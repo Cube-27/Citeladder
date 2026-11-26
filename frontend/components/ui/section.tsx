@@ -49,7 +49,10 @@ export function SectionHeader({
   return (
     <header {...props} className="flex min-w-0 flex-wrap items-start justify-between gap-2">
       <div className="grid min-w-0 flex-1 basis-40 grid-cols-[minmax(0,1fr)] gap-1">{children}</div>
-      <div className="-my-2 flex min-h-[var(--control-md)] max-w-full min-w-0 flex-wrap items-center gap-2">
+      <div
+        data-section-actions=""
+        className="-my-2 flex min-h-[var(--control-md)] max-w-full min-w-0 flex-wrap items-center gap-2"
+      >
         {actions}
       </div>
     </header>
