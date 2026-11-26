@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
 import { ProjectMarkets } from './project-markets';
-import { textRole } from '@/components/ui/typography';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Plus, X } from '@/lib/icons';
 import { projectMutations } from '@/lib/api/projects';
 import { brandDiscoveryQueries } from '@/lib/api/brand-discoveries';
@@ -150,77 +150,79 @@ export function ProjectEditPanel({
         </>
       }
     >
+      {save.isError ? (
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(save.error, { action: 'save the project' })}
+        />
+      ) : null}
+
       <Stack gap="workspace">
-        {save.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(save.error, { action: 'save the project' })}
-          />
-        ) : null}
-
-        <Stack gap="workspace">
-          <Field
-            label="Project name"
-            error={nameMissing ? 'Enter a project name.' : undefined}
-            required
-          >
+        <Field
+          label="Project name"
+          error={nameMissing ? 'Enter a project name.' : undefined}
+          required
+        >
+          {(props) => (
+            <Input {...props} value={name} onChange={(event) => setName(event.target.value)} />
+          )}
+        </Field>
+        <Field label="Brand name">
+          {(props) => (
+            <Input
+              {...props}
+              value={brandName}
+              onChange={(event) => {
+                setBrandName(event.target.value);
+                setBrandRule((rule) => ({ ...rule, touched: true }));
+              }}
+            />
+          )}
+        </Field>
+        <Field label="Website">
+          {(props) => (
+            <Input
+              {...props}
+              value={websiteUrl}
+              onChange={(event) => setWebsiteUrl(event.target.value)}
+            />
+          )}
+        </Field>
+        <MentionRuleFields name={brandName} rule={brandRule} onChange={setBrandRule} />
+        <Stack gap="compact" className="grid-cols-2">
+          <Field label="Country">
             {(props) => (
-              <Input {...props} value={name} onChange={(event) => setName(event.target.value)} />
-            )}
-          </Field>
-          <Field label="Brand name">
-            {(props) => (
-              <Input
+              <MarketSelect
                 {...props}
-                value={brandName}
-                onChange={(event) => {
-                  setBrandName(event.target.value);
-                  setBrandRule((rule) => ({ ...rule, touched: true }));
-                }}
+                ariaLabel="Country"
+                value={country}
+                onChange={setCountry}
+                options={MARKET_COUNTRIES}
               />
             )}
           </Field>
-          <Field label="Website">
+          <Field label="Language">
             {(props) => (
-              <Input
+              <MarketSelect
                 {...props}
-                value={websiteUrl}
-                onChange={(event) => setWebsiteUrl(event.target.value)}
+                ariaLabel="Language"
+                value={language}
+                onChange={setLanguage}
+                options={MARKET_LANGUAGES}
               />
             )}
           </Field>
-          <MentionRuleFields name={brandName} rule={brandRule} onChange={setBrandRule} />
-          <Stack gap="compact" className="grid-cols-2">
-            <Field label="Country">
-              {(props) => (
-                <MarketSelect
-                  {...props}
-                  ariaLabel="Country"
-                  value={country}
-                  onChange={setCountry}
-                  options={MARKET_COUNTRIES}
-                />
-              )}
-            </Field>
-            <Field label="Language">
-              {(props) => (
-                <MarketSelect
-                  {...props}
-                  ariaLabel="Language"
-                  value={language}
-                  onChange={setLanguage}
-                  options={MARKET_LANGUAGES}
-                />
-              )}
-            </Field>
-          </Stack>
-          {open ? (
-            <ProjectMarkets projectId={project.id} workspaceId={project.workspace_id} />
-          ) : null}
         </Stack>
+      </Stack>
+      {open ? <ProjectMarkets projectId={project.id} workspaceId={project.workspace_id} /> : null}
 
+      <Section aria-labelledby="project-domains">
+        <SectionHeader>
+          <SectionTitle id="project-domains" level={3}>
+            Domains
+          </SectionTitle>
+        </SectionHeader>
         <Stack gap="workspace">
-          <p className={textRole('body', 'text-ink-2')}>Domains</p>
           <Field label="Owned" hint="Comma separated">
             {(props) => (
               <Input
@@ -241,76 +243,82 @@ export function ProjectEditPanel({
             )}
           </Field>
         </Stack>
+      </Section>
 
-        <Stack gap="compact">
-          <Inline>
-            <p className={textRole('body', 'text-ink-2')}>Competitors</p>
-            <span className="type-caption">
-              {competitors.length} of {maximumCompetitors ?? '…'}
-            </span>
-            <Button
-              variant="quiet"
-              className="ms-auto"
-              aria-label="Add competitor"
-              disabled={competitorLimitReached}
-              onClick={() =>
-                setCompetitors((prev) => [
-                  ...prev,
-                  {
-                    key: nextCompetitorKey(),
-                    name: '',
-                    aliases: [],
-                    domains: '',
-                    rule: mentionRuleDraft(undefined),
-                  },
-                ])
-              }
-            >
-              <Icon icon={Plus} />
-              Add
-            </Button>
-          </Inline>
-          {competitors.length === 0 ? (
-            <StateBlock kind="empty" inline message="None tracked." />
-          ) : (
-            <Stack as="ul" gap="compact" className="list-none">
-              {competitors.map((competitor, index) => (
-                <Stack as="li" key={competitor.key} gap="compact">
-                  <Inline>
-                    <Input
-                      value={competitor.name}
-                      onChange={(event) =>
-                        updateCompetitor(index, {
-                          name: event.target.value,
-                          rule: { ...competitor.rule, touched: true },
-                        })
-                      }
-                      aria-label={`Competitor ${index + 1} name`}
-                      placeholder="Name"
-                    />
-                    <Input
-                      value={competitor.domains}
-                      onChange={(event) => updateCompetitor(index, { domains: event.target.value })}
-                      aria-label={`Competitor ${index + 1} domains`}
-                      placeholder="Domains"
-                    />
-                    <IconButton
-                      icon={X}
-                      label={`Remove ${competitorName(competitor.name, index)}`}
-                      onClick={() => setCompetitors((prev) => prev.filter((_, i) => i !== index))}
-                    />
-                  </Inline>
-                  <MentionRuleFields
-                    name={competitor.name}
-                    rule={competitor.rule}
-                    onChange={(rule) => updateCompetitor(index, { rule })}
+      <Section aria-labelledby="project-competitors">
+        <SectionHeader
+          actions={
+            <>
+              <span className="type-caption">
+                {competitors.length} of {maximumCompetitors ?? '…'}
+              </span>
+              <Button
+                variant="quiet"
+                aria-label="Add competitor"
+                disabled={competitorLimitReached}
+                onClick={() =>
+                  setCompetitors((prev) => [
+                    ...prev,
+                    {
+                      key: nextCompetitorKey(),
+                      name: '',
+                      aliases: [],
+                      domains: '',
+                      rule: mentionRuleDraft(undefined),
+                    },
+                  ])
+                }
+              >
+                <Icon icon={Plus} />
+                Add
+              </Button>
+            </>
+          }
+        >
+          <SectionTitle id="project-competitors" level={3}>
+            Competitors
+          </SectionTitle>
+        </SectionHeader>
+        {competitors.length === 0 ? (
+          <StateBlock kind="empty" inline message="None tracked." />
+        ) : (
+          <Stack as="ul" gap="compact" className="list-none">
+            {competitors.map((competitor, index) => (
+              <Stack as="li" key={competitor.key} gap="compact">
+                <Inline>
+                  <Input
+                    value={competitor.name}
+                    onChange={(event) =>
+                      updateCompetitor(index, {
+                        name: event.target.value,
+                        rule: { ...competitor.rule, touched: true },
+                      })
+                    }
+                    aria-label={`Competitor ${index + 1} name`}
+                    placeholder="Name"
                   />
-                </Stack>
-              ))}
-            </Stack>
-          )}
-        </Stack>
-      </Stack>
+                  <Input
+                    value={competitor.domains}
+                    onChange={(event) => updateCompetitor(index, { domains: event.target.value })}
+                    aria-label={`Competitor ${index + 1} domains`}
+                    placeholder="Domains"
+                  />
+                  <IconButton
+                    icon={X}
+                    label={`Remove ${competitorName(competitor.name, index)}`}
+                    onClick={() => setCompetitors((prev) => prev.filter((_, i) => i !== index))}
+                  />
+                </Inline>
+                <MentionRuleFields
+                  name={competitor.name}
+                  rule={competitor.rule}
+                  onChange={(rule) => updateCompetitor(index, { rule })}
+                />
+              </Stack>
+            ))}
+          </Stack>
+        )}
+      </Section>
     </Dialog>
   );
 }
