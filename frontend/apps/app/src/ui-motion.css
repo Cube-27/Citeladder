@@ -1,12 +1,13 @@
 .tooltip-panel {
   --popup-from: 0 -4px;
+  --popup-scale: 0.9;
 }
 .tooltip-panel[data-side] {
   --popup-from: 0 2px;
 }
 :is(.menu-panel, .popover-panel)[class] {
   --popup-from: 0;
-  --popup-scale: 0.96;
+  --popup-scale: 0.9;
   transform-origin: var(--radix-popper-transform-origin, var(--popup-origin, center));
 }
 @keyframes popup-in {
@@ -24,10 +25,10 @@
   }
 }
 :is(.tooltip-panel[data-state$='open'], .menu-panel:is([data-state$='open'], [data-open])) {
-  animation: popup-in var(--motion-open) var(--ease-standard);
+  animation: popup-in var(--motion-normal) ease;
 }
 :is(.menu-panel, .tooltip-panel)[data-state='closed'] {
-  animation: popup-out var(--motion-close) var(--ease-exit) both;
+  animation: popup-out var(--motion-menu-exit) var(--ease-exit) both;
 }
 [data-selection-dock] {
   --popup-from: -50% 8px;
@@ -51,14 +52,14 @@
   scale: var(--toast-scale);
   transform-origin: top;
   transition-property: translate, scale;
-  transition-duration: var(--motion-open);
+  transition-duration: var(--motion-toast);
   transition-timing-function: var(--ease-fluid);
 }
 .toast-panel:not([data-front]) {
   height: var(--front-height, auto);
 }
 .toast-panel > * {
-  transition: opacity var(--motion-fast) var(--ease-fluid);
+  transition: opacity var(--motion-normal) var(--ease-fluid);
 }
 .toast-stack .toast-panel:not([data-front]) > * {
   opacity: 0;
@@ -104,21 +105,17 @@
   --popup-from: 0;
 }
 .dialog-panel {
-  --popup-from: -50% 6px;
-  --popup-scale: 0.985;
+  --popup-from: -50% 0;
+  --popup-scale: 1.05;
 }
 .dialog-overlay[data-state='open'] {
-  animation: popup-in var(--motion-open) var(--ease-standard) both;
+  animation: popup-in var(--motion-normal) var(--ease-standard) both;
 }
 .dialog-panel[data-state='open'] {
-  animation: popup-in var(--motion-open) var(--ease-quad) both;
-}
-.dialog-panel[data-state='closed'] {
-  --popup-from: -50% 0;
-  --popup-scale: 0.99;
+  animation: popup-in var(--motion-overlay) var(--ease-quad) both;
 }
 :is(.dialog-overlay, .dialog-panel)[data-state='closed'] {
-  animation: popup-out var(--motion-close) var(--ease-exit) both;
+  animation: popup-out var(--motion-menu-exit) var(--ease-exit) both;
 }
 
 .drawer-panel {
@@ -138,16 +135,16 @@
   }
 }
 .drawer-overlay[data-state='open'] {
-  animation: popup-in var(--motion-open) var(--ease-fluid) both;
+  animation: popup-in var(--motion-overlay) var(--ease-fluid) both;
 }
 .drawer-panel[data-state='open'] {
-  animation: slide-in var(--motion-open) var(--ease-fluid) both;
+  animation: slide-in var(--motion-overlay) var(--ease-fluid) both;
 }
 .drawer-overlay[data-state='closed'] {
-  animation: popup-out var(--motion-close) var(--ease-fluid) both;
+  animation: popup-out var(--motion-slow) var(--ease-fluid) both;
 }
 .drawer-panel[data-state='closed'] {
-  animation: slide-out var(--motion-close) var(--ease-fluid) both;
+  animation: slide-out var(--motion-slow) var(--ease-fluid) both;
 }
 
 .disclosure > summary > svg {

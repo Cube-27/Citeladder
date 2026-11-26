@@ -243,6 +243,10 @@
   --ease-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --ease-sweep: linear;
   --motion-normal: 150ms;
+  --motion-press: 250ms;
+  --motion-tint: 100ms;
+  --motion-overlay: 250ms;
+  --motion-toast: 350ms;
   --motion-slow: 200ms;
   --motion-menu: 200ms;
   --motion-menu-exit: 100ms;
@@ -358,17 +362,17 @@
 }
 
 :root[data-theme='dark']:not([data-public-surface]) {
-  --color-ground: #0f0f0f;
-  --color-panel: #202020;
-  --color-raised: #2a2a2a;
-  --color-raised-2: #373737;
-  --table-head-ground: #2e2e2e;
+  --color-ground: oklch(12% 0.005 285.823);
+  --color-panel: oklch(21.03% 0.0059 285.89);
+  --color-raised: oklch(25.7% 0.0037 286.14);
+  --color-raised-2: oklch(27.21% 0.0024 247.91);
+  --table-head-ground: oklch(25.7% 0.0037 286.14);
   --color-thumb: var(--color-ink-2);
   --color-rule: rgb(255 255 255 / 11%);
   --color-control-line: rgb(255 255 255 / 22%);
-  --color-page: #141414;
-  --color-ink: #ececec;
-  --color-ink-2: #a8a8aa;
+  --color-page: oklch(15% 0.005 285.823);
+  --color-ink: oklch(99.11% 0 0);
+  --color-ink-2: oklch(72% 0.015 286.067);
   --color-ink-hover: oklch(85% 0 0);
   --color-accent: #ff6a33;
   --color-accent-text: oklch(75.3% 0.155 41.6);
@@ -387,14 +391,16 @@
   --color-data-other: oklch(65% 0 0);
   --color-state-hover: rgb(255 255 255 / 4%);
   --color-state-selected: rgb(255 255 255 / 7%);
-  --nav-current-fill: rgb(255 255 255 / 11%);
+  --color-state-fill: rgb(255 255 255 / 7%);
+  --color-state-fill-hover: rgb(255 255 255 / 10%);
+  --nav-current-fill: oklch(39.64% 0.01 285.93);
   --color-scrim: oklch(0% 0 0 / 60%);
   --shadow-card: none;
   --shadow-field: none;
   --shadow-pop: inset 0 0 1px rgb(255 255 255 / 30%);
   --shadow-sheet: var(--shadow-pop);
-  --color-well: var(--color-page);
-  --color-field-edge-hover: rgb(255 255 255 / 10%);
+  --color-well: oklch(27.4% 0.006 286.033);
+  --shadow-thumb: none;
 
   --weight-regular: 350;
   --weight-medium: 450;
@@ -540,15 +546,13 @@
   --color-well: oklch(94% 0.001 286.375);
   --color-page: oklch(97.02% 0 0);
   --color-rule: rgb(0 0 0 / 11%);
-  --color-field-edge-hover: rgb(0 0 0 / 10%);
+  --color-field-hover: color-mix(in oklab, var(--color-panel) 90%, var(--color-ink) 2%);
   --color-control-line: rgb(0 0 0 / 22%);
   --color-focus: var(--color-accent);
-  --focus-width: 1px;
-  --focus-offset: 0px;
-  --focus-glow: color-mix(in srgb, var(--color-focus) 24%, transparent);
-  --field-focus-edge: var(--color-focus);
-  --color-ink: #1d1d1d;
-  --color-ink-2: #54585f;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --color-ink: oklch(21.03% 0.0059 285.89);
+  --color-ink-2: oklch(47% 0.0138 285.94);
   --color-ink-3: #71717a;
   --color-ink-hover: oklch(32% 0.015 264);
   --color-on-ink: var(--color-panel);
@@ -559,6 +563,8 @@
   --color-positive-wash: oklch(95.2% 0.022 160);
   --color-negative: oklch(53.3% 0.191 16);
   --color-negative-wash: oklch(94.8% 0.022 4);
+  --color-negative-hover: color-mix(in oklab, var(--color-negative) 90%, white 10%);
+  --color-negative-wash-hover: color-mix(in oklab, var(--color-negative) 20%, transparent);
   --color-warning: oklch(50.8% 0.108 73.3);
   --color-warning-wash: oklch(95.9% 0.046 91);
   --color-info: oklch(49.7% 0.184 263);
@@ -570,7 +576,11 @@
   --color-state-hover: rgb(0 0 0 / 3%);
   --color-state-selected: rgb(0 0 0 / 6%);
   --color-state-pressed: var(--color-state-selected);
-  --color-scrim: oklch(from var(--color-ink) l c h / 45%);
+  --color-state-fill: rgb(0 0 0 / 8%);
+  --color-state-fill-hover: rgb(0 0 0 / 11%);
+  --color-link-decoration: color-mix(in oklab, var(--color-ink-2) 50%, transparent);
+  --scrollbar-thumb: color-mix(in oklch, var(--color-ink) 15%, transparent);
+  --color-scrim: rgb(0 0 0 / 50%);
   --color-chart-grid: var(--color-rule);
   --color-paper: var(--color-ground);
   --color-surface-sunken: var(--color-well);
@@ -608,9 +618,10 @@
   --shadow-field: var(--shadow-card);
   --shadow-pop: 0 2px 8px rgb(0 0 0 / 6%), 0 -6px 12px rgb(0 0 0 / 3%), 0 14px 28px rgb(0 0 0 / 8%);
   --shadow-sheet: var(--shadow-pop);
+  --shadow-thumb: 0 0 5px rgb(0 0 0 / 2%), 0 2px 10px rgb(0 0 0 / 6%), 0 0 1px rgb(0 0 0 / 30%);
   --mark-width: 2px;
 
-  --control-md: 32px;
+  --control-md: 36px;
   --control-lg: 40px;
   --control-coarse: 44px;
   --button-hit: 40px;
@@ -634,7 +645,6 @@
 
   --compact-gap: 8px;
   --card-padding: 16px;
-  --modal-padding: 16px;
   --workspace-gap: 16px;
   --page-top-gap: 24px;
   --section-gap: 20px;
@@ -1233,22 +1243,6 @@ a.focus-ring:active .type-caption {
   outline: var(--focus-width, 2px) solid var(--color-focus);
   outline-offset: var(--focus-offset, 2px);
 }
-:root:not([data-public-surface]):not([data-input-modality='pointer'])
-  :is(:focus-visible, .focus-ring:focus-visible):not(
-    :disabled,
-    [aria-disabled='true'],
-    [data-disabled],
-    [role='menuitem'][data-state='open'],
-    input,
-    textarea,
-    select,
-    [contenteditable],
-    .focus-ring-inset,
-    .table-frame tr,
-    [data-row-title] a
-  ) {
-  box-shadow: 0 0 0 3px var(--focus-glow);
-}
 
 :where(:root:not([data-public-surface]) *) {
   outline-color: var(--color-focus);
@@ -1269,7 +1263,7 @@ a.focus-ring:active .type-caption {
     :focus-visible,
     :has(input:focus-visible:not([data-quiet-focus]))
   ) {
-  box-shadow: inset 0 0 0 3px var(--focus-glow);
+  box-shadow: inset 0 0 0 var(--focus-width) var(--color-focus);
 }
 
 .focus-input:focus-visible,
@@ -1282,7 +1276,8 @@ a.focus-ring:active .type-caption {
 }
 :root:not([data-public-surface])
   :is(.focus-input:focus-visible, .focus-frame:has(:where(input, textarea, select):focus-visible)) {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--field-focus-edge) 24%, transparent);
+  border-color: transparent;
+  box-shadow: 0 0 0 var(--focus-width) var(--field-focus-edge, var(--color-focus));
 }
 
 :root:not([data-public-surface])
@@ -1441,9 +1436,7 @@ a.focus-ring:active .type-caption {
 
 :root:not([data-public-surface])
   [data-button-variant]:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
-  background-color: var(--color-raised-2);
-  border-color: transparent;
-  color: color-mix(in oklch, var(--color-ink-2) 80%, transparent);
+  opacity: 0.5;
   box-shadow: none;
 }
 
@@ -1655,7 +1648,7 @@ label {
 :root:not([data-public-surface]) .table-frame thead > tr {
   height: auto;
 }
-:root:not([data-public-surface]) .table-frame thead th[aria-sort] {
+:root:not([data-public-surface]) .table-frame thead th:is([aria-sort], :has(button:hover)) {
   color: var(--color-ink);
 }
 :root:not([data-public-surface]) .table-frame tbody :is(td, th) {
@@ -1854,11 +1847,11 @@ label {
 @layer components {
   .press {
     transition:
-      scale var(--motion-open),
-      background-color var(--motion-fast),
-      color var(--motion-fast),
-      border-color var(--motion-fast),
-      box-shadow var(--motion-fast);
+      scale var(--motion-press) ease,
+      background-color var(--motion-tint),
+      color var(--motion-tint),
+      border-color var(--motion-tint),
+      box-shadow var(--motion-tint);
     transition-timing-function: var(--ease-standard);
   }
   @media (prefers-reduced-motion: no-preference) {
@@ -1870,7 +1863,7 @@ label {
 }
 
 :is([aria-haspopup], [role='combobox']) .tabler-icon-chevron-down {
-  transition: rotate var(--motion-open) var(--ease-standard);
+  transition: rotate var(--motion-normal) var(--ease-standard);
 }
 :root:not([data-public-surface]) :is([aria-haspopup], [role='combobox'])[aria-expanded='true'] .tabler-icon-chevron-down {
   rotate: 180deg;
