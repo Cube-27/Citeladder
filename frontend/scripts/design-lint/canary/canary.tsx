@@ -15,7 +15,7 @@ export function Canary({ tone }: { tone: string }) {
       <p className="z-10 opacity-50">survivors</p>
       <p className="border-white">monochrome</p>
       <p className="[[data-public-surface]_&]:rounded-card">variant</p>
-      <p className="no-such-class">unknown</p>
+      <p className="no-such-class bg-ink font-medium">unknown</p>
       <Stack className={tone}>dynamic</Stack>
       <Stack className="rounded-card">restyle</Stack>
       <p title={MIX}>colour</p>

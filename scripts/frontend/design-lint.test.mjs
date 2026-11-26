@@ -31,10 +31,12 @@ function lintCanary() {
     );
     return [];
   } catch (error) {
-    return JSON.parse(error.stdout).diagnostics.map(
-      ({ filename, code, labels }) =>
-        `${filename.split('/').pop()}:${labels[0].span.line} ${code.replace(/^(\w+)\((.+)\)$/, '$1/$2')}`,
-    );
+    return JSON.parse(error.stdout)
+      .diagnostics.filter(({ labels }) => labels.length)
+      .map(
+        ({ filename, code, labels }) =>
+          `${filename.split('/').pop()}:${labels[0].span.line} ${code.replace(/^(\w+)\((.+)\)$/, '$1/$2')}`,
+      );
   } finally {
     rmSync(config, { force: true });
   }
@@ -57,6 +59,9 @@ test('the canary trips every design rule under the shipped lint config', () => {
     'canary.tsx:16 design/plain-element',
     'canary.tsx:17 design/plain-element',
     'canary.tsx:17 design/surface-variant',
+    'canary.tsx:18 design/plain-element',
+    'canary.tsx:18 shadcn/no-raw-colors',
+    'canary.tsx:18 shadcn/no-unknown-classes',
     'canary.tsx:18 shadcn/no-unknown-classes',
     'canary.tsx:19 shadcn/require-static-classes',
     'canary.tsx:20 shadcn/no-restyle',
