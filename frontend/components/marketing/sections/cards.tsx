@@ -37,7 +37,9 @@ export function RelatedCards({
         <li key={item.href}>
           <a href={item.href} className="cl-related-row focus-ring">
             <div className="cl-related-head">
-              {item.eyebrow && <span className="type-eyebrow cl-eyebrow">{item.eyebrow}</span>}
+              {item.eyebrow && (
+                <span className="text-kicker text-ink-2 cl-eyebrow">{item.eyebrow}</span>
+              )}
               <h3 className="cl-related-title">{item.title}</h3>
             </div>{' '}
             {item.body && <span className="cl-related-text">{item.body}</span>}

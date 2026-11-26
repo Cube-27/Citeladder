@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { Button, type ButtonVariant } from '@/components/ui/button';
-import { Card, CardEyebrow, CardHeader } from '@/components/ui/card';
+import { Card, CardHeader } from '@/components/ui/card';
 import { Delta } from '@/components/ui/delta';
 import { EngineMark, type EngineKey } from '@/components/ui/engine-mark';
 import { Icon } from '@/components/ui/icon';
@@ -19,6 +19,10 @@ import { cn } from '@/lib/utils';
 
 import { ENGINE_KEYS, ENGINE_NAMES, type Change } from './demo-data';
 import './screen-parts.css';
+
+function CardEyebrow({ children }: Readonly<{ children: ReactNode }>) {
+  return <span className="text-screen-label text-ink-2 font-mono uppercase">{children}</span>;
+}
 
 export function ScreenButton({
   variant = 'secondary',
@@ -109,7 +113,7 @@ export function ScreenStat({
 }: Readonly<{ label: string; value: string; unit?: string; change?: Change; period?: string }>) {
   return (
     <div className="cl-screen-stat">
-      <span className="type-eyebrow">{label}</span>
+      <span className="text-screen-eyebrow text-ink-2 font-mono uppercase">{label}</span>
       <span className="cl-screen-stat-value">
         {value}
         {unit && <span className="cl-screen-stat-unit">{unit}</span>}

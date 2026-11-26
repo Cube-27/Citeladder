@@ -65,7 +65,7 @@ const range = (count: number) => Array.from({ length: count }, (_, index) => ind
 
 function CaptionLine({ width }: Readonly<{ width: string }>) {
   return (
-    <span className="type-caption flex h-lh items-center">
+    <span className="text-caption text-ink-2 flex h-lh items-center">
       <SkeletonBlock className={width} />
     </span>
   );
@@ -214,7 +214,7 @@ function ThreadBlocks() {
 
 export function ComposerBlocks() {
   return (
-    <span className="bg-surface border-rule rounded-card shadow-pop grid gap-1 border p-2">
+    <span className="bg-panel border-rule rounded-card shadow-pop grid gap-1 border p-2">
       <span className="block h-[30px]" />
       <span className="flex h-[var(--control-md)] items-center justify-end">
         <SkeletonBlock className="size-8 rounded-full" />

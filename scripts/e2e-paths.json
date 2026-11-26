@@ -10,6 +10,9 @@
   {
     "sources": [
       "frontend/apps/app/src/globals.css",
+      "frontend/apps/app/src/app-type.css",
+      "frontend/apps/app/src/public-surface.css",
+      "frontend/apps/marketing/src/site-type.css",
       "frontend/apps/marketing/src/site-base.css",
       "frontend/components/marketing/**/*.css"
     ],
@@ -18,6 +21,7 @@
   {
     "sources": [
       "frontend/apps/app/src/globals.css",
+      "frontend/apps/app/src/app-type.css",
       "frontend/components/layout/page-shell.tsx",
       "frontend/components/prompts/prompt-bulk-bar.tsx",
       "frontend/components/prompts/prompt-library.tsx",
@@ -108,6 +112,7 @@
     "sources": [
       "frontend/apps/marketing/**",
       "frontend/apps/app/src/globals.css",
+      "frontend/apps/app/src/public-surface.css",
       "frontend/components/marketing/**",
       "frontend/lib/marketing-content/**",
       "frontend/lib/consent/**",

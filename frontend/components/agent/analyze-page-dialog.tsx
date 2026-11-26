@@ -225,7 +225,7 @@ function TopicField({
         inline
         message={
           <>
-            <span className="type-emphasis">No topics with prompts</span> Add prompts to a topic on
+            <span className="font-emphasis">No topics with prompts</span> Add prompts to a topic on
             the Prompts page first.
           </>
         }

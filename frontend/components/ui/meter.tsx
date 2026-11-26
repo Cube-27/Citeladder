@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 export type MeterTone = 'ink' | 'accent' | 'warning' | 'negative';
 
 const METER_FILL = {
-  ink: 'bg-ink',
+  ink: 'bg-mark-ink',
   accent: 'bg-data-you',
   warning: 'bg-warning',
   negative: 'bg-negative',
@@ -86,11 +86,11 @@ export function Meter({
       <MeterLabelRow>
         <span
           id={labelId}
-          className="text-body-sm text-ink [[data-public-surface]_&]:min-w-0 [[data-public-surface]_&]:break-words"
+          className="text-body text-ink [[data-public-surface]_&]:min-w-0 [[data-public-surface]_&]:break-words"
         >
           {label}
         </span>
-        <span className="text-body-sm text-ink-2 whitespace-nowrap tabular-nums">
+        <span className="text-body text-ink-2 whitespace-nowrap tabular-nums">
           {valueLabel === undefined && value === null ? <Absence state="not_measured" /> : shown}
         </span>
       </MeterLabelRow>
@@ -161,7 +161,7 @@ export function MeterRow({
           percent === null ? availabilityLabel('not_measured') : formatPercent(percent / 100)
         }
       />
-      <span className="text-body-sm text-ink text-right tabular-nums">{figure}</span>
+      <span className="text-body text-ink text-right tabular-nums">{figure}</span>
     </div>
   );
 }

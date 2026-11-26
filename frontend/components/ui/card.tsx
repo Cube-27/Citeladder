@@ -2,7 +2,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-const CARD_FACE = 'bg-surface text-ink rounded-card';
+const CARD_FACE = 'bg-panel text-ink rounded-card';
 
 const cardClasses = () => cn('surface-card p-[var(--card-padding)]', CARD_FACE);
 
@@ -46,17 +46,5 @@ export function CardHeader({
       <div className="grid min-w-0 flex-1 basis-60 gap-1">{children}</div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
     </header>
-  );
-}
-
-export function CardEyebrow({
-  children,
-  className,
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'span'>>) {
-  return (
-    <span {...props} className={cn('type-screen-label', className)}>
-      {children}
-    </span>
   );
 }

@@ -41,7 +41,7 @@ export function ProjectControls({
             <span className="grid min-w-0 flex-1">
               <span>Add project</span>
               {remainingProjectSlots === 0 && (
-                <span className="type-caption">Project limit reached</span>
+                <span className="text-caption text-ink-2">Project limit reached</span>
               )}
             </span>
           </MenuItem>

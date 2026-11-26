@@ -157,11 +157,13 @@ function DrawerHeader({
   return (
     <header className="flex items-start justify-between gap-4 px-[var(--modal-padding)] pt-[var(--modal-padding)]">
       <div className="min-w-0">
-        {eyebrow ? <p className="type-caption-strong mb-1">{eyebrow}</p> : null}
-        <DialogPrimitive.Title className="type-heading truncate">{title}</DialogPrimitive.Title>
+        {eyebrow ? <p className="text-caption-strong text-ink-2 mb-1">{eyebrow}</p> : null}
+        <DialogPrimitive.Title className="text-heading text-ink truncate">
+          {title}
+        </DialogPrimitive.Title>
         {description ? (
           <DialogPrimitive.Description asChild>
-            <div className="text-body-sm text-ink-2 mt-1">{description}</div>
+            <div className="text-body text-ink-2 mt-1">{description}</div>
           </DialogPrimitive.Description>
         ) : null}
       </div>

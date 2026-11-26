@@ -133,7 +133,7 @@ export function ValuesInput({
         onBlur={add}
         onKeyDown={onFieldKey}
         onPaste={onPaste}
-        className="text-ink placeholder:text-ink-3 type-body min-h-6 w-8 min-w-8 flex-1 bg-transparent px-1 disabled:cursor-not-allowed"
+        className="text-ink placeholder:text-ink-placeholder text-body min-h-6 w-8 min-w-8 flex-1 bg-transparent px-1 disabled:cursor-not-allowed"
       />
       {accepting ? <AcceptTick label={label} disabled={disabled} onAccept={onAccept} /> : null}
     </div>
@@ -169,7 +169,7 @@ function Token({
   return (
     <li
       className={cn(
-        'group/token type-body rounded-mark inline-flex h-6 max-w-full items-center gap-1 ps-1.5 pe-1 whitespace-nowrap',
+        'group/token text-body text-ink rounded-mark inline-flex h-6 max-w-full items-center gap-1 ps-1.5 pe-1 whitespace-nowrap',
         item.suggested ? 'border-control-line border border-dashed' : 'bg-state-selected',
       )}
     >
@@ -218,7 +218,7 @@ export function ChipInput({
 }: Readonly<Omit<Parameters<typeof ValuesInput>[0], 'variant' | 'separates'>>) {
   return (
     <fieldset className="flex min-w-0 flex-col gap-2">
-      <legend className="text-body-sm text-ink mb-2">{label}</legend>
+      <legend className="text-body text-ink mb-2">{label}</legend>
       <ValuesInput label={label} max={max} {...input} />
       {max !== undefined ? (
         <span

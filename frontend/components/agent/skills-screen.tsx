@@ -106,7 +106,7 @@ function SkillRow({ skill, output }: Readonly<{ skill: AgentSkill; output: strin
           href={agentHandoffHref({ skillId: skill.id })}
           aria-label={`Start a chat with ${skill.label}`}
           aria-describedby={output ? `${detailId} ${detailId}-output` : detailId}
-          className="focus-ring-inset type-label text-ink self-start no-underline before:absolute before:inset-0"
+          className="focus-ring-inset text-label text-ink self-start no-underline before:absolute before:inset-0"
         >
           {skill.label}
         </ProjectLink>

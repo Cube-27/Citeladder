@@ -13,7 +13,7 @@
 .cl-shead-title {
   max-width: 960px;
   margin: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-display);
   font-size: var(--text-site-section);
   font-weight: 400;
@@ -85,8 +85,8 @@
 }
 
 .cl-page-section--aside.cl-page-section--compact .cl-shead-lead {
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 @media (max-width: 1023px) {

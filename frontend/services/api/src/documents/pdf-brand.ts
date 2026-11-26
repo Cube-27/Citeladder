@@ -15,17 +15,16 @@ import { create as parseFont } from 'fontkit';
 import { oklchToHex } from './oklch.ts';
 
 const TOKENS = {
-  ink: '--color-ink',
-  inkSecondary: '--color-ink-secondary',
-  inkMuted: '--color-ink-muted',
+  ink: '--text-color-ink',
+  ink2: '--text-color-ink-2',
   accent: '--color-accent',
-  accentInk: '--color-accent-ink',
-  surfaceSunken: '--color-surface-sunken',
-  line: '--color-line',
+  accentText: '--text-color-accent-text',
+  well: '--color-well',
+  rule: '--color-rule',
   negative: '--color-negative',
-  negativeSoft: '--color-negative-soft',
+  negativeWash: '--color-negative-wash',
   warning: '--color-warning',
-  warningSoft: '--color-warning-soft',
+  warningWash: '--color-warning-wash',
 } as const;
 export type Tone = keyof typeof TOKENS;
 export type Palette = Readonly<Record<Tone, string>>;
@@ -145,13 +144,13 @@ async function tokenSource(): Promise<string> {
 
 function parsePalette(css: string): Palette {
   const declared = new Map<string, string>();
-  for (const match of css.matchAll(/^[ \t]*(--[a-z0-9-]+)[ \t]*:([^;{}]+);/gimu)) {
+  for (const match of css.matchAll(/^[ \t]*(--[\w-]+)[ \t]*:([^;{}]+);/gimu)) {
     const [, name = '', value = ''] = match;
     if (!declared.has(name)) declared.set(name, value.trim());
   }
   const resolve = (name: string, seen: ReadonlySet<string>): string => {
     const value = declared.get(name);
-    const reference = /^var\((--[a-z0-9-]+)\)$/iu.exec(value ?? '')?.[1];
+    const reference = /^var\((--[\w-]+)\)$/iu.exec(value ?? '')?.[1];
     if (reference && !seen.has(reference)) return resolve(reference, new Set([...seen, name]));
     const hex = value && (/^#[0-9a-f]{6}$/iu.test(value) ? value : oklchToHex(value));
     if (!hex) throw new Error(`Design token ${name} has no light sRGB colour`);
@@ -160,16 +159,15 @@ function parsePalette(css: string): Palette {
   const token = (tone: Tone) => resolve(TOKENS[tone], new Set());
   return {
     ink: token('ink'),
-    inkSecondary: token('inkSecondary'),
-    inkMuted: token('inkMuted'),
+    ink2: token('ink2'),
     accent: token('accent'),
-    accentInk: token('accentInk'),
-    surfaceSunken: token('surfaceSunken'),
-    line: token('line'),
+    accentText: token('accentText'),
+    well: token('well'),
+    rule: token('rule'),
     negative: token('negative'),
-    negativeSoft: token('negativeSoft'),
+    negativeWash: token('negativeWash'),
     warning: token('warning'),
-    warningSoft: token('warningSoft'),
+    warningWash: token('warningWash'),
   };
 }
 

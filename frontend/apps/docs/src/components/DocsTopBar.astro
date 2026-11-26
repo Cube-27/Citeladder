@@ -96,7 +96,7 @@ const sections = [
     top: 0;
     z-index: var(--z-index-overlay);
     background: var(--color-site-page);
-    box-shadow: inset 0 -1px 0 var(--color-line);
+    box-shadow: inset 0 -1px 0 var(--color-rule);
   }
   .cl-docs-bar-inner,
   .cl-docs-bar-tab-list {
@@ -118,7 +118,7 @@ const sections = [
     margin-left: -4px;
     padding: 4px;
     border-radius: var(--radius-sm);
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     text-decoration: none;
   }
   .cl-docs-bar-home :global(.cl-docs-bar-mark) {
@@ -144,7 +144,7 @@ const sections = [
     height: var(--control-md);
     padding: 0 12px;
     border-radius: var(--radius-md);
-    color: var(--color-ink-secondary);
+    color: var(--text-color-ink-2);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
     font-weight: 500;
@@ -155,11 +155,11 @@ const sections = [
       color var(--motion-fast) var(--ease-standard);
   }
   .cl-docs-bar-site:hover {
-    background: var(--color-surface-sunken);
-    color: var(--color-ink);
+    background: var(--color-well);
+    color: var(--text-color-ink);
   }
   .cl-docs-bar-tabs {
-    box-shadow: inset 0 1px 0 var(--color-line);
+    box-shadow: inset 0 1px 0 var(--color-rule);
   }
   .cl-docs-bar-tab-list {
     display: flex;
@@ -178,7 +178,7 @@ const sections = [
     align-items: center;
     gap: 8px;
     padding: 0 12px;
-    color: var(--color-ink-secondary);
+    color: var(--text-color-ink-2);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
     font-weight: 500;
@@ -203,13 +203,13 @@ const sections = [
     content: '';
   }
   .cl-docs-bar-tab:hover {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .cl-docs-bar-tab:not([aria-current='page']):hover::before {
-    background: var(--color-surface-sunken);
+    background: var(--color-well);
   }
   .cl-docs-bar-tab[aria-current='page'] {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .cl-docs-bar-tab[aria-current='page']::after {
     background: var(--color-accent);
@@ -234,7 +234,7 @@ const sections = [
     overscroll-behavior: contain;
     padding: 16px 20px 24px;
     background: var(--color-site-page);
-    border-top: 1px solid var(--color-line);
+    border-top: 1px solid var(--color-rule);
     box-shadow: var(--shadow-pop);
   }
   .cl-docs-bar-sheet[hidden] {
@@ -242,7 +242,7 @@ const sections = [
   }
   .cl-docs-bar-sheet-tabs {
     padding-bottom: 16px;
-    border-bottom: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-rule);
   }
   @media (max-width: 1279px) {
     .cl-docs-bar-search :global([data-docs-search-trigger='field']) {

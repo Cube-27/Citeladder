@@ -13,7 +13,7 @@ export const AXIS_PROPS = {
   axisLine: false,
   tickLine: false,
   tickMargin: 8,
-  tick: { fill: 'var(--color-ink-2)', fontSize: 12 },
+  tick: { fill: 'var(--text-color-ink-2)', fontSize: 12 },
 } as const;
 
 export const GRID_PROPS = {
@@ -56,7 +56,7 @@ export function ShapeMark({
 }>) {
   const paint = {
     fill: color,
-    stroke: outline ? 'var(--color-surface)' : 'none',
+    stroke: outline ? 'var(--color-panel)' : 'none',
     strokeWidth: outline ? 2 : 0,
   };
   switch (shape) {
@@ -96,7 +96,7 @@ export function ChartTooltipCard({
           <SeriesIndicator color={row.color} shape={row.shape} />
           {row.mark}
           <span className="text-ink-2 min-w-0 flex-1 truncate">{row.name}</span>
-          <span className="text-ink font-medium tabular-nums">{printed(row.value)}</span>
+          <span className="text-ink font-emphasis tabular-nums">{printed(row.value)}</span>
         </div>
       ))}
       {note ? <p className={textRole('caption', 'text-warning')}>{note}</p> : null}

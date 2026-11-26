@@ -50,7 +50,7 @@
 .cl-ifield-name {
   display: block;
   min-height: calc(var(--text-label--line-height) * 2);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-label);
   font-weight: 500;
   line-height: var(--text-label--line-height);

@@ -22,6 +22,7 @@ COPY frontend/vp-shared-config.ts ./vp-shared-config.ts
 COPY frontend/vite.config.ts ./vite.config.ts
 COPY frontend/apps/app/src/globals.css ./apps/app/src/globals.css
 COPY frontend/apps/app/src/ui-motion.css ./apps/app/src/ui-motion.css
+COPY frontend/apps/app/src/app-type.css ./apps/app/src/app-type.css
 RUN pnpm --filter @citeladder/mcp-app build \
     && mkdir -p services/api/assets/mcp-app/v1 \
     && cp packages/mcp-app/dist/analytics.html services/api/assets/mcp-app/v1/analytics.html \

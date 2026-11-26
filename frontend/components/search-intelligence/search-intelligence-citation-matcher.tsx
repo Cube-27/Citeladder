@@ -115,7 +115,7 @@ export function SearchIntelligenceCitationMatcher({
             as="label"
             key={audit.id}
             gap="compact"
-            className="type-body text-ink-2 justify-between"
+            className="text-body text-ink-2 justify-between"
           >
             <Checkbox
               checked={selectedAudits.includes(audit.id)}

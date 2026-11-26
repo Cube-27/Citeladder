@@ -66,11 +66,13 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
             </ClampText>
             <div className="flex shrink-0 items-center gap-2">
               {entry.rate.value === null ? (
-                <Absence state="unavailable" className="type-body text-ink-2" />
+                <Absence state="unavailable" className="text-body text-ink-2" />
               ) : (
                 <>
-                  <span className="type-body tabular-nums">{formatPercent(entry.rate.value)}</span>
-                  <span className="type-caption tabular-nums">
+                  <span className="text-body text-ink tabular-nums">
+                    {formatPercent(entry.rate.value)}
+                  </span>
+                  <span className="text-caption text-ink-2 tabular-nums">
                     {`${entry.rate.numerator} of ${entry.rate.denominator}`}
                   </span>
                 </>

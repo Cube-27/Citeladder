@@ -20,7 +20,7 @@ export function Spinner({
       <span aria-hidden className="inline-grid size-3.5 shrink-0 place-items-center">
         <span className="animate-live-rung rounded-mark block h-3 w-1 bg-current" />
       </span>
-      {label && showLabel ? <span className="type-body text-ink-2">{label}</span> : null}
+      {label && showLabel ? <span className="text-body text-ink-2">{label}</span> : null}
     </Root>
   );
 }

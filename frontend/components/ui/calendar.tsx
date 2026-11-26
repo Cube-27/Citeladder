@@ -95,7 +95,7 @@ export function Calendar({
         >
           <ChevronLeft className="size-3.5" aria-hidden />
         </Pressable>
-        <span aria-live="polite" className="type-body">
+        <span aria-live="polite" className="text-body text-ink">
           {monthLabel(month)}
         </span>
         <Pressable
@@ -111,7 +111,11 @@ export function Calendar({
         <thead>
           <tr>
             {WEEKDAYS.map((weekday) => (
-              <th key={weekday} scope="col" className="type-caption p-0 pb-1 text-center">
+              <th
+                key={weekday}
+                scope="col"
+                className="text-caption text-ink-2 p-0 pb-1 text-center"
+              >
                 {weekday}
               </th>
             ))}
@@ -136,7 +140,7 @@ export function Calendar({
                       disabled={disabled}
                       onClick={() => onSelect(iso)}
                       className={cn(
-                        'type-body text-ink inline-flex size-[var(--control-md)] items-center justify-center rounded-control tabular-nums transition-colors',
+                        'text-body text-ink inline-flex size-[var(--control-md)] items-center justify-center rounded-control tabular-nums transition-colors',
                         isSelected
                           ? 'bg-primary text-on-primary enabled:hover:bg-primary-hover enabled:active:bg-primary-hover'
                           : 'enabled:hover:bg-state-fill enabled:active:bg-state-fill-hover',

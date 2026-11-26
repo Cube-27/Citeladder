@@ -347,7 +347,7 @@ function ScheduleRow({
           <EngineStack engines={schedule.engines} />
           {marketSummary(schedule, markets)}
         </ClampText>
-        <ClampText phoneWrap className="type-caption">
+        <ClampText phoneWrap className="text-caption text-ink-2">
           <ScheduleStatus schedule={schedule} />
         </ClampText>
       </div>

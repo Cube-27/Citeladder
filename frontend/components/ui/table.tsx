@@ -52,7 +52,7 @@ export function Table({
       {...region}
       ref={wrapperRef}
       className={cn(
-        'table-frame bg-surface relative w-full max-w-full min-w-0 overflow-auto [[data-public-surface]_&]:rounded-card',
+        'table-frame bg-panel relative w-full max-w-full min-w-0 overflow-auto [[data-public-surface]_&]:rounded-card',
         wrapperClassName,
       )}
     >
@@ -60,7 +60,7 @@ export function Table({
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
         className={cn(
-          'text-body-sm text-ink w-full border-separate border-spacing-0',
+          'text-body text-ink w-full border-separate border-spacing-0',
           fixed && 'table-fixed',
           className,
         )}
@@ -163,7 +163,7 @@ function isPlainText(children: ReactNode) {
 
 const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
   cn(
-    'text-body-sm text-ink px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
+    'text-body text-ink px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
     numeric && 'whitespace-nowrap text-right tabular-nums',
     desktopOnly && desktopOnlyClasses,
   );
@@ -211,10 +211,7 @@ export function TableCell({
 export function TableGroupRow({ span, children }: Readonly<{ span: number; children: ReactNode }>) {
   return (
     <TableRow>
-      <TableCell
-        colSpan={span}
-        className={textRole('emphasis', 'bg-well [--table-ground:var(--color-well)]')}
-      >
+      <TableCell colSpan={span} className="bg-well [--table-ground:var(--color-well)]">
         {children}
       </TableCell>
     </TableRow>
@@ -247,7 +244,7 @@ export function TableCellLines({
 }
 
 export function YouTag() {
-  return <Tag className="text-ink font-medium">You</Tag>;
+  return <Tag className="text-ink font-emphasis">You</Tag>;
 }
 
 export function isRowSurfaceClick(event: MouseEvent<HTMLTableRowElement>): boolean {
@@ -307,7 +304,7 @@ export function TableRowHeader({
   className,
 }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
-    <th scope="row" className={cn(cellClasses({}), 'type-body', className)}>
+    <th scope="row" className={cn(cellClasses({}), 'text-body text-ink', className)}>
       {isPlainText(children) ? <ClampText rowTitle>{children}</ClampText> : children}
     </th>
   );

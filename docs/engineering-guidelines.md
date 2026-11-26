@@ -215,6 +215,23 @@ look that the next token change misses.
 `components/ui`. In review, run `rg "components/ui/" frontend/components/marketing`
 and read every changed primitive in that list for an unscoped class change.
 
+### A class migration proves the render, not the class
+
+**Rule:** Moving classes between CSS layers or into `cn`'s merge groups (a
+component class to a utility, a new role registered with tailwind-merge)
+changes which class wins. Prove the move with a before/after dump of computed
+values per element, not a class rename map. A passed-in class that the
+component's own utility used to beat (`TableCell className="type-caption"`)
+was dead: keep its rendered look explicitly and flag it, don't revive it.
+**Why:** The type-role batches found classes that never rendered: a table
+group row's emphasis (ds-2) and two `TableCell` captions (ds-3). They came
+alive once `cn` could merge them. The same move recoloured avatar initials on
+every page, because a tone landed in a map that `cn` applied after the base
+ink.
+**Check:** A computed-value sweep of the app before and after, plus a
+per-call-site render of every converted string in each entry stylesheet; any
+difference is a bug unless the plan lists it.
+
 ### Popup exits animate, eager CSS pays for itself
 
 **Rule:** Radix popups (menus, popovers, tooltips, dialogs) leave with a CSS

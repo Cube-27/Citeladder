@@ -32,7 +32,7 @@ function draftAttribute(state: DraftState) {
 function draftSheetClasses(state: DraftState, onPage: boolean) {
   if (!onPage) return 'min-w-0';
   return cn(
-    'bg-surface shadow-card rounded-card min-w-0 p-[var(--panel-inset)] [--panel-inset:var(--card-padding)]',
+    'bg-panel shadow-card rounded-card min-w-0 p-[var(--panel-inset)] [--panel-inset:var(--card-padding)]',
     state !== 'declined' && 'edge-draft',
   );
 }

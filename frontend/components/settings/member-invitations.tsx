@@ -132,7 +132,7 @@ export function InviteDialog({
               {deliveryNotice(delivery)}
               One-time link, shown once.
             </span>
-            <code className="type-caption min-w-0 justify-self-stretch truncate tabular-nums">
+            <code className="text-caption text-ink-2 min-w-0 justify-self-stretch truncate tabular-nums">
               {acceptanceLink(issuedToken)}
             </code>
             <CopyButton value={acceptanceLink(issuedToken)}>Copy link</CopyButton>

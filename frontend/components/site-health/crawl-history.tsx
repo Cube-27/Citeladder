@@ -64,7 +64,9 @@ function CrawlRow({ crawl, onView }: Readonly<{ crawl: SiteCrawlListItem; onView
           >
             <TableTime value={crawl.started_at ?? crawl.created_at} />
           </TextLink>
-          {crawl.run.kind === 'site' ? null : <span className="type-caption">Re-audit</span>}
+          {crawl.run.kind === 'site' ? null : (
+            <span className="text-caption text-ink-2">Re-audit</span>
+          )}
         </Inline>
       </TableCell>
       <TableCell>

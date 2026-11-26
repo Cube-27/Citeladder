@@ -79,7 +79,7 @@ export function Select<T extends string>({
         className={cn(
           'focus-input press',
           TRIGGER_BOX,
-          'data-[placeholder]:text-ink-3 flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-60 app:disabled:opacity-50',
+          'data-[placeholder]:text-ink-placeholder flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-60 app:disabled:opacity-50',
           className,
         )}
       >
@@ -87,7 +87,10 @@ export function Select<T extends string>({
           <SelectPrimitive.Value placeholder={placeholder} />
         </span>
         <SelectPrimitive.Icon asChild>
-          <ChevronDown className="text-ink-2 app:text-ink-3 size-3.5 shrink-0" aria-hidden />
+          <ChevronDown
+            className="text-ink-2 app:text-ink-placeholder size-3.5 shrink-0"
+            aria-hidden
+          />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
@@ -119,11 +122,14 @@ export function Select<T extends string>({
                     <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
                   </span>
                   {option.description ? (
-                    <span className="type-caption">{option.description}</span>
+                    <span className="text-caption text-ink-2">{option.description}</span>
                   ) : null}
                 </span>
                 {option.detail ? (
-                  <span id={`${detailId}-${index}`} className="type-caption ms-auto tabular-nums">
+                  <span
+                    id={`${detailId}-${index}`}
+                    className="text-caption text-ink-2 ms-auto tabular-nums"
+                  >
                     {option.detail}
                   </span>
                 ) : null}

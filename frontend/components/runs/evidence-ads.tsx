@@ -22,7 +22,7 @@ export function EvidenceAds({ ads }: Readonly<{ ads: ExecutionAds }>) {
         <SectionTitle level={3}>Ads in this answer</SectionTitle>
       </SectionHeader>
       {message ? (
-        <p className="type-caption">{message}</p>
+        <p className="text-caption text-ink-2">{message}</p>
       ) : (
         <SectionBleed as="ul" rows>
           {ads.items.map((ad) => (
@@ -31,8 +31,8 @@ export function EvidenceAds({ ads }: Readonly<{ ads: ExecutionAds }>) {
                 <span className={textRole('emphasis')}>{ad.title || 'Untitled ad'}</span>
                 <AdOwnershipChip ownership={ad.ownership} />
               </Inline>
-              {ad.snippet ? <span className="type-caption text-ink-2">{ad.snippet}</span> : null}
-              <ClampText className="type-caption">
+              {ad.snippet ? <span className="text-caption text-ink-2">{ad.snippet}</span> : null}
+              <ClampText className="text-caption text-ink-2">
                 Sponsored by {ad.advertiser_name} · {landingLabel(ad.landing_url)}
               </ClampText>
             </Stack>

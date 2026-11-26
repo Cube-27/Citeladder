@@ -212,7 +212,7 @@ function PropertyList({
               <span className={textRole('body', 'text-ink-2 block truncate')}>
                 {property.label}
               </span>
-              <span className="type-caption block truncate">
+              <span className="text-caption text-ink-2 block truncate">
                 {foreign ? 'Belongs to a different site' : property.property_ref}
               </span>
             </span>

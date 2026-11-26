@@ -169,15 +169,15 @@ function ProgressRow({
                 <Spinner />
               </span>
             ) : null}
-            <span className="type-body min-w-0" aria-live="polite">
+            <span className="text-body text-ink min-w-0" aria-live="polite">
               {narration}
             </span>
           </Inline>
           <Inline as="dl" gap="meta" className="empty:hidden">
             {counts.map((count) => (
               <Inline key={count.label} gap="item">
-                <dt className="type-body text-ink-2">{count.label}</dt>
-                <dd className="type-body text-ink tabular-nums">
+                <dt className="text-body text-ink-2">{count.label}</dt>
+                <dd className="text-body text-ink tabular-nums">
                   {count.value === null ? (
                     <Absence state="not_measured" />
                   ) : (
@@ -220,7 +220,7 @@ function DiscoveryStrip({
   return (
     <ProgressRow crawl={crawl} narration={narration} counts={counts} active={!cancelPending}>
       {sampleMode ? (
-        <p className="type-body text-ink-2">
+        <p className="text-body text-ink-2">
           {entitlement.sample_url_limit}-page sample. Choosing pages needs a monitored-URL
           allowance.
         </p>

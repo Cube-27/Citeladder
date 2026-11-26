@@ -118,7 +118,7 @@ describe('the boot shell geometry', () => {
       ident: token('--masthead-height'),
       switch: token('--control-md'),
       row: token('--nav-row-height'),
-      rowWeight: sidebarNavRowClasses(false).includes('font-normal') ? '400' : '500',
+      rowWeight: sidebarNavRowClasses(false).includes('text-body') ? '400' : '500',
     });
   });
 });

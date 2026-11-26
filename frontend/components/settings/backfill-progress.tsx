@@ -18,7 +18,7 @@ export function BackfillProgress({
   return (
     <Inline className="flex-wrap">
       <span className={textRole('body', 'text-ink-2')}>History</span>
-      <span className="type-caption tabular-nums">{progressLabel(progress)}</span>
+      <span className="text-caption text-ink-2 tabular-nums">{progressLabel(progress)}</span>
     </Inline>
   );
 }

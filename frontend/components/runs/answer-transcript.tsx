@@ -186,7 +186,7 @@ export function AnswerTranscript({
             linkChip={sourceLinks(sources)}
           />
         ) : (
-          <p className="type-body text-ink-2">{body.text}</p>
+          <p className="text-body text-ink-2">{body.text}</p>
         )}
       </AssistantMessage>
     </ChatThread>

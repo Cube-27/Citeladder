@@ -57,7 +57,7 @@ export function BrandsRail({ brands }: Readonly<{ brands: readonly AnswerBrand[]
           ))}
         </RailList>
       ) : (
-        <p className="type-caption text-ink-2">No tracked brand appeared in this answer.</p>
+        <p className="text-caption text-ink-2">No tracked brand appeared in this answer.</p>
       )}
     </RailSection>
   );
@@ -88,7 +88,7 @@ export function SourcesRail({ sources }: Readonly<{ sources: readonly AnswerSour
                 </RailCount>
               </RailLine>
               {source.title ? (
-                <span className="type-caption text-ink truncate" title={source.title}>
+                <span className="text-caption text-ink truncate" title={source.title}>
                   {source.title}
                 </span>
               ) : null}
@@ -205,9 +205,9 @@ function FanoutBody({
     );
   if (read.kind === 'missing')
     return evidence.search_query_count > 0 ? (
-      <p className="type-caption text-ink-2">{unread(evidence.search_query_count)}</p>
+      <p className="text-caption text-ink-2">{unread(evidence.search_query_count)}</p>
     ) : (
-      <p className="type-caption text-ink-2">Search queries are unavailable for this answer.</p>
+      <p className="text-caption text-ink-2">Search queries are unavailable for this answer.</p>
     );
   const { item } = read;
   switch (item.state) {
@@ -222,13 +222,13 @@ function FanoutBody({
       );
     }
     case 'no_search':
-      return <p className="type-caption text-ink-2">The engine ran no searches for this answer.</p>;
+      return <p className="text-caption text-ink-2">The engine ran no searches for this answer.</p>;
     case 'count_only':
     case 'no_exposed_queries':
-      return <p className="type-caption text-ink-2">{withheld(item.search_query_count)}</p>;
+      return <p className="text-caption text-ink-2">{withheld(item.search_query_count)}</p>;
     case 'unavailable':
       return (
-        <p className="type-caption text-ink-2">Search queries are unavailable for this answer.</p>
+        <p className="text-caption text-ink-2">Search queries are unavailable for this answer.</p>
       );
     default: {
       const unreachable: never = item.state;

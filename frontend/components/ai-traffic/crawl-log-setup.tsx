@@ -71,8 +71,8 @@ export function CrawlLogSetup({
             disabled: unavailable,
             label: (
               <span className="grid">
-                <span className="type-body text-ink">{s.label}</span>
-                <span className="type-caption">
+                <span className="text-body text-ink">{s.label}</span>
+                <span className="text-caption text-ink-2">
                   {unavailable ? 'Not available in this environment.' : s.description}
                 </span>
               </span>
@@ -81,7 +81,7 @@ export function CrawlLogSetup({
         })}
       />
       <Stack>
-        {steps ? <p className="type-body text-ink-2">{steps}</p> : null}
+        {steps ? <p className="text-body text-ink-2">{steps}</p> : null}
         {firehose ? <FirehoseSteps interval={model.bufferInterval} /> : null}
         {gcp ? <GcpSteps /> : null}
         <TextLink variant="external" href={chosen.guide} className="w-fit">
@@ -194,7 +194,7 @@ function FirehoseFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
 }
 function FirehoseSteps({ interval }: Readonly<{ interval: string }>) {
   return (
-    <Stack as="ol" gap="tight" className="type-body text-ink-2 list-inside list-decimal">
+    <Stack as="ol" gap="tight" className="text-body text-ink-2 list-inside list-decimal">
       <li>
         In us-east-1, create an Amazon Data Firehose stream: source Direct PUT, destination HTTP
         endpoint. Use the endpoint URL and the token (as the access key) shown after you create the
@@ -254,7 +254,7 @@ export function IssuedToken({
           <>
             <p>Copy this token now. It is shown once.</p>
             <CopyButton value={issued.token}>Copy token</CopyButton>
-            <code className="type-code break-all">{endpoint}</code>
+            <code className="text-code text-ink font-mono break-all">{endpoint}</code>
             <CopyButton value={endpoint}>Copy endpoint</CopyButton>
           </>
         ) : null}
@@ -336,7 +336,7 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
         Upload recognized requests
       </Button>
       {progress ? (
-        <output className="type-body text-ink-2">
+        <output className="text-body text-ink-2">
           {progress.scanned} lines scanned · {progress.matched} recognized crawler requests sent.
         </output>
       ) : null}

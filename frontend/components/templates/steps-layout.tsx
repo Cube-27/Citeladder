@@ -93,7 +93,7 @@ function StepRow<T extends string>({
           cn(
             'grid size-4 shrink-0 place-items-center rounded-full tabular-nums',
             done && 'text-ink-2',
-            position === current && 'border-ink text-ink border',
+            position === current && 'border-mark-ink text-ink border',
             position > current && 'border-control-line text-ink-2 border',
           ),
         )}

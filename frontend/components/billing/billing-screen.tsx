@@ -138,7 +138,7 @@ function NextStep({ step }: Readonly<{ step: PlanStep | null }>) {
         <Button variant="secondary" disabled aria-describedby="plan-step-reason">
           {step.label}
         </Button>
-        <span id="plan-step-reason" className="type-caption">
+        <span id="plan-step-reason" className="text-caption text-ink-2">
           Checkout is not open yet
         </span>
       </>

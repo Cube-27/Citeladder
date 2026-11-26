@@ -6,13 +6,18 @@ component family. The app follows the look the owner approved
 tokens, surfaces and controls on CiteLadder's corner radii, an inset content
 panel on light paper, white cards with the soft card shadow.
 
-**Scope.** Tokens live in
-[`globals.css`](../frontend/apps/app/src/globals.css). The app binds its own
-values in `:root:not([data-public-surface])` and its dark twin; the website
-and docs (`[data-public-surface]`, `components/marketing`,
-`components/content`) keep the system values above those blocks and are out of
-scope here. App code uses the app's role names, never a website role
-(`paper`, `line`, `ink-secondary`, the `-soft` fills).
+**Scope.** Tokens live in two layers. A `--ramp-*` block holds every literal
+colour once, named by hue and lightness; nothing but a role reads a ramp step.
+Roles alias ramp steps, and each surface and theme re-points the same role
+names. [`globals.css`](../frontend/apps/app/src/globals.css) holds the shared
+and app tokens (the app in `:root:not([data-public-surface])` and its dark
+twin). [`public-surface.css`](../frontend/apps/app/src/public-surface.css)
+holds the website and docs blocks (`[data-public-surface]`,
+`[data-marketing-surface]`, the landing-page product screens) and the ramp
+steps only they read. Only the marketing and docs entries import it, so the
+app's eager CSS never carries them. A new colour is a ramp step plus a role,
+never a literal at the call site; a website-only colour goes in
+`public-surface.css`.
 
 ## Design values
 
@@ -20,7 +25,7 @@ Every design value comes from a role token (AR-26): colour, type (size, line
 height, weight, tracking), spacing, size, radius, shadow, z-index, opacity and
 motion. A raw value, or a token class put straight on an element by a page,
 lets a later design change miss that page, so the page drifts. Atomic order:
-role tokens in [`globals.css`](../frontend/apps/app/src/globals.css), then the
+role tokens (the colour layers above and the type ladders below), then the
 primitives in `components/ui`, which alone turn roles into classes, then
 screens, which compose primitives and pass content. A new look, even one used
 once, adds a role token (and a primitive prop if a screen needs to choose it);
@@ -61,27 +66,32 @@ warning that never fails CI (AR-25).
 Values live in [`globals.css`](../frontend/apps/app/src/globals.css): HeroUI's
 zinc neutrals and shadows in both themes (AR-1).
 
-| Token            | Use                                                     |
-| ---------------- | ------------------------------------------------------- |
-| `ground`         | window and sidebar                                      |
-| `page`           | the inset content panel's paper                         |
-| `panel`          | cards, overlays, controls on the paper                  |
-| `raised`         | secondary buttons, menus                                |
-| `raised-2`       | hover and press fill, disabled field                    |
-| `well`           | fields in a surface, quoted material, table group rows  |
-| `state-hover`    | row and quiet-control hover                             |
-| `state-selected` | tags, keyboard hints, value tokens                      |
-| `state-fill`     | controls in a surface, segmented tray, rail current row |
-| `rule`           | every hairline                                          |
-| `control-line`   | checkbox and radio edge, draft edge                     |
-| `ink`, `ink-2`   | text; secondary text and icons                          |
-| `accent`         | "you, here" and focus                                   |
-| `primary`        | every action fill, white text                           |
-| `shadow-card`    | page-level cards and controls on the paper; none in dark |
+| Token                    | Use                                                      |
+| ------------------------ | -------------------------------------------------------- |
+| `ground`                 | window and sidebar                                       |
+| `page`                   | the inset content panel's paper                          |
+| `panel`                  | cards, overlays, controls on the paper                   |
+| `raised`                 | secondary buttons, menus                                 |
+| `raised-2`               | hover and press fill, disabled field                     |
+| `well`                   | fields in a surface, quoted material, table group rows   |
+| `state-hover`            | row and quiet-control hover                              |
+| `state-selected`         | tags, keyboard hints, value tokens                       |
+| `state-fill`             | controls in a surface, segmented tray, rail current row  |
+| `rule`                   | every hairline                                           |
+| `control-line`           | checkbox and radio edge, draft edge                      |
+| `ink`, `ink-2`           | text; secondary text and icons                           |
+| `ink-placeholder`        | field placeholders, 4.5:1 on `well`                      |
+| `mark-ink`, `mark-ink-2` | a fill, edge or shadow drawn in the ink colour           |
+| `accent`                 | "you, here" and focus                                    |
+| `primary`                | every action fill, white text                            |
+| `shadow-card`            | page-level cards and controls on the paper; none in dark |
 
-Older role names bind onto the table so call sites keep working: `chrome` is
-`ground`, `surface` is `panel`, `chart-grid` is `rule`, `state-pressed` is `state-selected`, `on-ink` is
-`panel`. Status colours (`positive`, `negative`, `warning`, `info` and their
+Text colours live in `--text-color-*` (`ink`, `ink-2`, `ink-placeholder`,
+`accent-text`, `on-ink`, `on-primary`, `nav-ink`), so `text-ink` exists and
+`bg-ink` does not; SVG text reads them through `--fill-*`. Three roles keep a
+distinct value only on the website: `rule-strong`, `chart-grid` and
+`state-pressed` (the app binds them to `control-line`, `rule` and
+`state-selected`). Status colours (`positive`, `negative`, `warning`, `info` and their
 `-wash` fills), `accent-text`, `accent-wash` and the data series keep their
 values in `globals.css`. A status colour appears only beside a glyph and a
 word, never as a large fill. Two exceptions (owner, 2026-11-22): a Site health
@@ -92,22 +102,44 @@ to `-4` ink then cool hues in rank order, `data-other` the grouped rest.
 ## Type
 
 Sans (Google Sans) for words and numbers alike, numbers in its tabular
-figures (dates, counts, prices, URLs too). Mono (Geist Mono) only for literal
+figures (dates, counts, prices, URLs too); the website sets its metric figures
+in mono. Mono (Geist Mono) only for literal
 code: API keys, code blocks, raw IDs and keyboard hints. Weights 400 and 500 only; the app's dark asks for every weight 50 lighter
 (350 and 450: light text on dark reads heavier), but the sans face starts at 400, so regular sans text is 400 in both themes and only 450 and the mono and display faces draw lighter. Emphasis is 500, never
 colour. Sizes are rem so they follow the reader's text size.
 
-| Role            | Size / line | Weight                  |
+Every size and line height derives from one base and one step per subdomain:
+the app's base is 14 and the website's is 16, both with a 2px step (owner,
+2026-11-26). A role's size is the base plus whole steps, and its line height is
+the size plus whole steps, so a change to the base moves every role together.
+The app ladder lives in
+[`app-type.css`](../frontend/apps/app/src/app-type.css), shared by the app and
+the MCP app. The website ladder lives in
+[`site-type.css`](../frontend/apps/marketing/src/site-type.css), shared by
+marketing and docs. Each entry stylesheet sets `--type-base` and `--type-step`.
+A role name means the same job on both ladders: `body` is UI text at 14 on both,
+and the website's 16px reading copy is `site-body`. Weights come only from
+`--weight-regular` and `--weight-medium`; the app's dark theme re-points those
+two. `font-emphasis` and `font-plain` are the only weight utilities. Tailwind's
+default weight, leading and tracking scales are switched off.
+
+| App role        | Size / line | Weight                  |
 | --------------- | ----------- | ----------------------- |
 | body, label     | 14 / 20     | 400, label 500          |
-| caption         | 12 / 16     | 400                     |
+| caption, code   | 12 / 16     | 400                     |
 | heading         | 16 / 24     | 500                     |
-| page title      | 14 / 20     | 500, in the page header |
+| prose           | 16 / 26     | 400                     |
+| title, page title | 20 / 28   | 400, page title 500     |
 | figure (metric) | 20 / 28     | 500, tabular            |
 
-The roles are the closed set in
-[`typography.tsx`](../frontend/components/ui/typography.tsx); a call site names
-the job, never a size.
+A screen names the job through `<Text variant tone>` in
+[`typography.tsx`](../frontend/components/ui/typography.tsx); a primitive uses
+the matching `text-<role>` utility; neither names a size, weight or line height. A `text-<role>`
+utility sets size, line height, weight and tracking only; the face and the ink
+come from `font-*` and `text-<ink>` beside it. A face that differs by subdomain
+is a face role each ladder sets: `font-figure` is sans in the app and mono on
+the website. `code` is a utility only in the app; the website keeps its size as
+a CSS variable for code blocks.
 
 ## Spacing, size and shape
 

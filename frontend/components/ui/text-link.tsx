@@ -163,7 +163,7 @@ export function ArrowLink({
       />
     </>
   );
-  const classes = 'text-ink inline-flex items-center gap-2 rounded-mark text-label-lg no-underline';
+  const classes = 'text-ink inline-flex items-center gap-2 rounded-mark text-heading no-underline';
   if (!href) return <span className={classes}>{content}</span>;
   return (
     <ProjectLink href={href} projectId={projectId} className={cn(classes, 'group focus-ring')}>

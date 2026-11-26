@@ -43,7 +43,7 @@ export function ChatAvatar({
       aria-hidden
       className={cn(
         'grid size-8 shrink-0 place-items-center rounded-full',
-        tone === 'you' ? 'bg-ink text-on-ink' : 'bg-well text-ink',
+        tone === 'you' ? 'bg-mark-ink text-on-ink' : 'bg-well text-ink',
       )}
     >
       {children}
@@ -57,7 +57,7 @@ export function UserMessage({
 }: Readonly<{ avatar: ReactNode; children: ReactNode }>) {
   return (
     <li className="flex items-start justify-end gap-3">
-      <div className="bg-well text-ink type-body rounded-card max-w-[min(80%,var(--container-prose))] px-4 py-3">
+      <div className="bg-well text-ink text-body rounded-card max-w-[min(80%,var(--container-prose))] px-4 py-3">
         {children}
       </div>
       {avatar}
@@ -83,14 +83,14 @@ export function AssistantMessage({
 
 export function YouMark() {
   return (
-    <span className="bg-accent-wash text-accent-text rounded-mark text-eyebrow px-1 font-medium">
+    <span className="bg-accent-wash text-accent-text rounded-mark text-eyebrow font-emphasis px-1">
       You
     </span>
   );
 }
 
 const CHIP =
-  'type-caption inline-flex max-w-full min-w-0 items-center gap-1 rounded-mark border px-1 align-baseline no-underline';
+  'text-caption text-ink-2 inline-flex max-w-full min-w-0 items-center gap-1 rounded-mark border px-1 align-baseline no-underline';
 
 export function MentionChip({
   position,
@@ -106,13 +106,13 @@ export function MentionChip({
   'data-brand-chip'?: string;
 }>) {
   return (
-    <span {...data} className={cn(CHIP, 'border-accent text-ink bg-surface border-dashed')}>
-      <span className="text-accent-text font-medium tabular-nums">
+    <span {...data} className={cn(CHIP, 'border-accent text-ink bg-panel border-dashed')}>
+      <span className="text-accent-text font-emphasis tabular-nums">
         <span className="sr-only">Position </span>
         {position}
       </span>
       {mark}
-      <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{children}</span>
+      <span className="font-emphasis min-w-0 [overflow-wrap:anywhere]">{children}</span>
       {you ? <YouMark /> : null}
     </span>
   );
@@ -208,17 +208,17 @@ export function RailUrl({
 }
 
 export function RailRank({ children }: Readonly<{ children: ReactNode }>) {
-  return <span className="type-caption text-ink-2 w-6 shrink-0 tabular-nums">{children}</span>;
+  return <span className="text-caption text-ink-2 w-6 shrink-0 tabular-nums">{children}</span>;
 }
 
 export function RailCount({ label, children }: Readonly<{ label: string; children: number }>) {
   return (
-    <span title={label} className="type-caption text-ink-2 shrink-0 tabular-nums">
+    <span title={label} className="text-caption text-ink-2 shrink-0 tabular-nums">
       ({children})
     </span>
   );
 }
 
 export function QueryItem({ children }: Readonly<{ children: ReactNode }>) {
-  return <li className="type-body bg-well rounded-mark px-2 py-1">{children}</li>;
+  return <li className="text-body text-ink bg-well rounded-mark px-2 py-1">{children}</li>;
 }

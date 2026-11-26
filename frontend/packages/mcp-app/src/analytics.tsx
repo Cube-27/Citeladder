@@ -16,7 +16,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { AreaChart } from '@/components/ui/area-chart';
-import { Label, Metric, textRole } from '@/components/ui/typography';
+import { Metric, Text, textRole } from '@/components/ui/typography';
 import { SectionHeader, SectionTitle } from '@/components/ui/section';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
 import { Absence, printed } from '@/components/ui/absence';
@@ -75,13 +75,17 @@ function Overview({
       />
       <div className="flex flex-wrap gap-6">
         <div>
-          <Label>Brand mention rate</Label>
+          <Text variant="body" tone="ink-2">
+            Brand mention rate
+          </Text>
           <div>
             <Metric>{printed(rate(projection.visibility_rate))}</Metric>
           </div>
         </div>
         <div>
-          <Label>Owned citation rate</Label>
+          <Text variant="body" tone="ink-2">
+            Owned citation rate
+          </Text>
           <div>
             <Metric>{printed(rate(projection.owned_citation_rate))}</Metric>
           </div>

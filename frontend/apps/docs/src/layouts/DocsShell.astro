@@ -98,7 +98,7 @@ const contact = websiteHref('/contact');
   .cl-docs-shell {
     min-height: 100vh;
     background: var(--color-site-page);
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .cl-docs-body {
     max-width: var(--container-app);
@@ -156,30 +156,30 @@ const contact = websiteHref('/contact');
     gap: 20px;
     max-width: var(--container-prose);
     padding-top: 24px;
-    border-top: 1px solid var(--color-line);
-    color: var(--color-ink-muted);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    border-top: 1px solid var(--color-rule);
+    color: var(--text-color-ink-2);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
   }
   .cl-docs-footer span {
     margin-right: auto;
   }
   .cl-docs-footer a,
   .cl-docs-help {
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
     text-decoration: none;
     transition: color var(--motion-fast) var(--ease-standard);
   }
   .cl-docs-footer a:hover,
   .cl-docs-help:hover {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .cl-docs-help {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
   }
   @media (max-width: 899px) {
     .cl-docs-body {

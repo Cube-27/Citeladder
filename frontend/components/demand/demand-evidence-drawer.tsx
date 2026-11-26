@@ -78,11 +78,11 @@ export function DemandEvidenceDrawer({
           </SectionHeader>
           <SectionBleed rows>
             {details.pages.map((page) => (
-              <Stack key={page.url} gap="tight" className="type-caption">
+              <Stack key={page.url} gap="tight" className="text-caption text-ink-2">
                 <div className={textRole('emphasis', 'text-ink flex min-w-0')}>
                   <UrlText url={page.url} />
                 </div>
-                <div className="type-caption flex items-center justify-between">
+                <div className="text-caption text-ink-2 flex items-center justify-between">
                   <span>{formatCount(page.impressions)} impressions</span>
                   <span className={textRole('emphasis', 'text-ink tabular-nums')}>
                     {formatPercent(page.share)} query share
@@ -100,7 +100,7 @@ export function DemandEvidenceDrawer({
             <SectionTitle level={3}>Position benchmark</SectionTitle>
           </SectionHeader>
           <SectionBleed rows>
-            <div className="type-caption flex justify-between">
+            <div className="text-caption text-ink-2 flex justify-between">
               <span className="text-ink-2">Position band</span>
               {details.positionBand !== null ? (
                 <span className={textRole('emphasis', 'text-ink')}>
@@ -110,7 +110,7 @@ export function DemandEvidenceDrawer({
                 <Absence state="not_measured" />
               )}
             </div>
-            <div className="type-caption flex justify-between">
+            <div className="text-caption text-ink-2 flex justify-between">
               <span className="text-ink-2">Median CTR in this band</span>
               <span className={textRole('emphasis', 'text-ink-2 tabular-nums')}>
                 {formatPercent(details.cohortMedianCtr)}
@@ -147,7 +147,7 @@ export function DemandEvidenceDrawer({
 
 function ProvenanceRow({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
-    <Inline gap="workspace" className="type-caption justify-between">
+    <Inline gap="workspace" className="text-caption text-ink-2 justify-between">
       <dt className="text-ink-2">{label}</dt>
       <dd className="text-ink tabular-nums">{children}</dd>
     </Inline>

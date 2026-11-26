@@ -75,11 +75,11 @@ export function EvidenceClaims({ claims }: Readonly<{ claims: readonly Execution
                 </Button>
               ) : null}
             </Inline>
-            <span className="type-caption text-ink-2">
+            <span className="text-caption text-ink-2">
               {TOPIC_LABELS[claim.topic]}: {claim.claim}
             </span>
             {claim.facts.map((fact) => (
-              <span key={fact.statement} className="type-caption text-ink-2">
+              <span key={fact.statement} className="text-caption text-ink-2">
                 Your fact: {fact.statement}
               </span>
             ))}

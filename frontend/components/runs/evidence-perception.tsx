@@ -70,7 +70,7 @@ export function EvidencePerception({
             </Inline>
             {entity.state === 'classified'
               ? entity.aspects.map((aspect) => (
-                  <span key={`${aspect.start}:${aspect.end}`} className="type-caption text-ink-2">
+                  <span key={`${aspect.start}:${aspect.end}`} className="text-caption text-ink-2">
                     {aspect.theme} ({aspect.polarity}): “{aspect.quote}”
                   </span>
                 ))

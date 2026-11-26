@@ -16,7 +16,7 @@ const initials = [words[0], words.length > 1 ? words.at(-1) : undefined]
 <aside class="cl-author" aria-label="About the author">
   <span class="cl-author-avatar" aria-hidden="true">{initials}</span>
   <div class="cl-author-body">
-    <p class="type-eyebrow cl-author-eyebrow">{eyebrow}</p>
+    <p class="text-kicker text-ink-2 cl-author-eyebrow">{eyebrow}</p>
     <p class="cl-author-name">{name}</p>
     {role && <p class="cl-author-role">{role}</p>}
     {
@@ -49,10 +49,10 @@ const initials = [words[0], words.length > 1 ? words.at(-1) : undefined]
     width: 56px;
     height: 56px;
     border-radius: var(--radius-full);
-    background: var(--color-ink);
-    color: var(--color-on-ink);
-    font-size: var(--text-label-lg);
-    line-height: var(--text-label-lg--line-height);
+    background: var(--color-mark-ink);
+    color: var(--text-color-on-ink);
+    font-size: var(--text-heading);
+    line-height: var(--text-heading--line-height);
     font-weight: 500;
   }
   .cl-author-body {
@@ -67,15 +67,15 @@ const initials = [words[0], words.length > 1 ? words.at(-1) : undefined]
     margin-bottom: 8px;
   }
   .cl-author-name {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-size: var(--text-title-sm);
     line-height: var(--text-title-sm--line-height);
     font-weight: 500;
   }
   .cl-author-role {
-    color: var(--color-ink-muted);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    color: var(--text-color-ink-2);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
   }
   .cl-author-links {
     display: flex;
@@ -86,7 +86,7 @@ const initials = [words[0], words.length > 1 ? words.at(-1) : undefined]
     list-style: none;
   }
   .cl-author-links a {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
     font-weight: 400;

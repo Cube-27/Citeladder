@@ -11,7 +11,7 @@ const unbroken = (label: string) =>
 ---
 
 <nav class="cl-toc" aria-label={title}>
-  <p class="type-eyebrow">{title}</p>
+  <p class="text-kicker text-ink-2">{title}</p>
   <ol class="cl-toc-list">
     {
       items.map((item) => (
@@ -37,15 +37,15 @@ const unbroken = (label: string) =>
   .cl-toc-list {
     padding: 0;
     list-style: none;
-    border-left: 1px solid var(--color-line);
+    border-left: 1px solid var(--color-rule);
   }
   .cl-toc-link {
     position: relative;
     display: block;
     padding: 4px 16px;
-    color: var(--color-ink-muted);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    color: var(--text-color-ink-2);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
     text-decoration: none;
     transition: color var(--motion-fast) var(--ease-standard);
   }
@@ -53,11 +53,11 @@ const unbroken = (label: string) =>
     padding-left: 32px;
   }
   .cl-toc-link[aria-current='location'] {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   @media (hover: hover) and (pointer: fine) {
     .cl-toc-link:hover {
-      color: var(--color-ink);
+      color: var(--text-color-ink);
     }
   }  .cl-toc-link[aria-current='location']::before {
     content: '';
@@ -66,7 +66,7 @@ const unbroken = (label: string) =>
     bottom: 0;
     left: -1px;
     width: 2px;
-    background: var(--color-ink);
+    background: var(--color-mark-ink);
   }
 </style>
 

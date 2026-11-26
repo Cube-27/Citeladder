@@ -42,7 +42,7 @@ export function PageHighlight({
           <dl className={cn('cl-page-hl-stats', `cl-page-hl-stats--${statColumns(stats.length)}`)}>
             {stats.map((stat) => (
               <div key={stat.label} className="cl-page-hl-stat">
-                <dt className="type-eyebrow">{stat.label}</dt>
+                <dt className="text-kicker text-ink-2">{stat.label}</dt>
                 <dd className="cl-page-hl-value">{stat.value}</dd>
                 {stat.sub && <dd className="cl-page-hl-sub">{stat.sub}</dd>}
               </div>

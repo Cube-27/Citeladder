@@ -10,7 +10,7 @@ function trailingPunctuation(token: string): string {
   return token.slice(end);
 }
 
-const LINK = 'text-ink underline decoration-line-control underline-offset-2';
+const LINK = 'text-ink underline decoration-control-line underline-offset-2';
 
 export function Linkify({ text }: Readonly<{ text: string }>) {
   const nodes: ReactNode[] = [];

@@ -101,7 +101,7 @@ export function DocsSearchDialog() {
         aria-haspopup="dialog"
         aria-keyshortcuts="Control+K Meta+K"
         onClick={(event) => show(event.currentTarget)}
-        className="focus-ring bg-surface text-ink-muted border-line hover:border-line-strong text-body-sm h-[var(--control-md)] items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
+        className="focus-ring bg-panel text-ink-2 border-rule hover:border-rule-strong text-body h-[var(--control-md)] items-center gap-2 rounded-md border pr-2 pl-3 text-left transition-colors"
       >
         <Search className="size-3.5 shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate" aria-hidden>
@@ -125,7 +125,7 @@ export function DocsSearchDialog() {
           setOpen(false);
           if (opener.current?.isConnected) opener.current.focus();
         }}
-        className="bg-surface text-ink shadow-pop backdrop:bg-scrim mx-auto mt-16 w-full max-w-160 flex-col overflow-hidden rounded-lg p-0 open:flex"
+        className="bg-panel text-ink shadow-pop backdrop:bg-scrim mx-auto mt-16 w-full max-w-160 flex-col overflow-hidden rounded-lg p-0 open:flex"
       >
         <h2 id="docs-search-title" className="sr-only">
           Search documentation
@@ -133,7 +133,7 @@ export function DocsSearchDialog() {
         <p id="docs-search-description" className="sr-only">
           Find guides across the product, Agent and MCP.
         </p>
-        <div className="palette-field border-line text-ink-muted flex h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
+        <div className="palette-field border-rule text-ink-2 flex h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
           <Search className="size-4 shrink-0" aria-hidden />
           <label htmlFor="docs-query" className="sr-only">
             Search terms
@@ -154,13 +154,13 @@ export function DocsSearchDialog() {
             aria-controls="docs-search-results"
             aria-autocomplete="list"
             aria-activedescendant={results.length ? optionId(cursor) : undefined}
-            className="text-body text-ink placeholder:text-ink-muted h-full min-w-0 flex-1 bg-transparent"
+            className="text-site-body text-ink placeholder:text-ink-2 h-full min-w-0 flex-1 bg-transparent"
           />
           <Kbd>Esc</Kbd>
         </div>
         <div className="h-100 min-h-0 shrink overflow-y-auto overscroll-contain p-2">
           <div className="flex min-h-[var(--control-md)] items-center justify-between gap-3 px-2">
-            <output className="text-caption text-ink-muted">
+            <output className="text-caption text-ink-2">
               {searchStatus(failed, entries, query, results.length)}
             </output>
             {failed && (
@@ -191,7 +191,7 @@ export function DocsSearchDialog() {
               >
                 <p
                   id={`docs-search-group-${groupIndex}`}
-                  className="text-caption text-ink-muted px-2 py-1 font-medium"
+                  className="text-caption-strong text-ink-2 px-2 py-1"
                 >
                   {group.label}
                 </p>
@@ -210,15 +210,15 @@ export function DocsSearchDialog() {
                       onMouseMove={() => setActive(index)}
                       className={cn(
                         'focus-ring flex h-16 items-start gap-3 rounded-sm p-3 no-underline',
-                        index === cursor && 'bg-surface-sunken',
+                        index === cursor && 'bg-well',
                       )}
                     >
-                      <FileText className="text-ink-muted mt-0.75 size-3.5 shrink-0" aria-hidden />
+                      <FileText className="text-ink-2 mt-0.75 size-3.5 shrink-0" aria-hidden />
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="text-body-sm text-ink truncate font-medium">
+                        <span className="text-label text-ink truncate">
                           <Marked text={result.title} query={query} />
                         </span>
-                        <span className="text-body-sm text-ink-secondary truncate">
+                        <span className="text-body text-ink-2 truncate">
                           <Marked text={result.description} query={query} />
                         </span>
                       </span>
@@ -229,7 +229,7 @@ export function DocsSearchDialog() {
             ))}
           </div>
         </div>
-        <div className="border-line text-ink-muted text-caption flex shrink-0 items-center gap-4 border-t px-4 py-2">
+        <div className="border-rule text-ink-2 text-caption flex shrink-0 items-center gap-4 border-t px-4 py-2">
           <span className="inline-flex items-center gap-2">
             <Kbd keys={['↑', '↓']} />
             navigate

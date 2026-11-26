@@ -87,7 +87,7 @@ function TrendCard({
 }>) {
   return (
     <Section>
-      <SectionHeader actions={<span className="type-caption">{badge}</span>}>
+      <SectionHeader actions={<span className="text-caption text-ink-2">{badge}</span>}>
         <SectionTitle>{title}</SectionTitle>
       </SectionHeader>
       <AreaChart

@@ -31,7 +31,7 @@ function LinkEnd({
   const summary = page.description || page.excerpt;
   return (
     <div className="grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)] gap-x-3">
-      <span className="type-caption pt-0.5">{label}</span>
+      <span className="text-caption text-ink-2 pt-0.5">{label}</span>
       <div className="grid min-w-0 gap-1">
         <TextLink
           variant="external"
@@ -48,11 +48,11 @@ function LinkEnd({
           )}
         </TextLink>
         {summary ? (
-          <ClampText lines={2} className="type-caption">
+          <ClampText lines={2} className="text-caption text-ink-2">
             {summary}
           </ClampText>
         ) : null}
-        {note ? <span className="type-caption">{note}</span> : null}
+        {note ? <span className="text-caption text-ink-2">{note}</span> : null}
       </div>
     </div>
   );
@@ -102,11 +102,11 @@ export function InternalLinkReview({
             <SectionHeader>
               <SectionTitle>{link.placement ? 'Where it goes' : 'Anchor text'}</SectionTitle>
             </SectionHeader>
-            <p className={wellClasses('type-body text-ink')}>
+            <p className={wellClasses('text-body text-ink')}>
               {link.placement ? (
                 <>
                   {link.placement.text.slice(0, link.placement.anchor_start)}
-                  <mark className="bg-accent-soft text-accent-text rounded-mark px-0.5">
+                  <mark className="bg-accent-wash text-accent-text rounded-mark px-0.5">
                     {link.anchor}
                   </mark>
                   {link.placement.text.slice(link.placement.anchor_start + link.anchor.length)}

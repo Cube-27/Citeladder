@@ -29,7 +29,7 @@ function SignalCell({ present, label }: Readonly<{ present: boolean; label: stri
     <TableCell>
       <Inline
         as="span"
-        className={cn('type-body inline-flex', present ? 'text-positive' : 'text-ink-2')}
+        className={cn('text-body text-ink inline-flex', present ? 'text-positive' : 'text-ink-2')}
       >
         <Icon icon={present ? Check : Minus} />
         <span className="sr-only">{label}: </span>
@@ -107,7 +107,9 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
   return (
     <Section>
       <SectionHeader
-        actions={<span className="type-caption">{pluralCount(links.length, 'link')}</span>}
+        actions={
+          <span className="text-caption text-ink-2">{pluralCount(links.length, 'link')}</span>
+        }
       >
         <SectionTitle level={3}>Inline links</SectionTitle>
       </SectionHeader>
@@ -134,7 +136,7 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
                     title
                   )}
                 </ClampText>
-                <ClampText phoneWrap className="type-caption">
+                <ClampText phoneWrap className="text-caption text-ink-2">
                   {link.domain}
                 </ClampText>
               </li>

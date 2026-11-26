@@ -202,10 +202,10 @@ function ByokSwitch({
         className="mt-0.5 pointer-coarse:before:-inset-x-0.5 pointer-coarse:before:-inset-y-3"
       />
       <span className="grid gap-1">
-        <label htmlFor={id} aria-hidden className="text-body text-ink cursor-pointer">
+        <label htmlFor={id} aria-hidden className="text-site-body text-ink cursor-pointer">
           {BYOK_SWITCH_LABEL}
         </label>
-        <span id={hint} className="text-body-sm text-ink-muted">
+        <span id={hint} className="text-body text-ink-2">
           {BYOK_DISCLOSURE}
         </span>
       </span>

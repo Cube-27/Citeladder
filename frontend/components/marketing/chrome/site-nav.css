@@ -2,7 +2,7 @@
   position: sticky;
   z-index: var(--z-index-sticky);
   top: 0;
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-rule);
   background: var(--site-page);
 }
 
@@ -24,7 +24,7 @@
   align-items: center;
   padding: 4px 0;
   border-radius: var(--radius-sm);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 .cl-navmenu {
@@ -52,7 +52,7 @@
   inset-block: 0;
   left: 0;
   border-radius: var(--radius-md);
-  background: color-mix(in oklch, var(--color-ink) 5%, transparent);
+  background: color-mix(in oklch, var(--color-mark-ink) 5%, transparent);
   opacity: 0;
   pointer-events: none;
   transform-origin: left center;
@@ -83,9 +83,9 @@
   position: relative;
   width: calc(var(--radix-navigation-menu-viewport-width) + 2px);
   height: calc(var(--radix-navigation-menu-viewport-height) + 2px);
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--color-rule);
   border-radius: var(--site-radius-frame-inner);
-  background: var(--color-surface);
+  background: var(--color-panel);
   clip-path: inset(-24px 0 0 0);
   transition:
     width var(--motion-menu) var(--ease-menu),
@@ -235,7 +235,7 @@
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
   font-family: var(--font-sans);
   font-size: var(--text-label);
   font-weight: 400;
@@ -251,12 +251,12 @@
 .cl-navbar-link[data-state='open'],
 .cl-navbar-link[aria-current='page'],
 .cl-navbar-link[data-current] {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .cl-navbar-link:hover {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
 }
 
@@ -266,7 +266,7 @@
   bottom: calc((var(--control-md) - var(--nav-height)) / 2 - 1px);
   left: 12px;
   height: 2px;
-  background: var(--color-ink);
+  background: var(--color-mark-ink);
   pointer-events: none;
   content: '';
 }
@@ -328,13 +328,13 @@
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   cursor: pointer;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .cl-navbar-toggle:hover {
-    background: var(--color-surface-sunken);
+    background: var(--color-well);
   }
 }
 
@@ -384,7 +384,7 @@
 }
 
 .cl-sheet-list > li {
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-rule);
 }
 
 .cl-navbar-sheet[hidden] {
@@ -406,7 +406,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-heading);
   font-weight: 500;
@@ -434,9 +434,9 @@
   gap: 12px;
   min-height: 44px;
   padding: 0;
-  color: var(--color-ink);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  color: var(--text-color-ink);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
   text-decoration: none;
 }
 

@@ -135,7 +135,7 @@ function LinksResult({
   if (isRunning(analysis.state) && !analysis.recommendations.length)
     return (
       <Section>
-        <output className="type-body text-ink-2">
+        <output className="text-body text-ink-2">
           {summary
             ? `Checking related pages… ${formatCount(summary.candidates - summary.pending)} of ${formatCount(summary.candidates)} page pairs done.`
             : 'Checking related pages…'}
@@ -167,7 +167,7 @@ function LinksBody({
   return (
     <>
       {isRunning(analysis.state) && summary ? (
-        <output className="type-caption">
+        <output className="text-caption text-ink-2">
           {formatCount(summary.candidates - summary.pending)} of {formatCount(summary.candidates)}{' '}
           page pairs checked
         </output>

@@ -14,7 +14,7 @@ export function AuthDivider() {
   return (
     <div
       aria-hidden
-      className="type-caption text-ink-2 before:bg-rule after:bg-rule flex items-center gap-3 before:h-px before:flex-1 after:h-px after:flex-1"
+      className="text-caption text-ink-2 before:bg-rule after:bg-rule flex items-center gap-3 before:h-px before:flex-1 after:h-px after:flex-1"
     >
       or
     </div>
@@ -46,7 +46,7 @@ export function AuthHumanCheck({
     >
       <div ref={container} className="w-full" />
       {failed ? (
-        <p className="type-caption text-ink-2 text-center">
+        <p className="text-caption text-ink-2 text-center">
           Couldn&apos;t load verification. Refresh the page to try again.
         </p>
       ) : null}
@@ -56,7 +56,7 @@ export function AuthHumanCheck({
 
 export function AuthLegal({ id, children }: Readonly<{ id?: string; children: ReactNode }>) {
   return (
-    <p id={id} className="type-caption text-ink-2 text-balance">
+    <p id={id} className="text-caption text-ink-2 text-balance">
       {children}
     </p>
   );
@@ -67,7 +67,9 @@ export function AuthActions({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 export function AuthLinkRow({ children }: Readonly<{ children: ReactNode }>) {
-  return <p className="type-body flex flex-wrap justify-between gap-x-4 gap-y-1">{children}</p>;
+  return (
+    <p className="text-body text-ink flex flex-wrap justify-between gap-x-4 gap-y-1">{children}</p>
+  );
 }
 
 export function AuthRowList({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
@@ -99,8 +101,8 @@ export function AuthRow({
   const content = (
     <>
       {lead}
-      <span className="type-body flex min-w-0 flex-1 items-baseline gap-2">
-        <span className="type-label text-ink truncate">{name}</span>
+      <span className="text-body text-ink flex min-w-0 flex-1 items-baseline gap-2">
+        <span className="text-label text-ink truncate">{name}</span>
         {meta ? <span className="text-ink-2 truncate">{meta}</span> : null}
       </span>
       {trailing}

@@ -269,7 +269,7 @@ function DataTableFoot({
       className="border-rule flex min-h-10 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t px-[var(--panel-inset)] py-1"
     >
       {footer ? (
-        <div className="type-caption grid min-w-0 content-center gap-1">{footer}</div>
+        <div className="text-caption text-ink-2 grid min-w-0 content-center gap-1">{footer}</div>
       ) : null}
       {pager ? (
         <div className="ms-auto flex min-w-0 flex-wrap items-center gap-4">
@@ -322,7 +322,7 @@ function DataTableHeader({
         </Heading>
       ) : null}
       {description ? (
-        <p data-data-table-description="" className="type-body text-ink-2 max-w-[72ch]">
+        <p data-data-table-description="" className="text-body text-ink-2 max-w-[72ch]">
           {description}
         </p>
       ) : null}

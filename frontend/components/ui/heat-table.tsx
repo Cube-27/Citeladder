@@ -19,7 +19,7 @@ import { cssVars } from '@/lib/css-vars';
 import { cn } from '@/lib/utils';
 
 const heat = (place: number) =>
-  `color-mix(in oklch, var(--color-accent) ${Math.round(4 + 46 * Math.min(1, Math.max(0, place)))}%, var(--color-surface))`;
+  `color-mix(in oklch, var(--color-accent) ${Math.round(4 + 46 * Math.min(1, Math.max(0, place)))}%, var(--color-panel))`;
 const HATCH = 'repeating-linear-gradient(135deg, transparent 0 6px, var(--color-rule) 6px 7px)';
 
 export type HeatValue =

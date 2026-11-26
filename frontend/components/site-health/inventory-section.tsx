@@ -87,7 +87,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
           <TableCell>
             <UrlText url={row.display_url} origin={origin} />
           </TableCell>
-          <TableCell className="type-caption">
+          <TableCell>
             {row.source ? statusLabel(row.source) : <Absence state="unavailable" label="Unknown" />}
           </TableCell>
         </TableRow>

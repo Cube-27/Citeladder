@@ -207,7 +207,7 @@ function FoldedItem({ entry }: Readonly<{ entry: FoldedEntry }>) {
       {entry.reason ? (
         <span className="grid min-w-0">
           <span>{entry.label}</span>
-          <span className="type-caption">{entry.reason}</span>
+          <span className="text-caption text-ink-2">{entry.reason}</span>
         </span>
       ) : (
         entry.label

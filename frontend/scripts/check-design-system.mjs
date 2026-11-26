@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 
-import { textContrastViolations } from './design-system-contrast.mjs';
+import { TOKEN_FILES, textContrast } from './design-system-contrast.mjs';
 import {
   ancestorRuleFindings,
   compositionFindings,
@@ -11,7 +11,7 @@ import {
 import { appSourceViolations } from './design-system-source-checks.mjs';
 
 const root = resolve(import.meta.dirname, '..');
-const tokenOwner = join(root, 'apps', 'app', 'src', 'globals.css');
+const tokenOwners = TOKEN_FILES.map((file) => join(root, ...file.split('/')));
 const sourceExtensions = new Set(['.css', '.ts', '.tsx', '.js', '.mjs', '.astro']);
 const ignored = new Set([
   'node_modules',
@@ -36,7 +36,7 @@ function files(directory) {
 
 for (const path of files(root)) {
   const extension = extname(path);
-  if (!sourceExtensions.has(extension) || path === tokenOwner) continue;
+  if (!sourceExtensions.has(extension) || tokenOwners.includes(path)) continue;
   const source = readFileSync(path, 'utf8');
   const label = relative(root, path);
   const styled =
@@ -44,7 +44,7 @@ for (const path of files(root)) {
       ? [...source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((match) => match[1]).join()
       : source;
   if (RAW_HEX.test(styled))
-    violations.push(`${label}: raw colour outside ${relative(root, tokenOwner)}`);
+    violations.push(`${label}: raw colour outside ${TOKEN_FILES.join(' and ')}`);
   if (extension === '.astro') continue;
   if (/\.tsx?$/.test(label) && !/\.test\.tsx?$/.test(label)) scriptSources.push({ label, source });
   composition.push(...compositionFindings(label, source));
@@ -52,10 +52,12 @@ for (const path of files(root)) {
 
 const appCssPath = join(root, 'apps', 'app', 'src', 'app.css');
 const appCss = readFileSync(appCssPath, 'utf8');
-violations.push(...textContrastViolations(root), ...appSourceViolations(appCss, scriptSources));
+violations.push(...textContrast(root).violations, ...appSourceViolations(appCss, scriptSources));
 
 composition.push(
-  ...ancestorRuleFindings(relative(root, tokenOwner), readFileSync(tokenOwner, 'utf8')),
+  ...tokenOwners.flatMap((owner) =>
+    ancestorRuleFindings(relative(root, owner), readFileSync(owner, 'utf8')),
+  ),
 );
 if (composition.length) {
   const report = compositionReport(composition);

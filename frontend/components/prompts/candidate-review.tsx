@@ -73,7 +73,9 @@ export function CandidateReview({
       <DataTable
         title={`Review ${pluralCount(candidates.length, 'suggestion')}`}
         toolbar={{
-          status: <span className="type-caption tabular-nums">{selected.length} selected</span>,
+          status: (
+            <span className="text-caption text-ink-2 tabular-nums">{selected.length} selected</span>
+          ),
           actions: (
             <Button
               variant="quiet"

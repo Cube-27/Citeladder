@@ -89,7 +89,7 @@ export function RunsTable({
     <DataTable
       title="All runs"
       actions={
-        <Inline as="output" className="type-caption">
+        <Inline as="output" className="text-caption text-ink-2">
           {status}
         </Inline>
       }

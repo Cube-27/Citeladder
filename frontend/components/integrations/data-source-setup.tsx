@@ -104,7 +104,7 @@ function RowFrame({
           <Icon icon={glyph} className="text-ink-2" />
           <div className="min-w-0">
             <div className={textRole('body', 'truncate')}>{title}</div>
-            <div className="type-caption">{status}</div>
+            <div className="text-caption text-ink-2">{status}</div>
           </div>
         </Inline>
         {action ? <Inline className="max-w-full shrink-0 flex-wrap">{action}</Inline> : null}
@@ -166,7 +166,7 @@ function ConnectRow({
         canManage ? (
           <ConnectButton family={family} onConnect={() => startConnect(family)} />
         ) : (
-          <span className="type-caption">Ask a workspace owner or admin</span>
+          <span className="text-caption text-ink-2">Ask a workspace owner or admin</span>
         )
       }
     />
@@ -230,7 +230,7 @@ function SourceRow({
   if (!canManage)
     return (
       <RowFrame Icon={source.Icon} title={source.label} status={status}>
-        <p className="type-caption">Ask a workspace owner or admin to choose it.</p>
+        <p className="text-caption text-ink-2">Ask a workspace owner or admin to choose it.</p>
       </RowFrame>
     );
   return (
@@ -301,7 +301,7 @@ function UnconnectedState({
         ))}
       </>
     ) : (
-      <span className="type-caption">Ask a workspace owner or admin to connect it.</span>
+      <span className="text-caption text-ink-2">Ask a workspace owner or admin to connect it.</span>
     );
   return <StateBlock kind="empty" icon={icon} heading={heading} action={action} />;
 }

@@ -139,8 +139,8 @@ export function Checkbox({
     >
       <span className={cn(CHECK_TARGET, '-my-0.5 [--target-hit:var(--target-min)]')}>{box}</span>
       <span className="flex min-w-0 flex-col">
-        <span className="type-body">{label}</span>
-        {description != null ? <span className="type-body text-ink-2">{description}</span> : null}
+        <span className="text-body text-ink">{label}</span>
+        {description != null ? <span className="text-body text-ink-2">{description}</span> : null}
       </span>
     </label>
   );

@@ -239,7 +239,7 @@ export function CommandPalette({
               aria-activedescendant={
                 results[activeIndex] ? `${listboxId}-${results[activeIndex].id}` : undefined
               }
-              className="type-body text-ink placeholder:text-ink-3 min-w-0 flex-1 self-stretch bg-transparent"
+              className="text-body text-ink placeholder:text-ink-placeholder min-w-0 flex-1 self-stretch bg-transparent"
             />
             <Kbd>Esc</Kbd>
           </div>
@@ -252,7 +252,7 @@ export function CommandPalette({
             className="content-scroll max-h-100 min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
           >
             {results.length === 0 ? (
-              <p className="type-body text-ink-2 px-4 py-[var(--page-section-gap)] text-center">
+              <p className="text-body text-ink-2 px-4 py-[var(--page-section-gap)] text-center">
                 {`No matches for “${query}”`}
               </p>
             ) : null}
@@ -272,7 +272,7 @@ export function CommandPalette({
                     aria-labelledby={headingId}
                     className="[&+&]:mt-2"
                   >
-                    <p id={headingId} className="type-caption-strong px-2 py-1">
+                    <p id={headingId} className="text-caption-strong text-ink-2 px-2 py-1">
                       {section.group}
                     </p>
                     {section.rows.map(({ command, index }) => {
@@ -291,7 +291,7 @@ export function CommandPalette({
                           onMouseMove={() => highlight(index)}
                           onClick={() => runCommand(command)}
                           className={cn(
-                            'press [--press:0.98] type-body text-ink flex min-h-[var(--control-md)] w-full items-center gap-2 rounded-mark px-2.5 text-left',
+                            'press [--press:0.98] text-body text-ink flex min-h-[var(--control-md)] w-full items-center gap-2 rounded-mark px-2.5 text-left',
                             isActive && 'overlay-hover',
                           )}
                         >
@@ -307,7 +307,7 @@ export function CommandPalette({
                           )}
                           <span className="min-w-0 flex-1 truncate">{command.label}</span>
                           {command.hint ? (
-                            <span className="type-caption text-ink-2 shrink-0 whitespace-nowrap">
+                            <span className="text-caption text-ink-2 shrink-0 whitespace-nowrap">
                               {command.hint}
                             </span>
                           ) : null}
@@ -320,7 +320,7 @@ export function CommandPalette({
             </div>
           </div>
 
-          <div className="border-rule type-caption text-ink-2 flex shrink-0 items-center gap-4 border-t px-4 py-2">
+          <div className="border-rule text-caption text-ink-2 flex shrink-0 items-center gap-4 border-t px-4 py-2">
             <span className="inline-flex items-center gap-2">
               <Kbd keys={['↑', '↓']} />
               {'navigate'}

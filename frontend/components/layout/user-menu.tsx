@@ -79,7 +79,7 @@ function UserMenuContent({
         {logout.isPending ? 'Signing out…' : 'Sign out'}
       </MenuItem>
       {logout.isError ? (
-        <p role="alert" className="type-caption text-negative px-2 py-2">
+        <p role="alert" className="text-caption text-negative px-2 py-2">
           Sign out failed. Your session is still active; please try again.
         </p>
       ) : null}

@@ -99,7 +99,7 @@ function CreatedKey({ secret }: Readonly<{ secret: string }>) {
     <>
       <Notice tone="warning">Shown once.</Notice>
       <Stack gap="compact" className="justify-items-start">
-        <code className="type-code break-all">{secret}</code>
+        <code className="text-code text-ink font-mono break-all">{secret}</code>
         <CopyButton value={secret}>Copy key</CopyButton>
       </Stack>
     </>

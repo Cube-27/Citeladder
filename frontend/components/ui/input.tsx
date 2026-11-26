@@ -8,7 +8,7 @@ export const FIELD_EDGE =
   'bg-panel border border-transparent [[data-public-surface]_&]:bg-well app:shadow-[var(--shadow-field,0_0_#0000)] app:not-disabled:hover:bg-field-hover';
 
 const FIELD_SHAPE =
-  'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)] app:duration-150';
+  'text-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)] app:duration-150';
 
 export const FIELD_BOX = `${FIELD_EDGE} ${FIELD_SHAPE}`;
 
@@ -45,7 +45,7 @@ export function Input({
         className={cn(
           'focus-input',
           FIELD_BOX,
-          'placeholder:text-ink-3 disabled:cursor-not-allowed disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-50',
+          'placeholder:text-ink-placeholder disabled:cursor-not-allowed disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-50',
           inputWidths[width],
           containerClassName,
           className,
@@ -67,20 +67,20 @@ export function Input({
       )}
     >
       {startContent ? (
-        <span className="type-caption flex shrink-0 items-center whitespace-nowrap tabular-nums">
+        <span className="text-caption text-ink-2 flex shrink-0 items-center whitespace-nowrap tabular-nums">
           {startContent}
         </span>
       ) : null}
       <input
         ref={ref}
         className={cn(
-          'placeholder:text-ink-3 type-body min-w-0 flex-1 self-stretch bg-transparent disabled:cursor-not-allowed',
+          'placeholder:text-ink-placeholder text-body text-ink min-w-0 flex-1 self-stretch bg-transparent disabled:cursor-not-allowed',
           className,
         )}
         {...props}
       />
       {endContent ? (
-        <span className="type-caption flex shrink-0 items-center whitespace-nowrap tabular-nums">
+        <span className="text-caption text-ink-2 flex shrink-0 items-center whitespace-nowrap tabular-nums">
           {endContent}
         </span>
       ) : null}

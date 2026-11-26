@@ -182,7 +182,7 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
               y={y}
               dy={12}
               textAnchor={edgeAnchor(payload.value, xTicks)}
-              fill="var(--color-ink-2)"
+              fill="var(--text-color-ink-2)"
               fontSize={12}
             >
               {axisLabels[payload.value] ?? ''}
@@ -222,7 +222,7 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
                             }
                             y={(viewBox.y ?? 0) - 14}
                             textAnchor={placement === 'left' ? 'start' : 'end'}
-                            fill="var(--color-ink-2)"
+                            fill="var(--text-color-ink-2)"
                             fontSize={12}
                           >
                             {entry.label}
@@ -316,7 +316,7 @@ function MetricTip({
             style={{ borderColor: row.color }}
           />
           <span className="text-ink-2 min-w-0 flex-1 truncate">{row.name}</span>
-          <span className="text-ink font-medium tabular-nums">{printed(row.value)}</span>
+          <span className="text-ink font-emphasis tabular-nums">{printed(row.value)}</span>
         </div>
       ))}
     </div>

@@ -62,7 +62,7 @@ type Line = Readonly<{
 }>;
 
 const EVENT_COLOR = {
-  panel: 'var(--color-ink-2)',
+  panel: 'var(--color-mark-ink-2)',
   model: 'var(--color-warning)',
   action: 'var(--color-positive)',
 } as const;
@@ -273,7 +273,7 @@ function AreaPlot({
                 ? {
                     value: 'No reading',
                     position: 'insideTop',
-                    fill: 'var(--color-ink-2)',
+                    fill: 'var(--text-color-ink-2)',
                     fontSize: 12,
                   }
                 : undefined
@@ -338,7 +338,7 @@ function AreaPlot({
               stroke={color}
               strokeWidth={line.tone === 'you' ? 2 : 1.5}
               fill={`url(#${id}-${at})`}
-              activeDot={{ r: 4, fill: color, stroke: 'var(--color-surface)', strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: color, stroke: 'var(--color-panel)', strokeWidth: 2 }}
               dot={(props: { cx?: number; cy?: number; payload?: ChartRow }) => (
                 <LineDot
                   key={`${line.name}-${props.payload?.x}`}

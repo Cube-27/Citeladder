@@ -61,7 +61,7 @@ export function useSeriesTones(
   });
 }
 
-export const AXIS_TEXT = 'fill-ink-2 type-caption tabular-nums';
+export const AXIS_TEXT = 'fill-ink-2 text-caption text-ink-2 tabular-nums';
 
 const END_LABEL_GAP = 16;
 export const LABEL_CHAR_WIDTH = 7.3;
@@ -96,7 +96,7 @@ export function EndLabels({ labels }: Readonly<{ labels: readonly EndLabel[] }>)
           x={label.x}
           y={label.y}
           dominantBaseline="middle"
-          className={cn('type-caption tabular-nums', SERIES_TEXT[label.tone])}
+          className={cn('text-caption text-ink-2 tabular-nums', SERIES_TEXT[label.tone])}
         >
           {label.text}
         </text>
@@ -227,7 +227,7 @@ export function EventTicks({
               x={event.x + 8}
               y={top - 6}
               dominantBaseline="middle"
-              className="fill-ink type-caption tabular-nums"
+              className="fill-ink text-caption text-ink-2 tabular-nums"
             >
               {event.count}
             </text>
@@ -237,7 +237,7 @@ export function EventTicks({
               x={event.x + 8}
               y={bottom - 12}
               dominantBaseline="middle"
-              className="fill-ink type-caption"
+              className="fill-ink text-caption text-ink-2"
             >
               {event.label.length > 28 ? `${event.label.slice(0, 27)}…` : event.label}
             </text>
@@ -256,7 +256,10 @@ export function EventLegend({
   return (
     <ul aria-hidden className="flex min-w-0 flex-wrap gap-x-6 gap-y-2">
       {events.map((event) => (
-        <li key={event.key} className="type-caption inline-flex min-w-0 items-center gap-2">
+        <li
+          key={event.key}
+          className="text-caption text-ink-2 inline-flex min-w-0 items-center gap-2"
+        >
           <svg aria-hidden viewBox="0 0 10 10" className="size-2.5 shrink-0">
             <path d={diamond(5, 5, 5)} className={EVENT_FILL[event.kind ?? 'action']} />
           </svg>
@@ -356,7 +359,7 @@ export function Markers({
   tone: SeriesTone;
   shape?: MarkerShape;
 }>) {
-  const className = cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-surface');
+  const className = cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-panel');
   return points.map((point, index) =>
     point ? (
       <g key={`${index}-${point[0]}`} data-marker-shape={shape}>

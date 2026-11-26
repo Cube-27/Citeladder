@@ -9,7 +9,7 @@
 .cl-art-canvas {
   position: absolute;
   inset: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
   font-size: clamp(8px, 2.5cqi, 20px);
   line-height: 1.3;
@@ -29,13 +29,13 @@
   gap: 0.7em;
   padding: 1.1em;
   border-radius: 0.9em;
-  background: var(--color-site-screen, var(--color-surface));
+  background: var(--color-site-screen, var(--color-panel));
   box-shadow: var(--site-shadow-float);
 }
 
 .cl-art-card--ghost {
   border: 0.12em solid var(--color-site-stage-line);
-  background: color-mix(in oklch, var(--color-surface) 70%, transparent);
+  background: color-mix(in oklch, var(--color-panel) 70%, transparent);
   box-shadow: none;
 }
 
@@ -60,7 +60,7 @@
 .cl-art-line--wash {
   height: 1.5em;
   border-radius: 0.35em;
-  background: var(--color-accent-soft);
+  background: var(--color-accent-wash);
 }
 
 .cl-art-pill {
@@ -69,16 +69,16 @@
   gap: 0.45em;
   padding: 0.5em 1em;
   border-radius: var(--radius-full);
-  background: var(--color-site-screen, var(--color-surface));
+  background: var(--color-site-screen, var(--color-panel));
   box-shadow: var(--site-shadow-float);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: 1.15em;
   font-weight: 500;
   white-space: nowrap;
 }
 
 .cl-art-pill--ring {
-  outline: 0.3em solid color-mix(in oklch, var(--color-surface) 55%, transparent);
+  outline: 0.3em solid color-mix(in oklch, var(--color-panel) 55%, transparent);
 }
 
 .cl-art-pill svg,
@@ -91,7 +91,7 @@
 
 .cl-art-pill svg[data-engine-mark],
 .cl-art-node > svg {
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 
 .cl-art-chip {
@@ -103,7 +103,7 @@
   padding: 0 0.9em;
   border: 0.12em solid var(--color-site-stage-line);
   border-radius: var(--radius-full);
-  background: color-mix(in oklch, var(--color-surface) 45%, transparent);
+  background: color-mix(in oklch, var(--color-panel) 45%, transparent);
 }
 
 .cl-art-chip > .cl-art-line {
@@ -121,7 +121,7 @@
   border-radius: 0.4em 0.4em 0 0;
   background: repeating-linear-gradient(
     to bottom,
-    var(--color-site-screen, var(--color-surface)) 0 0.28em,
+    var(--color-site-screen, var(--color-panel)) 0 0.28em,
     transparent 0.28em 0.5em
   );
 }
@@ -140,7 +140,7 @@
   left: 50%;
   padding: 0.2em 0.5em;
   border-radius: 0.35em;
-  background: var(--color-site-screen, var(--color-surface));
+  background: var(--color-site-screen, var(--color-panel));
   box-shadow: var(--site-shadow-float);
   font-size: 0.9em;
   font-weight: 500;
@@ -150,7 +150,7 @@
 
 .cl-art-bar--strong > .cl-art-tag {
   background: var(--color-accent);
-  color: var(--color-surface);
+  color: var(--color-panel);
 }
 
 .cl-art-node {
@@ -159,7 +159,7 @@
   width: 3.6em;
   height: 3.6em;
   border-radius: var(--radius-full);
-  background: var(--color-site-screen, var(--color-surface));
+  background: var(--color-site-screen, var(--color-panel));
   box-shadow: var(--site-shadow-float);
 }
 
@@ -175,8 +175,8 @@
   width: 1.5em;
   height: 1.5em;
   border-radius: var(--radius-full);
-  background: var(--color-accent-soft);
-  color: var(--color-accent-text);
+  background: var(--color-accent-wash);
+  color: var(--text-color-accent-text);
   font-size: 0.85em;
   font-weight: 500;
 }
@@ -189,14 +189,14 @@
 }
 
 .cl-art-caption {
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
   font-size: 0.95em;
 }
 
 .cl-art-swatch {
   aspect-ratio: 4 / 3;
   border-radius: 0.5em;
-  background: linear-gradient(135deg, var(--color-accent-soft), var(--color-site-stage-line));
+  background: linear-gradient(135deg, var(--color-accent-wash), var(--color-site-stage-line));
 }
 
 .cl-art-bubble {
@@ -210,7 +210,7 @@
 }
 
 .cl-art-bubble > .cl-art-line {
-  background: color-mix(in oklch, var(--color-surface) 75%, transparent);
+  background: color-mix(in oklch, var(--color-panel) 75%, transparent);
 }
 
 .cl-art-windowbar {
@@ -227,5 +227,5 @@
   width: 0.45em;
   height: 0.45em;
   border-radius: var(--radius-full);
-  background: var(--color-surface);
+  background: var(--color-panel);
 }

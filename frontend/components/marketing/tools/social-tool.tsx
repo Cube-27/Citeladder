@@ -42,7 +42,7 @@ export function SocialPreview() {
           }}
         />
       ) : (
-        <div className="bg-surface-sunken cl-body flex aspect-[1.91/1] items-center justify-center p-6 text-center">
+        <div className="bg-well cl-body flex aspect-[1.91/1] items-center justify-center p-6 text-center">
           Select a local image to preview its crop
         </div>
       )}
