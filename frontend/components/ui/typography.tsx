@@ -107,6 +107,7 @@ const TEXT_BOX = {
   fill: 'min-w-0 flex-1',
   shrink: 'min-w-0',
   fixed: 'shrink-0',
+  row: 'flex min-w-0',
 } as const;
 
 const TEXT_ALIGN = {

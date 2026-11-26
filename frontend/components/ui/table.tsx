@@ -99,8 +99,9 @@ export function TableRow({
   children,
   className,
   highlight,
+  focusable = false,
   ...props
-}: Readonly<HTMLAttributes<HTMLTableRowElement> & { highlight?: boolean }>) {
+}: Readonly<HTMLAttributes<HTMLTableRowElement> & { highlight?: boolean; focusable?: boolean }>) {
   const pressable = props.onClick !== undefined;
   return (
     <tr
@@ -113,6 +114,7 @@ export function TableRow({
           '[[data-public-surface]_&]:not-aria-selected:hover:overlay-hover',
         '[[data-public-surface]_&]:aria-selected:overlay-selected',
         highlight && '[[data-public-surface]_&]:bg-accent-wash',
+        focusable && 'focus-ring',
         className,
       )}
       data-you={highlight || undefined}
