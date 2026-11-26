@@ -50,12 +50,12 @@ export function FilterBar({ view, lead, ...row }: FilterBarProps) {
     <fieldset
       data-filter-bar=""
       aria-label="Search and filters"
-      className="flex min-h-[var(--control-md)] w-full min-w-0 flex-wrap items-center gap-1"
+      className="flex min-h-[var(--control-md)] w-full min-w-0 flex-wrap items-center gap-2"
     >
       {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
       {lead ? <div className="flex max-w-full min-w-0 shrink-0">{lead}</div> : null}
       {view ? (
-        <div className="flex min-w-[min(100%,16rem)] flex-[1_1_0] flex-wrap items-center justify-end gap-1">
+        <div className="flex min-w-[min(100%,16rem)] flex-[1_1_0] flex-wrap items-center justify-end gap-2">
           <Controls {...row} afterView />
         </div>
       ) : (
@@ -118,7 +118,7 @@ function Controls({
         <StripMeta windowLabel={windowLabel} status={status} afterView={afterView} />
       ) : null}
       {actions ? (
-        <div className="phone:ms-0 phone:justify-start phone:flex-wrap ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-1">
+        <div className="phone:ms-0 phone:justify-start phone:flex-wrap ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2">
           {actions}
         </div>
       ) : null}
