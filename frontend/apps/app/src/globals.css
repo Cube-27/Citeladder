@@ -1924,7 +1924,7 @@ label {
 [role='switch'] > span {
   box-shadow: var(--shadow-thumb);
 }
-[data-section='framed'] :is([data-data-table-frame], [data-setting-rows], :is(ol, ul).surface-lift) {
+:root:not([data-public-surface]) [data-section='framed'] :is([data-data-table-frame], [data-setting-rows], :is(ol, ul).surface-lift) {
   margin-inline: calc(-1 * var(--card-padding));
   border-inline: 0;
   border-radius: 0;
@@ -1942,7 +1942,6 @@ label {
 }
 [data-section='framed'] [data-figure-strip] {
   border: 0;
-  border-radius: 0;
   & > :first-child {
     padding-inline-start: 0;
   }
