@@ -52,7 +52,7 @@ export function splitTokens(text) {
   return text.split(/\s+/).filter(Boolean);
 }
 
-export function utilityOf(token) {
+function utilityOf(token) {
   let depth = 0;
   let last = 0;
   for (let index = 0; index < token.length; index += 1) {
