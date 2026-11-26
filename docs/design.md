@@ -291,7 +291,8 @@ holds the depth rules.
   website keeps its layered `.face`.
 - **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 36, the
   control face above with no edge at rest (`well` inside a surface); focused,
-  the focus ring; invalid, a negative edge. Disabled controls draw at 50%. 14px leading icon. Checkbox and radio
+  an accent edge inside the focus ring; invalid, a negative edge that stays
+  when focused. Disabled controls draw at 50%. 14px leading icon. Checkbox and radio
   are `panel` with a `control-line` edge, the one edged control, and a `primary` fill when on; the switch is a `primary`
   track when on, as is a picked calendar day and the setup stepper. Several short values ([`ValuesInput`](../frontend/components/ui/chip-input.tsx))
   are 24-high tokens on `state-selected`, a suggestion dashed with one accept
@@ -309,7 +310,7 @@ holds the depth rules.
   `ink` line, the rest `ink-2`. A panel's tabs are the slot under its header,
   their baseline across the card; never above the card or in its actions.
   Segmented control (and the sidebar's Dashboard | Agent): a `state-fill`
-  tray padded 4 with no edge, 32-high segments, the selected one a
+  tray one control high, padded 4, with no edge, 28-high segments, the selected one a
   `nav-current-fill` pill with the card shadow.
 - **Tags and status.** Tag: 20 high, radius 5, `state-selected` fill, no edge, 12px at 500 in `ink`; a
   draft is dashed; Kbd and composer chips share the face. Status

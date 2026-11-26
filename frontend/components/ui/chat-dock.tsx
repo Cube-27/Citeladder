@@ -37,7 +37,9 @@ export function DockedThread({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <DrawerPane label={label} scrollRef={scrollRef}>
-        {children}
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-[var(--panel-inset)]">
+          {children}
+        </div>
       </DrawerPane>
       {dock ? (
         <div className="px-[var(--panel-inset)]">

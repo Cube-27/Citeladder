@@ -1286,7 +1286,7 @@ a.focus-ring:active .type-caption {
 }
 :root:not([data-public-surface])
   :is(.focus-input:focus-visible, .focus-frame:has(:where(input, textarea, select):focus-visible)) {
-  border-color: transparent;
+  border-color: var(--field-focus-edge, var(--color-focus));
   box-shadow: 0 0 0 var(--focus-width) var(--field-focus-edge, var(--color-focus));
 }
 

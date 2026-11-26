@@ -159,30 +159,39 @@ export function Dialog({
               />
             </DialogPrimitive.Close>
           )}
-          {children == null ? null : (
-            <div
-              data-dialog-body=""
-              className={cn(
-                'text-ink flex min-h-0 flex-1 flex-col gap-[var(--panel-inset)] overflow-auto overscroll-contain px-[var(--panel-inset)] [--panel-inset:var(--modal-padding)]',
-                footer ? 'pb-0' : 'pb-[var(--panel-inset)]',
-              )}
-            >
-              <SurfaceContext value="surface">{children}</SurfaceContext>
-            </div>
-          )}
-          {footer ? (
-            <footer
-              className={cn(
-                'flex items-center justify-end gap-2 px-[var(--modal-padding)] pb-[var(--modal-padding)]',
-                children == null ? 'pt-0' : 'pt-5',
-              )}
-            >
-              {footer}
-            </footer>
-          ) : null}
+          <DialogBody footer={footer}>{children}</DialogBody>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+  );
+}
+
+function DialogBody({ children, footer }: Readonly<{ children?: ReactNode; footer?: ReactNode }>) {
+  const hasBody = children != null;
+  return (
+    <>
+      {hasBody ? (
+        <div
+          data-dialog-body=""
+          className={cn(
+            'text-ink flex min-h-0 flex-1 flex-col gap-[var(--panel-inset)] overflow-auto overscroll-contain px-[var(--panel-inset)] [--panel-inset:var(--modal-padding)]',
+            footer ? 'pb-0' : 'pb-[var(--panel-inset)]',
+          )}
+        >
+          <SurfaceContext value="surface">{children}</SurfaceContext>
+        </div>
+      ) : null}
+      {footer ? (
+        <footer
+          className={cn(
+            'flex items-center justify-end gap-2 px-[var(--modal-padding)] pb-[var(--modal-padding)]',
+            hasBody ? 'pt-5' : 'pt-0',
+          )}
+        >
+          {footer}
+        </footer>
+      ) : null}
+    </>
   );
 }
 

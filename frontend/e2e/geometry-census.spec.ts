@@ -59,7 +59,7 @@ const CONTROL_ROLES = [
   'input.height',
   'select.height',
   'segmented.height',
-  'data-table-header.height',
+  'data-table-actions.height',
 ] as const;
 const STRIP_ROLES = ['page-tab.height', 'tabs-strip.height'] as const;
 const CARD_INSET_ROLES = ['card.padding', 'card.inset-top', 'card.inset-left'] as const;
@@ -284,8 +284,8 @@ function measure({ route }: { route: string }) {
     if (!element.matches('[data-state-frame]') && !nestedState(element))
       add('query-state.padding', element, px(getComputedStyle(element).paddingTop));
   }
-  for (const element of all('[data-data-table-header]'))
-    add('data-table-header.height', element, element.getBoundingClientRect().height);
+  for (const element of all('[data-data-table-header] > [data-section-actions]'))
+    add('data-table-actions.height', element, element.getBoundingClientRect().height);
   for (const element of all('[data-figure-cell]')) {
     add('figure-cell.padding-y', element, px(getComputedStyle(element).paddingTop));
     if (element.matches('[data-label-lines="2"], [data-sub-line]')) continue;
@@ -622,7 +622,7 @@ const ROUTE_GROUPS: Readonly<Record<string, readonly PageState[]>> = {
         [new RegExp(String.raw`/api/v1/workspaces/${workspace}/members(\?.*)?$`), MEMBERS],
         [new RegExp(String.raw`/api/v1/workspaces/${workspace}/invitations(\?.*)?$`), []],
       ],
-      required: ['data-table-header.height', 'input.height'],
+      required: ['input.height'],
     },
   ],
   agent: [

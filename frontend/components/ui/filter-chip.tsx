@@ -40,7 +40,7 @@ export function FilterTrigger({
           'focus-input flex w-auto max-w-full min-w-0 shrink-0 items-center text-left',
           'press',
           'disabled:cursor-not-allowed disabled:opacity-50',
-          iconOnly ? 'gap-1 px-0 pe-2' : 'gap-2 ps-3 pe-2',
+          iconOnly ? 'gap-1 px-0 pe-2' : 'gap-2 ps-[var(--control-md-padding,12px)] pe-2',
           className,
         )}
         {...props}

@@ -1,6 +1,6 @@
 export const COMPOSITION_ENFORCED = false;
 
-export const QUOTED_WELLS = new Map([
+const QUOTED_WELLS = new Map([
   ['components/ai-traffic/gcp-pull-setup.tsx', 'the Cloud Shell commands and sink filter to copy'],
   ['components/site-health/internal-link-review.tsx', 'the anchor text quoted from the page'],
 ]);

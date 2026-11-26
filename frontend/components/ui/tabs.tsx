@@ -49,7 +49,7 @@ const TAB_KIND = {
     current: 'tab-line',
   },
   segment: {
-    base: 'rounded-mark h-8 px-4',
+    base: 'rounded-mark h-7 px-4',
     current: 'bg-[var(--nav-current-fill)] shadow-card',
   },
 } as const;
