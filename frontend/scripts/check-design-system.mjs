@@ -64,11 +64,6 @@ const appCss = readFileSync(appCssPath, 'utf8');
 const designSystem = await loadDesignSystem(appCss, dirname(appCssPath));
 
 const contrast = textContrast(root);
-if (contrast.awaitingOwner.length)
-  console.warn(
-    `Contrast below AA, awaiting the owner's colour decision:\n${contrast.awaitingOwner.join('\n')}`,
-  );
-
 violations.push(
   ...contrast.violations,
   ...undeclaredColourViolations(

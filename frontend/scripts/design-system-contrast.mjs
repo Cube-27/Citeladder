@@ -51,14 +51,16 @@ const TEXT_ON = {
   'metric-ink-dark': { surfaces: [color('metric-position')], only: 'app' },
 };
 
+const SEARCH_CONSOLE_LOOK = {
+  reason:
+    'white figures on the Search Console metric tiles are the owner-chosen look (owner, 2026-11-25)',
+  inks: [text('metric-ink')],
+  surfaces: ['metric-clicks', 'metric-ctr'].map(color),
+  minimum: 4.5,
+  only: 'app',
+};
+
 const CONTRAST_PAIRS = [
-  {
-    inks: [text('metric-ink')],
-    surfaces: ['metric-clicks', 'metric-ctr'].map(color),
-    minimum: 4.5,
-    only: 'app',
-    awaitingOwner: true,
-  },
   {
     inks: ['ink', 'ink-2'].map(text),
     surfaces: ['state-hover', 'state-pressed', 'state-selected'].map(color),
@@ -376,7 +378,7 @@ function measure(source) {
   const violations = clean.includes(`${DARK} {`)
     ? []
     : [`${TOKEN_CSS}: dark theme token mapping is missing`];
-  const awaitingOwner = [];
+  const accepted = [];
   for (const { name, layers, kind } of SCOPES) {
     const palette = resolvePalette(source, layers);
     const holds = (row) =>
@@ -388,10 +390,16 @@ function measure(source) {
       ...textRows(palette).map((row) => ({ ...row, surfaces: row.surfaces ?? GROUNDS[kind] })),
     ];
     for (const row of rows.filter(holds)) {
-      (row.awaitingOwner ? awaitingOwner : violations).push(...rowViolations(palette, name, row));
+      violations.push(...rowViolations(palette, name, row));
     }
+    if (holds(SEARCH_CONSOLE_LOOK))
+      accepted.push(
+        ...rowViolations(palette, name, SEARCH_CONSOLE_LOOK).map(
+          (finding) => `${finding}; accepted: ${SEARCH_CONSOLE_LOOK.reason}`,
+        ),
+      );
   }
-  return { violations, awaitingOwner };
+  return { violations, accepted };
 }
 
 /** @public */
@@ -400,8 +408,8 @@ export function paletteViolations(source) {
 }
 
 /** @public */
-export function paletteAwaitingOwner(source) {
-  return measure(source).awaitingOwner;
+export function paletteAccepted(source) {
+  return measure(source).accepted;
 }
 
 export function textContrast(root) {

@@ -4,7 +4,7 @@ import test from 'node:test';
 
 import {
   contrastRoles,
-  paletteAwaitingOwner,
+  paletteAccepted,
   paletteDeclarations,
   paletteViolations,
   resolvePalette,
@@ -121,12 +121,29 @@ test('a text role nobody listed is measured on every ground of its palette', () 
   );
 });
 
-test('a pair awaiting the owner is reported apart and does not fail', () => {
-  const source = css({ light: { '--color-metric-clicks': '#000000' } });
-  assert.ok(!paletteViolations(source).some((violation) => violation.includes('metric-clicks')));
-  assert.deepEqual(paletteAwaitingOwner(source), [
-    'apps/app/src/globals.css: :root:not([data-public-surface]) --text-color-metric-ink on --color-metric-clicks is 1.00:1; needs 4.5:1',
-  ]);
+test('only the owner-accepted Search Console tiles are exempt, and the same ink elsewhere fails', () => {
+  const source = css({
+    light: {
+      '--text-color-metric-ink': '#ffffff',
+      '--color-metric-clicks': '#ffffff',
+      '--color-metric-ctr': '#000000',
+      '--color-metric-impressions': '#ffffff',
+    },
+  });
+  const violations = paletteViolations(source);
+  assert.ok(!violations.some((violation) => violation.includes('metric-clicks')));
+  assert.ok(
+    violations.includes(
+      'apps/app/src/globals.css: :root:not([data-public-surface]) --text-color-metric-ink on --color-metric-impressions is 1.00:1; needs 4.5:1',
+    ),
+  );
+  assert.deepEqual(
+    paletteAccepted(source),
+    [':root:not([data-public-surface])', ":root[data-theme='dark']:not([data-public-surface])"].map(
+      (scope) =>
+        `apps/app/src/globals.css: ${scope} --text-color-metric-ink on --color-metric-clicks is 1.00:1; needs 4.5:1; accepted: white figures on the Search Console metric tiles are the owner-chosen look (owner, 2026-11-25)`,
+    ),
+  );
 });
 
 test('a translucent soft is composited onto the surface before measuring', () => {
