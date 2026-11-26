@@ -11,7 +11,7 @@ import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { useCreateChat } from '@/components/agent/use-chat-turns';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { useHandoffScope } from '@/components/agent/handoff-scope';
-import { ThreadPage } from '@/components/templates/thread-page';
+import { ThreadOpening, ThreadPage } from '@/components/templates/thread-page';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
@@ -100,7 +100,7 @@ function NewChat({
 
   return (
     <ThreadPage>
-      <Stack gap="section" className="max-w-thread mx-auto my-auto w-full">
+      <ThreadOpening>
         <h2 className={textRole('title', 'text-center')}>What can I help with?</h2>
         {unavailable ? (
           <Notice tone="negative">
@@ -149,7 +149,7 @@ function NewChat({
             disabled={!access.canSend}
           />
         )}
-      </Stack>
+      </ThreadOpening>
     </ThreadPage>
   );
 }

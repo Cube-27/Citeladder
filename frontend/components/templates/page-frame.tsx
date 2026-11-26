@@ -45,8 +45,15 @@ export function PageFrame({
   filters,
   fill,
   head = 'page',
+  end = 'page',
   children,
-}: PageFrameSlots & Readonly<{ fill?: true; head?: 'page' | 'masthead'; children: ReactNode }>) {
+}: PageFrameSlots &
+  Readonly<{
+    fill?: true;
+    head?: 'page' | 'masthead';
+    end?: 'page' | 'thread';
+    children: ReactNode;
+  }>) {
   const pathname = useLocation().pathname ?? '';
   const resolved = useRouteTitle(title, pathname);
   const parents = trail ?? routeTrail(pathname);
@@ -82,7 +89,11 @@ export function PageFrame({
           ) : null}
           <div
             data-page-body=""
-            className={cn('flex min-w-0 flex-1 flex-col pt-3', PAGE_COLUMN[width], 'pb-6')}
+            className={cn(
+              'flex min-w-0 flex-1 flex-col pt-3',
+              PAGE_COLUMN[width],
+              end === 'thread' ? 'pb-1' : 'pb-6',
+            )}
           >
             {children}
           </div>

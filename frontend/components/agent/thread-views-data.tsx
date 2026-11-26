@@ -11,7 +11,7 @@ import {
 } from '@/components/search-intelligence/search-intelligence-rows-table';
 import { ScoreSection } from '@/components/site-health/score-section';
 import { DataTable } from '@/components/ui/data-table';
-import { Stack } from '@/components/ui/layout';
+import { SectionStack } from '@/components/ui/section';
 import { crawlLogsAvailable, useCrawlSources } from '@/lib/ai-traffic/use-crawl-connections';
 import { aiTrafficQueries } from '@/lib/api/ai-traffic';
 import { searchIntelligenceQueries } from '@/lib/api/search-intelligence';
@@ -51,7 +51,7 @@ export function AiTrafficView({
     <ViewFrame title="AI traffic" href={agentViewHref(view)}>
       <ViewRead query={read} subject="AI traffic" shape={{ kind: 'figures' }}>
         {(data) => (
-          <Stack gap="workspace" className="min-w-0">
+          <SectionStack>
             <OverviewFigures
               data={data}
               projectId={scope.projectId}
@@ -59,7 +59,7 @@ export function AiTrafficView({
               ga4={ga4}
             />
             {data.crawl.series.length ? <RequestsByPurpose series={data.crawl.series} /> : null}
-          </Stack>
+          </SectionStack>
         )}
       </ViewRead>
     </ViewFrame>

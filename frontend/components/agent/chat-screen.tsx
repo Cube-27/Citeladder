@@ -11,7 +11,6 @@ import { WorkbenchPage } from '@/components/templates/workbench-page';
 import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
 import { ActionButton } from '@/components/ui/actions';
 import { ComposerDock } from '@/components/ui/chat-dock';
-import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { isPageReading } from '@/lib/agent/run-state';
 import type { AgentChatDetail } from '@/lib/api/agent';
@@ -120,26 +119,24 @@ function ChatView({
       }
       actions={<ChatHeaderActions detail={detail} />}
     >
-      <Stack gap="workspace" className="min-w-0 flex-1 content-start">
-        <p aria-hidden className={textRole('heading', 'desktop:hidden')}>
-          {detail.chat.title}
-        </p>
-        <ChatConversation
-          thread={thread}
-          detail={detail}
-          renderOutput={(output) => (
-            <OutputPane
-              workspaceId={workspaceId}
-              chatId={chatId}
-              output={output}
-              runActive={thread.runActive}
-              canEdit={canEdit}
-              canSend={thread.access.canSend && !thread.turn.pending}
-              onRevise={(message) => thread.turn.send(message)}
-            />
-          )}
-        />
-      </Stack>
+      <p aria-hidden className={textRole('heading', 'desktop:hidden')}>
+        {detail.chat.title}
+      </p>
+      <ChatConversation
+        thread={thread}
+        detail={detail}
+        renderOutput={(output) => (
+          <OutputPane
+            workspaceId={workspaceId}
+            chatId={chatId}
+            output={output}
+            runActive={thread.runActive}
+            canEdit={canEdit}
+            canSend={thread.access.canSend && !thread.turn.pending}
+            onRevise={(message) => thread.turn.send(message)}
+          />
+        )}
+      />
     </ThreadPage>
   );
 }

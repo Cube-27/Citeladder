@@ -15,7 +15,7 @@ import {
 } from '@/components/agent/use-actions-page';
 import { ReportPage } from '@/components/templates/report-page';
 import { Button, IconButton } from '@/components/ui/button';
-import { Stack } from '@/components/ui/layout';
+import { Section, SectionContent } from '@/components/ui/section';
 import { SelectionDock } from '@/components/ui/selection-dock';
 import { textRole } from '@/components/ui/typography';
 import { X } from '@/lib/icons';
@@ -66,17 +66,15 @@ export function ActionsScreen() {
   return (
     <ActionsPageContext value={{ scope, view, levels, selection }}>
       <ReportPage filters={<ActionsToolbar scope={scope} view={view} newCount={counts?.open} />}>
-        <Stack gap="workspace" className="min-w-0">
-          <Stack gap="tight">
-            <h2 className={textRole('heading')}>Close the gaps keeping you out of AI answers</h2>
-          </Stack>
-          <GoalStrip goals={primary.data?.goals} failed={primary.isError} onJump={jump} />
-          <div>
+        <h2 className={textRole('heading')}>Close the gaps keeping you out of AI answers</h2>
+        <GoalStrip goals={primary.data?.goals} failed={primary.isError} onJump={jump} />
+        <Section>
+          <SectionContent>
             {view.statuses.map((status) => (
               <StatusSection key={status} status={status} count={counts?.[status]} />
             ))}
-          </div>
-        </Stack>
+          </SectionContent>
+        </Section>
         <BulkBar />
       </ReportPage>
     </ActionsPageContext>

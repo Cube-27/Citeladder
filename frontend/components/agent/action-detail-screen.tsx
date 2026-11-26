@@ -95,7 +95,7 @@ function ActionPage({
         </Labelled>
         <ActionFacts action={action} />
         {gaps.length > 0 ? (
-          <Labelled title={placement ? 'Competitor evidence' : 'Why this matters'}>
+          <Labelled title={placement ? 'Competitor evidence' : 'Why this matters'} bare>
             <ContentGapWhy members={gaps} />
           </Labelled>
         ) : null}

@@ -8,8 +8,6 @@ export function slipClasses(className?: string) {
   return cn('surface-slip p-[var(--card-padding)]', SLIP_FACE, className);
 }
 
-export const STEP_SLIP = cn('surface-slip min-w-0 px-4 py-3', SLIP_FACE);
-
 export function wellClasses(className?: string) {
   return cn('surface-well bg-well rounded-control p-[var(--card-padding)]', className);
 }
