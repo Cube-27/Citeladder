@@ -322,7 +322,7 @@ function DataTableHeader({
         </Heading>
       ) : null}
       {description ? (
-        <p data-data-table-description="" className="text-body text-ink-2 max-w-[72ch]">
+        <p data-data-table-description="" className="text-body text-ink-2 max-w-copy">
           {description}
         </p>
       ) : null}

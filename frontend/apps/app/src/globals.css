@@ -260,6 +260,8 @@
   --color-brand-chatgpt: var(--ramp-brand-chatgpt);
   --color-brand-claude: var(--ramp-brand-claude);
   --color-brand-gemini: var(--ramp-brand-gemini);
+  --color-nav-current: transparent;
+  --color-table-head: transparent;
 
   --text-*: initial;
   --font-weight-*: initial;
@@ -294,6 +296,7 @@
   --container-narrow: 560px;
   --container-form: 640px;
   --container-flow: 480px;
+  --container-copy: 72ch;
 
   --transition-duration-fast: 120ms;
   --transition-duration-close: 160ms;
@@ -452,7 +455,7 @@
   --color-panel: var(--ramp-zinc-21);
   --color-raised: var(--ramp-zinc-25_7);
   --color-raised-2: var(--ramp-slate-27_2);
-  --table-head-ground: var(--ramp-zinc-25_7);
+  --color-table-head: var(--ramp-zinc-25_7);
   --color-thumb: var(--color-mark-ink-2);
   --color-rule: var(--ramp-white-a11);
   --color-control-line: var(--ramp-white-a22);
@@ -479,7 +482,7 @@
   --color-state-selected: var(--ramp-white-a7-srgb);
   --color-state-fill: var(--ramp-white-a7-srgb);
   --color-state-fill-hover: var(--ramp-white-a10-srgb);
-  --nav-current-fill: var(--ramp-zinc-39_6);
+  --color-nav-current: var(--ramp-zinc-39_6);
   --color-scrim: var(--ramp-black-a60);
   --shadow-card: none;
   --shadow-field: none;
@@ -612,7 +615,7 @@
 
 :root:not([data-public-surface]) {
   text-wrap: pretty;
-  --table-head-ground: var(--ramp-zinc-95_2);
+  --color-table-head: var(--ramp-zinc-95_2);
   --table-ground: var(--color-panel);
   --color-ground: var(--ramp-zinc-95_2);
   --color-panel: var(--ramp-white-srgb);
@@ -679,7 +682,7 @@
   --sticky-header-offset: calc(
     var(--masthead-block-size, var(--spacing-masthead)) + var(--strips-block-size, 0px)
   );
-  --nav-current-fill: var(--color-panel);
+  --color-nav-current: var(--color-panel);
   --spacing-panel-inset: 0px;
   --route-chrome-height: calc(
     2 * var(--spacing-panel-inset) + var(--masthead-block-size, var(--spacing-masthead)) +
@@ -1251,7 +1254,7 @@ label {
   letter-spacing: normal;
   text-transform: none;
   color: var(--text-color-ink-2);
-  background: var(--table-head-ground);
+  background: var(--color-table-head);
 }
 :root:not([data-public-surface]) .table-frame tbody > tr > * {
   background-color: var(--table-ground);

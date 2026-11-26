@@ -419,7 +419,7 @@
       "count": 17
     },
     "shadcn/no-arbitrary-values": {
-      "count": 3
+      "count": 2
     },
     "shadcn/no-restyle": {
       "count": 1
@@ -591,9 +591,6 @@
   },
   "components/marketing/pages/compare.tsx": {
     "design/plain-element": {
-      "count": 1
-    },
-    "shadcn/no-arbitrary-values": {
       "count": 1
     }
   },
@@ -1378,9 +1375,6 @@
     "design/plain-element": {
       "count": 8
     },
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/require-static-classes": {
       "count": 1
     }
@@ -1591,9 +1585,6 @@
     }
   },
   "components/ui/data-table.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-inline-styles": {
       "count": 1
     }
@@ -1800,11 +1791,6 @@
       "count": 2
     }
   },
-  "components/ui/section.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    }
-  },
   "components/ui/select.tsx": {
     "shadcn/no-arbitrary-values": {
       "count": 3
@@ -1817,7 +1803,7 @@
   },
   "components/ui/sidebar.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 4
+      "count": 2
     }
   },
   "components/ui/skeleton-block.tsx": {
@@ -1888,7 +1874,7 @@
   },
   "components/ui/tabs.tsx": {
     "shadcn/no-arbitrary-values": {
-      "count": 6
+      "count": 5
     },
     "shadcn/no-restyle": {
       "count": 1

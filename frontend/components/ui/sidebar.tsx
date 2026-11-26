@@ -181,7 +181,7 @@ export function SidebarNavGroup({
   );
 }
 
-const CURRENT_FILL = 'bg-[var(--nav-current-fill)] shadow-card';
+const CURRENT_FILL = 'bg-nav-current shadow-card';
 const CURRENT_TILE = cn(CURRENT_FILL, 'text-ink');
 const AT_REST = 'text-ink-2 hover:overlay-hover hover:text-ink';
 const NAV_AT_REST = 'text-nav-ink hover:overlay-hover hover:shadow-card';
@@ -233,7 +233,7 @@ export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
   if (rail) return cn(RAIL_BUTTON, current ? cn('text-ink', CURRENT_FILL) : AT_REST);
   return cn(
     'focus-ring text-label text-ink rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors',
-    current ? 'text-ink bg-[var(--nav-current-fill)] shadow-card' : AT_REST,
+    current ? 'text-ink bg-nav-current shadow-card' : AT_REST,
   );
 }
 

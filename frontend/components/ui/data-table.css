@@ -18,6 +18,6 @@
   [data-pinned] .table-frame thead tr > :nth-child(1),
   [data-pinned='2'] .table-frame thead tr > :nth-child(2) {
     z-index: 20;
-    background-color: var(--table-head-ground);
+    background-color: var(--color-table-head);
   }
 }

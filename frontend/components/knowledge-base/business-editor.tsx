@@ -203,7 +203,7 @@ export function OfferingsGrid({
           aria-hidden
           className={cn(
             ROW_GRID,
-            'border-rule column-split:grid hidden h-table-head items-center border-b bg-[var(--table-head-ground)]',
+            'border-rule column-split:grid hidden h-table-head items-center border-b bg-table-head',
             textRole('captionStrong'),
           )}
         >

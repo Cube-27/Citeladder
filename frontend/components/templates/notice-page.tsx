@@ -55,7 +55,7 @@ function NoticeBlock({
       {children ? (
         <div className="flex items-start gap-2">
           {heading ? null : mark}
-          <div className={textRole('body', 'flex max-w-[72ch] min-w-0 flex-col gap-2')}>
+          <div className={textRole('body', 'flex max-w-copy min-w-0 flex-col gap-2')}>
             {children}
           </div>
         </div>

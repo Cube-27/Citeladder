@@ -78,7 +78,7 @@ export function SectionDescription({
   ...props
 }: Readonly<Omit<ComponentPropsWithoutRef<'p'>, 'className'>>) {
   return (
-    <p {...props} className={textRole('body', 'text-ink-2 max-w-[72ch]')}>
+    <p {...props} className={textRole('body', 'text-ink-2 max-w-copy')}>
       {children}
     </p>
   );

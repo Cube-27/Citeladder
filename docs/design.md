@@ -144,9 +144,18 @@ a CSS variable for code blocks.
 
 ## Spacing, size and shape
 
-- **Spacing:** the spacing roles in `globals.css` (page section gap, panel
-  inset, modal padding, gutters); inside a primitive, steps of the 4px scale.
-  A screen never picks a step.
+- **Spacing and size:** named `--spacing-*` roles in the `@theme` of
+  `globals.css` (`gap-section`, `p-card`, `px-gutter`, `min-h-control-md`,
+  `h-row`…), one name per role, re-pointed per subdomain and breakpoint where
+  the value differs. A role that must resolve under a re-pointing ancestor
+  (the sidebar width) goes in `@theme inline`. Inside a primitive, steps of
+  the 4px scale are allowed; a screen never picks a step. Grid templates are
+  `grid-cols-<role>` roles, rendered by `Columns template`.
+- **Motion, layering and opacity:** `duration-<role>` (fast 120, close 160,
+  open 200, press 250, slide 300, plus reveal, pulse, sweep and the stagger
+  steps), `ease-<role>`, `z-<role>` (base, raised, sticky, float, overlay,
+  modal, toast) and `opacity-<role>` (disabled 50, muted 80, ghost, hover).
+  `cn` knows every role, so a caller can still override one.
 - **Controls:** 36 high (HeroUI's medium); 44 below 900px or under a coarse pointer, and on
   sign-in, account and setup pages (the website's height, `control-lg`).
   Icons 14 in `ink-2` (Tabler, the `Icon` atom), centred on and no taller than
@@ -217,7 +226,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Body.** 24 side padding (16 below 760px), 24 below; the title, tab
   strip, toolbar and content sit 12 apart, the same gap as a table's
   toolbar above its table (owner, 2026-11-22): status line,
-  then the metric strip, then cards 20 apart (`--page-section-gap`) with no
+  then the metric strip, then cards 20 apart (`gap-section`) with no
   rule between them; a section's head is inside its card (AR-24). Links carry no underline at rest,
   only on hover and focus. Narrow pages centre the body in their column (AR-9; 1040:
   Overview, Projects, Issues, Actions, Agent, Settings, Agent context; 720:
@@ -225,7 +234,11 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   pages, AR-22).
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
-  page-wide toolbar is the strip under the tabs, with no rule.
+  page-wide toolbar (`FilterBar`) is the strip under the tabs, with no rule,
+  and takes no search: a search narrows one table, so it lives in that
+  table's `TableToolbar` (`DataTable toolbar`). An export is `ExportAction`:
+  `scope="page"` in the page header actions, `scope="table"` in the table
+  toolbar.
 - **Metric strip:** a bleed slot of a card (on the paper it brings its own
   card), cells divided by hairlines, padded 12 by the card inset, 12px label
   over the value. Never one card per figure;
@@ -277,14 +290,19 @@ draws its own geometry). Every visible thing in the app's main column, drawers
 and dialogs is one of them; [`section.test.tsx`](../frontend/components/ui/section.test.tsx)
 holds the depth rules.
 
-- **Pages pass content, never geometry.** No primitive takes `className`; no
-  page adds padding, margin, border, fill, radius or shadow around one; no
+- **Pages pass content, never geometry.** A primitive exposes typed props
+  (`Stack`/`Inline` `gap`, `align`, `justify`, `wrap`; `Columns template`;
+  `tone` on `Text`, `Icon` and the link components). `Stack` and `Inline`
+  still accept `className` until the screen batches move their callers to
+  props; restyling any other primitive through `className` is a lint finding.
+  No page adds padding, margin, border, fill, radius or shadow around one; no
   globals rule depends on what contains what. A primitive that needs its
-  depth reads `SurfaceContext` (`useOnPage()`), never a CSS ancestor. The one
-  exception is the control face per ground (Buttons above).
+  depth reads `SurfaceContext` (`useOnPage()`), never a CSS ancestor. A
+  surface sets the control face tokens on itself (Buttons below); controls
+  only read them.
 - **Depth.** `Section`, `PanelFrame`, `Drawer`, `Dialog` and `DraftSheet`
   provide `surface`. On the paper a `Section` is a card (`panel`, card radius
-  and shadow, padded `--panel-inset` 16); inside a surface it is flat (no
+  and shadow, padded `panel-inset` 16); inside a surface it is flat (no
   fill, padding, radius or shadow) and its title takes the subheading role. A
   card can never draw inside a card.
 - **Slots.** `Section` > `SectionHeader` (title, description, `actions`) >
@@ -295,16 +313,16 @@ holds the depth rules.
   in the toolbar when there is one.
 - **Bleed.** `SectionBleed` is the one full-width slot: tables, `FigureStrip`,
   `SettingRows`, `LedgerList` and other row lists run edge to edge and pad
-  `--panel-inset` on their own edges, so row text lines up with the title.
+  `panel-inset` on their own edges, so row text lines up with the title.
   A bleed that is the card's first or last slot meets that edge; otherwise it
   draws one hairline on top, the only rule a card draws. It must be a direct
   child of the section (tab wrappers in a surface pass through). Nothing else
   uses negative margins. On the paper a bleed, strip, table or `StateBlock`
   with no section around it wraps itself in one.
 - **Page body.** A `SectionStack` of page-level `Section`s, `AppGrid`s of them
-  and self-wrapping primitives, `--page-section-gap` apart; only headings, the
+  and self-wrapping primitives, `gap-section` apart; only headings, the
   page toolbar and a `Notice` sit on the paper (AR-22).
-- **Overlays.** A drawer or dialog body is a surface at `--modal-padding` (24):
+- **Overlays.** A drawer or dialog body is a surface at `spacing-modal` (24):
   its sections are flat and 24 apart, tables bleed to its edges. Fields
   inside group in one `Stack gap="workspace"`; nothing else wraps the body.
   Overlay styling keys on `data-overlay`, never `[role=dialog]`.
@@ -354,8 +372,10 @@ holds the depth rules.
   radius 8; 14px icons in `ink-2` on a secondary. Secondary, filter chip,
   select trigger and field share one face per ground: on the paper `raised`
   with the field shadow, inside a surface (card, overlay, well, menu) the
-  `state-fill` grey with no shadow. App rules key on the `ui-button-<variant>`
-  class `buttonClasses()` emits, so a link styled as a button matches. Quiet:
+  `state-fill` grey with no shadow. Each surface sets `--control-face`,
+  `--control-face-hover` and `--control-face-shadow` on its own element; the
+  secondary button reads them (`bg-control-face`, `shadow-control-face`), so a
+  link styled as a button (`Button asChild`) matches. Quiet:
   transparent, `ink`, `state-hover` fill. Primary: `primary` fill (the deep accent),
   white text, at most one per view. Danger: secondary with negative text; filled only to confirm in a
   dialog (`danger-confirm`). One disabled look for every variant. The
