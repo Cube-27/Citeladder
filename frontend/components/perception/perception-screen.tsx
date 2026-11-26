@@ -21,6 +21,7 @@ import { availabilityLabel } from '@/lib/format';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useBrandFacts } from '@/lib/project/use-brand-facts';
 import { useAccuracy, useFactViews } from '@/lib/visibility/use-accuracy';
+import { FACT_CHECK_COHORT } from '@/lib/visibility/prompt-cohort';
 import { usePerception } from '@/lib/visibility/use-perception';
 import {
   useVisibilityFilters,
@@ -39,7 +40,7 @@ export function PerceptionScreen() {
   const { pilot, tab, setTab, items, probe } = usePerceptionTab();
   const filters = useVisibilityFilters({
     defaultSelection: 'range',
-    defaultCohort: tab === 'fact-checking' ? 'all' : undefined,
+    defaultCohort: tab === 'fact-checking' ? FACT_CHECK_COHORT : undefined,
   });
   const queries = useVisibilityQueries(filters, 'perception');
   const probeControls = useProbeControls(probe);

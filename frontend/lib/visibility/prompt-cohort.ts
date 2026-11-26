@@ -2,6 +2,7 @@ import type { UrlCodec } from '@/lib/navigation/url-state';
 
 export const PROMPT_COHORTS = ['core', 'comparison', 'all'] as const;
 export type PromptCohort = (typeof PROMPT_COHORTS)[number];
+export const FACT_CHECK_COHORT: PromptCohort = 'all';
 
 const storageKey = (projectId: string) => `citeladder.prompt-cohort.${projectId}`;
 
