@@ -167,7 +167,7 @@ export function Columns({
       {...props}
       data-columns={template}
       className={cn(
-        'grid grid-cols-1',
+        'grid min-w-0 grid-cols-1',
         COLUMN_TEMPLATE[template],
         STACK_GAP[gap],
         INLINE_ALIGN[align],

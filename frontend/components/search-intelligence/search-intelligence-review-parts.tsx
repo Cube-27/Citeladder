@@ -13,10 +13,10 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Field } from '@/components/ui/field';
 import { FigureStrip } from '@/components/ui/figure-strip';
 import { Input } from '@/components/ui/input';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline, Stack, Columns } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { formatCount, formattedText, pluralCount } from '@/lib/format';
 import { isRecord } from '@/lib/utils';
@@ -88,7 +88,7 @@ export function DatasetChoices({
   }));
   return (
     <TabsRoot value={current} onValueChange={setCurrent} orientation="vertical">
-      <div className="desktop:grid-cols-[11rem_minmax(0,1fr)] gap-card grid min-w-0">
+      <Columns template="rail-panel" gap="card">
         <div className="desktop:block hidden min-w-0">
           <TabRail items={items} ariaLabel="Datasets for" />
         </div>
@@ -108,7 +108,7 @@ export function DatasetChoices({
             <DatasetRows options={options} {...picks} />
           </TabPanel>
         ))}
-      </div>
+      </Columns>
     </TabsRoot>
   );
 }
@@ -126,11 +126,7 @@ function DatasetRows({
         const checked = isSelected(option);
         const label = SEARCH_DATASET_LABELS[option.kind] ?? option.kind;
         return (
-          <Stack
-            key={selectionKey(option)}
-            gap="compact"
-            className="grid-cols-[minmax(0,1fr)_6rem] items-center"
-          >
+          <Columns key={selectionKey(option)} template="body-field" align="center">
             <Checkbox checked={checked} onCheckedChange={() => onToggle(option)} label={label} />
             {SEARCH_DATASET_KINDS[option.kind].fixedDepth ? null : (
               <Input
@@ -141,7 +137,7 @@ function DatasetRows({
                 onChange={(event) => onDepth(option, event.target.value)}
               />
             )}
-          </Stack>
+          </Columns>
         );
       })}
     </Stack>
@@ -285,8 +281,8 @@ export function ReviewFooter({
       </Inline>
     );
   return (
-    <Inline gap="compact" className="justify-between">
-      <span className={textRole('caption')}>{pluralCount(selected, 'dataset')} selected</span>
+    <Inline gap="compact" justify="between">
+      <Text variant="caption">{pluralCount(selected, 'dataset')} selected</Text>
       <Button
         variant="primary"
         disabled={!canReview}
@@ -341,14 +337,14 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
             },
           ]}
         />
-        <p className={textRole('body', 'text-ink-2')}>
+        <Text as="p" variant="body" tone="ink-2">
           Scope: {searchScopeLabel(typeof scope === 'string' ? scope : undefined)}
-        </p>
-        <p className={textRole('caption')}>
+        </Text>
+        <Text as="p" variant="caption">
           {review.credential_mode === 'funded'
             ? 'Held from your AI credits; only successful requests are charged, never above the estimate.'
             : 'Billed to your DataForSEO account.'}
-        </p>
+        </Text>
       </Section>
       {review.call_plan.length ? (
         <Section>
@@ -363,18 +359,18 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
                 <Inline
                   as="li"
                   gap="compact"
-                  className="text-body text-ink-2 justify-between"
+                  justify="between"
                   key={`${String(call.dataset_key)}:${String(call.page)}`}
                 >
-                  <span>
+                  <Text variant="body" tone="ink-2">
                     {SEARCH_DATASET_LABELS[String(call.dataset_kind)] ?? String(call.dataset_kind)}
                     {target ? ` · ${target}` : ''}
                     {comparison ? ` vs ${comparison}` : ''}
-                  </span>
+                  </Text>
                   {call.estimated_cost_usd === undefined ? null : (
-                    <span className="text-ink-2">
+                    <Text variant="body" tone="ink-2">
                       ${estimateUsd(String(call.estimated_cost_usd))}
-                    </span>
+                    </Text>
                   )}
                 </Inline>
               );
@@ -383,10 +379,10 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
         </Section>
       ) : null}
       {review.reused_datasets.length ? (
-        <p className="text-body text-ink-2">
+        <Text as="p" variant="body" tone="ink-2">
           {pluralCount(review.reused_datasets.length, 'recent result')} will be reused without AI
           credits.
-        </p>
+        </Text>
       ) : null}
     </>
   );
