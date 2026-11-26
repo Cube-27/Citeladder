@@ -5,7 +5,6 @@ import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Textarea } from '@/components/ui/textarea';
-import { Stack } from '@/components/ui/layout';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { MessageSquare } from '@/lib/icons';
 import { commerceMutations } from '@/lib/api/commerce';
@@ -22,13 +21,7 @@ import type { CommerceQueries } from './commerce-queries';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 const HERO_COUNT = 3;
 
@@ -99,60 +92,56 @@ export function SetupPrompts({
           <SectionDescription>Approve a prompt to launch.</SectionDescription>
         )}
       </SectionHeader>
-      <SectionContent>
-        <Stack>
-          {generate.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(generate.error, { action: 'generate the prompts' })}
-            />
-          ) : null}
-          {failed ? (
-            <Notice tone="negative">The buyer-prompt update failed. Please try again.</Notice>
-          ) : null}
-          {shortfall !== null ? (
-            <Notice tone="info">
-              {shortfall} of {HERO_COUNT} generated prompts were usable. Generate again for more.
-            </Notice>
-          ) : null}
-          {launchedAuditId ? (
-            <Notice tone="info">
-              Audit launched. The metrics update when it finishes.{' '}
-              <ProjectLink href={`/runs/${launchedAuditId}`}>View the run</ProjectLink>
-            </Notice>
-          ) : null}
-          {target.kind === 'category' ? (
-            <CategoryMatrixSheet
-              projectId={projectId}
-              categoryId={target.id}
-              categoryLabel={targetLabel}
-              rows={rows}
-              open={matrixOpen}
-              onOpenChange={setMatrixOpen}
-            />
-          ) : null}
-          {canRun ? (
-            <LaunchDialog
-              open={launchOpen}
-              onOpenChange={setLaunchOpen}
-              projectId={projectId}
-              fixedPromptIds={approvedIds}
-              promptSelectionLabel={`${approvedIds.length} approved prompts for ${targetLabel}`}
-              auditScope="commerce"
-              onLaunched={(audit) => setLaunchedAuditId(audit.id)}
-            />
-          ) : null}
-          <PromptRows
-            query={query}
-            rows={rows}
-            pending={busy}
-            onToggle={canWrite ? (id, approved) => decide.mutate({ id, approved }) : undefined}
-          />
-          {canWrite ? (
-            <ManualPrompt text={text} onText={setText} busy={busy} onAdd={addPrompt} />
-          ) : null}
-        </Stack>
-      </SectionContent>
+      {generate.isError ? (
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(generate.error, { action: 'generate the prompts' })}
+        />
+      ) : null}
+      {failed ? (
+        <Notice tone="negative">The buyer-prompt update failed. Please try again.</Notice>
+      ) : null}
+      {shortfall !== null ? (
+        <Notice tone="info">
+          {shortfall} of {HERO_COUNT} generated prompts were usable. Generate again for more.
+        </Notice>
+      ) : null}
+      {launchedAuditId ? (
+        <Notice tone="info">
+          Audit launched. The metrics update when it finishes.{' '}
+          <ProjectLink href={`/runs/${launchedAuditId}`}>View the run</ProjectLink>
+        </Notice>
+      ) : null}
+      {target.kind === 'category' ? (
+        <CategoryMatrixSheet
+          projectId={projectId}
+          categoryId={target.id}
+          categoryLabel={targetLabel}
+          rows={rows}
+          open={matrixOpen}
+          onOpenChange={setMatrixOpen}
+        />
+      ) : null}
+      {canRun ? (
+        <LaunchDialog
+          open={launchOpen}
+          onOpenChange={setLaunchOpen}
+          projectId={projectId}
+          fixedPromptIds={approvedIds}
+          promptSelectionLabel={`${approvedIds.length} approved prompts for ${targetLabel}`}
+          auditScope="commerce"
+          onLaunched={(audit) => setLaunchedAuditId(audit.id)}
+        />
+      ) : null}
+      <PromptRows
+        query={query}
+        rows={rows}
+        pending={busy}
+        onToggle={canWrite ? (id, approved) => decide.mutate({ id, approved }) : undefined}
+      />
+      {canWrite ? (
+        <ManualPrompt text={text} onText={setText} busy={busy} onAdd={addPrompt} />
+      ) : null}
     </Section>
   );
 }

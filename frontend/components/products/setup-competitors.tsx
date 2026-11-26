@@ -2,7 +2,6 @@ import { useMutation } from '@tanstack/react-query';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
-import { Stack } from '@/components/ui/layout';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { TextLink } from '@/components/ui/text-link';
 import { Users } from '@/lib/icons';
@@ -18,7 +17,7 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { sameTarget } from '@/lib/products/targets';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 type Discovery = ReturnType<typeof useCompetitorDiscovery>;
 
@@ -66,61 +65,57 @@ export function SetupCompetitors({
       >
         <SectionTitle level={level}>Competitors</SectionTitle>
       </SectionHeader>
-      <SectionContent>
-        <Stack>
-          {tasks.map((task) =>
-            task.status === 'failed' ? (
-              <Notice
-                kind="mutation"
-                key={task.id}
-                notice={{
-                  message: discoveryMessage(task.status, task.target.kind, task.error_code),
-                  retryable: false,
-                }}
-                recovery={
-                  canRun ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={discovery.discover.isPending || running}
-                      onClick={() => discovery.discover.mutate([target])}
-                    >
-                      Find again
-                    </Button>
-                  ) : undefined
-                }
-              />
-            ) : (
-              <Notice key={task.id} tone="info">
-                {discoveryMessage(task.status, task.target.kind, task.error_code)}
-              </Notice>
-            ),
-          )}
-          {discovery.discover.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(discovery.discover.error, {
-                action: 'start competitor discovery',
-              })}
-            />
-          ) : null}
-          {decide.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(decide.error, {
-                action: 'save the competitor decision',
-              })}
-            />
-          ) : null}
-          <CompetitorRows
-            query={query}
-            rows={rows}
-            running={running}
-            pending={decide.isPending}
-            onDecide={canWrite ? (id, decision) => decide.mutate({ id, decision }) : undefined}
+      {tasks.map((task) =>
+        task.status === 'failed' ? (
+          <Notice
+            kind="mutation"
+            key={task.id}
+            notice={{
+              message: discoveryMessage(task.status, task.target.kind, task.error_code),
+              retryable: false,
+            }}
+            recovery={
+              canRun ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={discovery.discover.isPending || running}
+                  onClick={() => discovery.discover.mutate([target])}
+                >
+                  Find again
+                </Button>
+              ) : undefined
+            }
           />
-        </Stack>
-      </SectionContent>
+        ) : (
+          <Notice key={task.id} tone="info">
+            {discoveryMessage(task.status, task.target.kind, task.error_code)}
+          </Notice>
+        ),
+      )}
+      {discovery.discover.isError ? (
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(discovery.discover.error, {
+            action: 'start competitor discovery',
+          })}
+        />
+      ) : null}
+      {decide.isError ? (
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(decide.error, {
+            action: 'save the competitor decision',
+          })}
+        />
+      ) : null}
+      <CompetitorRows
+        query={query}
+        rows={rows}
+        running={running}
+        pending={decide.isPending}
+        onDecide={canWrite ? (id, decision) => decide.mutate({ id, decision }) : undefined}
+      />
     </Section>
   );
 }

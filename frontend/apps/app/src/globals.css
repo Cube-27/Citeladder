@@ -1591,17 +1591,6 @@ label {
 .table-frame tbody > tr > :is(td, th) {
   box-shadow: inset 0 -1px 0 var(--color-rule);
 }
-[data-ledger-item] {
-  position: relative;
-}
-[data-ledger-item]::after {
-  content: '';
-  position: absolute;
-  inset-inline: 12px;
-  bottom: 0;
-  height: 1px;
-  background-color: var(--color-rule);
-}
 .table-frame tbody > tr:last-child > :is(td, th) {
   box-shadow: none;
 }
@@ -1715,10 +1704,6 @@ label {
     grid-template-columns: minmax(0, 1fr);
     row-gap: 4px;
   }
-}
-
-[data-ledger-item]:last-child::after {
-  content: none;
 }
 
 @layer components {

@@ -7,7 +7,7 @@ import { RecordPage } from '@/components/templates/record-page';
 import { FilterBar } from '@/components/ui/filter-bar';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { InfoHint } from '@/components/ui/info-hint';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { ProductImage } from '@/components/ui/product-image';
 import { UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
@@ -46,7 +46,7 @@ import { SetupCompetitors } from './setup-competitors';
 import { SetupPrompts } from './setup-prompts';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionHeader, SectionStack, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 import type { LoadingShape } from '@/components/ui/skeleton-block';
 
@@ -207,13 +207,11 @@ function HolderDetail({
       {named ? (
         <Answers detail={data} />
       ) : (
-        <Section>
-          <StateBlock
-            kind="empty"
-            icon={MessageSquareOff}
-            heading={`No answer named it in the last ${data.window_days} days`}
-          />
-        </Section>
+        <StateBlock
+          kind="empty"
+          icon={MessageSquareOff}
+          heading={`No answer named it in the last ${data.window_days} days`}
+        />
       )}
       {data.product.kind === 'owned' && data.product.catalog?.lifecycle_state !== 'archived' ? (
         <ProductSetup detail={data} projectId={projectId} queries={queries} />
@@ -245,7 +243,7 @@ function ProductIdentity({
       ? product.description
       : null;
   return (
-    <Stack gap="workspace">
+    <>
       <Inline gap="item">
         <InfoHint label="About this product">
           {holderCaption(product)} · From {formatCount(detail.executions)}
@@ -268,7 +266,7 @@ function ProductIdentity({
         )}
       </Inline>
       {notices}
-    </Stack>
+    </>
   );
 }
 
@@ -304,23 +302,21 @@ function ProductSetup({
       <SectionHeader>
         <SectionTitle id="product-setup">Setup</SectionTitle>
       </SectionHeader>
-      <SectionStack>
-        <ProductActions detail={detail} />
-        <SetupCompetitors
-          projectId={projectId}
-          target={target}
-          query={queries.competitors}
-          discovery={discovery}
-          level={3}
-        />
-        <SetupPrompts
-          projectId={projectId}
-          target={target}
-          targetLabel={detail.product.name}
-          query={queries.buyerPrompts}
-          level={3}
-        />
-      </SectionStack>
+      <ProductActions detail={detail} />
+      <SetupCompetitors
+        projectId={projectId}
+        target={target}
+        query={queries.competitors}
+        discovery={discovery}
+        level={3}
+      />
+      <SetupPrompts
+        projectId={projectId}
+        target={target}
+        targetLabel={detail.product.name}
+        query={queries.buyerPrompts}
+        level={3}
+      />
     </Section>
   );
 }

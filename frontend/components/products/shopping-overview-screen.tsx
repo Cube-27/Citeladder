@@ -35,7 +35,7 @@ import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { SectionContent, TitledSection } from '@/components/ui/section';
+import { TitledSection } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 const WIDEST_WINDOW = PRODUCT_WINDOW_DAYS.at(-1) ?? '90';
@@ -317,15 +317,13 @@ function CategoryShelf({
         )
       }
     >
-      <SectionContent>
-        <FigureStrip
-          segments={segments.map(({ label, value }) => ({
-            key: label,
-            label,
-            value: value ?? <Absence state={missing} />,
-          }))}
-        />
-      </SectionContent>
+      <FigureStrip
+        segments={segments.map(({ label, value }) => ({
+          key: label,
+          label,
+          value: value ?? <Absence state={missing} />,
+        }))}
+      />
     </TitledSection>
   );
 }
