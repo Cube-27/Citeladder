@@ -184,7 +184,7 @@ export function SidebarNavGroup({
 const CURRENT_FILL = 'bg-[var(--nav-current-fill)] shadow-card';
 const CURRENT_TILE = cn(CURRENT_FILL, 'text-ink');
 const AT_REST = 'text-ink-2 hover:overlay-hover hover:text-ink';
-const NAV_AT_REST = 'text-nav-ink hover:overlay-hover';
+const NAV_AT_REST = 'text-nav-ink hover:overlay-hover hover:shadow-card';
 
 export function sidebarNavRowClasses(active: boolean, className?: string) {
   return cn(

@@ -1,7 +1,10 @@
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { useContext, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 
 import { SLIP_FACE, slipClasses } from '@/components/ui/slip';
-import { StateHeadingLevelContext } from '@/components/ui/state-heading-level';
+import {
+  SectionTitleRoleContext,
+  StateHeadingLevelContext,
+} from '@/components/ui/state-heading-level';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -67,7 +70,7 @@ export function SectionTitle({
 }: Readonly<ComponentPropsWithoutRef<'h2'> & { level?: 2 | 3 }>) {
   const Heading = level === 2 ? 'h2' : 'h3';
   return (
-    <Heading {...props} className={textRole('heading', className)}>
+    <Heading {...props} className={textRole(useContext(SectionTitleRoleContext), className)}>
       {children}
     </Heading>
   );

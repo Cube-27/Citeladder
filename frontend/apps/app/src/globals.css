@@ -1309,10 +1309,17 @@ a.focus-ring:active .type-caption {
   background: var(--color-well);
 }
 
-:where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
+:where(.surface-card, .surface-slip, .surface-well, [data-section='framed'])
   :is(.surface-card, .surface-slip) {
   background: var(--color-well);
   box-shadow: none;
+}
+:root:not([data-public-surface])
+  [role='dialog']
+  :is(.surface-card, .surface-slip, [data-figure-strip]):not(:where(.surface-card, .surface-slip, .surface-well) *) {
+  border-color: transparent;
+  background-color: var(--color-raised);
+  box-shadow: var(--shadow-card);
 }
 :where(.surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'])
   [data-section='framed'] {
@@ -1607,6 +1614,7 @@ label {
   background: var(--table-head-ground);
   padding: 0 4px 4px;
   overflow: clip;
+  box-shadow: var(--shadow-card);
 }
 :root:not([data-public-surface]) .table-frame {
   --table-cell-padding-x: 16px;

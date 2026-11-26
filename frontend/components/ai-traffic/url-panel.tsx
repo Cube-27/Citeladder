@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { TextLink } from '@/components/ui/text-link';
 import { Stack } from '@/components/ui/layout';
+import { SectionCard, TitledSection } from '@/components/ui/section';
 import { Tooltip } from '@/components/ui/tooltip';
 import { UrlText } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
@@ -198,17 +199,19 @@ function UrlEvidence({
         </p>
       ) : null}
       {fromRow ? null : (
-        <FactList
-          layout="record"
-          label="Page record"
-          facts={rows.map((row) => ({
-            key: row.name,
-            label: row.name,
-            value: row.value,
-            note: row.note,
-            end: row.link ? <PanelLink to={row.link.to}>{row.link.label}</PanelLink> : null,
-          }))}
-        />
+        <SectionCard>
+          <FactList
+            layout="record"
+            label="Page record"
+            facts={rows.map((row) => ({
+              key: row.name,
+              label: row.name,
+              value: row.value,
+              note: row.note,
+              end: row.link ? <PanelLink to={row.link.to}>{row.link.label}</PanelLink> : null,
+            }))}
+          />
+        </SectionCard>
       )}
       <Observations data={data} botLabel={botLabel} />
       <p className={textRole('caption')}>
@@ -250,21 +253,22 @@ function Observations({
     })),
   ];
   return (
-    <Stack gap="tight">
-      <h3 className={textRole('subheading')}>First and last observations</h3>
-      {rows.length ? (
-        <ul className="grid">
-          {rows.map((row) => (
-            <li key={row.key} className="flex min-h-8 items-center justify-between gap-4">
-              <span className={textRole('body', 'min-w-0 truncate')}>{row.name}</span>
-              <span className={textRole('caption', 'shrink-0 tabular-nums')}>{row.detail}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <Absence state="none" />
-      )}
-    </Stack>
+    <TitledSection title="First and last observations">
+      <SectionCard>
+        {rows.length ? (
+          <ul className="grid">
+            {rows.map((row) => (
+              <li key={row.key} className="flex min-h-8 items-center justify-between gap-4">
+                <span className={textRole('body', 'min-w-0 truncate')}>{row.name}</span>
+                <span className={textRole('caption', 'shrink-0 tabular-nums')}>{row.detail}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <Absence state="none" />
+        )}
+      </SectionCard>
+    </TitledSection>
   );
 }
 

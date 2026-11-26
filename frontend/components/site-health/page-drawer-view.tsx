@@ -12,6 +12,8 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
+import { SectionCard, TitledSection } from '@/components/ui/section';
+import { SectionTitleRoleContext } from '@/components/ui/state-heading-level';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
@@ -68,49 +70,53 @@ export function PageDrawerView({
         <TabRail items={items} ariaLabel="Page sections" />
       </div>
       <div className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain p-6">
-        <Stack gap="item" className="mb-6 empty:hidden">
-          {actions ? <Inline className="flex-wrap justify-end">{actions}</Inline> : null}
-          {children}
-        </Stack>
-        <TabPanel value="overview">
-          <Stack gap="workspace">
-            <Figures detail={detail} />
-            <FactSection title="URL" facts={urlFacts(detail, useDisplayTimeZone())} />
-            <FactSection title="Server HTML" facts={htmlFacts(detail)} />
-            <FactSection title="Delivery" facts={deliveryFacts(detail)} />
+        <SectionTitleRoleContext value="subheading">
+          <Stack gap="item" className="mb-6 empty:hidden">
+            {actions ? <Inline className="flex-wrap justify-end">{actions}</Inline> : null}
+            {children}
           </Stack>
-        </TabPanel>
-        <TabPanel value="issues">
-          <PageIssues
-            issues={detail.issues}
-            audited={detail.analysis_status === 'completed'}
-            crawlId={detail.crawl_id}
-          />
-        </TabPanel>
-        <TabPanel value="actions">{work.list}</TabPanel>
-        <TabPanel value="checks">
-          <PageChecks evaluations={detail.evaluations} />
-        </TabPanel>
-        <TabPanel value="in">
-          <LinkTable
-            label="Linked from"
-            first="Source page"
-            rows={links?.top_inbound}
-            total={links?.inbound_count}
-            crawlId={detail.crawl_id}
-          />
-        </TabPanel>
-        <TabPanel value="out">
-          <LinkTable
-            label="Links out"
-            first="Destination"
-            rows={links?.top_outbound}
-            total={links?.outbound_count}
-            crawlId={detail.crawl_id}
-          />
-        </TabPanel>
-        <TabPanel value="history">{history}</TabPanel>
-        <TabPanel value="traffic">{traffic}</TabPanel>
+          <TabPanel value="overview">
+            <Stack gap="workspace">
+              <Figures detail={detail} />
+              <FactSection title="URL" facts={urlFacts(detail, useDisplayTimeZone())} />
+              <FactSection title="Server HTML" facts={htmlFacts(detail)} />
+              <FactSection title="Delivery" facts={deliveryFacts(detail)} />
+            </Stack>
+          </TabPanel>
+          <TabPanel value="issues">
+            <PageIssues
+              issues={detail.issues}
+              audited={detail.analysis_status === 'completed'}
+              crawlId={detail.crawl_id}
+            />
+          </TabPanel>
+          <TabPanel value="actions">
+            <SectionCard>{work.list}</SectionCard>
+          </TabPanel>
+          <TabPanel value="checks">
+            <PageChecks evaluations={detail.evaluations} />
+          </TabPanel>
+          <TabPanel value="in">
+            <LinkTable
+              label="Linked from"
+              first="Source page"
+              rows={links?.top_inbound}
+              total={links?.inbound_count}
+              crawlId={detail.crawl_id}
+            />
+          </TabPanel>
+          <TabPanel value="out">
+            <LinkTable
+              label="Links out"
+              first="Destination"
+              rows={links?.top_outbound}
+              total={links?.outbound_count}
+              crawlId={detail.crawl_id}
+            />
+          </TabPanel>
+          <TabPanel value="history">{history}</TabPanel>
+          <TabPanel value="traffic">{traffic}</TabPanel>
+        </SectionTitleRoleContext>
       </div>
     </TabsRoot>
   );
@@ -142,10 +148,11 @@ type FactRow = { label: string; value: ReactNode };
 
 function FactSection({ title, facts }: Readonly<{ title: string; facts: readonly FactRow[] }>) {
   return (
-    <section className="min-w-0">
-      <h3 className={textRole('subheading', 'mb-3')}>{title}</h3>
-      <FactList layout="ruled" label={title} facts={facts} />
-    </section>
+    <TitledSection title={title}>
+      <SectionCard>
+        <FactList layout="ruled" label={title} facts={facts} />
+      </SectionCard>
+    </TitledSection>
   );
 }
 

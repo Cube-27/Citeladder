@@ -72,7 +72,7 @@ function widthOf(column: DataTableColumn): DataTableColumnWidth {
   return column.width ?? KIND[columnKind(column)].width;
 }
 
-function isFlexible(column: DataTableColumn): boolean {
+export function isFlexible(column: DataTableColumn): boolean {
   return COLUMN_WIDTH[widthOf(column)].kind === 'rest';
 }
 

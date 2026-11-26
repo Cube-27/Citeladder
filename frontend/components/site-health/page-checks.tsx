@@ -1,7 +1,6 @@
 import { DataTable } from '@/components/ui/data-table';
 import type { DataTableColumn } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
-import { SectionContent, TitledSection } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
@@ -109,34 +108,28 @@ function ResultMark({ result }: Readonly<{ result: CheckResult }>) {
 
 export function PageChecks({ evaluations }: Readonly<{ evaluations: readonly Evaluation[] }>) {
   const groups = checkGroups(evaluations);
-  return (
-    <TitledSection title="Checks">
-      <SectionContent>
-        {groups.length === 0 ? (
-          <StateBlock kind="empty" inline message="No checks." />
-        ) : (
-          <Stack gap="workspace">
-            {groups.map((group) => (
-              <DataTable
-                key={group.title}
-                title={`${group.title} (${group.rows.length})`}
-                columns={COLUMNS}
-              >
-                {group.rows.map((evaluation) => (
-                  <TableRow key={evaluation.id}>
-                    <TableCell>
-                      <TableCellLines title primary={evaluation.title || evaluation.rule_id} />
-                    </TableCell>
-                    <TableCell>
-                      <ResultMark result={checkResult(evaluation.outcome)} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </DataTable>
-            ))}
-          </Stack>
-        )}
-      </SectionContent>
-    </TitledSection>
+  return groups.length === 0 ? (
+    <StateBlock kind="empty" inline message="No checks." />
+  ) : (
+    <Stack gap="workspace">
+      {groups.map((group) => (
+        <DataTable
+          key={group.title}
+          title={`${group.title} (${group.rows.length})`}
+          columns={COLUMNS}
+        >
+          {group.rows.map((evaluation) => (
+            <TableRow key={evaluation.id}>
+              <TableCell>
+                <TableCellLines title primary={evaluation.title || evaluation.rule_id} />
+              </TableCell>
+              <TableCell>
+                <ResultMark result={checkResult(evaluation.outcome)} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </DataTable>
+      ))}
+    </Stack>
   );
 }

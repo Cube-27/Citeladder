@@ -20,7 +20,11 @@ import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-ed
 import { Table } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { StateBlock } from '@/components/ui/state-block';
-import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
+import {
+  SectionTitleRoleContext,
+  StateHeadingLevelContext,
+  type HeadingLevel,
+} from '@/components/ui/state-heading-level';
 
 import './data-table.css';
 
@@ -338,13 +342,14 @@ function TitleRow({
   toolbar?: FilterBarProps;
 }>) {
   const Heading = level === 3 ? 'h3' : 'h2';
+  const role = useContext(SectionTitleRoleContext);
   return (
     <div
       data-data-table-header=""
       className="rail:flex-row rail:items-center flex min-h-[var(--control-md)] min-w-0 flex-col items-stretch gap-2"
     >
       {title ? (
-        <Heading id={headingId} className={textRole('heading', 'min-w-0 shrink-0 truncate')}>
+        <Heading id={headingId} className={textRole(role, 'min-w-0 shrink-0 truncate')}>
           {title}
         </Heading>
       ) : null}
