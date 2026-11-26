@@ -108,11 +108,6 @@ const TEXT_BOX = {
   clip: 'min-w-0 overflow-hidden',
 } as const;
 
-const TEXT_ALIGN = {
-  start: undefined,
-  center: 'text-center',
-} as const;
-
 export function Text({
   variant,
   tone = SECONDARY_ROLES.has(variant) ? 'ink-2' : 'ink',
@@ -121,8 +116,6 @@ export function Text({
   wrap,
   box,
   focusable = false,
-  align = 'start',
-  hideOnDesktop = false,
   children,
   ...props
 }: Readonly<
@@ -135,8 +128,6 @@ export function Text({
     wrap?: keyof typeof TEXT_WRAP;
     box?: keyof typeof TEXT_BOX;
     focusable?: boolean;
-    align?: keyof typeof TEXT_ALIGN;
-    hideOnDesktop?: boolean;
   }
 >) {
   const className = cn(
@@ -146,8 +137,6 @@ export function Text({
     wrap && TEXT_WRAP[wrap],
     box && TEXT_BOX[box],
     focusable && 'focus-ring',
-    TEXT_ALIGN[align],
-    hideOnDesktop && 'desktop:hidden',
   );
   return createElement(Tag, { ...props, className }, children);
 }

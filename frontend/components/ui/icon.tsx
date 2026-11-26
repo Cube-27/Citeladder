@@ -18,27 +18,19 @@ export function Icon({
   icon: Glyph,
   label,
   tone,
-  muted = false,
   dim = false,
   className,
 }: Readonly<{
   icon: IconGlyph | BrandGlyph;
   label?: string;
   tone?: TextTone;
-  muted?: boolean;
   dim?: boolean;
   className?: string;
 }>) {
   return (
     <Glyph
       data-icon=""
-      className={cn(
-        'my-0.75 size-3.5 shrink-0',
-        toneClass(tone),
-        muted && 'opacity-muted',
-        dim && 'opacity-dim',
-        className,
-      )}
+      className={cn('my-0.75 size-3.5 shrink-0', toneClass(tone), dim && 'opacity-dim', className)}
       aria-hidden={label ? undefined : true}
       aria-label={label}
       role={label ? 'img' : undefined}
