@@ -8,7 +8,15 @@ import { AffectedPageLink, SharedOccurrences } from '@/components/site-health/sh
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { IssueUrlTable } from '@/components/site-health/issue-urls';
 import { Absence } from '@/components/ui/absence';
-import { SectionCard, TitledSection } from '@/components/ui/section';
+import {
+  Section,
+  SectionBleed,
+  SectionFooter,
+  SectionHeader,
+  SectionTitle,
+  SectionStack,
+  TitledSection,
+} from '@/components/ui/section';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -20,7 +28,6 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { Pager } from '@/components/ui/pager';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import type {
   AffectedPage,
@@ -63,16 +70,14 @@ export type IssueHead = Pick<
 function IssueBrief({ issue }: Readonly<{ issue: IssueHead }>) {
   if (!issue.description && !issue.remediation) return null;
   return (
-    <SectionCard>
-      <Stack gap="item">
-        {issue.description ? (
-          <p className={textRole('body', 'max-w-prose')}>{issue.description}</p>
-        ) : null}
-        {issue.remediation ? (
-          <p className={textRole('body', 'max-w-prose whitespace-pre-line')}>{issue.remediation}</p>
-        ) : null}
-      </Stack>
-    </SectionCard>
+    <Stack gap="item">
+      {issue.description ? (
+        <p className={textRole('body', 'max-w-prose')}>{issue.description}</p>
+      ) : null}
+      {issue.remediation ? (
+        <p className={textRole('body', 'max-w-prose whitespace-pre-line')}>{issue.remediation}</p>
+      ) : null}
+    </Stack>
   );
 }
 
@@ -139,12 +144,10 @@ export function IssuePage({
           </Inline>
         }
       >
-        <Stack as="section" aria-label={title} gap="workspace" className="min-w-0">
+        <SectionStack label={title}>
           <TitledSection title={title} actions={<IssueSeverityMark issue={issue} />}>
-            <Stack gap="workspace">
-              <IssueBrief issue={issue} />
-              <IssueFigures issue={issue} audited={audited} progress={progress} />
-            </Stack>
+            <IssueBrief issue={issue} />
+            <IssueFigures issue={issue} audited={audited} progress={progress} />
           </TitledSection>
           {pageLevel ? (
             <IssueUrlTable
@@ -155,30 +158,32 @@ export function IssuePage({
               initialPageKind={pageKind}
             />
           ) : (
-            <>
-              <Stack as="section" gap="workspace" aria-busy={detailQuery.isFetching || undefined}>
-                <h3 className={textRole('heading')}>Affected pages</h3>
-                <OccurrenceList
-                  issue={issue}
-                  detail={detail}
-                  crawlId={crawlId}
-                  query={detailQuery}
-                  firstPage={!canPrevious}
-                />
-              </Stack>
-              {detail || canPrevious ? (
-                <Pager
-                  hideWhenSinglePage
-                  canPrev={canPrevious}
-                  canNext={Boolean(detail?.next_cursor)}
-                  onPrev={onPrevious}
-                  onNext={onNext}
-                  busy={detailQuery.isFetching}
-                />
+            <Section aria-busy={detailQuery.isFetching || undefined}>
+              <SectionHeader>
+                <SectionTitle level={3}>Affected pages</SectionTitle>
+              </SectionHeader>
+              <OccurrenceList
+                issue={issue}
+                detail={detail}
+                crawlId={crawlId}
+                query={detailQuery}
+                firstPage={!canPrevious}
+              />
+              {canPrevious || detail?.next_cursor ? (
+                <SectionFooter>
+                  <Pager
+                    hideWhenSinglePage
+                    canPrev={canPrevious}
+                    canNext={Boolean(detail?.next_cursor)}
+                    onPrev={onPrevious}
+                    onNext={onNext}
+                    busy={detailQuery.isFetching}
+                  />
+                </SectionFooter>
               ) : null}
-            </>
+            </Section>
           )}
-        </Stack>
+        </SectionStack>
       </ReportPage>
     </PageDrawerHost>
   );
@@ -235,13 +240,14 @@ export function PendingIssuePage({
   onClose,
 }: Readonly<{ detailQuery: UseQueryResult<SiteIssueDetail>; onClose: () => void }>) {
   return (
-    <ReportPage>
-      <Stack as="section" aria-label="Issue" gap="workspace" className="min-w-0">
-        <Inline className="justify-end">
-          <Button variant="secondary" onClick={onClose}>
-            Back to issues
-          </Button>
-        </Inline>
+    <ReportPage
+      actions={
+        <Button variant="secondary" onClick={onClose}>
+          Back to issues
+        </Button>
+      }
+    >
+      <SectionStack label="Issue">
         {detailQuery.isError ? (
           <Notice
             kind="read"
@@ -252,7 +258,7 @@ export function PendingIssuePage({
         ) : (
           <StateBlock kind="loading" label="Loading the issue…" shape={{ kind: 'list' }} />
         )}
-      </Stack>
+      </SectionStack>
     </ReportPage>
   );
 }
@@ -298,7 +304,7 @@ function OccurrenceList({
       }))
     : groupOccurrences(detail.occurrences);
   return (
-    <ul className={ledgerClasses()}>
+    <SectionBleed as="ul" rows>
       {entries.map((entry) =>
         entry.kind === 'page' ? (
           <PageOccurrence
@@ -322,7 +328,7 @@ function OccurrenceList({
           />
         ),
       )}
-    </ul>
+    </SectionBleed>
   );
 }
 
@@ -337,7 +343,7 @@ function PageOccurrence({
 }>) {
   const range = valueRange(occurrence.rule_id, occurrence.evidence, occurrence.value);
   return (
-    <Stack as="li" gap="tight" className={ledgerItemClasses()}>
+    <Stack as="li" gap="tight">
       <AffectedPageLink
         crawlId={crawlId}
         siteUrlId={occurrence.site_url_id}
@@ -379,26 +385,22 @@ function SiteLevelList({
     );
   const hidden = evidence.total - evidence.pages.length;
   return (
-    <Stack gap="item">
+    <>
       {evidence.sections.length > 0 ? (
-        <ul className={ledgerClasses()}>
+        <SectionBleed as="ul" rows>
           {evidence.sections.map((section) => (
-            <Inline
-              as="li"
-              key={section.pathPrefix}
-              className={ledgerItemClasses('flex-wrap justify-between')}
-            >
+            <Inline as="li" key={section.pathPrefix} className="flex-wrap justify-between">
               <ClampText className={textRole('body', 'min-w-0 flex-1')}>
                 {section.pathPrefix}
               </ClampText>
               <span className="type-caption tabular-nums">{pageCountLabel(section.pageCount)}</span>
             </Inline>
           ))}
-        </ul>
+        </SectionBleed>
       ) : null}
-      <ul className={ledgerClasses()}>
+      <SectionBleed as="ul" rows>
         {evidence.pages.map((page) => (
-          <Stack as="li" gap="tight" key={page.siteUrlId} className={ledgerItemClasses()}>
+          <Stack as="li" gap="tight" key={page.siteUrlId}>
             <AffectedPageLink
               crawlId={crawlId}
               siteUrlId={page.siteUrlId}
@@ -413,13 +415,15 @@ function SiteLevelList({
             )}
           </Stack>
         ))}
-      </ul>
+      </SectionBleed>
       {hidden > 0 ? (
-        <p className="type-caption">
-          Showing {evidence.pages.length} of {evidence.total} pages.
-        </p>
+        <SectionFooter>
+          <p className="type-caption">
+            Showing {evidence.pages.length} of {evidence.total} pages.
+          </p>
+        </SectionFooter>
       ) : null}
-    </Stack>
+    </>
   );
 }
 
@@ -440,15 +444,10 @@ function DuplicateSetList({
     );
   const shown = evidence.sets.reduce((sum, set) => sum + set.pages.length, 0);
   return (
-    <Stack gap="item">
-      <ul className={ledgerClasses()}>
+    <>
+      <SectionBleed as="ul" rows>
         {evidence.sets.map((set) => (
-          <Stack
-            as="li"
-            gap="tight"
-            key={set.pages[0]?.siteUrlId ?? set.text}
-            className={ledgerItemClasses()}
-          >
+          <Stack as="li" gap="tight" key={set.pages[0]?.siteUrlId ?? set.text}>
             <ClampText className={textRole('body')}>
               {`These ${pageCountLabel(set.pageCount)} share “${set.text}”`}
             </ClampText>
@@ -470,13 +469,15 @@ function DuplicateSetList({
             </Stack>
           </Stack>
         ))}
-      </ul>
+      </SectionBleed>
       {shown < evidence.total ? (
-        <p className="type-caption">
-          Showing {shown} of {evidence.total} pages.
-        </p>
+        <SectionFooter>
+          <p className="type-caption">
+            Showing {shown} of {evidence.total} pages.
+          </p>
+        </SectionFooter>
       ) : null}
-    </Stack>
+    </>
   );
 }
 
@@ -496,12 +497,12 @@ function LinkTargetList({
       />
     );
   return (
-    <ul className={ledgerClasses()}>
+    <SectionBleed as="ul" rows>
       {evidence.targets.map((target) => {
         const origin = originOf(target.url);
         const hidden = target.pageCount - target.pages.length;
         return (
-          <Stack as="li" gap="tight" key={target.url} className={ledgerItemClasses()}>
+          <Stack as="li" gap="tight" key={target.url}>
             <ClampText className={textRole('body')}>
               {`${sitePath(target.url, origin)} → ${linkOutcomeLabel(target.outcome, origin)}`}
             </ClampText>
@@ -525,6 +526,6 @@ function LinkTargetList({
           </Stack>
         );
       })}
-    </ul>
+    </SectionBleed>
   );
 }

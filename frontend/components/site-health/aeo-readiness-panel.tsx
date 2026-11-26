@@ -10,9 +10,9 @@ import {
 import { IssueTable } from '@/components/site-health/overview-cards';
 import { ScoreCard } from '@/components/site-health/score-cards';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import type { BarRow } from '@/components/ui/score-gauge';
+import { SectionStack } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import type { IssuesParams } from '@/lib/api/site-health';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
@@ -61,7 +61,7 @@ export function AeoReadinessPanel({
   const data = readiness.data;
   const groups = new Map(issues.data?.items.map((issue) => [issue.rule_id, issue.group_id]));
   return (
-    <Stack gap="workspace" className="min-w-0" data-testid="aeo-readiness">
+    <SectionStack data-testid="aeo-readiness">
       {data.limitations.length > 0 ? (
         <Notice tone="info">{data.limitations.join(' ')}</Notice>
       ) : null}
@@ -96,7 +96,7 @@ export function AeoReadinessPanel({
         crawlId={crawlId}
         params={AEO_ISSUE_PARAMS}
       />
-    </Stack>
+    </SectionStack>
   );
 }
 

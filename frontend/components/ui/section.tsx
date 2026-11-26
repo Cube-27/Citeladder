@@ -154,11 +154,22 @@ export function TitledSection({
 
 export function SectionStack({
   children,
+  label,
   ...props
-}: Readonly<{ children: ReactNode; 'aria-busy'?: boolean; 'data-testid'?: string }>) {
+}: Readonly<{
+  children: ReactNode;
+  label?: string;
+  'aria-busy'?: boolean;
+  'data-testid'?: string;
+}>) {
+  const Element = label ? 'section' : 'div';
   return (
-    <div {...props} className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">
+    <Element
+      {...props}
+      aria-label={label}
+      className="flex min-w-0 flex-col gap-[var(--page-section-gap)]"
+    >
       {children}
-    </div>
+    </Element>
   );
 }

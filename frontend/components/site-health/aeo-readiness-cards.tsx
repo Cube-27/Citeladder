@@ -4,7 +4,7 @@ import { Absence, printed } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { scoreTone, type BarTone } from '@/components/ui/score-gauge';
-import { SectionCard, TitledSection } from '@/components/ui/section';
+import { TitledSection } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -41,54 +41,52 @@ export function ReadableCard({
   });
   return (
     <TitledSection title="What answer engines can read">
-      <SectionCard>
-        {rows.length === 0 ? (
-          <StateBlock kind="empty" inline message="No page checks were resolved in this crawl." />
-        ) : (
-          <table className="w-full">
-            <caption className="sr-only">Pages passing and failing each check</caption>
-            <thead>
-              <tr className={textRole('caption', 'text-ink-2')}>
-                <th scope="col" className="pb-2 text-left font-medium">
-                  Check
+      {rows.length === 0 ? (
+        <StateBlock kind="empty" inline message="No page checks were resolved in this crawl." />
+      ) : (
+        <table className="w-full">
+          <caption className="sr-only">Pages passing and failing each check</caption>
+          <thead>
+            <tr className={textRole('caption', 'text-ink-2')}>
+              <th scope="col" className="pb-2 text-left font-medium">
+                Check
+              </th>
+              <th scope="col">
+                <span className="sr-only">Share passing</span>
+              </th>
+              <th scope="col" className="w-16 pb-2 text-right font-medium">
+                Passing
+              </th>
+              <th scope="col" className="w-16 pb-2 text-right font-medium">
+                Failing
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.rule} className="border-rule h-10 border-t">
+                <th scope="row" className={textRole('body', 'pr-3 text-left font-normal')}>
+                  {row.label}
                 </th>
-                <th scope="col">
-                  <span className="sr-only">Share passing</span>
-                </th>
-                <th scope="col" className="w-16 pb-2 text-right font-medium">
-                  Passing
-                </th>
-                <th scope="col" className="w-16 pb-2 text-right font-medium">
-                  Failing
-                </th>
+                <td className="w-2/5 pr-3">
+                  <SplitBar passing={row.passing} failing={row.failing} />
+                </td>
+                <td className={textRole('body', 'text-right tabular-nums')}>
+                  {formatCount(row.passing)}
+                </td>
+                <td
+                  className={textRole(
+                    'body',
+                    cn('text-right tabular-nums', row.failing > 0 && 'text-negative'),
+                  )}
+                >
+                  {formatCount(row.failing)}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.rule} className="border-rule h-10 border-t">
-                  <th scope="row" className={textRole('body', 'pr-3 text-left font-normal')}>
-                    {row.label}
-                  </th>
-                  <td className="w-2/5 pr-3">
-                    <SplitBar passing={row.passing} failing={row.failing} />
-                  </td>
-                  <td className={textRole('body', 'text-right tabular-nums')}>
-                    {formatCount(row.passing)}
-                  </td>
-                  <td
-                    className={textRole(
-                      'body',
-                      cn('text-right tabular-nums', row.failing > 0 && 'text-negative'),
-                    )}
-                  >
-                    {formatCount(row.failing)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </SectionCard>
+            ))}
+          </tbody>
+        </table>
+      )}
     </TitledSection>
   );
 }

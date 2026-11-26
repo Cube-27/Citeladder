@@ -208,6 +208,16 @@ export function TableCell({
   );
 }
 
+export function TableGroupRow({ span, children }: Readonly<{ span: number; children: ReactNode }>) {
+  return (
+    <TableRow>
+      <TableCell colSpan={span} className={textRole('emphasis', 'bg-well')}>
+        {children}
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export function TableCellLines({
   primary,
   secondary,
