@@ -26,6 +26,9 @@ import {
 } from './internal-links-panel-bands';
 import { Notice } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
+import { SearchField } from '@/components/ui/search-field';
+import { ExportAction } from '@/components/ui/export-action';
+import { downloadInternalLinksCsv } from '@/lib/site-health/internal-link-csv';
 
 export function InternalLinksPanel({
   read,
@@ -208,6 +211,7 @@ function LinksTable({
   emptyReason: string;
   onSelect: (id: string) => void;
 }>) {
+  const { params, update } = useLinkParams();
   const pagination = useResizableTablePage(links.length, { urlKey: 'links_page' });
   const { pageSize } = pagination;
   const paged = links.slice(pagination.from - 1, pagination.to);
@@ -215,6 +219,24 @@ function LinksTable({
     <DataTable
       label="Internal link suggestions"
       columns={LINK_COLUMNS}
+      toolbar={{
+        search: (
+          <SearchField
+            value={params.links_q ?? ''}
+            onValueChange={(value) => update('links_q', value, 'replace')}
+            placeholder="Search pages and anchors"
+            aria-label="Search pages and anchors"
+          />
+        ),
+        actions: (
+          <ExportAction
+            scope="table"
+            formats={['csv']}
+            disabled={!links.length}
+            onExport={async () => downloadInternalLinksCsv(links)}
+          />
+        ),
+      }}
       pageSize={links.length > pageSize ? pageSize : undefined}
       rowCount={paged.length}
       state={
