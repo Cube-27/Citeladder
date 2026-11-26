@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { PromptAnswerRef } from '@/components/prompts/prompt-evidence';
@@ -68,6 +69,7 @@ function emptyState(rows: number, onClearFilters?: () => void): DataTableState |
 
 export function PromptTable({
   prompts,
+  search,
   actions,
   measurements,
   setNames,
@@ -79,6 +81,7 @@ export function PromptTable({
   resetKey,
 }: Readonly<{
   prompts: Prompt[];
+  search?: ReactNode;
   resetKey?: string;
   onClearFilters?: () => void;
   onOpenAnswer?: (prompt: Prompt, answer: PromptAnswerRef) => void;
@@ -108,6 +111,7 @@ export function PromptTable({
   return (
     <DataTable
       label="Prompts"
+      toolbar={search ? { search } : undefined}
       columns={promptColumns(measuredColumns, actions !== undefined)}
       pageSize={PAGE_SIZE}
       rowCount={pagedPrompts.length}
@@ -225,7 +229,7 @@ function TopicName({
   if (!topicId) return <Absence state="none" label="No topic" />;
   const name = names?.get(topicId);
   if (name === undefined) return <Absence state="unavailable" />;
-  return <ClampText className="text-ink-2">{name}</ClampText>;
+  return <ClampText tone="ink-2">{name}</ClampText>;
 }
 
 function PromptRowMenu({
