@@ -1,5 +1,10 @@
-import { Stack } from '@/components/ui/layout';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import {
+  Section,
+  SectionDescription,
+  SectionHeader,
+  SectionStack,
+  SectionTitle,
+} from '@/components/ui/section';
 import { Database } from '@/lib/icons';
 import type {
   SearchIntelligenceDataset,
@@ -27,7 +32,7 @@ export function SearchIntelligenceCollection({
   backlinkFigures: SearchIntelligenceReadiness['backlink_figures'];
 }>) {
   return (
-    <Stack gap="workspace" className="min-w-0">
+    <SectionStack>
       {collection.tab === 'backlinks' ? (
         <BacklinkMetrics
           datasets={datasets}
@@ -36,7 +41,7 @@ export function SearchIntelligenceCollection({
         />
       ) : null}
       <CollectionResult collection={collection} />
-    </Stack>
+    </SectionStack>
   );
 }
 

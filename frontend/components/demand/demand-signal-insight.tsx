@@ -5,9 +5,8 @@ import { numericMetric, signalDefinition } from '@/lib/demand/signals';
 import { formatCount, formatMean, formatPercent } from '@/lib/format';
 import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
-import { wellClasses } from '@/components/ui/slip';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 export function SignalInsight({
   signal,
@@ -15,12 +14,12 @@ export function SignalInsight({
 }: Readonly<{ signal: DemandSignal; policy: DemandDetectorPolicy }>) {
   const detail = (DETAIL[signal.signal_type] ?? (() => null))(signal, policy);
   return (
-    <Stack as="section" aria-label="Reading">
+    <Section aria-label="Reading">
       <p className={textRole('body', 'text-ink-2')}>
         {detail ?? signalDefinition(signal.signal_type, policy)}
       </p>
       <QueryRelevanceEvidence signal={signal} />
-    </Stack>
+    </Section>
   );
 }
 
@@ -69,53 +68,55 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
   const relevance = parsed.data;
   if (relevance.state === 'unknown') {
     return (
-      <Stack gap="tight" className={wellClasses()}>
-        <span className={textRole('body', 'text-ink-2')}>Query relevance unavailable</span>
-        <p className="type-caption">
-          {relevance.reason === 'page_content_unavailable'
-            ? 'The resolved page had no usable inspected content.'
-            : 'No usable query terms were available for comparison.'}
-        </p>
-      </Stack>
+      <Section>
+        <SectionHeader>
+          <SectionTitle level={3}>Query relevance unavailable</SectionTitle>
+          <SectionDescription>
+            {relevance.reason === 'page_content_unavailable'
+              ? 'The resolved page had no usable inspected content.'
+              : 'No usable query terms were available for comparison.'}
+          </SectionDescription>
+        </SectionHeader>
+      </Section>
     );
   }
   const missing = Array.from(
     new Set([...(relevance.absent_from_title ?? []), ...(relevance.absent_from_h1 ?? [])]),
   );
   return (
-    <section className={wellClasses()} aria-label="Query relevance">
-      <Stack>
-        <Stack gap="tight">
-          <span className={textRole('body', 'text-ink-2')}>Query relevance</span>
-          {relevance.statement ? <p className="type-caption">{relevance.statement}</p> : null}
-        </Stack>
-        <AppGrid as="dl" layout="thirds" className="type-caption">
-          <div>
-            <dt className="text-ink-2">Title</dt>
-            <dd className={textRole('emphasis', 'tabular-nums')}>
-              {coverageLabel(relevance.title_coverage)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-ink-2">H1</dt>
-            <dd className={textRole('emphasis', 'tabular-nums')}>
-              {coverageLabel(relevance.h1_coverage)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-ink-2">Page text</dt>
-            <dd className={textRole('emphasis', 'tabular-nums')}>
-              {coverageLabel(relevance.primary_content_coverage)}
-            </dd>
-          </div>
-        </AppGrid>
-        {missing.length > 0 ? (
-          <p className="type-caption">
-            <span className={textRole('body', 'text-ink-2')}>Missing from title or H1:</span>{' '}
-            {missing.join(', ')}
-          </p>
+    <Section aria-label="Query relevance">
+      <SectionHeader>
+        <SectionTitle level={3}>Query relevance</SectionTitle>
+        {relevance.statement ? (
+          <SectionDescription>{relevance.statement}</SectionDescription>
         ) : null}
-      </Stack>
-    </section>
+      </SectionHeader>
+      <AppGrid as="dl" layout="thirds" className="type-caption">
+        <div>
+          <dt className="text-ink-2">Title</dt>
+          <dd className={textRole('emphasis', 'tabular-nums')}>
+            {coverageLabel(relevance.title_coverage)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-ink-2">H1</dt>
+          <dd className={textRole('emphasis', 'tabular-nums')}>
+            {coverageLabel(relevance.h1_coverage)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-ink-2">Page text</dt>
+          <dd className={textRole('emphasis', 'tabular-nums')}>
+            {coverageLabel(relevance.primary_content_coverage)}
+          </dd>
+        </div>
+      </AppGrid>
+      {missing.length > 0 ? (
+        <p className="type-caption">
+          <span className={textRole('body', 'text-ink-2')}>Missing from title or H1:</span>{' '}
+          {missing.join(', ')}
+        </p>
+      ) : null}
+    </Section>
   );
 }

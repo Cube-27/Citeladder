@@ -21,8 +21,7 @@ import { textRole } from '@/components/ui/typography';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { UrlText } from '@/components/ui/table';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import { wellClasses } from '@/components/ui/slip';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 export function DemandEvidenceDrawer({
   signal,
@@ -65,82 +64,90 @@ export function DemandEvidenceDrawer({
         </Inline>
       }
     >
-      <Stack gap="workspace">
-        <SignalInsight signal={signal} policy={policy} />
+      <SignalInsight signal={signal} policy={policy} />
 
-        {details.pages.length > 0 && (
-          <Stack as="section">
-            <Inline as="h3" className={textRole('body', 'text-ink-2')}>
-              <Icon icon={Split} className="text-ink-2" />
-              Competing pages ({details.pages.length})
-            </Inline>
-            <div className={ledgerClasses()}>
-              {details.pages.map((page) => (
-                <Stack key={page.url} gap="tight" className={ledgerItemClasses('type-caption')}>
-                  <div className={textRole('emphasis', 'text-ink flex min-w-0')}>
-                    <UrlText url={page.url} />
-                  </div>
-                  <div className="type-caption flex items-center justify-between">
-                    <span>{formatCount(page.impressions)} impressions</span>
-                    <span className={textRole('emphasis', 'text-ink tabular-nums')}>
-                      {formatPercent(page.share)} query share
-                    </span>
-                  </div>
-                </Stack>
-              ))}
-            </div>
-          </Stack>
-        )}
-
-        {details.cohortMedianCtr !== null && (
-          <Stack as="section">
-            <h3 className={textRole('body', 'text-ink-2')}>Position benchmark</h3>
-            <Stack className={wellClasses('type-caption')}>
-              <div className="flex justify-between">
-                <span className="text-ink-2">Position band</span>
-                {details.positionBand !== null ? (
-                  <span className={textRole('emphasis', 'text-ink')}>
-                    Positions {details.positionBand}.0 – {details.positionBand}.9
+      {details.pages.length > 0 && (
+        <Section>
+          <SectionHeader>
+            <SectionTitle level={3}>
+              <Inline as="span">
+                <Icon icon={Split} className="text-ink-2" />
+                Competing pages ({details.pages.length})
+              </Inline>
+            </SectionTitle>
+          </SectionHeader>
+          <SectionBleed rows>
+            {details.pages.map((page) => (
+              <Stack key={page.url} gap="tight" className="type-caption">
+                <div className={textRole('emphasis', 'text-ink flex min-w-0')}>
+                  <UrlText url={page.url} />
+                </div>
+                <div className="type-caption flex items-center justify-between">
+                  <span>{formatCount(page.impressions)} impressions</span>
+                  <span className={textRole('emphasis', 'text-ink tabular-nums')}>
+                    {formatPercent(page.share)} query share
                   </span>
-                ) : (
-                  <Absence state="not_measured" />
-                )}
-              </div>
-              <div className="flex justify-between">
-                <span className="text-ink-2">Median CTR in this band</span>
-                <span className={textRole('emphasis', 'text-ink-2 tabular-nums')}>
-                  {formatPercent(details.cohortMedianCtr)}
-                </span>
-              </div>
-            </Stack>
-          </Stack>
-        )}
+                </div>
+              </Stack>
+            ))}
+          </SectionBleed>
+        </Section>
+      )}
 
-        <Stack as="section" aria-labelledby="demand-provenance">
-          <Inline as="h3" id="demand-provenance" className={textRole('body', 'text-ink-2')}>
-            <Icon icon={ShieldCheck} className="text-ink-2" />
-            Provenance
-          </Inline>
-          <Stack as="dl" className={wellClasses('type-caption')}>
-            <ProvenanceRow label="Search Console rows">
-              <ProvenanceCount value={details.metricRowCount} />
-            </ProvenanceRow>
-            <ProvenanceRow label="Source imports">
-              <ProvenanceCount value={details.artifactCount} />
-            </ProvenanceRow>
-            <ProvenanceRow label="Evaluated">
-              <DisplayTime value={signal.created_at} dateOnly />
-            </ProvenanceRow>
-          </Stack>
-        </Stack>
-      </Stack>
+      {details.cohortMedianCtr !== null && (
+        <Section>
+          <SectionHeader>
+            <SectionTitle level={3}>Position benchmark</SectionTitle>
+          </SectionHeader>
+          <SectionBleed rows>
+            <div className="type-caption flex justify-between">
+              <span className="text-ink-2">Position band</span>
+              {details.positionBand !== null ? (
+                <span className={textRole('emphasis', 'text-ink')}>
+                  Positions {details.positionBand}.0 – {details.positionBand}.9
+                </span>
+              ) : (
+                <Absence state="not_measured" />
+              )}
+            </div>
+            <div className="type-caption flex justify-between">
+              <span className="text-ink-2">Median CTR in this band</span>
+              <span className={textRole('emphasis', 'text-ink-2 tabular-nums')}>
+                {formatPercent(details.cohortMedianCtr)}
+              </span>
+            </div>
+          </SectionBleed>
+        </Section>
+      )}
+
+      <Section aria-labelledby="demand-provenance">
+        <SectionHeader>
+          <SectionTitle level={3} id="demand-provenance">
+            <Inline as="span">
+              <Icon icon={ShieldCheck} className="text-ink-2" />
+              Provenance
+            </Inline>
+          </SectionTitle>
+        </SectionHeader>
+        <SectionBleed as="dl" rows>
+          <ProvenanceRow label="Search Console rows">
+            <ProvenanceCount value={details.metricRowCount} />
+          </ProvenanceRow>
+          <ProvenanceRow label="Source imports">
+            <ProvenanceCount value={details.artifactCount} />
+          </ProvenanceRow>
+          <ProvenanceRow label="Evaluated">
+            <DisplayTime value={signal.created_at} dateOnly />
+          </ProvenanceRow>
+        </SectionBleed>
+      </Section>
     </Drawer>
   );
 }
 
 function ProvenanceRow({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
-    <Inline gap="workspace" className="justify-between">
+    <Inline gap="workspace" className="type-caption justify-between">
       <dt className="text-ink-2">{label}</dt>
       <dd className="text-ink tabular-nums">{children}</dd>
     </Inline>

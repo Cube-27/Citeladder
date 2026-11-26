@@ -38,7 +38,6 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
 import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -95,11 +94,7 @@ function RecomputeStatus({ mutation }: Readonly<{ mutation: RecomputeMutation }>
 }
 
 function DemandEmpty({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <Section>
-      <Stack>{children}</Stack>
-    </Section>
-  );
+  return <Section>{children}</Section>;
 }
 
 function RecomputeFailure({ mutation }: Readonly<{ mutation: RecomputeMutation }>) {

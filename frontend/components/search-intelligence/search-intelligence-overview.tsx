@@ -1,7 +1,7 @@
 import { Disclosure } from '@/components/ui/disclosure';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
-import { Section } from '@/components/ui/section';
+import { Section, SectionStack } from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
 import type {
   SearchIntelligenceDataset,
@@ -117,7 +117,7 @@ export function SearchIntelligenceOverview({
     );
   const share = footprint?.summary.top_10_percentage;
   return (
-    <Stack gap="workspace" className="min-w-0">
+    <SectionStack>
       <SearchMetrics
         label="Your search footprint"
         metrics={[
@@ -144,7 +144,7 @@ export function SearchIntelligenceOverview({
       <SearchSummaryEvidence
         datasets={[...(footprint ? [footprint] : []), ...figureDatasets(backlinks, datasets)]}
       />
-    </Stack>
+    </SectionStack>
   );
 }
 
@@ -153,29 +153,27 @@ export function SearchSummaryEvidence({
 }: Readonly<{ datasets: SearchIntelligenceDataset[] }>) {
   return (
     <Section aria-label="Metric definitions and sources">
-      <Stack gap="item">
-        <Disclosure title="Metric definitions and sources">
-          <p className={textRole('caption')}>
-            Organic positions exclude other result types; absolute position includes them. Estimated
-            traffic and CPC (USD) are provider estimates. Difficulty is organic keyword difficulty.
-            DataForSEO Rank uses a 0–100 scale for the named object. Referring domains and referring
-            root domains are distinct totals.
-          </p>
-          <Stack as="ul" gap="tight" className={textRole('caption')}>
-            {datasets.map((dataset) => (
-              <li key={dataset.id}>
-                {SEARCH_DATASET_LABELS[dataset.dataset_kind] ?? dataset.dataset_kind} for{' '}
-                {dataset.target_hostname}, collected{' '}
-                <DisplayTime
-                  value={dataset.collection_ended_at}
-                  dateOnly
-                  fallback="at an unknown time"
-                />
-              </li>
-            ))}
-          </Stack>
-        </Disclosure>
-      </Stack>
+      <Disclosure title="Metric definitions and sources">
+        <p className={textRole('caption')}>
+          Organic positions exclude other result types; absolute position includes them. Estimated
+          traffic and CPC (USD) are provider estimates. Difficulty is organic keyword difficulty.
+          DataForSEO Rank uses a 0–100 scale for the named object. Referring domains and referring
+          root domains are distinct totals.
+        </p>
+        <Stack as="ul" gap="tight" className={textRole('caption')}>
+          {datasets.map((dataset) => (
+            <li key={dataset.id}>
+              {SEARCH_DATASET_LABELS[dataset.dataset_kind] ?? dataset.dataset_kind} for{' '}
+              {dataset.target_hostname}, collected{' '}
+              <DisplayTime
+                value={dataset.collection_ended_at}
+                dateOnly
+                fallback="at an unknown time"
+              />
+            </li>
+          ))}
+        </Stack>
+      </Disclosure>
     </Section>
   );
 }

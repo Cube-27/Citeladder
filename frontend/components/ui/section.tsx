@@ -5,6 +5,7 @@ import {
   StateHeadingLevelContext,
 } from '@/components/ui/state-heading-level';
 import { textRole } from '@/components/ui/typography';
+import { cn } from '@/lib/utils';
 import './section.css';
 
 export type SurfaceDepth = 'page' | 'surface';
@@ -91,13 +92,15 @@ export function SectionContent({
 export function SectionBleed({
   children,
   rows = false,
+  scroll = false,
   as: Element = 'div',
   ...props
 }: Readonly<
   Omit<ComponentPropsWithoutRef<'div'>, 'className'> & {
     children: ReactNode;
     rows?: boolean;
-    as?: 'div' | 'ul' | 'ol';
+    scroll?: boolean;
+    as?: 'div' | 'ul' | 'ol' | 'dl';
   }
 >) {
   const bleed = (
@@ -105,7 +108,10 @@ export function SectionBleed({
       {...props}
       data-bleed=""
       data-bleed-rows={rows ? '' : undefined}
-      className={rows ? 'divide-rule grid divide-y' : undefined}
+      className={cn(
+        rows && 'divide-rule grid divide-y',
+        scroll && 'max-h-64 overflow-y-auto overscroll-contain',
+      )}
     >
       {children}
     </Element>
