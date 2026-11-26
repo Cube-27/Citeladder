@@ -279,6 +279,7 @@
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-full: 9999px;
+  --rule-width: 1px;
   --radius-mark: 2px;
   --radius-inner: var(--radius-sm);
   --radius-control: var(--radius-md);
