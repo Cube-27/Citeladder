@@ -63,8 +63,8 @@ styles outside `globals.css` and `public-surface.css`, and reports breaks of the
 warning that never fails CI (AR-25).
 
 The website (marketing and docs) composes the same primitives, and its own
-blocks are `cl-*` classes whose CSS, in the side sheets the marketing entry
-imports, reads role tokens. A variant is a data attribute or a lookup map of
+blocks are `cl-*` classes whose CSS, in the side sheets the marketing and docs
+entries import or an Astro `<style>`, reads role tokens. A variant is a data attribute or a lookup map of
 whole class names, never a class built from a template. In that CSS a
 declaration holds a token, a keyword, `0`, an opacity toggle, a percentage,
 `fr` or container and viewport units, a gradient stop or angle, or a unitless
@@ -159,7 +159,8 @@ a CSS variable for code blocks.
   the value differs. A role that must resolve under a re-pointing ancestor
   (the sidebar width) goes in `@theme inline`. Inside a primitive, steps of
   the 4px scale are allowed; a screen never picks a step. Grid templates are
-  `grid-cols-<role>` roles, rendered by `Columns template`.
+  `grid-cols-<role>` roles, rendered by `Columns template`. The app's hairline
+  width is `--rule-width`.
 - **Website spacing and size:**
   [`site-space.css`](../frontend/apps/marketing/src/site-space.css) derives
   `--site-space-<n>` from the website's base (a quarter of it per step), so a
@@ -178,7 +179,10 @@ a CSS variable for code blocks.
   Every target is at least 24×24.
 - **Radii** stay CiteLadder's, not HeroUI's (AR-1): tag 5 (`rounded-mark`),
   control and menu 8 (`rounded-control`), card 10 (`rounded-card`), overlay 14
-  (`rounded-overlay`); `full` only for avatars, dots and switch tracks.
+  (`rounded-overlay`), and 4 for a part inside a frame (`rounded-inner`);
+  `full` only for avatars, dots and switch tracks. On the website and docs
+  mark, control, card and overlay are 2, 6, 8 and 12. CSS reads these roles,
+  never the `xs`–`lg` scale.
 
 ## Kept rules
 
