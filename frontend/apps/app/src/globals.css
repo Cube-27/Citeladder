@@ -363,15 +363,15 @@
 }
 
 :root[data-theme='dark']:not([data-public-surface]) {
-  --color-ground: #0a0a0a;
-  --color-panel: #1b1b1b;
-  --color-raised: #232323;
-  --color-raised-2: #2e2e2e;
-  --table-head-ground: #262626;
+  --color-ground: #0c0c0c;
+  --color-panel: #202020;
+  --color-raised: #2a2a2a;
+  --color-raised-2: #373737;
+  --table-head-ground: #2e2e2e;
   --color-thumb: var(--color-ink-2);
   --color-rule: rgb(255 255 255 / 11%);
   --color-control-line: rgb(255 255 255 / 22%);
-  --color-page: #111111;
+  --color-page: #141414;
   --color-ink: #ececec;
   --color-ink-2: #a8a8aa;
   --color-ink-hover: oklch(85% 0 0);
