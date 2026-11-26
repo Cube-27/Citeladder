@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
 
 import { IconButton } from '@/components/ui/button';
-import { Section, SectionHeader } from '@/components/ui/section';
+import { Section, SectionToolbar } from '@/components/ui/section';
 import { InfoHint } from '@/components/ui/info-hint';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
@@ -42,17 +42,17 @@ export function AttributeRanks({ categories }: Readonly<{ categories: readonly C
   const most = ranked[0]?.[order] ?? 1;
   return (
     <Section aria-label="Ranked attributes">
-      <SectionHeader actions={<span className={textRole('caption', 'text-ink-2')}>Points</span>}>
-        <span className="flex items-center gap-2">
-          <SegmentedControl
-            value={order}
-            onChange={setOrder}
-            ariaLabel="Order attributes"
-            options={orders.map((value) => ({ value, label: ORDER_LABEL[value] }))}
-          />
-          <InfoHint label="About attributes">Labelled points per category</InfoHint>
-        </span>
-      </SectionHeader>
+      <SectionToolbar>
+        <SegmentedControl
+          value={order}
+          onChange={setOrder}
+          ariaLabel="Order attributes"
+          options={orders.map((value) => ({ value, label: ORDER_LABEL[value] }))}
+        />
+        <InfoHint label="About attributes">Labelled points per category</InfoHint>
+        <span className="flex-1" />
+        <span className={textRole('caption', 'text-ink-2')}>Points</span>
+      </SectionToolbar>
       <ol className="grid gap-1">
         {shown.map((category) => (
           <li

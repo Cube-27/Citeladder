@@ -5,6 +5,7 @@ import type { Visibility } from '@citeladder/contracts';
 import { isMetricsPending } from '@/lib/api/visibility-queries';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { BusyRung } from '@/components/ui/rung-meter';
+import { SectionStack } from '@/components/ui/section';
 import { StateBlock, screenState } from '@/components/ui/state-block';
 
 function isMeasured(data: Visibility | null): data is Visibility {
@@ -64,10 +65,10 @@ export function AnalysisRead<T>({
     );
   if (ready === undefined)
     return (
-      <>
+      <SectionStack aria-busy>
         <StateBlock kind="loading" shape={{ kind: 'list' }} />
         <StateBlock kind="loading" shape={{ kind: 'chart' }} />
-      </>
+      </SectionStack>
     );
   return (
     <div className="relative">

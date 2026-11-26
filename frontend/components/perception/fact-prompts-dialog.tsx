@@ -90,29 +90,31 @@ function PromptPicker({
           notice={mutationNoticeForError(save.error, { action: 'save the prompts' })}
         />
       ) : null}
-      {byTopic(list.prompts).map(([topic, prompts]) => (
-        <Stack key={topic ?? ''} gap="compact">
-          <Checkbox
-            label={<span className={textRole('label')}>{topic ?? 'No topic'}</span>}
-            checked={groupState(prompts, checked)}
-            onCheckedChange={(on) =>
-              toggle(
-                prompts.map((prompt) => prompt.id),
-                on === true,
-              )
-            }
-          />
-          {prompts.map((prompt) => (
+      <Stack gap="workspace">
+        {byTopic(list.prompts).map(([topic, prompts]) => (
+          <Stack key={topic ?? ''} gap="compact">
             <Checkbox
-              key={prompt.id}
-              nested
-              label={prompt.text}
-              checked={checked.has(prompt.id)}
-              onCheckedChange={(on) => toggle([prompt.id], on === true)}
+              label={<span className={textRole('label')}>{topic ?? 'No topic'}</span>}
+              checked={groupState(prompts, checked)}
+              onCheckedChange={(on) =>
+                toggle(
+                  prompts.map((prompt) => prompt.id),
+                  on === true,
+                )
+              }
             />
-          ))}
-        </Stack>
-      ))}
+            {prompts.map((prompt) => (
+              <Checkbox
+                key={prompt.id}
+                nested
+                label={prompt.text}
+                checked={checked.has(prompt.id)}
+                onCheckedChange={(on) => toggle([prompt.id], on === true)}
+              />
+            ))}
+          </Stack>
+        ))}
+      </Stack>
       <div className="flex items-center justify-between gap-3">
         <span className={textRole('caption')}>
           {formatCount(checked.size)} of {formatCount(list.prompts.length)}
