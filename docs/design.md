@@ -6,18 +6,21 @@ component family. The app follows the look the owner approved
 tokens, surfaces and controls on CiteLadder's corner radii, an inset content
 panel on light paper, white cards with the soft card shadow.
 
-**Scope.** Tokens live in
-[`globals.css`](../frontend/apps/app/src/globals.css) in two layers. The
-`--ramp-*` block holds every literal colour once, named by hue and lightness;
-nothing but a role reads a ramp step. Roles alias ramp steps, and each surface
-and theme re-points the same role names: the app in
-`:root:not([data-public-surface])` and its dark twin, the website and docs
-(`[data-public-surface]`, `components/marketing`, `components/content`) in the
-blocks above those. A new colour is a ramp step plus a role, never a literal
-at the call site.
+**Scope.** Tokens live in two layers. A `--ramp-*` block holds every literal
+colour once, named by hue and lightness; nothing but a role reads a ramp step.
+Roles alias ramp steps, and each surface and theme re-points the same role
+names. [`globals.css`](../frontend/apps/app/src/globals.css) holds the shared
+and app tokens (the app in `:root:not([data-public-surface])` and its dark
+twin). [`public-surface.css`](../frontend/apps/app/src/public-surface.css)
+holds the website and docs blocks (`[data-public-surface]`,
+`[data-marketing-surface]`, the landing-page product screens) and the ramp
+steps only they read. Only the marketing and docs entries import it, so the
+app's eager CSS never carries them. A new colour is a ramp step plus a role,
+never a literal at the call site; a website-only colour goes in
+`public-surface.css`.
 
 **Checks.** `pnpm check:policy` keeps three rules: no literal colours outside
-`globals.css`, WCAG AA contrast of token pairs (every `--text-color-*` role on
+those two files, WCAG AA contrast of token pairs (every `--text-color-*` role on
 the grounds of its palette at 4.5:1, marks 3:1, both themes), and no Radix
 import outside `components/ui`. The same script reports breaks of the [composition rules](#composition) as a warning that never fails CI
 (AR-25); everything else here is held by review.

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 import {
@@ -8,6 +8,7 @@ import {
   paletteDeclarations,
   paletteViolations,
   resolvePalette,
+  tokenSource,
 } from '../frontend/scripts/design-system-contrast.mjs';
 
 function palette({ ink, paper }) {
@@ -179,10 +180,7 @@ test('oklch literals and relative colours resolve to the sRGB they render', () =
 });
 
 test('the shipped palette meets every pair in the website and app palettes, both themes', () => {
-  const source = readFileSync(
-    new URL('../frontend/apps/app/src/globals.css', import.meta.url),
-    'utf8',
-  );
+  const source = tokenSource(fileURLToPath(new URL('../frontend', import.meta.url)));
   assert.deepEqual(paletteViolations(source), []);
 });
 
