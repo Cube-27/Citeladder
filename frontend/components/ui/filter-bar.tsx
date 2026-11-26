@@ -135,7 +135,7 @@ function StripMeta({
   const content = (
     <>
       {windowLabel ? (
-        <span className="type-caption min-w-0 shrink truncate">
+        <span className="text-caption text-ink-2 min-w-0 shrink truncate">
           {windowLabel}
           {status ? ' ·' : null}
         </span>
@@ -143,7 +143,7 @@ function StripMeta({
       {status === undefined ? null : (
         <output
           aria-live="polite"
-          className="type-caption block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"
+          className="text-caption text-ink-2 block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"
         >
           {status}
         </output>

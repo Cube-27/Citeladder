@@ -122,11 +122,14 @@ export function Select<T extends string>({
                     <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
                   </span>
                   {option.description ? (
-                    <span className="type-caption">{option.description}</span>
+                    <span className="text-caption text-ink-2">{option.description}</span>
                   ) : null}
                 </span>
                 {option.detail ? (
-                  <span id={`${detailId}-${index}`} className="type-caption ms-auto tabular-nums">
+                  <span
+                    id={`${detailId}-${index}`}
+                    className="text-caption text-ink-2 ms-auto tabular-nums"
+                  >
                     {option.detail}
                   </span>
                 ) : null}

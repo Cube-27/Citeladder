@@ -26,7 +26,7 @@ export function menuItemClasses({
   className,
 }: Readonly<{ danger?: boolean; className?: string }> = {}) {
   return cn(
-    'press [--press:0.98] focus-ring type-body relative flex min-h-[var(--control-md)] w-full shrink-0 cursor-pointer items-center gap-2 rounded-mark px-2 app:px-2.5 py-1 text-left select-none',
+    'press [--press:0.98] focus-ring text-body text-ink relative flex min-h-[var(--control-md)] w-full shrink-0 cursor-pointer items-center gap-2 rounded-mark px-2 app:px-2.5 py-1 text-left select-none',
     'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60 app:data-[disabled]:opacity-50',
     danger
       ? 'text-negative data-[highlighted]:bg-negative-wash hover:bg-negative-wash data-[disabled]:hover:bg-transparent app:data-[highlighted]:bg-transparent app:hover:bg-transparent app:data-[highlighted]:overlay-hover app:hover:overlay-hover [&_svg]:text-negative'
@@ -199,7 +199,7 @@ export function MenuItem({
       {value ? (
         <span className="text-ink-2 ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
       ) : null}
-      {shortcut ? <span className="type-code text-ink-2 ms-4">{shortcut}</span> : null}
+      {shortcut ? <span className="text-code text-ink-2 ms-4 font-mono">{shortcut}</span> : null}
       {selected ? <Check className="text-accent size-3.5 shrink-0" aria-hidden /> : null}
     </MenuPrimitive.Item>
   );
@@ -272,7 +272,7 @@ export function MenuControlRow({
   children,
 }: Readonly<{ label: string; children: ReactNode }>) {
   return (
-    <div className="type-body text-ink flex min-h-[var(--control-md)] items-center justify-between gap-4 px-2 py-1">
+    <div className="text-body text-ink flex min-h-[var(--control-md)] items-center justify-between gap-4 px-2 py-1">
       <span>{label}</span>
       {children}
     </div>

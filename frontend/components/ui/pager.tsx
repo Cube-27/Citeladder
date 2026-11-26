@@ -60,7 +60,7 @@ function PagerSummary({
   page,
   pageCount,
 }: Readonly<{ range?: PagerRange; page?: number; pageCount?: number }>) {
-  const face = 'type-body text-ink-2 pe-2 whitespace-nowrap tabular-nums';
+  const face = 'text-body text-ink-2 pe-2 whitespace-nowrap tabular-nums';
   if (range) {
     return (
       <output className={face}>

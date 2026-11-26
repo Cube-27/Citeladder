@@ -43,7 +43,7 @@ export function LedgerItem({
         {meta === undefined ? null : <div className="flex shrink-0 items-center gap-2">{meta}</div>}
       </div>
       {caption === undefined ? null : (
-        <ClampText phoneWrap className="type-caption">
+        <ClampText phoneWrap className="text-caption text-ink-2">
           {caption}
         </ClampText>
       )}

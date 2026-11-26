@@ -3,21 +3,21 @@ import type { ComponentPropsWithoutRef } from 'react';
 import { cn } from '@/lib/utils';
 
 const TEXT_ROLES = {
-  display: 'type-display',
-  title: 'type-title',
-  heading: 'type-heading',
-  subheading: 'type-subheading',
-  body: 'type-body',
-  label: 'type-label',
-  prose: 'type-prose',
-  caption: 'type-caption',
-  captionStrong: 'type-caption-strong',
-  figureXl: 'type-figure-xl',
-  figure: 'type-figure',
-  code: 'type-code',
+  display: 'text-display font-display text-ink',
+  title: 'text-title font-display text-ink',
+  heading: 'text-heading text-ink',
+  subheading: 'text-label text-ink',
+  body: 'text-body text-ink',
+  label: 'text-label text-ink',
+  prose: 'text-prose text-ink',
+  caption: 'text-caption text-ink-2',
+  captionStrong: 'text-caption-strong text-ink-2',
+  figureXl: 'text-figure-xl font-figure tabular-nums text-ink',
+  figure: 'text-figure font-figure tabular-nums text-ink',
+  code: 'text-code font-mono text-ink',
   emphasis: 'font-emphasis',
   bodyLg: 'text-body-lg font-sans text-ink',
-  pageTitle: 'type-page-title',
+  pageTitle: 'text-page-title text-ink',
 } as const;
 
 export type TextRole = keyof typeof TEXT_ROLES;
@@ -30,7 +30,6 @@ const ROLE_CLASSES = {
   caption: 'text-caption font-sans',
   'caption-strong': 'text-caption-strong font-sans',
   code: 'text-code font-mono',
-  eyebrow: 'text-eyebrow font-sans',
   body: 'text-body font-sans',
   'body-lg': 'text-body-lg font-sans',
   label: 'text-label font-sans',
@@ -38,8 +37,8 @@ const ROLE_CLASSES = {
   prose: 'text-prose font-sans',
   title: 'text-title font-display',
   'page-title': 'text-page-title font-sans',
-  figure: 'text-figure font-sans',
-  'figure-xl': 'text-figure-xl font-sans',
+  figure: 'text-figure font-figure',
+  'figure-xl': 'text-figure-xl font-figure',
   display: 'text-display font-display',
 } as const;
 
@@ -56,7 +55,7 @@ const TONE_CLASSES = {
 type TypeRole = keyof typeof ROLE_CLASSES;
 type TextTone = keyof typeof TONE_CLASSES;
 
-const SECONDARY_ROLES: ReadonlySet<TypeRole> = new Set(['caption', 'caption-strong', 'eyebrow']);
+const SECONDARY_ROLES: ReadonlySet<TypeRole> = new Set(['caption', 'caption-strong']);
 type TextTag =
   | 'span'
   | 'p'

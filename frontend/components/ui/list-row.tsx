@@ -50,12 +50,14 @@ export function OptionRow({
       className={cn(
         listRowClasses({ selected }),
         pressableRowClasses,
-        'disabled:pointer-events-none disabled:[&_.type-body]:text-ink-2',
+        'disabled:pointer-events-none disabled:[&_.text-body]:text-ink-2',
       )}
     >
       <span className="min-w-0 flex-1">
         <ClampText className={textRole('body')}>{title}</ClampText>
-        {caption ? <ClampText className="type-caption tabular-nums">{caption}</ClampText> : null}
+        {caption ? (
+          <ClampText className="text-caption text-ink-2 tabular-nums">{caption}</ClampText>
+        ) : null}
       </span>
       {pending ? <Spinner className="text-ink-2" /> : null}
       {selected && !pending ? <Icon icon={Check} className="text-ink" /> : null}
@@ -138,9 +140,9 @@ export function TreeItem({
         listRowClasses(),
       )}
     >
-      <ClampText className="type-body flex-1">{label}</ClampText>
+      <ClampText className="text-body text-ink flex-1">{label}</ClampText>
       {typeof count === 'number' ? (
-        <span className="type-caption shrink-0 tabular-nums">{formatCount(count)}</span>
+        <span className="text-caption text-ink-2 shrink-0 tabular-nums">{formatCount(count)}</span>
       ) : null}
       {actions}
     </li>

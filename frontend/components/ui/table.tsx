@@ -304,7 +304,7 @@ export function TableRowHeader({
   className,
 }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
-    <th scope="row" className={cn(cellClasses({}), 'type-body', className)}>
+    <th scope="row" className={cn(cellClasses({}), 'text-body text-ink', className)}>
       {isPlainText(children) ? <ClampText rowTitle>{children}</ClampText> : children}
     </th>
   );

@@ -61,7 +61,7 @@ export function HistoryRow({
           )}
         >
           <span className="flex min-w-0 items-center gap-2">
-            <span data-sidebar-text="title" className="type-label min-w-0 flex-1 truncate">
+            <span data-sidebar-text="title" className="text-label text-ink min-w-0 flex-1 truncate">
               {title}
             </span>
             {working ? <Spinner label="Working" /> : null}

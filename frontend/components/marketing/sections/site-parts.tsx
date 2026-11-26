@@ -35,7 +35,7 @@ export function SiteArrowLink({
 }
 
 export function Eyebrow({ children }: Readonly<{ children: ReactNode }>) {
-  return <p className="type-eyebrow cl-eyebrow">{children}</p>;
+  return <p className="text-kicker text-ink-2 cl-eyebrow">{children}</p>;
 }
 
 export function CheckList({

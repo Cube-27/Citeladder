@@ -82,9 +82,9 @@ export function RadioGroup<T extends string>({
 function radioText<T extends string>(option: RadioOption<T>) {
   return (
     <span className="flex min-w-0 flex-1 flex-col">
-      <span className="type-body">{option.label}</span>
+      <span className="text-body text-ink">{option.label}</span>
       {option.description != null ? (
-        <span className="type-body text-ink-2">{option.description}</span>
+        <span className="text-body text-ink-2">{option.description}</span>
       ) : null}
     </span>
   );

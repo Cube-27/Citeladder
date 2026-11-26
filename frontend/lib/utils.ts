@@ -6,6 +6,7 @@ const twMerge = extendTailwindMerge({
     theme: { radius: ['mark', 'control', 'card', 'overlay'] },
     classGroups: {
       'font-weight': [{ font: ['emphasis', 'plain'] }],
+      'font-family': [{ font: ['figure'] }],
       'font-size': [
         {
           text: [
@@ -14,7 +15,9 @@ const twMerge = extendTailwindMerge({
             'code',
             'data',
             'eyebrow',
+            'screen-eyebrow',
             'screen-label',
+            'kicker',
             'body',
             'body-lg',
             'label',

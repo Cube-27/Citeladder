@@ -36,7 +36,7 @@ const sections: Section[] = inApi
   {
     inApi && (
       <a
-        class:list={['cl-docs-side-title type-eyebrow', { 'is-active': current(API_ENDPOINTS_HREF) }]}
+        class:list={['cl-docs-side-title text-kicker text-ink-2', { 'is-active': current(API_ENDPOINTS_HREF) }]}
         href={API_ENDPOINTS_HREF}
         aria-current={current(API_ENDPOINTS_HREF) ? 'page' : undefined}
       >
@@ -48,7 +48,7 @@ const sections: Section[] = inApi
     sections.map((section) => (
       <details class="cl-docs-side-group" open={section.open}>
         <summary class="cl-docs-side-head">
-          <span class={section.eyebrow ? 'type-eyebrow text-ink' : 'cl-docs-side-label'}>
+          <span class={section.eyebrow ? 'text-kicker text-ink-2' : 'cl-docs-side-label'}>
             {section.label}
           </span>
           <ChevronDown className="cl-docs-side-caret size-3.5" aria-hidden />
@@ -118,7 +118,7 @@ const sections: Section[] = inApi
     height: var(--control-sm);
     padding: 0 12px;
     border-radius: var(--radius-sm);
-    color: var(--text-color-ink);
+    color: var(--text-color-ink-2);
     text-decoration: none;
   }
   .cl-docs-side-title:hover,

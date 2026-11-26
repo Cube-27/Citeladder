@@ -199,7 +199,9 @@ function RungRow({
           </span>
         ) : null}
       </span>
-      <span className="type-caption min-w-[6ch] text-right tabular-nums">{step.time}</span>
+      <span className="text-caption text-ink-2 min-w-[6ch] text-right tabular-nums">
+        {step.time}
+      </span>
     </li>
   );
 }
@@ -290,7 +292,7 @@ export function FoldedTrail({
           {live ? <Spinner /> : null}
           <span className="min-w-0 truncate">{live ? live.status : summary}</span>
           {live ? (
-            <span className="type-caption shrink-0 text-current tabular-nums">{live.seconds}s</span>
+            <span className="text-caption shrink-0 text-current tabular-nums">{live.seconds}s</span>
           ) : null}
           <Icon icon={ChevronRight} className="text-ink-2 my-0 shrink-0 group-open:rotate-90" />
         </summary>

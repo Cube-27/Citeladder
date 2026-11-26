@@ -58,9 +58,9 @@
   --screen-h: 860px;
 }
 
-.cl-screen--app .type-page-title {
+.cl-screen--app .text-page-title {
   font-family: var(--font-sans);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   letter-spacing: normal;
 }
 

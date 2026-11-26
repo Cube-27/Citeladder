@@ -65,7 +65,7 @@ const range = (count: number) => Array.from({ length: count }, (_, index) => ind
 
 function CaptionLine({ width }: Readonly<{ width: string }>) {
   return (
-    <span className="type-caption flex h-lh items-center">
+    <span className="text-caption text-ink-2 flex h-lh items-center">
       <SkeletonBlock className={width} />
     </span>
   );

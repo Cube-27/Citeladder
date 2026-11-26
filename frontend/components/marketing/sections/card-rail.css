@@ -341,7 +341,7 @@
     width: auto;
   }
 
-  .cl-rail .cl-railcard-copy > .cl-eyebrow.type-eyebrow {
+  .cl-rail .cl-railcard-copy > .cl-eyebrow.text-kicker {
     width: auto;
     margin: 0;
     padding: 0;
@@ -349,13 +349,13 @@
     color: var(--text-color-ink);
     font-family: var(--font-sans);
     font-size: var(--text-body-lg);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     line-height: var(--text-body-lg--line-height);
     letter-spacing: normal;
     text-transform: none;
   }
 
-  .cl-rail .cl-railcard-copy > .cl-eyebrow.type-eyebrow::after {
+  .cl-rail .cl-railcard-copy > .cl-eyebrow.text-kicker::after {
     content: none;
   }
 

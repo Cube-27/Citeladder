@@ -162,7 +162,7 @@ export function SidebarNavGroup({
           aria-expanded={expanded}
           aria-controls={listId}
           onClick={onToggle}
-          className="focus-ring type-caption-strong text-ink-2 hover:overlay-hover hover:text-ink rounded-control flex h-[var(--nav-row-height)] w-full min-w-0 items-center gap-2 px-2 text-left transition-colors"
+          className="focus-ring text-caption-strong text-ink-2 hover:overlay-hover hover:text-ink rounded-control flex h-[var(--nav-row-height)] w-full min-w-0 items-center gap-2 px-2 text-left transition-colors"
         >
           <span className="min-w-0 flex-1 truncate">{title}</span>
           <ChevronDown
@@ -188,7 +188,7 @@ const NAV_AT_REST = 'text-nav-ink hover:overlay-hover hover:shadow-card';
 
 export function sidebarNavRowClasses(active: boolean, className?: string) {
   return cn(
-    'focus-ring type-body rounded-control relative flex h-[var(--nav-row-height)] w-full min-w-0 shrink-0 items-center gap-2 px-2 text-left transition-colors',
+    'focus-ring text-body text-ink rounded-control relative flex h-[var(--nav-row-height)] w-full min-w-0 shrink-0 items-center gap-2 px-2 text-left transition-colors',
     active ? CURRENT_TILE : NAV_AT_REST,
     className,
   );
@@ -232,7 +232,7 @@ export function sidebarModeTrackClasses(rail: boolean) {
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
   if (rail) return cn(RAIL_BUTTON, current ? cn('text-ink', CURRENT_FILL) : AT_REST);
   return cn(
-    'focus-ring type-label rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors',
+    'focus-ring text-label text-ink rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors',
     current ? 'text-ink bg-[var(--nav-current-fill)] shadow-card' : AT_REST,
   );
 }
@@ -296,11 +296,11 @@ export function SidebarIdentButton({
           </>
         ) : (
           <>
-            <span data-sidebar-text="title" className="type-label text-ink truncate">
+            <span data-sidebar-text="title" className="text-label text-ink truncate">
               {title}
             </span>
             {meta ? (
-              <span data-sidebar-text="meta" className="type-caption text-ink-2 truncate">
+              <span data-sidebar-text="meta" className="text-caption text-ink-2 truncate">
                 {meta}
               </span>
             ) : null}

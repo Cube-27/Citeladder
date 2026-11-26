@@ -79,8 +79,8 @@ export type KeyEntry = Readonly<{
 
 function KeyValue({ value }: Readonly<{ value: Formatted }>) {
   if (isAbsent(value))
-    return <span className="type-caption text-ink-2 shrink-0">{ABSENCE_MARK}</span>;
-  return <span className="type-caption text-ink shrink-0 tabular-nums">{value}</span>;
+    return <span className="text-caption text-ink-2 shrink-0">{ABSENCE_MARK}</span>;
+  return <span className="text-caption text-ink shrink-0 tabular-nums">{value}</span>;
 }
 
 export function ChartKey({
@@ -150,7 +150,7 @@ export function ChartTipSheet({
       )}
       style={{ left: chartTipLeft(x, frameWidth), top: Math.round(top) }}
     >
-      <p className="type-caption tabular-nums">{title}</p>
+      <p className="text-caption text-ink-2 tabular-nums">{title}</p>
       {rows.map((row) => (
         <div key={row.name} className={textRole('caption', 'flex items-center gap-2 text-ink')}>
           <SeriesSwatch tone={row.tone} />

@@ -32,7 +32,7 @@ export function BillingQuoteSummary({
     }
   }
   return (
-    <Stack as="output" gap="compact" className="type-body text-ink-2">
+    <Stack as="output" gap="compact" className="text-body text-ink-2">
       <span className="text-ink-2">
         Quote · {TREATMENT_LABEL[quote.tax_treatment]} · valid until{' '}
         <DisplayTime value={quote.expires_at} />

@@ -164,7 +164,7 @@ function FigureLabel({ segment, subLine }: FigurePart) {
   const hint = segment.loading ? null : <FigureHint segment={segment} subLine={subLine} />;
   const Glyph = segment.icon;
   return (
-    <dt className="type-caption text-ink-2 phone:block flex min-w-0 items-center gap-2">
+    <dt className="text-caption text-ink-2 phone:block flex min-w-0 items-center gap-2">
       {Glyph ? (
         <Glyph
           aria-hidden
@@ -199,7 +199,7 @@ function FigureValueLine({ segment, subLine, textValues }: FigurePart) {
       className="phone:flex-wrap flex min-w-0 items-baseline gap-2 whitespace-nowrap"
     >
       <FigureValue segment={segment} textValues={textValues} />
-      {delta ? <span className="type-caption-strong shrink-0">{delta}</span> : null}
+      {delta ? <span className="text-caption-strong text-ink-2 shrink-0">{delta}</span> : null}
       {segment.labelHidden && !segment.loading ? (
         <span className="ms-auto shrink-0 self-center">
           <FigureHint segment={segment} subLine={subLine} />
@@ -211,7 +211,7 @@ function FigureValueLine({ segment, subLine, textValues }: FigurePart) {
 
 function FigureSub({ segment }: FigurePart) {
   return (
-    <dd className="type-caption text-ink-2 phone:whitespace-normal min-w-0 truncate">
+    <dd className="text-caption text-ink-2 phone:whitespace-normal min-w-0 truncate">
       {segment.sub && !segment.loading ? segment.sub : ' '}
     </dd>
   );

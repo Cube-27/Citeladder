@@ -1,4 +1,5 @@
 @theme {
+  --font-figure: var(--font-mono);
   --text-caption: calc(var(--type-base) - 2 * var(--type-step));
   --text-caption--line-height: calc(var(--text-caption) + 2 * var(--type-step));
   --text-caption--font-weight: var(--weight-regular);
@@ -11,13 +12,14 @@
   --text-eyebrow--line-height: var(--text-caption--line-height);
   --text-eyebrow--font-weight: var(--weight-medium);
   --text-eyebrow--letter-spacing: 0.08em;
+  --text-screen-eyebrow: var(--text-eyebrow);
+  --text-screen-eyebrow--line-height: var(--text-eyebrow--line-height);
+  --text-screen-eyebrow--font-weight: var(--weight-regular);
+  --text-screen-eyebrow--letter-spacing: var(--text-eyebrow--letter-spacing);
   --text-screen-label: var(--text-caption);
   --text-screen-label--line-height: var(--text-caption--line-height);
   --text-screen-label--font-weight: var(--weight-medium);
   --text-screen-label--letter-spacing: 0.06em;
-  --text-code: calc(var(--type-base) - 1.5 * var(--type-step));
-  --text-code--line-height: calc(var(--text-code) + 4.5 * var(--type-step));
-  --text-code--font-weight: var(--weight-regular);
   --text-data: var(--text-code);
   --text-data--line-height: calc(var(--text-data) + 3.5 * var(--type-step));
   --text-data--font-weight: var(--weight-regular);
@@ -27,6 +29,10 @@
   --text-label: var(--text-body);
   --text-label--line-height: var(--text-body--line-height);
   --text-label--font-weight: var(--weight-medium);
+  --text-kicker: var(--text-label);
+  --text-kicker--line-height: var(--text-label--line-height);
+  --text-kicker--font-weight: var(--weight-medium);
+  --text-kicker--letter-spacing: 0;
   --text-site-body: var(--type-base);
   --text-site-body--line-height: calc(var(--text-site-body) + 5 * var(--type-step));
   --text-site-body--font-weight: var(--weight-regular);
@@ -86,6 +92,12 @@
   --text-figure-xl--letter-spacing: -0.02em;
 }
 
+:root {
+  --text-code: calc(var(--type-base) - 1.5 * var(--type-step));
+  --text-code--line-height: calc(var(--text-code) + 4.5 * var(--type-step));
+  --text-code--font-weight: var(--weight-regular);
+}
+
 [data-marketing-surface] {
   --text-heading-lg: calc(var(--type-base) + 2 * var(--type-step));
   --text-heading-lg--line-height: calc(var(--text-heading-lg) + 2 * var(--type-step));
@@ -100,6 +112,12 @@
 }
 
 @media (max-width: 767px) {
+  :root {
+    --text-code: calc(var(--type-base) - 1.5 * var(--type-step));
+    --text-code--line-height: calc(var(--text-code) + 4.5 * var(--type-step));
+    --text-code--font-weight: var(--weight-regular);
+  }
+
   [data-marketing-surface] {
     --text-site-home: calc(var(--type-base) + 8 * var(--type-step));
     --text-site-home--line-height: calc(var(--text-site-home) + 4 * var(--type-step));

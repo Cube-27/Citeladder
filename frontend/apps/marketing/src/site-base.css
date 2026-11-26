@@ -1,6 +1,7 @@
 .cl-site {
   --text-eyebrow: var(--text-caption);
   --text-eyebrow--line-height: var(--text-body--line-height);
+  --text-screen-eyebrow--line-height: var(--text-body--line-height);
   --text-caption--line-height: var(--text-body--line-height);
   --text-data: var(--text-caption);
   --text-code: var(--text-body);
@@ -300,7 +301,7 @@
   }
 }
 
-.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *) {
+.cl-site .text-kicker:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *) {
   position: relative;
   width: fit-content;
   padding: 0 8px;
@@ -309,7 +310,7 @@
   color: var(--site-chip-ink);
 }
 
-.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *)::after {
+.cl-site .text-kicker:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *)::after {
   position: absolute;
   top: -4px;
   right: -4px;

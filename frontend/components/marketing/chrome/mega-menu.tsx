@@ -14,7 +14,7 @@ export function MegaMenu({ drop, path }: Readonly<{ drop: NavDrop; path: string 
         {drop.groups.map((group, index) => (
           <div key={group.label ?? drop.key} className="cl-mega-group">
             {group.label && (
-              <p id={headId(index)} className="type-eyebrow cl-eyebrow cl-mega-head">
+              <p id={headId(index)} className="text-kicker text-ink-2 cl-eyebrow cl-mega-head">
                 {group.label}
               </p>
             )}

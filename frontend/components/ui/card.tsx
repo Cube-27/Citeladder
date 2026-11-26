@@ -48,15 +48,3 @@ export function CardHeader({
     </header>
   );
 }
-
-export function CardEyebrow({
-  children,
-  className,
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'span'>>) {
-  return (
-    <span {...props} className={cn('type-screen-label', className)}>
-      {children}
-    </span>
-  );
-}

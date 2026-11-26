@@ -12,5 +12,12 @@ describe('cn', () => {
     );
     expect(cn('text-site-body', 'text-caption')).toBe('text-caption');
     expect(cn('font-plain', 'font-emphasis')).toBe('font-emphasis');
+    expect(cn('text-figure font-figure text-ink', 'font-emphasis')).toBe(
+      'text-figure font-figure text-ink font-emphasis',
+    );
+    expect(cn('font-sans', 'font-figure')).toBe('font-figure');
+    expect(cn('text-kicker text-ink-2', 'text-screen-eyebrow')).toBe(
+      'text-ink-2 text-screen-eyebrow',
+    );
   });
 });
