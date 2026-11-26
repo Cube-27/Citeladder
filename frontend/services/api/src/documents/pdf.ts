@@ -355,7 +355,7 @@ export class PdfReport {
           .moveTo(MARGIN + index * cell, top + 12)
           .lineTo(MARGIN + index * cell, top + height - 8)
           .lineWidth(0.6)
-          .strokeColor(this.palette.line)
+          .strokeColor(this.palette.rule)
           .stroke();
       this.draw(this.fit(stat.label, 8.5, 'medium', width), x, top + 20, {
         size: 8.5,
