@@ -3,9 +3,9 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--site-space-3);
   width: 100%;
-  padding: 16px;
+  padding: var(--site-space-4);
   color: var(--text-color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-body);
@@ -27,7 +27,7 @@
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px 16px;
+  gap: var(--site-space-2) var(--site-space-4);
 }
 
 .cl-vig-heading {
@@ -54,7 +54,7 @@
   display: flex;
   flex: none;
   align-items: center;
-  min-height: 24px;
+  min-height: var(--site-space-6);
 }
 
 .cl-vig .cl-vig-sentiment {
@@ -65,7 +65,7 @@
 .cl-vig-label {
   color: var(--text-color-ink);
   font-size: var(--text-label);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: var(--text-label--line-height);
   overflow-wrap: anywhere;
 }
@@ -78,14 +78,14 @@
   display: grid;
   flex: 1;
   grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 16px;
+  column-gap: var(--site-space-4);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .cl-vig-rows--lead {
-  grid-template-columns: 24px minmax(0, 1fr) auto;
+  grid-template-columns: var(--site-space-6) minmax(0, 1fr) auto;
 }
 
 .cl-vig-rows--extra {
@@ -93,7 +93,7 @@
 }
 
 .cl-vig-rows--lead.cl-vig-rows--extra {
-  grid-template-columns: 24px minmax(0, 1fr) auto auto;
+  grid-template-columns: var(--site-space-6) minmax(0, 1fr) auto auto;
 }
 
 .cl-vig-row {
@@ -101,9 +101,9 @@
   grid-template-columns: subgrid;
   grid-column: 1 / -1;
   align-items: center;
-  min-height: 56px;
-  padding-block: 8px;
-  border-top: 1px solid var(--color-rule);
+  min-height: var(--site-space-14);
+  padding-block: var(--site-space-2);
+  border-top: var(--site-rule) solid var(--color-rule);
 }
 
 .cl-vig-row:first-child {
@@ -134,8 +134,8 @@
 .cl-vig-lead {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: var(--site-space-6);
+  height: var(--site-space-6);
   color: var(--text-color-ink);
 }
 
@@ -153,7 +153,7 @@
   justify-self: end;
   color: var(--text-color-ink);
   font-size: var(--text-label);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: var(--text-label--line-height);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -169,14 +169,14 @@
   }
 
   .cl-vig-rows--lead.cl-vig-rows--extra {
-    grid-template-columns: 24px minmax(0, 1fr) auto;
+    grid-template-columns: var(--site-space-6) minmax(0, 1fr) auto;
   }
 }
 
 .cl-vig-bar {
   display: block;
-  width: 96px;
-  height: 6px;
+  width: var(--site-space-24);
+  height: var(--site-space-1_5);
   overflow: hidden;
   border-radius: var(--radius-2xs);
   background: var(--color-chart-grid);
@@ -190,14 +190,14 @@
 .cl-vig-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--site-space-4);
   margin: 0;
 }
 
 .cl-vig-stats > div {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--site-space-1);
   min-width: 0;
 }
 
@@ -239,9 +239,9 @@
 .cl-vig-plot {
   display: grid;
   flex: 1;
-  grid-template-rows: minmax(108px, 1fr) auto;
-  grid-template-columns: 40px minmax(0, 1fr);
-  row-gap: 8px;
+  grid-template-rows: minmax(var(--site-space-27), 1fr) auto;
+  grid-template-columns: var(--site-space-10) minmax(0, 1fr);
+  row-gap: var(--site-space-2);
   color: var(--text-color-ink-2);
   font-family: var(--font-mono);
   font-size: var(--text-caption);
@@ -262,8 +262,8 @@
 
 .cl-vig-dot {
   position: absolute;
-  width: 8px;
-  height: 8px;
+  width: var(--site-space-2);
+  height: var(--site-space-2);
   border-radius: var(--radius-full);
   transform: translate(-50%, -50%);
 }
@@ -279,7 +279,7 @@
   flex-direction: column;
   flex: 1;
   justify-content: flex-start;
-  gap: 12px;
+  gap: var(--site-space-3);
   min-height: 224px;
   color: var(--text-color-ink-2);
 }
@@ -290,19 +290,19 @@
 
 .cl-vig-panel strong {
   color: var(--text-color-ink);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .cl-vig-chips {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--site-space-2);
 }
 
 .cl-vig-outline {
-  margin: 4px 0 0;
-  padding-left: 20px;
+  margin: var(--site-space-1) 0 0;
+  padding-left: var(--site-space-5);
   list-style: decimal;
 }
 
@@ -310,10 +310,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--site-space-3);
   margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-rule);
+  padding-top: var(--site-space-3);
+  border-top: var(--site-rule) solid var(--color-rule);
 }
 
 .cl-vig-chips.cl-vig-foot {
@@ -323,7 +323,7 @@
 .cl-vig-user {
   align-self: flex-end;
   max-width: 85%;
-  padding: 8px 12px;
+  padding: var(--site-space-2) var(--site-space-3);
   border-radius: var(--radius-md);
   background: var(--color-well);
   color: var(--text-color-ink);
@@ -333,8 +333,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
-  padding: 8px 12px;
+  gap: var(--site-space-2) var(--site-space-3);
+  padding: var(--site-space-2) var(--site-space-3);
   border-radius: var(--radius-md);
   background: var(--color-well);
 }
@@ -349,9 +349,9 @@
 }
 
 .cl-vig-cite > * {
-  min-height: 20px;
-  gap: 4px;
-  padding-inline: 6px;
+  min-height: var(--site-space-5);
+  gap: var(--site-space-1);
+  padding-inline: var(--site-space-1_5);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
   vertical-align: 1px;

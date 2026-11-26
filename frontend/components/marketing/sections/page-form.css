@@ -3,7 +3,7 @@
 
   display: flex;
   flex-direction: column;
-  padding: 40px;
+  padding: var(--site-space-10);
   border: 0;
   border-radius: var(--site-radius-stage);
   color: var(--text-color-ink);
@@ -15,16 +15,16 @@
 .cl-page-form-head {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--color-rule);
+  gap: var(--site-space-2);
+  padding-bottom: var(--site-space-6);
+  border-bottom: var(--site-rule) solid var(--color-rule);
 }
 
 .cl-page-form-title {
   margin: 0;
   color: var(--text-color-ink);
   font-size: var(--text-heading-lg);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-heading-lg--line-height);
   letter-spacing: var(--text-heading-lg--letter-spacing);
 }
@@ -37,14 +37,14 @@
 }
 
 .cl-page-form-status {
-  padding-top: 24px;
+  padding-top: var(--site-space-6);
 }
 
 .cl-page-form-fields {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px 0;
+  gap: var(--site-space-6);
+  padding: var(--site-space-6) 0;
 }
 
 .cl-page-form-foot {
@@ -52,9 +52,9 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px 24px;
-  padding-top: 24px;
-  border-top: 1px solid var(--color-rule);
+  gap: var(--site-space-4) var(--site-space-6);
+  padding-top: var(--site-space-6);
+  border-top: var(--site-rule) solid var(--color-rule);
 }
 
 .cl-page-form-turnstile {
@@ -73,8 +73,8 @@
   width: 300px;
   max-width: 100%;
   height: 65px;
-  padding: 0 12px;
-  border: 1px dashed var(--color-rule-strong);
+  padding: 0 var(--site-space-3);
+  border: var(--site-rule) dashed var(--color-rule-strong);
   border-radius: var(--radius-sm);
   color: var(--text-color-ink-2);
   font-size: var(--text-caption);
@@ -85,18 +85,18 @@
 .cl-page-form-turnstile-line {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--site-space-2);
 }
 
 .cl-page-form-submit {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--site-space-3);
   margin-left: auto;
 }
 
 .cl-page-form-note {
-  margin: 20px 0 0;
+  margin: var(--site-space-5) 0 0;
   color: var(--text-color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
@@ -106,13 +106,13 @@
   border-radius: var(--radius-xs);
   color: var(--text-color-ink-2);
   text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
+  text-decoration-thickness: var(--site-rule);
+  text-underline-offset: var(--site-underline-offset);
 }
 
 @media (max-width: 767px) {
   .cl-page-form {
-    padding: 24px 20px;
+    padding: var(--site-space-6) var(--site-space-5);
     border-radius: var(--site-radius-card);
   }
 

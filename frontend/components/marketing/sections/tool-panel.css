@@ -1,8 +1,8 @@
 .cl-tool {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  gap: 8px;
-  padding: 8px;
+  gap: var(--site-space-2);
+  padding: var(--site-space-2);
   border-radius: var(--site-radius-card);
   background: var(--tint-neutral);
   background-image: var(--site-well-shade);
@@ -12,15 +12,15 @@
 .cl-tool-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 24px;
+  gap: var(--site-space-3);
+  padding: var(--site-space-6);
 }
 
 .cl-tool-title {
   margin: 0;
   color: var(--text-color-ink);
   font-size: var(--text-heading-lg);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-heading-lg--line-height);
   letter-spacing: var(--text-heading-lg--letter-spacing);
 }
@@ -35,8 +35,8 @@
 .cl-tool-fields {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 12px;
+  gap: var(--site-space-4);
+  margin-top: var(--site-space-3);
 }
 
 .cl-tool-result {
@@ -44,7 +44,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 420px;
-  margin: 24px 24px 24px 0;
+  margin: var(--site-space-6) var(--site-space-6) var(--site-space-6) 0;
   border-radius: var(--site-radius-inner);
   background: var(--color-panel);
 }
@@ -60,17 +60,17 @@
 .cl-tool-bar {
   display: flex;
   align-items: center;
-  gap: 4px 12px;
-  min-height: 52px;
-  padding: 8px 8px 8px 20px;
-  border-bottom: 1px solid var(--color-rule);
+  gap: var(--site-space-1) var(--site-space-3);
+  min-height: var(--site-space-13);
+  padding: var(--site-space-2) var(--site-space-2) var(--site-space-2) var(--site-space-5);
+  border-bottom: var(--site-rule) solid var(--color-rule);
 }
 
 .cl-tool-rtitle {
   margin: 0;
   color: var(--text-color-ink-2);
   font-size: var(--text-label);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: var(--text-label--line-height);
 }
 
@@ -86,7 +86,7 @@
   display: flex;
   flex: none;
   align-items: center;
-  gap: 4px;
+  gap: var(--site-space-1);
   margin-left: auto;
 }
 
@@ -94,7 +94,7 @@
   display: inline-flex;
   flex-direction: column;
   align-items: flex-end;
-  padding-right: 4px;
+  padding-right: var(--site-space-1);
   color: var(--text-color-ink-2);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
@@ -112,14 +112,14 @@
 }
 
 .cl-tool-copy {
-  min-width: 92px;
+  min-width: var(--site-space-23);
 }
 
 .cl-tool-output {
   position: relative;
   flex: 1;
   min-width: 0;
-  padding: 20px;
+  padding: var(--site-space-5);
   overflow-x: auto;
 }
 
@@ -149,18 +149,18 @@
   }
 
   .cl-tool-result {
-    margin: 0 24px 24px;
+    margin: 0 var(--site-space-6) var(--site-space-6);
   }
 }
 
 @media (max-width: 767px) {
   .cl-tool-form {
-    padding: 16px;
+    padding: var(--site-space-4);
   }
 
   .cl-tool-result {
     min-height: 360px;
-    margin: 0 16px 16px;
+    margin: 0 var(--site-space-4) var(--site-space-4);
   }
 
   .cl-tool-bar {
@@ -181,21 +181,21 @@
 }
 
 .cl-tool input[type='file'] {
-  padding: 4px 12px 4px 4px;
+  padding: var(--site-space-1) var(--site-space-3) var(--site-space-1) var(--site-space-1);
   color: var(--text-color-ink-2);
 }
 
 .cl-tool input[type='file']::file-selector-button {
-  height: calc(var(--spacing-control-md) - 10px);
-  margin-right: 12px;
-  padding: 0 12px;
-  border: 1px solid var(--color-control-line);
+  height: calc(var(--spacing-control-md) - var(--site-space-2_5));
+  margin-right: var(--site-space-3);
+  padding: 0 var(--site-space-3);
+  border: var(--site-rule) solid var(--color-control-line);
   border-radius: var(--radius-sm);
   background-color: var(--color-panel);
   color: var(--text-color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-body);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-body--line-height);
   cursor: pointer;
 }
@@ -212,7 +212,7 @@
 }
 
 .cl-tool-group-hint {
-  margin-bottom: 8px;
+  margin-bottom: var(--site-space-2);
   color: var(--text-color-ink-2);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);

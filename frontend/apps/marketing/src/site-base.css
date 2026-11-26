@@ -46,16 +46,17 @@
 
 .cl-container {
   width: 100%;
-  max-width: calc(var(--container-site) + 128px);
+  max-width: calc(var(--container-site) + var(--site-space-32));
   margin-inline: auto;
   padding-inline: var(--site-gutter);
 }
 
 .cl-section {
-  padding-top: 128px;
+  padding-top: var(--site-space-32);
   background-repeat: no-repeat;
-  background-position: 50% 64px;
-  background-size: min(var(--container-site), calc(100% - 2 * var(--site-gutter))) 2px;
+  background-position: 50% var(--site-space-16);
+  background-size: min(var(--container-site), calc(100% - 2 * var(--site-gutter)))
+    var(--site-space-0_5);
 }
 
 .cl-section:has(.cl-engines),
@@ -71,8 +72,8 @@
 
 @media (max-width: 1023px) {
   .cl-section {
-    padding-top: 80px;
-    background-position: 50% 40px;
+    padding-top: var(--site-space-20);
+    background-position: 50% var(--site-space-10);
   }
 }
 
@@ -114,7 +115,7 @@
 .cl-checks {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--site-space-3);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -122,22 +123,22 @@
 
 .cl-checks li {
   display: grid;
-  grid-template-columns: 6px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: var(--site-space-1_5) minmax(0, 1fr);
+  gap: var(--site-space-3);
   color: var(--text-color-ink-2);
   font-size: var(--text-site-body);
   line-height: var(--text-site-body--line-height);
 }
 
 .cl-checks-mark {
-  width: 6px;
-  height: 6px;
-  margin-top: calc((1lh - 6px) / 2);
+  width: var(--site-space-1_5);
+  height: var(--site-space-1_5);
+  margin-top: calc((1lh - var(--site-space-1_5)) / 2);
   background: var(--site-mark);
 }
 
 .cl-checks--sm {
-  gap: 8px;
+  gap: var(--site-space-2);
 }
 
 .cl-checks--sm li {
@@ -210,8 +211,8 @@
 }
 
 .cl-btn-lg {
-  min-height: 44px;
-  padding-inline: 16px;
+  min-height: var(--site-target);
+  padding-inline: var(--site-space-4);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
 }
@@ -219,11 +220,11 @@
 .cl-arrowlink {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--site-space-2);
   border-radius: var(--radius-xs);
   color: var(--text-color-ink);
   font-size: var(--text-heading);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-heading--line-height);
   text-decoration: none;
 }
@@ -231,7 +232,7 @@
 .cl-arrowlink-text {
   text-decoration-line: underline;
   text-decoration-color: transparent;
-  text-decoration-thickness: 1px;
+  text-decoration-thickness: var(--site-rule);
   text-underline-offset: 4px;
   transition: text-decoration-color var(--transition-duration-fast) var(--ease-standard);
 }
@@ -250,7 +251,7 @@
 
   a.cl-arrowlink:hover .cl-arrowlink-icon,
   a:hover .cl-arrowlink .cl-arrowlink-icon {
-    transform: translateX(2px);
+    transform: translateX(var(--site-space-0_5));
   }
 }
 
@@ -265,13 +266,13 @@
 
   .cl-arrowlink::after {
     position: absolute;
-    inset: calc(50% - 22px) 0;
+    inset: calc(50% - var(--site-target) / 2) 0;
     content: '';
   }
 }
 
 .cl-site-main {
-  padding-bottom: 96px;
+  padding-bottom: var(--site-space-24);
   background: var(--site-page);
 }
 
@@ -290,7 +291,7 @@
   background-position:
     0 0,
     100% 0;
-  background-size: 1px 100%;
+  background-size: var(--site-rule) 100%;
   pointer-events: none;
   translate: -50% 0;
 }
@@ -304,7 +305,7 @@
 .cl-site .text-kicker:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *) {
   position: relative;
   width: fit-content;
-  padding: 0 8px;
+  padding: 0 var(--site-space-2);
   border-radius: var(--radius-xs);
   background: var(--site-chip);
   color: var(--site-chip-ink);
@@ -312,17 +313,17 @@
 
 .cl-site .text-kicker:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *)::after {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 8px;
-  height: 8px;
+  top: calc(-1 * var(--site-space-1));
+  right: calc(-1 * var(--site-space-1));
+  width: var(--site-space-2);
+  height: var(--site-space-2);
   background: var(--color-accent);
   content: '';
 }
 
 @media (max-width: 1023px) {
   .cl-site-main {
-    padding-bottom: 64px;
+    padding-bottom: var(--site-space-16);
   }
 }
 

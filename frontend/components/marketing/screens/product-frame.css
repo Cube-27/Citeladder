@@ -97,14 +97,14 @@
 .cl-frame-caption {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 20px 8px 0;
+  gap: var(--site-space-1);
+  padding: var(--site-space-5) var(--site-space-2) 0;
 }
 
 .cl-frame-title {
   color: var(--text-color-ink);
   font-family: var(--font-sans);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   font-size: var(--text-title-sm);
   line-height: var(--text-title-sm--line-height);
 }

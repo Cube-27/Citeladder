@@ -73,7 +73,7 @@
   box-shadow: var(--site-shadow-float);
   color: var(--text-color-ink);
   font-size: 1.15em;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   white-space: nowrap;
 }
 
@@ -143,7 +143,7 @@
   background: var(--color-site-screen, var(--color-panel));
   box-shadow: var(--site-shadow-float);
   font-size: 0.9em;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   white-space: nowrap;
   transform: translateX(-50%);
 }
@@ -178,12 +178,12 @@
   background: var(--color-accent-wash);
   color: var(--text-color-accent-text);
   font-size: 0.85em;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .cl-art-stat {
   font-size: 2em;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }

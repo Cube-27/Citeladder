@@ -64,12 +64,12 @@ const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose
   .cl-tool-run {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--site-space-4);
   }
   .cl-tool-run-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: var(--site-space-3);
   }
   .cl-tool-notes .cl-cpage-article-grid {
     justify-content: start;
@@ -79,9 +79,9 @@ const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose
   }
   .cl-tool-extra {
     display: grid;
-    gap: 12px;
-    margin-top: 24px;
-    padding: 24px;
+    gap: var(--site-space-3);
+    margin-top: var(--site-space-6);
+    padding: var(--site-space-6);
     border-radius: var(--site-radius-card);
     background: var(--tint-neutral);
     background-image: var(--site-well-shade);
@@ -90,7 +90,7 @@ const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose
   .cl-tool-extra pre {
     overflow-x: auto;
     margin: 0;
-    padding: 16px;
+    padding: var(--site-space-4);
     border-radius: var(--radius-md);
     background: var(--color-well);
     color: var(--text-color-ink-2);

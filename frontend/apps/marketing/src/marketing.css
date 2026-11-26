@@ -2,6 +2,7 @@
 @import '../../app/src/globals.css';
 @import '../../app/src/public-surface.css';
 @import './site-type.css';
+@import './site-space.css';
 
 :root {
   --type-base: 1rem;
@@ -19,11 +20,11 @@
 
 [data-public-surface] .marketing-cta-button {
   height: auto;
-  min-height: 44px;
-  padding-inline: 16px;
+  min-height: var(--site-target);
+  padding-inline: var(--site-space-4);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   transition-property: transform, background-color, color, border-color, box-shadow;
 }
 
@@ -77,6 +78,6 @@
 
 @media (hover: hover) and (pointer: fine) {
   [data-public-surface] .marketing-cta-button:hover svg.tabler-icon-arrow-up-right {
-    transform: translate(2px, -2px);
+    transform: translate(var(--site-space-0_5), calc(-1 * var(--site-space-0_5)));
   }
 }

@@ -38,22 +38,22 @@ const initials = [words[0], words.length > 1 ? words.at(-1) : undefined]
 <style is:global>
   .cl-author {
     display: grid;
-    grid-template-columns: 56px minmax(0, 1fr);
-    gap: 20px;
+    grid-template-columns: var(--site-space-14) minmax(0, 1fr);
+    gap: var(--site-space-5);
     align-items: center;
     max-width: var(--container-prose);
   }
   .cl-author-avatar {
     display: inline-grid;
     place-items: center;
-    width: 56px;
-    height: 56px;
+    width: var(--site-space-14);
+    height: var(--site-space-14);
     border-radius: var(--radius-full);
     background: var(--color-mark-ink);
     color: var(--text-color-on-ink);
     font-size: var(--text-heading);
     line-height: var(--text-heading--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
   .cl-author-body {
     display: flex;
@@ -64,13 +64,13 @@ const initials = [words[0], words.length > 1 ? words.at(-1) : undefined]
     margin: 0;
   }
   .cl-author-eyebrow {
-    margin-bottom: 8px;
+    margin-bottom: var(--site-space-2);
   }
   .cl-author-name {
     color: var(--text-color-ink);
     font-size: var(--text-title-sm);
     line-height: var(--text-title-sm--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
   .cl-author-role {
     color: var(--text-color-ink-2);
@@ -80,8 +80,8 @@ const initials = [words[0], words.length > 1 ? words.at(-1) : undefined]
   .cl-author-links {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px 20px;
-    margin: 16px 0 0;
+    gap: var(--site-space-2) var(--site-space-5);
+    margin: var(--site-space-4) 0 0;
     padding: 0;
     list-style: none;
   }
@@ -89,21 +89,21 @@ const initials = [words[0], words.length > 1 ? words.at(-1) : undefined]
     color: var(--text-color-ink);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 400;
+    font-weight: var(--weight-regular);
     text-decoration: none;
     border-radius: var(--radius-xs);
   }
   @media (hover: hover) and (pointer: fine) {
     .cl-author-links a:hover {
       text-decoration: underline;
-      text-underline-offset: 3px;
+      text-underline-offset: var(--site-underline-offset);
     }
   }
   @media (max-width: 767px) {
     .cl-author {
       grid-template-columns: minmax(0, 1fr);
       align-items: start;
-      gap: 16px;
+      gap: var(--site-space-4);
     }
   }
 </style>

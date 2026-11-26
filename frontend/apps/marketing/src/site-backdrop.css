@@ -42,7 +42,7 @@
 }
 
 .cl-site-main:has(.cl-cta) ~ .cl-footer {
-  padding-top: 96px;
+  padding-top: var(--site-space-24);
 }
 
 @supports (animation-timeline: scroll()) {

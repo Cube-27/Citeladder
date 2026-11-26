@@ -2,6 +2,7 @@
 @import '../../../app/src/globals.css';
 @import '../../../app/src/public-surface.css';
 @import '../../../marketing/src/site-type.css';
+@import '../../../marketing/src/site-space.css';
 
 :root {
   --type-base: 1rem;

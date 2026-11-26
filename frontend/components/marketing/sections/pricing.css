@@ -1,9 +1,9 @@
 .cl-plan {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--site-space-6);
   height: 100%;
-  padding: 32px;
+  padding: var(--site-space-8);
   border-radius: var(--site-radius-card);
   background: var(--tint-neutral);
   background-image: var(--site-well-shade);
@@ -19,22 +19,22 @@
 .cl-plan-head {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--site-space-2);
 }
 
 .cl-plan-namerow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  min-height: 24px;
+  gap: var(--site-space-3);
+  min-height: var(--site-space-6);
 }
 
 .cl-plan-name {
   margin: 0;
   color: var(--text-color-ink);
   font-size: var(--text-title-sm);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-title-sm--line-height);
 }
 
@@ -49,21 +49,21 @@
 .cl-plan-pricing {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--site-space-1);
   font-variant-numeric: tabular-nums;
 }
 
 .cl-plan-price {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--site-space-2);
   margin: 0;
 }
 
 .cl-plan-amount {
   color: var(--text-color-ink);
   font-size: var(--text-site-feature);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-site-feature--line-height);
   letter-spacing: var(--text-stat--letter-spacing);
 }
@@ -75,7 +75,7 @@
 }
 
 .cl-plan-note {
-  min-height: 20px;
+  min-height: var(--site-space-5);
   margin: 0;
   color: var(--text-color-ink-2);
   font-size: var(--text-body);
@@ -89,16 +89,16 @@
 .cl-plan-features {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding-top: 24px;
-  border-top: 1px solid var(--color-rule);
+  gap: var(--site-space-4);
+  padding-top: var(--site-space-6);
+  border-top: var(--site-rule) solid var(--color-rule);
 }
 
 .cl-plan-ftitle {
   margin: 0;
   color: var(--text-color-ink);
   font-size: var(--text-label);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: var(--text-label--line-height);
 }
 
@@ -107,19 +107,19 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px 24px;
-  margin-bottom: 24px;
+  gap: var(--site-space-3) var(--site-space-6);
+  margin-bottom: var(--site-space-6);
 }
 
 .cl-page-plans-grid {
   display: grid;
   align-items: stretch;
-  gap: 24px;
+  gap: var(--site-space-6);
 }
 
 @media (max-width: 1023px) {
   .cl-page-plans-grid {
-    gap: 16px;
+    gap: var(--site-space-4);
   }
 }
 
@@ -186,7 +186,7 @@
 
 .cl-wtable th,
 .cl-wtable td {
-  padding: 16px 20px;
+  padding: var(--site-space-4) var(--site-space-5);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
   text-align: left;
@@ -195,16 +195,16 @@
 }
 
 .cl-wtable thead th {
-  padding-top: 24px;
-  border-bottom: 1px solid var(--color-rule);
+  padding-top: var(--site-space-6);
+  border-bottom: var(--site-rule) solid var(--color-rule);
   color: var(--text-color-ink-2);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   vertical-align: bottom;
 }
 
 .cl-wtable tbody th {
   color: var(--text-color-ink);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 
 .cl-wtable tbody td {
@@ -212,16 +212,16 @@
 }
 
 .cl-wtable tbody tr + tr > * {
-  border-top: 1px solid var(--color-rule);
+  border-top: var(--site-rule) solid var(--color-rule);
 }
 
 .cl-wt-group th {
-  padding: 8px 20px;
+  padding: var(--site-space-2) var(--site-space-5);
   background: var(--color-well);
 }
 
 .cl-wtable tbody + tbody .cl-wt-group th {
-  border-top: 1px solid var(--color-rule);
+  border-top: var(--site-rule) solid var(--color-rule);
 }
 
 .cl-wt-yes {
@@ -242,17 +242,17 @@
   display: block;
   color: var(--text-color-ink);
   font-size: var(--text-title-sm);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-title-sm--line-height);
 }
 
 .cl-ptable-price {
   display: block;
-  margin-top: 4px;
+  margin-top: var(--site-space-1);
   color: var(--text-color-ink-2);
   font-family: var(--font-mono);
   font-size: var(--text-data);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: var(--text-data--line-height);
 }
 
@@ -268,7 +268,7 @@
   .cl-wtable thead th:first-child,
   .cl-wtable tbody th[scope='row'] {
     position: sticky;
-    z-index: 1;
+    z-index: var(--z-index-base);
     left: 0;
     background: var(--tint-neutral);
   }
