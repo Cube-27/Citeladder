@@ -58,8 +58,9 @@ function useRunWindow(requestScope: RequestScope, market: string | null, window:
 }
 
 function useRunPicker(requestScope: RequestScope, market: string | null, active: boolean) {
-  const [paged, setPaged] = useState({ market, page: 1 });
-  const page = paged.market === market ? paged.page : 1;
+  const scopeKey = JSON.stringify([requestScope.workspaceId, requestScope.projectId, market]);
+  const [paged, setPaged] = useState({ scopeKey, page: 1 });
+  const page = paged.scopeKey === scopeKey ? paged.page : 1;
   const latestQuery = useQuery({
     ...runsQueries.list(requestScope, brandRunsParams(market)),
     enabled: active,
@@ -79,8 +80,8 @@ function useRunPicker(requestScope: RequestScope, market: string | null, active:
     runPage: {
       canPrev: page > 1,
       canNext: page * TABLE_DEFAULT_PAGE_SIZE < total,
-      onPrev: () => setPaged({ market, page: Math.max(1, page - 1) }),
-      onNext: () => setPaged({ market, page: page + 1 }),
+      onPrev: () => setPaged({ scopeKey, page: Math.max(1, page - 1) }),
+      onNext: () => setPaged({ scopeKey, page: page + 1 }),
     },
   };
 }
