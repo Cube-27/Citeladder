@@ -2,7 +2,7 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdownKeymap, markdownLanguage, pasteURLAsLink } from '@codemirror/lang-markdown';
 import { Annotation, Compartment, EditorState, Prec, type Extension } from '@codemirror/state';
 import { EditorView, keymap, type ViewUpdate } from '@codemirror/view';
-import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 
 import type { SuggestionHighlight } from '@/lib/agent/page-workspace';
 
@@ -101,7 +101,7 @@ export function PageEditor({
 >) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
-  const readOnlyMode = useRef(new Compartment());
+  const [readOnlyMode] = useState(() => new Compartment());
   const callbacks = useRef<Callbacks>({ onChange, onSelection, onHighlight, onAct });
   useEffect(() => {
     callbacks.current = { onChange, onSelection, onHighlight, onAct };
@@ -123,7 +123,7 @@ export function PageEditor({
           pasteURLAsLink,
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({ 'aria-label': initial.current.label }),
-          readOnlyMode.current.of(access(initial.current.readOnly)),
+          readOnlyMode.of(access(initial.current.readOnly)),
           livePreview,
           highlightField,
           listener(callbacks),
@@ -136,11 +136,11 @@ export function PageEditor({
       created.destroy();
       view.current = null;
     };
-  }, []);
+  }, [readOnlyMode]);
 
   useEffect(() => {
-    view.current?.dispatch({ effects: readOnlyMode.current.reconfigure(access(readOnly)) });
-  }, [readOnly]);
+    view.current?.dispatch({ effects: readOnlyMode.reconfigure(access(readOnly)) });
+  }, [readOnly, readOnlyMode]);
 
   useEffect(() => {
     const current = view.current;

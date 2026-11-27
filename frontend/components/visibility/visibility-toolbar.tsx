@@ -9,12 +9,8 @@ import type { ProjectMarket } from '@citeladder/contracts/markets';
 import { CircleHelp } from '@/lib/icons';
 import { docsHref } from '@/lib/config/docs';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import {
-  isEvidenceTab,
-  type PromptOption,
-  type RunOption,
-  type VisibilityView,
-} from '@/lib/visibility/dashboard';
+import { isEvidenceTab, type PromptOption, type VisibilityView } from '@/lib/visibility/dashboard';
+import type { RunPicker } from '@/lib/visibility/use-visibility-runs';
 import { ANSWER_OUTCOMES } from '@/lib/config/visibility';
 import { PROMPT_COHORTS, type PromptCohort } from '@/lib/visibility/prompt-cohort';
 import {
@@ -36,7 +32,7 @@ const COHORT_LABELS = {
 type ToolbarProps = Readonly<{
   view: VisibilityView;
   selectionMode?: 'run' | 'range';
-  runs: RunOption[];
+  runs: RunPicker;
   selectedRunId: string | null;
   onSelectMeasurement: (runId: string | null) => void;
   engine: EngineFilter;
@@ -160,9 +156,11 @@ function measurementFilter({
   onSelectPeriod,
 }: ToolbarProps): FilterDefinition {
   const pooled = selectionMode === 'range';
-  const selected = runs.find((run) => run.id === selectedRunId);
+  const selected =
+    runs.runs.find((run) => run.id === selectedRunId) ??
+    (runs.selectedRun?.id === selectedRunId ? runs.selectedRun : undefined);
   const missingRunLabel = selectedRunId ? 'Run unavailable' : 'Latest run';
-  const [latest] = runs;
+  const latest = runs.latestRun;
   const periods = RANGE_OPTIONS.map((option) => ({ ...option, value: `${PERIOD}${option.value}` }));
   return choiceFilter({
     id: 'measurement',
@@ -174,15 +172,17 @@ function measurementFilter({
     valueLabel: pooled ? undefined : (selected?.label ?? missingRunLabel),
     groups: [
       { options: [{ value: LATEST, label: 'Latest run' }, ...periods] },
-      ...(runs.length
+      ...(runs.runs.length
         ? [
             {
               label: 'Individual runs',
-              options: runs.map((run) => ({ value: run.id, label: run.label })),
+              options: runs.runs.map((run) => ({ value: run.id, label: run.label })),
             },
           ]
         : []),
     ],
+    searchable: false,
+    pages: { ...runs.runPage, previousLabel: 'Newer runs', nextLabel: 'Older runs' },
     onChange: (value) => {
       const period = RANGE_OPTIONS.find((option) => `${PERIOD}${option.value}` === value);
       if (period) onSelectPeriod(period.value);

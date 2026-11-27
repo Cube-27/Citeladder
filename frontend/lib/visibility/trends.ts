@@ -44,6 +44,13 @@ export function rangeToFrom(range: TrendRange, now: Date = new Date()): string |
   return from.toISOString();
 }
 
+export function rangeTo(now: Date = new Date()): string {
+  const to = new Date(now);
+  to.setUTCHours(0, 0, 0, 0);
+  to.setUTCDate(to.getUTCDate() + 1);
+  return to.toISOString();
+}
+
 export type TrendMetric = (typeof VISIBILITY_METRICS)[number]['value'];
 
 type Plotted = number | null;

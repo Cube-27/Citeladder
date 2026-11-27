@@ -238,3 +238,25 @@ export function useResizableTablePage(
   };
   return { ...pagination, pageSize, pageSizeControl };
 }
+
+export function useServerTablePage(urlKey: string) {
+  const [page, setPage] = useUrlState(urlKey, PAGE_CODEC);
+  const [pageSize, setPageSize] = useUrlState(`${urlKey}_size`, PAGE_SIZE_CODEC, {
+    clearKeys: [urlKey],
+  });
+  const pager = ({ total, noun }: Readonly<{ total: number; noun: string }>) => ({
+    range: {
+      from: total === 0 ? 0 : (page - 1) * pageSize + 1,
+      to: Math.min(total, page * pageSize),
+      total,
+      noun,
+    },
+    pageSize: {
+      value: pageSize,
+      onChange: (size: number) =>
+        setPageSize(isTablePageSize(size) ? size : TABLE_DEFAULT_PAGE_SIZE),
+    },
+    ...pageNumberControls(page, Math.max(1, Math.ceil(total / pageSize)), setPage),
+  });
+  return { page, pageSize, pager };
+}

@@ -194,9 +194,11 @@ export const visibilityApi = {
     projectId: string,
     params: {
       audit_id?: string;
-      audit_ids?: string[];
+      market?: string;
       engine?: string;
       cohort?: string;
+      from?: string;
+      to?: string;
       state?: ClaimStateFilter;
     },
     options?: ApiRequestOptions,

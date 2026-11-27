@@ -198,6 +198,8 @@ export const visibilityQueries = {
     }),
 };
 
+const VERDICT_READS = ['accuracy', 'accuracy-facts', 'accuracy-claims'] as const;
+
 export const visibilityMutations = {
   acceptCompetitorSuggestion: (scope: ProjectScope) =>
     mutationOptions({
@@ -226,10 +228,12 @@ export const visibilityMutations = {
         visibilityApi.overrideVerdict(scope.projectId, verdictId, input, scoped(scope)),
       // oxlint-disable-next-line max-params
       onSuccess: (_override, _input, _result, { client }) =>
-        Promise.all([
-          refreshVisibility(client, scope.projectId),
-          client.invalidateQueries({ queryKey: queryKeys.runs.anyExecution() }),
-        ]),
+        Promise.all(
+          [
+            ...VERDICT_READS.map((read) => queryKeys.visibility.resource(scope.projectId, read)),
+            queryKeys.runs.anyExecution(),
+          ].map((queryKey) => client.invalidateQueries({ queryKey })),
+        ),
     }),
 };
 

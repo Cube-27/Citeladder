@@ -1,19 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
 
 import type { Visibility } from '@citeladder/contracts';
-import {
-  brandRuns,
-  findActiveRun,
-  formatRate,
-  formatScore,
-  isDashboardStatus,
-  toRunOptions,
-  visibleEngines,
-} from './dashboard';
+import { formatRate, formatScore, visibleEngines } from './dashboard';
 
 const AUDIT_A = '11111111-1111-4111-8111-111111111111';
-const AUDIT_B = '22222222-2222-4222-8222-222222222222';
-const AUDIT_C = '33333333-3333-4333-8333-333333333333';
 
 function makeVisibility(overrides: Partial<Visibility> = {}): Visibility {
   return {
@@ -37,66 +27,6 @@ function makeVisibility(overrides: Partial<Visibility> = {}): Visibility {
 }
 
 describe('visibility dashboard helpers', () => {
-  it('keeps only dashboard-ready statuses, newest first', () => {
-    const options = toRunOptions([
-      {
-        id: AUDIT_A,
-        status: 'completed',
-        completed_at: '2026-07-10T00:00:00Z',
-        created_at: '2026-07-10T00:00:00Z',
-      },
-      { id: AUDIT_B, status: 'running', completed_at: null, created_at: '2026-07-12T00:00:00Z' },
-      {
-        id: AUDIT_C,
-        status: 'partially_completed',
-        completed_at: '2026-07-14T00:00:00Z',
-        created_at: '2026-07-14T00:00:00Z',
-      },
-    ]);
-    expect(options.map((o) => o.id)).toEqual([AUDIT_C, AUDIT_A]);
-    expect(options.map((o) => o.label)).toEqual([
-      'Jul 14, 2026, 12:00 AM',
-      'Jul 10, 2026, 12:00 AM',
-    ]);
-  });
-
-  it('flags dashboard statuses', () => {
-    expect(isDashboardStatus('completed')).toBe(true);
-    expect(isDashboardStatus('partially_completed')).toBe(true);
-    expect(isDashboardStatus('running')).toBe(false);
-  });
-
-  it('finds the newest non-terminal brand run as the active run', () => {
-    const runs = [
-      { id: AUDIT_A, status: 'completed', created_at: '2026-07-10T00:00:00Z' },
-      { id: AUDIT_B, status: 'running', created_at: '2026-07-12T00:00:00Z' },
-      { id: AUDIT_C, status: 'queued', created_at: '2026-07-14T00:00:00Z' },
-    ] as const;
-    expect(findActiveRun(runs)).toEqual({
-      id: AUDIT_C,
-      status: 'queued',
-      createdAt: '2026-07-14T00:00:00Z',
-    });
-    const scoped = runs.map((run) => ({
-      ...run,
-      completed_at: null,
-      audit_scope: run.id === AUDIT_C ? ('commerce' as const) : ('brand' as const),
-    }));
-    expect(findActiveRun(brandRuns(scoped))?.id).toBe(AUDIT_B);
-    expect(toRunOptions(brandRuns(scoped)).map((option) => option.id)).toEqual([AUDIT_A]);
-  });
-
-  it('returns null when every run is terminal', () => {
-    expect(
-      findActiveRun([
-        { id: AUDIT_A, status: 'completed', created_at: '2026-07-10T00:00:00Z' },
-        { id: AUDIT_B, status: 'failed', created_at: '2026-07-12T00:00:00Z' },
-        { id: AUDIT_C, status: 'cancelled', created_at: '2026-07-14T00:00:00Z' },
-      ]),
-    ).toBeNull();
-    expect(findActiveRun([])).toBeNull();
-  });
-
   it('formats rates and scores, a missing one as not measured', () => {
     expect(formatRate(0.5)).toBe('50.0%');
     expect(formatRate(null)).toEqual({ absent: 'not_measured' });

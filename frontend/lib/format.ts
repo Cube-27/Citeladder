@@ -61,13 +61,24 @@ export function percentText(fraction: number): string {
   return `${(fraction * 100).toFixed(1)}%`;
 }
 
-export function formatAmount(amount: number, currency: string | null): string {
-  if (currency && /^[A-Z]{3}$/u.test(currency)) {
+const PLAIN_AMOUNT = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
+const CURRENCY_AMOUNTS = new Map<string, Intl.NumberFormat | null>();
+
+function currencyFormat(currency: string): Intl.NumberFormat | null {
+  if (!CURRENCY_AMOUNTS.has(currency)) {
+    let format: Intl.NumberFormat | null = null;
     try {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+      format = new Intl.NumberFormat('en-US', { style: 'currency', currency });
     } catch {}
+    CURRENCY_AMOUNTS.set(currency, format);
   }
-  const number = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount);
+  return CURRENCY_AMOUNTS.get(currency) ?? null;
+}
+
+export function formatAmount(amount: number, currency: string | null): string {
+  const format = currency && /^[A-Z]{3}$/u.test(currency) ? currencyFormat(currency) : null;
+  if (format) return format.format(amount);
+  const number = PLAIN_AMOUNT.format(amount);
   return currency ? `${number} ${currency}` : number;
 }
 

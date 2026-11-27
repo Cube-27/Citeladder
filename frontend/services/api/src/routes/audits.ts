@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import {
+  AUDIT_LIST_DEFAULT_MARKET,
+  auditListSortSchema,
+  auditPageSchema,
   auditSchema,
+  auditScopeSchema,
+  auditStatusSchema,
   auditEstimateSchema,
   auditPerformanceSchema,
   auditMetricsSchema,
@@ -9,6 +14,7 @@ import {
 import { auditEventSchema } from '@citeladder/contracts/audit-events';
 import { policy } from '../config.ts';
 import { readBody } from '../http/body.ts';
+import { ApiError } from '../errors.ts';
 import { requestProjectOf } from '../auth/actor.ts';
 import {
   AUDITS_CANCEL,
@@ -23,8 +29,9 @@ import { auditRuntime } from '../audits/config.ts';
 import { estimateAudit, estimateInput } from '../audits/estimate.ts';
 import {
   readAudit,
-  listAudits,
+  pageAudits,
   listExecutions,
+  type AuditMarketFilter,
   readAuditMetrics,
   auditEvents,
 } from '../audits/reads.ts';
@@ -41,6 +48,14 @@ const family = 'audits',
   publicRoot = `${policy.api.machine_prefix}/projects/{project_id}/audits`;
 const item = { audit_id: { scalar: { kind: 'uuid' }, required: true } } as const;
 const empty = { path: {}, query: {} } as const;
+const marketId = z.uuid();
+function auditMarketFilter(market: string | null | undefined): AuditMarketFilter {
+  if (market === null || market === undefined) return { kind: 'any' };
+  if (market === AUDIT_LIST_DEFAULT_MARKET) return { kind: 'one', id: null };
+  const id = marketId.safeParse(market);
+  if (!id.success) throw new ApiError(422, 'market must be a market id or default');
+  return { kind: 'one', id: id.data };
+}
 const params = { path: item, query: {} } as const;
 function exportRoute(format: 'csv' | 'md') {
   return defineGetRoute({
@@ -111,15 +126,32 @@ export const auditRoutes = [
       path: {},
       query: {
         project_id: { scalar: { kind: 'uuid' } },
-        limit: { scalar: { kind: 'int', ge: 1, le: 200 }, default: 50 },
+        audit_scope: { scalar: { kind: 'literal', values: auditScopeSchema.options } },
+        market: { scalar: { kind: 'str', maxLength: 64 } },
+        status: { scalar: { kind: 'literal', values: auditStatusSchema.options }, list: true },
+        completed_from: { scalar: { kind: 'datetime' } },
+        completed_to: { scalar: { kind: 'datetime' } },
+        sort: {
+          scalar: { kind: 'literal', values: auditListSortSchema.options },
+          default: 'created',
+        },
+        descending: { scalar: { kind: 'bool' }, default: true },
+        page: { scalar: { kind: 'int', ge: 1 }, default: 1 },
+        page_size: { scalar: { kind: 'int', ge: 1, le: 100 }, default: 10 },
       },
     },
-    response: auditSchema.array(),
+    response: auditPageSchema,
     async handle({ c, db }, { query }) {
-      return listAudits(db, {
+      return pageAudits(db, {
         workspaceId: c.get('workspace').workspaceId,
-        projectId: query.project_id ?? undefined,
-        limit: query.limit,
+        projectId: query.project_id ?? null,
+        scope: query.audit_scope ?? null,
+        market: auditMarketFilter(query.market),
+        statuses: query.status ?? [],
+        completed: { from: query.completed_from ?? null, to: query.completed_to ?? null },
+        sort: { key: query.sort, descending: query.descending },
+        page: query.page,
+        pageSize: query.page_size,
       });
     },
   }),

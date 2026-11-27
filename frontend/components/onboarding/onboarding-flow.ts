@@ -1,7 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import { useForm, type FieldErrors } from 'react-hook-form';
 
 import {
@@ -83,6 +91,79 @@ function isOrphanedCompletion(
   return discovery?.status === 'project_created';
 }
 
+function isUpdater<T>(action: SetStateAction<T>): action is (previous: T) => T {
+  return typeof action === 'function';
+}
+
+function useEdits<T>(base: T) {
+  const [edited, setEdited] = useState<Readonly<{ value: T }> | null>(null);
+  const change: Dispatch<SetStateAction<T>> = useCallback(
+    (action) =>
+      setEdited((current) => {
+        const previous = current ? current.value : base;
+        return { value: isUpdater(action) ? action(previous) : action };
+      }),
+    [base],
+  );
+  const reset = useCallback(() => setEdited(null), []);
+  return [edited ? edited.value : base, change, reset] as const;
+}
+
+function useReviewEdits(
+  discoveryState: BrandDiscovery | undefined,
+  maximumCompetitors: number | undefined,
+) {
+  const ready = discoveryState?.status === 'ready' ? discoveryState : null;
+  const readyDiscoveryId = ready?.id ?? null;
+  const savedDraft = useMemo(
+    () => (readyDiscoveryId ? readReviewDraft(readyDiscoveryId) : null),
+    [readyDiscoveryId],
+  );
+  const suggestedDomains = useMemo(
+    (): ReviewDomain[] =>
+      ready
+        ? (savedDraft?.domains ??
+          ready.domains.map((domain, index) => ({
+            id: `domain:${index}:${domain}`,
+            domain,
+            selected: true,
+          })))
+        : [],
+    [ready, savedDraft],
+  );
+  const suggestedCompetitors = useMemo(
+    (): ReviewCompetitor[] =>
+      ready && maximumCompetitors !== undefined
+        ? (savedDraft?.competitors ??
+          ready.competitors.map((competitor, index) => ({
+            ...competitor,
+            id: `competitor:${index}:${competitor.name}`,
+            selected: index < maximumCompetitors,
+          })))
+        : [],
+    [maximumCompetitors, ready, savedDraft],
+  );
+  const suggestedProfile = ready ? (savedDraft?.profile ?? ready.profile) : null;
+  const [domains, setDomains, resetDomains] = useEdits(suggestedDomains);
+  const [competitors, setCompetitors, resetCompetitors] = useEdits(suggestedCompetitors);
+  const [profile, setProfile, resetProfile] = useEdits<DiscoveryProfile | null>(suggestedProfile);
+  const resetReview = () => {
+    resetDomains();
+    resetCompetitors();
+    resetProfile();
+  };
+  return {
+    readyDiscoveryId,
+    domains,
+    setDomains,
+    competitors,
+    setCompetitors,
+    profile,
+    setProfile,
+    resetReview,
+  };
+}
+
 export function useOnboardingFlow(transactionKey: string) {
   const router = useNavigate();
   const queryClient = useQueryClient();
@@ -104,23 +185,20 @@ export function useOnboardingFlow(transactionKey: string) {
     resumedStep(initialDiscoveryId, initialStepParameter),
   );
   const [resumeDiscoveryId, setResumeDiscoveryId] = useState<string | null>(initialDiscoveryId);
-  const [brand, setBrand] = useState<BrandStepValues | null>(null);
-  const [domains, setDomains] = useState<ReviewDomain[]>([]);
-  const [competitors, setCompetitors] = useState<ReviewCompetitor[]>([]);
-  const [profile, setProfile] = useState<DiscoveryProfile | null>(null);
+  const [enteredBrand, setBrand] = useState<BrandStepValues | null>(null);
   const form = useForm<BrandStepValues>({
     resolver: zodResolver(brandStepSchema),
     defaultValues: emptyBrandStep,
   });
   const discovery = useBrandDiscovery(
-    step >= 1 && brand
+    enteredBrand
       ? {
-          brand_name: brand.brand_name.trim(),
-          website_url: normalizeWebsiteUrl(brand.website_url),
-          industry: brand.industry,
-          subindustry: brand.subindustry,
-          primary_market: brand.primary_market,
-          language_code: brand.language_code,
+          brand_name: enteredBrand.brand_name.trim(),
+          website_url: normalizeWebsiteUrl(enteredBrand.website_url),
+          industry: enteredBrand.industry,
+          subindustry: enteredBrand.subindustry,
+          primary_market: enteredBrand.primary_market,
+          language_code: enteredBrand.language_code,
         }
       : null,
     resumeDiscoveryId,
@@ -133,64 +211,28 @@ export function useOnboardingFlow(transactionKey: string) {
   const maximumCompetitors = catalog.data?.maximum_competitors;
   const discoveryState = discovery.discovery;
   const orphanedCompletion = isOrphanedCompletion(initialDiscoveryId, discoveryState);
-  useEffect(() => {
-    if (!orphanedCompletion && !brand && discoveryState) {
-      // oxlint-disable-next-line react-hooks/set-state-in-effect
-      setBrand(persistedBrand(discoveryState.input_data));
-    }
-  }, [brand, discoveryState, orphanedCompletion]);
+  const brand =
+    enteredBrand ??
+    (discoveryState && !orphanedCompletion ? persistedBrand(discoveryState.input_data) : null);
 
   useEffect(() => {
     if (!orphanedCompletion) return;
     if (initialDiscoveryId) clearReviewDraft(initialDiscoveryId);
-    // oxlint-disable-next-line react-hooks/set-state-in-effect
-    setResumeDiscoveryId(null);
-    setBrand(null);
-    setDomains([]);
-    setCompetitors([]);
-    setProfile(null);
-    form.reset(emptyBrandStep);
-    setStep(0);
     const workspace = readUrlParam(searchParams, 'workspace') ?? activeWorkspaceId;
     const reset = withUrlParams(null, { new: true, workspace: workspace || null });
     router(`/onboarding?${reset.toString()}`, { replace: true, preventScrollReset: true });
-  }, [activeWorkspaceId, form, initialDiscoveryId, orphanedCompletion, router, searchParams]);
+  }, [activeWorkspaceId, initialDiscoveryId, orphanedCompletion, router, searchParams]);
 
-  const readyDiscoveryId = discoveryState?.status === 'ready' ? discoveryState.id : null;
-  const savedDraft = useMemo(
-    () => (readyDiscoveryId ? readReviewDraft(readyDiscoveryId) : null),
-    [readyDiscoveryId],
-  );
-  useEffect(() => {
-    if (discoveryState?.status !== 'ready') return;
-    // oxlint-disable-next-line react-hooks/set-state-in-effect
-    setDomains((current) =>
-      current.length
-        ? current
-        : (savedDraft?.domains ??
-          discoveryState.domains.map((domain, index) => ({
-            id: `domain:${index}:${domain}`,
-            domain,
-            selected: true,
-          }))),
-    );
-    setProfile((current) => current ?? savedDraft?.profile ?? discoveryState.profile);
-  }, [discoveryState, savedDraft]);
-
-  useEffect(() => {
-    if (discoveryState?.status !== 'ready' || maximumCompetitors === undefined) return;
-    // oxlint-disable-next-line react-hooks/set-state-in-effect
-    setCompetitors((current) =>
-      current.length
-        ? current
-        : (savedDraft?.competitors ??
-          discoveryState.competitors.map((competitor, index) => ({
-            ...competitor,
-            id: `competitor:${index}:${competitor.name}`,
-            selected: index < maximumCompetitors,
-          }))),
-    );
-  }, [discoveryState, maximumCompetitors, savedDraft]);
+  const {
+    readyDiscoveryId,
+    domains,
+    setDomains,
+    competitors,
+    setCompetitors,
+    profile,
+    setProfile,
+    resetReview,
+  } = useReviewEdits(discoveryState, maximumCompetitors);
 
   useEffect(() => {
     if (step !== 2 || !readyDiscoveryId || profile === null || maximumCompetitors === undefined)
@@ -262,10 +304,6 @@ export function useOnboardingFlow(transactionKey: string) {
     if (orphanedCompletion || openingProject.current || isCompleting || completedProjectId) return;
     const discoveryId = discoveryState?.id ?? resumeDiscoveryId;
     if (!discoveryId) return;
-    if (resumeDiscoveryId !== discoveryId) {
-      // oxlint-disable-next-line react-hooks/set-state-in-effect
-      setResumeDiscoveryId(discoveryId);
-    }
     const next = withUrlParams(searchParams, {
       discovery: discoveryId,
       step: STEP_QUERY_VALUES[step],
@@ -299,9 +337,7 @@ export function useOnboardingFlow(transactionKey: string) {
       (brand !== null && JSON.stringify(brand) !== JSON.stringify(values));
     if (rediscovers) {
       if (discoveryState) clearReviewDraft(discoveryState.id);
-      setDomains([]);
-      setCompetitors([]);
-      setProfile(null);
+      resetReview();
       setResumeDiscoveryId(null);
     }
     setBrand(values);
@@ -312,9 +348,7 @@ export function useOnboardingFlow(transactionKey: string) {
     const previous = discoveryState?.id;
     discovery.rerun(() => {
       if (previous) clearReviewDraft(previous);
-      setDomains([]);
-      setCompetitors([]);
-      setProfile(null);
+      resetReview();
     });
   };
 

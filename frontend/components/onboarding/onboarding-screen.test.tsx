@@ -580,6 +580,7 @@ describe('OnboardingScreen', () => {
       ),
     );
     expect(screen.queryByRole('button', { name: 'Create project' })).not.toBeInTheDocument();
+    expect(await screen.findByLabelText(/^Brand name/)).toHaveValue('');
   });
 
   it('reports a queued generation failure without replaying the failed job', async () => {

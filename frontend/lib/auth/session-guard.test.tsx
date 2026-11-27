@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { useQuery, type QueryClient } from '@tanstack/react-query';
 
 import { ApiError } from '@/lib/api/errors';
-import { runsQueries } from '@/lib/api/runs';
+import { RUNS_SCREEN_PARAMS, runsQueries } from '@/lib/api/runs';
 import { queryKeys } from '@/lib/api/query-keys';
 import {
   ACTIVE_PROJECT_STORAGE_KEY,
@@ -201,7 +201,7 @@ describe('SessionGuard', () => {
 
     function ChildQuery() {
       useQuery({
-        ...runsQueries.list({ workspaceId: null, projectId: 'p1' }),
+        ...runsQueries.list({ workspaceId: null, projectId: 'p1' }, RUNS_SCREEN_PARAMS),
       });
       return <Protected />;
     }

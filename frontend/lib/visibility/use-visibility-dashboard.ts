@@ -1,28 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { retainPreviousDataForScope, warmQuery } from '@/lib/api/query-client';
-import { useProjectScope, type ActiveProjectScope } from '@/lib/project/active-project-scope';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import {
   cohortUrlCodec,
   writeStoredCohort,
   type PromptCohort,
 } from '@/lib/visibility/prompt-cohort';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { runsQueries } from '@/lib/api/runs';
 import { useMarketVisibility } from '@/lib/visibility/use-market-visibility';
 import { useSurfaceRates } from '@/lib/visibility/use-surface-rates';
-import { refreshVisibility, visibilityQueries } from '@/lib/api/visibility-queries';
+import { visibilityQueries } from '@/lib/api/visibility-queries';
+import { useVisibilityRuns } from '@/lib/visibility/use-visibility-runs';
 import {
-  brandRuns,
-  findActiveRun,
   isEvidenceTab,
   VISIBILITY_TABS,
-  toRunOptions,
-  type RunOption,
   type VisibilityTab,
   type VisibilityView,
 } from '@/lib/visibility/dashboard';
-import { pollAudits } from '@/lib/runs/status';
 import { EVIDENCE_LIMIT } from '@/lib/config/operational';
 import {
   optionalStringUrlCodec,
@@ -34,6 +28,7 @@ import {
 import { logicalEngineSchema } from '@citeladder/contracts/providers';
 import {
   DEFAULT_TREND_RANGE,
+  rangeTo,
   rangeToFrom,
   type TrendGranularity,
   type TrendRange,
@@ -108,28 +103,17 @@ export function measuredSelection({
   chosen,
   namedRun,
   fallback,
-  runs,
-  from,
-  to,
+  rangeHasRuns,
 }: Readonly<{
   chosen: SelectionMode | null;
   namedRun: boolean;
   fallback: SelectionMode;
-  runs: readonly Pick<RunOption, 'completedAt'>[] | undefined;
-  from: string | undefined;
-  to: string | undefined;
+  rangeHasRuns: boolean | undefined;
 }>): SelectionMode {
   if (chosen !== null) return chosen;
   if (namedRun) return 'run';
-  if (fallback === 'run' || runs === undefined) return fallback;
-  const start = from === undefined ? -Infinity : Date.parse(from);
-  const end = to === undefined ? Infinity : Date.parse(to);
-  const inWindow = (completedAt: string | null) => {
-    if (completedAt === null) return false;
-    const at = Date.parse(completedAt);
-    return at >= start && at <= end;
-  };
-  return runs.some((run) => inWindow(run.completedAt)) ? 'range' : 'run';
+  if (fallback === 'run' || rangeHasRuns === undefined) return fallback;
+  return rangeHasRuns ? 'range' : 'run';
 }
 
 export function useVisibilityFilters({
@@ -255,35 +239,49 @@ export function useVisibilityFilters({
 
 function resolvedSelection(
   data:
-    | {
-        audit_id?: string | null;
-        selection_mode?: string;
-        source_audit_ids?: string[];
-        from_at?: string | null;
-        to_at?: string | null;
-      }
+    | { audit_id?: string | null; selection_mode?: string; source_audit_ids?: string[] }
     | null
     | undefined,
 ) {
-  const range = data?.selection_mode === 'range';
   return {
     activeRunId: data?.audit_id ?? null,
-    selectedRunIds: range ? data.source_audit_ids : undefined,
-    selectedPeriod: range ? { from: data.from_at ?? undefined, to: data.to_at ?? undefined } : null,
+    selectedRunIds: data?.selection_mode === 'range' ? data.source_audit_ids : undefined,
   };
+}
+
+export type SelectionWindow = Readonly<{ from: string | undefined; to: string }>;
+
+function useSelectionInputs(filters: ReturnType<typeof useVisibilityFilters>) {
+  const from = useMemo(
+    () => filters.fromAt ?? rangeToFrom(filters.range),
+    [filters.fromAt, filters.range],
+  );
+  const window: SelectionWindow = { from, to: filters.toAt ?? rangeTo() };
+  const asksWindow =
+    filters.chosenSelection === null &&
+    filters.selectedRunId === null &&
+    filters.defaultSelection === 'range';
+  const engine = filters.engine === 'all' ? undefined : filters.engine;
+  return { from, window, asksWindow, engine };
 }
 
 export function useVisibilityQueries(
   filters: ReturnType<typeof useVisibilityFilters>,
   view: VisibilityView,
+  { active = true }: Readonly<{ active?: boolean }> = {},
 ) {
   const { workspaceId, projectId } = useProjectScope();
   const requestScope = { workspaceId, projectId };
   const insights = view === 'insights';
-  const { queryClient, auditsQuery, runOptions, hasRuns, activeRun } = useVisibilityRuns(
-    requestScope,
-    filters.market,
-  );
+  const { from, window, asksWindow, engine } = useSelectionInputs(filters);
+  const { queryClient, auditsQuery, runPicker, hasRuns, activeRun, rangeHasRuns } =
+    useVisibilityRuns({
+      requestScope,
+      market: filters.market,
+      selectedRunId: filters.selectedRunId,
+      window: asksWindow ? window : null,
+      active,
+    });
   const topic = filters.topic ?? undefined;
   const { markets, marketRowsQuery } = useMarketVisibility(
     requestScope,
@@ -291,32 +289,28 @@ export function useVisibilityQueries(
     insights,
   );
 
-  const engine = filters.engine === 'all' ? undefined : filters.engine;
-  const from = useMemo(
-    () => filters.fromAt ?? rangeToFrom(filters.range),
-    [filters.fromAt, filters.range],
-  );
   const selectionMode = measuredSelection({
     chosen: filters.chosenSelection,
     namedRun: filters.selectedRunId !== null,
     fallback: filters.defaultSelection,
-    runs: auditsQuery.isSuccess ? runOptions : undefined,
-    from,
-    to: filters.toAt ?? undefined,
+    rangeHasRuns,
   });
-  const selectedParams = selectionParams(filters, { mode: selectionMode, from, engine });
+  const selectedParams = selectionParams(filters, { mode: selectionMode, window, engine });
   const projectionOptions = visibilityQueries.project(requestScope, selectedParams);
   const visibilityQuery = useQuery({
     ...projectionOptions,
+    enabled: active,
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
   });
-  const { activeRunId, selectedRunIds, selectedPeriod } = resolvedSelection(visibilityQuery.data);
+  const { activeRunId, selectedRunIds } = resolvedSelection(visibilityQuery.data);
+  const selectionReady =
+    active && auditsQuery.isSuccess && hasRuns && (!asksWindow || rangeHasRuns !== undefined);
   const trendParams = {
     market: filters.market ?? undefined,
     engine,
     topic,
     from,
-    to: filters.toAt ?? undefined,
+    to: window.to,
     granularity: filters.granularity,
     cohort: filters.cohort,
   };
@@ -364,7 +358,7 @@ export function useVisibilityQueries(
   return {
     selectionMode,
     auditsQuery,
-    runOptions,
+    runPicker,
     activeRun,
     activeRunId,
     hasRuns,
@@ -373,7 +367,8 @@ export function useVisibilityQueries(
     projectId,
     workspaceId,
     selectedRunIds,
-    selectedPeriod,
+    window,
+    selectionReady,
     visibilityQuery,
     trendQuery,
     topicsQuery,
@@ -400,48 +395,13 @@ export function useVisibilityQueries(
   };
 }
 
-function useVisibilityRuns(
-  requestScope: Pick<ActiveProjectScope, 'workspaceId' | 'projectId'>,
-  market: string | null,
-) {
-  const { workspaceId, projectId } = requestScope;
-  const timeZone = useDisplayTimeZone();
-  const queryClient = useQueryClient();
-  const auditsQuery = useQuery({
-    ...runsQueries.list({ workspaceId, projectId }),
-    refetchInterval: (query) =>
-      pollAudits(brandRuns(query.state.data).map((audit) => audit.status)),
-  });
-  const audits = useMemo(() => brandRuns(auditsQuery.data), [auditsQuery.data]);
-  const runOptions = useMemo(
-    () =>
-      toRunOptions(
-        audits.filter((audit) => audit.market.id === market),
-        timeZone,
-      ),
-    [audits, market, timeZone],
-  );
-  const allRuns = useMemo(() => toRunOptions(audits, timeZone), [audits, timeZone]);
-  const hasRuns = allRuns.length > 0;
-  const activeRun = useMemo(() => findActiveRun(audits), [audits]);
-  const runSignal = `${allRuns[0]?.id ?? ''}:${activeRun?.id ?? 'idle'}`;
-  const previousSignal = useRef<string | undefined>(undefined);
-  const auditsLoaded = auditsQuery.isSuccess;
-  useEffect(() => {
-    if (!auditsLoaded) return;
-    const previous = previousSignal.current;
-    previousSignal.current = runSignal;
-    if (previous !== undefined && previous !== runSignal) {
-      void refreshVisibility(queryClient, projectId);
-    }
-  }, [auditsLoaded, runSignal, queryClient, projectId]);
-
-  return { queryClient, auditsQuery, runOptions, hasRuns, activeRun };
-}
-
 function selectionParams(
   filters: ReturnType<typeof useVisibilityFilters>,
-  { mode, from, engine }: Readonly<{ mode: SelectionMode; from?: string; engine?: string }>,
+  {
+    mode,
+    window,
+    engine,
+  }: Readonly<{ mode: SelectionMode; window: SelectionWindow; engine?: string }>,
 ) {
   const range = mode === 'range';
   const runMode = filters.selectedRunId ? 'run' : 'latest';
@@ -453,8 +413,8 @@ function selectionParams(
     topic: filters.topic ?? undefined,
     baseline_id: filters.baselineId ?? undefined,
     selection_mode: range ? 'range' : runMode,
-    from: range ? from : undefined,
-    to: range ? (filters.toAt ?? undefined) : undefined,
+    from: range ? window.from : undefined,
+    to: range ? window.to : undefined,
     configuration_key: filters.configuration ?? undefined,
   };
 }

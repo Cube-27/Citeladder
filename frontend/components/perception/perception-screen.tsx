@@ -36,19 +36,26 @@ type Filters = ReturnType<typeof useVisibilityFilters>;
 type Queries = ReturnType<typeof useVisibilityQueries>;
 
 export function PerceptionScreen() {
-  const { pilot, tab, setTab, items, probe } = usePerceptionTab();
+  const { pilot, holding, tab, setTab, items, probe } = usePerceptionTab();
   const filters = useVisibilityFilters({
     defaultSelection: 'range',
     defaultCohort: tab === 'fact-checking' ? FACT_CHECK_COHORT : undefined,
   });
-  const queries = useVisibilityQueries(filters, 'perception');
+  const reads = !probe && !holding;
+  const queries = useVisibilityQueries(filters, 'perception', { active: reads });
   const probeControls = useProbeControls(probe);
-  const accuracy = useAccuracy({ filters, queries, pilot });
+  const perception = usePerception({ filters, queries, open: reads && tab === 'brand' });
+  const accuracy = useAccuracy({ filters, queries, open: reads && pilot });
   const factViews = useFactViews({ filters, queries, accuracy, open: tab === 'fact-checking' });
   const pageFilters = usePageFilters(filters, queries);
   const ready = selectionPageState(queries) === null;
-  const accuracyData = accuracy.isPlaceholderData ? undefined : accuracy.data;
-  const brandFact = pilot ? factFigure(accuracyData, () => setTab('fact-checking')) : undefined;
+  const brandFact = pilot ? settledFactFigure(accuracy, () => setTab('fact-checking')) : undefined;
+  const view =
+    tab === 'fact-checking' ? (
+      <PerceptionFactChecking query={accuracy} views={factViews} />
+    ) : (
+      <BrandTab query={perception} factFigure={brandFact} />
+    );
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       <ReportPage
@@ -61,17 +68,7 @@ export function PerceptionScreen() {
           {probe ? (
             <PerceptionProbe view={probe} controls={probeControls} />
           ) : (
-            <SelectionTab
-              ready={ready}
-              queries={queries}
-              view={
-                tab === 'fact-checking' ? (
-                  <PerceptionFactChecking query={accuracy} views={factViews} />
-                ) : (
-                  <BrandTab filters={filters} queries={queries} factFigure={brandFact} />
-                )
-              }
-            />
+            <SelectionTab ready={ready} queries={queries} view={view} />
           )}
         </TabPanel>
         {probeControls.dialog}
@@ -80,12 +77,21 @@ export function PerceptionScreen() {
   );
 }
 
+function settledFactFigure(
+  accuracy: ReturnType<typeof useAccuracy>,
+  onOpen: Parameters<typeof factFigure>[1],
+) {
+  return factFigure(accuracy.isPlaceholderData ? undefined : accuracy.data, onOpen);
+}
+
 function usePerceptionTab() {
-  const pilot = useBrandFacts().data?.enabled ?? false;
+  const brandFacts = useBrandFacts();
+  const pilot = brandFacts.data?.enabled ?? false;
   const [requested, setTab] = useUrlState('tab', TAB_CODEC);
   const tab = pilot || requested !== 'fact-checking' ? requested : 'brand';
   return {
     pilot,
+    holding: requested === 'fact-checking' && brandFacts.isPending,
     tab,
     setTab,
     items: pilot ? PERCEPTION_TABS : PUBLIC_PERCEPTION_TABS,
@@ -107,11 +113,9 @@ function RunBanner({ queries }: Readonly<{ queries: Queries }>) {
 }
 
 function BrandTab({
-  filters,
-  queries,
+  query,
   factFigure: figure,
-}: Readonly<{ filters: Filters; queries: Queries; factFigure?: FigureSegment }>) {
-  const query = usePerception(filters, queries);
+}: Readonly<{ query: ReturnType<typeof usePerception>; factFigure?: FigureSegment }>) {
   return (
     <AnalysisRead
       query={query}
@@ -164,7 +168,7 @@ function PageState({ queries }: Readonly<{ queries: Queries }>) {
 function usePageFilters(filters: Filters, queries: Queries) {
   return useVisibilityFilterMenu({
     view: 'perception',
-    runs: queries.runOptions,
+    runs: queries.runPicker,
     selectedRunId: filters.selectedRunId,
     onSelectMeasurement: filters.selectMeasurement,
     engine: filters.engine,

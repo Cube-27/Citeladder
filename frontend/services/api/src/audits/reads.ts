@@ -1,10 +1,21 @@
 import { sql } from 'kysely';
-import { auditSchema, executionSchema, auditMetricsSchema } from '@citeladder/contracts/audits';
+import {
+  auditPageSchema,
+  auditSchema,
+  auditStatusSchema,
+  executionSchema,
+  auditMetricsSchema,
+  type AuditListSort,
+  type AuditPage,
+  type AuditScope,
+  type AuditStatus,
+} from '@citeladder/contracts/audits';
 import { auditEventSchema } from '@citeladder/contracts/audit-events';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
-import { utcText, utcTextOf, wireUtc, wireUtcOrNull } from '../db/timestamps.ts';
+import { timestamptz, utcText, utcTextOf, wireUtc, wireUtcOrNull } from '../db/timestamps.ts';
+import type { ParsedDatetime } from '../http/datetimes.ts';
 import { notFound } from '../errors.ts';
 import { modelProvenanceFor } from '../analysis/provenance.ts';
 import { engineSnapshots } from '../visibility/runs.ts';
@@ -97,16 +108,10 @@ export async function readAudits(db: Database, workspaceId: string, auditIds: re
   if (ordered.length !== auditIds.length) throw notFound('Audit');
   return auditResponses(db, workspaceId, ordered);
 }
-export async function listAudits(
-  db: Database,
-  page: { workspaceId: string; projectId?: string; limit?: number; afterId?: string },
-) {
-  const { workspaceId, projectId, limit = 50, afterId } = page;
-  let query = db
-    .selectFrom('audits')
-    .select([
-      ...LISTED_COLUMNS,
-      sql<unknown>`jsonb_build_object(
+const listedSelection = () =>
+  [
+    ...LISTED_COLUMNS,
+    sql<unknown>`jsonb_build_object(
         'country_code', configuration -> 'country_code',
         'language_code', configuration -> 'language_code',
         'not_applicable_engines', configuration -> 'not_applicable_engines',
@@ -114,8 +119,16 @@ export async function listAudits(
           'retrieval_enabled', configuration -> 'measurement_policy' -> 'retrieval_enabled'
         )
       )`.as('configuration'),
-      ...auditTimes(),
-    ])
+    ...auditTimes(),
+  ] as const;
+export async function listAudits(
+  db: Database,
+  page: { workspaceId: string; projectId?: string; limit?: number; afterId?: string },
+) {
+  const { workspaceId, projectId, limit = 50, afterId } = page;
+  let query = db
+    .selectFrom('audits')
+    .select(listedSelection())
     .where('workspace_id', '=', workspaceId)
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
@@ -126,6 +139,68 @@ export async function listAudits(
       sql<boolean>`(audits.created_at, audits.id) < (SELECT anchor.created_at, anchor.id FROM audits AS anchor WHERE anchor.id = ${afterId} AND anchor.workspace_id = ${workspaceId} AND anchor.project_id = audits.project_id)`,
     );
   return auditResponses(db, workspaceId, await query.execute());
+}
+export type AuditMarketFilter = { kind: 'any' } | { kind: 'one'; id: string | null };
+export type AuditPageRequest = Readonly<{
+  workspaceId: string;
+  projectId: string | null;
+  scope: AuditScope | null;
+  market: AuditMarketFilter;
+  statuses: readonly AuditStatus[];
+  completed: Readonly<{ from: ParsedDatetime | null; to: ParsedDatetime | null }>;
+  sort: Readonly<{ key: AuditListSort; descending: boolean }>;
+  page: number;
+  pageSize: number;
+}>;
+const SORT_COLUMN = {
+  created: sql.ref('created_at'),
+  finished: sql`coalesce(completed_at, created_at)`,
+  requested: sql.ref('requested_count'),
+  completed: sql.ref('completed_count'),
+  failed: sql.ref('failed_count'),
+} satisfies Record<AuditListSort, unknown>;
+function scopedAudits(db: Database, request: AuditPageRequest) {
+  let query = db.selectFrom('audits').where('workspace_id', '=', request.workspaceId);
+  if (request.projectId) query = query.where('project_id', '=', request.projectId);
+  if (request.scope) query = query.where('audit_scope', '=', request.scope);
+  return query;
+}
+function filteredAudits(db: Database, request: AuditPageRequest) {
+  const { market, statuses, completed } = request;
+  let query = scopedAudits(db, request);
+  if (market.kind === 'one') query = query.where('market_id', 'is not distinct from', market.id);
+  if (statuses.length) query = query.where('status', 'in', [...statuses]);
+  if (completed.from) query = query.where('completed_at', '>=', timestamptz(completed.from));
+  if (completed.to) query = query.where('completed_at', '<=', timestamptz(completed.to));
+  return query;
+}
+export async function pageAudits(db: Database, request: AuditPageRequest): Promise<AuditPage> {
+  const direction = request.sort.descending ? 'desc' : 'asc';
+  const [counts, total, rows] = await Promise.all([
+    scopedAudits(db, request)
+      .select(['status', (eb) => eb.fn.countAll<string>().as('count')])
+      .groupBy('status')
+      .execute(),
+    filteredAudits(db, request)
+      .select((eb) => eb.fn.countAll<string>().as('count'))
+      .executeTakeFirstOrThrow(),
+    filteredAudits(db, request)
+      .select(listedSelection())
+      .orderBy(SORT_COLUMN[request.sort.key], direction)
+      .orderBy('id', direction)
+      .limit(request.pageSize)
+      .offset((request.page - 1) * request.pageSize)
+      .execute(),
+  ]);
+  const statusCounts = Object.fromEntries(auditStatusSchema.options.map((status) => [status, 0]));
+  for (const row of counts) statusCounts[row.status] = Number(row.count);
+  return {
+    items: await auditResponses(db, request.workspaceId, rows),
+    total: Number(total.count),
+    page: request.page,
+    page_size: request.pageSize,
+    status_counts: auditPageSchema.shape.status_counts.parse(statusCounts),
+  };
 }
 export async function listExecutions(db: Database, workspaceId: string, auditId: string) {
   await authorizedAudit(db, workspaceId, auditId);

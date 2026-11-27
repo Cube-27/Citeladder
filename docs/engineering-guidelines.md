@@ -76,12 +76,16 @@ provider, an import or a crawl.
 
 **Rule:** Page indexes, selected IDs, persisted filters, placeholder data and
 pending markers belong to one scope (project, range, filter, row, draft) and
-reset or re-validate when that scope changes.
+reset or re-validate when that scope changes. Reset by remounting on the
+scope's key, never by an effect that calls setters; edits over loaded data are
+held as a delta over the derived value. `check:policy` refuses a
+`react-hooks/set-state-in-effect` directive.
 **Why:** This recurred in about 15 PRs: #894 (page index kept across a range
 change), #980 (a removed row's ID stayed selected), #965 and #1007 (a
 persisted source filter hid every row), #970 (placeholder data from the
 previous selection), #919 (`busyId` held one row of many), #859 (a save that
-finishes clears an edit typed after it).
+finishes clears an edit typed after it). Onboarding copied its discovery and
+draft into state from five effects, each one render late.
 **Check:** New `useState`, URL state or storage that outlives a change to the
 range, project or data it filters. Mutation state keyed by anything coarser
 than the item and the draft it saved.
@@ -356,7 +360,9 @@ differs from the code's divisor.
 
 **Rule:** A query key or request param never holds a value computed from the
 current time. Key on the preset (`'90d'`) and resolve the bound on the
-server, or round it to a stable boundary.
+server, or round it to a stable boundary. That includes a bound the server
+derived from its clock and echoed back (`to_at`): send the client's rounded
+bound instead.
 **Why:** `rangeToFrom` (`lib/visibility/trends.ts`) once put a
 millisecond-precise `from` into the trends read, so every mount made a new
 key, a refetch and a prefetch that warmed nothing, on the Insights and
@@ -368,7 +374,8 @@ a `queryFn` param or a prefetcher.
 
 **Rule:** A change to `bootstrap-loader`, `route-prefetch`, `router.tsx`,
 `index.html` or a gate keeps every screen's reads in round 1 beside the gates
-and adds no read that waits on another it doesn't need.
+and adds no read that waits on another it doesn't need. A read never waits on a
+payload it does not render, and a tab not shown mounts no reads.
 **Why:** #523, #525, #541 and #549 brought page loads to one round and
 removed duplicate reads. Later changes (#727's slim project list, #551's
 selection clear) pushed screen reads back to rounds 3 to 6. A prefetcher's

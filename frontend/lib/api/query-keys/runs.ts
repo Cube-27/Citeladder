@@ -6,7 +6,8 @@ const auditDetail = (auditId: string) => ['runs', 'audit', auditId, 'detail'] as
 const auditExecutions = (auditId: string) => ['runs', 'audit', auditId, 'executions'] as const;
 export const runKeys = {
   ...runs,
-  list: (scope: ProjectScope) => runs.read('list', scope),
+  list: (scope: ProjectScope, params: Readonly<Record<string, unknown>>) =>
+    runs.read('list', scope, params),
   schedules: (scope: ProjectScope) => runs.read('schedules', scope),
   auditDetail,
   auditExecutions,

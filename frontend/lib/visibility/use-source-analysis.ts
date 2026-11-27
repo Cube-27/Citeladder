@@ -24,7 +24,7 @@ export type SourceScope = {
   pageSize: number;
 };
 
-export function selectionParams(
+function selectionParams(
   filters: Pick<SourceFilters, 'engine' | 'cohort'>,
   queries: SourceQueries,
 ) {
@@ -43,11 +43,22 @@ export function topicSelectionParams(
   return { ...selectionParams(filters, queries), topic: queries.topic };
 }
 
-export function periodSelectionParams(
-  filters: Pick<SourceFilters, 'engine' | 'cohort'>,
-  queries: SourceQueries,
-) {
-  return { ...selectionParams(filters, queries), ...queries.selectedPeriod };
+export type WindowFilters = Pick<SourceFilters, 'engine' | 'cohort' | 'market' | 'selectedRunId'>;
+
+export function windowSelectionParams(filters: WindowFilters, queries: SourceQueries) {
+  const engine = set(filters.engine === 'all' ? null : filters.engine);
+  if (queries.selectionMode === 'range')
+    return { market: set(filters.market), engine, cohort: filters.cohort, ...queries.window };
+  return {
+    audit_id: set(filters.selectedRunId ?? queries.activeRunId),
+    engine,
+    cohort: filters.cohort,
+  };
+}
+
+export function windowSelectionReady(filters: WindowFilters, queries: SourceQueries): boolean {
+  if (!queries.selectionReady) return false;
+  return queries.selectionMode === 'range' || Boolean(filters.selectedRunId ?? queries.activeRunId);
 }
 
 export function selectionEnabled(queries: SourceQueries): boolean {

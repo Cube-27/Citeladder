@@ -22,6 +22,8 @@ import { comparedAgainst, datasetCoverage, referringLists } from './search-intel
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
+const CITATION_RUNS_PARAMS = { page_size: 50 } as const;
+
 export function SearchIntelligenceCitationMatcher({
   datasets,
   targetOrigin,
@@ -42,7 +44,7 @@ export function SearchIntelligenceCitationMatcher({
     lists.find((dataset) => dataset.id === listId) ??
     lists.find((dataset) => dataset.target_origin === targetOrigin);
   const audits = useQuery({
-    ...runsQueries.list(scope),
+    ...runsQueries.list(scope, CITATION_RUNS_PARAMS),
     enabled: Boolean(referring),
   });
   const derive = useMutation(searchIntelligenceMutations.deriveCitationMatches(scope));
@@ -80,7 +82,7 @@ export function SearchIntelligenceCitationMatcher({
       />
     );
   if (audits.isPending) return <Skeleton variant="list" />;
-  const answered = audits.data.filter((audit) => audit.completed_count > 0);
+  const answered = audits.data.items.filter((audit) => audit.completed_count > 0);
   if (!answered.length)
     return (
       <StateBlock

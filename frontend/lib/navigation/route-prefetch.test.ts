@@ -26,6 +26,8 @@ import { demandApi, demandQueries } from '@/lib/api/demand';
 import { projectQueries } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsQueries } from '@/lib/api/runs';
+import { brandRunsParams } from '@/lib/visibility/use-visibility-runs';
+import { DEFAULT_TREND_RANGE, rangeTo, rangeToFrom } from '@/lib/visibility/trends';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { INITIAL_VISIBILITY_PARAMS } from '@/lib/api/visibility';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -189,11 +191,27 @@ describe('prefetchRoute', () => {
   });
 
   const visibilitySelectionKeys = [
-    runsQueries.list(PROJECT).queryKey,
+    runsQueries.list(PROJECT, brandRunsParams(null)).queryKey,
     projectQueries.markets(PROJECT).queryKey,
     visibilityQueries.project(PROJECT, INITIAL_VISIBILITY_PARAMS).queryKey,
   ];
+  const perceptionWindow = {
+    cohort: 'core' as const,
+    from: rangeToFrom(DEFAULT_TREND_RANGE),
+    to: rangeTo(),
+  };
   it.each([
+    [
+      '/perception',
+      [
+        projectQueries.brandFacts(PROJECT).queryKey,
+        runsQueries.list(PROJECT, brandRunsParams(null)).queryKey,
+        projectQueries.markets(PROJECT).queryKey,
+        visibilityQueries.project(PROJECT, { ...perceptionWindow, selection_mode: 'range' })
+          .queryKey,
+        visibilityQueries.perception(PROJECT, perceptionWindow).queryKey,
+      ],
+    ],
     ['/insights', visibilitySelectionKeys],
     ['/competitors', visibilitySelectionKeys],
     ['/agent', [actionsQueries.list(PROJECT).queryKey]],

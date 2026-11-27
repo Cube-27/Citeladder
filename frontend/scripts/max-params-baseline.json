@@ -47,7 +47,6 @@
   "lib/free-tools/robots.ts": 1,
   "lib/navigation/app-routes.ts": 1,
   "lib/navigation/project-destination.ts": 1,
-  "lib/navigation/route-prefetch.ts": 4,
   "lib/onboarding/discovery-activity.ts": 1,
   "lib/project/bootstrap-loader.ts": 1,
   "lib/prompts/csv.ts": 1,

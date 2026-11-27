@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { auditStatusSchema } from '@citeladder/contracts/audits';
 
 import { makeProject } from '../../test/fixtures/project';
 import { providerCatalogFixture } from '../../test/provider-catalog-fixture';
@@ -219,4 +220,17 @@ export async function stubAuthedShell(
   for (const [pattern, body] of stubs) {
     await page.route(pattern, (route) => route.fulfill({ json: body })); // NOSONAR
   }
+}
+
+export function auditPageBody(items: ReadonlyArray<{ status: string }>) {
+  const count = (status: string) => items.filter((item) => item.status === status).length;
+  return {
+    items,
+    total: items.length,
+    page: 1,
+    page_size: 10,
+    status_counts: Object.fromEntries(
+      auditStatusSchema.options.map((status) => [status, count(status)]),
+    ),
+  };
 }
