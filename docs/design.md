@@ -48,7 +48,11 @@ The lint enforces this and fails CI (`vp lint`; config in
   `opacity-<n>`, `duration-<n>`, `delay-<n>`), `colour-literal` (a hex or
   colour function in any string), `monochrome-colour` (`white`/`black`),
   `surface-variant` (a `[[data-public-surface]_&]:` variant outside
-  `components/ui`) and `astro-class` (value classes in Astro markup).
+  `components/ui`), `raw-media` (outside `components/ui` and the website, an
+  `<img>` or a sized `<svg>`: logos and engine marks render through
+  `BrandMark`, sized from the icon roles and never taller than their line, so
+  a mark cannot set a row's height) and `astro-class` (value classes in Astro
+  markup).
 
 There is no suppressions file and no baseline: a finding is fixed at its
 source, by a role token or a primitive prop. No
@@ -263,7 +267,11 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   page-wide toolbar (`FilterBar`) is the strip under the tabs, with no rule,
   and takes no search (`PageFrame` `filters` is `FilterBarProps`, which has
   none): a search narrows one table, so it lives in that
-  table's `TableToolbar` (`DataTable toolbar`). An export is `ExportAction`:
+  table's `TableToolbar` (`DataTable toolbar`). A `DataTable` head is one row:
+  title at the start, then the view, search and filters, and its actions
+  (`actions` and `toolbar.actions` together) at the end. It wraps only when
+  the content does not fit; a card never has a row holding only an action or
+  only a search (owner, 2026-11-27). An export is `ExportAction`:
   `scope="page"` in the page header actions, `scope="table"` in the table
   toolbar.
 - **Metric strip:** a bleed slot of a card (on the paper it brings its own

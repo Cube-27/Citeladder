@@ -20,6 +20,8 @@ export function Canary({ tone }: { tone: string }) {
       <Stack className="rounded-card">restyle</Stack>
       <p title={MIX}>colour</p>
       <p className={LAYOUT[tone === 'row' ? 'row' : 'column']}>layout map</p>
+      <img src="/logo.png" alt="" />
+      <svg aria-hidden viewBox="0 0 24 24" className="size-6 shrink-0" />
     </Stack>
   );
 }

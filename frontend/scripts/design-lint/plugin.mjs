@@ -76,6 +76,28 @@ const plainElement = {
   },
 };
 
+const SIZING_ATTRIBUTES = new Set(['width', 'height', 'className', 'style']);
+
+const rawMedia = {
+  meta: { type: 'problem' },
+  create(context) {
+    return {
+      JSXOpeningElement(node) {
+        if (node.name.type !== 'JSXIdentifier') return;
+        const tag = node.name.name;
+        const sized = node.attributes.some(
+          (item) => item.type === 'JSXSpreadAttribute' || SIZING_ATTRIBUTES.has(item.name.name),
+        );
+        if (tag === 'img' || (tag === 'svg' && sized))
+          context.report({
+            node,
+            message: `<${tag}> sizes a picture itself, so a logo can set its row's height. Render BrandMark for a logo or mark, Avatar for a person and ProductImage for a product photo. ${GUIDE}`,
+          });
+      },
+    };
+  },
+};
+
 const astroClass = {
   meta: { type: 'problem' },
   create(context) {
@@ -123,6 +145,7 @@ const plugin = {
         : [];
     }),
     'astro-class': astroClass,
+    'raw-media': rawMedia,
   },
 };
 

@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/data-table-body';
 import { TableToolbar, type TableToolbarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
-import { Section, SectionBleed, SectionHeader, SectionToolbar } from '@/components/ui/section';
+import { Section, SectionBleed, SectionHeader } from '@/components/ui/section';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
@@ -92,12 +92,8 @@ export function DataTable({
         level={level}
         description={description}
         actions={actions}
+        toolbar={toolbar}
       />
-      {toolbar ? (
-        <SectionToolbar>
-          <TableToolbar {...toolbar} />
-        </SectionToolbar>
-      ) : null}
       <HeldFootprint
         state={replacing}
         level={stateLevel(title, level)}
@@ -302,24 +298,41 @@ function pagingLayout(
   return reserveRows || hasMorePages(pager) ? { pager, pageSize } : {};
 }
 
+function joinActions(first: ReactNode, second: ReactNode): ReactNode {
+  if (!first || !second) return first || second;
+  return (
+    <>
+      {first}
+      {second}
+    </>
+  );
+}
+
+const hasControls = ({ view, lead, search, filters, status }: TableToolbarProps) =>
+  Boolean(view || lead || search || filters?.length || status !== undefined);
+
 function DataTableHeader({
   title,
   headingId,
   level,
   description,
   actions,
+  toolbar,
 }: Readonly<{
   title?: string;
   headingId: string;
   level: HeadingLevel;
   description?: ReactNode;
   actions?: ReactNode;
+  toolbar?: TableToolbarProps;
 }>) {
   const role = useContext(SectionTitleRoleContext);
-  if (!title && !description && !actions) return null;
+  const allActions = joinActions(toolbar?.actions, actions);
+  const named = Boolean(title || description);
+  if (!named && !allActions && !toolbar) return null;
   const Heading = level === 3 ? 'h3' : 'h2';
-  return (
-    <SectionHeader data-data-table-header="" actions={actions}>
+  const heading = named ? (
+    <>
       {title ? (
         <Heading id={headingId} className={cn(TEXT_ROLE_CLASS[role], 'min-w-0 truncate')}>
           {title}
@@ -330,6 +343,20 @@ function DataTableHeader({
           {description}
         </p>
       ) : null}
-    </SectionHeader>
+    </>
+  ) : null;
+  if (!toolbar || !hasControls(toolbar))
+    return (
+      <SectionHeader data-data-table-header="" actions={allActions}>
+        {heading}
+      </SectionHeader>
+    );
+  return (
+    <div data-data-table-header="" className="flex min-w-0 flex-wrap items-center gap-4">
+      {named ? <div className="grid max-w-full min-w-0 gap-1">{heading}</div> : null}
+      <div className="flex max-w-full min-w-0 grow">
+        <TableToolbar {...toolbar} actions={allActions} />
+      </div>
+    </div>
   );
 }

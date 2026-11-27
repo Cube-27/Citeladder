@@ -87,9 +87,7 @@ function Controls({
   const windowLabel = dataWindow(chips);
   return (
     <>
-      {search ? (
-        <div className="rail:max-w-64 rail:grow rail:basis-50 min-w-0 basis-full">{search}</div>
-      ) : null}
+      {search ? <div className="rail:max-w-64 min-w-0 grow basis-50">{search}</div> : null}
       {chips.map((filter) => (
         <div key={filter.id} className="flex min-w-0 shrink-0">
           <FilterChip filter={filter} />

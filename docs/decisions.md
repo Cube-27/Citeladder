@@ -403,6 +403,14 @@ how to add or change an entry.
   from one base per subdomain (app 14, website 16). A new look, even a one-off,
   adds a role token; never a raw value. The raw-value lint fails CI from a
   baseline that only shrinks (2026-11-26).
+- **AR-27 Alignment** (2026-11-27): a card head's padding above and below its
+  controls is equal, and a logo or mark never sets the row's height; an icon,
+  mark or trailing meta beside a multi-line block centres on its first line; a
+  table head holds title, search and actions on one row and wraps only when
+  they do not fit.
+- **AR-28 One term, "prompts"** (technically buyer queries), not "answers",
+  for what a product or brand is measured in (2026-11-27). Product detail and
+  the Products list follow it; other screens still say "answers".
 
 ## Audit remediation (owner 2026-11-12)
 

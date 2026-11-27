@@ -1,18 +1,8 @@
-import type { ComponentType, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import type { IconGlyph } from '@/lib/icons';
 import { TEXT_TONE_CLASS, type TextTone } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
-
-type GlyphProps = Readonly<{
-  className?: string;
-  'aria-hidden'?: true;
-  'aria-label'?: string;
-  role?: 'img';
-  'data-icon'?: '';
-}>;
-
-export type BrandGlyph = ComponentType<GlyphProps>;
 
 const ICON_SIZE = {
   text: 'my-0.75 size-3.5',
@@ -31,7 +21,7 @@ export function Icon({
   revealOnHover = false,
   className,
 }: Readonly<{
-  icon: IconGlyph | BrandGlyph;
+  icon: IconGlyph;
   label?: string;
   tone?: TextTone;
   size?: keyof typeof ICON_SIZE;
@@ -63,6 +53,10 @@ export function Icon({
       role={label ? 'img' : undefined}
     />
   );
+}
+
+export function LineMark({ children }: Readonly<{ children: ReactNode }>) {
+  return <span className="h-body-line flex shrink-0 items-center">{children}</span>;
 }
 
 export function TitleMark({ children }: Readonly<{ children: ReactNode }>) {

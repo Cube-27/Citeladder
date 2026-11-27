@@ -167,7 +167,7 @@ function CompetitorRows({
           caption={[
             row.brand_name,
             competitorHost(row.canonical_url),
-            row.source_kind === 'ai_observed' ? 'Seen in AI answers' : '',
+            row.source_kind === 'ai_observed' ? 'Seen in prompts' : '',
           ]
             .filter(Boolean)
             .join(' · ')}
