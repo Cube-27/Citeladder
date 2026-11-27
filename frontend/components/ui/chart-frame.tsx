@@ -8,6 +8,7 @@ import {
   type MarkerShape,
   type SeriesTone,
 } from '@/components/ui/step-chart-parts';
+import { CHART_KEY_GLYPH, SERIES_WEIGHT } from '@/components/ui/chart-geometry';
 import { Section, useOnPage } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
 import { InfoHint } from '@/components/ui/info-hint';
@@ -42,18 +43,27 @@ export function ChartFrame({
   return useOnPage() ? <Section>{frame}</Section> : frame;
 }
 
+const { width: KEY_WIDTH, height: KEY_HEIGHT } = CHART_KEY_GLYPH;
+
 function SeriesSwatch({ tone, shape }: Readonly<{ tone: SeriesTone; shape?: MarkerShape }>) {
   if (shape)
     return (
       <svg
         aria-hidden
-        width={16}
-        height={10}
-        viewBox="0 0 16 10"
+        width={KEY_WIDTH}
+        height={KEY_HEIGHT}
+        viewBox={`0 0 ${KEY_WIDTH} ${KEY_HEIGHT}`}
         className="shrink-0 overflow-visible"
       >
-        <line x1={0} x2={16} y1={5} y2={5} strokeWidth={2} className={SERIES_STROKE[tone]} />
-        <MarkerMark x={8} y={5} shape={shape} tone={tone} />
+        <line
+          x1={0}
+          x2={KEY_WIDTH}
+          y1={KEY_HEIGHT / 2}
+          y2={KEY_HEIGHT / 2}
+          strokeWidth={SERIES_WEIGHT.you}
+          className={SERIES_STROKE[tone]}
+        />
+        <MarkerMark x={KEY_WIDTH / 2} y={KEY_HEIGHT / 2} shape={shape} tone={tone} />
       </svg>
     );
   return (
@@ -154,7 +164,7 @@ export function ChartTipSheet({
       aria-hidden
       className={cn(
         SHEET_FACE,
-        'rounded-card pointer-events-none absolute left-tip-x top-tip-y z-float flex w-54 flex-col gap-1 p-3',
+        'rounded-card pointer-events-none absolute left-tip-x top-tip-y z-float flex w-chart-tip flex-col gap-1 p-chart-tip-pad',
       )}
       style={{ '--tip-x': `${chartTipLeft(x, frameWidth)}px`, '--tip-y': `${Math.round(top)}px` }}
     >

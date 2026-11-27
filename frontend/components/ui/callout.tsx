@@ -49,7 +49,7 @@ export function Callout({
       role={urgent ? 'alert' : undefined}
       data-callout-tone={tone}
       className={cn(
-        'flex items-start gap-2 rounded-control border border-transparent px-4 py-3 text-body',
+        'flex items-start gap-2 rounded-control border border-transparent px-alert-x py-alert-y text-body',
         style.box,
         className,
       )}

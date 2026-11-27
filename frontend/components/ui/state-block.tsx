@@ -285,11 +285,7 @@ function EmptyBody({
   const Heading = HEADING_TAG[headingLevel];
   return (
     <div className="flex flex-col items-center text-center">
-      <span
-        aria-hidden
-        data-icon-tile=""
-        className="bg-well rounded-control text-ink-2 grid size-8 place-items-center"
-      >
+      <span aria-hidden data-icon-tile="" className="text-ink-2">
         <Glyph className="size-4" />
       </span>
       <Heading className="text-label text-ink mt-state-title text-balance">{heading}</Heading>

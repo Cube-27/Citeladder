@@ -200,7 +200,7 @@ function DialogBody({ children, footer }: Readonly<{ children?: ReactNode; foote
         <footer
           className={cn(
             'flex items-center justify-end gap-2 px-modal pb-modal',
-            hasBody ? 'pt-5' : 'pt-0',
+            hasBody ? 'pt-modal-foot-top' : 'pt-0',
           )}
         >
           {footer}

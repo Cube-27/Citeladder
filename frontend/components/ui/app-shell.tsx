@@ -10,7 +10,7 @@ const FRAME =
   'bg-ground text-ink grid h-dvh overflow-hidden grid-cols-1 rail:grid-cols-shell-compact shell:grid-cols-shell data-[sidebar-state=collapsed]:rail:grid-cols-shell-rail transition-track duration-open ease-resize motion-reduce:transition-none has-[[data-dragging]]:transition-none';
 const SIDEBAR_COLUMN = 'rail:block z-sticky relative hidden min-h-0 min-w-0';
 const PANEL =
-  '@container/main bg-page rail:ms-0 rail:rounded-card rail:ring-1 ring-rule/50 m-panel-inset relative flex min-h-0 min-w-0 flex-col overflow-y-auto overscroll-contain px-page-inline';
+  '@container/main bg-page rail:ms-0 rail:rounded-card rail:ring-1 ring-rule/50 m-shell-inset relative flex min-h-0 min-w-0 flex-col overflow-y-auto overscroll-contain px-page-inline';
 const PAGE = 'flex w-full min-w-0 flex-1 flex-col';
 
 function useFrameState(): { width: string | undefined; state: 'collapsed' | 'expanded' } {

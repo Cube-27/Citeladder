@@ -104,6 +104,7 @@
   --rule-width: 1px;
   --mark-pad-inline: 0.2em;
   --heading-line-height: 1.25;
+  --heading-weight: var(--weight-medium);
   --radius-mark: 2px;
   --radius-inner: var(--radius-sm);
   --radius-control: var(--radius-md);
@@ -172,6 +173,34 @@
   --spacing-control-coarse: var(--spacing-control-md);
   --spacing-control-x: 12px;
   --spacing-tag: 24px;
+  --spacing-tag-x: 8px;
+  --spacing-badge: 22px;
+  --spacing-badge-x: 8px;
+  --spacing-switch-h: 20px;
+  --spacing-switch-w: 40px;
+  --spacing-switch-thumb-h: 16px;
+  --spacing-switch-thumb-w: 22px;
+  --spacing-switch-pad: 2px;
+  --spacing-switch-travel: calc(
+    var(--spacing-switch-w) - var(--spacing-switch-thumb-w) - 2 * var(--spacing-switch-pad)
+  );
+  --spacing-check: 16px;
+  --spacing-tooltip-x: 8px;
+  --spacing-tooltip-y: 4px;
+  --spacing-menu-item-x: 8px;
+  --spacing-menu-item-y: 4px;
+  --spacing-alert-x: 16px;
+  --spacing-alert-y: 12px;
+  --spacing-meter: 6px;
+  --spacing-meter-cell: 8px;
+  --spacing-tab: 32px;
+  --spacing-tab-x: 16px;
+  --spacing-tab-face-x: 12px;
+  --spacing-pager: 32px;
+  --spacing-close: 24px;
+  --spacing-chip-clear: 22px;
+  --spacing-hint: 32px;
+  --spacing-chart-tip-pad: 12px;
   --spacing-target: 24px;
   --spacing-nav-row: 32px;
   --spacing-rail-button: 40px;
@@ -203,7 +232,12 @@
   --spacing-group: 12px;
   --spacing-loose: 16px;
   --spacing-modal: 24px;
-  --spacing-panel-inset: 0px;
+  --spacing-modal-foot-top: 20px;
+  --spacing-drawer-inset: 8px;
+  --spacing-drawer-close: 16px;
+  --spacing-drawer-foot-y: 12px;
+  --spacing-shell-inset: 0px;
+  --spacing-panel-inset: var(--spacing-shell-inset);
   --spacing-band: 8px;
   --spacing-flow-gap: 48px;
   --spacing-label-column: 160px;
@@ -240,6 +274,10 @@
   --container-chart-key: min(100%, 20rem);
   --container-list-wide: 640px;
   --container-card-row: 640px;
+  --container-tooltip: 288px;
+  --container-drawer-start: 272px;
+  --container-cell-meter: 120px;
+  --container-chart-tip: 216px;
   --link-rule-width: 1.5px;
   --transition-property-field: background-color, border-color, outline-color;
   --transition-property-underline: color, text-decoration-color;
@@ -331,8 +369,8 @@
   --spacing-select-max: min(18.5rem, var(--radix-select-content-available-height));
   --spacing-select-trigger: var(--radix-select-trigger-width);
   --spacing-select-public: max(15rem, var(--radix-select-trigger-width));
-  --spacing-state-title: var(--state-title-gap, 16px);
-  --spacing-state-action: var(--state-action-gap, 16px);
+  --spacing-state-title: var(--state-title-gap, var(--spacing-loose));
+  --spacing-state-action: var(--state-action-gap, var(--spacing-loose));
   --spacing-figure-line: var(--text-figure--line-height);
   --spacing-body-line: var(--text-body--line-height);
   --spacing-row-block: calc((var(--spacing-row) - var(--spacing-body-line)) / 2);

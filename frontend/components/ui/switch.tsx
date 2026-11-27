@@ -28,7 +28,7 @@ export function Switch({
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        'press focus-ring hit-area inline-flex h-5 w-10 shrink-0 items-center rounded-full disabled:cursor-not-allowed disabled:opacity-disabled',
+        'press focus-ring hit-area inline-flex h-switch-h w-switch-w shrink-0 items-center rounded-full disabled:cursor-not-allowed disabled:opacity-disabled',
         checked
           ? 'bg-primary not-disabled:hover:bg-primary-hover'
           : 'bg-control-edge not-disabled:hover:bg-control-edge-hover',
@@ -38,8 +38,8 @@ export function Switch({
       <span
         aria-hidden
         className={cn(
-          'ms-0.5 h-4 w-5.5 rounded-full transition-transform duration-slide ease-fluid',
-          checked ? 'bg-thumb-checked translate-x-3.5' : 'bg-thumb',
+          'ms-switch-pad h-switch-thumb-h w-switch-thumb-w rounded-full transition-transform duration-slide ease-fluid',
+          checked ? 'bg-thumb-checked translate-x-switch-travel' : 'bg-thumb',
         )}
       />
     </button>

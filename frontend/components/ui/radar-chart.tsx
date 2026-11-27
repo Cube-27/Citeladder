@@ -1,10 +1,5 @@
-import {
-  chartFill,
-  chartStroke,
-  SERIES_FILL_OPACITY,
-  SERIES_WEIGHT,
-  type ChartTone,
-} from '@/components/ui/chart';
+import { chartFill, chartStroke, SERIES_FILL_OPACITY, type ChartTone } from '@/components/ui/chart';
+import { CHART_MARKER, SERIES_WEIGHT } from '@/components/ui/chart-geometry';
 import { cn } from '@/lib/utils';
 
 const CX = 200;
@@ -84,10 +79,23 @@ export function RadarChart({
   );
 }
 
+const LEGEND_DOT = CHART_MARKER.key * 2;
+
 export function LegendDot({ tone }: Readonly<{ tone: ChartTone | undefined }>) {
   return (
-    <svg aria-hidden width={8} height={8} viewBox="0 0 8 8" className="shrink-0">
-      <circle cx={4} cy={4} r={4} className={tone ? chartFill(tone) : 'fill-rule'} />
+    <svg
+      aria-hidden
+      width={LEGEND_DOT}
+      height={LEGEND_DOT}
+      viewBox={`0 0 ${LEGEND_DOT} ${LEGEND_DOT}`}
+      className="shrink-0"
+    >
+      <circle
+        cx={CHART_MARKER.key}
+        cy={CHART_MARKER.key}
+        r={CHART_MARKER.key}
+        className={tone ? chartFill(tone) : 'fill-rule'}
+      />
     </svg>
   );
 }

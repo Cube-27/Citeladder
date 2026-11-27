@@ -7,8 +7,9 @@ import {
   compositionReport,
   COMPOSITION_ENFORCED,
 } from './design-system-composition.mjs';
-import { astroStyleFindings, cssValueFindings } from './design-system-css-values.mjs';
+import { cssValueFindings, styleBlockFindings } from './design-system-css-values.mjs';
 import { appSourceViolations } from './design-system-source-checks.mjs';
+import { UI_SOURCE, uiValueFindings } from './design-system-ui-values.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const tokenOwners = TOKEN_FILES.map((file) => join(root, ...file.split('/')));
@@ -40,12 +41,16 @@ for (const path of files(root)) {
   const label = relative(root, path);
   if (extension === '.css') violations.push(...cssValueFindings(label, source));
   if (extension === '.astro') {
-    violations.push(...astroStyleFindings(label, source));
+    violations.push(...styleBlockFindings(label, source));
     continue;
   }
   if (tokenOwners.includes(path)) continue;
+  if (UI_SOURCE.test(label)) violations.push(...uiValueFindings(label, source));
   if (/\.tsx?$/.test(label) && !/\.test\.tsx?$/.test(label)) scriptSources.push({ label, source });
 }
+
+const bootShell = join('apps', 'app', 'index.html');
+violations.push(...styleBlockFindings(bootShell, readFileSync(join(root, bootShell), 'utf8')));
 
 const appCssPath = join(root, 'apps', 'app', 'src', 'app.css');
 const appCss = readFileSync(appCssPath, 'utf8');

@@ -108,8 +108,6 @@
   --color-control-edge: var(--ramp-neutral-61_7);
   --color-control-edge-hover: var(--color-mark-ink-2);
   --color-focus: var(--color-accent);
-  --focus-width: 2px;
-  --focus-offset: 2px;
   --text-color-ink: var(--ramp-zinc-21);
   --text-color-ink-2: var(--ramp-zinc-47);
   --text-color-ink-placeholder: var(--ramp-zinc-50);
@@ -170,9 +168,14 @@
     var(--masthead-block-size, var(--spacing-masthead)) + var(--strips-block-size, 0px)
   );
   --color-nav-current: var(--color-panel);
-  --spacing-panel-inset: 0px;
+  --spacing-tag: 20px;
+  --spacing-tag-x: 6px;
+  --spacing-tooltip-y: 8px;
+  --container-tooltip: 20rem;
+  --spacing-menu-item-x: 10px;
+  --spacing-meter: 8px;
   --route-chrome-height: calc(
-    2 * var(--spacing-panel-inset) + var(--masthead-block-size, var(--spacing-masthead)) +
+    2 * var(--spacing-shell-inset) + var(--masthead-block-size, var(--spacing-masthead)) +
       var(--page-heading-block-size, 0px) + var(--spacing-page-block) + 24px
   );
   --spacing-card: 16px;

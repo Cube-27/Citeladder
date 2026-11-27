@@ -49,6 +49,9 @@
   --text-figure-xl--line-height: calc(var(--text-figure-xl) + 4 * var(--type-step));
   --text-figure-xl--font-weight: var(--weight-medium);
   --text-figure-xl--letter-spacing: 0;
+  --text-table-head: var(--text-caption);
+  --text-table-head--line-height: var(--text-caption--line-height);
+  --text-table-head--font-weight: var(--weight-medium);
 }
 
 :root {

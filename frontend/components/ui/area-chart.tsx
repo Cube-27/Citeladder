@@ -31,6 +31,12 @@ import {
 } from '@/components/ui/chart';
 import { ChartBreakNote, ChartFrame, ChartKey } from '@/components/ui/chart-frame';
 import {
+  CHART_MARKER,
+  CHART_OUTLINE,
+  CHART_RULE_DASH,
+  CHART_TEXT_SIZE,
+} from '@/components/ui/chart-geometry';
+import {
   AXIS_PROPS,
   ChartTooltipCard,
   GRID_PROPS,
@@ -281,7 +287,7 @@ function AreaPlot({
                     value: 'No reading',
                     position: 'insideTop',
                     fill: 'var(--text-color-ink-2)',
-                    fontSize: 12,
+                    fontSize: CHART_TEXT_SIZE,
                   }
                 : undefined
             }
@@ -293,7 +299,7 @@ function AreaPlot({
               key={`version-${point.label}`}
               x={xs[index]}
               stroke="var(--color-warning)"
-              strokeDasharray="4 3"
+              strokeDasharray={CHART_RULE_DASH.version}
             />
           ) : null,
         )}
@@ -302,7 +308,7 @@ function AreaPlot({
             key={event.key}
             x={event.timestamp}
             stroke={EVENT_COLOR[event.kind ?? 'action']}
-            strokeDasharray="2 3"
+            strokeDasharray={CHART_RULE_DASH.event}
           />
         ))}
         {lines.flatMap((line, at) =>
@@ -312,7 +318,7 @@ function AreaPlot({
               segment={[bridge.from, bridge.to]}
               stroke={seriesColor(line.tone)}
               strokeWidth={seriesWeight(line.tone === 'you')}
-              strokeDasharray="4 4"
+              strokeDasharray={CHART_RULE_DASH.bridge}
               ifOverflow="visible"
             />
           )),
@@ -337,7 +343,12 @@ function AreaPlot({
               stroke={color}
               strokeWidth={seriesWeight(line.tone === 'you')}
               fill={`url(#${id}-${at})`}
-              activeDot={{ r: 4, fill: color, stroke: 'var(--color-panel)', strokeWidth: 2 }}
+              activeDot={{
+                r: CHART_MARKER.active,
+                fill: color,
+                stroke: 'var(--color-panel)',
+                strokeWidth: CHART_OUTLINE,
+              }}
               dot={<LineDot line={line} data={data} />}
             />
           );
@@ -369,7 +380,7 @@ function LineDot({
       <ShapeMark
         x={cx}
         y={cy}
-        r={3}
+        r={CHART_MARKER.marker}
         shape={line.shape ?? 'circle'}
         color={seriesColor(line.tone)}
         outline

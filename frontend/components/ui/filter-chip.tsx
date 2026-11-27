@@ -129,7 +129,7 @@ export function ValueChip({ filter }: Readonly<{ filter: FilterDefinition }>) {
           type="button"
           aria-label={`Remove ${filter.label} filter`}
           onClick={filter.reset}
-          className="focus-ring rounded-tray-item text-ink-2 hover:text-ink hover:overlay-hover flex size-5.5 shrink-0 items-center justify-center"
+          className="focus-ring rounded-tray-item text-ink-2 hover:text-ink hover:overlay-hover size-chip-clear flex shrink-0 items-center justify-center"
         >
           <X className="size-3" aria-hidden />
         </button>

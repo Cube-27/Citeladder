@@ -1,6 +1,7 @@
 import { MapMode, StateEffect, StateField, type ChangeDesc, type Range } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
 
+import { buttonClasses, type ButtonVariant } from '@/components/ui/button';
 import type { SuggestionHighlight } from '@/lib/agent/page-workspace';
 
 export type HighlightAct = 'apply' | 'dismiss';
@@ -25,9 +26,14 @@ function mapHighlights(
   });
 }
 
-const ACTS: readonly { act: HighlightAct; text: string; label: string }[] = [
-  { act: 'apply', text: 'Accept', label: 'Accept suggestion' },
-  { act: 'dismiss', text: 'Dismiss', label: 'Dismiss suggestion' },
+const ACTS: readonly {
+  act: HighlightAct;
+  text: string;
+  label: string;
+  variant: ButtonVariant;
+}[] = [
+  { act: 'apply', text: 'Accept', label: 'Accept suggestion', variant: 'primary' },
+  { act: 'dismiss', text: 'Dismiss', label: 'Dismiss suggestion', variant: 'secondary' },
 ];
 
 class ProposalWidget extends WidgetType {
@@ -61,10 +67,10 @@ class ProposalWidget extends WidgetType {
       root.append(inserted);
     }
     if (!this.actionable) return root;
-    for (const { act, text, label } of ACTS) {
+    for (const { act, text, label, variant } of ACTS) {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = `page-editor-proposal-act page-editor-proposal-${act}`;
+      button.className = buttonClasses(variant, 'ms-1', 'sm');
       button.dataset.suggestionAct = act;
       button.setAttribute('aria-label', label);
       button.textContent = text;

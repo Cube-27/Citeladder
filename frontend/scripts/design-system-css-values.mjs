@@ -161,7 +161,7 @@ export function cssValueFindings(label, css, { offsetLine = 0 } = {}) {
   return findings;
 }
 
-export function astroStyleFindings(label, source) {
+export function styleBlockFindings(label, source) {
   return [...source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].flatMap((match) => {
     const start = match.index + match[0].indexOf('>') + 1;
     const offsetLine = source.slice(0, start).split('\n').length - 1;

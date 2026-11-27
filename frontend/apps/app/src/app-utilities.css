@@ -68,7 +68,11 @@
   );
 }
 @utility bg-hatch {
-  background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--color-rule) 6px 7px);
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 var(--hatch-gap),
+    var(--color-rule) var(--hatch-gap) calc(var(--hatch-gap) + var(--rule-width))
+  );
 }
 
 @utility overlay-hover {

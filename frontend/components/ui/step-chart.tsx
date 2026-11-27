@@ -10,6 +10,7 @@ import {
   type ChartHeight,
 } from '@/components/ui/chart';
 import { ChartFrame, ChartKey, ChartReadout, ChartTipSheet } from '@/components/ui/chart-frame';
+import { CHART_RULE_DASH } from '@/components/ui/chart-geometry';
 import {
   lastMeasured,
   plottedLines,
@@ -427,7 +428,7 @@ function StepPlot({
             x2={scale.x(index)}
             y1={scale.padTop}
             y2={bottom}
-            strokeDasharray="4 3"
+            strokeDasharray={CHART_RULE_DASH.version}
             className="stroke-warning"
           />
         ) : null,

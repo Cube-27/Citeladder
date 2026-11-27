@@ -90,6 +90,19 @@ token only in a token file or a rule on `:root` itself (attribute and
 `:not()` suffixes, no descendant); anywhere else it is checked like any value. The token files (the sheets `globals.css` imports, and `public-surface.css`) alone
 read the ramps.
 
+The same rule reads the boot shell's `<style>` in `apps/app/index.html`, so the
+cold-load frame reads the live mode tokens (Tailwind keeps a theme variable the
+page names in `var()`) and cannot drift from the shell it stands in for. The UI
+value rule ([`design-system-ui-values.mjs`](../frontend/scripts/design-system-ui-values.mjs))
+reads every `components/ui` source: a string or template part holds no
+`px`/`rem`/`em` length, and `strokeWidth`, `strokeDasharray`, `fontSize` and
+`r` take a named constant (chart geometry lives in
+[`chart-geometry.ts`](../frontend/components/ui/chart-geometry.ts)), never a bare
+number. Tailwind scale steps (`gap-2`) are multipliers of `--spacing` and pass;
+a computed position (`${x}px`) passes. A new size role is a `--spacing-*` or
+`--container-*` token registered in `lib/utils.ts` for tailwind-merge; the two
+never share a name, because `w-<name>` resolves to the spacing role first.
+
 The website (marketing and docs) composes the same primitives, and its own
 blocks are `cl-*` classes whose CSS, in the side sheets the marketing and docs
 entries import or an Astro `<style>`, reads role tokens. A variant is a data attribute or a lookup map of

@@ -161,7 +161,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                   ) : null}
                 </div>
                 <ToastPrimitive.Close
-                  className="focus-ring press hit-area text-ink-2 rounded-control not-disabled:hover:text-ink bg-state-fill not-disabled:hover:bg-state-fill-hover press-firm grid size-6 shrink-0 place-items-center"
+                  className="focus-ring press hit-area text-ink-2 rounded-control not-disabled:hover:text-ink bg-state-fill not-disabled:hover:bg-state-fill-hover press-firm size-close grid shrink-0 place-items-center"
                   aria-label="Dismiss notification"
                 >
                   <Icon icon={X} size="flush" />

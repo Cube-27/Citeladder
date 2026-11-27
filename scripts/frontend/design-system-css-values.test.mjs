@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  astroStyleFindings,
+  styleBlockFindings,
   cssValueFindings,
 } from '../../frontend/scripts/design-system-css-values.mjs';
+import { uiValueFindings } from '../../frontend/scripts/design-system-ui-values.mjs';
 
 const lines = (findings) => findings.map((finding) => finding.split(': ')[0]);
 
@@ -72,8 +73,30 @@ test('a token file may declare ramp colours and read them in rules', () => {
   ]);
 });
 
-test('an Astro style block is checked on its own lines', () => {
+test('an HTML or Astro style block is checked on its own lines', () => {
   const astro =
     '---\nconst a = 1;\n---\n<div class="x" />\n<style>\n  .x { z-index: -1; }\n</style>\n';
-  assert.deepEqual(lines(astroStyleFindings('Box.astro', astro)), ['Box.astro:6']);
+  assert.deepEqual(lines(styleBlockFindings('Box.astro', astro)), ['Box.astro:6']);
+});
+
+test('a shared component fails on a raw length or SVG geometry number and passes on roles and scale steps', () => {
+  const source = [
+    "const a = 'w-[13px]';",
+    'const b = `top-[3rem] ${x}`;',
+    'const c = <line strokeWidth={1.5} />;',
+    'const d = <circle r={-2} />;',
+    'const e = <text fontSize={flag ? 11 : 12} />;',
+    "const f = { strokeDasharray: '3 3' };",
+    "const g = 'gap-2 size-4 w-cell-meter';",
+    'const h = <line strokeWidth={SERIES_WEIGHT.you} r={0} />;',
+    "const i = { strokeDasharray: CHART_RULE_DASH.grid, '--tip-x': `${left}px` };",
+  ].join('\n');
+  assert.deepEqual(lines(uiValueFindings('ui.tsx', source)), [
+    'ui.tsx:1',
+    'ui.tsx:2',
+    'ui.tsx:3',
+    'ui.tsx:4',
+    'ui.tsx:5',
+    'ui.tsx:6',
+  ]);
 });

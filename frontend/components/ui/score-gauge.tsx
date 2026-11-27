@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 
 const ARC = 'M 22 100 A 78 78 0 0 1 178 100';
 const ARC_LENGTH = Math.PI * 78;
+const ARC_WEIGHT = 18;
+const FIGURE_SIZE = 36;
 
 const BAND = {
   low: { stroke: 'stroke-negative', tone: 'negative', label: 'Critical' },
@@ -44,12 +46,18 @@ export function ScoreGauge({
         viewBox="0 0 200 112"
         className="h-28 w-50 max-w-full"
       >
-        <path d={ARC} fill="none" strokeWidth={18} strokeLinecap="round" className="stroke-well" />
+        <path
+          d={ARC}
+          fill="none"
+          strokeWidth={ARC_WEIGHT}
+          strokeLinecap="round"
+          className="stroke-well"
+        />
         {band && shown ? (
           <path
             d={ARC}
             fill="none"
-            strokeWidth={18}
+            strokeWidth={ARC_WEIGHT}
             strokeLinecap="round"
             strokeDasharray={`${(shown / 100) * ARC_LENGTH} ${ARC_LENGTH}`}
             className={band.stroke}
@@ -60,7 +68,7 @@ export function ScoreGauge({
             x={100}
             y={98}
             textAnchor="middle"
-            fontSize={36}
+            fontSize={FIGURE_SIZE}
             fontWeight={600}
             className="fill-ink tabular-nums"
           >
