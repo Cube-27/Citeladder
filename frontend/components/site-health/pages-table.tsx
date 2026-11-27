@@ -123,8 +123,8 @@ export function PagesTable({
             className="cursor-pointer"
           >
             <TableCell>
-              <Stack as="span" gap="tight" className="min-w-0">
-                <Inline as="span" className="phone:flex-wrap">
+              <Stack as="span" gap="tight" box="shrink">
+                <Inline as="span" wrap="phone">
                   <ClampText className="max-w-full shrink-0">
                     <PageLink
                       text="emphasis"

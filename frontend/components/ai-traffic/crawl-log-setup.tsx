@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Field } from '@/components/ui/field';
-import { Stack } from '@/components/ui/layout';
+import { Columns, Stack } from '@/components/ui/layout';
 import { Text } from '@/components/ui/typography';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -93,14 +93,14 @@ export function CrawlLogSetup({
           Setup guide: {chosen.label}
         </TextLink>
       </Stack>
-      <Stack gap="workspace" className="desktop:grid-cols-2">
+      <Columns template="halves" gap="workspace">
         <Field label="Site origin" className="desktop:col-span-2">
           {(field) => (
             <Input {...field} value={origin} onChange={(e) => setOrigin(e.target.value)} />
           )}
         </Field>
         {fields}
-      </Stack>
+      </Columns>
       {mutation.isError && mutation.variables.kind === 'create' ? (
         <Notice
           kind="mutation"

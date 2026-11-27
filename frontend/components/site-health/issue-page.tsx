@@ -140,7 +140,7 @@ export function IssuePage({
         ]}
         crumb={{ label: title }}
         actions={
-          <Inline className="flex-wrap items-center justify-end">
+          <Inline wrap justify="end">
             <IssueFixActions scope={scope} crawlId={crawlId} groupId={issue.group_id} />
             <CopyButton value={buildFixPrompt(issue)} variant="secondary" className="w-fit">
               Copy fix prompt
@@ -460,7 +460,7 @@ function DuplicateSetList({
             {set.pages.length < set.pageCount ? <Text variant="caption">Including:</Text> : null}
             <Stack as="ul" gap="item">
               {set.pages.map((page) => (
-                <Inline as="li" key={page.siteUrlId} className="min-h-target">
+                <Inline as="li" key={page.siteUrlId} box="target">
                   <AffectedPageLink
                     crawlId={crawlId}
                     siteUrlId={page.siteUrlId}
@@ -516,7 +516,7 @@ function LinkTargetList({
             </Text>
             <Stack as="ul" gap="item">
               {target.pages.map((page) => (
-                <Inline as="li" key={page.siteUrlId} className="min-h-target">
+                <Inline as="li" key={page.siteUrlId} box="target">
                   <AffectedPageLink
                     crawlId={crawlId}
                     siteUrlId={page.siteUrlId}

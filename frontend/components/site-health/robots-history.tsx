@@ -70,7 +70,7 @@ export function RobotsHistory({
   const toolbar: FilterBarProps = {
     view:
       versions.length < 2 ? undefined : (
-        <Inline className="flex-wrap">
+        <Inline wrap>
           {(['before', 'after'] as const).map((side) => (
             <FilterChip
               key={side}

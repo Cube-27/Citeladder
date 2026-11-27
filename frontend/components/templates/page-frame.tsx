@@ -152,7 +152,7 @@ function PageHeading({
     <PageHeadingRow ref={block} width={width} strips={strips}>
       <PageTitle>{title}</PageTitle>
       {actions === undefined ? null : (
-        <Inline data-page-actions="" justify="end" wrap className="ms-auto">
+        <Inline data-page-actions="" justify="end" wrap box="end">
           <MastheadPrimarySlot value={primarySlot}>
             <MastheadOverflow label="Page actions">{actions}</MastheadOverflow>
           </MastheadPrimarySlot>

@@ -253,7 +253,7 @@ function PageKindPages({
         {pages.length === 0 ? (
           <StateBlock kind="empty" inline message="No pages of this kind to list." />
         ) : (
-          <Stack as="ul" gap="item" className="max-h-64 overflow-y-auto overscroll-contain">
+          <Stack as="ul" gap="item" box="scroll">
             {pages.map((page) => (
               <li key={page.site_url_id} className="min-w-0">
                 {crawlId ? (

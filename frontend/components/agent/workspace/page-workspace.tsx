@@ -381,7 +381,7 @@ function PageHead({
 }>) {
   return (
     <>
-      <Inline className="flex-wrap justify-between">
+      <Inline wrap justify="between">
         <Text variant="caption" aria-live="polite">
           {status}
         </Text>
