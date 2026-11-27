@@ -2,7 +2,7 @@ import { lineIndex, parseSource, walk } from './source-ast.mjs';
 
 const GEOMETRY = new Set(['strokeWidth', 'strokeDasharray', 'fontSize', 'r']);
 const RAW_LENGTH = /(?<![\w.])-?(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em)\b/g;
-const DIGIT = /\d/;
+const NON_ZERO_DIGIT = /[1-9]/;
 
 export const SCREEN_SOURCE =
   /^(?:components\/(?!ui\/|marketing\/)|apps\/app\/src\/).*(?<!\.test)\.tsx?$/;
@@ -11,13 +11,17 @@ function rawNumber(node) {
   if (!node) return false;
   switch (node.type) {
     case 'Literal':
-      return typeof node.value === 'number' ? node.value !== 0 : DIGIT.test(String(node.value));
+      return typeof node.value === 'number'
+        ? node.value !== 0
+        : NON_ZERO_DIGIT.test(String(node.value));
     case 'UnaryExpression':
       return rawNumber(node.argument);
     case 'ConditionalExpression':
       return rawNumber(node.consequent) || rawNumber(node.alternate);
     case 'TemplateLiteral':
-      return node.expressions.length === 0 && DIGIT.test(node.quasis[0]?.value.cooked ?? '');
+      return (
+        node.expressions.length === 0 && NON_ZERO_DIGIT.test(node.quasis[0]?.value.cooked ?? '')
+      );
     case 'JSXExpressionContainer':
       return rawNumber(node.expression);
     default:

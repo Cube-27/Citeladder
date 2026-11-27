@@ -90,7 +90,7 @@ test('a screen fails on a raw length or SVG geometry number and passes on roles,
     "const n = { marginTop: '-8px', inset: '-0.5rem' };",
     "const g = 'gap-2 size-4 w-chart-key';",
     "const z = { rootMargin: '0px 0px -60% 0px' };",
-    'const h = <line strokeWidth={SERIES_WEIGHT.you} r={0} />;',
+    'const h = <line strokeWidth={SERIES_WEIGHT.you} r={0} strokeDasharray="0" />;',
     "const i = { strokeDasharray: CHART_RULE_DASH.grid, '--tip-x': `${left}px` };",
   ].join('\n');
   assert.deepEqual(lines(screenValueFindings('ui.tsx', source)), [
