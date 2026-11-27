@@ -22,9 +22,9 @@ export function ViewFrame({
   children,
 }: Readonly<{ title: string; href: string; children: ReactNode }>) {
   return (
-    <Stack as="figure" gap="compact" aria-label={title} className="min-w-0">
+    <Stack as="figure" gap="compact" aria-label={title} box="shrink">
       {children}
-      <Inline as="figcaption" className="flex-wrap justify-between">
+      <Inline as="figcaption" wrap justify="between">
         <Text variant="caption">{title}</Text>
         <TextLink href={href}>Open in app</TextLink>
       </Inline>

@@ -179,7 +179,7 @@
 .cl-frame--stage > .cl-frame-card::before {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: var(--z-index-behind);
   background: radial-gradient(
       circle,
       var(--color-site-stage-dot) var(--frame-dot),

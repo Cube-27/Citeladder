@@ -93,11 +93,37 @@ export function perceptionReads() {
       })
       .where('id', '=', analysisId!)
       .execute();
-    if (!input.outcome) return taskId;
+    if (input.outcome)
+      await perceive({
+        tenant,
+        auditId,
+        taskId,
+        analysisId: analysisId!,
+        outcome: input.outcome,
+        input,
+      });
+    return taskId;
+  }
+
+  async function perceive({
+    tenant,
+    auditId,
+    taskId,
+    analysisId,
+    outcome,
+    input,
+  }: {
+    tenant: Tenant;
+    auditId: string;
+    taskId: string;
+    analysisId: string;
+    outcome: string;
+    input: Parameters<typeof answer>[2];
+  }) {
     const analysis = await db
       .selectFrom('response_analyses')
       .select(['artifact_id'])
-      .where('id', '=', analysisId!)
+      .where('id', '=', analysisId)
       .executeTakeFirstOrThrow();
     const perceptionId = randomUUID();
     await db
@@ -108,11 +134,11 @@ export function perceptionReads() {
         project_id: tenant.projectId,
         audit_id: auditId,
         task_id: taskId,
-        analysis_id: analysisId!,
+        analysis_id: analysisId,
         artifact_id: analysis.artifact_id,
         extractor_version: VERSIONS.extractor_version,
         template_version: VERSIONS.template_version,
-        outcome: input.outcome,
+        outcome,
         outcome_reason: input.reason ?? null,
         created_at: new Date(),
       })
@@ -137,7 +163,6 @@ export function perceptionReads() {
           })),
         )
         .execute();
-    return taskId;
   }
 
   async function themes(tenant: Tenant, rows: [id: string, name: string][]) {

@@ -56,7 +56,7 @@ export function OrphanPageDrawer({
       <>
         <SectionBleed as="ul" rows>
           {pages.map((page) => (
-            <Stack as="li" gap="tight" key={page.site_url_id} className="min-w-0">
+            <Stack as="li" gap="tight" key={page.site_url_id} box="shrink">
               {crawlId ? (
                 <PageLink
                   text="body"

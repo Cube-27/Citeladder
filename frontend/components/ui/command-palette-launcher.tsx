@@ -3,11 +3,9 @@ import { useEffect, useState, useSyncExternalStore, type ComponentProps } from '
 import { Button } from '@/components/ui/button';
 import type { CommandPalette, PaletteLaunch } from '@/components/ui/command-palette';
 import { Kbd } from '@/components/ui/kbd';
-import { MASTHEAD_LABELLED } from '@/components/ui/masthead';
 import { Search } from '@/lib/icons';
 import { reportClientError } from '@/lib/client-errors';
 import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
-import { cn } from '@/lib/utils';
 
 function subscribeToPlatform() {
   return () => {};
@@ -45,7 +43,8 @@ export function CommandPaletteTrigger({
       data-palette-launcher=""
       aria-label="Search or jump to"
       aria-keyshortcuts="Meta+K Control+K"
-      className={cn('text-ink-2 text-left', MASTHEAD_LABELLED, className)}
+      look="launcher"
+      className={className}
     >
       <Search className="text-ink-2 size-3.5 shrink-0" aria-hidden />
       <span className="min-w-0 truncate">Search</span>

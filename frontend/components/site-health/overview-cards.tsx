@@ -59,7 +59,7 @@ export function IssueTable({
         <IssueRow
           key={issue.group_id}
           issue={issue}
-          name={(name) => (
+          renderName={(name) => (
             <TextLink
               text="body"
               underline="hover"

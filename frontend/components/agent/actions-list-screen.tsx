@@ -5,7 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { GoalStrip } from '@/components/agent/actions-goal-strip';
 import { ActionsPageContext, useActionsPageContext } from '@/components/agent/actions-page-context';
 import { groupAnchor, levelKey, StatusSection } from '@/components/agent/actions-status-tree';
-import { ActionsToolbar } from '@/components/agent/actions-toolbar';
+import { actionsToolbar } from '@/components/agent/actions-toolbar';
 import { useActionFilters } from '@/components/agent/use-action-filters';
 import {
   useBulkDecision,
@@ -65,7 +65,7 @@ export function ActionsScreen() {
 
   return (
     <ActionsPageContext value={{ scope, view, levels, selection }}>
-      <ReportPage filters={<ActionsToolbar scope={scope} view={view} newCount={counts?.open} />}>
+      <ReportPage filters={actionsToolbar({ scope, view, newCount: counts?.open })}>
         <Text as="h2" variant="heading">
           Close the gaps keeping you out of AI answers
         </Text>

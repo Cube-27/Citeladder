@@ -16,7 +16,7 @@ export function WorkProgress({
   return (
     <Section aria-label={label}>
       <Stack gap="item">
-        <Inline className="flex-wrap justify-between">
+        <Inline wrap justify="between">
           <Inline>
             <Spinner />
             <span className="text-body text-ink min-w-0" aria-live="polite">

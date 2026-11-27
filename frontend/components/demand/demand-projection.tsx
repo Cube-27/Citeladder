@@ -9,7 +9,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
-import { FilterBar } from '@/components/ui/filter-bar';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
 import { DemandLatentDemand } from '@/components/demand/demand-latent-demand';
@@ -173,21 +173,19 @@ export function DemandActions({ demand }: Readonly<{ demand: Demand }>) {
   );
 }
 
-export function demandControls(demand: Demand): ReactNode {
+export function demandControls(demand: Demand): FilterBarProps | undefined {
   const { snapshot, filter } = demand;
-  if (!snapshot) return demand.latest.isLoading ? <FilterBar {...RESERVED_CONTROLS} /> : undefined;
-  return (
-    <FilterBar
-      view={
-        <DemandSignalFilters
-          activeTab={filter.activeTab}
-          onTabChange={filter.setActiveTab}
-          tabCounts={filter.tabCounts}
-        />
-      }
-      status={<DemandLatentDemand snapshot={snapshot} />}
-    />
-  );
+  if (!snapshot) return demand.latest.isLoading ? RESERVED_CONTROLS : undefined;
+  return {
+    view: (
+      <DemandSignalFilters
+        activeTab={filter.activeTab}
+        onTabChange={filter.setActiveTab}
+        tabCounts={filter.tabCounts}
+      />
+    ),
+    status: <DemandLatentDemand snapshot={snapshot} />,
+  };
 }
 
 export function DemandPanel({ demand }: Readonly<{ demand: Demand }>) {

@@ -54,7 +54,7 @@ export function SharedOccurrences({
       </Stack>
       <Stack as="ul" gap="item">
         {entry.occurrences.map((occurrence) => (
-          <Inline as="li" key={occurrence.occurrence_id} className="min-h-target">
+          <Inline as="li" key={occurrence.occurrence_id} box="target">
             <AffectedPageLink
               crawlId={crawlId}
               siteUrlId={occurrence.site_url_id}
@@ -84,7 +84,7 @@ export function AffectedPageLink({
 }>) {
   return (
     <PageLink text="body" className="block min-w-0" crawlId={crawlId} siteUrlId={siteUrlId}>
-      <Stack as="span" gap="tight" className="min-w-0">
+      <Stack as="span" gap="tight" box="shrink">
         <Inline as="span" align="baseline" justify="between">
           <Text variant="body" box="shrink" wrap="truncate" title={pageDisplayTitle(title, url)}>
             {pageDisplayTitle(title, url)}

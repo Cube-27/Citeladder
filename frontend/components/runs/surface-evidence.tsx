@@ -26,7 +26,7 @@ function presenceLabel(evidence: SearchSurfaceEvidence): string {
 function SignalCell({ present, label }: Readonly<{ present: boolean; label: string }>) {
   return (
     <TableCell>
-      <Inline as="span" className="inline-flex">
+      <Inline as="span" inline>
         <Icon icon={present ? Check : Minus} tone={present ? 'positive' : 'ink-2'} />
         <span className="sr-only">{label}: </span>
         <Text variant="body" tone={present ? 'positive' : 'ink-2'}>
@@ -122,12 +122,7 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
             const href = safeLinkUrl(link.url);
             const title = link.title || link.domain || link.url;
             return (
-              <Stack
-                as="li"
-                key={`${link.element_index}-${link.url}`}
-                gap="tight"
-                className="min-w-0"
-              >
+              <Stack as="li" key={`${link.element_index}-${link.url}`} gap="tight" box="shrink">
                 <ClampText phoneWrap text="body">
                   {href ? (
                     <TextLink variant="external" text="body" href={href}>

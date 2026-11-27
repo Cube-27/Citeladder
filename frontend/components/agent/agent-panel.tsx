@@ -60,7 +60,7 @@ export function AgentPanel() {
           projectId={activeProjectId}
           onLeave={close}
           toolbar={
-            <Inline className="flex-wrap justify-end">
+            <Inline wrap justify="end">
               <Button variant="quiet" onClick={() => panel.setChat(null)}>
                 <Icon icon={ICONS.newChat} />
                 New chat

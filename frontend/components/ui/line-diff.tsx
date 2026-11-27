@@ -1,4 +1,3 @@
-import { textRole } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 type DiffLine = { kind: 'same' | 'added' | 'removed'; text: string };
@@ -23,7 +22,7 @@ export function LineDiff({
   return (
     <ol
       aria-label={label}
-      className={textRole('caption', 'bg-well grid overflow-x-auto rounded-control font-mono')}
+      className="text-caption text-ink-2 bg-well rounded-control grid overflow-x-auto font-mono"
     >
       {keyedLines.map((line) => {
         const style = DIFF_LINE[line.kind];

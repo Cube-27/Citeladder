@@ -101,7 +101,7 @@ function IssueBody({ issue, crawlId }: Readonly<{ issue: PageIssue; crawlId: str
           ))}
         </Inline>
       ) : null}
-      <Inline className="flex-wrap">
+      <Inline wrap>
         <AskAgentLink
           handoff={{
             issueGroup: { crawlId, groupId: issue.group_id, siteUrlId: issue.site_url_id },

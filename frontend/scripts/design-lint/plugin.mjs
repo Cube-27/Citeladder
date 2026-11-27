@@ -62,7 +62,6 @@ const plainElement = {
           const found = classValues(value, constants);
           const parts = [
             ...found.strings.flatMap(splitTokens).filter(isValueClass),
-            ...found.roles.map((role) => `textRole('${role}')`),
             ...found.helpers,
             ...found.unreadable.map((name) => `{${name}}`),
           ];
@@ -72,6 +71,28 @@ const plainElement = {
             message: `<${tag}> sets design values itself: ${[...new Set(parts)].slice(0, 6).join(' ')}. Render a primitive (Stack, Inline, Text, Section…) or give one a role prop. ${GUIDE}`,
           });
         }
+      },
+    };
+  },
+};
+
+const SIZING_ATTRIBUTES = new Set(['width', 'height', 'className', 'style']);
+
+const rawMedia = {
+  meta: { type: 'problem' },
+  create(context) {
+    return {
+      JSXOpeningElement(node) {
+        if (node.name.type !== 'JSXIdentifier') return;
+        const tag = node.name.name;
+        const sized = node.attributes.some(
+          (item) => item.type === 'JSXSpreadAttribute' || SIZING_ATTRIBUTES.has(item.name.name),
+        );
+        if (tag === 'img' || (tag === 'svg' && sized))
+          context.report({
+            node,
+            message: `<${tag}> sizes a picture itself, so a logo can set its row's height. Render BrandMark for a logo or mark, Avatar for a person and ProductImage for a product photo. ${GUIDE}`,
+          });
       },
     };
   },
@@ -124,6 +145,7 @@ const plugin = {
         : [];
     }),
     'astro-class': astroClass,
+    'raw-media': rawMedia,
   },
 };
 

@@ -129,7 +129,7 @@ function HierarchyList({
         const source = home ? null : PARENT_SOURCE_LABELS[node.parent_source];
         const childShown = children.some((child) => !shown || shown.has(child.site_url_id));
         return (
-          <Stack as="li" gap="item" key={node.site_url_id} className="min-w-0">
+          <Stack as="li" gap="item" key={node.site_url_id} box="shrink">
             <Inline>
               {crawlId ? (
                 <PageLink

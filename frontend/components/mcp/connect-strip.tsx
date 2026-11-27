@@ -7,7 +7,6 @@ import { Inline } from '@/components/ui/layout';
 import { Menu, MenuContent, MenuLinkItem, MenuTrigger } from '@/components/ui/menu';
 import { CodeToken, Text } from '@/components/ui/typography';
 import { ChevronDown, ExternalLink } from '@/lib/icons';
-import { cn } from '@/lib/utils';
 import { MCP_CLIENT_LINKS, MCP_SERVER_URL, type McpClientLink } from '@/lib/config/mcp-clients';
 
 const HOVER_CLOSE_DELAY_MS = 160;
@@ -87,7 +86,7 @@ export function ConnectStrip({
             <Button
               asChild
               variant={inApp ? 'secondary' : 'primary'}
-              className={cn(!inApp && 'marketing-cta-button')}
+              look={inApp ? undefined : 'cta'}
             >
               <a
                 ref={link}
@@ -145,7 +144,7 @@ export function ConnectStrip({
         <CopyButton
           value={MCP_SERVER_URL}
           variant={inApp ? 'secondary' : 'quiet'}
-          className={cn(!inApp && 'marketing-cta-button')}
+          look={inApp ? undefined : 'cta'}
           copiedLabel="MCP URL copied"
         >
           Copy

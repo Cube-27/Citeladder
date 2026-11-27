@@ -167,7 +167,7 @@ function AddToTrackingButton({
 }
 
 const ARCHIVED_NOTE =
-  'This product is out of your catalog, answer matching and shopping prompts. Its history stays here.';
+  'This product is out of your catalog, prompt matching and shopping prompts. Its history stays here.';
 
 type ControlParts = Readonly<{ notices: ReactNode; actions: ReactNode }>;
 

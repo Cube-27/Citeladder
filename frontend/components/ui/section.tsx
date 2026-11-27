@@ -11,7 +11,7 @@ import {
   SectionTitleRoleContext,
   StateHeadingLevelContext,
 } from '@/components/ui/state-heading-level';
-import { textRole } from '@/components/ui/text-role';
+import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 import './section.css';
 
@@ -73,8 +73,8 @@ export function SectionTitle({
   return (
     <Heading
       {...props}
-      className={textRole(
-        useContext(SectionTitleRoleContext),
+      className={cn(
+        TEXT_ROLE_CLASS[useContext(SectionTitleRoleContext)],
         cn(truncate && 'truncate', className),
       )}
     >
@@ -94,7 +94,7 @@ export function SectionDescription({
   ...props
 }: Readonly<Omit<ComponentPropsWithoutRef<'p'>, 'className'>>) {
   return (
-    <p {...props} className={textRole('body', 'text-ink-2 max-w-copy')}>
+    <p {...props} className="text-body text-ink-2 max-w-copy">
       {children}
     </p>
   );
