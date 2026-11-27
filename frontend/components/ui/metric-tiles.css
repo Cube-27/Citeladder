@@ -19,19 +19,6 @@
   border-inline-end: var(--rule-width) solid var(--color-rule);
   background: var(--color-panel);
   color: var(--text-color-ink-2);
-  &[data-metric='clicks'] {
-    --metric: var(--color-metric-clicks);
-  }
-  &[data-metric='impressions'] {
-    --metric: var(--color-metric-impressions);
-  }
-  &[data-metric='ctr'] {
-    --metric: var(--color-metric-ctr);
-  }
-  &[data-metric='position'] {
-    --metric: var(--color-metric-position);
-    --metric-ink: var(--text-color-metric-ink-dark);
-  }
   & :is(label, .text-body, .text-caption, .text-figure) {
     color: inherit;
   }

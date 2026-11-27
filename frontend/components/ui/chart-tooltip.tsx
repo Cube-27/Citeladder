@@ -9,11 +9,40 @@ import { cn } from '@/lib/utils';
 
 export const seriesColor = (tone: SeriesTone) => `var(--color-data-${tone})`;
 
+export const CHART_TICK_TEXT = { fill: 'var(--text-color-ink-2)', fontSize: 12 } as const;
+
+export function ChartText({
+  x,
+  y,
+  dy,
+  textAnchor,
+  children,
+}: Readonly<{
+  x?: number;
+  y?: number;
+  dy?: number;
+  textAnchor: 'start' | 'middle' | 'end';
+  children: ReactNode;
+}>) {
+  return (
+    <text
+      x={x}
+      y={y}
+      dy={dy}
+      textAnchor={textAnchor}
+      fill={CHART_TICK_TEXT.fill}
+      fontSize={CHART_TICK_TEXT.fontSize}
+    >
+      {children}
+    </text>
+  );
+}
+
 export const AXIS_PROPS = {
   axisLine: false,
   tickLine: false,
   tickMargin: 8,
-  tick: { fill: 'var(--text-color-ink-2)', fontSize: 12 },
+  tick: CHART_TICK_TEXT,
 } as const;
 
 export const GRID_PROPS = {
