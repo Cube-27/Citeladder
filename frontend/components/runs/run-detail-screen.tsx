@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 import { AnswerDialog } from '@/components/runs/answer-dialog';
-import { RunActions, useRunExport } from '@/components/runs/progress-panel';
+import { RunActions } from '@/components/runs/progress-panel';
 import { RunDetailView } from '@/components/runs/run-detail-view';
 import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { RecordPage } from '@/components/templates/record-page';
@@ -58,7 +58,6 @@ export function RunDetailScreen() {
     executions.find((execution) => execution.id === activeExecutionId) ?? null;
 
   const audit = auditQuery.data;
-  const runExport = useRunExport(audit);
   const timeZone = useDisplayTimeZone();
   const title = audit ? runTitle(audit, timeZone) : undefined;
 
@@ -74,8 +73,6 @@ export function RunDetailScreen() {
             onCancel={canRun ? () => cancelMutation.mutate() : undefined}
             onRerunFailures={canRun ? rerunFailures : undefined}
             rerunPending={rerunFailuresMutation.isPending}
-            onExport={runExport.onExport}
-            exporting={runExport.exporting}
           />
         ) : null
       }
@@ -87,7 +84,6 @@ export function RunDetailScreen() {
         executions={executionsQuery.data}
         executionsLoading={executionsQuery.isLoading}
         executionsRead={executionsQuery}
-        exportError={runExport.exportError}
         cancelNotice={failureNotice(cancelMutation, 'cancel the run')}
         rerunNotice={failureNotice(rerunFailuresMutation, 'rerun failed executions')}
         onCancel={() => cancelMutation.mutate()}

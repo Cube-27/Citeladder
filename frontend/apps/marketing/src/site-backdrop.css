@@ -1,13 +1,11 @@
 .cl-site-backdrop {
   position: absolute;
-  z-index: -1;
+  z-index: var(--z-index-behind);
   inset: calc(-1 * var(--marketing-nav-offset)) 0 0;
   pointer-events: none;
 }
 
 .cl-site-backdrop > div {
-  --lb-grain: 0.05;
-
   position: sticky;
   top: 0;
   height: 100vh;
@@ -24,17 +22,13 @@
     var(--color-site-hero-base);
 }
 
-:root[data-theme='dark'] .cl-site-backdrop > div {
-  --lb-grain: 0.07;
-}
-
 .cl-site-backdrop > div::after {
   position: absolute;
   inset: 0;
   content: '';
   background: var(--site-noise);
   mix-blend-mode: overlay;
-  opacity: var(--lb-grain);
+  opacity: var(--site-grain);
 }
 
 .cl-site-main:has(.cl-cta) {
@@ -42,7 +36,7 @@
 }
 
 .cl-site-main:has(.cl-cta) ~ .cl-footer {
-  padding-top: 96px;
+  padding-top: var(--site-space-24);
 }
 
 @supports (animation-timeline: scroll()) {
@@ -60,7 +54,7 @@
   }
 
   to {
-    border-bottom-color: var(--color-line);
+    border-bottom-color: var(--color-rule);
     background-color: var(--site-page);
   }
 }

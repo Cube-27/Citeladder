@@ -11,6 +11,8 @@ import {
   MenuLabel,
   MenuLinkItem,
   MenuSeparator,
+  MenuAlert,
+  MenuIconTrigger,
   MenuTrigger,
 } from '@/components/ui/menu';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
@@ -79,9 +81,7 @@ function UserMenuContent({
         {logout.isPending ? 'Signing out…' : 'Sign out'}
       </MenuItem>
       {logout.isError ? (
-        <p role="alert" className="type-caption text-negative px-2 py-2">
-          Sign out failed. Your session is still active; please try again.
-        </p>
+        <MenuAlert>Sign out failed. Your session is still active; please try again.</MenuAlert>
       ) : null}
     </MenuContent>
   );
@@ -100,12 +100,9 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
   return (
     <Menu open={open} onOpenChange={(next) => setOpen(presenter, next)}>
       {presenter === 'compact' ? (
-        <MenuTrigger
-          aria-label={label}
-          className="focus-ring not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed rounded-control flex size-[var(--control-md)] shrink-0 items-center justify-center transition-colors"
-        >
+        <MenuIconTrigger aria-label={label}>
           <Avatar name={email} />
-        </MenuTrigger>
+        </MenuIconTrigger>
       ) : (
         <SidebarTextTooltip inRail="only">
           <MenuTrigger asChild>

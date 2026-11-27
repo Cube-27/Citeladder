@@ -41,6 +41,7 @@ import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { SettingsGroup } from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
+import { Text } from '@/components/ui/typography';
 
 type Checkout = ReturnType<typeof useSubscriptionCheckout>;
 
@@ -138,9 +139,9 @@ function NextStep({ step }: Readonly<{ step: PlanStep | null }>) {
         <Button variant="secondary" disabled aria-describedby="plan-step-reason">
           {step.label}
         </Button>
-        <span id="plan-step-reason" className="type-caption">
+        <Text id="plan-step-reason" variant="caption">
           Checkout is not open yet
-        </span>
+        </Text>
       </>
     );
   return (

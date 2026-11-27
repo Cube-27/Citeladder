@@ -1,11 +1,11 @@
 import { cn } from '@/lib/utils';
 
 export function wellClasses(className?: string) {
-  return cn('surface-well bg-well rounded-control p-[var(--card-padding)]', className);
+  return cn('surface-well bg-well rounded-control p-card', className);
 }
 
 export const SHEET_FACE =
-  'bg-surface text-ink border-transparent rounded-overlay border shadow-sheet';
+  'bg-panel text-ink border-transparent rounded-overlay border shadow-sheet';
 
 export const POP_FACE =
-  'bg-raised app:bg-surface text-ink border-transparent rounded-card border shadow-pop';
+  'bg-raised app:bg-panel text-ink border-transparent rounded-card border shadow-pop';

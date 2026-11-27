@@ -6,23 +6,23 @@
 .page-editor .cm-editor {
   flex: 1;
   background: transparent;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
 }
 .page-editor .cm-editor .cm-scroller {
   font-family: var(--font-sans);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 .page-editor .cm-editor .cm-content {
-  padding: var(--card-padding) 0;
-  caret-color: var(--color-ink);
+  padding: var(--spacing-card) 0;
+  caret-color: var(--text-color-ink);
 }
 .page-editor .cm-editor .cm-line {
-  padding: 0 var(--card-padding);
+  padding: 0 var(--spacing-card);
 }
 .page-editor .cm-editor .page-editor-h1 {
-  font-size: var(--text-display-sm, 1.5rem);
-  line-height: var(--text-display-sm--line-height, 2rem);
+  font-size: var(--text-display);
+  line-height: var(--text-display--line-height);
 }
 .page-editor .cm-editor .page-editor-h2 {
   font-size: var(--text-title);
@@ -33,7 +33,7 @@
   line-height: var(--text-heading--line-height);
 }
 .page-editor .cm-editor :is(.page-editor-h1, .page-editor-h2, .page-editor-h3) {
-  padding-top: 0.5rem;
+  padding-top: calc(var(--spacing) * 2);
 }
 .page-editor
   .cm-editor
@@ -52,16 +52,16 @@
   font-weight: var(--weight-medium);
 }
 .page-editor .cm-editor .page-editor-link {
-  color: var(--color-accent-text);
+  color: var(--text-color-accent-text);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: calc(var(--spacing) * 0.5);
 }
 .page-editor .cm-editor .page-editor-suggestion {
-  border-bottom-width: 2px;
+  border-bottom-width: var(--spacing-mark);
   border-bottom-style: solid;
   border-color: var(--color-info);
   background: var(--color-info-wash);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   cursor: pointer;
 }
 .page-editor .cm-editor .page-editor-suggestion-needs_input {
@@ -70,37 +70,37 @@
 }
 .page-editor .cm-editor .page-editor-suggestion-replaced {
   text-decoration: line-through;
-  text-decoration-color: var(--color-ink-2);
+  text-decoration-color: var(--text-color-ink-2);
 }
 .page-editor .cm-editor .page-editor-suggestion-applied {
   border-color: var(--color-positive);
   background: var(--color-positive-wash);
 }
 .page-editor .cm-editor .page-editor-proposal {
-  margin-inline-start: 0.25rem;
+  margin-inline-start: var(--spacing);
   white-space: pre-wrap;
 }
 .page-editor .cm-editor .page-editor-proposal-text {
-  border-bottom: 2px dashed var(--color-control-line);
+  border-bottom: var(--spacing-mark) dashed var(--color-control-line);
   background: var(--color-positive-wash);
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   text-decoration: none;
 }
 .page-editor .cm-editor .page-editor-proposal-act {
-  margin-inline-start: 0.25rem;
-  min-height: 1.5rem;
+  margin-inline-start: var(--spacing);
+  min-height: var(--spacing-tag);
   border-radius: var(--radius-mark);
   background: var(--color-raised-2);
-  padding: 0 0.5rem;
+  padding: 0 calc(var(--spacing) * 2);
   font-size: var(--text-caption);
   font-weight: var(--weight-medium);
-  line-height: 1.5rem;
-  color: var(--color-ink);
+  line-height: var(--spacing-tag);
+  color: var(--text-color-ink);
   cursor: pointer;
 }
 .page-editor .cm-editor .page-editor-proposal-apply {
   background: var(--color-primary);
-  color: var(--color-on-primary);
+  color: var(--text-color-on-primary);
 }
 .page-editor .cm-editor .page-editor-proposal-apply:hover {
   background: var(--color-primary-hover);

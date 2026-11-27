@@ -10,6 +10,7 @@ import { Absence } from '@/components/ui/absence';
 import { TrafficUrlButton } from './url-panel';
 import { Notice } from '@/components/ui/notice';
 import { TitledSection } from '@/components/ui/section';
+import { Text } from '@/components/ui/typography';
 
 const COMPARISON_COLUMNS: readonly DataTableColumn[] = [
   { key: 'channel', label: 'Channel' },
@@ -114,5 +115,9 @@ export function Measure({
   format,
 }: Readonly<{ value: number | null; format: (value: number) => string }>) {
   if (value === null) return <Absence state="not_measured" />;
-  return <span className="tabular-nums">{format(value)}</span>;
+  return (
+    <Text variant="body" numeric>
+      {format(value)}
+    </Text>
+  );
 }

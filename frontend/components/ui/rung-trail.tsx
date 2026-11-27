@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Icon } from '@/components/ui/icon';
 import { SectionBleed } from '@/components/ui/section';
 import { Spinner } from '@/components/ui/spinner';
-import { textRole } from '@/components/ui/typography';
+import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
 import { Check, ChevronRight, CircleHelp, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
@@ -31,9 +31,9 @@ function rungFace(status: RungStatus) {
     case 'pending':
       return 'bg-rule';
     case 'running':
-      return 'bg-ink animate-live-rung';
+      return 'bg-mark-ink animate-live-rung';
     case 'done':
-      return 'bg-ink';
+      return 'bg-mark-ink';
     case 'failed':
       return 'bg-negative';
     case 'unavailable':
@@ -48,9 +48,9 @@ function rungFace(status: RungStatus) {
 }
 
 function StepGlyph({ status }: Readonly<{ status: RungStatus }>) {
-  if (status === 'done') return <Icon icon={Check} className="text-ink-2 my-0" />;
-  if (status === 'failed') return <Icon icon={X} className="text-negative my-0" />;
-  if (status === 'unknown') return <Icon icon={CircleHelp} className="text-ink-2 my-0" />;
+  if (status === 'done') return <Icon icon={Check} tone="ink-2" className="my-0" />;
+  if (status === 'failed') return <Icon icon={X} tone="negative" className="my-0" />;
+  if (status === 'unknown') return <Icon icon={CircleHelp} tone="ink-2" className="my-0" />;
   return null;
 }
 
@@ -87,8 +87,8 @@ export function RungTrail({
               />
             </span>
             <span
-              className={textRole(
-                step.status === 'running' ? 'label' : 'body',
+              className={cn(
+                TEXT_ROLE_CLASS[step.status === 'running' ? 'label' : 'body'],
                 step.status === 'pending' ? 'text-ink-2' : undefined,
               )}
             >
@@ -129,7 +129,7 @@ const ROW_SIZE = {
     railTop: 'top-2.5',
     bridge: '-bottom-2 h-auto',
     gap: '',
-    label: (running: boolean) => textRole(running ? 'label' : 'body'),
+    label: (running: boolean) => TEXT_ROLE_CLASS[running ? 'label' : 'body'],
   },
   lg: {
     row: '',
@@ -138,7 +138,7 @@ const ROW_SIZE = {
     railTop: 'top-3',
     bridge: 'bottom-0',
     gap: 'pb-3',
-    label: (running: boolean) => textRole('prose', cn('leading-6', running && 'type-emphasis')),
+    label: (running: boolean) => TEXT_ROLE_CLASS[running ? 'heading' : 'bodyLg'],
   },
 } as const satisfies Record<RowSize, unknown>;
 
@@ -153,10 +153,7 @@ function RungRow({
     <li
       aria-current={step.status === 'running' ? 'step' : undefined}
       data-rung-status={step.status}
-      className={cn(
-        'grid grid-cols-[0.75rem_1rem_minmax(0,1fr)_auto] gap-x-2 last:pb-0',
-        geometry.row,
-      )}
+      className={cn('grid grid-cols-rung gap-x-2 last:pb-0', geometry.row)}
     >
       <span aria-hidden className={cn('relative flex justify-center', geometry.rail)}>
         <span
@@ -185,21 +182,23 @@ function RungRow({
         </span>
         {step.detail ? (
           <span
-            className={textRole(
-              'caption',
-              cn('break-words', step.status === 'failed' && 'text-negative'),
+            className={cn(
+              'text-caption text-ink-2 break-words',
+              step.status === 'failed' && 'text-negative',
             )}
           >
             {step.detail}
           </span>
         ) : null}
         {!step.detail && step.status === 'unavailable' ? (
-          <span aria-hidden className={textRole('caption')}>
+          <span aria-hidden className="text-caption text-ink-2">
             {STATUS_WORD.unavailable}
           </span>
         ) : null}
       </span>
-      <span className="type-caption min-w-[6ch] text-right tabular-nums">{step.time}</span>
+      <span className="text-caption text-ink-2 min-w-rung-figure text-right tabular-nums">
+        {step.time}
+      </span>
     </li>
   );
 }
@@ -240,18 +239,18 @@ export function SetupSteps({
               />
             ) : null}
             <span aria-hidden className="flex w-4 shrink-0 justify-center">
-              {step.state === 'done' ? <Icon icon={Check} className="text-ink-2 my-0" /> : null}
+              {step.state === 'done' ? <Icon icon={Check} tone="ink-2" className="my-0" /> : null}
               {step.state === 'running' ? <Spinner /> : null}
             </span>
             <span
-              className={textRole(
-                current ? 'label' : 'body',
+              className={cn(
+                TEXT_ROLE_CLASS[current ? 'label' : 'body'],
                 cn('min-w-0 truncate', step.state === 'waiting' ? 'text-ink-2' : 'text-ink'),
               )}
             >
               {step.label}
             </span>
-            <span className={textRole('caption', 'text-ink-2 shrink-0')}>
+            <span className="text-caption text-ink-2 shrink-0">
               <span className="sr-only">, </span>
               {SETUP_WORD[step.state]}
             </span>
@@ -281,24 +280,19 @@ export function FoldedTrail({
   return (
     <>
       <details className="group grid min-w-0">
-        <summary
-          className={textRole(
-            'caption',
-            'focus-ring flex min-h-6 min-w-0 cursor-pointer list-none items-center gap-2 rounded-control whitespace-nowrap [&::-webkit-details-marker]:hidden',
-          )}
-        >
+        <summary className="text-caption text-ink-2 focus-ring rounded-control flex min-h-6 min-w-0 cursor-pointer list-none items-center gap-2 whitespace-nowrap [&::-webkit-details-marker]:hidden">
           {live ? <Spinner /> : null}
           <span className="min-w-0 truncate">{live ? live.status : summary}</span>
           {live ? (
-            <span className="type-caption shrink-0 text-current tabular-nums">{live.seconds}s</span>
+            <span className="text-caption shrink-0 text-current tabular-nums">{live.seconds}s</span>
           ) : null}
-          <Icon icon={ChevronRight} className="text-ink-2 my-0 shrink-0 group-open:rotate-90" />
+          <Icon icon={ChevronRight} tone="ink-2" className="my-0 shrink-0 group-open:rotate-90" />
         </summary>
         <div className="pt-3">
           {steps.length ? (
             <RungTrail steps={steps} label={label} />
           ) : (
-            <p className={textRole('caption')}>{empty}</p>
+            <p className="text-caption text-ink-2">{empty}</p>
           )}
         </div>
       </details>

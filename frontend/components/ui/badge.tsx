@@ -2,20 +2,29 @@ import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-export type BadgeTone = 'neutral' | 'accent' | 'positive' | 'negative' | 'warning' | 'info' | 'ink';
+export type BadgeTone =
+  | 'neutral'
+  | 'accent'
+  | 'positive'
+  | 'negative'
+  | 'warning'
+  | 'info'
+  | 'ink'
+  | 'selected';
 
 const TONE: Record<BadgeTone, string> = {
-  neutral: 'bg-surface-sunken text-ink-secondary',
-  accent: 'bg-accent-soft text-accent-ink',
-  positive: 'bg-positive-soft text-positive',
-  negative: 'bg-negative-soft text-negative',
-  warning: 'bg-warning-soft text-warning',
-  info: 'bg-info-soft text-info',
-  ink: 'bg-ink text-on-ink',
+  neutral: 'bg-well text-ink-2',
+  accent: 'bg-accent-wash text-accent-text',
+  positive: 'bg-positive-wash text-positive',
+  negative: 'bg-negative-wash text-negative',
+  warning: 'bg-warning-wash text-warning',
+  info: 'bg-info-wash text-info',
+  ink: 'bg-mark-ink text-on-ink',
+  selected: 'bg-state-selected text-ink',
 };
 
 const BADGE_FACE =
-  'inline-flex min-h-5.5 max-w-full shrink-0 items-center gap-0.5 rounded-xs px-2 align-middle font-sans text-caption tracking-normal whitespace-nowrap';
+  'inline-flex min-h-5.5 max-w-full shrink-0 items-center gap-0.5 rounded-xs px-2 align-middle font-sans text-caption whitespace-nowrap';
 
 export type BadgeProps = {
   children: ReactNode;

@@ -10,7 +10,7 @@ import {
   seriesTone,
   type SeriesTone,
 } from '@/components/ui/step-chart-parts';
-import { textRole } from '@/components/ui/typography';
+
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -107,8 +107,8 @@ export function PartDonut({
         />
         {totalLabel ? (
           <span className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className={textRole('figure')}>{format(whole)}</span>
-            <span className={textRole('caption')}>{totalLabel}</span>
+            <span className="text-figure font-figure text-ink tabular-nums">{format(whole)}</span>
+            <span className="text-caption text-ink-2">{totalLabel}</span>
           </span>
         ) : null}
       </div>
@@ -117,7 +117,7 @@ export function PartDonut({
       ) : (
         <ul aria-hidden className="flex min-w-fit flex-1 flex-col gap-2">
           {rows.map((row) => (
-            <li key={row.label} className={textRole('body', 'flex min-w-0 items-center gap-2')}>
+            <li key={row.label} className="text-body text-ink flex min-w-0 items-center gap-2">
               <span
                 data-part={row.ink?.part ?? 'remainder'}
                 className={cn('rounded-full size-2 shrink-0', row.ink?.fill ?? 'bg-well')}
@@ -144,13 +144,13 @@ function StackedKey({
   return (
     <ul aria-hidden className="flex flex-wrap justify-center gap-x-4 gap-y-1">
       {rows.map((row) => (
-        <li key={row.label} className={textRole('body', 'text-ink-2 flex items-center gap-2')}>
+        <li key={row.label} className="text-body text-ink-2 flex items-center gap-2">
           <span
             data-part={row.ink?.part ?? 'remainder'}
             className={cn('rounded-full size-2 shrink-0', row.ink?.fill ?? 'bg-well')}
           />
           {row.label}
-          <span className="text-ink font-medium tabular-nums">{format(row.value)}</span>
+          <span className="text-ink font-emphasis tabular-nums">{format(row.value)}</span>
         </li>
       ))}
     </ul>
@@ -171,11 +171,7 @@ function DonutRing({
   const data = drawn.length ? drawn : [{ key: 'empty', share: 1, color: WELL }];
   return (
     <div aria-hidden className="block w-full">
-      <PieChart
-        width={size}
-        height={size}
-        style={{ width: '100%', height: 'auto', aspectRatio: 1 }}
-      >
+      <PieChart width={size} height={size} className="aspect-square h-auto w-full">
         <Pie
           data={data.map((segment) => ({ ...segment }))}
           dataKey="share"

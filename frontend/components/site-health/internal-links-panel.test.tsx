@@ -10,7 +10,6 @@ import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { downloadCsv } from '@/lib/csv/download';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar } from '@/components/ui/filter-bar';
 import { InternalLinksPanel } from './internal-links-panel';
 import { useInternalLinksBands } from './internal-links-panel-bands';
 
@@ -87,21 +86,7 @@ function LinksTab({ canAnalyze }: Readonly<{ canAnalyze?: boolean }>) {
   });
   const controls = links.controls;
   return (
-    <ReportPage
-      filters={
-        controls ? (
-          <FilterBar
-            {...controls}
-            actions={
-              <>
-                {links.actions}
-                {controls.actions}
-              </>
-            }
-          />
-        ) : undefined
-      }
-    >
+    <ReportPage filters={controls ? { ...controls, actions: links.actions } : undefined}>
       <InternalLinksPanel read={links.read} workspaceId={project.workspace_id} />
     </ReportPage>
   );
@@ -326,9 +311,13 @@ describe('Internal links', () => {
     );
     const header = screen.getByRole('banner');
     expect(within(header).queryByRole('button', { name: 'Analyze again' })).not.toBeInTheDocument();
-    const controls = screen.getByRole('group', { name: 'Search and filters' });
-    expect(within(controls).getByRole('button', { name: 'Analyze again' })).toBeInTheDocument();
-    await userEvent.click(within(controls).getByRole('button', { name: 'Export CSV' }));
+    const [band, tableBar] = screen.getAllByRole('group', { name: 'Search and filters' });
+    expect(within(band!).getByRole('button', { name: 'Analyze again' })).toBeInTheDocument();
+    expect(within(band!).queryByRole('searchbox')).not.toBeInTheDocument();
+    expect(
+      within(tableBar!).getByRole('searchbox', { name: 'Search pages and anchors' }),
+    ).toBeInTheDocument();
+    await userEvent.click(within(tableBar!).getByRole('button', { name: 'Export CSV' }));
     expect(downloadCsv).toHaveBeenCalledWith(
       'internal-links',
       ['Source page', 'Destination', 'Anchor text', 'Source passage'],

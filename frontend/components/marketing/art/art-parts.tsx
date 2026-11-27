@@ -1,8 +1,61 @@
 import type { ReactNode } from 'react';
 
-import { cn } from '@/lib/utils';
-
 import './art.css';
+
+export type ArtPlace = Readonly<
+  Partial<Record<'top' | 'right' | 'bottom' | 'left' | 'width' | 'height', number>>
+>;
+
+const PLACED = {
+  card: 'div',
+  bubble: 'div',
+  chips: 'div',
+  bars: 'div',
+  shelf: 'div',
+  pill: 'span',
+  link: 'span',
+  node: 'span',
+} as const;
+
+function percent(value: number | undefined) {
+  if (value === undefined) return undefined;
+  return value === 0 ? '0' : `${value}%`;
+}
+
+export function Placed({
+  kind,
+  at,
+  children,
+  ...data
+}: Readonly<{
+  kind: keyof typeof PLACED;
+  at?: ArtPlace;
+  children?: ReactNode;
+  'data-ghost'?: true;
+  'data-picked'?: true;
+  'data-ring'?: true;
+  'data-align'?: 'center';
+  'data-centre'?: 'x' | 'both';
+}>) {
+  const Tag = PLACED[kind];
+  return (
+    <Tag
+      {...data}
+      data-art={kind}
+      data-at={at ? '' : undefined}
+      style={{
+        '--art-top': percent(at?.top),
+        '--art-right': percent(at?.right),
+        '--art-bottom': percent(at?.bottom),
+        '--art-left': percent(at?.left),
+        '--art-width': percent(at?.width),
+        '--art-height': percent(at?.height),
+      }}
+    >
+      {children}
+    </Tag>
+  );
+}
 
 export function Art({ children }: Readonly<{ children: ReactNode }>) {
   return (
@@ -13,50 +66,75 @@ export function Art({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 export function Line({
-  className,
+  width,
   tone = 'soft',
-}: Readonly<{ className: string; tone?: 'soft' | 'strong' | 'wash' }>) {
+  trail = false,
+}: Readonly<{ width: number; tone?: 'soft' | 'strong' | 'wash'; trail?: boolean }>) {
   return (
-    <span className={cn('cl-art-line', tone !== 'soft' && `cl-art-line--${tone}`, className)} />
+    <span
+      className="cl-art-line"
+      data-tone={tone}
+      data-trail={trail || undefined}
+      style={{ '--art-width': `${width}%` }}
+    />
   );
 }
 
 export function Card({
-  className,
+  at,
   ghost = false,
+  picked = false,
+  align,
   children,
-}: Readonly<{ className?: string; ghost?: boolean; children: ReactNode }>) {
+}: Readonly<{
+  at?: ArtPlace;
+  ghost?: boolean;
+  picked?: boolean;
+  align?: 'center';
+  children: ReactNode;
+}>) {
   return (
-    <div className={cn('cl-art-card', ghost && 'cl-art-card--ghost', className)}>{children}</div>
+    <Placed
+      kind="card"
+      at={at}
+      data-ghost={ghost || undefined}
+      data-picked={picked || undefined}
+      data-align={align}
+    >
+      {children}
+    </Placed>
   );
 }
 
 export function Pill({
-  className,
+  at,
+  centre,
   ring = false,
   children,
-}: Readonly<{ className?: string; ring?: boolean; children: ReactNode }>) {
+}: Readonly<{ at?: ArtPlace; centre?: 'x' | 'both'; ring?: boolean; children: ReactNode }>) {
   return (
-    <span className={cn('cl-art-pill', ring && 'cl-art-pill--ring', className)}>{children}</span>
+    <Placed kind="pill" at={at} data-ring={ring || undefined} data-centre={centre}>
+      {children}
+    </Placed>
   );
 }
 
 export function Chips({
-  className,
+  at,
   count,
   children,
-}: Readonly<{ className: string; count: 2 | 4; children?: ReactNode }>) {
+}: Readonly<{ at: ArtPlace; count: 2 | 4; children?: ReactNode }>) {
   const half = count / 2;
   const chip = (key: number) => (
     <span key={key} className="cl-art-chip">
-      <Line className="w-full" tone={children ? 'strong' : 'soft'} />
+      <Line width={100} tone={children ? 'strong' : 'soft'} />
     </span>
   );
   return (
-    <div className={cn('absolute flex items-center gap-[1em]', className)}>
+    <Placed kind="chips" at={at}>
       {Array.from({ length: half }, (_, index) => chip(index))}
       {children}
       {Array.from({ length: half }, (_, index) => chip(half + index))}
-    </div>
+    </Placed>
   );
 }

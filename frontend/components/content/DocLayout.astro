@@ -86,50 +86,53 @@ const hasBar = hasToc || nav !== undefined;
 </div>
 
 <style is:global>
+  :root {
+    --doc-toc-width: 232px;
+  }
   .cl-doc {
     display: grid;
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-    gap: 48px;
+    grid-template-columns: var(--spacing-sidebar) minmax(0, 1fr);
+    gap: var(--site-space-12);
     align-items: start;
   }
   .cl-doc--toc {
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 232px;
+    grid-template-columns: var(--spacing-sidebar) minmax(0, 1fr) var(--doc-toc-width);
   }
   .cl-doc-rail,
   .cl-doc-toc {
     position: sticky;
-    top: calc(var(--nav-height) + 40px);
+    top: calc(var(--nav-height) + var(--site-space-10));
   }
   .cl-doc-rail {
-    max-height: calc(100vh - var(--nav-height) - 64px);
-    margin: 0 -4px;
-    padding: 0 4px;
+    max-height: calc(100vh - var(--nav-height) - var(--site-space-16));
+    margin: 0 calc(-1 * var(--site-space-1));
+    padding: 0 var(--site-space-1);
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: var(--color-line) transparent;
+    scrollbar-color: var(--color-rule) transparent;
   }
   .cl-doc-toc {
     display: flex;
     flex-direction: column;
-    gap: 40px;
-    max-height: calc(100vh - var(--nav-height) - 64px);
-    margin: 0 -4px;
-    padding: 0 4px;
+    gap: var(--site-space-10);
+    max-height: calc(100vh - var(--nav-height) - var(--site-space-16));
+    margin: 0 calc(-1 * var(--site-space-1));
+    padding: 0 var(--site-space-1);
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
-    scrollbar-color: var(--color-line) transparent;
+    scrollbar-color: var(--color-rule) transparent;
   }
   .cl-doc-main {
     display: flex;
     flex-direction: column;
-    gap: 40px;
+    gap: var(--site-space-10);
     min-width: 0;
   }
   .cl-doc-list {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--site-space-0_5);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -137,28 +140,28 @@ const hasBar = hasToc || nav !== undefined;
   .cl-doc-link {
     display: flex;
     align-items: center;
-    min-height: var(--control-md);
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-    color: var(--color-ink-secondary);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    min-height: var(--spacing-control-md);
+    padding: var(--site-space-2) var(--site-space-3);
+    border-radius: var(--radius-inner);
+    color: var(--text-color-ink-2);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
     text-decoration: none;
     transition:
-      background-color var(--motion-fast) var(--ease-standard),
-      color var(--motion-fast) var(--ease-standard);
+      background-color var(--transition-duration-fast) var(--ease-standard),
+      color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-doc-link:hover,
   .cl-doc-link.is-active {
-    background: var(--color-surface-sunken);
-    color: var(--color-ink);
+    background: var(--color-well);
+    color: var(--text-color-ink);
   }
   .cl-doc-link.is-active {
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
   .cl-doc-bar {
     display: none;
-    gap: 12px;
+    gap: var(--site-space-3);
     max-width: var(--container-prose);
   }
   .cl-doc-bar-nav {
@@ -167,7 +170,7 @@ const hasBar = hasToc || nav !== undefined;
   @media (max-width: 1199px) {
     .cl-doc,
     .cl-doc--toc {
-      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+      grid-template-columns: var(--spacing-sidebar) minmax(0, 1fr);
     }
     .cl-doc-toc {
       display: none;
@@ -184,7 +187,7 @@ const hasBar = hasToc || nav !== undefined;
     .cl-doc,
     .cl-doc--toc {
       grid-template-columns: minmax(0, 1fr);
-      gap: 32px;
+      gap: var(--site-space-8);
     }
     .cl-doc-rail {
       display: none;

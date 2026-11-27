@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
-import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
+import { EngineBrandMark } from '@/components/ui/engine-mark';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Inline } from '@/components/ui/layout';
@@ -131,12 +131,11 @@ export function PromptEngineCoverage({ latest }: Readonly<{ latest: PromptMetric
   return (
     <DataTable title="Engine coverage" columns={ENGINE_COLUMNS}>
       {outcomes.map((outcome) => {
-        const mark = engineMarkKey(outcome.logical_engine);
         return (
           <TableRow key={outcome.logical_engine}>
             <TableCell>
               <Inline gap="item">
-                {mark ? <EngineMark engine={mark} brand /> : null}
+                <EngineBrandMark engine={outcome.logical_engine} placement="row" />
                 {engines.label(outcome.logical_engine)}
               </Inline>
             </TableCell>

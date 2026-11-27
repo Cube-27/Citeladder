@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { TextLink } from '@/components/ui/text-link';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+
 import { humanizeApiError } from '@/lib/api/errors';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { isPlanLimit, PLANS_HREF } from '@/lib/billing/plan-limit';
@@ -110,7 +110,7 @@ function MessageNoticeView({
       role={urgent ? 'alert' : undefined}
       data-notice-tone={tone}
       className={cn(
-        textRole('body'),
+        'text-body text-ink',
         'flex flex-wrap gap-2',
         action && title == null ? 'items-center' : 'items-start',
         className,
@@ -121,7 +121,7 @@ function MessageNoticeView({
       </span>
       <div className="flex min-w-0 flex-col gap-1">
         {title != null ? (
-          <p className="type-emphasis">
+          <p className="font-emphasis">
             {word}
             {title}
           </p>
@@ -138,7 +138,7 @@ function MessageNoticeView({
 function NoticeAction({ children }: Readonly<{ children: ReactNode }>) {
   if (!children) return null;
   return (
-    <div className="phone:ms-6 phone:basis-[calc(100%-1.5rem)] phone:justify-start [&_.ui-button-quiet]:text-ink ms-2 flex max-w-full shrink-0 flex-wrap items-center gap-2 self-center">
+    <div className="phone:ms-6 phone:basis-notice-body phone:justify-start [&_.ui-button-quiet]:text-ink ms-2 flex max-w-full shrink-0 flex-wrap items-center gap-2 self-center">
       {children}
     </div>
   );
@@ -162,7 +162,7 @@ function MutationFailureNotice({ notice, onRetry, recovery, className }: Mutatio
     >
       <span className="block">{notice.message}</span>
       {notice.code ? (
-        <span className={textRole('caption', 'block')}>Support: code {notice.code}</span>
+        <span className="text-caption text-ink-2 block">Support: code {notice.code}</span>
       ) : null}
     </MessageNoticeView>
   );
@@ -207,4 +207,12 @@ function withReference(action: ReactNode, requestId: string | undefined): ReactN
       </Tooltip>
     </>
   );
+}
+
+export function NoticeHeading({ children }: Readonly<{ children: ReactNode }>) {
+  return <h1 className="text-heading text-ink">{children}</h1>;
+}
+
+export function NoticeFrame({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className="p-section min-h-notice-fill grid place-items-center">{children}</div>;
 }

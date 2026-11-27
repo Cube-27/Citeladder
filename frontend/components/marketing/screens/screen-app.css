@@ -1,42 +1,56 @@
+:root {
+  --screen-app-width: 1440px;
+  --screen-app-height: 820px;
+  --screen-app-overview-height: 860px;
+  --screen-app-sidebar: 224px;
+  --screen-visibility-width: 1200px;
+  --screen-visibility-height: 704px;
+}
+
 .cl-screen {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--site-space-4);
   width: var(--screen-w);
   height: var(--screen-h);
   overflow: hidden;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   text-align: left;
 }
 
 .cl-screen--visibility {
-  --screen-natural: 1200px;
+  --screen-natural: var(--screen-visibility-width);
   --screen-w: var(--screen-natural);
-  --screen-h: 704px;
+  --screen-h: var(--screen-visibility-height);
 }
 
 .cl-screen--app {
-  --content-gutter: 24px;
-  --page-section-gap: 16px;
-  --workspace-gap: 12px;
-  --compact-gap: 8px;
-  --card-padding: 16px;
-  --table-row-height: var(--row-app);
-  --sidebar-width: 224px;
-  --screen-natural: 1440px;
+  --spacing-gutter: var(--site-space-6);
+  --spacing-section: var(--site-space-4);
+  --spacing-workspace: var(--site-space-3);
+  --spacing-compact: var(--site-space-2);
+  --spacing-card: var(--site-space-4);
+  --spacing-row: var(--row-app);
+  --spacing-sidebar: var(--screen-app-sidebar);
+  --screen-natural: var(--screen-app-width);
   --screen-w: var(--screen-natural);
-  --screen-h: 820px;
-  --radius-card: 6px;
+  --screen-h: var(--screen-app-height);
+  --radius-card: var(--radius-md);
+  --screen-page-edge: color-mix(in oklch, var(--color-rule) 50%, transparent);
 
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-columns: var(--spacing-sidebar) minmax(0, 1fr);
   gap: 0;
   border-radius: var(--radius-lg);
   background: var(--color-ground);
+}
+
+.cl-screen--app th {
+  background: var(--color-page);
 }
 
 .cl-screen--app [data-button-variant='secondary'] {
@@ -47,25 +61,25 @@
 
 .cl-screen--app [data-figure-strip]:not(.cl-vig *, [class*='surface-card'] *) {
   border-color: transparent;
-  background: var(--color-surface);
+  background: var(--color-panel);
 }
 
 .cl-screen--app-overview {
-  --screen-h: 860px;
+  --screen-h: var(--screen-app-overview-height);
 }
 
-.cl-screen--app .type-page-title {
+.cl-screen--app .text-page-title {
   font-family: var(--font-sans);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   letter-spacing: normal;
 }
 
 .cl-app-side {
   display: flex;
   flex-direction: column;
-  gap: var(--page-section-gap);
+  gap: var(--spacing-section);
   min-width: 0;
-  padding: 0 12px 12px;
+  padding: 0 var(--site-space-3) var(--site-space-3);
 }
 
 .cl-app-topbar {
@@ -76,17 +90,17 @@
 }
 
 .cl-app-side > .cl-app-topbar {
-  margin-inline: -12px;
-  padding-inline: 12px;
+  margin-inline: calc(-1 * var(--site-space-3));
+  padding-inline: var(--site-space-3);
 }
 
 .cl-app-ident {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--site-space-3);
   width: 100%;
   height: var(--row-app);
-  padding: 0 12px;
+  padding: 0 var(--site-space-3);
   border-radius: var(--radius-md);
 }
 
@@ -100,7 +114,7 @@
 .cl-app-side-controls {
   display: flex;
   flex-direction: column;
-  gap: var(--page-band-gap);
+  gap: var(--spacing-band);
 }
 
 .cl-app-mode > span {
@@ -116,58 +130,63 @@
 .cl-app-nav {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--site-space-4);
 }
 
 .cl-app-nav-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--site-space-1);
 }
 
 .cl-app-nav-title {
   display: flex;
   align-items: center;
-  height: 28px;
+  height: var(--site-space-7);
   margin: 0;
-  padding: 0 12px;
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  padding: 0 var(--site-space-3);
+  color: var(--text-color-ink-2);
+  font-size: var(--text-body);
+  font-weight: var(--text-body--font-weight);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-app-nav-row {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: var(--control-md);
-  padding: 0 12px;
+  gap: var(--site-space-2);
+  height: var(--spacing-control-md);
+  padding: 0 var(--site-space-3);
   border-radius: var(--radius-md);
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
+  font-size: var(--text-body);
+  font-weight: var(--text-body--font-weight);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-app-nav-row.is-active {
   background: var(--screen-nav-current);
-  color: var(--color-ink);
-  font-weight: 500;
+  color: var(--text-color-ink);
+  font-weight: var(--weight-medium);
 }
 
 .cl-app-nav-row.is-active::before {
   position: absolute;
-  inset-block: 8px;
+  inset-block: var(--site-space-2);
   inset-inline-start: 0;
-  width: 2px;
+  width: var(--site-space-0_5);
   border-radius: var(--radius-full);
   background: var(--color-accent);
   content: '';
 }
 
-.cl-app-nav-icon {
+.cl-app-nav-row > svg {
   flex: none;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
 }
 
-.cl-app-nav-row.is-active .cl-app-nav-icon {
+.cl-app-nav-row.is-active > svg {
   color: var(--color-accent);
 }
 
@@ -184,7 +203,7 @@
 }
 
 .cl-app-nav-count {
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
@@ -195,55 +214,55 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  margin: 8px 8px 0 0;
-  padding: 0 var(--content-gutter) var(--content-gutter);
+  margin: var(--site-space-2) var(--site-space-2) 0 0;
+  padding: 0 var(--spacing-gutter) var(--spacing-gutter);
   border-radius: var(--radius-card) var(--radius-card) 0 0;
   background: var(--color-page);
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--color-line) 50%, transparent);
+  box-shadow: 0 0 0 var(--site-rule) var(--screen-page-edge);
 }
 
 .cl-app-header {
   justify-content: space-between;
-  border-bottom: 1px solid var(--color-line);
-  gap: var(--card-padding);
-  margin-inline: calc(var(--content-gutter) * -1);
-  padding-inline: var(--content-gutter);
+  border-bottom: var(--site-rule) solid var(--color-rule);
+  gap: var(--spacing-card);
+  margin-inline: calc(var(--spacing-gutter) * -1);
+  padding-inline: var(--spacing-gutter);
 }
 
 .cl-app-actions,
 .cl-app-filters {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--site-space-2);
 }
 
 .cl-app-bands {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--page-band-gap);
-  margin-top: var(--page-section-gap);
+  gap: var(--spacing-band);
+  margin-top: var(--spacing-section);
 }
 
 .cl-app-content {
   display: flex;
   flex-direction: column;
-  gap: var(--workspace-gap);
-  margin-top: var(--page-section-gap);
+  gap: var(--spacing-workspace);
+  margin-top: var(--spacing-section);
 }
 
 .cl-app-page > .cl-vig {
   flex: none;
-  max-width: 760px;
+  max-width: var(--site-measure-xl);
   border-radius: var(--radius-card);
-  background: var(--color-surface);
+  background: var(--color-panel);
 }
 
 .cl-app-lede {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: var(--card-padding);
+  gap: var(--site-space-1);
+  margin-bottom: var(--spacing-card);
 }
 
 .cl-app-lede > p {
@@ -260,7 +279,7 @@
 }
 
 .cl-app-split > :last-child {
-  margin-inline-start: -1px;
+  margin-inline-start: calc(-1 * var(--site-rule));
   border-start-start-radius: 0;
   border-end-start-radius: 0;
 }

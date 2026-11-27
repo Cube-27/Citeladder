@@ -29,12 +29,7 @@ const FURTHER_READING = [
 function SourceLink({ source }: Readonly<{ source: Competitor['sources'][number] }>) {
   return (
     <TextLink asChild text="inherit">
-      <a
-        href={source.url}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex min-h-6 items-center"
-      >
+      <a href={source.url} target="_blank" rel="noreferrer" className="cl-source-link">
         {source.label}
       </a>
     </TextLink>
@@ -92,7 +87,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                     source ? (
                       <>
                         <SourceLink source={source} />
-                        <span className="text-ink-muted">
+                        <span className="cl-muted">
                           {' '}
                           · reviewed {formatSiteDate(source.reviewedDate)}
                         </span>

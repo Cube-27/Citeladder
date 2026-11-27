@@ -96,11 +96,13 @@ describe('boot-title.js', () => {
 });
 
 describe('the boot shell geometry', () => {
-  const appTokens = /:root:not\(\[data-public-surface\]\) \{([\s\S]*?)\n\}/u.exec(
-    readFileSync(join(import.meta.dirname, 'src/globals.css'), 'utf8'),
-  )?.[1];
-  const token = (name: string) =>
-    Number(new RegExp(`${name}: (\\d+)px;`, 'u').exec(appTokens ?? '')?.[1]);
+  const css = readFileSync(join(import.meta.dirname, 'src/globals.css'), 'utf8');
+  const appTokens = /:root:not\(\[data-public-surface\]\) \{([\s\S]*?)\n\}/u.exec(css)?.[1] ?? '';
+  const themeTokens = /@theme \{([\s\S]*?)\n\}/u.exec(css)?.[1] ?? '';
+  const token = (name: string) => {
+    const read = new RegExp(`${name}: (\\d+)px;`, 'u');
+    return Number((read.exec(appTokens) ?? read.exec(themeTokens))?.[1]);
+  };
   const px = (element: Element, property: 'height') =>
     Number.parseFloat(getComputedStyle(element)[property]);
 
@@ -114,11 +116,11 @@ describe('the boot shell geometry', () => {
       row: px(at('.boot-row'), 'height'),
       rowWeight: getComputedStyle(at('.boot-row')).fontWeight,
     }).toEqual({
-      masthead: token('--masthead-height'),
-      ident: token('--masthead-height'),
-      switch: token('--control-md'),
-      row: token('--nav-row-height'),
-      rowWeight: sidebarNavRowClasses(false).includes('font-normal') ? '400' : '500',
+      masthead: token('--spacing-masthead'),
+      ident: token('--spacing-masthead'),
+      switch: token('--spacing-control-md'),
+      row: token('--spacing-nav-row'),
+      rowWeight: sidebarNavRowClasses(false).includes('text-body') ? '400' : '500',
     });
   });
 });

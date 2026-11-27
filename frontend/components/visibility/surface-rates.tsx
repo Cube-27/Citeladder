@@ -6,7 +6,7 @@ import { Absence } from '@/components/ui/absence';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { ClampText } from '@/components/ui/clamp-text';
 import { Inline } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { formatPercent } from '@/lib/format';
 import type { AioRate, SurfaceRates } from '@citeladder/contracts';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -50,11 +50,8 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
       </SectionHeader>
       <SectionBleed as="ul" rows>
         {rates.map((entry) => (
-          <li
-            key={entry.name}
-            className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
-          >
-            <ClampText phoneWrap className={textRole('body', 'flex-[1_1_15rem]')}>
+          <Inline as="li" key={entry.name} gap="meta" align="baseline" justify="between">
+            <ClampText phoneWrap grow text="body">
               <Inline as="span">
                 <BrandMark
                   name={entry.name}
@@ -64,19 +61,21 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
                 {entry.name}
               </Inline>
             </ClampText>
-            <div className="flex shrink-0 items-center gap-2">
+            <Inline box="fixed">
               {entry.rate.value === null ? (
-                <Absence state="unavailable" className="type-body text-ink-2" />
+                <Absence state="unavailable" body />
               ) : (
                 <>
-                  <span className="type-body tabular-nums">{formatPercent(entry.rate.value)}</span>
-                  <span className="type-caption tabular-nums">
+                  <Text variant="body" numeric>
+                    {formatPercent(entry.rate.value)}
+                  </Text>
+                  <Text variant="caption" numeric>
                     {`${entry.rate.numerator} of ${entry.rate.denominator}`}
-                  </span>
+                  </Text>
                 </>
               )}
-            </div>
-          </li>
+            </Inline>
+          </Inline>
         ))}
       </SectionBleed>
     </Section>

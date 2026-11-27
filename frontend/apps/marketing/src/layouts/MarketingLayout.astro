@@ -113,7 +113,7 @@ const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplication
     {gaMeasurementId && <GoogleAnalytics />}
     <a href="#main" class="skip-link">Skip to main content</a>
     <SiteNav path={Astro.url.pathname} />
-    <div class="cl-site-main relative z-1 overflow-x-clip">
+    <div class="cl-site-main relative overflow-x-clip">
       <div class="cl-site-backdrop" aria-hidden="true"><div></div></div>
       <slot />
     </div>

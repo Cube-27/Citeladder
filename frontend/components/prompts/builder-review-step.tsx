@@ -17,6 +17,7 @@ import {
   type CoverageRow,
   type PlannedCoverage,
 } from '@/lib/prompts/builder-run';
+import { Text } from '@/components/ui/typography';
 
 const STATE: Record<
   PlannedCoverage,
@@ -36,9 +37,9 @@ function CoverageValue({
   const short = row.state === 'short' || row.state === 'empty';
   return (
     <Inline>
-      <span className="tabular-nums">
+      <Text variant="body" numeric>
         {row.actual} of {row.target}
-      </span>
+      </Text>
       <StatusMark variant="status" value={STATE[row.state].badge}>
         {STATE[row.state].label}
       </StatusMark>

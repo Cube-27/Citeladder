@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { COMMERCE_TARGETS_MAX } from '@citeladder/contracts/commerce-suite';
 import { X } from '@/lib/icons';
 import { humanizeApiError } from '@/lib/api/errors';
@@ -25,19 +25,19 @@ export function BulkActions({
   const hint = tooMany ? `Up to ${COMMERCE_TARGETS_MAX} products at a time` : null;
   return (
     <Section>
-      <Inline gap="compact" className="flex-wrap justify-between">
+      <Inline gap="compact" wrap justify="between">
         <Stack gap="tight">
-          <span aria-live="polite" className={textRole('body')}>
+          <Text variant="body" aria-live="polite">
             {count ? `${count} ${noun} selected` : 'No products selected'}
-          </span>
-          {hint ? <span className="type-caption">{hint}</span> : null}
+          </Text>
+          {hint ? <Text variant="caption">{hint}</Text> : null}
           {error ? (
-            <span role="alert" className="type-caption text-negative">
+            <Text role="alert" variant="caption" tone="negative">
               {humanizeApiError(error, 'Competitor discovery could not start.').message}
-            </span>
+            </Text>
           ) : null}
         </Stack>
-        <Inline className="flex-wrap">
+        <Inline wrap>
           <Button
             variant="secondary"
             disabled={!count || tooMany}

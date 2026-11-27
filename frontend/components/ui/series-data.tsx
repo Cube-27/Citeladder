@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import type { EventKind } from '@/components/ui/step-chart-parts';
 import { ChartTable } from '@/components/ui/chart-frame';
-import { textRole } from '@/components/ui/typography';
+
 import { Value } from '@/components/ui/value';
 import { absent, type Formatted, formattedText } from '@/lib/format';
 
@@ -124,7 +124,7 @@ export function SingleMeasurements({
           const value = line.values[0];
           return (
             <li key={line.name} className="flex min-w-0 items-center justify-between gap-4 py-1">
-              <span className={textRole('body', 'text-ink-2 min-w-0 truncate')} title={line.name}>
+              <span className="text-body text-ink-2 min-w-0 truncate" title={line.name}>
                 {line.name}
               </span>
               <Value
@@ -135,7 +135,7 @@ export function SingleMeasurements({
           );
         })}
       </ul>
-      <p className={textRole('caption')}>{`Measured ${point.label}`}</p>
+      <p className="text-caption text-ink-2">{`Measured ${point.label}`}</p>
     </div>
   );
 }

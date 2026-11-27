@@ -28,14 +28,14 @@
   }
 }
 :is(.tooltip-panel[data-state$='open'], .menu-panel:is([data-state$='open'], [data-open])) {
-  animation: popup-in var(--motion-normal) ease;
+  animation: popup-in var(--transition-duration-fast) ease;
 }
 :is(.menu-panel, .tooltip-panel)[data-state='closed'] {
-  animation: popup-out var(--motion-menu-exit) var(--ease-exit) both;
+  animation: popup-out var(--transition-duration-fast) var(--ease-standard) both;
 }
 [data-selection-dock] {
   --popup-from: -50% 8px;
-  animation: popup-in var(--motion-open) var(--ease-standard);
+  animation: popup-in var(--transition-duration-open) var(--ease-standard);
 }
 
 .toast-stack {
@@ -55,14 +55,14 @@
   scale: var(--toast-scale);
   transform-origin: top;
   transition-property: translate, scale;
-  transition-duration: var(--motion-toast);
+  transition-duration: var(--transition-duration-slide);
   transition-timing-function: var(--ease-fluid);
 }
 .toast-panel:not([data-front]) {
   height: var(--front-height, auto);
 }
 .toast-panel > * {
-  transition: opacity var(--motion-normal) var(--ease-fluid);
+  transition: opacity var(--transition-duration-fast) var(--ease-fluid);
 }
 .toast-stack .toast-panel:not([data-front]) > * {
   opacity: 0;
@@ -87,18 +87,18 @@
 }
 .toast-panel[data-state='open'] {
   --popup-from: 0 -16px;
-  animation: popup-in var(--motion-open) var(--ease-fluid);
+  animation: popup-in var(--transition-duration-open) var(--ease-fluid);
 }
 .toast-panel[data-state='closed'] {
   z-index: 0;
-  animation: popup-out var(--motion-close) var(--ease-fluid) both;
+  animation: popup-out var(--transition-duration-close) var(--ease-fluid) both;
 }
 
 .toast-panel[data-swipe] {
   translate: var(--radix-toast-swipe-move-x, var(--radix-toast-swipe-end-x, 0)) var(--toast-y);
 }
 .toast-panel[data-swipe='cancel'] {
-  transition: translate var(--motion-close) var(--ease-standard);
+  transition: translate var(--transition-duration-close) var(--ease-standard);
 }
 .toast-panel[data-swipe='end'] {
   --popup-from: 100% var(--toast-y);
@@ -112,13 +112,13 @@
   --popup-scale: 1.05;
 }
 .dialog-overlay[data-state='open'] {
-  animation: popup-in var(--motion-normal) var(--ease-standard) both;
+  animation: popup-in var(--transition-duration-fast) var(--ease-standard) both;
 }
 .dialog-panel[data-state='open'] {
-  animation: popup-in var(--motion-overlay) var(--ease-quad) both;
+  animation: popup-in var(--transition-duration-press) var(--ease-quad) both;
 }
 :is(.dialog-overlay, .dialog-panel)[data-state='closed'] {
-  animation: popup-out var(--motion-menu-exit) var(--ease-exit) both;
+  animation: popup-out var(--transition-duration-fast) var(--ease-standard) both;
 }
 
 .drawer-panel {
@@ -138,20 +138,20 @@
   }
 }
 .drawer-overlay[data-state='open'] {
-  animation: popup-in var(--motion-overlay) var(--ease-fluid) both;
+  animation: popup-in var(--transition-duration-press) var(--ease-fluid) both;
 }
 .drawer-panel[data-state='open'] {
-  animation: slide-in var(--motion-overlay) var(--ease-fluid) both;
+  animation: slide-in var(--transition-duration-press) var(--ease-fluid) both;
 }
 .drawer-overlay[data-state='closed'] {
-  animation: popup-out var(--motion-slow) var(--ease-fluid) both;
+  animation: popup-out var(--transition-duration-open) var(--ease-fluid) both;
 }
 .drawer-panel[data-state='closed'] {
-  animation: slide-out var(--motion-slow) var(--ease-fluid) both;
+  animation: slide-out var(--transition-duration-open) var(--ease-fluid) both;
 }
 
 .disclosure > summary > svg {
-  transition: rotate var(--motion-open) var(--ease-quad);
+  transition: rotate var(--transition-duration-open) var(--ease-quad);
 }
 .disclosure[open] > summary > svg {
   rotate: -180deg;
@@ -165,9 +165,9 @@
     opacity: 0;
     overflow-y: clip;
     transition:
-      block-size var(--motion-open) var(--ease-quad),
-      opacity var(--motion-open) var(--ease-standard),
-      content-visibility var(--motion-open) allow-discrete;
+      block-size var(--transition-duration-open) var(--ease-quad),
+      opacity var(--transition-duration-open) var(--ease-standard),
+      content-visibility var(--transition-duration-open) allow-discrete;
   }
   .disclosure[open]::details-content {
     block-size: auto;
@@ -190,11 +190,11 @@
     background: linear-gradient(
       90deg,
       transparent,
-      color-mix(in oklch, var(--color-surface) 55%, transparent),
+      color-mix(in oklch, var(--color-panel) 55%, transparent),
       transparent
     );
     translate: -100% 0;
-    animation: skeleton-sweep var(--motion-sweep) var(--ease-sweep) infinite;
+    animation: skeleton-sweep var(--transition-duration-sweep) var(--ease-sweep) infinite;
   }
   .skeleton-sweep .skeleton-sweep::after {
     content: none;
@@ -217,7 +217,7 @@
   }
 }
 [data-sidebar-toggled] [data-sidebar-frame] {
-  animation: sidebar-labelled-in var(--motion-open) var(--ease-standard);
+  animation: sidebar-labelled-in var(--transition-duration-open) var(--ease-standard);
 }
 [data-sidebar-toggled][data-sidebar-state='collapsed'] [data-sidebar-frame] {
   animation-name: sidebar-rail-in;

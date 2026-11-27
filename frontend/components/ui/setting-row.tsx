@@ -2,7 +2,7 @@ import { useId, type HTMLAttributes, type ReactNode } from 'react';
 
 import { FieldFoot, type ControlProps } from '@/components/ui/field';
 import { Section, SectionBleed, SectionDescription, SectionHeader } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+
 import { cn } from '@/lib/utils';
 
 export function SettingsGroup({
@@ -29,7 +29,7 @@ export function SettingsGroup({
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h2
             id={titleId}
-            className={textRole('subheading', 'flex min-w-0 items-center gap-2 break-words')}
+            className="text-label text-ink flex min-w-0 items-center gap-2 break-words"
           >
             {title}
           </h2>
@@ -92,9 +92,7 @@ export function SettingRow({
         {hasValue || action ? (
           <div className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2">
             {hasValue ? (
-              <div className={textRole('body', 'text-ink-2 min-w-0 text-end break-words')}>
-                {value}
-              </div>
+              <div className="text-body text-ink-2 min-w-0 text-end break-words">{value}</div>
             ) : null}
             {action}
           </div>
@@ -141,7 +139,7 @@ export function SettingField({
       }
     >
       <div className="grid min-w-0 flex-1 basis-60 content-start gap-0.5">
-        <label htmlFor={id} className={textRole('label')}>
+        <label htmlFor={id} className="text-label text-ink">
           {label}
           {required ? (
             <span aria-hidden="true" className="text-ink-2 ms-0.5">
@@ -150,7 +148,7 @@ export function SettingField({
           ) : null}
         </label>
         {hint ? (
-          <p id={hintId} className={textRole('caption')}>
+          <p id={hintId} className="text-caption text-ink-2">
             {hint}
           </p>
         ) : null}
@@ -172,9 +170,9 @@ export function SettingField({
 function RowName({ label, description }: Readonly<{ label: ReactNode; description?: ReactNode }>) {
   return (
     <div className="grid min-w-0 flex-1 basis-60 gap-0.5">
-      <div className={textRole('label')}>{label}</div>
+      <div className="text-label text-ink">{label}</div>
       {description === undefined || description === null ? null : (
-        <div className={textRole('caption', 'min-w-0 break-words')}>{description}</div>
+        <div className="text-caption text-ink-2 min-w-0 break-words">{description}</div>
       )}
     </div>
   );

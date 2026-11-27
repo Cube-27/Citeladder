@@ -5,7 +5,7 @@ import { contactSalesHref } from '@/lib/config/contact-sales';
 
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 
 function PolicyLink({ path, children }: Readonly<{ path: `/${string}`; children: string }>) {
   return (
@@ -19,14 +19,14 @@ function PolicyLink({ path, children }: Readonly<{ path: `/${string}`; children:
 
 export function CheckoutConsent({ recurring }: Readonly<{ recurring: boolean }>) {
   return (
-    <p className={textRole('caption')}>
+    <Text as="p" variant="caption">
       {recurring
         ? 'By continuing you authorise a recurring monthly charge of the quoted total until you cancel. Cancellation takes effect at the end of the paid period. '
         : 'By continuing you authorise a single charge of the quoted total. It does not renew. '}
       You agree to the <PolicyLink path="/terms">Terms of Service</PolicyLink>,{' '}
       <PolicyLink path="/refund-policy">Refund Policy</PolicyLink> and{' '}
       <PolicyLink path="/cancellation-policy">Cancellation Policy</PolicyLink>.
-    </p>
+    </Text>
   );
 }
 

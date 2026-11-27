@@ -6,8 +6,7 @@ const QUOTED_WELLS = new Map([
 ]);
 
 const NEGATIVE_MARGIN = /(?<![\w-])-m[xytblrse]?-(?:\[[^\]\s]+\]|\([^)\s]+\)|[\d.]+|px)(?![\w-])/g;
-const LAYOUT_FACE =
-  /\b(?:slipClasses|SLIP_FACE|FRAMED_FACE|STEP_SLIP|wellClasses)\b|(?<![\w-])surface-card(?![\w-])/g;
+const LAYOUT_FACE = /\bwellClasses\b|(?<![\w-])surface-card(?![\w-])/g;
 const ANCESTOR_KEY = /\[(?:data-section\b|role=['"]?dialog\b)/;
 
 const featureCode = (label) =>
@@ -72,15 +71,26 @@ function keysOnAncestor(selector) {
   });
 }
 
+function ruleHeads(source) {
+  const heads = [];
+  let start = 0;
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '{' && index > start) heads.push({ start, text: source.slice(start, index + 1) });
+    if (char === '{' || char === '}' || char === ';') start = index + 1;
+  }
+  return heads;
+}
+
 export function ancestorRuleFindings(label, css) {
   const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
   const findings = [];
-  for (const match of source.matchAll(/([^{};]+)\{/g)) {
-    const selector = match[1].trim();
+  for (const { start, text } of ruleHeads(source)) {
+    const selector = text.slice(0, -1).trim();
     if (selector.startsWith('@') || !ANCESTOR_KEY.test(selector)) continue;
     if (keysOnAncestor(selector))
       findings.push(
-        `${label}:${lineAt(source, match.index + match[0].search(/\S/))}: rule keyed on an ancestor section or dialog`,
+        `${label}:${lineAt(source, start + text.search(/\S/))}: rule keyed on an ancestor section or dialog`,
       );
   }
   return findings;

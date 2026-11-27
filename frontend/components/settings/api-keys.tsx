@@ -10,7 +10,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
@@ -97,7 +97,9 @@ function KeyRow({
       <TableCell>
         <div className="grid min-w-0">
           <ClampText tooltip={apiKey.name}>{apiKey.name}</ClampText>
-          <code className={textRole('caption', 'truncate')}>{apiKey.prefix}…</code>
+          <Text as="code" variant="caption-mono" wrap="truncate">
+            {apiKey.prefix}…
+          </Text>
         </div>
       </TableCell>
       <TableCell>
@@ -106,7 +108,7 @@ function KeyRow({
       <TableCell>
         <div className="grid min-w-0">
           <span>{writes ? 'Read and write' : 'Read'}</span>
-          <ClampText tooltip={projects} className={textRole('caption')}>
+          <ClampText tooltip={projects} text="caption">
             {projects}
           </ClampText>
         </div>
@@ -115,14 +117,18 @@ function KeyRow({
         {apiKey.expires_at ? (
           <DisplayTime value={apiKey.expires_at} dateOnly />
         ) : (
-          <span className="text-ink-2">Never</span>
+          <Text variant="body" tone="ink-2">
+            Never
+          </Text>
         )}
       </TableCell>
       <TableCell>
         {apiKey.last_used_at ? (
           <DisplayTime value={apiKey.last_used_at} dateOnly />
         ) : (
-          <span className="text-ink-2">Not used yet</span>
+          <Text variant="body" tone="ink-2">
+            Not used yet
+          </Text>
         )}
       </TableCell>
       <TableActionsCell>
@@ -152,9 +158,7 @@ function KeysHeadActions({
   const limit = list.limit ?? 0;
   return (
     <>
-      <span className={textRole('caption', 'text-ink-2')}>
-        {`${formatCount(live)} of ${formatCount(limit)} keys in use`}
-      </span>
+      <Text variant="caption">{`${formatCount(live)} of ${formatCount(limit)} keys in use`}</Text>
       <Button onClick={onCreate} disabled={live >= limit}>
         Create key
       </Button>
@@ -246,7 +250,9 @@ export function ApiKeys() {
         region={false}
         description={
           <>
-            <code className={textRole('code', 'break-words')}>{API_BASE_URL}</code>{' '}
+            <Text as="code" variant="code" wrap="words">
+              {API_BASE_URL}
+            </Text>{' '}
             <CopyButton
               value={API_BASE_URL}
               iconOnly

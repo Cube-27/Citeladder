@@ -5,11 +5,11 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog } from '@/components/ui/dialog';
-import { Stack } from '@/components/ui/layout';
+import { Stack, Inline } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { useToast } from '@/components/ui/toast';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations, projectQueries } from '@/lib/api/projects';
 import { formatCount } from '@/lib/format';
@@ -94,7 +94,7 @@ function PromptPicker({
         {byTopic(list.prompts).map(([topic, prompts]) => (
           <Stack key={topic ?? ''} gap="compact">
             <Checkbox
-              label={<span className={textRole('label')}>{topic ?? 'No topic'}</span>}
+              label={<Text variant="label">{topic ?? 'No topic'}</Text>}
               checked={groupState(prompts, checked)}
               onCheckedChange={(on) =>
                 toggle(
@@ -115,11 +115,11 @@ function PromptPicker({
           </Stack>
         ))}
       </Stack>
-      <div className="flex items-center justify-between gap-3">
-        <span className={textRole('caption')}>
+      <Inline gap="group" justify="between">
+        <Text variant="caption">
           {formatCount(checked.size)} of {formatCount(list.prompts.length)}
-        </span>
-        <span className="flex gap-2">
+        </Text>
+        <Inline as="span" align="stretch">
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
@@ -140,8 +140,8 @@ function PromptPicker({
           >
             Save prompts
           </Button>
-        </span>
-      </div>
+        </Inline>
+      </Inline>
     </>
   );
 }

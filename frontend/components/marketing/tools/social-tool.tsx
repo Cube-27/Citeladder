@@ -34,7 +34,7 @@ export function SocialPreview() {
         <img
           src={localImage}
           alt={alt || 'Locally selected preview'}
-          className="aspect-[1.91/1] w-full object-cover"
+          className="cl-social-image"
           onError={() => {
             setFile(null);
             setLocalImage('');
@@ -42,11 +42,9 @@ export function SocialPreview() {
           }}
         />
       ) : (
-        <div className="bg-surface-sunken cl-body flex aspect-[1.91/1] items-center justify-center p-6 text-center">
-          Select a local image to preview its crop
-        </div>
+        <div className="cl-body cl-social-empty">Select a local image to preview its crop</div>
       )}
-      <div className="flex flex-col gap-2 p-5">
+      <div className="cl-social-meta">
         <p className="cl-note truncate">{url || 'https://example.com'}</p>
         <h3 className="cl-fcard-title break-words">{title || 'Your page title'}</h3>
         <p className="cl-body break-words">

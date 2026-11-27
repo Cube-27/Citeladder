@@ -11,7 +11,7 @@ import {
 } from '@/components/demand/demand-projection';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar } from '@/components/ui/filter-bar';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { SearchIntelligenceCitationMatcher } from '@/components/search-intelligence/search-intelligence-citation-matcher';
 import { SearchIntelligenceCollection } from './search-intelligence-collection';
 import { useSearchCollection, type SearchCollection } from './search-intelligence-collection-state';
@@ -258,10 +258,10 @@ function researchView({
   cancelling: boolean;
   savedView: (tab: Tab) => FilterDefinition[];
   onOpen: (dataset: SearchIntelligenceDataset) => void;
-}>): Readonly<{ filters?: ReactNode; body: ReactNode }> {
+}>): Readonly<{ filters?: FilterBarProps; body: ReactNode }> {
   if (readiness.isPending)
     return {
-      filters: <FilterBar {...RESERVED_CONTROLS} />,
+      filters: RESERVED_CONTROLS,
       body: statePanels((value) => <ResearchLoading tab={value} />),
     };
   if (readiness.isError)
@@ -299,18 +299,16 @@ function researchView({
   ) : undefined;
   return {
     filters:
-      tab === 'demand' ? undefined : (
-        <FilterBar
-          {...pageControls({
+      tab === 'demand'
+        ? undefined
+        : pageControls({
             datasets,
             collection: empty ? null : collection,
             onSeed: actions.onSeed,
             onMatch: actions.onMatch,
             onExpand: actions.onExpand,
             savedView: savedView(tab),
-          })}
-        />
-      ),
+          }),
     body: (
       <SectionStack>
         <UnavailableNotice data={loaded} />

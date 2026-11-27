@@ -27,7 +27,7 @@ import { formatCount, formatPercent } from '@/lib/format';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pager } from '@/components/ui/pager';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import type {
   AffectedPage,
@@ -72,10 +72,14 @@ function IssueBrief({ issue }: Readonly<{ issue: IssueHead }>) {
   return (
     <Stack gap="item">
       {issue.description ? (
-        <p className={textRole('body', 'max-w-prose')}>{issue.description}</p>
+        <Text as="p" variant="body" box="prose">
+          {issue.description}
+        </Text>
       ) : null}
       {issue.remediation ? (
-        <p className={textRole('body', 'max-w-prose whitespace-pre-line')}>{issue.remediation}</p>
+        <Text as="p" variant="body" box="prose" wrap="lines">
+          {issue.remediation}
+        </Text>
       ) : null}
     </Stack>
   );
@@ -120,13 +124,14 @@ export function IssuePage({
   const back = new URLSearchParams(location.search);
   back.delete('issue');
   const backQuery = back.toString();
+  const backHref = backQuery ? `${location.pathname}?${backQuery}` : location.pathname;
   return (
     <PageDrawerHost workspaceId={scope.workspaceId}>
       <ReportPage
         trail={[
           {
             label: 'Issues',
-            href: `${location.pathname}${backQuery ? `?${backQuery}` : ''}`,
+            href: backHref,
             onClick: (event) => {
               if (event.metaKey || event.ctrlKey || event.shiftKey) return;
               event.preventDefault();
@@ -136,7 +141,7 @@ export function IssuePage({
         ]}
         crumb={{ label: title }}
         actions={
-          <Inline className="flex-wrap items-center justify-end">
+          <Inline wrap justify="end">
             <IssueFixActions scope={scope} crawlId={crawlId} groupId={issue.group_id} />
             <CopyButton value={buildFixPrompt(issue)} variant="secondary" className="w-fit">
               Copy fix prompt
@@ -389,11 +394,13 @@ function SiteLevelList({
       {evidence.sections.length > 0 ? (
         <SectionBleed as="ul" rows>
           {evidence.sections.map((section) => (
-            <Inline as="li" key={section.pathPrefix} className="flex-wrap justify-between">
-              <ClampText className={textRole('body', 'min-w-0 flex-1')}>
+            <Inline as="li" key={section.pathPrefix} wrap justify="between">
+              <ClampText text="body" className="flex-1">
                 {section.pathPrefix}
               </ClampText>
-              <span className="type-caption tabular-nums">{pageCountLabel(section.pageCount)}</span>
+              <Text variant="caption" numeric>
+                {pageCountLabel(section.pageCount)}
+              </Text>
             </Inline>
           ))}
         </SectionBleed>
@@ -409,18 +416,18 @@ function SiteLevelList({
               pageKind={page.pageKind}
             />
             {page.clicksFromHome === null ? null : (
-              <span className="type-caption tabular-nums">
+              <Text variant="caption" numeric>
                 {page.clicksFromHome} clicks from the homepage
-              </span>
+              </Text>
             )}
           </Stack>
         ))}
       </SectionBleed>
       {hidden > 0 ? (
         <SectionFooter>
-          <p className="type-caption">
+          <Text as="p" variant="caption">
             Showing {evidence.pages.length} of {evidence.total} pages.
-          </p>
+          </Text>
         </SectionFooter>
       ) : null}
     </>
@@ -448,15 +455,13 @@ function DuplicateSetList({
       <SectionBleed as="ul" rows>
         {evidence.sets.map((set) => (
           <Stack as="li" gap="tight" key={set.pages[0]?.siteUrlId ?? set.text}>
-            <ClampText className={textRole('body')}>
+            <ClampText text="body">
               {`These ${pageCountLabel(set.pageCount)} share “${set.text}”`}
             </ClampText>
-            {set.pages.length < set.pageCount ? (
-              <span className="type-caption">Including:</span>
-            ) : null}
+            {set.pages.length < set.pageCount ? <Text variant="caption">Including:</Text> : null}
             <Stack as="ul" gap="item">
               {set.pages.map((page) => (
-                <li key={page.siteUrlId} className="flex min-h-6 min-w-0 items-center">
+                <Inline as="li" key={page.siteUrlId} box="target">
                   <AffectedPageLink
                     crawlId={crawlId}
                     siteUrlId={page.siteUrlId}
@@ -464,7 +469,7 @@ function DuplicateSetList({
                     url={page.url}
                     pageKind={page.pageKind}
                   />
-                </li>
+                </Inline>
               ))}
             </Stack>
           </Stack>
@@ -472,9 +477,9 @@ function DuplicateSetList({
       </SectionBleed>
       {shown < evidence.total ? (
         <SectionFooter>
-          <p className="type-caption">
+          <Text as="p" variant="caption">
             Showing {shown} of {evidence.total} pages.
-          </p>
+          </Text>
         </SectionFooter>
       ) : null}
     </>
@@ -503,16 +508,16 @@ function LinkTargetList({
         const hidden = target.pageCount - target.pages.length;
         return (
           <Stack as="li" gap="tight" key={target.url}>
-            <ClampText className={textRole('body')}>
+            <ClampText text="body">
               {`${sitePath(target.url, origin)} → ${linkOutcomeLabel(target.outcome, origin)}`}
             </ClampText>
-            <span className="type-caption tabular-nums">
+            <Text variant="caption" numeric>
               On {pageCountLabel(target.pageCount)}
               {hidden > 0 ? ', including:' : ':'}
-            </span>
+            </Text>
             <Stack as="ul" gap="item">
               {target.pages.map((page) => (
-                <li key={page.siteUrlId} className="flex min-h-6 min-w-0 items-center">
+                <Inline as="li" key={page.siteUrlId} box="target">
                   <AffectedPageLink
                     crawlId={crawlId}
                     siteUrlId={page.siteUrlId}
@@ -520,7 +525,7 @@ function LinkTargetList({
                     url={page.url}
                     pageKind={page.pageKind}
                   />
-                </li>
+                </Inline>
               ))}
             </Stack>
           </Stack>

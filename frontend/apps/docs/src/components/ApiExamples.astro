@@ -68,10 +68,13 @@ const responseExample =
 </div>
 
 <style>
+  :root {
+    --docs-example-max: 420px;
+  }
   .cl-docs-examples {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--site-space-4);
     min-width: 0;
     min-height: 0;
   }
@@ -85,7 +88,7 @@ const responseExample =
   }
   .cl-docs-examples :global(.cl-code-pre) {
     min-height: 0;
-    max-height: 420px;
+    max-height: var(--docs-example-max);
     overflow: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: thin;
@@ -105,23 +108,23 @@ const responseExample =
   .cl-docs-code-tabs {
     display: flex;
     align-self: stretch;
-    gap: 4px;
+    gap: var(--site-space-1);
   }
   .cl-docs-code-tab {
     position: relative;
     display: inline-flex;
     align-items: center;
     align-self: stretch;
-    padding: 0 8px;
+    padding: 0 var(--site-space-2);
     border: 0;
     background: transparent;
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
     font-family: var(--font-mono);
     font-size: var(--text-eyebrow);
     line-height: var(--text-eyebrow--line-height);
     letter-spacing: var(--text-eyebrow--letter-spacing);
     text-transform: uppercase;
-    transition: color var(--motion-fast) var(--ease-standard);
+    transition: color var(--transition-duration-fast) var(--ease-standard);
   }
   button.cl-docs-code-tab {
     cursor: pointer;
@@ -129,14 +132,14 @@ const responseExample =
   .cl-docs-code-tab::after {
     position: absolute;
     right: 0;
-    bottom: -1px;
+    bottom: calc(-1 * var(--site-rule));
     left: 0;
-    height: 2px;
+    height: var(--site-space-0_5);
     content: '';
   }
   .cl-docs-code-tab:hover,
   .cl-docs-code-tab:is([aria-selected='true'], [data-on]) {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .cl-docs-code-tab:is([aria-selected='true'], [data-on])::after {
     background: var(--color-accent);
@@ -154,10 +157,10 @@ const responseExample =
     color: var(--color-negative);
   }
   .cl-docs-examples :global(.cl-tok-keyword) {
-    color: var(--color-accent-ink);
+    color: var(--text-color-accent-text);
   }
   .cl-docs-examples :global(.cl-tok-comment) {
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
   }
 </style>
 

@@ -1,52 +1,59 @@
+:root {
+  --tool-social-ratio: 1.91 / 1;
+  --tool-result-min: 420px;
+  --tool-result-min-narrow: 360px;
+  --tool-empty-min: 280px;
+}
+
 .cl-tool {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  gap: 8px;
-  padding: 8px;
+  gap: var(--site-space-2);
+  padding: var(--site-space-2);
   border-radius: var(--site-radius-card);
   background: var(--tint-neutral);
   background-image: var(--site-well-shade);
-  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
+  box-shadow: inset 0 0 0 var(--site-rule) var(--color-site-well-edge);
 }
 
 .cl-tool-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 24px;
+  gap: var(--site-space-3);
+  padding: var(--site-space-6);
 }
 
 .cl-tool-title {
   margin: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-size: var(--text-heading-lg);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-heading-lg--line-height);
   letter-spacing: var(--text-heading-lg--letter-spacing);
 }
 
 .cl-tool-desc {
   margin: 0;
-  color: var(--color-ink-secondary);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  color: var(--text-color-ink-2);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 .cl-tool-fields {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 12px;
+  gap: var(--site-space-4);
+  margin-top: var(--site-space-3);
 }
 
 .cl-tool-result {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 420px;
-  margin: 24px 24px 24px 0;
+  min-height: var(--tool-result-min);
+  margin: var(--site-space-6) var(--site-space-6) var(--site-space-6) 0;
   border-radius: var(--site-radius-inner);
-  background: var(--color-surface);
+  background: var(--color-panel);
 }
 
 .cl-tool-preview {
@@ -54,30 +61,30 @@
   border-radius: var(--site-radius-inner);
   background: var(--tint-neutral);
   background-image: var(--site-well-shade);
-  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
+  box-shadow: inset 0 0 0 var(--site-rule) var(--color-site-well-edge);
 }
 
 .cl-tool-bar {
   display: flex;
   align-items: center;
-  gap: 4px 12px;
-  min-height: 52px;
-  padding: 8px 8px 8px 20px;
-  border-bottom: 1px solid var(--color-line);
+  gap: var(--site-space-1) var(--site-space-3);
+  min-height: var(--site-space-13);
+  padding: var(--site-space-2) var(--site-space-2) var(--site-space-2) var(--site-space-5);
+  border-bottom: var(--site-rule) solid var(--color-rule);
 }
 
 .cl-tool-rtitle {
   margin: 0;
-  color: var(--color-ink-secondary);
+  color: var(--text-color-ink-2);
   font-size: var(--text-label);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: var(--text-label--line-height);
 }
 
 .cl-tool-status {
   flex: 1 1 auto;
   min-width: 0;
-  color: var(--color-ink-muted);
+  color: var(--text-color-ink-2);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
 }
@@ -86,7 +93,7 @@
   display: flex;
   flex: none;
   align-items: center;
-  gap: 4px;
+  gap: var(--site-space-1);
   margin-left: auto;
 }
 
@@ -94,8 +101,8 @@
   display: inline-flex;
   flex-direction: column;
   align-items: flex-end;
-  padding-right: 4px;
-  color: var(--color-ink-muted);
+  padding-right: var(--site-space-1);
+  color: var(--text-color-ink-2);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
 }
@@ -111,15 +118,15 @@
   color: var(--color-negative);
 }
 
-.cl-tool-copy {
-  min-width: 92px;
+.cl-tool-copy-status + button {
+  min-width: var(--site-space-23);
 }
 
 .cl-tool-output {
   position: relative;
   flex: 1;
   min-width: 0;
-  padding: 20px;
+  padding: var(--site-space-5);
   overflow-x: auto;
 }
 
@@ -127,19 +134,19 @@
   display: grid;
   place-items: center;
   height: 100%;
-  min-height: 280px;
+  min-height: var(--tool-empty-min);
   margin: 0;
-  color: var(--color-ink-muted);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  color: var(--text-color-ink-2);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   text-align: center;
 }
 
 .cl-tool-hint {
   margin: 0;
-  color: var(--color-ink-muted);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  color: var(--text-color-ink-2);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   text-align: center;
 }
 
@@ -149,18 +156,18 @@
   }
 
   .cl-tool-result {
-    margin: 0 24px 24px;
+    margin: 0 var(--site-space-6) var(--site-space-6);
   }
 }
 
 @media (max-width: 767px) {
   .cl-tool-form {
-    padding: 16px;
+    padding: var(--site-space-4);
   }
 
   .cl-tool-result {
-    min-height: 360px;
-    margin: 0 16px 16px;
+    min-height: var(--tool-result-min-narrow);
+    margin: 0 var(--site-space-4) var(--site-space-4);
   }
 
   .cl-tool-bar {
@@ -181,22 +188,22 @@
 }
 
 .cl-tool input[type='file'] {
-  padding: 4px 12px 4px 4px;
-  color: var(--color-ink-secondary);
+  padding: var(--site-space-1) var(--site-space-3) var(--site-space-1) var(--site-space-1);
+  color: var(--text-color-ink-2);
 }
 
 .cl-tool input[type='file']::file-selector-button {
-  height: calc(var(--control-md) - 10px);
-  margin-right: 12px;
-  padding: 0 12px;
-  border: 1px solid var(--color-line-control);
+  height: calc(var(--spacing-control-md) - var(--site-space-2_5));
+  margin-right: var(--site-space-3);
+  padding: 0 var(--site-space-3);
+  border: var(--site-rule) solid var(--color-control-line);
   border-radius: var(--radius-sm);
-  background-color: var(--color-surface);
-  color: var(--color-ink);
+  background-color: var(--color-panel);
+  color: var(--text-color-ink);
   font-family: var(--font-sans);
-  font-size: var(--text-body-sm);
-  font-weight: 500;
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: var(--text-body--line-height);
   cursor: pointer;
 }
 
@@ -212,8 +219,116 @@
 }
 
 .cl-tool-group-hint {
-  margin-bottom: 8px;
-  color: var(--color-ink-muted);
+  margin-bottom: var(--site-space-2);
+  color: var(--text-color-ink-2);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
+}
+
+.cl-tool-run {
+  display: flex;
+  flex-direction: column;
+  gap: var(--site-space-4);
+}
+
+.cl-tool-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--site-space-3);
+}
+
+.cl-tool-extra {
+  display: grid;
+  gap: var(--site-space-3);
+  margin-top: var(--site-space-6);
+  padding: var(--site-space-6);
+  border-radius: var(--site-radius-card);
+  background: var(--tint-neutral);
+  background-image: var(--site-well-shade);
+  box-shadow: inset 0 0 0 var(--site-rule) var(--color-site-well-edge);
+}
+
+.cl-tool-extra pre {
+  overflow-x: auto;
+  margin: 0;
+  padding: var(--site-space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-well);
+  color: var(--text-color-ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-data);
+  line-height: var(--text-data--line-height);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cl-tool-generated textarea {
+  font-family: var(--font-mono);
+}
+
+.cl-tool-error {
+  color: var(--color-negative);
+}
+
+.cl-tool-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--site-space-6);
+}
+
+.cl-tool-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--site-space-3);
+}
+
+.cl-tool-bots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--site-space-1);
+}
+
+.cl-tool-bots > legend {
+  margin-bottom: var(--site-space-2);
+  color: var(--text-color-ink);
+  font-size: var(--text-body);
+  font-weight: var(--text-body--font-weight);
+  line-height: var(--text-body--line-height);
+}
+
+.cl-tool-bots > label {
+  align-items: center;
+  min-height: var(--site-space-6);
+  padding-block: var(--site-space-0_5);
+}
+
+.cl-tool-bots button[data-state='unchecked'] {
+  border-color: var(--color-control-line);
+}
+
+.cl-tool-bots button[data-state='unchecked']:hover {
+  border-color: var(--color-mark-ink-2);
+}
+
+.cl-social-image {
+  width: 100%;
+  aspect-ratio: var(--tool-social-ratio);
+  object-fit: cover;
+}
+
+.cl-social-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: var(--tool-social-ratio);
+  padding: var(--site-space-6);
+  background: var(--color-well);
+  text-align: center;
+}
+
+.cl-social-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--site-space-2);
+  padding: var(--site-space-5);
 }

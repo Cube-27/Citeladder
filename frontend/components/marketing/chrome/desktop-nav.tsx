@@ -109,7 +109,6 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
     >
       <div ref={root} className="cl-navmenu">
         <List
-          className="cl-navmenu-list"
           onPointerEnter={() => {
             hovering.current = true;
           }}
@@ -122,8 +121,9 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
             data-visible={pill.visible ? '' : undefined}
             data-jump={pill.jump ? '' : undefined}
             style={{
-              width: PILL_BASE_WIDTH,
-              transform: `translateX(${pill.x}px) scaleX(${pill.width / PILL_BASE_WIDTH})`,
+              '--pill-base': `${PILL_BASE_WIDTH}px`,
+              '--pill-x': `${pill.x}px`,
+              '--pill-scale': pill.width / PILL_BASE_WIDTH,
             }}
           />
           {NAV_DROPS.map((drop) => (
@@ -132,7 +132,6 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
                 ref={(node) => {
                   if (node) triggers.current.set(drop.key, node);
                 }}
-                className="cl-navbar-link focus-ring"
                 data-current={dropCurrent(path, drop) ? '' : undefined}
                 onPointerEnter={(event) => {
                   if (event.pointerType === 'mouse') pinned.current = null;
@@ -144,7 +143,7 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
                 {drop.label}
                 <ChevronDown aria-hidden className="cl-navbar-caret size-4" />
               </Trigger>
-              <Content className="cl-navmenu-content">
+              <Content>
                 <MegaMenu drop={drop} path={path} />
               </Content>
             </Item>
@@ -167,12 +166,12 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
         <div
           className="cl-navmenu-stage"
           data-slide={stage.slide ? '' : undefined}
-          style={{ transform: `translateX(${stage.shift}px)` }}
+          style={{
+            '--stage-shift': `${stage.shift}px`,
+            '--stage-origin': `${stage.origin}px`,
+          }}
         >
-          <Viewport
-            className="cl-navmenu-viewport"
-            style={{ transformOrigin: `${stage.origin}px 0` }}
-          />
+          <Viewport />
         </div>
       </div>
     </Root>

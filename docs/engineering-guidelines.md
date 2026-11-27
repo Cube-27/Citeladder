@@ -201,16 +201,36 @@ drawn sidebar is visible. In review: a `max-width` media query or
 ### App restyles of shared primitives stay off the website
 
 **Rule:** A look change to a `components/ui` primitive the website also
-imports (button, input, select, textarea, tag, table, tabs, facts) goes
-behind the `app:` variant, or keeps the old value under
-`[[data-public-surface]_&]:`. Token values change only in the app's
-`:root:not([data-public-surface])` blocks.
+imports (button, input, select, textarea, tag, table, tabs, facts) re-points
+a role token in the app's `:root:not([data-public-surface])` blocks, or adds a
+role the website binds to its own value. Inside the primitive, the `app:`
+variant may scope a class; a screen never forks a look with
+`[[data-public-surface]_&]:`.
 **Why:** The HeroUI move (2026-11) restyled shared controls; the review
 caught the website's tables losing their corner radius and its textareas
 their motion timing, after earlier rounds where a shared-component edit
-restyled pages nobody named.
-**Check:** In review, run `rg "components/ui/" frontend/components/marketing`
+restyled pages nobody named. A per-call-site surface variant is a one-off
+look that the next token change misses.
+**Check:** `design/surface-variant` fails a surface variant outside
+`components/ui`. In review, run `rg "components/ui/" frontend/components/marketing`
 and read every changed primitive in that list for an unscoped class change.
+
+### A class migration proves the render, not the class
+
+**Rule:** Moving classes between CSS layers or into `cn`'s merge groups (a
+component class to a utility, a new role registered with tailwind-merge)
+changes which class wins. Prove the move with a before/after dump of computed
+values per element, not a class rename map. A passed-in class that the
+component's own utility used to beat (`TableCell className="type-caption"`)
+was dead: keep its rendered look explicitly and flag it, don't revive it.
+**Why:** The type-role batches found classes that never rendered: a table
+group row's emphasis (ds-2) and two `TableCell` captions (ds-3). They came
+alive once `cn` could merge them. The same move recoloured avatar initials on
+every page, because a tone landed in a map that `cn` applied after the base
+ink.
+**Check:** A computed-value sweep of the app before and after, plus a
+per-call-site render of every converted string in each entry stylesheet; any
+difference is a bug unless the plan lists it.
 
 ### Popup exits animate, eager CSS pays for itself
 
@@ -223,6 +243,17 @@ little headroom; the button redesign (#1082) went over it twice before dead
 rules were cut.
 **Check:** The CSS budget step in CI. In review: an `exit` or closed-state rule
 under a Radix part that uses `transition` alone.
+
+### A boot file's import ships the whole module
+
+**Rule:** Code only lazy routes use lives in a module no boot file (shell,
+`page-frame`, `first-frame`, `not-found`) imports. Split a shared module along
+that seam rather than adding to it.
+**Why:** The bundler puts every module statically reachable from the entry into
+the boot chunk whole. Design batch 6 (#1274) went 13 KB over the eager JS
+budget by putting setup, record and steps chrome next to the page chrome boot
+screens use.
+**Check:** The eager JS budget step in CI.
 
 ### The window never scrolls in the app
 

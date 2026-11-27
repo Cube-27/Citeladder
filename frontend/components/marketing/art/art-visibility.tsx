@@ -1,30 +1,29 @@
 import { EngineMark } from '@/components/ui/engine-mark';
 import { Eye, Link2, ShoppingBag } from '@/lib/icons';
-import { cn } from '@/lib/utils';
 
-import { Art, Card, Chips, Line, Pill } from './art-parts';
+import { Art, Card, Chips, Line, Pill, Placed } from './art-parts';
 
 export function ArtVisibility() {
   return (
     <Art>
-      <Card className="absolute top-[8%] left-[27%] w-[46%]">
+      <Card at={{ top: 8, left: 27, width: 46 }}>
         <div className="cl-art-row">
-          <EngineMark engine="chatgpt" className="cl-art-icon" />
-          <Line className="w-3/5" tone="strong" />
+          <EngineMark engine="chatgpt" />
+          <Line width={60} tone="strong" />
         </div>
-        <Line className="w-full" />
-        <Line className="w-full" />
-        <Line className="w-2/3" />
+        <Line width={100} />
+        <Line width={100} />
+        <Line width={200 / 3} />
       </Card>
-      <span className="cl-art-link absolute top-[38%] left-1/2 h-[10%]" />
-      <Pill ring className="absolute top-[47%] left-1/2 -translate-x-1/2">
+      <Placed kind="link" at={{ top: 38, left: 50, height: 10 }} />
+      <Pill ring at={{ top: 47, left: 50 }} centre="x">
         <Eye aria-hidden />
         Visibility
       </Pill>
-      <Chips count={4} className="top-[66%] right-[-8%] left-[-8%]">
+      <Chips count={4} at={{ top: 66, right: -8, left: -8 }}>
         <Pill>ChatGPT</Pill>
       </Chips>
-      <Chips count={4} className="top-[82%] right-[2%] left-[2%]" />
+      <Chips count={4} at={{ top: 82, right: 2, left: 2 }} />
     </Art>
   );
 }
@@ -32,33 +31,33 @@ export function ArtVisibility() {
 export function ArtSources() {
   return (
     <Art>
-      <Card className="absolute top-[9%] left-[19%] w-[62%]">
+      <Card at={{ top: 9, left: 19, width: 62 }}>
         <div className="cl-art-windowbar">
           <span />
           <span />
           <span />
         </div>
         <div className="cl-art-row">
-          <Line className="w-1/4" tone="strong" />
-          <Line className="w-3/5" />
+          <Line width={25} tone="strong" />
+          <Line width={60} />
         </div>
-        <Line className="w-full" />
-        <Line className="w-full" />
-        <Line className="w-full" />
-        <Line className="mb-[1em] w-4/5" />
+        <Line width={100} />
+        <Line width={100} />
+        <Line width={100} />
+        <Line width={80} trail />
       </Card>
-      <Pill ring className="absolute top-[55%] left-1/2 -translate-x-1/2">
+      <Pill ring at={{ top: 55, left: 50 }} centre="x">
         <Link2 aria-hidden />
         Cited sources
       </Pill>
-      <Card ghost className="absolute top-[74%] left-[30%] w-[40%]">
+      <Card ghost at={{ top: 74, left: 30, width: 40 }}>
         <div className="cl-art-row">
           <span className="cl-art-num">1</span>
-          <Line className="w-3/5" tone="strong" />
+          <Line width={60} tone="strong" />
         </div>
         <div className="cl-art-row">
           <span className="cl-art-num">2</span>
-          <Line className="w-2/5" />
+          <Line width={40} />
         </div>
       </Card>
     </Art>
@@ -66,11 +65,11 @@ export function ArtSources() {
 }
 
 const BARS = [
-  ['h-[52%]', '30%'],
-  ['h-[24%]', '13%'],
-  ['h-[40%]', '25%'],
-  ['h-[62%]', '45%'],
-  ['h-[84%]', '56%'],
+  [52, '30%'],
+  [24, '13%'],
+  [40, '25%'],
+  [62, '45%'],
+  [84, '56%'],
 ] as const;
 
 export function ArtReferrals() {
@@ -81,25 +80,27 @@ export function ArtReferrals() {
         focusable="false"
         viewBox="0 0 300 200"
         preserveAspectRatio="none"
-        className="fill-surface absolute inset-0 size-full opacity-55"
+        className="cl-art-area"
       >
         <path d="M0 200V150C40 150 60 95 100 95S150 130 185 110 240 40 300 30V200Z" />
       </svg>
-      <div className="absolute top-[14%] bottom-0 left-[8%] flex w-[56%] items-end gap-[1.6em]">
+      <Placed kind="bars" at={{ top: 14, bottom: 0, left: 8, width: 56 }}>
         {BARS.map(([height, share], index) => (
           <span
             key={share}
-            className={cn('cl-art-bar', height, index === BARS.length - 1 && 'cl-art-bar--strong')}
+            className="cl-art-bar"
+            data-strong={index === BARS.length - 1 || undefined}
+            style={{ '--art-height': `${height}%` }}
           >
             <span className="cl-art-tag">{share}</span>
           </span>
         ))}
-      </div>
-      <Card className="absolute top-[14%] right-[-4%] w-[34%]">
+      </Placed>
+      <Card at={{ top: 14, right: -4, width: 34 }}>
         <span className="cl-art-caption">AI sessions</span>
         <span className="cl-art-stat">1,846</span>
-        <Line className="w-4/5" tone="strong" />
-        <Line className="w-3/5" />
+        <Line width={80} tone="strong" />
+        <Line width={60} />
       </Card>
     </Art>
   );
@@ -108,24 +109,20 @@ export function ArtReferrals() {
 export function ArtCommerce() {
   return (
     <Art>
-      <Pill ring className="absolute top-[9%] left-1/2 -translate-x-1/2">
+      <Pill ring at={{ top: 9, left: 50 }} centre="x">
         <ShoppingBag aria-hidden />
         Recommended
       </Pill>
-      <span className="cl-art-link absolute top-[21%] left-1/2 h-[9%]" />
-      <div className="absolute top-[30%] right-[-6%] left-[-6%] flex items-start gap-[1.2em]">
+      <Placed kind="link" at={{ top: 21, left: 50, height: 9 }} />
+      <Placed kind="shelf" at={{ top: 30, right: -6, left: -6 }}>
         {[false, false, true, false, false].map((picked, index) => (
-          <Card
-            key={index}
-            ghost={!picked}
-            className={cn('flex-1', picked ? 'scale-110' : 'mt-[1.4em]')}
-          >
+          <Card key={index} ghost={!picked} picked={picked}>
             <span className="cl-art-swatch" />
-            <Line className="w-4/5" tone={picked ? 'strong' : 'soft'} />
-            <Line className="w-1/2" />
+            <Line width={80} tone={picked ? 'strong' : 'soft'} />
+            <Line width={50} />
           </Card>
         ))}
-      </div>
+      </Placed>
     </Art>
   );
 }

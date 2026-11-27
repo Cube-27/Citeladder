@@ -4,7 +4,7 @@ import { Absence } from '@/components/ui/absence';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Inline } from '@/components/ui/layout';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 
 export function NamedBrandMarks({
   brands,
@@ -32,10 +32,10 @@ export function NamedBrandMarks({
         </Tooltip>
       ))}
       {overflow > 0 ? (
-        <span className={textRole('caption', 'text-ink-2 tabular-nums')}>
+        <Text variant="caption" numeric>
           +{overflow}
           <span className="sr-only"> more</span>
-        </span>
+        </Text>
       ) : null}
     </Inline>
   );

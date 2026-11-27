@@ -16,10 +16,12 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
+import { Inline } from '@/components/ui/layout';
+import { PolaritySplit } from '@/components/ui/polarity-bars';
+import { QuoteGrid, QuoteGridRow } from '@/components/ui/quote-grid';
 import { formatCount } from '@/lib/format';
 import { optionalStringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
-import { cn } from '@/lib/utils';
 import {
   categoryShare,
   filterCategories,
@@ -128,7 +130,9 @@ function CategoryRow({
               {category.category}
             </ExpandToggle>
           ) : (
-            <span className="ps-6">{category.category}</span>
+            <Text variant="body" box="indent">
+              {category.category}
+            </Text>
           )}
         </TableCell>
         <TableCell numeric>{formatCount(category.negative)}</TableCell>
@@ -137,10 +141,10 @@ function CategoryRow({
           {share.kind === 'empty' ? (
             <Absence />
           ) : (
-            <span className="inline-flex items-center gap-2">
+            <Inline as="span" inline>
               {share.small ? <Tag>{SMALL_SAMPLE}</Tag> : null}
               {share.text}
-            </span>
+            </Inline>
           )}
         </TableCell>
         <TableCell>
@@ -152,30 +156,6 @@ function CategoryRow({
   );
 }
 
-function PolaritySplit({ negative, positive }: Readonly<{ negative: number; positive: number }>) {
-  const total = negative + positive;
-  if (!total) return null;
-  return (
-    <span aria-hidden className="flex h-1.5 w-40 gap-0.5">
-      {negative ? (
-        <span
-          className="bg-negative rounded-full"
-          style={{ width: `${(negative / total) * 100}%` }}
-        />
-      ) : null}
-      {positive ? (
-        <span
-          className="bg-positive rounded-full"
-          style={{ width: `${(positive / total) * 100}%` }}
-        />
-      ) : null}
-    </span>
-  );
-}
-
-const QUOTE_GRID =
-  'grid grid-cols-[minmax(9rem,12rem)_minmax(16rem,1fr)_6rem_4rem_minmax(9rem,14rem)] gap-x-4';
-
 const QUOTE_HEADS = ['Attribute', 'In the answer', 'Sentiment', 'Engine', 'Prompt'];
 
 function QuoteRows({
@@ -185,46 +165,30 @@ function QuoteRows({
   const span = useShownSpan(['attribute', 'negative', 'positive', 'share', 'split']);
   return (
     <TableRow>
-      <TableCell nested colSpan={span} className="py-1">
-        <div className="min-w-[48rem] whitespace-normal">
-          <div aria-hidden className={cn(QUOTE_GRID, textRole('caption', 'text-ink-2 py-2'))}>
-            {QUOTE_HEADS.map((head) => (
-              <span key={head}>{head}</span>
-            ))}
-          </div>
-          <ul aria-label={`${label} quotes`}>
-            {quotes.map(({ attribute, quote }) => (
-              <li
-                key={`${quote.execution_id}:${quote.text}`}
-                className={cn(QUOTE_GRID, 'border-rule items-start border-t py-3')}
-              >
-                <span>{attribute}</span>
-                <span className="text-pretty">
-                  <AnswerLink answer={quote} attributes>
-                    “{quote.text}”
-                  </AnswerLink>
-                </span>
-                <span>
-                  <StatusMark variant="sentiment" value={quote.polarity}>
-                    {quote.polarity === 'negative' ? 'Negative' : 'Positive'}
-                  </StatusMark>
-                </span>
-                <EngineCell engine={quote.logical_engine} />
-                <span>
-                  <AnswerLink
-                    answer={quote}
-                    attributes
-                    text="inherit"
-                    tone="muted"
-                    underline="hover"
-                  >
-                    {quote.prompt}
-                  </AnswerLink>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      <TableCell nested colSpan={span} tight>
+        <QuoteGrid heads={QUOTE_HEADS} label={`${label} quotes`}>
+          {quotes.map(({ attribute, quote }) => (
+            <QuoteGridRow key={`${quote.execution_id}:${quote.text}`}>
+              <span>{attribute}</span>
+              <span className="text-pretty">
+                <AnswerLink answer={quote} attributes>
+                  “{quote.text}”
+                </AnswerLink>
+              </span>
+              <span>
+                <StatusMark variant="sentiment" value={quote.polarity}>
+                  {quote.polarity === 'negative' ? 'Negative' : 'Positive'}
+                </StatusMark>
+              </span>
+              <EngineCell engine={quote.logical_engine} />
+              <span>
+                <AnswerLink answer={quote} attributes text="inherit" tone="muted" underline="hover">
+                  {quote.prompt}
+                </AnswerLink>
+              </span>
+            </QuoteGridRow>
+          ))}
+        </QuoteGrid>
       </TableCell>
     </TableRow>
   );

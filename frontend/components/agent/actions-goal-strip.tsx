@@ -1,7 +1,8 @@
 import { FigureStrip } from '@/components/ui/figure-strip';
 import { InfoHint } from '@/components/ui/info-hint';
+import { Inline } from '@/components/ui/layout';
 import { StatusMark } from '@/components/ui/status-mark';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 import {
   ACTION_GOAL_HINT,
@@ -31,15 +32,15 @@ export function GoalStrip({
         const phrase = entry ? goalCountPhrase(goal, entry.count) : null;
         return {
           key: goal,
-          label: <span className={textRole('body', 'text-ink')}>{label}</span>,
+          label: <Text variant="body">{label}</Text>,
           loading: !failed && !goals,
           value: entry ? (
-            <span className="flex min-w-0 items-baseline gap-2" title={phrase ?? undefined}>
+            <Inline as="span" align="baseline" title={phrase ?? undefined}>
               <span className="shrink-0">{formatCount(entry.count)}</span>
-              <span className={textRole('caption', 'min-w-0 truncate')}>
+              <Text variant="caption" box="shrink" wrap="truncate">
                 {goalCountWords(goal, entry.count)}
-              </span>
-            </span>
+              </Text>
+            </Inline>
           ) : null,
           missingState: 'unavailable',
           marker: (

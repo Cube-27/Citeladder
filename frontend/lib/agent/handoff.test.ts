@@ -1,13 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import {
-  agentHandoff,
-  agentHandoffHref,
-  contextChips,
-  developerTicket,
-  parseAgentHandoff,
-  withoutContext,
-} from './handoff';
+import { agentHandoff, agentHandoffHref, contextChips, withoutContext } from './handoff';
+import { developerTicket } from './developer-ticket';
+import { parseAgentHandoff } from './handoff-params';
 
 const ACTION = '11111111-1111-4111-8111-111111111111';
 const DATASET = '22222222-2222-4222-8222-222222222222';

@@ -1,0 +1,9 @@
+{
+  "style": "new-york",
+  "tailwind": {
+    "css": "scripts/design-lint/app-theme.css"
+  },
+  "aliases": {
+    "ui": "@/components/ui"
+  }
+}

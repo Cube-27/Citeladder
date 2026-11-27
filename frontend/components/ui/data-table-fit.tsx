@@ -1,21 +1,13 @@
-import {
-  createContext,
-  useContext,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type Ref,
-} from 'react';
+import { createContext, useContext, useLayoutEffect, useRef, useState, type Ref } from 'react';
 
 import {
-  columnRules,
+  columnLayout,
   fitFloor,
   isFlexible,
-  SELECT_WIDTH,
   withEdges,
   type DataTableColumn,
 } from '@/components/ui/data-table-columns';
+import { cn } from '@/lib/utils';
 
 export type FitColumn = Readonly<{ floor: number; low: boolean }>;
 
@@ -65,7 +57,6 @@ export function useFittedColumns({
   columns,
   selection,
 }: Readonly<{ columns: readonly DataTableColumn[]; selection: boolean }>) {
-  const scope = useId();
   const frameRef = useRef<HTMLDivElement>(null);
   const probeRef = useRef<HTMLDivElement>(null);
   const [hidden, setHidden] = useState<readonly number[]>([]);
@@ -83,7 +74,9 @@ export function useFittedColumns({
     const update = () => {
       const style = getComputedStyle(frame);
       const width =
-        frame.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        frame.clientWidth -
+        Number.parseFloat(style.paddingLeft) -
+        Number.parseFloat(style.paddingRight);
       if (width <= 0) return;
       const [select = 0, ...floors] = [...probe.children].map(
         (child) => child.getBoundingClientRect().width,
@@ -124,13 +117,8 @@ export function useFittedColumns({
     frameRef,
     shown,
     shownKeys: new Set(shown.map((column) => column.key)),
-    scope,
-    probe: (
-      <>
-        {hasLow ? <FloorProbe ref={probeRef} columns={columns} selection={selection} /> : null}
-        <style>{columnRules({ scope, columns, hidden, selection })}</style>
-      </>
-    ),
+    layout: columnLayout({ columns, hidden, selection }),
+    probe: hasLow ? <FloorProbe ref={probeRef} columns={columns} selection={selection} /> : null,
   };
 }
 
@@ -149,12 +137,12 @@ function FloorProbe({
       aria-hidden
       className="pointer-events-none invisible absolute h-0 overflow-hidden"
     >
-      <div style={{ width: SELECT_WIDTH }} />
+      <div className="w-10" />
       {withEdges(columns, selection).map(({ column, edge }) => (
         <div
           key={column.key}
-          className={column.desktopOnly ? 'desktop:block hidden' : undefined}
-          style={{ width: fitFloor(column, edge) }}
+          className={cn('w-floor', column.desktopOnly && 'desktop:block hidden')}
+          style={{ '--floor': fitFloor(column, edge) }}
         />
       ))}
     </div>

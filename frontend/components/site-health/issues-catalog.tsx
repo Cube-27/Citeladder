@@ -218,7 +218,7 @@ function CatalogRow({
     <IssueRow
       issue={issue}
       onOpen={open}
-      name={(title) => (
+      renderName={(title) => (
         <Inline gap="tight">
           <TextLink asChild underline="hover">
             <Pressable

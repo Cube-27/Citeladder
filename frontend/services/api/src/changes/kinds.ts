@@ -54,7 +54,8 @@ export const CHANGE_KINDS = Object.keys(changeKinds).filter((kind): kind is Chan
 );
 
 export function memberOf<K extends string>(list: readonly K[]) {
-  return (kind: string): kind is K => list.some((listed) => listed === kind);
+  const listed: readonly string[] = list;
+  return (kind: string): kind is K => listed.includes(kind);
 }
 
 function areaLines(

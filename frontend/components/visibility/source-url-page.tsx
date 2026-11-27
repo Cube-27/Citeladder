@@ -97,7 +97,7 @@ function EntityRow({ entity, mark }: Readonly<{ entity: PageEntity; mark: Mark }
   return (
     <TableRow>
       <TableCell>
-        <Inline as="span" gap="compact" className="min-w-0">
+        <Inline as="span" gap="compact">
           <BrandMark
             name={entity.entity_name}
             logoUrl={mark.logoUrl}

@@ -25,14 +25,14 @@ const { title = 'Sources', count } = Astro.props;
 <style is:global>
   .cl-sources {
     max-width: var(--container-prose);
-    border-top: 1px solid var(--color-line);
-    border-bottom: 1px solid var(--color-line);
+    border-top: var(--site-rule) solid var(--color-rule);
+    border-bottom: var(--site-rule) solid var(--color-rule);
   }
   .cl-sources-summary {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 20px 0;
+    gap: var(--site-space-3);
+    padding: var(--site-space-5) 0;
     list-style: none;
     cursor: pointer;
   }
@@ -41,75 +41,75 @@ const { title = 'Sources', count } = Astro.props;
   }
   .cl-sources-title {
     margin: 0;
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-size: var(--text-title);
     line-height: var(--text-title--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
   .cl-sources-count {
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
     font-family: var(--font-mono);
     font-size: var(--text-data);
     line-height: var(--text-data--line-height);
   }
   .cl-sources-icon {
     margin-left: auto;
-    color: var(--color-ink-secondary);
-    transition: transform var(--motion-fast) var(--ease-standard);
+    color: var(--text-color-ink-2);
+    transition: transform var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-sources-details[open] .cl-sources-icon {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   @media (hover: hover) and (pointer: fine) {
     .cl-sources-summary:hover .cl-sources-icon {
-      color: var(--color-ink);
+      color: var(--text-color-ink);
     }
   }
   .cl-sources-details[open] .cl-sources-icon {
     transform: rotate(45deg);
   }
   .cl-sources-notes {
-    margin: 0 0 16px;
-    color: var(--color-ink-secondary);
-    font-size: var(--text-body);
-    line-height: var(--text-body--line-height);
+    margin: 0 0 var(--site-space-4);
+    color: var(--text-color-ink-2);
+    font-size: var(--text-site-body);
+    line-height: var(--text-site-body--line-height);
   }
   .cl-sources-list {
     margin: 0;
     padding: 0;
-    border-top: 1px solid var(--color-line);
+    border-top: var(--site-rule) solid var(--color-rule);
     list-style: none;
   }
   .cl-source {
     display: grid;
-    grid-template-columns: 24px minmax(0, 1fr);
+    grid-template-columns: var(--site-space-6) minmax(0, 1fr);
     align-items: start;
-    gap: 12px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--color-line);
-    scroll-margin-top: calc(var(--nav-height) + 32px);
+    gap: var(--site-space-3);
+    padding: var(--site-space-3) 0;
+    border-bottom: var(--site-rule) solid var(--color-rule);
+    scroll-margin-top: calc(var(--nav-height) + var(--site-space-8));
   }
   .cl-source:last-child {
     border-bottom: 0;
   }
   .cl-source:target {
-    background: var(--color-surface-sunken);
+    background: var(--color-well);
   }
   .cl-source-n {
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
     font-family: var(--font-mono);
     font-size: var(--text-data);
-    line-height: var(--text-body-sm--line-height);
+    line-height: var(--text-body--line-height);
     text-align: right;
   }
   .cl-source-body {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--site-space-1);
     min-width: 0;
-    color: var(--color-ink);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    color: var(--text-color-ink);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
   }
   .cl-source-body p {
     margin: 0;
@@ -117,9 +117,9 @@ const { title = 'Sources', count } = Astro.props;
   .cl-source-body a {
     color: inherit;
     text-decoration: underline;
-    text-decoration-color: var(--color-line-control);
-    text-decoration-thickness: 1px;
-    text-underline-offset: 3px;
+    text-decoration-color: var(--color-control-line);
+    text-decoration-thickness: var(--site-rule);
+    text-underline-offset: var(--site-underline-offset);
     border-radius: var(--radius-xs);
   }
   @media (hover: hover) and (pointer: fine) {
@@ -129,7 +129,7 @@ const { title = 'Sources', count } = Astro.props;
   }
   .cl-source-meta {
     margin: 0;
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
     font-family: var(--font-mono);
     font-size: var(--text-data);
     line-height: var(--text-data--line-height);

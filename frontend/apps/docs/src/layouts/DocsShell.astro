@@ -95,36 +95,40 @@ const contact = websiteHref('/contact');
 </html>
 
 <style>
+  :root {
+    --docs-aside-min: 360px;
+    --docs-aside-max: 440px;
+  }
   .cl-docs-shell {
     min-height: 100vh;
     background: var(--color-site-page);
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .cl-docs-body {
     max-width: var(--container-app);
     margin: 0 auto;
-    padding: 40px 24px 0;
+    padding: var(--site-space-10) var(--site-space-6) 0;
   }
   .cl-docs-shell :global(:is(.cl-doc-rail, .cl-doc-toc)) {
-    top: calc(var(--docs-bar-height) + 40px);
-    height: calc(100dvh - var(--docs-bar-height) - 40px);
+    top: calc(var(--docs-bar-height) + var(--site-space-10));
+    height: calc(100dvh - var(--docs-bar-height) - var(--site-space-10));
     max-height: none;
-    padding-bottom: 24px;
+    padding-bottom: var(--site-space-6);
     overscroll-behavior: contain;
   }
   .cl-docs-shell :global(.cl-prose :is(h2, h3, h4)) {
-    scroll-margin-top: calc(var(--docs-bar-height) + 32px);
+    scroll-margin-top: calc(var(--docs-bar-height) + var(--site-space-8));
   }
   .cl-docs-page,
   .cl-docs-page-body,
   .cl-docs-page-end {
     display: flex;
     flex-direction: column;
-    gap: 40px;
+    gap: var(--site-space-10);
     min-width: 0;
   }
   .cl-docs-page-end {
-    padding-bottom: 96px;
+    padding-bottom: var(--site-space-24);
   }
   .cl-docs-page-aside {
     display: flex;
@@ -134,10 +138,10 @@ const contact = websiteHref('/contact');
   @media (min-width: 1280px) {
     .cl-docs-page--aside {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+      grid-template-columns: minmax(0, 1fr) minmax(var(--docs-aside-min), var(--docs-aside-max));
       grid-template-rows: auto 1fr;
       align-items: start;
-      gap: 40px 48px;
+      gap: var(--site-space-10) var(--site-space-12);
     }
     .cl-docs-page--aside > :not(.cl-docs-page-aside) {
       grid-column: 1;
@@ -146,47 +150,47 @@ const contact = websiteHref('/contact');
       grid-column: 2;
       grid-row: 1 / span 2;
       position: sticky;
-      top: calc(var(--docs-bar-height) + 40px);
-      max-height: calc(100dvh - var(--docs-bar-height) - 64px);
+      top: calc(var(--docs-bar-height) + var(--site-space-10));
+      max-height: calc(100dvh - var(--docs-bar-height) - var(--site-space-16));
     }
   }
   .cl-docs-footer {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: var(--site-space-5);
     max-width: var(--container-prose);
-    padding-top: 24px;
-    border-top: 1px solid var(--color-line);
-    color: var(--color-ink-muted);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    padding-top: var(--site-space-6);
+    border-top: var(--site-rule) solid var(--color-rule);
+    color: var(--text-color-ink-2);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
   }
   .cl-docs-footer span {
     margin-right: auto;
   }
   .cl-docs-footer a,
   .cl-docs-help {
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
     text-decoration: none;
-    transition: color var(--motion-fast) var(--ease-standard);
+    transition: color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-docs-footer a:hover,
   .cl-docs-help:hover {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .cl-docs-help {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    gap: var(--site-space-1);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
   }
   @media (max-width: 899px) {
     .cl-docs-body {
-      padding: 32px 20px 0;
+      padding: var(--site-space-8) var(--site-space-5) 0;
     }
     .cl-docs-page-end {
-      padding-bottom: 64px;
+      padding-bottom: var(--site-space-16);
     }
   }
   @media print {

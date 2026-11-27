@@ -17,11 +17,11 @@ export function Rungs({
         {RUNG_HEIGHTS.map((height, index) => (
           <span
             key={height}
-            className={cn('rounded-2xs', height, index < level ? 'w-1 bg-accent' : 'w-1 bg-line')}
+            className={cn('rounded-2xs', height, index < level ? 'w-1 bg-accent' : 'w-1 bg-rule')}
           />
         ))}
       </span>
-      <span className={showLabel ? 'text-body-sm text-ink-secondary' : 'sr-only'}>{text}</span>
+      <span className={showLabel ? 'text-body text-ink-2' : 'sr-only'}>{text}</span>
     </span>
   );
 }

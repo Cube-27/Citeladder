@@ -67,7 +67,7 @@ const responseTitle = response.status ? `Response ${response.status}` : 'Respons
   .cl-docs-endpoint-text {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: var(--site-space-6);
     min-width: 0;
     max-width: var(--container-prose);
   }
@@ -75,48 +75,48 @@ const responseTitle = response.status ? `Response ${response.status}` : 'Respons
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 12px;
-    min-height: var(--control-lg);
+    gap: var(--site-space-2) var(--site-space-3);
+    min-height: var(--spacing-control-lg);
     margin: 0;
-    padding: 8px 12px;
-    border: 1px solid var(--color-line-strong);
-    border-radius: var(--radius-md);
+    padding: var(--site-space-2) var(--site-space-3);
+    border: var(--site-rule) solid var(--color-rule-strong);
+    border-radius: var(--radius-control);
   }
   .cl-docs-endpoint-path {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-family: var(--font-mono);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
     overflow-wrap: anywhere;
   }
   .cl-docs-endpoint-param {
-    color: var(--color-ink-muted);
+    color: var(--text-color-ink-2);
   }
   .cl-docs-endpoint-scope {
     display: flex;
-    gap: 8px;
+    gap: var(--site-space-2);
     margin: 0;
-    color: var(--color-ink-secondary);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    color: var(--text-color-ink-2);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
   }
   .cl-docs-endpoint-body {
-    color: var(--color-ink-secondary);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    color: var(--text-color-ink-2);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
   }
   .cl-docs-endpoint-body :global(code),
   .cl-docs-endpoint-scope :global(code) {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     font-family: var(--font-mono);
     font-size: var(--text-data);
     line-height: var(--text-data--line-height);
   }
   .cl-docs-endpoint-body :global(a) {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
     text-decoration: underline;
-    text-decoration-color: var(--color-line-control);
-    text-decoration-thickness: 1px;
-    text-underline-offset: 2px;
+    text-decoration-color: var(--color-control-line);
+    text-decoration-thickness: var(--site-rule);
+    text-underline-offset: var(--site-underline-offset-sm);
   }
 </style>

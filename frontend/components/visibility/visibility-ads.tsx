@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Megaphone } from '@/lib/icons';
@@ -99,11 +99,11 @@ function EngineApplicability({ engines }: Readonly<{ engines: VisibilityAdsRespo
   const { label: engineLabel } = useEngineCatalog();
   if (!engines.length) return null;
   return (
-    <Inline as="ul" gap="meta" className={textRole('caption', 'text-ink-2')}>
+    <Inline as="ul" gap="meta">
       {engines.map((engine) => (
-        <li key={engine.engine}>
+        <Text as="li" variant="caption" key={engine.engine}>
           {engineLabel(engine.engine)}: {AD_APPLICABILITY[engine.applicability]}
-        </li>
+        </Text>
       ))}
     </Inline>
   );
@@ -256,14 +256,16 @@ function CreativeList({
               gap="tight"
               key={`${creative.advertiser_domain}:${creative.title}:${creative.snippet}:${creative.landing_url}`}
             >
-              <Inline as="span" className="flex-wrap">
-                <span className={textRole('emphasis')}>{creative.title || 'Untitled ad'}</span>
+              <Inline as="span" wrap>
+                <Text variant="label">{creative.title || 'Untitled ad'}</Text>
                 <AdOwnershipChip ownership={creative.ownership} />
               </Inline>
               {creative.snippet ? (
-                <span className={textRole('body', 'text-ink-2')}>{creative.snippet}</span>
+                <Text variant="body" tone="ink-2">
+                  {creative.snippet}
+                </Text>
               ) : null}
-              <ClampText className={textRole('caption', 'text-ink-2')}>
+              <ClampText text="caption">
                 {creative.advertiser_name} · {landingLabel(creative.landing_url)} ·{' '}
                 {pluralCount(creative.appearances, 'appearance')}
               </ClampText>

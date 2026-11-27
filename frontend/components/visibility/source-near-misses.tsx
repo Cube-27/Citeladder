@@ -3,7 +3,7 @@ import type { z } from 'zod';
 
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
+import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { NumericCell, SourceName } from '@/components/visibility/source-cells';
 import { OpenSource, type SourceFilters } from '@/components/visibility/source-rows';
@@ -109,7 +109,7 @@ export function NearMissTable({
 }: Readonly<{
   query: ReturnType<typeof useSourceNearMisses>;
   pageSize: number;
-  toolbar: FilterBarProps;
+  toolbar: TableToolbarProps;
   onOpenUrl: (url: string) => void;
   onPageSizeChange: (value: number) => void;
 }>) {

@@ -6,15 +6,15 @@ import { IssuesPageLoading } from '@/components/site-health/issues-summary-loadi
 import { PageFrame } from '@/components/templates/page-frame';
 import { ReportPage } from '@/components/templates/report-page';
 import { NewChatLoading, ThreadPageLoading } from '@/components/templates/thread-page';
-import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
+import { Stack } from '@/components/ui/layout';
 import { TextLineSkeleton } from '@/components/ui/loading-parts';
-import { RailColumns } from '@/components/templates/settings-page';
+import { RailColumns } from '@/components/ui/page-chrome';
 import { HeldTabRail, HeldTabRow } from '@/components/ui/tabs';
 import { ShapeBlocks, SkeletonFrame, type LoadingShape } from '@/components/ui/skeleton-block';
 import { Section, SectionBleed } from '@/components/ui/section';
 import { routeLoading } from '@/lib/navigation/app-routes';
 import type { HeldTabs, RouteLoading } from '@/lib/navigation/route-types';
-import { cn } from '@/lib/utils';
 
 export const RESERVED_CONTROLS: FilterBarProps = {};
 
@@ -43,16 +43,13 @@ export function RouteLoadingScreen() {
         <SkeletonFrame
           label="Loading…"
           variant="route"
-          className={cn(
-            'flex flex-col',
-            loading.stacked ? 'gap-[var(--workspace-gap)]' : 'gap-[var(--page-section-gap)]',
-          )}
+          layout={loading.stacked ? 'workspace' : 'section'}
         >
           {loading.intro ? (
-            <span data-loading-shape="intro" className="flex flex-col gap-1">
+            <Stack as="span" gap="tight" data-loading-shape="intro">
               <TextLineSkeleton text="heading" width="long" />
               <TextLineSkeleton text="body" width="long" />
-            </span>
+            </Stack>
           ) : null}
           {loading.shapes.map((shape, index) => (
             <ShapeBox key={index} shape={shape} />
@@ -64,7 +61,7 @@ export function RouteLoadingScreen() {
           tabs={
             loading.tabs ? <RouteTabs tabs={loading.tabs} search={location.search} /> : undefined
           }
-          filters={loading.filters ? <FilterBar {...RESERVED_CONTROLS} /> : undefined}
+          filters={loading.filters ? RESERVED_CONTROLS : undefined}
         >
           {loading.rail ? (
             <RouteRail rail={loading.rail} search={location.search}>

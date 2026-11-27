@@ -7,7 +7,7 @@ import { Stack } from '@/components/ui/layout';
 import { BarRows, ScoreGauge, scoreTone, type BarRow } from '@/components/ui/score-gauge';
 import { TitledSection } from '@/components/ui/section';
 import { StatusMark } from '@/components/ui/status-mark';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { availabilityLabel, formatCount } from '@/lib/format';
 import { severityCount } from '@/lib/site-health/issues';
 import { formatScore, statusLabel } from '@/lib/site-health/status';
@@ -78,11 +78,13 @@ const dimensionRow = (dimension: Dimension) =>
     ),
   });
 
+const areaLabel = (key: string) => key.replaceAll(/\b\p{L}/gu, (letter) => letter.toUpperCase());
+
 function areaRow(area: Area) {
   const judged = area.passed_count + area.missing_count;
   return scoreRow({
     key: area.key,
-    label: <span className="capitalize">{area.key}</span>,
+    label: areaLabel(area.key),
     score: judged > 0 ? (area.passed_count / judged) * 100 : null,
     absent: <Unscored state={area.state} />,
   });
@@ -175,7 +177,9 @@ export function SeverityCard({
   return (
     <TitledSection title="Issues by severity" actions={actions}>
       <Stack gap="item">
-        <span className={textRole('figure')}>{formatCount(data.issue_count)}</span>
+        <Text variant="figure" numeric>
+          {formatCount(data.issue_count)}
+        </Text>
         <BarRows
           label="Issues by severity"
           rows={SEVERITIES.map((severity, index) => ({

@@ -3,7 +3,7 @@ import type { ExecutionAds } from '@citeladder/contracts/visibility-ads';
 import { ClampText } from '@/components/ui/clamp-text';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { landingLabel } from '@/lib/visibility/ads';
 import { AdOwnershipChip } from '@/components/visibility/ad-ownership-chip';
 
@@ -22,17 +22,19 @@ export function EvidenceAds({ ads }: Readonly<{ ads: ExecutionAds }>) {
         <SectionTitle level={3}>Ads in this answer</SectionTitle>
       </SectionHeader>
       {message ? (
-        <p className="type-caption">{message}</p>
+        <Text as="p" variant="caption">
+          {message}
+        </Text>
       ) : (
         <SectionBleed as="ul" rows>
           {ads.items.map((ad) => (
             <Stack as="li" gap="tight" key={ad.rank_absolute}>
-              <Inline as="span" className="flex-wrap">
-                <span className={textRole('emphasis')}>{ad.title || 'Untitled ad'}</span>
+              <Inline as="span" wrap>
+                <Text variant="label">{ad.title || 'Untitled ad'}</Text>
                 <AdOwnershipChip ownership={ad.ownership} />
               </Inline>
-              {ad.snippet ? <span className="type-caption text-ink-2">{ad.snippet}</span> : null}
-              <ClampText className="type-caption">
+              {ad.snippet ? <Text variant="caption">{ad.snippet}</Text> : null}
+              <ClampText text="caption">
                 Sponsored by {ad.advertiser_name} · {landingLabel(ad.landing_url)}
               </ClampText>
             </Stack>

@@ -1,6 +1,6 @@
 import { TableHead } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+
 import { ArrowDown } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
@@ -17,7 +17,7 @@ export function HintedTableHead({
       <Tooltip content={hint}>
         <button
           type="button"
-          className="focus-ring rounded-mark inline-flex min-h-[var(--control-sm)] cursor-default items-center"
+          className="focus-ring rounded-mark min-h-control-sm inline-flex cursor-default items-center"
         >
           {label}
         </button>
@@ -60,7 +60,7 @@ export function SortableTableHead({
       type="button"
       onClick={onSort}
       className={cn(
-        'focus-ring inline-flex min-h-[var(--control-sm)] w-full flex-col justify-center rounded-mark transition-colors',
+        'focus-ring inline-flex min-h-control-sm w-full flex-col justify-center rounded-mark transition-colors',
         align.column,
         !active && 'hover:text-ink',
       )}
@@ -75,12 +75,12 @@ export function SortableTableHead({
         <ArrowDown
           className={cn(
             'size-3 shrink-0 transition-transform',
-            active ? !descending && 'rotate-180' : 'opacity-0 group-hover:opacity-50',
+            active ? !descending && 'rotate-180' : 'opacity-0 group-hover:opacity-disabled',
           )}
           aria-hidden
         />
       </span>
-      {sublabel ? <span className={textRole('caption')}>{sublabel}</span> : null}
+      {sublabel ? <span className="text-caption text-ink-2">{sublabel}</span> : null}
     </button>
   );
   return (

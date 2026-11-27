@@ -1,0 +1,203 @@
+:root {
+  --ramp-white-a0: oklch(100% 0 0 / 0%);
+  --ramp-white-a7: oklch(100% 0 0 / 7%);
+  --ramp-white-a9: oklch(100% 0 0 / 9%);
+  --ramp-white-a45: oklch(100% 0 0 / 45%);
+  --ramp-white-a60: oklch(100% 0 0 / 60%);
+  --ramp-white-a70: oklch(100% 0 0 / 70%);
+  --ramp-neutral-9-a50: oklch(9% 0 0 / 50%);
+  --ramp-neutral-14_5-srgb: #0a0a0a;
+  --ramp-neutral-17_8-a80: oklch(17.8% 0 0 / 80%);
+  --ramp-neutral-17_76: #111111;
+  --ramp-neutral-20_5: oklch(20.5% 0 0);
+  --ramp-neutral-21_2: oklch(21.2% 0 0);
+  --ramp-neutral-22_2: #1b1b1b;
+  --ramp-neutral-23_8: oklch(23.8% 0 0);
+  --ramp-neutral-24_5: oklch(24.5% 0 0);
+  --ramp-neutral-25_6: #232323;
+  --ramp-neutral-25-a0: oklch(25% 0 0 / 0%);
+  --ramp-neutral-30_1: #2e2e2e;
+  --ramp-neutral-43_9-a16: oklch(43.9% 0 0 / 16%);
+  --ramp-neutral-55_6: oklch(55.6% 0 0);
+  --ramp-neutral-70_8: oklch(70.8% 0 0);
+  --ramp-neutral-88: oklch(88% 0 0);
+  --ramp-neutral-94_6: oklch(94.6% 0 0);
+  --ramp-neutral-97: oklch(97% 0 0);
+  --ramp-slate-93_5-h256: #e4eaf2;
+  --ramp-slate-93_5-h264: oklch(93.5% 0.004 264);
+  --ramp-slate-94_8: #e9eef6;
+  --ramp-slate-96_6: #f0f4f9;
+  --ramp-stone-10: oklch(10% 0.008 40);
+  --ramp-stone-11_6: oklch(11.6% 0.0023 17);
+  --ramp-stone-13: oklch(13% 0.018 42);
+  --ramp-stone-18_3: oklch(18.3% 0.0026 67.7);
+  --ramp-stone-97_6: oklch(97.6% 0.018 70);
+  --ramp-stone-99-a55: oklch(99% 0.008 70 / 55%);
+  --ramp-orange-17: oklch(17% 0.03 45);
+  --ramp-orange-24-a55: oklch(24% 0.06 40 / 55%);
+  --ramp-orange-29: oklch(29% 0.06 45);
+  --ramp-orange-32-a30: oklch(32% 0.09 40 / 30%);
+  --ramp-orange-40-a8: oklch(40% 0.1 40 / 8%);
+  --ramp-orange-40-a35: oklch(40% 0.12 38 / 35%);
+  --ramp-orange-42: oklch(42% 0.125 40);
+  --ramp-orange-45-a10: oklch(45% 0.1 40 / 10%);
+  --ramp-orange-55-a55: oklch(55% 0.13 40 / 55%);
+  --ramp-orange-63_4-a30: oklch(63.4% 0.1973 37.5 / 30%);
+  --ramp-orange-63_4-a32: oklch(63.4% 0.1973 37.5 / 32%);
+  --ramp-orange-63_4-a55: oklch(63.4% 0.1973 37.5 / 55%);
+  --ramp-orange-70_3-a10: oklch(70.3% 0.194 39.3 / 10%);
+  --ramp-orange-70_3-a26: oklch(70.3% 0.194 39.3 / 26%);
+  --ramp-orange-70_3-a38: oklch(70.3% 0.194 39.3 / 38%);
+  --ramp-orange-70_3-a55: oklch(70.3% 0.194 39.3 / 55%);
+  --ramp-orange-72_3-a10: oklch(72.3% 0.18 42.6 / 10%);
+  --ramp-orange-78: oklch(78% 0.125 44);
+  --ramp-orange-86_5-a50: oklch(86.5% 0.08 46 / 50%);
+  --ramp-amber-23: oklch(23% 0.02 50);
+  --ramp-amber-30-a9: oklch(30% 0.07 48 / 9%);
+  --ramp-amber-55-a10: oklch(55% 0.13 50 / 10%);
+  --ramp-amber-56-a16: oklch(56% 0.13 50 / 16%);
+  --ramp-amber-78-a19: oklch(78% 0.12 55 / 19%);
+  --ramp-amber-80_8-a55: oklch(80.8% 0.11 55 / 55%);
+  --ramp-amber-80-a12: oklch(80% 0.11 55 / 12%);
+  --ramp-amber-88-a12: oklch(88% 0.06 60 / 12%);
+  --ramp-amber-88-a35: oklch(88% 0.07 48 / 35%);
+  --ramp-amber-90: oklch(90% 0.06 50);
+  --ramp-amber-91: oklch(91% 0.06 50);
+  --ramp-amber-94_4: oklch(94.4% 0.04 58);
+  --ramp-amber-96_5: oklch(96.5% 0.022 55);
+  --ramp-blue-91_2: #d3e3fd;
+}
+
+@media (max-width: 1279px) {
+  :root[data-public-surface] {
+    --spacing-gutter: 24px;
+  }
+}
+
+[data-marketing-surface] {
+  --site-radius-inner: 4px;
+  --site-radius-card: 12px;
+  --site-radius-stage: 16px;
+  --site-radius-frame: 20px;
+  --site-radius-frame-inner: 14px;
+}
+
+:root[data-public-surface]:not([data-theme='dark']) {
+  --color-ground: var(--ramp-white);
+  --color-site-page: var(--ramp-white);
+}
+
+:root[data-public-surface][data-theme='dark'] {
+  --color-site-page: var(--ramp-black);
+}
+
+:root[data-public-surface] {
+  --shadow-xs: 0 0 0 1px var(--color-rule);
+  --marketing-nav-offset: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
+}
+
+:root[data-marketing-surface] {
+  --color-site-mark: var(--ramp-neutral-55_6);
+  --color-site-chip: var(--ramp-neutral-94_6);
+  --text-color-site-chip-ink: var(--ramp-neutral-26_9);
+  --color-site-guide: var(--ramp-neutral-43_9-a16);
+  --color-site-rule-from: var(--ramp-amber-80_8-a55);
+  --color-site-rule-to: var(--ramp-orange-63_4-a55);
+  --color-site-well: var(--ramp-neutral-97);
+  --color-site-screen: var(--color-panel);
+  --color-site-frame-strip: var(--ramp-slate-93_5-h264);
+  --color-site-frame-edge: var(--ramp-black-a8);
+  --color-site-frame-card: var(--ramp-white);
+  --color-site-stage-from: var(--ramp-amber-96_5);
+  --color-site-stage-mid: var(--ramp-amber-90);
+  --color-site-stage-to: var(--ramp-orange-78);
+  --color-site-stage-dot: var(--ramp-orange-63_4-a30);
+  --color-site-stage-line: var(--ramp-orange-63_4-a32);
+  --site-shadow-float:
+    0 0 0 1px var(--ramp-orange-45-a10), 0 2px 4px var(--ramp-orange-40-a8),
+    0 18px 40px -12px var(--ramp-orange-40-a35);
+  --color-site-well-edge: var(--ramp-neutral-25-a0);
+  --color-site-vignette: var(--ramp-orange-72_3-a10);
+  --color-site-hero-base: var(--ramp-white);
+  --color-site-hero-amber: var(--ramp-amber-78-a19);
+  --color-site-hero-umber: var(--ramp-amber-88-a12);
+  --color-site-hero-side: var(--ramp-amber-80-a12);
+  --color-site-band-from: var(--ramp-stone-97_6);
+  --color-site-band-mid: var(--ramp-amber-94_4);
+  --color-site-band-to: var(--ramp-amber-91);
+  --color-site-band-mist: var(--ramp-white-a70);
+  --color-site-band-streak: var(--ramp-white-a60);
+  --color-site-band-warm: var(--ramp-amber-88-a35);
+  --color-site-band-glow: var(--ramp-orange-86_5-a50);
+  --color-site-band-scrim: var(--ramp-stone-99-a55);
+  --text-color-site-band-ink-2: var(--ramp-neutral-43_9);
+  --color-site-band-line: var(--ramp-neutral-17_8-a80);
+  --color-site-hover-wash: color-mix(in oklch, var(--color-mark-ink) 5%, transparent);
+  --color-site-well-hover: color-mix(in oklch, var(--color-mark-ink) 5%, var(--color-site-well));
+  --color-site-frame-card-hover: color-mix(
+    in oklch,
+    var(--color-mark-ink) 5%,
+    var(--color-site-frame-card)
+  );
+  --color-site-form-rule: color-mix(in oklch, var(--color-mark-ink) 10%, transparent);
+  --color-site-scroll-shade: color-mix(in oklch, var(--color-mark-ink) 14%, transparent);
+  --color-site-scroll-shade-strong: color-mix(in oklch, var(--color-mark-ink) 20%, transparent);
+}
+
+.cl-screen--app {
+  --color-ground: var(--ramp-slate-93_5-h256);
+  --color-page: var(--ramp-slate-96_6);
+  --color-panel: var(--ramp-white-srgb);
+  --color-raised: var(--ramp-white-srgb);
+  --color-raised-2: var(--ramp-slate-94_8);
+  --screen-nav-current: var(--ramp-blue-91_2);
+}
+
+:root[data-theme='dark'] .cl-screen--app {
+  --color-ground: var(--ramp-neutral-14_5-srgb);
+  --color-page: var(--ramp-neutral-17_76);
+  --color-panel: var(--ramp-neutral-22_2);
+  --color-raised: var(--ramp-neutral-25_6);
+  --color-raised-2: var(--ramp-neutral-30_1);
+  --screen-nav-current: var(--ramp-white-a11);
+}
+
+:root[data-marketing-surface][data-theme='dark'] {
+  --color-site-page: var(--ramp-stone-18_3);
+  --color-ground: var(--ramp-stone-18_3);
+  --color-panel: var(--ramp-neutral-21_2);
+  --color-well: var(--ramp-neutral-23_8);
+  --color-site-mark: var(--ramp-neutral-70_8);
+  --color-site-chip: var(--ramp-neutral-26_9);
+  --text-color-site-chip-ink: var(--ramp-neutral-92_2);
+  --color-site-guide: var(--ramp-white-a9);
+  --color-site-rule-from: var(--ramp-orange-55-a55);
+  --color-site-rule-to: var(--ramp-orange-70_3-a55);
+  --color-site-well: var(--ramp-neutral-21_2);
+  --color-site-screen: var(--ramp-neutral-24_5);
+  --color-site-frame-strip: var(--ramp-neutral-20_5);
+  --color-site-frame-edge: var(--ramp-white-a7);
+  --color-site-frame-card: var(--ramp-neutral-14_5);
+  --color-site-stage-from: var(--ramp-amber-23);
+  --color-site-stage-mid: var(--ramp-orange-29);
+  --color-site-stage-to: var(--ramp-orange-42);
+  --color-site-stage-dot: var(--ramp-orange-70_3-a26);
+  --color-site-stage-line: var(--ramp-orange-70_3-a38);
+  --site-shadow-float: 0 0 0 1px var(--ramp-white-a8), 0 18px 40px -12px var(--ramp-black-a60);
+  --color-site-well-edge: var(--ramp-white-a0);
+  --color-site-vignette: var(--ramp-orange-70_3-a10);
+  --color-site-hero-base: var(--ramp-stone-11_6);
+  --color-site-hero-amber: var(--ramp-amber-56-a16);
+  --color-site-hero-umber: var(--ramp-amber-30-a9);
+  --color-site-hero-side: var(--ramp-amber-55-a10);
+  --color-site-band-from: var(--ramp-orange-17);
+  --color-site-band-mid: var(--ramp-stone-13);
+  --color-site-band-to: var(--ramp-stone-10);
+  --color-site-band-mist: var(--ramp-orange-32-a30);
+  --color-site-band-streak: var(--ramp-white-a5);
+  --color-site-band-warm: var(--ramp-orange-70_3-a10);
+  --color-site-band-glow: var(--ramp-orange-24-a55);
+  --color-site-band-scrim: var(--ramp-neutral-9-a50);
+  --text-color-site-band-ink-2: var(--ramp-neutral-88);
+  --color-site-band-line: var(--ramp-white-a45);
+}

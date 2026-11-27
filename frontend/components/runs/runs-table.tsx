@@ -5,7 +5,6 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
-import { Inline } from '@/components/ui/layout';
 import type { Audit } from '@citeladder/contracts';
 import { marketLabel } from '@citeladder/contracts/markets';
 import { Play } from '@/lib/icons';
@@ -13,6 +12,7 @@ import { formatCount, formatDisplayTime } from '@/lib/format';
 import { AUDIT_STATES, runTitle } from '@/lib/runs/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { sortUrlCodec, useUrlState, type UrlSort } from '@/lib/navigation/url-state';
+import { Text } from '@/components/ui/typography';
 
 const sameLaunch = (audit: Audit, previous: Audit | undefined) =>
   audit.launch_id !== null && previous?.launch_id === audit.launch_id;
@@ -89,9 +89,9 @@ export function RunsTable({
     <DataTable
       title="All runs"
       actions={
-        <Inline as="output" className="type-caption">
+        <Text as="output" variant="caption" box="row">
           {status}
-        </Inline>
+        </Text>
       }
       columns={runsColumns(sort, onSort)}
       pageSize={PAGE_SIZE}

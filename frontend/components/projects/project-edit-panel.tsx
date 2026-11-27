@@ -6,7 +6,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline, Stack, Columns } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
 import { ProjectMarkets } from './project-markets';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
@@ -20,6 +20,7 @@ import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/market
 import { MentionRuleFields, mentionRuleDraft, type MentionRuleDraft } from './mention-rule-fields';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
+import { Text } from '@/components/ui/typography';
 
 const splitList = (value: string): string[] =>
   value
@@ -189,7 +190,7 @@ export function ProjectEditPanel({
           )}
         </Field>
         <MentionRuleFields name={brandName} rule={brandRule} onChange={setBrandRule} />
-        <Stack gap="compact" className="grid-cols-2">
+        <Columns template="two" gap="compact">
           <Field label="Country">
             {(props) => (
               <MarketSelect
@@ -212,7 +213,7 @@ export function ProjectEditPanel({
               />
             )}
           </Field>
-        </Stack>
+        </Columns>
       </Stack>
       {open ? <ProjectMarkets projectId={project.id} workspaceId={project.workspace_id} /> : null}
 
@@ -249,9 +250,9 @@ export function ProjectEditPanel({
         <SectionHeader
           actions={
             <>
-              <span className="type-caption">
+              <Text variant="caption">
                 {competitors.length} of {maximumCompetitors ?? '…'}
-              </span>
+              </Text>
               <Button
                 variant="quiet"
                 aria-label="Add competitor"
@@ -282,7 +283,7 @@ export function ProjectEditPanel({
         {competitors.length === 0 ? (
           <StateBlock kind="empty" inline message="None tracked." />
         ) : (
-          <Stack as="ul" gap="compact" className="list-none">
+          <Stack as="ul" gap="compact" list="plain">
             {competitors.map((competitor, index) => (
               <Stack as="li" key={competitor.key} gap="compact">
                 <Inline>

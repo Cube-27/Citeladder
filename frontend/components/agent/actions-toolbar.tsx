@@ -10,7 +10,7 @@ import {
 } from '@/components/agent/use-action-filters';
 import type { ActionsView } from '@/components/agent/use-actions-page';
 import { Button } from '@/components/ui/button';
-import { FilterBar, FilterChoice } from '@/components/ui/filter-bar';
+import { FilterChoice, type FilterBarProps } from '@/components/ui/filter-bar';
 import { FilterTrigger } from '@/components/ui/filter-chip';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
@@ -35,34 +35,36 @@ const CREATE_PROMPT = 'Create an action for';
 const WORK_PROMPT =
   'Help me work through my open actions, starting with what blocks AI from reading my site.';
 
-export function ActionsToolbar({
+export function actionsToolbar({
   scope,
   view,
   newCount,
-}: Readonly<{ scope: ProjectScope; view: ActionsView; newCount: number | undefined }>) {
-  return (
-    <FilterBar
-      lead={
-        <Inline className="flex-wrap">
-          <FilterChoice<StatusChoice>
-            label="Status"
-            value={view.status}
-            defaultValue="all"
-            options={STATUS_OPTIONS}
-            onChange={view.setStatus}
-          />
-          <GroupByMenu view={view} />
-        </Inline>
-      }
-      filters={view.definitions}
-      actions={
-        <>
-          <CreateMenu />
-          <AcceptAll scope={scope} view={view} newCount={newCount} />
-        </>
-      }
-    />
-  );
+}: Readonly<{
+  scope: ProjectScope;
+  view: ActionsView;
+  newCount: number | undefined;
+}>): FilterBarProps {
+  return {
+    lead: (
+      <Inline wrap>
+        <FilterChoice<StatusChoice>
+          label="Status"
+          value={view.status}
+          defaultValue="all"
+          options={STATUS_OPTIONS}
+          onChange={view.setStatus}
+        />
+        <GroupByMenu view={view} />
+      </Inline>
+    ),
+    filters: view.definitions,
+    actions: (
+      <>
+        <CreateMenu />
+        <AcceptAll scope={scope} view={view} newCount={newCount} />
+      </>
+    ),
+  };
 }
 
 function GroupByMenu({ view }: Readonly<{ view: ActionsView }>) {

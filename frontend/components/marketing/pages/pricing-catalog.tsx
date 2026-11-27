@@ -1,6 +1,8 @@
 import { useId, useState } from 'react';
 
+import { Stack } from '@/components/ui/layout';
 import { Switch } from '@/components/ui/switch';
+import { Text } from '@/components/ui/typography';
 import type {
   BillingCatalog,
   CatalogAddon,
@@ -189,7 +191,7 @@ function ByokSwitch({
   const hint = useId();
   const [changed, setChanged] = useState(false);
   return (
-    <div className="flex max-w-xl items-start gap-3">
+    <div className="cl-byok">
       <Switch
         id={id}
         checked={byok}
@@ -201,14 +203,14 @@ function ByokSwitch({
         describedBy={hint}
         className="mt-0.5 pointer-coarse:before:-inset-x-0.5 pointer-coarse:before:-inset-y-3"
       />
-      <span className="grid gap-1">
-        <label htmlFor={id} aria-hidden className="text-body text-ink cursor-pointer">
+      <Stack as="span" gap="tight">
+        <label htmlFor={id} aria-hidden className="cl-byok-label">
           {BYOK_SWITCH_LABEL}
         </label>
-        <span id={hint} className="text-body-sm text-ink-muted">
+        <Text id={hint} variant="body" tone="ink-2">
           {BYOK_DISCLOSURE}
-        </span>
-      </span>
+        </Text>
+      </Stack>
       <output aria-live="polite" className="sr-only">
         {changed && (byok ? BYOK_ON_ANNOUNCEMENT : BYOK_OFF_ANNOUNCEMENT)}
       </output>
@@ -335,7 +337,7 @@ export function PublicPricingCatalog({
   return (
     <>
       <PageSection spacing="compact" label="Plans" labelHeading>
-        <div className="grid gap-6">
+        <div className="cl-plans-stack">
           <PagePlans
             toolbar={
               <>
@@ -349,7 +351,7 @@ export function PublicPricingCatalog({
                     window.history.replaceState(null, '', url);
                   }}
                 />
-                <p className="cl-note max-w-md">
+                <p className="cl-note cl-plans-note">
                   Prices shown in {catalog.currency}
                   {catalog.currency === 'INR' ? ', exclusive of GST' : ''}. Your billing country
                   sets the final currency and tax, confirmed in the app before payment.

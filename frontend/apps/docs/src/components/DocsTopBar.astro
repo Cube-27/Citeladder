@@ -91,12 +91,16 @@ const sections = [
 </header>
 
 <style>
+  :root {
+    --docs-search-width: 360px;
+    --docs-search-width-compact: 280px;
+  }
   .cl-docs-bar {
     position: sticky;
     top: 0;
     z-index: var(--z-index-overlay);
     background: var(--color-site-page);
-    box-shadow: inset 0 -1px 0 var(--color-line);
+    box-shadow: inset 0 calc(-1 * var(--site-rule)) 0 var(--color-rule);
   }
   .cl-docs-bar-inner,
   .cl-docs-bar-tab-list {
@@ -105,20 +109,20 @@ const sections = [
   }
   .cl-docs-bar-inner {
     display: grid;
-    padding: 0 24px;
+    padding: 0 var(--site-space-6);
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    gap: 24px;
+    gap: var(--site-space-6);
     height: var(--nav-height);
   }
   .cl-docs-bar-home {
     display: inline-flex;
     align-items: center;
     justify-self: start;
-    margin-left: -4px;
-    padding: 4px;
-    border-radius: var(--radius-sm);
-    color: var(--color-ink);
+    margin-left: calc(-1 * var(--site-space-1));
+    padding: var(--site-space-1);
+    border-radius: var(--radius-inner);
+    color: var(--text-color-ink);
     text-decoration: none;
   }
   .cl-docs-bar-home :global(.cl-docs-bar-mark) {
@@ -126,7 +130,7 @@ const sections = [
   }
   .cl-docs-bar-search :global([data-docs-search-trigger='field']) {
     display: flex;
-    width: 360px;
+    width: var(--docs-search-width);
   }
   .cl-docs-bar-search :global([data-docs-search-trigger='icon']),
   .cl-docs-bar-end :global(.cl-docs-bar-menu) {
@@ -136,35 +140,35 @@ const sections = [
     display: flex;
     align-items: center;
     justify-self: end;
-    gap: 8px;
+    gap: var(--site-space-2);
   }
   .cl-docs-bar-site {
     display: inline-flex;
     align-items: center;
-    height: var(--control-md);
-    padding: 0 12px;
-    border-radius: var(--radius-md);
-    color: var(--color-ink-secondary);
+    height: var(--spacing-control-md);
+    padding: 0 var(--site-space-3);
+    border-radius: var(--radius-control);
+    color: var(--text-color-ink-2);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     text-decoration: none;
     white-space: nowrap;
     transition:
-      background-color var(--motion-fast) var(--ease-standard),
-      color var(--motion-fast) var(--ease-standard);
+      background-color var(--transition-duration-fast) var(--ease-standard),
+      color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-docs-bar-site:hover {
-    background: var(--color-surface-sunken);
-    color: var(--color-ink);
+    background: var(--color-well);
+    color: var(--text-color-ink);
   }
   .cl-docs-bar-tabs {
-    box-shadow: inset 0 1px 0 var(--color-line);
+    box-shadow: inset 0 var(--site-rule) 0 var(--color-rule);
   }
   .cl-docs-bar-tab-list {
     display: flex;
-    gap: 4px;
-    padding: 0 12px;
+    gap: var(--site-space-1);
+    padding: 0 var(--site-space-3);
     height: var(--docs-tabs-height);
     list-style: none;
   }
@@ -176,40 +180,40 @@ const sections = [
     isolation: isolate;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 0 12px;
-    color: var(--color-ink-secondary);
+    gap: var(--site-space-2);
+    padding: 0 var(--site-space-3);
+    color: var(--text-color-ink-2);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     text-decoration: none;
     white-space: nowrap;
-    transition: color var(--motion-fast) var(--ease-standard);
+    transition: color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-docs-bar-tab::before {
     position: absolute;
-    inset: 8px 0;
-    z-index: -1;
-    border-radius: var(--radius-sm);
+    inset: var(--site-space-2) 0;
+    z-index: var(--z-index-behind);
+    border-radius: var(--radius-inner);
     content: '';
-    transition: background-color var(--motion-fast) var(--ease-standard);
+    transition: background-color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-docs-bar-tab::after {
     position: absolute;
     right: 0;
-    bottom: -1px;
+    bottom: calc(-1 * var(--site-rule));
     left: 0;
-    height: 2px;
+    height: var(--site-space-0_5);
     content: '';
   }
   .cl-docs-bar-tab:hover {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .cl-docs-bar-tab:not([aria-current='page']):hover::before {
-    background: var(--color-surface-sunken);
+    background: var(--color-well);
   }
   .cl-docs-bar-tab[aria-current='page'] {
-    color: var(--color-ink);
+    color: var(--text-color-ink);
   }
   .cl-docs-bar-tab[aria-current='page']::after {
     background: var(--color-accent);
@@ -228,25 +232,25 @@ const sections = [
     left: 0;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--site-space-4);
     max-height: calc(100dvh - var(--nav-height));
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 16px 20px 24px;
+    padding: var(--site-space-4) var(--site-space-5) var(--site-space-6);
     background: var(--color-site-page);
-    border-top: 1px solid var(--color-line);
+    border-top: var(--site-rule) solid var(--color-rule);
     box-shadow: var(--shadow-pop);
   }
   .cl-docs-bar-sheet[hidden] {
     display: none;
   }
   .cl-docs-bar-sheet-tabs {
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--color-line);
+    padding-bottom: var(--site-space-4);
+    border-bottom: var(--site-rule) solid var(--color-rule);
   }
   @media (max-width: 1279px) {
     .cl-docs-bar-search :global([data-docs-search-trigger='field']) {
-      width: 280px;
+      width: var(--docs-search-width-compact);
     }
     .cl-docs-bar-site {
       display: none;
@@ -255,8 +259,8 @@ const sections = [
   @media (max-width: 899px) {
     .cl-docs-bar-inner {
       display: flex;
-      gap: 8px;
-      padding: 0 20px;
+      gap: var(--site-space-2);
+      padding: 0 var(--site-space-5);
     }
     .cl-docs-bar-home {
       margin-right: auto;
@@ -271,7 +275,7 @@ const sections = [
       display: inline-flex;
     }
     .cl-docs-bar-end :global(.cl-docs-bar-menu) {
-      width: var(--control-md);
+      width: var(--spacing-control-md);
       padding: 0;
     }
   }

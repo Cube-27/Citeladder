@@ -126,17 +126,27 @@ export function PromptStatusTabs({
   );
 }
 
+export function PromptSearch({
+  value,
+  onValueChange,
+}: Readonly<{ value: string; onValueChange: (value: string) => void }>) {
+  return (
+    <SearchField
+      value={value}
+      onValueChange={onValueChange}
+      placeholder="Search prompts"
+      aria-label="Search prompts"
+    />
+  );
+}
+
 export function promptFilterControls({
-  search,
-  onSearchChange,
   filters,
   onFiltersChange,
   personas = [],
   measured,
   topic,
 }: Readonly<{
-  search: string;
-  onSearchChange: (value: string) => void;
   filters: PromptFilters;
   onFiltersChange: (update: (current: PromptFilters) => PromptFilters) => void;
   personas?: readonly string[];
@@ -145,14 +155,6 @@ export function promptFilterControls({
 }>): FilterBarProps {
   const patch: Patch = (part) => onFiltersChange((current) => ({ ...current, ...part }));
   return {
-    search: (
-      <SearchField
-        value={search}
-        onValueChange={onSearchChange}
-        placeholder="Search prompts"
-        aria-label="Search prompts"
-      />
-    ),
     filters: [
       ...(topic ? [topic] : []),
       singleChoice({
@@ -231,7 +233,7 @@ export function AddPromptsMenu({ onImport, onAdd, onGenerate }: AddPromptsHandle
         <Button variant={ACTIONS.addPrompts.variant}>
           <Icon icon={ACTIONS.addPrompts.icon} />
           {ACTIONS.addPrompts.label}
-          <Icon icon={ChevronDown} className="opacity-80" />
+          <Icon icon={ChevronDown} muted />
         </Button>
       </MenuTrigger>
       <MenuContent align="end">

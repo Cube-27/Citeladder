@@ -1,16 +1,27 @@
-import { useState, type ClipboardEvent, type ReactNode } from 'react';
+import { useState, type ClipboardEvent } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
 import { ValuesInput, type ChipItem } from '@/components/ui/chip-input';
 import { Icon } from '@/components/ui/icon';
+import { Inline } from '@/components/ui/layout';
+import {
+  FactRow,
+  BareInput,
+  MapAddRow,
+  MapGridCell,
+  MapGridEnd,
+  MapGridHead,
+  MapGridLead,
+  MapGridRow,
+} from '@/components/ui/map-editor';
 import { Notice } from '@/components/ui/notice';
 import { Tag } from '@/components/ui/tag';
 import { Select } from '@/components/ui/select';
 import { SectionBleed } from '@/components/ui/section';
 import { SettingsGroup } from '@/components/ui/setting-row';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type { BusinessMap } from '@citeladder/contracts';
-import { Check, Plus, X } from '@/lib/icons';
+import { Check, X } from '@/lib/icons';
 import { formatCount, pluralCount } from '@/lib/format';
 import {
   acceptAll,
@@ -25,7 +36,6 @@ import {
   type MapEntryDraft,
 } from '@/lib/prompts/builder-business';
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
-import { cn } from '@/lib/utils';
 
 type EditorProps = Readonly<{
   draft: BusinessDraft;
@@ -51,11 +61,6 @@ const itemEntries = (items: readonly ChipItem[]): MapEntryDraft[] =>
   }));
 const listItems = (values: readonly string[], suggested: boolean): ChipItem[] =>
   values.map((value) => ({ value, suggested }));
-
-const ROW_GRID =
-  'column-split:grid-cols-[minmax(9rem,22%)_repeat(3,minmax(0,1fr))_2.25rem] column-split:gap-0 grid gap-1';
-const CELL = 'column-split:border-s column-split:border-rule min-w-0 column-split:p-1';
-const FIELD_LABEL = textRole('caption', 'column-split:hidden px-2 pt-1');
 
 export function SuggestionsNotice({ draft, onChange, disabled }: Omit<EditorProps, 'listMax'>) {
   const count = suggestionCount(draft);
@@ -88,12 +93,8 @@ function OfferingRow({
   onRemove: () => void;
 }>) {
   return (
-    <li
-      aria-label={map.offering}
-      className={cn(ROW_GRID, 'border-rule column-split:p-0 border-b p-2')}
-    >
-      <div className="column-split:px-[var(--panel-inset)] column-split:py-3 flex min-w-0 items-start justify-between gap-2 px-2 pt-1">
-        <span className={textRole('label', 'min-w-0 break-words')}>{map.offering}</span>
+    <MapGridRow aria-label={map.offering}>
+      <MapGridLead label={map.offering}>
         <IconButton
           icon={X}
           label={`Remove ${map.offering}`}
@@ -101,12 +102,9 @@ function OfferingRow({
           onClick={onRemove}
           className="column-split:hidden"
         />
-      </div>
+      </MapGridLead>
       {DIMENSIONS.map((dimension) => (
-        <div key={dimension.key} className={CELL}>
-          <p aria-hidden className={FIELD_LABEL}>
-            {dimension.label}
-          </p>
+        <MapGridCell key={dimension.key} label={dimension.label}>
           <ValuesInput
             variant="cell"
             separates="comma"
@@ -117,17 +115,17 @@ function OfferingRow({
             max={listMax}
             disabled={disabled}
           />
-        </div>
+        </MapGridCell>
       ))}
-      <div className="column-split:flex column-split:border-s column-split:border-rule hidden items-start justify-center pt-2">
+      <MapGridEnd>
         <IconButton
           icon={X}
           label={`Remove ${map.offering}`}
           disabled={disabled}
           onClick={onRemove}
         />
-      </div>
-    </li>
+      </MapGridEnd>
+    </MapGridRow>
   );
 }
 
@@ -149,9 +147,8 @@ function AddOffering({
     setName('');
   };
   return (
-    <div className="focus-frame border-rule flex min-h-10 items-center gap-2 border-t border-transparent px-[var(--panel-inset)]">
-      <Icon icon={Plus} className="text-ink-2" />
-      <input
+    <MapAddRow>
+      <BareInput
         aria-label="Add offering"
         placeholder="Add offering"
         value={name}
@@ -164,9 +161,8 @@ function AddOffering({
           event.preventDefault();
           add();
         }}
-        className="type-body text-ink placeholder:text-ink-3 min-h-8 flex-1 bg-transparent"
       />
-    </div>
+    </MapAddRow>
   );
 }
 
@@ -193,28 +189,13 @@ export function OfferingsGrid({
     <SettingsGroup
       title="Offerings"
       status={
-        <span className={textRole('caption', 'tabular-nums')}>
+        <Text variant="caption" numeric>
           {formatCount(draft.offerings.length)}
-        </span>
+        </Text>
       }
     >
       <SectionBleed>
-        <div
-          aria-hidden
-          className={cn(
-            ROW_GRID,
-            'border-rule column-split:grid hidden h-[var(--table-header-height)] items-center border-b bg-[var(--table-head-ground)]',
-            textRole('captionStrong'),
-          )}
-        >
-          <span className="px-[var(--panel-inset)]">Offering</span>
-          {DIMENSIONS.map((dimension) => (
-            <span key={dimension.key} className="px-3">
-              {dimension.label}
-            </span>
-          ))}
-          <span />
-        </div>
+        <MapGridHead lead="Offering" heads={DIMENSIONS.map((dimension) => dimension.label)} />
         {draft.maps.length ? (
           <ul aria-label="Offerings" className="contents">
             {draft.maps.map((map, index) => (
@@ -248,22 +229,6 @@ const LISTS = [
   { key: 'categoryTerms', label: 'Category terms' },
   { key: 'jobs', label: 'Jobs to be done' },
 ] as const satisfies readonly { key: ContextListKey; label: string }[];
-
-function FactRow({
-  label,
-  count,
-  children,
-}: Readonly<{ label: string; count?: string; children: ReactNode }>) {
-  return (
-    <div className="column-split:grid-cols-[10.5rem_minmax(0,1fr)] grid min-w-0 items-start gap-x-3 gap-y-1">
-      <div className="column-split:pt-2.5">
-        <p className={textRole('label')}>{label}</p>
-        {count ? <p className={textRole('caption', 'tabular-nums')}>{count}</p> : null}
-      </div>
-      <div className="min-w-0">{children}</div>
-    </div>
-  );
-}
 
 export function BusinessFacts({
   draft,
@@ -307,7 +272,7 @@ export function BusinessFacts({
           </FactRow>
         ))}
         <FactRow label="Business model">
-          <div className="flex items-center gap-2">
+          <Inline>
             <Select
               ariaLabel="Business model"
               placeholder={unknownModel ? 'Unknown' : 'Not set'}
@@ -325,7 +290,7 @@ export function BusinessFacts({
                 onClick={() => accept('businessModel')}
               />
             ) : null}
-          </div>
+          </Inline>
         </FactRow>
       </SectionBleed>
     </SettingsGroup>

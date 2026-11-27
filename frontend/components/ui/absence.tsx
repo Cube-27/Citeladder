@@ -15,6 +15,7 @@ type AbsenceProps = Readonly<
     state?: DataAvailabilityState;
     reason?: string;
     label?: string;
+    body?: boolean;
   }
 >;
 
@@ -26,6 +27,7 @@ export function Absence({
   state = 'not_measured',
   reason,
   label,
+  body = false,
   className,
   ...props
 }: AbsenceProps) {
@@ -35,7 +37,7 @@ export function Absence({
       {...props}
       data-absence={state}
       title={reason ? undefined : word}
-      className={cn('text-ink-2 font-normal whitespace-nowrap', className)}
+      className={cn('text-ink-2 font-plain whitespace-nowrap', body && 'text-body', className)}
     >
       <span aria-hidden>{ABSENCE_MARK}</span>
       <span className="sr-only">{word}</span>

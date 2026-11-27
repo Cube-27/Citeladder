@@ -1,24 +1,24 @@
 .cl-shead {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--site-space-5);
 }
 
 .cl-shead-main {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--site-space-4);
 }
 
 .cl-shead-title {
-  max-width: 960px;
+  max-width: var(--site-measure-2xl);
   margin: 0;
-  color: var(--color-ink);
+  color: var(--text-color-ink);
   font-family: var(--font-display);
   font-size: var(--text-site-section);
-  font-weight: 400;
+  font-weight: var(--text-site-section--font-weight);
   line-height: var(--text-site-section--line-height);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--text-site-section--letter-spacing);
   text-wrap: balance;
 }
 
@@ -26,11 +26,11 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 20px;
+  gap: var(--site-space-5);
 }
 
 .cl-shead-lead {
-  max-width: 62ch;
+  max-width: var(--site-measure-lead);
   margin: 0;
   text-wrap: pretty;
 }
@@ -40,7 +40,7 @@
 }
 
 .cl-page-section > .cl-container > .cl-shead + .cl-page-section-body {
-  margin-top: 48px;
+  margin-top: var(--site-space-12);
 }
 
 .cl-page-section-body {
@@ -52,14 +52,14 @@
 }
 
 .cl-page-section-body > * + * {
-  margin-top: 32px;
+  margin-top: var(--site-space-8);
 }
 
 .cl-page-section-grid {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   align-items: start;
-  gap: 24px;
+  gap: var(--site-space-6);
 }
 
 .cl-page-section-grid--even {
@@ -68,8 +68,8 @@
 
 .cl-page-section-aside {
   position: sticky;
-  top: calc(var(--nav-height) + 32px);
-  padding-right: 24px;
+  top: calc(var(--nav-height) + var(--site-space-8));
+  padding-right: var(--site-space-6);
 }
 
 .cl-page-section-aside:has(+ .cl-page-section-body > .cl-faq) {
@@ -81,18 +81,18 @@
 }
 
 .cl-page-section-aside > .cl-shead + .cl-page-section-aside-body {
-  margin-top: 32px;
+  margin-top: var(--site-space-8);
 }
 
 .cl-page-section--aside.cl-page-section--compact .cl-shead-lead {
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 @media (max-width: 1023px) {
   .cl-page-section-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 48px;
+    gap: var(--site-space-12);
   }
 
   .cl-page-section-aside {
@@ -103,10 +103,21 @@
 
 @media (max-width: 767px) {
   .cl-page-section > .cl-container > .cl-shead + .cl-page-section-body {
-    margin-top: 32px;
+    margin-top: var(--site-space-8);
   }
 
   .cl-page-section-grid {
-    gap: 32px;
+    gap: var(--site-space-8);
   }
+}
+
+.cl-callout-copy {
+  display: block;
+  max-width: var(--container-copy);
+}
+
+.cl-source-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--site-space-6);
 }

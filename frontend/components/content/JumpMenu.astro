@@ -18,6 +18,10 @@ const { label } = Astro.props;
 </details>
 
 <style>
+  :root {
+    --jump-menu-min: 280px;
+    --jump-menu-max-height: 480px;
+  }
   .cl-jump {
     position: relative;
     min-width: 0;
@@ -26,24 +30,24 @@ const { label } = Astro.props;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    height: var(--control-lg);
-    padding: 0 16px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-line-control);
-    border-radius: var(--radius-md);
-    color: var(--color-ink);
+    gap: var(--site-space-3);
+    height: var(--spacing-control-lg);
+    padding: 0 var(--site-space-4);
+    background: var(--color-panel);
+    border: var(--site-rule) solid var(--color-control-line);
+    border-radius: var(--radius-control);
+    color: var(--text-color-ink);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     list-style: none;
-    transition: background-color var(--motion-fast) var(--ease-standard);
+    transition: background-color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-jump-summary::-webkit-details-marker {
     display: none;
   }
   .cl-jump-summary:hover {
-    background: var(--color-surface-sunken);
+    background: var(--color-well);
   }
   .cl-jump-label {
     min-width: 0;
@@ -52,8 +56,8 @@ const { label } = Astro.props;
     white-space: nowrap;
   }
   .cl-jump :global(.cl-jump-caret) {
-    color: var(--color-ink-secondary);
-    transition: transform var(--motion-fast) var(--ease-standard);
+    color: var(--text-color-ink-2);
+    transition: transform var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-jump[open] :global(.cl-jump-caret) {
     transform: rotate(180deg);
@@ -61,43 +65,43 @@ const { label } = Astro.props;
   .cl-jump-panel {
     position: absolute;
     z-index: var(--z-index-sticky);
-    top: calc(100% + 8px);
+    top: calc(100% + var(--site-space-2));
     left: 0;
-    width: max(100%, 280px);
-    max-width: calc(100vw - 40px);
-    max-height: min(60vh, 480px);
+    width: max(100%, var(--jump-menu-min));
+    max-width: calc(100vw - var(--site-space-10));
+    max-height: min(60vh, var(--jump-menu-max-height));
     overflow: auto;
-    padding: 12px 12px 12px 8px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: var(--site-radius-inner, var(--radius-lg));
+    padding: var(--site-space-3) var(--site-space-3) var(--site-space-3) var(--site-space-2);
+    background: var(--color-panel);
+    border: var(--site-rule) solid var(--color-rule);
+    border-radius: var(--site-radius-inner, var(--radius-card));
     opacity: 0;
-    translate: 0 var(--cl-jump-shift, -4px);
+    translate: 0 var(--cl-jump-shift, calc(-1 * var(--site-space-1)));
     transition:
-      opacity var(--motion-close) var(--ease-exit),
-      translate var(--motion-close) var(--ease-exit);
+      opacity var(--transition-duration-close) var(--ease-standard),
+      translate var(--transition-duration-close) var(--ease-standard);
   }
   .cl-jump::details-content {
-    transition: content-visibility var(--motion-close) allow-discrete;
+    transition: content-visibility var(--transition-duration-close) allow-discrete;
   }
   .cl-jump[open]::details-content {
-    transition-duration: var(--motion-open);
+    transition-duration: var(--transition-duration-open);
   }
   .cl-jump[open] .cl-jump-panel {
     opacity: 1;
     translate: 0;
-    transition-duration: var(--motion-open);
+    transition-duration: var(--transition-duration-open);
     transition-timing-function: var(--ease-standard);
     @starting-style {
       opacity: 0;
-      translate: 0 var(--cl-jump-shift, -4px);
+      translate: 0 var(--cl-jump-shift, calc(-1 * var(--site-space-1)));
     }
   }
   .cl-jump + .cl-jump .cl-jump-panel {
     right: 0;
     left: auto;
   }
-  .cl-jump-panel :global(.cl-toc > .type-eyebrow) {
+  .cl-jump-panel :global(.cl-toc > .cl-kicker) {
     display: none;
   }
   @media (prefers-reduced-motion: reduce) {
