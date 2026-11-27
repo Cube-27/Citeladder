@@ -72,6 +72,7 @@ const COLOUR_FUNCTION = /^(rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)$/i;
 const GRADIENT = /gradient$/i;
 const EXEMPT_MEDIA = /forced-colors|prefers-reduced-motion:\s*reduce/;
 const SKIPPED_AT_RULE = /^(theme|font-face|keyframes|property)$/;
+const ROOT_COMPOUND = /^:root(?:\[[^\]]*\]|:not\([^()]*\))*$/;
 const GLOBAL_KEYWORD = /^(inherit|initial|unset|revert|revert-layer)$/i;
 
 const fullOpacity = (property, number) => property === 'opacity' && Number(number.number) === 1;
@@ -132,7 +133,7 @@ function exempt(node) {
 
 const rootToken = (decl) =>
   decl.parent?.type === 'rule' &&
-  decl.parent.selectors.every((selector) => selector.trim().startsWith(':root'));
+  decl.parent.selectors.every((selector) => ROOT_COMPOUND.test(selector.trim()));
 
 function declarationParts(decl, tokenFile) {
   const property = decl.prop.toLowerCase();

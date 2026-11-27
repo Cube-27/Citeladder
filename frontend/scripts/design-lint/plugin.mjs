@@ -96,18 +96,28 @@ const plainElement = {
     const constants = new Map();
     const imports = new Map();
     const elements = [];
+    const spreads = [];
     const forwarded = new Set();
-    const forwardsProps = (item) => {
-      if (item.type !== 'JSXSpreadAttribute') return false;
-      const { argument } = item;
-      if (argument.type === 'Identifier') return forwarded.has(argument.name);
+    const stylingObject = (argument) => {
+      let object = argument.type === 'Identifier' ? constants.get(argument.name) : argument;
+      while (object?.type === 'TSAsExpression' || object?.type === 'TSSatisfiesExpression')
+        object = object.expression;
       return (
-        argument.type === 'ObjectExpression' &&
-        argument.properties.some((property) =>
+        object?.type === 'ObjectExpression' &&
+        object.properties.some((property) =>
           ['className', 'style'].includes(property.key?.name ?? property.key?.value),
         )
       );
     };
+    const unsafeSpread = (node) =>
+      node.attributes.some(
+        ({ type, argument }) =>
+          type === 'JSXSpreadAttribute' &&
+          (stylingObject(argument) ||
+            (/^[a-z]/.test(rootName(node.name)) &&
+              argument.type === 'Identifier' &&
+              forwarded.has(argument.name))),
+      );
     const collectParams = (node) => {
       for (const param of node.params) paramNames(param).forEach((name) => forwarded.add(name));
     };
@@ -124,11 +134,7 @@ const plainElement = {
           constants.set(node.id.name, node.init);
       },
       JSXOpeningElement(node) {
-        if (/^[a-z]/.test(rootName(node.name)) && node.attributes.some(forwardsProps))
-          context.report({
-            node,
-            message: `<${rootName(node.name)}> spreads forwarded props, so a caller can pass it any class or style. Render a primitive instead. ${GUIDE}`,
-          });
+        spreads.push(node);
         const keys = roleKeys(attributeNamed(node, 'style'));
         if (keys.length)
           context.report({
@@ -139,6 +145,11 @@ const plainElement = {
         if (attribute?.value) elements.push({ node, value: attribute.value });
       },
       'Program:exit'() {
+        for (const node of spreads.filter(unsafeSpread))
+          context.report({
+            node,
+            message: `<${rootName(node.name)}> spreads forwarded props or an object holding className or style, so a caller can pass it any class or style. Render a primitive instead. ${GUIDE}`,
+          });
         for (const { node, value } of elements) {
           const { tag, test, kind } = elementCheck(node, imports);
           const found = classValues(value, constants);

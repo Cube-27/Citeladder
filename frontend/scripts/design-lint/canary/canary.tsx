@@ -30,11 +30,13 @@ export function Canary({ tone }: Readonly<{ tone: string }>) {
       <i className={`flex ${LAYOUT.row}`}>template</i>
       <div className="grid @[517px]:grid-flow-col">breakpoint</div>
       <Frame>forwarded</Frame>
+      <Box {...BAG}>constant spread</Box>
     </Stack>
   );
 }
 
 const LAYOUT = { row: 'flex', column: 'grid' } as const;
+const BAG = { className: 'flex' } as const;
 
 function Box(props: Readonly<{ className: string; children: string }>) {
   return <Stack {...props} />;

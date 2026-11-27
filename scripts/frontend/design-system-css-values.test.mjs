@@ -32,11 +32,12 @@ test('raw colour, type, z, motion, shadow, spacing, size, border, radius, opacit
     '.t { width: 313px; max-width: 37rem; }',
     '.u { --pad: 13px; }',
     '.v { mask-image: linear-gradient(#000, transparent); }',
+    ':root .w { --pad: 13px; }',
   ].join('\n');
   const twice = new Set([17, 20]);
   assert.deepEqual(
     lines(cssValueFindings('x.css', css)),
-    Array.from({ length: 22 }, (_, index) => index + 1).flatMap((line) =>
+    Array.from({ length: 23 }, (_, index) => index + 1).flatMap((line) =>
       Array(twice.has(line) ? 2 : 1).fill(`x.css:${line}`),
     ),
   );
@@ -53,6 +54,7 @@ test('tokens, keywords, zero, multipliers, percentages, gradient stops and exemp
 .e { clip-path: inset(-24px 0 0 0); line-height: var(--text-label--line-height); }
 .h { opacity: 1; mask-image: linear-gradient(black, transparent); font-family: var(--font-mono); width: var(--w); }
 .i { color: var(--tint, var(--text-color-ink)); border-radius: var(--radius-card); }
+:root[data-x]:not([data-y]) { --pad: 13px; }
 @media (forced-colors: active) { .f { border: 1px solid CanvasText; } }
 @media (prefers-reduced-motion: reduce) { .g { transition-duration: 1ms; } }
 @keyframes spin { to { transform: rotate(1turn); } }
