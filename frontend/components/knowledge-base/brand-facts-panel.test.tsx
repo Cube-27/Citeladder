@@ -58,6 +58,7 @@ describe('BrandFactsPanel', () => {
     const dialog = screen.getByRole('alertdialog', { name: 'Retire fact?' });
     await user.click(within(dialog).getByRole('button', { name: 'Retire fact' }));
     await screen.findByText('Fact retired');
+    await vi.waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
     await user.click(screen.getByRole('button', { name: 'Undo' }));
 
     await vi.waitFor(() =>
