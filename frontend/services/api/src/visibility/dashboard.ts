@@ -49,6 +49,8 @@ import {
   AnalysisNotFoundError,
   authorizedSelection,
   latestBrandRunId,
+  observedAt,
+  selectedRuns,
   TrendQueryError,
   validateCohort,
   validateEngineAndRange,
@@ -172,6 +174,25 @@ export async function scopedSelection(
   const scoped = await authorizedSelection(db, selection);
   if (scoped.auditId || scoped.auditIds?.length || scoped.fromAt || scoped.toAt) return scoped;
   return { ...scoped, auditId: await latestDashboardRunId(db, scoped) };
+}
+
+export async function windowSelection(
+  db: Database,
+  selection: RunSelection,
+): Promise<RunSelection> {
+  const scoped = await scopedSelection(db, selection);
+  if (scoped.auditId !== null || scoped.auditIds?.length) return scoped;
+  const runs = await selectedRuns(db, scoped)
+    .select('audit.id')
+    .orderBy(observedAt, 'desc')
+    .orderBy('audit.id', 'desc')
+    .limit(visibility.selection_max_runs + 1)
+    .execute();
+  if (runs.length > visibility.selection_max_runs)
+    throw new TrendQueryError(
+      `Select a narrower period: at most ${visibility.selection_max_runs} runs per selection`,
+    );
+  return { ...scoped, auditIds: runs.map((run) => run.id) };
 }
 
 async function selectedRun(

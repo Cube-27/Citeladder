@@ -16,10 +16,9 @@ export function competitorLogoUrl(projectId: string, competitorId: string): stri
 
 export async function logoResponse(
   db: Database,
-  scope: ProjectScope,
-  competitorId: string | null,
-  ifNoneMatch: string | undefined,
+  request: { scope: ProjectScope; competitorId: string | null; ifNoneMatch: string | undefined },
 ): Promise<Response> {
+  const { scope, competitorId } = request;
   const owner =
     competitorId === null
       ? db
@@ -33,13 +32,13 @@ export async function logoResponse(
           .where('owner.id', '=', competitorId);
   const asset = await owner
     .innerJoin('brand_logo_assets as asset', 'asset.id', 'owner.logo_asset_id')
-    .select(['asset.image_data', 'asset.content_type', 'asset.sha256'])
+    .select(['asset.id', 'asset.content_type', 'asset.sha256'])
     .where('projects.workspace_id', '=', scope.workspaceId)
     .where('asset.status', '=', READY)
     .where('asset.image_data', 'is not', null)
     .executeTakeFirst();
-  if (asset?.image_data == null)
-    throw notFound(competitorId === null ? 'Brand logo' : 'Competitor logo');
+  const missing = () => notFound(competitorId === null ? 'Brand logo' : 'Competitor logo');
+  if (asset === undefined) throw missing();
   const etag = `"${asset.sha256}"`;
   const headers = {
     'cache-control': REVALIDATE_CACHE_CONTROL,
@@ -48,8 +47,14 @@ export async function logoResponse(
     etag,
     'x-content-type-options': 'nosniff',
   };
-  if (ifNoneMatch === etag) return new Response(null, { status: 304, headers });
-  return new Response(new Uint8Array(asset.image_data), {
+  if (request.ifNoneMatch === etag) return new Response(null, { status: 304, headers });
+  const bytes = await db
+    .selectFrom('brand_logo_assets')
+    .select('image_data')
+    .where('id', '=', asset.id)
+    .executeTakeFirst();
+  if (bytes?.image_data == null) throw missing();
+  return new Response(new Uint8Array(bytes.image_data), {
     headers: { ...headers, 'content-type': asset.content_type },
   });
 }

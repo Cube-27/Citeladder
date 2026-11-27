@@ -32,15 +32,14 @@ import {
 import { isNamed } from '../perception/passages.ts';
 import { compareText } from '../text-order.ts';
 import { applyIdentities, brandIdentities } from './brand-identities.ts';
-import { scopedSelection } from './dashboard.ts';
-import { periodTrendSelection } from './runs.ts';
+import { scopedSelection, windowSelection } from './dashboard.ts';
+import { runConfigurations } from './run-configurations.ts';
+import { periodTrendSelection, samePeriod } from './runs.ts';
 import {
   citationsByAnalysis,
   evidenceScope,
   observedAt,
   perceptionCohorts,
-  selectedRuns,
-  TrendQueryError,
   type RunSelection,
 } from './selection.ts';
 
@@ -201,10 +200,9 @@ function mentionsOf(assessments: readonly Assessment[], perceived: Perceived | u
 
 async function selectionAnswers(
   db: Database,
-  selection: RunSelection,
+  scoped: RunSelection,
   options: { citations: boolean; brandQuestions?: boolean },
 ) {
-  const scoped = await scopedSelection(db, selection);
   const cohorts = options.brandQuestions ? perceptionCohorts(scoped.cohort) : undefined;
   const selected = await evidenceScope(db, scoped, cohorts)
     .select([
@@ -213,16 +211,27 @@ async function selectionAnswers(
       'ra.task_id',
       'ra.logical_engine',
       'ra.entity_assessments',
-      'audit.configuration',
       'snapshot.text as prompt',
       'snapshot.theme as topic',
       'snapshot.topic_id',
       utcTextOf(observedAt).as('observed_at'),
     ])
     .execute();
+  const configurations = await runConfigurations(db, {
+    workspaceId: scoped.workspaceId,
+    projectId: scoped.projectId,
+    auditIds: selected.map((row) => row.audit_id),
+  });
+  const frozen = new Map(
+    [...configurations].flatMap(([auditId, configuration]) => {
+      const versions = frozenPerceptionVersions(configuration);
+      const comparisonKey = frozenComparisonKey(configuration, scoped.logicalEngine);
+      return versions ? [[auditId, { versions, comparisonKey }] as const] : [];
+    }),
+  );
   const rows = selected.flatMap((row) => {
-    const versions = frozenPerceptionVersions(row.configuration);
-    return versions ? [{ ...row, versions }] : [];
+    const run = frozen.get(row.audit_id);
+    return run ? [{ ...row, ...run }] : [];
   });
   const ids = rows.map((row) => row.id);
   const [perceived, citations] = await Promise.all([
@@ -250,7 +259,7 @@ async function selectionAnswers(
         metrics: row.versions.metrics_version,
         model: row.versions.model,
       },
-      comparisonKey: frozenComparisonKey(row.configuration, scoped.logicalEngine),
+      comparisonKey: row.comparisonKey,
       mentions: mentionsOf(assessments, perceived.get(row.id)).map(({ mention }) => mention),
       brandRecommendation: assessments.find((row) => row.entity_kind === 'brand')?.state ?? null,
       topicId: row.topic_id,
@@ -262,25 +271,9 @@ async function selectionAnswers(
     auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText),
     partial: rows.length < selected.length,
     unperceived: new Set(
-      selected.filter((row) => !frozenPerceptionVersions(row.configuration)).map((r) => r.audit_id),
+      selected.filter((row) => !frozen.has(row.audit_id)).map((r) => r.audit_id),
     ),
   };
-}
-
-async function windowSelection(db: Database, selection: RunSelection): Promise<RunSelection> {
-  const scoped = await scopedSelection(db, selection);
-  if (scoped.auditId !== null || scoped.auditIds?.length) return scoped;
-  const runs = await selectedRuns(db, scoped)
-    .select('audit.id')
-    .orderBy(observedAt, 'desc')
-    .orderBy('audit.id', 'desc')
-    .limit(policy.visibility.selection_max_runs + 1)
-    .execute();
-  if (runs.length > policy.visibility.selection_max_runs)
-    throw new TrendQueryError(
-      `Select a narrower period: at most ${policy.visibility.selection_max_runs} runs per selection`,
-    );
-  return { ...scoped, auditIds: runs.map((run) => run.id) };
 }
 
 export async function getPerception(
@@ -288,22 +281,29 @@ export async function getPerception(
   selection: RunSelection,
 ): Promise<PerceptionResponse> {
   const scoped = await windowSelection(db, selection);
-  const [{ answers, auditIds }, period] = await Promise.all([
+  const [{ answers, auditIds }, period, identities] = await Promise.all([
     selectionAnswers(db, scoped, { citations: true, brandQuestions: true }),
     periodTrendSelection(db, scoped),
+    brandIdentities(db, scoped),
   ]);
   const summary = perceptionSummary(answers, policy.perception);
-  applyIdentities(summary.entities, await brandIdentities(db, scoped));
-  const trend = period
-    ? perceptionTrend(
-        (await selectionAnswers(db, period, { citations: false, brandQuestions: true })).answers,
-      )
-    : summary.trend;
+  applyIdentities(summary.entities, identities);
+  const trend =
+    period === null
+      ? summary.trend
+      : perceptionTrend(
+          samePeriod(period, scoped)
+            ? answers
+            : (await selectionAnswers(db, period, { citations: false, brandQuestions: true }))
+                .answers,
+        );
   return { ...summary, trend, source_audit_ids: auditIds };
 }
 
 export async function perceivedAnswers(db: Database, selection: RunSelection) {
-  const { answers, partial } = await selectionAnswers(db, selection, { citations: false });
+  const { answers, partial } = await selectionAnswers(db, await scopedSelection(db, selection), {
+    citations: false,
+  });
   return partial ? null : answers;
 }
 
@@ -312,7 +312,11 @@ export async function groupedSentiments(
   selection: RunSelection,
   groups: readonly (readonly string[])[],
 ) {
-  const { answers, unperceived } = await selectionAnswers(db, selection, { citations: false });
+  const { answers, unperceived } = await selectionAnswers(
+    db,
+    await scopedSelection(db, selection),
+    { citations: false },
+  );
   const byAudit = groupBy(answers, (answer) => answer.auditId);
   return groups.map((auditIds) =>
     auditIds.some((id) => unperceived.has(id))

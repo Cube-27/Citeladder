@@ -646,8 +646,11 @@ describe('accuracy reads', () => {
       `/visibility/accuracy?audit_ids=${pooled}&${window}`,
     );
 
+    const range = await call(tenant, 'GET', `/visibility/accuracy?${window}`);
+
     expect(status).toBe(200);
     expect(body.source_audit_ids).toEqual([pooled]);
+    expect([range.status, range.body.source_audit_ids]).toEqual([200, [pooled, other].sort()]);
     expect(
       (body.trend as { audit_id: string; comparable: boolean }[]).map((point) => [
         point.audit_id,

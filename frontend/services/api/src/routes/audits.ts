@@ -116,12 +116,11 @@ export const auditRoutes = [
     },
     response: auditSchema.array(),
     async handle({ c, db }, { query }) {
-      return listAudits(
-        db,
-        c.get('workspace').workspaceId,
-        query.project_id ?? undefined,
-        query.limit,
-      );
+      return listAudits(db, {
+        workspaceId: c.get('workspace').workspaceId,
+        projectId: query.project_id ?? undefined,
+        limit: query.limit,
+      });
     },
   }),
   defineGetRoute({

@@ -34,12 +34,22 @@ export function namesAnyEntity(assessments: readonly { state: string }[]): boole
   return assessments.some((row) => isNamed(row.state));
 }
 
-function segmenter(languageCode: string) {
+const segmenters = new Map<string, Intl.Segmenter>();
+
+function newSegmenter(languageCode: string) {
   try {
     return new Intl.Segmenter(languageCode || 'en', { granularity: 'sentence' });
   } catch {
     return new Intl.Segmenter('en', { granularity: 'sentence' });
   }
+}
+
+function segmenter(languageCode: string) {
+  const cached = segmenters.get(languageCode);
+  if (cached) return cached;
+  const created = newSegmenter(languageCode);
+  segmenters.set(languageCode, created);
+  return created;
 }
 
 function codePointIndex(text: string): (utf16: number) => number {

@@ -748,6 +748,11 @@ describe('logos', () => {
     });
     expect(unchanged.status).toBe(304);
     expect(unchanged.headers.get('etag')).toBe(etag);
+    const stale = await request('/logo', {
+      workspace: null,
+      headers: { 'if-none-match': '"stale"' },
+    });
+    expect([stale.status, Buffer.from(await stale.arrayBuffer())]).toEqual([200, png]);
     const competitor = await request(`/competitors/${competitorId}/logo`, { workspace: null });
     expect(competitor.status).toBe(200);
 

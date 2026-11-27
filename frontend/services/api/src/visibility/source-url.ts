@@ -135,18 +135,20 @@ async function brands(
   selection: RunSelection,
   cited: Cited,
 ): Promise<SourceUrlDetail['brands']> {
-  const found: { kind: 'brand' | 'competitor'; name: string; responses: number }[] = [];
-  for (const kind of ['brand', 'competitor'] as const) {
-    for (const row of await /* NOSONAR */ mentionCounts(db, selection.workspaceId, cited, kind)) {
-      if (row.name) found.push({ kind, ...row });
-    }
-  }
-  const ordered = found
+  const [brand, competitor, identities] = await Promise.all([
+    mentionCounts(db, selection.workspaceId, cited, 'brand'),
+    mentionCounts(db, selection.workspaceId, cited, 'competitor'),
+    brandIdentities(db, selection),
+  ]);
+  const ordered = [
+    ...brand.map((row) => ({ kind: 'brand' as const, ...row })),
+    ...competitor.map((row) => ({ kind: 'competitor' as const, ...row })),
+  ]
+    .filter((row) => row.name)
     .toSorted(
       (left, right) => right.responses - left.responses || compareText(left.name, right.name),
     )
     .slice(0, limits.brands);
-  const identities = await brandIdentities(db, selection);
   return ordered.map((entry) => {
     const identity = identities.get(identityKey(entry.name));
     return { ...entry, logo_url: identity?.logo_url ?? null, website: identity?.website ?? null };
@@ -176,13 +178,19 @@ export async function pageSection(
     .where('url_hash', '=', urlHash)
     .executeTakeFirst();
   if (!page) return null;
-  const reading = (await latestReadings(db, scope, [page.id])).get(page.id);
-  const presences = reading
-    ? ((await readingPresences(db, scope, [reading.id])).get(reading.id) ?? [])
-    : [];
-  const actionId = (await earnedPageActions(db, scope, [page.url_hash])).get(
-    page.url_hash,
-  )?.action_id;
+  const [{ reading, presences }, actions] = await Promise.all([
+    latestReadings(db, scope, [page.id]).then(async (readings) => {
+      const latest = readings.get(page.id);
+      return {
+        reading: latest,
+        presences: latest
+          ? ((await readingPresences(db, scope, [latest.id])).get(latest.id) ?? [])
+          : [],
+      };
+    }),
+    earnedPageActions(db, scope, [page.url_hash]),
+  ]);
+  const actionId = actions.get(page.url_hash)?.action_id;
   return {
     state: page.inspection_state,
     reason: page.inspection_reason,
@@ -210,33 +218,38 @@ export async function getSourceUrlDetail(
     .innerJoin(scope, 'scope.analysis_id', 'citation.analysis_id')
     .where('citation.workspace_id', '=', selection.workspaceId)
     .where('citation.url', '=', url);
-  const [denominator, overview, counted, title] = await Promise.all([
-    db
-      .selectFrom(scope)
-      .select(sql<string>`count(distinct scope.analysis_id)`.as('responses'))
-      .executeTakeFirstOrThrow(),
-    db
-      .selectFrom(cited)
-      .select([
-        sql<string>`count(distinct cited.analysis_id)`.as('retrievals'),
-        utcText(sql`min(cited.observed_at)`).as('first_seen'),
-        utcText(sql`max(cited.observed_at)`).as('last_seen'),
-        sql<string>`count(distinct cited.prompt_key)`.as('prompts'),
-      ])
-      .executeTakeFirstOrThrow(),
-    matching
-      .select([
-        sql<string>`count(citation.id)`.as('citations'),
-        sql<string | null>`max(citation.url_hash)`.as('url_hash'),
-      ])
-      .executeTakeFirstOrThrow(),
-    matching
-      .where('citation.title', '!=', '')
-      .select('citation.title')
-      .orderBy('scope.observed_at', 'desc')
-      .limit(1)
-      .executeTakeFirst(),
-  ]);
+  const [denominator, overview, counted, title, engineRows, prompts, brandRows] = await Promise.all(
+    [
+      db
+        .selectFrom(scope)
+        .select(sql<string>`count(distinct scope.analysis_id)`.as('responses'))
+        .executeTakeFirstOrThrow(),
+      db
+        .selectFrom(cited)
+        .select([
+          sql<string>`count(distinct cited.analysis_id)`.as('retrievals'),
+          utcText(sql`min(cited.observed_at)`).as('first_seen'),
+          utcText(sql`max(cited.observed_at)`).as('last_seen'),
+          sql<string>`count(distinct cited.prompt_key)`.as('prompts'),
+        ])
+        .executeTakeFirstOrThrow(),
+      matching
+        .select([
+          sql<string>`count(citation.id)`.as('citations'),
+          sql<string | null>`max(citation.url_hash)`.as('url_hash'),
+        ])
+        .executeTakeFirstOrThrow(),
+      matching
+        .where('citation.title', '!=', '')
+        .select('citation.title')
+        .orderBy('scope.observed_at', 'desc')
+        .limit(1)
+        .executeTakeFirst(),
+      engines(db, cited),
+      promptRows(db, cited),
+      brands(db, selection, cited),
+    ],
+  );
   const { citations, url_hash: urlHash } = counted;
   const retrievals = Number(overview.retrievals);
   return {
@@ -249,9 +262,9 @@ export async function getSourceUrlDetail(
     prompts: Number(overview.prompts),
     first_seen: wireUtcOrNull(overview.first_seen),
     last_seen: wireUtcOrNull(overview.last_seen),
-    engines: await engines(db, cited),
-    prompt_rows: await promptRows(db, cited),
-    brands: await brands(db, selection, cited),
+    engines: engineRows,
+    prompt_rows: prompts,
+    brands: brandRows,
     page: await pageSection(db, selection, urlHash),
   };
 }

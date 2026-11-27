@@ -32,7 +32,12 @@ export async function auditRuns({ db, scope }: ProjectRead, args: Page): Promise
     after = id;
   }
   const count = args.limit ?? mcpPolicy.default_list_limit;
-  const audits = await listAudits(db, scope.workspaceId, scope.projectId, count + 1, after);
+  const audits = await listAudits(db, {
+    workspaceId: scope.workspaceId,
+    projectId: scope.projectId,
+    limit: count + 1,
+    afterId: after,
+  });
   const items = audits.slice(0, count).map(runSummary);
   const last = items.at(-1);
   return {

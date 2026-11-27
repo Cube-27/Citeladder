@@ -396,9 +396,13 @@ into memory, so three runner executions in a row ran out of heap, and nothing
 was published. The 51,000-page fixture then showed two more failures. A
 per-chunk lookup led by the tracked set took 25 s per chunk. A pairwise
 duplicate-content loop (1.3 billion comparisons) held the event loop until the
-finalize lease expired.
+finalize lease expired. 2026-11-27: the Brand and Fact-checking reads copied
+`audit.configuration` (about 19 KB, up to 56 KB) onto every answer row, about
+2.4 MB per run per request, and the period trend loaded whole metric rows only
+to collect their ids.
 **Check:** A query without `LIMIT` or a keyset inside a locked transaction or
-a per-task hook. A per-task step that rereads a whole crawl. An array or map
+a per-task hook. A per-row select of a per-run column (`audit.configuration`)
+instead of one read per run. A whole-row read used only for its ids. A per-task step that rereads a whole crawl. An array or map
 filled from every page, evaluation or issue of a crawl. A nested loop over a
 crawl's pages, or a lookup led by the growing side instead of the batch. A new entitlement
 ceiling without a matching `SITE_HEALTH_SCALE_PAGES` run.
@@ -427,9 +431,11 @@ on it. Hashes the model cannot pass to another read (give the path).
 **Why:** Sonar S9382 is the most common rule in the project's history: 209
 fixed and 23 open (for example `services/api/src/agent/suggest-edits.ts` and
 `page-documents/suggestion-actions.ts`). #464 had to annotate 204 loops after
-the fact.
+the fact. 2026-11-27: the source URL detail ran its brand and competitor counts
+in a `NOSONAR` loop and its sections one after another, though nothing shared
+forced the order.
 **Check:** `for … { await … }` over items that share no transaction, order
-or budget.
+or budget. A `NOSONAR` loop on the request pool with no shared transaction.
 
 ## Type discipline
 
