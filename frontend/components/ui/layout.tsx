@@ -66,6 +66,7 @@ export function Stack({
   list = 'none',
   box = 'auto',
   content = 'stretch',
+  inset = false,
   pad,
   hideEmpty = false,
   shrinkTrack = false,
@@ -80,6 +81,7 @@ export function Stack({
     list?: keyof typeof STACK_LIST;
     box?: Box;
     content?: keyof typeof STACK_CONTENT;
+    inset?: boolean;
     pad?: Pad;
     hideEmpty?: boolean;
     shrinkTrack?: boolean;
@@ -97,6 +99,7 @@ export function Stack({
         STACK_LIST[list],
         BOX[box],
         STACK_CONTENT[content],
+        inset && 'p-4',
         pad?.top && PAD_TOP[pad.top],
         hideEmpty && 'empty:hidden',
         shrinkTrack && 'grid-cols-1',
@@ -113,6 +116,7 @@ const INLINE_GAP = {
   compact: 'gap-compact',
   group: 'gap-group',
   loose: 'gap-loose',
+  wide: 'gap-6',
   item: 'gap-item',
   tight: 'gap-tight',
   none: 'gap-0',

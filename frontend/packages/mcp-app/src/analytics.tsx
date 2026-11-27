@@ -82,9 +82,7 @@ function Overview({
             Brand mention rate
           </Text>
           <div>
-            <Text variant="figure" numeric>
-              {printed(rate(projection.visibility_rate))}
-            </Text>
+            <Text variant="figure">{printed(rate(projection.visibility_rate))}</Text>
           </div>
         </div>
         <div>
@@ -92,9 +90,7 @@ function Overview({
             Owned citation rate
           </Text>
           <div>
-            <Text variant="figure" numeric>
-              {printed(rate(projection.owned_citation_rate))}
-            </Text>
+            <Text variant="figure">{printed(rate(projection.owned_citation_rate))}</Text>
           </div>
         </div>
       </Inline>

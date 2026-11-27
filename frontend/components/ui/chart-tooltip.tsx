@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 export const seriesColor = (tone: SeriesTone) => `var(--color-data-${tone})`;
 
-export const CHART_TICK_TEXT = { fill: 'var(--text-color-ink-2)', fontSize: 12 } as const;
+const CHART_TICK_TEXT = { fill: 'var(--text-color-ink-2)', fontSize: 12 } as const;
 
 export function ChartText({
   x,

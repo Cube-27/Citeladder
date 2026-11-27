@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { BrandMark, type BrandMarkPlacement } from '@/components/ui/brand-mark';
-import { EngineGlyph } from '@/components/ui/engine-glyph';
+import { EngineGlyph, EngineShapes } from '@/components/ui/engine-glyph';
 import type { EngineKey } from '@/components/ui/engine-svg';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
@@ -27,7 +27,11 @@ export function GlyphMark({
   glyph,
   placement = 'inline',
 }: Readonly<{ glyph: EngineKey; placement?: BrandMarkPlacement }>) {
-  return <BrandMark kind="glyph" glyph={glyph} placement={placement} />;
+  return (
+    <BrandMark kind="glyph" glyph={glyph} placement={placement}>
+      <EngineShapes engine={glyph} brand />
+    </BrandMark>
+  );
 }
 
 export function engineOptionMark(engine: string): ReactNode {

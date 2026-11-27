@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
-import { EngineGlyph } from '@/components/ui/engine-glyph';
-import type { EngineKey } from '@/components/ui/engine-svg';
+import { EngineFrame, type EngineKey } from '@/components/ui/engine-svg';
 import { brandInitials } from '@/lib/brand/initials';
 import { brandMarkSources } from '@/lib/brand/mark-sources';
 import { cn } from '@/lib/utils';
@@ -39,7 +38,7 @@ type LogoSource = Readonly<{
   entity?: 'brand' | 'site';
 }>;
 
-type GlyphSource = Readonly<{ kind: 'glyph'; glyph: EngineKey }>;
+type GlyphSource = Readonly<{ kind: 'glyph'; glyph: EngineKey; children: ReactNode }>;
 
 export function BrandMark(
   props: Readonly<(LogoSource | GlyphSource) & { placement?: BrandMarkPlacement }>,
@@ -56,7 +55,9 @@ export function BrandMark(
       )}
     >
       {props.kind === 'glyph' ? (
-        <EngineGlyph engine={props.glyph} brand size={placement} flow="block" />
+        <EngineFrame engine={props.glyph} size={placement} flow="block">
+          {props.children}
+        </EngineFrame>
       ) : (
         <LogoImage source={props} placement={placement} />
       )}
