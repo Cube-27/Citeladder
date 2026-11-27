@@ -44,7 +44,7 @@ export function DemandEvidenceDrawer({
       eyebrow="Signal evidence"
       title={details.target}
       footer={
-        <Inline className="flex-wrap justify-between">
+        <Inline wrap justify="between">
           {signal.action_id ? (
             <ActionButton
               action="openAction"

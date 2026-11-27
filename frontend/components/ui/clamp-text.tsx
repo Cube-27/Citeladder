@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
-import { textRole, toneClass, type TextRole, type TextTone } from '@/components/ui/text-role';
+import {
+  TEXT_ROLE_CLASS,
+  TEXT_TONE_CLASS,
+  type TextRole,
+  type TextTone,
+} from '@/components/ui/text-role';
 import { urlCut } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +44,19 @@ export function useCut(
   return cut;
 }
 
+function clampClasses({
+  lines,
+  phoneWrap,
+  grow,
+}: Readonly<{ lines: 1 | 2; phoneWrap: boolean; grow: boolean }>) {
+  return cn(
+    'block min-w-0',
+    lines === 1 ? 'truncate' : 'line-clamp-2',
+    phoneWrap && 'phone:whitespace-normal phone:break-words',
+    grow && 'grow basis-60',
+  );
+}
+
 export function ClampText({
   children,
   lines = 1,
@@ -50,6 +68,7 @@ export function ClampText({
   rowTitle = false,
   phoneWrap = false,
   grow = false,
+  wrapOnPublic = false,
 }: Readonly<{
   children: ReactNode;
   lines?: 1 | 2;
@@ -61,6 +80,7 @@ export function ClampText({
   rowTitle?: boolean;
   phoneWrap?: boolean;
   grow?: boolean;
+  wrapOnPublic?: boolean;
 }>) {
   const ref = useRef<HTMLSpanElement>(null);
   const cut = useCut(ref);
@@ -79,15 +99,14 @@ export function ClampText({
         // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
         tabIndex={cut ? 0 : undefined}
         className={cn(
-          'block min-w-0',
-          lines === 1 ? 'truncate' : 'line-clamp-2',
-          phoneWrap && 'phone:whitespace-normal phone:break-words',
-          grow && 'grow basis-60',
+          clampClasses({ lines, phoneWrap, grow }),
           cut && 'rounded-mark',
-          text && textRole(text),
+          text && TEXT_ROLE_CLASS[text],
           numeric && 'tabular-nums',
-          toneClass(tone),
+          tone && TEXT_TONE_CLASS[tone],
           className,
+          wrapOnPublic &&
+            '[[data-public-surface]_&]:overflow-visible [[data-public-surface]_&]:whitespace-normal [[data-public-surface]_&]:wrap-anywhere',
         )}
       >
         {children}

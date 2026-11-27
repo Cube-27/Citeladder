@@ -179,7 +179,7 @@
 
 .cl-cta::before {
   position: absolute;
-  z-index: -1;
+  z-index: var(--z-index-behind);
   inset: 0 calc(50% - 50vw);
   background:
     radial-gradient(34% 70% at 50% 50%, var(--color-site-band-scrim), transparent 80%),
@@ -199,7 +199,7 @@
 
 .cl-cta::after {
   position: absolute;
-  z-index: -1;
+  z-index: var(--z-index-behind);
   inset: 0 calc(50% - 50vw);
   background: var(--site-noise);
   content: '';

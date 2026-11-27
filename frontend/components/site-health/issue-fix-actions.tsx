@@ -56,7 +56,7 @@ export function IssueFixActions({
   );
   return (
     <>
-      <Inline className="flex-wrap">
+      <Inline wrap>
         {canWrite ? (
           <MarkFixedButton
             scope={scope}

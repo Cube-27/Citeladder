@@ -7,7 +7,6 @@ import {
   TEXT_WIDTHS,
 } from '@/components/ui/skeleton-block';
 import type { ChartHeight } from '@/components/ui/chart';
-import { cn } from '@/lib/utils';
 
 type SkeletonProps = Readonly<{
   label?: string;
@@ -60,7 +59,7 @@ function TextBlocks({ lines = 3 }: Readonly<{ lines?: 1 | 2 | 3 }>) {
   return (
     <span className="grid gap-2">
       {TEXT_WIDTHS.slice(0, lines).map((width) => (
-        <SkeletonBlock key={width} className={cn('h-4', width)} />
+        <SkeletonBlock key={width} height="4" width={width} />
       ))}
     </span>
   );

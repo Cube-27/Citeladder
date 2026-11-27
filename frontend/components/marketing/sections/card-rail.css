@@ -3,7 +3,6 @@
   --rail-open-max: 720px;
   --rail-page-width: 1000px;
   --rail-page-zoom: 0.7;
-  --rail-shot-radius: 10px;
 }
 
 .cl-rail {
@@ -183,10 +182,6 @@
     visibility 0s;
 }
 
-.cl-railcard-shot .cl-frame-card {
-  border-radius: var(--rail-shot-radius);
-}
-
 .cl-railcard-shot {
   position: relative;
   display: flex;
@@ -325,8 +320,10 @@
   .cl-railcard {
     height: auto;
     overflow: visible;
+    border: 0;
     border-radius: 0;
     background: none;
+    outline: none;
     box-shadow: none;
   }
 

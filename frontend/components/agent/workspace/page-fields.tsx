@@ -104,7 +104,7 @@ function FieldRow({
   ...actions
 }: Readonly<FieldActions & { field: AgentPageField; value: string; review: FieldReview }>) {
   return (
-    <Stack as="li" gap="tight" className="min-w-0">
+    <Stack as="li" gap="tight" box="shrink">
       <Inline wrap>
         <Text variant="caption">{pageFieldLabel(field)}</Text>
         {review.edited ? <StatusMark tone="positive">Edited</StatusMark> : null}

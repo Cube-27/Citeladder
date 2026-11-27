@@ -68,23 +68,14 @@ describe('DataTable', () => {
       </DataTable>,
     );
     const frame = container.querySelector<HTMLElement>('[data-data-table-frame]')!;
-    const scope = frame.dataset.tableScope!;
-    const rules = frame.querySelector('style')!.textContent!.replaceAll(scope, 'S');
-    const rule = (position: number) =>
-      new RegExp(
-        String.raw`\[data-table-scope="S"\] tr:not\(\[data-table-state\]\) > :nth-child\(${position}\)\{([^}]*)\}`,
-        'u',
-      ).exec(rules)?.[1];
-    expect(rule(2)).toBe(
-      'text-align:start;width:100.000%;max-width:0;min-width:var(--data-table-identity-min);',
-    );
-    expect(rule(3)).toBe(
-      'text-align:end;width:1px;white-space:nowrap;min-width:calc(var(--spacing) * 16);',
-    );
-    expect(rule(4)).toContain('padding-inline-start:calc(var(--spacing-cell-x) + 12px);');
-    expect(rule(5)).toContain('text-align:end;');
-    expect(rules).toContain(':nth-child(3){font-variant-numeric:tabular-nums}');
-    expect(rules).toContain(':nth-child(4){font-variant-numeric:tabular-nums}');
+    expect([1, 2, 3, 4, 5].map((position) => frame.getAttribute(`data-c${position}`))).toEqual([
+      'select',
+      'start rest',
+      'end fixed s16 num',
+      'start fixed s24 gutter num',
+      'end fixed s20',
+    ]);
+    expect(frame.style.getPropertyValue('--data-table-share')).toBe('100.000%');
     expect(frame).toHaveAttribute('data-pinned', '2');
     expect(screen.getByRole('columnheader', { name: 'Open' })).toBeInTheDocument();
     expect(screen.getAllByRole('columnheader').map((head) => head.getAttribute('scope'))).toEqual([
@@ -355,9 +346,13 @@ describe('DataTable', () => {
         ]}
       />,
     );
-    const rules = container.querySelector('[data-data-table-frame] style')!.textContent!;
-    expect(rules.match(/width:50\.000%/gu)).toHaveLength(2);
-    expect(rules).not.toContain('display:none');
+    const frame = container.querySelector<HTMLElement>('[data-data-table-frame]')!;
+    expect(frame.style.getPropertyValue('--data-table-share')).toBe('50.000%');
+    expect([1, 2, 3].map((position) => frame.getAttribute(`data-c${position}`))).toEqual([
+      'start rest',
+      'end fixed s16 num',
+      'start rest gutter',
+    ]);
   });
 
   it('announces the filtered result count in a polite live region', () => {

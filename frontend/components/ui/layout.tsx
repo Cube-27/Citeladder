@@ -47,6 +47,9 @@ const BOX = {
   fit: 'w-fit max-w-full',
   'fixed-full': 'max-w-full shrink-0',
   line: 'h-5 phone:h-auto',
+  target: 'min-h-target',
+  end: 'ms-auto',
+  scroll: 'max-h-64 overflow-y-auto overscroll-contain',
 } as const;
 
 export type Box = keyof typeof BOX;
@@ -65,11 +68,13 @@ export function Stack({
   content = 'stretch',
   inset = false,
   pad,
-  className,
+  hideEmpty = false,
+  shrinkTrack = false,
+  anchor = false,
   children,
   ...props
 }: Readonly<
-  ComponentPropsWithRef<'div'> & {
+  Omit<ComponentPropsWithRef<'div'>, 'className' | 'style'> & {
     as?: ElementType;
     gap?: StackGap;
     align?: StackAlign;
@@ -78,6 +83,9 @@ export function Stack({
     content?: keyof typeof STACK_CONTENT;
     inset?: boolean;
     pad?: Pad;
+    hideEmpty?: boolean;
+    shrinkTrack?: boolean;
+    anchor?: boolean;
   }
 >) {
   const Component = as ?? 'div';
@@ -93,7 +101,9 @@ export function Stack({
         STACK_CONTENT[content],
         inset && 'p-4',
         pad?.top && PAD_TOP[pad.top],
-        className,
+        hideEmpty && 'empty:hidden',
+        shrinkTrack && 'grid-cols-1',
+        anchor && 'group scroll-mt-4',
       )}
     >
       {children}
@@ -147,20 +157,23 @@ export function Inline({
   inline = false,
   nowrap = false,
   stackBelow,
-  className,
+  showFrom,
+  hideEmpty = false,
   children,
   ...props
 }: Readonly<
-  ComponentPropsWithRef<'div'> & {
+  Omit<ComponentPropsWithRef<'div'>, 'className' | 'style'> & {
     as?: ElementType;
     gap?: InlineGap;
     align?: InlineAlign;
     justify?: InlineJustify;
-    wrap?: boolean;
+    wrap?: boolean | 'phone';
     box?: Box;
     inline?: boolean;
     nowrap?: boolean;
     stackBelow?: 'desktop';
+    showFrom?: 'desktop';
+    hideEmpty?: boolean;
   }
 >) {
   const Component = as ?? 'div';
@@ -172,13 +185,14 @@ export function Inline({
         'flex min-w-0',
         INLINE_ALIGN[align],
         INLINE_JUSTIFY[justify],
-        wraps && 'flex-wrap',
+        wraps === 'phone' ? 'phone:flex-wrap' : wraps && 'flex-wrap',
         INLINE_GAP[gap],
         BOX[box],
         inline && 'inline-flex',
         nowrap && 'whitespace-nowrap',
         stackBelow && 'desktop:flex-row desktop:items-center flex-col items-stretch',
-        className,
+        showFrom && 'desktop:flex hidden',
+        hideEmpty && 'empty:hidden',
       )}
     >
       {children}

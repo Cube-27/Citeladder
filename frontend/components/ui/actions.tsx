@@ -1,11 +1,6 @@
 import type { ReactNode } from 'react';
 
-import {
-  Button,
-  buttonClasses,
-  type ButtonProps,
-  type ButtonVariant,
-} from '@/components/ui/button';
+import { Button, type ButtonProps, type ButtonVariant } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import {
@@ -18,7 +13,6 @@ import {
   Sparkles,
   type IconGlyph,
 } from '@/lib/icons';
-import { cn } from '@/lib/utils';
 
 type ActionPreset = Readonly<{ label: string; variant: ButtonVariant; icon?: IconGlyph }>;
 
@@ -63,14 +57,11 @@ export function ActionButton({
   );
   if (href !== undefined) {
     return (
-      <ProjectLink
-        href={href}
-        aria-label={props['aria-label']}
-        data-button-variant={preset.variant}
-        className={cn(buttonClasses(preset.variant, undefined, props.size), className)}
-      >
-        {content}
-      </ProjectLink>
+      <Button asChild variant={preset.variant} size={props.size} className={className}>
+        <ProjectLink href={href} aria-label={props['aria-label']}>
+          {content}
+        </ProjectLink>
+      </Button>
     );
   }
   return (

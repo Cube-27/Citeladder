@@ -4,7 +4,7 @@ import { IconButton } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { SectionBleed } from '@/components/ui/section';
-import { textRole } from '@/components/ui/text-role';
+
 import { Ellipsis, GripVertical } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
@@ -92,16 +92,13 @@ function ReorderRow({
         if (!pending) onDropped(event.dataTransfer.getData(ROW_DRAG_TYPE));
       }}
       className={cn(
-        'group hover:overlay-hover grid min-h-10 grid-cols-[1.25rem_minmax(0,1fr)_1rem_auto] items-center gap-2 transition-colors',
+        'group hover:overlay-hover grid min-h-10 grid-cols-reorder-row items-center gap-2 transition-colors',
         dragging && 'opacity-disabled',
       )}
     >
-      <span className={textRole('body', 'text-ink-2 tabular-nums')}>{index + 1}</span>
+      <span className="text-body text-ink-2 tabular-nums">{index + 1}</span>
       <div className="min-w-0">{item.content}</div>
-      <Icon
-        icon={GripVertical}
-        className="text-ink-2 cursor-grab opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
-      />
+      <Icon icon={GripVertical} tone="ink-2" revealOnHover className="cursor-grab" />
       <Menu>
         <MenuTrigger asChild>
           <IconButton icon={Ellipsis} label={`Reorder ${index + 1}, ${item.name}`} />

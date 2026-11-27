@@ -1,6 +1,4 @@
-import { cn } from '@/lib/utils';
-
-const TEXT_ROLES = {
+export const TEXT_ROLE_CLASS = {
   display: 'text-display font-display text-ink',
   title: 'text-title font-display text-ink',
   heading: 'text-heading text-ink',
@@ -18,13 +16,9 @@ const TEXT_ROLES = {
   pageTitle: 'text-page-title text-ink',
 } as const;
 
-export type TextRole = keyof typeof TEXT_ROLES;
+export type TextRole = keyof typeof TEXT_ROLE_CLASS;
 
-export function textRole(role: TextRole, className?: string) {
-  return cn(TEXT_ROLES[role], className);
-}
-
-const TONE_CLASSES = {
+export const TEXT_TONE_CLASS = {
   ink: 'text-ink',
   'ink-2': 'text-ink-2',
   'accent-text': 'text-accent-text',
@@ -35,8 +29,4 @@ const TONE_CLASSES = {
   placeholder: 'text-ink-placeholder',
 } as const;
 
-export type TextTone = keyof typeof TONE_CLASSES;
-
-export function toneClass(tone: TextTone | undefined) {
-  return tone ? TONE_CLASSES[tone] : undefined;
-}
+export type TextTone = keyof typeof TEXT_TONE_CLASS;

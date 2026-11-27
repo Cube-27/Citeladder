@@ -42,17 +42,17 @@ function netChange(issue: IssueRowFacts): number | null {
 
 export function IssueRow({
   issue,
-  name,
+  renderName,
   onOpen,
 }: Readonly<{
   issue: IssueRowFacts;
-  name: (title: string) => ReactNode;
+  renderName: (title: string) => ReactNode;
   onOpen?: () => void;
 }>) {
   const title = issueTitle(issue);
   return (
     <TableRow onClick={onOpen} className={onOpen ? 'cursor-pointer' : undefined}>
-      <TableCell>{name(title)}</TableCell>
+      <TableCell>{renderName(title)}</TableCell>
       <TableCell className="whitespace-nowrap">
         <IssueSeverityMark issue={issue} />
       </TableCell>

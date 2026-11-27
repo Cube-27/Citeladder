@@ -144,7 +144,9 @@ const DESIGN_RULES = {
 const SCREEN_RULES = {
   'design/plain-element': 'error',
   'design/surface-variant': 'error',
+  'design/raw-media': 'error',
 } satisfies LintRules;
+const WEBSITE_SOURCES = ['components/marketing/**', 'apps/marketing/**', 'apps/docs/**'];
 const offRules = (rules: LintRules): LintRules =>
   Object.fromEntries(Object.keys(rules).map((rule) => [rule, 'off']));
 
@@ -350,6 +352,7 @@ export const lintConfig: OxlintConfig = {
     },
     { files: DESIGN_SCRIPTS, rules: { ...DESIGN_RULES, ...SCREEN_RULES } },
     { files: ['components/ui/**'], rules: offRules(SCREEN_RULES) },
+    { files: WEBSITE_SOURCES, rules: { 'design/raw-media': 'off' } },
     {
       files: DESIGN_SOURCES.map((glob) => `${glob}/*.astro`),
       rules: { 'design/astro-class': 'error' },
@@ -395,7 +398,6 @@ export const fmtConfig: OxfmtConfig = {
     '**/test-results/**',
     '**/.wrangler/**',
     '**/pnpm-lock.yaml',
-    '**/oxlint-suppressions.json',
     '**/services/*/src/generated/**',
     '**/packages/*/src/generated/**',
     '**/apps/app/src/globals.css',

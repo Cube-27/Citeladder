@@ -76,7 +76,7 @@ function DateRangeFields({
   return (
     <Stack as="fieldset" gap="compact" onFocus={onActivate}>
       <legend className="sr-only">{legend}</legend>
-      <Inline gap="compact" className="flex-wrap">
+      <Inline gap="compact" wrap>
         <Field label="Start date">
           {(props) => (
             <DateField

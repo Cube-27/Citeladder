@@ -335,7 +335,7 @@ function ScheduleRow({
     promptSets.find((set) => set.id === schedule.prompt_set_id)?.name ?? 'Removed prompt set';
   return (
     <Inline as="li" gap="loose">
-      <Stack gap="tight" className="min-w-0 flex-1">
+      <Stack gap="tight" box="fill">
         <ClampText phoneWrap text="body">
           <Text variant="label">{cadenceLabel(schedule)}</Text>
           {` · ${promptSet} · ${SCOPE_LABELS[schedule.audit_scope]} · `}

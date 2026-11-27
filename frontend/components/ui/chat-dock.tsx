@@ -16,7 +16,7 @@ import { LogoMark } from '@/components/ui/logo-mark';
 import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
 import { Pressable } from '@/components/ui/pressable';
 import { Tag } from '@/components/ui/tag';
-import { textRole } from '@/components/ui/text-role';
+
 import { wellClasses } from '@/components/ui/slip';
 import { ArrowDown, FileText } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -61,7 +61,8 @@ export function ComposerDock({
             label="Jump to latest"
             variant="secondary"
             onClick={onJumpToLatest}
-            className="shadow-sheet pointer-events-auto rounded-full"
+            shape="floating"
+            className="pointer-events-auto"
           />
         </div>
       ) : null}
@@ -122,7 +123,7 @@ export function ComposerFrame({
         <div
           data-dragging={dragging || undefined}
           className={cn(
-            'focus-frame grid min-w-0 grid-cols-1 gap-1 rounded-card p-2 transition-[border-color,box-shadow] duration-fast data-[dragging]:border-focus',
+            'focus-frame grid min-w-0 grid-cols-1 gap-1 rounded-card p-2 transition-edge duration-fast data-[dragging]:border-focus',
             FIELD_EDGE,
           )}
         >
@@ -145,7 +146,7 @@ export function ComposerFrame({
           <div
             data-dragging={dragging || undefined}
             className={cn(
-              'focus-frame relative flex min-w-0 items-end gap-1 rounded-card p-1 ps-2 transition-[border-color,box-shadow] duration-fast data-[dragging]:border-focus',
+              'focus-frame relative flex min-w-0 items-end gap-1 rounded-card p-1 ps-2 transition-edge duration-fast data-[dragging]:border-focus',
               FIELD_EDGE,
             )}
           >
@@ -155,7 +156,7 @@ export function ComposerFrame({
                   {chips}
                 </ul>
               ) : null}
-              <div className="min-w-[min(12rem,100%)] flex-1">{field}</div>
+              <div className="min-w-dock-chip flex-1">{field}</div>
             </div>
             <div className="shrink-0">{submit}</div>
           </div>
@@ -182,14 +183,8 @@ export function AgentThread({ children }: Readonly<{ children: ReactNode }>) {
 export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: ReactNode }>) {
   return (
     <div className="flex justify-end">
-      <div
-        className={wellClasses(
-          'flex max-w-[min(80%,var(--container-prose))] min-w-0 flex-col gap-2 px-4 py-3',
-        )}
-      >
-        <p className={textRole('body', 'text-ink whitespace-pre-wrap [overflow-wrap:anywhere]')}>
-          {text}
-        </p>
+      <div className={wellClasses('flex max-w-bubble min-w-0 flex-col gap-2 px-4 py-3')}>
+        <p className="text-body text-ink wrap-anywhere whitespace-pre-wrap">{text}</p>
         {footer}
       </div>
     </div>
@@ -210,9 +205,9 @@ export function AgentTurn({
     >
       <div className="flex min-h-6 flex-wrap items-center gap-2">
         <LogoMark wordmark={false} variant="compact" />
-        <span className={textRole('body', 'text-ink-2')}>Agent</span>
-        {time ? <span className={textRole('caption', 'tabular-nums')}>{time}</span> : null}
-        {meta ? <span className={textRole('caption')}>{meta}</span> : null}
+        <span className="text-body text-ink-2">Agent</span>
+        {time ? <span className="text-caption text-ink-2 tabular-nums">{time}</span> : null}
+        {meta ? <span className="text-caption text-ink-2">{meta}</span> : null}
       </div>
       <div data-turn-rail="" className="border-rule ms-3 flex min-w-0 flex-col gap-3 border-s ps-4">
         {children}
@@ -259,19 +254,13 @@ export function PastedTextChip({
   return (
     <li className="max-w-full">
       <ChipTag label={label} onRemove={onRemove}>
-        <Pressable
-          className="focus-ring hover:text-ink rounded-mark inline-flex w-auto min-w-0 items-center gap-1"
-          aria-label={`View ${label}`}
-          onClick={() => setOpen(true)}
-        >
+        <Pressable look="chip" aria-label={`View ${label}`} onClick={() => setOpen(true)}>
           <Icon icon={FileText} className="my-0" />
           <span className="truncate">{label}</span>
         </Pressable>
       </ChipTag>
       <Dialog open={open} onOpenChange={setOpen} title={name ?? 'Pasted text'} width="wide">
-        <pre className={textRole('body', 'text-ink font-mono break-words whitespace-pre-wrap')}>
-          {text}
-        </pre>
+        <pre className="text-body text-ink font-mono break-words whitespace-pre-wrap">{text}</pre>
       </Dialog>
     </li>
   );
@@ -312,7 +301,7 @@ export function SuggestionList({
       data-open={open || undefined}
       className={cn(
         MENU_PANEL,
-        'absolute inset-x-0 bottom-full mb-0.5 grid max-h-[min(20rem,40dvh)] overflow-auto overscroll-contain [--popup-origin:bottom]',
+        'absolute inset-x-0 bottom-full mb-0.5 grid max-h-dock-menu overflow-auto overscroll-contain popup-from-bottom',
       )}
     >
       {options.map((option, index) => (
@@ -338,7 +327,7 @@ export function SuggestionList({
               <span className="truncate">{option.label}</span>
             )}
             {option.detail ? (
-              <span className={textRole('caption', 'truncate')}>{option.detail}</span>
+              <span className="text-caption text-ink-2 truncate">{option.detail}</span>
             ) : null}
           </button>
         </li>

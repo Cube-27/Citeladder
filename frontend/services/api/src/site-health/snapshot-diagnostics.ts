@@ -211,6 +211,29 @@ type Area = {
   findings: Map<string, Finding>;
 };
 
+function countEvaluation(
+  area: Area,
+  row: Evaluation,
+  rule: NonNullable<ReturnType<typeof catalog.get>>,
+) {
+  area.rows++;
+  if (row.outcome !== 'not_applicable') area.applicable++;
+  if (row.outcome === 'satisfied' || row.outcome === 'missing') area.determinate++;
+  if (row.outcome === 'satisfied') area.passed++;
+  if (row.outcome === 'unknown') area.unknown++;
+  if (row.outcome === 'unavailable') area.unavailable++;
+  if (row.outcome !== 'missing') return;
+  area.missing++;
+  const finding = area.findings.get(row.rule_id) ?? {
+    rule_id: row.rule_id,
+    title: rule.display_label,
+    remediation: rule.remediation,
+    affected_pages: 0,
+  };
+  finding.affected_pages++;
+  area.findings.set(row.rule_id, finding);
+}
+
 export class WebDiagnosticFold {
   private readonly areas = new Map<string, Area>(
     reads.web_fundamentals_areas.map((area) => [
@@ -233,24 +256,7 @@ export class WebDiagnosticFold {
       const area = scored?.score_roles.includes('web_fundamentals')
         ? this.areas.get(scored.category)
         : undefined;
-      if (!area) continue;
-      area.rows++;
-      if (row.outcome !== 'not_applicable') area.applicable++;
-      if (row.outcome === 'satisfied' || row.outcome === 'missing') area.determinate++;
-      if (row.outcome === 'satisfied') area.passed++;
-      if (row.outcome === 'unknown') area.unknown++;
-      if (row.outcome === 'unavailable') area.unavailable++;
-      if (row.outcome !== 'missing') continue;
-      area.missing++;
-      const rule = catalog.get(row.rule_id)!;
-      const finding = area.findings.get(row.rule_id) ?? {
-        rule_id: row.rule_id,
-        title: rule.display_label,
-        remediation: rule.remediation,
-        affected_pages: 0,
-      };
-      finding.affected_pages++;
-      area.findings.set(row.rule_id, finding);
+      if (scored && area) countEvaluation(area, row, scored);
     }
   }
   result(sourceArtifactIds: string[]) {

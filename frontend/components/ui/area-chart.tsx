@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { cn } from '@/lib/utils';
 
 import {
   breakBridges,
@@ -21,7 +22,12 @@ import {
   pointXs,
   type ChartRow,
 } from '@/components/ui/area-chart-data';
-import { CHART_HEIGHT_PX, useChartWidth, type ChartHeight } from '@/components/ui/chart';
+import {
+  CHART_HEIGHT_CLASS,
+  CHART_HEIGHT_PX,
+  useChartWidth,
+  type ChartHeight,
+} from '@/components/ui/chart';
 import { ChartBreakNote, ChartFrame, ChartKey } from '@/components/ui/chart-frame';
 import {
   AXIS_PROPS,
@@ -165,7 +171,7 @@ export function AreaChart({
           data={data}
           lines={lines}
           events={placed}
-          height={CHART_HEIGHT_PX[heightRole]}
+          heightRole={heightRole}
           yMin={yMin}
           yMax={yMax}
           yFormat={yFormat}
@@ -184,7 +190,7 @@ function AreaPlot({
   data,
   lines,
   events,
-  height,
+  heightRole,
   yMin,
   yMax,
   yFormat,
@@ -194,13 +200,14 @@ function AreaPlot({
   data: readonly TrendPoint[];
   lines: readonly Line[];
   events: readonly TrendEvent[];
-  height: number;
+  heightRole: ChartHeight;
   yMin?: number;
   yMax?: number;
   yFormat: (value: number) => string;
   shown: Shown;
 }>) {
   const id = useId().replaceAll(':', '');
+  const height = CHART_HEIGHT_PX[heightRole];
   const [plotRef, width] = useChartWidth<HTMLDivElement>();
   const xs = pointXs(data);
   const rows = chartRows(data, lines);
@@ -220,8 +227,7 @@ function AreaPlot({
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="group"
       aria-label={`${label}. Focus the chart and use the arrow keys to read each point.`}
-      className="w-full"
-      style={{ height }}
+      className={cn('w-full', CHART_HEIGHT_CLASS[heightRole])}
     >
       <RechartsAreaChart
         width={width}
@@ -313,15 +319,7 @@ function AreaPlot({
         <Tooltip
           cursor={LINE_CURSOR}
           isAnimationActive={false}
-          content={({ active, payload }) => (
-            <AreaTip
-              active={active}
-              row={payload?.[0]?.payload}
-              data={data}
-              lines={lines}
-              shown={shown}
-            />
-          )}
+          content={<AreaTip data={data} lines={lines} shown={shown} />}
         />
         {[...lines.keys()].reverse().map((at) => {
           const line = lines[at];
@@ -339,14 +337,7 @@ function AreaPlot({
               strokeWidth={line.tone === 'you' ? 2 : 1.5}
               fill={`url(#${id}-${at})`}
               activeDot={{ r: 4, fill: color, stroke: 'var(--color-panel)', strokeWidth: 2 }}
-              dot={(props: { cx?: number; cy?: number; payload?: ChartRow }) => (
-                <LineDot
-                  key={`${line.name}-${props.payload?.x}`}
-                  {...props}
-                  line={line}
-                  data={data}
-                />
-              )}
+              dot={<LineDot line={line} data={data} />}
             />
           );
         })}
@@ -388,17 +379,18 @@ function LineDot({
 
 function AreaTip({
   active,
-  row,
+  payload,
   data,
   lines,
   shown,
 }: Readonly<{
   active?: boolean;
-  row: ChartRow | undefined;
+  payload?: readonly { payload?: ChartRow }[];
   data: readonly TrendPoint[];
   lines: readonly Line[];
   shown: Shown;
 }>) {
+  const row = payload?.[0]?.payload;
   if (!active || !row || row.break) return null;
   const point = data[row.index];
   if (!point) return null;

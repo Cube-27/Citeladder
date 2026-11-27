@@ -38,7 +38,7 @@ export function mountTocSpy(root: Document = document): void {
   const mark = () => {
     let current = followed;
     if (!current && (atEnd || contentEnded)) current = headings.at(-1);
-    current ??= headings.filter((h) => reached.has(h)).at(-1) ?? first;
+    current ??= [...headings].reverse().find((h) => reached.has(h)) ?? first;
     for (const link of links) {
       if (linkId(link) !== current?.id) {
         link.removeAttribute('aria-current');

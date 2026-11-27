@@ -17,7 +17,7 @@ import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const TAB_STRIP =
-  'relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  'relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden';
 
 const REVEAL_PADDING = 32;
 
@@ -68,7 +68,7 @@ function tabFace({
   );
 }
 
-export const TAB_BASELINE = 'shadow-[inset_0_-1px_0_var(--color-rule)]';
+export const TAB_BASELINE = 'shadow-tab-rule';
 
 const STRIP_ROW = {
   page: 'min-h-page-tabs',
@@ -76,10 +76,10 @@ const STRIP_ROW = {
 } as const;
 
 const TAB_TRACK =
-  'inline-flex min-h-control-md max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-control p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  'inline-flex min-h-control-md max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-control p-0.5 scrollbar-none [&::-webkit-scrollbar]:hidden';
 
 const TAB_FACE =
-  'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border border-transparent px-3 text-label whitespace-nowrap transition-[background-color,color] duration-fast focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-disabled';
+  'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border border-transparent px-3 text-label whitespace-nowrap transition-tint duration-fast focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-disabled';
 
 const TAB_FACE_STATE = {
   selected: 'bg-panel text-ink font-emphasis',
@@ -121,7 +121,7 @@ export function ControlCount({ count, upTo }: Readonly<{ count: number; upTo?: n
       <span
         aria-hidden
         data-size={` (${formatCount(upTo)})`}
-        className="invisible col-start-1 row-start-1 after:content-[attr(data-size)]"
+        className="after:content-data-size invisible col-start-1 row-start-1"
       />
     </span>
   );
@@ -152,6 +152,7 @@ const TABS_LAYOUT = {
   flow: undefined,
   'drawer-split':
     'phone:grid-cols-1 phone:grid-rows-drawer-split grid min-h-0 flex-1 grid-cols-drawer-split',
+  spaced: 'grid min-w-0 gap-workspace',
 } as const;
 
 export function TabsRoot<T extends string>({
@@ -341,11 +342,7 @@ export function Tabs<T extends string>({
   ...bar
 }: Readonly<TabsProps<T>>) {
   return (
-    <TabsRoot
-      value={value}
-      onValueChange={onValueChange}
-      className={cn(spaced && 'grid min-w-0 gap-workspace')}
-    >
+    <TabsRoot value={value} onValueChange={onValueChange} layout={spaced ? 'spaced' : 'flow'}>
       <TabStrip {...bar} />
       {children}
     </TabsRoot>

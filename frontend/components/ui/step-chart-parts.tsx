@@ -311,8 +311,9 @@ export function MarkerMark({
   x,
   y,
   shape,
-  className,
-}: Readonly<{ x: number; y: number; shape: MarkerShape; className: string }>) {
+  tone,
+}: Readonly<{ x: number; y: number; shape: MarkerShape; tone: SeriesTone }>) {
+  const className = cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-panel');
   switch (shape) {
     case 'square':
       return (
@@ -359,11 +360,10 @@ export function Markers({
   tone: SeriesTone;
   shape?: MarkerShape;
 }>) {
-  const className = cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-panel');
   return points.map((point, index) =>
     point ? (
       <g key={`${index}-${point[0]}`} data-marker-shape={shape}>
-        <MarkerMark x={point[0]} y={point[1]} shape={shape} className={className} />
+        <MarkerMark x={point[0]} y={point[1]} shape={shape} tone={tone} />
       </g>
     ) : null,
   );

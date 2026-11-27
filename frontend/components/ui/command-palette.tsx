@@ -219,7 +219,7 @@ export function CommandPalette({
           }}
           className={cn(
             SHEET_FACE,
-            'dialog-panel z-modal fixed top-16 left-1/2 flex max-h-[calc(100dvh-8rem)] w-[calc(100vw-3rem)] max-w-160 -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-overlay',
+            'dialog-panel z-modal fixed top-16 left-1/2 flex max-h-dialog-max w-dialog-fit max-w-160 -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-overlay',
           )}
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
@@ -277,7 +277,7 @@ export function CommandPalette({
                     </p>
                     {section.rows.map(({ command, index }) => {
                       const isActive = index === activeIndex;
-                      const Icon = command.icon;
+                      const Glyph = command.icon;
                       return (
                         <button
                           key={command.id}
@@ -291,12 +291,12 @@ export function CommandPalette({
                           onMouseMove={() => highlight(index)}
                           onClick={() => runCommand(command)}
                           className={cn(
-                            'press [--press:0.98] text-body text-ink flex min-h-control-md w-full items-center gap-2 rounded-mark px-2.5 text-left',
+                            'press press-soft text-body text-ink flex min-h-control-md w-full items-center gap-2 rounded-mark px-2.5 text-left',
                             isActive && 'overlay-hover',
                           )}
                         >
-                          {Icon ? (
-                            <Icon className="text-ink-2 size-3.5 shrink-0" aria-hidden />
+                          {Glyph ? (
+                            <Glyph className="text-ink-2 size-3.5 shrink-0" aria-hidden />
                           ) : (
                             <BrandMark
                               name={command.label}

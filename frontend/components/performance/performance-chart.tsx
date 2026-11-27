@@ -171,18 +171,7 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
           domain={[0, Math.max(1, length - 1)]}
           ticks={xTicks}
           interval={0}
-          tick={({ x, y, payload }) => (
-            <text
-              x={x}
-              y={y}
-              dy={12}
-              textAnchor={edgeAnchor(payload.value, xTicks)}
-              fill="var(--text-color-ink-2)"
-              fontSize={12}
-            >
-              {axisLabels[payload.value] ?? ''}
-            </text>
-          )}
+          tick={<DayTick edgeTicks={xTicks} dayLabels={axisLabels} />}
         />
         {plotted.map((entry, index) => {
           const placement = axisPlacement(index, plotted.length);
@@ -206,24 +195,7 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
               label={
                 placement === 'hidden'
                   ? undefined
-                  : {
-                      content: ({ viewBox }) =>
-                        viewBox && 'width' in viewBox ? (
-                          <text
-                            x={
-                              placement === 'left'
-                                ? viewBox.x
-                                : (viewBox.x ?? 0) + (viewBox.width ?? 0)
-                            }
-                            y={(viewBox.y ?? 0) - 14}
-                            textAnchor={placement === 'left' ? 'start' : 'end'}
-                            fill="var(--text-color-ink-2)"
-                            fontSize={12}
-                          >
-                            {entry.label}
-                          </text>
-                        ) : null,
-                    }
+                  : { content: <AxisCaption side={placement} caption={entry.label} /> }
               }
               tickFormatter={(value: number) => formatAxisTick(entry.key, value)}
             />
@@ -232,12 +204,7 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
         <Tooltip
           cursor={LINE_CURSOR}
           isAnimationActive={false}
-          content={({ active, payload }) => {
-            const x = payload?.[0]?.payload?.x;
-            return active && typeof x === 'number' ? (
-              <MetricTip plotted={plotted} index={x} />
-            ) : null;
-          }}
+          content={<MetricTipContent plotted={plotted} />}
         />
         {plotted.flatMap((entry) => [
           entry.comparison ? (
@@ -271,6 +238,70 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
       </LineChart>
     </div>
   );
+}
+
+function DayTick({
+  x,
+  y,
+  payload,
+  edgeTicks,
+  dayLabels,
+}: Readonly<{
+  x?: number;
+  y?: number;
+  payload?: { value: number };
+  edgeTicks: readonly number[];
+  dayLabels: readonly (string | undefined)[];
+}>) {
+  if (!payload) return null;
+  return (
+    <text
+      x={x}
+      y={y}
+      dy={12}
+      textAnchor={edgeAnchor(payload.value, edgeTicks)}
+      fill="var(--text-color-ink-2)"
+      fontSize={12}
+    >
+      {dayLabels[payload.value] ?? ''}
+    </text>
+  );
+}
+
+function AxisCaption({
+  viewBox,
+  side,
+  caption,
+}: Readonly<{
+  viewBox?: { x?: number; y?: number; width?: number };
+  side: Exclude<AxisPlacement, 'hidden'>;
+  caption: string;
+}>) {
+  if (!viewBox || !('width' in viewBox)) return null;
+  return (
+    <text
+      x={side === 'left' ? viewBox.x : (viewBox.x ?? 0) + (viewBox.width ?? 0)}
+      y={(viewBox.y ?? 0) - 14}
+      textAnchor={side === 'left' ? 'start' : 'end'}
+      fill="var(--text-color-ink-2)"
+      fontSize={12}
+    >
+      {caption}
+    </text>
+  );
+}
+
+function MetricTipContent({
+  active,
+  payload,
+  plotted,
+}: Readonly<{
+  active?: boolean;
+  payload?: readonly { payload?: { x?: unknown } }[];
+  plotted: readonly ChartSeries[];
+}>) {
+  const x = payload?.[0]?.payload?.x;
+  return active && typeof x === 'number' ? <MetricTip plotted={plotted} index={x} /> : null;
 }
 
 function MetricTip({

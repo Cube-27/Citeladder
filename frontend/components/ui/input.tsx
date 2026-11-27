@@ -8,7 +8,7 @@ export const FIELD_EDGE =
   'bg-panel border border-transparent [[data-public-surface]_&]:bg-well app:shadow-field-face app:not-disabled:hover:bg-field-hover';
 
 const FIELD_SHAPE =
-  'text-body min-h-control-md w-full rounded-control px-3 text-ink transition-[background-color,border-color,outline-color] duration-fast app:duration-fast';
+  'text-body min-h-control-md w-full rounded-control px-3 text-ink transition-field duration-fast app:duration-fast';
 
 export const FIELD_BOX = `${FIELD_EDGE} ${FIELD_SHAPE}`;
 
@@ -19,6 +19,12 @@ const inputWidths = {
   quantity: 'w-16 text-center tabular-nums',
 } as const;
 
+const INPUT_ROOM = {
+  none: undefined,
+  end: 'pe-9',
+  both: 'pe-9 pl-10',
+} as const;
+
 export function Input({
   className,
   containerClassName,
@@ -26,11 +32,13 @@ export function Input({
   endContent,
   endContentFlush = false,
   width = 'fill',
+  room = 'none',
   ref,
   ...props
 }: Readonly<
   Omit<ComponentPropsWithoutRef<'input'>, 'size' | 'width'> & {
     width?: keyof typeof inputWidths;
+    room?: keyof typeof INPUT_ROOM;
     startContent?: ReactNode;
     endContent?: ReactNode;
     endContentFlush?: boolean;
@@ -49,6 +57,7 @@ export function Input({
           inputWidths[width],
           containerClassName,
           className,
+          INPUT_ROOM[room],
         )}
         {...props}
       />

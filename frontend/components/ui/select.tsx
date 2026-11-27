@@ -37,6 +37,7 @@ export type SelectProps<T extends string> = {
   ariaLabel: string;
   disabled?: boolean;
   invalid?: boolean;
+  numeric?: boolean;
   'aria-invalid'?: boolean;
   className?: string;
   id?: string;
@@ -54,6 +55,7 @@ export function Select<T extends string>({
   ariaLabel,
   disabled,
   invalid,
+  numeric = false,
   'aria-invalid': ariaInvalid,
   className,
   id,
@@ -81,6 +83,7 @@ export function Select<T extends string>({
           TRIGGER_BOX,
           'data-[placeholder]:text-ink-placeholder flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-disabled',
           className,
+          numeric && 'tabular-nums',
         )}
       >
         <span className="min-w-0 flex-1 truncate text-start">
@@ -100,7 +103,7 @@ export function Select<T extends string>({
           collisionPadding={8}
           className={cn(
             MENU_PANEL,
-            'max-h-[min(18.5rem,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] [[data-public-surface]_&]:min-w-[max(15rem,var(--radix-select-trigger-width))]',
+            'max-h-select-max min-w-select-trigger [[data-public-surface]_&]:min-w-select-public',
           )}
         >
           <SelectPrimitive.ScrollUpButton className="text-ink-2 h-control-md flex items-center justify-center">

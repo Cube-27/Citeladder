@@ -79,7 +79,7 @@ const described = rows.some((row) => row.description || row.values.length || row
   .cl-docs-params {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--site-space-3);
     min-width: 0;
     max-width: var(--container-prose);
   }
@@ -87,7 +87,7 @@ const described = rows.some((row) => row.description || row.values.length || row
     color: var(--text-color-ink);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
   .cl-docs-params-frame {
     overflow-x: auto;
@@ -106,24 +106,24 @@ const described = rows.some((row) => row.description || row.values.length || row
   }
   th {
     height: var(--spacing-table-head);
-    padding: 0 12px;
-    border-bottom: 1px solid var(--color-rule);
+    padding: 0 var(--site-space-3);
+    border-bottom: var(--site-rule) solid var(--color-rule);
     color: var(--text-color-ink-2);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     text-align: left;
     white-space: nowrap;
   }
   td {
-    padding: 12px;
-    border-bottom: 1px solid var(--color-rule);
+    padding: var(--site-space-3);
+    border-bottom: var(--site-rule) solid var(--color-rule);
     vertical-align: top;
   }
   .cl-docs-param {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--site-space-1);
     min-width: 0;
   }
   .cl-docs-param-name {
@@ -131,21 +131,21 @@ const described = rows.some((row) => row.description || row.values.length || row
     font-family: var(--font-mono);
     font-size: var(--text-data);
     line-height: var(--text-data--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     overflow-wrap: anywhere;
   }
   .cl-docs-param-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: var(--site-space-1);
     font-family: var(--font-mono);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
     overflow-wrap: anywhere;
   }
   .cl-docs-param-tag {
-    padding: 0 4px;
-    border-radius: var(--radius-xs);
+    padding: 0 var(--site-space-1);
+    border-radius: var(--radius-mark);
     background: var(--color-well);
     color: var(--text-color-ink-2);
   }
@@ -157,13 +157,13 @@ const described = rows.some((row) => row.description || row.values.length || row
     color: var(--text-color-ink);
     text-decoration: underline;
     text-decoration-color: var(--color-control-line);
-    text-decoration-thickness: 1px;
-    text-underline-offset: 2px;
+    text-decoration-thickness: var(--site-rule);
+    text-underline-offset: var(--site-underline-offset-sm);
   }
   .cl-docs-param-desc {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--site-space-2);
     color: var(--text-color-ink-2);
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
@@ -172,17 +172,17 @@ const described = rows.some((row) => row.description || row.values.length || row
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
+    gap: var(--site-space-1);
   }
   .cl-docs-param-values-label {
-    margin-right: 4px;
+    margin-right: var(--site-space-1);
     color: var(--text-color-ink-2);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
   }
   .cl-docs-param-desc code {
-    padding: 1px 4px;
-    border-radius: var(--radius-xs);
+    padding: var(--site-rule) var(--site-space-1);
+    border-radius: var(--radius-mark);
     background: var(--color-well);
     color: var(--text-color-ink);
     font-family: var(--font-mono);

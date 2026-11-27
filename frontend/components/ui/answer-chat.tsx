@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
+import { CHIP_FACE } from '@/components/ui/link-look';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/text-role';
+
 import { ArrowUpRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
@@ -12,7 +13,7 @@ export function AnswerLayout({
   railLabel,
 }: Readonly<{ main: ReactNode; rail: ReactNode; railLabel: string }>) {
   return (
-    <div className="desktop:grid-cols-[minmax(0,1fr)_20rem] gap-y-panel-inset grid min-w-0">
+    <div className="desktop:grid-cols-answer-aside gap-y-panel-inset grid min-w-0">
       <div className="desktop:pe-panel-inset gap-panel-inset grid min-w-0 content-start">
         {main}
       </div>
@@ -57,7 +58,7 @@ export function UserMessage({
 }: Readonly<{ avatar: ReactNode; children: ReactNode }>) {
   return (
     <li className="flex items-start justify-end gap-3">
-      <div className="bg-well text-ink text-body rounded-card max-w-[min(80%,var(--container-prose))] px-4 py-3">
+      <div className="bg-well text-ink text-body rounded-card max-w-bubble px-4 py-3">
         {children}
       </div>
       {avatar}
@@ -74,7 +75,7 @@ export function AssistantMessage({
     <li className="flex min-w-0 items-start gap-3">
       {avatar}
       <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <span className={textRole('label', 'text-ink-2')}>{name}</span>
+        <span className="text-label text-ink-2">{name}</span>
         {children}
       </div>
     </li>
@@ -88,9 +89,6 @@ export function YouMark() {
     </span>
   );
 }
-
-const CHIP =
-  'text-caption text-ink-2 inline-flex max-w-full min-w-0 items-center gap-1 rounded-mark border px-1 align-baseline no-underline';
 
 export function MentionChip({
   position,
@@ -106,13 +104,13 @@ export function MentionChip({
   'data-brand-chip'?: string;
 }>) {
   return (
-    <span {...data} className={cn(CHIP, 'border-accent text-ink bg-panel border-dashed')}>
+    <span {...data} className={cn(CHIP_FACE, 'border-accent text-ink bg-panel border-dashed')}>
       <span className="text-accent-text font-emphasis tabular-nums">
         <span className="sr-only">Position </span>
         {position}
       </span>
       {mark}
-      <span className="font-emphasis min-w-0 [overflow-wrap:anywhere]">{children}</span>
+      <span className="font-emphasis min-w-0 wrap-anywhere">{children}</span>
       {you ? <YouMark /> : null}
     </span>
   );
@@ -132,16 +130,9 @@ export function CitationChip({
   'data-source-chip'?: string;
 }>) {
   return (
-    <ExternalHttpLink
-      {...data}
-      href={href}
-      className={cn(
-        CHIP,
-        'border-transparent bg-state-hover text-ink hover:overlay-hover no-underline',
-      )}
-    >
+    <ExternalHttpLink {...data} href={href} look="source-chip">
       {mark}
-      <span className="min-w-0 [overflow-wrap:anywhere]">{children}</span>
+      <span className="min-w-0 wrap-anywhere">{children}</span>
       {you ? <YouMark /> : null}
       <ArrowUpRight aria-hidden className="text-ink-2 size-3 shrink-0" />
       {href ? <span className="sr-only">(opens in a new tab)</span> : null}
@@ -156,7 +147,7 @@ export function RailSection({
 }: Readonly<{ title: string; count?: number; children: ReactNode }>) {
   return (
     <section className="border-rule flex min-w-0 flex-col gap-3 border-t pt-4 first:border-t-0 first:pt-0">
-      <h3 className={textRole('emphasis')}>
+      <h3 className="font-emphasis">
         {title}
         {count ? <span className="text-ink-2 tabular-nums"> ({count})</span> : null}
       </h3>
@@ -198,7 +189,8 @@ export function RailUrl({
         underline="hover"
         href={href}
         title={text}
-        className="text-ink-2 flex min-w-0 items-center [&>svg]:shrink-0"
+        tone="quiet"
+        className="flex min-w-0 items-center [&>svg]:shrink-0"
       >
         <span className="min-w-0 truncate">{text}</span>
       </TextLink>

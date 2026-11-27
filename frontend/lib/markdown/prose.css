@@ -1,3 +1,9 @@
+:root {
+  --markdown-underline-offset: 2px;
+  --markdown-cell-min: 8rem;
+  --markdown-cell-max: 28rem;
+}
+
 @layer components {
   .prose-content {
     font-family: var(--font-sans);
@@ -14,7 +20,7 @@
     font-weight: var(--weight-medium);
     letter-spacing: 0;
     color: var(--text-color-ink);
-    margin: 1.5rem 0 0.75rem;
+    margin: calc(var(--spacing) * 6) 0 calc(var(--spacing) * 3);
   }
   .prose-content > :where(h2, h3, h4, h5, h6):first-child {
     margin-top: 0;
@@ -32,10 +38,10 @@
     line-height: var(--text-label--line-height);
   }
   .prose-content :where(p, ul, ol, pre, table, blockquote) {
-    margin: 0 0 1rem;
+    margin: 0 0 calc(var(--spacing) * 4);
   }
   .prose-content :where(ul, ol) {
-    margin-left: 1.5rem;
+    margin-left: calc(var(--spacing) * 6);
   }
   .prose-content ul {
     list-style: disc;
@@ -44,7 +50,7 @@
     list-style: decimal;
   }
   .prose-content li + li {
-    margin-top: 0.5rem;
+    margin-top: calc(var(--spacing) * 2);
   }
   .prose-content strong {
     font-weight: var(--weight-medium);
@@ -54,13 +60,13 @@
     color: var(--text-color-ink);
     text-decoration: underline;
     text-decoration-color: var(--color-control-line);
-    text-underline-offset: 2px;
+    text-underline-offset: var(--markdown-underline-offset);
   }
   .prose-content a:hover {
     text-decoration-color: currentColor;
   }
   .prose-content blockquote {
-    padding: 0.75rem 1rem;
+    padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4);
     border-radius: var(--radius-control);
     background: var(--color-well);
     color: var(--text-color-ink-2);
@@ -69,14 +75,14 @@
     font-family: var(--font-mono);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
-    padding: 0.125rem 0.25rem;
+    padding: calc(var(--spacing) * 0.5) var(--spacing);
     border-radius: var(--radius-mark);
     background: var(--color-well);
   }
   .prose-content pre {
     max-width: 100%;
     white-space: pre-wrap;
-    padding: 1rem;
+    padding: calc(var(--spacing) * 4);
     border-radius: var(--radius-control);
     background: var(--color-well);
     font-family: var(--font-mono);
@@ -91,8 +97,8 @@
   }
   .prose-content .prose-table-frame {
     max-width: 100%;
-    margin: 0 0 1rem;
-    border: 1px solid var(--color-rule);
+    margin: 0 0 calc(var(--spacing) * 4);
+    border: var(--rule-width) solid var(--color-rule);
     border-radius: var(--radius-control);
   }
   .prose-content .prose-table-frame table {
@@ -110,26 +116,26 @@
     line-height: var(--text-body--line-height);
   }
   .prose-content th {
-    padding: 0.5rem 0.75rem;
+    padding: var(--spacing-cell-y) var(--spacing-cell-x);
     text-align: left;
     font-family: var(--font-sans);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
     font-weight: var(--weight-medium);
     color: var(--text-color-ink-2);
-    border-bottom: 1px solid var(--color-rule);
+    border-bottom: var(--rule-width) solid var(--color-rule);
   }
   .prose-content td {
-    padding: 0.5rem 0.75rem;
+    padding: var(--spacing-cell-y) var(--spacing-cell-x);
     color: var(--text-color-ink);
-    border-bottom: 1px solid var(--color-rule);
+    border-bottom: var(--rule-width) solid var(--color-rule);
   }
   .prose-content tr:last-child td {
     border-bottom: 0;
   }
   .prose-content :is(th, td) {
-    min-width: 8rem;
-    max-width: 28rem;
+    min-width: var(--markdown-cell-min);
+    max-width: var(--markdown-cell-max);
     overflow-wrap: normal;
     vertical-align: top;
   }
@@ -138,7 +144,7 @@
     line-height: var(--text-body--line-height);
   }
   .prose-compact :where(h2, h3, h4, h5, h6) {
-    margin: 1rem 0 0.5rem;
+    margin: calc(var(--spacing) * 4) 0 calc(var(--spacing) * 2);
   }
   .prose-compact h2 {
     font-size: var(--text-heading);
@@ -149,12 +155,12 @@
     line-height: var(--text-label--line-height);
   }
   .prose-compact :where(p, ul, ol, pre, table, blockquote) {
-    margin-bottom: 0.75rem;
+    margin-bottom: calc(var(--spacing) * 3);
   }
   .prose-compact pre {
-    padding: 0.75rem;
+    padding: calc(var(--spacing) * 3);
   }
   .prose-compact :is(th, td) {
-    padding: 0.5rem 0.75rem;
+    padding: var(--spacing-cell-y) var(--spacing-cell-x);
   }
 }

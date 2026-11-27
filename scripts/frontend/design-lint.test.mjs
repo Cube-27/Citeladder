@@ -42,7 +42,7 @@ function lintCanary() {
   }
 }
 
-test('the canary trips every design rule under the shipped lint config', () => {
+test('the canary trips every design rule and passing.tsx trips none under the shipped lint config', () => {
   assert.deepEqual(lintCanary().sort(), [
     'canary.astro:2 design/astro-class',
     'canary.astro:2 design/astro-class',
@@ -67,6 +67,9 @@ test('the canary trips every design rule under the shipped lint config', () => {
     'canary.tsx:18 shadcn/no-unknown-classes',
     'canary.tsx:19 shadcn/require-static-classes',
     'canary.tsx:20 shadcn/no-restyle',
+    'canary.tsx:23 design/raw-media',
+    'canary.tsx:24 design/plain-element',
+    'canary.tsx:24 design/raw-media',
     'canary.tsx:3 design/colour-literal',
     'canary.tsx:8 shadcn/no-arbitrary-values',
     'canary.tsx:8 shadcn/no-restyle',

@@ -271,7 +271,7 @@ export function ReviewFooter({
 }>) {
   if (review)
     return (
-      <Inline className="justify-end">
+      <Inline justify="end">
         <Button variant="secondary" onClick={onBack}>
           Back
         </Button>

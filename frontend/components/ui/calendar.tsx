@@ -2,7 +2,6 @@ import { useState } from 'react';
 
 import { Pressable } from '@/components/ui/pressable';
 import { ChevronLeft, ChevronRight } from '@/lib/icons';
-import { cn } from '@/lib/utils';
 
 const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] as const;
 
@@ -91,7 +90,7 @@ export function Calendar({
           type="button"
           aria-label="Previous month"
           onClick={() => setMonth((current) => addMonths(current, -1))}
-          className="rounded-control enabled:hover:bg-state-fill enabled:active:bg-state-fill-hover size-control-md inline-flex items-center justify-center"
+          look="square"
         >
           <ChevronLeft className="size-3.5" aria-hidden />
         </Pressable>
@@ -102,7 +101,7 @@ export function Calendar({
           type="button"
           aria-label="Next month"
           onClick={() => setMonth((current) => addMonths(current, 1))}
-          className="rounded-control enabled:hover:bg-state-fill enabled:active:bg-state-fill-hover size-control-md inline-flex items-center justify-center"
+          look="square"
         >
           <ChevronRight className="size-3.5" aria-hidden />
         </Pressable>
@@ -139,13 +138,10 @@ export function Calendar({
                       aria-label={iso}
                       disabled={disabled}
                       onClick={() => onSelect(iso)}
-                      className={cn(
-                        'text-body text-ink inline-flex size-control-md items-center justify-center rounded-control tabular-nums transition-colors',
-                        isSelected
-                          ? 'bg-primary text-on-primary enabled:hover:bg-primary-hover enabled:active:bg-primary-hover'
-                          : 'enabled:hover:bg-state-fill enabled:active:bg-state-fill-hover',
-                        outside && !isSelected && 'text-ink-2',
-                      )}
+                      text="body"
+                      numeric
+                      look={isSelected ? 'day-selected' : 'day'}
+                      tone={outside && !isSelected ? 'ink-2' : undefined}
                     >
                       {day.getUTCDate()}
                     </Pressable>

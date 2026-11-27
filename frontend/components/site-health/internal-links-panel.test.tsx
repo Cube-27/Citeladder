@@ -10,7 +10,6 @@ import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { downloadCsv } from '@/lib/csv/download';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar } from '@/components/ui/filter-bar';
 import { InternalLinksPanel } from './internal-links-panel';
 import { useInternalLinksBands } from './internal-links-panel-bands';
 
@@ -87,9 +86,7 @@ function LinksTab({ canAnalyze }: Readonly<{ canAnalyze?: boolean }>) {
   });
   const controls = links.controls;
   return (
-    <ReportPage
-      filters={controls ? <FilterBar {...controls} actions={links.actions} /> : undefined}
-    >
+    <ReportPage filters={controls ? { ...controls, actions: links.actions } : undefined}>
       <InternalLinksPanel read={links.read} workspaceId={project.workspace_id} />
     </ReportPage>
   );
