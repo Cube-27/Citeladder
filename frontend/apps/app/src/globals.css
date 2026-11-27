@@ -214,6 +214,8 @@
   --color-panel: var(--ramp-white);
   --color-page: var(--color-panel);
   --color-well: var(--ramp-neutral-94_3);
+  --color-print-ground: var(--ramp-white);
+  --color-print-ink: var(--ramp-black);
   --color-state-hover: oklch(from var(--color-mark-ink) l c h / 6%);
   --color-state-pressed: oklch(from var(--color-mark-ink) l c h / 8%);
   --color-state-selected: oklch(from var(--color-mark-ink) l c h / 10%);
@@ -1243,7 +1245,7 @@ a.focus-ring:active .text-caption.text-ink-2 {
 
 :root:not([data-public-surface])
   .ui-button:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
-  opacity: 0.5;
+  opacity: var(--opacity-disabled);
   box-shadow: none;
 }
 
@@ -1404,8 +1406,8 @@ label {
 
 @media print {
   body {
-    background: white !important;
-    color: black !important;
+    background: var(--color-print-ground) !important;
+    color: var(--color-print-ink) !important;
   }
 }
 

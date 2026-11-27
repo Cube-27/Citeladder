@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { Stack } from '@/components/ui/layout';
 
 const MIX = 'color-mix(in oklch, var(--color-accent), transparent)';
@@ -22,8 +23,18 @@ export function Canary({ tone }: Readonly<{ tone: string }>) {
       <p className={LAYOUT[tone === 'row' ? 'row' : 'column']}>layout map</p>
       <img src="/logo.png" alt="" />
       <svg aria-hidden viewBox="0 0 24 24" className="size-6 shrink-0" />
+      <Box className="text-accent p-3">component</Box>
+      <p {...{ title: tone }}>spread</p>
+      <div style={{ '--spacing-card': '40px' }}>role style</div>
+      <Button className="mt-7 w-78">ui steps</Button>
+      <i className={`flex ${LAYOUT.row}`}>template</i>
+      <div className="grid @[517px]:grid-flow-col">breakpoint</div>
     </Stack>
   );
 }
 
 const LAYOUT = { row: 'flex', column: 'grid' } as const;
+
+function Box(props: Readonly<{ className: string; children: string }>) {
+  return <Stack {...props} />;
+}

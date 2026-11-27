@@ -1,11 +1,20 @@
 import postcss from 'postcss';
 import valueParser from 'postcss-value-parser';
 
+import { TOKEN_FILES } from './design-system-contrast.mjs';
+import { NAMED_COLOURS } from './named-colours.mjs';
+
 const SIDES = ['', '-top', '-right', '-bottom', '-left'].concat(
   ['-block', '-inline'].flatMap((axis) => [axis, `${axis}-start`, `${axis}-end`]),
 );
 const sided = (names, suffix = '') =>
   names.flatMap((name) => SIDES.map((side) => `${name}${side}${suffix}`));
+const CORNERS = ['top-left', 'top-right', 'bottom-right', 'bottom-left'].concat([
+  'start-start',
+  'start-end',
+  'end-start',
+  'end-end',
+]);
 const CHECKED = new Set([
   'color',
   'background',
@@ -21,6 +30,7 @@ const CHECKED = new Set([
   'font-weight',
   'letter-spacing',
   'z-index',
+  'opacity',
   'transition',
   'transition-duration',
   'transition-delay',
@@ -44,18 +54,23 @@ const CHECKED = new Set([
   'left',
   ...sided(['border', 'outline']),
   ...sided(['border', 'outline'], '-width'),
+  'border-radius',
+  ...CORNERS.map((corner) => `border-${corner}-radius`),
   'outline-offset',
   'text-decoration-thickness',
   'text-underline-offset',
 ]);
-const BARE_NUMBER_PROPERTY = /^(z-index|font-weight|line-height)$/;
+const BARE_NUMBER_PROPERTY = /^(z-index|font-weight|line-height|opacity)$/;
 const RAW_UNIT = /^(px|rem|em|ms|s)$/i;
 const COLOUR_FUNCTION = /^(rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)$/i;
 const GRADIENT = /gradient$/i;
-const EXEMPT_MEDIA = /forced-colors|prefers-reduced-motion/;
+const EXEMPT_MEDIA = /forced-colors|prefers-reduced-motion:\s*reduce/;
 const SKIPPED_AT_RULE = /^(theme|font-face|keyframes|property)$/;
+const GLOBAL_KEYWORD = /^(inherit|initial|unset|revert|revert-layer)$/i;
 
-function rawParts(value, property) {
+const fullOpacity = (property, number) => property === 'opacity' && Number(number.number) === 1;
+
+function rawParts(value, property, { tokenFile }) {
   const found = [];
   const bareOnly = BARE_NUMBER_PROPERTY.test(property);
   const walk = (nodes, inGradient) =>
@@ -66,18 +81,33 @@ function rawParts(value, property) {
       }
       return visit(node, inGradient);
     });
+  const visitVar = ([name, ...rest], inGradient) => {
+    if (tokenFile) return false;
+    if (name?.value.startsWith('--ramp-')) found.push(`var(${name.value})`);
+    const fallback = rest.slice(rest.findIndex((node) => node.type === 'div') + 1);
+    if (rest.length) walk(fallback, inGradient);
+    return false;
+  };
   const visit = (node, inGradient) => {
-    if (node.type === 'function' && node.value === 'var') return false;
+    if (node.type === 'function' && node.value === 'var') return visitVar(node.nodes, inGradient);
     if (node.type === 'function' && COLOUR_FUNCTION.test(node.value)) {
       found.push(valueParser.stringify(node));
       return false;
     }
+    if (property === 'font-family' && (node.type === 'string' || node.type === 'word')) {
+      if (!GLOBAL_KEYWORD.test(node.value)) found.push(node.value);
+      return undefined;
+    }
     if (node.type !== 'word') return undefined;
-    if (/^#[0-9a-f]{3,8}$/i.test(node.value)) found.push(node.value);
+    if (/^#[0-9a-f]{3,8}$/i.test(node.value) || NAMED_COLOURS.has(node.value.toLowerCase()))
+      found.push(node.value);
     const number = valueParser.unit(node.value);
-    if (!number || Number(number.number) === 0) return undefined;
+    if (!number || Number(number.number) === 0 || fullOpacity(property, number)) return undefined;
     const rawUnit = RAW_UNIT.test(number.unit) && !inGradient;
-    const bare = bareOnly && number.unit === '' && value.trim() === node.value;
+    const bare =
+      bareOnly &&
+      ['', '%'].includes(number.unit) &&
+      (property === 'opacity' || value.trim() === node.value);
     if (rawUnit || bare) found.push(node.value);
     return undefined;
   };
@@ -94,19 +124,24 @@ function exempt(node) {
   return false;
 }
 
+function declarationParts(decl, tokenFile) {
+  const property = decl.prop.toLowerCase();
+  const custom = property.startsWith('--');
+  if ((custom && tokenFile) || property.startsWith('mask') || exempt(decl)) return [];
+  const parts = rawParts(decl.value, property, { tokenFile });
+  if (CHECKED.has(property)) return parts;
+  return parts.filter((part) => /^(?:[#a-z]|var\()/i.test(part));
+}
+
 export function cssValueFindings(label, css, { offsetLine = 0 } = {}) {
+  const tokenFile = TOKEN_FILES.includes(label);
   const findings = [];
   postcss.parse(css).walkDecls((decl) => {
-    const property = decl.prop.toLowerCase();
-    if (property.startsWith('--') || exempt(decl)) return;
-    const checked = CHECKED.has(property);
-    const raw = checked
-      ? rawParts(decl.value, property)
-      : rawParts(decl.value, property).filter((part) => /^[#a-z]/i.test(part));
+    const raw = declarationParts(decl, tokenFile);
     if (!raw.length) return;
     const line = (decl.source?.start?.line ?? 0) + offsetLine;
     findings.push(
-      `${label}:${line}: ${property}: ${decl.value} holds ${raw.join(', ')}; use a role token`,
+      `${label}:${line}: ${decl.prop}: ${decl.value} holds ${raw.join(', ')}; use a role token`,
     );
   });
   return findings;

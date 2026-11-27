@@ -1,4 +1,5 @@
 import { BrandMark } from '@/components/ui/brand-mark';
+import { TableCell } from '@/components/ui/table';
 
 export function Passing() {
   return (
@@ -6,6 +7,16 @@ export function Passing() {
       <BrandMark name="Google" />
       Google
       <svg viewBox="0 0 24 24" aria-hidden />
+      <a href="#faq" title="z-0 opacity-0 &#123;" className="@list-wide:grid-flow-col">
+        survivor zero
+      </a>
+      <TableCell className="whitespace-nowrap">layout</TableCell>
+      <Glyph className="shrink-0" />
+      <span style={{ '--share': '40%' }} className={`flex`} />
     </h2>
   );
+}
+
+function Glyph(_: Readonly<{ className: string }>) {
+  return null;
 }

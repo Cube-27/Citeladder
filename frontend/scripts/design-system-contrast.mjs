@@ -13,8 +13,8 @@ const PUBLIC_DARK = ":root[data-public-surface][data-theme='dark']";
 const MARKETING_LIGHT = ':root[data-marketing-surface]';
 const MARKETING_DARK = ":root[data-marketing-surface][data-theme='dark']";
 const SCOPES = [
-  { name: LIGHT, layers: [LIGHT], kind: 'website' },
-  { name: DARK, layers: [DARK], kind: 'website' },
+  { name: PUBLIC_LIGHT, layers: [PUBLIC_LIGHT, PUBLIC], kind: 'website' },
+  { name: PUBLIC_DARK, layers: [DARK, PUBLIC, PUBLIC_DARK], kind: 'website' },
   { name: MARKETING_LIGHT, layers: [PUBLIC_LIGHT, PUBLIC, MARKETING_LIGHT], kind: 'marketing' },
   {
     name: MARKETING_DARK,
@@ -29,8 +29,9 @@ const color = (role) => `--color-${role}`;
 const TEXT = '--text-color-';
 const text = (role) => `${TEXT}${role}`;
 const STATUSES = ['positive', 'negative', 'warning', 'info'];
-const WEBSITE_GROUNDS = ['ground', 'panel', 'well'].map(color);
-const MARKETING_GROUNDS = [...WEBSITE_GROUNDS, color('site-page'), color('site-well')];
+const SHARED_GROUNDS = ['ground', 'panel', 'well'].map(color);
+const WEBSITE_GROUNDS = [...SHARED_GROUNDS, color('site-page')];
+const MARKETING_GROUNDS = [...WEBSITE_GROUNDS, color('site-well')];
 const APP_FILLS = ['ground', 'panel', 'raised', 'raised-2'].map(color);
 const APP_GROUNDS = [...APP_FILLS, color('well')];
 const APP_SERIES = ['data-you', 'data-rival-1', 'data-rival-2', 'data-rival-3', 'data-rival-4'];
@@ -52,20 +53,11 @@ const TEXT_ON = {
   'metric-ink-dark': { surfaces: [color('metric-position')], only: 'app' },
 };
 
-const SEARCH_CONSOLE_LOOK = {
-  reason:
-    'white figures on the Search Console metric tiles are the owner-chosen look (owner, 2026-11-25)',
-  inks: [text('metric-ink')],
-  surfaces: ['metric-clicks', 'metric-ctr'].map(color),
-  minimum: 4.5,
-  only: 'app',
-};
-
 const CONTRAST_PAIRS = [
   {
     inks: ['ink', 'ink-2'].map(text),
     surfaces: ['state-hover', 'state-pressed', 'state-selected'].map(color),
-    over: WEBSITE_GROUNDS,
+    over: SHARED_GROUNDS,
     minimum: 4.5,
   },
   {
@@ -78,8 +70,8 @@ const CONTRAST_PAIRS = [
     surfaces: [color('ground'), color('panel'), color(`${status}-wash`)],
     minimum: 4.5,
   })),
-  { inks: [color('accent'), color('focus')], surfaces: WEBSITE_GROUNDS, minimum: 3 },
-  { inks: [color('control-line')], surfaces: WEBSITE_GROUNDS, minimum: 3, only: 'website' },
+  { inks: [color('accent'), color('focus')], surfaces: SHARED_GROUNDS, minimum: 3 },
+  { inks: [color('control-line')], surfaces: SHARED_GROUNDS, minimum: 3, only: 'website' },
   {
     inks: [text('ink')],
     surfaces: ['site-band-from', 'site-band-mid', 'site-band-to'].map(color),
@@ -374,12 +366,11 @@ function rowViolations(palette, scope, { inks, surfaces, over = [color('panel')]
 }
 
 /** @public */
-function measure(source) {
+export function paletteViolations(source) {
   const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
   const violations = clean.includes(`${DARK} {`)
     ? []
     : [`${TOKEN_CSS}: dark theme token mapping is missing`];
-  const accepted = [];
   for (const { name, layers, kind } of SCOPES) {
     const palette = resolvePalette(source, layers);
     const holds = (row) =>
@@ -393,24 +384,8 @@ function measure(source) {
     for (const row of rows.filter(holds)) {
       violations.push(...rowViolations(palette, name, row));
     }
-    if (holds(SEARCH_CONSOLE_LOOK))
-      accepted.push(
-        ...rowViolations(palette, name, SEARCH_CONSOLE_LOOK).map(
-          (finding) => `${finding}; accepted: ${SEARCH_CONSOLE_LOOK.reason}`,
-        ),
-      );
   }
-  return { violations, accepted };
-}
-
-/** @public */
-export function paletteViolations(source) {
-  return measure(source).violations;
-}
-
-/** @public */
-export function paletteAccepted(source) {
-  return measure(source).accepted;
+  return violations;
 }
 
 /** @public */
@@ -419,5 +394,5 @@ export function tokenSource(root) {
 }
 
 export function textContrast(root) {
-  return measure(tokenSource(root));
+  return paletteViolations(tokenSource(root));
 }
