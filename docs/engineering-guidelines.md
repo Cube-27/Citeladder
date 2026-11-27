@@ -244,6 +244,17 @@ rules were cut.
 **Check:** The CSS budget step in CI. In review: an `exit` or closed-state rule
 under a Radix part that uses `transition` alone.
 
+### A boot file's import ships the whole module
+
+**Rule:** Code only lazy routes use lives in a module no boot file (shell,
+`page-frame`, `first-frame`, `not-found`) imports. Split a shared module along
+that seam rather than adding to it.
+**Why:** The bundler puts every module statically reachable from the entry into
+the boot chunk whole. Design batch 6 (#1274) went 13 KB over the eager JS
+budget by putting setup, record and steps chrome next to the page chrome boot
+screens use.
+**Check:** The eager JS budget step in CI.
+
 ### The window never scrolls in the app
 
 **Rule:** The app panel (`[data-main-column]`) is the only scroller, and it is

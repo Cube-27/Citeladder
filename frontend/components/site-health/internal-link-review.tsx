@@ -7,18 +7,19 @@ import { PageOpenContext } from '@/components/site-health/page-open-context';
 import { Checkbox } from '@/components/ui/checkbox';
 
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { wellClasses } from '@/components/ui/slip';
+import { AnchorMark, TextWell } from '@/components/ui/well';
 import { ClampText } from '@/components/ui/clamp-text';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline, Stack, Columns } from '@/components/ui/layout';
 import { UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { MarkActionImplemented } from '@/components/agent/action-declaration';
 import { FileSearch } from '@/lib/icons';
 import { pluralCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { Text } from '@/components/ui/typography';
 
 const escapeHtml = (value: string) =>
   value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
@@ -30,9 +31,9 @@ function LinkEnd({
 }: Readonly<{ label: string; page: InternalLink['source']; note?: string }>) {
   const summary = page.description || page.excerpt;
   return (
-    <div className="grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)] gap-x-3">
-      <span className="text-caption text-ink-2 pt-0.5">{label}</span>
-      <div className="grid min-w-0 gap-1">
+    <Columns template="label-value" gap="group" align="baseline">
+      <Text variant="caption">{label}</Text>
+      <Stack gap="tight" box="shrink">
         <TextLink
           variant="external"
           text="body"
@@ -48,13 +49,13 @@ function LinkEnd({
           )}
         </TextLink>
         {summary ? (
-          <ClampText lines={2} className="text-caption text-ink-2">
+          <ClampText lines={2} text="caption">
             {summary}
           </ClampText>
         ) : null}
-        {note ? <span className="text-caption text-ink-2">{note}</span> : null}
-      </div>
-    </div>
+        {note ? <Text variant="caption">{note}</Text> : null}
+      </Stack>
+    </Columns>
   );
 }
 
@@ -102,22 +103,20 @@ export function InternalLinkReview({
             <SectionHeader>
               <SectionTitle>{link.placement ? 'Where it goes' : 'Anchor text'}</SectionTitle>
             </SectionHeader>
-            <p className={wellClasses('text-body text-ink')}>
+            <TextWell>
               {link.placement ? (
                 <>
                   {link.placement.text.slice(0, link.placement.anchor_start)}
-                  <mark className="bg-accent-wash text-accent-text rounded-mark px-0.5">
-                    {link.anchor}
-                  </mark>
+                  <AnchorMark>{link.anchor}</AnchorMark>
                   {link.placement.text.slice(link.placement.anchor_start + link.anchor.length)}
                 </>
               ) : (
                 link.anchor
               )}
-            </p>
+            </TextWell>
           </Section>
           <Stack gap="item">
-            <Inline className="flex-wrap">
+            <Inline wrap>
               <CopyButton
                 variant="primary"
                 value={`<a href="${escapeHtml(link.target.url)}">${escapeHtml(link.anchor)}</a>`}
@@ -131,7 +130,7 @@ export function InternalLinkReview({
                 Copy URL
               </CopyButton>
             </Inline>
-            <Inline className="flex-wrap">
+            <Inline wrap>
               <Button
                 variant="quiet"
                 aria-haspopup="dialog"

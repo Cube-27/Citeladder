@@ -39,7 +39,7 @@ export function DateField({
       className={cn(
         'focus-frame flex items-center gap-2 pe-1',
         FIELD_BOX,
-        disabled && 'cursor-not-allowed opacity-60',
+        disabled && 'cursor-not-allowed opacity-disabled',
         className,
       )}
     >
@@ -62,7 +62,7 @@ export function DateField({
             type="button"
             aria-label={`${ariaLabel}: open calendar`}
             disabled={disabled}
-            className="focus-ring text-ink-2 enabled:hover:text-ink not-data-[state=open]:enabled:hover:overlay-hover data-[state=open]:overlay-pressed data-[state=open]:text-ink rounded-mark hit-area inline-flex size-[var(--target-min)] shrink-0 items-center justify-center transition-colors"
+            className="focus-ring text-ink-2 enabled:hover:text-ink not-data-[state=open]:enabled:hover:overlay-hover data-[state=open]:overlay-pressed data-[state=open]:text-ink rounded-mark hit-area size-target inline-flex shrink-0 items-center justify-center transition-colors"
           >
             <CalendarDays className="size-3.5" aria-hidden />
           </button>

@@ -2,6 +2,7 @@
 @import '../../app/src/globals.css';
 @import '../../app/src/public-surface.css';
 @import './site-type.css';
+@import './site-space.css';
 
 :root {
   --type-base: 1rem;
@@ -17,13 +18,13 @@
 @source '../../../components/ui';
 @source '../../../lib';
 
-[data-public-surface] .marketing-cta-button {
+[data-public-surface] [data-button-look='cta'] {
   height: auto;
-  min-height: 44px;
-  padding-inline: 16px;
+  min-height: var(--site-target);
+  padding-inline: var(--site-space-4);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   transition-property: transform, background-color, color, border-color, box-shadow;
 }
 
@@ -37,7 +38,7 @@
 }
 
 @media (max-width: 540px) {
-  [data-public-surface] .marketing-cta-button {
+  [data-public-surface] [data-button-look='cta'] {
     flex: none;
     align-self: center;
     width: max-content;
@@ -46,7 +47,7 @@
     text-align: center;
   }
 
-  [data-public-surface] .marketing-cta-button.w-full {
+  [data-public-surface] [data-button-look='cta'].w-full {
     align-self: stretch;
     width: 100%;
     white-space: normal;
@@ -70,13 +71,13 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  [data-public-surface] .marketing-cta-button svg.tabler-icon-arrow-up-right {
-    transition: transform var(--motion-slow) var(--ease-standard);
+  [data-public-surface] [data-button-look='cta'] svg.tabler-icon-arrow-up-right {
+    transition: transform var(--transition-duration-open) var(--ease-standard);
   }
 }
 
 @media (hover: hover) and (pointer: fine) {
-  [data-public-surface] .marketing-cta-button:hover svg.tabler-icon-arrow-up-right {
-    transform: translate(2px, -2px);
+  [data-public-surface] [data-button-look='cta']:hover svg.tabler-icon-arrow-up-right {
+    transform: translate(var(--site-space-0_5), calc(-1 * var(--site-space-0_5)));
   }
 }

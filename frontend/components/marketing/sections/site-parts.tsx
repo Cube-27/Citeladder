@@ -7,12 +7,12 @@ import { cn } from '@/lib/utils';
 export function SiteArrowLink({
   href,
   children,
-  className,
+  inCard = false,
   demo = false,
 }: Readonly<{
   href?: string;
   children: ReactNode;
-  className?: string;
+  inCard?: boolean;
   demo?: boolean;
 }>) {
   const content = (
@@ -21,11 +21,12 @@ export function SiteArrowLink({
       <ArrowRight aria-hidden className="cl-arrowlink-icon size-4" />
     </>
   );
-  if (!href) return <span className={cn('cl-arrowlink', className)}>{content}</span>;
+  if (!href)
+    return <span className={cn('cl-arrowlink', inCard && 'cl-fcard-more')}>{content}</span>;
   return (
     <a
       href={href}
-      className={cn('cl-arrowlink focus-ring', className)}
+      className={cn('cl-arrowlink focus-ring', inCard && 'cl-fcard-more')}
       data-demo-cta={demo ? '' : undefined}
       {...(demo && DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
     >
@@ -35,7 +36,7 @@ export function SiteArrowLink({
 }
 
 export function Eyebrow({ children }: Readonly<{ children: ReactNode }>) {
-  return <p className="text-kicker text-ink-2 cl-eyebrow">{children}</p>;
+  return <p className="cl-kicker cl-eyebrow">{children}</p>;
 }
 
 export function CheckList({

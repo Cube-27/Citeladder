@@ -1,0 +1,59 @@
+:root {
+  --site-space: calc(var(--type-base) / 4);
+  --site-space-0_5: calc(var(--site-space) * 0.5);
+  --site-space-1: var(--site-space);
+  --site-space-1_5: calc(var(--site-space) * 1.5);
+  --site-space-2: calc(var(--site-space) * 2);
+  --site-space-2_5: calc(var(--site-space) * 2.5);
+  --site-space-3: calc(var(--site-space) * 3);
+  --site-space-4: calc(var(--site-space) * 4);
+  --site-space-4_5: calc(var(--site-space) * 4.5);
+  --site-space-5: calc(var(--site-space) * 5);
+  --site-space-6: calc(var(--site-space) * 6);
+  --site-space-7: calc(var(--site-space) * 7);
+  --site-space-8: calc(var(--site-space) * 8);
+  --site-space-9: calc(var(--site-space) * 9);
+  --site-space-10: calc(var(--site-space) * 10);
+  --site-space-12: calc(var(--site-space) * 12);
+  --site-space-13: calc(var(--site-space) * 13);
+  --site-space-14: calc(var(--site-space) * 14);
+  --site-space-16: calc(var(--site-space) * 16);
+  --site-space-20: calc(var(--site-space) * 20);
+  --site-space-23: calc(var(--site-space) * 23);
+  --site-space-24: calc(var(--site-space) * 24);
+  --site-space-25: calc(var(--site-space) * 25);
+  --site-space-27: calc(var(--site-space) * 27);
+  --site-space-28: calc(var(--site-space) * 28);
+  --site-space-30: calc(var(--site-space) * 30);
+  --site-space-31: calc(var(--site-space) * 31);
+  --site-space-32: calc(var(--site-space) * 32);
+
+  --site-rule: 1px;
+  --site-rule-thick: 2px;
+  --site-target: 44px;
+  --site-underline-offset-sm: 2px;
+  --site-underline-offset: 3px;
+  --site-underline-offset-lg: 4px;
+
+  --site-measure-3xs: 320px;
+  --site-measure-2xs: 420px;
+  --site-measure-xs: 480px;
+  --site-measure-sm: 520px;
+  --site-measure-md: 560px;
+  --site-measure-lg: 640px;
+  --site-measure-xl: 760px;
+  --site-measure-2xl: 960px;
+  --site-measure-3xl: 1120px;
+  --site-measure-note: 44ch;
+  --site-measure-lead: 62ch;
+  --site-measure-prose: 65ch;
+
+  --site-grain: 0.05;
+  --site-band-grain: 0.6;
+  --site-noise-tile: 220px;
+  --site-z-banner: calc(var(--z-index-sticky) - 1);
+}
+
+:root[data-theme='dark'] {
+  --site-grain: 0.07;
+}

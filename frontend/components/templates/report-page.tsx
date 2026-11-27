@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 
-import { PageFrame, PageSections, type PageFrameSlots } from './page-frame';
+import { PageSections } from '@/components/ui/page-chrome';
+
+import { PageFrame, type PageFrameSlots } from './page-frame';
 
 export function ReportPage({
   children,

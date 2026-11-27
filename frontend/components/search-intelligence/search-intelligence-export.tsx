@@ -1,8 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import { Download } from '@/lib/icons';
+import { ExportAction } from '@/components/ui/export-action';
 import { downloadCsv } from '@/lib/csv/download';
 import {
   searchIntelligenceApi,
@@ -11,7 +9,6 @@ import {
 } from '@/lib/api/search-intelligence';
 import { SEARCH_COLUMNS_BY_KIND, searchScopeLabel } from '@/lib/config/search-intelligence';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { Notice } from '@/components/ui/notice';
 
 export function SearchIntelligenceExport({
   dataset,
@@ -21,15 +18,11 @@ export function SearchIntelligenceExport({
   params: Parameters<typeof searchIntelligenceApi.rows>[3];
 }>) {
   const { workspaceId, projectId } = useProjectScope();
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState('');
   const controller = useRef<AbortController | null>(null);
   useEffect(() => () => controller.current?.abort(), [projectId, workspaceId]);
   const exportSaved = async () => {
     controller.current = new AbortController();
     const signal = controller.current.signal;
-    setExporting(true);
-    setExportError('');
     try {
       const exported: SearchIntelligenceRow[] = [];
       let cursor: string | undefined;
@@ -66,18 +59,8 @@ export function SearchIntelligenceExport({
         ]),
       );
     } catch (error) {
-      setExportError(error instanceof Error ? error.message : 'Saved export failed');
-    } finally {
-      setExporting(false);
+      if (!signal.aborted) throw error;
     }
   };
-  return (
-    <>
-      <Button variant="quiet" disabled={exporting} onClick={() => void exportSaved()}>
-        <Icon icon={Download} />
-        {exporting ? 'Exporting…' : 'Export CSV'}
-      </Button>
-      {exportError ? <Notice tone="negative">{exportError}</Notice> : null}
-    </>
-  );
+  return <ExportAction scope="table" formats={['csv']} onExport={exportSaved} />;
 }

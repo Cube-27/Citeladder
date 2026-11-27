@@ -152,7 +152,7 @@
   "services/api/src/site-health/routes.ts": 4,
   "services/api/src/site-health/score-summary.ts": 1,
   "services/api/src/site-health/site-setup-task.ts": 2,
-  "services/api/src/site-health/snapshot-diagnostics.ts": 6,
+  "services/api/src/site-health/snapshot-diagnostics.ts": 5,
   "services/api/src/site-health/tracked-set.ts": 2,
   "services/api/src/site-health/url-admission.ts": 8,
   "services/api/src/site-health/url-identity.ts": 1,

@@ -5,6 +5,11 @@ import { cn } from '@/lib/utils';
 
 import './steps-faq-cta.css';
 
+const STEPS_DIRECTION = {
+  horizontal: 'cl-steps--horizontal',
+  vertical: 'cl-steps--vertical',
+} as const;
+
 export function Steps({
   items,
   direction = 'horizontal',
@@ -13,7 +18,7 @@ export function Steps({
   direction?: 'horizontal' | 'vertical';
 }>) {
   return (
-    <ol className={cn('cl-steps', `cl-steps--${direction}`)}>
+    <ol className={cn('cl-steps', STEPS_DIRECTION[direction])}>
       {items.map((step) => (
         <li key={step.title} className="cl-step">
           <div className="cl-step-body">

@@ -1,8 +1,6 @@
-import { Button } from '@/components/ui/button';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
-import { Icon } from '@/components/ui/icon';
+import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
-import { Download } from '@/lib/icons';
+import { ExportAction } from '@/components/ui/export-action';
 import { downloadCsv } from '@/lib/csv/download';
 import { standingLabel } from '@citeladder/contracts/page-labels';
 import { typeLabel, type SourceItem } from '@/lib/visibility/sources';
@@ -44,7 +42,7 @@ export function sourceTableToolbar({
   onSearch: (value: string) => void;
   rows: readonly SourceItem[];
   domain: string | null;
-}>): FilterBarProps {
+}>): TableToolbarProps {
   const onExport = () => {
     const stamp = new Date().toISOString().slice(0, 10);
     const scope = domain ? `${domain}-` : '';
@@ -95,10 +93,12 @@ export function sourceTableToolbar({
       />
     ),
     actions: (
-      <Button variant="secondary" onClick={onExport} disabled={rows.length === 0}>
-        <Icon icon={Download} />
-        Export
-      </Button>
+      <ExportAction
+        scope="table"
+        formats={['csv']}
+        disabled={rows.length === 0}
+        onExport={async () => onExport()}
+      />
     ),
   };
 }

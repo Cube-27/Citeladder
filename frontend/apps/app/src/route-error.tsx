@@ -3,7 +3,7 @@ import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
 
 import { FirstFrame } from '@/components/layout/first-frame';
 import { NoticePage, NoticeScreen } from '@/components/templates/notice-page';
-import { Button, buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
 import { isChunkLoadError, reloadOnceForChunkLoad, reportClientError } from '@/lib/client-errors';
 
@@ -79,9 +79,9 @@ export function ShellRouteError() {
         actions={
           <>
             <ReloadButton />
-            <a href="/projects" className={buttonClasses('secondary')}>
-              Go to Overview
-            </a>
+            <Button asChild variant="secondary">
+              <a href="/projects">Go to Overview</a>
+            </Button>
           </>
         }
       />

@@ -1,12 +1,18 @@
 [data-data-table-frame] {
   --data-table-identity-min: 25ch;
+  --data-table-hug-cap: 40ch;
+  --data-table-shrink: 1px;
+  --data-table-select: calc(var(--spacing) * 10);
+  --data-table-select-gap: calc(var(--spacing) * 2);
+  --data-table-gutter: calc(var(--spacing) * 3);
+  --data-table-edge-pad: calc(var(--spacing) * 4);
 }
 
 @media (min-width: 768px) {
   [data-pinned] .table-frame tr > :nth-child(1),
   [data-pinned='2'] .table-frame tr > :nth-child(2) {
     position: sticky;
-    z-index: 10;
+    z-index: var(--z-index-raised);
     background-color: var(--table-ground);
   }
   [data-pinned] .table-frame tr > :nth-child(1) {
@@ -17,7 +23,7 @@
   }
   [data-pinned] .table-frame thead tr > :nth-child(1),
   [data-pinned='2'] .table-frame thead tr > :nth-child(2) {
-    z-index: 20;
-    background-color: var(--table-head-ground);
+    z-index: var(--z-index-sticky);
+    background-color: var(--color-table-head);
   }
 }

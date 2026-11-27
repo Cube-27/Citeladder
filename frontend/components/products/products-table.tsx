@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { DataTable, type DataTableColumn, type DataTablePager } from '@/components/ui/data-table';
 import {
   TableActionsCell,
@@ -35,6 +36,9 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { AddToTracking } from './product-catalog-controls';
+import { Inline } from '@/components/ui/layout';
+import { Text } from '@/components/ui/typography';
+import { InlinePress } from '@/components/ui/inline-press';
 
 const SORTABLE: Partial<Record<ProductColumnKey, CommerceProductSort>> = {
   visibility: 'visibility',
@@ -63,10 +67,12 @@ function MetricValue({ cell, text }: Readonly<{ cell: ProductCell; text: boolean
   else value = text ? <FirstOfList text={cell.text} /> : <Value value={cell.text} />;
   if (!cell.note) return value;
   return (
-    <span className="inline-flex items-baseline gap-2 whitespace-nowrap">
+    <Inline as="span" inline nowrap align="baseline">
       {value}
-      <span className="text-ink-2 font-sans">{cell.note}</span>
-    </span>
+      <Text variant="body" tone="ink-2">
+        {cell.note}
+      </Text>
+    </Inline>
   );
 }
 
@@ -74,14 +80,12 @@ function FirstOfList({ text }: Readonly<{ text: string }>) {
   const [first, ...rest] = text.split(', ');
   if (!rest.length) return <ClampText>{text}</ClampText>;
   return (
-    <span className="inline-flex items-baseline gap-2 whitespace-nowrap">
+    <Inline as="span" inline nowrap align="baseline">
       {first}
       <Tooltip content={rest.join(', ')}>
-        <button type="button" className="text-ink-2 rounded-mark focus-ring">
-          +{rest.length} more
-        </button>
+        <InlinePress tone="ink-2">+{rest.length} more</InlinePress>
       </Tooltip>
-    </span>
+    </Inline>
   );
 }
 
@@ -141,9 +145,11 @@ export function ProductsTable({
   empty,
   description,
   actions,
+  toolbar,
   onRetry = () => void query.refetch(),
 }: Readonly<{
   actions?: ReactNode;
+  toolbar?: TableToolbarProps;
   empty: ProductsEmpty;
   onRetry?: () => void;
   description?: ReactNode;
@@ -213,6 +219,7 @@ export function ProductsTable({
       label="Products"
       description={description}
       actions={actions}
+      toolbar={toolbar}
       columns={tableColumns}
       rowCount={rows.length}
       pageSize={pageSize}

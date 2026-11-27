@@ -22,8 +22,8 @@ import type {
 import { auditScheduleCadenceSchema } from '@citeladder/contracts';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { DisplayTime } from '@/components/ui/display-time';
-import { textRole } from '@/components/ui/typography';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Text } from '@/components/ui/typography';
+import { Inline, Stack, Columns } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { StatusMark } from '@/components/ui/status-mark';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -212,12 +212,7 @@ function ScheduleForm({
           </FormRow>
         ) : null}
         <FormRow label="Engines">
-          <Stack
-            as="fieldset"
-            aria-label="Engines"
-            gap="item"
-            className="grid-cols-[auto_auto] justify-start gap-x-4"
-          >
+          <Columns as="fieldset" aria-label="Engines" template="choices" gap="choices">
             {catalog.order.map((engine) => (
               <Checkbox
                 key={engine}
@@ -232,7 +227,7 @@ function ScheduleForm({
                 }
               />
             ))}
-          </Stack>
+          </Columns>
         </FormRow>
         <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
       </SettingRows>
@@ -267,7 +262,7 @@ function MarketChecklist({
   if (markets.length < 2) return null;
   return (
     <FormRow label="Markets">
-      <Inline as="fieldset" aria-label="Markets" className="flex-wrap">
+      <Inline as="fieldset" aria-label="Markets" wrap>
         {markets.map((market) => (
           <Checkbox
             key={market.id ?? 'default'}
@@ -339,25 +334,25 @@ function ScheduleRow({
   const promptSet =
     promptSets.find((set) => set.id === schedule.prompt_set_id)?.name ?? 'Removed prompt set';
   return (
-    <li className="flex min-w-0 items-center gap-4">
-      <div className="grid min-w-0 flex-1 gap-1">
-        <ClampText phoneWrap className={textRole('body')}>
-          <span className={textRole('emphasis')}>{cadenceLabel(schedule)}</span>
+    <Inline as="li" gap="loose">
+      <Stack gap="tight" box="fill">
+        <ClampText phoneWrap text="body">
+          <Text variant="label">{cadenceLabel(schedule)}</Text>
           {` · ${promptSet} · ${SCOPE_LABELS[schedule.audit_scope]} · `}
           <EngineStack engines={schedule.engines} />
           {marketSummary(schedule, markets)}
         </ClampText>
-        <ClampText phoneWrap className="text-caption text-ink-2">
+        <ClampText phoneWrap text="caption">
           <ScheduleStatus schedule={schedule} />
         </ClampText>
-      </div>
+      </Stack>
       {resumable ? (
         <Button variant="secondary" disabled={resuming} onClick={onResume}>
           <Icon icon={Play} />
           Resume
         </Button>
       ) : null}
-    </li>
+    </Inline>
   );
 }
 

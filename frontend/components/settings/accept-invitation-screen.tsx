@@ -8,7 +8,7 @@ import { FlowBlock, FlowPage } from '@/components/templates/flow-page';
 import { Button } from '@/components/ui/button';
 import { Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Link2Off } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { workspaceMutations } from '@/lib/api/workspaces';
@@ -96,7 +96,7 @@ function InvitationDeadEnd({
 }: Readonly<{ heading: string; description: string; reference?: string; onLeave: () => void }>) {
   useDocumentTitle(heading);
   return (
-    <Stack gap="item" className="min-w-0 justify-items-center">
+    <Stack gap="item" box="shrink" align="center">
       <StateBlock
         kind="empty"
         icon={Link2Off}
@@ -110,11 +110,9 @@ function InvitationDeadEnd({
         }
       />
       {reference ? (
-        <p
-          className={textRole('caption', 'text-ink-2 max-w-full overflow-x-auto whitespace-nowrap')}
-        >
+        <Text as="p" variant="caption" box="scroll" wrap="nowrap">
           {`Reference: ${reference}`}
-        </p>
+        </Text>
       ) : null}
     </Stack>
   );

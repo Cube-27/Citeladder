@@ -96,20 +96,55 @@ export function BarRows({ label, rows }: Readonly<{ label: string; rows: readonl
       {rows.map((row) => (
         <li
           key={row.key}
-          className="border-rule grid min-h-9 grid-cols-[minmax(0,1fr)_auto_minmax(0,1.1fr)] items-center gap-3 border-t"
+          className="border-rule grid-cols-score-gauge grid min-h-9 items-center gap-3 border-t"
         >
           <span className="text-body text-ink min-w-0 truncate">{row.label}</span>
           <span className="text-body text-ink min-w-10 text-right tabular-nums">{row.figure}</span>
           <span className="bg-well rounded-mark block h-2 overflow-hidden" aria-hidden>
             {row.share === null ? null : (
               <span
-                className={cn('block h-full', BAR_FILL[row.tone])}
-                style={{ width: `${Math.max(0, Math.min(1, row.share)) * 100}%` }}
+                className={cn('block h-full w-share', BAR_FILL[row.tone])}
+                style={{ '--share': `${Math.max(0, Math.min(1, row.share)) * 100}%` }}
               />
             )}
           </span>
         </li>
       ))}
     </ul>
+  );
+}
+
+const percent = (share: number) => `${share * 100}%`;
+
+export function ScoreBar({ score }: Readonly<{ score: number | null }>) {
+  return (
+    <span aria-hidden className="bg-well rounded-mark block h-2 min-w-24 overflow-hidden">
+      {score === null ? null : (
+        <span
+          className={cn('block h-full w-(--fill)', BAR_FILL[scoreTone(score)])}
+          style={{ '--fill': percent(Math.max(0, Math.min(100, score)) / 100) }}
+        />
+      )}
+    </span>
+  );
+}
+
+export function PassFailBar({ passing, failing }: Readonly<{ passing: number; failing: number }>) {
+  const total = passing + failing;
+  return (
+    <span aria-hidden className="rounded-mark flex h-2 gap-0.5 overflow-hidden">
+      {passing > 0 ? (
+        <span
+          className="bg-positive block h-full w-(--fill)"
+          style={{ '--fill': percent(passing / total) }}
+        />
+      ) : null}
+      {failing > 0 ? (
+        <span
+          className="bg-negative block h-full w-(--fill)"
+          style={{ '--fill': percent(failing / total) }}
+        />
+      ) : null}
+    </span>
   );
 }

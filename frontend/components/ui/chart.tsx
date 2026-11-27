@@ -94,6 +94,12 @@ export function useChartWidth<T extends HTMLElement>(fallback = 640) {
 
 export type ChartHeight = 'sm' | 'md' | 'lg';
 
+export const CHART_HEIGHT_CLASS = {
+  sm: 'h-chart-sm',
+  md: 'h-chart-md',
+  lg: 'h-chart-lg',
+} as const satisfies Record<ChartHeight, string>;
+
 export const CHART_HEIGHT_PX = { sm: 160, md: 240, lg: 320 } as const satisfies Record<
   ChartHeight,
   number

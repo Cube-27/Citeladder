@@ -5,7 +5,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Input } from '@/components/ui/input';
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type {
   BillingCatalog,
   BillingEntitlement,
@@ -119,9 +119,9 @@ function ExtraRow({
       }
     >
       {reason ? (
-        <p id={reasonId} className={textRole('caption', 'text-end')}>
+        <Text as="p" id={reasonId} variant="caption" align="end">
           {reason}
-        </p>
+        </Text>
       ) : null}
     </SettingRow>
   );

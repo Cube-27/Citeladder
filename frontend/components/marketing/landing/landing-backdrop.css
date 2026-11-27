@@ -1,5 +1,5 @@
 @media (min-width: 1024px) {
   .cl-lhero .cl-lhero-frame {
-    margin-top: 120px;
+    margin-top: var(--site-space-30);
   }
 }

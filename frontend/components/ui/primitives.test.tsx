@@ -140,7 +140,9 @@ describe('ProgressMeter', () => {
     expect(bar).toHaveAttribute('aria-valuetext', '48.0%');
     expect(bar).not.toHaveAttribute('aria-busy');
     expect(screen.getByText('48.0%')).toBeInTheDocument();
-    expect(container.querySelector<HTMLElement>('.bg-data-you')?.style.width).toBe('48%');
+    expect(
+      container.querySelector<HTMLElement>('.bg-data-you')?.style.getPropertyValue('--share'),
+    ).toBe('48%');
 
     rerender(<ProgressMeter label="Progress" value={130} />);
     expect(screen.getByRole('progressbar', { name: 'Progress' })).toHaveAttribute('value', '100');

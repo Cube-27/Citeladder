@@ -16,10 +16,10 @@ function extent(element: HTMLElement) {
   return {
     open: { height: `${element.offsetHeight}px`, marginTop: '0px', opacity: 1 },
     shut: { height: '0px', marginTop: `${-gap}px`, opacity: 0 },
-    opening: Number.parseFloat(style.getPropertyValue('--motion-open')) || 0,
-    closing: Number.parseFloat(style.getPropertyValue('--motion-close')) || 0,
+    opening: Number.parseFloat(style.getPropertyValue('--transition-duration-open')) || 0,
+    closing: Number.parseFloat(style.getPropertyValue('--transition-duration-close')) || 0,
     enter: style.getPropertyValue('--ease-standard').trim(),
-    exit: style.getPropertyValue('--ease-exit').trim(),
+    exit: style.getPropertyValue('--ease-standard').trim(),
   };
 }
 

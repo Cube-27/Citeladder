@@ -283,8 +283,8 @@ describe('OverviewPanel', () => {
     await screen.findByRole('table', { name: 'Top issues' });
     const areas = within(screen.getByRole('list', { name: 'Web fundamentals breakdown' }));
     expect(areas.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'accessibility75',
-      'mobile100',
+      'Accessibility75',
+      'Mobile100',
     ]);
     expect(screen.queryByRole('button', { name: 'View evidence' })).toBeNull();
   });

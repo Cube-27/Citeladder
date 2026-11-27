@@ -5,7 +5,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
 import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { MenuItem } from '@/components/ui/menu';
-import { SPLIT_ACTION_JOIN, SplitButton } from '@/components/ui/split-button';
+import { SplitButton } from '@/components/ui/split-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { budgetLeft, type CrawlBudget } from '@/lib/site-health/crawl-budget';
 
@@ -64,7 +64,7 @@ export function StartCrawlControl({
       pending={pending}
       pendingLabel="Starting…"
       disabled={usedUp}
-      style={SPLIT_ACTION_JOIN}
+      data-split-action=""
     />
   );
   return (

@@ -413,8 +413,8 @@ async function settleThrown(ctx: SiteTaskContext, claimed: SiteTask, error: unkn
       const task = await ctx.queue.fence(trx, claimed, ctx.owner);
       if (task && task.conflict_count < ctx.settings.conflictMax)
         await settleTask(trx, ctx, task, { kind: 'conflict', errorDetail: detail, cause: error });
-    }).catch((contended: unknown) => {
-      if (!isRetryableContention(contended)) throw contended;
+    }).catch((contendedError: unknown) => {
+      if (!isRetryableContention(contendedError)) throw contendedError;
       logger.warning('site_task_settle_contended', { task_id: claimed.id });
     });
   }

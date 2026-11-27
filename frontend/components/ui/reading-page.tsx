@@ -9,21 +9,16 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
-import { textRole, type TextRole } from '@/components/ui/typography';
 
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="flex min-h-dvh w-full min-w-0 flex-col gap-[var(--page-section-gap)] pb-[var(--page-end-space)]">
-      {children}
-    </div>
+    <div className="gap-section pb-page-end flex min-h-dvh w-full min-w-0 flex-col">{children}</div>
   );
 }
 
 export function ReadingTools({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="flex flex-wrap gap-2">{children}</div>;
 }
-
-export const READING_SECTION_TITLE = 'subheading' satisfies TextRole;
 
 export function Labelled({
   title,
@@ -55,7 +50,7 @@ export function Labelled({
 }
 
 export function Prose({ children }: Readonly<{ children: ReactNode }>) {
-  return <p className={textRole('body', 'break-words')}>{children}</p>;
+  return <p className="text-body text-ink break-words">{children}</p>;
 }
 
 export type DetailFact = Readonly<{ label: string; value: ReactNode }>;
@@ -70,8 +65,8 @@ export function DetailsFacts({ facts }: Readonly<{ facts: readonly DetailFact[] 
       <SectionBleed as="dl" rows>
         {facts.map((fact) => (
           <div key={fact.label} className="flex">
-            <dt className={textRole('body', 'text-ink-2 w-30 shrink-0')}>{fact.label}</dt>
-            <dd className={textRole('body', 'flex min-w-0 flex-1 items-center gap-2')}>
+            <dt className="text-body text-ink-2 w-30 shrink-0">{fact.label}</dt>
+            <dd className="text-body text-ink flex min-w-0 flex-1 items-center gap-2">
               {fact.value}
             </dd>
           </div>
@@ -85,7 +80,7 @@ export function StepList({ items }: Readonly<{ items: readonly string[] }>) {
   return (
     <ul className="flex list-disc flex-col gap-1 ps-5">
       {items.map((item) => (
-        <li key={item} className={textRole('body', 'min-w-0 break-words')}>
+        <li key={item} className="text-body text-ink min-w-0 break-words">
           {item}
         </li>
       ))}

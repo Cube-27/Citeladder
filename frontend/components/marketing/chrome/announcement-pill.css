@@ -1,21 +1,21 @@
 .cl-announce {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--site-space-2);
   max-width: 100%;
-  height: 32px;
-  padding: 0 12px 0 4px;
+  height: var(--site-space-8);
+  padding: 0 var(--site-space-3) 0 var(--site-space-1);
   border-radius: var(--radius-full);
   background: var(--color-panel);
   color: var(--text-color-ink-2);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
   text-decoration: none;
-  transition: color var(--motion-fast) var(--ease-standard);
+  transition: color var(--transition-duration-fast) var(--ease-standard);
 }
 
 .cl-announce:not(:has(.cl-announce-tag)) {
-  padding-left: 12px;
+  padding-left: var(--site-space-3);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -27,8 +27,8 @@
 .cl-announce-tag {
   display: inline-flex;
   align-items: center;
-  height: 24px;
-  padding: 0 12px;
+  height: var(--site-space-6);
+  padding: 0 var(--site-space-3);
   border-radius: var(--radius-full);
   background: var(--site-chip);
   color: var(--site-chip-ink);
@@ -48,14 +48,14 @@
 
 @media (max-width: 767px) {
   .cl-announce {
-    gap: 4px;
-    padding-right: 8px;
+    gap: var(--site-space-1);
+    padding-right: var(--site-space-2);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
   }
 
   .cl-announce-tag {
-    padding: 0 8px;
+    padding: 0 var(--site-space-2);
   }
 
   .cl-announce > svg {

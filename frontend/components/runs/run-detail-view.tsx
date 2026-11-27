@@ -14,7 +14,6 @@ type RunDetailViewProps = {
   executions: Execution[] | undefined;
   executionsLoading: boolean;
   executionsRead: RetryableRead;
-  exportError: string | null;
   cancelNotice: MutationNotice | null;
   rerunNotice: MutationNotice | null;
   onCancel: () => void;
@@ -26,7 +25,6 @@ function AuditSection({
   audit,
   auditLoading,
   auditRead,
-  exportError,
   cancelNotice,
   rerunNotice,
   onCancel,
@@ -46,7 +44,6 @@ function AuditSection({
   return (
     <ProgressPanel
       audit={audit}
-      exportError={exportError}
       cancelNotice={cancelNotice}
       onCancelRetry={onCancel}
       rerunNotice={rerunNotice}

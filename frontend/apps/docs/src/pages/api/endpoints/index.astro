@@ -37,32 +37,32 @@ import { API_GROUPS } from '../../../lib/api-reference';
   .cl-docs-endpoints {
     display: flex;
     flex-direction: column;
-    gap: 40px;
+    gap: var(--site-space-10);
     max-width: var(--container-prose);
   }
   .cl-docs-endpoints-title {
-    margin: 0 0 8px;
+    margin: 0 0 var(--site-space-2);
     color: var(--text-color-ink);
     font-size: var(--text-title-sm);
     line-height: var(--text-title-sm--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
   .cl-docs-endpoints-list {
     padding: 0;
     margin: 0;
     list-style: none;
-    border-top: 1px solid var(--color-rule);
+    border-top: var(--site-rule) solid var(--color-rule);
   }
   .cl-docs-endpoints-row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    min-height: var(--control-lg);
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--color-rule);
+    gap: var(--site-space-3);
+    min-height: var(--spacing-control-lg);
+    padding: var(--site-space-2) var(--site-space-3);
+    border-bottom: var(--site-rule) solid var(--color-rule);
     color: var(--text-color-ink);
     text-decoration: none;
-    transition: background-color var(--motion-fast) var(--ease-standard);
+    transition: background-color var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-docs-endpoints-row:hover {
     background: var(--color-well);
@@ -71,7 +71,7 @@ import { API_GROUPS } from '../../../lib/api-reference';
     flex-shrink: 0;
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
   .cl-docs-endpoints-path {
     min-width: 0;

@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
   type ButtonHTMLAttributes,
+  type ComponentPropsWithoutRef,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
@@ -16,11 +17,11 @@ import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const TAB_STRIP =
-  'relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  'relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden';
 
 const REVEAL_PADDING = 32;
 
-const SELECTED_ITEM = '.tab-face:is([aria-selected="true"], [aria-checked="true"])';
+const SELECTED_ITEM = '[data-tab-face]:is([aria-selected="true"], [aria-checked="true"])';
 
 function useRevealSelected(selected: string | null) {
   const strip = useRef<HTMLDivElement | null>(null);
@@ -50,7 +51,7 @@ const TAB_KIND = {
   },
   segment: {
     base: 'rounded-mark h-7 px-4',
-    current: 'bg-[var(--nav-current-fill)] shadow-card',
+    current: 'bg-nav-current shadow-card',
   },
 } as const;
 
@@ -60,30 +61,53 @@ function tabFace({
   className,
 }: Readonly<{ kind: keyof typeof TAB_KIND; selected: boolean; className?: string }>) {
   return cn(
-    'tab-face focus-ring-inset text-label text-ink relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+    'focus-ring-inset text-label text-ink relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-disabled',
     TAB_KIND[kind].base,
     selected ? cn('text-ink', TAB_KIND[kind].current) : 'text-ink-2 not-disabled:hover:text-ink',
     className,
   );
 }
 
-export const TAB_BASELINE = 'shadow-[inset_0_-1px_0_var(--color-rule)]';
+export const TAB_BASELINE = 'shadow-tab-rule';
 
 const STRIP_ROW = {
-  page: 'min-h-[var(--page-tabs-height,var(--control-md))]',
+  page: 'min-h-page-tabs',
   section: cn(TAB_BASELINE, 'flex w-full'),
 } as const;
 
-export const TAB_TRACK =
-  'inline-flex min-h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-control p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+const TAB_TRACK =
+  'inline-flex min-h-control-md max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-control p-0.5 scrollbar-none [&::-webkit-scrollbar]:hidden';
 
-export function tabClasses(selected: boolean, className?: string) {
-  return cn(
-    'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border border-transparent px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
-    selected
-      ? 'bg-panel text-ink font-emphasis'
-      : 'text-ink-2 not-disabled:hover:text-ink font-plain',
-    className,
+const TAB_FACE =
+  'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border border-transparent px-3 text-label whitespace-nowrap transition-tint duration-fast focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-disabled';
+
+const TAB_FACE_STATE = {
+  selected: 'bg-panel text-ink font-emphasis',
+  idle: 'text-ink-2 not-disabled:hover:text-ink font-plain',
+} as const;
+
+export function TabTrackFace({
+  items,
+  selected,
+  ...props
+}: Readonly<
+  Omit<ComponentPropsWithoutRef<'span'>, 'className' | 'style' | 'children'> & {
+    items: readonly Readonly<{ label: string; count?: number }>[];
+    selected: string;
+  }
+>) {
+  return (
+    <span {...props} className={TAB_TRACK}>
+      {items.map((item) => (
+        <span
+          key={item.label}
+          className={cn(TAB_FACE, TAB_FACE_STATE[item.label === selected ? 'selected' : 'idle'])}
+        >
+          {item.label}
+          {item.count === undefined ? null : <ControlCount count={item.count} />}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -97,7 +121,7 @@ export function ControlCount({ count, upTo }: Readonly<{ count: number; upTo?: n
       <span
         aria-hidden
         data-size={` (${formatCount(upTo)})`}
-        className="invisible col-start-1 row-start-1 after:content-[attr(data-size)]"
+        className="after:content-data-size invisible col-start-1 row-start-1"
       />
     </span>
   );
@@ -124,16 +148,25 @@ export type TabsProps<T extends string> = TabStripProps<T> & {
   spaced?: boolean;
 };
 
+const TABS_LAYOUT = {
+  flow: undefined,
+  'drawer-split':
+    'phone:grid-cols-1 phone:grid-rows-drawer-split grid min-h-0 flex-1 grid-cols-drawer-split',
+  spaced: 'grid min-w-0 gap-workspace',
+} as const;
+
 export function TabsRoot<T extends string>({
   value,
   onValueChange,
   orientation,
+  layout = 'flow',
   className,
   children,
 }: Readonly<{
   value: T;
   onValueChange: (value: T) => void;
   orientation?: 'vertical';
+  layout?: keyof typeof TABS_LAYOUT;
   className?: string;
   children: ReactNode;
 }>) {
@@ -145,7 +178,7 @@ export function TabsRoot<T extends string>({
         onValueChange={(next) => onValueChange(next as T)}
         orientation={orientation}
         data-slot-host={inPanel && orientation !== 'vertical' ? '' : undefined}
-        className={className}
+        className={cn(TABS_LAYOUT[layout], className)}
       >
         {children}
       </TabsPrimitive.Root>
@@ -227,6 +260,7 @@ export function HeldTabRow({
         <span
           key={label}
           data-selected={label === current || undefined}
+          data-tab-face=""
           className={tabFace({ kind: 'tab', selected: label === current })}
         >
           {label}
@@ -287,6 +321,7 @@ function TabStrip<T extends string>({
                 onIntent?.(item.value);
                 event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
               }}
+              data-tab-face=""
               className={tabFace({ kind: 'tab', selected: item.value === active })}
             >
               {item.label}
@@ -307,11 +342,7 @@ export function Tabs<T extends string>({
   ...bar
 }: Readonly<TabsProps<T>>) {
   return (
-    <TabsRoot
-      value={value}
-      onValueChange={onValueChange}
-      className={cn(spaced && 'grid min-w-0 gap-[var(--workspace-gap)]')}
-    >
+    <TabsRoot value={value} onValueChange={onValueChange} layout={spaced ? 'spaced' : 'flow'}>
       <TabStrip {...bar} />
       {children}
     </TabsRoot>
@@ -440,6 +471,7 @@ export function SegmentedControl<T extends string>({
                     if (edge) select(edge === 'first' ? 0 : options.length - 1);
                     else if (delta !== undefined) move(index, delta);
                   }}
+                  data-tab-face=""
                   className={tabFace({ kind: 'segment', selected })}
                 >
                   {option.label}
@@ -483,7 +515,12 @@ export function SegmentedAction({
   }
 >) {
   return (
-    <button {...props} type="button" className={tabFace({ kind: 'segment', selected, className })}>
+    <button
+      {...props}
+      type="button"
+      data-tab-face=""
+      className={tabFace({ kind: 'segment', selected, className })}
+    >
       <span className="inline-grid justify-items-center">
         {labels.map((reserved) => (
           <span key={reserved} aria-hidden="true" className="invisible col-start-1 row-start-1">

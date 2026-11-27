@@ -14,7 +14,7 @@ import {
 import { StatusMark } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
-import { GoogleMark } from '@/components/ui/google-glyph';
+import { GlyphMark } from '@/components/ui/engine-mark';
 import { SectionBleed } from '@/components/ui/section';
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import {
@@ -77,7 +77,7 @@ function GrantStatus({
 function GrantTitle({ family }: Readonly<{ family: GrantFamily }>) {
   return (
     <>
-      {family === 'google' ? <GoogleMark /> : null}
+      {family === 'google' ? <GlyphMark glyph="google" placement="row" /> : null}
       {FAMILY_META[family].title}
     </>
   );

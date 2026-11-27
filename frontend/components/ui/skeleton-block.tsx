@@ -1,20 +1,103 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import type { ChartHeight } from '@/components/ui/chart';
+import { THREAD_OPENING } from '@/components/ui/thread-opening';
 import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
 
-export function SkeletonBlock({ className }: Readonly<{ className?: string }>) {
+const SKELETON_WIDTH = {
+  auto: undefined,
+  full: 'w-full',
+  '4/5': 'w-4/5',
+  '3/4': 'w-3/4',
+  '7/10': 'w-7/10',
+  '3/5': 'w-3/5',
+  '1/2': 'w-1/2',
+  '9/20': 'w-9/20',
+  '2/5': 'w-2/5',
+  '3/10': 'w-3/10',
+  '1/5': 'w-1/5',
+  '3/20': 'w-3/20',
+  '8': 'w-8',
+  '12': 'w-12',
+  '16': 'w-16',
+  '24': 'w-24',
+  '32': 'w-32',
+  '48': 'w-48',
+  '64': 'w-64',
+  '20-fit': 'w-20 max-w-full',
+  '40-fit': 'w-40 max-w-full',
+  '60-fit': 'w-60 max-w-full',
+  fill: 'flex-1',
+} as const;
+
+export type SkeletonWidth = keyof typeof SKELETON_WIDTH;
+
+const SKELETON_HEIGHT = {
+  line: undefined,
+  '4': 'h-4',
+  '5': 'h-5',
+  '6': 'h-6',
+  '7': 'h-7',
+  '8': 'h-8',
+  '10': 'h-10',
+  tile: 'h-10 min-h-10',
+  control: 'h-control-md',
+  'chart-sm': 'h-chart-sm',
+  'chart-md': 'h-chart-md',
+  'chart-lg': 'h-chart-lg',
+} as const;
+
+export type SkeletonHeight = keyof typeof SKELETON_HEIGHT;
+
+const SKELETON_SHAPE = {
+  mark: undefined,
+  control: 'rounded-control',
+  card: 'rounded-card',
+  round: 'rounded-full',
+} as const;
+
+const SKELETON_PLACE = {
+  flow: undefined,
+  fixed: 'shrink-0',
+  center: 'mx-auto',
+  end: 'ms-auto',
+} as const;
+
+export function SkeletonBlock({
+  width = 'auto',
+  height = 'line',
+  shape = 'mark',
+  place = 'flow',
+  desktopOnly = false,
+}: Readonly<{
+  width?: SkeletonWidth;
+  height?: SkeletonHeight;
+  shape?: keyof typeof SKELETON_SHAPE;
+  place?: keyof typeof SKELETON_PLACE;
+  desktopOnly?: boolean;
+}>) {
   return (
     <span
       aria-hidden
       data-skeleton-block=""
-      className={cn('skeleton-sweep bg-well rounded-mark block h-3 min-h-3', className)}
+      className={cn(
+        'skeleton-sweep bg-well rounded-mark block h-3 min-h-3',
+        SKELETON_HEIGHT[height],
+        SKELETON_WIDTH[width],
+        SKELETON_SHAPE[shape],
+        SKELETON_PLACE[place],
+        desktopOnly && 'desktop:block hidden',
+      )}
     />
   );
 }
 
-export const TEXT_WIDTHS = ['w-full', 'w-4/5', 'w-3/5'] as const;
+export function CountPlaceholder() {
+  return <span aria-hidden className="bg-well rounded-control w-count-mark inline-block h-3" />;
+}
+
+export const TEXT_WIDTHS = ['full', '4/5', '3/5'] as const;
 
 export type LoadingShape =
   | Readonly<{ kind: 'table'; columns?: number; desktopOnly?: number }>
@@ -24,11 +107,11 @@ export type LoadingShape =
   | Readonly<{ kind: 'list'; rows?: number }>
   | Readonly<{ kind: 'thread' }>;
 
-const CHART_HEIGHT: Record<ChartHeight, string> = {
-  sm: 'h-[var(--chart-height-sm)]',
-  md: 'h-[var(--chart-height-md)]',
-  lg: 'h-[var(--chart-height-lg)]',
-};
+const CHART_HEIGHT = {
+  sm: 'chart-sm',
+  md: 'chart-md',
+  lg: 'chart-lg',
+} as const satisfies Record<ChartHeight, SkeletonHeight>;
 
 export function ShapeBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
   return (
@@ -45,7 +128,7 @@ function ShapeBody({ shape }: Readonly<{ shape: LoadingShape }>) {
     case 'figures':
       return <FigureBlocks count={shape.count} />;
     case 'chart': {
-      const plot = <SkeletonBlock className={cn('w-full', CHART_HEIGHT[shape.height ?? 'md'])} />;
+      const plot = <SkeletonBlock width="full" height={CHART_HEIGHT[shape.height ?? 'md']} />;
       return shape.keyed ? <KeyedChartBlocks plot={plot} /> : plot;
     }
     case 'facts':
@@ -63,34 +146,34 @@ function ShapeBody({ shape }: Readonly<{ shape: LoadingShape }>) {
 
 const range = (count: number) => Array.from({ length: count }, (_, index) => index);
 
-function CaptionLine({ width }: Readonly<{ width: string }>) {
+function CaptionLine({ width }: Readonly<{ width: SkeletonWidth }>) {
   return (
     <span className="text-caption text-ink-2 flex h-lh items-center">
-      <SkeletonBlock className={width} />
+      <SkeletonBlock width={width} />
     </span>
   );
 }
 
 function KeyedChartBlocks({ plot }: Readonly<{ plot: ReactNode }>) {
   return (
-    <div className="grid gap-[var(--compact-gap)]">
+    <div className="gap-compact grid">
       <div className="flex min-w-0 flex-col gap-4">
-        <CaptionLine width="w-48" />
+        <CaptionLine width="48" />
         {plot}
-        <CaptionLine width="w-3/5" />
+        <CaptionLine width="3/5" />
       </div>
-      <CaptionLine width="w-2/5" />
+      <CaptionLine width="2/5" />
     </div>
   );
 }
 
 function TitleBlock() {
-  return <SkeletonBlock className="h-4 w-40 max-w-full" />;
+  return <SkeletonBlock height="4" width="40-fit" />;
 }
 
 export function WidgetCardBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
   return (
-    <div className="skeleton-sweep flex h-full flex-col gap-[var(--workspace-gap)]">
+    <div className="skeleton-sweep gap-workspace flex h-full flex-col">
       <span className="flex h-6 items-center">
         <TitleBlock />
       </span>
@@ -105,13 +188,9 @@ export function ReportSkeletonFrame({
   children,
 }: Readonly<{ label: string; variant: string; children: ReactNode }>) {
   return (
-    <SkeletonFrame
-      label={label}
-      variant={variant}
-      className="flex flex-col gap-[var(--page-top-gap)]"
-    >
+    <SkeletonFrame label={label} variant={variant} layout="report">
       <span className="flex h-4 items-center">
-        <SkeletonBlock className="w-60 max-w-full" />
+        <SkeletonBlock width="60-fit" />
       </span>
       {children}
     </SkeletonFrame>
@@ -126,11 +205,11 @@ function FactBlocks({
     <span className="grid">
       {range(rows).map((row) => (
         <span key={row} className="flex h-10 items-center gap-4">
-          <SkeletonBlock className="h-4 w-[30%]" />
+          <SkeletonBlock height="4" width="3/10" />
           {tagRows.includes(row) ? (
-            <SkeletonBlock className="h-6 w-16" />
+            <SkeletonBlock height="6" width="16" />
           ) : (
-            <SkeletonBlock className="h-5 w-[45%]" />
+            <SkeletonBlock height="5" width="9/20" />
           )}
         </span>
       ))}
@@ -143,10 +222,10 @@ function ListBlocks({ rows = 3 }: Readonly<{ rows?: number }>) {
     <span className="grid">
       {range(rows).map((row) => (
         <span key={row} className="flex h-12 items-center gap-3">
-          <SkeletonBlock className="size-8 shrink-0" />
+          <SkeletonBlock height="8" width="8" place="fixed" />
           <span className="grid min-w-0 flex-1 gap-1">
-            <SkeletonBlock className="h-4 w-1/2" />
-            <SkeletonBlock className="w-[30%]" />
+            <SkeletonBlock height="4" width="1/2" />
+            <SkeletonBlock width="3/10" />
           </span>
         </span>
       ))}
@@ -154,11 +233,11 @@ function ListBlocks({ rows = 3 }: Readonly<{ rows?: number }>) {
   );
 }
 
-const CELL_WIDTHS = ['w-2/5', 'w-1/5', 'w-[15%]', 'w-[15%]'] as const;
+const CELL_WIDTHS = ['2/5', '1/5', '3/20', '3/20'] as const;
 
-function cellWidth(columns: number, cell: number): string {
-  if (columns === CELL_WIDTHS.length) return CELL_WIDTHS[cell] ?? 'flex-1';
-  return cell === 0 ? 'w-2/5' : 'flex-1';
+function cellWidth(columns: number, cell: number): SkeletonWidth {
+  if (columns === CELL_WIDTHS.length) return CELL_WIDTHS[cell] ?? 'fill';
+  return cell === 0 ? '2/5' : 'fill';
 }
 
 export function TableBlocks({
@@ -167,15 +246,18 @@ export function TableBlocks({
   rows = 5,
 }: Readonly<{ columns?: number; desktopOnly?: number; rows?: number }>) {
   const cells = range(Math.max(1, columns));
-  const width = (cell: number) =>
-    cn(cellWidth(columns, cell), cell >= columns - desktopOnly && 'desktop:block hidden');
   return (
     <span className="grid">
-      <span className="bg-well rounded-mark block h-[var(--table-header-height)]" />
+      <span className="bg-well rounded-mark h-table-head block" />
       {range(rows).map((row) => (
         <span key={row} className="flex h-10 items-center gap-4 px-4">
           {cells.map((cell) => (
-            <SkeletonBlock key={cell} className={cn('h-7', width(cell))} />
+            <SkeletonBlock
+              key={cell}
+              height="7"
+              width={cellWidth(columns, cell)}
+              desktopOnly={cell >= columns - desktopOnly}
+            />
           ))}
         </span>
       ))}
@@ -189,10 +271,10 @@ export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
       {range(count).map((index) => (
         <span key={index} data-figure-cell="">
           <span className="flex h-4 items-center">
-            <SkeletonBlock className="h-3 w-1/2" />
+            <SkeletonBlock width="1/2" />
           </span>
           <span data-figure-value="" className="flex items-center">
-            <SkeletonBlock className="h-5 w-20 max-w-full" />
+            <SkeletonBlock height="5" width="20-fit" />
           </span>
         </span>
       ))}
@@ -202,11 +284,11 @@ export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
 
 function ThreadBlocks() {
   return (
-    <span className="grid gap-[var(--card-padding)] px-4">
-      <SkeletonBlock className="rounded-card ms-auto h-10 w-[45%]" />
+    <span className="gap-card grid px-4">
+      <SkeletonBlock shape="card" place="end" height="10" width="9/20" />
       <span className="grid gap-2">
-        <SkeletonBlock className="h-4 w-full" />
-        <SkeletonBlock className="h-4 w-[70%]" />
+        <SkeletonBlock height="4" width="full" />
+        <SkeletonBlock height="4" width="7/10" />
       </span>
     </span>
   );
@@ -215,22 +297,56 @@ function ThreadBlocks() {
 export function ComposerBlocks() {
   return (
     <span className="bg-panel border-rule rounded-card shadow-pop grid gap-1 border p-2">
-      <span className="block h-[30px]" />
-      <span className="flex h-[var(--control-md)] items-center justify-end">
-        <SkeletonBlock className="size-8 rounded-full" />
+      <span className="block h-7.5" />
+      <span className="h-control-md flex items-center justify-end">
+        <SkeletonBlock height="8" width="8" shape="round" />
       </span>
     </span>
+  );
+}
+
+const FRAME_LAYOUT = {
+  workspace: 'flex flex-col gap-workspace',
+  section: 'flex flex-col gap-section',
+  report: 'flex flex-col gap-page-top',
+  opening: THREAD_OPENING,
+} as const;
+
+export function OpeningTitleBlocks() {
+  return (
+    <span className="flex h-7 items-center justify-center">
+      <SkeletonBlock height="5" width="60-fit" />
+    </span>
+  );
+}
+
+export function DockedComposerBlocks() {
+  return (
+    <div className="shrink-0 pt-2 pb-4">
+      <ComposerBlocks />
+    </div>
   );
 }
 
 export function SkeletonFrame({
   label,
   variant,
+  layout,
   className,
   children,
-}: Readonly<{ label: string; variant: string; className?: string; children: ReactNode }>) {
+}: Readonly<{
+  label: string;
+  variant: string;
+  layout?: keyof typeof FRAME_LAYOUT;
+  className?: string;
+  children: ReactNode;
+}>) {
   return (
-    <div aria-busy="true" data-skeleton={variant} className={cn('min-w-0', className)}>
+    <div
+      aria-busy="true"
+      data-skeleton={variant}
+      className={cn('min-w-0', layout && FRAME_LAYOUT[layout], className)}
+    >
       <LiveVerb label={label} />
       {children}
     </div>

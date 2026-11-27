@@ -9,7 +9,7 @@ import { SettingField, SettingRows, SettingsGroup } from '@/components/ui/settin
 import { SplitBar } from '@/components/ui/split-bar';
 import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type { PromptFormLimits, SeedQueries, Topic } from '@citeladder/contracts';
 import { Search, Users } from '@/lib/icons';
 import { PROMPT_BUILDER } from '@/lib/config/prompts';
@@ -21,6 +21,7 @@ import {
   type RunSettings,
   type SeedChoice,
 } from '@/lib/prompts/builder-run';
+import { LegendRow } from '@/components/ui/legend-row';
 
 const INTENT_SEGMENTS = [
   { key: 'informational', label: 'Informational' },
@@ -158,12 +159,15 @@ function SeedList({
         const kept = own.filter((query) => !settings.unticked.has(query.id)).length;
         return [
           <Stack key={topic.id} as="fieldset" gap="tight">
-            <legend className={textRole('label', 'flex w-full justify-between gap-2 pb-1')}>
+            <LegendRow
+              end={
+                <Text variant="caption" numeric>
+                  {`${formatCount(kept)} of ${formatCount(own.length)}`}
+                </Text>
+              }
+            >
               {topic.name}
-              <span className={textRole('caption', 'tabular-nums')}>
-                {`${formatCount(kept)} of ${formatCount(own.length)}`}
-              </span>
-            </legend>
+            </LegendRow>
             {own.map((query) => (
               <Checkbox
                 key={query.id}
@@ -238,9 +242,9 @@ export function BuilderDistributionStep({
         <SettingsGroup
           title="Size"
           status={
-            <span className={textRole('caption', 'tabular-nums')}>
+            <Text variant="caption" numeric>
               {`AI credits: up to ${formatCount(limits.brand_generation_calls)} model calls`}
-            </span>
+            </Text>
           }
         >
           <SettingRows>
@@ -320,9 +324,9 @@ function MarketSettings({
       <SettingsGroup
         title="Personas"
         status={
-          <span className={textRole('caption', 'tabular-nums')}>
+          <Text variant="caption" numeric>
             {`${formatCount(settings.personas.length)} of ${formatCount(limits.distribution_personas_max)}`}
-          </span>
+          </Text>
         }
       >
         <PersonaChoices

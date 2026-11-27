@@ -48,7 +48,7 @@ export function ProbeActions({
   const schedule = useMutation(probeMutations.schedule(scope));
   const refreshing = useIsFetching({ queryKey: queryKeys.projects.probes(scope) }) > 0;
   return (
-    <Inline className="flex-wrap justify-end">
+    <Inline wrap justify="end">
       <Select<Cadence>
         ariaLabel="Probe schedule"
         value={cadenceOf(status.schedule)}
