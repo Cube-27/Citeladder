@@ -6,17 +6,13 @@ import { Pressable } from '@/components/ui/pressable';
 import { POP_FACE } from '@/components/ui/slip';
 import { Text } from '@/components/ui/typography';
 
-export function treeBranchClasses(className?: string) {
-  return cn('border-rule grid min-w-0 gap-2 border-l pl-4', className);
-}
-
 export function TreeBranch({
   as: Component = 'ul',
   'aria-label': label,
   children,
 }: Readonly<{ as?: ElementType; 'aria-label'?: string; children: ReactNode }>) {
   return (
-    <Component aria-label={label} className={treeBranchClasses()}>
+    <Component aria-label={label} className="border-rule grid min-w-0 gap-2 border-l pl-4">
       {children}
     </Component>
   );
