@@ -21,6 +21,7 @@ import {
   ANALYTICS_KINDS,
   ANALYTICS_LEASE_TTL_SECONDS,
 } from './analytics-kinds.ts';
+import { errorOf } from '../errors.ts';
 import { compensateTerminalTasks } from './terminal-compensation.ts';
 
 const logger = getLogger('workers.analytics');
@@ -166,7 +167,7 @@ export class AnalyticsWorker {
     } catch (error) {
       logger.exception('analytics_task_crashed', error, { task_id: claimed.id });
       if (started)
-        await this.#finalize(claimed, error as Error, startedAt).catch((settleError: unknown) =>
+        await this.#finalize(claimed, errorOf(error), startedAt).catch((settleError: unknown) =>
           logger.exception('analytics_task_settle_failed', settleError, { task_id: claimed.id }),
         );
     }
@@ -207,7 +208,7 @@ export class AnalyticsWorker {
       });
       return settlement ?? null;
     } catch (error) {
-      return error instanceof Error ? error : new Error(String(error));
+      return errorOf(error);
     } finally {
       await heartbeat.stop();
     }

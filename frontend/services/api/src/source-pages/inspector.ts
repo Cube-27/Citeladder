@@ -63,34 +63,33 @@ function fetchedOutcome(url: string, result: FetchedPage): FetchOutcome {
   const readable = p.allowed_content_types.includes(
     result.contentType.split(';')[0]!.trim().toLowerCase(),
   );
-  return {
-    outcome: ok && readable ? 'inspected' : 'failed',
-    requestedUrl: url,
+  const response = {
     finalUrl: result.url,
     status: result.status,
     type: result.contentType,
-    charset: result.charset,
+    charset: result.charset ?? null,
     bytes: result.body.length,
-    redirects: result.redirects,
-    headers: result.headers,
-    robots: 'allowed',
-    reason: rejection(ok, readable),
+    redirects: result.redirects ?? [],
+    headers: result.headers ?? null,
   };
-}
-function rejection(ok: boolean, readable: boolean) {
-  if (!ok) return 'status_rejected';
-  return readable ? undefined : 'non_html';
+  if (ok && readable) return { outcome: 'inspected', requestedUrl: url, response };
+  return {
+    outcome: 'failed',
+    requestedUrl: url,
+    reason: ok ? 'non_html' : 'status_rejected',
+    response,
+  };
 }
 function failedOutcome(url: string, error: unknown): FetchOutcome {
   const code = error instanceof FetchError ? error.code : 'transport_error';
   if (code === 'robots_disallowed') {
-    return { outcome: 'blocked', requestedUrl: url, robots: 'disallowed', reason: code };
+    return { outcome: 'blocked', requestedUrl: url, reason: code };
   }
   return {
     outcome: 'failed',
     requestedUrl: url,
-    robots: code === 'robots_unavailable' ? 'unavailable' : undefined,
     reason: code === 'content_type' ? 'non_html' : code.slice(0, 48),
+    response: null,
   };
 }
 export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {

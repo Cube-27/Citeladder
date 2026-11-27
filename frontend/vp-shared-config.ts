@@ -44,7 +44,6 @@ const apiTypeAssertionBaseline = [
   'services/api/src/integrations/oauth.ts',
   'services/api/src/integrations/sync.ts',
   'services/api/src/integrations/tokens.ts',
-  'services/api/src/mcp/oauth-routes.ts',
   'services/api/src/mcp/retrieval.ts',
   'services/api/src/models/anthropic.ts',
   'services/api/src/openapi/document.ts',
@@ -88,7 +87,6 @@ const apiTypeAssertionBaseline = [
   'services/api/src/visibility/dashboard.ts',
   'services/api/src/visibility/surface.ts',
   'services/api/src/web-evidence/acquisition.ts',
-  'services/api/src/workers/analytics-worker.ts',
   'services/api/src/workers/integration-dispatcher.ts',
   'services/api/src/workers/integration-worker.ts',
 ];

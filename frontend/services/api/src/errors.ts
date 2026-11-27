@@ -47,6 +47,10 @@ function errorEnvelope(input: {
   return { error };
 }
 
+export function errorOf(thrown: unknown): Error {
+  return thrown instanceof Error ? thrown : new Error(String(thrown));
+}
+
 export class ApiError extends Error {
   readonly status: ContentfulStatusCode;
   readonly code: ApiErrorCode;

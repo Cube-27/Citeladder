@@ -1,6 +1,7 @@
 import { Worker } from 'node:worker_threads';
 import { policy } from '../../config.ts';
 import { resolveSettingSpec } from '../../config/settings.ts';
+import { errorOf } from '../../errors.ts';
 import {
   SitemapParseError,
   SitemapTooLargeError,
@@ -108,9 +109,7 @@ function start(): Slot {
     if (error === undefined) job.resolve(result);
     else job.reject(new Error(error));
   });
-  worker.on('error', (error: unknown) =>
-    retire(slot, error instanceof Error ? error : new Error(String(error))),
-  );
+  worker.on('error', (error: unknown) => retire(slot, errorOf(error)));
   worker.on('exit', (code) => retire(slot, new Error(`Page interpretation exited (${code})`)));
   slots.push(slot);
   return slot;

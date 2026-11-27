@@ -110,57 +110,124 @@ export function persistOverviewFailure(
   );
 }
 
-type SurfaceExchange = {
-  taskId?: string | null;
-  chargeMicrousd?: number | null;
-  raw?: unknown;
-  error?: ProviderError;
-  poll?: boolean;
-  reconciliation?: unknown;
-  delaySeconds: number;
-  uncertain?: boolean;
-  paid?: boolean;
-  resetPoll?: boolean;
+type Delay = { delaySeconds: number };
+type SurfaceExchange = Delay &
+  (
+    | { kind: 'still_pending' }
+    | { kind: 'poll_failed'; error: ProviderError }
+    | { kind: 'submitted'; taskId: string; chargeMicrousd: number | null; raw: unknown }
+    | { kind: 'submission_uncertain'; error: ProviderError; chargeMicrousd: number | null }
+    | {
+        kind: 'reconciled';
+        reconciliation: unknown;
+        taskId: string;
+        chargeMicrousd: number | null;
+      }
+    | { kind: 'unreconciled'; reconciliation: unknown }
+    | { kind: 'reconcile_failed'; error: ProviderError }
+  );
+
+type ExchangeWrite = {
+  metadata: Record<string, unknown>;
+  taskId: string | null;
+  chargeMicrousd: number | null;
+  poll: 'advance' | 'reset' | 'hold';
+  paid: boolean;
+  error: ProviderError | null;
+  uncertain: boolean;
 };
+
+function exchangeWrite(exchange: SurfaceExchange): ExchangeWrite {
+  const none = { metadata: {}, taskId: null, chargeMicrousd: null, error: null };
+  switch (exchange.kind) {
+    case 'still_pending':
+      return { ...none, poll: 'advance', paid: false, uncertain: false };
+    case 'poll_failed':
+      return { ...none, error: exchange.error, poll: 'advance', paid: false, uncertain: false };
+    case 'submitted':
+      return {
+        ...none,
+        metadata: { provider_submission_payload: exchange.raw },
+        taskId: exchange.taskId,
+        chargeMicrousd: exchange.chargeMicrousd,
+        poll: 'hold',
+        paid: true,
+        uncertain: false,
+      };
+    case 'submission_uncertain':
+      return {
+        ...none,
+        chargeMicrousd: exchange.chargeMicrousd,
+        error: exchange.error,
+        poll: 'hold',
+        paid: true,
+        uncertain: true,
+      };
+    case 'reconciled':
+      return {
+        ...none,
+        metadata: { reconciliation: exchange.reconciliation },
+        taskId: exchange.taskId,
+        chargeMicrousd: exchange.chargeMicrousd,
+        poll: 'reset',
+        paid: false,
+        uncertain: false,
+      };
+    case 'unreconciled':
+      return {
+        ...none,
+        metadata: { reconciliation: exchange.reconciliation },
+        poll: 'advance',
+        paid: false,
+        uncertain: true,
+      };
+    case 'reconcile_failed':
+      return { ...none, error: exchange.error, poll: 'advance', paid: false, uncertain: true };
+    default: {
+      const unknownExchange: never = exchange;
+      throw new Error(`Unknown surface exchange: ${JSON.stringify(unknownExchange)}`);
+    }
+  }
+}
+
+function pollCount(poll: ExchangeWrite['poll'], current: number) {
+  if (poll === 'reset') return 0;
+  return poll === 'advance' ? current + 1 : current;
+}
+
 export function persistSurfaceExchange(
   db: Database,
-  claimed: AuditTask,
-  owner: string,
-  exchange: SurfaceExchange,
-  at = new Date(),
+  input: { claimed: AuditTask; owner: string; exchange: SurfaceExchange; at?: Date },
 ) {
+  const { claimed, owner, exchange, at = new Date() } = input;
+  const write = exchangeWrite(exchange);
   return db.transaction().execute(async (trx) => {
     const locked = await ownedAuditTask(trx, claimed, owner);
     if (!locked) return false;
-    const metadata = { ...record(locked.task.provider_metadata) };
-    if (exchange.raw !== undefined) metadata.provider_submission_payload = exchange.raw;
+    const metadata = { ...record(locked.task.provider_metadata), ...write.metadata };
     if (
-      exchange.chargeMicrousd != null &&
+      write.chargeMicrousd !== null &&
       typeof metadata.provider_submission_cost_microusd !== 'number'
     )
-      metadata.provider_submission_cost_microusd = exchange.chargeMicrousd;
-    if (exchange.reconciliation !== undefined) metadata.reconciliation = exchange.reconciliation;
-    const pollDelta = exchange.poll ? 1 : 0;
+      metadata.provider_submission_cost_microusd = write.chargeMicrousd;
     const task = await trx
       .updateTable('audit_tasks')
       .set({
         provider_metadata: JSON.stringify(metadata),
-        provider_task_id: exchange.taskId ?? locked.task.provider_task_id,
-        provider_poll_count: exchange.resetPoll ? 0 : locked.task.provider_poll_count + pollDelta,
-        attempt_count: locked.task.attempt_count + (exchange.paid ? 1 : 0),
+        provider_task_id: write.taskId ?? locked.task.provider_task_id,
+        provider_poll_count: pollCount(write.poll, locked.task.provider_poll_count),
+        attempt_count: locked.task.attempt_count + (write.paid ? 1 : 0),
         updated_at: at,
       })
       .where('id', '=', claimed.id)
       .where('workspace_id', '=', claimed.workspace_id)
       .returningAll()
       .executeTakeFirstOrThrow();
-    await appendProviderAttempt(trx, task, at, {
-      ...(exchange.error ? { error: exchange.error } : {}),
-    });
+    await appendProviderAttempt(trx, task, at, write.error ? { error: write.error } : {});
     await parkAuditTask(
       trx,
       task,
-      exchange.uncertain ? 'submission_uncertain' : 'awaiting_provider_result',
+      write.uncertain ? 'submission_uncertain' : 'awaiting_provider_result',
       new Date(at.getTime() + exchange.delaySeconds * 1000),
       at,
     );

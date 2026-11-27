@@ -11,7 +11,7 @@ import { pageIdentity } from '../src/source-pages/identity.ts';
 import { claimPages, spendRedirect } from '../src/source-pages/admission.ts';
 import { assessPage } from '../src/source-pages/assessment.ts';
 import { extractSourcePage } from '../src/source-pages/extract.ts';
-import { recordInspection } from '../src/source-pages/persistence.ts';
+import { recordInspection, type FetchOutcome } from '../src/source-pages/persistence.ts';
 import { latestReadings, projectRoster } from '../src/source-pages/reading.ts';
 import { gapPageHashes } from '../src/visibility/page-standing.ts';
 import { resolveCitation, syncCitedPages, syncPages } from '../src/source-pages/sync.ts';
@@ -70,6 +70,19 @@ async function seed(urls = ['https://publisher.test/review']) {
     .executeTakeFirstOrThrow();
   return { ...tenant, scope, audit, task, configuration };
 }
+const inspectedFetch = (url: string): FetchOutcome => ({
+  outcome: 'inspected',
+  requestedUrl: url,
+  response: {
+    finalUrl: url,
+    status: 200,
+    type: 'text/html',
+    charset: null,
+    bytes: 0,
+    redirects: [],
+    headers: null,
+  },
+});
 it('synchronizes canonical citation recurrence idempotently and serializes concurrent budget admission', async () => {
   const own = await seed(
     Array.from({ length: 10 }, (_value, index) => `https://publisher.test/page-${index}`),
@@ -114,12 +127,7 @@ it('appends exact snapshot and quoted-presence provenance only under the owning 
     Buffer.from(`<h1>Acme review</h1><p>${'Acme describes its tools. '.repeat(40)}</p>`),
   );
   const assessment = assessPage(page, own.configuration);
-  const fetch = {
-    outcome: 'inspected' as const,
-    requestedUrl: claim.url,
-    finalUrl: claim.url,
-    status: 200,
-  };
+  const fetch = inspectedFetch(claim.url);
   expect(
     await recordInspection(
       db,
@@ -220,7 +228,7 @@ it('stops counting a reading judged against an outdated roster until the page is
       scope: own.scope,
       pageId: claim.id,
       lease: claim.lease,
-      fetch: { outcome: 'inspected', requestedUrl: claim.url, finalUrl: claim.url, status: 200 },
+      fetch: inspectedFetch(claim.url),
       auditId: own.audit,
       roster: projectRoster(configuration),
       extracted: page,
@@ -309,10 +317,19 @@ it('runs recorded acquisition through persisted admission, robots refusal and ba
   expect(
     await db
       .selectFrom('source_page_snapshots')
-      .select('id')
+      .select(['outcome', 'outcome_reason', 'robots_state', 'status_code'])
       .where('project_id', '=', own.projectId)
+      .orderBy('outcome')
       .execute(),
-  ).toHaveLength(2);
+  ).toEqual([
+    {
+      outcome: 'blocked',
+      outcome_reason: 'robots_disallowed',
+      robots_state: 'disallowed',
+      status_code: null,
+    },
+    { outcome: 'inspected', outcome_reason: null, robots_state: 'allowed', status_code: 200 },
+  ]);
   expect(
     await db
       .selectFrom('analytics_tasks')
@@ -574,7 +591,7 @@ it('selects candidate-audit evidence and keeps missing owned relevance explicitl
       scope: own.scope,
       pageId: claim.id,
       lease: claim.lease,
-      fetch: { outcome: 'inspected', requestedUrl: claim.url },
+      fetch: inspectedFetch(claim.url),
       auditId: own.audit,
       roster: projectRoster(own.configuration),
       extracted: page,
@@ -675,7 +692,7 @@ it('replaces URL format evidence with page evidence and preserves stronger publi
       scope: own.scope,
       pageId: claim.id,
       lease,
-      fetch: { outcome: 'inspected', requestedUrl: claim.url },
+      fetch: inspectedFetch(claim.url),
       auditId: own.audit,
       roster: projectRoster(own.configuration),
       extracted: page,
