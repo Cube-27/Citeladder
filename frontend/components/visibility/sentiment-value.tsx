@@ -1,7 +1,7 @@
 import type { NetSentiment } from '@citeladder/contracts';
 
 import { Absence } from '@/components/ui/absence';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { availabilityLabel } from '@/lib/format';
 import { NOT_NAMED, sentimentReading } from '@/lib/visibility/perception';
 
@@ -28,9 +28,7 @@ export function SentimentValue({
       return (
         <span className="whitespace-nowrap">
           {reading.net}
-          {showCount ? (
-            <span className={textRole('caption')}> · {reading.classified} classified</span>
-          ) : null}
+          {showCount ? <Text variant="caption"> · {reading.classified} classified</Text> : null}
         </span>
       );
     default: {

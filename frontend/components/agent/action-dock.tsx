@@ -6,15 +6,14 @@ import {
   useMarkImplemented,
 } from '@/components/agent/action-declaration';
 import { ACTIONS } from '@/components/ui/actions';
-import { Button, buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
-import { DOCK_SLOT, PageDock } from '@/components/ui/selection-dock';
+import { DockLabel, DockSlot, PageDock } from '@/components/ui/selection-dock';
 import { useToast } from '@/components/ui/toast';
 import { Check, RotateCcw, Sparkles, X, type IconGlyph } from '@/lib/icons';
 import { actionsApi, actionsQueries, type ActionDetail } from '@/lib/api/actions';
 import { queryKeys } from '@/lib/api/query-keys';
-import { cn } from '@/lib/utils';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import type { ActionUserStatus } from '@citeladder/contracts/actions';
 
@@ -39,9 +38,6 @@ const ANNOUNCED: Record<ActionUserStatus, string> = {
   open: 'Action restored to New.',
 };
 
-const FIRST = DOCK_SLOT.decision;
-const SECOND = DOCK_SLOT.wide;
-
 export function ActionDock({
   action,
   workspaceId,
@@ -58,45 +54,53 @@ export function ActionDock({
   const markImplemented = useMarkImplemented({ workspaceId, action, revision: null });
   const [first, second] = mayWrite ? DOCK_SLOTS[action.status] : [null, null];
   const linkRoute = action.members.some((member) => member.rule_id === 'site_contextual_links');
-  const slot = (decision: Decision | null, width: string) =>
-    decision ? (
-      <Button
-        variant="quiet"
-        className={width}
-        aria-disabled={decide.isPending || undefined}
-        onClick={() => {
-          if (!decide.isPending) decide.mutate(decision.to);
-        }}
-      >
-        <Icon icon={decision.icon} />
-        {decision.label}
-      </Button>
-    ) : (
-      <span aria-hidden className={cn(width, 'shrink-0')} />
-    );
-  let declare = slot(null, SECOND);
+  const slot = (decision: Decision | null, size: 'decision' | 'wide') => (
+    <DockSlot size={size}>
+      {decision ? (
+        <Button
+          variant="quiet"
+          aria-disabled={decide.isPending || undefined}
+          onClick={() => {
+            if (!decide.isPending) decide.mutate(decision.to);
+          }}
+        >
+          <Icon icon={decision.icon} />
+          {decision.label}
+        </Button>
+      ) : undefined}
+    </DockSlot>
+  );
+  let declare = slot(null, 'wide');
   if (second === 'declare' && isDeclarable(action))
-    declare = linkRoute ? (
-      <ContextualLinkDeclarationRoute className={SECOND} />
-    ) : (
-      <Button variant="quiet" className={SECOND} onClick={markImplemented.start}>
-        <Icon icon={ACTIONS.markImplemented.icon} />
-        {ACTIONS.markImplemented.label}
-      </Button>
+    declare = (
+      <DockSlot size="wide">
+        {linkRoute ? (
+          <ContextualLinkDeclarationRoute />
+        ) : (
+          <Button variant="quiet" onClick={markImplemented.start}>
+            <Icon icon={ACTIONS.markImplemented.icon} />
+            {ACTIONS.markImplemented.label}
+          </Button>
+        )}
+      </DockSlot>
     );
   return (
     <PageDock label="Work on this action">
       <output className="sr-only">{decide.isSuccess ? ANNOUNCED[decide.variables] : null}</output>
       {first === null && second === null ? null : (
         <>
-          {slot(first, FIRST)}
-          {second === 'declare' ? declare : slot(second, SECOND)}
+          {slot(first, 'decision')}
+          {second === 'declare' ? declare : slot(second, 'wide')}
         </>
       )}
-      <ProjectLink href={agentHref} className={buttonClasses('primary', DOCK_SLOT.primary)}>
-        <Icon icon={Sparkles} />
-        <span className={DOCK_SLOT.primaryLabel}>{agentLabel}</span>
-      </ProjectLink>
+      <DockSlot size="primary">
+        <Button asChild variant="primary">
+          <ProjectLink href={agentHref}>
+            <Icon icon={Sparkles} />
+            <DockLabel>{agentLabel}</DockLabel>
+          </ProjectLink>
+        </Button>
+      </DockSlot>
       {markImplemented.dialog}
     </PageDock>
   );

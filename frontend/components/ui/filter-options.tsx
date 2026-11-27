@@ -54,7 +54,7 @@ function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
   return (
     <>
       {isSearchable(filter) ? (
-        <div className="bg-raised sticky top-0 z-10 pb-1">
+        <div className="bg-raised z-raised sticky top-0 pb-1">
           <SearchField
             value={query}
             onValueChange={setQuery}
@@ -101,7 +101,7 @@ export function DefaultHint() {
     <span
       aria-hidden
       data-hint="Default"
-      className="text-ink-2 type-caption ms-auto shrink-0 ps-4 after:content-[attr(data-hint)]"
+      className="text-ink-2 text-caption after:content-data-hint ms-auto shrink-0 ps-4"
     />
   );
 }

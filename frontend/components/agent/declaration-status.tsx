@@ -9,7 +9,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole, type TextRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import {
   checkKindLabel,
   checkKindNote,
@@ -35,21 +35,21 @@ const LEG_OWNER: Record<MeasurementLeg['leg'], { href: string; label: string } |
 function Measurement({ declaration }: Readonly<{ declaration: ActionDeclaration }>) {
   if (declaration.resolved_before_snapshot_id)
     return (
-      <p className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2">
         Resolved before go-live: not credited, not measured.
-      </p>
+      </Text>
     );
   if (declaration.checks.length === 0)
     return (
-      <p className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2">
         No automatic check applies. Recorded, not verified.
-      </p>
+      </Text>
     );
   return (
     <>
-      <p className={textRole('body', 'text-ink-2')} aria-live="polite">
+      <Text as="p" variant="body" tone="ink-2" aria-live="polite">
         {IMPLEMENTATION_STATE_LABEL[declaration.state]}
-      </p>
+      </Text>
       <Stack as="ul" gap="compact" aria-label="Checks">
         {declaration.checks.map((check) => (
           <CheckRow key={check.index} check={check} />
@@ -64,15 +64,13 @@ export function DeclarationStatus({
   shownRevision,
   workspaceId,
   focusOnMount = false,
-  titleRole = 'subheading',
 }: Readonly<{
   declaration: ActionDeclaration;
   shownRevision?: { id: string; number: number };
   workspaceId: string;
   focusOnMount?: boolean;
-  titleRole?: TextRole;
 }>) {
-  const heading = useRef<HTMLHeadingElement>(null);
+  const heading = useRef<HTMLElement>(null);
   useEffect(() => {
     if (focusOnMount) heading.current?.focus();
   }, [focusOnMount]);
@@ -82,14 +80,14 @@ export function DeclarationStatus({
   );
   return (
     <Stack gap="compact">
-      <p className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2">
         Went live on <DisplayTime value={declaration.declared_implemented_at} dateOnly />
         {revisionNote(declaration.output_revision_id, shownRevision)}
-      </p>
+      </Text>
       <Deployment declaration={declaration} />
-      <h3 ref={heading} tabIndex={-1} className={textRole(titleRole, 'focus-ring w-fit')}>
+      <Text as="h3" variant="label" ref={heading} tabIndex={-1} focusable box="fit">
         Measurement
-      </h3>
+      </Text>
       <Measurement declaration={declaration} />
       {declaration.legs.length > 0 ? (
         <Stack as="ul" gap="compact" aria-label="Next readings">
@@ -104,10 +102,10 @@ export function DeclarationStatus({
         </Stack>
       ) : null}
       {declaration.checks.length > 0 ? (
-        <p className={textRole('caption')}>
+        <Text as="p" variant="caption">
           Read until <DisplayTime value={declaration.measured_until} dateOnly />. A met check does
           not prove this Action caused the movement.
-        </p>
+        </Text>
       ) : null}
       <VerificationObservations implementation={declaration} showAuditLink={hasVisibility} />
     </Stack>
@@ -123,8 +121,8 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
   const note = checkKindNote(check.kind);
   return (
     <Stack as="li" gap="tight">
-      <Inline as="span" className="flex-wrap">
-        <span className={textRole('body')}>{checkKindLabel(check.kind)}</span>
+      <Inline as="span" wrap>
+        <Text variant="body">{checkKindLabel(check.kind)}</Text>
         {tone ? (
           <StatusMark variant="status" value={tone}>
             {checkStateLabel(check)}
@@ -134,9 +132,9 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
         )}
       </Inline>
       {subject ? <CheckSubject subject={subject} promptId={check.prompt_id} /> : null}
-      {note ? <span className={textRole('caption')}>{note}</span> : null}
+      {note ? <Text variant="caption">{note}</Text> : null}
       {reason || check.observed_at ? (
-        <span className={textRole('caption')}>
+        <Text variant="caption">
           {reason}
           {reason && check.observed_at ? ' · ' : null}
           {check.observed_at ? (
@@ -144,7 +142,7 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
               Read <DisplayTime value={check.observed_at} dateOnly />
             </>
           ) : null}
-        </span>
+        </Text>
       ) : null}
     </Stack>
   );
@@ -160,13 +158,13 @@ function CheckSubject({
         {subject}
       </TextLink>
     );
-  return <ClampText className={textRole('caption')}>{subject}</ClampText>;
+  return <ClampText text="caption">{subject}</ClampText>;
 }
 
 function Deployment({ declaration }: Readonly<{ declaration: ActionDeclaration }>) {
   const { deployed_by: by, deployment_reference: reference } = declaration;
   return (
-    <p className={textRole('caption', 'break-words')}>
+    <Text as="p" variant="caption" wrap="words">
       {by ? `Deployment recorded by ${by}` : 'Deployment recorded by a former workspace member'}
       {reference ? (
         <>
@@ -176,7 +174,7 @@ function Deployment({ declaration }: Readonly<{ declaration: ActionDeclaration }
           </TextLink>
         </>
       ) : null}
-    </p>
+    </Text>
   );
 }
 
@@ -200,8 +198,8 @@ function LegRow({
   const waiting = leg.state !== 'observed';
   return (
     <Stack as="li" gap="tight">
-      <span className={textRole('body')}>{measurementLegLabel(leg.leg)}</span>
-      <span className={textRole('caption')}>
+      <Text variant="body">{measurementLegLabel(leg.leg)}</Text>
+      <Text variant="caption">
         <LegWait leg={leg} />
         {waiting && owner ? (
           <>
@@ -211,7 +209,7 @@ function LegRow({
             </TextLink>
           </>
         ) : null}
-      </span>
+      </Text>
       {offerCrawl ? <RunCrawl workspaceId={workspaceId} /> : null}
     </Stack>
   );
@@ -224,12 +222,12 @@ function RunCrawl({ workspaceId }: Readonly<{ workspaceId: string }>) {
   if (!mayWrite || !activeProjectId) return null;
   if (start.isSuccess)
     return (
-      <output className={textRole('caption')}>
+      <Text as="output" variant="caption">
         Crawl started.{' '}
         <TextLink href="/site" text="inherit">
           Open Site health
         </TextLink>
-      </output>
+      </Text>
     );
   return (
     <Stack gap="compact">

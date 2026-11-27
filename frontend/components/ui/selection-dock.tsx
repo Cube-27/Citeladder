@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import { Slot } from '@radix-ui/react-slot';
+import type { ReactElement, ReactNode } from 'react';
 
 import { POP_FACE } from '@/components/ui/slip';
-import { textRole } from '@/components/ui/typography';
+
 import { cn } from '@/lib/utils';
 
 export function SelectionDock({
@@ -17,7 +18,7 @@ export function SelectionDock({
     <DockLayer>
       {summary === null ? null : (
         <DockBar label={label} slidesIn>
-          <span className={textRole('body', 'px-2 whitespace-nowrap tabular-nums')}>{summary}</span>
+          <span className="text-body text-ink px-2 whitespace-nowrap tabular-nums">{summary}</span>
           {children}
         </DockBar>
       )}
@@ -25,12 +26,23 @@ export function SelectionDock({
   );
 }
 
-export const DOCK_SLOT = {
+const DOCK_SLOT = {
   decision: 'min-w-28',
   wide: 'rail:w-44',
   primary: 'min-w-0 shrink rail:w-64',
-  primaryLabel: 'min-w-0 truncate',
 } as const;
+
+export function DockSlot({
+  size,
+  children,
+}: Readonly<{ size: keyof typeof DOCK_SLOT; children?: ReactElement }>) {
+  if (!children) return <span aria-hidden className={cn(DOCK_SLOT[size], 'shrink-0')} />;
+  return <Slot className={DOCK_SLOT[size]}>{children}</Slot>;
+}
+
+export function DockLabel({ children }: Readonly<{ children: ReactNode }>) {
+  return <span className="min-w-0 truncate">{children}</span>;
+}
 
 export function PageDock({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
@@ -41,7 +53,7 @@ export function PageDock({ label, children }: Readonly<{ label: string; children
 }
 
 function DockLayer({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="pointer-events-none sticky bottom-5 z-10 h-0">{children}</div>;
+  return <div className="z-raised pointer-events-none sticky bottom-5 h-0">{children}</div>;
 }
 
 function DockBar({
@@ -56,7 +68,7 @@ function DockBar({
       data-selection-dock={slidesIn ? '' : undefined}
       className={cn(
         POP_FACE,
-        'pointer-events-auto absolute bottom-0 left-1/2 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1 p-2',
+        'pointer-events-auto absolute bottom-0 left-1/2 flex max-w-viewport-fit -translate-x-1/2 items-center gap-1 p-2',
       )}
     >
       {children}

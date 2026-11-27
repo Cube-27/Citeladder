@@ -21,7 +21,7 @@ import { Stack } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { Select } from '@/components/ui/select';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import {
   apiKeyScopeSchema,
   type ApiKeyCreated,
@@ -46,12 +46,21 @@ function expiryOptions(today: string) {
       label: (
         <>
           {days === 1 ? '1 day' : `${days} days`}{' '}
-          <span className="text-ink-2">({presetLabelDate(addDays(today, days), today)})</span>
+          <Text variant="body" tone="ink-2">
+            ({presetLabelDate(addDays(today, days), today)})
+          </Text>
         </>
       ),
     })),
     { value: 'custom' as const, label: 'Custom' },
-    { value: 'never' as const, label: <span className="text-negative">Never</span> },
+    {
+      value: 'never' as const,
+      label: (
+        <Text variant="body" tone="negative">
+          Never
+        </Text>
+      ),
+    },
   ];
 }
 
@@ -70,7 +79,9 @@ function ProjectsField({
   };
   return (
     <Stack as="fieldset" gap="tight">
-      <legend className={textRole('label')}>Projects</legend>
+      <Text as="legend" variant="label">
+        Projects
+      </Text>
       <RadioGroup
         ariaLabel="Projects the key can reach"
         value={value === null ? 'all' : 'chosen'}
@@ -98,8 +109,10 @@ function CreatedKey({ secret }: Readonly<{ secret: string }>) {
   return (
     <>
       <Notice tone="warning">Shown once.</Notice>
-      <Stack gap="compact" className="justify-items-start">
-        <code className="type-code break-all">{secret}</code>
+      <Stack gap="compact" align="start">
+        <Text as="code" variant="code" wrap="all">
+          {secret}
+        </Text>
         <CopyButton value={secret}>Copy key</CopyButton>
       </Stack>
     </>
@@ -121,7 +134,9 @@ function AccessField({
       };
   return (
     <Stack as="fieldset" gap="tight">
-      <legend className={textRole('label')}>Access</legend>
+      <Text as="legend" variant="label">
+        Access
+      </Text>
       <RadioGroup
         ariaLabel="What the key can do"
         value={value}

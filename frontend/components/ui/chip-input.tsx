@@ -133,7 +133,7 @@ export function ValuesInput({
         onBlur={add}
         onKeyDown={onFieldKey}
         onPaste={onPaste}
-        className="text-ink placeholder:text-ink-placeholder type-body min-h-6 w-8 min-w-8 flex-1 bg-transparent px-1 disabled:cursor-not-allowed"
+        className="text-ink placeholder:text-ink-placeholder text-body min-h-6 w-8 min-w-8 flex-1 bg-transparent px-1 disabled:cursor-not-allowed"
       />
       {accepting ? <AcceptTick label={label} disabled={disabled} onAccept={onAccept} /> : null}
     </div>
@@ -146,12 +146,12 @@ function boxClasses({
   disabled,
 }: Readonly<{ variant: 'field' | 'cell'; accepting: boolean; disabled?: boolean }>) {
   return cn(
-    'focus-frame relative flex w-full min-w-0 cursor-text flex-wrap items-center gap-1.5 rounded-control p-1 transition-[border-color,box-shadow]',
+    'focus-frame relative flex w-full min-w-0 cursor-text flex-wrap items-center gap-1.5 rounded-control p-1 transition-edge',
     accepting && 'pe-8',
     variant === 'field'
-      ? cn('min-h-[var(--control-md)]', FIELD_EDGE)
+      ? cn('min-h-control-md', FIELD_EDGE)
       : 'min-h-10 border border-transparent hover:bg-state-hover',
-    disabled && 'cursor-not-allowed opacity-45',
+    disabled && 'cursor-not-allowed opacity-disabled',
   );
 }
 
@@ -169,7 +169,7 @@ function Token({
   return (
     <li
       className={cn(
-        'group/token type-body rounded-mark inline-flex h-6 max-w-full items-center gap-1 ps-1.5 pe-1 whitespace-nowrap',
+        'group/token text-body text-ink rounded-mark inline-flex h-6 max-w-full items-center gap-1 ps-1.5 pe-1 whitespace-nowrap',
         item.suggested ? 'border-control-line border border-dashed' : 'bg-state-selected',
       )}
     >

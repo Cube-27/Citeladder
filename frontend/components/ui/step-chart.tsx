@@ -1,6 +1,13 @@
 import { useId, useState, type ComponentProps, type KeyboardEvent, type ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
-import { CHART_HEIGHT_PX, chartPath, useChartWidth, type ChartHeight } from '@/components/ui/chart';
+import {
+  CHART_HEIGHT_CLASS,
+  CHART_HEIGHT_PX,
+  chartPath,
+  useChartWidth,
+  type ChartHeight,
+} from '@/components/ui/chart';
 import { ChartFrame, ChartKey, ChartTipSheet } from '@/components/ui/chart-frame';
 import {
   lastMeasured,
@@ -215,8 +222,10 @@ export function StepChart({
           }
           onMouseLeave={() => setActive(null)}
           onBlur={() => setActive(null)}
-          className="focus-ring rounded-control relative w-full"
-          style={{ height }}
+          className={cn(
+            'focus-ring rounded-control relative w-full',
+            CHART_HEIGHT_CLASS[heightRole],
+          )}
         >
           <StepPlot
             data={data}

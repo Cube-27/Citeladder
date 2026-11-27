@@ -13,7 +13,6 @@ export function FeaturedPost({ post }: Readonly<{ post: BlogPost }>) {
   return (
     <div className="cl-featured-post">
       <FeatureCard
-        size="lg"
         href={`/blog/${post.slug}`}
         linkLabel="Read article"
         eyebrow={postMeta(post)}

@@ -17,7 +17,7 @@ import { PageFilterBandContext, PageTabEnd } from '@/components/templates/page-t
 import { X } from '@/lib/icons';
 import { batchUrlWrites } from '@/lib/navigation/url-state';
 
-export type FilterBarProps = Readonly<{
+export type TableToolbarProps = Readonly<{
   view?: ReactNode;
   lead?: ReactNode;
   search?: ReactNode;
@@ -25,6 +25,8 @@ export type FilterBarProps = Readonly<{
   status?: ReactNode;
   actions?: ReactNode;
 }>;
+
+export type FilterBarProps = Omit<TableToolbarProps, 'search'>;
 
 const ROW_ICON_CHIPS = 4;
 
@@ -45,17 +47,25 @@ function dataWindow(chips: readonly FilterDefinition[]): string | undefined {
   return period ? (period.windowLabel ?? period.valueLabel) : undefined;
 }
 
-export function FilterBar({ view, lead, ...row }: FilterBarProps) {
+export function FilterBar(props: FilterBarProps) {
+  return <ToolbarRow {...props} />;
+}
+
+export function TableToolbar(props: TableToolbarProps) {
+  return <ToolbarRow {...props} />;
+}
+
+function ToolbarRow({ view, lead, ...row }: TableToolbarProps) {
   return (
     <fieldset
       data-filter-bar=""
       aria-label="Search and filters"
-      className="flex min-h-[var(--control-md)] w-full min-w-0 flex-wrap items-center gap-2"
+      className="min-h-control-md flex w-full min-w-0 flex-wrap items-center gap-2"
     >
       {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
       {lead ? <div className="flex max-w-full min-w-0 shrink-0">{lead}</div> : null}
       {view ? (
-        <div className="flex min-w-[min(100%,16rem)] flex-[1_1_0] flex-wrap items-center justify-end gap-2">
+        <div className="min-w-filter-search flex grow basis-0 flex-wrap items-center justify-end gap-2">
           <Controls {...row} afterView />
         </div>
       ) : (
@@ -71,17 +81,13 @@ function Controls({
   status,
   actions,
   afterView = false,
-}: Omit<FilterBarProps, 'view' | 'lead'> & { afterView?: boolean }) {
+}: Omit<TableToolbarProps, 'view' | 'lead'> & { afterView?: boolean }) {
   const { chips, menu } = placeFilters(filters);
   const set = filters.filter((filter) => !filter.isDefault);
   const windowLabel = dataWindow(chips);
   return (
     <>
-      {search ? (
-        <div className="rail:max-w-64 rail:grow rail:basis-[200px] min-w-0 basis-full">
-          {search}
-        </div>
-      ) : null}
+      {search ? <div className="rail:max-w-64 min-w-0 grow basis-50">{search}</div> : null}
       {chips.map((filter) => (
         <div key={filter.id} className="flex min-w-0 shrink-0">
           <FilterChip filter={filter} />
@@ -135,7 +141,7 @@ function StripMeta({
   const content = (
     <>
       {windowLabel ? (
-        <span className="type-caption min-w-0 shrink truncate">
+        <span className="text-caption text-ink-2 min-w-0 shrink truncate">
           {windowLabel}
           {status ? ' ·' : null}
         </span>
@@ -143,7 +149,7 @@ function StripMeta({
       {status === undefined ? null : (
         <output
           aria-live="polite"
-          className="type-caption block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"
+          className="text-caption text-ink-2 block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"
         >
           {status}
         </output>

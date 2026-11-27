@@ -14,7 +14,7 @@ import remarkGfm from 'remark-gfm';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { Stack } from '@/components/ui/layout';
 import { useScrollFrame } from '@/components/ui/scroll-edges';
-import { InlineFigure } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 import { highlightPlugin, type Highlight } from './highlight';
@@ -162,7 +162,7 @@ const MarkdownBody = memo(function MarkdownBody({
   return (
     <div
       className={cn(
-        'prose-content min-w-0 w-full max-w-full [overflow-wrap:anywhere]',
+        'prose-content min-w-0 w-full max-w-full wrap-anywhere',
         density === 'compact' && 'prose-compact',
       )}
     >
@@ -236,9 +236,11 @@ export function ContentMarkdown({
                       This link goes to an address that is not your project’s site or a cited
                       source. Check the full address before you open it.
                     </p>
-                    <p className="text-ink [overflow-wrap:anywhere]">
-                      <InlineFigure>{leaving}</InlineFigure>
-                    </p>
+                    <Text as="p" variant="body" wrap="anywhere">
+                      <Text variant="body" numeric>
+                        {leaving}
+                      </Text>
+                    </Text>
                   </Stack>
                 ),
                 confirmLabel: 'Open link',

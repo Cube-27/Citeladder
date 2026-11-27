@@ -63,7 +63,7 @@ export function CompareIndex() {
 
       <PageSection spacing="compact" label="Comparisons" labelHeading>
         <Callout tone="neutral">
-          <span className="block max-w-[72ch]">
+          <span className="cl-callout-copy">
             Published by CiteLadder. These are vendor-authored comparisons, not independent
             rankings. Product scope, plans and availability can change; use the linked official
             sources when evaluating a purchase.
@@ -78,7 +78,6 @@ export function CompareIndex() {
               span: 6,
               content: (
                 <FeatureCard
-                  size="lg"
                   href={`/compare/${competitor.slug}`}
                   linkLabel={`Compare with ${competitor.name}`}
                   title={`CiteLadder vs ${competitor.name}`}

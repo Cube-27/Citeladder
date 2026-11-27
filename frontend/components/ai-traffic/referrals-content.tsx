@@ -1,7 +1,7 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { AiReferralsEmptyState } from '@/components/ai-traffic/empty-state';
-import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { DEFAULT_RANGE, rangeLabel, type AiReferralsRange } from '@/lib/ai-traffic/options';
 import { isAiReferralsEmpty } from '@/lib/ai-traffic/series';
 import type { AiReferrals } from '@/lib/api/ai-traffic';
@@ -36,10 +36,7 @@ export function AiReferralsContent({
     data
   );
   return (
-    <ReportPage
-      tabs={tabs ? <TabRow {...tabs} /> : undefined}
-      filters={<FilterBar {...controls} />}
-    >
+    <ReportPage tabs={tabs ? <TabRow {...tabs} /> : undefined} filters={controls}>
       {tabs ? <TabPanel value="referrals">{region}</TabPanel> : region}
     </ReportPage>
   );

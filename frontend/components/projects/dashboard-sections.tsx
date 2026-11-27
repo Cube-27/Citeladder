@@ -11,7 +11,7 @@ import { Inline } from '@/components/ui/layout';
 import { Section } from '@/components/ui/section';
 import { ReorderList } from '@/components/ui/reorder-list';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { pluralCount } from '@/lib/format';
 import type { CommandCenter, Project } from '@citeladder/contracts';
@@ -42,7 +42,7 @@ export function ProjectMeta({ data }: Readonly<{ data: CommandCenter }>) {
   const shown = website?.replace(/^https?:\/\//i, '').replace(/\/$/, '');
   return (
     <Section>
-      <Inline as="p" gap="meta" className={textRole('caption')}>
+      <Inline as="p" gap="meta">
         {href ? (
           <TextLink variant="external" text="caption" tone="muted" href={href} className="min-w-0">
             <span className="truncate" title={shown}>
@@ -51,15 +51,15 @@ export function ProjectMeta({ data }: Readonly<{ data: CommandCenter }>) {
           </TextLink>
         ) : null}
         {website && !href ? (
-          <span className="truncate" title={shown}>
+          <Text variant="caption" wrap="truncate" title={shown}>
             {shown}
-          </span>
+          </Text>
         ) : null}
         {measurement ? (
-          <span>
+          <Text variant="caption">
             Tracked <DisplayTime value={measurement.completed_at} /> ·{' '}
             <EngineStack engines={measurement.logical_engines} />
-          </span>
+          </Text>
         ) : null}
       </Inline>
     </Section>
@@ -133,7 +133,7 @@ export function DashboardActions({
 function FactSummary({ value }: Readonly<{ value: string }>) {
   if (!value.trim()) return <Absence state="not_set" />;
   return (
-    <ClampText lines={2} className={textRole('body', 'whitespace-normal')}>
+    <ClampText lines={2} text="body" className="whitespace-normal">
       {value}
     </ClampText>
   );

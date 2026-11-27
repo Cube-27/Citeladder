@@ -21,7 +21,7 @@ import {
   toggleMarket,
   type RepetitionLimits,
 } from '@/lib/runs/launch';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
@@ -57,7 +57,11 @@ function PromptSetField({
     <Field label="Prompt set" required layout="row">
       {(props) => {
         if (locked) {
-          return <p className={textRole('body', 'text-ink-2')}>{label}</p>;
+          return (
+            <Text as="p" variant="body" tone="ink-2">
+              {label}
+            </Text>
+          );
         }
         if (promptSetsRead.status === 'error') {
           return (
@@ -71,9 +75,9 @@ function PromptSetField({
         }
         if (promptSetsRead.status === 'success' && !promptSets.length) {
           return (
-            <p className="type-body text-ink-2">
+            <Text as="p" variant="body" tone="ink-2">
               No prompt set yet. Add prompts on the Prompts screen first.
-            </p>
+            </Text>
           );
         }
         return (
@@ -155,7 +159,7 @@ function MarketsField({
   if (markets.length < 2) return null;
   return (
     <ChoiceRow label="Markets">
-      <Inline className="flex-wrap">
+      <Inline wrap>
         {markets.map((market) => (
           <ChoiceChip
             key={market.id ?? 'default'}
@@ -166,9 +170,9 @@ function MarketsField({
           </ChoiceChip>
         ))}
       </Inline>
-      <p className="type-caption">
+      <Text as="p" variant="caption">
         Each market runs separately. An engine that cannot measure a market is skipped there.
-      </p>
+      </Text>
     </ChoiceRow>
   );
 }
@@ -269,14 +273,14 @@ function RepetitionsField({
 
 function EstimateNote({ estimate }: Readonly<{ estimate: Estimate }>) {
   return (
-    <Stack gap="tight" className="type-caption">
-      <span className={textRole('emphasis', 'text-ink')}>
+    <Stack gap="tight">
+      <Text variant="caption-strong" tone="ink">
         {estimate.execution_count} {estimate.execution_count === 1 ? 'response' : 'responses'}{' '}
         planned
-      </span>
-      <span className="text-ink-2">
+      </Text>
+      <Text variant="caption">
         Maximum wall-clock budget {estimate.maximum_wall_clock_seconds}s
-      </span>
+      </Text>
     </Stack>
   );
 }
@@ -379,10 +383,10 @@ export function LaunchDialogView({
         <ChoiceRow label="Engines">
           {[true, false].map((consumer) => (
             <Stack key={String(consumer)} gap="item">
-              <p className={textRole('captionStrong')}>
+              <Text as="p" variant="caption-strong">
                 {consumer ? 'Consumer experiences' : 'APIs'}
-              </p>
-              <Inline className="flex-wrap">
+              </Text>
+              <Inline wrap>
                 {catalog.order
                   .filter((engine) => catalog.isObserved(engine) === consumer)
                   .map((engine) => {
@@ -417,10 +421,10 @@ export function LaunchDialogView({
         <MarketsField markets={markets} marketIds={marketIds} setMarketIds={setMarketIds} />
       </Stack>
       {estimate ? <EstimateNote estimate={estimate} /> : null}
-      <p className="type-caption text-ink-2">
+      <Text as="p" variant="caption">
         Answers that mention you or a competitor are also classified for sentiment. No credits are
         used.
-      </p>
+      </Text>
     </Dialog>
   );
 }

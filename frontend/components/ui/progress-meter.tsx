@@ -9,8 +9,8 @@ export function ProgressMeter({ label, value }: Readonly<{ label: string; value:
   const clamped = Math.min(MAX, Math.max(0, value));
   const shown = formatPercent(clamped / MAX);
   return (
-    <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-      <span id={labelId} className="type-caption text-ink-2 truncate">
+    <div className="grid-cols-lead-body-end grid min-w-0 items-center gap-3">
+      <span id={labelId} className="text-caption text-ink-2 truncate">
         {label}
       </span>
       <progress
@@ -22,11 +22,11 @@ export function ProgressMeter({ label, value }: Readonly<{ label: string; value:
       />
       <span aria-hidden className="bg-well block h-1 overflow-hidden rounded-full">
         <span
-          className="bg-data-you block h-full rounded-full [transition:width_var(--motion-slide)_var(--ease-standard)]"
-          style={{ width: `${clamped}%` }}
+          className="bg-data-you w-share transition-size duration-slide ease-standard block h-full rounded-full"
+          style={{ '--share': `${clamped}%` }}
         />
       </span>
-      <span className="type-caption text-ink whitespace-nowrap tabular-nums">{shown}</span>
+      <span className="text-caption text-ink whitespace-nowrap tabular-nums">{shown}</span>
     </div>
   );
 }

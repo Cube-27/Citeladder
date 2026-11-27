@@ -6,7 +6,7 @@ import { FIGURE_MIN_WIDTH, useStripWidth } from '@/components/ui/figure-rows';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Section, SectionBleed, useOnPage } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
 import {
   type Absent,
   availabilityLabel,
@@ -151,7 +151,7 @@ function FigureLabel({ segment, subLine }: FigurePart) {
     text = (
       <>
         <span className="sr-only">{segment.label}</span>
-        <Block className="h-[14px] w-24" />
+        <Block className="h-3.5 w-24" />
       </>
     );
   else if (segment.action)
@@ -164,7 +164,7 @@ function FigureLabel({ segment, subLine }: FigurePart) {
   const hint = segment.loading ? null : <FigureHint segment={segment} subLine={subLine} />;
   const Glyph = segment.icon;
   return (
-    <dt className="type-caption text-ink-2 phone:block flex min-w-0 items-center gap-2">
+    <dt className="text-caption text-ink-2 phone:block flex min-w-0 items-center gap-2">
       {Glyph ? (
         <Glyph
           aria-hidden
@@ -188,7 +188,7 @@ function FigureLabel({ segment, subLine }: FigurePart) {
 }
 
 function pressableLayer(segment: FigureSegment) {
-  return segment.onSelect ? 'relative z-10' : undefined;
+  return segment.onSelect ? 'relative z-raised' : undefined;
 }
 
 function FigureValueLine({ segment, subLine, textValues }: FigurePart) {
@@ -199,7 +199,7 @@ function FigureValueLine({ segment, subLine, textValues }: FigurePart) {
       className="phone:flex-wrap flex min-w-0 items-baseline gap-2 whitespace-nowrap"
     >
       <FigureValue segment={segment} textValues={textValues} />
-      {delta ? <span className="type-caption-strong shrink-0">{delta}</span> : null}
+      {delta ? <span className="text-caption-strong text-ink-2 shrink-0">{delta}</span> : null}
       {segment.labelHidden && !segment.loading ? (
         <span className="ms-auto shrink-0 self-center">
           <FigureHint segment={segment} subLine={subLine} />
@@ -211,7 +211,7 @@ function FigureValueLine({ segment, subLine, textValues }: FigurePart) {
 
 function FigureSub({ segment }: FigurePart) {
   return (
-    <dd className="type-caption text-ink-2 phone:whitespace-normal min-w-0 truncate">
+    <dd className="text-caption text-ink-2 phone:whitespace-normal min-w-0 truncate">
       {segment.sub && !segment.loading ? segment.sub : ' '}
     </dd>
   );
@@ -225,7 +225,7 @@ function reportsChange(delta: ReactNode): boolean {
 }
 
 function FigureValue({ segment, textValues }: FigurePart) {
-  const valueText = textRole(textValues ? 'heading' : 'figure');
+  const valueText = TEXT_ROLE_CLASS[textValues ? 'heading' : 'figure'];
   if (segment.loading)
     return (
       <span className="flex items-center self-center">
@@ -287,7 +287,7 @@ function FigureLabelLink({
 }: Readonly<{ action: FigureLink; children: ReactNode }>) {
   if (action.onSelect)
     return (
-      <TextLink asChild text="inherit" underline="hover" className="text-ink-2">
+      <TextLink asChild text="inherit" underline="hover" tone="quiet">
         <button type="button" className="text-start" onClick={action.onSelect}>
           {children}
         </button>
@@ -299,7 +299,7 @@ function FigureLabelLink({
       projectId={action.projectId}
       text="inherit"
       underline="hover"
-      className="text-ink-2"
+      tone="quiet"
     >
       {children}
     </TextLink>

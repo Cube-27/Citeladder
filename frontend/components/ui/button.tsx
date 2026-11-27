@@ -25,27 +25,26 @@ const RAISED_FACE =
   'face bg-raised border border-transparent not-disabled:hover:bg-raised-2 not-disabled:active:bg-raised-2 aria-pressed:bg-raised-2 data-[state=open]:bg-raised-2';
 
 const BUTTON_BASE =
-  'focus-ring press type-label relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-[var(--control-coarse)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
+  'focus-ring press text-label text-ink relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-control-coarse disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-disabled [[data-public-surface]_&]:aria-disabled:opacity-disabled';
 
 const BUTTON_SIZE: Record<ButtonSize, string> = {
-  md: 'min-h-[var(--control-md)] px-[var(--control-md-padding,12px)]',
-  lg: 'min-h-[var(--control-lg)] px-4',
+  md: 'min-h-control-md px-control-x',
+  lg: 'min-h-control-lg px-4',
 };
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
     'face face-primary bg-primary border border-primary text-on-primary not-disabled:hover:bg-primary-hover not-disabled:hover:border-primary-hover',
-  secondary: cn(RAISED_FACE, 'text-ink app:shadow-[var(--shadow-field,0_0_#0000)]'),
+  secondary:
+    'face bg-control-face border border-transparent not-disabled:hover:bg-control-face-hover not-disabled:active:bg-control-face-hover aria-pressed:bg-control-face-hover data-[state=open]:bg-control-face-hover text-ink app:shadow-control-face',
   quiet: cn(
     'bg-transparent text-ink-2 app:text-ink border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
     HOVER_OVERLAY,
   ),
   danger: cn(RAISED_FACE, 'face-danger text-negative [[data-public-surface]_&]:border-negative'),
   'danger-confirm':
-    'face face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90',
+    'face face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-hover',
 };
-
-export const CLOSE_BUTTON = 'size-6 min-h-6 pointer-coarse:min-h-6 [--press:0.93]';
 
 export function buttonClasses(
   variant: ButtonVariant = 'secondary',
@@ -66,13 +65,31 @@ export type ButtonProps = ComponentPropsWithoutRef<'button'> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
   asChild?: boolean;
+  shape?: keyof typeof SHAPE;
+  look?: keyof typeof LOOK;
   pending?: boolean;
   pendingLabel?: ReactNode;
   ref?: Ref<HTMLButtonElement>;
 };
 
+const ICON_SHAPE = 'w-control-md gap-0 px-0';
+
+const SHAPE = {
+  label: undefined,
+  icon: ICON_SHAPE,
+  floating: cn(ICON_SHAPE, 'shadow-sheet rounded-full'),
+  close: cn(ICON_SHAPE, 'size-6 min-h-6 pointer-coarse:min-h-6 press-firm'),
+} as const;
+
+const LOOK = {
+  launcher: 'text-ink-2 text-left shrink-0 justify-start',
+  cta: undefined,
+} as const;
+
 function SlottedButton({
   className,
+  shape = 'label',
+  look,
   variant = 'secondary',
   size = 'md',
   pending = false,
@@ -89,8 +106,9 @@ function SlottedButton({
       ref={ref}
       {...props}
       data-button-variant={variant}
+      data-button-look={look}
       aria-busy={pending || undefined}
-      className={buttonClasses(variant, className, size)}
+      className={buttonClasses(variant, cn(SHAPE[shape], look && LOOK[look], className), size)}
     >
       {children}
     </Slot>
@@ -99,6 +117,8 @@ function SlottedButton({
 
 function NativeButton({
   className,
+  shape = 'label',
+  look,
   variant = 'secondary',
   size = 'md',
   pending = false,
@@ -115,9 +135,14 @@ function NativeButton({
       {...props}
       type={type ?? 'button'}
       data-button-variant={variant}
+      data-button-look={look}
       aria-busy={pending || undefined}
       disabled={props.disabled || pending}
-      className={buttonClasses(variant, cn(pending && 'pointer-events-none', className), size)}
+      className={buttonClasses(
+        variant,
+        cn(pending && 'pointer-events-none', SHAPE[shape], look && LOOK[look], className),
+        size,
+      )}
     >
       <span
         aria-hidden={pending || undefined}
@@ -149,6 +174,7 @@ type IconButtonProps = Omit<ButtonProps, 'variant' | 'children' | 'asChild' | 'a
   tooltipSide?: 'top' | 'right' | 'bottom' | 'left';
   tooltip?: boolean;
   href?: string;
+  shape?: Exclude<keyof typeof SHAPE, 'label'>;
 };
 
 function IconLinkTarget({
@@ -182,12 +208,12 @@ export function IconButton({
   shortcut,
   tooltipSide = 'top',
   tooltip = true,
+  shape = 'icon',
   className,
   ...props
 }: Readonly<IconButtonProps>) {
-  const classes = cn('w-[var(--control-md)] gap-0 px-0', className);
   const control = href ? (
-    <Button {...props} variant={variant} className={classes} asChild>
+    <Button {...props} variant={variant} shape={shape} className={className} asChild>
       <IconLinkTarget href={href} label={label}>
         <Icon icon={icon} />
       </IconLinkTarget>
@@ -196,7 +222,8 @@ export function IconButton({
     <Button
       {...props}
       variant={variant}
-      className={classes}
+      shape={shape}
+      className={className}
       aria-label={label}
       pendingLabel={<span className="sr-only">{props.pendingLabel ?? label}</span>}
     >

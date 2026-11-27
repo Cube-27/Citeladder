@@ -7,6 +7,7 @@ import { useProjectCreation } from '@/components/layout/use-project-creation';
 import type { Project } from '@citeladder/contracts';
 import { ChevronDown, Pencil, Plus } from '@/lib/icons';
 import { newProjectDestination } from '@/lib/navigation/project-destination';
+import { Text } from '@/components/ui/typography';
 
 export function ProjectControls({
   activeProject,
@@ -23,7 +24,7 @@ export function ProjectControls({
     <Menu>
       <MenuTrigger asChild>
         <Button variant="secondary">
-          Manage project <Icon icon={ChevronDown} className="opacity-80" />
+          Manage project <Icon icon={ChevronDown} muted />
         </Button>
       </MenuTrigger>
       <MenuContent align="end">
@@ -40,9 +41,7 @@ export function ProjectControls({
           >
             <span className="grid min-w-0 flex-1">
               <span>Add project</span>
-              {remainingProjectSlots === 0 && (
-                <span className="type-caption">Project limit reached</span>
-              )}
+              {remainingProjectSlots === 0 && <Text variant="caption">Project limit reached</Text>}
             </span>
           </MenuItem>
         ) : null}

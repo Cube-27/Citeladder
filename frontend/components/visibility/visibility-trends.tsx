@@ -10,7 +10,7 @@ import { StateBlock } from '@/components/ui/state-block';
 import { AreaChart } from '@/components/ui/area-chart';
 import { type TrendSeries } from '@/components/ui/series-data';
 import { RankedBrandMark } from '@/components/visibility/ranked-brand-mark';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type {
   NetSentiment,
   RankingRow,
@@ -67,10 +67,14 @@ export function InsightsLede({ selected }: Readonly<{ selected: Visibility }>) {
   return (
     <Section aria-labelledby="insights-headline">
       <SectionHeader>
-        <h2 id="insights-headline" className={textRole('title')}>
+        <Text as="h2" variant="title" id="insights-headline">
           {headline}
-        </h2>
-        {sub ? <p className={textRole('body', 'text-ink-2')}>{sub}</p> : null}
+        </Text>
+        {sub ? (
+          <Text as="p" variant="body" tone="ink-2">
+            {sub}
+          </Text>
+        ) : null}
       </SectionHeader>
       <PooledSelectionNote selected={selected} />
       <HeadlineMetrics selected={selected} />
@@ -158,9 +162,9 @@ function winRateSegment(brand: RankingRow | undefined, unmeasured: Absent | null
     missingState: winRateAbsence(brand),
     delta:
       answers && wins !== null ? (
-        <span className={textRole('caption')}>
+        <Text variant="caption">
           {`Named first in ${formatCount(wins)} of ${formatCount(answers)}`}
-        </span>
+        </Text>
       ) : null,
   };
 }

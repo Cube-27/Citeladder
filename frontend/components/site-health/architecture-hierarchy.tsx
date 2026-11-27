@@ -6,12 +6,13 @@ import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { UrlText } from '@/components/ui/table';
 import { PageLink } from '@/components/site-health/page-link';
-import { treeBranchClasses } from '@/components/ui/workspace';
+import { TreeBranch } from '@/components/ui/workspace';
 import type { ArchitectureNode } from '@citeladder/contracts';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionContent, TitledSection } from '@/components/ui/section';
 import { ChevronDown } from '@/lib/icons';
 import { formatCount, readableUrl, sharedOrigin } from '@/lib/format';
+import { Text } from '@/components/ui/typography';
 
 const PARENT_SOURCE_LABELS: Record<ArchitectureNode['parent_source'], string | null> = {
   breadcrumb: 'Breadcrumb',
@@ -121,14 +122,14 @@ function HierarchyList({
 }>) {
   const visible = shown ? nodes.filter((node) => shown.has(node.site_url_id)) : nodes;
   return (
-    <ul className={treeBranchClasses()}>
+    <TreeBranch>
       {visible.map((node) => {
         const children = grouped.get(node.site_url_id) ?? [];
         const home = node.depth_from_home === 0;
         const source = home ? null : PARENT_SOURCE_LABELS[node.parent_source];
         const childShown = children.some((child) => !shown || shown.has(child.site_url_id));
         return (
-          <Stack as="li" gap="item" key={node.site_url_id} className="min-w-0">
+          <Stack as="li" gap="item" key={node.site_url_id} box="shrink">
             <Inline>
               {crawlId ? (
                 <PageLink
@@ -141,12 +142,16 @@ function HierarchyList({
                   <UrlText url={node.url} origin={origin} />
                 </PageLink>
               ) : (
-                <span className="type-body text-ink flex min-w-0">
+                <Text variant="body" box="row">
                   <UrlText url={node.url} origin={origin} />
-                </span>
+                </Text>
               )}
               <PageKindBadge pageKind={node.page_kind} />
-              {source ? <span className="type-caption whitespace-nowrap">{source}</span> : null}
+              {source ? (
+                <Text variant="caption" wrap="nowrap">
+                  {source}
+                </Text>
+              ) : null}
             </Inline>
             {childShown ? (
               <HierarchyList
@@ -160,6 +165,6 @@ function HierarchyList({
           </Stack>
         );
       })}
-    </ul>
+    </TreeBranch>
   );
 }

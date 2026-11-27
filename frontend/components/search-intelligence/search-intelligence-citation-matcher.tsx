@@ -8,7 +8,7 @@ import { Inline } from '@/components/ui/layout';
 import { SectionBleed } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { useToast } from '@/components/ui/toast';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp, pluralCount } from '@/lib/format';
@@ -111,22 +111,19 @@ export function SearchIntelligenceCitationMatcher({
       ) : null}
       <SectionBleed rows scroll>
         {answered.map((audit) => (
-          <Inline
-            as="label"
-            key={audit.id}
-            gap="compact"
-            className="type-body text-ink-2 justify-between"
-          >
+          <Inline as="label" key={audit.id} gap="compact" justify="between">
             <Checkbox
               checked={selectedAudits.includes(audit.id)}
               onCheckedChange={() => toggle(audit.id)}
               label={formatDisplayTimestamp(audit.created_at, timeZone)}
             />
-            <span className="text-ink-2">{pluralCount(audit.completed_count, 'answer')}</span>
+            <Text variant="body" tone="ink-2">
+              {pluralCount(audit.completed_count, 'answer')}
+            </Text>
           </Inline>
         ))}
       </SectionBleed>
-      <Inline gap="compact" className="flex-wrap">
+      <Inline gap="compact" wrap>
         <Button
           variant="primary"
           disabled={!selectedAudits.length || derive.isPending}
@@ -134,9 +131,9 @@ export function SearchIntelligenceCitationMatcher({
         >
           Match citations
         </Button>
-        <span className={textRole('caption')}>
+        <Text variant="caption">
           {comparedAgainst(referring.unique_rows_saved, referring.provider_total)}
-        </span>
+        </Text>
       </Inline>
     </>
   );

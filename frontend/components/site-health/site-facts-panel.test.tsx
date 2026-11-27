@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { SiteFactsPanel } from './site-facts-panel';
 import { makeSiteCrawl, makeSiteFacts } from '@/test/fixtures/site-health';
-import { parseAgentHandoff } from '@/lib/agent/handoff';
+import { parseAgentHandoff } from '@/lib/agent/handoff-params';
 import { chooseFilterOption } from '@/test/all-filters';
 
 it('renders all policies and Not specified with accessible purpose tables and an agent handoff', async () => {

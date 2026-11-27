@@ -49,7 +49,12 @@ function SocialLinks() {
             rel="noreferrer"
             aria-label={link.label}
           >
-            <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
+            <svg
+              viewBox="0 0 24 24"
+              className="cl-footer-social-icon"
+              fill="currentColor"
+              aria-hidden
+            >
               <path d={SOCIAL_GLYPHS[link.network]} />
             </svg>
           </a>
@@ -107,7 +112,7 @@ export function SiteFooter() {
         <div className="cl-footer-top">
           <div className="cl-footer-brand">
             <a href="/" aria-label="CiteLadder home" className="cl-footer-logo focus-ring">
-              <LogoMark className="text-ink" />
+              <LogoMark />
             </a>
             <p className="cl-footer-tagline">{FOOTER_TAGLINE}</p>
             <SocialLinks />

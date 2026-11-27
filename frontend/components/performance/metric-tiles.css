@@ -13,10 +13,10 @@
   position: relative;
   display: grid;
   align-content: start;
-  gap: 4px;
+  gap: calc(var(--spacing) * 1);
   min-width: 0;
-  padding: 12px var(--panel-inset);
-  border-inline-end: 1px solid var(--color-rule);
+  padding: calc(var(--spacing) * 3) var(--spacing-panel-inset);
+  border-inline-end: var(--rule-width) solid var(--color-rule);
   background: var(--color-panel);
   color: var(--text-color-ink-2);
   &[data-metric='clicks'] {
@@ -32,14 +32,14 @@
     --metric: var(--color-metric-position);
     --metric-ink: var(--text-color-metric-ink-dark);
   }
-  & :is(label, .type-body, .type-caption, .type-figure) {
+  & :is(label, .text-body, .text-caption, .text-figure) {
     color: inherit;
   }
   &:last-child {
     border-inline-end: 0;
   }
   & label > :first-child {
-    margin-inline-start: -4px;
+    margin-inline-start: calc(var(--spacing) * -1);
   }
   & label::after {
     content: '';
@@ -49,7 +49,7 @@
   }
   & [data-metric-help] {
     position: relative;
-    z-index: 1;
+    z-index: var(--z-index-base);
   }
   &[data-on] {
     border-color: var(--metric);

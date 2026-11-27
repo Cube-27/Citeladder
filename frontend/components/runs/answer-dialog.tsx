@@ -5,7 +5,7 @@ import { ANSWER_FORMAT_LABELS } from '@/components/runs/answer-formats';
 import { choiceFilter } from '@/components/ui/all-filters';
 import { ClampText } from '@/components/ui/clamp-text';
 import { Dialog } from '@/components/ui/dialog';
-import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
+import { EngineBrandMark } from '@/components/ui/engine-mark';
 import { FilterControls } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
@@ -70,10 +70,9 @@ function MarketChip({ auditId }: Readonly<{ auditId: string }>) {
 
 function EngineChip({ engine }: Readonly<{ engine: string }>) {
   const label = useEngineCatalog().label(engine);
-  const key = engineMarkKey(engine);
   return (
     <Tag>
-      {key ? <EngineMark engine={key} placement="inline" brand /> : null}
+      <EngineBrandMark engine={engine} />
       {label}
     </Tag>
   );

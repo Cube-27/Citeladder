@@ -71,15 +71,15 @@ function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) 
   const host = hostOf(url);
   return (
     <SectionHeader>
-      <Inline gap="compact" className="items-start">
+      <Inline gap="compact" align="start">
         <BrandMark
           name={host ?? url}
           websiteUrl={host ? `https://${host}` : null}
           placement="header"
           entity="site"
         />
-        <Stack gap="tight" className="min-w-0">
-          <SectionTitle className="truncate">{title}</SectionTitle>
+        <Stack gap="tight" box="shrink">
+          <SectionTitle truncate>{title}</SectionTitle>
           <TextLink variant="external" text="caption" href={url} className="flex min-w-0">
             <UrlText url={url} />
           </TextLink>

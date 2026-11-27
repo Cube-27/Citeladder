@@ -39,9 +39,14 @@ import {
   type PromptMeasurements,
 } from './use-latest-prompt-measurements';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 
-import { PromptActions, PromptStatusTabs, promptFilterControls } from './prompt-toolbar';
+import {
+  PromptActions,
+  PromptSearch,
+  PromptStatusTabs,
+  promptFilterControls,
+} from './prompt-toolbar';
 import { HeldTabRow, TabPanel, TabsRoot } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/toast';
 import { type TopicDialog, TopicDialogs, topicFilter } from './topic-controls';
@@ -181,8 +186,11 @@ function measuredChoicesFor({
   };
 }
 
-function libraryFilterBar(hasPrompts: boolean, controls: FilterBarProps): ReactNode {
-  return hasPrompts ? <FilterBar {...controls} /> : undefined;
+function libraryFilterBar(
+  hasPrompts: boolean,
+  controls: FilterBarProps,
+): FilterBarProps | undefined {
+  return hasPrompts ? controls : undefined;
 }
 
 function libraryTabs(
@@ -355,6 +363,7 @@ export function PromptLibrary() {
       <>
         <PromptTable
           prompts={visible}
+          search={<PromptSearch value={search} onValueChange={setSearch} />}
           actions={edits?.rows}
           onOpenAnswer={(prompt: Prompt, answer: PromptAnswerRef) =>
             evidence.open({ ...answer, promptId: prompt.id, promptText: prompt.text })
@@ -401,7 +410,7 @@ export function PromptLibrary() {
             selected={STATUS_LABELS[statusFilter]}
           />
         }
-        filters={<FilterBar />}
+        filters={{}}
       >
         <StateBlock kind="loading" label="Loading prompts…" shape={{ kind: 'table', columns: 8 }} />
       </ReportPage>
@@ -416,8 +425,6 @@ export function PromptLibrary() {
         filters={libraryFilterBar(
           hasPrompts,
           promptFilterControls({
-            search,
-            onSearchChange: setSearch,
             filters,
             onFiltersChange: setFilters,
             personas,

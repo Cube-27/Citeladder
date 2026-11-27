@@ -4,7 +4,9 @@ import { cn } from '@/lib/utils';
 
 import './product-frame.css';
 
-export type FrameFit = 'fluid' | 'scale';
+const FRAME_FIT = { fluid: 'cl-frame--fluid', scale: 'cl-frame--scale' } as const;
+
+export type FrameFit = keyof typeof FRAME_FIT;
 
 export function ProductFrame({
   children,
@@ -22,7 +24,7 @@ export function ProductFrame({
   caption?: ReactNode;
 }>) {
   return (
-    <figure className={cn('cl-frame', `cl-frame--${fit}`, stage && 'cl-frame--stage')}>
+    <figure className={cn('cl-frame', FRAME_FIT[fit], stage && 'cl-frame--stage')}>
       <div className="cl-frame-card">
         <div // NOSONAR
           className="cl-frame-well"

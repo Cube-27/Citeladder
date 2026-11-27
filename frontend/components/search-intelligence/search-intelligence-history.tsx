@@ -4,7 +4,7 @@ import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AreaChart } from '@/components/ui/area-chart';
 import { type TrendPoint } from '@/components/ui/series-data';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import {
   searchIntelligenceQueries,
   type SearchIntelligenceDataset,
@@ -80,11 +80,15 @@ function HistoryBody({ query }: Readonly<{ query: ReturnType<typeof useHistory> 
     }));
   return (
     <AppGrid layout="halves">
-      <p className={textRole('caption', 'shell:col-span-2')}>
-        {formatWindowDate(first.date)} to {formatWindowDate(last.date)}
-      </p>
-      <Stack gap="compact" className="min-w-0 content-start">
-        <h3 className={textRole('subheading', 'min-h-6')}>Total backlinks</h3>
+      <div className="shell:col-span-2">
+        <Text as="p" variant="caption">
+          {formatWindowDate(first.date)} to {formatWindowDate(last.date)}
+        </Text>
+      </div>
+      <Stack gap="compact" box="shrink" content="start">
+        <SectionHeader>
+          <SectionTitle level={3}>Total backlinks</SectionTitle>
+        </SectionHeader>
         <AreaChart
           label="Saved monthly backlink totals"
           name="Backlinks"
@@ -94,8 +98,10 @@ function HistoryBody({ query }: Readonly<{ query: ReturnType<typeof useHistory> 
           you={false}
         />
       </Stack>
-      <Stack gap="compact" className="min-w-0 content-start">
-        <h3 className={textRole('subheading', 'min-h-6')}>Monthly changes</h3>
+      <Stack gap="compact" box="shrink" content="start">
+        <SectionHeader>
+          <SectionTitle level={3}>Monthly changes</SectionTitle>
+        </SectionHeader>
         <AreaChart
           label="Saved monthly new and lost backlinks"
           name="New backlinks"

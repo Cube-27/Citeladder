@@ -1,7 +1,7 @@
 import { PageTabEnd } from '@/components/templates/page-tab-end';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { Section, SectionHeader } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
 
@@ -23,11 +23,13 @@ export function ProbeLede({
     <Section>
       <SectionHeader>
         <PageTabEnd>
-          <p className={textRole('caption', 'text-ink-2 min-w-0 truncate')}>
+          <Text as="p" variant="caption" box="shrink" wrap="truncate">
             From the market probe · {formatDisplayDate(createdAt, timeZone)}
-          </p>
+          </Text>
         </PageTabEnd>
-        <h2 className={textRole('heading')}>{headline}</h2>
+        <Text as="h2" variant="heading">
+          {headline}
+        </Text>
       </SectionHeader>
       <FigureStrip label={label} segments={segments} subLine textValues={textValues} />
     </Section>

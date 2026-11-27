@@ -1,53 +1,252 @@
-import type { ComponentPropsWithoutRef, ComponentPropsWithRef, ElementType } from 'react';
+import type { ComponentPropsWithRef, ElementType } from 'react';
 
 import { cn } from '@/lib/utils';
 
 const STACK_GAP = {
-  section: 'gap-[var(--page-section-gap)]',
-  workspace: 'gap-[var(--workspace-gap)]',
-  compact: 'gap-[var(--compact-gap)]',
+  section: 'gap-section',
+  card: 'gap-card',
+  workspace: 'gap-workspace',
+  compact: 'gap-compact',
+  group: 'gap-3',
+  loose: 'gap-4',
+  choices: 'gap-x-4 gap-y-2',
+  'page-top': 'gap-page-top',
   item: 'gap-2',
   tight: 'gap-1',
+  none: 'gap-0',
 } as const;
 
+const PAD_TOP = {
+  'flow-gap': 'pt-flow-gap',
+} as const;
+
+export type Pad = Readonly<{ top?: keyof typeof PAD_TOP }>;
+
 export type StackGap = keyof typeof STACK_GAP;
+
+const STACK_ALIGN = {
+  stretch: undefined,
+  start: 'justify-items-start',
+  center: 'justify-items-center',
+  end: 'justify-items-end',
+} as const;
+
+type StackAlign = keyof typeof STACK_ALIGN;
+
+const STACK_LIST = {
+  none: undefined,
+  plain: 'list-none',
+  decimal: 'list-inside list-decimal',
+} as const;
+
+const BOX = {
+  auto: undefined,
+  shrink: 'min-w-0',
+  fill: 'min-w-0 flex-1',
+  fixed: 'shrink-0',
+  fit: 'w-fit max-w-full',
+  'fixed-full': 'max-w-full shrink-0',
+  line: 'h-5 phone:h-auto',
+  target: 'min-h-target',
+  end: 'ms-auto',
+  scroll: 'max-h-64 overflow-y-auto overscroll-contain',
+} as const;
+
+export type Box = keyof typeof BOX;
+
+const STACK_CONTENT = {
+  stretch: undefined,
+  start: 'content-start',
+} as const;
 
 export function Stack({
   as,
   gap = 'compact',
-  className,
+  align = 'stretch',
+  list = 'none',
+  box = 'auto',
+  content = 'stretch',
+  inset = false,
+  pad,
+  hideEmpty = false,
+  shrinkTrack = false,
+  anchor = false,
   children,
   ...props
-}: Readonly<ComponentPropsWithRef<'div'> & { as?: ElementType; gap?: StackGap }>) {
+}: Readonly<
+  Omit<ComponentPropsWithRef<'div'>, 'className' | 'style'> & {
+    as?: ElementType;
+    gap?: StackGap;
+    align?: StackAlign;
+    list?: keyof typeof STACK_LIST;
+    box?: Box;
+    content?: keyof typeof STACK_CONTENT;
+    inset?: boolean;
+    pad?: Pad;
+    hideEmpty?: boolean;
+    shrinkTrack?: boolean;
+    anchor?: boolean;
+  }
+>) {
   const Component = as ?? 'div';
   return (
-    <Component {...props} className={cn('grid', STACK_GAP[gap], className)}>
+    <Component
+      {...props}
+      className={cn(
+        'grid',
+        STACK_GAP[gap],
+        STACK_ALIGN[align],
+        STACK_LIST[list],
+        BOX[box],
+        STACK_CONTENT[content],
+        inset && 'p-4',
+        pad?.top && PAD_TOP[pad.top],
+        hideEmpty && 'empty:hidden',
+        shrinkTrack && 'grid-cols-1',
+        anchor && 'group scroll-mt-4',
+      )}
+    >
       {children}
     </Component>
   );
 }
 
 const INLINE_GAP = {
-  workspace: 'gap-[var(--workspace-gap)]',
-  compact: 'gap-[var(--compact-gap)]',
+  workspace: 'gap-workspace',
+  compact: 'gap-compact',
+  group: 'gap-3',
+  loose: 'gap-4',
+  wide: 'gap-6',
   item: 'gap-2',
   tight: 'gap-1',
-  meta: 'flex-wrap gap-x-4 gap-y-1',
-  status: 'flex-wrap gap-x-2 gap-y-1',
+  none: 'gap-0',
+  meta: 'gap-x-4 gap-y-1',
+  status: 'gap-x-2 gap-y-1',
 } as const;
 
 export type InlineGap = keyof typeof INLINE_GAP;
 
+const INLINE_ALIGN = {
+  center: 'items-center',
+  start: 'items-start',
+  end: 'items-end',
+  baseline: 'items-baseline',
+  stretch: 'items-stretch',
+} as const;
+
+type InlineAlign = keyof typeof INLINE_ALIGN;
+
+const INLINE_JUSTIFY = {
+  start: undefined,
+  center: 'justify-center',
+  end: 'justify-end',
+  between: 'justify-between',
+} as const;
+
+type InlineJustify = keyof typeof INLINE_JUSTIFY;
+
+const WRAPPING_GAPS: ReadonlySet<InlineGap> = new Set(['meta', 'status']);
+
 export function Inline({
   as,
   gap = 'item',
-  className,
+  align = 'center',
+  justify = 'start',
+  wrap,
+  box = 'auto',
+  inline = false,
+  nowrap = false,
+  stackBelow,
+  showFrom,
+  hideEmpty = false,
   children,
   ...props
-}: Readonly<ComponentPropsWithoutRef<'div'> & { as?: ElementType; gap?: InlineGap }>) {
+}: Readonly<
+  Omit<ComponentPropsWithRef<'div'>, 'className' | 'style'> & {
+    as?: ElementType;
+    gap?: InlineGap;
+    align?: InlineAlign;
+    justify?: InlineJustify;
+    wrap?: boolean | 'phone';
+    box?: Box;
+    inline?: boolean;
+    nowrap?: boolean;
+    stackBelow?: 'desktop';
+    showFrom?: 'desktop';
+    hideEmpty?: boolean;
+  }
+>) {
+  const Component = as ?? 'div';
+  const wraps = wrap ?? WRAPPING_GAPS.has(gap);
+  return (
+    <Component
+      {...props}
+      className={cn(
+        'flex min-w-0',
+        INLINE_ALIGN[align],
+        INLINE_JUSTIFY[justify],
+        wraps === 'phone' ? 'phone:flex-wrap' : wraps && 'flex-wrap',
+        INLINE_GAP[gap],
+        BOX[box],
+        inline && 'inline-flex',
+        nowrap && 'whitespace-nowrap',
+        stackBelow && 'desktop:flex-row desktop:items-center flex-col items-stretch',
+        showFrom && 'desktop:flex hidden',
+        hideEmpty && 'empty:hidden',
+      )}
+    >
+      {children}
+    </Component>
+  );
+}
+
+const COLUMN_TEMPLATE = {
+  'label-value': 'grid-cols-label-value phone:grid-cols-1',
+  'fields-action': 'grid-cols-fields-action',
+  'lead-body-end': 'grid-cols-lead-body-end',
+  'lead-body': 'grid-cols-lead-body',
+  'body-end': 'grid-cols-body-end',
+  'body-field': 'grid-cols-body-field',
+  choices: 'grid-cols-choices justify-start',
+  'rail-panel': 'desktop:grid-cols-label-value',
+  'main-aside': 'column-wide:grid-cols-main-aside',
+  'aside-main': 'column-wide:grid-cols-aside-main',
+  pair: 'column-split:grid-cols-2',
+  halves: 'desktop:grid-cols-2',
+  two: 'grid-cols-2',
+  record: 'column-split:grid-cols-record',
+  thirds: 'column-split:grid-cols-3',
+} as const;
+
+type ColumnTemplate = keyof typeof COLUMN_TEMPLATE;
+
+export function Columns({
+  as,
+  template,
+  gap = 'compact',
+  align = 'stretch',
+  children,
+  ...props
+}: Readonly<
+  Omit<ComponentPropsWithRef<'div'>, 'className' | 'style'> & {
+    as?: ElementType;
+    template: ColumnTemplate;
+    gap?: StackGap;
+    align?: InlineAlign;
+  }
+>) {
   const Component = as ?? 'div';
   return (
-    <Component {...props} className={cn('flex min-w-0 items-center', INLINE_GAP[gap], className)}>
+    <Component
+      {...props}
+      data-columns={template}
+      className={cn(
+        'grid min-w-0 grid-cols-1',
+        COLUMN_TEMPLATE[template],
+        STACK_GAP[gap],
+        INLINE_ALIGN[align],
+      )}
+    >
       {children}
     </Component>
   );

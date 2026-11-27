@@ -6,7 +6,6 @@ import { PerceptionView } from '@/components/perception/perception-brand';
 import { PerceptionFactChecking } from '@/components/perception/perception-factcheck';
 import { PerceptionProbe, useProbeControls } from '@/components/perception/perception-probe';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar } from '@/components/ui/filter-bar';
 import type { FigureSegment } from '@/components/ui/figure-strip';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -55,7 +54,7 @@ export function PerceptionScreen() {
       <ReportPage
         tabs={<TabRow items={items} ariaLabel="Perception views" />}
         actions={probeControls.actions ?? null}
-        filters={ready && !probe ? <FilterBar filters={pageFilters} /> : undefined}
+        filters={ready && !probe ? { filters: pageFilters } : undefined}
       >
         {probe ? null : <RunBanner queries={queries} />}
         <TabPanel value={tab}>

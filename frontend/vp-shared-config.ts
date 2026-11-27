@@ -1,3 +1,6 @@
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+
 import type { OxlintConfig } from 'vite-plus/lint';
 import type { OxfmtConfig } from 'vite-plus/fmt';
 
@@ -113,9 +116,52 @@ const CONSOLE_FILES = [
   '**/apps/docs/public/templates/**',
 ];
 const TEST_FILES = ['**/*.{test,spec}.{ts,tsx}', 'test/**', 'e2e/**', '**/test/**'];
+const RADIX_IMPORT = {
+  group: ['@radix-ui/*'],
+  message: 'Feature code uses the primitives in components/ui instead of importing Radix.',
+};
+const DESIGN_CANARY = 'scripts/design-lint/canary/**';
+const DESIGN_SOURCES = [
+  'components/**',
+  'apps/*/src/**',
+  'lib/**',
+  'packages/mcp-app/src/**',
+  DESIGN_CANARY,
+];
+const DESIGN_SCRIPTS = DESIGN_SOURCES.map((glob) => `${glob}/*.{ts,tsx}`);
+type LintRules = NonNullable<OxlintConfig['rules']>;
+const DESIGN_RULES = {
+  'shadcn/no-raw-colors': 'error',
+  'shadcn/no-arbitrary-values': ['error', { scanAllStrings: true }],
+  'shadcn/no-inline-styles': 'error',
+  'shadcn/no-unknown-classes': 'error',
+  'shadcn/require-static-classes': 'error',
+  'shadcn/no-restyle': ['error', { allow: ['layout'] }],
+  'design/reset-survivor': 'error',
+  'design/colour-literal': 'error',
+  'design/monochrome-colour': 'error',
+} satisfies LintRules;
+const SCREEN_RULES = {
+  'design/plain-element': 'error',
+  'design/surface-variant': 'error',
+  'design/raw-media': 'error',
+} satisfies LintRules;
+const WEBSITE_SOURCES = ['components/marketing/**', 'apps/marketing/**', 'apps/docs/**'];
+const offRules = (rules: LintRules): LintRules =>
+  Object.fromEntries(Object.keys(rules).map((rule) => [rule, 'off']));
 
 export const lintConfig: OxlintConfig = {
   plugins: ['typescript'],
+  jsPlugins: [
+    createRequire(import.meta.url).resolve('@shadcn/lint'),
+    fileURLToPath(new URL('./scripts/design-lint/plugin.mjs', import.meta.url)),
+  ],
+  settings: {
+    shadcn: {
+      ui: '@/components/ui',
+      note: 'Design values come from role tokens; a new look adds a role token (docs/design.md#design-values).',
+    },
+  },
   options: {
     denyWarnings: true,
     reportUnusedDisableDirectives: 'error',
@@ -140,6 +186,7 @@ export const lintConfig: OxlintConfig = {
     '**/test-results/**',
     '**/services/*/src/generated/**',
     '**/packages/*/src/generated/**',
+    DESIGN_CANARY,
   ],
   rules: {
     'no-array-constructor': 'error',
@@ -176,16 +223,32 @@ export const lintConfig: OxlintConfig = {
     'typescript/prefer-as-const': 'error',
     'typescript/prefer-namespace-keyword': 'error',
     'typescript/triple-slash-reference': 'error',
-    'no-restricted-imports': ['error', { paths: [ICONS_IMPORT, SEARCH_PARAMS_IMPORT] }],
+    'no-restricted-imports': [
+      'error',
+      { paths: [ICONS_IMPORT, SEARCH_PARAMS_IMPORT], patterns: [RADIX_IMPORT] },
+    ],
   },
   overrides: [
     {
       files: ['**/lib/icons.ts'],
-      rules: { 'no-restricted-imports': ['error', { paths: [SEARCH_PARAMS_IMPORT] }] },
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          { paths: [SEARCH_PARAMS_IMPORT], patterns: [RADIX_IMPORT] },
+        ],
+      },
     },
     {
       files: ['**/lib/navigation/**'],
-      rules: { 'no-restricted-imports': ['error', { paths: [ICONS_IMPORT] }] },
+      rules: {
+        'no-restricted-imports': ['error', { paths: [ICONS_IMPORT], patterns: [RADIX_IMPORT] }],
+      },
+    },
+    {
+      files: ['components/ui/**'],
+      rules: {
+        'no-restricted-imports': ['error', { paths: [ICONS_IMPORT, SEARCH_PARAMS_IMPORT] }],
+      },
     },
     {
       files: BROWSER_FILES,
@@ -287,6 +350,14 @@ export const lintConfig: OxlintConfig = {
         node: true,
       },
     },
+    { files: DESIGN_SCRIPTS, rules: { ...DESIGN_RULES, ...SCREEN_RULES } },
+    { files: ['components/ui/**'], rules: offRules(SCREEN_RULES) },
+    { files: WEBSITE_SOURCES, rules: { 'design/raw-media': 'off' } },
+    {
+      files: DESIGN_SOURCES.map((glob) => `${glob}/*.astro`),
+      rules: { 'design/astro-class': 'error' },
+    },
+    { files: TEST_FILES, rules: offRules({ ...DESIGN_RULES, ...SCREEN_RULES }) },
     {
       files: ['**/*.ts', '**/*.tsx', '**/*.mts', '**/*.cts'],
       rules: {

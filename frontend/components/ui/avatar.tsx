@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { cn, emailInitials } from '@/lib/utils';
 
 const PLACEMENT = {
-  byline: 'size-5 type-caption',
-  row: 'size-7 type-caption',
-  profile: 'size-10 type-body',
+  byline: 'size-5 text-caption',
+  row: 'size-7 text-caption',
+  profile: 'size-10 text-body',
 } as const;
 
 export type AvatarPlacement = keyof typeof PLACEMENT;

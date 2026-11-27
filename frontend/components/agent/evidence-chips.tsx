@@ -9,7 +9,7 @@ export function EvidenceChips({
   const groups = groupEvidence(refs);
   if (groups.length === 0) return null;
   return (
-    <Inline as="ul" aria-label={label} className="flex-wrap">
+    <Inline as="ul" aria-label={label} wrap>
       {groups.map((group) => {
         const text = group.count > 1 ? `${group.label} · ${group.count}` : group.label;
         return (

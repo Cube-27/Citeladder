@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/section';
 import { ChartFrame } from '@/components/ui/chart-frame';
 import { FigureStrip } from '@/components/ui/figure-strip';
+import { Text } from '@/components/ui/typography';
 
 const COVERAGE_LABELS: Record<CoverageState, string> = {
   complete: 'Complete coverage',
@@ -206,7 +207,7 @@ function PageKindTable({
                     className="w-auto"
                   >
                     <Inline as="span">
-                      <Icon icon={open ? ChevronDown : ChevronRight} className="text-ink-2" />
+                      <Icon icon={open ? ChevronDown : ChevronRight} tone="ink-2" />
                       <PageKindBadge pageKind={pageKind.page_kind} />
                     </Inline>
                   </Pressable>
@@ -247,16 +248,12 @@ function PageKindPages({
 }: Readonly<{ id: string; pages: ArchitectureNode[]; crawlId: string | null }>) {
   const span = useShownSpan(PAGE_KIND_KEYS);
   return (
-    <TableRow id={id} className="bg-well hover:bg-well">
+    <TableRow id={id} well>
       <TableCell colSpan={span}>
         {pages.length === 0 ? (
           <StateBlock kind="empty" inline message="No pages of this kind to list." />
         ) : (
-          <Stack
-            as="ul"
-            gap="item"
-            className="content-scroll max-h-64 overflow-y-auto overscroll-contain"
-          >
+          <Stack as="ul" gap="item" box="scroll">
             {pages.map((page) => (
               <li key={page.site_url_id} className="min-w-0">
                 {crawlId ? (
@@ -269,9 +266,9 @@ function PageKindPages({
                     <UrlText url={page.url} />
                   </PageLink>
                 ) : (
-                  <span className="type-body text-ink flex min-w-0">
+                  <Text variant="body" box="row">
                     <UrlText url={page.url} />
-                  </span>
+                  </Text>
                 )}
               </li>
             ))}
@@ -363,11 +360,11 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
               </Stack>
             </ChartFrame>
             {data.structure_depth.unmeasured_page_count > 0 ? (
-              <p className="type-caption">
+              <Text as="p" variant="caption">
                 {data.structure_depth.unmeasured_page_count === 1
                   ? '1 crawled page has no measured depth.'
                   : `${formatCount(data.structure_depth.unmeasured_page_count)} crawled pages have no measured depth.`}
-              </p>
+              </Text>
             ) : null}
           </Stack>
         </SectionContent>

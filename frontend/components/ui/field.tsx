@@ -63,7 +63,7 @@ export function Field({
       data-form-field=""
       className={cn('flex min-w-0 flex-col gap-1 [[data-public-surface]_&]:gap-2', className)}
     >
-      <label htmlFor={id} className="type-label [[data-public-surface]_&]:font-plain">
+      <label htmlFor={id} className="text-label text-ink [[data-public-surface]_&]:font-plain">
         {name}
       </label>
       {control}
@@ -92,14 +92,14 @@ export function FieldRow({
     <div
       data-form-field=""
       className={cn(
-        'grid min-w-0 grid-cols-[10rem_minmax(0,1fr)] items-start gap-x-6 gap-y-1 phone:grid-cols-1',
+        'grid min-w-0 grid-cols-label-value items-start gap-x-6 gap-y-1 phone:grid-cols-1',
         className,
       )}
     >
       <Label
         htmlFor={labelFor}
         id={labelId}
-        className="type-label phone:min-h-0 flex min-h-8 items-center"
+        className="text-label text-ink phone:min-h-0 flex min-h-8 items-center"
       >
         {label}
         {required ? (
@@ -128,14 +128,14 @@ export function FieldFoot({
   let note: ReactNode = <span />;
   if (error) {
     note = (
-      <p id={id} role="alert" className="type-caption text-negative flex items-start gap-1">
+      <p id={id} role="alert" className="text-caption text-negative flex items-start gap-1">
         <Icon icon={CircleAlert} className="my-0 [[data-public-surface]_&]:hidden" />
         <span>{error}</span>
       </p>
     );
   } else if (hint) {
     note = (
-      <p id={id} className="type-caption">
+      <p id={id} className="text-caption text-ink-2">
         {hint}
       </p>
     );
@@ -146,7 +146,7 @@ export function FieldFoot({
       {count ? (
         <span
           className={cn(
-            'type-caption ms-auto shrink-0 tabular-nums',
+            'text-caption text-ink-2 ms-auto shrink-0 tabular-nums',
             count.used >= count.max ? 'text-ink' : 'text-ink-2',
           )}
         >

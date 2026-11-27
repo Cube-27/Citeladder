@@ -1,6 +1,6 @@
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
-import { InlineFigure } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { Zap } from '@/lib/icons';
 import type { DemandSnapshot } from '@/lib/api/demand';
@@ -14,27 +14,34 @@ export function DemandLatentDemand({ snapshot }: Readonly<{ snapshot: DemandSnap
   const known = observed.filter((value): value is number => value !== null);
   const partial = known.length > 0 && known.length < observed.length;
   return (
-    <Inline as="span" gap="tight" className="type-caption">
+    <Inline as="span" gap="tight">
       <Icon icon={Zap} />
       {observed.length > 0 && known.length === 0 ? (
         <>
-          <Absence state="not_measured" /> latent demand
+          <Text variant="caption">
+            <Absence state="not_measured" />
+          </Text>
+          <Text variant="caption">{' latent demand'}</Text>
         </>
       ) : (
         <>
-          <InlineFigure className="text-ink">
+          <Text variant="caption" tone="ink" numeric>
             {formatCount(known.reduce((sum, value) => sum + value, 0))}
-          </InlineFigure>
+          </Text>
           {partial ? (
             <>
-              {' impressions on '}
-              <InlineFigure>{formatCount(known.length)}</InlineFigure>
-              {' of '}
-              <InlineFigure>{formatCount(observed.length)}</InlineFigure>
-              {' non-branded signals'}
+              <Text variant="caption">{' impressions on '}</Text>
+              <Text variant="caption" numeric>
+                {formatCount(known.length)}
+              </Text>
+              <Text variant="caption">{' of '}</Text>
+              <Text variant="caption" numeric>
+                {formatCount(observed.length)}
+              </Text>
+              <Text variant="caption">{' non-branded signals'}</Text>
             </>
           ) : (
-            ' impressions on non-branded signals'
+            <Text variant="caption">{' impressions on non-branded signals'}</Text>
           )}
         </>
       )}

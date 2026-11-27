@@ -11,15 +11,15 @@ import { FIELD_EDGE } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 const textareaClasses =
-  'text-ink placeholder:text-ink-placeholder type-body block w-full rounded-control border disabled:cursor-not-allowed';
+  'text-ink placeholder:text-ink-placeholder text-body block w-full rounded-control border disabled:cursor-not-allowed';
 
 const fieldClasses = cn(
-  'focus-input disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-50 field-sizing-content min-h-[calc(var(--field-min-rows)*1lh+1rem+2px)] max-h-[calc(var(--field-max-rows)*1lh+1rem+2px)] resize-none px-3 py-2 transition-[background-color,border-color,outline-color] duration-[var(--motion-fast)] app:duration-150',
+  'focus-input disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-disabled field-sizing-content min-h-field-rows-min max-h-field-rows-max resize-none px-3 py-2 transition-field duration-fast app:duration-fast',
   FIELD_EDGE,
 );
 
 const composerClasses =
-  'field-sizing-content min-h-[max(var(--control-md),calc(var(--field-min-rows)*1lh+0.5rem))] min-w-0 resize-none overflow-y-auto border-0 bg-transparent px-2 py-1 [overflow-wrap:anywhere] max-h-[calc(var(--field-max-rows)*1lh+0.5rem)]';
+  'field-sizing-content min-h-composer-rows-min min-w-0 resize-none overflow-y-auto border-0 bg-transparent px-2 py-1 wrap-anywhere max-h-composer-rows-max';
 
 const sizesItself = () => globalThis.CSS?.supports('field-sizing', 'content') ?? false;
 
@@ -28,6 +28,7 @@ export function Textarea({
   placement = 'field',
   rows: rowsProp,
   maxRows = 8,
+  numeric = false,
   style,
   ref,
   ...props
@@ -35,6 +36,7 @@ export function Textarea({
   ComponentPropsWithoutRef<'textarea'> & {
     placement?: 'field' | 'composer';
     maxRows?: number;
+    numeric?: boolean;
     ref?: Ref<HTMLTextAreaElement>;
   }
 >) {
@@ -66,7 +68,12 @@ export function Textarea({
       ref={setRef}
       rows={grows ? 1 : rows}
       style={growStyle}
-      className={cn(textareaClasses, grows ? composerClasses : fieldClasses, className)}
+      className={cn(
+        textareaClasses,
+        grows ? composerClasses : fieldClasses,
+        numeric && 'tabular-nums',
+        className,
+      )}
       {...props}
     />
   );

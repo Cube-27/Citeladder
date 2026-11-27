@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { RungTrail, type RungStatus } from '@/components/ui/rung-trail';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import {
   performanceQueries,
   type ProjectReadiness,
@@ -92,7 +92,11 @@ export function ReadinessLadder({
             status: ladderStepState(index, reached),
           }))}
         />
-        {note ? <p className={textRole('caption')}>{note}</p> : null}
+        {note ? (
+          <Text as="p" variant="caption">
+            {note}
+          </Text>
+        ) : null}
       </Stack>
     </Section>
   );

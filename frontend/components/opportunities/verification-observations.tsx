@@ -1,6 +1,6 @@
 import { Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { movementLegLabel, movementStateLabel } from '@/lib/agent/vocabulary';
 
 type VerificationResult = Record<string, unknown>;
@@ -15,7 +15,7 @@ export function VerificationObservations({
   const result = implementation?.verification_events?.at(-1)?.result;
   if (!result) return null;
   return (
-    <Stack className="type-caption">
+    <Stack>
       <ComparableMovement result={result} />
       <GapChanges result={result} />
       {showAuditLink ? (
@@ -37,11 +37,13 @@ function ComparableMovement({ result }: Readonly<{ result: VerificationResult | 
   if (!entries.length) return null;
   return (
     <Stack gap="tight">
-      <p className={textRole('body', 'text-ink-2')}>Comparable movement</p>
+      <Text as="p" variant="body" tone="ink-2">
+        Comparable movement
+      </Text>
       {entries.map(([label, leg]) => (
-        <p key={label}>
+        <Text as="p" variant="caption" key={label}>
           {label}: {movementStateLabel(legState(leg))}
-        </p>
+        </Text>
       ))}
     </Stack>
   );
@@ -50,18 +52,28 @@ function ComparableMovement({ result }: Readonly<{ result: VerificationResult | 
 function GapChanges({ result }: Readonly<{ result: VerificationResult | undefined }>) {
   const changes = result?.gap_changes;
   if (!changes || typeof changes !== 'object' || !('state' in changes)) return null;
-  if (changes.state === 'not_run') return <p>Gap comparison: no reading yet</p>;
-  if (changes.state !== 'available') return <p>Gap comparison: not available</p>;
+  if (changes.state === 'not_run')
+    return (
+      <Text as="p" variant="caption">
+        Gap comparison: no reading yet
+      </Text>
+    );
+  if (changes.state !== 'available')
+    return (
+      <Text as="p" variant="caption">
+        Gap comparison: not available
+      </Text>
+    );
   const lists = new Map(Object.entries(changes));
   const count = (key: string) => {
     const value = lists.get(key);
     return Array.isArray(value) ? value.length : 0;
   };
   return (
-    <p>
+    <Text as="p" variant="caption">
       Gaps: {count('no_longer_observed')} no longer observed · {count('persistent')} persistent ·{' '}
       {count('new')} new
-    </p>
+    </Text>
   );
 }
 

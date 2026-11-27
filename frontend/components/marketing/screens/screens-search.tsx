@@ -94,11 +94,7 @@ export function ScreenPerception() {
     <Vignette
       title="Brand perception"
       meta="Acme Analytics · themes in 412 answers"
-      badge={
-        <Badge tone="positive" className="cl-vig-sentiment">
-          Net sentiment +46
-        </Badge>
-      }
+      badge={<Badge tone="selected">Net sentiment +46</Badge>}
     >
       <VignetteRows
         label="Themes in answers about Acme Analytics"
@@ -107,14 +103,7 @@ export function ScreenPerception() {
           label: row.theme,
           secondary: `${row.positive} positive · ${row.negative} negative`,
           extra: <VignetteBar share={row.positive / (row.positive + row.negative)} />,
-          value: (
-            <Badge
-              tone={row.tone === 'Positive' ? 'positive' : 'neutral'}
-              className="cl-vig-sentiment"
-            >
-              {row.tone}
-            </Badge>
-          ),
+          value: <Badge tone="selected">{row.tone}</Badge>,
         }))}
       />
     </Vignette>

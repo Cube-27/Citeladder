@@ -29,7 +29,6 @@ import {
   type SearchGroup,
 } from '@/lib/visibility/fanout-grouping';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
-import { textRole } from '@/components/ui/typography';
 import { TABLE_SEARCH_DEBOUNCE_MS } from '@/lib/config/operational';
 import { useDebounced } from '@/lib/use-debounced';
 import {
@@ -353,7 +352,7 @@ function SearchGroupRows({
       {group.label ? (
         <TableRow>
           <TableCell colSpan={COLUMNS.length}>
-            <ClampText className={textRole('captionStrong')}>{group.label}</ClampText>
+            <ClampText text="captionStrong">{group.label}</ClampText>
           </TableCell>
         </TableRow>
       ) : null}
@@ -370,7 +369,7 @@ function SearchGroupRows({
       ))}
       {note ? (
         <TableRow>
-          <TableCell colSpan={COLUMNS.length} className={textRole('caption', 'text-ink-2')}>
+          <TableCell colSpan={COLUMNS.length} tone="ink-2">
             {note}
           </TableCell>
         </TableRow>
@@ -395,8 +394,8 @@ function QueryRow({
   return (
     <TableRow>
       <TableCell nested={nested}>
-        <Inline as="span" className="items-start">
-          <Icon icon={Search} className="text-ink-2" />
+        <Inline as="span" align="start">
+          <Icon icon={Search} tone="ink-2" />
           <ClampText>{query}</ClampText>
         </Inline>
       </TableCell>

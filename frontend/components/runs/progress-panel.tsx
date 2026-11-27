@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
-import { CircleStop, Download, RotateCcw } from '@/lib/icons';
+import { CircleStop, RotateCcw } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { marketLabel } from '@citeladder/contracts/markets';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Spinner } from '@/components/ui/spinner';
 import { ProgressMeter } from '@/components/ui/progress-meter';
-import { humanizeApiError } from '@/lib/api/errors';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@citeladder/contracts';
@@ -22,39 +21,8 @@ import { formatCount, formatDisplayTime } from '@/lib/format';
 import { AUDIT_STATES } from '@/lib/runs/status';
 import { Notice } from '@/components/ui/notice';
 import { FigureStrip } from '@/components/ui/figure-strip';
-
-type ExportFormat = 'csv' | 'md';
-
-export function useRunExport(audit: Audit | undefined) {
-  const [exporting, setExporting] = useState<{ auditId: string; format: ExportFormat } | null>(
-    null,
-  );
-  const [exportError, setExportError] = useState<{ auditId: string; message: string } | null>(null);
-
-  async function download(format: ExportFormat) {
-    if (!audit) return;
-    const auditId = audit.id;
-    setExporting({ auditId, format });
-    setExportError(null);
-    try {
-      const blob = await runsApi.downloadExport(auditId, format, {
-        workspaceId: audit.workspace_id,
-      });
-      saveBlob(blob, `audit-${auditId}.${format}`);
-    } catch (error) {
-      setExportError({ auditId, message: humanizeApiError(error).message });
-    } finally {
-      setExporting((current) => (current?.auditId === auditId ? null : current));
-    }
-  }
-
-  const current = audit?.id;
-  return {
-    exporting: exporting && exporting.auditId === current ? exporting.format : null,
-    exportError: exportError && exportError.auditId === current ? exportError.message : null,
-    onExport: (format: ExportFormat) => void download(format),
-  };
-}
+import { ExportAction } from '@/components/ui/export-action';
+import { Text } from '@/components/ui/typography';
 
 export function RunActions({
   audit,
@@ -62,28 +30,26 @@ export function RunActions({
   onCancel,
   onRerunFailures,
   rerunPending = false,
-  onExport,
-  exporting,
 }: Readonly<{
   audit: Audit;
   cancelPending: boolean;
   onCancel?: () => void;
   onRerunFailures?: () => void;
   rerunPending?: boolean;
-  onExport: (format: ExportFormat) => void;
-  exporting: ExportFormat | null;
 }>) {
   const { cancelable } = audit;
   return (
     <>
-      <Button variant="secondary" onClick={() => onExport('csv')} disabled={exporting !== null}>
-        <Icon icon={Download} />
-        {exporting === 'csv' ? 'Exporting…' : 'Export CSV'}
-      </Button>
-      <Button variant="secondary" onClick={() => onExport('md')} disabled={exporting !== null}>
-        <Icon icon={Download} />
-        {exporting === 'md' ? 'Exporting…' : 'Export Markdown'}
-      </Button>
+      <ExportAction
+        scope="page"
+        formats={['csv', 'md']}
+        onExport={async (format) => {
+          const blob = await runsApi.downloadExport(audit.id, format, {
+            workspaceId: audit.workspace_id,
+          });
+          saveBlob(blob, `audit-${audit.id}.${format}`);
+        }}
+      />
       {onCancel && (cancelable || cancelPending) ? (
         <Button variant="danger" onClick={onCancel} disabled={cancelPending}>
           <Icon icon={CircleStop} />
@@ -116,10 +82,10 @@ function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: bo
   const engines = useEngineCatalog();
   const timeZone = useDisplayTimeZone();
   return (
-    <Inline className="flex-wrap">
-      <span className="type-body text-ink-2">
+    <Inline wrap>
+      <Text variant="body" tone="ink-2">
         Started {formatDisplayTime(audit.created_at, timeZone)}
-      </span>
+      </Text>
       <StatusMark variant="run-status" value={AUDIT_STATES[audit.status].badge}>
         {AUDIT_STATES[audit.status].label}
       </StatusMark>
@@ -192,14 +158,12 @@ function ProgressNotices({
 
 export function ProgressPanel({
   audit,
-  exportError,
   cancelNotice,
   onCancelRetry,
   rerunNotice,
   onRerunRetry,
 }: Readonly<{
   audit: Audit;
-  exportError?: string | null;
   cancelNotice?: MutationNoticeData | null;
   onCancelRetry?: () => void;
   rerunNotice?: MutationNoticeData | null;
@@ -224,7 +188,7 @@ export function ProgressPanel({
         }
       />
       <ProgressNotices
-        errorMessage={exportError ?? audit.error_message}
+        errorMessage={audit.error_message}
         cancelNotice={cancelNotice}
         onCancelRetry={onCancelRetry}
         rerunNotice={rerunNotice}

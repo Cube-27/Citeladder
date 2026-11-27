@@ -26,8 +26,8 @@ export function menuItemClasses({
   className,
 }: Readonly<{ danger?: boolean; className?: string }> = {}) {
   return cn(
-    'press [--press:0.98] focus-ring type-body relative flex min-h-[var(--control-md)] w-full shrink-0 cursor-pointer items-center gap-2 rounded-mark px-2 app:px-2.5 py-1 text-left select-none',
-    'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60 app:data-[disabled]:opacity-50',
+    'press press-soft focus-ring text-body text-ink relative flex min-h-control-md w-full shrink-0 cursor-pointer items-center gap-2 rounded-mark px-2 app:px-2.5 py-1 text-left select-none',
+    'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-disabled',
     danger
       ? 'text-negative data-[highlighted]:bg-negative-wash hover:bg-negative-wash data-[disabled]:hover:bg-transparent app:data-[highlighted]:bg-transparent app:hover:bg-transparent app:data-[highlighted]:overlay-hover app:hover:overlay-hover [&_svg]:text-negative'
       : 'text-ink aria-selected:overlay-selected not-aria-selected:data-[highlighted]:overlay-hover not-aria-selected:not-data-[disabled]:hover:overlay-hover',
@@ -63,6 +63,26 @@ export const MenuNested = createContext(false);
 export function MenuTrigger(props: Readonly<MenuPrimitive.DropdownMenuTriggerProps>) {
   return useContext(MenuNested) ? null : <MenuPrimitive.Trigger {...props} />;
 }
+export function MenuIconTrigger(
+  props: Readonly<Omit<MenuPrimitive.DropdownMenuTriggerProps, 'className' | 'asChild'>>,
+) {
+  if (useContext(MenuNested)) return null;
+  return (
+    <MenuPrimitive.Trigger
+      {...props}
+      className="focus-ring not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed rounded-control size-control-md flex shrink-0 items-center justify-center transition-colors"
+    />
+  );
+}
+
+export function MenuAlert({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <p role="alert" className="text-caption text-negative px-2 py-2">
+      {children}
+    </p>
+  );
+}
+
 export const MenuRadioGroup = MenuPrimitive.RadioGroup;
 export const MenuSub = MenuPrimitive.Sub;
 
@@ -111,7 +131,7 @@ export function MenuSubContent({
         collisionPadding={collisionPadding}
         className={cn(
           MENU_PANEL,
-          'flex max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] max-w-[min(28rem,calc(100vw-16px))] min-w-56 flex-col overflow-auto',
+          'flex max-h-menu-max max-w-menu-wide min-w-56 flex-col overflow-auto',
         )}
         {...props}
       >
@@ -139,7 +159,7 @@ export function MenuContent({
         collisionPadding={collisionPadding}
         className={cn(
           MENU_PANEL,
-          'flex max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] max-w-80 min-w-[var(--radix-dropdown-menu-trigger-width)] flex-col overflow-auto',
+          'flex max-h-menu-max max-w-80 min-w-menu-trigger flex-col overflow-auto',
         )}
         {...props}
       >
@@ -180,6 +200,7 @@ export function MenuItem({
   value,
   selected = false,
   danger = false,
+  quietWhenDisabled = false,
   className,
   children,
   ...props
@@ -190,16 +211,23 @@ export function MenuItem({
     value?: string;
     selected?: boolean;
     danger?: boolean;
+    quietWhenDisabled?: boolean;
   }
 >) {
   return (
-    <MenuPrimitive.Item className={menuItemClasses({ danger, className })} {...props}>
+    <MenuPrimitive.Item
+      className={menuItemClasses({
+        danger,
+        className: cn(quietWhenDisabled && 'data-[disabled]:text-ink-2', className),
+      })}
+      {...props}
+    >
       <Lead>{icon}</Lead>
       <span className={cn('min-w-0 truncate', value ? 'shrink-0' : 'flex-1')}>{children}</span>
       {value ? (
         <span className="text-ink-2 ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
       ) : null}
-      {shortcut ? <span className="type-code text-ink-2 ms-4">{shortcut}</span> : null}
+      {shortcut ? <span className="text-code text-ink-2 ms-4 font-mono">{shortcut}</span> : null}
       {selected ? <Check className="text-accent size-3.5 shrink-0" aria-hidden /> : null}
     </MenuPrimitive.Item>
   );
@@ -263,7 +291,10 @@ export function MenuSeparator(
   props: Readonly<Omit<ComponentPropsWithoutRef<typeof MenuPrimitive.Separator>, 'className'>>,
 ) {
   return (
-    <MenuPrimitive.Separator {...props} className="bg-rule app:mx-[3%] -mx-1 my-1 h-px shrink-0" />
+    <MenuPrimitive.Separator
+      {...props}
+      className="bg-rule app:mx-menu-rule-inset -mx-1 my-1 h-px shrink-0"
+    />
   );
 }
 
@@ -272,7 +303,7 @@ export function MenuControlRow({
   children,
 }: Readonly<{ label: string; children: ReactNode }>) {
   return (
-    <div className="type-body text-ink flex min-h-[var(--control-md)] items-center justify-between gap-4 px-2 py-1">
+    <div className="text-body text-ink min-h-control-md flex items-center justify-between gap-4 px-2 py-1">
       <span>{label}</span>
       {children}
     </div>

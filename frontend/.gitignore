@@ -29,3 +29,4 @@ pnpm-debug.log*
 # env
 .env*.local
 *.tsbuildinfo
+/.design-lint-canary-*.json

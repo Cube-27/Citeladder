@@ -210,7 +210,7 @@ function QuoteFacts({
     {
       label: 'Engines',
       value: (
-        <Inline className="flex-wrap">
+        <Inline wrap>
           {choice.available.map((engine) => (
             <Checkbox
               key={engine}

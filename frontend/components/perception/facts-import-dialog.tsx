@@ -124,8 +124,8 @@ export function FactsImportDialog({
         >
           <DataTable label="Parsed facts" columns={PREVIEW_COLUMNS}>
             {parsed.rows.map((row) => (
-              <TableRow key={row.line} className={row.errors.length ? 'opacity-60' : undefined}>
-                <TableCell numeric className="text-ink-2">
+              <TableRow key={row.line} dimmed={row.errors.length > 0}>
+                <TableCell numeric tone="ink-2">
                   {row.line}
                 </TableCell>
                 <TableCell>{row.input.topic || <Absence state="not_set" />}</TableCell>

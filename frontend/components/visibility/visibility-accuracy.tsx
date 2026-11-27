@@ -13,7 +13,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { CONTRADICTED_COLUMNS, ClaimRow, claimKey } from './claim-row';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { ShieldCheck } from '@/lib/icons';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
@@ -121,7 +121,11 @@ function AccuracyState({
 function CoverageNote({ coverage }: Readonly<{ coverage: AccuracyCoverage }>) {
   const extras = accuracyCoverageExtras(coverage);
   if (!extras.length) return null;
-  return <p className={textRole('caption', 'text-ink-2')}>{extras.join(' · ')}</p>;
+  return (
+    <Text as="p" variant="caption">
+      {extras.join(' · ')}
+    </Text>
+  );
 }
 
 function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: ReactNode }>) {

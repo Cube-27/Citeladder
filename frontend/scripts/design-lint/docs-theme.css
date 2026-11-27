@@ -1,0 +1,5 @@
+@import '../../apps/docs/src/styles/tailwind.css';
+@import '../../components/content/prose.css';
+@import '../../components/ui/data-table.css';
+@import '../../components/ui/section.css';
+@import '../../components/ui/table-phone.css';

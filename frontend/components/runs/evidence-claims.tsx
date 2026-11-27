@@ -12,7 +12,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type { Highlight } from '@/lib/markdown/highlight';
 import { TOPIC_LABELS, VERDICT_LABELS, VERDICT_TONE } from '@/lib/visibility/accuracy';
 
@@ -64,8 +64,8 @@ export function EvidenceClaims({ claims }: Readonly<{ claims: readonly Execution
       <SectionBleed as="ul" rows>
         {claims.map((claim) => (
           <Stack as="li" gap="tight" key={`${claim.start}:${claim.end}:${claim.topic}`}>
-            <Inline as="span" className="flex-wrap">
-              <span className={textRole('emphasis')}>“{claim.quote}”</span>
+            <Inline as="span" wrap>
+              <Text variant="label">“{claim.quote}”</Text>
               <VerdictChip claim={claim} />
               <EditedMark edited={claim.edited} />
               {claim.verdict_id ? (
@@ -75,13 +75,13 @@ export function EvidenceClaims({ claims }: Readonly<{ claims: readonly Execution
                 </Button>
               ) : null}
             </Inline>
-            <span className="type-caption text-ink-2">
+            <Text variant="caption">
               {TOPIC_LABELS[claim.topic]}: {claim.claim}
-            </span>
+            </Text>
             {claim.facts.map((fact) => (
-              <span key={fact.statement} className="type-caption text-ink-2">
+              <Text key={fact.statement} variant="caption">
                 Your fact: {fact.statement}
-              </span>
+              </Text>
             ))}
           </Stack>
         ))}

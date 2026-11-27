@@ -219,11 +219,11 @@ export function CommandPalette({
           }}
           className={cn(
             SHEET_FACE,
-            'dialog-panel z-modal fixed top-16 left-1/2 flex max-h-[calc(100dvh-8rem)] w-[calc(100vw-3rem)] max-w-160 -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-overlay',
+            'dialog-panel z-modal fixed top-16 left-1/2 flex max-h-dialog-max w-dialog-fit max-w-160 -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-overlay',
           )}
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
-          <div className="palette-field border-rule text-ink-2 flex min-h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
+          <div className="palette-field border-rule text-ink-2 min-h-control-lg flex shrink-0 items-center gap-3 border-b px-4">
             <Search className="size-3.5 shrink-0" aria-hidden />
             <input
               ref={inputRef}
@@ -239,7 +239,7 @@ export function CommandPalette({
               aria-activedescendant={
                 results[activeIndex] ? `${listboxId}-${results[activeIndex].id}` : undefined
               }
-              className="type-body text-ink placeholder:text-ink-placeholder min-w-0 flex-1 self-stretch bg-transparent"
+              className="text-body text-ink placeholder:text-ink-placeholder min-w-0 flex-1 self-stretch bg-transparent"
             />
             <Kbd>Esc</Kbd>
           </div>
@@ -249,10 +249,10 @@ export function CommandPalette({
 
           <div
             ref={listRef}
-            className="content-scroll max-h-100 min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
+            className="max-h-100 min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
           >
             {results.length === 0 ? (
-              <p className="type-body text-ink-2 px-4 py-[var(--page-section-gap)] text-center">
+              <p className="text-body text-ink-2 py-section px-4 text-center">
                 {`No matches for “${query}”`}
               </p>
             ) : null}
@@ -272,12 +272,12 @@ export function CommandPalette({
                     aria-labelledby={headingId}
                     className="[&+&]:mt-2"
                   >
-                    <p id={headingId} className="type-caption-strong px-2 py-1">
+                    <p id={headingId} className="text-caption-strong text-ink-2 px-2 py-1">
                       {section.group}
                     </p>
                     {section.rows.map(({ command, index }) => {
                       const isActive = index === activeIndex;
-                      const Icon = command.icon;
+                      const Glyph = command.icon;
                       return (
                         <button
                           key={command.id}
@@ -291,12 +291,12 @@ export function CommandPalette({
                           onMouseMove={() => highlight(index)}
                           onClick={() => runCommand(command)}
                           className={cn(
-                            'press [--press:0.98] type-body text-ink flex min-h-[var(--control-md)] w-full items-center gap-2 rounded-mark px-2.5 text-left',
+                            'press press-soft text-body text-ink flex min-h-control-md w-full items-center gap-2 rounded-mark px-2.5 text-left',
                             isActive && 'overlay-hover',
                           )}
                         >
-                          {Icon ? (
-                            <Icon className="text-ink-2 size-3.5 shrink-0" aria-hidden />
+                          {Glyph ? (
+                            <Glyph className="text-ink-2 size-3.5 shrink-0" aria-hidden />
                           ) : (
                             <BrandMark
                               name={command.label}
@@ -307,7 +307,7 @@ export function CommandPalette({
                           )}
                           <span className="min-w-0 flex-1 truncate">{command.label}</span>
                           {command.hint ? (
-                            <span className="type-caption text-ink-2 shrink-0 whitespace-nowrap">
+                            <span className="text-caption text-ink-2 shrink-0 whitespace-nowrap">
                               {command.hint}
                             </span>
                           ) : null}
@@ -320,7 +320,7 @@ export function CommandPalette({
             </div>
           </div>
 
-          <div className="border-rule type-caption text-ink-2 flex shrink-0 items-center gap-4 border-t px-4 py-2">
+          <div className="border-rule text-caption text-ink-2 flex shrink-0 items-center gap-4 border-t px-4 py-2">
             <span className="inline-flex items-center gap-2">
               <Kbd keys={['↑', '↓']} />
               {'navigate'}

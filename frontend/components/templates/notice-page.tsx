@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
-import { Icon } from '@/components/ui/icon';
+import { Icon, TitleMark } from '@/components/ui/icon';
+import { Inline, Stack } from '@/components/ui/layout';
 import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
-import { textRole } from '@/components/ui/typography';
+import { CopyStack, Text } from '@/components/ui/typography';
+import { type TextTone } from '@/components/ui/text-role';
 import { CircleAlert, Info, TriangleAlert, type IconGlyph } from '@/lib/icons';
 
 import { PageFrame } from './page-frame';
@@ -12,11 +14,11 @@ import { PageFrame } from './page-frame';
 type NoticeTone = 'info' | 'warning' | 'negative' | 'loading';
 
 const TONE: Readonly<
-  Record<Exclude<NoticeTone, 'loading'>, readonly [glyph: IconGlyph, ink: string, word: string]>
+  Record<Exclude<NoticeTone, 'loading'>, readonly [glyph: IconGlyph, ink: TextTone, word: string]>
 > = {
-  info: [Info, 'text-info', 'Notice'],
-  warning: [TriangleAlert, 'text-warning', 'Warning'],
-  negative: [CircleAlert, 'text-negative', 'Error'],
+  info: [Info, 'info', 'Notice'],
+  warning: [TriangleAlert, 'warning', 'Warning'],
+  negative: [CircleAlert, 'negative', 'Error'],
 };
 
 type NoticeContent = Readonly<{
@@ -41,26 +43,30 @@ function NoticeBlock({
   if (tone === 'loading')
     return <StateBlock kind="loading" label={heading ?? undefined} shape={{ kind: 'list' }} />;
   const [glyph, ink, word] = TONE[tone];
-  const mark = <Icon icon={icon ?? glyph} className={ink} />;
+  const mark = <Icon icon={icon ?? glyph} tone={ink} />;
   return (
     <Section data-notice-tone={tone}>
-      {label === null ? null : <p className={textRole('captionStrong')}>{label ?? word}</p>}
+      {label === null ? null : (
+        <Text as="p" variant="caption-strong">
+          {label ?? word}
+        </Text>
+      )}
       {heading ? (
-        <div className="flex items-start gap-2">
-          <span className="flex h-7 items-center">{mark}</span>
-          <h1 className={textRole('title', 'min-w-0 text-balance')}>{heading}</h1>
-        </div>
+        <Inline align="start">
+          <TitleMark>{mark}</TitleMark>
+          <Text as="h1" variant="title" box="shrink" wrap="balance">
+            {heading}
+          </Text>
+        </Inline>
       ) : null}
       {panels}
       {children ? (
-        <div className="flex items-start gap-2">
+        <Inline align="start">
           {heading ? null : mark}
-          <div className={textRole('body', 'flex max-w-[72ch] min-w-0 flex-col gap-2')}>
-            {children}
-          </div>
-        </div>
+          <CopyStack>{children}</CopyStack>
+        </Inline>
       ) : null}
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? <Inline wrap>{actions}</Inline> : null}
     </Section>
   );
 }
@@ -77,8 +83,8 @@ export function NoticePage({ heading, ...notice }: NoticeContent) {
 export function NoticeScreen(notice: NoticeContent) {
   useDocumentTitle(notice.tone === 'loading' ? undefined : notice.heading);
   return (
-    <div className="flex min-w-0 flex-col pt-[var(--flow-gap)]">
+    <Stack gap="none" pad={{ top: 'flow-gap' }} box="shrink">
       <NoticeBlock {...notice} />
-    </div>
+    </Stack>
   );
 }

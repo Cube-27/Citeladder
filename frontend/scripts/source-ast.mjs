@@ -60,23 +60,3 @@ export function lineIndex(source) {
     return low + 1;
   };
 }
-
-export function stringValue(node) {
-  if (node?.type === 'Literal' && typeof node.value === 'string') return node.value;
-  return null;
-}
-
-export function nameText(node) {
-  if (!node) return '';
-  switch (node.type) {
-    case 'JSXIdentifier':
-    case 'Identifier':
-      return node.name;
-    case 'JSXNamespacedName':
-      return `${nameText(node.namespace)}:${nameText(node.name)}`;
-    case 'JSXMemberExpression':
-      return `${nameText(node.object)}.${nameText(node.property)}`;
-    default:
-      return '';
-  }
-}

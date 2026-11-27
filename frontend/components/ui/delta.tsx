@@ -35,7 +35,7 @@ function roundedChange(value: number, precision: number) {
 }
 
 const DELTA_FACE =
-  'type-caption inline-flex items-baseline gap-1 font-emphasis tabular-nums whitespace-nowrap [[data-public-surface]_&]:font-mono [[data-public-surface]_&]:font-plain';
+  'text-caption text-ink-2 inline-flex items-baseline gap-1 font-emphasis tabular-nums whitespace-nowrap [[data-public-surface]_&]:font-mono [[data-public-surface]_&]:font-plain';
 
 const SIGN = { up: '+', down: '−', flat: '±' } as const satisfies Record<Direction, string>;
 

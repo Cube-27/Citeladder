@@ -244,7 +244,8 @@ The [`validate-change` skill](../.claude/skills/validate-change/SKILL.md) owns
 when each tier runs. This section covers the commands.
 
 The pre-commit hook (`vp staged`, configured in the root `vite.config.ts`) runs
-`vp check --fix` on staged JS/TS/CSS/JSON files, the design-system policy
+`vp check --fix` on staged JS/TS/CSS/JSON files (from `frontend/` for frontend
+files) and `vp lint` on staged Astro files, the design-system policy
 (`frontend/scripts/check-design-system.mjs`) when frontend CSS, TS/TSX or Astro
 files are staged, and the source token-size limit below.
 
@@ -271,9 +272,10 @@ code unchanged, with no renames of exported symbols or behaviour changes, in its
 own commit when possible. Never shrink a file by compressing code, and never
 extend the ignore list or baseline to pass.
 
-`pnpm check:policy` runs the design-system policy (no literal colours outside
-the token stylesheet, WCAG AA contrast of token pairs, Radix only inside
-`components/ui`, the app's Tailwind `@source` list) and the architecture guard,
+`pnpm check:policy` runs the design-system policy (no hex colours outside the
+token stylesheet, WCAG AA contrast of token pairs, the app's Tailwind `@source`
+list; the design lint rules are in `vp lint`, see
+[design values](design.md#design-values)) and the architecture guard,
 which also fails on any type-discipline finding
 (`frontend/scripts/type-discipline-checks.mjs`) and on any tracked font file,
 and the comment check (`frontend/scripts/source-comments.mjs`), which fails on
