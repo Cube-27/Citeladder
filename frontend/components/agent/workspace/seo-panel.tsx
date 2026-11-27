@@ -19,7 +19,7 @@ type PageCheck = AgentPageFetchDone['checks'][number];
 function CheckRow({ check }: Readonly<{ check: PageCheck }>) {
   const severity = issueSeveritySchema.safeParse(check.severity);
   return (
-    <Inline as="li" gap="compact" className="justify-between">
+    <Inline as="li" gap="compact" justify="between">
       <Text variant="body">{check.label}</Text>
       {severity.success ? (
         <StatusMark variant="severity" value={severity.data}>

@@ -51,6 +51,59 @@ const SPACING_ROLES = [
   'route-fill',
   'thread-fill',
   'flow-top',
+  'nav-count',
+  'rung-figure',
+  'indent',
+  'indent-2',
+  'ledger-label',
+  'filter-search',
+  'open-row-bleed',
+  'notice-body',
+  'viewport-fit',
+  'drawer-fit',
+  'dialog-fit',
+  'dialog-max',
+  'dialog-top',
+  'dialog-top-max',
+  'showcase-fill',
+  'menu-wide',
+  'menu-rule-inset',
+  'dock-chip',
+  'dock-menu',
+  'turnstile',
+  'turnstile-compact',
+  'field-rows-min',
+  'field-rows-max',
+  'composer-rows-min',
+  'composer-rows-max',
+  'table-rows',
+  'table-fit',
+  'cell-indent',
+  'cell-indent-2',
+  'heat-floor',
+  'heat-floor-phone',
+  'rank-floor',
+  'masthead-offset',
+  'toast-top',
+  'menu-max',
+  'menu-trigger',
+  'select-max',
+  'select-trigger',
+  'select-public',
+  'state-title',
+  'state-action',
+  'figure-line',
+  'body-line',
+  'share',
+  'offset',
+  'tip-x',
+  'tip-y',
+  'place-top',
+  'place-right',
+  'place-bottom',
+  'place-left',
+  'place-width',
+  'floor',
 ];
 
 const DURATION_ROLES = [
@@ -66,17 +119,33 @@ const DURATION_ROLES = [
   'reveal-step',
 ];
 
+const TRANSITION_ROLES = [
+  'field',
+  'underline',
+  'underline-color',
+  'tint',
+  'edge',
+  'track',
+  'fill',
+  'size',
+];
+
 const twMerge = extendTailwindMerge({
   extend: {
     theme: {
-      radius: ['mark', 'control', 'card', 'overlay'],
+      radius: ['mark', 'inner', 'control', 'card', 'overlay'],
       spacing: SPACING_ROLES,
+      container: ['bubble', 'state', 'chart-key', 'list-wide'],
+      shadow: ['tab-rule'],
       ease: ['standard', 'resize', 'fluid', 'quad', 'menu', 'sweep'],
     },
     classGroups: {
       duration: [{ duration: DURATION_ROLES }],
+      transition: [{ transition: TRANSITION_ROLES }],
       opacity: [{ opacity: ['disabled', 'muted', 'dim', 'ghost', 'hover'] }],
-      z: [{ z: ['base', 'raised', 'sticky', 'float', 'overlay', 'modal', 'toast'] }],
+      z: [
+        { z: ['behind', 'base', 'raised', 'sticky', 'float', 'overlay', 'modal', 'toast', 'skip'] },
+      ],
       'grid-cols': [
         {
           'grid-cols': [
@@ -97,6 +166,20 @@ const twMerge = extendTailwindMerge({
             'shell',
             'shell-compact',
             'shell-rail',
+            'meter-row',
+            'score-gauge',
+            'answer-aside',
+            'editor',
+            'cards',
+            'facts',
+            'rung',
+            'reorder-row',
+            'work-row',
+            'work-row-phone',
+            'work-row-wide',
+            'list-row',
+            'list-row-phone',
+            'list-row-wide',
           ],
         },
       ],
@@ -154,7 +237,8 @@ export function isOneOf<T extends string | number>(
   allowed: readonly T[],
   value: unknown,
 ): value is T {
-  return allowed.some((item) => item === value);
+  const options: readonly unknown[] = allowed;
+  return options.includes(value);
 }
 
 export function emailInitials(email: string) {

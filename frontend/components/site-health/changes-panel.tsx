@@ -154,7 +154,7 @@ function ChangeRow({
       </TableCell>
       <TableCell>{field}</TableCell>
       <TableCell>
-        <Inline className="whitespace-nowrap">
+        <Inline nowrap>
           <StatusMark tone={CLASS_TONES[row.change_class]}>
             {CLASS_LABELS[row.change_class]}
           </StatusMark>

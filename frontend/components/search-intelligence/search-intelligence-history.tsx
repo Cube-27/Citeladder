@@ -85,7 +85,7 @@ function HistoryBody({ query }: Readonly<{ query: ReturnType<typeof useHistory> 
           {formatWindowDate(first.date)} to {formatWindowDate(last.date)}
         </Text>
       </div>
-      <Stack gap="compact" className="min-w-0 content-start">
+      <Stack gap="compact" box="shrink" content="start">
         <SectionHeader>
           <SectionTitle level={3}>Total backlinks</SectionTitle>
         </SectionHeader>
@@ -98,7 +98,7 @@ function HistoryBody({ query }: Readonly<{ query: ReturnType<typeof useHistory> 
           you={false}
         />
       </Stack>
-      <Stack gap="compact" className="min-w-0 content-start">
+      <Stack gap="compact" box="shrink" content="start">
         <SectionHeader>
           <SectionTitle level={3}>Monthly changes</SectionTitle>
         </SectionHeader>

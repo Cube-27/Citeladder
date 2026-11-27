@@ -139,7 +139,7 @@ function DashboardNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
 
 function RunNotice({ crawl, message }: Readonly<{ crawl: SiteCrawl; message: string }>) {
   return (
-    <Inline className="flex-wrap">
+    <Inline wrap>
       <CrawlStatusBadge crawl={crawl} />
       <span>{message}</span>
     </Inline>
@@ -162,8 +162,8 @@ function ProgressRow({
   return (
     <Section aria-label="Crawl status">
       <Stack>
-        <Inline gap="meta" className="justify-between">
-          <Inline gap="item" className="min-w-0">
+        <Inline gap="meta" justify="between">
+          <Inline gap="item">
             <CrawlStatusBadge crawl={crawl} />
             {active ? (
               <span data-testid="activity-pulse" className="inline-flex">
@@ -174,7 +174,7 @@ function ProgressRow({
               {narration}
             </Text>
           </Inline>
-          <Inline as="dl" gap="meta" className="empty:hidden">
+          <Inline as="dl" gap="meta" hideEmpty>
             {counts.map((count) => (
               <Inline key={count.label} gap="item">
                 <Text as="dt" variant="body" tone="ink-2">

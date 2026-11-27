@@ -1,5 +1,4 @@
 import { useLayoutEffect, type ReactNode, type RefObject } from 'react';
-import { cssVars } from '@/lib/css-vars';
 
 import { LiveVerb, SkeletonBlock } from '@/components/ui/skeleton-block';
 import { StateBlock, type StateBlockProps } from '@/components/ui/state-block';
@@ -41,8 +40,8 @@ export function DataTableBody({
         <tr data-table-state="">
           <TableCell
             colSpan={colSpan}
-            className="h-[calc(var(--data-table-rows)*var(--spacing-row))] align-top"
-            style={footprint(pageSize ?? 0)}
+            className="h-table-rows align-top"
+            style={{ '--data-table-rows': pageSize ?? 0 }}
           >
             <InFrame>
               <StateBlock {...state} />
@@ -62,12 +61,9 @@ export function DataTableBody({
           <tr // NOSONAR
             aria-hidden="true"
             data-table-spacer=""
-            style={footprint(rest)}
+            style={{ '--data-table-rows': rest }}
           >
-            <TableCell
-              colSpan={colSpan}
-              className="h-[calc(var(--data-table-rows)*var(--spacing-row))]"
-            />
+            <TableCell colSpan={colSpan} className="h-table-rows" />
           </tr>
         </TableBody>
       ) : null}
@@ -93,7 +89,7 @@ function LoadingBody({
           {cells.map((cell) => (
             <td key={cell} className="px-cell-x">
               {row === 0 && cell === 0 ? <LiveVerb label={label} /> : null}
-              <SkeletonBlock className="h-3 w-3/4" />
+              <SkeletonBlock width="3/4" />
             </td>
           ))}
         </tr>
@@ -103,14 +99,8 @@ function LoadingBody({
 }
 
 function InFrame({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div className="start-panel-inset sticky w-[calc(100cqi-2*var(--spacing-panel-inset))]">
-      {children}
-    </div>
-  );
+  return <div className="start-panel-inset w-table-fit sticky">{children}</div>;
 }
-
-const footprint = (rows: number) => cssVars({ '--data-table-rows': rows });
 
 const LOADING_ROWS = 5;
 

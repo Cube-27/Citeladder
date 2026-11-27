@@ -278,7 +278,7 @@ export function ReviewStage({
         <CompletionStateAlert failed={completionFailed} />
       </ReviewNotices>
       <StepColumns>
-        <Stack gap="workspace" className="min-w-0">
+        <Stack gap="workspace" box="shrink">
           <ReviewStep
             domains={domains}
             competitors={competitors}
@@ -305,7 +305,7 @@ export function ReviewStage({
           />
         </Stack>
         {profile ? (
-          <Stack gap="workspace" className="min-w-0">
+          <Stack gap="workspace" box="shrink">
             <IcpCategory
               profile={profile}
               onChange={setProfile}
@@ -325,7 +325,7 @@ function ReviewNotices({ failed, children }: Readonly<{ failed: boolean; childre
     if (failed) region.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
   }, [failed]);
   return (
-    <Stack ref={region} gap="workspace" aria-live="polite" className="empty:hidden">
+    <Stack ref={region} gap="workspace" aria-live="polite" hideEmpty>
       {children}
     </Stack>
   );

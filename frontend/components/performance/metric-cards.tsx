@@ -48,13 +48,7 @@ export function MetricCards({
 }>) {
   return (
     <SectionBleed>
-      <div
-        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
-        role="group"
-        aria-label="Search Console metrics"
-        data-testid={testId}
-        className="metric-tiles"
-      >
+      <fieldset aria-label="Search Console metrics" data-testid={testId} className="metric-tiles">
         {METRIC_CARDS.map((card) => {
           const plotted = active.has(card.key);
           const label = TILE_LABEL[card.key];
@@ -95,7 +89,7 @@ export function MetricCards({
             </div>
           );
         })}
-      </div>
+      </fieldset>
     </SectionBleed>
   );
 }

@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, Ref } from 'react';
 
-import { toneClass, type TextTone } from '@/components/ui/text-role';
+import { TEXT_TONE_CLASS, type TextTone } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 export function InlinePress({
@@ -19,7 +19,7 @@ export function InlinePress({
       {...props}
       ref={ref}
       type={type}
-      className={cn(toneClass(tone), 'rounded-mark focus-ring')}
+      className={cn(tone && TEXT_TONE_CLASS[tone], 'rounded-mark focus-ring')}
     />
   );
 }

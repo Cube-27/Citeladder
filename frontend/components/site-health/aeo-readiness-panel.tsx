@@ -59,7 +59,9 @@ export function AeoReadinessPanel({
   }
 
   const data = readiness.data;
-  const groups = new Map(issues.data?.items.map((issue) => [issue.rule_id, issue.group_id]));
+  const groups = new Map<string, string>(
+    issues.data?.items.map((issue) => [issue.rule_id, issue.group_id]),
+  );
   return (
     <SectionStack data-testid="aeo-readiness">
       {data.limitations.length > 0 ? (

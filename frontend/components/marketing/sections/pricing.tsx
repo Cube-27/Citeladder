@@ -63,9 +63,11 @@ export function PagePlans({
 }: Readonly<{ toolbar?: ReactNode; children: ReactNode }>) {
   const columns = Math.max(2, columnsFor(Children.count(children)));
   return (
-    <div className="cl-page-plans">
+    <div>
       {toolbar && <div className="cl-page-plans-bar">{toolbar}</div>}
-      <div className={cn('cl-page-plans-grid', `cl-cols-${columns}`)}>{children}</div>
+      <div className="cl-page-plans-grid" data-tile-cols={columns}>
+        {children}
+      </div>
     </div>
   );
 }

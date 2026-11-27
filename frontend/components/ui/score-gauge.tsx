@@ -96,15 +96,15 @@ export function BarRows({ label, rows }: Readonly<{ label: string; rows: readonl
       {rows.map((row) => (
         <li
           key={row.key}
-          className="border-rule grid min-h-9 grid-cols-[minmax(0,1fr)_auto_minmax(0,1.1fr)] items-center gap-3 border-t"
+          className="border-rule grid-cols-score-gauge grid min-h-9 items-center gap-3 border-t"
         >
           <span className="text-body text-ink min-w-0 truncate">{row.label}</span>
           <span className="text-body text-ink min-w-10 text-right tabular-nums">{row.figure}</span>
           <span className="bg-well rounded-mark block h-2 overflow-hidden" aria-hidden>
             {row.share === null ? null : (
               <span
-                className={cn('block h-full', BAR_FILL[row.tone])}
-                style={{ width: `${Math.max(0, Math.min(1, row.share)) * 100}%` }}
+                className={cn('block h-full w-share', BAR_FILL[row.tone])}
+                style={{ '--share': `${Math.max(0, Math.min(1, row.share)) * 100}%` }}
               />
             )}
           </span>

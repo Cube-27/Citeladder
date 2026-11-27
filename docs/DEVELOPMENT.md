@@ -245,8 +245,7 @@ when each tier runs. This section covers the commands.
 
 The pre-commit hook (`vp staged`, configured in the root `vite.config.ts`) runs
 `vp check --fix` on staged JS/TS/CSS/JSON files (from `frontend/` for frontend
-files, so the lint suppressions file applies) and `vp lint` on staged Astro
-files, the design-system policy
+files) and `vp lint` on staged Astro files, the design-system policy
 (`frontend/scripts/check-design-system.mjs`) when frontend CSS, TS/TSX or Astro
 files are staged, and the source token-size limit below.
 

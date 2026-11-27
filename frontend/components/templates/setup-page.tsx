@@ -66,7 +66,7 @@ function SetupStepper({
         {count}
       </Text>
       <p className="sr-only">{count}</p>
-      <Inline as="ol" gap="group" className="desktop:flex hidden">
+      <Inline as="ol" gap="group" showFrom="desktop">
         {steps.map((step, index) => (
           <Inline as="li" key={step} aria-current={index === current ? 'step' : undefined}>
             {index > 0 ? <StepConnector done={index <= current} /> : null}

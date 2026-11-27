@@ -4,8 +4,8 @@ import { useParams } from 'react-router-dom';
 
 import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { RecordPage } from '@/components/templates/record-page';
-import { FilterBar } from '@/components/ui/filter-bar';
 import type { FilterDefinition } from '@/components/ui/all-filters';
+import { AppGrid } from '@/components/ui/app-grid';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Inline } from '@/components/ui/layout';
 import { ProductImage } from '@/components/ui/product-image';
@@ -19,6 +19,7 @@ import { promptsQueries } from '@/lib/api/prompts';
 import { formatCount } from '@/lib/format';
 import { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 import { holderCaption, PRODUCT_COLUMNS, productCell } from '@/lib/products/product-columns';
+import { productPromptOutcomes } from '@/lib/products/prompt-outcomes';
 import {
   productScopeSearch,
   useProductScopeFilters,
@@ -32,15 +33,8 @@ import type { CommerceQueries } from './commerce-queries';
 import { ProductActions } from './product-actions';
 import { productScopeFilters } from './product-scope-filters';
 import { AddToTracking, ProductCatalogControls } from './product-catalog-controls';
-import {
-  Answers,
-  CompetingProducts,
-  FanOutQueries,
-  Merchants,
-  PromptMetrics,
-  SeenIn,
-  Sources,
-} from './product-sections';
+import { EngineOutcomes, ProductPrompts } from './product-prompts';
+import { CompetingProducts, FanOutQueries, Merchants, SeenIn, Sources } from './product-sections';
 import { MissingValue } from './products-table';
 import { SetupCompetitors } from './setup-competitors';
 import { SetupPrompts } from './setup-prompts';
@@ -185,34 +179,42 @@ function HolderDetail({
     );
   const data = detail.data;
   const named = data.answer_total > 0;
+  const outcomes = productPromptOutcomes(data);
   const page = (notices: ReactNode, actions: ReactNode) => (
     <RecordPage
       title={data.product.name}
       trail={trail}
       busy={detail.isFetching}
       actions={actions}
-      filters={<FilterBar filters={filters} />}
+      filters={{ filters: filters }}
       identity={<ProductIdentity detail={data} notices={notices} />}
     >
       <ProductKpis detail={data} />
       {named ? (
         <>
-          <CompetingProducts detail={data} scope={scopeFilters} />
-          <Merchants detail={data} />
-          <SeenIn detail={data} scope={scopeFilters} />
-          <Sources detail={data} />
-          <FanOutQueries detail={data} />
+          <AppGrid layout="pair" className="items-start">
+            <EngineOutcomes outcomes={outcomes} />
+            <CompetingProducts detail={data} scope={scopeFilters} />
+          </AppGrid>
+          <ProductPrompts outcomes={outcomes} />
+          <AppGrid layout="pair" className="items-start">
+            <Sources detail={data} />
+            <FanOutQueries detail={data} />
+          </AppGrid>
+          <AppGrid layout="pair" className="items-start">
+            <Merchants detail={data} />
+            <SeenIn detail={data} scope={scopeFilters} />
+          </AppGrid>
         </>
-      ) : null}
-      {named || data.prompts.length > 0 ? <PromptMetrics detail={data} /> : null}
-      {named ? (
-        <Answers detail={data} />
       ) : (
-        <StateBlock
-          kind="empty"
-          icon={MessageSquareOff}
-          heading={`No answer named it in the last ${data.window_days} days`}
-        />
+        <>
+          {data.prompts.length > 0 ? <ProductPrompts outcomes={outcomes} /> : null}
+          <StateBlock
+            kind="empty"
+            icon={MessageSquareOff}
+            heading={`Not named in any prompt in the last ${data.window_days} days`}
+          />
+        </>
       )}
       {data.product.kind === 'owned' && data.product.catalog?.lifecycle_state !== 'archived' ? (
         <ProductSetup detail={data} projectId={projectId} queries={queries} />
@@ -248,7 +250,8 @@ function ProductIdentity({
       <Inline gap="item">
         <InfoHint label="About this product">
           {holderCaption(product)} · From {formatCount(detail.executions)}
-          {detail.executions === 1 ? ' answer' : ' answers'} in the last {detail.window_days} days.
+          {detail.executions === 1 ? ' prompt run' : ' prompt runs'} in the last{' '}
+          {detail.window_days} days.
           {listingTitle ? ` Listing title: ${listingTitle}` : null}
         </InfoHint>
         {product.image_url ? <ProductImage src={product.image_url} /> : null}

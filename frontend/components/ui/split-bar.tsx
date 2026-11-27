@@ -1,6 +1,5 @@
 import { useRef, type KeyboardEvent, type PointerEvent } from 'react';
 
-import { textRole } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 export type SplitSegment = Readonly<{ key: string; label: string }>;
@@ -114,8 +113,8 @@ export function SplitBar({
           {segments.map((segment, index) => (
             <span
               key={segment.key}
-              className={cn(FILLS[index % FILLS.length], 'h-full')}
-              style={{ width: `${values[index] ?? 0}%` }}
+              className={cn(FILLS[index % FILLS.length], 'h-full w-share')}
+              style={{ '--share': `${values[index] ?? 0}%` }}
             />
           ))}
         </div>
@@ -142,8 +141,8 @@ export function SplitBar({
                 dragging.current = index;
                 track.current?.setPointerCapture?.(event.pointerId);
               }}
-              style={{ left: `${at}%` }}
-              className="focus-ring rounded-control absolute inset-y-[-4px] grid w-3 -translate-x-1/2 cursor-ew-resize place-items-center pointer-coarse:w-11"
+              style={{ '--offset': `${at}%` }}
+              className="focus-ring rounded-control left-offset absolute -inset-y-1 grid w-3 -translate-x-1/2 cursor-ew-resize place-items-center pointer-coarse:w-11"
             >
               <span className="bg-panel h-6 w-0.5" />
             </div>
@@ -152,7 +151,7 @@ export function SplitBar({
       </div>
       <ul className="flex flex-wrap gap-x-4 gap-y-1">
         {segments.map((segment, index) => (
-          <li key={segment.key} className={textRole('caption', 'flex items-center gap-1.5')}>
+          <li key={segment.key} className="text-caption text-ink-2 flex items-center gap-1.5">
             <span aria-hidden className={cn('size-1.5 rounded-full', DOTS[index % DOTS.length])} />
             {segment.label}
             <span className="text-ink tabular-nums">{percent(values[index])}</span>

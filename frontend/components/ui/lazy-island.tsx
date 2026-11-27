@@ -1,6 +1,5 @@
 import { Component, Suspense, type ReactNode } from 'react';
 
-import { textRole } from '@/components/ui/text-role';
 import { isChunkLoadError, reportClientError } from '@/lib/client-errors';
 
 type DefectHandling = 'surface' | 'contain';
@@ -64,7 +63,7 @@ export function LazyIsland({
 export function IslandUnavailable({ message }: Readonly<{ message: string }>) {
   return (
     <div className="grid h-full place-items-center">
-      <p className={textRole('caption', 'text-ink-2')}>{message}</p>
+      <p className="text-caption text-ink-2">{message}</p>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
-import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
+import { EngineBrandMark } from '@/components/ui/engine-mark';
 import { Icon } from '@/components/ui/icon';
 import type { EvidenceSubject } from '@/components/runs/answer-dialog';
 import { useAnswerDialog } from '@/components/runs/answer-link';
@@ -111,11 +111,6 @@ function promptsState(
   };
 }
 
-function EngineLogo({ engine }: Readonly<{ engine: string }>) {
-  const key = engineMarkKey(engine);
-  return key ? <EngineMark engine={key} brand className="shrink-0" /> : null;
-}
-
 function PromptRow({
   item,
   onOpenAnswer,
@@ -128,7 +123,7 @@ function PromptRow({
     <TableRow>
       <TableCell>
         <Inline as="span">
-          <EngineLogo engine={item.logical_engine} />
+          <EngineBrandMark placement="row" engine={item.logical_engine} />
           <TableCellLines
             primary={item.prompt_text || 'Untitled prompt'}
             secondary={engines.label(item.logical_engine)}

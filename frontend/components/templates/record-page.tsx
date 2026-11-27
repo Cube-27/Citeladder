@@ -29,7 +29,7 @@ export function RecordPage({
           {aside ? (
             <Columns template="record" gap="section" align="start">
               <PageSections>{children}</PageSections>
-              <Stack as="aside" gap="section" className="min-w-0">
+              <Stack as="aside" gap="section" box="shrink">
                 {aside}
               </Stack>
             </Columns>

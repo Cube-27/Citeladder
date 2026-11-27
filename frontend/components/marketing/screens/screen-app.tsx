@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Kbd } from '@/components/ui/kbd';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import {
   ChevronDown,
   ChevronsUpDown,
@@ -114,8 +114,8 @@ function NavRow({
 }: Readonly<{ label: string; icon: IconGlyph | null; active: boolean }>) {
   const count = OPEN_COUNTS[label];
   return (
-    <span className={cn('text-body cl-app-nav-row', active && 'is-active')}>
-      {Icon && <Icon className="cl-app-nav-icon size-3.5" aria-hidden />}
+    <span className={cn('cl-app-nav-row', active && 'is-active')}>
+      {Icon && <Icon className="size-3.5" aria-hidden />}
       <span className="cl-app-nav-label">{label}</span>
       {count !== undefined && <span className="cl-app-nav-count">{count}</span>}
     </span>
@@ -133,7 +133,7 @@ function ScreenSidebar({
         <span className="cl-app-ident">
           <BrandMark name="Acme Analytics" placement="inline" />
           <span className="cl-app-ident-text">
-            <span className="text-body">Acme Analytics</span>
+            <Text variant="body">Acme Analytics</Text>
           </span>
           <ChevronsUpDown className="text-ink-2 size-3.5" aria-hidden />
         </span>
@@ -146,9 +146,7 @@ function ScreenSidebar({
       <div className="cl-app-nav">
         {groups.map((group) => (
           <div key={group.title ?? 'top'} className="cl-app-nav-group">
-            {group.title && (
-              <p className="text-caption text-ink-2 cl-app-nav-title">{group.title}</p>
-            )}
+            {group.title && <p className="cl-app-nav-title">{group.title}</p>}
             {group.items.map(([label, icon]) => (
               <NavRow key={label} label={label} icon={icon} active={label === active} />
             ))}
@@ -245,7 +243,9 @@ function ScreenPageHeader({
 }: Readonly<{ title: string; actions?: PageActions; mode?: 'Dashboard' | 'Agent' }>) {
   return (
     <div className="cl-app-topbar cl-app-header">
-      <p className={textRole('pageTitle')}>{title}</p>
+      <Text as="p" variant="page-title">
+        {title}
+      </Text>
       <span className="cl-app-actions">
         {actions && <HeaderActions actions={actions} />}
         <ScreenButton icon={Search}>

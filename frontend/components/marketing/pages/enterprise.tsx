@@ -127,7 +127,7 @@ export function EnterprisePage() {
           cells={GOVERNANCE.map((group) => ({
             key: group.title,
             span: 4,
-            content: <FeatureCard size="lg" title={group.title} points={group.points} />,
+            content: <FeatureCard title={group.title} points={group.points} />,
           }))}
         />
       </PageSection>
@@ -137,7 +137,7 @@ export function EnterprisePage() {
         title="Who Enterprise is for"
         lead="Enterprise fits when your AEO program needs more scope, more review and clearer boundaries than a self-serve plan provides."
       >
-        <ul className={`cl-tiles cl-cols-${columnsFor(FIT.length)}`}>
+        <ul className="cl-tiles" data-tile-cols={columnsFor(FIT.length)}>
           {FIT.map((item) => (
             <li key={item.title}>
               <FeatureCard title={item.title} body={item.body} />
@@ -151,7 +151,7 @@ export function EnterprisePage() {
         title="Scope the agreement around the work"
         lead="Six inputs set an Enterprise agreement. Each is quoted to fit your program, and none changes how a score is computed."
       >
-        <ul className={`cl-tiles cl-cols-${columnsFor(AGREEMENT.length)}`}>
+        <ul className="cl-tiles" data-tile-cols={columnsFor(AGREEMENT.length)}>
           {AGREEMENT.map((item) => (
             <li key={item.title}>
               <FeatureCard eyebrow={item.unit} title={item.title} body={item.desc} />

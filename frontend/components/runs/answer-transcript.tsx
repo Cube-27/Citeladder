@@ -7,7 +7,7 @@ import {
   UserMessage,
 } from '@/components/ui/answer-chat';
 import { BrandMark } from '@/components/ui/brand-mark';
-import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
+import { engineMarkKey, GlyphMark } from '@/components/ui/engine-mark';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/typography';
 import { UserRound } from '@/lib/icons';
@@ -134,11 +134,7 @@ function EngineAvatar({ engine, label }: Readonly<{ engine: string; label: strin
   const key = engineMarkKey(engine);
   return (
     <ChatAvatar tone="engine">
-      {key ? (
-        <EngineMark engine={key} placement="inline" brand />
-      ) : (
-        <Text variant="label">{label.slice(0, 1)}</Text>
-      )}
+      {key ? <GlyphMark glyph={key} /> : <Text variant="label">{label.slice(0, 1)}</Text>}
     </ChatAvatar>
   );
 }

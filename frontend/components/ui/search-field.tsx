@@ -76,8 +76,8 @@ export function SearchField({
       aria-label={ariaLabel}
       aria-busy={pending || undefined}
       containerClassName={className}
-      className="[appearance:textfield] [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
-      startContent={pending ? <Spinner /> : <Icon icon={Search} className="text-ink-placeholder" />}
+      className="appearance-textfield [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+      startContent={pending ? <Spinner /> : <Icon icon={Search} tone="placeholder" />}
       endContent={
         <span className="inline-flex min-h-5 min-w-7 items-center justify-end">{end}</span>
       }

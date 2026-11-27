@@ -128,7 +128,7 @@ function CitedPage({ page }: Readonly<{ page: ContentGapEvidence['members'][numb
     ? `${page.matched_competitor} (${page.domain})`
     : page.domain;
   return (
-    <Stack as="li" gap="tight" className="min-w-0">
+    <Stack as="li" gap="tight" box="shrink">
       {page.title ? (
         <ClampText tooltip={readableUrl(page.url)}>
           <TextLink variant="external" href={page.url} text="body">

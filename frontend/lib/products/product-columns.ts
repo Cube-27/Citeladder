@@ -8,26 +8,26 @@ export const PRODUCT_COLUMNS = [
   {
     key: 'visibility',
     label: 'Visibility',
-    hint: 'Share of answers in the window that named the product.',
+    hint: 'Share of prompt runs in the window that named the product.',
   },
-  { key: 'appearances', label: 'Appearances', hint: 'Answers that named the product.' },
+  { key: 'appearances', label: 'Appearances', hint: 'Prompt runs that named the product.' },
   {
     key: 'win_rate',
     label: 'Win rate',
-    hint: 'Of the ranked answers that named it, the share that ranked it first.',
+    hint: 'Of the ranked prompt runs that named it, the share that ranked it first.',
   },
   {
     key: 'position',
     label: 'Position',
-    hint: 'Its mean rank in the answers that ranked it; a carousel rank counts first.',
+    hint: 'Its mean rank in the prompt runs that ranked it; a carousel rank counts first.',
   },
   {
     key: 'mentioned_price',
     label: 'Mentioned price',
-    hint: 'Median price the answers quoted; other currencies are counted, not converted.',
+    hint: 'Median price the prompt runs quoted; other currencies are counted, not converted.',
   },
   { key: 'catalog_price', label: 'Catalog price', hint: 'The price in your catalog.' },
-  { key: 'merchants', label: 'Merchants', hint: 'Where the answers send shoppers to buy it.' },
+  { key: 'merchants', label: 'Merchants', hint: 'Where the prompt runs send shoppers to buy it.' },
 ] as const;
 
 export type ProductColumnKey = (typeof PRODUCT_COLUMNS)[number]['key'];
@@ -99,7 +99,7 @@ export function productCell(row: CommerceProductRow, key: ProductColumnKey): Pro
 const HOLDER_LABELS = {
   owned: 'Your product',
   approved_competitor: 'Competitor',
-  ai_observed_competitor: 'Seen in answers',
+  ai_observed_competitor: 'Seen in prompts',
 } as const satisfies Record<CommerceProductRow['kind'], string>;
 
 const holderLabel = (kind: CommerceProductRow['kind']) => HOLDER_LABELS[kind];

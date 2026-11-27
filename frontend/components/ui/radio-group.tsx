@@ -11,7 +11,7 @@ export type RadioOption<T extends string> = {
 };
 
 const RADIO =
-  'press [--press:0.95] focus-ring bg-panel border-control-line data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:ring-panel hit-area [--target-hit:var(--spacing-target)] size-4 shrink-0 rounded-full border ring-inset data-[state=checked]:ring-4 disabled:cursor-not-allowed';
+  'press press-mark focus-ring bg-panel border-control-line data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:ring-panel hit-area target-hit-fine size-4 shrink-0 rounded-full border ring-inset data-[state=checked]:ring-4 disabled:cursor-not-allowed';
 
 const LIST_LAYOUT = {
   list: 'flex flex-col gap-3',

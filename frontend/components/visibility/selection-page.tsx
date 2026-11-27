@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
 
 import type { FilterDefinition } from '@/components/ui/all-filters';
-import { FilterBar } from '@/components/ui/filter-bar';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { readErrorProps } from '@/components/ui/notice';
 import { SectionStack } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
@@ -23,9 +22,9 @@ export type SelectionPageState = 'loading' | 'error' | 'empty' | null;
 export function selectionPageFilterBar(
   state: SelectionPageState,
   filters: readonly FilterDefinition[],
-): ReactNode {
+): FilterBarProps | undefined {
   if (state !== null && state !== 'loading') return undefined;
-  return <FilterBar filters={filters} />;
+  return { filters };
 }
 
 export function selectionPageState(queries: Queries): SelectionPageState {
