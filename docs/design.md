@@ -139,8 +139,9 @@ docs' `data` line height that follows it. The app ladder lives in
 the MCP app. The website ladder lives in
 [`site-type.css`](../frontend/apps/marketing/src/site-type.css), shared by
 marketing and docs: its `@theme` holds the docs values and one
-`[data-marketing-surface]` block holds every marketing difference, so no other
-sheet re-points a website role. A theme alias resolves on `:root`, so that block
+`[data-marketing-surface]` block holds every marketing difference (plus the
+phone sizes kept inside drawn product screens), so no other sheet re-points a
+website role. A theme alias resolves on `:root`, so that block
 declares the line height of every size it re-points, and any alias whose source
 it changes. Each ladder file sets its own `--type-base` and `--type-step` in
 `:root`; entry stylesheets never do.

@@ -86,15 +86,6 @@
   }
 }
 
-@media (max-width: 767px) {
-  .cl-frame-screen {
-    --text-body-lg: calc(var(--type-base) + var(--type-step));
-    --text-body-lg--line-height: calc(var(--text-body-lg) + 6 * var(--type-step));
-    --text-site-body: var(--type-base);
-    --text-site-body--line-height: calc(var(--text-site-body) + 5 * var(--type-step));
-  }
-}
-
 .cl-frame-caption {
   display: flex;
   flex-direction: column;
