@@ -74,7 +74,7 @@ function MissingRow({ row }: Readonly<{ row: MissingPrompt }>) {
   return (
     <LedgerItem
       title={
-        <TextLink href={promptHistoryHref(row.promptId)} underline="hover" className="flex min-w-0">
+        <TextLink href={promptHistoryHref(row.promptId)} underline="hover" box="row">
           <ClampText phoneWrap>{row.text}</ClampText>
         </TextLink>
       }

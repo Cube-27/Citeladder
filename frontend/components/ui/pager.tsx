@@ -96,7 +96,7 @@ function PageSizeSelect({ pageSize, noun }: Readonly<{ pageSize: PagerPageSize; 
           label: String(size),
         }))}
         numeric
-        className="w-20"
+        box="pager"
       />
     </div>
   );
@@ -117,7 +117,7 @@ function PagerSteps({
       {onFirst && canPrev ? (
         <IconButton
           variant="secondary"
-          className="size-8 min-h-8"
+          box="pager"
           icon={ChevronsLeft}
           label="First page"
           tooltip={false}
@@ -127,7 +127,7 @@ function PagerSteps({
       ) : null}
       <IconButton
         variant="secondary"
-        className="size-8 min-h-8"
+        box="pager"
         icon={ChevronLeft}
         label="Previous page"
         tooltip={false}
@@ -136,7 +136,7 @@ function PagerSteps({
       />
       <IconButton
         variant="secondary"
-        className="size-8 min-h-8"
+        box="pager"
         icon={ChevronRight}
         label="Next page"
         tooltip={false}

@@ -172,7 +172,7 @@ function ExpiryFields({
             id={props.id}
             aria-describedby={props['aria-describedby']}
             ariaLabel="Expires"
-            className="w-full"
+            box="fill"
             value={choice}
             onValueChange={onChoice}
             options={expiryOptions(today)}

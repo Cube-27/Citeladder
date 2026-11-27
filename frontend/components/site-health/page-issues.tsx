@@ -14,7 +14,6 @@ import type { PageIssue } from '@citeladder/contracts';
 import { dimensionLabel, scoreRoleLabels, severityRank } from '@/lib/site-health/issues';
 import { StateBlock } from '@/components/ui/state-block';
 import { ChevronDown } from '@/lib/icons';
-import { cn } from '@/lib/utils';
 import { TitledSection } from '@/components/ui/section';
 import { Text } from '@/components/ui/typography';
 
@@ -61,8 +60,8 @@ function IssueList({
         ))}
       </DisclosureList>
       {issues.length > PREVIEW_COUNT ? (
-        <Button variant="quiet" className="w-fit" onClick={() => setExpanded(!expanded)}>
-          <Icon icon={ChevronDown} className={cn(expanded && 'rotate-180')} />
+        <Button variant="quiet" box="fit" onClick={() => setExpanded(!expanded)}>
+          <Icon icon={ChevronDown} flip={expanded} />
           {expanded ? 'Show fewer issues' : `View all ${issues.length} issues`}
         </Button>
       ) : null}
@@ -109,7 +108,7 @@ function IssueBody({ issue, crawlId }: Readonly<{ issue: PageIssue; crawlId: str
             skillId: 'technical_health',
           }}
         />
-        <CopyButton value={buildFixPrompt(head)} variant="secondary" className="w-fit">
+        <CopyButton value={buildFixPrompt(head)} variant="secondary" box="fit">
           Copy fix prompt
         </CopyButton>
       </Inline>

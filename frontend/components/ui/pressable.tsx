@@ -9,13 +9,31 @@ import {
 import { pressableRowClasses } from '@/components/ui/open-row-skeleton';
 import { cn } from '@/lib/utils';
 
-export type PressableProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+export type PressableProps = Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  'className' | 'style'
+> & {
   ref?: Ref<HTMLButtonElement>;
   tone?: TextTone;
   text?: TextRole;
   numeric?: boolean;
   look?: keyof typeof LOOK;
+  box?: keyof typeof BOX;
 };
+
+const BOX = {
+  auto: 'w-auto',
+  'auto-start': 'w-auto text-start',
+  'auto-end': 'w-auto text-right',
+  start: 'text-start',
+  overlay: 'absolute inset-0',
+  block: 'block min-w-0',
+  row: 'flex w-auto max-w-full min-w-0',
+  inline: 'inline-flex w-auto',
+  target: 'inline-flex min-h-target w-auto items-center',
+  'target-shrink': 'min-h-target w-auto min-w-0',
+  'target-square': 'min-h-target w-auto min-w-target text-center',
+} as const;
 
 export const ROW_FACE = {
   base: 'relative rounded-control transition-tint duration-fast ease-standard',
@@ -46,7 +64,7 @@ const LOOK = {
 } as const;
 
 export function Pressable({
-  className,
+  box,
   type = 'button',
   tone,
   text,
@@ -65,7 +83,7 @@ export function Pressable({
         numeric && 'tabular-nums',
         LOOK[look],
         tone && TEXT_TONE_CLASS[tone],
-        className,
+        box && BOX[box],
       )}
       {...props}
     />

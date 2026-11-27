@@ -60,7 +60,7 @@ function Proposal({
   const { replacement } = suggestion;
   if (suggestion.readiness !== 'ready' || replacement === null)
     return (
-      <Pressable look="jump" className="text-start" onClick={() => onShow(suggestion.id)}>
+      <Pressable look="jump" box="start" onClick={() => onShow(suggestion.id)}>
         <Text variant="caption">{suggestion.needs_input ?? suggestion.rationale}</Text>
       </Pressable>
     );

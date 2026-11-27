@@ -3,13 +3,11 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import { Icon } from '@/components/ui/icon';
 import { Plus } from '@/lib/icons';
 
-const ROW_GRID = 'column-split:grid-cols-offering-map column-split:gap-0 grid gap-1';
-
 export function MapGridHead({ lead, heads }: Readonly<{ lead: string; heads: readonly string[] }>) {
   return (
     <div
       aria-hidden
-      className={`${ROW_GRID} border-rule column-split:grid h-table-head text-caption-strong text-ink-2 bg-table-head hidden items-center border-b`}
+      className="column-split:grid-cols-offering-map column-split:gap-0 border-rule column-split:grid h-table-head text-caption-strong text-ink-2 bg-table-head grid hidden items-center gap-1 border-b"
     >
       <span className="px-panel-inset">{lead}</span>
       {heads.map((head) => (
@@ -27,7 +25,10 @@ export function MapGridRow({
   ...props
 }: Readonly<Omit<ComponentPropsWithoutRef<'li'>, 'className' | 'style'>>) {
   return (
-    <li {...props} className={`${ROW_GRID} border-rule column-split:p-0 border-b p-2`}>
+    <li
+      {...props}
+      className="column-split:grid-cols-offering-map column-split:gap-0 border-rule column-split:p-0 grid gap-1 border-b p-2"
+    >
       {children}
     </li>
   );

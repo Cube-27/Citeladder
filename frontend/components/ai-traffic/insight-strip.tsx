@@ -57,7 +57,7 @@ export function InsightStrip({
               </ClampText>
               <Inline gap="meta">
                 <TextLink
-                  className="inline-flex min-h-6 items-center"
+                  box="target"
                   aria-label={`Inspect pages: ${patternLabel(r.pattern)}`}
                   href={projectDestination(
                     '/ai-traffic',

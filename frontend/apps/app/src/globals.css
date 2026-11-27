@@ -431,6 +431,7 @@
   --container-state: 500px;
   --container-chart-key: min(100%, 20rem);
   --container-list-wide: 640px;
+  --container-card-row: 640px;
   --link-rule-width: 1.5px;
   --transition-property-field: background-color, border-color, outline-color;
   --transition-property-underline: color, text-decoration-color;

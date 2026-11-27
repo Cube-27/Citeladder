@@ -10,6 +10,7 @@ import {
 import { Pressable } from '@/components/ui/pressable';
 import { SidebarRowFace, SidebarRowLabel } from '@/components/ui/sidebar';
 import { Check } from '@/lib/icons';
+import { Icon } from '@/components/ui/icon';
 
 export type StepItem<T extends string> = Readonly<{ value: T; label: string }>;
 
@@ -77,7 +78,7 @@ function StepRow<T extends string>({
   const face = (
     <>
       <StepsRowMark state={stepState(position, current)}>
-        {done ? <Check className="size-3.5" /> : position + 1}
+        {done ? <Icon icon={Check} size="flush" /> : position + 1}
       </StepsRowMark>
       <SidebarRowLabel muted={position > current}>{step.label}</SidebarRowLabel>
     </>

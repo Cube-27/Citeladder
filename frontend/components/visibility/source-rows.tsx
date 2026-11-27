@@ -50,7 +50,7 @@ export function OpenSource({
   children,
 }: Readonly<{ onOpen: () => void; children: ReactNode }>) {
   return (
-    <Pressable onClick={onOpen} className="block min-w-0">
+    <Pressable onClick={onOpen} box="block">
       <Inline as="span" justify="between">
         <span className="min-w-0">{children}</span>
         <Icon icon={ChevronRight} tone="ink-2" />

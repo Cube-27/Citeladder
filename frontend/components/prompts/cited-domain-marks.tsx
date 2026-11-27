@@ -23,7 +23,7 @@ export function CitedDomainMarks({
           key={domain}
           content={`${domain}${owned ? ' (yours)' : ''}: ${citations} ${citations === 1 ? 'citation' : 'citations'}`}
         >
-          <Pressable className="inline-flex w-auto">
+          <Pressable box="inline">
             <span className="sr-only">{domain}</span>
             <BrandMark
               name={domain}

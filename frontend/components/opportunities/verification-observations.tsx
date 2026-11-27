@@ -19,7 +19,7 @@ export function VerificationObservations({
       <ComparableMovement result={result} />
       <GapChanges result={result} />
       {showAuditLink ? (
-        <TextLink text="caption" className="w-fit" href="/runs">
+        <TextLink text="caption" box="fit" href="/runs">
           Run a comparable audit
         </TextLink>
       ) : null}

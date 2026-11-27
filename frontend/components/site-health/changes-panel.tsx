@@ -144,7 +144,7 @@ function ChangeRow({
         <PageLink
           text="emphasis"
           underline="hover"
-          className="flex min-w-0"
+          box="row"
           crawlId={crawlBId ?? ''}
           siteUrlId={row.site_url_id}
           aria-label={url}

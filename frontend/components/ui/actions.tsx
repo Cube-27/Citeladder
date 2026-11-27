@@ -43,7 +43,6 @@ export function ActionButton({
   action,
   href,
   secondary = false,
-  className,
   ...props
 }: Readonly<ActionButtonProps>) {
   const named: ActionPreset = ACTIONS[action];
@@ -57,7 +56,7 @@ export function ActionButton({
   );
   if (href !== undefined) {
     return (
-      <Button asChild variant={preset.variant} size={props.size} className={className}>
+      <Button asChild variant={preset.variant} size={props.size} box={props.box}>
         <ProjectLink href={href} aria-label={props['aria-label']}>
           {content}
         </ProjectLink>
@@ -65,7 +64,7 @@ export function ActionButton({
     );
   }
   return (
-    <Button {...props} variant={preset.variant} className={className}>
+    <Button {...props} variant={preset.variant}>
       {content}
     </Button>
   );

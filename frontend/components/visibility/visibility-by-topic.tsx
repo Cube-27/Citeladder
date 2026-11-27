@@ -62,7 +62,7 @@ export function VisibilityByTopic({
             <TableCell>
               <TextLink asChild text="inherit" underline="hover">
                 <Pressable
-                  className="w-auto"
+                  box="auto"
                   aria-current={row.topic_id === topic ? 'true' : undefined}
                   onClick={() => onSelectTopic(row.topic_id)}
                 >

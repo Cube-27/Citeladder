@@ -3,6 +3,7 @@ import { Check, Copy } from '@/lib/icons';
 
 import { Button } from './button';
 import { useToast } from './toast';
+import { Icon } from '@/components/ui/icon';
 
 export type CopyButtonProps = Omit<
   ComponentPropsWithoutRef<typeof Button>,
@@ -62,11 +63,7 @@ export function CopyButton({
       aria-live="polite"
       aria-label={iconOnly ? iconLabel : props['aria-label']}
     >
-      {status === 'copied' ? (
-        <Check className="size-3.5" aria-hidden />
-      ) : (
-        <Copy className="size-3.5" aria-hidden />
-      )}
+      {status === 'copied' ? <Icon icon={Check} size="flush" /> : <Icon icon={Copy} size="flush" />}
       {iconOnly ? null : label}
     </Button>
   );

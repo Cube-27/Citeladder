@@ -58,12 +58,7 @@ export function OrphanPageDrawer({
           {pages.map((page) => (
             <Stack as="li" gap="tight" key={page.site_url_id} box="shrink">
               {crawlId ? (
-                <PageLink
-                  text="body"
-                  className="block min-w-0"
-                  crawlId={crawlId}
-                  siteUrlId={page.site_url_id}
-                >
+                <PageLink text="body" box="block" crawlId={crawlId} siteUrlId={page.site_url_id}>
                   {page.title ? <ClampText>{page.title}</ClampText> : <UrlText url={page.url} />}
                 </PageLink>
               ) : (

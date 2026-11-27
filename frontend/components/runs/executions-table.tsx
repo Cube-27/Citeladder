@@ -116,7 +116,7 @@ function StatusBadge({ execution }: Readonly<{ execution: Execution }>) {
     <StatusMark
       variant="status"
       value={EXECUTION_STATES[execution.status].badge}
-      className="max-w-full"
+      full
       title={label}
     >
       <span className="min-w-0 truncate">{label}</span>

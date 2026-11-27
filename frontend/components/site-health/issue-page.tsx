@@ -143,7 +143,7 @@ export function IssuePage({
         actions={
           <Inline wrap justify="end">
             <IssueFixActions scope={scope} crawlId={crawlId} groupId={issue.group_id} />
-            <CopyButton value={buildFixPrompt(issue)} variant="secondary" className="w-fit">
+            <CopyButton value={buildFixPrompt(issue)} variant="secondary" box="fit">
               Copy fix prompt
             </CopyButton>
           </Inline>
@@ -395,7 +395,7 @@ function SiteLevelList({
         <SectionBleed as="ul" rows>
           {evidence.sections.map((section) => (
             <Inline as="li" key={section.pathPrefix} wrap justify="between">
-              <ClampText text="body" className="flex-1">
+              <ClampText text="body" box="flex">
                 {section.pathPrefix}
               </ClampText>
               <Text variant="caption" numeric>

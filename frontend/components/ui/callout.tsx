@@ -55,7 +55,7 @@ export function Callout({
       )}
     >
       <span aria-hidden className="inline-flex h-5 shrink-0 items-center">
-        <Icon icon={icon ?? style.icon} className="my-0" />
+        <Icon icon={icon ?? style.icon} size="flush" />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         {title != null ? (

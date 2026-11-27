@@ -228,7 +228,7 @@ function TrafficPageRow({
         <TextLink asChild text="inherit" underline="hover">
           <Pressable
             onClick={() => onOpen(r.url_hash)}
-            className="flex w-auto max-w-full min-w-0"
+            box="row"
             aria-label={`View AI traffic for ${r.canonical_url}`}
           >
             <UrlText

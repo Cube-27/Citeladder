@@ -23,7 +23,7 @@ function CodeText({ value, label }: Readonly<{ value: string; label: string }>) 
   return (
     <Stack>
       <CodeWell>{value}</CodeWell>
-      <CopyButton value={value} className="w-fit">
+      <CopyButton value={value} box="fit">
         {label}
       </CopyButton>
     </Stack>
@@ -34,7 +34,7 @@ export function GcpFields({ model }: Readonly<{ model: ReturnType<typeof useCraw
   const { subscription, setSubscription, sampleRate, setSampleRate } = model;
   return (
     <>
-      <Field label="Pub/Sub subscription" hint="Full path" className="desktop:col-span-2">
+      <Field label="Pub/Sub subscription" hint="Full path" wide>
         {(field) => (
           <Input
             {...field}
@@ -96,7 +96,7 @@ export function GcpSourceSetup({
       />
       <Button
         variant="secondary"
-        className="w-fit"
+        box="fit"
         pending={verify.isPending}
         pendingLabel="Checking…"
         onClick={() => verify.mutate(source.id)}
@@ -166,7 +166,7 @@ function SinkFilterUpdate({
       {canManage ? (
         <Button
           variant="secondary"
-          className="w-fit"
+          box="fit"
           pending={confirmFilter.isPending}
           onClick={() => confirmFilter.mutate(source.id)}
         >

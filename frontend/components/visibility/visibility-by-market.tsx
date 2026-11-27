@@ -62,7 +62,7 @@ export function VisibilityByMarket({
             <TableCell>
               <TextLink asChild text="inherit" underline="hover">
                 <Pressable
-                  className="w-auto"
+                  box="auto"
                   aria-current={row.market.id === market ? 'true' : undefined}
                   onClick={() => onSelectMarket(row.market.id)}
                 >

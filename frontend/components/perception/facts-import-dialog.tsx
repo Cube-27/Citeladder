@@ -106,7 +106,7 @@ export function FactsImportDialog({
           <CsvImportFileInput inputRef={inputRef} onSelect={(file) => void selectFile(file)} />
           <Button
             variant="secondary"
-            className="justify-self-start"
+            box="start"
             onClick={() => downloadCsv('facts-sample.csv', FACT_CSV_COLUMNS, FACT_CSV_SAMPLE_ROWS)}
           >
             <Icon icon={Download} />

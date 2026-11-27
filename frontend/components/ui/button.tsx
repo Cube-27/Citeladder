@@ -61,7 +61,28 @@ export function buttonClasses(
   );
 }
 
-export type ButtonProps = ComponentPropsWithoutRef<'button'> & {
+const BUTTON_BOX = {
+  start: 'justify-self-start',
+  fit: 'w-fit',
+  full: 'max-w-full',
+  fixed: 'shrink-0',
+  push: 'mr-auto',
+  action: 'min-w-22',
+  float: 'pointer-events-auto',
+  middle: 'align-middle',
+  fill: 'w-full',
+  'rail-hidden': 'rail:hidden',
+  'rail-hidden-fixed': 'rail:hidden shrink-0',
+  corner: 'absolute top-6 right-6',
+  pager: 'size-8 min-h-8',
+  'hide-split': 'column-split:hidden',
+  'rail-toggle':
+    'rail:inline-flex not-labelled:size-rail-button hidden shrink-0 self-center in-data-[nav-drawer]:hidden',
+} as const;
+
+export type ButtonBox = keyof typeof BUTTON_BOX;
+
+type ButtonFrameProps = ComponentPropsWithoutRef<'button'> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
   asChild?: boolean;
@@ -71,6 +92,8 @@ export type ButtonProps = ComponentPropsWithoutRef<'button'> & {
   pendingLabel?: ReactNode;
   ref?: Ref<HTMLButtonElement>;
 };
+
+export type ButtonProps = Omit<ButtonFrameProps, 'className' | 'style'> & { box?: ButtonBox };
 
 const ICON_SHAPE = 'w-control-md gap-0 px-0';
 
@@ -100,7 +123,7 @@ function SlottedButton({
   type: _type,
   asChild: _asChild,
   ...props
-}: Readonly<ButtonProps>) {
+}: Readonly<ButtonFrameProps>) {
   return (
     <Slot
       ref={ref}
@@ -128,7 +151,7 @@ function NativeButton({
   children,
   asChild: _asChild,
   ...props
-}: Readonly<ButtonProps>) {
+}: Readonly<ButtonFrameProps>) {
   return (
     <button
       ref={ref}
@@ -162,8 +185,13 @@ function NativeButton({
   );
 }
 
-export function Button(props: Readonly<ButtonProps>) {
-  return props.asChild ? <SlottedButton {...props} /> : <NativeButton {...props} />;
+export function Button({ box, ...props }: Readonly<ButtonProps>) {
+  const className = box && BUTTON_BOX[box];
+  return props.asChild ? (
+    <SlottedButton {...props} className={className} />
+  ) : (
+    <NativeButton {...props} className={className} />
+  );
 }
 
 type IconButtonProps = Omit<ButtonProps, 'variant' | 'children' | 'asChild' | 'aria-label'> & {
@@ -209,11 +237,10 @@ export function IconButton({
   tooltipSide = 'top',
   tooltip = true,
   shape = 'icon',
-  className,
   ...props
 }: Readonly<IconButtonProps>) {
   const control = href ? (
-    <Button {...props} variant={variant} shape={shape} className={className} asChild>
+    <Button {...props} variant={variant} shape={shape} asChild>
       <IconLinkTarget href={href} label={label}>
         <Icon icon={icon} />
       </IconLinkTarget>
@@ -223,7 +250,6 @@ export function IconButton({
       {...props}
       variant={variant}
       shape={shape}
-      className={className}
       aria-label={label}
       pendingLabel={<span className="sr-only">{props.pendingLabel ?? label}</span>}
     >

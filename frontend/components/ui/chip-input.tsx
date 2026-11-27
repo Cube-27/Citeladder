@@ -187,7 +187,7 @@ function Token({
         onKeyDown={onKeyDown}
         className={TOKEN_REMOVE}
       >
-        <Icon icon={X} className="my-0" />
+        <Icon icon={X} size="flush" />
       </button>
     </li>
   );
@@ -206,7 +206,7 @@ function AcceptTick({
       onClick={onAccept}
       className="focus-ring hit-area text-ink-2 hover:text-ink hover:overlay-hover rounded-control absolute end-1 top-1 grid size-6 place-items-center"
     >
-      <Icon icon={Check} className="my-0" />
+      <Icon icon={Check} size="flush" />
     </button>
   );
 }

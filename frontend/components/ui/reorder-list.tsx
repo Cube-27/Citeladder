@@ -98,7 +98,7 @@ function ReorderRow({
     >
       <span className="text-body text-ink-2 tabular-nums">{index + 1}</span>
       <div className="min-w-0">{item.content}</div>
-      <Icon icon={GripVertical} tone="ink-2" revealOnHover className="cursor-grab" />
+      <Icon icon={GripVertical} tone="ink-2" revealOnHover handle />
       <Menu>
         <MenuTrigger asChild>
           <IconButton icon={Ellipsis} label={`Reorder ${index + 1}, ${item.name}`} />

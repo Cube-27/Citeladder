@@ -94,7 +94,7 @@ export function DisclosureRow({
         look="disclosure"
       >
         <span className="phone:flex-wrap phone:gap-y-1 phone:py-2 flex min-w-0 flex-1 items-center gap-3">
-          <ClampText phoneWrap text="label" className="phone:basis-full min-w-0">
+          <ClampText phoneWrap text="label" box="phone-row">
             {title}
           </ClampText>
           <span className="text-caption text-ink-2 flex shrink-0 items-center gap-3">{meta}</span>
@@ -140,7 +140,7 @@ export function TreeItem({
         listRowClasses(),
       )}
     >
-      <ClampText text="body" className="flex-1">
+      <ClampText text="body" box="flex">
         {label}
       </ClampText>
       {typeof count === 'number' ? (

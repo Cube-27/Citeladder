@@ -25,6 +25,7 @@ import { useProjectContext } from '@/lib/project/project-context';
 import { Avatar } from '@/components/ui/avatar';
 
 import { ACCOUNT_MENU_ITEMS, isAccountCurrent, isNavItemActive } from './nav-items';
+import { Icon } from '@/components/ui/icon';
 
 type UserMenuState = {
   email: string;
@@ -54,13 +55,13 @@ function UserMenuContent({
     <MenuContent align={sidebar ? 'start' : 'end'} side={sidebar ? 'top' : 'bottom'}>
       <MenuLabel>{email}</MenuLabel>
       <MenuSeparator />
-      {ACCOUNT_MENU_ITEMS.map(({ label, href, icon: Icon, scope }) => (
+      {ACCOUNT_MENU_ITEMS.map(({ label, href, icon: glyph, scope }) => (
         <MenuLinkItem key={href}>
           <Link
             to={scopedNavigationDestination(href, scope, activeProjectId, activeWorkspaceId)}
             aria-current={href === currentHref ? 'page' : undefined}
           >
-            <Icon className="size-3.5 shrink-0" aria-hidden />
+            <Icon icon={glyph} size="flush" />
             <span>{label}</span>
           </Link>
         </MenuLinkItem>

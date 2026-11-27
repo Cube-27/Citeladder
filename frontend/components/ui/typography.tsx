@@ -149,11 +149,10 @@ export function CodeToken({ children }: Readonly<{ children: string }>) {
 
 export function InlineFigure({
   children,
-  className,
   ...props
-}: Readonly<ComponentPropsWithoutRef<'span'>>) {
+}: Readonly<Omit<ComponentPropsWithoutRef<'span'>, 'className' | 'style'>>) {
   return (
-    <span {...props} className={cn('tabular-nums', className)}>
+    <span {...props} className="tabular-nums">
       {children}
     </span>
   );

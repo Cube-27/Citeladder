@@ -5,6 +5,7 @@ import { TRIGGER_BOX } from '@/components/ui/input';
 import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
 import { Check, ChevronDown, ChevronUp } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import { Icon } from '@/components/ui/icon';
 
 const EMPTY_VALUE = '__citeladder_empty_value__';
 
@@ -28,6 +29,8 @@ type SelectOption<T extends string> = {
   disabled?: boolean;
 };
 
+const SELECT_BOX = { fill: 'w-full', pager: 'w-20' } as const;
+
 export type SelectProps<T extends string> = {
   value?: T;
   defaultValue?: T;
@@ -39,7 +42,7 @@ export type SelectProps<T extends string> = {
   invalid?: boolean;
   numeric?: boolean;
   'aria-invalid'?: boolean;
-  className?: string;
+  box?: keyof typeof SELECT_BOX;
   id?: string;
   required?: boolean;
   'aria-describedby'?: string;
@@ -57,7 +60,7 @@ export function Select<T extends string>({
   invalid,
   numeric = false,
   'aria-invalid': ariaInvalid,
-  className,
+  box,
   id,
   required,
   'aria-describedby': ariaDescribedBy,
@@ -82,7 +85,7 @@ export function Select<T extends string>({
           'focus-input press',
           TRIGGER_BOX,
           'data-[placeholder]:text-ink-placeholder flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-disabled',
-          className,
+          box && SELECT_BOX[box],
           numeric && 'tabular-nums',
         )}
       >
@@ -107,7 +110,7 @@ export function Select<T extends string>({
           )}
         >
           <SelectPrimitive.ScrollUpButton className="text-ink-2 h-control-md flex items-center justify-center">
-            <ChevronUp className="size-3.5" aria-hidden />
+            <Icon icon={ChevronUp} size="flush" />
           </SelectPrimitive.ScrollUpButton>
           <SelectPrimitive.Viewport>
             {options.map((option, index) => (
@@ -137,13 +140,13 @@ export function Select<T extends string>({
                   </span>
                 ) : null}
                 <SelectPrimitive.ItemIndicator className="absolute right-2 inline-flex items-center">
-                  <Check className="size-3.5" aria-hidden />
+                  <Icon icon={Check} size="flush" />
                 </SelectPrimitive.ItemIndicator>
               </SelectPrimitive.Item>
             ))}
           </SelectPrimitive.Viewport>
           <SelectPrimitive.ScrollDownButton className="text-ink-2 h-control-md flex items-center justify-center">
-            <ChevronDown className="size-3.5" aria-hidden />
+            <Icon icon={ChevronDown} size="flush" />
           </SelectPrimitive.ScrollDownButton>
         </SelectPrimitive.Content>
       </SelectPrimitive.Portal>

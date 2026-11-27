@@ -190,7 +190,7 @@ export function RailUrl({
         href={href}
         title={text}
         tone="quiet"
-        className="flex min-w-0 items-center [&>svg]:shrink-0"
+        box="row-glyph"
       >
         <span className="min-w-0 truncate">{text}</span>
       </TextLink>

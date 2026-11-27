@@ -22,7 +22,7 @@ export function ExpandToggle({
   children,
 }: Readonly<{ open: boolean; onToggle: () => void; children: ReactNode }>) {
   return (
-    <Pressable aria-expanded={open} onClick={onToggle} className="w-auto">
+    <Pressable aria-expanded={open} onClick={onToggle} box="auto">
       <Inline as="span">
         <Icon icon={open ? ChevronDown : ChevronRight} tone="ink-2" />
         {children}

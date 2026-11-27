@@ -256,7 +256,7 @@ export function TableCellLines({
 }>) {
   return (
     <span data-cell-lines="" className="flex min-w-0 items-baseline gap-2">
-      <ClampText rowTitle text={title ? 'body' : undefined} className="max-w-full shrink-0">
+      <ClampText rowTitle text={title ? 'body' : undefined} box="fixed-full">
         {primary}
       </ClampText>
       {secondary ? (

@@ -78,7 +78,7 @@ function SyncButton({
   const reasonId = useId();
   const button = (
     <Button
-      className="min-w-22"
+      box="action"
       onClick={onSync}
       disabled={disabled}
       pending={pending}

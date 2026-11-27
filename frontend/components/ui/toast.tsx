@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, Info, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { POP_FACE } from '@/components/ui/slip';
+import { Icon } from '@/components/ui/icon';
 
 type ToastTone = 'neutral' | 'positive' | 'negative';
 
@@ -29,9 +30,9 @@ const MAX_TOASTS = 3;
 const STACK_GAP_PX = 8;
 
 const TONE_ICON = {
-  neutral: { Icon: Info, className: 'text-ink-2', word: 'Notice' },
-  positive: { Icon: CheckCircle2, className: 'text-positive', word: 'Success' },
-  negative: { Icon: AlertCircle, className: 'text-negative', word: 'Error' },
+  neutral: { glyph: Info, className: 'text-ink-2', word: 'Notice' },
+  positive: { glyph: CheckCircle2, className: 'text-positive', word: 'Success' },
+  negative: { glyph: AlertCircle, className: 'text-negative', word: 'Error' },
 } as const;
 
 function useToastHeights() {
@@ -103,7 +104,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
         {children}
         {messages.map((message) => {
           const tone = message.tone ?? 'neutral';
-          const { Icon, className, word } = TONE_ICON[tone];
+          const { glyph, className, word } = TONE_ICON[tone];
           const place = message.open ? shown.indexOf(message) : newestFirst.indexOf(message);
           const height = heights[message.id];
           return (
@@ -135,7 +136,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             >
               <div ref={measure(message.id)} className="flex items-start gap-3 py-3 ps-4 pe-3">
                 <span className={cn('inline-flex h-5 shrink-0 items-center', className)}>
-                  <Icon className="size-3.5" aria-hidden />
+                  <Icon icon={glyph} size="flush" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <ToastPrimitive.Title className="text-label text-ink">
@@ -159,7 +160,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                   className="focus-ring press hit-area text-ink-2 rounded-control not-disabled:hover:text-ink bg-state-fill not-disabled:hover:bg-state-fill-hover press-firm grid size-6 shrink-0 place-items-center"
                   aria-label="Dismiss notification"
                 >
-                  <X className="size-3.5" aria-hidden />
+                  <Icon icon={X} size="flush" />
                 </ToastPrimitive.Close>
               </div>
             </ToastPrimitive.Root>

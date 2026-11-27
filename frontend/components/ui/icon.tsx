@@ -7,7 +7,15 @@ import { cn } from '@/lib/utils';
 const ICON_SIZE = {
   text: 'my-0.75 size-3.5',
   field: 'my-0.5 size-4',
+  flush: 'size-3.5',
+  control: 'size-4',
+  lead: 'size-5',
+  feature: 'size-9',
 } as const;
+
+const ICON_TONE = { ...TEXT_TONE_CLASS, accent: 'text-accent' } as const;
+
+export type IconSize = keyof typeof ICON_SIZE;
 
 export function Icon({
   icon: Glyph,
@@ -19,18 +27,22 @@ export function Icon({
   flipOnOpen = false,
   flip,
   revealOnHover = false,
-  className,
+  turnOnOpen = false,
+  handle = false,
+  appOnly = false,
 }: Readonly<{
   icon: IconGlyph;
   label?: string;
-  tone?: TextTone;
-  size?: keyof typeof ICON_SIZE;
+  tone?: TextTone | 'accent';
+  size?: IconSize;
   muted?: boolean;
   dim?: boolean;
   flipOnOpen?: boolean;
   flip?: boolean;
   revealOnHover?: boolean;
-  className?: string;
+  turnOnOpen?: boolean;
+  handle?: boolean;
+  appOnly?: boolean;
 }>) {
   return (
     <Glyph
@@ -38,7 +50,7 @@ export function Icon({
       className={cn(
         ICON_SIZE[size],
         'shrink-0',
-        tone && TEXT_TONE_CLASS[tone],
+        tone && ICON_TONE[tone],
         muted && 'opacity-muted',
         dim && 'opacity-dim',
         flipOnOpen &&
@@ -46,7 +58,9 @@ export function Icon({
         flip !== undefined && 'transition-transform',
         flip && 'rotate-180',
         revealOnHover && 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100',
-        className,
+        turnOnOpen && 'group-open:rotate-90',
+        handle && 'cursor-grab',
+        appOnly && '[[data-public-surface]_&]:hidden',
       )}
       aria-hidden={label ? undefined : true}
       aria-label={label}

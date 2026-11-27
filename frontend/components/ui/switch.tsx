@@ -7,7 +7,7 @@ export function Switch({
   label,
   describedBy,
   disabled = false,
-  className,
+  besideText = false,
 }: Readonly<{
   id?: string;
   checked: boolean;
@@ -15,7 +15,7 @@ export function Switch({
   label: string;
   describedBy?: string;
   disabled?: boolean;
-  className?: string;
+  besideText?: boolean;
 }>) {
   return (
     <button
@@ -32,7 +32,7 @@ export function Switch({
         checked
           ? 'bg-primary not-disabled:hover:bg-primary-hover'
           : 'bg-control-line not-disabled:hover:bg-rule',
-        className,
+        besideText && 'mt-0.5 pointer-coarse:before:-inset-x-0.5 pointer-coarse:before:-inset-y-3',
       )}
     >
       <span

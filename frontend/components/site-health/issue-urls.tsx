@@ -115,7 +115,7 @@ export function IssueUrlTable({
               underline="hover"
               crawlId={row.crawl_id}
               siteUrlId={row.site_url_id}
-              className="flex min-w-0 items-center"
+              box="row-center"
             >
               <UrlText url={row.display_url} origin={origin} />
             </PageLink>

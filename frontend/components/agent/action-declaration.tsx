@@ -419,9 +419,9 @@ const SELECT_IMPLEMENTED_LINKS = {
   icon: ListChecks,
 } as const;
 
-export function ContextualLinkDeclarationRoute({ className }: Readonly<{ className?: string }>) {
+export function ContextualLinkDeclarationRoute() {
   return (
-    <Button asChild variant="secondary" className={className}>
+    <Button asChild variant="secondary">
       <ProjectLink href={SELECT_IMPLEMENTED_LINKS.href}>
         <Icon icon={SELECT_IMPLEMENTED_LINKS.icon} />
         {SELECT_IMPLEMENTED_LINKS.label}

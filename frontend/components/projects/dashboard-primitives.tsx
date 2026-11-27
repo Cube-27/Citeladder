@@ -86,11 +86,11 @@ function ActionScope({ action, row }: Readonly<{ action: Opportunity; row: boole
   const evidence = pluralCount(action.evidence_summary.count, 'evidence item');
   if (!label || echoes)
     return row ? (
-      <ClampText text="body" tone="ink-2" className="phone:hidden min-w-0 flex-1">
+      <ClampText text="body" tone="ink-2" box="fill-desktop">
         {evidence}
       </ClampText>
     ) : (
-      <ClampText text="caption" className="min-w-0 flex-1">
+      <ClampText text="caption" box="fill">
         {evidence}
       </ClampText>
     );
@@ -133,7 +133,7 @@ export function actionItem(action: Opportunity): ReorderItem {
         <TextLink
           text="body"
           underline="hover"
-          className="flex min-w-0"
+          box="row"
           href={action.action_id ? `/actions/${action.action_id}` : '/actions'}
         >
           <ClampText phoneWrap>{action.title}</ClampText>

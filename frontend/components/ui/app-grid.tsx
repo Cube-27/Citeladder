@@ -19,14 +19,14 @@ type GridElement = 'div' | 'ul' | 'ol' | 'dl' | 'section';
 export function AppGrid({
   as = 'div',
   layout,
-  className,
+  alignTop = false,
   children,
   ...props
 }: Readonly<
-  HTMLAttributes<HTMLElement> & {
+  Omit<HTMLAttributes<HTMLElement>, 'className' | 'style'> & {
     as?: GridElement;
     layout: AppGridLayout;
-    className?: string;
+    alignTop?: boolean;
   }
 >) {
   const gap = useOnPage() ? 'gap-section' : 'gap-panel-inset';
@@ -35,7 +35,12 @@ export function AppGrid({
     {
       ...props,
       'data-app-grid': layout,
-      className: cn('grid min-w-0 grid-cols-1 *:min-w-0', gap, LAYOUT[layout], className),
+      className: cn(
+        'grid min-w-0 grid-cols-1 *:min-w-0',
+        gap,
+        LAYOUT[layout],
+        alignTop && 'items-start',
+      ),
     },
     children,
   );

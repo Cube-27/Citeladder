@@ -48,9 +48,9 @@ function rungFace(status: RungStatus) {
 }
 
 function StepGlyph({ status }: Readonly<{ status: RungStatus }>) {
-  if (status === 'done') return <Icon icon={Check} tone="ink-2" className="my-0" />;
-  if (status === 'failed') return <Icon icon={X} tone="negative" className="my-0" />;
-  if (status === 'unknown') return <Icon icon={CircleHelp} tone="ink-2" className="my-0" />;
+  if (status === 'done') return <Icon icon={Check} tone="ink-2" size="flush" />;
+  if (status === 'failed') return <Icon icon={X} tone="negative" size="flush" />;
+  if (status === 'unknown') return <Icon icon={CircleHelp} tone="ink-2" size="flush" />;
   return null;
 }
 
@@ -239,7 +239,7 @@ export function SetupSteps({
               />
             ) : null}
             <span aria-hidden className="flex w-4 shrink-0 justify-center">
-              {step.state === 'done' ? <Icon icon={Check} tone="ink-2" className="my-0" /> : null}
+              {step.state === 'done' ? <Icon icon={Check} tone="ink-2" size="flush" /> : null}
               {step.state === 'running' ? <Spinner /> : null}
             </span>
             <span
@@ -286,7 +286,7 @@ export function FoldedTrail({
           {live ? (
             <span className="text-caption shrink-0 text-current tabular-nums">{live.seconds}s</span>
           ) : null}
-          <Icon icon={ChevronRight} tone="ink-2" className="my-0 shrink-0 group-open:rotate-90" />
+          <Icon icon={ChevronRight} tone="ink-2" size="flush" turnOnOpen />
         </summary>
         <div className="pt-3">
           {steps.length ? (

@@ -39,24 +39,22 @@ export function engineOptionMark(engine: string): ReactNode {
   return engineMarkKey(engine) ? <EngineBrandMark engine={engine} /> : undefined;
 }
 
-const PLACEMENT = { inline: 'size-4', row: 'size-5' } as const;
+const PLACEMENT = { inline: 'size-4', row: 'size-5', card: 'size-7', feature: 'size-9' } as const;
 
 export function EngineMark({
   engine,
   placement = 'row',
   brand = false,
-  className,
 }: Readonly<{
   engine: EngineKey;
   placement?: keyof typeof PLACEMENT;
   brand?: boolean;
-  className?: string;
 }>) {
   return (
     <svg
       {...ENGINE_SVG}
       data-engine-mark={engine}
-      className={cn('shrink-0 fill-current', PLACEMENT[placement], className)}
+      className={cn('shrink-0 fill-current', PLACEMENT[placement])}
     >
       <EngineShapes engine={engine} brand={brand} />
     </svg>

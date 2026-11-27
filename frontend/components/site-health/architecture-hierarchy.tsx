@@ -134,7 +134,7 @@ function HierarchyList({
               {crawlId ? (
                 <PageLink
                   text="body"
-                  className="flex min-w-0"
+                  box="row"
                   aria-label={readableUrl(node.url)}
                   crawlId={crawlId}
                   siteUrlId={node.site_url_id}

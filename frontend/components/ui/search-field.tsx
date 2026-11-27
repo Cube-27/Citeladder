@@ -2,14 +2,15 @@ import { useEffect, useRef, type InputHTMLAttributes, type ReactNode } from 'rea
 import { Search, X } from '@/lib/icons';
 
 import { Icon } from './icon';
-import { FieldEndButton, Input } from './input';
+import { FieldEndButton, Input, type InputFrame } from './input';
 import { Kbd } from './kbd';
 import { Spinner } from './spinner';
 
 export type SearchFieldProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
-  'type' | 'value' | 'onChange' | 'size' | 'width'
+  'type' | 'value' | 'onChange' | 'size' | 'width' | 'className' | 'style'
 > & {
+  frame?: InputFrame;
   value: string;
   onValueChange: (value: string) => void;
   pending?: boolean;
@@ -23,7 +24,7 @@ export function SearchField({
   pending = false,
   onClear,
   shortcut,
-  className,
+  frame,
   onKeyDown,
   'aria-label': ariaLabel = 'Search',
   ...props
@@ -75,8 +76,8 @@ export function SearchField({
       }}
       aria-label={ariaLabel}
       aria-busy={pending || undefined}
-      containerClassName={className}
-      className="appearance-textfield [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+      frame={frame}
+      search
       startContent={pending ? <Spinner /> : <Icon icon={Search} tone="placeholder" />}
       endContent={
         <span className="inline-flex min-h-5 min-w-7 items-center justify-end">{end}</span>

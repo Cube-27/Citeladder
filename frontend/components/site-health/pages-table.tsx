@@ -128,7 +128,7 @@ export function PagesTable({
             <TableCell>
               <Stack as="span" gap="tight" box="shrink">
                 <Inline as="span" wrap="phone">
-                  <ClampText className="max-w-full shrink-0">
+                  <ClampText box="fixed-full">
                     <PageLink
                       text="emphasis"
                       underline="hover"

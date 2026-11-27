@@ -9,6 +9,7 @@ import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/sta
 
 import { CircleDashed, Inbox, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import { Icon } from '@/components/ui/icon';
 
 const HEADING_TAG = { 1: 'h1', 2: 'h2', 3: 'h3' } as const satisfies Record<HeadingLevel, string>;
 
@@ -192,7 +193,7 @@ function InlineEmptyView({ message, icon: Glyph, action, compact = false }: Inli
       data-state-block-inline=""
       className={cn('text-body text-ink-2 flex min-w-0 items-center gap-2')}
     >
-      {Glyph ? <Glyph className="size-3.5 shrink-0" aria-hidden /> : null}
+      {Glyph ? <Icon icon={Glyph} size="flush" /> : null}
       <p className={cn('min-w-0 flex-1', compact && 'truncate')}>{message}</p>
       {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
     </div>

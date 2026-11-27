@@ -36,10 +36,9 @@ export type LinkChip = (href: string, children: ReactNode) => ReactNode | null;
 const LinkChipContext = createContext<LinkChip | null>(null);
 
 function MarkdownLink({
-  node: _node,
   children,
   href,
-  ...props
+  title,
 }: Readonly<ComponentPropsWithoutRef<'a'> & ExtraProps>) {
   const guard = useContext(LeaveGuardContext);
   const chip = useContext(LinkChipContext)?.(href ?? '', children) ?? null;
@@ -53,8 +52,8 @@ function MarkdownLink({
   if (chip !== null) return <>{chip}</>;
   return (
     <a
-      {...props}
       href={href}
+      title={title}
       target="_blank"
       rel="noopener noreferrer"
       onClick={confirm ? intercept : undefined}
@@ -70,14 +69,13 @@ export type PhraseChip = Readonly<{ text: string; node: ReactNode }>;
 const ChipsContext = createContext<readonly PhraseChip[]>([]);
 
 function MarkdownSpan({
-  node: _node,
   children,
-  ...props
+  'data-chip': chipIndex,
 }: Readonly<ComponentPropsWithoutRef<'span'> & ExtraProps & { 'data-chip'?: string }>) {
   const chips = useContext(ChipsContext);
-  const chip = props['data-chip'] === undefined ? undefined : chips[Number(props['data-chip'])];
+  const chip = chipIndex === undefined ? undefined : chips[Number(chipIndex)];
   if (chip) return <>{chip.node}</>;
-  return <span {...props}>{children}</span>;
+  return <span data-chip={chipIndex}>{children}</span>;
 }
 
 type HastNode = Readonly<{ type: string; tagName?: string; value?: string; children?: HastNode[] }>;
@@ -100,28 +98,38 @@ function tableName(node: HastNode | undefined): string {
 }
 
 const MARKDOWN_COMPONENTS: Components = {
-  h1: ({ node: _node, children, ...props }) => <h2 {...props}>{children}</h2>,
-  h2: ({ node: _node, children, ...props }) => <h3 {...props}>{children}</h3>,
-  h3: ({ node: _node, children, ...props }) => <h4 {...props}>{children}</h4>,
-  h4: ({ node: _node, children, ...props }) => <h5 {...props}>{children}</h5>,
-  h5: ({ node: _node, children, ...props }) => <h6 {...props}>{children}</h6>,
-  h6: ({ node: _node, children, ...props }) => <h6 {...props}>{children}</h6>,
+  h1: ({ children }) => <h2>{children}</h2>,
+  h2: ({ children }) => <h3>{children}</h3>,
+  h3: ({ children }) => <h4>{children}</h4>,
+  h4: ({ children }) => <h5>{children}</h5>,
+  h5: ({ children }) => <h6>{children}</h6>,
+  h6: ({ children }) => <h6>{children}</h6>,
   img: () => null,
-  table: ({ node, ...props }) => <MarkdownTable name={tableName(node)} {...props} />,
-  th: ({ node: _node, ...props }) => <th {...props} scope="col" />,
+  table: ({ node, children }) => <MarkdownTable name={tableName(node)}>{children}</MarkdownTable>,
+  th: ({ style, children }) => (
+    <th
+      scope="col"
+      className={
+        CELL_ALIGN[
+          style?.textAlign === 'center' || style?.textAlign === 'right' ? style.textAlign : 'start'
+        ]
+      }
+    >
+      {children}
+    </th>
+  ),
   a: MarkdownLink,
   span: MarkdownSpan,
 };
 
-function MarkdownTable({
-  name,
-  ...props
-}: Readonly<{ name: string } & ComponentPropsWithoutRef<'table'>>) {
+const CELL_ALIGN = { start: undefined, center: 'text-center', right: 'text-right' } as const;
+
+function MarkdownTable({ name, children }: Readonly<{ name: string; children: ReactNode }>) {
   const { ref, region, frame } = useScrollFrame({ label: name });
   return (
     <div {...frame} className="prose-table-frame grid min-w-0">
       <div ref={ref} {...region} className="overflow-x-auto">
-        <table {...props} aria-label={name} />
+        <table aria-label={name}>{children}</table>
       </div>
     </div>
   );

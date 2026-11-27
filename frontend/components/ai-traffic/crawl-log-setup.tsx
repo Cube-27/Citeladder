@@ -89,12 +89,12 @@ export function CrawlLogSetup({
         ) : null}
         {firehose ? <FirehoseSteps interval={model.bufferInterval} /> : null}
         {gcp ? <GcpSteps /> : null}
-        <TextLink variant="external" href={chosen.guide} className="w-fit">
+        <TextLink variant="external" href={chosen.guide} box="fit">
           Setup guide: {chosen.label}
         </TextLink>
       </Stack>
       <Columns template="halves" gap="workspace">
-        <Field label="Site origin" className="desktop:col-span-2">
+        <Field label="Site origin" wide>
           {(field) => (
             <Input {...field} value={origin} onChange={(e) => setOrigin(e.target.value)} />
           )}
@@ -162,7 +162,7 @@ function DeclaredFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
         </Field>
       ) : null}
       {sampling === 'filtered' ? (
-        <Field label="Filtering limitations" className="desktop:col-span-2">
+        <Field label="Filtering limitations" wide>
           {(field) => (
             <Input {...field} value={filter} onChange={(e) => setFilter(e.target.value)} />
           )}
@@ -189,7 +189,7 @@ function FirehoseFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
         )}
       </Field>
       <Checkbox
-        className="desktop:col-span-2"
+        box="wide"
         checked={declaredFiltered}
         onCheckedChange={(checked) => setDeclaredFiltered(checked === true)}
         label="The stream runs the CiteLadder filter Lambda (coverage stays partial)"
@@ -335,7 +335,7 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
       </Field>
       <Button
         variant="secondary"
-        className="w-fit"
+        box="fit"
         disabled={!file || !sourceId || sources.data?.availability !== 'available'}
         pending={upload.isPending}
         onClick={() => upload.mutate(resume || undefined)}

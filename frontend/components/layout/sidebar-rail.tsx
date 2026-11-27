@@ -7,6 +7,7 @@ import { Menu, MenuContent, MenuLabel, MenuLinkItem, MenuTrigger } from '@/compo
 import { SidebarRailFace, SidebarRowTooltip } from '@/components/ui/sidebar';
 
 import type { NavItem } from './nav-items';
+import { Icon } from '@/components/ui/icon';
 
 const OpenActionCountLabel = lazy(() =>
   import('./open-action-count').then(({ OpenActionCountLabel }) => ({
@@ -83,9 +84,9 @@ export function RailGroupMenu({
       {items.map(({ icon: ItemIcon, ...item }) => (
         <MenuLinkItem key={item.href}>
           <Link to={item.href} aria-current={item.active ? 'page' : undefined}>
-            <ItemIcon className="text-ink-2 size-3.5 shrink-0" aria-hidden />
+            <Icon icon={ItemIcon} size="flush" tone="ink-2" />
             <span className="min-w-0 flex-1 truncate">{item.label}</span>
-            {item.active ? <Check className="text-accent size-3.5 shrink-0" aria-hidden /> : null}
+            {item.active ? <Icon icon={Check} size="flush" tone="accent" /> : null}
           </Link>
         </MenuLinkItem>
       ))}

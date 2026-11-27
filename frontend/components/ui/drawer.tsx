@@ -76,7 +76,7 @@ export function Drawer({
         tooltip={false}
         variant="secondary"
         shape="close"
-        className="shrink-0"
+        box="fixed"
       />
     </DialogPrimitive.Close>
   );

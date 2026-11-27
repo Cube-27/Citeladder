@@ -78,7 +78,7 @@ export function AttributeTable({ categories }: Readonly<{ categories: readonly C
           onValueChange={setQuery}
           aria-label="Search attributes"
           placeholder="Search attributes"
-          className="phone:w-full w-60"
+          frame="filter"
         />
         <SegmentedControl value={side} onChange={setSide} options={SIDES} ariaLabel="Side" />
       </SectionToolbar>

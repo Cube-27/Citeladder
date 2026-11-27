@@ -39,6 +39,7 @@ type MessageNotice = Readonly<{
   children?: ReactNode;
   action?: ReactNode;
   standing?: boolean;
+  measure?: boolean;
   className?: string;
 }>;
 
@@ -98,6 +99,7 @@ function MessageNoticeView({
   children,
   action,
   standing = false,
+  measure = false,
   className,
 }: MessageNotice) {
   if (children == null && title == null) return null;
@@ -113,6 +115,7 @@ function MessageNoticeView({
         'text-body text-ink',
         'flex flex-wrap gap-2',
         action && title == null ? 'items-center' : 'items-start',
+        measure && 'max-w-lg',
         className,
       )}
     >

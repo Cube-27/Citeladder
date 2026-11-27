@@ -100,7 +100,7 @@ function OfferingRow({
           label={`Remove ${map.offering}`}
           disabled={disabled}
           onClick={onRemove}
-          className="column-split:hidden"
+          box="hide-split"
         />
       </MapGridLead>
       {DIMENSIONS.map((dimension) => (

@@ -78,13 +78,7 @@ export function WorkRow({
     >
       <td className="z-raised relative flex">{tick}</td>
       <td className="flex min-w-0 items-baseline gap-2">
-        <TextLink
-          href={href}
-          text="body"
-          underline="hover"
-          truncate
-          className="phone:flex-1 min-w-0 shrink before:absolute before:inset-x-0 before:inset-y-0"
-        >
+        <TextLink href={href} text="body" underline="hover" truncate box="cover">
           {title}
         </TextLink>
         <span className="text-body text-ink-2 phone:hidden min-w-0 flex-1 truncate">{caption}</span>
