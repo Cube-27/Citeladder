@@ -292,7 +292,7 @@ const URL_SEGMENT_KEPT = 32;
 const URL_TAIL_KEPT = 28;
 
 export function urlCut(text: string): { head: string; tail: string } {
-  if (/\s/u.test(text)) return { head: '', tail: text };
+  if (/\s/u.test(text) && !text.includes('/')) return { head: '', tail: text };
   const slash = text.replace(/\/$/u, '').lastIndexOf('/');
   const keepSegment = slash > 0 && text.length - slash <= URL_SEGMENT_KEPT;
   const start = keepSegment ? slash : Math.max(0, text.length - URL_TAIL_KEPT);

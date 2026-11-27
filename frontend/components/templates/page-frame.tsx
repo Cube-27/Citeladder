@@ -64,13 +64,13 @@ export function PageFrame({
     end?: 'page' | 'thread';
     children: ReactNode;
   }>) {
-  const pathname = useLocation().pathname ?? '';
-  const resolved = useRouteTitle(title, pathname);
-  const parents = trail ?? routeTrail(pathname);
-  const hasTrail = parents.length > 0;
-  const width: PageWidth = fill ? 'fill' : routeWidth(pathname);
-  const headed = head === 'page' || hasTrail;
-  const narrow = useMediaQuery(NARROW_QUERY);
+  const { pathname, resolved, parents, width, headed, narrow } = usePageLayout({
+    title,
+    trail,
+    fill,
+    head,
+  });
+  const strips = Boolean(tabs || filters);
   const [tabEnd, setTabEnd] = useState<HTMLElement | null>(null);
   return (
     <PageEmptyOfferProvider>
@@ -84,22 +84,16 @@ export function PageFrame({
             heading={!headed}
             actions={head === 'masthead' || narrow ? actions : undefined}
           />
-          {headed && narrow ? (
-            <PageHeadingRow width={width} strips={Boolean(tabs || filters)}>
-              <h1 className="sr-only">{resolved}</h1>
-            </PageHeadingRow>
-          ) : null}
-          {headed && !narrow ? (
+          {headed ? (
             <PageHeading
               title={resolved}
+              narrow={narrow}
               actions={head === 'page' ? actions : undefined}
-              strips={Boolean(tabs || filters)}
+              strips={strips}
               width={width}
             />
           ) : null}
-          {tabs || filters ? (
-            <PageStrips tabs={tabs} filters={filters} onTabEnd={setTabEnd} />
-          ) : null}
+          {strips ? <PageStrips tabs={tabs} filters={filters} onTabEnd={setTabEnd} /> : null}
           <PageBody width={width} end={end}>
             {children}
           </PageBody>
@@ -149,15 +143,54 @@ function PageMasthead({
   );
 }
 
+function usePageLayout({
+  title,
+  trail,
+  fill,
+  head,
+}: Readonly<{
+  title: string | undefined;
+  trail: readonly Crumb[] | undefined;
+  fill: true | undefined;
+  head: 'page' | 'masthead';
+}>) {
+  const pathname = useLocation().pathname ?? '';
+  const resolved = useRouteTitle(title, pathname);
+  const parents = trail ?? routeTrail(pathname);
+  const width: PageWidth = fill ? 'fill' : routeWidth(pathname);
+  const narrow = useMediaQuery(NARROW_QUERY);
+  return {
+    pathname,
+    resolved,
+    parents,
+    width,
+    narrow,
+    headed: head === 'page' || parents.length > 0,
+  };
+}
+
 function PageHeading({
   title,
+  narrow,
   actions,
   strips,
   width,
-}: Readonly<{ title: string; actions?: ReactNode; strips: boolean; width: PageWidth }>) {
+}: Readonly<{
+  title: string;
+  narrow: boolean;
+  actions?: ReactNode;
+  strips: boolean;
+  width: PageWidth;
+}>) {
   const block = useRef<HTMLDivElement>(null);
   usePublishedHeight(block, '--page-heading-block-size');
   const [primarySlot, setPrimarySlot] = useState<HTMLElement | null>(null);
+  if (narrow)
+    return (
+      <PageHeadingRow ref={block} width={width} strips={strips}>
+        <h1 className="sr-only">{title}</h1>
+      </PageHeadingRow>
+    );
   return (
     <PageHeadingRow ref={block} width={width} strips={strips}>
       <PageTitle>{title}</PageTitle>

@@ -291,7 +291,7 @@ function measure({ route }: { route: string }) {
     if (element.matches('[data-label-lines="2"], [data-sub-line]')) continue;
     add('figure-cell.height', element, element.getBoundingClientRect().height);
   }
-  for (const row of all('dl[data-figure-strip]')) {
+  for (const row of all('[data-figure-strip] dl')) {
     const cells = Array.from(row.children)
       .filter(visible)
       .map((cell) => cell.getBoundingClientRect());

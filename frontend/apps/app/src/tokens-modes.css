@@ -103,7 +103,7 @@
   --color-rule: var(--ramp-black-a11);
   --color-field-hover: var(--ramp-neutral-99_1);
   --color-well-hover: var(--ramp-zinc-91_2);
-  --spacing-control-x: 16px;
+  --spacing-control-x: 12px;
   --color-control-line: var(--ramp-black-a22);
   --color-control-edge: var(--ramp-neutral-61_7);
   --color-control-edge-hover: var(--color-mark-ink-2);
@@ -157,8 +157,8 @@
   --shadow-thumb:
     0 0 5px var(--ramp-black-a2), 0 2px 10px var(--ramp-black-a6), 0 0 1px var(--ramp-black-a30);
 
-  --spacing-control-sm: 32px;
-  --spacing-control-md: 36px;
+  --spacing-control-sm: 24px;
+  --spacing-control-md: 32px;
   --spacing-control-lg: 40px;
   --spacing-control-coarse: 44px;
   --button-hit: 40px;
@@ -175,9 +175,9 @@
     2 * var(--spacing-panel-inset) + var(--masthead-block-size, var(--spacing-masthead)) +
       var(--page-heading-block-size, 0px) + var(--spacing-page-block) + 24px
   );
-  --spacing-gutter: 24px;
+  --spacing-card: 16px;
+  --spacing-gutter: var(--spacing-card);
 
   --spacing-compact: 8px;
-  --spacing-card: 16px;
-  --spacing-section: 20px;
+  --spacing-section: var(--spacing-card);
 }

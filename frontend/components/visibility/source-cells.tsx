@@ -1,5 +1,6 @@
+import { Fragment } from 'react';
+
 import { BrandMark } from '@/components/ui/brand-mark';
-import { HostText } from '@/components/ui/clamp-text';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
@@ -19,6 +20,24 @@ export function SourceName({
       />
     </Inline>
   );
+}
+
+function HostText({ host }: Readonly<{ host: string }>) {
+  let offset = 0;
+  return host.split('.').map((part) => {
+    const at = offset;
+    offset += part.length + 1;
+    return (
+      <Fragment key={at}>
+        {at ? (
+          <>
+            .<wbr />
+          </>
+        ) : null}
+        {part}
+      </Fragment>
+    );
+  });
 }
 
 export function NumericCell({

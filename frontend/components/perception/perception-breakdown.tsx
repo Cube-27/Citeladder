@@ -1,7 +1,6 @@
-import type { ReactNode } from 'react';
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
 
-import { AttributeTable } from '@/components/perception/attribute-table';
+import { useAttributeTable } from '@/components/perception/attribute-table';
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Section, SectionHeader, SectionTitle, SectionToolbar } from '@/components/ui/section';
@@ -48,25 +47,23 @@ export function PerceptionBreakdown({
   const [requested, setView] = useUrlState('breakdown', VIEW_CODEC, { history: 'replace' });
   const views = shownViews(data, categories);
   const view = views.includes(requested) ? requested : views[0];
+  const attribute = useAttributeTable(categories);
   if (!view) return null;
   return (
     <Section aria-label="Breakdown">
       <SectionHeader>
         <SectionTitle>Breakdown</SectionTitle>
       </SectionHeader>
-      <BreakdownView
-        view={view}
-        data={data}
-        categories={categories}
-        switcher={
-          <SegmentedControl
-            value={view}
-            onChange={setView}
-            ariaLabel="Break perception down"
-            options={views.map((value) => ({ value, label: VIEW_LABEL[value] }))}
-          />
-        }
-      />
+      <SectionToolbar>
+        <SegmentedControl
+          value={view}
+          onChange={setView}
+          ariaLabel="Break perception down"
+          options={views.map((value) => ({ value, label: VIEW_LABEL[value] }))}
+        />
+        {view === 'attribute' ? attribute.tools : null}
+      </SectionToolbar>
+      {view === 'attribute' ? attribute.table : <BreakdownView view={view} data={data} />}
     </Section>
   );
 }
@@ -74,32 +71,13 @@ export function PerceptionBreakdown({
 function BreakdownView({
   view,
   data,
-  categories,
-  switcher,
-}: Readonly<{
-  view: View;
-  data: PerceptionResponse;
-  categories: readonly Category[];
-  switcher: ReactNode;
-}>) {
+}: Readonly<{ view: Exclude<View, 'attribute'>; data: PerceptionResponse }>) {
   switch (view) {
-    case 'attribute':
-      return <AttributeTable categories={categories} lead={switcher} />;
     case 'topic':
     case 'engine':
-      return (
-        <>
-          <SectionToolbar>{switcher}</SectionToolbar>
-          <SegmentTable segment={view} rows={data[`${view}s`]} />
-        </>
-      );
+      return <SegmentTable segment={view} rows={data[`${view}s`]} />;
     case 'source':
-      return (
-        <>
-          <SectionToolbar>{switcher}</SectionToolbar>
-          <SourceTable drivers={data.drivers} />
-        </>
-      );
+      return <SourceTable drivers={data.drivers} />;
     default: {
       const _exhaustive: never = view;
       return _exhaustive;

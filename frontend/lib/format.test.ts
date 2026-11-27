@@ -138,5 +138,9 @@ describe('urlCut', () => {
   it('leaves text that is not a URL whole so it cuts at its end', () => {
     const label = 'Coffee of the month club the roundup cites first';
     expect(urlCut(label)).toEqual({ head: '', tail: label });
+    expect(urlCut("shop.test/Women's Clothing/shoes")).toEqual({
+      head: "shop.test/Women's Clothing",
+      tail: '/shoes',
+    });
   });
 });

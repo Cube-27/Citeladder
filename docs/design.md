@@ -219,8 +219,11 @@ marketing).
   reveal, pulse, sweep and the stagger steps), `ease-<role>`, `z-<role>` (base, raised, sticky, float, overlay,
   modal, toast) and `opacity-<role>` (disabled 50, muted 80, dim 70, ghost, hover).
   `cn` knows every role, so a caller can still override one.
-- **Controls:** 36 high (HeroUI's medium), small ones 32 (`control-sm`); 44 below 900px or under a coarse pointer, and on
-  sign-in, account and setup pages (the website's height, `control-lg`).
+- **Controls** (owner, 2026-11-27: "control height 32 for all"): every
+  control reads `control-md`, 32 high (buttons, fields, selects, chips, menu
+  items, trays and the pills sized from them), with 12 side padding; small
+  ones 24 (`control-sm`), large 40 (`control-lg`, sign-in, account and
+  setup pages); 44 below 900px or under a coarse pointer.
   Icons 14 in `ink-2` (Tabler, the `Icon` atom), centred on and no taller than
   the 14px text beside them; empty-state tiles and website wells draw larger.
   Every target is at least 24×24.
@@ -302,10 +305,13 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   underline (`tab-line`), the rest `ink-2`. The
   tab strip and the toolbar under it stick below the page header with 12 of
   `page` above and below them.
-- **Body.** 24 side padding (16 below 760px), 24 below; the title, tab
+- **Body.** One 16 role (owner, 2026-11-27) is the page side padding, the
+  vertical and horizontal gap between sections and cards and the card inset,
+  at every width, on every page except the narrow ones, which centre their
+  column. 24 below; the title, tab
   strip, toolbar and content sit 12 apart, the same gap as a table's
   toolbar above its table (owner, 2026-11-22): status line,
-  then the metric strip, then cards 20 apart (`gap-section`) with no
+  then the metric strip, then cards 16 apart (`gap-section`) with no
   rule between them; a section's head is inside its card (AR-24). Links carry no underline at rest,
   only on hover and focus. Narrow pages centre the body in their column (AR-9; 1040:
   Overview, Projects, Issues, Actions, Agent, Settings, Agent context; 720:
@@ -335,7 +341,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   table keeps its negative-vs-positive bar (AR-19).
 - **Table:** a `DataTable` is always a `Section` (a card on the paper, flat in
   a surface) whose rows bleed to the card's edges; no tray and no inner card.
-  Head band 36 on `table-head`, 12px at 500, a 16-high `rule` tick
+  Head band 32 on `table-head`, 12px at 500, a 16-high `rule` tick
   between columns; cells padded 12 inline and 8 block, the first and last
   cell padded to the card inset so cell text lines up with the title and
   actions; rows 44, one line each, hairline dividers, `state-hover` fill; secondary text
@@ -343,7 +349,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   figures; foot 40 with the count and an icon pager. The first column takes the spare width,
   the others hug their content (AR-4).
 - **Settings layout** (Settings, Agent context, Billing, Pricing): the
-  route's column holds a stack of group cards 20 apart. Settings and Agent context list their sections in a sticky 192 rail (`section-rail`, the Prompt builder's step rail too)
+  route's column holds a stack of group cards 16 apart. Settings and Agent context list their sections in a sticky 192 rail (`section-rail`, the Prompt builder's step rail too)
   of sidebar rows on the column's left (`TabRail`), never a tab strip; the
   current section sits 24 beside it, at most 720 wide (Business map takes
   the rest of the column), so the header and rail never move (AR-9). A
@@ -488,7 +494,7 @@ holds the depth rules.
   `SERIES_FILL_OPACITY` in [`chart.tsx`](../frontend/components/ui/chart.tsx);
   axis text reads `CHART_AXIS_TEXT`, and recharts ticks and captions
   `CHART_TICK_TEXT` through `ChartText`.
-- **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 36,
+- **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 32,
   radius 8; 14px icons in `ink-2` on a secondary. The secondary face: on the
   paper `raised` with the field shadow, inside a surface (card, overlay, well,
   menu) the `state-fill` grey with no shadow. Each surface sets
@@ -501,7 +507,7 @@ holds the depth rules.
   white text, at most one per view. Danger: the `danger-face` (the negative wash) with negative text; filled only to confirm in a
   dialog (`danger-confirm`). One disabled look for every variant. The
   website keeps its layered `.face`.
-- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 36, no
+- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 32, no
   edge at rest: on the paper `panel` (a select trigger or filter chip
   `raised`) with the field shadow; inside a surface `well` (`panel` inside a
   well) with no shadow, set by the surface rule in `app-rules.css`, which also
@@ -525,7 +531,8 @@ holds the depth rules.
   `ink` line, the rest `ink-2`. A panel's tabs are the slot under its header,
   their baseline across the card; never above the card or in its actions.
   Segmented control (and the sidebar's Dashboard | Agent): a `state-fill`
-  tray padded 4 around `control-sm` segments (40 high; 52 under a coarse pointer), with no edge, the selected one a
+  tray one control high (32), padded 4 around 24-high `control-sm` segments
+  (52 around 44 under a coarse pointer), with no edge, the selected one a
   `nav-current-fill` pill with the card shadow.
 - **Tags and status.** Tag: 20 high, radius 5, `state-selected` fill, no edge, 12px at 500 in `ink`; a
   draft is dashed; Kbd and composer chips share the face. Status

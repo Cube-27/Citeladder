@@ -1,39 +1,23 @@
 @media (max-width: 767px) {
-  :is(
-      [data-data-table-frame]:not([data-pinned='2']) tr > :first-child,
-      [data-data-table-frame][data-pinned='2'] tr > :nth-child(2)
-    )
-    .truncate,
+  :is([data-pinned='1'] tr > :first-child, [data-pinned='2'] tr > :nth-child(2))
+    :is(.truncate, [data-url-text], [data-url-text] > span),
   .table-frame th[scope='row'] .truncate {
     white-space: normal;
     overflow-wrap: break-word;
     text-overflow: clip;
   }
 
-  :is(
-      [data-data-table-frame]:not([data-pinned='2']) tr > :first-child,
-      [data-data-table-frame][data-pinned='2'] tr > :nth-child(2)
-    )
-    [data-cell-lines] {
-    flex-wrap: wrap;
-  }
+  :is([data-pinned='1'] tr > :first-child, [data-pinned='2'] tr > :nth-child(2)) {
+    & [data-cell-lines] {
+      flex-wrap: wrap;
+    }
 
-  :is(
-      [data-data-table-frame]:not([data-pinned='2']) tr > :first-child,
-      [data-data-table-frame][data-pinned='2'] tr > :nth-child(2)
-    )
-    [data-url-text] {
-    display: block;
-    white-space: normal;
-  }
+    & [data-url-text] {
+      display: block;
+    }
 
-  :is(
-      [data-data-table-frame]:not([data-pinned='2']) tr > :first-child,
-      [data-data-table-frame][data-pinned='2'] tr > :nth-child(2)
-    )
-    [data-url-text]
-    > span {
-    display: inline;
-    overflow-wrap: break-word;
+    & [data-url-text] > span {
+      display: inline;
+    }
   }
 }

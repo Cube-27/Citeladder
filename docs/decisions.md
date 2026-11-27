@@ -426,6 +426,11 @@ how to add or change an entry.
   stretching to a neighbour.
 - **AR-30 Phone header** (2026-11-27, C18): below 900 the header shows the page
   title and the h1 stays for screen readers only.
+- **AR-31 Control height 32** (2026-11-27): every control is 32 high with 12
+  side padding; small 24, large 40; 44 on phones and coarse pointers stays.
+- **AR-32 One page spacing** (2026-11-27): page side padding, the gaps between
+  sections and cards and the card inset are one 16 role on every page except
+  the narrow ones.
 - **AR-28 One term, "prompts"** (technically buyer queries), not "answers",
   for what a product or brand is measured in (2026-11-27). Product detail and
   the Products list follow it; other screens still say "answers".

@@ -184,10 +184,16 @@ describe('SettingsScreen', () => {
     expect(screen.getByRole('tab', { name: 'Account' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('moves down the section rail with the arrow keys', async () => {
+  it('moves down the section rail on desktop and along it as a row below desktop', async () => {
     const ue = userEvent.setup();
-    renderScreen();
-
+    const desktop = (wide: boolean) =>
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: wide && query === '(min-width: 981px)',
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+    desktop(true);
+    const { unmount } = renderScreen();
     const account = screen.getByRole('tab', { name: 'Account' });
     account.focus();
     await ue.keyboard('{ArrowRight}');
@@ -196,6 +202,15 @@ describe('SettingsScreen', () => {
     expect(screen.getByRole('tab', { name: 'Workspace' })).toHaveAttribute('aria-selected', 'true');
     await ue.keyboard('{End}');
     expect(screen.getByRole('tab', { name: 'API keys' })).toHaveAttribute('aria-selected', 'true');
+    unmount();
+
+    desktop(false);
+    window.history.replaceState(null, '', '/settings');
+    renderScreen();
+    screen.getByRole('tab', { name: 'Account' }).focus();
+    await ue.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Workspace' })).toHaveAttribute('aria-selected', 'true');
+    vi.unstubAllGlobals();
   });
 
   it('does not expose project deletion while self-serve billing is unavailable', () => {
