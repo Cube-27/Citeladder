@@ -79,7 +79,7 @@ export function Tooltip({
         onClick={(event) => {
           if (!tap.current.touch) return;
           event.preventDefault();
-          setOpen(!tap.current.wasOpen);
+          onOpenChange(!tap.current.wasOpen);
         }}
       >
         {children}

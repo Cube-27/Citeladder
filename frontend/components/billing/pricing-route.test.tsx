@@ -235,11 +235,13 @@ describe('app pricing continuation', () => {
 
   it('keeps focus on the purchase button once its quote is ready', async () => {
     const usd = (amount_minor: number) => ({ currency: 'USD', amount_minor });
+    let posts = 0;
     mswServer.use(
       http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog)),
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
-      http.post('/api/v1/billing/addons', () =>
-        HttpResponse.json({
+      http.post('/api/v1/billing/addons', () => {
+        posts += 1;
+        return HttpResponse.json({
           activation_id: '11111111-1111-4111-8111-111111111111',
           kind: 'addon',
           catalog_key: 'addon_seats',
@@ -268,8 +270,8 @@ describe('app pricing continuation', () => {
           },
           expires_at: '2026-08-01T12:00:00Z',
           failure_code: null,
-        }),
-      ),
+        });
+      }),
     );
     globalThis.sessionStorage.setItem(
       PENDING_PRICING_INTENT_KEY,
@@ -290,8 +292,15 @@ describe('app pricing continuation', () => {
     renderWithProviders(<PricingRoute />);
     const purchase = await screen.findByRole('button', { name: 'Review current quote' });
     await user.click(purchase);
-    await waitFor(() => expect(purchase).toHaveAttribute('aria-disabled', 'true'));
-    expect(document.activeElement).toBe(purchase);
+    await waitFor(() =>
+      expect([purchase.getAttribute('aria-busy'), purchase.getAttribute('aria-disabled')]).toEqual([
+        null,
+        'true',
+      ]),
+    );
+    await user.click(purchase);
+    await user.keyboard('{Enter}');
+    expect([posts, document.activeElement]).toEqual([1, purchase]);
   });
 
   it('reports a refused purchase once, in the server sentence', async () => {

@@ -11,7 +11,7 @@ export type SearchableSelectOption = { value: string; label: string; detail?: st
 
 type SelectOptionRenderer = (option: SearchableSelectOption) => ReactNode;
 
-const labelledBy = ({ ariaLabel, id }: ControlName) =>
+const labelledBy = ({ ariaLabel, id }: Readonly<{ ariaLabel?: string; id?: string }>) =>
   ariaLabel === undefined && id ? fieldLabelId(id) : undefined;
 
 export function SearchableSelect({
