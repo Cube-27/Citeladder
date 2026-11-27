@@ -1,11 +1,10 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { describe, expect, it } from 'vite-plus/test';
+
+import { appStylesheet } from '@/test/app-stylesheet';
 
 import { cn } from './utils';
 
-const THEME = readFileSync(join(import.meta.dirname, '../apps/app/src/globals.css'), 'utf8');
+const THEME = appStylesheet();
 const roles = (namespace: string) => [
   ...new Set(
     [...THEME.matchAll(new RegExp(`--${namespace}-([a-z][a-z0-9-]*):`, 'gu'))].map(

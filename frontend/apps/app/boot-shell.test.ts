@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { DASHBOARD_GROUPS, FOOT_NAV_ITEMS, pageSection } from '@/components/layout/nav-items';
 import { sidebarNavRowClasses } from '@/components/ui/sidebar';
 import * as manifest from '@/lib/navigation/app-routes';
+import { appStylesheet } from '@/test/app-stylesheet';
 
 import { BOOT_SIDEBAR_MARKER, bootSidebarHtml, bootTitleScript } from './boot-shell';
 
@@ -96,7 +97,7 @@ describe('boot-title.js', () => {
 });
 
 describe('the boot shell geometry', () => {
-  const css = readFileSync(join(import.meta.dirname, 'src/globals.css'), 'utf8');
+  const css = appStylesheet();
   const appTokens = /:root:not\(\[data-public-surface\]\) \{([\s\S]*?)\n\}/u.exec(css)?.[1] ?? '';
   const themeTokens = /@theme \{([\s\S]*?)\n\}/u.exec(css)?.[1] ?? '';
   const token = (name: string) => {

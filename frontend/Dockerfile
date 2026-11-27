@@ -46,7 +46,7 @@ RUN npm install --global --ignore-scripts pnpm@12.21.0
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/apps/marketing ./apps/marketing
-COPY frontend/apps/app/src/globals.css frontend/apps/app/src/public-surface.css frontend/apps/app/src/ui-motion.css ./apps/app/src/
+COPY frontend/apps/app/src/*.css ./apps/app/src/
 COPY frontend/components ./components
 COPY frontend/lib ./lib
 COPY frontend/packages ./packages

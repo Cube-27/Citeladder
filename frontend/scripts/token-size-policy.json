@@ -21,11 +21,7 @@
     { "glob": "**/migrations/**", "reason": "migrations are append-only history" },
     { "glob": "frontend/lib/marketing-content/**", "reason": "marketing content data" },
     { "glob": "frontend/services/api/src/config/**", "reason": "API config and policy data" },
-    { "glob": "frontend/lib/config/**", "reason": "frontend config owner" },
-    {
-      "glob": "frontend/apps/app/src/globals.css",
-      "reason": "design tokens and the shared rules, ordered by cascade tier: an area (tables, shell) spans several tiers, so an order-keeping split gives tier files, not area files, and the design-system checks read it as the one token owner (owner, 2026-11-19: split only if it helps maintenance)"
-    }
+    { "glob": "frontend/lib/config/**", "reason": "frontend config owner" }
   ],
   "baseline": {
     "frontend/services/api/src/workspaces/account-manager.ts": 6292

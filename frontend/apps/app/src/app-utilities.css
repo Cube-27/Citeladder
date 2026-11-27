@@ -1,0 +1,196 @@
+@utility page-start-full {
+  --page-start: max(0px, calc((100cqw - var(--container-app)) / 2));
+}
+@utility page-start-narrow {
+  --page-start: max(0px, calc((100cqw - var(--container-page)) / 2));
+}
+@utility page-start-compact {
+  --page-start: max(0px, calc((100cqw - var(--container-measure)) / 2));
+}
+@utility scrollbar-stable {
+  scrollbar-gutter: stable;
+}
+@utility controls-lg {
+  --spacing-control-md: var(--spacing-control-lg);
+}
+@utility shadow-xs {
+  box-shadow: var(--shadow-xs);
+}
+@utility shadow-pop {
+  box-shadow: var(--shadow-pop);
+}
+@utility shadow-sheet {
+  box-shadow: var(--shadow-sheet);
+}
+@utility shadow-card {
+  box-shadow: var(--shadow-card, none);
+}
+
+@layer utilities {
+  .edge-draft {
+    position: relative;
+    border: var(--rule-width) dashed var(--color-control-line);
+  }
+  .edge-draft::after {
+    content: '';
+    position: absolute;
+    inset: calc(-1 * var(--rule-width));
+    border: var(--rule-width) solid var(--color-control-line);
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-duration-open) var(--ease-standard);
+  }
+  .edge-draft[data-draft='false']::after {
+    opacity: 1;
+  }
+}
+
+@utility bg-heat {
+  background: color-mix(in oklch, var(--color-accent) var(--heat-share), var(--color-panel));
+}
+@utility bg-heat-scale {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--color-accent) 4%, var(--color-panel)),
+    color-mix(in oklch, var(--color-accent) 50%, var(--color-panel))
+  );
+}
+@utility bg-hatch {
+  background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--color-rule) 6px 7px);
+}
+
+@utility overlay-hover {
+  background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
+}
+@utility overlay-pressed {
+  background-image: linear-gradient(var(--color-state-pressed), var(--color-state-pressed));
+}
+@utility overlay-selected {
+  background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
+}
+@utility link-rule {
+  text-decoration-thickness: var(--link-rule-width);
+}
+@utility scrollbar-none {
+  scrollbar-width: none;
+}
+@utility appearance-textfield {
+  appearance: textfield;
+}
+@utility align-glyph {
+  vertical-align: var(--align-glyph);
+}
+@utility align-glyph-sm {
+  vertical-align: var(--align-glyph-sm);
+}
+@utility shrink-last {
+  flex-shrink: 0.001;
+}
+@utility press-firm {
+  --press: var(--press-firm);
+}
+@utility press-soft {
+  --press: var(--press-soft);
+}
+@utility press-mark {
+  --press: var(--press-mark);
+}
+@utility press-check {
+  --press: var(--press-check);
+}
+@utility target-hit-fine {
+  --target-hit: var(--spacing-target);
+}
+@utility panel-inset-card {
+  --spacing-panel-inset: var(--spacing-card);
+}
+@utility panel-inset-modal {
+  --spacing-panel-inset: var(--spacing-modal);
+}
+@utility popup-from-top {
+  --popup-origin: top;
+}
+@utility popup-from-bottom {
+  --popup-origin: bottom;
+}
+@utility cell-indent {
+  --cell-indent: var(--spacing-indent);
+}
+@utility cell-indent-2 {
+  --cell-indent: var(--spacing-indent-2);
+}
+@utility table-ground-well {
+  --table-ground: var(--color-well);
+}
+@utility check-draw {
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset var(--check-draw-duration) linear var(--check-draw-delay);
+}
+@layer utilities {
+  .check-draw[data-drawn] {
+    stroke-dashoffset: 0;
+  }
+}
+@utility transition-meter {
+  transition:
+    width var(--transition-duration-slide) var(--ease-standard),
+    background-color var(--transition-duration-open) var(--ease-standard);
+}
+
+[data-public-surface] {
+  .face {
+    --face-from: var(--color-face-from);
+    --face-to: var(--color-face-to);
+    background:
+      linear-gradient(var(--face-tint, transparent), var(--face-tint, transparent)),
+      linear-gradient(var(--face-from), var(--face-to)) var(--face-bg, var(--face-to));
+    box-shadow: var(--face-lit, 0 0 transparent), var(--shadow-button);
+  }
+  .face-primary {
+    --face-from: var(--color-primary-from);
+    --face-to: var(--color-primary-to);
+    --face-lit: inset 0 1px 0 var(--ramp-white-a16);
+    --face-hover: var(--ramp-white-a5);
+    --face-press: var(--ramp-black-a8);
+    border-color: var(--color-primary-to);
+    color: var(--text-color-on-primary);
+  }
+  .face-danger {
+    --face-to: var(--color-face-from);
+  }
+  .face-filled {
+    --face-from: var(--ramp-white-a6);
+    --face-to: transparent;
+    --face-bg: var(--color-negative);
+  }
+  @media (hover: hover) {
+    .face:hover {
+      --face-tint: var(--face-hover, var(--color-state-hover));
+    }
+  }
+  .face:is(:active, [aria-pressed='true'], [data-state='open']) {
+    --face-tint: var(--face-press, var(--color-state-pressed));
+    box-shadow: none;
+  }
+  .face:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
+    --face-tint: transparent;
+    --face-from: var(--face-to);
+    box-shadow: none;
+  }
+}
+
+@layer components {
+  .hit-area {
+    position: relative;
+  }
+  .hit-area::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, var(--target-hit));
+    height: max(100%, var(--target-hit));
+    translate: -50% -50%;
+  }
+}

@@ -2,7 +2,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const TOKEN_CSS = 'apps/app/src/globals.css';
-export const TOKEN_FILES = [TOKEN_CSS, 'apps/app/src/public-surface.css'];
+const APP_SHEETS = [
+  ...readFileSync(new URL(`../${TOKEN_CSS}`, import.meta.url), 'utf8').matchAll(
+    /^@import '\.\/([\w-]+\.css)';$/gmu,
+  ),
+].map((match) => `apps/app/src/${match[1]}`);
+export const TOKEN_FILES = [...APP_SHEETS, 'apps/app/src/public-surface.css'];
 const LIGHT = ':root';
 const DARK = ":root[data-theme='dark']";
 const APP_LIGHT = ':root:not([data-public-surface])';

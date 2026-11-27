@@ -75,7 +75,6 @@ test('tests, codegen, config, content and registries are ignored; authored sourc
     'frontend/lib/marketing-content/blog-index.ts',
     'frontend/services/api/src/config/opportunity.ts',
     'frontend/lib/config/agent.ts',
-    'frontend/apps/app/src/globals.css',
     'frontend/services/api/migrations/0002_x.sql',
     'docs/DEVELOPMENT.md',
   ];
@@ -84,6 +83,7 @@ test('tests, codegen, config, content and registries are ignored; authored sourc
     'frontend/services/api/src/mcp/tools.ts',
     'frontend/components/agent/chat-screen.tsx',
     'frontend/apps/app/src/app.css',
+    'frontend/apps/app/src/tokens-roles.css',
     'frontend/scripts/check-token-size.mjs',
     'scripts/quality.mjs',
   ];
