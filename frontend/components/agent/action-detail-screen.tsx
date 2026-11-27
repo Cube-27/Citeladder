@@ -8,7 +8,6 @@ import {
   StepList,
   Labelled,
   Prose,
-  READING_SECTION_TITLE,
   ReadingColumn,
   ReadingTools,
 } from '@/components/ui/reading-page';
@@ -114,11 +113,7 @@ function ActionPage({
         </PageDrawerHost>
         {action.declaration ? (
           <Labelled title="Implementation">
-            <DeclarationStatus
-              declaration={action.declaration}
-              workspaceId={workspaceId}
-              titleRole={READING_SECTION_TITLE}
-            />
+            <DeclarationStatus declaration={action.declaration} workspaceId={workspaceId} />
           </Labelled>
         ) : null}
       </ReadingColumn>

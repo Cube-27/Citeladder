@@ -12,6 +12,7 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
 import { Notice } from '@/components/ui/notice';
+import { Text } from '@/components/ui/typography';
 
 export function ProjectMarkets({
   projectId,
@@ -45,8 +46,10 @@ export function ProjectMarkets({
       {extra.length ? (
         <SectionBleed as="ul" rows>
           {extra.map((market) => (
-            <Inline as="li" key={market.id} className="text-body text-ink-2 justify-between">
-              <span>{market.label}</span>
+            <Inline as="li" key={market.id} justify="between">
+              <Text variant="body" tone="ink-2">
+                {market.label}
+              </Text>
               <IconButton
                 icon={X}
                 label={`Remove ${market.label}`}

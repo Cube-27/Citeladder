@@ -9,6 +9,8 @@ import {
   type RefObject,
 } from 'react';
 
+import { Slot } from '@radix-ui/react-slot';
+
 import { IconButton } from '@/components/ui/button';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import {
@@ -219,22 +221,89 @@ const RAIL_BUTTON = cn(
   'data-[state=open]:overlay-pressed',
 );
 
-export function sidebarRailButtonClasses(current: boolean) {
-  return cn(RAIL_BUTTON, current ? CURRENT_TILE : NAV_AT_REST);
-}
+type FaceProps = Readonly<ComponentPropsWithoutRef<'span'> & { asChild?: boolean }>;
 
-export function sidebarModeTrackClasses(rail: boolean) {
-  return rail
-    ? 'flex flex-col items-center'
-    : 'rounded-control flex h-control-md w-full min-w-0 shrink-0 bg-state-fill p-0.5';
-}
-
-export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
-  if (rail) return cn(RAIL_BUTTON, current ? cn('text-ink', CURRENT_FILL) : AT_REST);
-  return cn(
-    'focus-ring text-label text-ink rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors',
-    current ? 'text-ink bg-nav-current shadow-card' : AT_REST,
+export function SidebarRowFace({
+  active,
+  still = false,
+  asChild = false,
+  ...props
+}: FaceProps & Readonly<{ active: boolean; still?: boolean }>) {
+  const Root = asChild ? Slot : 'span';
+  return (
+    <Root
+      {...props}
+      className={sidebarNavRowClasses(active, still ? 'pointer-events-none' : undefined)}
+    />
   );
+}
+
+export function SidebarRailFace({
+  current,
+  asChild = false,
+  ...props
+}: FaceProps & Readonly<{ current: boolean }>) {
+  const Root = asChild ? Slot : 'span';
+  return <Root {...props} className={cn(RAIL_BUTTON, current ? CURRENT_TILE : NAV_AT_REST)} />;
+}
+
+export function SidebarModeTrack({
+  rail,
+  as: Root = 'div',
+  ...props
+}: Readonly<ComponentPropsWithoutRef<'div'> & { rail: boolean; as?: 'div' | 'nav' }>) {
+  return (
+    <Root
+      {...props}
+      className={
+        rail
+          ? 'flex flex-col items-center'
+          : 'rounded-control h-control-md bg-state-fill flex w-full min-w-0 shrink-0 p-0.5'
+      }
+    />
+  );
+}
+
+export function SidebarModeSegment({
+  current,
+  rail,
+  asChild = false,
+  ...props
+}: FaceProps & Readonly<{ current: boolean; rail: boolean }>) {
+  const Root = asChild ? Slot : 'span';
+  return (
+    <Root
+      {...props}
+      className={
+        rail
+          ? cn(RAIL_BUTTON, current ? cn('text-ink', CURRENT_FILL) : AT_REST)
+          : cn(
+              'focus-ring text-label text-ink rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors',
+              current ? 'text-ink bg-nav-current shadow-card' : AT_REST,
+            )
+      }
+    />
+  );
+}
+
+export function SidebarFootList({
+  rail,
+  children,
+}: Readonly<{ rail: boolean; children: ReactNode }>) {
+  return (
+    <ul className={rail ? 'flex flex-col items-center' : 'flex flex-col gap-0.5'}>{children}</ul>
+  );
+}
+
+export function SidebarRowLabel({
+  muted,
+  children,
+}: Readonly<{ muted: boolean; children: ReactNode }>) {
+  return <span className={cn('truncate', muted && 'text-ink-2')}>{children}</span>;
+}
+
+export function SidebarMarkPlaceholder() {
+  return <span aria-hidden className="bg-well rounded-mark size-5 shrink-0" />;
 }
 
 export function RailFlyoutSlot({ children }: Readonly<{ children: ReactNode }>) {

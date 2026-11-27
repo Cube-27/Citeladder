@@ -1,5 +1,5 @@
 import { SkeletonBlock } from '@/components/ui/skeleton-block';
-import { textRole, type TextRole } from '@/components/ui/typography';
+import { textRole, type TextRole } from '@/components/ui/text-role';
 
 const LINE_WIDTH = {
   short: 'w-32',

@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SetupSteps, type SetupStep } from '@/components/ui/rung-trail';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { ArrowRight } from '@/lib/icons';
 import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 
@@ -50,9 +50,9 @@ export function OverviewStart({ data }: Readonly<{ data: CommandCenter }>) {
     <Section aria-labelledby="overview-start">
       <SectionHeader
         actions={
-          <span className={textRole('caption', 'flex h-6 items-center tabular-nums')}>
+          <Text variant="caption" box="meta" numeric>
             {done} of {steps.length} done
-          </span>
+          </Text>
         }
       >
         <SectionTitle id="overview-start">

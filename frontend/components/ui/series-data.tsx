@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import type { EventKind } from '@/components/ui/step-chart-parts';
 import { ChartTable } from '@/components/ui/chart-frame';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Value } from '@/components/ui/value';
 import { absent, type Formatted, formattedText } from '@/lib/format';
 

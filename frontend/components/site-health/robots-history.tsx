@@ -8,7 +8,7 @@ import { FilterChip } from '@/components/ui/filter-chip';
 import { Inline } from '@/components/ui/layout';
 import { LineDiff } from '@/components/ui/line-diff';
 import { TableCell, TableRow, TableTime } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { FileText } from '@/lib/icons';
 import { diffLines } from '@/lib/agent/diff';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
@@ -160,9 +160,9 @@ function RobotsDiff({
       {lines ? (
         <LineDiff lines={lines} label="robots.txt line diff" />
       ) : (
-        <p className={textRole('body', 'text-ink-2')}>
+        <Text as="p" variant="body" tone="ink-2">
           These robots.txt files are too long to compare line by line.
-        </p>
+        </Text>
       )}
     </>
   );

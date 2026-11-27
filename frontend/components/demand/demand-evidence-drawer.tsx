@@ -17,7 +17,7 @@ import {
 } from '@/lib/demand/signals';
 import { DisplayTime } from '@/components/ui/display-time';
 import { formatCount, formatPercent } from '@/lib/format';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { UrlText } from '@/components/ui/table';
@@ -71,23 +71,23 @@ export function DemandEvidenceDrawer({
           <SectionHeader>
             <SectionTitle level={3}>
               <Inline as="span">
-                <Icon icon={Split} className="text-ink-2" />
+                <Icon icon={Split} tone="ink-2" />
                 Competing pages ({details.pages.length})
               </Inline>
             </SectionTitle>
           </SectionHeader>
           <SectionBleed rows>
             {details.pages.map((page) => (
-              <Stack key={page.url} gap="tight" className="text-caption text-ink-2">
-                <div className={textRole('emphasis', 'text-ink flex min-w-0')}>
+              <Stack key={page.url} gap="tight">
+                <Text as="div" variant="caption-strong" tone="ink" box="row">
                   <UrlText url={page.url} />
-                </div>
-                <div className="text-caption text-ink-2 flex items-center justify-between">
-                  <span>{formatCount(page.impressions)} impressions</span>
-                  <span className={textRole('emphasis', 'text-ink tabular-nums')}>
+                </Text>
+                <Inline gap="none" justify="between">
+                  <Text variant="caption">{formatCount(page.impressions)} impressions</Text>
+                  <Text variant="caption-strong" tone="ink" numeric>
                     {formatPercent(page.share)} query share
-                  </span>
-                </div>
+                  </Text>
+                </Inline>
               </Stack>
             ))}
           </SectionBleed>
@@ -100,22 +100,24 @@ export function DemandEvidenceDrawer({
             <SectionTitle level={3}>Position benchmark</SectionTitle>
           </SectionHeader>
           <SectionBleed rows>
-            <div className="text-caption text-ink-2 flex justify-between">
-              <span className="text-ink-2">Position band</span>
+            <Inline gap="none" align="stretch" justify="between">
+              <Text variant="caption">Position band</Text>
               {details.positionBand !== null ? (
-                <span className={textRole('emphasis', 'text-ink')}>
+                <Text variant="caption-strong" tone="ink">
                   Positions {details.positionBand}.0 – {details.positionBand}.9
-                </span>
+                </Text>
               ) : (
-                <Absence state="not_measured" />
+                <Text variant="caption">
+                  <Absence state="not_measured" />
+                </Text>
               )}
-            </div>
-            <div className="text-caption text-ink-2 flex justify-between">
-              <span className="text-ink-2">Median CTR in this band</span>
-              <span className={textRole('emphasis', 'text-ink-2 tabular-nums')}>
+            </Inline>
+            <Inline gap="none" align="stretch" justify="between">
+              <Text variant="caption">Median CTR in this band</Text>
+              <Text variant="caption-strong" numeric>
                 {formatPercent(details.cohortMedianCtr)}
-              </span>
-            </div>
+              </Text>
+            </Inline>
           </SectionBleed>
         </Section>
       )}
@@ -124,7 +126,7 @@ export function DemandEvidenceDrawer({
         <SectionHeader>
           <SectionTitle level={3} id="demand-provenance">
             <Inline as="span">
-              <Icon icon={ShieldCheck} className="text-ink-2" />
+              <Icon icon={ShieldCheck} tone="ink-2" />
               Provenance
             </Inline>
           </SectionTitle>
@@ -147,9 +149,13 @@ export function DemandEvidenceDrawer({
 
 function ProvenanceRow({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
-    <Inline gap="workspace" className="text-caption text-ink-2 justify-between">
-      <dt className="text-ink-2">{label}</dt>
-      <dd className="text-ink tabular-nums">{children}</dd>
+    <Inline gap="workspace" justify="between">
+      <Text as="dt" variant="caption">
+        {label}
+      </Text>
+      <Text as="dd" variant="caption" tone="ink" numeric>
+        {children}
+      </Text>
     </Inline>
   );
 }

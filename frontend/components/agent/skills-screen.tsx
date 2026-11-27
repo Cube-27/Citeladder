@@ -1,16 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { useId } from 'react';
 
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ReportPage } from '@/components/templates/report-page';
-import { ProjectLink } from '@/components/ui/project-link';
-import { Icon } from '@/components/ui/icon';
-import { textRole } from '@/components/ui/typography';
+import { LinkListRow } from '@/components/ui/list-row';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import {
   BarChart3,
-  ChevronRight,
   FileText,
   Link2,
   ListChecks,
@@ -77,8 +73,8 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
       {[...groups].map(([group, rows]) => (
         <Section key={group} aria-label={group}>
           <SectionHeader>
-            <SectionTitle level={2}>
-              {group} <span className="text-ink-2">({rows.length})</span>
+            <SectionTitle level={2} count={rows.length}>
+              {group}
             </SectionTitle>
           </SectionHeader>
           <SectionBleed as="ul" rows>
@@ -97,32 +93,20 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
 }
 
 function SkillRow({ skill, output }: Readonly<{ skill: AgentSkill; output: string | undefined }>) {
-  const detailId = useId();
   return (
-    <li className="hover:overlay-hover min-h-row relative flex min-w-0 items-center gap-3">
-      <Icon icon={OUTPUT_ICONS[skill.output_kind] ?? Sparkles} className="text-ink-2" />
-      <span className={textRole('body', 'flex min-w-0 flex-1 flex-col gap-0.5')}>
-        <ProjectLink
-          href={agentHandoffHref({ skillId: skill.id })}
-          aria-label={`Start a chat with ${skill.label}`}
-          aria-describedby={output ? `${detailId} ${detailId}-output` : detailId}
-          className="focus-ring-inset text-label text-ink self-start no-underline before:absolute before:inset-0"
-        >
-          {skill.label}
-        </ProjectLink>
-        <span id={detailId} className="text-ink-2 phone:sr-only line-clamp-2 min-w-0">
-          {skill.description}
-        </span>
-      </span>
-      {output ? (
-        <span
-          id={`${detailId}-output`}
-          className={textRole('caption', 'shrink-0 whitespace-nowrap')}
-        >
-          <span className="sr-only">Output:</span> {output}
-        </span>
-      ) : null}
-      <Icon icon={ChevronRight} className="text-ink-2" />
-    </li>
+    <LinkListRow
+      icon={OUTPUT_ICONS[skill.output_kind] ?? Sparkles}
+      href={agentHandoffHref({ skillId: skill.id })}
+      label={skill.label}
+      linkLabel={`Start a chat with ${skill.label}`}
+      description={skill.description}
+      end={
+        output ? (
+          <>
+            <span className="sr-only">Output:</span> {output}
+          </>
+        ) : undefined
+      }
+    />
   );
 }

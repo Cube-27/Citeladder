@@ -1,8 +1,7 @@
-import { JUMP_LINK } from '@/components/agent/jump-link';
 import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
-import { textRole } from '@/components/ui/typography';
-import { treeBranchClasses } from '@/components/ui/workspace';
+import { Text } from '@/components/ui/typography';
+import { TreeBranch } from '@/components/ui/workspace';
 import { pageOutline, type OutlineHeading } from '@/lib/agent/page-workspace';
 
 type OutlineNode = { heading: OutlineHeading; children: OutlineNode[] };
@@ -24,21 +23,24 @@ function Branch({
   nested,
   onJump,
 }: Readonly<{ nodes: readonly OutlineNode[]; nested: boolean; onJump: (from: number) => void }>) {
-  return (
-    <Stack as="ol" gap="tight" className={nested ? treeBranchClasses() : undefined}>
-      {nodes.map((node) => (
-        <Stack as="li" gap="tight" key={node.heading.from}>
-          <Pressable
-            className={textRole('body', `${JUMP_LINK} w-auto text-start`)}
-            onClick={() => onJump(node.heading.from)}
-          >
-            {node.heading.text}
-          </Pressable>
-          {node.children.length > 0 ? (
-            <Branch nodes={node.children} nested onJump={onJump} />
-          ) : null}
-        </Stack>
-      ))}
+  const items = nodes.map((node) => (
+    <Stack as="li" gap="tight" key={node.heading.from}>
+      <Pressable
+        look="jump"
+        text="body"
+        className="w-auto text-start"
+        onClick={() => onJump(node.heading.from)}
+      >
+        {node.heading.text}
+      </Pressable>
+      {node.children.length > 0 ? <Branch nodes={node.children} nested onJump={onJump} /> : null}
+    </Stack>
+  ));
+  return nested ? (
+    <TreeBranch as="ol">{items}</TreeBranch>
+  ) : (
+    <Stack as="ol" gap="tight">
+      {items}
     </Stack>
   );
 }
@@ -49,7 +51,11 @@ export function OutlinePanel({
 }: Readonly<{ body: string; onJump: (from: number) => void }>) {
   const tree = nest(pageOutline(body));
   if (tree.length === 0)
-    return <p className={textRole('body', 'text-ink-2')}>This page has no headings yet.</p>;
+    return (
+      <Text as="p" variant="body" tone="ink-2">
+        This page has no headings yet.
+      </Text>
+    );
   return (
     <nav aria-label="Page outline">
       <Branch nodes={tree} nested={false} onJump={onJump} />

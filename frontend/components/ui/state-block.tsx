@@ -6,7 +6,7 @@ import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/noti
 import { Section, useOnPage } from '@/components/ui/section';
 import { ShapeBlocks, SkeletonFrame, type LoadingShape } from '@/components/ui/skeleton-block';
 import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { CircleDashed, Inbox, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 

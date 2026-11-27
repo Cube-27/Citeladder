@@ -5,10 +5,10 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { Menu, MenuContent, MenuLinkItem, MenuTrigger } from '@/components/ui/menu';
-import { CodeToken, textRole } from '@/components/ui/typography';
+import { CodeToken, Text } from '@/components/ui/typography';
 import { ChevronDown, ExternalLink } from '@/lib/icons';
-import { MCP_CLIENT_LINKS, MCP_SERVER_URL, type McpClientLink } from '@/lib/config/mcp-clients';
 import { cn } from '@/lib/utils';
+import { MCP_CLIENT_LINKS, MCP_SERVER_URL, type McpClientLink } from '@/lib/config/mcp-clients';
 
 const HOVER_CLOSE_DELAY_MS = 160;
 
@@ -78,7 +78,8 @@ export function ConnectStrip({
       as="section"
       gap="compact"
       aria-label="Connect CiteLadder to an AI assistant"
-      className="w-fit max-w-full flex-wrap"
+      box="fit"
+      wrap
     >
       <Menu open={menu.open} onOpenChange={menu.setOpen} modal={false}>
         <MenuTrigger asChild>
@@ -107,10 +108,7 @@ export function ConnectStrip({
                 }}
               >
                 Connect to {primary.label}
-                <Icon
-                  icon={ChevronDown}
-                  className="transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none"
-                />
+                <Icon icon={ChevronDown} flipOnOpen />
               </a>
             </Button>
           </span>
@@ -140,7 +138,9 @@ export function ConnectStrip({
         </MenuContent>
       </Menu>
       <Inline>
-        <span className={textRole('body', 'text-ink-2 shrink-0')}>MCP URL</span>
+        <Text variant="body" tone="ink-2" box="fixed">
+          MCP URL
+        </Text>
         <CodeToken>{MCP_SERVER_URL}</CodeToken>
         <CopyButton
           value={MCP_SERVER_URL}

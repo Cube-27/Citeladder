@@ -2,7 +2,7 @@ import { ArrowDown, ArrowUp } from '@/lib/icons';
 import { Checkbox } from '@/components/ui/checkbox';
 import { HintedTableHead, SortableTableHead } from '@/components/ui/table-heads';
 import { TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 
 const COLUMN_WIDTH = {
   flex: { kind: 'rest' },

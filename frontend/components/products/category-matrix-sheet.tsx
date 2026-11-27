@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { pluralCount } from '@/lib/format';
@@ -118,11 +118,11 @@ export function CategoryMatrixSheet({
             notice={mutationNoticeForError(decide.error, { action: 'update the shopping prompt' })}
           />
         ) : null}
-        <p aria-label="Matrix coverage" className={textRole('body', 'text-ink-2')}>
+        <Text as="p" variant="body" tone="ink-2" aria-label="Matrix coverage">
           {coverage.contexts.length
             ? `${pluralCount(coverage.contexts.length, 'context')} × ${pluralCount(coverage.stages.length, 'stage')} (${coverage.filledCells} of ${coverage.contexts.length * coverage.stages.length} filled) · ${coverage.branded.length} branded`
             : 'No matrix yet for this category.'}
-        </p>
+        </Text>
         {list('Buyer contexts × stages', coverage.organic)}
         {list('Branded comparisons', coverage.branded)}
         {list('Other prompts', coverage.other)}

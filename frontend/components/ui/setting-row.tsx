@@ -2,7 +2,7 @@ import { useId, type HTMLAttributes, type ReactNode } from 'react';
 
 import { FieldFoot, type ControlProps } from '@/components/ui/field';
 import { Section, SectionBleed, SectionDescription, SectionHeader } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 export function SettingsGroup({

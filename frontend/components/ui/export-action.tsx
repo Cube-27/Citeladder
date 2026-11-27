@@ -2,7 +2,6 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Inline } from '@/components/ui/layout';
 import { useToast } from '@/components/ui/toast';
 import { Download } from '@/lib/icons';
 
@@ -38,10 +37,11 @@ export function ExportAction({
     }
   };
   return (
-    <Inline data-export-scope={scope}>
+    <>
       {formats.map((format) => (
         <Button
           key={format}
+          data-export-scope={scope}
           variant="secondary"
           onClick={() => void run(format)}
           pending={exporting === format}
@@ -51,6 +51,6 @@ export function ExportAction({
           {FORMAT_LABEL[format]}
         </Button>
       ))}
-    </Inline>
+    </>
   );
 }

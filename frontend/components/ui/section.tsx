@@ -11,7 +11,7 @@ import {
   SectionTitleRoleContext,
   StateHeadingLevelContext,
 } from '@/components/ui/state-heading-level';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 import './section.css';
 
@@ -63,12 +63,28 @@ export function SectionTitle({
   children,
   className,
   level = 2,
+  truncate = false,
+  count,
   ...props
-}: Readonly<ComponentPropsWithoutRef<'h2'> & { level?: 2 | 3 }>) {
+}: Readonly<
+  ComponentPropsWithoutRef<'h2'> & { level?: 2 | 3; truncate?: boolean; count?: number }
+>) {
   const Heading = level === 2 ? 'h2' : 'h3';
   return (
-    <Heading {...props} className={textRole(useContext(SectionTitleRoleContext), className)}>
+    <Heading
+      {...props}
+      className={textRole(
+        useContext(SectionTitleRoleContext),
+        cn(truncate && 'truncate', className),
+      )}
+    >
       {children}
+      {count === undefined ? null : (
+        <>
+          {' '}
+          <span className="text-ink-2">({count})</span>
+        </>
+      )}
     </Heading>
   );
 }

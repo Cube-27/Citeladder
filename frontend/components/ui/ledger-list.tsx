@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { SectionBleed } from '@/components/ui/section';
 import { ClampText } from '@/components/ui/clamp-text';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 export function LedgerList({

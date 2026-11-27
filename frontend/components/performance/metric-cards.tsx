@@ -1,7 +1,7 @@
 import { Absence, printed } from '@/components/ui/absence';
 import { Checkbox } from '@/components/ui/checkbox';
 import { InfoHint } from '@/components/ui/info-hint';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Spinner } from '@/components/ui/spinner';
 import type { PerformanceWindow } from '@/lib/api/performance';
 import { formatCount, formattedText } from '@/lib/format';
@@ -13,6 +13,7 @@ import {
 import { FigureStrip } from '@/components/ui/figure-strip';
 import { SectionBleed } from '@/components/ui/section';
 import './metric-tiles.css';
+import { Inline } from '@/components/ui/layout';
 
 const METRIC_HELP: Record<PerformanceMetricKey, string> = {
   clicks: 'Total clicks from Google Search results',
@@ -64,7 +65,7 @@ export function MetricCards({
               data-on={plotted || undefined}
               className="metric-tile"
             >
-              <div className="flex min-w-0 items-center justify-between gap-2">
+              <Inline justify="between">
                 <Checkbox
                   label={label}
                   checked={plotted}
@@ -76,20 +77,20 @@ export function MetricCards({
                     {METRIC_HELP[card.key]}
                   </InfoHint>
                 </span>
-              </div>
-              <span className={textRole('figure', 'tabular-nums whitespace-nowrap')}>
+              </Inline>
+              <Text variant="figure" numeric wrap="nowrap">
                 {loading ? (
                   <Spinner label="Loading" />
                 ) : (
                   printed(formatMetric(card.key, selected.totals[card.key] ?? null))
                 )}
-              </span>
+              </Text>
               {comparison ? (
-                <span className={textRole('caption', 'truncate tabular-nums')}>
+                <Text variant="caption" wrap="truncate" numeric>
                   {comparison.evidence_state === 'not_run'
                     ? `${compareLabel} (not imported)`
                     : `${compareLabel}: ${formattedText(formatMetric(card.key, comparison.totals[card.key] ?? null))}`}
-                </span>
+                </Text>
               ) : null}
             </div>
           );
@@ -142,9 +143,9 @@ export function Ga4SummaryRow({
           value: value === null || value === undefined ? null : formatCount(value),
           loading,
           sub: comparison ? (
-            <span className="tabular-nums">
+            <Text variant="caption" numeric>
               {ga4ComparisonLabel(comparison, comparisonValue, compareLabel)}
-            </span>
+            </Text>
           ) : undefined,
         };
       })}

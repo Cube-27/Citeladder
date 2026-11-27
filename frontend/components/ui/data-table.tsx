@@ -19,7 +19,7 @@ import { Section, SectionBleed, SectionHeader, SectionToolbar } from '@/componen
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { StateBlock } from '@/components/ui/state-block';
 import {
   SectionTitleRoleContext,

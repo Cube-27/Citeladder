@@ -1,6 +1,6 @@
 import { Absence } from '@/components/ui/absence';
 import { Spinner } from '@/components/ui/spinner';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { type DataAvailabilityState, type Formatted, isAbsent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 

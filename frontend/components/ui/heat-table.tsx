@@ -13,7 +13,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { SkeletonBlock, SkeletonFrame } from '@/components/ui/skeleton-block';
 import { SectionBleed } from '@/components/ui/section';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { DataAvailabilityState, Formatted } from '@/lib/format';
 import { cssVars } from '@/lib/css-vars';
 import { cn } from '@/lib/utils';

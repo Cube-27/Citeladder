@@ -7,7 +7,6 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Inline } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableHead, TableRow } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
 import { ProjectLink } from '@/components/ui/project-link';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { agentHandoffHref } from '@/lib/agent/handoff';
@@ -192,7 +191,7 @@ function PolicySample({ bot }: Readonly<{ bot: CrawlerBot }>) {
       ? 'Unknown'
       : `${formatCount(bot.disallowed_url_count)} of ${formatCount(bot.evaluated_url_count)} known URLs disallowed`;
   return (
-    <ClampText lines={1} className={textRole('caption')}>
+    <ClampText lines={1} text="caption">
       {sample}
     </ClampText>
   );

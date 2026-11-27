@@ -148,16 +148,24 @@ export type TabsProps<T extends string> = TabStripProps<T> & {
   spaced?: boolean;
 };
 
+const TABS_LAYOUT = {
+  flow: undefined,
+  'drawer-split':
+    'phone:grid-cols-1 phone:grid-rows-drawer-split grid min-h-0 flex-1 grid-cols-drawer-split',
+} as const;
+
 export function TabsRoot<T extends string>({
   value,
   onValueChange,
   orientation,
+  layout = 'flow',
   className,
   children,
 }: Readonly<{
   value: T;
   onValueChange: (value: T) => void;
   orientation?: 'vertical';
+  layout?: keyof typeof TABS_LAYOUT;
   className?: string;
   children: ReactNode;
 }>) {
@@ -169,7 +177,7 @@ export function TabsRoot<T extends string>({
         onValueChange={(next) => onValueChange(next as T)}
         orientation={orientation}
         data-slot-host={inPanel && orientation !== 'vertical' ? '' : undefined}
-        className={className}
+        className={cn(TABS_LAYOUT[layout], className)}
       >
         {children}
       </TabsPrimitive.Root>

@@ -9,7 +9,7 @@ import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-no
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Stack } from '@/components/ui/layout';
+import { Stack, Columns } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { Prompt, PromptFormLimits, Topic } from '@citeladder/contracts';
@@ -138,7 +138,7 @@ export function PromptFormDialog({
           </Field>
 
           {isEdit ? (
-            <Stack gap="workspace" className="desktop:grid-cols-2">
+            <Columns template="halves" gap="workspace">
               <Field label="Intent">
                 {(props) => (
                   <Controller
@@ -178,7 +178,7 @@ export function PromptFormDialog({
                   <Input {...props} {...register('persona')} placeholder="Marathon runners" />
                 )}
               </Field>
-            </Stack>
+            </Columns>
           ) : null}
         </Stack>
       </form>

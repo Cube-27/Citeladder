@@ -8,7 +8,7 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type { AgentPageFetchDone } from '@/lib/api/agent';
 import { pluralCount } from '@/lib/format';
 import { severityLabel } from '@/lib/site-health/issues';
@@ -20,7 +20,7 @@ function CheckRow({ check }: Readonly<{ check: PageCheck }>) {
   const severity = issueSeveritySchema.safeParse(check.severity);
   return (
     <Inline as="li" gap="compact" className="justify-between">
-      <span className={textRole('body')}>{check.label}</span>
+      <Text variant="body">{check.label}</Text>
       {severity.success ? (
         <StatusMark variant="severity" value={severity.data}>
           {severityLabel(severity.data)}
@@ -55,12 +55,14 @@ export function SeoPanel({ fetch }: Readonly<{ fetch: AgentPageFetchDone | null 
           ))}
         </SectionBleed>
       ) : (
-        <p className={textRole('body', 'text-ink-2')}>
+        <Text as="p" variant="body" tone="ink-2">
           {fetch?.checks.length ? 'Every page check passed.' : 'No page checks ran on this fetch.'}
-        </p>
+        </Text>
       )}
       {failing.length > 0 && passed > 0 ? (
-        <p className={textRole('caption')}>{pluralCount(passed, 'other check')} passed.</p>
+        <Text as="p" variant="caption">
+          {pluralCount(passed, 'other check')} passed.
+        </Text>
       ) : null}
     </Section>
   );

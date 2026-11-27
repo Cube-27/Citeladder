@@ -1,15 +1,26 @@
-import type { ComponentPropsWithoutRef, ComponentPropsWithRef, ElementType } from 'react';
+import type { ComponentPropsWithRef, ElementType } from 'react';
 
 import { cn } from '@/lib/utils';
 
 const STACK_GAP = {
   section: 'gap-section',
+  card: 'gap-card',
   workspace: 'gap-workspace',
   compact: 'gap-compact',
+  group: 'gap-3',
+  loose: 'gap-4',
+  choices: 'gap-x-4 gap-y-2',
+  'page-top': 'gap-page-top',
   item: 'gap-2',
   tight: 'gap-1',
   none: 'gap-0',
 } as const;
+
+const PAD_TOP = {
+  'flow-gap': 'pt-flow-gap',
+} as const;
+
+export type Pad = Readonly<{ top?: keyof typeof PAD_TOP }>;
 
 export type StackGap = keyof typeof STACK_GAP;
 
@@ -22,19 +33,69 @@ const STACK_ALIGN = {
 
 type StackAlign = keyof typeof STACK_ALIGN;
 
+const STACK_LIST = {
+  none: undefined,
+  plain: 'list-none',
+  decimal: 'list-inside list-decimal',
+} as const;
+
+const BOX = {
+  auto: undefined,
+  shrink: 'min-w-0',
+  fill: 'min-w-0 flex-1',
+  fixed: 'shrink-0',
+  fit: 'w-fit max-w-full',
+  'fixed-full': 'max-w-full shrink-0',
+  line: 'h-5 phone:h-auto',
+} as const;
+
+export type Box = keyof typeof BOX;
+
+const STACK_CONTENT = {
+  stretch: undefined,
+  start: 'content-start',
+} as const;
+
 export function Stack({
   as,
   gap = 'compact',
   align = 'stretch',
+  list = 'none',
+  box = 'auto',
+  content = 'stretch',
+  inset = false,
+  pad,
   className,
   children,
   ...props
 }: Readonly<
-  ComponentPropsWithRef<'div'> & { as?: ElementType; gap?: StackGap; align?: StackAlign }
+  ComponentPropsWithRef<'div'> & {
+    as?: ElementType;
+    gap?: StackGap;
+    align?: StackAlign;
+    list?: keyof typeof STACK_LIST;
+    box?: Box;
+    content?: keyof typeof STACK_CONTENT;
+    inset?: boolean;
+    pad?: Pad;
+  }
 >) {
   const Component = as ?? 'div';
   return (
-    <Component {...props} className={cn('grid', STACK_GAP[gap], STACK_ALIGN[align], className)}>
+    <Component
+      {...props}
+      className={cn(
+        'grid',
+        STACK_GAP[gap],
+        STACK_ALIGN[align],
+        STACK_LIST[list],
+        BOX[box],
+        STACK_CONTENT[content],
+        inset && 'p-4',
+        pad?.top && PAD_TOP[pad.top],
+        className,
+      )}
+    >
       {children}
     </Component>
   );
@@ -43,6 +104,9 @@ export function Stack({
 const INLINE_GAP = {
   workspace: 'gap-workspace',
   compact: 'gap-compact',
+  group: 'gap-3',
+  loose: 'gap-4',
+  wide: 'gap-6',
   item: 'gap-2',
   tight: 'gap-1',
   none: 'gap-0',
@@ -79,16 +143,24 @@ export function Inline({
   align = 'center',
   justify = 'start',
   wrap,
+  box = 'auto',
+  inline = false,
+  nowrap = false,
+  stackBelow,
   className,
   children,
   ...props
 }: Readonly<
-  ComponentPropsWithoutRef<'div'> & {
+  ComponentPropsWithRef<'div'> & {
     as?: ElementType;
     gap?: InlineGap;
     align?: InlineAlign;
     justify?: InlineJustify;
     wrap?: boolean;
+    box?: Box;
+    inline?: boolean;
+    nowrap?: boolean;
+    stackBelow?: 'desktop';
   }
 >) {
   const Component = as ?? 'div';
@@ -102,6 +174,10 @@ export function Inline({
         INLINE_JUSTIFY[justify],
         wraps && 'flex-wrap',
         INLINE_GAP[gap],
+        BOX[box],
+        inline && 'inline-flex',
+        nowrap && 'whitespace-nowrap',
+        stackBelow && 'desktop:flex-row desktop:items-center flex-col items-stretch',
         className,
       )}
     >
@@ -116,9 +192,15 @@ const COLUMN_TEMPLATE = {
   'lead-body-end': 'grid-cols-lead-body-end',
   'lead-body': 'grid-cols-lead-body',
   'body-end': 'grid-cols-body-end',
+  'body-field': 'grid-cols-body-field',
+  choices: 'grid-cols-choices justify-start',
+  'rail-panel': 'desktop:grid-cols-label-value',
   'main-aside': 'column-wide:grid-cols-main-aside',
   'aside-main': 'column-wide:grid-cols-aside-main',
   pair: 'column-split:grid-cols-2',
+  halves: 'desktop:grid-cols-2',
+  two: 'grid-cols-2',
+  record: 'column-split:grid-cols-record',
   thirds: 'column-split:grid-cols-3',
 } as const;
 
@@ -145,7 +227,7 @@ export function Columns({
       {...props}
       data-columns={template}
       className={cn(
-        'grid grid-cols-1',
+        'grid min-w-0 grid-cols-1',
         COLUMN_TEMPLATE[template],
         STACK_GAP[gap],
         INLINE_ALIGN[align],

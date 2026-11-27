@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { FlowMain, PageGround } from '@/components/ui/flow-frame';
 import { isFlowPath } from '@/lib/navigation/app-routes';
 
 import { ShellFallback } from './shell-fallback';
@@ -9,13 +10,13 @@ export function FirstFrame({ children }: Readonly<{ children?: ReactNode }>) {
   const { pathname } = useLocation();
   if (!isFlowPath(pathname ?? '')) return <ShellFallback>{children}</ShellFallback>;
   return (
-    <div data-flow-frame="" className="bg-ground text-ink min-h-dvh antialiased">
+    <PageGround data-flow-frame="">
       {children === undefined ? null : (
-        <main id="main" className="max-w-flow px-gutter pt-flow-gap mx-auto w-full">
+        <FlowMain id="main" variant="frame">
           {children}
-        </main>
+        </FlowMain>
       )}
-    </div>
+    </PageGround>
   );
 }
 

@@ -9,7 +9,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
-import { FilterBar, TableToolbar } from '@/components/ui/filter-bar';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
 import { DemandLatentDemand } from '@/components/demand/demand-latent-demand';
@@ -177,20 +177,12 @@ export function demandControls(demand: Demand): ReactNode {
   const { snapshot, filter } = demand;
   if (!snapshot) return demand.latest.isLoading ? <FilterBar {...RESERVED_CONTROLS} /> : undefined;
   return (
-    <TableToolbar
+    <FilterBar
       view={
         <DemandSignalFilters
           activeTab={filter.activeTab}
           onTabChange={filter.setActiveTab}
           tabCounts={filter.tabCounts}
-        />
-      }
-      search={
-        <SearchField
-          value={filter.searchQuery}
-          onValueChange={filter.setSearchQuery}
-          placeholder="Filter queries or pages…"
-          aria-label="Filter queries or pages"
         />
       }
       status={<DemandLatentDemand snapshot={snapshot} />}
@@ -241,6 +233,14 @@ function SignalsFeed({
         <DemandSignalTable
           rows={filter.filteredSignals}
           filterKey={`${filter.activeTab}\u0000${filter.searchQuery.trim().toLowerCase()}`}
+          search={
+            <SearchField
+              value={filter.searchQuery}
+              onValueChange={filter.setSearchQuery}
+              placeholder="Filter queries or pages…"
+              aria-label="Filter queries or pages"
+            />
+          }
           onInspect={(signal: DemandSignal) => selection.setSelectedSignalId(signal.id)}
           onClearFilters={() => {
             filter.setActiveTab('all');

@@ -4,7 +4,7 @@ import type { NewChatInput } from '@/components/agent/use-chat-turns';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Sparkles } from '@/lib/icons';
 import { actionsQueries } from '@/lib/api/actions';
 import { AGENT_BRIEFING_ACTIONS } from '@/lib/config/agent';
@@ -32,10 +32,14 @@ export function BriefingCard({
   return (
     <Stack as="section" aria-labelledby="agent-briefing">
       <Stack gap="tight">
-        <h2 id="agent-briefing" className={textRole('subheading')}>
+        <Text as="h2" variant="label" id="agent-briefing">
           What should I work on?
-        </h2>
-        {basis ? <p className={textRole('body', 'text-ink-2')}>{basis}</p> : null}
+        </Text>
+        {basis ? (
+          <Text as="p" variant="body" tone="ink-2">
+            {basis}
+          </Text>
+        ) : null}
       </Stack>
       <Button
         variant="secondary"

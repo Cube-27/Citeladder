@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom';
 
-import { SidebarNavGroup, SidebarScrollList } from '@/components/ui/sidebar';
+import { SidebarFootList, SidebarNavGroup, SidebarScrollList } from '@/components/ui/sidebar';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useUrlSearch } from '@/lib/navigation/url-params';
 import { setGroupFolded, useGroupFolded } from '@/lib/navigation/sidebar-folds';
@@ -81,7 +81,7 @@ export function SidebarFootNav({ rail }: Readonly<{ rail: boolean }>) {
   const { isActive, href } = useDestinations();
   return (
     <nav aria-label="Workspace">
-      <ul className={rail ? 'flex flex-col items-center' : 'flex flex-col gap-0.5'}>
+      <SidebarFootList rail={rail}>
         {rail ? (
           FOOT_NAV_ITEMS.map((item) => (
             <li key={item.href}>
@@ -91,7 +91,7 @@ export function SidebarFootNav({ rail }: Readonly<{ rail: boolean }>) {
         ) : (
           <DestinationRows items={FOOT_NAV_ITEMS} />
         )}
-      </ul>
+      </SidebarFootList>
     </nav>
   );
 }

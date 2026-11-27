@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { SidebarTextTooltip } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 export function HistoryList({

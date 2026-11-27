@@ -1,10 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 
-import {
-  SidebarRowTooltip,
-  sidebarModeSegmentClasses,
-  sidebarModeTrackClasses,
-} from '@/components/ui/sidebar';
+import { SidebarModeSegment, SidebarModeTrack, SidebarRowTooltip } from '@/components/ui/sidebar';
 import { ICONS, PanelsTopLeft, type IconGlyph } from '@/lib/icons';
 import { MODE_HOMES, navigationMode, type NavigationMode } from '@/lib/navigation/app-routes';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
@@ -20,29 +16,30 @@ export function ModeSwitch({ rail }: Readonly<{ rail: boolean }>) {
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
   const current = navigationMode(pathname);
   return (
-    <nav aria-label="Mode" data-segmented-track="" className={sidebarModeTrackClasses(rail)}>
+    <SidebarModeTrack as="nav" rail={rail} aria-label="Mode" data-segmented-track="">
       {MODES.map(({ mode, label, icon: Icon }) => {
         const selected = mode === current;
         return (
           <SidebarRowTooltip key={mode} label={label}>
-            <Link
-              to={scopedNavigationDestination(
-                MODE_HOMES[mode],
-                'project',
-                activeProjectId,
-                activeWorkspaceId,
-              )}
-              aria-current={selected ? 'true' : undefined}
-              className={sidebarModeSegmentClasses(selected, rail)}
-            >
-              {rail ? <Icon aria-hidden /> : null}
-              <span data-sidebar-text="title" className={rail ? 'sr-only' : 'min-w-0 truncate'}>
-                {label}
-              </span>
-            </Link>
+            <SidebarModeSegment asChild current={selected} rail={rail}>
+              <Link
+                to={scopedNavigationDestination(
+                  MODE_HOMES[mode],
+                  'project',
+                  activeProjectId,
+                  activeWorkspaceId,
+                )}
+                aria-current={selected ? 'true' : undefined}
+              >
+                {rail ? <Icon aria-hidden /> : null}
+                <span data-sidebar-text="title" className={rail ? 'sr-only' : 'min-w-0 truncate'}>
+                  {label}
+                </span>
+              </Link>
+            </SidebarModeSegment>
           </SidebarRowTooltip>
         );
       })}
-    </nav>
+    </SidebarModeTrack>
   );
 }

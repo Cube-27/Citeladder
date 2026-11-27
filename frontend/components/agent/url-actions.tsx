@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { Impact } from '@/components/agent/actions-rows';
-import { buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { LinkRow, LinkRows } from '@/components/ui/link-rows';
 import { readErrorProps } from '@/components/ui/notice';
@@ -60,12 +60,11 @@ export function FixUrlWithAgent({ siteUrlId }: Readonly<{ siteUrlId: string }>) 
   const open = data?.items.some((item) => item.status === 'open' || item.status === 'in_progress');
   if (!open) return null;
   return (
-    <ProjectLink
-      href={agentHandoffHref({ urlActionsSiteUrlId: siteUrlId, prompt: URL_ASK })}
-      className={buttonClasses('secondary')}
-    >
-      <Icon icon={Sparkles} />
-      Fix this URL with Agent
-    </ProjectLink>
+    <Button asChild variant="secondary">
+      <ProjectLink href={agentHandoffHref({ urlActionsSiteUrlId: siteUrlId, prompt: URL_ASK })}>
+        <Icon icon={Sparkles} />
+        Fix this URL with Agent
+      </ProjectLink>
+    </Button>
   );
 }
