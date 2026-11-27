@@ -143,7 +143,9 @@ const twMerge = extendTailwindMerge({
       duration: [{ duration: DURATION_ROLES }],
       transition: [{ transition: TRANSITION_ROLES }],
       opacity: [{ opacity: ['disabled', 'muted', 'dim', 'ghost', 'hover'] }],
-      z: [{ z: ['base', 'raised', 'sticky', 'float', 'overlay', 'modal', 'toast'] }],
+      z: [
+        { z: ['behind', 'base', 'raised', 'sticky', 'float', 'overlay', 'modal', 'toast', 'skip'] },
+      ],
       'grid-cols': [
         {
           'grid-cols': [

@@ -1,15 +1,11 @@
-import {
-  Content,
-  Item,
-  Link,
-  List,
-  Root,
-  Trigger,
-  Viewport,
-} from '@radix-ui/react-navigation-menu';
+import { Content, List, Trigger, Viewport } from '@radix-ui/react-navigation-menu';
 import type { ComponentProps } from 'react';
 
-export { Item as NavigationMenuItem, Link as NavigationMenuLink, Root as NavigationMenu };
+export {
+  Item as NavigationMenuItem,
+  Link as NavigationMenuLink,
+  Root as NavigationMenu,
+} from '@radix-ui/react-navigation-menu';
 
 export function NavigationMenuList(
   props: Readonly<Omit<ComponentProps<typeof List>, 'className'>>,

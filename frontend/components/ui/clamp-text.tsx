@@ -44,6 +44,19 @@ export function useCut(
   return cut;
 }
 
+function clampClasses({
+  lines,
+  phoneWrap,
+  grow,
+}: Readonly<{ lines: 1 | 2; phoneWrap: boolean; grow: boolean }>) {
+  return cn(
+    'block min-w-0',
+    lines === 1 ? 'truncate' : 'line-clamp-2',
+    phoneWrap && 'phone:whitespace-normal phone:break-words',
+    grow && 'grow basis-60',
+  );
+}
+
 export function ClampText({
   children,
   lines = 1,
@@ -86,10 +99,7 @@ export function ClampText({
         // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
         tabIndex={cut ? 0 : undefined}
         className={cn(
-          'block min-w-0',
-          lines === 1 ? 'truncate' : 'line-clamp-2',
-          phoneWrap && 'phone:whitespace-normal phone:break-words',
-          grow && 'grow basis-60',
+          clampClasses({ lines, phoneWrap, grow }),
           cut && 'rounded-mark',
           text && TEXT_ROLE_CLASS[text],
           numeric && 'tabular-nums',

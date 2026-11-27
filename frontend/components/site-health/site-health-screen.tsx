@@ -113,7 +113,7 @@ function SiteHealthContent({
               onIntent={prefetchTab}
             />
           }
-          filters={controls ? controls : undefined}
+          filters={controls}
         >
           {blocking ? (
             <SiteHealthBlocked blocking={blocking} />

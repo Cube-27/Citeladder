@@ -744,7 +744,9 @@
 @utility check-draw {
   stroke-dashoffset: 1;
   transition: stroke-dashoffset var(--check-draw-duration) linear var(--check-draw-delay);
-  &[data-drawn] {
+}
+@layer utilities {
+  .check-draw[data-drawn] {
     stroke-dashoffset: 0;
   }
 }

@@ -1,12 +1,24 @@
 import postcss from 'postcss';
 import valueParser from 'postcss-value-parser';
 
-const VALUE_PROPERTY =
-  /^(color|background(-color|-image)?|border(-(top|right|bottom|left|block|inline)(-(start|end))?)?-color|outline-color|fill|stroke|box-shadow|text-shadow|font-size|line-height|font-weight|letter-spacing|z-index|transition(-duration|-delay)?|animation(-duration|-delay)?|text-decoration-color|caret-color|accent-color|column-rule-color|scrollbar-color|font)$/;
-const SPACING_PROPERTY =
-  /^(padding|margin|scroll-padding|scroll-margin)(-(top|right|bottom|left|block|inline)(-(start|end))?)?$|^(gap|row-gap|column-gap|inset(-(block|inline)(-(start|end))?)?|top|right|bottom|left)$/;
-const WIDTH_PROPERTY =
-  /^(border|outline)(-(top|right|bottom|left|block|inline)(-(start|end))?)?(-width)?$|^(outline-offset|text-decoration-thickness|text-underline-offset)$/;
+const SIDES = ['', '-top', '-right', '-bottom', '-left'].concat(
+  ['-block', '-inline'].flatMap((axis) => [axis, `${axis}-start`, `${axis}-end`]),
+);
+const sided = (names, suffix = '') =>
+  names.flatMap((name) => SIDES.map((side) => `${name}${side}${suffix}`));
+const CHECKED = new Set([
+  ...['color', 'background', 'background-color', 'background-image', 'fill', 'stroke'],
+  ...['box-shadow', 'text-shadow', 'font', 'font-size', 'line-height', 'font-weight'],
+  ...['letter-spacing', 'z-index', 'transition', 'transition-duration', 'transition-delay'],
+  ...['animation', 'animation-duration', 'animation-delay', 'outline-color', 'caret-color'],
+  ...['text-decoration-color', 'accent-color', 'column-rule-color', 'scrollbar-color'],
+  ...sided(['border'], '-color'),
+  ...sided(['padding', 'margin', 'scroll-padding', 'scroll-margin', 'inset']),
+  ...['gap', 'row-gap', 'column-gap', 'top', 'right', 'bottom', 'left'],
+  ...sided(['border', 'outline']),
+  ...sided(['border', 'outline'], '-width'),
+  ...['outline-offset', 'text-decoration-thickness', 'text-underline-offset'],
+]);
 const BARE_NUMBER_PROPERTY = /^(z-index|font-weight|line-height)$/;
 const RAW_UNIT = /^(px|rem|em|ms|s)$/i;
 const COLOUR_FUNCTION = /^(rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)$/i;
@@ -35,8 +47,9 @@ function rawParts(value, property) {
     if (/^#[0-9a-f]{3,8}$/i.test(node.value)) found.push(node.value);
     const number = valueParser.unit(node.value);
     if (!number || Number(number.number) === 0) return undefined;
-    if (RAW_UNIT.test(number.unit) && !inGradient) found.push(node.value);
-    else if (bareOnly && number.unit === '' && value.trim() === node.value) found.push(node.value);
+    const rawUnit = RAW_UNIT.test(number.unit) && !inGradient;
+    const bare = bareOnly && number.unit === '' && value.trim() === node.value;
+    if (rawUnit || bare) found.push(node.value);
     return undefined;
   };
   walk(valueParser(value).nodes, false);
@@ -57,10 +70,7 @@ export function cssValueFindings(label, css, { offsetLine = 0 } = {}) {
   postcss.parse(css).walkDecls((decl) => {
     const property = decl.prop.toLowerCase();
     if (property.startsWith('--') || exempt(decl)) return;
-    const checked =
-      VALUE_PROPERTY.test(property) ||
-      SPACING_PROPERTY.test(property) ||
-      WIDTH_PROPERTY.test(property);
+    const checked = CHECKED.has(property);
     const raw = checked
       ? rawParts(decl.value, property)
       : rawParts(decl.value, property).filter((part) => /^[#a-z]/i.test(part));
