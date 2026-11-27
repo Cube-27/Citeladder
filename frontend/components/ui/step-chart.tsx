@@ -2,6 +2,7 @@ import { useId, useState, type ComponentProps, type KeyboardEvent, type ReactNod
 import { cn } from '@/lib/utils';
 
 import {
+  seriesWeight,
   CHART_HEIGHT_CLASS,
   CHART_HEIGHT_PX,
   chartPath,
@@ -443,7 +444,7 @@ function StepPlot({
             <path
               d={chartPath(points)}
               fill="none"
-              strokeWidth={line.tone === 'you' ? 2 : 1.5}
+              strokeWidth={seriesWeight(line.tone === 'you')}
               strokeLinejoin="round"
               strokeLinecap="round"
               className={SERIES_STROKE[line.tone]}

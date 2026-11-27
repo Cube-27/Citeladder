@@ -24,6 +24,18 @@ export const chartStroke = (tone: ChartTone) => SERIES_STROKE[CHART_SERIES[tone]
 
 export const chartFill = (tone: ChartTone) => SERIES_FILL[CHART_SERIES[tone]];
 
+export const SERIES_WEIGHT = {
+  you: 2,
+  series: 1.5,
+  'trend-you': 2.75,
+  'trend-series': 1.75,
+  faint: 1.25,
+} as const;
+
+export const seriesWeight = (you: boolean) => SERIES_WEIGHT[you ? 'you' : 'series'];
+
+export const SERIES_FILL_OPACITY = { you: 0.28, faint: 0.12 } as const;
+
 export const CHART_AXIS_TEXT = 'fill-ink-2 text-caption tabular-nums';
 
 export const CHART_PLOT_FRAME = 'focus-ring relative w-full rounded-control';

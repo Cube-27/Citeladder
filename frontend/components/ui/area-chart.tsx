@@ -23,6 +23,7 @@ import {
   type ChartRow,
 } from '@/components/ui/area-chart-data';
 import {
+  seriesWeight,
   CHART_HEIGHT_CLASS,
   CHART_HEIGHT_PX,
   useChartWidth,
@@ -310,7 +311,7 @@ function AreaPlot({
               key={`bridge-${at}-${bridge.from.x}`}
               segment={[bridge.from, bridge.to]}
               stroke={seriesColor(line.tone)}
-              strokeWidth={line.tone === 'you' ? 2 : 1.5}
+              strokeWidth={seriesWeight(line.tone === 'you')}
               strokeDasharray="4 4"
               ifOverflow="visible"
             />
@@ -334,7 +335,7 @@ function AreaPlot({
               connectNulls={false}
               isAnimationActive={false}
               stroke={color}
-              strokeWidth={line.tone === 'you' ? 2 : 1.5}
+              strokeWidth={seriesWeight(line.tone === 'you')}
               fill={`url(#${id}-${at})`}
               activeDot={{ r: 4, fill: color, stroke: 'var(--color-panel)', strokeWidth: 2 }}
               dot={<LineDot line={line} data={data} />}

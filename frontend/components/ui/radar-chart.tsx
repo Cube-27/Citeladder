@@ -1,4 +1,10 @@
-import { chartFill, chartStroke, type ChartTone } from '@/components/ui/chart';
+import {
+  chartFill,
+  chartStroke,
+  SERIES_FILL_OPACITY,
+  SERIES_WEIGHT,
+  type ChartTone,
+} from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 
 const CX = 200;
@@ -8,8 +14,6 @@ const LABEL_RADIUS = 1.1;
 const LABEL_SIZE = 8;
 const LABEL_BASELINE = 2.5;
 const RINGS = [25, 50, 75, 100];
-const FILL_OPACITY = { lead: 0.28, rival: 0.12 } as const;
-const STROKE_WIDTH = { lead: 2, rival: 1.25 } as const;
 
 export type RadarAxis = Readonly<{ key: string; label: string }>;
 export type RadarShape = Readonly<{
@@ -65,14 +69,14 @@ export function RadarChart({
         );
       })}
       {shapes.map((shape) => {
-        const weight = shape.lead ? 'lead' : 'rival';
+        const weight = shape.lead ? 'you' : 'faint';
         return (
           <polygon
             key={shape.key}
             points={polygon(shape.values)}
             className={cn(chartStroke(shape.tone), chartFill(shape.tone))}
-            fillOpacity={FILL_OPACITY[weight]}
-            strokeWidth={STROKE_WIDTH[weight]}
+            fillOpacity={SERIES_FILL_OPACITY[weight]}
+            strokeWidth={SERIES_WEIGHT[weight]}
           />
         );
       })}
