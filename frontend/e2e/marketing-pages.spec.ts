@@ -127,74 +127,73 @@ test.describe('marketing routes', () => {
     expect(schemas).toHaveLength(0);
   });
 
-  test('product frames keep their size and position through hydration', async ({
-    browser,
-    baseURL,
-  }) => {
+  test.describe('product frames keep their size and position through hydration', () => {
     for (const width of [375, 1280]) {
       for (const path of ['/', '/solutions']) {
-        const context = await browser.newContext({
-          baseURL,
-          viewport: { width, height: 900 },
-          reducedMotion: 'reduce',
-        });
-        const page = await context.newPage();
-        let releaseScripts!: () => void;
-        const scriptsReleased = new Promise<void>((resolve) => {
-          releaseScripts = resolve;
-        });
-        await page.route('**/_astro/*.js', async (route) => {
-          await scriptsReleased;
-          await route.continue();
-        });
-        await page.goto(path, { waitUntil: 'commit' });
-        const frames = page.locator('main .cl-frame:not([data-card-rail-track] .cl-frame)');
-        await expect(frames.first()).toBeVisible();
-        await page.waitForFunction(() =>
-          [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].every(
-            (stylesheet) => stylesheet.sheet !== null,
-          ),
-        );
-        await page.evaluate(
-          (fonts) => Promise.allSettled(fonts.map((font) => document.fonts.load(font))),
-          [
-            `400 14px "${brandFontName('sans')}"`,
-            `500 14px "${brandFontName('sans')}"`,
-            `400 44px "${brandFontName('display')}"`,
-          ],
-        );
-        await page.evaluate(
-          () =>
-            new Promise((resolve) => {
-              requestAnimationFrame(() => requestAnimationFrame(resolve));
-            }),
-        );
-        const boxes = () =>
-          frames.evaluateAll((elements) =>
-            elements.map((element) => {
-              const { y, width, height } = element.getBoundingClientRect();
-              return { y, width, height };
-            }),
+        test(`${path} at ${width}px`, async ({ browser, baseURL }) => {
+          const context = await browser.newContext({
+            baseURL,
+            viewport: { width, height: 900 },
+            reducedMotion: 'reduce',
+          });
+          const page = await context.newPage();
+          let releaseScripts!: () => void;
+          const scriptsReleased = new Promise<void>((resolve) => {
+            releaseScripts = resolve;
+          });
+          await page.route('**/_astro/*.js', async (route) => {
+            await scriptsReleased;
+            await route.continue();
+          });
+          await page.goto(path, { waitUntil: 'commit' });
+          const frames = page.locator('main .cl-frame:not([data-card-rail-track] .cl-frame)');
+          await expect(frames.first()).toBeVisible();
+          await page.waitForFunction(() =>
+            [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].every(
+              (stylesheet) => stylesheet.sheet !== null,
+            ),
           );
-        const before = await boxes();
-        releaseScripts();
-        await page.waitForLoadState('networkidle');
-        const after = await boxes();
-        for (let index = 0; index < before.length; index += 1) {
-          expect(before[index]!.height).toBeGreaterThan(0);
+          await page.evaluate(
+            (fonts) => Promise.allSettled(fonts.map((font) => document.fonts.load(font))),
+            [
+              `400 14px "${brandFontName('sans')}"`,
+              `500 14px "${brandFontName('sans')}"`,
+              `400 44px "${brandFontName('display')}"`,
+            ],
+          );
+          await page.evaluate(
+            () =>
+              new Promise((resolve) => {
+                requestAnimationFrame(() => requestAnimationFrame(resolve));
+              }),
+          );
+          const boxes = () =>
+            frames.evaluateAll((elements) =>
+              elements.map((element) => {
+                const { y, width, height } = element.getBoundingClientRect();
+                return { y, width, height };
+              }),
+            );
+          const before = await boxes();
+          releaseScripts();
+          await page.waitForLoadState('networkidle');
+          const after = await boxes();
+          for (let index = 0; index < before.length; index += 1) {
+            expect(before[index]!.height).toBeGreaterThan(0);
+            expect(
+              Math.abs(after[index]!.height - before[index]!.height),
+              `${path} at ${width}px: preview height`,
+            ).toBeLessThanOrEqual(1);
+            expect(
+              Math.abs(after[index]!.y - before[index]!.y),
+              `${path} at ${width}px: preview position`,
+            ).toBeLessThanOrEqual(1);
+          }
           expect(
-            Math.abs(after[index]!.height - before[index]!.height),
-            `${path} at ${width}px: preview height`,
-          ).toBeLessThanOrEqual(1);
-          expect(
-            Math.abs(after[index]!.y - before[index]!.y),
-            `${path} at ${width}px: preview position`,
-          ).toBeLessThanOrEqual(1);
-        }
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-          true,
-        );
-        await context.close();
+            await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          ).toBe(true);
+          await context.close();
+        });
       }
     }
   });
