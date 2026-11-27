@@ -164,8 +164,11 @@ export function SeverityCard({
   data,
   actions,
 }: Readonly<{ data: SiteHealthOverview; actions?: ReactNode }>) {
-  const counts = SEVERITIES.map((severity) => severityCount(data.severity_counts, severity.key));
-  const largest = Math.max(...counts);
+  const severities = SEVERITIES.map((severity) => ({
+    ...severity,
+    count: severityCount(data.severity_counts, severity.key),
+  }));
+  const largest = Math.max(...severities.map((severity) => severity.count));
   const audited = data.audited_page_count;
   const pages = (key: string, label: string, count: number): BarRow => ({
     key,
@@ -180,15 +183,15 @@ export function SeverityCard({
         <Text variant="figure">{formatCount(data.issue_count)}</Text>
         <BarRows
           label="Issues by severity"
-          rows={SEVERITIES.map((severity, index) => ({
+          rows={severities.map((severity) => ({
             key: severity.key,
             label: (
               <StatusMark variant="severity" value={severity.key}>
                 {severity.label}
               </StatusMark>
             ),
-            figure: formatCount(counts[index]!),
-            share: largest > 0 ? counts[index]! / largest : null,
+            figure: formatCount(severity.count),
+            share: largest > 0 ? severity.count / largest : null,
             tone: severity.tone,
           }))}
         />

@@ -1,4 +1,5 @@
 import type { Database } from '../db/database.ts';
+import { isRecord } from '../db/json.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { parseUuid } from '../http/uuid.ts';
 import type { QueueTask } from './task-queue.ts';
@@ -37,9 +38,7 @@ export class TerminalExecutorError extends Error {
 
 function payloadField(task: QueueTask, name: string): unknown {
   const payload = task.payload;
-  return payload !== null && typeof payload === 'object' && !Array.isArray(payload)
-    ? payload[name]
-    : undefined;
+  return isRecord(payload) ? payload[name] : undefined;
 }
 
 export function requireProject(task: QueueTask): string {

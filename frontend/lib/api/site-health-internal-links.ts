@@ -61,6 +61,7 @@ export const internalLinksMutations = {
     mutationOptions({
       mutationFn: (input: InternalLinksInput) =>
         internalLinksApi.analyze(scope.projectId, input, scoped(scope)),
+      // oxlint-disable-next-line max-params
       onSuccess: (result, _input, _result, { client }) => {
         void client.invalidateQueries({
           queryKey: queryKeys.siteHealth.internalLinks(scope),
@@ -78,6 +79,7 @@ export const internalLinksMutations = {
     mutationOptions({
       mutationFn: (analysisId: string) =>
         internalLinksApi.cancel(scope.projectId, analysisId, scoped(scope)),
+      // oxlint-disable-next-line max-params
       onSuccess: (result, _analysisId, _result, { client }) =>
         client.setQueryData(queryKeys.siteHealth.internalLinks(scope, shownAnalysisId), result),
     }),

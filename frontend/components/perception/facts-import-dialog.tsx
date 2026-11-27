@@ -62,7 +62,14 @@ export function FactsImportDialog({
       { rows: ready.map((row) => row.input) },
       {
         onSuccess: (result) => {
-          setOutcomes(new Map(result.rows.map((row) => [ready[row.index]!.line, row])));
+          setOutcomes(
+            new Map(
+              result.rows.flatMap((row): [number, Outcome][] => {
+                const sent = ready[row.index];
+                return sent ? [[sent.line, row]] : [];
+              }),
+            ),
+          );
           const created = result.rows.filter((row) => row.kind === 'created').length;
           notify('Facts imported', `${pluralCount(created, 'draft fact')} added.`);
         },

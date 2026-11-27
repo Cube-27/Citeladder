@@ -33,8 +33,8 @@ const turnSchema = z.strictObject({
     .string()
     .refine(
       (message) =>
-        [...message.matchAll(PLACEHOLDER)].every(([, key]) =>
-          (PLACEHOLDERS as readonly string[]).includes(key!),
+        [...message.matchAll(PLACEHOLDER)].every(
+          ([, key]) => key !== undefined && (PLACEHOLDERS as readonly string[]).includes(key),
         ),
       'Unknown {{placeholder}}',
     ),
@@ -443,7 +443,7 @@ async function load(label: string) {
 function percentile(samples: number[], p: number) {
   if (samples.length === 0) return null;
   const sorted = samples.toSorted((a, b) => a - b);
-  return sorted[Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1)]!;
+  return sorted[Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1)] ?? null;
 }
 
 function metrics(records: EvalRecord[]): Record<string, string> {
@@ -465,8 +465,8 @@ function metrics(records: EvalRecord[]): Record<string, string> {
     (record) =>
       typeof record.input_tokens === 'number' && typeof record.cached_input_tokens === 'number',
   );
-  const input = both.reduce((sum, record) => sum + record.input_tokens!, 0);
-  const cached = both.reduce((sum, record) => sum + record.cached_input_tokens!, 0);
+  const input = both.reduce((sum, record) => sum + (record.input_tokens ?? 0), 0);
+  const cached = both.reduce((sum, record) => sum + (record.cached_input_tokens ?? 0), 0);
   return {
     Turns: `${done.length} of ${records.length}`,
     Succeeded: String(done.filter((record) => record.run_status === 'succeeded').length),

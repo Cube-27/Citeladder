@@ -185,6 +185,7 @@ export type PromptBulkChange =
 
 type SetResolver = () => Promise<PromptSet>;
 const refreshed = (scope: ProjectScope) => ({
+  // oxlint-disable-next-line max-params
   onSuccess: (
     _data: unknown,
     _vars: unknown,
@@ -209,6 +210,7 @@ export const promptsMutations = {
           scoped(scope),
         );
       },
+      // oxlint-disable-next-line max-params
       onSuccess: async (created, _vars, _result, { client }) => {
         client.setQueryData<PromptSetList>(queryKeys.prompts.sets(scope), (prev) =>
           prev && !prev.prompt_sets.some((set) => set.id === created.id)
@@ -253,9 +255,11 @@ export const promptsMutations = {
         );
         return { previous };
       },
+      // oxlint-disable-next-line max-params
       onError: (_error, _vars, result, { client }) => {
         if (result?.previous) client.setQueryData(queryKey, result.previous);
       },
+      // oxlint-disable-next-line max-params
       onSettled: (_data, _error, _vars, _result, { client }) =>
         refreshPromptLibrary(client, scope.projectId),
     });
@@ -313,6 +317,7 @@ export const promptsMutations = {
           }
         }
       },
+      // oxlint-disable-next-line max-params
       onSettled: (_data, _error, _vars, _result, { client }) =>
         refreshPromptLibrary(client, scope.projectId),
     }),
@@ -336,6 +341,7 @@ export const promptsMutations = {
           ...scoped(scope),
           idempotencyKey,
         }),
+      // oxlint-disable-next-line max-params
       onSettled: (_data, _error, _vars, _result, { client }) =>
         refreshPromptLibrary(client, scope.projectId),
     }),

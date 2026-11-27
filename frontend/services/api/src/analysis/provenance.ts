@@ -1,14 +1,11 @@
 import { auditFrozenRetrievalEnabled } from '../audits/frozen-configuration.ts';
 import { logicalEngines } from '../config/providers.ts';
+import { isRecord } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
 
 function frozenRetrievalEnabled(...snapshots: unknown[]): boolean | null {
   for (const snapshot of snapshots) {
-    if (!isObject(snapshot)) continue;
+    if (!isRecord(snapshot)) continue;
     const retrievalEnabled = snapshot.retrieval_enabled;
     if (typeof retrievalEnabled === 'boolean') {
       return retrievalEnabled;

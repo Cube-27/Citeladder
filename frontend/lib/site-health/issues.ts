@@ -8,8 +8,11 @@ export function severityPriority(severity: IssueSeverity): PriorityValue {
       return 'high';
     case 'medium':
       return 'medium';
-    default:
+    case 'low':
+    case 'info':
       return 'low';
+    default:
+      return severity satisfies never;
   }
 }
 

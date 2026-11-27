@@ -177,13 +177,22 @@ export async function sourceMaterial(
         classifier_version: v.classifier_version,
         override_id: v.override_id,
       })),
-    page_evidence: unique(
-      queryInputs.flatMap((r) =>
-        r.page_analysis_id && r.page_artifact_id
-          ? [JSON.stringify([r.page_analysis_id, r.page_artifact_id])]
-          : [],
+    page_evidence: [
+      ...new Map(
+        queryInputs.flatMap((r): [string, string[]][] =>
+          r.page_analysis_id && r.page_artifact_id
+            ? [
+                [
+                  JSON.stringify([r.page_analysis_id, r.page_artifact_id]),
+                  [r.page_analysis_id, r.page_artifact_id],
+                ],
+              ]
+            : [],
+        ),
       ),
-    ).map((v): string[] => JSON.parse(v)),
+    ]
+      .sort(([a], [b]) => compareText(a, b))
+      .map(([, pair]) => pair),
   };
 }
 

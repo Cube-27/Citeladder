@@ -72,8 +72,10 @@ export const promptTools = {
           return promptSets(read, args);
         case 'candidates':
           return promptCandidates(read, args);
-        default:
+        case 'prompts':
           return promptPortfolio(read, args);
+        default:
+          return args.view satisfies never;
       }
     },
   }),

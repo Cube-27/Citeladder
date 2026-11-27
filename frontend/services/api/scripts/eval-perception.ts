@@ -64,14 +64,19 @@ async function evaluate(fixture: Fixture) {
     run,
     fixture: fixture.name,
     template_version: settings.template_version,
-    pairs: validated.entities
-      .filter((entity) => expected[entity.entity_name] !== undefined)
-      .map((entity) => ({
-        entity: entity.entity_name,
-        expected: expected[entity.entity_name]!,
-        actual: entity.label,
-        confidence: entity.confidence,
-      })),
+    pairs: validated.entities.flatMap((entity) => {
+      const label = expected[entity.entity_name];
+      return label === undefined
+        ? []
+        : [
+            {
+              entity: entity.entity_name,
+              expected: label,
+              actual: entity.label,
+              confidence: entity.confidence,
+            },
+          ];
+    }),
     quotes: validated.entities.reduce((sum, entity) => sum + entity.aspects.length, 0),
     drops: validated.drops,
     total_tokens: Number(result.usage.total_tokens ?? 0),

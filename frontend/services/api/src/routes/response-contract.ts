@@ -1,7 +1,6 @@
 import type { z } from 'zod';
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
+import { isRecord } from '../db/json.ts';
 
 function undeclared(wire: unknown, parsed: unknown, path: string): string[] {
   if (Array.isArray(wire))

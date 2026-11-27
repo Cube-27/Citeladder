@@ -56,8 +56,10 @@ export const siteTools = {
           return aeoReadinessView(read, args);
         case 'architecture':
           return architectureView(read, args);
-        default:
+        case 'summary':
           return siteSnapshot(read, args);
+        default:
+          return args.view satisfies never;
       }
     },
   }),

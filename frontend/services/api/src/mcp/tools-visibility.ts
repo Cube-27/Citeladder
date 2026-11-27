@@ -70,8 +70,12 @@ export const visibilityTools = {
           return surfaceRatesView(read, args);
         case 'markets':
           return marketHeadlines(read, args);
-        default:
+        case 'summary':
+        case 'topics':
+        case 'matrix':
           return visibilityOverview(read, { ...args, view: args.view });
+        default:
+          return args.view satisfies never;
       }
     },
   }),
@@ -165,8 +169,11 @@ export const visibilityTools = {
             args,
             params: [],
           });
-        default:
+        case 'summary':
+        case 'quotes':
           return perceptionRead(read, { ...args, view: args.view });
+        default:
+          return args.view satisfies never;
       }
     },
   }),

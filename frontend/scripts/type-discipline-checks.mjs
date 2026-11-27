@@ -1,3 +1,5 @@
+import { visitorKeys } from 'oxc-parser';
+
 import { lineIndex, parseSource, walk } from './source-ast.mjs';
 
 const OBJECT_KEY_READERS = new Set(['keys', 'entries']);
@@ -37,7 +39,19 @@ function indexNonNull(node) {
   return false;
 }
 
-const DISCRIMINANTS = new Set(['kind', 'type', 'status', 'state', 'phase', 'mode', 'event_type']);
+const DISCRIMINANTS = new Set([
+  'kind',
+  'type',
+  'status',
+  'state',
+  'phase',
+  'mode',
+  'event_type',
+  'view',
+  'severity',
+  'quality_status',
+  'dataset_kind',
+]);
 
 const discriminantName = (node) =>
   node?.type === 'Identifier' ? node.name : (propertyName(node) ?? '');
@@ -80,8 +94,6 @@ function openSwitch(node) {
   return !fallback || !provesExhaustive(fallback);
 }
 
-export const isApiSource = (label) => label.startsWith('services/api/src/');
-
 export function nonNullCount(source, label) {
   let count = 0;
   walk(parseSource(source, label), (node) => {
@@ -90,14 +102,92 @@ export function nonNullCount(source, label) {
   return count;
 }
 
-export function nonNullRatchetFailures(counts, baseline) {
-  return Object.entries(counts)
-    .filter(([file, count]) => count > (baseline[file] ?? 0))
-    .map(
-      ([file, count]) =>
-        `${file}: ${count} non-null assertions, baseline ${baseline[file] ?? 0}; narrow the value instead of asserting it`,
-    );
+export const MAX_PARAMS = 3;
+const PARAMETER_HOLDERS = new Set([
+  'FunctionDeclaration',
+  'FunctionExpression',
+  'ArrowFunctionExpression',
+  'TSDeclareFunction',
+  'TSEmptyBodyFunctionExpression',
+  'TSFunctionType',
+]);
+const LIBRARY_CALLBACKS = new Set(['onSuccess', 'onMutate', 'onError', 'onSettled']);
+
+const isLibraryCallback = (node, parent) =>
+  parent?.type === 'Property' && parent.value === node && LIBRARY_CALLBACKS.has(parent.key?.name);
+
+export function maxParamsCount(source, label) {
+  let count = 0;
+  const visit = (node, parent) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item, parent);
+      return;
+    }
+    if (typeof node.type !== 'string') return;
+    if (
+      PARAMETER_HOLDERS.has(node.type) &&
+      node.params.length > MAX_PARAMS &&
+      !isLibraryCallback(node, parent)
+    )
+      count += 1;
+    for (const key of visitorKeys[node.type] ?? []) visit(node[key], node);
+  };
+  visit(parseSource(source, label), null);
+  return count;
 }
+
+export const RATCHETS = [
+  {
+    file: 'non-null-baseline.json',
+    flag: '--write-non-null-baseline',
+    noun: 'non-null assertions',
+    fix: 'narrow the value instead of asserting it',
+    count: nonNullCount,
+  },
+  {
+    file: 'max-params-baseline.json',
+    flag: '--write-max-params-baseline',
+    noun: `functions over ${MAX_PARAMS} parameters`,
+    fix: 'take one object argument',
+    count: maxParamsCount,
+  },
+];
+
+export function baselineRatchetFailures({ counts, baseline, ratchet }) {
+  const files = [...new Set([...Object.keys(counts), ...Object.keys(baseline)])].sort();
+  return files.flatMap((file) => {
+    const count = counts[file] ?? 0;
+    const allowed = baseline[file] ?? 0;
+    if (count > allowed)
+      return [`${file}: ${count} ${ratchet.noun}, baseline ${allowed}; ${ratchet.fix}`];
+    if (count < allowed)
+      return [
+        `${file}: ${count} ${ratchet.noun}, baseline ${allowed}; lower the entry with ${ratchet.flag}`,
+      ];
+    return [];
+  });
+}
+
+export function baselineDiffFailures({ base, baseline, ratchet }) {
+  return Object.entries(baseline).flatMap(([file, allowed]) => {
+    if (!Object.hasOwn(base, file))
+      return [`${ratchet.file}: new entry ${file}; the baseline only shrinks`];
+    if (allowed > base[file])
+      return [
+        `${ratchet.file}: ${file} raised ${base[file]} -> ${allowed}; the baseline only shrinks`,
+      ];
+    return [];
+  });
+}
+
+export const loweredBaseline = (counts, baseline) =>
+  Object.fromEntries(
+    Object.entries(baseline).flatMap(([file, allowed]) => {
+      const next = Math.min(allowed, counts[file] ?? 0);
+      return next ? [[file, next]] : [];
+    }),
+  );
 
 const isValueChangeHandler = (node) =>
   node.type === 'JSXAttribute' &&

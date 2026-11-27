@@ -3,9 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
-  isApiSource,
-  nonNullCount,
-  nonNullRatchetFailures,
+  RATCHETS,
+  baselineDiffFailures,
+  baselineRatchetFailures,
+  loweredBaseline,
   typeDisciplineFindings,
 } from './type-discipline-checks.mjs';
 
@@ -68,25 +69,55 @@ if (fs.existsSync(facade)) {
   }
 }
 
-const NON_NULL_BASELINE = path.join(root, 'scripts', 'non-null-baseline.json');
-const nonNullCounts = {};
+const ratchetCounts = RATCHETS.map(() => ({}));
 for (const file of ['apps', 'components', 'lib', 'packages', 'services'].flatMap(sourceFiles)) {
   if (/\.(?:test|spec)\.tsx?$|\.d\.ts$|\/(?:test|e2e|generated)\//.test(file)) continue;
   const source = fs.readFileSync(path.join(root, file), 'utf8');
   for (const { line, message } of typeDisciplineFindings(source, file))
     failures.push(`${file}:${line}: ${message}`);
-  if (isApiSource(file)) {
-    const count = nonNullCount(source, file);
-    if (count) nonNullCounts[file] = count;
+  RATCHETS.forEach((ratchet, index) => {
+    const count = ratchet.count(source, file);
+    if (count) ratchetCounts[index][file] = count;
+  });
+}
+RATCHETS.forEach((ratchet, index) =>
+  failures.push(...ratchetFailures(ratchet, ratchetCounts[index])),
+);
+
+function baselineAtBase(ratchet) {
+  const base = process.env.COMPLEXITY_BASE_SHA;
+  if (!base || /^0+$/.test(base)) return null;
+  if (!/^[0-9a-f]{40}$/i.test(base)) throw new Error(`invalid COMPLEXITY_BASE_SHA: ${base}`);
+  try {
+    return JSON.parse(
+      execFileSync(
+        '/usr/bin/git',
+        ['-C', root, 'show', `${base}:frontend/scripts/${ratchet.file}`],
+        {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'pipe'],
+        },
+      ),
+    );
+  } catch (error) {
+    if (/does not exist in|exists on disk, but not in/.test(String(error?.stderr))) return null;
+    throw error;
   }
 }
-const nonNullFailures = nonNullRatchetFailures(
-  nonNullCounts,
-  JSON.parse(fs.readFileSync(NON_NULL_BASELINE, 'utf8')),
-);
-failures.push(...nonNullFailures);
-if (process.argv.includes('--write-non-null-baseline') && !nonNullFailures.length)
-  fs.writeFileSync(NON_NULL_BASELINE, `${JSON.stringify(nonNullCounts, null, 2)}\n`);
+
+function ratchetFailures(ratchet, counts) {
+  const target = path.join(root, 'scripts', ratchet.file);
+  let baseline = JSON.parse(fs.readFileSync(target, 'utf8'));
+  if (process.argv.includes(ratchet.flag)) {
+    baseline = loweredBaseline(counts, baseline);
+    fs.writeFileSync(target, `${JSON.stringify(baseline, null, 2)}\n`);
+  }
+  const base = baselineAtBase(ratchet);
+  return [
+    ...baselineRatchetFailures({ counts, baseline, ratchet }),
+    ...(base ? baselineDiffFailures({ base, baseline, ratchet }) : []),
+  ];
+}
 
 const tracked = execFileSync('/usr/bin/git', ['-C', root, 'ls-files', '--', ':(top)'], {
   encoding: 'utf8',

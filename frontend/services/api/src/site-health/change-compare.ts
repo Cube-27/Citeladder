@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import { compareText } from '../text-order.ts';
 import { policy } from '../config.ts';
+import { isRecord } from '../db/json.ts';
 
 const p = policy.site_health.change_intel;
 const failing = new Set(policy.site_health.reads.failing_outcomes);
@@ -189,8 +190,6 @@ function fieldObservation(
     ...expectedLink(expected, after, field),
   };
 }
-const isRecord = (value: unknown): value is ContentRecord =>
-  value !== null && typeof value === 'object' && !Array.isArray(value);
 function contentObservation(before: ChangePage, after: ChangePage): ChangeObservation | null {
   const previous = before.fields[p.change_field];
   const current = after.fields[p.change_field];

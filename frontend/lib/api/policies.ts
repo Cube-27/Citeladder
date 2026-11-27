@@ -39,6 +39,7 @@ export const policyMutations = {
     mutationOptions({
       mutationFn: ({ workspaceId, revision }: { workspaceId: string; revision: string }) =>
         policiesApi.accept(workspaceId, revision),
+      // oxlint-disable-next-line max-params
       onSuccess: (status, { workspaceId }, _result, { client }) =>
         client.setQueryData(queryKeys.policies.workspace(workspaceId), status),
     }),

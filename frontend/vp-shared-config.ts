@@ -93,6 +93,13 @@ const apiTypeAssertionBaseline = [
   'services/api/src/workers/integration-worker.ts',
 ];
 
+const maxParamsBaseline = Object.keys(
+  createRequire(import.meta.url)('./scripts/max-params-baseline.json'),
+);
+const PARAMETER_SOURCES = ['apps', 'components', 'lib', 'packages', 'services'].map(
+  (root) => `${root}/**/*.{ts,tsx}`,
+);
+
 const ICONS_IMPORT = { name: '@tabler/icons-react', message: 'Import glyphs from @/lib/icons.' };
 const SEARCH_PARAMS_IMPORT = {
   name: 'react-router-dom',
@@ -277,12 +284,7 @@ export const lintConfig: OxlintConfig = {
       rules: { 'no-restricted-globals': 'off', 'no-restricted-properties': 'off' },
     },
     {
-      files: [
-        '**/lib/api/client.ts',
-        '**/components/ui/select.tsx',
-        '**/components/ui/tabs.tsx',
-        '**/components/analytics/google-analytics.ts',
-      ],
+      files: ['**/lib/api/client.ts', '**/components/ui/select.tsx', '**/components/ui/tabs.tsx'],
       rules: { 'typescript/consistent-type-assertions': 'off' },
     },
     {
@@ -304,6 +306,11 @@ export const lintConfig: OxlintConfig = {
     {
       files: apiTypeAssertionBaseline,
       rules: { 'typescript/consistent-type-assertions': 'off' },
+    },
+    { files: PARAMETER_SOURCES, rules: { 'max-params': ['error', { max: 3 }] } },
+    {
+      files: [...TEST_FILES, '**/e2e/**', '**/*.d.ts', ...maxParamsBaseline],
+      rules: { 'max-params': 'off' },
     },
     {
       files: ['**/*.{js,jsx,mjs,ts,tsx,mts,cts}'],

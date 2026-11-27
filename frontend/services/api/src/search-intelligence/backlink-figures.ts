@@ -28,20 +28,22 @@ const PRECEDENCE: readonly string[] = [
 const figure = (value: unknown) =>
   typeof value === 'number' && Number.isFinite(value) ? value : null;
 
-function carried(dataset: DatasetView, months: ReadonlyMap<string, HistoryMonth>): Carried {
-  switch (dataset.dataset_kind) {
-    case 'backlink_summary':
-      return dataset.summary;
-    case 'backlinks':
-      return dataset.acquisition.mode === 'as_is' ? { backlinks: dataset.provider_total } : {};
-    case 'referring_domains':
-      return { referring_domains: dataset.provider_total };
-    case 'backlink_history':
-      return months.get(dataset.id) ?? {};
-    default:
-      return {};
-  }
-}
+const CARRIED = new Map<
+  string,
+  (dataset: DatasetView, months: ReadonlyMap<string, HistoryMonth>) => Carried
+>([
+  ['backlink_summary', (dataset) => dataset.summary],
+  [
+    'backlinks',
+    (dataset) =>
+      dataset.acquisition.mode === 'as_is' ? { backlinks: dataset.provider_total } : {},
+  ],
+  ['referring_domains', (dataset) => ({ referring_domains: dataset.provider_total })],
+  ['backlink_history', (dataset, months) => months.get(dataset.id) ?? {}],
+]);
+
+const carried = (dataset: DatasetView, months: ReadonlyMap<string, HistoryMonth>): Carried =>
+  CARRIED.get(dataset.dataset_kind)?.(dataset, months) ?? {};
 
 function latestHistoryMonths(db: Database, scope: Scope, datasetIds: string[]) {
   if (!datasetIds.length) return Promise.resolve([]);

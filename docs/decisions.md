@@ -49,6 +49,11 @@ how to add or change an entry.
 - **Source code has no comments.** Names, types, tests and owner docs carry
   the meaning; a check enforces it and allows only machine-read directives.
   Owner, 2026-11-21 (#1136).
+- **More than three parameters, or two of one type, take one object argument.**
+  Lint enforces the count on every new PR against a per-file baseline of source
+  files (not tests) that only shrinks, with no mass refactor and no hot-path
+  exception; callbacks whose signature a library dictates are exempt. Owner,
+  2026-11-27.
 
 ## Accounts, access and sign-in
 
