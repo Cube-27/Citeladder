@@ -52,14 +52,7 @@ export function buttonClasses(
   className?: string,
   size: ButtonSize = 'md',
 ) {
-  return cn(
-    'ui-button',
-    `ui-button-${variant}`,
-    BUTTON_BASE,
-    BUTTON_SIZE[size],
-    BUTTON_VARIANT[variant],
-    className,
-  );
+  return cn(BUTTON_BASE, BUTTON_SIZE[size], BUTTON_VARIANT[variant], className);
 }
 
 const BUTTON_BOX = {

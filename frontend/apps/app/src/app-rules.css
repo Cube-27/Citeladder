@@ -327,31 +327,36 @@ a.focus-ring:active .text-caption.text-ink-2 {
 }
 
 [data-state-offer] [data-button-variant='secondary']:first-child,
-:root:not([data-public-surface]) [data-state-offer] .ui-button-secondary:first-child {
+:root:not([data-public-surface]) [data-state-offer] [data-button-variant='secondary']:first-child {
   border-color: var(--color-primary);
   background-color: var(--color-primary);
   color: var(--text-color-on-primary);
 }
 [data-demoted] [data-button-variant],
-:root:not([data-public-surface]) [data-demoted] .ui-button {
+:root:not([data-public-surface]) [data-demoted] [data-button-variant] {
   border-color: transparent;
   background-color: var(--color-raised);
   color: var(--text-color-ink);
 }
-:root:not([data-public-surface]) :is(.ui-button-secondary, [data-demoted] .ui-button) svg {
+:root:not([data-public-surface])
+  :is([data-button-variant='secondary'], [data-demoted] [data-button-variant])
+  svg {
   color: var(--text-color-ink-2);
 }
-:root:not([data-public-surface]) [data-state-offer] .ui-button-secondary:first-child svg {
+:root:not([data-public-surface])
+  [data-state-offer]
+  [data-button-variant='secondary']:first-child
+  svg {
   color: inherit;
 }
 
 :root:not([data-public-surface])
-  .ui-button:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
+  [data-button-variant]:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
   opacity: var(--opacity-disabled);
   box-shadow: none;
 }
 
-:root:not([data-public-surface]) .ui-button::after {
+:root:not([data-public-surface]) [data-button-variant]::after {
   content: '';
   position: absolute;
   inset-block: min(0px, calc((100% - var(--button-hit)) / 2));
@@ -435,7 +440,12 @@ input:is(:autofill, :-webkit-autofill) {
   [data-button-variant='primary'],
   [data-button-variant='secondary'],
   [data-button-variant='danger'],
-  :root:not([data-public-surface]) :is(.ui-button-primary, .ui-button-secondary, .ui-button-danger),
+  :root:not([data-public-surface])
+    :is(
+      [data-button-variant='primary'],
+      [data-button-variant='secondary'],
+      [data-button-variant='danger']
+    ),
   [data-app-surface] a[aria-current='page'] {
     outline: 1px solid ButtonText;
     outline-offset: -1px;
@@ -600,7 +610,11 @@ label {
   box-shadow: inset var(--spacing-mark) 0 0 var(--color-accent);
 }
 
-:root:not([data-public-surface]) .table-frame tbody td :is(.ui-button, [role='combobox']) {
+:root:not([data-public-surface])
+  .table-frame
+  tbody
+  td
+  :is([data-button-variant], [role='combobox']) {
   margin-block: min(
     0px,
     calc((var(--spacing-row) - 2 * var(--spacing-cell-y) - var(--spacing-control-md)) / 2)
@@ -795,11 +809,11 @@ label {
   --control-face-hover: var(--color-state-fill-hover);
   --control-face-shadow: none;
 }
-:root:not([data-public-surface]) :is(.menu-panel, [role='listbox'], .ui-button-quiet) {
+:root:not([data-public-surface]) :is(.menu-panel, [role='listbox'], [data-button-variant='quiet']) {
   --color-state-hover: var(--color-state-fill);
   --color-state-pressed: var(--color-state-fill);
 }
-:root:not([data-public-surface]) .ui-button-danger {
+:root:not([data-public-surface]) [data-button-variant='danger'] {
   --color-raised: var(--color-negative-wash);
   --color-raised-2: oklch(from var(--color-negative-wash) calc(l - 0.02) c h);
 }

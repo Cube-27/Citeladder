@@ -42,7 +42,8 @@ export function OptionRow({
       onClick={onSelect}
       disabled={disabled}
       aria-pressed={selected}
-      look={selected ? 'option-selected' : 'option'}
+      look="option"
+      selected={selected}
     >
       <span className="flex min-w-0 flex-1 items-start gap-3">
         <span className="min-w-0 flex-1">

@@ -221,6 +221,7 @@ export function SectionStack({
   label?: string;
   'aria-busy'?: boolean;
   'data-testid'?: string;
+  'data-page-content'?: '';
 }>) {
   const Element = label ? 'section' : 'div';
   return (
