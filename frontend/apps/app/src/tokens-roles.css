@@ -187,6 +187,10 @@
   --spacing-workspace: 16px;
   --spacing-compact: 12px;
   --spacing-card: 24px;
+  --spacing-tight: 4px;
+  --spacing-item: 8px;
+  --spacing-group: 12px;
+  --spacing-loose: 16px;
   --spacing-modal: 24px;
   --spacing-panel-inset: 0px;
   --spacing-band: 8px;

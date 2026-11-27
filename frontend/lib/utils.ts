@@ -4,6 +4,10 @@ import { extendTailwindMerge } from 'tailwind-merge';
 const SPACING_ROLES = [
   'band',
   'card',
+  'group',
+  'item',
+  'loose',
+  'tight',
   'cell-x',
   'cell-y',
   'chart-lg',

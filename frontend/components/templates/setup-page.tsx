@@ -132,7 +132,7 @@ export function SetupStep({
 
 export function StepColumns({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <Columns template="halves" gap="card" align="start">
+    <Columns template="halves-desktop" gap="card" align="start">
       {children}
     </Columns>
   );
