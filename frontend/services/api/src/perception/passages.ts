@@ -36,19 +36,20 @@ export function namesAnyEntity(assessments: readonly { state: string }[]): boole
 
 const segmenters = new Map<string, Intl.Segmenter>();
 
-function newSegmenter(languageCode: string) {
+function localeOf(languageCode: string): string {
   try {
-    return new Intl.Segmenter(languageCode || 'en', { granularity: 'sentence' });
+    return Intl.getCanonicalLocales(languageCode || 'en')[0] ?? 'en';
   } catch {
-    return new Intl.Segmenter('en', { granularity: 'sentence' });
+    return 'en';
   }
 }
 
 function segmenter(languageCode: string) {
-  const cached = segmenters.get(languageCode);
+  const locale = localeOf(languageCode);
+  const cached = segmenters.get(locale);
   if (cached) return cached;
-  const created = newSegmenter(languageCode);
-  segmenters.set(languageCode, created);
+  const created = new Intl.Segmenter(locale, { granularity: 'sentence' });
+  segmenters.set(locale, created);
   return created;
 }
 

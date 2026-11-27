@@ -35,24 +35,23 @@ export async function logoResponse(
     .where('projects.workspace_id', '=', scope.workspaceId)
     .where('asset.status', '=', READY)
     .where('asset.image_data', 'is not', null);
-  const asset = await ready.select(['asset.content_type', 'asset.sha256']).executeTakeFirst();
+  const current = await ready.select('asset.sha256').executeTakeFirst();
   const missing = () => notFound(competitorId === null ? 'Brand logo' : 'Competitor logo');
-  if (asset === undefined) throw missing();
-  const etag = `"${asset.sha256}"`;
-  const headers = {
+  if (current === undefined) throw missing();
+  const headers = (sha256: string) => ({
     'cache-control': REVALIDATE_CACHE_CONTROL,
     'content-disposition': 'inline',
     'content-security-policy': "default-src 'none'; sandbox",
-    etag,
+    etag: `"${sha256}"`,
     'x-content-type-options': 'nosniff',
-  };
-  if (request.ifNoneMatch === etag) return new Response(null, { status: 304, headers });
-  const bytes = await ready
-    .select('asset.image_data')
-    .where('asset.sha256', '=', asset.sha256)
+  });
+  if (request.ifNoneMatch === `"${current.sha256}"`)
+    return new Response(null, { status: 304, headers: headers(current.sha256) });
+  const asset = await ready
+    .select(['asset.content_type', 'asset.sha256', 'asset.image_data'])
     .executeTakeFirst();
-  if (bytes?.image_data == null) throw missing();
-  return new Response(new Uint8Array(bytes.image_data), {
-    headers: { ...headers, 'content-type': asset.content_type },
+  if (asset?.image_data == null) throw missing();
+  return new Response(new Uint8Array(asset.image_data), {
+    headers: { ...headers(asset.sha256), 'content-type': asset.content_type },
   });
 }
