@@ -124,13 +124,14 @@ export function IssuePage({
   const back = new URLSearchParams(location.search);
   back.delete('issue');
   const backQuery = back.toString();
+  const backHref = backQuery ? `${location.pathname}?${backQuery}` : location.pathname;
   return (
     <PageDrawerHost workspaceId={scope.workspaceId}>
       <ReportPage
         trail={[
           {
             label: 'Issues',
-            href: `${location.pathname}${backQuery ? `?${backQuery}` : ''}`,
+            href: backHref,
             onClick: (event) => {
               if (event.metaKey || event.ctrlKey || event.shiftKey) return;
               event.preventDefault();

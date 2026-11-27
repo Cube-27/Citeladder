@@ -319,15 +319,7 @@ function AreaPlot({
         <Tooltip
           cursor={LINE_CURSOR}
           isAnimationActive={false}
-          content={({ active, payload }) => (
-            <AreaTip
-              active={active}
-              row={payload?.[0]?.payload}
-              data={data}
-              lines={lines}
-              shown={shown}
-            />
-          )}
+          content={<AreaTip data={data} lines={lines} shown={shown} />}
         />
         {[...lines.keys()].reverse().map((at) => {
           const line = lines[at];
@@ -345,14 +337,7 @@ function AreaPlot({
               strokeWidth={line.tone === 'you' ? 2 : 1.5}
               fill={`url(#${id}-${at})`}
               activeDot={{ r: 4, fill: color, stroke: 'var(--color-panel)', strokeWidth: 2 }}
-              dot={(props: { cx?: number; cy?: number; payload?: ChartRow }) => (
-                <LineDot
-                  key={`${line.name}-${props.payload?.x}`}
-                  {...props}
-                  line={line}
-                  data={data}
-                />
-              )}
+              dot={<LineDot line={line} data={data} />}
             />
           );
         })}
@@ -394,17 +379,18 @@ function LineDot({
 
 function AreaTip({
   active,
-  row,
+  payload,
   data,
   lines,
   shown,
 }: Readonly<{
   active?: boolean;
-  row: ChartRow | undefined;
+  payload?: readonly { payload?: ChartRow }[];
   data: readonly TrendPoint[];
   lines: readonly Line[];
   shown: Shown;
 }>) {
+  const row = payload?.[0]?.payload;
   if (!active || !row || row.break) return null;
   const point = data[row.index];
   if (!point) return null;
