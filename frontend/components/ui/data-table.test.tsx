@@ -141,12 +141,12 @@ describe('DataTable', () => {
         ?.style.getPropertyValue('--reserve-rows');
     const { container, rerender } = render(table(false));
     expect(reserved(container)).toBeUndefined();
-    expect(container.querySelector('table')?.closest('[hidden]')).not.toBeNull();
+    expect(screen.getByRole('table', { hidden: true }).closest('[hidden]')).not.toBeNull();
 
     rerender(table(true));
     expect(reserved(container)).toBe('10');
     expect(screen.getByText("Couldn't load signals")).toBeVisible();
-    expect(container.querySelector('table')?.closest('[inert]')).not.toBeNull();
+    expect(screen.getByRole('table', { hidden: true }).closest('[inert]')).not.toBeNull();
   });
 
   it('draws the pager only once the rows run past one page, and never blank rows', () => {
