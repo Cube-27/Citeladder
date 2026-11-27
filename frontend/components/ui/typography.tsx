@@ -94,10 +94,7 @@ const TEXT_WRAP = {
   anywhere: 'wrap-anywhere',
   all: 'break-all',
   words: 'break-words',
-  balance: 'text-balance',
   nowrap: 'whitespace-nowrap',
-  pre: 'whitespace-pre-wrap',
-  'pre-anywhere': 'whitespace-pre-wrap wrap-anywhere',
   truncate: 'truncate',
   lines: 'whitespace-pre-line',
 } as const;
@@ -122,7 +119,6 @@ const TEXT_BOX = {
 
 const TEXT_ALIGN = {
   start: undefined,
-  center: 'text-center',
   end: 'text-end',
 } as const;
 
@@ -135,7 +131,6 @@ export function Text({
   box,
   focusable = false,
   align = 'start',
-  hideOnDesktop = false,
   hideOnPhone = false,
   children,
   ...props
@@ -150,7 +145,6 @@ export function Text({
     box?: keyof typeof TEXT_BOX;
     focusable?: boolean;
     align?: keyof typeof TEXT_ALIGN;
-    hideOnDesktop?: boolean;
     hideOnPhone?: boolean;
   }
 >) {
@@ -162,7 +156,6 @@ export function Text({
     box && TEXT_BOX[box],
     focusable && 'focus-ring',
     TEXT_ALIGN[align],
-    hideOnDesktop && 'desktop:hidden',
     hideOnPhone && 'phone:hidden',
   );
   return createElement(Tag, { ...props, className }, children);
@@ -189,18 +182,6 @@ export function InlineFigure({
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
     <span {...props} className={cn('tabular-nums', className)}>
-      {children}
-    </span>
-  );
-}
-
-export function Metric({
-  children,
-  className,
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'span'>>) {
-  return (
-    <span {...props} className={textRole('figure', className)}>
       {children}
     </span>
   );
