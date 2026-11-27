@@ -48,7 +48,11 @@ The lint enforces this and fails CI (`vp lint`; config in
   `opacity-<n>`, `duration-<n>`, `delay-<n>`), `colour-literal` (a hex or
   colour function in any string), `monochrome-colour` (`white`/`black`),
   `surface-variant` (a `[[data-public-surface]_&]:` variant outside
-  `components/ui`) and `astro-class` (value classes in Astro markup).
+  `components/ui`), `raw-media` (outside `components/ui` and the website, an
+  `<img>` or a sized `<svg>`: logos and engine marks render through
+  `BrandMark`, sized from the icon roles and never taller than their line, so
+  a mark cannot set a row's height) and `astro-class` (value classes in Astro
+  markup).
 
 There is no suppressions file and no baseline: a finding is fixed at its
 source, by a role token or a primitive prop. No
