@@ -89,14 +89,16 @@ function rawParts(value, property, { tokenFile }) {
       return visit(node, inGradient);
     });
   const visitVar = ([name, ...rest], inGradient) => {
-    if (tokenFile) return false;
+    if (tokenFile) return;
     if (name?.value.startsWith('--ramp-')) found.push(`var(${name.value})`);
     const fallback = rest.slice(rest.findIndex((node) => node.type === 'div') + 1);
     if (rest.length) walk(fallback, inGradient);
-    return false;
   };
   const visit = (node, inGradient) => {
-    if (node.type === 'function' && node.value === 'var') return visitVar(node.nodes, inGradient);
+    if (node.type === 'function' && node.value === 'var') {
+      visitVar(node.nodes, inGradient);
+      return false;
+    }
     if (node.type === 'function' && COLOUR_FUNCTION.test(node.value)) {
       found.push(valueParser.stringify(node));
       return false;
