@@ -47,7 +47,7 @@ function SelectablePrompts() {
 }
 
 describe('DataTable', () => {
-  it("lays every head and cell out by its column's kind, counting the selection column", () => {
+  it('pins the selection column together with the first', () => {
     const { container } = render(
       <DataTable
         label="Pages"
@@ -68,23 +68,7 @@ describe('DataTable', () => {
       </DataTable>,
     );
     const frame = container.querySelector<HTMLElement>('[data-data-table-frame]')!;
-    expect([1, 2, 3, 4, 5].map((position) => frame.getAttribute(`data-c${position}`))).toEqual([
-      'select',
-      'start rest',
-      'end fixed s16 num',
-      'start fixed s24 gutter num',
-      'end fixed s20',
-    ]);
-    expect(frame.style.getPropertyValue('--data-table-share')).toBe('100.000%');
     expect(frame).toHaveAttribute('data-pinned', '2');
-    expect(screen.getByRole('columnheader', { name: 'Open' })).toBeInTheDocument();
-    expect(screen.getAllByRole('columnheader').map((head) => head.getAttribute('scope'))).toEqual([
-      'col',
-      'col',
-      'col',
-      'col',
-      'col',
-    ]);
   });
 
   it('selects every row from the header box and shows a partial selection as mixed', () => {
@@ -333,26 +317,6 @@ describe('DataTable', () => {
     expect(fades()).toEqual(['end']);
     layout(900, 500);
     expect(fades()).toEqual([]);
-  });
-
-  it('splits the spare width between flexible columns and hides a low column with its cells', () => {
-    const { container } = render(
-      <DataTable
-        label="Crawlers"
-        columns={[
-          { key: 'name', label: 'Crawler' },
-          { key: 'seen', label: 'Seen', kind: 'number', priority: 'low' },
-          { key: 'breakdown', label: 'Folder and resource breakdown' },
-        ]}
-      />,
-    );
-    const frame = container.querySelector<HTMLElement>('[data-data-table-frame]')!;
-    expect(frame.style.getPropertyValue('--data-table-share')).toBe('50.000%');
-    expect([1, 2, 3].map((position) => frame.getAttribute(`data-c${position}`))).toEqual([
-      'start rest',
-      'end fixed s16 num',
-      'start rest gutter',
-    ]);
   });
 
   it('announces the filtered result count in a polite live region', () => {

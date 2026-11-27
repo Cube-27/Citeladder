@@ -90,7 +90,10 @@ const counted = (label: string, count: number) => new RegExp(`^${label} ?\\(${co
 const conflict = (code: string, message: string) =>
   HttpResponse.json({ error: { code, message } }, { status: 409 });
 
-beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
+beforeAll(async () => {
+  mswServer.listen({ onUnhandledFrame: 'error' });
+  await import('./page-workspace');
+});
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
