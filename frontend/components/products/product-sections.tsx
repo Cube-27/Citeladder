@@ -41,11 +41,9 @@ export function CompetingProducts({
         <TableRow key={row.holder_id}>
           <TableCell>
             <Inline as="span" align="start">
-              {row.brand ? (
-                <LineMark>
-                  <BrandMark name={row.brand} placement="inline" />
-                </LineMark>
-              ) : null}
+              <LineMark>
+                <BrandMark name={row.brand || row.name} placement="inline" />
+              </LineMark>
               <TableCellLines
                 primary={
                   <TextLink

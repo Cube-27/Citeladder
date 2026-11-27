@@ -117,6 +117,10 @@
   padding-inline-end: var(--spacing-panel-inset);
 }
 
+[data-app-grid='pair'] > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 @media (forced-colors: active) {
   :is([data-panel='card'], [data-panel-frame], [data-main-column], .shadow-card):not(
     :focus-visible
