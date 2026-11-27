@@ -38,7 +38,7 @@ export function ThemeComparison({ themes }: Readonly<{ themes: readonly Theme[] 
             columns={roster.map((entity) => ({
               key: entityKey(entity),
               header: (
-                <Inline as="span" className="justify-center">
+                <Inline as="span" justify="center">
                   {entity.name}
                   {entity.kind === 'brand' ? <YouTag /> : null}
                 </Inline>

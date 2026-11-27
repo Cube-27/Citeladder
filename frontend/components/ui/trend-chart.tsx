@@ -3,6 +3,7 @@ import { useState, type KeyboardEvent } from 'react';
 import {
   CHART_AXIS_TEXT,
   CHART_DASH,
+  CHART_HEIGHT_CLASS,
   CHART_HEIGHT_PX,
   CHART_PLOT_FRAME,
   chartFill,
@@ -140,8 +141,7 @@ export function TrendChart({
         }
         onMouseLeave={() => setActive(null)}
         onBlur={() => setActive(null)}
-        className={CHART_PLOT_FRAME}
-        style={{ height }}
+        className={cn(CHART_PLOT_FRAME, CHART_HEIGHT_CLASS[heightRole])}
       >
         <TrendPlot
           data={data}
@@ -295,7 +295,7 @@ function TrendPlot({
               strokeWidth={1.5}
               strokeDasharray="3 4"
               strokeLinecap="round"
-              className={cn(chartStroke(line.tone), 'opacity-40')}
+              className={cn(chartStroke(line.tone), 'opacity-ghost')}
             />
           ))}
           {isolatedPoints(points).map(([x, y]) => (

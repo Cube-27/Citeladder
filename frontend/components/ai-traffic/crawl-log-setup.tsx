@@ -16,7 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Field } from '@/components/ui/field';
-import { Stack } from '@/components/ui/layout';
+import { Columns, Stack } from '@/components/ui/layout';
+import { Text } from '@/components/ui/typography';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -71,31 +72,35 @@ export function CrawlLogSetup({
             disabled: unavailable,
             label: (
               <span className="grid">
-                <span className="text-body text-ink">{s.label}</span>
-                <span className="text-caption text-ink-2">
+                <Text variant="body">{s.label}</Text>
+                <Text variant="caption">
                   {unavailable ? 'Not available in this environment.' : s.description}
-                </span>
+                </Text>
               </span>
             ),
           };
         })}
       />
       <Stack>
-        {steps ? <p className="text-body text-ink-2">{steps}</p> : null}
+        {steps ? (
+          <Text as="p" variant="body" tone="ink-2">
+            {steps}
+          </Text>
+        ) : null}
         {firehose ? <FirehoseSteps interval={model.bufferInterval} /> : null}
         {gcp ? <GcpSteps /> : null}
         <TextLink variant="external" href={chosen.guide} className="w-fit">
           Setup guide: {chosen.label}
         </TextLink>
       </Stack>
-      <Stack gap="workspace" className="desktop:grid-cols-2">
+      <Columns template="halves" gap="workspace">
         <Field label="Site origin" className="desktop:col-span-2">
           {(field) => (
             <Input {...field} value={origin} onChange={(e) => setOrigin(e.target.value)} />
           )}
         </Field>
         {fields}
-      </Stack>
+      </Columns>
       {mutation.isError && mutation.variables.kind === 'create' ? (
         <Notice
           kind="mutation"
@@ -194,30 +199,30 @@ function FirehoseFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
 }
 function FirehoseSteps({ interval }: Readonly<{ interval: string }>) {
   return (
-    <Stack as="ol" gap="tight" className="text-body text-ink-2 list-inside list-decimal">
-      <li>
+    <Stack as="ol" gap="tight" list="decimal">
+      <Text as="li" variant="body" tone="ink-2">
         In us-east-1, create an Amazon Data Firehose stream: source Direct PUT, destination HTTP
         endpoint. Use the endpoint URL and the token (as the access key) shown after you create the
         source. Content encoding GZIP, buffer size 1–3 MiB, buffer interval {interval || '60'}{' '}
         seconds, retry duration 3600 seconds, S3 backup for failed data only.
-      </li>
-      <li>
+      </Text>
+      <Text as="li" variant="body" tone="ink-2">
         On the CloudFront distribution, add standard logging to Amazon Data Firehose, choose the
         stream and output format JSON, with these fields: {CLOUDFRONT_LOG_FIELDS.join(', ')}.
-      </li>
-      <li>
+      </Text>
+      <Text as="li" variant="body" tone="ink-2">
         Optional: to send crawler requests only, add the{' '}
         <TextLink variant="external" href={FIREHOSE_FILTER_TEMPLATE}>
           CiteLadder filter Lambda
         </TextLink>{' '}
         as the stream&apos;s data transformation and tick the box below. Coverage then stays
         partial.
-      </li>
-      <li>
+      </Text>
+      <Text as="li" variant="body" tone="ink-2">
         CloudFront can take about four hours to start delivering reliably. The Firehose
         console&apos;s test data is not CloudFront logs and shows as an unsupported-format batch;
         test with a real page visit instead.
-      </li>
+      </Text>
     </Stack>
   );
 }
@@ -254,7 +259,9 @@ export function IssuedToken({
           <>
             <p>Copy this token now. It is shown once.</p>
             <CopyButton value={issued.token}>Copy token</CopyButton>
-            <code className="text-code text-ink font-mono break-all">{endpoint}</code>
+            <Text as="code" variant="code" wrap="all">
+              {endpoint}
+            </Text>
             <CopyButton value={endpoint}>Copy endpoint</CopyButton>
           </>
         ) : null}
@@ -336,9 +343,9 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
         Upload recognized requests
       </Button>
       {progress ? (
-        <output className="text-body text-ink-2">
+        <Text as="output" variant="body" tone="ink-2">
           {progress.scanned} lines scanned · {progress.matched} recognized crawler requests sent.
-        </output>
+        </Text>
       ) : null}
       {upload.isSuccess ? (
         <Notice tone={processing === 'processed' ? 'positive' : 'info'}>

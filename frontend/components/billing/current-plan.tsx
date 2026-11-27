@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { X } from '@/lib/icons';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -174,9 +174,9 @@ function ResumeNotice({
   return (
     <>
       {subscription?.resumable_until ? (
-        <p className={textRole('caption')}>
+        <Text as="p" variant="caption">
           Resumable until <DisplayTime value={subscription.resumable_until} dateOnly />
-        </p>
+        </Text>
       ) : null}
       {cancellation.resumeError ? (
         <Notice
@@ -253,9 +253,9 @@ function CancelDialog({ cancellation }: Readonly<{ cancellation: BillingCancella
         </>
       }
     >
-      <p className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2">
         Access runs to the end of this period. No refund.
-      </p>
+      </Text>
       {cancellation.error ? (
         <Notice
           kind="mutation"

@@ -13,7 +13,7 @@ import type { CommandCenter, Opportunity } from '@citeladder/contracts';
 import { percentText, pluralCount } from '@/lib/format';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 
 export const VS_PREVIOUS_RUN = {
   spokenContext: 'compared with the previous run',
@@ -34,9 +34,9 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
     <ChartFrame summary={`Mention rate by engine, previous to current run. ${summary}.`}>
       <AppGrid layout="halves">
         {movements.map((row) => (
-          <Stack key={row.label} gap="compact" className="min-w-0">
-            <Inline className="justify-between">
-              <span className={textRole('label')}>{engines.label(row.label)}</span>
+          <Stack key={row.label} gap="compact" box="shrink">
+            <Inline justify="between">
+              <Text variant="label">{engines.label(row.label)}</Text>
               <Delta value={row.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
             </Inline>
             <MovementMeter
@@ -80,16 +80,30 @@ function MovementMeter({
   );
 }
 
-function ActionScope({ action, className }: Readonly<{ action: Opportunity; className: string }>) {
+function ActionScope({ action, row }: Readonly<{ action: Opportunity; row: boolean }>) {
   const label = action.target_label;
   const echoes = label?.toLowerCase().startsWith(action.title.toLowerCase());
   const evidence = pluralCount(action.evidence_summary.count, 'evidence item');
-  if (!label || echoes) return <ClampText className={className}>{evidence}</ClampText>;
+  if (!label || echoes)
+    return row ? (
+      <ClampText text="body" tone="ink-2" className="phone:hidden min-w-0 flex-1">
+        {evidence}
+      </ClampText>
+    ) : (
+      <ClampText text="caption" className="min-w-0 flex-1">
+        {evidence}
+      </ClampText>
+    );
+  const face = row
+    ? ({ variant: 'body', tone: 'ink-2' } as const)
+    : ({ variant: 'caption' } as const);
   return (
-    <span className={`flex ${className}`}>
+    <Text {...face} box="fill-row" hideOnPhone={row}>
       <UrlText url={label} />
-      <span className="min-w-0 truncate ps-1">· {evidence}</span>
-    </span>
+      <Text {...face} box="trail" wrap="truncate">
+        · {evidence}
+      </Text>
+    </Text>
   );
 }
 
@@ -105,7 +119,7 @@ export function ActionFacts({ action }: Readonly<{ action: Opportunity }>) {
   return (
     <Inline>
       <ActionPriority action={action} />
-      <ActionScope action={action} className={textRole('caption', 'min-w-0 flex-1')} />
+      <ActionScope action={action} row={false} />
     </Inline>
   );
 }
@@ -115,7 +129,7 @@ export function actionItem(action: Opportunity): ReorderItem {
     key: action.id,
     name: action.title,
     content: (
-      <Inline gap="item" className="min-w-0">
+      <Inline gap="item">
         <TextLink
           text="body"
           underline="hover"
@@ -124,10 +138,7 @@ export function actionItem(action: Opportunity): ReorderItem {
         >
           <ClampText phoneWrap>{action.title}</ClampText>
         </TextLink>
-        <ActionScope
-          action={action}
-          className={textRole('body', 'text-ink-2 phone:hidden min-w-0 flex-1')}
-        />
+        <ActionScope action={action} row />
         <ActionPriority action={action} />
       </Inline>
     ),

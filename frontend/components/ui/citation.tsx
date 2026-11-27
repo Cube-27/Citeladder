@@ -1,6 +1,12 @@
 import { BrandMark } from '@/components/ui/brand-mark';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
+import { CITATION_FACE, type LinkLook } from '@/components/ui/link-look';
 import { cn } from '@/lib/utils';
+
+function citationLook(own: boolean, bare: boolean): LinkLook {
+  if (own) return bare ? 'citation-own-bare' : 'citation-own';
+  return bare ? 'citation-bare' : 'citation';
+}
 
 export function Citation({
   domain,
@@ -44,16 +50,16 @@ export function Citation({
       {title ? <span className="text-ink-2 min-w-0 truncate">{title}</span> : null}
     </>
   );
-  const classes = cn(
-    'text-ink inline-flex min-h-[var(--control-sm)] max-w-full items-center gap-1 rounded-sm ps-1 pe-3 align-middle text-body no-underline',
-    own ? 'bg-accent-wash' : 'bg-state-selected',
-    index === undefined && 'ps-2',
-  );
+  const bare = index === undefined;
   return href ? (
-    <ExternalHttpLink href={href} className={cn(classes, 'focus-ring hover:overlay-hover')}>
+    <ExternalHttpLink href={href} look={citationLook(own, bare)}>
       {content}
     </ExternalHttpLink>
   ) : (
-    <span className={classes}>{content}</span>
+    <span
+      className={cn(CITATION_FACE, own ? 'bg-accent-wash' : 'bg-state-selected', bare && 'ps-2')}
+    >
+      {content}
+    </span>
   );
 }

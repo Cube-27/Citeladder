@@ -28,7 +28,7 @@ export function main(cwd = process.cwd()) {
   if (!findings.length) return 0;
   process.stderr.write(
     [
-      `${findings.length} source comment(s). Source code has no comments: carry the meaning in a name, a type or a test, or in the owner doc when it crosses boundaries. Only machine-read directives are allowed (frontend/scripts/source-comments.mjs).`,
+      `${findings.length} source comment(s). Source code has no comments: carry the meaning in a name, a type or a test, or in the owner doc when it crosses boundaries. Only machine-read directives are allowed, and none may switch off a design/ or shadcn/ lint rule (frontend/scripts/source-comments.mjs).`,
       ...findings.map(({ file, line, text }) => `  ${file}:${line}: ${text}`),
       '',
     ].join('\n'),

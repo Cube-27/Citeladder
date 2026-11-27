@@ -2,8 +2,7 @@ import type { ReactNode, RefCallback } from 'react';
 
 import { Inline, Stack } from './layout';
 import { SurfaceContext, useOnPage } from './section';
-import { Tag as DraftTag } from './tag';
-import { textRole } from './typography';
+import { Tag } from './tag';
 import { cn } from '@/lib/utils';
 
 export type DraftState = 'draft' | 'accepted' | 'declined';
@@ -32,8 +31,19 @@ function draftAttribute(state: DraftState) {
 function draftSheetClasses(state: DraftState, onPage: boolean) {
   if (!onPage) return 'min-w-0';
   return cn(
-    'bg-panel shadow-card rounded-card min-w-0 p-[var(--panel-inset)] [--panel-inset:var(--card-padding)]',
+    'bg-panel shadow-card rounded-card min-w-0 p-panel-inset panel-inset-card',
     state !== 'declined' && 'edge-draft',
+  );
+}
+
+export function DraftInset({
+  children,
+  ...props
+}: Readonly<{ children: ReactNode; 'data-field-proposal'?: string }>) {
+  return (
+    <div {...props} className="edge-draft rounded-control grid gap-2 p-2">
+      {children}
+    </div>
   );
 }
 
@@ -42,7 +52,7 @@ export function DraftSheet({
   state,
   marker,
   actions,
-  as: Tag = 'section',
+  as: Root = 'section',
   id,
   ref,
   tabIndex,
@@ -62,11 +72,11 @@ export function DraftSheet({
 }>) {
   const onPage = useOnPage();
   return (
-    <Tag
+    <Root
       id={id}
       ref={ref}
       tabIndex={tabIndex}
-      aria-label={Tag === 'section' ? title : undefined}
+      aria-label={Root === 'section' ? title : undefined}
       aria-current={aria['aria-current']}
       data-draft={draftAttribute(state)}
       data-draft-state={state}
@@ -75,17 +85,13 @@ export function DraftSheet({
       <SurfaceContext value="surface">
         <Stack gap="item">
           <p className="flex">
-            <DraftTag kind={state === 'draft' ? 'draft' : 'category'}>
-              {marker ?? MARKER[state]}
-            </DraftTag>
+            <Tag kind={state === 'draft' ? 'draft' : 'category'}>{marker ?? MARKER[state]}</Tag>
           </p>
-          {title ? (
-            <h2 className={textRole('subheading', 'min-w-0 break-words')}>{title}</h2>
-          ) : null}
+          {title ? <h2 className="text-label text-ink min-w-0 break-words">{title}</h2> : null}
           {children}
-          {actions ? <Inline className="flex-wrap">{actions}</Inline> : null}
+          {actions ? <Inline wrap>{actions}</Inline> : null}
         </Stack>
       </SurfaceContext>
-    </Tag>
+    </Root>
   );
 }

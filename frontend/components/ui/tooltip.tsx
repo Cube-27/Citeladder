@@ -17,7 +17,7 @@ const Provided = createContext(false);
 
 export const TOOLTIP_SHEET = cn(
   POP_FACE,
-  'tooltip-panel z-modal text-caption text-ink-2 block max-w-72 min-w-0 px-2 py-1 app:max-w-xs app:py-2 [overflow-wrap:anywhere]',
+  'tooltip-panel z-modal text-caption text-ink-2 block max-w-72 min-w-0 px-2 py-1 app:max-w-xs app:py-2 wrap-anywhere',
 );
 
 export function isTextCut(node: Element): boolean {

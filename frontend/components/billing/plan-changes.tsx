@@ -5,7 +5,7 @@ import { CardGroup, CardRow } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Dialog } from '@/components/ui/dialog';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type {
   BillingCatalog,
   BillingEntitlement,
@@ -110,7 +110,9 @@ export function PlanChanges({
         ))}
       </CardRow>
       {options.some((option) => option.direction === 'upgrade' && !checkoutOpen(option.plan)) ? (
-        <p className={textRole('caption')}>Upgrades unavailable: checkout is closed.</p>
+        <Text as="p" variant="caption">
+          Upgrades unavailable: checkout is closed.
+        </Text>
       ) : null}
       <Dialog
         open={downgradeTo !== null}
@@ -136,9 +138,9 @@ export function PlanChanges({
           </>
         }
       >
-        <p className={textRole('body', 'text-ink-2')}>
+        <Text as="p" variant="body" tone="ink-2">
           {currentPlan.name} continues to the end of this period. No refund.
-        </p>
+        </Text>
       </Dialog>
     </CardGroup>
   );

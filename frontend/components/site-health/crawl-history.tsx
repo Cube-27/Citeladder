@@ -11,6 +11,7 @@ import { absent, formatCount, formatScore } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
+import { Text } from '@/components/ui/typography';
 
 export function CrawlHistory({
   workspaceId,
@@ -64,9 +65,7 @@ function CrawlRow({ crawl, onView }: Readonly<{ crawl: SiteCrawlListItem; onView
           >
             <TableTime value={crawl.started_at ?? crawl.created_at} />
           </TextLink>
-          {crawl.run.kind === 'site' ? null : (
-            <span className="text-caption text-ink-2">Re-audit</span>
-          )}
+          {crawl.run.kind === 'site' ? null : <Text variant="caption">Re-audit</Text>}
         </Inline>
       </TableCell>
       <TableCell>

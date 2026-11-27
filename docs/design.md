@@ -19,11 +19,68 @@ app's eager CSS never carries them. A new colour is a ramp step plus a role,
 never a literal at the call site; a website-only colour goes in
 `public-surface.css`.
 
-**Checks.** `pnpm check:policy` keeps three rules: no literal colours outside
-those two files, WCAG AA contrast of token pairs (every `--text-color-*` role on
-the grounds of its palette at 4.5:1, marks 3:1, both themes), and no Radix
-import outside `components/ui`. The same script reports breaks of the [composition rules](#composition) as a warning that never fails CI
-(AR-25); everything else here is held by review.
+## Design values
+
+Every design value comes from a role token (AR-26): colour, type (size, line
+height, weight, tracking), spacing, size, radius, shadow, z-index, opacity and
+motion. A raw value, or a token class put straight on an element by a page,
+lets a later design change miss that page, so the page drifts. Atomic order:
+role tokens (the colour layers above and the type ladders below), then the
+primitives in `components/ui`, which alone turn roles into classes, then
+screens, which compose primitives and pass content. A new look, even one used
+once, adds a role token (and a primitive prop if a screen needs to choose it);
+it never adds a raw value.
+
+The lint enforces this and fails CI (`vp lint`; config in
+[`vp-shared-config.ts`](../frontend/vp-shared-config.ts)):
+
+- **`shadcn/*`** ([`@shadcn/lint`](https://github.com/shadcn-ui/lint)):
+  no palette colours, no arbitrary values (class constants included), no
+  inline styles beyond a literal object of custom properties (the rule's
+  default; no option is enabled), no classes the theme cannot generate, no unreadable or
+  restyling `className` on a `components/ui` primitive. Each subdomain's
+  theme is the `components.json` nearest the file.
+- **`design/*`** (the [local plugin](../frontend/scripts/design-lint/plugin.mjs)):
+  `plain-element` (outside `components/ui`, a plain element's `className`
+  carries layout structure only: no spacing, size, colour, type, shape, effect
+  or motion class, no `*Classes()` helper, nothing
+  unreadable), `reset-survivor` (`leading-<n>`, `text-<role>/<n>`, `z-<n>`,
+  `opacity-<n>`, `duration-<n>`, `delay-<n>`), `colour-literal` (a hex or
+  colour function in any string), `monochrome-colour` (`white`/`black`),
+  `surface-variant` (a `[[data-public-surface]_&]:` variant outside
+  `components/ui`), `raw-media` (outside `components/ui` and the website, an
+  `<img>` or a sized `<svg>`: logos and engine marks render through
+  `BrandMark`, sized from the icon roles and never taller than their line, so
+  a mark cannot set a row's height) and `astro-class` (value classes in Astro
+  markup).
+
+There is no suppressions file and no baseline: a finding is fixed at its
+source, by a role token or a primitive prop. No
+inline `oxlint-disable` may name a `design/` or `shadcn/` rule (the comment
+check rejects it). A fixture in `frontend/scripts/design-lint/canary` must trip
+every rule (`scripts/frontend/design-lint.test.mjs`).
+
+`pnpm check:policy` adds WCAG AA contrast of token pairs (every
+`--text-color-*` role on the grounds of its palette at 4.5:1, marks 3:1, both
+themes), the app's Tailwind `@source` list and the CSS value rule
+([`design-system-css-values.mjs`](../frontend/scripts/design-system-css-values.mjs)),
+and reports breaks of the [composition rules](#composition) as a warning that
+never fails CI (AR-25). The CSS value rule reads every `.css` file and Astro
+`<style>`, `globals.css` rule blocks included: outside `@theme`, custom
+property declarations, `@keyframes` and `@font-face`, a colour, type, z-index,
+motion, shadow, spacing or border-width value holds no hex, colour function,
+`px`/`rem`/`em`/`ms`/`s` length or bare z-index, weight or line-height
+number. Tokens, keywords, `0`, unitless multipliers, percentages and gradient
+stops pass; `forced-colors` and `prefers-reduced-motion` blocks are exempt.
+
+The website (marketing and docs) composes the same primitives, and its own
+blocks are `cl-*` classes whose CSS, in the side sheets the marketing and docs
+entries import or an Astro `<style>`, reads role tokens. A variant is a data attribute or a lookup map of
+whole class names, never a class built from a template. In that CSS a
+declaration holds a token, a keyword, `0`, an opacity toggle, a percentage,
+`fr` or container and viewport units, a gradient stop or angle, or a unitless
+multiplier; anything else is a token. A dimension one block alone uses is a
+token in the `:root` block at the top of that block's sheet.
 
 ## Tokens
 
@@ -96,9 +153,9 @@ default weight, leading and tracking scales are switched off.
 | title, page title | 20 / 28   | 400, page title 500     |
 | figure (metric) | 20 / 28     | 500, tabular            |
 
-A call site names the job through `<Text variant tone>` in
-[`typography.tsx`](../frontend/components/ui/typography.tsx) or the matching
-`text-<role>` utility, never a size, weight or line height. A `text-<role>`
+A screen names the job through `<Text variant tone>` in
+[`typography.tsx`](../frontend/components/ui/typography.tsx); a primitive uses
+the matching `text-<role>` utility; neither names a size, weight or line height. A `text-<role>`
 utility sets size, line height, weight and tracking only; the face and the ink
 come from `font-*` and `text-<ink>` beside it. A face that differs by subdomain
 is a face role each ladder sets: `font-figure` is sans in the app and mono on
@@ -107,7 +164,25 @@ a CSS variable for code blocks.
 
 ## Spacing, size and shape
 
-- **Spacing:** 2, 4, 8, 12, 16, 24, 32, 48 only.
+- **Spacing and size:** named `--spacing-*` roles in the `@theme` of
+  `globals.css` (`gap-section`, `p-card`, `px-gutter`, `min-h-control-md`,
+  `h-row`…), one name per role, re-pointed per subdomain and breakpoint where
+  the value differs. A role that must resolve under a re-pointing ancestor
+  (the sidebar width) goes in `@theme inline`. Inside a primitive, steps of
+  the 4px scale are allowed; a screen never picks a step. Grid templates are
+  `grid-cols-<role>` roles, rendered by `Columns template`. App CSS reads
+  `var(--spacing)` multiples and `--rule-width` for border widths.
+- **Website spacing and size:**
+  [`site-space.css`](../frontend/apps/marketing/src/site-space.css) derives
+  `--site-space-<n>` from the website's base (a quarter of it per step), so a
+  base change moves spacing with type. It also names the hairline
+  (`--site-rule`), the 44 target, the underline offsets, the reading measures
+  (`--site-measure-*`) and the grain.
+- **Motion, layering and opacity:** `duration-<role>` (fast 120, close 160,
+  open 200, press 250, slide 300, plus reveal, pulse, sweep and the stagger
+  steps), `ease-<role>`, `z-<role>` (base, raised, sticky, float, overlay,
+  modal, toast) and `opacity-<role>` (disabled 50, muted 80, dim 70, ghost, hover).
+  `cn` knows every role, so a caller can still override one.
 - **Controls:** 36 high (HeroUI's medium); 44 below 900px or under a coarse pointer, and on
   sign-in, account and setup pages (the website's height, `control-lg`).
   Icons 14 in `ink-2` (Tabler, the `Icon` atom), centred on and no taller than
@@ -115,7 +190,10 @@ a CSS variable for code blocks.
   Every target is at least 24×24.
 - **Radii** stay CiteLadder's, not HeroUI's (AR-1): tag 5 (`rounded-mark`),
   control and menu 8 (`rounded-control`), card 10 (`rounded-card`), overlay 14
-  (`rounded-overlay`); `full` only for avatars, dots and switch tracks.
+  (`rounded-overlay`), and 4 for a part inside a frame (`rounded-inner`);
+  `full` only for avatars, dots and switch tracks. On the website and docs
+  mark, control, card and overlay are 2, 6, 8 and 12. CSS reads these roles,
+  never the `xs`–`lg` scale.
 
 ## Kept rules
 
@@ -178,7 +256,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Body.** 24 side padding (16 below 760px), 24 below; the title, tab
   strip, toolbar and content sit 12 apart, the same gap as a table's
   toolbar above its table (owner, 2026-11-22): status line,
-  then the metric strip, then cards 20 apart (`--page-section-gap`) with no
+  then the metric strip, then cards 20 apart (`gap-section`) with no
   rule between them; a section's head is inside its card (AR-24). Links carry no underline at rest,
   only on hover and focus. Narrow pages centre the body in their column (AR-9; 1040:
   Overview, Projects, Issues, Actions, Agent, Settings, Agent context; 720:
@@ -186,7 +264,16 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   pages, AR-22).
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
-  page-wide toolbar is the strip under the tabs, with no rule.
+  page-wide toolbar (`FilterBar`) is the strip under the tabs, with no rule,
+  and takes no search (`PageFrame` `filters` is `FilterBarProps`, which has
+  none): a search narrows one table, so it lives in that
+  table's `TableToolbar` (`DataTable toolbar`). A `DataTable` head is one row:
+  title at the start, then the view, search and filters, and its actions
+  (`actions` and `toolbar.actions` together) at the end. It wraps only when
+  the content does not fit; a card never has a row holding only an action or
+  only a search (owner, 2026-11-27). An export is `ExportAction`:
+  `scope="page"` in the page header actions, `scope="table"` in the table
+  toolbar.
 - **Metric strip:** a bleed slot of a card (on the paper it brings its own
   card), cells divided by hairlines, padded 12 by the card inset, 12px label
   over the value. Never one card per figure;
@@ -238,14 +325,26 @@ draws its own geometry). Every visible thing in the app's main column, drawers
 and dialogs is one of them; [`section.test.tsx`](../frontend/components/ui/section.test.tsx)
 holds the depth rules.
 
-- **Pages pass content, never geometry.** No primitive takes `className`; no
-  page adds padding, margin, border, fill, radius or shadow around one; no
+- **Pages pass content, never geometry.** A primitive exposes typed props
+  (`Stack`/`Inline` `gap`, `align`, `justify`, `wrap`; `Stack` `pad`;
+  `Columns template`; `Text` `wrap`, `box`, `align` and `tone`; `tone` on `Icon` and
+  the link components). Template chrome (page width, heading row, tab and
+  filter bands, thread and setup frames) lives in
+  [`page-chrome.tsx`](../frontend/components/ui/page-chrome.tsx) and
+  [`flow-frame.tsx`](../frontend/components/ui/flow-frame.tsx), which boot
+  screens import, and in `flow-chrome.tsx` and `record-chrome.tsx`, which
+  only lazy routes import: a module a boot file imports ships whole in the
+  eager bundle. Templates compose them and hold no classes. `Stack` and `Inline` take
+  typed props only, with no `className`; restyling any other primitive
+  through `className` is a lint finding.
+  No page adds padding, margin, border, fill, radius or shadow around one; no
   globals rule depends on what contains what. A primitive that needs its
-  depth reads `SurfaceContext` (`useOnPage()`), never a CSS ancestor. The one
-  exception is the control face per ground (Buttons above).
+  depth reads `SurfaceContext` (`useOnPage()`), never a CSS ancestor. A
+  surface sets the control face tokens on itself (Buttons below); controls
+  only read them.
 - **Depth.** `Section`, `PanelFrame`, `Drawer`, `Dialog` and `DraftSheet`
   provide `surface`. On the paper a `Section` is a card (`panel`, card radius
-  and shadow, padded `--panel-inset` 16); inside a surface it is flat (no
+  and shadow, padded `panel-inset` 16); inside a surface it is flat (no
   fill, padding, radius or shadow) and its title takes the subheading role. A
   card can never draw inside a card.
 - **Slots.** `Section` > `SectionHeader` (title, description, `actions`) >
@@ -256,16 +355,16 @@ holds the depth rules.
   in the toolbar when there is one.
 - **Bleed.** `SectionBleed` is the one full-width slot: tables, `FigureStrip`,
   `SettingRows`, `LedgerList` and other row lists run edge to edge and pad
-  `--panel-inset` on their own edges, so row text lines up with the title.
+  `panel-inset` on their own edges, so row text lines up with the title.
   A bleed that is the card's first or last slot meets that edge; otherwise it
   draws one hairline on top, the only rule a card draws. It must be a direct
   child of the section (tab wrappers in a surface pass through). Nothing else
   uses negative margins. On the paper a bleed, strip, table or `StateBlock`
   with no section around it wraps itself in one.
 - **Page body.** A `SectionStack` of page-level `Section`s, `AppGrid`s of them
-  and self-wrapping primitives, `--page-section-gap` apart; only headings, the
+  and self-wrapping primitives, `gap-section` apart; only headings, the
   page toolbar and a `Notice` sit on the paper (AR-22).
-- **Overlays.** A drawer or dialog body is a surface at `--modal-padding` (24):
+- **Overlays.** A drawer or dialog body is a surface at `spacing-modal` (24):
   its sections are flat and 24 apart, tables bleed to its edges. Fields
   inside group in one `Stack gap="workspace"`; nothing else wraps the body.
   Overlay styling keys on `data-overlay`, never `[role=dialog]`.
@@ -278,7 +377,10 @@ holds the depth rules.
 
 - **Tables.** Geometry as in Standard layouts. A page declares each
   column's kind and width role, never a pixel width; `DataTable` turns them
-  into one scoped rule set (`columnRules`): `flex` columns share the spare
+  into data attributes on the table frame (`data-c<n>`), read by the static
+  position rules in `components/ui/generated/data-table-positions.css`
+  (16 positions; `pnpm gen:table-positions` rewrites it, and a test fails
+  when it is stale): `flex` columns share the spare
   width and cut their text, every other role hugs its content above a small
   floor, so no gap opens between columns. When the floors do not fit, `low`
   columns hide, the last first; below that the table scrolls with the first
@@ -315,8 +417,10 @@ holds the depth rules.
   radius 8; 14px icons in `ink-2` on a secondary. Secondary, filter chip,
   select trigger and field share one face per ground: on the paper `raised`
   with the field shadow, inside a surface (card, overlay, well, menu) the
-  `state-fill` grey with no shadow. App rules key on the `ui-button-<variant>`
-  class `buttonClasses()` emits, so a link styled as a button matches. Quiet:
+  `state-fill` grey with no shadow. Each surface sets `--control-face`,
+  `--control-face-hover` and `--control-face-shadow` on its own element; the
+  secondary button reads them (`bg-control-face`, `shadow-control-face`), so a
+  link styled as a button (`Button asChild`) matches. Quiet:
   transparent, `ink`, `state-hover` fill. Primary: `primary` fill (the deep accent),
   white text, at most one per view. Danger: secondary with negative text; filled only to confirm in a
   dialog (`danger-confirm`). One disabled look for every variant. The

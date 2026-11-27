@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 
-import { PageFrame, PageSections, type PageFrameSlots } from './page-frame';
+import { Columns, Stack } from '@/components/ui/layout';
+import { PageSections } from '@/components/ui/page-chrome';
+import { ActionBar, RecordBody } from '@/components/ui/record-chrome';
 
-const BAR_CLEARANCE = 'calc(var(--filter-bar-height) + 2 * var(--content-gutter))';
+import { PageFrame, type PageFrameSlots } from './page-frame';
 
 export function RecordPage({
   busy,
@@ -19,34 +21,24 @@ export function RecordPage({
     actionBar?: ReactNode;
     children: ReactNode;
   }>) {
-  const hasBar = Boolean(actionBar);
   return (
     <PageFrame {...slots}>
-      <div
-        aria-busy={busy}
-        className="flex min-w-0 flex-1 flex-col"
-        style={hasBar ? { paddingBottom: BAR_CLEARANCE } : undefined}
-      >
+      <RecordBody busy={busy} clearsBar={Boolean(actionBar)}>
         <PageSections>
           {identity}
           {aside ? (
-            <div className="column-split:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] grid min-w-0 items-start gap-[var(--page-section-gap)]">
+            <Columns template="record" gap="section" align="start">
               <PageSections>{children}</PageSections>
-              <aside className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">{aside}</aside>
-            </div>
+              <Stack as="aside" gap="section" box="shrink">
+                {aside}
+              </Stack>
+            </Columns>
           ) : (
             children
           )}
         </PageSections>
-      </div>
-      {actionBar ? (
-        <div
-          data-page-band="action-bar"
-          className="bg-raised border-rule rounded-card shadow-pop z-sticky sticky bottom-[var(--content-gutter)] mt-[var(--workspace-gap)] flex min-h-[var(--filter-bar-height)] min-w-0 flex-nowrap items-center justify-end gap-2 border px-[var(--card-padding)] py-2"
-        >
-          {actionBar}
-        </div>
-      ) : null}
+      </RecordBody>
+      {actionBar ? <ActionBar sticky>{actionBar}</ActionBar> : null}
     </PageFrame>
   );
 }

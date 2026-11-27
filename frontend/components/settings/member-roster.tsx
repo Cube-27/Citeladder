@@ -2,7 +2,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Tag } from '@/components/ui/tag';
 import { Button, IconButton } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
+import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { ClampText } from '@/components/ui/clamp-text';
@@ -69,7 +69,7 @@ export function MemberRoster({
   onRemove,
 }: Readonly<{
   members: readonly WorkspaceMember[];
-  toolbar: FilterBarProps;
+  toolbar: TableToolbarProps;
   noMatch: string | null;
   isLoading: boolean;
   isError: boolean;

@@ -1,12 +1,10 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { UrlCutParts } from '@/components/ui/clamp-text';
+import { TAG_FACE } from '@/components/ui/link-look';
 import { ProjectLink } from '@/components/ui/project-link';
 import { ArrowRight, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
-
-const TAG_FACE =
-  'text-caption border border-transparent bg-state-selected text-ink-2 inline-flex min-h-5 max-w-full min-w-0 shrink-0 items-center gap-0.5 rounded-mark px-1.5 normal-nums whitespace-nowrap [[data-public-surface]_&]:min-h-[var(--tag-height)] [[data-public-surface]_&]:px-2 [[data-public-surface]_&]:text-ink app:font-emphasis app:text-ink';
 
 type TagKind =
   | { kind?: 'category' | 'draft' }
@@ -16,7 +14,10 @@ type TagKind =
       removeLabel?: string;
     };
 
-type SpanProps = Omit<ComponentPropsWithoutRef<'span'>, 'children'> & { children?: ReactNode };
+type SpanProps = Omit<ComponentPropsWithoutRef<'span'>, 'children'> & {
+  children?: ReactNode;
+  strong?: boolean;
+};
 type TagProps = Readonly<SpanProps & TagKind>;
 
 function TagShell({
@@ -24,6 +25,7 @@ function TagShell({
   className,
   children,
   end,
+  strong = false,
   ...span
 }: Readonly<SpanProps & { kind: 'category' | 'draft' | 'removable'; end?: ReactNode }>) {
   const text = typeof children === 'string' ? children : undefined;
@@ -37,6 +39,7 @@ function TagShell({
         kind === 'removable' && 'pe-0.5',
         kind === 'draft' && 'border-control-line border-dashed',
         className,
+        strong && 'text-ink font-emphasis',
       )}
     >
       {text === undefined ? children : <span className="min-w-0 truncate">{text}</span>}
@@ -77,11 +80,7 @@ export function RecordTag({
   status,
 }: Readonly<{ href: string; label: string; labelKind?: 'text' | 'url'; status?: ReactNode }>) {
   return (
-    <ProjectLink
-      href={href}
-      data-tag-kind="record"
-      className={cn(TAG_FACE, 'hover:overlay-hover focus-ring align-middle no-underline')}
-    >
+    <ProjectLink href={href} data-tag-kind="record" look="tag">
       {labelKind === 'url' ? (
         <span className="flex min-w-0">
           <UrlCutParts text={label} />

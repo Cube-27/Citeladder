@@ -1,12 +1,23 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Slot } from '@radix-ui/react-slot';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 
 import { MastheadOverflow, MastheadPrimarySlot } from '@/components/ui/masthead-actions';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
 import { ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
-export const MASTHEAD_LABELLED = 'shrink-0 justify-start';
+const MASTHEAD_LABELLED = 'shrink-0 justify-start';
+
+export function MastheadLabelled({ children }: Readonly<{ children: ReactElement }>) {
+  return <Slot className={MASTHEAD_LABELLED}>{children}</Slot>;
+}
 
 export function Masthead({
   title,
@@ -40,14 +51,12 @@ export function Masthead({
     <header
       data-masthead=""
       ref={header}
-      className="bg-page border-rule z-sticky rail:h-[var(--masthead-height)] sticky top-0 -mx-[var(--page-pad-inline)] flex min-h-[var(--masthead-height)] min-w-0 items-center gap-2 border-b px-[var(--page-pad-inline)]"
+      className="bg-page border-rule z-sticky rail:h-masthead -mx-page-inline min-h-masthead px-page-inline sticky top-0 flex min-w-0 items-center gap-2 border-b"
     >
       <div data-masthead-title="" className="rail:min-w-0 me-2 flex flex-1 items-center gap-2">
         {lead}
         {section ? (
-          <span
-            className={textRole('body', 'text-ink-2 rail:flex hidden shrink-0 items-center gap-2')}
-          >
+          <span className="text-body text-ink-2 rail:flex hidden shrink-0 items-center gap-2">
             {section.title}
             <ChevronRight aria-hidden className="size-3" />
           </span>
@@ -58,7 +67,10 @@ export function Masthead({
               ref={heading}
               data-masthead-name=""
               tabIndex={cut ? 0 : undefined}
-              className={textRole('label', cn('w-0 min-w-28 flex-1 truncate', cut && 'focus-ring'))}
+              className={cn(
+                'text-label text-ink w-0 min-w-28 flex-1 truncate',
+                cut && 'focus-ring',
+              )}
             >
               {title}
             </Name>

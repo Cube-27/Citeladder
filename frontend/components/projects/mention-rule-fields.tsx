@@ -5,7 +5,7 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Switch } from '@/components/ui/switch';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type { EntityMatching } from '@citeladder/contracts';
 
 export type MentionRuleDraft = {
@@ -42,7 +42,7 @@ export function MentionRuleFields({
       as="fieldset"
       gap="compact"
       aria-label={`Mention rule for ${name || 'this name'}`}
-      className="min-w-0"
+      box="shrink"
     >
       <Inline gap="compact">
         <Switch
@@ -50,9 +50,9 @@ export function MentionRuleFields({
           onCheckedChange={(checked) => update({ mode: checked ? 'context_required' : 'always' })}
           label={`${name || 'This name'} needs context to count as a mention`}
         />
-        <span aria-hidden className={textRole('body', 'text-ink-2')}>
+        <Text variant="body" tone="ink-2" aria-hidden>
           Needs context to count as a mention
-        </span>
+        </Text>
       </Inline>
       {rule.mode === 'context_required' ? (
         <Field label="Context words" hint="Comma separated">

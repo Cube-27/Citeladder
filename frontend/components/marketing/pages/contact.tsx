@@ -259,7 +259,7 @@ export function ContactPage() {
         split="even"
         title="What happens next"
         aside={
-          <div className="grid gap-6">
+          <div className="cl-form-aside">
             <Steps direction="vertical" items={NEXT_STEPS} />
             <p className="cl-body">
               Prefer email? <EmailLink />
@@ -269,7 +269,7 @@ export function ContactPage() {
       >
         <ContactForm />
         <noscript>
-          <p className="cl-body mt-6">
+          <p className="cl-body">
             Please email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> to get in touch.
           </p>
         </noscript>

@@ -92,7 +92,7 @@ export function FieldRow({
     <div
       data-form-field=""
       className={cn(
-        'grid min-w-0 grid-cols-[10rem_minmax(0,1fr)] items-start gap-x-6 gap-y-1 phone:grid-cols-1',
+        'grid min-w-0 grid-cols-label-value items-start gap-x-6 gap-y-1 phone:grid-cols-1',
         className,
       )}
     >

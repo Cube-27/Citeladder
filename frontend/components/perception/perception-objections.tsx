@@ -6,7 +6,7 @@ import { ObjectionActions } from '@/components/perception/objection-actions';
 import { ObjectionQuotesRow } from '@/components/perception/objection-quotes';
 import { AnswerLink } from '@/components/runs/answer-link';
 import { Absence } from '@/components/ui/absence';
-import { buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ProbeLede } from '@/components/perception/probe-lede';
 import { ExpandToggle, SourcePagesRow } from '@/components/perception/probe-sources';
@@ -136,17 +136,18 @@ function ObjectionTable({
                   <Sources sources={group.sources} />
                 </TableCell>
                 <TableActionsCell>
-                  <ProjectLink
-                    href={agentHandoffHref({
-                      objectionGroupId: group.id,
-                      skillId: OBJECTION_SKILL,
-                      prompt: `Help me answer the objection "${group.name}".`,
-                    })}
-                    aria-label={`Ask agent about ${group.name}`}
-                    className={buttonClasses('quiet')}
-                  >
-                    Ask agent
-                  </ProjectLink>
+                  <Button variant="quiet" asChild>
+                    <ProjectLink
+                      href={agentHandoffHref({
+                        objectionGroupId: group.id,
+                        skillId: OBJECTION_SKILL,
+                        prompt: `Help me answer the objection "${group.name}".`,
+                      })}
+                      aria-label={`Ask agent about ${group.name}`}
+                    >
+                      Ask agent
+                    </ProjectLink>
+                  </Button>
                   {mayEdit ? (
                     <ObjectionActions
                       scope={scope}

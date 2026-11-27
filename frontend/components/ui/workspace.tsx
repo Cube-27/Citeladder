@@ -1,10 +1,57 @@
-import type { ReactNode } from 'react';
+import type { ElementType, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
+import { Stack } from '@/components/ui/layout';
+import { Pressable } from '@/components/ui/pressable';
 import { POP_FACE } from '@/components/ui/slip';
+import { Text } from '@/components/ui/typography';
 
-export function treeBranchClasses(className?: string) {
-  return cn('border-rule grid min-w-0 gap-2 border-l pl-4', className);
+export function TreeBranch({
+  as: Component = 'ul',
+  'aria-label': label,
+  children,
+}: Readonly<{ as?: ElementType; 'aria-label'?: string; children: ReactNode }>) {
+  return (
+    <Component aria-label={label} className="border-rule grid min-w-0 gap-2 border-l pl-4">
+      {children}
+    </Component>
+  );
+}
+
+export function PaneBlock({
+  as: Component = 'div',
+  'aria-label': label,
+  children,
+}: Readonly<{ as?: ElementType; 'aria-label'?: string; children: ReactNode }>) {
+  return (
+    <Component aria-label={label} className="border-rule p-card gap-compact grid border-b">
+      {children}
+    </Component>
+  );
+}
+
+export type JumpItem = Readonly<{ key: string | number; label: ReactNode; onJump: () => void }>;
+
+export function JumpList({
+  label,
+  items,
+}: Readonly<{ label: string; items: readonly JumpItem[] }>) {
+  return (
+    <Stack as="nav" gap="tight" aria-label={label}>
+      <Text variant="body" tone="ink-2">
+        {label}
+      </Text>
+      <TreeBranch as="ol">
+        {items.map((item) => (
+          <li key={item.key}>
+            <Pressable look="jump" text="caption" className="w-auto" onClick={item.onJump}>
+              {item.label}
+            </Pressable>
+          </li>
+        ))}
+      </TreeBranch>
+    </Stack>
+  );
 }
 
 export function MetaFooter({
@@ -26,5 +73,7 @@ export function MetaFooter({
 }
 
 export function FloatingToolbar({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className={cn(POP_FACE, 'absolute end-3 top-3 z-10 flex gap-1 p-1')}>{children}</div>;
+  return (
+    <div className={cn(POP_FACE, 'absolute end-3 top-3 z-raised flex gap-1 p-1')}>{children}</div>
+  );
 }

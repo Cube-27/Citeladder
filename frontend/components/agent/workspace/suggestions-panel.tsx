@@ -1,6 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { JUMP_LINK } from '@/components/agent/jump-link';
 
 import { GapEvidence, type GapMember } from '@/components/agent/content-gap-evidence';
 import { StatusMark } from '@/components/ui/status-mark';
@@ -12,7 +11,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { X } from '@/lib/icons';
 import { agentWriteFailure, isOutputConflict } from '@/lib/agent/errors';
 import { groupByPassage } from '@/lib/agent/page-workspace';
@@ -92,18 +91,17 @@ function suggestionReference(suggestion: AgentSuggestion): ContextReference {
 function SuggestionText({ suggestion }: Readonly<{ suggestion: AgentSuggestion }>) {
   const original = originalText(suggestion);
   if (suggestion.readiness === 'needs_input')
-    return <span className={textRole('body')}>{suggestion.needs_input}</span>;
-  if (suggestion.replacement === null)
-    return <span className={textRole('body')}>{suggestion.rationale}</span>;
+    return <Text variant="body">{suggestion.needs_input}</Text>;
+  if (suggestion.replacement === null) return <Text variant="body">{suggestion.rationale}</Text>;
   return (
     <Stack as="span" gap="tight">
-      <span className={textRole('body', '[overflow-wrap:anywhere]')}>
+      <Text variant="body" wrap="anywhere">
         {suggestion.replacement || 'Remove this text.'}
-      </span>
+      </Text>
       {original ? (
-        <span className={textRole('caption', '[overflow-wrap:anywhere]')}>
+        <Text variant="caption" wrap="anywhere">
           Replaces “{original}”
-        </span>
+        </Text>
       ) : null}
     </Stack>
   );
@@ -119,12 +117,12 @@ function StrengthBadge({ guidance }: Readonly<{ guidance: Guidance | null }>) {
 function RuleSource({ guidance }: Readonly<{ guidance: Guidance | null }>) {
   if (!guidance) return null;
   return (
-    <p className={textRole('caption')}>
+    <Text as="p" variant="caption">
       {suggestionStrengthCopy(guidance.strength).lead}{' '}
       <TextLink variant="external" href={guidance.source_url} text="inherit">
         {guidance.source_label}
       </TextLink>
-    </p>
+    </Text>
   );
 }
 
@@ -153,7 +151,7 @@ function Actions({
       </Button>
     );
   return (
-    <Inline className="flex-wrap">
+    <Inline wrap>
       {suggestion.readiness === 'ready' ? (
         <Button
           variant="primary"
@@ -215,7 +213,7 @@ function SuggestionCard({
       state={SUGGESTION_STATE[suggestion.status]}
       marker={suggestion.status === 'stale' ? 'Out of date' : undefined}
     >
-      <Inline className="flex-wrap">
+      <Inline wrap>
         <StatusMark tone={suggestion.readiness === 'needs_input' ? 'warning' : 'info'}>
           {suggestionCategoryLabel(suggestion.category)}
         </StatusMark>
@@ -226,7 +224,7 @@ function SuggestionCard({
         {suggestion.choose_one ? <StatusMark tone="neutral">Choose one</StatusMark> : null}
       </Inline>
       {inPage ? (
-        <Pressable className={`${JUMP_LINK} text-start`} onClick={() => onShow(suggestion.id)}>
+        <Pressable look="jump" className="text-start" onClick={() => onShow(suggestion.id)}>
           <span className="sr-only">Show in the page: </span>
           {text}
         </Pressable>
@@ -234,11 +232,15 @@ function SuggestionCard({
         text
       )}
       {suggestion.readiness !== 'advice' ? (
-        <p className={textRole('caption')}>{suggestion.rationale}</p>
+        <Text as="p" variant="caption">
+          {suggestion.rationale}
+        </Text>
       ) : null}
       <RuleSource guidance={suggestion.guidance} />
       {suggestion.choose_one ? (
-        <p className={textRole('caption')}>Overlaps another suggestion. Apply all skips it.</p>
+        <Text as="p" variant="caption">
+          Overlaps another suggestion. Apply all skips it.
+        </Text>
       ) : null}
       {canChange ? <Actions suggestion={suggestion} textId={textId} {...actions} /> : null}
     </DraftSheet>
@@ -270,7 +272,9 @@ function CoverageGaps({
       <SectionBleed as="ul" rows>
         {gaps.map(({ id, evidence }) => (
           <Stack as="li" key={id} gap="item">
-            <p className={textRole('body')}>{evidence.angle_label}</p>
+            <Text as="p" variant="body">
+              {evidence.angle_label}
+            </Text>
             <Disclosure title="Evidence">
               <GapEvidence evidence={evidence} />
             </Disclosure>
@@ -352,7 +356,7 @@ function BulkActions({
 }>) {
   if (open === 0) return null;
   return (
-    <Inline className="flex-wrap">
+    <Inline wrap>
       <Button variant="secondary" disabled={disabled || !ready} onClick={changes.applyAll}>
         Apply all
       </Button>
@@ -425,14 +429,22 @@ export function SuggestionsPanel({
           { value: 'dismissed', label: 'Dismissed', count: counts.dismissed },
         ]}
       />
-      {locked ? <p className={textRole('caption')}>{locked}</p> : null}
+      {locked ? (
+        <Text as="p" variant="caption">
+          {locked}
+        </Text>
+      ) : null}
       {changes.notice ? <Notice tone={changes.notice.tone}>{changes.notice.message}</Notice> : null}
       {items.length === 0 ? (
-        <p className={textRole('body', 'text-ink-2')}>{EMPTY[filter]}</p>
+        <Text as="p" variant="body" tone="ink-2">
+          {EMPTY[filter]}
+        </Text>
       ) : null}
       {groupByPassage(items, body).map((group) => (
         <Section key={group.key} aria-label={`Passage: ${group.label}`}>
-          <p className={textRole('caption', '[overflow-wrap:anywhere]')}>{group.label}</p>
+          <Text as="p" variant="caption" wrap="anywhere">
+            {group.label}
+          </Text>
           <SectionBleed as="ul" rows>
             {group.items.map((suggestion) => (
               <SuggestionCard
@@ -453,9 +465,9 @@ export function SuggestionsPanel({
         <BulkActions open={counts.open} ready={ready} disabled={disabled} changes={changes} />
       ) : null}
       {counts.stale > 0 ? (
-        <p className={textRole('caption')}>
+        <Text as="p" variant="caption">
           {pluralCount(counts.stale, 'suggestion')} hidden: no longer fit the page.
-        </p>
+        </Text>
       ) : null}
       <CoverageGaps gaps={gaps} onAddToContext={canChange ? onAddToContext : undefined} />
     </>

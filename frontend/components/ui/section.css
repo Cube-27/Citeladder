@@ -11,7 +11,7 @@
 }
 
 :root {
-  --panel-inset: var(--card-padding);
+  --spacing-panel-inset: var(--spacing-card);
 }
 
 [data-panel] {
@@ -19,18 +19,18 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
-  gap: var(--card-padding);
+  gap: var(--spacing-card);
   min-width: 0;
 }
 
 [data-panel='card'] {
-  --panel-inset: var(--card-padding);
-  padding: var(--panel-inset);
+  --spacing-panel-inset: var(--spacing-card);
+  padding: var(--spacing-panel-inset);
 }
 
 [data-panel='card'][data-accent] {
   box-shadow:
-    inset 0 2px 0 var(--color-accent),
+    inset 0 var(--spacing-mark) 0 var(--color-accent),
     var(--shadow-card);
 }
 
@@ -70,25 +70,25 @@
 [data-slot-host] {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--card-padding);
+  gap: var(--spacing-card);
   min-width: 0;
 }
 
 [data-bleed] {
   min-width: 0;
-  margin-inline: calc(-1 * var(--panel-inset));
-  margin-top: calc(var(--panel-top) * -1 * var(--panel-inset));
-  margin-bottom: calc(var(--panel-bottom) * -1 * var(--panel-inset));
-  border-top: calc((1 - var(--panel-top)) * 1px) solid var(--color-rule);
+  margin-inline: calc(-1 * var(--spacing-panel-inset));
+  margin-top: calc(var(--panel-top) * -1 * var(--spacing-panel-inset));
+  margin-bottom: calc(var(--panel-bottom) * -1 * var(--spacing-panel-inset));
+  border-top: calc((1 - var(--panel-top)) * var(--rule-width)) solid var(--color-rule);
 }
 
 [data-bleed-rows] > * {
-  padding: 12px var(--panel-inset);
+  padding: calc(var(--spacing) * 3) var(--spacing-panel-inset);
 }
 
 [data-bleed] .table-frame tr > :first-child {
-  padding-inline-start: calc(var(--panel-inset) + var(--cell-indent, 0px));
+  padding-inline-start: calc(var(--spacing-panel-inset) + var(--cell-indent, 0px));
 }
 [data-bleed] .table-frame tr > :last-child:not([data-tile-cell]) {
-  padding-inline-end: var(--panel-inset);
+  padding-inline-end: var(--spacing-panel-inset);
 }

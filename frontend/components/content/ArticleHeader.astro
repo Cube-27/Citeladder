@@ -26,7 +26,7 @@ const initials = author?.name
 
 <header class="cl-ahead">
   <slot name="crumbs" />
-  {eyebrow && <p class="text-kicker text-ink-2">{eyebrow}</p>}
+  {eyebrow && <p class="cl-kicker">{eyebrow}</p>}
   {
     tags.length > 0 && (
       <ul class="cl-ahead-tags" aria-label="Topics">
@@ -76,16 +76,16 @@ const initials = author?.name
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 20px;
+    gap: var(--site-space-5);
     max-width: var(--container-prose);
   }
   .cl-ahead :global(.cl-crumbs) {
-    margin-bottom: 12px;
+    margin-bottom: var(--site-space-3);
   }
   .cl-ahead-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--site-space-2);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -95,8 +95,8 @@ const initials = author?.name
     font-family: var(--font-display);
     font-size: var(--text-site-title, var(--text-display-lg));
     line-height: var(--text-site-title--line-height, var(--text-display-lg--line-height));
-    letter-spacing: -0.01em;
-    font-weight: 400;
+    letter-spacing: var(--text-site-title--letter-spacing, var(--text-display-lg--letter-spacing));
+    font-weight: var(--weight-regular);
     color: var(--text-color-ink);
     text-wrap: balance;
   }
@@ -114,22 +114,22 @@ const initials = author?.name
     color: var(--text-color-ink);
     text-decoration: underline;
     text-decoration-color: var(--color-control-line);
-    text-decoration-thickness: 1px;
-    text-underline-offset: 3px;
+    text-decoration-thickness: var(--site-rule);
+    text-underline-offset: var(--site-underline-offset);
   }
   .cl-ahead-byline {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 16px 32px;
+    gap: var(--site-space-4) var(--site-space-8);
     width: 100%;
-    margin-top: 4px;
+    margin-top: var(--site-space-1);
   }
   .cl-byline {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--site-space-3);
   }
   .cl-byline p {
     display: flex;
@@ -140,20 +140,20 @@ const initials = author?.name
     display: inline-grid;
     flex-shrink: 0;
     place-items: center;
-    width: 32px;
-    height: 32px;
+    width: var(--site-space-8);
+    height: var(--site-space-8);
     border-radius: var(--radius-full);
     background: var(--color-mark-ink);
     color: var(--text-color-on-ink);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
   .cl-byline-name {
     color: var(--text-color-ink);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 400;
+    font-weight: var(--weight-regular);
   }
   .cl-byline-role {
     color: var(--text-color-ink-2);
@@ -163,7 +163,7 @@ const initials = author?.name
   .cl-ahead-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--site-space-2);
     margin: 0;
     color: var(--text-color-ink-2);
     font-size: var(--text-body);
@@ -171,7 +171,7 @@ const initials = author?.name
   }
   .cl-ahead-meta > span {
     display: inline-flex;
-    gap: 8px;
+    gap: var(--site-space-2);
   }
   @media (max-width: 767px) {
     .cl-ahead-title {

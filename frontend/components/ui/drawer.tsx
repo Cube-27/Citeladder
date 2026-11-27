@@ -1,7 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import type { ReactNode, RefObject } from 'react';
 
-import { CLOSE_BUTTON, IconButton } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/button';
 import { SCRIM, useReturnFocus } from '@/components/ui/dialog';
 import { X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -9,14 +9,11 @@ import { SurfaceContext } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
 
 const DRAWER_PANE =
-  'grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] content-start gap-[var(--panel-inset)] overflow-x-hidden overflow-y-auto overscroll-contain p-[var(--panel-inset)]';
-
-export const DRAWER_SPLIT =
-  'phone:grid-cols-1 phone:grid-rows-[auto_minmax(0,1fr)] grid min-h-0 flex-1 grid-cols-[11.5rem_minmax(0,1fr)]';
+  'grid min-h-0 flex-1 grid-cols-1 content-start gap-panel-inset overflow-x-hidden overflow-y-auto overscroll-contain p-panel-inset';
 
 export function DrawerNav({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="border-rule phone:border-e-0 phone:border-b border-e px-3 py-[var(--panel-inset)]">
+    <div className="border-rule phone:border-e-0 phone:border-b py-panel-inset border-e px-3">
       {children}
     </div>
   );
@@ -71,16 +68,22 @@ export function Drawer({
   width?: keyof typeof DRAWER_WIDTH;
 }>) {
   const returnFocus = useReturnFocus(open);
-  const close = (
+  const closeButton = (
     <DialogPrimitive.Close asChild>
       <IconButton
         icon={X}
         label={closeLabel}
         tooltip={false}
         variant="secondary"
-        className={cn(CLOSE_BUTTON, hideHeader ? 'absolute top-4 right-4 z-1' : 'shrink-0')}
+        shape="close"
+        className="shrink-0"
       />
     </DialogPrimitive.Close>
+  );
+  const close = hideHeader ? (
+    <span className="z-base absolute top-4 right-4 flex">{closeButton}</span>
+  ) : (
+    closeButton
   );
 
   return (
@@ -94,7 +97,7 @@ export function Drawer({
           data-side={side}
           className={cn(
             SHEET_FACE,
-            'drawer-panel z-modal fixed inset-y-2 flex w-[calc(100vw-1rem)] flex-col overflow-hidden',
+            'drawer-panel z-modal fixed inset-y-2 flex w-drawer-fit flex-col overflow-hidden',
             side === 'left' ? 'left-2 max-w-68' : 'right-2',
             side === 'right' && DRAWER_WIDTH[width],
           )}
@@ -109,14 +112,14 @@ export function Drawer({
           />
           <div
             className={cn(
-              'flex min-h-0 flex-1 flex-col [--panel-inset:var(--modal-padding)]',
+              'flex min-h-0 flex-1 flex-col panel-inset-modal',
               body === 'dock' ? 'overflow-hidden' : DRAWER_PANE,
             )}
           >
             <SurfaceContext value="surface">{children}</SurfaceContext>
           </div>
           {footer ? (
-            <footer className="border-rule flex items-center justify-end gap-2 border-t px-[var(--modal-padding)] py-3">
+            <footer className="border-rule px-modal flex items-center justify-end gap-2 border-t py-3">
               {footer}
             </footer>
           ) : null}
@@ -155,7 +158,7 @@ function DrawerHeader({
     );
   }
   return (
-    <header className="flex items-start justify-between gap-4 px-[var(--modal-padding)] pt-[var(--modal-padding)]">
+    <header className="px-modal pt-modal flex items-start justify-between gap-4">
       <div className="min-w-0">
         {eyebrow ? <p className="text-caption-strong text-ink-2 mb-1">{eyebrow}</p> : null}
         <DialogPrimitive.Title className="text-heading text-ink truncate">

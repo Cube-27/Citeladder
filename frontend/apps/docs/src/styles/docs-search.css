@@ -1,0 +1,143 @@
+:root {
+  --docs-search-results-height: 400px;
+  --docs-search-option-height: 64px;
+}
+
+@layer components {
+  .cl-docs-search-trigger {
+    gap: var(--site-space-2);
+    height: var(--spacing-control-md);
+    padding-right: var(--site-space-2);
+    padding-left: var(--site-space-3);
+    border: var(--site-rule) solid var(--color-rule);
+    border-radius: var(--radius-control);
+    background-color: var(--color-panel);
+    color: var(--text-color-ink-2);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    transition-property:
+      color, background-color, border-color, outline-color, text-decoration-color, fill, stroke;
+    transition-timing-function: var(--default-transition-timing-function);
+    transition-duration: var(--default-transition-duration);
+  }
+
+  @media (hover: hover) {
+    .cl-docs-search-trigger:hover {
+      border-color: var(--color-rule-strong);
+    }
+  }
+
+  .cl-docs-search-dialog {
+    max-width: var(--site-measure-lg);
+    margin-top: var(--site-space-16);
+    padding: 0;
+    border-radius: var(--radius-card);
+    background-color: var(--color-panel);
+    color: var(--text-color-ink);
+    box-shadow: var(--shadow-pop);
+  }
+
+  .cl-docs-search-dialog::backdrop {
+    background-color: var(--color-scrim);
+  }
+
+  .cl-docs-search-field {
+    gap: var(--site-space-3);
+    height: var(--spacing-control-lg);
+    padding-inline: var(--site-space-4);
+    border-bottom: var(--site-rule) solid;
+    border-color: var(--color-rule);
+    color: var(--text-color-ink-2);
+  }
+
+  .cl-docs-search-input {
+    background-color: transparent;
+    color: var(--text-color-ink);
+    font-size: var(--text-site-body);
+    line-height: var(--text-site-body--line-height);
+    font-weight: var(--text-site-body--font-weight);
+  }
+
+  .cl-docs-search-input::placeholder {
+    color: var(--text-color-ink-2);
+  }
+
+  .cl-docs-search-results {
+    height: var(--docs-search-results-height);
+    padding: var(--site-space-2);
+  }
+
+  .cl-docs-search-status-row {
+    gap: var(--site-space-3);
+    min-height: var(--spacing-control-md);
+    padding-inline: var(--site-space-2);
+  }
+
+  .cl-docs-search-status {
+    color: var(--text-color-ink-2);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    letter-spacing: var(--text-caption--letter-spacing);
+    font-weight: var(--text-caption--font-weight);
+  }
+
+  .cl-docs-search-group {
+    margin-top: var(--site-space-2);
+  }
+
+  .cl-docs-search-group-label {
+    padding: var(--site-space-1) var(--site-space-2);
+    color: var(--text-color-ink-2);
+    font-size: var(--text-caption-strong);
+    line-height: var(--text-caption-strong--line-height);
+    letter-spacing: var(--text-caption-strong--letter-spacing);
+    font-weight: var(--text-caption-strong--font-weight);
+  }
+
+  .cl-docs-search-option {
+    gap: var(--site-space-3);
+    height: var(--docs-search-option-height);
+    padding: var(--site-space-3);
+    border-radius: var(--radius-inner);
+    text-decoration-line: none;
+  }
+
+  .cl-docs-search-option[data-active='true'] {
+    background-color: var(--color-well);
+  }
+
+  .cl-docs-search-option-text {
+    gap: var(--site-space-0_5);
+  }
+
+  .cl-docs-search-option-title {
+    color: var(--text-color-ink);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: var(--text-label--font-weight);
+  }
+
+  .cl-docs-search-option-description {
+    color: var(--text-color-ink-2);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+  }
+
+  .cl-docs-search-footer {
+    gap: var(--site-space-4);
+    padding: var(--site-space-2) var(--site-space-4);
+    border-top: var(--site-rule) solid;
+    border-color: var(--color-rule);
+    color: var(--text-color-ink-2);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    letter-spacing: var(--text-caption--letter-spacing);
+    font-weight: var(--text-caption--font-weight);
+  }
+
+  .cl-docs-search-key {
+    gap: var(--site-space-2);
+  }
+}

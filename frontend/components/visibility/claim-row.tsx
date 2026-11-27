@@ -9,6 +9,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { TOPIC_LABELS, VERDICT_TONE } from '@/lib/visibility/accuracy';
+import { Text } from '@/components/ui/typography';
 
 export const CLAIM_COLUMNS = [
   { key: 'prompt', label: 'Prompt', kind: 'identity' },
@@ -50,15 +51,15 @@ export function ClaimRow({
       </TableCell>
       <TableCell>
         {facts ? (
-          <span className="text-ink-2 block min-w-0 truncate" title={facts}>
+          <Text variant="body" tone="ink-2" box="block" wrap="truncate" title={facts}>
             {facts}
-          </span>
+          </Text>
         ) : (
           <Absence label="No fact on this point" />
         )}
       </TableCell>
       <TableCell>
-        <Inline gap="tight" className="flex-nowrap">
+        <Inline gap="tight">
           {facet === 'topic' ? (
             <StatusMark
               variant="sentiment"

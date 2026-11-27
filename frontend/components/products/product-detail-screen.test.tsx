@@ -162,7 +162,7 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('ProductDetailScreen', () => {
-  it('shows a catalog product’s metrics, the answers behind them and its setup', async () => {
+  it('shows a catalog product’s metrics, the prompts behind them per engine and its setup', async () => {
     serve({ [ROAD]: ROAD_DETAIL });
     renderAt(`/products/${ROAD}?window=90`);
 
@@ -191,10 +191,24 @@ describe('ProductDetailScreen', () => {
       'https://reviews.example/best-road',
     );
     expect(
-      screen.getByText('No search queries were captured for the answers that named it.'),
+      screen.getByText('No search queries were captured for the prompt runs that named it.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Newest 1 of 3')).toBeInTheDocument();
-    expect(screen.getByText('Lost')).toBeInTheDocument();
+    expect(screen.getAllByText('Newest 1 of 3 runs')).toHaveLength(2);
+    const byEngine = within(screen.getByRole('region', { name: 'By engine' }));
+    expect(
+      byEngine
+        .getAllByRole('cell')
+        .slice(1)
+        .map((cell) => cell.textContent),
+    ).toEqual(['1', '0', '1', '0.0%', '2.0']);
+    expect(screen.getByRole('heading', { name: 'Prompts' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Answers' })).toBeNull();
+    const prompt = within(screen.getByRole('row', { name: /best running shoes for road/ }));
+    expect(
+      prompt.getByRole('button', {
+        name: /^Open the latest .+ run for best running shoes for road: #2, won 0 of 1 runs$/,
+      }),
+    ).toHaveTextContent('#2');
 
     const setup = within(screen.getByRole('region', { name: 'Setup' }));
     expect(setup.getByRole('link', { name: 'Add the missing price' })).toBeInTheDocument();
@@ -204,6 +218,30 @@ describe('ProductDetailScreen', () => {
     expect(agent.map((params) => params.get('action_id'))).toEqual([null, ACTION]);
     expect(agent[0]!.get('target_url')).toBe('https://shop.example/products/road');
     expect(setup.getByRole('button', { name: 'Find competitors' })).toBeInTheDocument();
+  });
+
+  it('marks an engine missing from a truncated run sample as outside it, and as not named only when the sample is whole', async () => {
+    const other = {
+      ...ROAD_DETAIL.answers[0]!,
+      task_id: '12121212-1212-4121-8121-121212121212',
+      prompt_text: 'trail shoes for mud',
+      engine: 'claude',
+    };
+    const twoEngines = { ...ROAD_DETAIL, answers: [...ROAD_DETAIL.answers, other] };
+    serve({
+      [ROAD]: { ...twoEngines, answer_total: 5 },
+      [RIVAL]: { ...twoEngines, answer_total: 2 },
+    });
+    const sampled = renderAt(`/products/${ROAD}`);
+    const sampledRow = await screen.findByRole('row', { name: /best running shoes for road/ });
+    expect(within(sampledRow).getByText('Not in the newest runs')).toBeInTheDocument();
+    expect(within(sampledRow).queryByText('Not named')).toBeNull();
+    sampled.unmount();
+
+    renderAt(`/products/${RIVAL}`);
+    const wholeRow = await screen.findByRole('row', { name: /best running shoes for road/ });
+    expect(within(wholeRow).getByText('Not named')).toBeInTheDocument();
+    expect(within(wholeRow).queryByText('Not in the newest runs')).toBeNull();
   });
 
   it('shows a viewer the product and its setup without a control to change either', async () => {

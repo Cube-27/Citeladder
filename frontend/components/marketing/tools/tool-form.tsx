@@ -88,17 +88,11 @@ export function ToolForm({
     }
   }
   const output = current ? (
-    <Textarea
-      className="font-mono"
-      rows={18}
-      readOnly
-      value={current}
-      aria-label="Generated output"
-    />
+    <Textarea rows={18} readOnly value={current} aria-label="Generated output" />
   ) : undefined;
   const shown =
     preview || output ? (
-      <div className="cl-tool-run">
+      <div className="cl-tool-run cl-tool-generated">
         {preview}
         {output ?? <p className="cl-tool-hint">{status}</p>}
       </div>
@@ -130,7 +124,7 @@ export function ToolForm({
           </div>
           <output className="sr-only">{status}</output>
           {error && (
-            <p role="alert" className="text-negative">
+            <p role="alert" className="cl-tool-error">
               {error}
             </p>
           )}

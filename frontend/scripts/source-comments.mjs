@@ -27,8 +27,9 @@ const IGNORE = [
 ];
 
 const RULES = String.raw`(?: [\w@/-]+(?:, ?[\w@/-]+)*)?`;
+const LINT_RULES = String.raw` (?!.*\b(?:design|shadcn)/)[\w@/-]+(?:, ?[\w@/-]+)*`;
 const DIRECTIVES = [
-  new RegExp(`^(?:oxlint|eslint)-(?:disable|enable)(?:-next-line|-line)?${RULES}$`, 'u'),
+  new RegExp(`^(?:oxlint|eslint)-(?:disable|enable)(?:-next-line|-line)?${LINT_RULES}$`, 'u'),
   new RegExp(`^react-doctor-disable(?:-next-line|-line)?${RULES}$`, 'u'),
   /^NOSONAR$/u,
   /^@ts-expect-error$/u,

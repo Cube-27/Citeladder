@@ -201,15 +201,18 @@ drawn sidebar is visible. In review: a `max-width` media query or
 ### App restyles of shared primitives stay off the website
 
 **Rule:** A look change to a `components/ui` primitive the website also
-imports (button, input, select, textarea, tag, table, tabs, facts) goes
-behind the `app:` variant, or keeps the old value under
-`[[data-public-surface]_&]:`. Token values change only in the app's
-`:root:not([data-public-surface])` blocks.
+imports (button, input, select, textarea, tag, table, tabs, facts) re-points
+a role token in the app's `:root:not([data-public-surface])` blocks, or adds a
+role the website binds to its own value. Inside the primitive, the `app:`
+variant may scope a class; a screen never forks a look with
+`[[data-public-surface]_&]:`.
 **Why:** The HeroUI move (2026-11) restyled shared controls; the review
 caught the website's tables losing their corner radius and its textareas
 their motion timing, after earlier rounds where a shared-component edit
-restyled pages nobody named.
-**Check:** In review, run `rg "components/ui/" frontend/components/marketing`
+restyled pages nobody named. A per-call-site surface variant is a one-off
+look that the next token change misses.
+**Check:** `design/surface-variant` fails a surface variant outside
+`components/ui`. In review, run `rg "components/ui/" frontend/components/marketing`
 and read every changed primitive in that list for an unscoped class change.
 
 ### A class migration proves the render, not the class
@@ -240,6 +243,17 @@ little headroom; the button redesign (#1082) went over it twice before dead
 rules were cut.
 **Check:** The CSS budget step in CI. In review: an `exit` or closed-state rule
 under a Radix part that uses `transition` alone.
+
+### A boot file's import ships the whole module
+
+**Rule:** Code only lazy routes use lives in a module no boot file (shell,
+`page-frame`, `first-frame`, `not-found`) imports. Split a shared module along
+that seam rather than adding to it.
+**Why:** The bundler puts every module statically reachable from the entry into
+the boot chunk whole. Design batch 6 (#1274) went 13 KB over the eager JS
+budget by putting setup, record and steps chrome next to the page chrome boot
+screens use.
+**Check:** The eager JS budget step in CI.
 
 ### The window never scrolls in the app
 

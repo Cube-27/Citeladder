@@ -11,7 +11,7 @@ export type RadioOption<T extends string> = {
 };
 
 const RADIO =
-  'press [--press:0.95] focus-ring bg-panel border-control-line data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:ring-panel hit-area [--target-hit:var(--target-min)] size-4 shrink-0 rounded-full border ring-inset data-[state=checked]:ring-4 disabled:cursor-not-allowed';
+  'press press-mark focus-ring bg-panel border-control-line data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:ring-panel hit-area target-hit-fine size-4 shrink-0 rounded-full border ring-inset data-[state=checked]:ring-4 disabled:cursor-not-allowed';
 
 const LIST_LAYOUT = {
   list: 'flex flex-col gap-3',
@@ -63,7 +63,7 @@ export function RadioGroup<T extends string>({
             key={option.value}
             className={cn(
               'text-ink inline-flex cursor-pointer items-start gap-2',
-              option.disabled && 'cursor-not-allowed opacity-60',
+              option.disabled && 'cursor-not-allowed opacity-disabled',
             )}
           >
             <RadioGroupPrimitive.Item
@@ -100,7 +100,7 @@ function RadioCard<T extends string>({
         'text-ink bg-panel flex cursor-pointer items-start gap-2 rounded-control border border-transparent p-4',
         selected && 'bg-state-fill',
         !selected && !option.disabled && 'hover:bg-state-fill-hover',
-        option.disabled && 'cursor-not-allowed opacity-50',
+        option.disabled && 'cursor-not-allowed opacity-disabled',
       )}
     >
       <RadioGroupPrimitive.Item

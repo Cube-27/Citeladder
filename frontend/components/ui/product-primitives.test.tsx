@@ -10,7 +10,7 @@ import { Avatar } from './avatar';
 import { Button } from './button';
 import { Delta } from './delta';
 import { choiceFilter, rangeFilter, singleFilter, type FilterIcon } from './all-filters';
-import { FilterBar } from './filter-bar';
+import { FilterBar, TableToolbar } from './filter-bar';
 import { DataTable } from './data-table';
 import { Meter } from './meter';
 import { Pager, pageNumberControls } from './pager';
@@ -315,7 +315,7 @@ describe('ArrowLink', () => {
 describe('FilterBar and FilterTrigger', () => {
   it('lays every row out in one order: view, search, All filters, count, action', () => {
     render(
-      <FilterBar
+      <TableToolbar
         actions={<Button>Export</Button>}
         status="12 pages"
         filters={[

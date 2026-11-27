@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ClampText } from '@/components/ui/clamp-text';
 import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
@@ -41,7 +42,9 @@ export function DemandSignalTable({
   filterKey,
   onInspect,
   onClearFilters,
+  search,
 }: Readonly<{
+  search: ReactNode;
   rows: readonly RankedSignal[];
   filterKey: string;
   onInspect: (signal: DemandSignal) => void;
@@ -57,6 +60,7 @@ export function DemandSignalTable({
     <DataTable
       title="Demand signals"
       columns={COLUMNS}
+      toolbar={{ search }}
       state={
         rows.length === 0
           ? { kind: 'filtered', heading: 'No signals match your filter', onClear: onClearFilters }
@@ -99,7 +103,8 @@ function SignalRow({
         event.preventDefault();
         inspect();
       }}
-      className="focus-ring cursor-pointer"
+      focusable
+      className="cursor-pointer"
     >
       <TableCell>
         <TableCellLines
@@ -138,7 +143,7 @@ function SignalRow({
       </TableCell>
       <TableCell numeric>{rank}</TableCell>
       <TableActionsCell>
-        <Icon icon={ChevronRight} className="text-ink-2" />
+        <Icon icon={ChevronRight} tone="ink-2" />
       </TableActionsCell>
     </TableRow>
   );
