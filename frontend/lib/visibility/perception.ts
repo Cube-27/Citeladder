@@ -240,9 +240,8 @@ export function filterSegments<
 
 export function filterDrivers<T extends Readonly<{ domain: string }>>(
   drivers: readonly T[],
-  { query, polarity }: BreakdownNarrowing,
+  query: string,
 ): T[] {
-  if (polarity === 'positive') return [];
   const matches = matcher(query);
   return drivers.filter((driver) => matches(driver.domain));
 }

@@ -178,10 +178,7 @@ describe('perception derivations', () => {
       't2',
     ]);
     const drivers = [{ domain: 'reddit.com' }, { domain: 'quora.com' }];
-    expect(filterDrivers(drivers, { query: 'red', polarity: 'all' })).toEqual([
-      { domain: 'reddit.com' },
-    ]);
-    expect(filterDrivers(drivers, { query: '', polarity: 'positive' })).toEqual([]);
+    expect(filterDrivers(drivers, 'red')).toEqual([{ domain: 'reddit.com' }]);
   });
 
   it('shows a share as counts below the sample size and as a percentage from it', () => {

@@ -142,7 +142,7 @@ function BreakdownView({
             }}
           />
         );
-      const drivers = filterDrivers(data.drivers, narrowing);
+      const drivers = filterDrivers(data.drivers, narrowing.query);
       return <SourceTable drivers={drivers} state={drivers.length ? undefined : empty} />;
     }
     default: {
