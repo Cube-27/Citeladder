@@ -21,7 +21,7 @@ const BAR_FILL = {
   ink: 'bg-mark-ink',
 } as const;
 
-export type BarTone = keyof typeof BAR_FILL;
+type BarTone = keyof typeof BAR_FILL;
 
 export const scoreTone = (score: number) => BAND[scoreBand(Math.round(score))].tone;
 

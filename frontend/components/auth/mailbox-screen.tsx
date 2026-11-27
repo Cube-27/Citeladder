@@ -103,7 +103,12 @@ export default function MailboxScreen() {
         showForm={!mutation.isSuccess && !incomplete}
         error={
           mutation.isError
-            ? authErrorMessage(mutation.error, "Couldn't send the email. Try again.")
+            ? authErrorMessage(
+                mutation.error,
+                confirmation
+                  ? "Couldn't confirm the link. Try again."
+                  : "Couldn't send the email. Try again.",
+              )
             : undefined
         }
         verification={confirmation ? undefined : verification}
