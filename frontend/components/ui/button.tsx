@@ -66,7 +66,7 @@ export type ButtonProps = ComponentPropsWithoutRef<'button'> & {
   size?: ButtonSize;
   asChild?: boolean;
   shape?: keyof typeof SHAPE;
-  look?: 'launcher';
+  look?: keyof typeof LOOK;
   pending?: boolean;
   pendingLabel?: ReactNode;
   ref?: Ref<HTMLButtonElement>;
@@ -83,6 +83,7 @@ const SHAPE = {
 
 const LOOK = {
   launcher: 'text-ink-2 text-left shrink-0 justify-start',
+  cta: undefined,
 } as const;
 
 function SlottedButton({
@@ -105,6 +106,7 @@ function SlottedButton({
       ref={ref}
       {...props}
       data-button-variant={variant}
+      data-button-look={look}
       aria-busy={pending || undefined}
       className={buttonClasses(variant, cn(SHAPE[shape], look && LOOK[look], className), size)}
     >
@@ -133,6 +135,7 @@ function NativeButton({
       {...props}
       type={type ?? 'button'}
       data-button-variant={variant}
+      data-button-look={look}
       aria-busy={pending || undefined}
       disabled={props.disabled || pending}
       className={buttonClasses(
