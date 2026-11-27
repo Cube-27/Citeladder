@@ -7,7 +7,7 @@ import {
 } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
-import { Icon } from '@/components/ui/icon';
+import { Icon, LineMark } from '@/components/ui/icon';
 import { Pressable, ROW_FACE } from '@/components/ui/pressable';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Spinner } from '@/components/ui/spinner';
@@ -44,18 +44,28 @@ export function OptionRow({
       aria-pressed={selected}
       look={selected ? 'option-selected' : 'option'}
     >
-      <span className="min-w-0 flex-1">
-        <ClampText text="body" tone={disabled ? 'ink-2' : undefined}>
-          {title}
-        </ClampText>
-        {caption ? (
-          <ClampText text="caption" numeric>
-            {caption}
+      <span className="flex min-w-0 flex-1 items-start gap-3">
+        <span className="min-w-0 flex-1">
+          <ClampText text="body" tone={disabled ? 'ink-2' : undefined}>
+            {title}
           </ClampText>
+          {caption ? (
+            <ClampText text="caption" numeric>
+              {caption}
+            </ClampText>
+          ) : null}
+        </span>
+        {pending ? (
+          <LineMark>
+            <Spinner tone="ink-2" />
+          </LineMark>
+        ) : null}
+        {selected && !pending ? (
+          <LineMark>
+            <Icon icon={Check} tone="ink" />
+          </LineMark>
         ) : null}
       </span>
-      {pending ? <Spinner tone="ink-2" /> : null}
-      {selected && !pending ? <Icon icon={Check} tone="ink" /> : null}
     </Pressable>
   );
 }
@@ -249,27 +259,38 @@ export function LinkListRow({
 }>) {
   const detailId = useId();
   return (
-    <li className="hover:overlay-hover min-h-row relative flex min-w-0 items-center gap-3">
-      <Icon icon={icon} tone="ink-2" />
-      <span className="text-body text-ink flex min-w-0 flex-1 flex-col gap-0.5">
-        <ProjectLink
-          href={href}
-          aria-label={linkLabel}
-          aria-describedby={end ? `${detailId} ${detailId}-end` : detailId}
-          look="row-title"
-        >
-          {label}
-        </ProjectLink>
-        <span id={detailId} className="text-ink-2 phone:sr-only line-clamp-2 min-w-0">
-          {description}
+    <li className="hover:overlay-hover min-h-row relative flex min-w-0 items-center">
+      <span className="flex min-w-0 flex-1 items-start gap-3">
+        <LineMark>
+          <Icon icon={icon} tone="ink-2" />
+        </LineMark>
+        <span className="text-body text-ink flex min-w-0 flex-1 flex-col gap-0.5">
+          <ProjectLink
+            href={href}
+            aria-label={linkLabel}
+            aria-describedby={end ? `${detailId} ${detailId}-end` : detailId}
+            look="row-title"
+          >
+            {label}
+          </ProjectLink>
+          <span id={detailId} className="text-ink-2 phone:sr-only line-clamp-2 min-w-0">
+            {description}
+          </span>
         </span>
+        {end ? (
+          <LineMark>
+            <span
+              id={`${detailId}-end`}
+              className="text-caption text-ink-2 shrink-0 whitespace-nowrap"
+            >
+              {end}
+            </span>
+          </LineMark>
+        ) : null}
+        <LineMark>
+          <Icon icon={ChevronRight} tone="ink-2" />
+        </LineMark>
       </span>
-      {end ? (
-        <span id={`${detailId}-end`} className="text-caption text-ink-2 shrink-0 whitespace-nowrap">
-          {end}
-        </span>
-      ) : null}
-      <Icon icon={ChevronRight} tone="ink-2" />
     </li>
   );
 }

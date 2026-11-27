@@ -55,6 +55,10 @@ export function Icon({
   );
 }
 
+export function LineMark({ children }: Readonly<{ children: ReactNode }>) {
+  return <span className="h-body-line flex shrink-0 items-center">{children}</span>;
+}
+
 export function TitleMark({ children }: Readonly<{ children: ReactNode }>) {
   return <span className="h-title-line flex items-center">{children}</span>;
 }
