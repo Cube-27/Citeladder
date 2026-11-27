@@ -237,7 +237,7 @@ function ProductsContent({
               <Text variant="caption" numeric>
                 {formatCount(page.data.executions)}
               </Text>
-              {page.data.executions === 1 ? ' answer' : ' answers'} in the last{' '}
+              {page.data.executions === 1 ? ' prompt run' : ' prompt runs'} in the last{' '}
               <Text variant="caption" numeric>
                 {page.data.window_days}
               </Text>{' '}
