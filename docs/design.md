@@ -36,22 +36,22 @@ The lint enforces this and fails CI (`vp lint`; config in
 
 - **`shadcn/*`** ([`@shadcn/lint`](https://github.com/shadcn-ui/lint)):
   no palette colours, no arbitrary values (class constants included), no
-  inline styles, no classes the theme cannot generate, no unreadable or
+  inline styles beyond a literal object of custom properties (the rule's
+  default; no option is enabled), no classes the theme cannot generate, no unreadable or
   restyling `className` on a `components/ui` primitive. Each subdomain's
   theme is the `components.json` nearest the file.
 - **`design/*`** (the [local plugin](../frontend/scripts/design-lint/plugin.mjs)):
   `plain-element` (outside `components/ui`, a plain element's `className`
   carries layout structure only: no spacing, size, colour, type, shape, effect
-  or motion class, no `textRole()` or `*Classes()` helper, nothing
+  or motion class, no `*Classes()` helper, nothing
   unreadable), `reset-survivor` (`leading-<n>`, `text-<role>/<n>`, `z-<n>`,
   `opacity-<n>`, `duration-<n>`, `delay-<n>`), `colour-literal` (a hex or
   colour function in any string), `monochrome-colour` (`white`/`black`),
   `surface-variant` (a `[[data-public-surface]_&]:` variant outside
   `components/ui`) and `astro-class` (value classes in Astro markup).
 
-Existing findings sit in `frontend/oxlint-suppressions.json`, counted per file
-and rule. A new finding fails, and so does a fixed one until the file is
-pruned (`vp lint --prune-suppressions`), so the baseline only shrinks. No
+There is no suppressions file and no baseline: a finding is fixed at its
+source, by a role token or a primitive prop. No
 inline `oxlint-disable` may name a `design/` or `shadcn/` rule (the comment
 check rejects it). A fixture in `frontend/scripts/design-lint/canary` must trip
 every rule (`scripts/frontend/design-lint.test.mjs`).
@@ -254,7 +254,8 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
   page-wide toolbar (`FilterBar`) is the strip under the tabs, with no rule,
-  and takes no search: a search narrows one table, so it lives in that
+  and takes no search (`PageFrame` `filters` is `FilterBarProps`, which has
+  none): a search narrows one table, so it lives in that
   table's `TableToolbar` (`DataTable toolbar`). An export is `ExportAction`:
   `scope="page"` in the page header actions, `scope="table"` in the table
   toolbar.
@@ -318,9 +319,9 @@ holds the depth rules.
   [`flow-frame.tsx`](../frontend/components/ui/flow-frame.tsx), which boot
   screens import, and in `flow-chrome.tsx` and `record-chrome.tsx`, which
   only lazy routes import: a module a boot file imports ships whole in the
-  eager bundle. Templates compose them and hold no classes. `Stack` and `Inline` still accept
-  `className` until the screen batches move their callers to props;
-  restyling any other primitive through `className` is a lint finding.
+  eager bundle. Templates compose them and hold no classes. `Stack` and `Inline` take
+  typed props only, with no `className`; restyling any other primitive
+  through `className` is a lint finding.
   No page adds padding, margin, border, fill, radius or shadow around one; no
   globals rule depends on what contains what. A primitive that needs its
   depth reads `SurfaceContext` (`useOnPage()`), never a CSS ancestor. A
@@ -361,7 +362,10 @@ holds the depth rules.
 
 - **Tables.** Geometry as in Standard layouts. A page declares each
   column's kind and width role, never a pixel width; `DataTable` turns them
-  into one scoped rule set (`columnRules`): `flex` columns share the spare
+  into data attributes on the table frame (`data-c<n>`), read by the static
+  position rules in `components/ui/generated/data-table-positions.css`
+  (16 positions; `pnpm gen:table-positions` rewrites it, and a test fails
+  when it is stale): `flex` columns share the spare
   width and cut their text, every other role hugs its content above a small
   floor, so no gap opens between columns. When the floors do not fit, `low`
   columns hide, the last first; below that the table scrolls with the first
