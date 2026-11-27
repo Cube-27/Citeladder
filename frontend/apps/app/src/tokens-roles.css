@@ -109,8 +109,9 @@
 
   --container-site: 1320px;
   --container-app: 1440px;
-  --container-page: 1160px;
-  --container-measure: 800px;
+  --container-page: 1040px;
+  --container-detail: 800px;
+  --container-reading: 720px;
   --container-answer: 1080px;
   --container-thread: 1040px;
   --container-prose: 720px;
@@ -196,6 +197,7 @@
   --spacing-band: 8px;
   --spacing-flow-gap: 48px;
   --spacing-label-column: 160px;
+  --spacing-section-rail: 192px;
   --spacing-quote-grid: 768px;
   --spacing-notice-fill: 60dvh;
   --spacing-turn-estimate: 320px;

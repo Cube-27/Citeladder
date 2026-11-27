@@ -4,8 +4,11 @@
 @utility page-start-narrow {
   --page-start: max(0px, calc((100cqw - var(--container-page)) / 2));
 }
-@utility page-start-compact {
-  --page-start: max(0px, calc((100cqw - var(--container-measure)) / 2));
+@utility page-start-detail {
+  --page-start: max(0px, calc((100cqw - var(--container-detail)) / 2));
+}
+@utility page-start-reading {
+  --page-start: max(0px, calc((100cqw - var(--container-reading)) / 2));
 }
 @utility scrollbar-stable {
   scrollbar-gutter: stable;

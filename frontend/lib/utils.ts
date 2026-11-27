@@ -43,6 +43,7 @@ const SPACING_ROLES = [
   'target',
   'workspace',
   'label-column',
+  'section-rail',
   'quote-grid',
   'notice-fill',
   'turn-estimate',

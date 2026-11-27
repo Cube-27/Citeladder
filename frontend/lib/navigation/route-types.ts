@@ -42,7 +42,7 @@ export type RouteLoading =
   | Readonly<{
       kind: 'cards';
       tabs?: HeldTabs;
-      rail?: HeldTabs;
+      rail?: HeldRail;
       filters?: boolean;
       intro?: boolean;
       stacked?: boolean;
@@ -55,6 +55,8 @@ export type HeldTabs = Readonly<{
   items: readonly Readonly<{ value: string; label: string }>[];
 }>;
 
+export type HeldRail = HeldTabs & Readonly<{ fillTab: string | null }>;
+
 export type AppRouteRecord = {
   path: string;
   title: string | null;
@@ -65,5 +67,5 @@ export type AppRouteRecord = {
   credentialInUrl?: true;
   nav?: readonly NavEntry[];
   loading?: RouteLoading;
-  width?: 'narrow' | 'compact';
+  width?: 'narrow' | 'detail' | 'reading';
 };

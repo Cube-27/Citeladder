@@ -63,7 +63,7 @@ export function StepsNav({
   return (
     <nav
       aria-label={label}
-      className="desktop:sticky desktop:top-0 desktop:self-start flex w-56 shrink-0 flex-col"
+      className="desktop:sticky desktop:top-0 desktop:self-start w-section-rail flex shrink-0 flex-col"
     >
       <ol className="flex min-w-0 flex-col gap-1">{children}</ol>
       {note ? <p className="text-caption text-ink-2 px-2 pt-3">{note}</p> : null}

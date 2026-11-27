@@ -8,3 +8,5 @@ export const CONTEXT_TABS = [
 ] as const;
 
 export type ContextTab = (typeof CONTEXT_TABS)[number]['value'];
+
+export const CONTEXT_FILL_TAB = 'map' satisfies ContextTab;

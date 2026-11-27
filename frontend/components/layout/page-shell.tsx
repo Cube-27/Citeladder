@@ -94,6 +94,7 @@ function RouteRail({
   return (
     <RailColumns
       rail={<HeldTabRail labels={rail.items.map((item) => item.label)} selected={current?.label} />}
+      section={current?.value === rail.fillTab ? 'fill' : 'reading'}
     >
       {children}
     </RailColumns>

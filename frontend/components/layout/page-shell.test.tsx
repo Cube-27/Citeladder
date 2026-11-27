@@ -195,12 +195,34 @@ describe('PageFrame', () => {
     const report = <ReportPage>body</ReportPage>;
     expect([
       widthAt('/billing', report),
+      widthAt('/pricing', report),
+      widthAt('/runs', report),
       widthAt('/actions/a1', report),
       widthAt('/actions', report),
       widthAt('/site', report),
       widthAt('/agent/chats/c1', <WorkbenchPage>body</WorkbenchPage>),
       widthAt('/issues', <RouteLoadingScreen />),
-    ]).toEqual(['compact', 'compact', 'narrow', 'full', 'fill', 'narrow']);
+    ]).toEqual(['reading', 'reading', 'reading', 'detail', 'narrow', 'full', 'fill', 'narrow']);
+  });
+
+  it('caps a rail page’s section at the reading width, except the Business map', () => {
+    const sectionAt = (path: string) => {
+      const { container, unmount } = render(
+        <MemoryRouter initialEntries={[path]}>
+          <RouteLoadingScreen />
+        </MemoryRouter>,
+      );
+      const section = container
+        .querySelector('[data-rail-section]')
+        ?.getAttribute('data-rail-section');
+      unmount();
+      return section;
+    };
+    expect([
+      sectionAt('/settings'),
+      sectionAt('/agent/context'),
+      sectionAt('/agent/context?tab=map'),
+    ]).toEqual(['reading', 'reading', 'fill']);
   });
 
   it('stacks the masthead, the page tabs band, the filter bar band, then the content', () => {
