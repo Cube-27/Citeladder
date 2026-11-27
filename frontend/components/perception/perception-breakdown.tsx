@@ -1,15 +1,27 @@
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
 
-import { useAttributeTable } from '@/components/perception/attribute-table';
+import { useState } from 'react';
+
+import { AttributeTable } from '@/components/perception/attribute-table';
 import { Absence } from '@/components/ui/absence';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { EngineLabel } from '@/components/ui/engine-mark';
-import { Section, SectionHeader, SectionTitle, SectionToolbar } from '@/components/ui/section';
+import { FilterChoice } from '@/components/ui/filter-bar';
+import { SearchField } from '@/components/ui/search-field';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
-import { breakdownRow, SMALL_SAMPLE, type SampleShare } from '@/lib/visibility/perception';
+import {
+  breakdownRow,
+  filterDrivers,
+  filterSegments,
+  SMALL_SAMPLE,
+  type BreakdownNarrowing,
+  type Polarity,
+  type SampleShare,
+} from '@/lib/visibility/perception';
 import { Inline } from '@/components/ui/layout';
 
 type Category = PerceptionResponse['entities'][number]['categories'][number];
@@ -17,11 +29,17 @@ type View = 'attribute' | 'topic' | 'engine' | 'source';
 type Segment = 'topic' | 'engine';
 
 const VIEW_LABEL: Record<View, string> = {
-  attribute: 'By attribute',
-  topic: 'By topic',
-  engine: 'By engine',
-  source: 'By source',
+  attribute: 'Attribute',
+  topic: 'Topic',
+  engine: 'Engine',
+  source: 'Source',
 };
+
+const SIDES = [
+  { value: 'all', label: 'All' },
+  { value: 'negative', label: 'Negative' },
+  { value: 'positive', label: 'Positive' },
+] as const satisfies readonly { value: Polarity | 'all'; label: string }[];
 
 const VIEWS = ['attribute', 'topic', 'engine', 'source'] as const satisfies readonly View[];
 
@@ -47,37 +65,75 @@ export function PerceptionBreakdown({
   const [requested, setView] = useUrlState('breakdown', VIEW_CODEC, { history: 'replace' });
   const views = shownViews(data, categories);
   const view = views.includes(requested) ? requested : views[0];
-  const attribute = useAttributeTable(categories);
+  const [query, setQuery] = useState('');
+  const [side, setSide] = useState<Polarity | 'all'>('all');
   if (!view) return null;
+  const narrowing = { query, polarity: side };
+  const empty: DataTableState | undefined =
+    query.trim() || side !== 'all'
+      ? {
+          kind: 'filtered',
+          headingLevel: 3,
+          heading: 'No matches',
+          onClear: () => {
+            setQuery('');
+            setSide('all');
+          },
+        }
+      : undefined;
   return (
     <Section aria-label="Breakdown">
-      <SectionHeader>
+      <SectionHeader
+        search={
+          <SearchField
+            value={query}
+            onValueChange={setQuery}
+            onClear={() => setQuery('')}
+            aria-label="Search the breakdown"
+            placeholder="Search"
+          />
+        }
+        actions={
+          <>
+            <FilterChoice
+              label="Break down by"
+              value={view}
+              options={views.map((value) => ({ value, label: VIEW_LABEL[value] }))}
+              onChange={setView}
+            />
+            <SegmentedControl value={side} onChange={setSide} options={SIDES} ariaLabel="Side" />
+          </>
+        }
+      >
         <SectionTitle>Breakdown</SectionTitle>
       </SectionHeader>
-      <SectionToolbar>
-        <SegmentedControl
-          value={view}
-          onChange={setView}
-          ariaLabel="Break perception down"
-          options={views.map((value) => ({ value, label: VIEW_LABEL[value] }))}
-        />
-        {view === 'attribute' ? attribute.tools : null}
-      </SectionToolbar>
-      {view === 'attribute' ? attribute.table : <BreakdownView view={view} data={data} />}
+      {view === 'attribute' ? (
+        <AttributeTable categories={categories} narrowing={narrowing} empty={empty} />
+      ) : (
+        <BreakdownView view={view} data={data} narrowing={narrowing} empty={empty} />
+      )}
     </Section>
   );
 }
 
+type Narrowed = Readonly<{ narrowing: BreakdownNarrowing; empty: DataTableState | undefined }>;
+
 function BreakdownView({
   view,
   data,
-}: Readonly<{ view: Exclude<View, 'attribute'>; data: PerceptionResponse }>) {
+  narrowing,
+  empty,
+}: Readonly<{ view: Exclude<View, 'attribute'>; data: PerceptionResponse }> & Narrowed) {
   switch (view) {
     case 'topic':
-    case 'engine':
-      return <SegmentTable segment={view} rows={data[`${view}s`]} />;
-    case 'source':
-      return <SourceTable drivers={data.drivers} />;
+    case 'engine': {
+      const rows = filterSegments(data[`${view}s`], narrowing);
+      return <SegmentTable segment={view} rows={rows} state={rows.length ? undefined : empty} />;
+    }
+    case 'source': {
+      const drivers = filterDrivers(data.drivers, narrowing);
+      return <SourceTable drivers={drivers} state={drivers.length ? undefined : empty} />;
+    }
     default: {
       const _exhaustive: never = view;
       return _exhaustive;
@@ -103,9 +159,14 @@ function ShareCell({ share }: Readonly<{ share: SampleShare }>) {
 function SegmentTable({
   segment,
   rows,
-}: Readonly<{ segment: Segment; rows: PerceptionResponse['topics'] }>) {
+  state,
+}: Readonly<{
+  segment: Segment;
+  rows: PerceptionResponse['topics'];
+  state: DataTableState | undefined;
+}>) {
   return (
-    <DataTable label={`Perception by ${segment}`} columns={segmentColumns(segment)}>
+    <DataTable label={`Perception by ${segment}`} columns={segmentColumns(segment)} state={state}>
       {rows.map((row) => {
         const cells = breakdownRow(row);
         return (
@@ -132,10 +193,14 @@ function SegmentTable({
   );
 }
 
-function SourceTable({ drivers }: Readonly<{ drivers: PerceptionResponse['drivers'] }>) {
+function SourceTable({
+  drivers,
+  state,
+}: Readonly<{ drivers: PerceptionResponse['drivers']; state: DataTableState | undefined }>) {
   return (
     <DataTable
       label="Sources cited alongside criticism"
+      state={state}
       columns={[
         { key: 'domain', label: 'Source' },
         { key: 'answers', label: 'Negative answers', width: 'metric', kind: 'number' },

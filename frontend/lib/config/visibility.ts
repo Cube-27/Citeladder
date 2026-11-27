@@ -35,9 +35,9 @@ export const MATRIX_DIMENSIONS = [
 ] as const;
 
 export const RANKING_DIMENSIONS = [
-  { value: 'topic', label: 'By topic' },
-  { value: 'engine', label: 'By engine' },
-  { value: 'market', label: 'By market' },
+  { value: 'topic', label: 'Topic' },
+  { value: 'engine', label: 'Engine' },
+  { value: 'market', label: 'Market' },
 ] as const;
 
 export const SHARE_OF_VOICE_HINT =

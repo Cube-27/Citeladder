@@ -89,7 +89,6 @@ export function BrandFactsPanel({
       <DataTable
         label="Brand facts"
         columns={mayEdit ? EDIT_COLUMNS : COLUMNS}
-        rowCount={facts.length}
         state={facts.length ? undefined : { kind: 'empty', inline: true, message: 'No facts yet.' }}
       >
         {facts.map((fact) => (

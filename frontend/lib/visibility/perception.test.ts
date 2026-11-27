@@ -5,6 +5,8 @@ import {
   formatNet,
   categoryShare,
   filterCategories,
+  filterDrivers,
+  filterSegments,
   rankCategories,
   sampleNote,
   sampleShare,
@@ -142,6 +144,44 @@ describe('perception derivations', () => {
     expect(named.map((c) => [c.category, c.attributes.map((a) => a.attribute)])).toEqual([
       ['Price', ['Cheap basics']],
     ]);
+  });
+
+  it('finds topics by name across the breakdown: quote themes, topic rows and sources', () => {
+    const themed = [
+      {
+        ...category('Fit', 1, 0, ['Runs small']),
+        attributes: [
+          {
+            attribute: 'Runs small',
+            negative: 1,
+            positive: 0,
+            quotes: [{ ...RUN_QUOTE, theme: 'Kids pyjamas', polarity: 'negative' as const }],
+          },
+        ],
+      },
+      category('Price', 0, 3, ['Cheap basics']),
+    ];
+    expect(
+      filterCategories(themed, { query: 'pyjamas', polarity: 'all' }).map((c) => c.category),
+    ).toEqual(['Fit']);
+    const topic = (key: string, label: string, positive: number, negative: number) => ({
+      key,
+      label,
+      score: score(positive, 0, negative),
+      coverage: cover(positive + negative, positive + negative),
+    });
+    const topics = [topic('t1', 'Kids pyjamas', 2, 0), topic('t2', 'Adult robes', 0, 2)];
+    expect(filterSegments(topics, { query: 'PYJAMAS', polarity: 'all' }).map((t) => t.key)).toEqual(
+      ['t1'],
+    );
+    expect(filterSegments(topics, { query: '', polarity: 'negative' }).map((t) => t.key)).toEqual([
+      't2',
+    ]);
+    const drivers = [{ domain: 'reddit.com' }, { domain: 'quora.com' }];
+    expect(filterDrivers(drivers, { query: 'red', polarity: 'all' })).toEqual([
+      { domain: 'reddit.com' },
+    ]);
+    expect(filterDrivers(drivers, { query: '', polarity: 'positive' })).toEqual([]);
   });
 
   it('shows a share as counts below the sample size and as a percentage from it', () => {

@@ -45,7 +45,7 @@ export function actionsToolbar({
   newCount: number | undefined;
 }>): FilterBarProps {
   return {
-    lead: (
+    view: (
       <Inline wrap>
         <FilterChoice<StatusChoice>
           label="Status"

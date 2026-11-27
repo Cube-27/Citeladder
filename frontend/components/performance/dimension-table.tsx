@@ -208,7 +208,6 @@ export function DimensionTable({
       <DataTable
         label={tab.header}
         columns={columns}
-        reserveRows
         {...table}
         state={{
           kind: 'empty',
@@ -223,7 +222,7 @@ export function DimensionTable({
   const origin =
     dimension === 'page' ? sharedOrigin(page?.items.map((row) => row.display_value) ?? []) : null;
   return (
-    <DataTable label={tab.header} columns={columns} reserveRows {...table}>
+    <DataTable label={tab.header} columns={columns} {...table}>
       {page?.items.map((row) => (
         <TableRow key={row.dimension_key}>
           <TableCell>

@@ -123,7 +123,6 @@ export function NearMissTable({
       columns={nearMissColumns(query.data, engines.label)}
       state={nearMissState(query, engines.label)}
       pageSize={pageSize}
-      rowCount={shown}
       busy={{ active: query.isFetching, label: 'Updating your pages read but not cited' }}
       pager={{
         range: {

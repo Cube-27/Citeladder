@@ -101,9 +101,7 @@ describe('Your brand over time', () => {
     point('2026-11-03T00:00:00Z', 0.31),
   ]);
   const lineNames = (container: HTMLElement) =>
-    [...container.querySelectorAll('[data-end-labels] text, ul[aria-hidden] li span[title]')].map(
-      (label) => label.textContent ?? '',
-    );
+    [...container.querySelectorAll('table tbody th')].map((head) => head.textContent ?? '');
 
   it('plots a focused brand alone, and falls back to every brand for one this selection never measured', () => {
     window.history.replaceState(null, '', '/insights?brand=Kmart%20Australia');
@@ -141,26 +139,12 @@ describe('Your brand over time', () => {
     expect(states(none.container)).toEqual(['empty']);
   });
 
-  it('plots one run as a point per brand under a key, not a list of values', () => {
+  it('plots one run as a point per brand, not a list of values', () => {
     const { container } = render(
       <BrandTrend query={loaded([point('2026-11-17T00:00:00Z', 0.31)])} selected={selected} />,
     );
     expect(container.querySelector('[data-single-measurement]')).toBeNull();
     expect(container.querySelectorAll('[data-trend-point="you"]')).toHaveLength(1);
     expect(lineNames(container)).toEqual(['You', 'Kmart Australia', 'Target Australia']);
-    expect(container.querySelectorAll('ul[aria-hidden] li [data-brand-mark]')).toHaveLength(3);
-  });
-
-  it('keys each line at the figures precision, not a rounded whole percent', () => {
-    const { container } = render(
-      <BrandTrend
-        query={loaded([point('2026-11-01T00:00:00Z', 0.31), point('2026-11-03T00:00:00Z', 0.025)])}
-        selected={selected}
-      />,
-    );
-    const key = [...container.querySelectorAll('ul[aria-hidden] li')].map(
-      (item) => item.textContent,
-    );
-    expect(key).toEqual(['AYou2.5%', 'KKmart Australia60.0%', 'TTarget Australia—']);
   });
 });

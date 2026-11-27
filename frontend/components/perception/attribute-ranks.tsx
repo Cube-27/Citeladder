@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
 
 import { IconButton } from '@/components/ui/button';
-import { Section, SectionHeader, SectionTitle, SectionToolbar } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { InfoHint } from '@/components/ui/info-hint';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/typography';
@@ -40,20 +40,22 @@ export function AttributeRanks({ categories }: Readonly<{ categories: readonly C
   const most = ranked[0]?.[order] ?? 1;
   return (
     <Section aria-label="Ranked attributes">
-      <SectionHeader>
+      <SectionHeader
+        actions={
+          <>
+            <SegmentedControl
+              value={order}
+              onChange={setOrder}
+              ariaLabel="Order attributes"
+              options={orders.map((value) => ({ value, label: ORDER_LABEL[value] }))}
+            />
+            <InfoHint label="About attributes">Labelled points per category</InfoHint>
+            <Text variant="caption">Points</Text>
+          </>
+        }
+      >
         <SectionTitle>Ranked attributes</SectionTitle>
       </SectionHeader>
-      <SectionToolbar>
-        <SegmentedControl
-          value={order}
-          onChange={setOrder}
-          ariaLabel="Order attributes"
-          options={orders.map((value) => ({ value, label: ORDER_LABEL[value] }))}
-        />
-        <InfoHint label="About attributes">Labelled points per category</InfoHint>
-        <span className="flex-1" />
-        <Text variant="caption">Points</Text>
-      </SectionToolbar>
       <RankBarList
         polarity={order}
         rows={shown.map((category) => ({

@@ -120,7 +120,6 @@ export function RunsTable({
       }
       columns={runsColumns(sort, onSort)}
       pageSize={pageSize}
-      rowCount={audits.length}
       state={
         audits.length === 0
           ? { kind: 'empty', headingLevel: 3, icon: Play, heading: emptyHeading }

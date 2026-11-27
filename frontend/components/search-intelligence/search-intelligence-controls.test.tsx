@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it } from 'vite-plus/test';
 
-import { FiltersMenu } from '@/components/ui/filters-menu';
+import { AllFiltersMenu } from '@/components/ui/filter-bar';
 import { chooseFilterOption, openFilterOptions } from '@/test/all-filters';
 
 import { keywordFilters } from './search-intelligence-controls';
@@ -13,7 +13,7 @@ function Filters() {
   const [intent, setIntent] = useState('');
   return (
     <>
-      <FiltersMenu filters={keywordFilters({ minVolume, setMinVolume, intent, setIntent })} />
+      <AllFiltersMenu filters={keywordFilters({ minVolume, setMinVolume, intent, setIntent })} />
       <output>{`${minVolume}|${intent}`}</output>
     </>
   );

@@ -6,7 +6,7 @@ import type { ComponentProps } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Topic } from '@citeladder/contracts';
 
-import { FiltersMenu } from '@/components/ui/filters-menu';
+import { AllFiltersMenu } from '@/components/ui/filter-bar';
 import { chooseFilterOption, openFilterOptions } from '@/test/all-filters';
 
 import { AddTopicDialog, ManageTopicsDialog, topicFilter } from './topic-controls';
@@ -35,13 +35,12 @@ const child = makeTopic({
 
 function renderFilter(props: Partial<Parameters<typeof topicFilter>[0]> = {}) {
   return render(
-    <FiltersMenu
+    <AllFiltersMenu
       filters={[
         topicFilter({
           topics: [child, parent],
           selectedTopicId: null,
           onSelect: () => {},
-          manage: { onAdd: () => {}, onManage: () => {} },
           ...props,
         }),
       ]}
@@ -99,31 +98,9 @@ describe('topicFilter', () => {
     const onSelect = vi.fn();
     renderFilter({ selectedTopicId: parent.id, onSelect });
 
-    expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
     await chooseFilterOption(user, 'Topic', 'All topics');
     expect(onSelect).toHaveBeenCalledWith(null);
-  });
-
-  it('ends with Add topic and Manage topics', async () => {
-    const user = userEvent.setup();
-    const onAdd = vi.fn();
-    const onManage = vi.fn();
-    renderFilter({ manage: { onAdd, onManage } });
-
-    await chooseFilterOption(user, 'Topic', 'Add topic', 'menuitem');
-    expect(onAdd).toHaveBeenCalledTimes(1);
-    await chooseFilterOption(user, 'Topic', 'Manage topics…', 'menuitem');
-    expect(onManage).toHaveBeenCalledTimes(1);
-  });
-
-  it('offers only topic selection to a reader who may not edit topics', async () => {
-    const user = userEvent.setup();
-    renderFilter({ manage: undefined });
-
-    await openFilterOptions(user, 'Topic');
-    expect(await screen.findByRole('menuitemradio', { name: 'All topics' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Add topic' })).toBeNull();
-    expect(screen.queryByRole('menuitem', { name: 'Manage topics…' })).toBeNull();
   });
 });
 

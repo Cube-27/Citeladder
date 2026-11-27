@@ -105,9 +105,7 @@ export function PagesTable({
       state={state}
       pager={pager}
       pageSize={pageSize}
-      rowCount={pages.length}
       busy={busy}
-      reserveRows
     >
       {pages.map((page) => {
         const title = pageDisplayTitle(page.title, page.display_url);

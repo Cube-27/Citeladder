@@ -1,7 +1,8 @@
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
+import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
 import { makeProject } from '@/test/fixtures/project';
@@ -118,7 +119,9 @@ describe('Shopping overview', () => {
     const shareHead = { name: /share of shelf/i };
     expect(within(ranking).getByRole('columnheader', shareHead)).toBeInTheDocument();
 
-    fireEvent.click(within(ranking).getByRole('radio', { name: 'Products' }));
+    const user = userEvent.setup();
+    await user.click(within(ranking).getByRole('button', { name: 'Rank: Brands' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Products' }));
     expect(within(ranking).queryByRole('columnheader', shareHead)).not.toBeInTheDocument();
     expect(rowCells(ranking, 'Rival Pacer')).toEqual([
       'Rival PacerRival · Competitor',

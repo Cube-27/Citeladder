@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import { emptyFilters } from '@/lib/prompts/filter';
 
-import { FilterBar } from '@/components/ui/filter-bar';
+import { HeadControls } from '@/components/ui/filter-bar';
 import { chooseFilterOption, openFilterRow } from '@/test/all-filters';
 
 import { TabsRoot } from '@/components/ui/tabs';
@@ -51,12 +51,12 @@ describe('PromptSearch', () => {
 });
 
 describe('promptFilterControls filters', () => {
-  it('offers Enabled and Branded as one choice each, marking a chosen one, and clears both at once', async () => {
+  it('puts every prompt filter behind All filters, counting the ones set', async () => {
     const user = userEvent.setup();
     function Harness() {
       const [filters, setFilters] = useState(emptyFilters);
       return (
-        <FilterBar
+        <HeadControls
           {...promptFilterControls({
             filters,
             onFiltersChange: setFilters,
@@ -66,21 +66,11 @@ describe('promptFilterControls filters', () => {
     }
 
     render(<Harness />);
+    expect(screen.queryByRole('button', { name: /^Branded:/ })).toBeNull();
     await chooseFilterOption(user, 'Branded', 'Branded only');
-    expect(await openFilterRow(user, 'Branded', 'Branded only')).toHaveAttribute('data-active');
-    expect(await openFilterRow(user, 'Enabled', 'All prompts')).toBeVisible();
-    await user.keyboard('{Escape}');
+    expect(await screen.findByRole('button', { name: 'All filters (1)' })).toBeVisible();
     await chooseFilterOption(user, 'Enabled', 'Disabled only');
-    expect(screen.getByRole('button', { name: 'Enabled: Disabled only' })).toHaveAttribute(
-      'data-active',
-    );
-
-    await user.click(screen.getByRole('button', { name: 'Clear' }));
-    expect(screen.getByRole('button', { name: 'Branded: All prompts' })).not.toHaveAttribute(
-      'data-active',
-    );
-    expect(screen.getByRole('button', { name: 'Enabled: All prompts' })).not.toHaveAttribute(
-      'data-active',
-    );
+    expect(await screen.findByRole('button', { name: 'All filters (2)' })).toBeVisible();
+    expect(await openFilterRow(user, 'Branded', 'Branded only')).toBeVisible();
   });
 });

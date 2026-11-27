@@ -54,7 +54,6 @@ export function ExecutionsTable({
         toolbar={!state || state.kind === 'loading' ? { filters: filters.definitions } : undefined}
         columns={COLUMNS}
         state={state ?? unmatched}
-        rowCount={pageRows.length}
         pageSize={pageCount > 1 ? pageSize : undefined}
         pager={{
           range: { from, to, total: filters.rows.length, noun: 'executions' },

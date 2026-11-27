@@ -13,16 +13,12 @@ export function DataTableBody({
   colSpan,
   state,
   pageSize,
-  rowCount,
-  reserve,
   children,
 }: Readonly<{
   cells: number;
   colSpan: number;
   state?: DataTableState | DataTableInlineEmpty;
   pageSize?: number;
-  rowCount?: number;
-  reserve: boolean;
   children?: ReactNode;
 }>) {
   if (state?.kind === 'loading') {
@@ -51,27 +47,7 @@ export function DataTableBody({
       </TableBody>
     );
   }
-  const rest =
-    reserve && pageSize !== undefined && rowCount !== undefined ? pageSize - rowCount : 0;
-  return (
-    <>
-      <TableBody>{children}</TableBody>
-      {rest > 0 ? (
-        <TableBody>
-          <tr // NOSONAR
-            aria-hidden="true"
-            data-table-spacer=""
-            style={{ '--data-table-rows': rest }}
-          >
-            <TableCell
-              colSpan={colSpan}
-              className="h-[calc(var(--data-table-rows)_*_var(--spacing-row))]"
-            />
-          </tr>
-        </TableBody>
-      ) : null}
-    </>
-  );
+  return <TableBody>{children}</TableBody>;
 }
 
 function LoadingBody({

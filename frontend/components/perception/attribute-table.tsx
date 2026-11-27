@@ -1,4 +1,4 @@
-import { Fragment, useState, type ReactNode } from 'react';
+import { Fragment, useState } from 'react';
 import type {
   PerceptionQuote,
   PerceptionResponse,
@@ -7,13 +7,11 @@ import type {
 import { ExpandToggle } from '@/components/perception/probe-sources';
 import { AnswerLink } from '@/components/runs/answer-link';
 import { Absence } from '@/components/ui/absence';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { useShownSpan } from '@/components/ui/data-table-fit';
 import { EngineCell } from '@/components/ui/engine-mark';
-import { SearchField } from '@/components/ui/search-field';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { SegmentedControl } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
 import { Text } from '@/components/ui/typography';
 import { Inline } from '@/components/ui/layout';
@@ -26,28 +24,24 @@ import {
   filterCategories,
   SMALL_SAMPLE,
   sortCategories,
+  type BreakdownNarrowing,
   type CategorySort,
-  type Polarity,
 } from '@/lib/visibility/perception';
 
 type Category = PerceptionResponse['entities'][number]['categories'][number];
-type Side = Polarity | 'all';
 
-const SIDES = [
-  { value: 'all', label: 'All' },
-  { value: 'negative', label: 'Negative' },
-  { value: 'positive', label: 'Positive' },
-] as const satisfies readonly { value: Side; label: string }[];
-
-export function useAttributeTable(categories: readonly Category[]): {
-  tools: ReactNode;
-  table: ReactNode;
-} {
-  const [query, setQuery] = useState('');
-  const [side, setSide] = useState<Side>('all');
+export function AttributeTable({
+  categories,
+  narrowing,
+  empty,
+}: Readonly<{
+  categories: readonly Category[];
+  narrowing: BreakdownNarrowing;
+  empty: DataTableState | undefined;
+}>) {
   const [sort, setSort] = useState<CategorySort | null>(null);
   const [open, setOpen] = useUrlState('attribute', optionalStringUrlCodec, { history: 'replace' });
-  const shown = filterCategories(categories, { query, polarity: side });
+  const shown = filterCategories(categories, narrowing);
   const rows = sort ? sortCategories(shown, sort) : shown;
   const sortable = (key: CategorySort['key']) => ({
     active: sort?.key === key,
@@ -71,49 +65,18 @@ export function useAttributeTable(categories: readonly Category[]): {
       sort: sortable('share'),
     },
   ];
-  const narrowed = Boolean(query.trim()) || side !== 'all';
-  return {
-    tools: (
-      <>
-        <SearchField
-          value={query}
-          onValueChange={setQuery}
-          aria-label="Search attributes"
-          placeholder="Search attributes"
-          frame="filter"
+  return (
+    <DataTable label="Attributes" columns={columns} state={rows.length ? undefined : empty}>
+      {rows.map((category) => (
+        <CategoryRow
+          key={category.category}
+          category={category}
+          open={open === category.category}
+          onToggle={() => setOpen(open === category.category ? null : category.category)}
         />
-        <SegmentedControl value={side} onChange={setSide} options={SIDES} ariaLabel="Side" />
-      </>
-    ),
-    table: (
-      <DataTable
-        label="Attributes"
-        columns={columns}
-        state={
-          rows.length || !narrowed
-            ? undefined
-            : {
-                kind: 'filtered',
-                headingLevel: 3,
-                heading: 'No matches',
-                onClear: () => {
-                  setQuery('');
-                  setSide('all');
-                },
-              }
-        }
-      >
-        {rows.map((category) => (
-          <CategoryRow
-            key={category.category}
-            category={category}
-            open={open === category.category}
-            onToggle={() => setOpen(open === category.category ? null : category.category)}
-          />
-        ))}
-      </DataTable>
-    ),
-  };
+      ))}
+    </DataTable>
+  );
 }
 
 function CategoryRow({

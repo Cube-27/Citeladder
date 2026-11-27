@@ -353,18 +353,22 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   it changes. One that scopes the page (period, page-wide filters) is in the
   page toolbar (`FilterBar`), the strip under the tabs on the paper, with no
   rule; it takes no search (`PageFrame` `filters` is `FilterBarProps`).
-  One that scopes one table or card is in that card's single head row
-  (`DataTable toolbar`): title at the start, then the view, search and
-  filters, and its actions (`actions` and `toolbar.actions` together) at
-  the end. A row wraps only when its content does not fit; a card never has
-  a row holding only an action or only a search. Filters are their own
-  chips while they fit; the bar measures its width and folds only the
-  overflow into Filters, with a set folded filter's value beside it, and
-  Clear joins the chips. Export is `ExportAction` (`secondary`) with the
-  scope it exports: `scope="page"` in the page header actions,
-  `scope="table"` in the table head. An action shows once, never in both
-  the header and a card or notice. A status or count line sits with the
-  block it describes.
+  Every card, table and graph has one head, `SectionHeader`: row 1 is the
+  title, and with no search its controls sit at the right end of that row;
+  with a search, row 2 holds the search at the start and the controls
+  right-aligned after it. Controls run filters, then All filters, then the
+  view, then a status or count, then actions (`HeadControls`; a
+  `DataTable` passes `toolbar` and `actions` through it). A measure or
+  dimension switch (metric, break down by, rank) is a dropdown
+  (`FilterChoice`) whose labels carry no "By"; a switch that narrows rows
+  (All/Negative/Positive, Rising/Falling) stays tabs. Filters are their own
+  chips while they fit; the bar folds only the overflow into All filters,
+  unless the owner pinned a table's filters there (`inFilters`: Prompts,
+  Site health Pages, whose view is one of them). Export is `ExportAction`
+  (`secondary`) with the scope it exports: `scope="page"` in the page
+  header actions, `scope="table"` in the table head. An action shows once,
+  never in both the header and a card or notice. A chart draws no legend
+  row when its head's filter names the series.
 - **Metric strip:** a bleed slot of a card (on the paper it brings its own
   card), cells divided by hairlines, padded 12 by the card inset, 12px label
   over the value. Never one card per figure;
@@ -379,7 +383,10 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   cell padded to the card inset so cell text lines up with the title and
   actions; rows 44, one line each, hairline dividers, `state-hover` fill; secondary text
   inline after the primary in `ink-2`; numbers right-aligned in tabular
-  figures; foot 40 with the count and an icon pager. The first column takes the spare width,
+  figures; foot 40 with the count and an icon pager. A paged table keeps ten rows of
+  body height (`TABLE_DEFAULT_PAGE_SIZE`) and draws its loading, empty and
+  error states inside that area, so paging and filtering never move the
+  card's bottom; the space is reserved below the rows only. The first column takes the spare width,
   the others hug their content (AR-4).
 - **Settings layout** (Settings, Agent context, Billing, Pricing): the
   route's column holds a stack of group cards 16 apart. Settings and Agent context list their sections in a sticky 192 rail (`section-rail`, the Prompt builder's step rail too)
@@ -451,12 +458,11 @@ holds the depth rules.
 - **Slots.** A card's description is muted trailing text on its title row,
   never a second row: when the row lacks room it is not shown, and one that
   only explains the card is deleted (owner, 2026-11-27).
-  `Section` > `SectionHeader` (title, description, `actions`) >
-  `SectionToolbar` (`FilterBar` or tabs) > `SectionContent` (at the inset;
+  `Section` > `SectionHeader` (title, description, `search`, `actions`) >
+  `SectionContent` (at the inset;
   `fill` takes the card's spare height) > `SectionBleed` > `SectionFooter`,
-  16 apart. The header lives inside the card (AR-24); `actions` holds buttons,
-  links and a status, never a filter or tabs, and a value-setting control goes
-  in the toolbar when there is one.
+  16 apart. The header lives inside the card (AR-24) and is the only head
+  (see Toolbar placement).
 - **Bleed.** `SectionBleed` is the one full-width slot: tables, `FigureStrip`,
   `SettingRows`, `LedgerList` and other row lists run edge to edge and pad
   `panel-inset` on their own edges, so row text lines up with the title.

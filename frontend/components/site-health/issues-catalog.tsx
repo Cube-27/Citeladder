@@ -145,7 +145,6 @@ export function IssuesCatalog({
           filters: catalogFilters(filters, rows, updateFilters),
         }}
         state={tableState(issuesQuery)}
-        rowCount={rows.length}
         pageSize={ISSUE_PAGE_LIMIT}
         pager={pager}
         busy={{ active: issuesQuery.isFetching, label: 'Updating issues' }}

@@ -61,7 +61,7 @@ describe('RouteLoadingScreen', () => {
     expect(container.querySelector('[data-page-band="filters"]')).toBeNull();
     expect(container.querySelector('[data-skeleton="summary"]')).toBeNull();
     const order = [
-      container.querySelector('[data-filter-bar]'),
+      container.querySelector('[data-section-search-row]'),
       container.querySelector('[data-loading-shape="table"]'),
     ];
     expect(order).not.toContain(null);

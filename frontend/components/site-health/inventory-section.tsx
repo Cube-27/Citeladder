@@ -5,10 +5,10 @@ import { PageDrawerHost } from '@/components/site-health/page-drawer';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { choiceFilter } from '@/components/ui/all-filters';
 import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
-import { SegmentedControl } from '@/components/ui/tabs';
 import { Absence } from '@/components/ui/absence';
 import { pageKindFilter } from '@/components/site-health/page-kind-select';
 import {
@@ -105,22 +105,18 @@ const DISCOVERED_COLUMNS: readonly DataTableColumn[] = [
   { key: 'source', label: 'Source', kind: 'text', width: 'name' },
 ];
 
-type ViewKey = 'monitored' | 'all' | 'errors' | 'with_issues' | 'not_indexable';
+type ViewKey = 'monitored' | 'all' | 'errors';
 
 const VIEWS: ReadonlyArray<{ key: ViewKey; label: string }> = [
   { key: 'monitored', label: 'Monitored' },
   { key: 'all', label: 'All discovered' },
   { key: 'errors', label: 'Errors' },
-  { key: 'with_issues', label: 'With issues' },
-  { key: 'not_indexable', label: 'Not indexable' },
 ];
 
 const VIEW_PARAMS: Readonly<Record<ViewKey, PagesParams>> = {
   monitored: { monitored: true },
   all: {},
   errors: { status: 'error_or_blocked' },
-  with_issues: { with_issues: true },
-  not_indexable: { indexable: false },
 };
 
 const VIEW_CODEC = stringUrlCodec<ViewKey>(
@@ -172,20 +168,23 @@ function usePagesToolbar({
   const pageFilters = usePagesFilters({
     workspaceId: crawl.workspace_id,
     crawlId: crawl.id,
-    indexableFixed: view === 'not_indexable',
   });
-  return {
-    view: (
-      <SegmentedControl
-        value={view}
-        onChange={(next) => setView(next)}
-        options={VIEWS.map((item) => ({
+  const shown = choiceFilter({
+    id: 'view',
+    label: 'Pages',
+    value: view,
+    defaultValue: 'monitored',
+    groups: [
+      {
+        options: VIEWS.map((item) => ({
           value: item.key,
           label: active && item.key === 'monitored' ? 'Audited' : item.label,
-        }))}
-        ariaLabel="Page inventory views"
-      />
-    ),
+        })),
+      },
+    ],
+    onChange: setView,
+  });
+  return {
     search: (
       <SubmittedSearch
         key={query}
@@ -196,9 +195,10 @@ function usePagesToolbar({
       />
     ),
     filters: [
+      shown,
       pageKindFilter({ value: pageKind, onChange: (next) => setPageKind(next) }),
       ...pageFilters,
-    ],
+    ].map((filter) => ({ ...filter, inFilters: true })),
     actions: exportPages ? (
       <Button
         variant="secondary"

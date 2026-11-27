@@ -1,5 +1,5 @@
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
-import { menuFieldKeys } from '@/components/ui/filter-options';
+import { menuFieldKeys } from '@/components/ui/filter-chip';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/tabs';
 import type { SearchCollection } from './search-intelligence-collection-state';

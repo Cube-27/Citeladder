@@ -275,7 +275,7 @@ describe('PromptLibrary never filled', () => {
     );
     expect(screen.queryByRole('textbox', { name: 'Search prompts' })).toBeNull();
     expect(screen.queryByRole('tab', { name: /Active/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
   });
 });
 
@@ -299,13 +299,13 @@ describe('PromptLibrary failed read', () => {
 
     expect(await screen.findByText("Couldn't load the prompts")).toBeVisible();
     await waitFor(() => expect(screen.getAllByRole('button', { name: /Retry/ })).toHaveLength(1));
-    expect(screen.queryByText(/topics/i)).toBeNull();
+    expect(screen.queryByText("Couldn't load topics")).toBeNull();
   });
 });
 
 describe('PromptLibrary by role', () => {
   it.each([
-    ['member', ['Add prompts', 'Launch run'], ['', 'Prompt', 'Topic', 'Actions']],
+    ['member', ['Add topics', 'Add prompts', 'Launch run'], ['', 'Prompt', 'Topic', 'Actions']],
     ['viewer', [], ['Prompt', 'Topic']],
   ] as const)(
     'offers a %s exactly the controls its role may use',
@@ -327,7 +327,7 @@ describe('PromptLibrary by role', () => {
           .getAllByRole('columnheader')
           .map((head) => head.textContent),
       ).toEqual(headers);
-      const offered = ['Add prompts', 'Launch run'].filter((name) =>
+      const offered = ['Add topics', 'Add prompts', 'Launch run'].filter((name) =>
         screen.queryByRole('button', { name: new RegExp(name) }),
       );
       expect(offered).toEqual(pageActions);
@@ -541,7 +541,7 @@ describe('PromptLibrary topic filter', () => {
 
     const table = await screen.findByRole('table', { name: 'Prompts' });
     expect(within(table).getByText('Best road shoes?')).toBeVisible();
-    await screen.findByRole('button', { name: 'Topic: All topics' });
+    await screen.findByRole('button', { name: 'All filters' });
     await chooseFilterOption(user, 'Topic', /^Trail/);
 
     await waitFor(() => expect(within(table).getByText('Best trail shoes?')).toBeVisible());

@@ -1,6 +1,5 @@
-import { TableToolbar } from '@/components/ui/filter-bar';
 import { SkeletonFrame, TableBlocks } from '@/components/ui/skeleton-block';
-import { Section, SectionBleed, SectionToolbar } from '@/components/ui/section';
+import { Section, SectionBleed, SectionHeader } from '@/components/ui/section';
 
 export function ToolbarTableLoading({
   label,
@@ -11,12 +10,10 @@ export function ToolbarTableLoading({
   return (
     <SkeletonFrame label={label} variant="table" className="grid min-w-0">
       <Section>
-        <SectionToolbar>
-          <TableToolbar
-            view={view ? <span className="h-control-md block" /> : undefined}
-            search={<span />}
-          />
-        </SectionToolbar>
+        <SectionHeader
+          search={<span className="h-control-md block" />}
+          actions={view ? <span className="h-control-md block" /> : undefined}
+        />
         <SectionBleed data-loading-shape="table">
           <TableBlocks columns={columns} rows={rows} />
         </SectionBleed>

@@ -10,7 +10,7 @@ import { Avatar } from './avatar';
 import { Button } from './button';
 import { Delta } from './delta';
 import { choiceFilter, rangeFilter, singleFilter, type FilterIcon } from './all-filters';
-import { FilterBar, TableToolbar } from './filter-bar';
+import { FilterBar } from './filter-bar';
 import { DataTable } from './data-table';
 import { Meter } from './meter';
 import { Pager, pageNumberControls } from './pager';
@@ -174,7 +174,7 @@ describe('DataTable', () => {
 
   it('draws only the rows a short page has and gives way to one empty state, head included', () => {
     const { container, rerender } = render(
-      <DataTable title="Runs" columns={columns} pageSize={5} rowCount={2}>
+      <DataTable title="Runs" columns={columns} pageSize={5}>
         <TableRow>
           <TableCell>Alpha</TableCell>
           <TableCell numeric>1</TableCell>
@@ -321,44 +321,51 @@ describe('ArrowLink', () => {
   });
 });
 
-describe('TableToolbar', () => {
-  it('lays every row out in one order: view, search, All filters, count, action', () => {
+describe('Table head', () => {
+  it('puts the search first, then filters, view, count and action', () => {
     render(
-      <TableToolbar
-        actions={<Button>Export</Button>}
-        status="12 pages"
-        filters={[
-          choiceFilter({
-            id: 'kind',
-            label: 'Page kind',
-            value: 'faq',
-            defaultValue: 'all',
-            groups: [
-              {
-                options: [
-                  { value: 'all', label: 'All page kinds' },
-                  { value: 'faq', label: 'FAQ' },
-                ],
-              },
-            ],
-            onChange: () => undefined,
-          }),
-        ]}
-        search={<SearchField value="" onValueChange={() => undefined} aria-label="Search pages" />}
-        view={
-          <SegmentedControl
-            ariaLabel="Pages shown"
-            value="all"
-            onChange={() => undefined}
-            options={[{ value: 'all', label: 'All' }]}
-          />
-        }
+      <DataTable
+        title="Pages"
+        columns={[{ key: 'url', label: 'URL' }]}
+        toolbar={{
+          actions: <Button>Export</Button>,
+          status: '12 pages',
+          filters: [
+            choiceFilter({
+              id: 'kind',
+              label: 'Page kind',
+              value: 'faq',
+              defaultValue: 'all',
+              groups: [
+                {
+                  options: [
+                    { value: 'all', label: 'All page kinds' },
+                    { value: 'faq', label: 'FAQ' },
+                  ],
+                },
+              ],
+              onChange: () => undefined,
+            }),
+          ],
+          search: (
+            <SearchField value="" onValueChange={() => undefined} aria-label="Search pages" />
+          ),
+          view: (
+            <SegmentedControl
+              ariaLabel="Pages shown"
+              value="all"
+              onChange={() => undefined}
+              options={[{ value: 'all', label: 'All' }]}
+            />
+          ),
+        }}
       />,
     );
     const order = [
-      screen.getByRole('radiogroup', { name: 'Pages shown' }),
+      screen.getByRole('heading', { name: 'Pages' }),
       screen.getByRole('searchbox', { name: 'Search pages' }),
       screen.getByRole('button', { name: 'Page kind: FAQ' }),
+      screen.getByRole('radiogroup', { name: 'Pages shown' }),
       screen.getByText('12 pages'),
       screen.getByRole('button', { name: 'Export' }),
     ];
@@ -367,9 +374,9 @@ describe('TableToolbar', () => {
       .map((node, index) =>
         Boolean(order[index]!.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING),
       );
-    expect(follows).toEqual([true, true, true, true]);
+    expect(follows).toEqual([true, true, true, true, true]);
   });
-  it('keeps every filter inline while they fit and folds the overflow into Filters with its set values beside it', () => {
+  it('keeps every filter inline while they fit and folds the overflow into All filters with its set values beside it', () => {
     const filter = (id: string, value = 'all', icon?: FilterIcon) =>
       choiceFilter({
         id,
@@ -397,7 +404,7 @@ describe('TableToolbar', () => {
     const { unmount } = render(row);
     for (const name of ['Period: All', 'Engines: All', 'Market: All', 'Topic: One', 'Kind: One'])
       expect(screen.getByRole('button', { name })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
     unmount();
 
     const restore = measuredRow(600);
@@ -405,7 +412,7 @@ describe('TableToolbar', () => {
     restore();
     expect(screen.getByRole('button', { name: 'Period: All' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Engines: All' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Filters (2)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All filters (2)' })).toBeInTheDocument();
     for (const name of ['Remove Topic filter', 'Remove Kind filter'])
       expect(screen.getByRole('button', { name })).toBeInTheDocument();
   });

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { choiceFilter } from './all-filters';
-import { FiltersMenu } from './filters-menu';
+import { AllFiltersMenu, keptFilterCount } from './filter-bar';
 
 const PROMPTS = Array.from({ length: 12 }, (_, index) => ({
   value: `p${index + 1}`,
@@ -16,7 +16,7 @@ function Page() {
   const [prompt, setPrompt] = useState('every');
   return (
     <>
-      <FiltersMenu
+      <AllFiltersMenu
         filters={[
           choiceFilter({
             id: 'surface',
@@ -50,7 +50,7 @@ function Page() {
   );
 }
 
-describe('FiltersMenu', () => {
+describe('AllFiltersMenu', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -58,7 +58,7 @@ describe('FiltersMenu', () => {
   it('lists each filter with its value, checks the selected option and counts what is set', async () => {
     const user = userEvent.setup();
     render(<Page />);
-    await user.click(screen.getByRole('button', { name: 'Filters' }));
+    await user.click(screen.getByRole('button', { name: 'All filters' }));
     const [surface, prompt, ...rest] = screen.getAllByRole('menuitem');
     expect(surface).toHaveAccessibleName('Surface: All surfaces');
     expect(prompt).toHaveAccessibleName('Prompt: Every prompt');
@@ -69,8 +69,8 @@ describe('FiltersMenu', () => {
     await user.keyboard('{ArrowRight}{ArrowDown}{ArrowDown}{Enter}');
 
     expect(screen.getByTestId('selection')).toHaveTextContent('gemini every');
-    expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Filters (1)' }));
+    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'All filters (1)' }));
     const set = screen.getByRole('menuitem', { name: 'Surface: Gemini' });
     set.focus();
     await user.keyboard('{ArrowRight}');
@@ -82,7 +82,7 @@ describe('FiltersMenu', () => {
   it('searches a long list and picks from it with the keyboard alone', async () => {
     const user = userEvent.setup();
     render(<Page />);
-    screen.getByRole('button', { name: 'Filters' }).focus();
+    screen.getByRole('button', { name: 'All filters' }).focus();
     await user.keyboard('{Enter}');
     await user.keyboard('{ArrowDown}{ArrowDown}{ArrowRight}');
 
@@ -109,7 +109,7 @@ describe('FiltersMenu', () => {
       const [folder, setFolder] = useState('');
       return (
         <>
-          <FiltersMenu
+          <AllFiltersMenu
             filters={[
               {
                 kind: 'custom',
@@ -136,7 +136,7 @@ describe('FiltersMenu', () => {
     }
     const user = userEvent.setup();
     render(<FolderPage />);
-    screen.getByRole('button', { name: 'Filters' }).focus();
+    screen.getByRole('button', { name: 'All filters' }).focus();
     await user.keyboard('{Enter}{ArrowDown}{ArrowRight}');
 
     expect(screen.getByRole('textbox', { name: 'Folder' })).toHaveFocus();
@@ -153,7 +153,7 @@ describe('FiltersMenu', () => {
     }));
     const user = userEvent.setup();
     render(<Page />);
-    await user.click(screen.getByRole('button', { name: 'Filters' }));
+    await user.click(screen.getByRole('button', { name: 'All filters' }));
     await user.click(screen.getByRole('menuitem', { name: 'Surface: All surfaces' }));
     expect(screen.getAllByRole('menu')).toHaveLength(1);
     expect(screen.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
@@ -162,7 +162,7 @@ describe('FiltersMenu', () => {
       'Gemini',
     ]);
 
-    await user.click(screen.getByRole('menuitem', { name: 'Filters' }));
+    await user.click(screen.getByRole('menuitem', { name: 'All filters' }));
     expect(screen.getByRole('menuitem', { name: 'Prompt: Every prompt' })).toBeVisible();
     await user.click(screen.getByRole('menuitem', { name: 'Surface: All surfaces' }));
     await user.click(screen.getByRole('menuitemradio', { name: 'ChatGPT' }));
@@ -172,10 +172,43 @@ describe('FiltersMenu', () => {
   it('draws nothing for a page with no filters', () => {
     render(
       <>
-        <FiltersMenu filters={[]} />
+        <AllFiltersMenu filters={[]} />
         <button type="button">Other</button>
       </>,
     );
     expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual(['Other']);
+  });
+});
+
+const base = { gap: 8, trailing: 0, menu: 90, menuAlways: false, values: [] };
+
+describe('keptFilterCount', () => {
+  it.each([
+    ['keeps every chip while they fit', { widths: [100, 100, 100], available: 316 }, 3],
+    ['folds the overflow and reserves the menu', { widths: [100, 100, 100], available: 300 }, 1],
+    ['folds every chip when only the menu fits', { widths: [100, 100], available: 120 }, 0],
+    ['keeps chips that have not been measured', { widths: [0, 0, 0], available: 0 }, 3],
+    [
+      'keeps chips in a row with no width yet',
+      { widths: [0, 0], available: 0, menuAlways: true },
+      2,
+    ],
+  ])('%s', (_name, input, kept) => {
+    expect(keptFilterCount({ ...base, ...input })).toBe(kept);
+  });
+
+  it('charges a folded filter its value chip only while it stays folded', () => {
+    const fit = { ...base, widths: [100, 100, 100], values: [0, 0, 100], trailing: 60 };
+    expect(keptFilterCount({ ...fit, available: 384 })).toBe(3);
+    expect(keptFilterCount({ ...fit, available: 383 })).toBe(1);
+  });
+
+  it('reserves an always-present menu and the trailing chips before keeping a chip', () => {
+    const widths = [100, 100];
+    expect(keptFilterCount({ ...base, widths, available: 208 })).toBe(2);
+    expect(keptFilterCount({ ...base, widths, available: 208, menuAlways: true })).toBe(1);
+    expect(
+      keptFilterCount({ ...base, widths, available: 306, menuAlways: true, trailing: 60 }),
+    ).toBe(1);
   });
 });
