@@ -79,6 +79,15 @@
   --ramp-neutral-96_7: oklch(96.7% 0 0);
   --ramp-neutral-99_1: oklch(99.11% 0 0);
   --ramp-neutral-99_1-a15: oklch(99.11% 0 0 / 15%);
+  --ramp-neutral-18_2: #121212;
+  --ramp-neutral-21_3: #191919;
+  --ramp-neutral-26_4: #252525;
+  --ramp-neutral-32_9: #353535;
+  --ramp-neutral-52_1: #696969;
+  --ramp-neutral-64_0: #8c8c8c;
+  --ramp-neutral-69_9: #9e9e9e;
+  --ramp-neutral-69_9-a50: rgb(158 158 158 / 50%);
+  --ramp-neutral-95_2: #efefef;
   --ramp-zinc-12: oklch(12% 0.005 285.823);
   --ramp-zinc-15: oklch(15% 0.005 285.823);
   --ramp-zinc-21: oklch(21.03% 0.0059 285.89);

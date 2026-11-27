@@ -101,7 +101,15 @@ token in the `:root` block at the top of that block's sheet.
 ## Tokens
 
 Values live in [`tokens-ramps.css`](../frontend/apps/app/src/tokens-ramps.css) and [`tokens-roles.css`](../frontend/apps/app/src/tokens-roles.css): HeroUI's
-zinc neutrals and shadows in both themes (AR-1).
+zinc neutrals and shadows in both themes (AR-1). The app's dark theme is
+neutral grey, matched to the Claude Console's dark (owner, 2026-11-27):
+window and sidebar `ground` #121212, the content `page` #191919, cards,
+overlays and `well` fields #1e1e1e with `rule` #252525 as the hairline and
+card edge, hover fills #252525, the current nav row #353535, text #efefef and
+secondary text #9e9e9e, placeholders #8c8c8c and the scroll thumb #696969.
+Secondary text and placeholders sit one step lighter than the reference
+(#9c9c9c, #787878) so they pass AA on every fill. Our orange, accent and status
+hues stay. The website keeps its own dark.
 
 | Token                    | Use                                                      |
 | ------------------------ | -------------------------------------------------------- |

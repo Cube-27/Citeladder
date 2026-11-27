@@ -237,7 +237,15 @@ for (const viewport of [
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       viewport.width,
     );
-    await page.getByRole('button', { name: 'New analysis' }).click();
+    const start = page.getByRole('button', { name: 'New analysis' });
+    const more = page.getByRole('button', { name: 'More' });
+    await expect(start.or(more).first()).toBeVisible();
+    if (await start.isVisible()) {
+      await start.click();
+    } else {
+      await more.click();
+      await page.getByRole('menuitem', { name: 'New analysis' }).click();
+    }
     await expect(page.getByRole('combobox', { name: 'Market' })).toHaveText('Australia');
     expect(writes).toEqual([]);
   });

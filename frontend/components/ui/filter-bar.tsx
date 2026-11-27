@@ -78,7 +78,9 @@ function Controls({
   const windowLabel = dataWindow(inlineOrder(filters));
   return (
     <>
-      {search ? <div className="rail:max-w-64 min-w-0 grow basis-50">{search}</div> : null}
+      {search ? (
+        <div className="rail:max-w-64 phone:basis-full min-w-0 grow basis-50">{search}</div>
+      ) : null}
       {filters.length > 0 ? <ChipGroup filters={filters} /> : null}
       {windowLabel || status !== undefined ? (
         <StripMeta windowLabel={windowLabel} status={status} afterView={afterView} />
@@ -104,7 +106,7 @@ function ChipGroup({ filters }: Readonly<{ filters: readonly FilterDefinition[] 
     <div
       ref={ref}
       data-filter-chips=""
-      className="flex min-w-min grow basis-0 flex-wrap items-center gap-2"
+      className="phone:basis-full flex min-w-0 grow basis-0 flex-wrap items-center gap-2"
     >
       {chips.map((filter) => (
         <div key={filter.id} data-filter-slot={filter.id} className="flex min-w-0 shrink-0">

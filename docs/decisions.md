@@ -431,6 +431,10 @@ how to add or change an entry.
 - **AR-32 One page spacing** (2026-11-27): page side padding, the gaps between
   sections and cards and the card inset are one 16 role on every page except
   the narrow ones.
+- **AR-33 Claude Console dark** (2026-11-27): the app's dark theme is the
+  Claude Console's neutral grey (design.md "Tokens" holds the values); our
+  orange, accent and status hues stay, and a reference grey that fails AA is
+  lightened by the smallest step that passes. The website's dark is unchanged.
 - **AR-28 One term, "prompts"** (technically buyer queries), not "answers",
   for what a product or brand is measured in (2026-11-27). Product detail and
   the Products list follow it; other screens still say "answers".

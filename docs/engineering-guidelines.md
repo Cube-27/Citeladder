@@ -180,7 +180,10 @@ design rounds; the four-icon-chip cap in `filter-bar.tsx` was the latest
 form, and its tests pinned the cap instead of the fit.
 **Check:** A constant capping how many controls show inline. A measured fit
 treats an unmeasured row (width 0: jsdom, hidden, first paint) as "everything
-fits", or every test folds everything; tests that need a fold set widths.
+fits", or every test folds everything; tests that need a fold set widths. A
+measured box whose own contents set its width (a `grow basis-0` flex item
+sharing a line, or one with no minimum width) folds itself and stays folded:
+the fit measures a box that wraps to a full line when its contents need one.
 
 ### Empty, zero and "none" only after a successful read
 
