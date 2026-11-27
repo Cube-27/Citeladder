@@ -107,6 +107,13 @@ describe('ContentMarkdown', () => {
     expect(screen.getByRole('heading', { name: 'Six', level: 6 })).toBeVisible();
   });
 
+  it('keeps footnote references described by their hidden label', () => {
+    render(<ContentMarkdown markdown={'Claim[^1]\n\n[^1]: Source'} />);
+
+    expect(screen.getByRole('link', { name: '1' })).toHaveAccessibleDescription('Footnotes');
+    expect(screen.getByRole('heading', { name: 'Footnotes', level: 3 })).toHaveClass('sr-only');
+  });
+
   it('preserves leading indentation in the original Markdown', () => {
     const { container } = render(<ContentMarkdown markdown={'    indented code\n'} />);
 

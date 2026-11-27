@@ -13,7 +13,7 @@ import { Icon } from '@/components/ui/icon';
 import type { PageIssue } from '@citeladder/contracts';
 import { dimensionLabel, scoreRoleLabels, severityRank } from '@/lib/site-health/issues';
 import { StateBlock } from '@/components/ui/state-block';
-import { ChevronDown } from '@/lib/icons';
+import { ChevronDown, ChevronUp } from '@/lib/icons';
 import { TitledSection } from '@/components/ui/section';
 import { Text } from '@/components/ui/typography';
 
@@ -61,7 +61,7 @@ function IssueList({
       </DisclosureList>
       {issues.length > PREVIEW_COUNT ? (
         <Button variant="quiet" box="fit" onClick={() => setExpanded(!expanded)}>
-          <Icon icon={ChevronDown} flip={expanded} />
+          <Icon icon={expanded ? ChevronUp : ChevronDown} />
           {expanded ? 'Show fewer issues' : `View all ${issues.length} issues`}
         </Button>
       ) : null}

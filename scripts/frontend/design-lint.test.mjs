@@ -73,6 +73,7 @@ test('the canary trips every design rule and passing.tsx trips none under the sh
     'canary.tsx:30 design/static-class',
     'canary.tsx:31 design/arbitrary-breakpoint',
     'canary.tsx:4 design/colour-literal',
+    'canary.tsx:44 design/plain-element',
     'canary.tsx:9 shadcn/no-arbitrary-values',
     'canary.tsx:9 shadcn/no-restyle',
   ]);

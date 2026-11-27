@@ -35,11 +35,18 @@ export type LinkChip = (href: string, children: ReactNode) => ReactNode | null;
 
 const LinkChipContext = createContext<LinkChip | null>(null);
 
+type FootnoteMarks = { 'data-footnote-ref'?: boolean; 'data-footnote-backref'?: string };
+
 function MarkdownLink({
   children,
   href,
   title,
-}: Readonly<ComponentPropsWithoutRef<'a'> & ExtraProps>) {
+  id,
+  'aria-describedby': describedBy,
+  'aria-label': label,
+  'data-footnote-ref': footnoteRef,
+  'data-footnote-backref': footnoteBackref,
+}: Readonly<ComponentPropsWithoutRef<'a'> & ExtraProps & FootnoteMarks>) {
   const guard = useContext(LeaveGuardContext);
   const chip = useContext(LinkChipContext)?.(href ?? '', children) ?? null;
   const confirm =
@@ -54,6 +61,11 @@ function MarkdownLink({
     <a
       href={href}
       title={title}
+      id={id}
+      aria-describedby={describedBy}
+      aria-label={label}
+      data-footnote-ref={footnoteRef}
+      data-footnote-backref={footnoteBackref}
       target="_blank"
       rel="noopener noreferrer"
       onClick={confirm ? intercept : undefined}
@@ -97,13 +109,27 @@ function tableName(node: HastNode | undefined): string {
   return `Table: ${shown}${heads.length > 3 ? ', …' : ''}`;
 }
 
+function demoted(Tag: 'h2' | 'h3' | 'h4' | 'h5' | 'h6') {
+  return function DemotedHeading({
+    id,
+    className,
+    children,
+  }: Readonly<ComponentPropsWithoutRef<'h1'>>) {
+    return (
+      <Tag id={id} className={className === 'sr-only' ? 'sr-only' : undefined}>
+        {children}
+      </Tag>
+    );
+  };
+}
+
 const MARKDOWN_COMPONENTS: Components = {
-  h1: ({ children }) => <h2>{children}</h2>,
-  h2: ({ children }) => <h3>{children}</h3>,
-  h3: ({ children }) => <h4>{children}</h4>,
-  h4: ({ children }) => <h5>{children}</h5>,
-  h5: ({ children }) => <h6>{children}</h6>,
-  h6: ({ children }) => <h6>{children}</h6>,
+  h1: demoted('h2'),
+  h2: demoted('h3'),
+  h3: demoted('h4'),
+  h4: demoted('h5'),
+  h5: demoted('h6'),
+  h6: demoted('h6'),
   img: () => null,
   table: ({ node, children }) => <MarkdownTable name={tableName(node)}>{children}</MarkdownTable>,
   th: ({ style, children }) => (

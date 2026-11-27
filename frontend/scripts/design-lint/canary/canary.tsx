@@ -29,6 +29,7 @@ export function Canary({ tone }: Readonly<{ tone: string }>) {
       <Button className="mt-7 w-78">ui steps</Button>
       <i className={`flex ${LAYOUT.row}`}>template</i>
       <div className="grid @[517px]:grid-flow-col">breakpoint</div>
+      <Frame>forwarded</Frame>
     </Stack>
   );
 }
@@ -37,4 +38,8 @@ const LAYOUT = { row: 'flex', column: 'grid' } as const;
 
 function Box(props: Readonly<{ className: string; children: string }>) {
   return <Stack {...props} />;
+}
+
+function Frame(props: Readonly<{ children: string }>) {
+  return <div {...props} />;
 }
