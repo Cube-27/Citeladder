@@ -256,6 +256,7 @@ describe('StepChart', () => {
     await user.tab();
     await user.keyboard('{ArrowLeft}');
     expect(screen.getByText('1 Jun 2026', { selector: 'p' })).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent('1 Jun 2026: Visibility trend 40');
     await user.keyboard('{Escape}');
     expect(screen.queryByText('1 Jun 2026', { selector: 'p' })).toBeNull();
   });

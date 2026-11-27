@@ -227,7 +227,7 @@ function AreaPlot({
       ref={plotRef}
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="group"
-      aria-label={`${label}. Focus the chart and use the arrow keys to read each point.`}
+      aria-label={label}
       className={cn('w-full', CHART_HEIGHT_CLASS[heightRole])}
     >
       <RechartsAreaChart

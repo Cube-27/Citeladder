@@ -28,6 +28,8 @@ describe('CsvImportDialog file flow', () => {
     const user = userEvent.setup();
     const onImport = vi.fn();
     renderDialog(onImport);
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('');
 
     await user.upload(
       screen.getByLabelText('CSV file'),
@@ -38,6 +40,8 @@ describe('CsvImportDialog file flow', () => {
 
     expect(await screen.findByText('How do I choose a bike?')).toBeInTheDocument();
     expect(screen.getByText('Prompt is required.')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBe(status);
+    expect(status).toHaveTextContent('Parsed 2 rows from prompts.csv. 1 skipped');
     await user.click(screen.getByRole('button', { name: 'Import 1 prompt' }));
     expect(onImport).toHaveBeenCalledWith([
       expect.objectContaining({ text: 'How do I choose a bike?', topic: 'Bikes' }),

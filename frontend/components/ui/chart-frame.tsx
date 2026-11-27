@@ -12,7 +12,7 @@ import { Section, useOnPage } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
 import { InfoHint } from '@/components/ui/info-hint';
 
-import { ABSENCE_MARK, type Formatted, isAbsent } from '@/lib/format';
+import { ABSENCE_MARK, availabilityLabel, type Formatted, isAbsent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const FRAME_HEIGHT = {
@@ -116,6 +116,23 @@ export function chartTipLeft(x: number, frameWidth: number) {
   const left = right + TIP_WIDTH > frameWidth - TIP_INSET ? x - TIP_GAP - TIP_WIDTH : right;
   const max = Math.max(TIP_INSET, frameWidth - TIP_INSET - TIP_WIDTH);
   return Math.round(Math.min(max, Math.max(TIP_INSET, left)));
+}
+
+function spoken(value: Formatted | undefined) {
+  if (value === undefined) return '';
+  return isAbsent(value) ? availabilityLabel(value.absent) : value;
+}
+
+export function ChartReadout({
+  tip,
+}: Readonly<{ tip: { title: string; rows: readonly KeyEntry[] } | null }>) {
+  return (
+    <output className="sr-only">
+      {tip
+        ? `${tip.title}: ${tip.rows.map((row) => `${row.name} ${spoken(row.value)}`.trim()).join(', ')}`
+        : ''}
+    </output>
+  );
 }
 
 export function ChartTipSheet({
