@@ -101,8 +101,9 @@ token in the `:root` block at the top of that block's sheet.
 ## Tokens
 
 Values live in [`tokens-ramps.css`](../frontend/apps/app/src/tokens-ramps.css) and [`tokens-roles.css`](../frontend/apps/app/src/tokens-roles.css): HeroUI's
-zinc neutrals and shadows in both themes (AR-1). The app's dark theme is
-neutral grey, matched to the Claude Console's dark (owner, 2026-11-27):
+zinc neutrals and shadows in the app's light theme and on the website (AR-1).
+The app's dark theme is neutral grey, matched to the Claude Console's dark
+(AR-33, owner, 2026-11-27):
 window and sidebar `ground` #121212, the content `page` #191919, cards,
 overlays and `well` fields #1e1e1e with `rule` #252525 as the hairline and
 card edge, hover fills #252525, the current nav row #353535, text #efefef and

@@ -337,7 +337,7 @@ how to add or change an entry.
 
 [Design](design.md) holds the values; these are the rules behind them.
 
-- **AR-1 Look:** HeroUI's tokens, surfaces and controls (neutrals, shadows,
+- **AR-1 Look:** HeroUI's tokens, surfaces and controls (light neutrals, dark per AR-33, shadows,
   control sizes, focus), keeping CiteLadder's corner radii; Google Sans as the
   sans face and an inset content panel (2026-11-26). The HeroUI move changes
   layout and styling only, never behaviour (2026-11-26). **AR-2 Text:** body
