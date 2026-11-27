@@ -1,99 +1,72 @@
-import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
-
 import { AuditSchedules } from '@/components/runs/audit-schedules';
 import {
   FirstRunAction,
   LaunchAuditButton,
   useLaunchReadiness,
 } from '@/components/runs/launch-audit-button';
-import { RunsTable } from '@/components/runs/runs-table';
+import { RunsTable, useRunsPage, type RunsTablePage } from '@/components/runs/runs-table';
 import { ReportPage } from '@/components/templates/report-page';
 import { Spinner } from '@/components/ui/spinner';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { Play } from '@/lib/icons';
-import { runsQueries } from '@/lib/api/runs';
-import type { Audit } from '@citeladder/contracts';
+import type { Audit, AuditStatus } from '@citeladder/contracts';
+import { auditStatusSchema } from '@citeladder/contracts/audits';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
-import { AUDIT_STATES, pollAudits } from '@/lib/runs/status';
+import { ACTIVE_AUDIT_STATUSES, statusCount } from '@/lib/runs/status';
 import { readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 type StatusFilter = 'all' | 'completed' | 'partial' | 'running' | 'failed';
 
-const STATUS_FILTERS: {
-  id: StatusFilter;
-  label: string;
-  match: (audit: Audit) => boolean;
-}[] = [
-  { id: 'all', label: 'All', match: () => true },
-  {
-    id: 'completed',
-    label: 'Completed',
-    match: (audit) => audit.status === 'completed',
-  },
-  {
-    id: 'partial',
-    label: 'Partial',
-    match: (audit) => audit.status === 'partially_completed',
-  },
-  {
-    id: 'running',
-    label: 'Running',
-    match: (audit) => AUDIT_STATES[audit.status].active,
-  },
-  {
-    id: 'failed',
-    label: 'Failed or cancelled',
-    match: (audit) => audit.status === 'failed' || audit.status === 'cancelled',
-  },
+const STATUS_FILTER_IDS: readonly StatusFilter[] = [
+  'all',
+  'completed',
+  'partial',
+  'running',
+  'failed',
 ];
 
-const statusCodec = stringUrlCodec<StatusFilter>(
-  STATUS_FILTERS.map((filter) => filter.id),
-  'all',
-);
+const STATUS_FILTERS = {
+  all: { label: 'All', statuses: auditStatusSchema.options },
+  completed: { label: 'Completed', statuses: ['completed'] },
+  partial: { label: 'Partial', statuses: ['partially_completed'] },
+  running: { label: 'Running', statuses: ACTIVE_AUDIT_STATUSES },
+  failed: { label: 'Failed or cancelled', statuses: ['failed', 'cancelled'] },
+} as const satisfies Record<StatusFilter, { label: string; statuses: readonly AuditStatus[] }>;
+
+const statusCodec = stringUrlCodec<StatusFilter>(STATUS_FILTER_IDS, 'all');
 
 export function RunsScreen() {
-  const { workspaceId, projectId, project } = useProjectScope();
+  const { projectId, project } = useProjectScope();
   const [statusFilter, setStatusFilter] = useUrlState('status', statusCodec, {
     clearKeys: ['page'],
   });
 
-  const runsQuery = useQuery({
-    ...runsQueries.list({ workspaceId, projectId }),
-    refetchInterval: (query) => pollAudits(query.state.data?.map((audit) => audit.status)),
-  });
-
-  const audits = useMemo(() => runsQuery.data ?? [], [runsQuery.data]);
-  const filteredAudits = useMemo(
-    () =>
-      audits.filter(
-        STATUS_FILTERS.find((filter) => filter.id === statusFilter)?.match ?? (() => true),
-      ),
-    [audits, statusFilter],
-  );
-  const anyActive = audits.some((audit) => AUDIT_STATES[audit.status].active);
+  const filter = STATUS_FILTERS[statusFilter];
+  const { query: runsQuery, table } = useRunsPage(statusFilter === 'all' ? [] : filter.statuses);
+  const counts = runsQuery.data?.status_counts;
+  const runCount = counts ? statusCount(counts, auditStatusSchema.options) : 0;
+  const anyActive = counts ? statusCount(counts, ACTIVE_AUDIT_STATUSES) > 0 : false;
 
   const canRun = useWorkspaceCapability('run');
   const readiness = useLaunchReadiness(projectId);
-  const empty = runsQuery.isSuccess && audits.length === 0;
+  const empty = runsQuery.isSuccess && runCount === 0;
   const actions = empty ? undefined : (
     <MastheadPrimary>
       <LaunchAuditButton />
     </MastheadPrimary>
   );
   const tabs =
-    audits.length === 0 ? undefined : (
+    counts === undefined || runCount === 0 ? undefined : (
       <TabRow
         ariaLabel="Filter by status"
-        items={STATUS_FILTERS.map((filter) => ({
-          value: filter.id,
-          label: filter.label,
-          count: audits.filter(filter.match).length,
+        items={STATUS_FILTER_IDS.map((id) => ({
+          value: id,
+          label: STATUS_FILTERS[id].label,
+          count: statusCount(counts, STATUS_FILTERS[id].statuses),
         }))}
       />
     );
@@ -112,9 +85,10 @@ export function RunsScreen() {
         <TabPanel value={statusFilter}>
           <RunsContent
             read={runsQuery}
-            audits={audits}
-            filteredAudits={filteredAudits}
-            statusFilter={statusFilter}
+            runCount={runCount}
+            audits={runsQuery.data?.items ?? []}
+            table={table}
+            filterLabel={filter.label}
             anyActive={anyActive}
             canRun={canRun}
             promptsReady={readiness.kind !== 'blocked'}
@@ -131,17 +105,19 @@ export function RunsScreen() {
 
 function RunsContent({
   read,
+  runCount,
   audits,
-  filteredAudits,
-  statusFilter,
+  table,
+  filterLabel,
   anyActive,
   canRun,
   promptsReady,
 }: Readonly<{
   read: RetryableRead;
-  audits: Audit[];
-  filteredAudits: Audit[];
-  statusFilter: StatusFilter;
+  runCount: number;
+  audits: readonly Audit[];
+  table: RunsTablePage;
+  filterLabel: string;
   anyActive: boolean;
   canRun: boolean;
   promptsReady: boolean;
@@ -156,7 +132,7 @@ function RunsContent({
       />
     );
   }
-  if (audits.length === 0) {
+  if (runCount === 0) {
     return (
       <StateBlock
         kind="empty"
@@ -168,13 +144,11 @@ function RunsContent({
     );
   }
 
-  const filterLabel = STATUS_FILTERS.find(
-    (filter) => filter.id === statusFilter,
-  )?.label.toLowerCase();
   return (
     <RunsTable
-      audits={filteredAudits}
-      emptyHeading={`No ${filterLabel} runs`}
+      audits={audits}
+      table={table}
+      emptyHeading={`No ${filterLabel.toLowerCase()} runs`}
       status={anyActive ? <Spinner label="Updating live" showLabel /> : null}
     />
   );

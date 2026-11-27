@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
+import {
+  auditPageBody,
+  FIXTURE_PROJECT,
+  fixtureProjectPath,
+  stubAuthedShell,
+} from './helpers/app-fixture';
 
 const PROJECT_ID = FIXTURE_PROJECT.id;
 const WORKSPACE_ID = FIXTURE_PROJECT.workspace_id;
@@ -95,7 +100,9 @@ const evidence = {
 
 test('shell → open run → open execution evidence', async ({ page }) => {
   await stubAuthedShell(page);
-  await page.route(/\/api\/v1\/audits(\?.*)?$/, (route) => route.fulfill({ json: [audit] }));
+  await page.route(/\/api\/v1\/audits(\?.*)?$/, (route) =>
+    route.fulfill({ json: auditPageBody([audit]) }),
+  );
   await page.route(`**/api/v1/audits/${AUDIT_ID}`, (route) => route.fulfill({ json: audit }));
   await page.route(`**/api/v1/audits/${AUDIT_ID}/executions`, (route) =>
     route.fulfill({ json: [execution] }),

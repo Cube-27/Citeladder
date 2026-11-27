@@ -26,6 +26,7 @@ import { demandApi, demandQueries } from '@/lib/api/demand';
 import { projectQueries } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsQueries } from '@/lib/api/runs';
+import { brandRunsParams } from '@/lib/visibility/use-visibility-runs';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { INITIAL_VISIBILITY_PARAMS } from '@/lib/api/visibility';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -189,7 +190,7 @@ describe('prefetchRoute', () => {
   });
 
   const visibilitySelectionKeys = [
-    runsQueries.list(PROJECT).queryKey,
+    runsQueries.list(PROJECT, brandRunsParams(null)).queryKey,
     projectQueries.markets(PROJECT).queryKey,
     visibilityQueries.project(PROJECT, INITIAL_VISIBILITY_PARAMS).queryKey,
   ];

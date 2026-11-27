@@ -2,13 +2,18 @@ import { z } from 'zod';
 import { mutationOptions, queryOptions, skipToken, type QueryClient } from '@tanstack/react-query';
 
 import { API_BASE_URL } from '@/lib/config/operational';
+import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
 import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import {
   auditEstimateSchema,
+  auditPageSchema,
   auditScheduleSchema,
   auditSchema,
+  type AuditListSort,
+  type AuditPage,
+  type AuditScope,
   executionEvidenceSchema,
   executionSchema,
 } from '@citeladder/contracts/audits';
@@ -25,6 +30,7 @@ import { startInteractiveWork } from './interactive-work';
 import type {
   Audit,
   AuditSchedule,
+  AuditStatus,
   Execution,
   ExecutionEvidence,
   PromptAnswerSearch,
@@ -33,6 +39,26 @@ import {
   promptAnswerPageSchema,
   type PromptAnswerPage,
 } from '@citeladder/contracts/visibility-prompt-answers';
+
+export type RunsPageParams = Readonly<{
+  audit_scope?: AuditScope;
+  market?: string;
+  status?: readonly AuditStatus[];
+  completed_from?: string;
+  completed_to?: string;
+  sort?: AuditListSort;
+  descending?: boolean;
+  page?: number;
+  page_size?: number;
+}>;
+
+export const RUNS_SCREEN_PARAMS: RunsPageParams = {
+  status: [],
+  sort: 'created',
+  descending: true,
+  page: 1,
+  page_size: TABLE_DEFAULT_PAGE_SIZE,
+};
 
 export type PromptAnswerParams = Readonly<{
   market?: string;
@@ -60,10 +86,10 @@ export const runsApi = {
     for (const audit of audits) startInteractiveWork(`/audits/${audit.id}/run`, options);
     return audits;
   },
-  listAudits: async (params?: { project_id?: string }, options?: ApiRequestOptions) => {
-    const path = withQuery('/audits', definedQuery(params));
-    const res = await apiClient.get<Audit[]>(path, options);
-    return strictValidate(auditListSchema, res, 'runs.listAudits');
+  listAudits: async (scope: ProjectScope, params: RunsPageParams, options?: ApiRequestOptions) => {
+    const path = withQuery('/audits', definedQuery({ project_id: scope.projectId, ...params }));
+    const res = await apiClient.get<AuditPage>(path, options);
+    return strictValidate(auditPageSchema, res, 'runs.listAudits');
   },
   getAudit: async (auditId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<Audit>(`/audits/${auditId}`, options);
@@ -152,11 +178,10 @@ export const runsQueries = {
           ? ({ signal }) => runsApi.estimateAudit(input, { signal, workspaceId })
           : skipToken,
     }),
-  list: (scope: ProjectScope) =>
+  list: (scope: ProjectScope, params: RunsPageParams) =>
     queryOptions({
-      queryKey: queryKeys.runs.list(scope),
-      queryFn: ({ signal }) =>
-        runsApi.listAudits({ project_id: scope.projectId }, { signal, ...scoped(scope) }),
+      queryKey: queryKeys.runs.list(scope, params),
+      queryFn: ({ signal }) => runsApi.listAudits(scope, params, { signal, ...scoped(scope) }),
     }),
   schedules: (scope: ProjectScope) =>
     queryOptions({

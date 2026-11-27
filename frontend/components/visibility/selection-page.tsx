@@ -72,7 +72,7 @@ export function useSelectionPageFilters({
   );
   return useVisibilityFilterMenu({
     view,
-    runs: queries.runOptions,
+    runs: queries.runPicker,
     selectedRunId: filters.selectedRunId,
     onSelectMeasurement: filters.selectMeasurement,
     engine: filters.engine,

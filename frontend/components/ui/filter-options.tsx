@@ -1,6 +1,6 @@
 import { Fragment, useState, type FocusEvent, type KeyboardEvent } from 'react';
 
-import { OptionText, type FilterDefinition } from '@/components/ui/all-filters';
+import { OptionText, type FilterDefinition, type FilterPages } from '@/components/ui/all-filters';
 import {
   MenuItem,
   MenuLabel,
@@ -92,6 +92,26 @@ function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
         ))}
       </MenuRadioGroup>
       {groups.length === 0 ? <p className="text-body text-ink-2 px-2 py-2">No matches</p> : null}
+      {filter.pages ? <PageSteps pages={filter.pages} /> : null}
+    </>
+  );
+}
+
+function PageSteps({ pages }: Readonly<{ pages: FilterPages }>) {
+  if (!pages.canPrev && !pages.canNext) return null;
+  const step = (move: () => void) => (event: Event) => {
+    event.preventDefault();
+    move();
+  };
+  return (
+    <>
+      <MenuSeparator />
+      <MenuItem disabled={!pages.canPrev} onSelect={step(pages.onPrev)}>
+        {pages.previousLabel}
+      </MenuItem>
+      <MenuItem disabled={!pages.canNext} onSelect={step(pages.onNext)}>
+        {pages.nextLabel}
+      </MenuItem>
     </>
   );
 }

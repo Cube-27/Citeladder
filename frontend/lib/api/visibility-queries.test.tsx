@@ -8,6 +8,7 @@ import { mswServer } from '@/test/msw-server';
 import { createAppQueryClient } from './query-client';
 import { INITIAL_VISIBILITY_PARAMS } from './visibility';
 import { isMetricsPending, visibilityQueries } from './visibility-queries';
+import { auditPage } from '@/test/fixtures/runs';
 
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -41,7 +42,7 @@ describe('the Visibility landing projection', () => {
   it('is asked for once when the route warmup found nothing measured yet', async () => {
     const asked: string[] = [];
     mswServer.use(
-      http.get(`/api/v1/audits`, () => HttpResponse.json([])),
+      http.get(`/api/v1/audits`, () => HttpResponse.json(auditPage([]))),
       http.get(PROJECTION, ({ request }) => {
         asked.push(new URL(request.url).search);
         return notFound('visibility_not_measured', 'No completed audit for project');

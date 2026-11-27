@@ -13,6 +13,7 @@ import { makeSiteCrawl, makeWorkspaceEntitlement } from '@/test/fixtures/site-he
 import { ProjectProvider } from '@/lib/project/project-context';
 import type { CrawlSchedule, SiteHealthDashboard } from '@citeladder/contracts';
 import { SiteHealthScreen } from './site-health-screen';
+import { auditPage } from '@/test/fixtures/runs';
 
 function setSearch(value: string) {
   window.history.replaceState(null, '', value ? `/site?${value}` : '/site');
@@ -159,7 +160,7 @@ function mockRoutes(
   mswServer.use(
     http.get('/api/v1/projects', () => HttpResponse.json([project])),
     http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(project)),
-    http.get('/api/v1/audits', () => HttpResponse.json([])),
+    http.get('/api/v1/audits', () => HttpResponse.json(auditPage([]))),
     http.post('/api/v1/projects/:id/logos/refresh', () => HttpResponse.json(project)),
     http.get(ENTITLEMENT_PATH, () => HttpResponse.json(entitlement)),
     http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>

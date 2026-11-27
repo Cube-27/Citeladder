@@ -1,15 +1,20 @@
 import type { ReactNode } from 'react';
 
 import { StatusMark } from '@/components/ui/status-mark';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { pageNumberControls, useTablePage } from '@/components/ui/pager';
+import { DataTable, type DataTableColumn, type DataTablePager } from '@/components/ui/data-table';
+import { useServerTablePage } from '@/components/ui/pager';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
-import type { Audit } from '@citeladder/contracts';
+import { useQuery } from '@tanstack/react-query';
+
+import type { Audit, AuditStatus } from '@citeladder/contracts';
+import { retainPreviousDataForScope } from '@/lib/api/query-client';
+import { runsQueries } from '@/lib/api/runs';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import { marketLabel } from '@citeladder/contracts/markets';
 import { Play } from '@/lib/icons';
 import { formatCount, formatDisplayTime } from '@/lib/format';
-import { AUDIT_STATES, runTitle } from '@/lib/runs/status';
+import { AUDIT_STATES, countedStatuses, pollAudits, runTitle } from '@/lib/runs/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { sortUrlCodec, useUrlState, type UrlSort } from '@/lib/navigation/url-state';
 import { Text } from '@/components/ui/typography';
@@ -17,26 +22,12 @@ import { Text } from '@/components/ui/typography';
 const sameLaunch = (audit: Audit, previous: Audit | undefined) =>
   audit.launch_id !== null && previous?.launch_id === audit.launch_id;
 
-const PAGE_SIZE = 10;
 const PAGE_KEYS = ['page'] as const;
 
 const SORT_KEYS = ['created', 'requested', 'completed', 'failed'] as const;
 type SortKey = (typeof SORT_KEYS)[number];
 type Sort = UrlSort<SortKey>;
 const SORT_CODEC = sortUrlCodec(SORT_KEYS, { key: 'created', descending: true });
-
-const SORT_VALUE: Record<SortKey, (audit: Audit) => number> = {
-  created: (audit) => Date.parse(audit.created_at),
-  requested: (audit) => audit.requested_count,
-  completed: (audit) => audit.completed_count,
-  failed: (audit) => audit.failed_count,
-};
-
-function sortAudits(audits: readonly Audit[], sort: Sort): Audit[] {
-  const value = SORT_VALUE[sort.key];
-  const direction = sort.descending ? -1 : 1;
-  return [...audits].sort((a, b) => (value(a) - value(b)) * direction);
-}
 
 function runsColumns(sort: Sort, onSort: (key: SortKey) => void): DataTableColumn[] {
   const sortable = (key: SortKey) => ({
@@ -65,26 +56,57 @@ function runsColumns(sort: Sort, onSort: (key: SortKey) => void): DataTableColum
   ];
 }
 
+export type RunsTablePage = Readonly<{
+  sort: Sort;
+  onSort: (key: SortKey) => void;
+  pageSize: number;
+  pager: DataTablePager;
+}>;
+
+export function useRunsPage(statuses: readonly AuditStatus[]) {
+  const { workspaceId, projectId } = useProjectScope();
+  const [sort, setSort] = useUrlState('sort', SORT_CODEC, { clearKeys: PAGE_KEYS });
+  const { page, pageSize, pager } = useServerTablePage(PAGE_KEYS[0]);
+  const query = useQuery({
+    ...runsQueries.list(
+      { workspaceId, projectId },
+      {
+        status: statuses,
+        sort: sort.key,
+        descending: sort.descending,
+        page,
+        page_size: pageSize,
+      },
+    ),
+    placeholderData: (data, previous) => retainPreviousDataForScope(projectId, data, previous),
+    refetchInterval: (current) => pollAudits(countedStatuses(current.state.data?.status_counts)),
+  });
+  const onSort = (key: SortKey) =>
+    setSort(sort.key === key ? { key, descending: !sort.descending } : { key, descending: true });
+  return {
+    query,
+    table: {
+      sort,
+      onSort,
+      pageSize,
+      pager: pager({ total: query.data?.total ?? 0, noun: 'runs' }),
+    } satisfies RunsTablePage,
+  };
+}
+
 export function RunsTable({
   audits,
+  table,
   status,
   emptyHeading,
 }: Readonly<{
-  audits: Audit[];
+  audits: readonly Audit[];
+  table: RunsTablePage;
   status: ReactNode;
   emptyHeading: string;
 }>) {
   const timeZone = useDisplayTimeZone();
-  const [sort, setSort] = useUrlState('sort', SORT_CODEC, { clearKeys: PAGE_KEYS });
-  const sorted = sortAudits(audits, sort);
-  const { page, setPage, pageCount, from, to } = useTablePage(sorted.length, {
-    pageSize: PAGE_SIZE,
-    urlKey: PAGE_KEYS[0],
-  });
-  const pagedAudits = sorted.slice(from - 1, to);
-  const onSort = (key: SortKey) =>
-    setSort(sort.key === key ? { key, descending: !sort.descending } : { key, descending: true });
-
+  const { sort, onSort, pageSize, pager } = table;
   return (
     <DataTable
       title="All runs"
@@ -94,19 +116,16 @@ export function RunsTable({
         </Text>
       }
       columns={runsColumns(sort, onSort)}
-      pageSize={PAGE_SIZE}
-      rowCount={pagedAudits.length}
+      pageSize={pageSize}
+      rowCount={audits.length}
       state={
         audits.length === 0
           ? { kind: 'empty', headingLevel: 3, icon: Play, heading: emptyHeading }
           : undefined
       }
-      pager={{
-        range: { from, to, total: sorted.length, noun: 'runs' },
-        ...pageNumberControls(page, pageCount, setPage),
-      }}
+      pager={pager}
     >
-      {pagedAudits.map((audit, index) => (
+      {audits.map((audit, index) => (
         <TableRow key={audit.id}>
           <TableCell>
             <TableCellLines
@@ -119,7 +138,7 @@ export function RunsTable({
               secondary={runCaption({
                 audit,
                 timeZone,
-                launchAbove: sort.key === 'created' && sameLaunch(audit, pagedAudits[index - 1]),
+                launchAbove: sort.key === 'created' && sameLaunch(audit, audits[index - 1]),
               })}
             />
           </TableCell>

@@ -1,5 +1,10 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
-import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
+import {
+  auditPageBody,
+  FIXTURE_PROJECT,
+  fixtureProjectPath,
+  stubAuthedShell,
+} from './helpers/app-fixture';
 
 const WORKSPACE_ID = FIXTURE_PROJECT.workspace_id;
 const PROJECT_ID = FIXTURE_PROJECT.id;
@@ -332,7 +337,10 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
   await stubAuthedShell(page);
   await page.route('**/api/v1/audits**', (route) =>
     route.fulfill({
-      json: [audit, { ...audit, id: AUDIT_EARLIER, completed_at: '2026-07-08T00:00:00Z' }],
+      json: auditPageBody([
+        audit,
+        { ...audit, id: AUDIT_EARLIER, completed_at: '2026-07-08T00:00:00Z' },
+      ]),
     }),
   );
 

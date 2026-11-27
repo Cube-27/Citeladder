@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import {
+  auditPageBody,
   FIXTURE_PROJECT,
   FIXTURE_WORKSPACE_ID,
   fixtureProjectPath,
@@ -63,7 +64,7 @@ test('runs resolve on their own while the schedules empty state waits for its re
   const pending = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route('**/api/v1/audits*', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/v1/audits*', (route) => route.fulfill({ json: auditPageBody([]) }));
   await page.route('**/api/v1/projects/*/audit-schedules', async (route) => {
     await pending;
     await route.fulfill({ json: [] });

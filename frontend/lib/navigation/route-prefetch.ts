@@ -30,18 +30,18 @@ const opensOn = (search: URLSearchParams, defaultTab: string) =>
 
 const visibilitySelection = () =>
   Promise.all([
-    import('@/lib/api/runs'),
+    import('@/lib/visibility/use-visibility-runs'),
     import('@/lib/api/visibility'),
     import('@/lib/api/visibility-queries'),
     import('@/lib/api/projects'),
   ]);
 
 const warmVisibilitySelection: Warm<Awaited<ReturnType<typeof visibilitySelection>>> = (
-  [{ runsQueries }, { INITIAL_VISIBILITY_PARAMS }, { visibilityQueries }, { projectQueries }],
+  [{ warmBrandRuns }, { INITIAL_VISIBILITY_PARAMS }, { visibilityQueries }, { projectQueries }],
   client,
   scope,
 ) => {
-  warmQuery(client, runsQueries.list(scope));
+  warmBrandRuns(client, scope);
   warmQuery(client, projectQueries.markets(scope));
   warmQuery(client, visibilityQueries.project(scope, INITIAL_VISIBILITY_PARAMS));
 };
@@ -150,9 +150,9 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
   '/competitors': routeReads(visibilitySelection, warmVisibilitySelection),
   '/perception': routeReads(
     () => Promise.all([visibilitySelection(), import('@/lib/visibility/trends')]),
-    ([[{ runsQueries }, , { visibilityQueries }, { projectQueries }], trends], client, scope) => {
+    ([[{ warmBrandRuns }, , { visibilityQueries }, { projectQueries }], trends], client, scope) => {
       warmQuery(client, projectQueries.brandFacts(scope));
-      warmQuery(client, runsQueries.list(scope));
+      warmBrandRuns(client, scope);
       warmQuery(client, projectQueries.markets(scope));
       warmQuery(
         client,
@@ -166,7 +166,8 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
   ),
   '/runs': routeReads(
     () => import('@/lib/api/runs'),
-    ({ runsQueries }, client, scope) => warmQuery(client, runsQueries.list(scope)),
+    ({ runsQueries, RUNS_SCREEN_PARAMS }, client, scope) =>
+      warmQuery(client, runsQueries.list(scope, RUNS_SCREEN_PARAMS)),
   ),
   '/ai-traffic': routeReads(
     () => Promise.all([import('@/lib/api/ai-traffic'), import('@/lib/config/crawl-logs')]),

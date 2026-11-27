@@ -15,6 +15,15 @@ export type FilterOptionGroup<T extends string = string> = Readonly<{
   options: readonly FilterOption<T>[];
 }>;
 
+export type FilterPages = Readonly<{
+  canPrev: boolean;
+  canNext: boolean;
+  onPrev: () => void;
+  onNext: () => void;
+  previousLabel: string;
+  nextLabel: string;
+}>;
+
 type FilterBase = Readonly<{
   id: string;
   label: string;
@@ -37,6 +46,7 @@ export type FilterDefinition = FilterBase &
         groups: readonly FilterOptionGroup[];
         onChange: (value: string) => void;
         searchable?: boolean;
+        pages?: FilterPages;
       }>
     | Readonly<{ kind: 'custom'; content: ReactNode }>
   );
@@ -49,6 +59,7 @@ export function choiceFilter<T extends string>({
   groups,
   onChange,
   searchable,
+  pages,
   valueLabel,
   icon,
   windowLabel,
@@ -61,6 +72,7 @@ export function choiceFilter<T extends string>({
   groups: readonly FilterOptionGroup<T>[];
   onChange: (value: T) => void;
   searchable?: boolean;
+  pages?: FilterPages;
   valueLabel?: string;
   icon?: FilterIcon;
   windowLabel?: string;
@@ -83,6 +95,7 @@ export function choiceFilter<T extends string>({
     disabled,
     groups,
     searchable,
+    pages,
     onChange: (raw) => {
       const picked = options.find((option) => option.value === raw);
       if (picked) onChange(picked.value);

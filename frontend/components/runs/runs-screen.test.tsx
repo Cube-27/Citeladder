@@ -1,57 +1,53 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vite-plus/test';
 
-import type { Audit } from '@citeladder/contracts';
+import { http, HttpResponse } from 'msw';
+import userEvent from '@testing-library/user-event';
 import { promptsApi } from '@/lib/api/prompts';
 import { runsApi } from '@/lib/api/runs';
 import { makeProject } from '@/test/fixtures/project';
+import { auditPage, makeAudit } from '@/test/fixtures/runs';
+import { mswServer } from '@/test/msw-server';
 import { makePrompt, makeSet, makeSetList } from '@/test/fixtures/prompts';
 import { renderWithProviders } from '@/test/render';
+import type { Audit, AuditStatus } from '@citeladder/contracts';
 
 import { RunsScreen } from './runs-screen';
 
 const project = makeProject();
 
-function audit(n: number, status: Audit['status'], created_at: string): Audit {
-  return {
-    id: `0000000${n}-1111-4111-8111-111111111111`,
-    workspace_id: project.workspace_id,
+const audit = (n: number, status: AuditStatus, created_at: string) =>
+  makeAudit(n, {
     project_id: project.id,
-    parent_audit_id: null,
+    workspace_id: project.workspace_id,
     status,
-    cancelable: false,
-    benchmark_mode: 'consumer_like',
-    audit_scope: 'brand',
-    model_provenance: [],
-    repetitions: 1,
-    random_seed: 'seed',
-    requested_count: 10,
+    created_at,
     completed_count: status === 'failed' ? 0 : 10,
     failed_count: status === 'failed' ? 10 : 0,
-    error_message: '',
-    engine_snapshots: [],
-    market: { id: null, country_code: 'US', language_code: 'en' },
-    launch_id: null,
-    not_applicable_engines: [],
-    created_at,
-    updated_at: created_at,
-    started_at: created_at,
-    completed_at: created_at,
-  };
+  });
+
+function serveRuns(audits: readonly Audit[]) {
+  const asked: URLSearchParams[] = [];
+  mswServer.use(
+    http.get('/api/v1/audits', ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      asked.push(params);
+      const statuses = params.getAll('status');
+      const shown = audits.filter((run) => !statuses.length || statuses.includes(run.status));
+      const page = Number(params.get('page'));
+      const size = Number(params.get('page_size'));
+      return HttpResponse.json(
+        auditPage(audits, {
+          items: shown.slice((page - 1) * size, page * size),
+          total: shown.length,
+        }),
+      );
+    }),
+  );
+  return asked;
 }
 
-afterEach(() => {
-  vi.restoreAllMocks();
-  window.history.replaceState(null, '', '/');
-});
-
-it('opens on the status a deep link names', async () => {
-  vi.spyOn(runsApi, 'listAudits').mockResolvedValue([
-    audit(1, 'completed', '2026-08-01T00:00:00Z'),
-    audit(2, 'failed', '2026-07-30T00:00:00Z'),
-  ]);
-  vi.spyOn(runsApi, 'listSchedules').mockResolvedValue([]);
-  window.history.replaceState(null, '', `/projects/${project.id}/runs?status=failed`);
+const renderRuns = () =>
   renderWithProviders(<RunsScreen />, {
     projectSelection: {
       projects: [project],
@@ -61,28 +57,57 @@ it('opens on the status a deep link names', async () => {
     },
   });
 
+beforeAll(() => mswServer.listen({ onUnhandledRequest: 'bypass' }));
+afterAll(() => mswServer.close());
+afterEach(() => {
+  mswServer.resetHandlers();
+  vi.restoreAllMocks();
+  window.history.replaceState(null, '', '/');
+});
+
+it('opens on the status a deep link names and asks the server for that status', async () => {
+  const asked = serveRuns([
+    audit(1, 'completed', '2026-08-01T00:00:00Z'),
+    audit(2, 'failed', '2026-07-30T00:00:00Z'),
+  ]);
+  vi.spyOn(runsApi, 'listSchedules').mockResolvedValue([]);
+  window.history.replaceState(null, '', `/projects/${project.id}/runs?status=failed`);
+  renderRuns();
+
   const table = within(await screen.findByRole('table', { name: 'All runs' }));
   expect(table.getByRole('link', { name: 'Brand audit · Jul 30, 2026' })).toBeVisible();
   expect(table.queryByRole('link', { name: 'Brand audit · Aug 1, 2026' })).not.toBeInTheDocument();
   expect(screen.getByRole('tab', { name: /Failed/ })).toHaveAttribute('aria-selected', 'true');
+  expect(asked.at(-1)?.getAll('status')).toEqual(['failed', 'cancelled']);
+});
+
+it('sends the sort and page to the server and returns to page one on a new sort', async () => {
+  const user = userEvent.setup();
+  const asked = serveRuns(
+    Array.from({ length: 25 }, (_, i) => audit(i + 1, 'completed', '2026-08-01T00:00:00Z')),
+  );
+  vi.spyOn(runsApi, 'listSchedules').mockResolvedValue([]);
+  renderRuns();
+  await screen.findByRole('table', { name: 'All runs' });
+  const last = () => Object.fromEntries(asked.at(-1)!);
+  expect(last()).toMatchObject({ sort: 'created', descending: 'true', page: '1', page_size: '10' });
+
+  await user.click(screen.getByRole('button', { name: /next/i }));
+  await waitFor(() => expect(last()).toMatchObject({ page: '2' }));
+
+  await user.click(screen.getByRole('button', { name: /Failed/ }));
+  await waitFor(() => expect(last()).toMatchObject({ sort: 'failed', page: '1' }));
 });
 
 it('counts every run under exactly one status tab', async () => {
-  vi.spyOn(runsApi, 'listAudits').mockResolvedValue([
+  serveRuns([
     audit(1, 'completed', '2026-08-04T00:00:00Z'),
     audit(2, 'partially_completed', '2026-08-03T00:00:00Z'),
     audit(3, 'cancelled', '2026-08-02T00:00:00Z'),
     audit(4, 'failed', '2026-08-01T00:00:00Z'),
   ]);
   vi.spyOn(runsApi, 'listSchedules').mockResolvedValue([]);
-  renderWithProviders(<RunsScreen />, {
-    projectSelection: {
-      projects: [project],
-      activeProject: project,
-      activeProjectId: project.id,
-      status: 'ready',
-    },
-  });
+  renderRuns();
 
   await screen.findByRole('table', { name: 'All runs' });
   expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
@@ -100,7 +125,7 @@ it.each([
 ] as const)(
   'with no run and %s, the empty state carries the next step and no status tabs',
   async (_label, status, next, schedules) => {
-    vi.spyOn(runsApi, 'listAudits').mockResolvedValue([]);
+    serveRuns([]);
     vi.spyOn(runsApi, 'listSchedules').mockResolvedValue([]);
     vi.spyOn(promptsApi, 'listPromptSets').mockResolvedValue(
       makeSetList([makeSet([makePrompt({ status })])]),

@@ -1,28 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { retainPreviousDataForScope, warmQuery } from '@/lib/api/query-client';
-import { useProjectScope, type ActiveProjectScope } from '@/lib/project/active-project-scope';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import {
   cohortUrlCodec,
   writeStoredCohort,
   type PromptCohort,
 } from '@/lib/visibility/prompt-cohort';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { runsQueries } from '@/lib/api/runs';
 import { useMarketVisibility } from '@/lib/visibility/use-market-visibility';
 import { useSurfaceRates } from '@/lib/visibility/use-surface-rates';
-import { refreshVisibility, visibilityQueries } from '@/lib/api/visibility-queries';
+import { visibilityQueries } from '@/lib/api/visibility-queries';
+import { useVisibilityRuns } from '@/lib/visibility/use-visibility-runs';
 import {
-  brandRuns,
-  findActiveRun,
   isEvidenceTab,
   VISIBILITY_TABS,
-  toRunOptions,
-  type RunOption,
   type VisibilityTab,
   type VisibilityView,
 } from '@/lib/visibility/dashboard';
-import { pollAudits } from '@/lib/runs/status';
 import { EVIDENCE_LIMIT } from '@/lib/config/operational';
 import {
   optionalStringUrlCodec,
@@ -108,28 +102,17 @@ export function measuredSelection({
   chosen,
   namedRun,
   fallback,
-  runs,
-  from,
-  to,
+  rangeHasRuns,
 }: Readonly<{
   chosen: SelectionMode | null;
   namedRun: boolean;
   fallback: SelectionMode;
-  runs: readonly Pick<RunOption, 'completedAt'>[] | undefined;
-  from: string | undefined;
-  to: string | undefined;
+  rangeHasRuns: boolean | undefined;
 }>): SelectionMode {
   if (chosen !== null) return chosen;
   if (namedRun) return 'run';
-  if (fallback === 'run' || runs === undefined) return fallback;
-  const start = from === undefined ? -Infinity : Date.parse(from);
-  const end = to === undefined ? Infinity : Date.parse(to);
-  const inWindow = (completedAt: string | null) => {
-    if (completedAt === null) return false;
-    const at = Date.parse(completedAt);
-    return at >= start && at <= end;
-  };
-  return runs.some((run) => inWindow(run.completedAt)) ? 'range' : 'run';
+  if (fallback === 'run' || rangeHasRuns === undefined) return fallback;
+  return rangeHasRuns ? 'range' : 'run';
 }
 
 export function useVisibilityFilters({
@@ -280,10 +263,21 @@ export function useVisibilityQueries(
   const { workspaceId, projectId } = useProjectScope();
   const requestScope = { workspaceId, projectId };
   const insights = view === 'insights';
-  const { queryClient, auditsQuery, runOptions, hasRuns, activeRun } = useVisibilityRuns(
-    requestScope,
-    filters.market,
+  const from = useMemo(
+    () => filters.fromAt ?? rangeToFrom(filters.range),
+    [filters.fromAt, filters.range],
   );
+  const asksWindow =
+    filters.chosenSelection === null &&
+    filters.selectedRunId === null &&
+    filters.defaultSelection === 'range';
+  const { queryClient, auditsQuery, runPicker, hasRuns, activeRun, rangeHasRuns } =
+    useVisibilityRuns({
+      requestScope,
+      market: filters.market,
+      selectedRunId: filters.selectedRunId,
+      window: asksWindow ? { from, to: filters.toAt ?? undefined } : null,
+    });
   const topic = filters.topic ?? undefined;
   const { markets, marketRowsQuery } = useMarketVisibility(
     requestScope,
@@ -292,17 +286,11 @@ export function useVisibilityQueries(
   );
 
   const engine = filters.engine === 'all' ? undefined : filters.engine;
-  const from = useMemo(
-    () => filters.fromAt ?? rangeToFrom(filters.range),
-    [filters.fromAt, filters.range],
-  );
   const selectionMode = measuredSelection({
     chosen: filters.chosenSelection,
     namedRun: filters.selectedRunId !== null,
     fallback: filters.defaultSelection,
-    runs: auditsQuery.isSuccess ? runOptions : undefined,
-    from,
-    to: filters.toAt ?? undefined,
+    rangeHasRuns,
   });
   const selectedParams = selectionParams(filters, { mode: selectionMode, from, engine });
   const projectionOptions = visibilityQueries.project(requestScope, selectedParams);
@@ -364,7 +352,7 @@ export function useVisibilityQueries(
   return {
     selectionMode,
     auditsQuery,
-    runOptions,
+    runPicker,
     activeRun,
     activeRunId,
     hasRuns,
@@ -398,45 +386,6 @@ export function useVisibilityQueries(
     promptOptions: evidenceQuery.data?.prompt_options ?? [],
     prefetchTab,
   };
-}
-
-function useVisibilityRuns(
-  requestScope: Pick<ActiveProjectScope, 'workspaceId' | 'projectId'>,
-  market: string | null,
-) {
-  const { workspaceId, projectId } = requestScope;
-  const timeZone = useDisplayTimeZone();
-  const queryClient = useQueryClient();
-  const auditsQuery = useQuery({
-    ...runsQueries.list({ workspaceId, projectId }),
-    refetchInterval: (query) =>
-      pollAudits(brandRuns(query.state.data).map((audit) => audit.status)),
-  });
-  const audits = useMemo(() => brandRuns(auditsQuery.data), [auditsQuery.data]);
-  const runOptions = useMemo(
-    () =>
-      toRunOptions(
-        audits.filter((audit) => audit.market.id === market),
-        timeZone,
-      ),
-    [audits, market, timeZone],
-  );
-  const allRuns = useMemo(() => toRunOptions(audits, timeZone), [audits, timeZone]);
-  const hasRuns = allRuns.length > 0;
-  const activeRun = useMemo(() => findActiveRun(audits), [audits]);
-  const runSignal = `${allRuns[0]?.id ?? ''}:${activeRun?.id ?? 'idle'}`;
-  const previousSignal = useRef<string | undefined>(undefined);
-  const auditsLoaded = auditsQuery.isSuccess;
-  useEffect(() => {
-    if (!auditsLoaded) return;
-    const previous = previousSignal.current;
-    previousSignal.current = runSignal;
-    if (previous !== undefined && previous !== runSignal) {
-      void refreshVisibility(queryClient, projectId);
-    }
-  }, [auditsLoaded, runSignal, queryClient, projectId]);
-
-  return { queryClient, auditsQuery, runOptions, hasRuns, activeRun };
 }
 
 function selectionParams(

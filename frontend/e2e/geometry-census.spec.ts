@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
+import {
+  auditPageBody,
+  FIXTURE_PROJECT,
+  fixtureProjectPath,
+  stubAuthedShell,
+} from './helpers/app-fixture';
 
 const PROMPT_SET_ID = '44444444-4444-4444-8444-000000000001';
 const PROMPT_SETS = {
@@ -593,7 +598,7 @@ const ROUTE_GROUPS: Readonly<Record<string, readonly PageState[]>> = {
     {
       route: '/runs',
       label: '/runs (rows)',
-      stubs: [[/\/api\/v1\/audits(\?.*)?$/, RUNS]],
+      stubs: [[/\/api\/v1\/audits(\?.*)?$/, auditPageBody(RUNS)]],
       required: ['table-cell.padding-y', 'tag.height'],
     },
     {

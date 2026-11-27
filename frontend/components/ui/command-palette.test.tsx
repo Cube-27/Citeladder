@@ -16,7 +16,8 @@ import {
 } from 'vite-plus/test';
 
 import { resolveCommandGroups } from '@/components/layout/nav-items';
-import { runsQueries } from '@/lib/api/runs';
+import { RUNS_SCREEN_PARAMS, runsQueries } from '@/lib/api/runs';
+import { auditPage } from '@/test/fixtures/runs';
 import { ProjectSelectionProvider } from '@/lib/project/project-scope';
 import { makeProject } from '@/test/fixtures/project';
 import { testProjectSelection } from '@/test/render';
@@ -90,7 +91,7 @@ describe('CommandPalette', () => {
     mswServer.use(
       http.get('/api/v1/audits', ({ request }) => {
         asked.push(new URL(request.url).search);
-        return HttpResponse.json([]);
+        return HttpResponse.json(auditPage([]));
       }),
     );
     const user = await open();
@@ -100,12 +101,14 @@ describe('CommandPalette', () => {
     await waitFor(() =>
       expect(
         queryClient.getQueryData(
-          runsQueries.list({ workspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', projectId: 'p1' })
-            .queryKey,
+          runsQueries.list(
+            { workspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', projectId: 'p1' },
+            RUNS_SCREEN_PARAMS,
+          ).queryKey,
         ),
-      ).toEqual([]),
+      ).toEqual(auditPage([])),
     );
-    expect(asked).toEqual(['?project_id=p1']);
+    expect(asked).toEqual(['?project_id=p1&sort=created&descending=true&page=1&page_size=10']);
   });
   it('renders the trigger closed, advertising its shortcut', () => {
     renderPalette(<Palette />);

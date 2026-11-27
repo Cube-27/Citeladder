@@ -5,7 +5,6 @@ import {
   formatDisplayTimestamp,
   type Formatted,
 } from '@/lib/format';
-import { AUDIT_STATES } from '@/lib/runs/status';
 import type {
   AuditStatus,
   LogicalEngine,
@@ -14,10 +13,7 @@ import type {
 } from '@citeladder/contracts';
 import type { VisibilityTab } from './tabs';
 
-const DASHBOARD_STATUSES: ReadonlySet<AuditStatus> = new Set<AuditStatus>([
-  'completed',
-  'partially_completed',
-]);
+export const DASHBOARD_STATUSES: readonly AuditStatus[] = ['completed', 'partially_completed'];
 
 export { VISIBILITY_TABS, type VisibilityTab } from './tabs';
 
@@ -45,10 +41,6 @@ export type RunOption = {
   completedAt: string | null;
 };
 
-export function isDashboardStatus(status: AuditStatus): boolean {
-  return DASHBOARD_STATUSES.has(status);
-}
-
 export function toRunOptions(
   audits: ReadonlyArray<{
     id: string;
@@ -58,26 +50,12 @@ export function toRunOptions(
   }>,
   timeZone = 'UTC',
 ): RunOption[] {
-  return audits
-    .filter((audit) => isDashboardStatus(audit.status))
-    .slice()
-    .sort((a, b) => {
-      const aKey = a.completed_at ?? a.created_at;
-      const bKey = b.completed_at ?? b.created_at;
-      return bKey.localeCompare(aKey);
-    })
-    .map((audit) => ({
-      id: audit.id,
-      status: audit.status,
-      completedAt: audit.completed_at,
-      label: formatDisplayTimestamp(audit.completed_at ?? audit.created_at, timeZone),
-    }));
-}
-
-export function brandRuns<T extends { audit_scope: string }>(
-  audits: readonly T[] | undefined,
-): T[] {
-  return (audits ?? []).filter((audit) => audit.audit_scope === 'brand');
+  return audits.map((audit) => ({
+    id: audit.id,
+    status: audit.status,
+    completedAt: audit.completed_at,
+    label: formatDisplayTimestamp(audit.completed_at ?? audit.created_at, timeZone),
+  }));
 }
 
 export type ActiveRun = {
@@ -85,17 +63,6 @@ export type ActiveRun = {
   status: AuditStatus;
   createdAt: string;
 };
-
-export function findActiveRun(
-  audits: ReadonlyArray<{ id: string; status: AuditStatus; created_at: string }>,
-): ActiveRun | null {
-  const active = audits
-    .filter((audit) => AUDIT_STATES[audit.status].active)
-    .slice()
-    .sort((a, b) => b.created_at.localeCompare(a.created_at));
-  const newest = active[0];
-  return newest ? { id: newest.id, status: newest.status, createdAt: newest.created_at } : null;
-}
 
 export function visibleEngines(
   visibility: Visibility,

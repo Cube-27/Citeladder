@@ -164,7 +164,7 @@ function PageState({ queries }: Readonly<{ queries: Queries }>) {
 function usePageFilters(filters: Filters, queries: Queries) {
   return useVisibilityFilterMenu({
     view: 'perception',
-    runs: queries.runOptions,
+    runs: queries.runPicker,
     selectedRunId: filters.selectedRunId,
     onSelectMeasurement: filters.selectMeasurement,
     engine: filters.engine,

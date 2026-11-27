@@ -8,6 +8,7 @@ import type { ClassificationValue, RunStatusValue, StatusValue } from '@/compone
 import { ACTIVE_RUN_POLL_MS } from '@/lib/config/operational';
 import { pollWhileActive, type JobStates } from '@/lib/jobs/poll';
 import { formatDisplayDate } from '@/lib/format';
+import { auditStatusSchema } from '@citeladder/contracts/audits';
 
 export const AUDIT_STATES = {
   draft: { label: 'Draft', badge: 'draft', active: true },
@@ -21,6 +22,20 @@ export const AUDIT_STATES = {
   failed: { label: 'Failed', badge: 'failed', active: false },
   cancelled: { label: 'Cancelled', badge: 'cancelled', active: false },
 } as const satisfies JobStates<AuditStatus, RunStatusValue>;
+
+export const ACTIVE_AUDIT_STATUSES: readonly AuditStatus[] = auditStatusSchema.options.filter(
+  (status) => AUDIT_STATES[status].active,
+);
+
+type StatusCounts = Readonly<Record<AuditStatus, number>>;
+
+export function countedStatuses(counts: StatusCounts | undefined): AuditStatus[] {
+  return counts ? auditStatusSchema.options.filter((status) => counts[status] > 0) : [];
+}
+
+export function statusCount(counts: StatusCounts, statuses: readonly AuditStatus[]): number {
+  return statuses.reduce((sum, status) => sum + counts[status], 0);
+}
 
 export const pollAudits = (statuses: AuditStatus | readonly AuditStatus[] | undefined) =>
   pollWhileActive(AUDIT_STATES, ACTIVE_RUN_POLL_MS, statuses);
