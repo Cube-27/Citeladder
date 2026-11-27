@@ -157,6 +157,7 @@
   --shadow-thumb:
     0 0 5px var(--ramp-black-a2), 0 2px 10px var(--ramp-black-a6), 0 0 1px var(--ramp-black-a30);
 
+  --spacing-control-sm: 32px;
   --spacing-control-md: 36px;
   --spacing-control-lg: 40px;
   --spacing-control-coarse: 44px;

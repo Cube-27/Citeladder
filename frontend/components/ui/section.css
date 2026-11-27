@@ -83,7 +83,11 @@
 }
 
 [data-bleed-rows] > * {
-  padding: calc(var(--spacing) * 3) var(--spacing-panel-inset);
+  padding: var(--spacing-row-block) var(--spacing-panel-inset);
+}
+
+[data-bleed-rows] > * [data-button-shape='icon'] {
+  margin-block: calc(var(--spacing-row-control-gap) - var(--spacing-row-block));
 }
 
 [data-bleed] .table-frame tr > :first-child {

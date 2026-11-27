@@ -50,7 +50,7 @@ const TAB_KIND = {
     current: 'tab-line',
   },
   segment: {
-    base: 'rounded-tray-item h-7 px-4',
+    base: 'rounded-tray-item h-control-sm px-4',
     current: 'bg-nav-current shadow-card',
   },
 } as const;

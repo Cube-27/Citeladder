@@ -124,6 +124,7 @@ function SlottedButton({
       {...props}
       data-button-variant={variant}
       data-button-look={look}
+      data-button-shape={shape === 'label' ? undefined : shape}
       aria-busy={pending || undefined}
       className={buttonClasses(variant, cn(SHAPE[shape], look && LOOK[look], className), size)}
     >
@@ -155,6 +156,7 @@ function NativeButton({
       type={type ?? 'button'}
       data-button-variant={variant}
       data-button-look={look}
+      data-button-shape={shape === 'label' ? undefined : shape}
       aria-busy={pending || undefined}
       aria-disabled={pending || props['aria-disabled']}
       disabled={pending ? undefined : disabled}
