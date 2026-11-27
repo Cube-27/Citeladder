@@ -71,12 +71,16 @@ describe('promptFilterControls filters', () => {
     expect(await openFilterRow(user, 'Enabled', 'All prompts')).toBeVisible();
     await user.keyboard('{Escape}');
     await chooseFilterOption(user, 'Enabled', 'Disabled only');
-    expect(screen.getByRole('button', { name: 'Remove Enabled filter' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Enabled: Disabled only' })).toHaveAttribute(
+      'data-active',
+    );
 
     await user.click(screen.getByRole('button', { name: 'Clear' }));
     expect(screen.getByRole('button', { name: 'Branded: All prompts' })).not.toHaveAttribute(
       'data-active',
     );
-    expect(screen.queryByRole('button', { name: 'Remove Enabled filter' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Enabled: All prompts' })).not.toHaveAttribute(
+      'data-active',
+    );
   });
 });

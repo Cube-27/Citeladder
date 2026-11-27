@@ -108,8 +108,10 @@ describe('useVisibilityFilterMenu', () => {
       'Engines: All engines',
       'Market: United States',
       'Topic: All topics',
+      'Prompts: Unbranded',
+      'Group by: Per run',
     ]);
-    expect(await filtersMenu()).toEqual(['Prompts: Unbranded', 'Group by: Per run']);
+    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
   });
 
   it('draws a fifth filter left alone as its own chip rather than a one-entry Filters', () => {
