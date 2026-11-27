@@ -69,7 +69,7 @@ describe('Focus that did not come from the keyboard', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Switch to light theme');
   });
 
-  it('quiets a field an overlay focused or a press entered; a Tab into it rings', async () => {
+  it('rings a field an overlay focused after a key and quiets one it focused after a press', async () => {
     const user = userEvent.setup();
     render(
       <>
@@ -88,6 +88,10 @@ describe('Focus that did not come from the keyboard', () => {
     const quiet = (field: HTMLElement) => field.hasAttribute('data-quiet-focus');
 
     await user.keyboard('{Control>}k{/Control}');
+    act(() => email.focus());
+    expect(quiet(email)).toBe(false);
+
+    await user.click(page);
     act(() => email.focus());
     expect(quiet(email)).toBe(true);
 

@@ -4,6 +4,7 @@ let modality: InputModality | null = null;
 let keyDown = false;
 let tabDown = false;
 let pressed = false;
+let keyed = false;
 let away = false;
 let installed = false;
 
@@ -22,6 +23,7 @@ function textField(target: EventTarget | null): HTMLElement | null {
 }
 
 function onKeyDown(event: KeyboardEvent) {
+  if (event.key !== 'Escape') keyed = true;
   keyDown = !(event.ctrlKey || event.altKey || event.metaKey || event.key === 'Escape');
   tabDown = keyDown && event.key === 'Tab';
   if (tabDown) delete textField(document.activeElement)?.dataset.quietFocus;
@@ -36,7 +38,8 @@ function onFocusIn(event: FocusEvent) {
   if (keyDown) set('keyboard');
   const field = textField(event.target);
   if (!field) return;
-  if (!tabDown && (!pressed || field.closest(OVERLAY))) field.dataset.quietFocus = '';
+  const quiet = field.closest(OVERLAY) ? pressed || !keyed : !pressed;
+  if (!tabDown && quiet) field.dataset.quietFocus = '';
   else delete field.dataset.quietFocus;
 }
 
@@ -48,6 +51,7 @@ function onFocusOut(event: FocusEvent) {
 function onPointerDown(event: PointerEvent) {
   keyDown = false;
   tabDown = false;
+  keyed = false;
   pressed = true;
   set('pointer');
   const field = textField(event.target);
