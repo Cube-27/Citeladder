@@ -414,7 +414,7 @@ how to add or change an entry.
   let a later design change drift one page: a raw value, or a page using a
   token or primitive class directly instead of a primitive. Text roles derive
   from one base per subdomain (app 14, website 16). A look a page needs adds a
-  role token, never a raw value. The raw-value lint fails CI from a baseline
+  role token, never a raw value; a raw size, z-index, line-height or duration used once in its one stylesheet may stay inline, and a second use in that sheet is a `:root` variable (2026-11-27). The raw-value lint fails CI from a baseline
   that only shrinks (2026-11-26). Screens and pages hold no raw size or colour; a
   shared component holds no raw colour, and a raw size only when that component
   alone uses it. A value several components or pages share is a role, and a

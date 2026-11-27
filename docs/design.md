@@ -27,7 +27,9 @@ never a literal at the call site; a website-only colour goes in
 
 Every design value comes from a role token (AR-26): colour, type (size, line
 height, weight, tracking), spacing, size, radius, shadow, z-index, opacity and
-motion. A raw value, or a token class put straight on an element by a page,
+motion. A stylesheet may hold a raw size, z-index, line-height or duration
+that appears once in that sheet (AR-26); a value repeated in one sheet is a
+`:root` variable. A raw value elsewhere, or a token class put straight on an element by a page,
 lets a later design change miss that page, so the page drifts. Atomic order:
 role tokens (the colour layers above and the type ladders below), then the
 primitives in `components/ui`, which alone turn roles into classes, then
@@ -84,7 +86,8 @@ sheets' rule blocks included. Outside `@theme`, `@keyframes`, `@font-face` and
 spacing, size, radius or border-width value holds no hex, named colour,
 colour function, `px`/`rem`/`em`/`ms`/`s` length, bare z-index, weight,
 line-height or opacity number, font name, `--ramp-*` read or raw `var()`
-fallback. Tokens, keywords, `0`, opacity `1`, unitless multipliers,
+fallback; a length, z-index, weight, line-height or opacity number that
+appears once in its stylesheet passes, and the second use fails. Tokens, keywords, `0`, opacity `1`, unitless multipliers,
 percentages and gradient stops pass; `forced-colors` and
 `prefers-reduced-motion: reduce` blocks are exempt. A custom property is a
 token only in a token file or a rule on `:root` itself (attribute and

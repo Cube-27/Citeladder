@@ -147,17 +147,26 @@ function declarationParts(decl, tokenFile) {
   return parts.filter((part) => /^(?:[#a-z]|var\()/i.test(part));
 }
 
+const isMeasure = (part) => /^[-+.\d]/.test(part);
+
 export function cssValueFindings(label, css, { offsetLine = 0 } = {}) {
   const tokenFile = TOKEN_FILES.includes(label);
   const findings = [];
+  const declared = [];
+  const uses = new Map();
   postcss.parse(css).walkDecls((decl) => {
-    const raw = declarationParts(decl, tokenFile);
-    if (!raw.length) return;
+    const parts = declarationParts(decl, tokenFile);
+    declared.push({ decl, parts });
+    for (const part of parts) uses.set(part, (uses.get(part) ?? 0) + 1);
+  });
+  for (const { decl, parts } of declared) {
+    const raw = parts.filter((part) => !isMeasure(part) || uses.get(part) > 1);
+    if (!raw.length) continue;
     const line = (decl.source?.start?.line ?? 0) + offsetLine;
     findings.push(
       `${label}:${line}: ${decl.prop}: ${decl.value} holds ${raw.join(', ')}; use a role token`,
     );
-  });
+  }
   return findings;
 }
 
