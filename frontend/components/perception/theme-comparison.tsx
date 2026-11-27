@@ -5,7 +5,7 @@ import type { ProbeMarketValue } from '@citeladder/contracts/probes';
 import { entityKey } from '@/components/perception/brand-radar';
 import { HeatScale, HeatTable, type HeatValue } from '@/components/ui/heat-table';
 import { Inline } from '@/components/ui/layout';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { YouTag } from '@/components/ui/table';
 
@@ -26,9 +26,6 @@ export function ThemeComparison({ themes }: Readonly<{ themes: readonly Theme[] 
     <Section aria-labelledby={titleId}>
       <SectionHeader>
         <SectionTitle id={titleId}>Brand comparison by theme</SectionTitle>
-        <SectionDescription>
-          Position score each brand earns when AI is asked about a theme, not about one brand
-        </SectionDescription>
       </SectionHeader>
       {themes.length ? (
         <>

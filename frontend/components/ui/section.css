@@ -74,6 +74,26 @@
   min-width: 0;
 }
 
+[data-section-heading]:has(> [data-section-description]) {
+  display: flex;
+  align-items: center;
+  column-gap: var(--spacing-item);
+}
+
+[data-section-heading] > [data-section-description] {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  width: 0;
+  min-width: 0;
+  height: var(--spacing-body-line);
+  overflow: clip;
+  white-space: nowrap;
+  &::before {
+    content: '';
+  }
+}
+
 [data-bleed] {
   min-width: 0;
   margin-inline: calc(-1 * var(--spacing-panel-inset));

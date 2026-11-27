@@ -29,10 +29,7 @@ export function PerceptionMarket({ data }: Readonly<{ data: ProbeMarketValue }>)
     <SectionStack>
       <Lede data={data} />
       <AppGrid layout="halves">
-        <TitledSection
-          title={`How AI describes ${data.brand}`}
-          description="Raised most, and earliest"
-        >
+        <TitledSection title={`How AI describes ${data.brand}`}>
           <SectionContent>
             {data.known_for.length ? (
               <Stack gap="compact">
@@ -57,7 +54,6 @@ export function PerceptionMarket({ data }: Readonly<{ data: ProbeMarketValue }>)
         </TitledSection>
         <TitledSection
           title="Brand shape"
-          description="Position score per theme"
           actions={
             mayEdit ? (
               <Button variant="secondary" asChild>
@@ -135,7 +131,6 @@ function RankTable({ data }: Readonly<{ data: ProbeMarketValue }>) {
   return (
     <DataTable
       title="Your rank by theme"
-      description="Position score: 100 when named first, 10 less per place, 0 when not named"
       columns={RANK_COLUMNS}
       state={
         data.themes.length

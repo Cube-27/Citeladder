@@ -14,13 +14,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { TreeCheckOption, TreeList } from '@/components/ui/list-row';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/typography';
-import {
-  Section,
-  SectionBleed,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { X } from '@/lib/icons';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -104,9 +98,6 @@ function CategoryReview({
         <Section>
           <SectionHeader>
             <SectionTitle level={3}>Categories</SectionTitle>
-            <SectionDescription>
-              Clear a category to leave it and the categories under it out of your catalog.
-            </SectionDescription>
           </SectionHeader>
           <TreeList label="Proposed categories">
             {stage.categories.map((node) => (
