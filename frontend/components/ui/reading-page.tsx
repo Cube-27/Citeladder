@@ -9,7 +9,7 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
-import { textRole, type TextRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   return (
@@ -20,8 +20,6 @@ export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
 export function ReadingTools({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="flex flex-wrap gap-2">{children}</div>;
 }
-
-export const READING_SECTION_TITLE = 'subheading' satisfies TextRole;
 
 export function Labelled({
   title,

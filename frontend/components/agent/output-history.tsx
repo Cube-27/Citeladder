@@ -7,7 +7,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
 import { SectionBleed } from '@/components/ui/section';
 import { LineDiff } from '@/components/ui/line-diff';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Eye, EyeOff, GitCompare } from '@/lib/icons';
 import { diffLines } from '@/lib/agent/diff';
 import { agentWriteFailure } from '@/lib/agent/errors';
@@ -103,12 +103,12 @@ function RevisionRow({
   const knownHosts = useAgentLinkHosts(revision.web_sources);
   return (
     <>
-      <Inline className="flex-wrap">
-        <span className={textRole('body')}>Revision {revision.number}</span>
-        <span className={textRole('caption')}>
+      <Inline wrap>
+        <Text variant="body">Revision {revision.number}</Text>
+        <Text variant="caption">
           {revisionAuthorLabel(revision.author)} · <DisplayTime value={revision.created_at} />
-        </span>
-        {latest ? <span className={textRole('caption')}>Current</span> : null}
+        </Text>
+        {latest ? <Text variant="caption">Current</Text> : null}
         <span className="flex-1" />
         <Button variant="quiet" aria-expanded={open === 'view'} onClick={() => onToggle('view')}>
           <Icon icon={open === 'view' ? EyeOff : Eye} />
@@ -132,7 +132,9 @@ function RevisionRow({
       </Inline>
       {open === 'view' ? (
         <Stack gap="compact">
-          <h4 className={textRole('subheading')}>{revision.title}</h4>
+          <Text as="h4" variant="label">
+            {revision.title}
+          </Text>
           <ContentMarkdown markdown={revision.body} density="compact" knownHosts={knownHosts} />
         </Stack>
       ) : null}
@@ -166,18 +168,18 @@ function RevisionDiff({
   );
   if (lines === null)
     return (
-      <p className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2">
         These revisions are too long to compare line by line. View each one instead.
-      </p>
+      </Text>
     );
   const changed = lines.filter((line) => line.kind !== 'same').length;
   const noun = changed === 1 ? 'line' : 'lines';
   const summary = changed === 0 ? 'no changes' : `${changed} changed ${noun}`;
   return (
     <Stack gap="compact">
-      <p className={textRole('caption')}>
+      <Text as="p" variant="caption">
         Revision {before.number} → current (revision {after.number}): {summary}
-      </p>
+      </Text>
       <LineDiff lines={lines} label={`Changes from revision ${before.number}`} />
     </Stack>
   );

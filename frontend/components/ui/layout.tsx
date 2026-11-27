@@ -10,10 +10,17 @@ const STACK_GAP = {
   group: 'gap-3',
   loose: 'gap-4',
   choices: 'gap-x-4 gap-y-2',
+  'page-top': 'gap-page-top',
   item: 'gap-2',
   tight: 'gap-1',
   none: 'gap-0',
 } as const;
+
+const PAD_TOP = {
+  'flow-gap': 'pt-flow-gap',
+} as const;
+
+export type Pad = Readonly<{ top?: keyof typeof PAD_TOP }>;
 
 export type StackGap = keyof typeof STACK_GAP;
 
@@ -36,6 +43,7 @@ export function Stack({
   gap = 'compact',
   align = 'stretch',
   list = 'none',
+  pad,
   className,
   children,
   ...props
@@ -45,13 +53,21 @@ export function Stack({
     gap?: StackGap;
     align?: StackAlign;
     list?: keyof typeof STACK_LIST;
+    pad?: Pad;
   }
 >) {
   const Component = as ?? 'div';
   return (
     <Component
       {...props}
-      className={cn('grid', STACK_GAP[gap], STACK_ALIGN[align], STACK_LIST[list], className)}
+      className={cn(
+        'grid',
+        STACK_GAP[gap],
+        STACK_ALIGN[align],
+        STACK_LIST[list],
+        pad?.top && PAD_TOP[pad.top],
+        className,
+      )}
     >
       {children}
     </Component>
@@ -142,6 +158,8 @@ const COLUMN_TEMPLATE = {
   'main-aside': 'column-wide:grid-cols-main-aside',
   'aside-main': 'column-wide:grid-cols-aside-main',
   pair: 'column-split:grid-cols-2',
+  halves: 'desktop:grid-cols-2',
+  record: 'column-split:grid-cols-record',
   thirds: 'column-split:grid-cols-3',
 } as const;
 

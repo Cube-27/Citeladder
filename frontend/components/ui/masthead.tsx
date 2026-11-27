@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Slot } from '@radix-ui/react-slot';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 
 import { MastheadOverflow, MastheadPrimarySlot } from '@/components/ui/masthead-actions';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
@@ -7,6 +15,10 @@ import { ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 export const MASTHEAD_LABELLED = 'shrink-0 justify-start';
+
+export function MastheadLabelled({ children }: Readonly<{ children: ReactElement }>) {
+  return <Slot className={MASTHEAD_LABELLED}>{children}</Slot>;
+}
 
 export function Masthead({
   title,

@@ -5,8 +5,6 @@ import { PanelFrame, SurfaceContext } from '@/components/ui/section';
 
 const FILL = 'h-[calc(100dvh-var(--route-chrome-height))] min-h-0';
 
-export const EDITOR_RAIL_TAB = 'flex min-h-0 flex-1 flex-col';
-
 export function EditorWorkspace({ page, rail }: Readonly<{ page: ReactNode; rail: ReactNode }>) {
   return (
     <div

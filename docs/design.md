@@ -292,10 +292,17 @@ and dialogs is one of them; [`section.test.tsx`](../frontend/components/ui/secti
 holds the depth rules.
 
 - **Pages pass content, never geometry.** A primitive exposes typed props
-  (`Stack`/`Inline` `gap`, `align`, `justify`, `wrap`; `Columns template`;
-  `tone` on `Text`, `Icon` and the link components). `Stack` and `Inline`
-  still accept `className` until the screen batches move their callers to
-  props; restyling any other primitive through `className` is a lint finding.
+  (`Stack`/`Inline` `gap`, `align`, `justify`, `wrap`; `Stack` `pad`;
+  `Columns template`; `Text` `wrap`, `box`, `align` and `tone`; `tone` on `Icon` and
+  the link components). Template chrome (page width, heading row, tab and
+  filter bands, thread and setup frames) lives in
+  [`page-chrome.tsx`](../frontend/components/ui/page-chrome.tsx) and
+  [`flow-frame.tsx`](../frontend/components/ui/flow-frame.tsx), which boot
+  screens import, and in `flow-chrome.tsx` and `record-chrome.tsx`, which
+  only lazy routes import: a module a boot file imports ships whole in the
+  eager bundle. Templates compose them and hold no classes. `Stack` and `Inline` still accept
+  `className` until the screen batches move their callers to props;
+  restyling any other primitive through `className` is a lint finding.
   No page adds padding, margin, border, fill, radius or shadow around one; no
   globals rule depends on what contains what. A primitive that needs its
   depth reads `SurfaceContext` (`useOnPage()`), never a CSS ancestor. A

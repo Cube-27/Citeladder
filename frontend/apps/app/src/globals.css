@@ -370,10 +370,20 @@
   --spacing-band: 8px;
   --spacing-flow-gap: 48px;
   --spacing-label-column: 160px;
+  --spacing-turn-estimate: 320px;
+  --spacing-count-mark: 3ch;
 
 }
 
 @theme inline {
+  --spacing-title-line: var(--text-title--line-height);
+  --spacing-page-start: var(--page-start, 0px);
+  --spacing-page-strip: calc(var(--spacing-page-inline) + var(--page-start, 0px));
+  --spacing-bar-clearance: calc(var(--spacing-filter-bar) + 2 * var(--spacing-gutter));
+  --spacing-rail-top: calc(var(--masthead-block-size, var(--spacing-masthead)) + var(--spacing-page-block));
+  --spacing-route-fill: calc(100dvh - var(--route-chrome-height));
+  --spacing-thread-fill: calc(100dvh - var(--route-chrome-height) + var(--spacing-page-block));
+  --spacing-flow-top: max(var(--spacing-flow-gap), calc(20dvh - var(--spacing-masthead)));
   --shadow-field-face: var(--shadow-field, 0 0 transparent);
   --shadow-control-face: var(--control-face-shadow, var(--shadow-field, 0 0 transparent));
   --color-control-face: var(--control-face, var(--color-raised));
@@ -382,6 +392,7 @@
   --grid-template-columns-fields-action: 1fr 1fr auto;
   --grid-template-columns-lead-body-end: auto minmax(0, 1fr) auto;
   --grid-template-columns-lead-body: auto minmax(0, 1fr);
+  --grid-template-columns-record: minmax(0, 2fr) minmax(0, 1fr);
   --grid-template-columns-body-end: minmax(0, 1fr) auto;
   --grid-template-columns-body-field: minmax(0, 1fr) calc(var(--spacing) * 24);
   --grid-template-columns-choices: auto auto;
@@ -505,6 +516,21 @@
   --weight-medium: 450;
 }
 
+@utility page-start-full {
+  --page-start: max(0px, calc((100cqw - var(--container-app)) / 2));
+}
+@utility page-start-narrow {
+  --page-start: max(0px, calc((100cqw - var(--container-page)) / 2));
+}
+@utility page-start-compact {
+  --page-start: max(0px, calc((100cqw - var(--container-measure)) / 2));
+}
+@utility scrollbar-stable {
+  scrollbar-gutter: stable;
+}
+@utility controls-lg {
+  --spacing-control-md: var(--spacing-control-lg);
+}
 @utility shadow-xs {
   box-shadow: var(--shadow-xs);
 }

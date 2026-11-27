@@ -67,13 +67,17 @@ export type ButtonProps = ComponentPropsWithoutRef<'button'> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
   asChild?: boolean;
+  shape?: 'label' | 'icon';
   pending?: boolean;
   pendingLabel?: ReactNode;
   ref?: Ref<HTMLButtonElement>;
 };
 
+const ICON_SHAPE = 'w-control-md gap-0 px-0';
+
 function SlottedButton({
   className,
+  shape = 'label',
   variant = 'secondary',
   size = 'md',
   pending = false,
@@ -91,7 +95,7 @@ function SlottedButton({
       {...props}
       data-button-variant={variant}
       aria-busy={pending || undefined}
-      className={buttonClasses(variant, className, size)}
+      className={buttonClasses(variant, cn(shape === 'icon' && ICON_SHAPE, className), size)}
     >
       {children}
     </Slot>
@@ -100,6 +104,7 @@ function SlottedButton({
 
 function NativeButton({
   className,
+  shape = 'label',
   variant = 'secondary',
   size = 'md',
   pending = false,
@@ -118,7 +123,11 @@ function NativeButton({
       data-button-variant={variant}
       aria-busy={pending || undefined}
       disabled={props.disabled || pending}
-      className={buttonClasses(variant, cn(pending && 'pointer-events-none', className), size)}
+      className={buttonClasses(
+        variant,
+        cn(pending && 'pointer-events-none', shape === 'icon' && ICON_SHAPE, className),
+        size,
+      )}
     >
       <span
         aria-hidden={pending || undefined}
@@ -186,9 +195,8 @@ export function IconButton({
   className,
   ...props
 }: Readonly<IconButtonProps>) {
-  const classes = cn('w-control-md gap-0 px-0', className);
   const control = href ? (
-    <Button {...props} variant={variant} className={classes} asChild>
+    <Button {...props} variant={variant} shape="icon" className={className} asChild>
       <IconLinkTarget href={href} label={label}>
         <Icon icon={icon} />
       </IconLinkTarget>
@@ -197,7 +205,8 @@ export function IconButton({
     <Button
       {...props}
       variant={variant}
-      className={classes}
+      shape="icon"
+      className={className}
       aria-label={label}
       pendingLabel={<span className="sr-only">{props.pendingLabel ?? label}</span>}
     >

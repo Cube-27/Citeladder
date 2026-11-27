@@ -5,7 +5,7 @@ import { PageOpenContext, pageHref } from '@/components/site-health/page-open-co
 import { Labelled } from '@/components/ui/reading-page';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LinkRow, LinkRows } from '@/components/ui/link-rows';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { WorkRowsMore } from '@/components/ui/work-rows';
 import { actionTarget } from '@/lib/agent/action-title';
 import { HANDOFF_URLS_MAX } from '@/lib/agent/handoff';
@@ -100,9 +100,11 @@ function UrlPath({ url }: Readonly<{ url: string }>) {
   const home = !path.startsWith('/');
   const cut = path.lastIndexOf('/') + 1;
   return (
-    <span className={textRole('caption', 'block truncate')} title={url}>
+    <Text variant="caption" box="block" wrap="truncate" title={url}>
       {home ? null : path.slice(0, cut)}
-      <b className={textRole('emphasis', 'text-ink')}>{home ? '/' : path.slice(cut)}</b>
-    </span>
+      <Text as="b" variant="caption-strong" tone="ink">
+        {home ? '/' : path.slice(cut)}
+      </Text>
+    </Text>
   );
 }

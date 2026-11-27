@@ -7,7 +7,6 @@ import { WorkbenchPage } from '@/components/templates/workbench-page';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
 import {
-  EDITOR_RAIL_TAB,
   EditorPane,
   EditorRail,
   EditorRailPanel,
@@ -17,7 +16,7 @@ import {
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { UnsavedChangesGuard } from '@/components/ui/unsaved-changes-guard';
 import {
   suggestionHighlights,
@@ -315,7 +314,7 @@ function WorkspaceLayout({
   composer: ReactNode;
 }>) {
   const railPanels = RAIL_TABS.map((value) => (
-    <TabPanel key={value} value={value} className={EDITOR_RAIL_TAB}>
+    <TabPanel key={value} value={value} className="flex min-h-0 flex-1 flex-col">
       {value === 'chat' ? conversation : <EditorRailPanel>{panels[value]}</EditorRailPanel>}
     </TabPanel>
   ));
@@ -349,7 +348,7 @@ function WorkspaceLayout({
           />
         }
       >
-        <TabPanel value="page" forceMount className={EDITOR_RAIL_TAB}>
+        <TabPanel value="page" forceMount className="flex min-h-0 flex-1 flex-col">
           {page}
         </TabPanel>
         {tabs.stackTab === 'page' ? null : <EditorRail foot={composer}>{railPanels}</EditorRail>}
@@ -383,10 +382,10 @@ function PageHead({
   return (
     <>
       <Inline className="flex-wrap justify-between">
-        <span className={textRole('caption')} aria-live="polite">
+        <Text variant="caption" aria-live="polite">
           {status}
-        </span>
-        <Inline className="flex-wrap">
+        </Text>
+        <Inline wrap>
           <Button variant="quiet" disabled={!canAsk} onClick={onAsk}>
             <Icon icon={Sparkles} />
             Ask AI

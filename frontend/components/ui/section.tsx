@@ -63,12 +63,19 @@ export function SectionTitle({
   children,
   className,
   level = 2,
+  count,
   ...props
-}: Readonly<ComponentPropsWithoutRef<'h2'> & { level?: 2 | 3 }>) {
+}: Readonly<ComponentPropsWithoutRef<'h2'> & { level?: 2 | 3; count?: number }>) {
   const Heading = level === 2 ? 'h2' : 'h3';
   return (
     <Heading {...props} className={textRole(useContext(SectionTitleRoleContext), className)}>
       {children}
+      {count === undefined ? null : (
+        <>
+          {' '}
+          <span className="text-ink-2">({count})</span>
+        </>
+      )}
     </Heading>
   );
 }

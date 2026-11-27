@@ -8,7 +8,7 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders as raw, selectionAs, type TestRole } from '@/test/render';
 import type { PageDetail } from '@citeladder/contracts';
 
-import { parseAgentHandoff } from '@/lib/agent/handoff';
+import { parseAgentHandoff } from '@/lib/agent/handoff-params';
 import type { Action } from '@/lib/api/actions';
 import { PageDrawerHost } from './page-drawer';
 import {

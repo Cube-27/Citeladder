@@ -8,7 +8,13 @@ export type PressableProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   tone?: TextTone;
   text?: TextRole;
   numeric?: boolean;
+  look?: 'plain' | 'jump';
 };
+
+const LOOK = {
+  plain: undefined,
+  jump: 'underline decoration-1 underline-offset-3 decoration-control-line hover:decoration-current',
+} as const;
 
 export function Pressable({
   className,
@@ -16,6 +22,7 @@ export function Pressable({
   tone,
   text,
   numeric = false,
+  look = 'plain',
   ref,
   ...props
 }: Readonly<PressableProps>) {
@@ -28,6 +35,7 @@ export function Pressable({
         toneClass(tone),
         text && textRole(text),
         numeric && 'tabular-nums',
+        LOOK[look],
         className,
       )}
       {...props}
