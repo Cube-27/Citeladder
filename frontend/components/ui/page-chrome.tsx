@@ -4,20 +4,22 @@ import { SectionStack } from '@/components/ui/section';
 import { TAB_BASELINE } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
-export type PageWidth = 'full' | 'narrow' | 'compact' | 'fill';
+export type PageWidth = 'full' | 'narrow' | 'detail' | 'reading' | 'fill';
 
 const PAGE_START: Record<PageWidth, string | false> = {
   fill: false,
   full: 'page-start-full',
   narrow: 'page-start-narrow',
-  compact: 'page-start-compact',
+  detail: 'page-start-detail',
+  reading: 'page-start-reading',
 };
 
 const PAGE_COLUMN: Record<PageWidth, string | false> = {
   fill: false,
   full: 'ms-page-start w-full max-w-app',
   narrow: 'ms-page-start w-full max-w-page',
-  compact: 'ms-page-start w-full max-w-measure',
+  detail: 'ms-page-start w-full max-w-detail',
+  reading: 'ms-page-start w-full max-w-reading',
 };
 
 export function PageWidthFrame({
@@ -116,16 +118,23 @@ export function PageSections({ children }: Readonly<{ children: ReactNode }>) {
   return <SectionStack data-page-content="">{children}</SectionStack>;
 }
 
+const RAIL_SECTION = { reading: 'max-w-reading', fill: false } as const;
+
+export type RailSection = keyof typeof RAIL_SECTION;
+
 export function RailColumns({
   rail,
+  section,
   children,
-}: Readonly<{ rail: ReactNode; children: ReactNode }>) {
+}: Readonly<{ rail: ReactNode; section: RailSection; children: ReactNode }>) {
   return (
     <div data-section-rail="" className="desktop:flex-row gap-page-top flex min-w-0 flex-col">
-      <div className="desktop:sticky desktop:top-rail-top desktop:w-48 desktop:self-start shrink-0">
+      <div className="desktop:sticky desktop:top-rail-top desktop:w-section-rail desktop:self-start shrink-0">
         {rail}
       </div>
-      <div className="min-w-0 flex-1">{children}</div>
+      <div data-rail-section={section} className={cn('min-w-0 flex-1', RAIL_SECTION[section])}>
+        {children}
+      </div>
     </div>
   );
 }

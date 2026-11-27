@@ -115,9 +115,10 @@ zinc neutrals and shadows in both themes (AR-1).
 | `state-selected`         | tags, keyboard hints, value tokens                       |
 | `state-fill`             | controls in a surface, segmented tray, rail current row  |
 | `rule`                   | every hairline                                           |
-| `control-line`           | checkbox and radio edge, draft edge                      |
+| `control-line`           | draft edge, chart strokes, link underlines               |
+| `control-edge`           | checkbox, radio and off-switch edge, 3:1 on its fill     |
 | `ink`, `ink-2`           | text; secondary text and icons                           |
-| `ink-placeholder`        | field placeholders, 4.5:1 on `well`                      |
+| `ink-placeholder`        | field placeholders, 4.5:1 on `well` and `well-hover`     |
 | `mark-ink`, `mark-ink-2` | a fill, edge or shadow drawn in the ink colour           |
 | `accent`                 | "you, here" and focus                                    |
 | `primary`                | every action fill, white text                            |
@@ -213,8 +214,9 @@ marketing).
   and the grain. A step or measure only one block uses is a token at the top of
   that block's sheet, not a shared step.
 - **Motion, layering and opacity:** `duration-<role>` (fast 120, close 160,
-  open 200, press 250, slide 300, plus reveal, pulse, sweep and the stagger
-  steps), `ease-<role>`, `z-<role>` (base, raised, sticky, float, overlay,
+  open 200, press 150, panel 250 for dialogs and drawers, turn 200 for every
+  chevron, pop-exit 96 for a menu, tooltip or dialog leaving, slide 300, plus
+  reveal, pulse, sweep and the stagger steps), `ease-<role>`, `z-<role>` (base, raised, sticky, float, overlay,
   modal, toast) and `opacity-<role>` (disabled 50, muted 80, dim 70, ghost, hover).
   `cn` knows every role, so a caller can still override one.
 - **Controls:** 36 high (HeroUI's medium); 44 below 900px or under a coarse pointer, and on
@@ -224,7 +226,10 @@ marketing).
   Every target is at least 24×24.
 - **Radii** stay CiteLadder's, not HeroUI's (AR-1): tag 5 (`rounded-mark`),
   control and menu 8 (`rounded-control`), card 10 (`rounded-card`), overlay 14
-  (`rounded-overlay`), and 4 for a part inside a frame (`rounded-inner`);
+  (`rounded-overlay`), and 4 for a part inside a frame (`rounded-inner`). A
+  tray item is the control radius minus the tray inset (`rounded-tray-item`,
+  `p-tray-inset`), a menu item the card radius minus the menu inset
+  (`rounded-popup-item`, `p-popup-inset`), so both sit concentric;
   `full` only for avatars, dots and switch tracks. On the website and docs
   mark, inner, control, card and overlay are 2, 4, 6, 8 and 12. CSS reads these
   roles, never the `xs`–`lg` scale; marketing blocks add the
@@ -246,7 +251,9 @@ marketing).
 **The accent means "you, here".** It marks you (your brand's row, series and
 the word "You") and here (the current nav item and step, as a 2px mark
 with `aria-current` or `aria-selected`), the live rung, and where keyboard
-and input focus is (AR-13). Never an action, status, link or decoration.
+and input focus is (AR-13). Never an action, status, link or decoration. One
+exception: a `HeatTable`'s heat scale stays the accent for every brand
+(owner, 2026-11-27).
 
 **Nothing moves on interaction.** Pagination, tabs, filters, sorting, loading
 and empty states keep their footprint; a pending button keeps its width.
@@ -257,7 +264,8 @@ skeleton, a flow route its plain ground. Data on screen stays while it
 refreshes.
 
 **Accessibility.** WCAG AA in both themes; meaning never by colour alone; one
-`focus` ring, never removed: a 2px accent ring 2px outside the control,
+`focus` ring, never removed (a gated `aria-disabled` control keeps it; only a
+`:disabled` one is unfocusable): a 2px accent ring 2px outside the control,
 drawn inward where a frame clips it; it holds 3:1 on every fill; all motion stops under
 `prefers-reduced-motion`.
 
@@ -295,8 +303,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   rule between them; a section's head is inside its card (AR-24). Links carry no underline at rest,
   only on hover and focus. Narrow pages centre the body in their column (AR-9; 1040:
   Overview, Projects, Issues, Actions, Agent, Settings, Agent context; 720:
-  Billing, Pricing, Runs, and the Site Health page detail and Action detail
-  pages, AR-22).
+  Billing, Pricing, Runs; 800: Action detail, AR-22).
 - **Toolbar**, above the content it scopes: segmented control, search, filter
   buttons, then right-aligned the muted count and one action, 8 apart. A
   page-wide toolbar (`FilterBar`) is the strip under the tabs, with no rule,
@@ -312,8 +319,10 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
 - **Metric strip:** a bleed slot of a card (on the paper it brings its own
   card), cells divided by hairlines, padded 12 by the card inset, 12px label
   over the value. Never one card per figure;
-  no meters, rings or bars inside a cell (AR-3). The one table with a bar in a
-  cell is Perception › Brand's attributes table (AR-19).
+  no meters, rings or bars inside a cell (AR-3). A table has one meter-column
+  kind: a neutral ink bar beside its figure, the accent for you, and a status
+  hue only at a quota limit or as a score; Perception › Brand's attributes
+  table keeps its negative-vs-positive bar (AR-19).
 - **Table:** a `DataTable` is always a `Section` (a card on the paper, flat in
   a surface) whose rows bleed to the card's edges; no tray and no inner card.
   Head band 36 on `table-head`, 12px at 500, a 16-high `rule` tick
@@ -324,7 +333,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   figures; foot 40 with the count and an icon pager. The first column takes the spare width,
   the others hug their content (AR-4).
 - **Settings layout** (Settings, Agent context, Billing, Pricing): the
-  route's column holds a stack of group cards 20 apart. Settings and Agent context list their sections in a sticky 192 rail
+  route's column holds a stack of group cards 20 apart. Settings and Agent context list their sections in a sticky 192 rail (`section-rail`, the Prompt builder's step rail too)
   of sidebar rows on the column's left (`TabRail`), never a tab strip; the
   current section sits 24 beside it, at most 720 wide (Business map takes
   the rest of the column), so the header and rail never move (AR-9). A
@@ -469,7 +478,7 @@ holds the depth rules.
   matches. Fields, select triggers and filter chips keep their own face (Inputs
   below). Quiet:
   transparent, `ink`, `state-hover` fill. Primary: `primary` fill (the deep accent),
-  white text, at most one per view. Danger: secondary with negative text; filled only to confirm in a
+  white text, at most one per view. Danger: the `danger-face` (the negative wash) with negative text; filled only to confirm in a
   dialog (`danger-confirm`). One disabled look for every variant. The
   website keeps its layered `.face`.
 - **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 36, no
@@ -479,7 +488,7 @@ holds the depth rules.
   keeps that fill while focused or open; focused,
   an accent edge inside the focus ring; invalid, a negative edge that stays
   when focused. Disabled controls draw at 50%. 14px leading icon. Checkbox and radio
-  are `panel` with a `control-line` edge, the one edged control, and a `primary` fill when on; the switch is a `primary`
+  are `panel` with a `control-edge` edge, the one edged control, and a `primary` fill when on; the switch is a `primary`
   track when on, as is a picked calendar day and the setup stepper. Several short values ([`ValuesInput`](../frontend/components/ui/chip-input.tsx))
   are 24-high tokens on `state-selected`, a suggestion dashed with one accept
   tick per field, then the add field; Enter (and a comma in a grid cell) adds,

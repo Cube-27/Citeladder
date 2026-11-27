@@ -12,10 +12,7 @@ function TreeChevron({ open }: Readonly<{ open: boolean }>) {
   return (
     <ChevronDown
       aria-hidden
-      className={cn(
-        'text-ink-2 size-3.5 shrink-0 transition-transform duration-open',
-        !open && '-rotate-90',
-      )}
+      className={cn('text-ink-2 size-3.5 shrink-0 turn', !open && '-rotate-90')}
     />
   );
 }

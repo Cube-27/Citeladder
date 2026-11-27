@@ -29,7 +29,12 @@ export function Avatar({
       )}
     >
       {src && !failed ? (
-        <img src={src} alt="" className="size-full object-cover" onError={() => setFailed(true)} />
+        <img
+          src={src}
+          alt=""
+          className="image-edge size-full object-cover"
+          onError={() => setFailed(true)}
+        />
       ) : (
         emailInitials(name)
       )}

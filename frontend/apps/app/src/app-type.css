@@ -11,7 +11,7 @@
   --text-eyebrow: var(--text-caption);
   --text-eyebrow--line-height: var(--text-caption--line-height);
   --text-eyebrow--font-weight: var(--weight-medium);
-  --text-eyebrow--letter-spacing: 0.08em;
+  --text-eyebrow--letter-spacing: 0;
   --text-code: var(--text-caption);
   --text-code--line-height: var(--text-caption--line-height);
   --text-code--font-weight: var(--weight-regular);

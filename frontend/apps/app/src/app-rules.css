@@ -107,12 +107,12 @@ html:has([data-app-surface]) {
   overflow: hidden;
 }
 [data-main-column] {
+  @variant rail {
+    scrollbar-gutter: stable;
+  }
   scroll-padding-top: calc(var(--sticky-header-offset) + var(--spacing-page-top));
   &:has([data-page-band='action-bar']) {
     scroll-padding-bottom: calc(var(--spacing-filter-bar) + 2 * var(--spacing-gutter));
-  }
-  &:has([data-section-rail]) {
-    scrollbar-gutter: stable;
   }
 }
 
@@ -364,10 +364,8 @@ a.focus-ring:active .text-caption.text-ink-2 {
 }
 
 :disabled:focus-visible,
-[aria-disabled='true']:focus-visible,
-[data-disabled]:focus-visible,
-.focus-ring:is(:disabled, [aria-disabled='true'], [data-disabled]):focus-visible,
-.focus-input:is(:disabled, [aria-disabled='true'], [data-disabled]):focus-visible,
+.focus-ring:disabled:focus-visible,
+.focus-input:disabled:focus-visible,
 .focus-frame:has(:disabled):not(:has(:enabled:focus-visible)) {
   outline: none;
 }
@@ -553,8 +551,13 @@ label {
 :root:not([data-public-surface]) .table-frame thead > tr {
   height: auto;
 }
-:root:not([data-public-surface]) .table-frame thead th:is([aria-sort], :has(button:hover)) {
+:root:not([data-public-surface]) .table-frame thead th[aria-sort] {
   color: var(--text-color-ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  :root:not([data-public-surface]) .table-frame thead th:has(button:hover) {
+    color: var(--text-color-ink);
+  }
 }
 :root:not([data-public-surface]) .table-frame tbody :is(td, th) {
   font-size: var(--text-body);
@@ -706,7 +709,7 @@ label {
 @layer components {
   .press {
     transition:
-      scale var(--transition-duration-press) ease,
+      scale var(--transition-duration-press),
       background-color var(--transition-duration-fast),
       color var(--transition-duration-fast),
       border-color var(--transition-duration-fast),
@@ -728,7 +731,7 @@ label {
 }
 
 :is([aria-haspopup], [role='combobox']) .tabler-icon-chevron-down {
-  transition: rotate var(--transition-duration-fast) var(--ease-standard);
+  transition: rotate var(--transition-duration-turn) var(--ease-standard);
 }
 :root:not([data-public-surface])
   :is([aria-haspopup], [role='combobox'])[aria-expanded='true']
@@ -751,8 +754,8 @@ label {
   opacity: 0;
   scale: 0.7;
   transition:
-    scale var(--transition-duration-fast) linear,
-    opacity var(--transition-duration-open);
+    scale var(--transition-duration-fast) var(--ease-standard),
+    opacity var(--transition-duration-open) var(--ease-standard);
 }
 .check-box:not([data-state='unchecked'])::after {
   opacity: 1;
@@ -788,10 +791,12 @@ label {
 :root:not([data-public-surface]) .surface-well :is(.focus-input, .focus-frame) {
   background-color: var(--color-panel);
 }
-:root:not([data-public-surface])
-  :where([data-overlay], [data-panel], [data-panel-frame], .table-frame, [data-auth-form])
-  :is(.focus-input, .focus-frame):hover:not(:focus, :focus-within, :disabled, [data-disabled]) {
-  background-color: var(--color-well-hover);
+@media (hover: hover) and (pointer: fine) {
+  :root:not([data-public-surface])
+    :where([data-overlay], [data-panel], [data-panel-frame], .table-frame, [data-auth-form])
+    :is(.focus-input, .focus-frame):hover:not(:focus, :focus-within, :disabled, [data-disabled]) {
+    background-color: var(--color-well-hover);
+  }
 }
 :root:not([data-public-surface]):where(:not([data-theme='dark'])) {
   --control-face-hover: var(--color-field-hover);
@@ -814,8 +819,8 @@ label {
   --color-state-pressed: var(--color-state-fill);
 }
 :root:not([data-public-surface]) [data-button-variant='danger'] {
-  --color-raised: var(--color-negative-wash);
-  --color-raised-2: oklch(from var(--color-negative-wash) calc(l - 0.02) c h);
+  --color-raised: var(--color-danger-face);
+  --color-raised-2: var(--color-danger-face-hover);
 }
 :root:not([data-public-surface]) kbd {
   height: var(--kbd-height);

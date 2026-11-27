@@ -123,13 +123,13 @@ export function FilterChip({
 export function ValueChip({ filter }: Readonly<{ filter: FilterDefinition }>) {
   return (
     <Tooltip content={filter.label}>
-      <span className="rounded-control text-body text-ink bg-state-fill min-h-control-md inline-flex max-w-full min-w-0 shrink-0 items-center gap-1 border border-transparent ps-3 pe-1">
+      <span className="rounded-control text-body text-ink bg-state-fill min-h-control-md pe-tray-inset inline-flex max-w-full min-w-0 shrink-0 items-center gap-1 border border-transparent ps-3">
         <span className="min-w-0 truncate">{filter.valueLabel}</span>
         <button
           type="button"
           aria-label={`Remove ${filter.label} filter`}
           onClick={filter.reset}
-          className="focus-ring rounded-mark text-ink-2 hover:text-ink hover:overlay-hover flex size-5.5 shrink-0 items-center justify-center"
+          className="focus-ring rounded-tray-item text-ink-2 hover:text-ink hover:overlay-hover flex size-5.5 shrink-0 items-center justify-center"
         >
           <X className="size-3" aria-hidden />
         </button>

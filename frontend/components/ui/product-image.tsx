@@ -10,7 +10,7 @@ export function ProductImage({ src }: Readonly<{ src: string }>) {
         alt=""
         loading="lazy"
         data-product-photo=""
-        className="size-full object-contain"
+        className="image-edge size-full object-contain"
         onError={() => setFailed(true)}
       />
     </span>

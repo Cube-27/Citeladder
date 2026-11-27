@@ -50,7 +50,7 @@ const TAB_KIND = {
     current: 'tab-line',
   },
   segment: {
-    base: 'rounded-mark h-7 px-4',
+    base: 'rounded-tray-item h-7 px-4',
     current: 'bg-nav-current shadow-card',
   },
 } as const;
@@ -76,10 +76,10 @@ const STRIP_ROW = {
 } as const;
 
 const TAB_TRACK =
-  'inline-flex min-h-control-md max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-control p-0.5 scrollbar-none [&::-webkit-scrollbar]:hidden';
+  'inline-flex min-h-control-md max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-control p-tray-inset scrollbar-none [&::-webkit-scrollbar]:hidden';
 
 const TAB_FACE =
-  'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border border-transparent px-3 text-label whitespace-nowrap transition-tint duration-fast focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-disabled';
+  'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-tray-item border border-transparent px-3 text-label whitespace-nowrap transition-tint duration-fast focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-disabled';
 
 const TAB_FACE_STATE = {
   selected: 'bg-panel text-ink font-emphasis',
@@ -439,7 +439,7 @@ export function SegmentedControl<T extends string>({
             strip.current = node;
           }}
           data-segmented-track=""
-          className={cn(TAB_STRIP, 'rounded-control bg-state-fill p-1', className)}
+          className={cn(TAB_STRIP, 'rounded-control bg-state-fill p-tray-inset', className)}
         >
           <div
             id={id}

@@ -22,7 +22,7 @@ export function ProgressMeter({ label, value }: Readonly<{ label: string; value:
       />
       <span aria-hidden className="bg-well block h-1 overflow-hidden rounded-full">
         <span
-          className="bg-data-you w-share transition-size duration-slide ease-standard block h-full rounded-full"
+          className="bg-data-you fill-share transition-meter block h-full"
           style={{ '--share': `${clamped}%` }}
         />
       </span>

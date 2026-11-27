@@ -250,7 +250,7 @@ export function CommandPalette({
 
           <div
             ref={listRef}
-            className="max-h-100 min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
+            className="p-palette-inset max-h-100 min-h-0 flex-1 overflow-y-auto overscroll-contain"
           >
             {results.length === 0 ? (
               <p className="text-body text-ink-2 py-section px-4 text-center">
@@ -292,7 +292,7 @@ export function CommandPalette({
                           onMouseMove={() => highlight(index)}
                           onClick={() => runCommand(command)}
                           className={cn(
-                            'press press-soft text-body text-ink flex min-h-control-md w-full items-center gap-2 rounded-mark px-2.5 text-left',
+                            'press press-soft text-body text-ink flex min-h-control-md w-full items-center gap-2 rounded-popup-item px-2.5 text-left',
                             isActive && 'overlay-hover',
                           )}
                         >

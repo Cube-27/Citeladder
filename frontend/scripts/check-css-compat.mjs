@@ -14,6 +14,7 @@ const ACKNOWLEDGED_ENHANCEMENTS = {
   '::-webkit-scrollbar-track': 'Firefox styles scrollbars through scrollbar-color instead.',
   '::-webkit-scrollbar-thumb': 'Firefox styles scrollbars through scrollbar-color instead.',
   'text-size-adjust': 'The browser keeps its own text inflation on phones.',
+  '-webkit-tap-highlight-color': "A tap draws the browser's own highlight.",
   'box-decoration-break': 'A highlight broken across lines loses its end padding.',
   'forced-color-adjust': 'Browsers without a forced colours mode never apply it.',
   '::selection': 'iOS Safari keeps its own selection colour.',

@@ -158,7 +158,12 @@ export function SettingsScreen() {
 
   return (
     <TabsRoot value={activeTab} onValueChange={setActiveTab} orientation="vertical">
-      <SettingsPage rail={<TabRail items={tabs} ariaLabel="Settings sections" />}>
+      <SettingsPage
+        rail={{
+          nav: <TabRail items={tabs} ariaLabel="Settings sections" />,
+          section: 'reading',
+        }}
+      >
         <TabPanel value="account" forceMount className="data-[state=inactive]:hidden">
           <SectionStack>
             <SettingsGroup title="Profile">

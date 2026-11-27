@@ -25,7 +25,7 @@ export type CheckboxProps = AccessibleCheckbox & {
 const BOX = { wide: 'desktop:col-span-2', shrink: 'min-w-0', fill: 'min-w-0 flex-1' } as const;
 
 const CHECK_BOX =
-  'check-box press press-check isolate focus-ring bg-panel border-control-line text-on-primary data-[state=checked]:border-primary data-[state=indeterminate]:border-primary hit-area grid size-4 shrink-0 place-items-center rounded-mark border disabled:cursor-not-allowed';
+  'check-box press press-check isolate focus-ring bg-panel border-control-edge text-on-primary data-[state=checked]:border-primary data-[state=indeterminate]:border-primary hit-area grid size-4 shrink-0 place-items-center rounded-mark border disabled:cursor-not-allowed';
 
 function CheckMark({ on }: Readonly<{ on: boolean }>) {
   return (

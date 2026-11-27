@@ -10,7 +10,7 @@ import type {
   Screen,
   SidebarGroup,
 } from './route-types';
-import { CONTEXT_TABS } from '../agent/context-tabs.ts';
+import { CONTEXT_FILL_TAB, CONTEXT_TABS } from '../agent/context-tabs.ts';
 import { TRAFFIC_TABS } from '../ai-traffic/tabs.ts';
 import { PUBLIC_PERCEPTION_TABS } from '../perception/tabs.ts';
 import { SEARCH_INTELLIGENCE_TABS } from '../search-intelligence/tabs.ts';
@@ -238,7 +238,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/actions/:actionId',
-    width: 'compact',
+    width: 'detail',
     title: 'Action',
     collection: '/actions',
     screen: screens.action,
@@ -312,7 +312,9 @@ export const APP_ROUTES = [
     width: 'narrow',
     title: 'Context',
     screen: screens.context,
-    loading: cards([facts(5)], { rail: held('tab', CONTEXT_TABS) }),
+    loading: cards([facts(5)], {
+      rail: { ...held('tab', CONTEXT_TABS), fillTab: CONTEXT_FILL_TAB },
+    }),
     nav: [listed('Context', 'context', 'agent')],
   }),
   page({
@@ -362,7 +364,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/runs',
-    width: 'narrow',
+    width: 'reading',
     title: 'Runs',
     screen: screens.runs,
     loading: cards([table(5)], {
@@ -399,7 +401,7 @@ export const APP_ROUTES = [
     title: 'Settings',
     scope: 'workspace',
     screen: screens.settings,
-    loading: cards([facts(3)], { rail: held('tab', SETTINGS_TABS) }),
+    loading: cards([facts(3)], { rail: { ...held('tab', SETTINGS_TABS), fillTab: null } }),
     nav: [
       {
         label: 'Integrations',
@@ -426,7 +428,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/billing',
-    width: 'compact',
+    width: 'reading',
     title: 'Billing',
     scope: 'workspace',
     screen: screens.billing,
@@ -435,7 +437,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/pricing',
-    width: 'compact',
+    width: 'reading',
     title: 'Pricing',
     scope: 'workspace',
     screen: screens.pricing,

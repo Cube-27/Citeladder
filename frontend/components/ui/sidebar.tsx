@@ -258,7 +258,7 @@ export function SidebarModeTrack({
       className={
         rail
           ? 'flex flex-col items-center'
-          : 'rounded-control h-control-md bg-state-fill flex w-full min-w-0 shrink-0 p-0.5'
+          : 'rounded-control h-control-md bg-state-fill p-tray-inset flex w-full min-w-0 shrink-0'
       }
     />
   );
@@ -273,7 +273,7 @@ export function SidebarModeSegment({
   const Root = asChild ? Slot : 'span';
   const shape = rail
     ? RAIL_BUTTON
-    : 'focus-ring text-label text-ink rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors';
+    : 'focus-ring text-label text-ink rounded-tray-item relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors';
   const currentFill = rail ? cn('text-ink', CURRENT_FILL) : 'text-ink bg-nav-current shadow-card';
   return <Root {...props} className={cn(shape, current ? currentFill : AT_REST)} />;
 }

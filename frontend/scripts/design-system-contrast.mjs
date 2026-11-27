@@ -85,6 +85,13 @@ const CONTRAST_PAIRS = [
   },
   { inks: [color('site-mark')], surfaces: [color('site-page')], minimum: 3, only: 'marketing' },
   { inks: [color('focus')], surfaces: APP_FILLS, minimum: 3, only: 'app' },
+  { inks: [color('control-edge')], surfaces: APP_FILLS, minimum: 3, only: 'app' },
+  {
+    inks: [text('ink-placeholder')],
+    surfaces: [color('well-hover')],
+    minimum: 4.5,
+    only: 'app',
+  },
   {
     inks: ['ink', 'ink-2'].map(text),
     surfaces: [

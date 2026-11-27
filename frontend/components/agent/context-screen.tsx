@@ -20,7 +20,7 @@ import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
 import { readErrorProps } from '@/components/ui/notice';
 import { projectQueries } from '@/lib/api/projects';
 import type { BrandProfile, Project } from '@citeladder/contracts';
-import { CONTEXT_TABS, type ContextTab } from '@/lib/agent/context-tabs';
+import { CONTEXT_FILL_TAB, CONTEXT_TABS, type ContextTab } from '@/lib/agent/context-tabs';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -58,7 +58,12 @@ function ContextWorkspace({
 
   return (
     <TabsRoot value={requestedTab} onValueChange={setTab} orientation="vertical">
-      <SettingsPage rail={<TabRail items={CONTEXT_TABS} ariaLabel="Context sections" />}>
+      <SettingsPage
+        rail={{
+          nav: <TabRail items={CONTEXT_TABS} ariaLabel="Context sections" />,
+          section: requestedTab === CONTEXT_FILL_TAB ? 'fill' : 'reading',
+        }}
+      >
         <ContextPanels
           project={project}
           workspaceId={workspaceId}
