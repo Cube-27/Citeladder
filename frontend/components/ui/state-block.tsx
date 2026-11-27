@@ -288,12 +288,14 @@ function EmptyBody({
       <span aria-hidden data-icon-tile="" className="text-ink-2">
         <Glyph className="size-4" />
       </span>
-      <Heading className="text-label text-ink mt-state-title text-balance">{heading}</Heading>
+      <Heading className="text-label text-ink mt-[var(--state-title-gap,var(--spacing-loose))] text-balance">
+        {heading}
+      </Heading>
       {description ? (
-        <p className="text-body text-ink-2 max-w-state mt-1 text-balance">{description}</p>
+        <p className="text-body text-ink-2 mt-1 max-w-125 text-balance">{description}</p>
       ) : null}
       {action ? (
-        <div className="mt-state-action flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-[var(--state-action-gap,var(--spacing-loose))] flex flex-wrap items-center justify-center gap-2">
           {action}
         </div>
       ) : null}

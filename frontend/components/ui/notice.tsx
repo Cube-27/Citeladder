@@ -138,7 +138,7 @@ function MessageNoticeView({
 function NoticeAction({ children }: Readonly<{ children: ReactNode }>) {
   if (!children) return null;
   return (
-    <div className="phone:ms-6 phone:basis-notice-body phone:justify-start [&_[data-button-variant=quiet]]:text-ink ms-2 flex max-w-full shrink-0 flex-wrap items-center gap-2 self-center">
+    <div className="phone:ms-6 phone:basis-[calc(100%_-_1.5rem)] phone:justify-start [&_[data-button-variant=quiet]]:text-ink ms-2 flex max-w-full shrink-0 flex-wrap items-center gap-2 self-center">
       {children}
     </div>
   );
@@ -214,5 +214,5 @@ export function NoticeHeading({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 export function NoticeFrame({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="p-section min-h-notice-fill grid place-items-center">{children}</div>;
+  return <div className="p-section grid min-h-[60dvh] place-items-center">{children}</div>;
 }

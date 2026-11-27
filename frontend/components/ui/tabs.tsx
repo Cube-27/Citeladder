@@ -70,7 +70,7 @@ function tabFace({
   );
 }
 
-export const TAB_BASELINE = 'shadow-tab-rule';
+export const TAB_BASELINE = 'shadow-[inset_0_-1px_0_var(--color-rule)]';
 
 const STRIP_ROW = {
   page: 'min-h-page-tabs',
@@ -123,7 +123,7 @@ export function ControlCount({ count, upTo }: Readonly<{ count: number; upTo?: n
       <span
         aria-hidden
         data-size={` (${formatCount(upTo)})`}
-        className="after:content-data-size invisible col-start-1 row-start-1"
+        className="invisible col-start-1 row-start-1 after:content-[attr(data-size)]"
       />
     </span>
   );
@@ -153,7 +153,7 @@ export type TabsProps<T extends string> = TabStripProps<T> & {
 const TABS_LAYOUT = {
   flow: undefined,
   'drawer-split':
-    'phone:grid-cols-1 phone:grid-rows-drawer-split grid min-h-0 flex-1 grid-cols-drawer-split',
+    'phone:grid-cols-1 phone:grid-rows-[auto_minmax(0,1fr)] grid min-h-0 flex-1 grid-cols-[184px_minmax(0,1fr)]',
   spaced: 'grid min-w-0 gap-workspace',
 } as const;
 

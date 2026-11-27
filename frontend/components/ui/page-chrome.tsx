@@ -16,10 +16,10 @@ const PAGE_START: Record<PageWidth, string | false> = {
 
 const PAGE_COLUMN: Record<PageWidth, string | false> = {
   fill: false,
-  full: 'ms-page-start w-full max-w-app',
-  narrow: 'ms-page-start w-full max-w-page',
-  detail: 'ms-page-start w-full max-w-detail',
-  reading: 'ms-page-start w-full max-w-reading',
+  full: 'ms-[var(--page-start,0px)] w-full max-w-app',
+  narrow: 'ms-[var(--page-start,0px)] w-full max-w-page',
+  detail: 'ms-[var(--page-start,0px)] w-full max-w-detail',
+  reading: 'ms-[var(--page-start,0px)] w-full max-w-reading',
 };
 
 export function PageWidthFrame({
@@ -67,7 +67,7 @@ export function PageTitle({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-const STRIP = 'flex min-w-0 px-page-strip';
+const STRIP = 'flex min-w-0 px-[calc(var(--spacing-page-inline)_+_var(--page-start,0px))]';
 
 export function PageTabBand({
   endRef,
@@ -129,7 +129,7 @@ export function RailColumns({
 }: Readonly<{ rail: ReactNode; section: RailSection; children: ReactNode }>) {
   return (
     <div data-section-rail="" className="desktop:flex-row gap-page-top flex min-w-0 flex-col">
-      <div className="desktop:sticky desktop:top-rail-top desktop:w-section-rail desktop:self-start shrink-0">
+      <div className="desktop:sticky desktop:top-[calc(var(--masthead-block-size,var(--spacing-masthead))_+_var(--spacing-page-block))] desktop:w-section-rail desktop:self-start shrink-0">
         {rail}
       </div>
       <div data-rail-section={section} className={cn('min-w-0 flex-1', RAIL_SECTION[section])}>
@@ -151,7 +151,7 @@ export function ThreadLayout({
   children: ReactNode;
 }>) {
   return (
-    <div className="gap-workspace h-thread-fill flex min-h-0 flex-col">
+    <div className="gap-workspace flex h-[calc(100dvh_-_var(--route-chrome-height)_+_var(--spacing-page-block))] min-h-0 flex-col">
       <section
         ref={scrollRef}
         aria-label={scrollLabel}

@@ -358,7 +358,10 @@ export const lintConfig: OxlintConfig = {
       },
     },
     { files: DESIGN_SCRIPTS, rules: { ...DESIGN_RULES, ...SCREEN_RULES } },
-    { files: ['components/ui/**'], rules: offRules(SCREEN_RULES) },
+    {
+      files: ['components/ui/**'],
+      rules: { ...offRules(SCREEN_RULES), 'shadcn/no-arbitrary-values': 'off' },
+    },
     { files: WEBSITE_SOURCES, rules: { 'design/raw-media': 'off' } },
     {
       files: DESIGN_SOURCES.map((glob) => `${glob}/*.astro`),

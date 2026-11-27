@@ -176,7 +176,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             '--stack-height': `${listHeight}px`,
             '--front-height': frontHeight === undefined ? undefined : `${frontHeight}px`,
           }}
-          className="toast-stack focus-ring z-toast top-toast-top max-w-viewport-fit fixed right-4 w-100"
+          className="toast-stack focus-ring max-w-viewport-fit fixed top-[calc(var(--masthead-block-size,var(--spacing-masthead))_+_8px)] right-4 z-[60] w-100"
         />
       </ToastPrimitive.Provider>
     </ToastContext>

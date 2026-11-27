@@ -94,7 +94,7 @@ export function SkeletonBlock({
 }
 
 export function CountPlaceholder() {
-  return <span aria-hidden className="bg-well rounded-control w-count-mark inline-block h-3" />;
+  return <span aria-hidden className="bg-well rounded-control inline-block h-3 w-[3ch]" />;
 }
 
 export const TEXT_WIDTHS = ['full', '4/5', '3/5'] as const;

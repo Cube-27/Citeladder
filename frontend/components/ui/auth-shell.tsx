@@ -41,7 +41,7 @@ export function AuthHumanCheck({
       data-size={size}
       className={cn(
         'm-0 grid min-w-0 justify-items-center overflow-hidden border-0 p-0 *:col-start-1 *:row-start-1 *:self-center',
-        size === 'compact' ? 'h-turnstile-compact' : 'h-turnstile',
+        size === 'compact' ? 'h-35' : 'h-16.25',
       )}
     >
       <div ref={container} className="w-full" />

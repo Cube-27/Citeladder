@@ -17,7 +17,7 @@ export function Rungs({
         {RUNG_HEIGHTS.map((height, index) => (
           <span
             key={height}
-            className={cn('rounded-2xs', height, index < level ? 'w-1 bg-accent' : 'w-1 bg-rule')}
+            className={cn('rounded-[2px]', height, index < level ? 'w-1 bg-accent' : 'w-1 bg-rule')}
           />
         ))}
       </span>

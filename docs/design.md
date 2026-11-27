@@ -39,7 +39,8 @@ The lint enforces this and fails CI (`vp lint`; config in
 [`vp-shared-config.ts`](../frontend/vp-shared-config.ts)):
 
 - **`shadcn/*`** ([`@shadcn/lint`](https://github.com/shadcn-ui/lint)):
-  no palette colours, no arbitrary values (class constants included), no
+  no palette colours, no arbitrary values outside `components/ui` (class
+  constants included), no
   inline styles beyond a literal object of custom properties (the rule's
   default; no option is enabled), no classes the theme cannot generate, no unreadable or
   restyling `className` on a `components/ui` primitive. Each subdomain's
@@ -528,8 +529,7 @@ holds the depth rules.
   paper `raised` with the field shadow, inside a surface (card, overlay, well,
   menu) the `state-fill` grey with no shadow. Each surface sets
   `--control-face`, `--control-face-hover` and `--control-face-shadow` on its
-  own element; the secondary button reads them (`bg-control-face`,
-  `shadow-control-face`), so a link styled as a button (`Button asChild`)
+  own element; the secondary button reads them, so a link styled as a button (`Button asChild`)
   matches. Fields, select triggers and filter chips keep their own face (Inputs
   below). Quiet:
   transparent, `ink`, `state-hover` fill. Primary: `primary` fill (the deep accent),

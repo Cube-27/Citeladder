@@ -206,8 +206,8 @@ function exactOption(options: readonly SearchableSelectOption[], query: string) 
 
 function optionGridClass(hasLeading: boolean, hasEnd: boolean) {
   if (hasLeading && hasEnd) return 'grid-cols-lead-body-end';
-  if (hasLeading) return 'grid-cols-lead-body';
-  if (hasEnd) return 'grid-cols-body-end';
+  if (hasLeading) return 'grid-cols-[auto_minmax(0,1fr)]';
+  if (hasEnd) return 'grid-cols-[minmax(0,1fr)_auto]';
   return 'grid-cols-1';
 }
 

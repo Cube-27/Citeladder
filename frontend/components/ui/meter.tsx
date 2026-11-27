@@ -149,7 +149,7 @@ export function MeterRow({
 }>) {
   const percent = percentOf(value, max);
   return (
-    <div className="grid-cols-meter-row grid items-center gap-3">
+    <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3">
       <span className="text-caption text-ink-2">{name}</span>
       <MeterTrack
         value={value}

@@ -153,7 +153,10 @@ function RungRow({
     <li
       aria-current={step.status === 'running' ? 'step' : undefined}
       data-rung-status={step.status}
-      className={cn('grid grid-cols-rung gap-x-2 last:pb-0', geometry.row)}
+      className={cn(
+        'grid grid-cols-[0.75rem_1rem_minmax(0,1fr)_auto] gap-x-2 last:pb-0',
+        geometry.row,
+      )}
     >
       <span aria-hidden className={cn('relative flex justify-center', geometry.rail)}>
         <span
@@ -196,7 +199,7 @@ function RungRow({
           </span>
         ) : null}
       </span>
-      <span className="text-caption text-ink-2 min-w-rung-figure text-right tabular-nums">
+      <span className="text-caption text-ink-2 min-w-[6ch] text-right tabular-nums">
         {step.time}
       </span>
     </li>

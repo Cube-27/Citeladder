@@ -1,4 +1,10 @@
 :root {
+  --panel-duration: 250ms;
+  --pop-exit-duration: 96ms;
+  --sweep-duration: 2s;
+}
+
+:root {
   --tooltip-lift: -4px;
   --tooltip-side-lift: 2px;
   --dock-lift: 8px;
@@ -41,7 +47,7 @@
   animation: popup-in var(--transition-duration-fast) var(--ease-standard);
 }
 :is(.menu-panel, .tooltip-panel)[data-state='closed'] {
-  animation: popup-out var(--transition-duration-pop-exit) var(--ease-standard) both;
+  animation: popup-out var(--pop-exit-duration) var(--ease-standard) both;
 }
 [data-selection-dock] {
   --popup-from: -50% var(--dock-lift);
@@ -128,10 +134,10 @@
   animation: popup-in var(--transition-duration-fast) var(--ease-standard) both;
 }
 .dialog-panel[data-state='open'] {
-  animation: popup-in var(--transition-duration-panel) var(--ease-quad) both;
+  animation: popup-in var(--panel-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 :is(.dialog-overlay, .dialog-panel)[data-state='closed'] {
-  animation: popup-out var(--transition-duration-pop-exit) var(--ease-standard) both;
+  animation: popup-out var(--pop-exit-duration) var(--ease-standard) both;
 }
 
 .drawer-panel {
@@ -151,10 +157,10 @@
   }
 }
 .drawer-overlay[data-state='open'] {
-  animation: popup-in var(--transition-duration-panel) var(--ease-fluid) both;
+  animation: popup-in var(--panel-duration) var(--ease-fluid) both;
 }
 .drawer-panel[data-state='open'] {
-  animation: slide-in var(--transition-duration-panel) var(--ease-fluid) both;
+  animation: slide-in var(--panel-duration) var(--ease-fluid) both;
 }
 .drawer-overlay[data-state='closed'] {
   animation: popup-out var(--transition-duration-open) var(--ease-fluid) both;
@@ -178,7 +184,7 @@
     opacity: 0;
     overflow-y: clip;
     transition:
-      block-size var(--transition-duration-open) var(--ease-quad),
+      block-size var(--transition-duration-open) cubic-bezier(0.25, 0.46, 0.45, 0.94),
       opacity var(--transition-duration-open) var(--ease-standard),
       content-visibility var(--transition-duration-open) allow-discrete;
   }
@@ -207,7 +213,7 @@
       transparent
     );
     translate: -100% 0;
-    animation: skeleton-sweep var(--transition-duration-sweep) var(--ease-sweep) infinite;
+    animation: skeleton-sweep var(--sweep-duration) var(--ease-sweep) infinite;
   }
   .skeleton-sweep .skeleton-sweep::after {
     content: none;

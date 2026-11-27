@@ -1,6 +1,6 @@
 @supports (overflow-anchor: auto) {
   [data-render-when-visible] {
     content-visibility: auto;
-    contain-intrinsic-block-size: auto var(--spacing-turn-estimate);
+    contain-intrinsic-block-size: auto 320px;
   }
 }

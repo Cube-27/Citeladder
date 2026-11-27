@@ -6,8 +6,11 @@ export function QuoteGrid({
   children,
 }: Readonly<{ heads: readonly string[]; label: string; children: ReactNode }>) {
   return (
-    <div className="min-w-quote-grid whitespace-normal">
-      <div aria-hidden className="grid-cols-quotes text-caption text-ink-2 grid gap-x-4 py-2">
+    <div className="min-w-192 whitespace-normal">
+      <div
+        aria-hidden
+        className="text-caption text-ink-2 grid grid-cols-[minmax(144px,192px)_minmax(256px,1fr)_96px_64px_minmax(144px,224px)] gap-x-4 py-2"
+      >
         {heads.map((head) => (
           <span key={head}>{head}</span>
         ))}
@@ -19,7 +22,7 @@ export function QuoteGrid({
 
 export function QuoteGridRow({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <li className="grid-cols-quotes border-rule grid items-start gap-x-4 border-t py-3">
+    <li className="border-rule grid grid-cols-[minmax(144px,192px)_minmax(256px,1fr)_96px_64px_minmax(144px,224px)] items-start gap-x-4 border-t py-3">
       {children}
     </li>
   );

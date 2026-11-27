@@ -132,7 +132,7 @@ export function MenuSubContent({
         collisionPadding={collisionPadding}
         className={cn(
           MENU_PANEL,
-          'flex max-h-menu-max max-w-menu-wide min-w-56 flex-col overflow-auto',
+          'flex max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] max-w-[min(28rem,calc(100vw_-_16px))] min-w-56 flex-col overflow-auto',
         )}
         {...props}
       >
@@ -160,7 +160,7 @@ export function MenuContent({
         collisionPadding={collisionPadding}
         className={cn(
           MENU_PANEL,
-          'flex max-h-menu-max max-w-80 min-w-menu-trigger flex-col overflow-auto',
+          'flex max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] max-w-80 min-w-(--radix-dropdown-menu-trigger-width) flex-col overflow-auto',
         )}
         {...props}
       >
@@ -292,10 +292,7 @@ export function MenuSeparator(
   props: Readonly<Omit<ComponentPropsWithoutRef<typeof MenuPrimitive.Separator>, 'className'>>,
 ) {
   return (
-    <MenuPrimitive.Separator
-      {...props}
-      className="bg-rule app:mx-menu-rule-inset -mx-1 my-1 h-px shrink-0"
-    />
+    <MenuPrimitive.Separator {...props} className="bg-rule app:mx-[3%] -mx-1 my-1 h-px shrink-0" />
   );
 }
 

@@ -19,7 +19,7 @@ export type IconSize = keyof typeof ICON_SIZE;
 
 const ICON_FLAGS = [
   ['muted', 'opacity-muted'],
-  ['dim', 'opacity-dim'],
+  ['dim', 'opacity-[70%]'],
   ['flipOnOpen', 'turn group-data-[state=open]:rotate-180 motion-reduce:transition-none'],
   ['revealOnHover', 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'],
   ['turnOnOpen', 'group-open:rotate-90'],
@@ -68,5 +68,5 @@ export function LineMark({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 export function TitleMark({ children }: Readonly<{ children: ReactNode }>) {
-  return <span className="h-title-line flex items-center">{children}</span>;
+  return <span className="flex h-(--text-title--line-height) items-center">{children}</span>;
 }

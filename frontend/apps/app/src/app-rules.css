@@ -1,3 +1,10 @@
+:root {
+  --mark-pad-inline: 0.2em;
+  --heading-line-height: 1.25;
+  --skip-link-z: 100;
+  --press-duration: 150ms;
+}
+
 @media (min-width: 900px) {
   :root:not([data-public-surface]) {
     --spacing-shell-inset: 8px;
@@ -469,7 +476,7 @@ samp {
   position: fixed;
   top: calc(var(--spacing) * 2);
   left: calc(var(--spacing) * 2);
-  z-index: var(--z-index-skip);
+  z-index: var(--skip-link-z);
   transform: translateY(calc(-100% - 5rem));
   border-radius: var(--radius-control);
   background: var(--color-panel);
@@ -708,7 +715,7 @@ label {
 @layer components {
   .press {
     transition:
-      scale var(--transition-duration-press),
+      scale var(--press-duration),
       background-color var(--transition-duration-fast),
       color var(--transition-duration-fast),
       border-color var(--transition-duration-fast),

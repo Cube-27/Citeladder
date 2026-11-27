@@ -254,7 +254,7 @@ export function CardGroup({
 export function CardRow({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="@container min-w-0">
-      <div className="gap-section @card-row:auto-cols-fr @card-row:grid-flow-col grid">
+      <div className="gap-section @row-wide:auto-cols-fr @row-wide:grid-flow-col grid">
         {children}
       </div>
     </div>

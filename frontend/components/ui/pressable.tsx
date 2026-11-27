@@ -100,7 +100,7 @@ function SlotMergedPressable({
       ref={ref}
       type={type}
       className={cn(
-        'focus-ring w-full rounded-control text-left transition-fill duration-fast ease-standard disabled:pointer-events-none disabled:bg-well disabled:text-ink-2 disabled:border-rule',
+        'focus-ring w-full rounded-control text-left transition-[background-color] duration-fast ease-standard disabled:pointer-events-none disabled:bg-well disabled:text-ink-2 disabled:border-rule',
         text && textRoleClass(text),
         numeric && 'tabular-nums',
         lookClasses(look, selected),

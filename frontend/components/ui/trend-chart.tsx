@@ -315,7 +315,7 @@ function TrendPlot({
               strokeWidth={SERIES_WEIGHT.series}
               strokeDasharray={CHART_RULE_DASH.connector}
               strokeLinecap="round"
-              className={cn(chartStroke(line.tone), 'opacity-ghost')}
+              className={cn(chartStroke(line.tone), 'opacity-[40%]')}
             />
           ))}
           {isolatedPoints(points).map(([x, y]) => (

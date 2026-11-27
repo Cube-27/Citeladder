@@ -113,7 +113,7 @@ export function SplitBar({
           {segments.map((segment, index) => (
             <span
               key={segment.key}
-              className={cn(FILLS[index % FILLS.length], 'h-full w-share')}
+              className={cn(FILLS[index % FILLS.length], 'h-full w-(--share)')}
               style={{ '--share': `${values[index] ?? 0}%` }}
             />
           ))}
@@ -142,7 +142,7 @@ export function SplitBar({
                 track.current?.setPointerCapture?.(event.pointerId);
               }}
               style={{ '--offset': `${at}%` }}
-              className="focus-ring rounded-control left-offset absolute -inset-y-1 grid w-3 -translate-x-1/2 cursor-ew-resize place-items-center pointer-coarse:w-11"
+              className="focus-ring rounded-control absolute -inset-y-1 left-(--offset) grid w-3 -translate-x-1/2 cursor-ew-resize place-items-center pointer-coarse:w-11"
             >
               <span className="bg-panel h-6 w-0.5" />
             </div>

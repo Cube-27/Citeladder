@@ -10,7 +10,10 @@ export function RecordBody({
   return (
     <div
       aria-busy={busy}
-      className={cn('flex min-w-0 flex-1 flex-col', clearsBar && 'pb-bar-clearance')}
+      className={cn(
+        'flex min-w-0 flex-1 flex-col',
+        clearsBar && 'pb-[calc(var(--spacing-filter-bar)_+_2_*_var(--spacing-gutter))]',
+      )}
     >
       {children}
     </div>

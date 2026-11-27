@@ -92,7 +92,7 @@ function ReorderRow({
         if (!pending) onDropped(event.dataTransfer.getData(ROW_DRAG_TYPE));
       }}
       className={cn(
-        'group hover:overlay-hover grid grid-cols-reorder-row items-center gap-2 transition-colors',
+        'group hover:overlay-hover grid grid-cols-[1.25rem_minmax(0,1fr)_1rem_auto] items-center gap-2 transition-colors',
         dragging && 'opacity-disabled',
       )}
     >

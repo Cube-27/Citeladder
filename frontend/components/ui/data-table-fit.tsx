@@ -142,7 +142,7 @@ function FloorProbe({
       {withEdges(columns, selection).map(({ column, edge }) => (
         <div
           key={column.key}
-          className={cn('w-floor', column.desktopOnly && 'desktop:block hidden')}
+          className={cn('w-(--floor)', column.desktopOnly && 'desktop:block hidden')}
           style={{ '--floor': fitFloor(column, edge) }}
         />
       ))}

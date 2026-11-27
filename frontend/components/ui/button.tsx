@@ -38,14 +38,14 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
     'face face-primary bg-primary border border-primary text-on-primary not-disabled:hover:bg-primary-hover not-disabled:hover:border-primary-hover',
   secondary:
-    'face bg-control-face border border-transparent not-disabled:hover:bg-control-face-hover not-disabled:active:bg-control-face-hover aria-pressed:bg-control-face-hover data-[state=open]:bg-control-face-hover text-ink app:shadow-control-face',
+    'face bg-control-face border border-transparent not-disabled:hover:bg-control-face-hover not-disabled:active:bg-control-face-hover aria-pressed:bg-control-face-hover data-[state=open]:bg-control-face-hover text-ink app:shadow-[var(--control-face-shadow,var(--shadow-field,0_0_transparent))]',
   quiet: cn(
     'bg-transparent text-ink-2 app:text-ink border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
     HOVER_OVERLAY,
   ),
   danger: cn(RAISED_FACE, 'face-danger text-negative [[data-public-surface]_&]:border-negative'),
   'danger-confirm':
-    'face face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-hover',
+    'face face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-[90%]',
 };
 
 export function buttonClasses(
