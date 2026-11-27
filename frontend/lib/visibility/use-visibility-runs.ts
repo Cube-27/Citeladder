@@ -68,7 +68,7 @@ function useRunPicker(requestScope: RequestScope, market: string | null, active:
   });
   const pageQuery = useQuery({
     ...runsQueries.list(requestScope, brandRunsParams(market, page)),
-    enabled: page > 1,
+    enabled: active && page > 1,
     placeholderData: (data, previous) =>
       retainPreviousDataForScope(requestScope.projectId, data, previous),
   });
@@ -84,6 +84,20 @@ function useRunPicker(requestScope: RequestScope, market: string | null, active:
       onNext: () => setPaged({ scopeKey, page: page + 1 }),
     },
   };
+}
+
+function useOffPageRun({
+  workspaceId,
+  runId,
+  enabled,
+}: Readonly<{ workspaceId: string | null; runId: string | null; enabled: boolean }>) {
+  const timeZone = useDisplayTimeZone();
+  const query = useQuery({
+    ...runsQueries.detail(workspaceId, runId ?? ''),
+    enabled: enabled && runId !== null,
+  });
+  const [run] = toRunOptions(query.data ? [query.data] : [], timeZone);
+  return run;
 }
 
 export function useVisibilityRuns({
@@ -116,12 +130,12 @@ export function useVisibilityRuns({
     [picker.items, timeZone],
   );
   const shownSelected = runOptions.some((run) => run.id === selectedRunId);
-  const selectedQuery = useQuery({
-    ...runsQueries.detail(workspaceId, selectedRunId ?? ''),
-    enabled: selectedRunId !== null && auditsQuery.isSuccess && !shownSelected,
+  const selectedRun = useOffPageRun({
+    workspaceId,
+    runId: selectedRunId,
+    enabled: active && auditsQuery.isSuccess && !shownSelected,
   });
   const [latestRun] = toRunOptions(auditsQuery.data?.items.slice(0, 1) ?? [], timeZone);
-  const [selectedRun] = toRunOptions(selectedQuery.data ? [selectedQuery.data] : [], timeZone);
   const measured = auditsQuery.data?.total ?? 0;
   const activeRun = anyActive ? activeRunOf(activeQuery.data?.items[0]) : null;
   const rangeHasRuns = useRunWindow(requestScope, market, active ? window : null);
