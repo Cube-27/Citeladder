@@ -6,7 +6,7 @@
 .cl-crumbs ol {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--site-space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -16,10 +16,10 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 8px;
+  gap: var(--site-space-2);
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   white-space: nowrap;
 }
 
@@ -44,7 +44,7 @@
   .cl-crumbs a:hover {
     color: var(--text-color-ink);
     text-decoration: underline;
-    text-underline-offset: 3px;
+    text-underline-offset: var(--site-underline-offset);
   }
 }
 

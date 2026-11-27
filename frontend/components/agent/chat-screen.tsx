@@ -11,7 +11,7 @@ import { WorkbenchPage } from '@/components/templates/workbench-page';
 import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
 import { ActionButton } from '@/components/ui/actions';
 import { ComposerDock } from '@/components/ui/chat-dock';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { isPageReading } from '@/lib/agent/run-state';
 import type { AgentChatDetail } from '@/lib/api/agent';
 import { isNotFound } from '@/lib/api/errors';
@@ -119,9 +119,9 @@ function ChatView({
       }
       actions={<ChatHeaderActions detail={detail} />}
     >
-      <p aria-hidden className={textRole('heading', 'desktop:hidden')}>
+      <Text as="p" variant="heading" aria-hidden hideOnDesktop>
         {detail.chat.title}
-      </p>
+      </Text>
       <ChatConversation
         thread={thread}
         detail={detail}

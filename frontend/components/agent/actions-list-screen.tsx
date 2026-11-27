@@ -5,7 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { GoalStrip } from '@/components/agent/actions-goal-strip';
 import { ActionsPageContext, useActionsPageContext } from '@/components/agent/actions-page-context';
 import { groupAnchor, levelKey, StatusSection } from '@/components/agent/actions-status-tree';
-import { ActionsToolbar } from '@/components/agent/actions-toolbar';
+import { actionsToolbar } from '@/components/agent/actions-toolbar';
 import { useActionFilters } from '@/components/agent/use-action-filters';
 import {
   useBulkDecision,
@@ -17,7 +17,7 @@ import { ReportPage } from '@/components/templates/report-page';
 import { Button, IconButton } from '@/components/ui/button';
 import { Section, SectionContent } from '@/components/ui/section';
 import { SelectionDock } from '@/components/ui/selection-dock';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { X } from '@/lib/icons';
 import { listJumpSchema, type ListJump } from '@/lib/agent/action-crumbs';
 import type { ActionStatus, ActionTree } from '@/lib/api/actions';
@@ -65,8 +65,10 @@ export function ActionsScreen() {
 
   return (
     <ActionsPageContext value={{ scope, view, levels, selection }}>
-      <ReportPage filters={<ActionsToolbar scope={scope} view={view} newCount={counts?.open} />}>
-        <h2 className={textRole('heading')}>Close the gaps keeping you out of AI answers</h2>
+      <ReportPage filters={actionsToolbar({ scope, view, newCount: counts?.open })}>
+        <Text as="h2" variant="heading">
+          Close the gaps keeping you out of AI answers
+        </Text>
         <GoalStrip goals={primary.data?.goals} failed={primary.isError} onJump={jump} />
         <Section>
           <SectionContent>

@@ -10,11 +10,11 @@ export function MegaMenu({ drop, path }: Readonly<{ drop: NavDrop; path: string 
   const headId = (index: number) => `desktop-nav-${drop.key}-section-${index}`;
   return (
     <div className="cl-mega">
-      <div className={cn('cl-mega-groups', `cl-cols-${drop.groups.length}`)}>
+      <div className="cl-mega-groups" data-tile-cols={drop.groups.length}>
         {drop.groups.map((group, index) => (
           <div key={group.label ?? drop.key} className="cl-mega-group">
             {group.label && (
-              <p id={headId(index)} className="type-eyebrow cl-eyebrow cl-mega-head">
+              <p id={headId(index)} className="cl-kicker cl-eyebrow cl-mega-head">
                 {group.label}
               </p>
             )}

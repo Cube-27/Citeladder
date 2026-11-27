@@ -25,7 +25,7 @@ function SitemapInput({
     [],
   );
   return (
-    <div className="flex flex-col gap-3">
+    <div className="cl-tool-upload">
       <Field
         label={`Upload ${label.toLowerCase()}`}
         hint={`Uncompressed UTF-8 XML, up to ${FREE_TOOL_LIMITS.fileBytes / 1_000_000} MB and ${formatCount(FREE_TOOL_LIMITS.text)} characters.`}

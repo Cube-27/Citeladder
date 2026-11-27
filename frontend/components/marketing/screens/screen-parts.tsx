@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { Button, type ButtonVariant } from '@/components/ui/button';
-import { Card, CardEyebrow, CardHeader } from '@/components/ui/card';
+import { Card, CardHeader } from '@/components/ui/card';
 import { Delta } from '@/components/ui/delta';
 import { EngineMark, type EngineKey } from '@/components/ui/engine-mark';
 import { Icon } from '@/components/ui/icon';
@@ -13,12 +13,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ControlCount, TAB_TRACK, tabClasses } from '@/components/ui/tabs';
+import { TabTrackFace } from '@/components/ui/tabs';
 import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 import { ENGINE_KEYS, ENGINE_NAMES, type Change } from './demo-data';
 import './screen-parts.css';
+
+function CardEyebrow({ children }: Readonly<{ children: ReactNode }>) {
+  return <span className="cl-screen-label">{children}</span>;
+}
 
 export function ScreenButton({
   variant = 'secondary',
@@ -40,16 +44,7 @@ export function ScreenTabs({
   items,
   selected,
 }: Readonly<{ items: readonly Readonly<{ label: string; count?: number }>[]; selected: string }>) {
-  return (
-    <span className={cn(TAB_TRACK, 'cl-screen-tabs')}>
-      {items.map((item) => (
-        <span key={item.label} className={tabClasses(item.label === selected)}>
-          {item.label}
-          {item.count === undefined ? null : <ControlCount count={item.count} />}
-        </span>
-      ))}
-    </span>
-  );
+  return <TabTrackFace data-screen-tabs items={items} selected={selected} />;
 }
 
 export function ScreenEngineMarks({ on }: Readonly<{ on: readonly EngineKey[] }>) {
@@ -109,7 +104,7 @@ export function ScreenStat({
 }: Readonly<{ label: string; value: string; unit?: string; change?: Change; period?: string }>) {
   return (
     <div className="cl-screen-stat">
-      <span className="type-eyebrow">{label}</span>
+      <span className="cl-screen-eyebrow">{label}</span>
       <span className="cl-screen-stat-value">
         {value}
         {unit && <span className="cl-screen-stat-unit">{unit}</span>}
@@ -131,12 +126,10 @@ export function ScreenChartCard({
 }: Readonly<{ title: string; controls?: ReactNode; footnote?: string; children: ReactNode }>) {
   return (
     <Card>
-      <CardHeader
-        actions={controls && <span className="cl-screen-controls contents">{controls}</span>}
-      >
+      <CardHeader actions={controls && <span className="contents">{controls}</span>}>
         <ScreenCardTitle>{title}</ScreenCardTitle>
       </CardHeader>
-      <div className="text-ink grid min-w-0 gap-y-6">
+      <div className="cl-screen-card-body">
         <div className="min-w-0">{children}</div>
         {footnote && <ScreenNote>{footnote}</ScreenNote>}
       </div>
@@ -171,7 +164,15 @@ export function ScreenCard({
   );
 }
 
-type ColumnWidth = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+const SCREEN_COL = {
+  xs: 'cl-screen-col--xs',
+  sm: 'cl-screen-col--sm',
+  md: 'cl-screen-col--md',
+  lg: 'cl-screen-col--lg',
+  xl: 'cl-screen-col--xl',
+} as const;
+
+type ColumnWidth = keyof typeof SCREEN_COL;
 
 export type ScreenColumn<Row> = Readonly<{
   header: string;
@@ -199,10 +200,7 @@ export function ScreenTable<Row>({
     <Table fixed ariaLabel={caption}>
       <colgroup>
         {columns.map((column) => (
-          <col
-            key={column.header}
-            className={column.width ? `cl-screen-col--${column.width}` : undefined}
-          />
+          <col key={column.header} className={column.width && SCREEN_COL[column.width]} />
         ))}
       </colgroup>
       <TableHeader>

@@ -101,7 +101,7 @@ function ChoiceMenu<Value extends string>({
         aria-disabled
       >
         {shown ?? label}
-        <Icon icon={Lock} className="opacity-80" />
+        <Icon icon={Lock} muted />
       </Button>
     );
   const name = `${label}: ${shown ?? ''}`;

@@ -16,7 +16,7 @@ import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/noti
 import { Skeleton } from '@/components/ui/skeleton';
 import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type { ExecutionEvidence, VisibilityExecutionEvidence } from '@citeladder/contracts';
 import { Quote } from '@/lib/icons';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -50,14 +50,18 @@ export function BrandsRail({ brands }: Readonly<{ brands: readonly AnswerBrand[]
                   websiteUrl={brand.websiteUrl}
                   placement="row"
                 />
-                <span className={textRole('body', 'min-w-0 truncate')}>{brand.name}</span>
+                <Text variant="body" box="shrink" wrap="truncate">
+                  {brand.name}
+                </Text>
                 {brand.you ? <YouMark /> : null}
               </RailLine>
             </RailItem>
           ))}
         </RailList>
       ) : (
-        <p className="type-caption text-ink-2">No tracked brand appeared in this answer.</p>
+        <Text as="p" variant="caption">
+          No tracked brand appeared in this answer.
+        </Text>
       )}
     </RailSection>
   );
@@ -77,9 +81,9 @@ export function SourcesRail({ sources }: Readonly<{ sources: readonly AnswerSour
                   placement="inline"
                   entity="site"
                 />
-                <span className={textRole('emphasis', 'min-w-0 truncate')}>
+                <Text variant="label" box="shrink" wrap="truncate">
                   {source.domain || 'Unknown domain'}
-                </span>
+                </Text>
                 {source.you ? <YouMark /> : null}
                 <RailCount
                   label={source.count === 1 ? 'Cited once' : `Cited ${source.count} times`}
@@ -88,9 +92,9 @@ export function SourcesRail({ sources }: Readonly<{ sources: readonly AnswerSour
                 </RailCount>
               </RailLine>
               {source.title ? (
-                <span className="type-caption text-ink truncate" title={source.title}>
+                <Text variant="caption" tone="ink" wrap="truncate" title={source.title}>
                   {source.title}
-                </span>
+                </Text>
               ) : null}
               <RailUrl
                 href={source.href}
@@ -137,7 +141,9 @@ export function LinksRail({
                   placement="inline"
                   entity="site"
                 />
-                <span className={textRole('emphasis', 'min-w-0 truncate')}>{link.domain}</span>
+                <Text variant="label" box="shrink" wrap="truncate">
+                  {link.domain}
+                </Text>
                 {link.you ? <YouMark /> : null}
                 <RailCount label={link.count === 1 ? 'Linked once' : `Linked ${link.count} times`}>
                   {link.count}
@@ -205,9 +211,13 @@ function FanoutBody({
     );
   if (read.kind === 'missing')
     return evidence.search_query_count > 0 ? (
-      <p className="type-caption text-ink-2">{unread(evidence.search_query_count)}</p>
+      <Text as="p" variant="caption">
+        {unread(evidence.search_query_count)}
+      </Text>
     ) : (
-      <p className="type-caption text-ink-2">Search queries are unavailable for this answer.</p>
+      <Text as="p" variant="caption">
+        Search queries are unavailable for this answer.
+      </Text>
     );
   const { item } = read;
   switch (item.state) {
@@ -222,13 +232,23 @@ function FanoutBody({
       );
     }
     case 'no_search':
-      return <p className="type-caption text-ink-2">The engine ran no searches for this answer.</p>;
+      return (
+        <Text as="p" variant="caption">
+          The engine ran no searches for this answer.
+        </Text>
+      );
     case 'count_only':
     case 'no_exposed_queries':
-      return <p className="type-caption text-ink-2">{withheld(item.search_query_count)}</p>;
+      return (
+        <Text as="p" variant="caption">
+          {withheld(item.search_query_count)}
+        </Text>
+      );
     case 'unavailable':
       return (
-        <p className="type-caption text-ink-2">Search queries are unavailable for this answer.</p>
+        <Text as="p" variant="caption">
+          Search queries are unavailable for this answer.
+        </Text>
       );
     default: {
       const unreachable: never = item.state;

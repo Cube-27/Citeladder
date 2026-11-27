@@ -2,7 +2,15 @@ import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-export type BadgeTone = 'neutral' | 'accent' | 'positive' | 'negative' | 'warning' | 'info' | 'ink';
+export type BadgeTone =
+  | 'neutral'
+  | 'accent'
+  | 'positive'
+  | 'negative'
+  | 'warning'
+  | 'info'
+  | 'ink'
+  | 'selected';
 
 const TONE: Record<BadgeTone, string> = {
   neutral: 'bg-well text-ink-2',
@@ -12,10 +20,11 @@ const TONE: Record<BadgeTone, string> = {
   warning: 'bg-warning-wash text-warning',
   info: 'bg-info-wash text-info',
   ink: 'bg-mark-ink text-on-ink',
+  selected: 'bg-state-selected text-ink',
 };
 
 const BADGE_FACE =
-  'inline-flex min-h-5.5 max-w-full shrink-0 items-center gap-0.5 rounded-xs px-2 align-middle font-sans text-caption tracking-normal whitespace-nowrap';
+  'inline-flex min-h-5.5 max-w-full shrink-0 items-center gap-0.5 rounded-xs px-2 align-middle font-sans text-caption whitespace-nowrap';
 
 export type BadgeProps = {
   children: ReactNode;

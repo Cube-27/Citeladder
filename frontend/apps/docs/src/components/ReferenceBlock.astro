@@ -14,27 +14,27 @@ const { id } = Astro.props;
   .cl-docs-op {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: var(--site-space-6);
     min-width: 0;
-    scroll-margin-top: calc(var(--docs-bar-height) + 32px);
+    scroll-margin-top: calc(var(--docs-bar-height) + var(--site-space-8));
   }
   .cl-docs-op-head {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--site-space-3);
     max-width: var(--container-prose);
   }
   .cl-docs-op :global(.cl-docs-op-title) {
     color: var(--text-color-ink);
     font-size: var(--text-heading);
     line-height: var(--text-heading--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
   .cl-docs-op :global(.cl-docs-op-line) {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 12px;
+    gap: var(--site-space-2) var(--site-space-3);
     min-width: 0;
   }
   .cl-docs-op :global(.cl-docs-op-code) {
@@ -42,7 +42,7 @@ const { id } = Astro.props;
     font-family: var(--font-mono);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     overflow-wrap: anywhere;
   }
   .cl-docs-op :global(.cl-docs-op-param) {
@@ -50,23 +50,23 @@ const { id } = Astro.props;
   }
   .cl-docs-op :global(.cl-docs-op-desc) {
     color: var(--text-color-ink-2);
-    font-size: var(--text-body);
-    line-height: var(--text-body--line-height);
+    font-size: var(--text-site-body);
+    line-height: var(--text-site-body--line-height);
   }
   .cl-docs-op :global(.cl-docs-op-auth) {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
+    gap: var(--site-space-2);
     color: var(--text-color-ink-2);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
   }
   .cl-docs-op :global(.cl-docs-op-auth svg) {
     color: var(--text-color-ink-2);
   }
   .cl-docs-op :global(.cl-docs-op-auth code) {
-    padding: 1px 4px;
-    border-radius: var(--radius-xs);
+    padding: var(--site-rule) var(--site-space-1);
+    border-radius: var(--radius-mark);
     background: var(--color-well);
     color: var(--text-color-ink);
     font-family: var(--font-mono);

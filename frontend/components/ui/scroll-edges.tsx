@@ -106,7 +106,7 @@ function ScrollStep({ side, onStep }: Readonly<{ side: 'start' | 'end'; onStep: 
       data-scroll-step={side}
       aria-label={side === 'start' ? 'Scroll back' : 'Scroll forward'}
       onClick={onStep}
-      className="text-ink-2 hover:text-ink hover:overlay-hover rounded-control grid min-h-[var(--control-md)] min-w-[var(--control-sm)] shrink-0 place-items-center transition-colors duration-[var(--motion-fast)]"
+      className="text-ink-2 hover:text-ink hover:overlay-hover rounded-control min-h-control-md min-w-control-sm duration-fast grid shrink-0 place-items-center transition-colors"
     >
       <Glyph className="size-3.5" aria-hidden />
     </button>

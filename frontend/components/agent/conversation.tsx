@@ -3,7 +3,6 @@ import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { ActionChip } from '@/components/agent/action-chip';
 import { ActivityChain } from '@/components/agent/activity-chain';
 import { EvidenceChips } from '@/components/agent/evidence-chips';
-import { JUMP_LINK } from '@/components/agent/jump-link';
 import { LiveActivity } from '@/components/agent/live-activity';
 import { ProposalCards } from '@/components/agent/proposal-cards';
 import { skillLabel } from '@/components/agent/skill-picker';
@@ -20,10 +19,9 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
-import { treeBranchClasses } from '@/components/ui/workspace';
+import { Text } from '@/components/ui/typography';
+import { JumpList } from '@/components/ui/workspace';
 import { Pencil, RotateCcw } from '@/lib/icons';
 import { documentAnchor, latestOutput, outputPlacements } from '@/lib/agent/documents';
 import { citedActions } from '@/lib/agent/evidence';
@@ -33,7 +31,6 @@ import { isPageReading, isRunActive, runOutcome } from '@/lib/agent/run-state';
 import type { AgentChatDetail, AgentMessage, AgentOutput } from '@/lib/api/agent';
 import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown, MarkdownText } from '@/lib/markdown/markdown';
-import { cn } from '@/lib/utils';
 
 import './conversation.css';
 
@@ -64,7 +61,7 @@ export function Conversation({
   const items = threadItems(detail, new Set(byMessage.keys()));
   const deferred = useDeferredAtOpen(detail.chat.id, items.map(itemKey));
   const older = (key: string, holdsDocument = false) =>
-    deferred.has(key) && !holdsDocument ? 'render-when-visible' : undefined;
+    deferred.has(key) && !holdsDocument ? '' : undefined;
   const documents = (outputs: readonly AgentOutput[] | undefined) =>
     renderOutput
       ? outputs?.map((placed) => (
@@ -78,16 +75,18 @@ export function Conversation({
       <ReplyAnnouncement key={detail.chat.id} detail={detail} />
       <ContextUsed context={detail.context} />
       {renderOutput ? <DocumentList outputs={detail.outputs} /> : null}
-      <Stack as="ol" gap="workspace" aria-label="Messages" className="grid-cols-1">
+      <Stack as="ol" gap="workspace" aria-label="Messages" shrinkTrack>
         {items.map((item) =>
           item.kind === 'message' ? (
             <Stack
               as="li"
               gap="workspace"
               key={item.message.id}
-              className={cn(
-                TURN,
-                older(item.message.id, Boolean(renderOutput) && byMessage.has(item.message.id)),
+              box="shrink"
+              shrinkTrack
+              data-render-when-visible={older(
+                item.message.id,
+                Boolean(renderOutput) && byMessage.has(item.message.id),
               )}
             >
               <MessageBubble
@@ -117,7 +116,9 @@ export function Conversation({
               as="li"
               gap="workspace"
               key={item.request?.id ?? item.failures[0].id}
-              className={cn(TURN, older(itemKey(item)))}
+              box="shrink"
+              shrinkTrack
+              data-render-when-visible={older(itemKey(item))}
             >
               {item.request ? (
                 <MessageBubble message={item.request} skill={null} actions={detail.actions} />
@@ -150,7 +151,6 @@ export function Conversation({
     </AgentThread>
   );
 }
-const TURN = 'min-w-0 grid-cols-1';
 
 type ThreadItem = ReturnType<typeof threadItems>[number];
 const itemKey = (item: ThreadItem) =>
@@ -201,25 +201,17 @@ function hasFreshDeliverable(detail: AgentChatDetail, output: AgentOutput): bool
 function DocumentList({ outputs }: Readonly<{ outputs: readonly AgentOutput[] }>) {
   if (outputs.length < 2) return null;
   return (
-    <Stack as="nav" gap="tight" aria-label="Documents">
-      <span className={textRole('body', 'text-ink-2')}>Documents</span>
-      <Stack as="ol" gap="tight" className={treeBranchClasses()}>
-        {outputs.map((output) => (
-          <li key={output.id}>
-            <Pressable
-              className={textRole('caption', `${JUMP_LINK} w-auto`)}
-              onClick={() =>
-                document
-                  .getElementById(documentAnchor(output.id))
-                  ?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
-              }
-            >
-              Document {output.number}: {output.latest_revision.title}
-            </Pressable>
-          </li>
-        ))}
-      </Stack>
-    </Stack>
+    <JumpList
+      label="Documents"
+      items={outputs.map((output) => ({
+        key: output.id,
+        label: `Document ${output.number}: ${output.latest_revision.title}`,
+        onJump: () =>
+          document
+            .getElementById(documentAnchor(output.id))
+            ?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }),
+      }))}
+    />
   );
 }
 
@@ -242,7 +234,7 @@ function TurnActions({
   const ended = ['failed', 'cancelled', 'stopped_at_limit'].includes(kind);
   if (!ended && kind !== 'succeeded') return null;
   return (
-    <Inline className="flex-wrap">
+    <Inline wrap>
       <Button variant="secondary" onClick={() => onRetry(request)}>
         <Icon icon={RotateCcw} />
         {ended ? 'Try again' : 'Regenerate'}
@@ -260,9 +252,9 @@ function PendingMessage({ text }: Readonly<{ text: string }>) {
     <UserTurn
       text={text}
       footer={
-        <output aria-live="polite" className={textRole('caption')}>
+        <Text as="output" variant="caption" aria-live="polite">
           Sending…
-        </output>
+        </Text>
       }
     />
   );
@@ -287,7 +279,7 @@ function MessageBubble({
         footer={
           <>
             {message.attachments.length > 0 ? (
-              <Inline as="ul" aria-label="Attachments" className="flex-wrap">
+              <Inline as="ul" aria-label="Attachments" wrap>
                 {message.attachments.map((attachment, index) => (
                   <PastedTextChip
                     key={index} // NOSONAR
@@ -298,7 +290,7 @@ function MessageBubble({
               </Inline>
             ) : null}
             {message.mentions.length > 0 ? (
-              <Inline as="ul" aria-label="Mentioned Actions" className="flex-wrap">
+              <Inline as="ul" aria-label="Mentioned Actions" wrap>
                 {message.mentions.map((mention) => {
                   const action = actions.find((item) => item.id === mention.id);
                   return (
@@ -306,9 +298,9 @@ function MessageBubble({
                       {action ? (
                         <ActionChip action={action} prefix="@" />
                       ) : (
-                        <span className={textRole('caption', 'block truncate')}>
+                        <Text variant="caption" box="block" wrap="truncate">
                           @{mention.label}
-                        </span>
+                        </Text>
                       )}
                     </li>
                   );
@@ -344,7 +336,7 @@ function MessageBubble({
             );
           case 'evidence':
             return (
-              <Inline key="evidence" className="flex-wrap">
+              <Inline key="evidence" wrap>
                 <EvidenceChips refs={part.refs} />
                 <CopyButton value={message.content} variant="quiet">
                   Copy reply
@@ -385,21 +377,25 @@ function ContextUsed({ context }: Readonly<{ context: AgentChatDetail['context']
   return (
     <Disclosure title="Context used">
       <Stack gap="compact">
-        <p className={textRole('caption')}>
+        <Text as="p" variant="caption">
           {included.some((section) => labels[String(section)])
             ? included.flatMap((section) => labels[String(section)] ?? []).join(' · ')
             : 'Business context and the chat so far.'}
-        </p>
+        </Text>
         {context.instructions ? (
-          <p className={textRole('caption')}>
+          <Text as="p" variant="caption">
             Project instructions · revision {context.instructions.revision}
-          </p>
+          </Text>
         ) : null}
         {context.action ? (
-          <p className={textRole('caption')}>Action: {context.action.label}</p>
+          <Text as="p" variant="caption">
+            Action: {context.action.label}
+          </Text>
         ) : null}
         {omissions.length > 0 ? (
-          <p className={textRole('caption')}>Some older context was left out to fit this turn.</p>
+          <Text as="p" variant="caption">
+            Some older context was left out to fit this turn.
+          </Text>
         ) : null}
       </Stack>
     </Disclosure>
@@ -433,8 +429,10 @@ function FollowUps({
   if (!presentation) return null;
   return (
     <Stack gap="compact">
-      <Inline as="fieldset" aria-label="Suggested follow-ups" className="flex-wrap">
-        <legend className={textRole('caption')}>Add a suggestion to your message:</legend>
+      <Inline as="fieldset" aria-label="Suggested follow-ups" wrap>
+        <Text as="legend" variant="caption">
+          Add a suggestion to your message:
+        </Text>
         {presentation.refinements.map((instruction) => (
           <Button key={instruction} variant="secondary" onClick={() => onRefine(instruction)}>
             {instruction}
@@ -442,8 +440,8 @@ function FollowUps({
         ))}
       </Inline>
       {next.length > 0 ? (
-        <Inline as="nav" aria-label="Next steps" className="flex-wrap">
-          <span className={textRole('caption')}>Next, in a new chat:</span>
+        <Inline as="nav" aria-label="Next steps" wrap>
+          <Text variant="caption">Next, in a new chat:</Text>
           {next.map(({ workflow, prompt }) => (
             <TextLink
               key={workflow.id}

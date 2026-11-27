@@ -138,8 +138,8 @@ function ParsedRows({
         {parsed.rows.map((row) => {
           const invalid = row.errors.length > 0;
           return (
-            <TableRow key={row.line} className={invalid ? 'opacity-60' : undefined}>
-              <TableCell numeric className="text-ink-2">
+            <TableRow key={row.line} dimmed={invalid}>
+              <TableCell numeric tone="ink-2">
                 {row.line}
               </TableCell>
               <TableCell>{row.input.topic || <Absence state="not_set" />}</TableCell>

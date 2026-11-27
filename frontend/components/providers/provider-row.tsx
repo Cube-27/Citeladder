@@ -8,7 +8,7 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { Inline, Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type { ProviderConnection } from '@citeladder/contracts';
 import {
   ENGINE_LOGOS,
@@ -78,10 +78,10 @@ function PauseNotice({
 }: Readonly<{ pause: NonNullable<ProviderGroup['engines'][number]['pause']>; reason: string }>) {
   const timeZone = useDisplayTimeZone();
   return (
-    <p className="type-caption text-negative">
+    <Text as="p" variant="caption" tone="negative">
       {pause.until ? `Paused until ${formatDisplayTimestamp(pause.until, timeZone)}.` : 'Paused.'}{' '}
       {PAUSE_REASONS[reason] ?? ''} A passing test resumes it.
-    </p>
+    </Text>
   );
 }
 
@@ -94,12 +94,12 @@ function LastFailure({ group }: Readonly<{ group: ProviderGroup }>) {
   )?.latest_probe;
   if (!probe) return null;
   return (
-    <p className="type-caption text-negative">
+    <Text as="p" variant="caption" tone="negative">
       Last test failed.
       {probe.safe_reason
         ? ` ${endSentence(executionFailureReason(probe.safe_reason, probe.safe_reason))}`
         : ''}
-    </p>
+    </Text>
   );
 }
 
@@ -120,7 +120,7 @@ function CredentialForm({ id, state }: Readonly<{ id: string; state: ConnectionS
   return (
     <Stack gap="compact" id={id}>
       <ProviderConnectionFields state={state} />
-      <Inline className="flex-wrap justify-end">
+      <Inline wrap justify="end">
         {state.connection ? (
           <Button
             type="button"
@@ -188,23 +188,25 @@ export function ProviderRow({
   const toggleLabel = open ? 'Close' : closedAction;
   return (
     <Stack as="li" gap="compact">
-      <Inline gap="workspace" className="flex-wrap items-start">
-        <Inline gap="compact" className="flex-1 items-start">
+      <Inline gap="workspace" wrap align="start">
+        <Inline gap="compact" align="start" box="fill">
           <BrandMark
             name={group.label}
             logoUrl={TRANSPORT_LOGOS[group.transport]}
             websiteUrl={TRANSPORT_DOMAINS[group.transport]}
           />
           <div className="grid min-w-0">
-            <h3 className={textRole('subheading')}>{group.label}</h3>
+            <Text as="h3" variant="label">
+              {group.label}
+            </Text>
             {compact ? null : (
-              <p className={textRole('caption')}>
+              <Text as="p" variant="caption">
                 {group.engines.map((engine) => engine.label).join(' · ')}
-              </p>
+              </Text>
             )}
           </div>
         </Inline>
-        <Inline className="phone:h-auto h-5">
+        <Inline box="line">
           <StatusBadge group={group} connection={state.connection} compact={compact} />
           {canManage ? (
             <Button

@@ -7,6 +7,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { UrlText } from '@/components/ui/table';
 import { formatCount, pluralCount } from '@/lib/format';
 import { type FigureSegment } from '@/components/ui/figure-strip';
+import { Text } from '@/components/ui/typography';
 
 const ORPHAN_SCOPE_NOTE = 'within this crawl';
 
@@ -55,7 +56,7 @@ export function OrphanPageDrawer({
       <>
         <SectionBleed as="ul" rows>
           {pages.map((page) => (
-            <Stack as="li" gap="tight" key={page.site_url_id} className="min-w-0">
+            <Stack as="li" gap="tight" key={page.site_url_id} box="shrink">
               {crawlId ? (
                 <PageLink
                   text="body"
@@ -66,18 +67,20 @@ export function OrphanPageDrawer({
                   {page.title ? <ClampText>{page.title}</ClampText> : <UrlText url={page.url} />}
                 </PageLink>
               ) : (
-                <span className="type-body text-ink flex min-w-0">
+                <Text variant="body" box="row">
                   {page.title ? <ClampText>{page.title}</ClampText> : <UrlText url={page.url} />}
-                </span>
+                </Text>
               )}
-              <span className="type-caption flex min-w-0">
+              <Text variant="caption" box="row">
                 <UrlText url={page.url} />
-              </span>
+              </Text>
             </Stack>
           ))}
         </SectionBleed>
         {undisclosed > 0 ? (
-          <p className="type-caption">and {formatCount(undisclosed)} more</p>
+          <Text as="p" variant="caption">
+            and {formatCount(undisclosed)} more
+          </Text>
         ) : null}
       </>
     </Drawer>

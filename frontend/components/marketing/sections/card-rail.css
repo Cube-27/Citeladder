@@ -1,15 +1,22 @@
+:root {
+  --rail-card-height: 460px;
+  --rail-open-max: 720px;
+  --rail-page-width: 1000px;
+  --rail-page-zoom: 0.7;
+}
+
 .cl-rail {
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  gap: 48px;
+  gap: var(--site-space-12);
 }
 
 .cl-rail-top {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
+  gap: var(--site-space-6);
 }
 
 .cl-rail-top > .cl-shead {
@@ -20,7 +27,7 @@
 .cl-rail-nav {
   display: flex;
   flex: none;
-  gap: 8px;
+  gap: var(--site-space-2);
 }
 
 .cl-rail-nav:not([data-ready]) {
@@ -31,15 +38,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--site-space-10);
+  height: var(--site-space-10);
   padding: 0;
-  border: 1px solid var(--color-control-line);
+  border: var(--site-rule) solid var(--color-control-line);
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-color-ink);
   cursor: pointer;
-  transition: background-color var(--motion-fast) var(--ease-standard);
+  transition: background-color var(--transition-duration-fast) var(--ease-standard);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -55,21 +62,21 @@
 
 .cl-railcard {
   --cl-tint: var(--color-site-frame-card);
-  --cl-card-h: 460px;
+  --cl-card-h: var(--rail-card-height);
 
   position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  border: 6px solid var(--color-site-frame-strip);
+  border: var(--site-space-1_5) solid var(--color-site-frame-strip);
   border-radius: var(--site-radius-frame);
   background: var(--cl-tint);
-  outline: 1px solid var(--color-site-frame-edge);
-  outline-offset: -1px;
+  outline: var(--site-rule) solid var(--color-site-frame-edge);
+  outline-offset: calc(-1 * var(--site-rule));
   color: var(--text-color-ink);
   text-decoration: none;
-  transition: background-color var(--motion-fast) var(--ease-standard);
+  transition: background-color var(--transition-duration-fast) var(--ease-standard);
 }
 
 .cl-rail[data-ready] .cl-railcard:not([data-expanded]) {
@@ -83,27 +90,27 @@
 
 @media (hover: hover) and (pointer: fine) {
   .cl-rail[data-ready] .cl-railcard:not([data-expanded]):hover {
-    background-color: color-mix(in oklch, var(--color-mark-ink) 5%, var(--cl-tint));
+    background-color: var(--color-site-frame-card-hover);
   }
 
   .cl-railcard-link:hover {
     text-decoration: underline;
-    text-underline-offset: 4px;
+    text-underline-offset: var(--site-underline-offset-lg);
   }
 }
 .cl-railcard-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  padding: 18px 18px 0;
+  gap: var(--site-space-4);
+  padding: var(--site-space-4_5) var(--site-space-4_5) 0;
 }
 
 .cl-railcard-copy {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: calc(var(--cl-card-w) - 120px);
+  gap: var(--site-space-3);
+  width: calc(var(--cl-card-w) - var(--site-space-30));
   min-width: 0;
 }
 
@@ -111,7 +118,7 @@
   margin: 0;
   color: var(--text-color-ink);
   font-size: var(--text-heading-lg);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-heading-lg--line-height);
   letter-spacing: var(--text-heading-lg--letter-spacing);
 }
@@ -121,10 +128,10 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--site-space-8);
+  height: var(--site-space-8);
   padding: 0;
-  border: 1px solid var(--color-rule-strong);
+  border: var(--site-rule) solid var(--color-rule-strong);
   border-radius: var(--radius-full);
   background: transparent;
   color: var(--text-color-ink);
@@ -142,7 +149,7 @@
 
   .cl-railcard-toggle::after {
     position: absolute;
-    inset: calc(50% - 22px);
+    inset: calc(50% - var(--site-target) / 2);
     content: '';
   }
 }
@@ -175,23 +182,19 @@
     visibility 0s;
 }
 
-.cl-railcard-shot .cl-frame-card {
-  border-radius: 10px;
-}
-
 .cl-railcard-shot {
   position: relative;
   display: flex;
   flex: 1;
-  width: calc(var(--cl-card-w) - 28px);
-  margin: 18px 8px 8px;
+  width: calc(var(--cl-card-w) - var(--site-space-7));
+  margin: var(--site-space-4_5) var(--site-space-2) var(--site-space-2);
 }
 
 .cl-railcard-page {
-  top: 100px;
-  bottom: 24px;
-  left: calc(var(--cl-open-w) / 2 + 16px);
-  width: 1000px;
+  top: var(--site-space-25);
+  bottom: var(--site-space-6);
+  left: calc(var(--cl-open-w) / 2 + var(--site-space-4));
+  width: var(--rail-page-width);
   overflow: hidden;
 }
 
@@ -201,18 +204,18 @@
 }
 
 .cl-railcard-page .cl-screen {
-  height: calc((var(--cl-card-h) - 124px) / 0.7);
-  zoom: 0.7;
+  height: calc((var(--cl-card-h) - var(--site-space-31)) / var(--rail-page-zoom));
+  zoom: var(--rail-page-zoom);
 }
 
 .cl-railcard-more {
-  bottom: 24px;
-  left: 24px;
+  bottom: var(--site-space-6);
+  left: var(--site-space-6);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 24px;
-  width: min(420px, calc(var(--cl-open-w) / 2 - 56px));
+  gap: var(--site-space-6);
+  width: min(var(--site-measure-2xs), calc(var(--cl-open-w) / 2 - var(--site-space-14)));
 }
 
 .cl-railcard .cl-railcard-more > a {
@@ -220,11 +223,11 @@
 }
 
 .cl-railcard-body {
-  max-width: 420px;
+  max-width: var(--site-measure-2xs);
   margin: 0;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 .cl-railcard-page :is(.cl-frame, .cl-frame-card) {
@@ -244,9 +247,9 @@
 }
 
 .cl-rail-track {
-  --cl-rail-gap: 24px;
+  --cl-rail-gap: var(--site-space-6);
   --cl-card-w: calc((100cqw - 2 * var(--cl-rail-gap)) / 3);
-  --cl-open-w: min(720px, 100cqw);
+  --cl-open-w: min(var(--rail-open-max), 100cqw);
 
   container-type: inline-size;
   display: flex;
@@ -272,8 +275,8 @@
 }
 
 .cl-rail-item {
-  --cl-card-motion: var(--motion-close);
-  --cl-card-ease: var(--ease-exit);
+  --cl-card-motion: var(--transition-duration-close);
+  --cl-card-ease: var(--ease-standard);
 
   flex: 0 0 var(--cl-card-w);
   scroll-snap-align: start;
@@ -281,7 +284,7 @@
 }
 
 .cl-rail-item:has(> [data-expanded]) {
-  --cl-card-motion: var(--motion-open);
+  --cl-card-motion: var(--transition-duration-open);
   --cl-card-ease: var(--ease-standard);
 
   flex-basis: var(--cl-open-w);
@@ -295,7 +298,7 @@
 
 @media (max-width: 767px) {
   .cl-rail {
-    gap: 24px;
+    gap: var(--site-space-6);
   }
 
   .cl-rail-nav {
@@ -311,14 +314,16 @@
   }
 
   .cl-rail-item {
-    border-bottom: 1px solid var(--color-rule);
+    border-bottom: var(--site-rule) solid var(--color-rule);
   }
 
   .cl-railcard {
     height: auto;
     overflow: visible;
+    border: 0;
     border-radius: 0;
     background: none;
+    outline: none;
     box-shadow: none;
   }
 
@@ -332,8 +337,8 @@
     flex-direction: row-reverse;
     align-items: center;
     justify-content: flex-end;
-    gap: 12px;
-    padding: 16px 0;
+    gap: var(--site-space-3);
+    padding: var(--site-space-4) 0;
   }
 
   .cl-railcard-copy {
@@ -341,7 +346,7 @@
     width: auto;
   }
 
-  .cl-rail .cl-railcard-copy > .cl-eyebrow.type-eyebrow {
+  .cl-rail .cl-railcard-copy > .cl-eyebrow.cl-kicker {
     width: auto;
     margin: 0;
     padding: 0;
@@ -349,13 +354,13 @@
     color: var(--text-color-ink);
     font-family: var(--font-sans);
     font-size: var(--text-body-lg);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     line-height: var(--text-body-lg--line-height);
     letter-spacing: normal;
     text-transform: none;
   }
 
-  .cl-rail .cl-railcard-copy > .cl-eyebrow.type-eyebrow::after {
+  .cl-rail .cl-railcard-copy > .cl-eyebrow.cl-kicker::after {
     content: none;
   }
 
@@ -369,16 +374,16 @@
   }
 
   .cl-railcard-toggle {
-    width: 24px;
-    height: 24px;
-    border: 1px solid var(--color-rule-strong);
+    width: var(--site-space-6);
+    height: var(--site-space-6);
+    border: var(--site-rule) solid var(--color-rule-strong);
     background: none;
     color: var(--text-color-ink);
   }
 
   .cl-railcard-toggle > svg {
-    width: 16px;
-    height: 16px;
+    width: var(--site-space-4);
+    height: var(--site-space-4);
   }
 
   .cl-rail .cl-railcard :is(.cl-railcard-shot, .cl-railcard-more) {
@@ -397,7 +402,7 @@
 
   .cl-rail .cl-railcard[data-expanded] .cl-railcard-more {
     display: flex;
-    gap: 16px;
-    padding: 16px 0 24px;
+    gap: var(--site-space-4);
+    padding: var(--site-space-4) 0 var(--site-space-6);
   }
 }

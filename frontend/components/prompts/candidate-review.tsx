@@ -16,6 +16,7 @@ import { Notice } from '@/components/ui/notice';
 import { pluralCount } from '@/lib/format';
 import { PROMPT_BUILDER_REVIEW_HREF } from '@/lib/prompts/routes';
 import { ProjectLink } from '@/components/ui/project-link';
+import { Text } from '@/components/ui/typography';
 
 const COLUMNS: readonly DataTableColumn[] = [{ key: 'suggestion', label: 'Suggestion' }];
 
@@ -73,7 +74,11 @@ export function CandidateReview({
       <DataTable
         title={`Review ${pluralCount(candidates.length, 'suggestion')}`}
         toolbar={{
-          status: <span className="type-caption tabular-nums">{selected.length} selected</span>,
+          status: (
+            <Text variant="caption" numeric>
+              {selected.length} selected
+            </Text>
+          ),
           actions: (
             <Button
               variant="quiet"

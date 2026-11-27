@@ -11,14 +11,14 @@ import {
 import { Section, useOnPage } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
 import { InfoHint } from '@/components/ui/info-hint';
-import { textRole } from '@/components/ui/typography';
+
 import { ABSENCE_MARK, type Formatted, isAbsent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const FRAME_HEIGHT = {
-  sm: 'min-h-[var(--chart-height-sm)]',
-  md: 'min-h-[var(--chart-height-md)]',
-  lg: 'min-h-[var(--chart-height-lg)]',
+  sm: 'min-h-chart-sm',
+  md: 'min-h-chart-md',
+  lg: 'min-h-chart-lg',
 } as const satisfies Record<ChartHeight, string>;
 
 export function ChartFrame({
@@ -53,12 +53,7 @@ function SeriesSwatch({ tone, shape }: Readonly<{ tone: SeriesTone; shape?: Mark
         className="shrink-0 overflow-visible"
       >
         <line x1={0} x2={16} y1={5} y2={5} strokeWidth={2} className={SERIES_STROKE[tone]} />
-        <MarkerMark
-          x={8}
-          y={5}
-          shape={shape}
-          className={cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-panel')}
-        />
+        <MarkerMark x={8} y={5} shape={shape} tone={tone} />
       </svg>
     );
   return (
@@ -79,18 +74,15 @@ export type KeyEntry = Readonly<{
 
 function KeyValue({ value }: Readonly<{ value: Formatted }>) {
   if (isAbsent(value))
-    return <span className="type-caption text-ink-2 shrink-0">{ABSENCE_MARK}</span>;
-  return <span className="type-caption text-ink shrink-0 tabular-nums">{value}</span>;
+    return <span className="text-caption text-ink-2 shrink-0">{ABSENCE_MARK}</span>;
+  return <span className="text-caption text-ink shrink-0 tabular-nums">{value}</span>;
 }
 
 export function ChartKey({
   entries,
   eventsLabel,
 }: Readonly<{ entries: readonly KeyEntry[]; eventsLabel?: string }>) {
-  const item = textRole(
-    'caption',
-    'inline-flex max-w-[min(100%,20rem)] min-w-0 items-center gap-2',
-  );
+  const item = 'text-caption text-ink-2 inline-flex max-w-chart-key min-w-0 items-center gap-2';
   return (
     <ul aria-hidden className="flex min-w-0 flex-wrap gap-x-6 gap-y-2">
       {entries.map((entry) => (
@@ -146,20 +138,20 @@ export function ChartTipSheet({
       aria-hidden
       className={cn(
         SHEET_FACE,
-        'rounded-card pointer-events-none absolute z-20 flex w-54 flex-col gap-1 p-3',
+        'rounded-card pointer-events-none absolute left-tip-x top-tip-y z-float flex w-54 flex-col gap-1 p-3',
       )}
-      style={{ left: chartTipLeft(x, frameWidth), top: Math.round(top) }}
+      style={{ '--tip-x': `${chartTipLeft(x, frameWidth)}px`, '--tip-y': `${Math.round(top)}px` }}
     >
-      <p className="type-caption tabular-nums">{title}</p>
+      <p className="text-caption text-ink-2 tabular-nums">{title}</p>
       {rows.map((row) => (
-        <div key={row.name} className={textRole('caption', 'flex items-center gap-2 text-ink')}>
+        <div key={row.name} className="text-caption text-ink flex items-center gap-2">
           <SeriesSwatch tone={row.tone} />
           {row.mark}
           <span className="min-w-0 flex-1 truncate">{row.name}</span>
           {row.value === undefined ? null : <KeyValue value={row.value} />}
         </div>
       ))}
-      {note ? <p className={textRole('caption')}>{note}</p> : null}
+      {note ? <p className="text-caption text-ink-2">{note}</p> : null}
     </div>
   );
 }
@@ -258,5 +250,5 @@ export function ChartBreakNote({
         <InfoHint label="About breaks in the line">{note}</InfoHint>
       </span>
     );
-  return <p className={textRole('caption')}>{note}</p>;
+  return <p className="text-caption text-ink-2">{note}</p>;
 }

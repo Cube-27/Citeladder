@@ -58,14 +58,14 @@ export function PageKindScores({
               <TableCell numeric>{printed(formatPercent(share(row.page_kind)))}</TableCell>
             ) : null}
             <TableCell numeric>{formatCount(row.analyzed_count)}</TableCell>
-            <TableCell numeric className={mutedWhenMissing(row.web_fundamentals_score)}>
+            <TableCell numeric tone={mutedWhenMissing(row.web_fundamentals_score)}>
               <MeasurementValue
                 score={row.web_fundamentals_score}
                 checks={row.web_fundamentals_checks}
                 state={row.web_fundamentals_state}
               />
             </TableCell>
-            <TableCell numeric className={mutedWhenMissing(row.aeo_readiness_score)}>
+            <TableCell numeric tone={mutedWhenMissing(row.aeo_readiness_score)}>
               <MeasurementValue
                 score={row.aeo_readiness_score}
                 checks={row.aeo_readiness_checks}

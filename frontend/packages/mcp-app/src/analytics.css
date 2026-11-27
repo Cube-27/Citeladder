@@ -1,5 +1,11 @@
 @import 'tailwindcss' source(none);
 @import '../../../apps/app/src/globals.css';
+@import '../../../apps/app/src/app-type.css';
+
+:root {
+  --type-base: 0.875rem;
+  --type-step: 0.125rem;
+}
 
 @source "./";
 @source "../../../components/ui";

@@ -14,8 +14,7 @@ const METER_FILL = {
   negative: 'bg-negative',
 } as const satisfies Record<MeterTone, string>;
 
-const FILL_MOTION =
-  'block h-full [transition:width_var(--motion-slide)_var(--ease-standard),background-color_var(--motion-open)_var(--ease-standard)]';
+const FILL_MOTION = 'block h-full transition-meter';
 
 function percentOf(value: number | null, max: number) {
   if (value === null || max <= 0) return null;
@@ -51,7 +50,7 @@ function MeterTrack({
       className="bg-well [[data-public-surface]_&]:bg-rule rounded-mark app:h-2 block h-1.5 w-full overflow-hidden"
     >
       {percent === null ? null : (
-        <span className={cn(FILL_MOTION, fill)} style={{ width: `${percent}%` }} />
+        <span className={cn(FILL_MOTION, 'w-share', fill)} style={{ '--share': `${percent}%` }} />
       )}
     </div>
   );
@@ -86,11 +85,11 @@ export function Meter({
       <MeterLabelRow>
         <span
           id={labelId}
-          className="text-body-sm text-ink [[data-public-surface]_&]:min-w-0 [[data-public-surface]_&]:break-words"
+          className="text-body text-ink [[data-public-surface]_&]:min-w-0 [[data-public-surface]_&]:break-words"
         >
           {label}
         </span>
-        <span className="text-body-sm text-ink-2 whitespace-nowrap tabular-nums">
+        <span className="text-body text-ink-2 whitespace-nowrap tabular-nums">
           {valueLabel === undefined && value === null ? <Absence state="not_measured" /> : shown}
         </span>
       </MeterLabelRow>
@@ -126,7 +125,10 @@ export function CellMeter({
       data-meter-tone={tone}
       className="bg-well rounded-mark block h-2 w-30 overflow-hidden"
     >
-      <span className={cn(FILL_MOTION, METER_FILL[tone])} style={{ width: `${percent}%` }} />
+      <span
+        className={cn(FILL_MOTION, 'w-share', METER_FILL[tone])}
+        style={{ '--share': `${percent}%` }}
+      />
     </div>
   );
 }
@@ -150,7 +152,7 @@ export function MeterRow({
 }>) {
   const percent = percentOf(value, max);
   return (
-    <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3">
+    <div className="grid-cols-meter-row grid items-center gap-3">
       <span className="text-caption text-ink-2">{name}</span>
       <MeterTrack
         value={value}
@@ -161,7 +163,7 @@ export function MeterRow({
           percent === null ? availabilityLabel('not_measured') : formatPercent(percent / 100)
         }
       />
-      <span className="text-body-sm text-ink text-right tabular-nums">{figure}</span>
+      <span className="text-body text-ink text-right tabular-nums">{figure}</span>
     </div>
   );
 }

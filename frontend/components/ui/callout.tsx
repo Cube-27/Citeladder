@@ -49,7 +49,7 @@ export function Callout({
       role={urgent ? 'alert' : undefined}
       data-callout-tone={tone}
       className={cn(
-        'flex items-start gap-2 rounded-control border border-transparent px-4 py-3 text-body-sm',
+        'flex items-start gap-2 rounded-control border border-transparent px-4 py-3 text-body',
         style.box,
         className,
       )}
@@ -59,7 +59,7 @@ export function Callout({
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         {title != null ? (
-          <p className={cn('font-medium', style.title)}>
+          <p className={cn('font-emphasis', style.title)}>
             {word}
             {title}
           </p>

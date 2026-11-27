@@ -1,23 +1,23 @@
 .cl-mega {
   width: max-content;
-  max-width: calc(100cqw - 2px);
-  padding: 12px;
+  max-width: calc(100cqw - var(--site-space-0_5));
+  padding: var(--site-space-3);
 }
 
 .cl-mega .cl-mega-groups {
   display: grid;
   grid-template-columns: repeat(var(--cols), minmax(0, max-content));
-  gap: 8px;
+  gap: var(--site-space-2);
 }
 
 .cl-mega-group {
   min-width: 0;
-  padding-top: 12px;
+  padding-top: var(--site-space-3);
 }
 
 .cl-mega-head {
-  margin-bottom: 8px;
-  padding: 0 12px;
+  margin-bottom: var(--site-space-2);
+  padding: 0 var(--site-space-3);
 }
 
 .cl-mega-list {
@@ -30,17 +30,17 @@
 
 .cl-mega-item {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  gap: 12px;
-  padding: 12px;
+  grid-template-columns: var(--site-space-8) minmax(0, 1fr);
+  gap: var(--site-space-3);
+  padding: var(--site-space-3);
   border-radius: var(--radius-md);
   text-decoration: none;
-  transition: background-color var(--motion-fast) var(--ease-standard);
+  transition: background-color var(--transition-duration-fast) var(--ease-standard);
 }
 
 .cl-mega-item--text {
   grid-template-columns: minmax(0, 1fr);
-  padding: 8px 12px;
+  padding: var(--site-space-2) var(--site-space-3);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -53,8 +53,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--site-space-8);
+  height: var(--site-space-8);
   border-radius: var(--radius-md);
   background: var(--color-site-chip);
   color: var(--color-accent);
@@ -69,17 +69,17 @@
 .cl-mega-title {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--site-space-1);
   color: var(--text-color-ink);
-  font-size: var(--text-body-sm);
-  font-weight: 400;
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  line-height: var(--text-body--line-height);
   white-space: nowrap;
 }
 
 .cl-mega-item[aria-current='page'] .cl-mega-title {
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: var(--site-underline-offset);
 }
 
 .cl-mega-ext {
@@ -90,6 +90,6 @@
 .cl-mega-desc {
   color: var(--text-color-ink-2);
   font-size: var(--text-caption);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   line-height: var(--text-caption--line-height);
 }

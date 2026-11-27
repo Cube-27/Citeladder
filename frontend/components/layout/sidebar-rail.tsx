@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Check, type IconGlyph } from '@/lib/icons';
 import { LazyIsland } from '@/components/ui/lazy-island';
 import { Menu, MenuContent, MenuLabel, MenuLinkItem, MenuTrigger } from '@/components/ui/menu';
-import { SidebarRowTooltip, sidebarRailButtonClasses } from '@/components/ui/sidebar';
+import { SidebarRailFace, SidebarRowTooltip } from '@/components/ui/sidebar';
 
 import type { NavItem } from './nav-items';
 
@@ -18,21 +18,19 @@ export function RailLink({ item, active }: Readonly<{ item: NavItem; active: boo
   const Icon = item.icon;
   return (
     <SidebarRowTooltip label={item.label}>
-      <Link
-        to={item.href}
-        aria-current={active ? 'page' : undefined}
-        className={sidebarRailButtonClasses(active)}
-      >
-        <Icon aria-hidden />
-        <span className="sr-only">
-          {item.label}
-          {item.badge === 'open-actions' ? (
-            <LazyIsland failed={null} label="open-action-count" defects="contain">
-              <OpenActionCountLabel />
-            </LazyIsland>
-          ) : null}
-        </span>
-      </Link>
+      <SidebarRailFace asChild current={active}>
+        <Link to={item.href} aria-current={active ? 'page' : undefined}>
+          <Icon aria-hidden />
+          <span className="sr-only">
+            {item.label}
+            {item.badge === 'open-actions' ? (
+              <LazyIsland failed={null} label="open-action-count" defects="contain">
+                <OpenActionCountLabel />
+              </LazyIsland>
+            ) : null}
+          </span>
+        </Link>
+      </SidebarRailFace>
     </SidebarRowTooltip>
   );
 }
@@ -47,18 +45,19 @@ export function RailFlyout({
   return (
     <Menu open={open} onOpenChange={setOpen} modal={false}>
       <SidebarRowTooltip label={label}>
-        <MenuTrigger
-          aria-label={label}
-          aria-current={current ? 'true' : undefined}
-          onKeyDown={(event) => {
-            if (event.key !== 'ArrowRight') return;
-            event.preventDefault();
-            setOpen(true);
-          }}
-          className={sidebarRailButtonClasses(current)}
-        >
-          <Icon aria-hidden />
-        </MenuTrigger>
+        <SidebarRailFace asChild current={current}>
+          <MenuTrigger
+            aria-label={label}
+            aria-current={current ? 'true' : undefined}
+            onKeyDown={(event) => {
+              if (event.key !== 'ArrowRight') return;
+              event.preventDefault();
+              setOpen(true);
+            }}
+          >
+            <Icon aria-hidden />
+          </MenuTrigger>
+        </SidebarRailFace>
       </SidebarRowTooltip>
       <MenuContent side="right" align="start" aria-label={label}>
         <MenuLabel>{label}</MenuLabel>

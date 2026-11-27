@@ -30,7 +30,6 @@ import {
   toggleSort,
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
-import { cn } from '@/lib/utils';
 
 function orderableSort(
   sort: string,
@@ -231,7 +230,7 @@ export function DimensionTable({
             {dimension === 'page' ? (
               <UrlText url={row.display_value} origin={origin} />
             ) : (
-              <ClampText className={cn(dimension === 'day' && 'tabular-nums')}>
+              <ClampText numeric={dimension === 'day'}>
                 {formatDimensionValue(dimension, row.display_value)}
               </ClampText>
             )}
@@ -252,7 +251,7 @@ export function DimensionTable({
             );
             return [
               selectedCell,
-              <TableCell key={`${metric.key}-comparison`} numeric className="text-ink-2">
+              <TableCell key={`${metric.key}-comparison`} numeric tone="ink-2">
                 {formatMetric(metric.key, comparisonValue)}
               </TableCell>,
               <TableCell key={`${metric.key}-difference`} numeric>

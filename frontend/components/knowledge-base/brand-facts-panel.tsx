@@ -156,7 +156,7 @@ function FactRow({ fact, actions }: Readonly<{ fact: BrandFact; actions: ReactNo
   return (
     <TableRow>
       <TableCell>
-        <Inline as="span" className="flex-wrap">
+        <Inline as="span" wrap>
           {fact.statement}
           {fact.status === 'draft' ? (
             <StatusMark variant="status" value="warning">
@@ -171,7 +171,8 @@ function FactRow({ fact, actions }: Readonly<{ fact: BrandFact; actions: ReactNo
           <ExternalHttpLink
             href={fact.source_url}
             title={fact.source_url}
-            className="block min-w-0 truncate"
+            className="block min-w-0"
+            truncate
           >
             {shortUrlTitle(fact.source_url)}
           </ExternalHttpLink>

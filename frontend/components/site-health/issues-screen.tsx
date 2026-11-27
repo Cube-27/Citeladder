@@ -136,7 +136,7 @@ function IssuesRunNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   if (!message) return null;
   return (
     <Notice tone="info">
-      <Inline className="flex-wrap">
+      <Inline wrap>
         <CrawlStatusBadge crawl={crawl} />
         <span>{message}</span>
       </Inline>

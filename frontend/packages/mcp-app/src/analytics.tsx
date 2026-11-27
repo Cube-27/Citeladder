@@ -16,7 +16,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { AreaChart } from '@/components/ui/area-chart';
-import { Label, Metric, textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { SectionHeader, SectionTitle } from '@/components/ui/section';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
 import { Absence, printed } from '@/components/ui/absence';
@@ -33,6 +33,7 @@ import { appPolicy } from './config';
 import type { AppState, Controller } from './controller';
 import { notYetMeasuredMessage, SourcesView, SiteHealthView } from './evidence-views';
 import { day, moment, rate } from './format';
+import { Stack, Inline } from '@/components/ui/layout';
 
 const views = [
   { value: 'overview', label: 'Overview' },
@@ -54,50 +55,60 @@ function Overview({
   if (!parsed.success) {
     const missing = notYetMeasuredMessage(data);
     return (
-      <p role={missing ? undefined : 'alert'} className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2" role={missing ? undefined : 'alert'}>
         {missing ?? 'Visibility evidence is unavailable. Retry or reconnect.'}
-      </p>
+      </Text>
     );
   }
   const projection = parsed.data;
   return (
-    <div className="space-y-4">
-      <Select
-        ariaLabel="Overview competitor"
-        value={selection.competitor ?? ''}
-        options={[
-          { value: '', label: 'All brands' },
-          ...projection.rankings
-            .filter((row) => !row.is_brand)
-            .map((row) => ({ value: row.name, label: row.name })),
-        ]}
-        onValueChange={(competitor) => selectCompetitor(competitor || null)}
-      />
-      <div className="flex flex-wrap gap-6">
-        <div>
-          <Label>Brand mention rate</Label>
-          <div>
-            <Metric>{printed(rate(projection.visibility_rate))}</Metric>
-          </div>
-        </div>
-        <div>
-          <Label>Owned citation rate</Label>
-          <div>
-            <Metric>{printed(rate(projection.owned_citation_rate))}</Metric>
-          </div>
-        </div>
+    <Stack gap="loose">
+      <div>
+        <Select
+          ariaLabel="Overview competitor"
+          value={selection.competitor ?? ''}
+          options={[
+            { value: '', label: 'All brands' },
+            ...projection.rankings
+              .filter((row) => !row.is_brand)
+              .map((row) => ({ value: row.name, label: row.name })),
+          ]}
+          onValueChange={(competitor) => selectCompetitor(competitor || null)}
+        />
       </div>
-      <p className={textRole('caption')}>
+      <Inline gap="wide" wrap align="stretch">
+        <div>
+          <Text variant="body" tone="ink-2">
+            Brand mention rate
+          </Text>
+          <div>
+            <Text variant="figure" numeric>
+              {printed(rate(projection.visibility_rate))}
+            </Text>
+          </div>
+        </div>
+        <div>
+          <Text variant="body" tone="ink-2">
+            Owned citation rate
+          </Text>
+          <div>
+            <Text variant="figure" numeric>
+              {printed(rate(projection.owned_citation_rate))}
+            </Text>
+          </div>
+        </div>
+      </Inline>
+      <Text as="p" variant="caption">
         Observed {moment(projection.created_at)} ·{' '}
         {projection.counts?.state ?? projection.audit_status} · {projection.total_completed}{' '}
         responses · comparison: {projection.comparison?.status ?? 'unavailable'}
-      </p>
-      <p className={textRole('caption')}>
+      </Text>
+      <Text as="p" variant="caption">
         Analyzer {projection.analyzer_version} · scoring {projection.scoring_rule_version} ·{' '}
         {projection.counts?.expected ?? 'Unknown'} expected / {projection.total_failed ?? 'Unknown'}{' '}
         failed
-      </p>
-      <p className={textRole('caption')}>
+      </Text>
+      <Text as="p" variant="caption">
         {projection.model_provenance.length
           ? projection.model_provenance
               .map(
@@ -106,7 +117,7 @@ function Overview({
               )
               .join(' · ')
           : 'Model and retrieval provenance unavailable'}
-      </p>
+      </Text>
       <SectionHeader>
         <SectionTitle>Brand and competitors</SectionTitle>
       </SectionHeader>
@@ -128,11 +139,11 @@ function Overview({
           ))}
         </TableBody>
       </Table>
-      <p className={textRole('caption')}>
+      <Text as="p" variant="caption">
         Rates describe observed answers, not causal impact. Model/retrieval conditions and coverage
         determine comparison eligibility.
-      </p>
-    </div>
+      </Text>
+    </Stack>
   );
 }
 
@@ -151,9 +162,9 @@ function Trends({
   const parsed = visibilityTrendListSchema.safeParse(data.points);
   if (!parsed.success)
     return (
-      <p role="alert" className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2" role="alert">
         Visibility history is unavailable. Retry or reconnect.
-      </p>
+      </Text>
     );
   const points = parsed.data;
   const competitors = [
@@ -183,8 +194,8 @@ function Trends({
   };
   const events = toTrendEvents(points, { timeZone: 'UTC', engineLabel: (key) => key });
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-3">
+    <Stack gap="loose">
+      <Inline gap="group" wrap align="stretch">
         <Select
           ariaLabel="Trend metric"
           value={metric}
@@ -203,7 +214,7 @@ function Trends({
           ]}
           onValueChange={(competitor) => selectCompetitor(competitor || null)}
         />
-      </div>
+      </Inline>
       <AreaChart
         label={`${metricLabel} over time`}
         name={competitor ?? 'Your brand'}
@@ -265,13 +276,15 @@ function Trends({
         </TableBody>
       </Table>
       {!points.length && (
-        <p className={textRole('body', 'text-ink-2')}>No measured runs in this window.</p>
+        <Text as="p" variant="body" tone="ink-2">
+          No measured runs in this window.
+        </Text>
       )}
-      <p className={textRole('caption')}>
+      <Text as="p" variant="caption">
         Gaps and changed comparison identities break the line. Sources drill-down selects one
         concrete audit from this window.
-      </p>
-    </div>
+      </Text>
+    </Stack>
   );
 }
 
@@ -355,9 +368,11 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
     });
   };
   return (
-    <main className="space-y-4 p-4">
-      <h1 className={textRole('title')}>CiteLadder analytics</h1>
-      <div className="flex flex-wrap gap-3">
+    <Stack as="main" gap="loose" inset>
+      <Text as="h1" variant="title">
+        CiteLadder analytics
+      </Text>
+      <Inline gap="group" wrap align="stretch">
         <Select
           ariaLabel="Project and workspace"
           value={selection?.project_id ?? ''}
@@ -380,9 +395,9 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
             More projects
           </Button>
         )}
-      </div>
+      </Inline>
       {state.error && (
-        <div role="alert" className={textRole('body', 'text-ink-2')}>
+        <Text as="div" variant="body" tone="ink-2" role="alert">
           {state.error}
           <Button
             variant="quiet"
@@ -392,25 +407,27 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
           >
             Retry
           </Button>
-        </div>
+        </Text>
       )}
       {state.busy && (
-        <output className={textRole('body', 'text-ink-2')}>Loading persisted evidence…</output>
+        <Text as="output" variant="body" tone="ink-2">
+          Loading persisted evidence…
+        </Text>
       )}
       {!selection && (
-        <p className={textRole('body', 'text-ink-2')}>
+        <Text as="p" variant="body" tone="ink-2">
           Connect your account and select a project. If you have no projects, complete onboarding in
           CiteLadder.
-        </p>
+        </Text>
       )}
       {selection && (
         <>
-          <p className={textRole('caption')}>
+          <Text as="p" variant="caption">
             {project ? `${project.name} · ` : ''}
             {evidenceLabel(selection, state.result?.evidence)}
-          </p>
+          </Text>
           {selection.view !== 'site_health' && (
-            <div className="flex flex-wrap gap-3">
+            <Inline gap="group" wrap align="stretch">
               <Select
                 ariaLabel="Engine"
                 value={selection.engine ?? ''}
@@ -436,10 +453,10 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
                   void controller.select({ ...selection, cohort, cursor: null })
                 }
               />
-            </div>
+            </Inline>
           )}
           {selection.view === 'trends' && (
-            <div className="flex flex-wrap gap-3">
+            <Inline gap="group" wrap align="stretch">
               <Input
                 type="date"
                 aria-label="Period start"
@@ -464,7 +481,7 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
                     });
                 }}
               />
-            </div>
+            </Inline>
           )}
           <Tabs
             ariaLabel="Analytics view"
@@ -483,22 +500,24 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
           </Tabs>
         </>
       )}
-      {state.result && (
-        <Button asChild variant="secondary">
-          <a href={state.result.links.application} target="_blank" rel="noreferrer">
-            Open CiteLadder
+      <div>
+        {state.result && (
+          <Button asChild variant="secondary">
+            <a href={state.result.links.application} target="_blank" rel="noreferrer">
+              Open CiteLadder
+            </a>
+          </Button>
+        )}
+        <Button asChild variant="quiet">
+          <a
+            href={state.result?.links.onboarding ?? 'https://app.citeladder.com/onboarding'}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Set up a project
           </a>
         </Button>
-      )}
-      <Button asChild variant="quiet">
-        <a
-          href={state.result?.links.onboarding ?? 'https://app.citeladder.com/onboarding'}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Set up a project
-        </a>
-      </Button>
-    </main>
+      </div>
+    </Stack>
   );
 }

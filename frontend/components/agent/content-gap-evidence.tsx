@@ -7,7 +7,7 @@ import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
 import { SectionBleed } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type { ActionDetail } from '@/lib/api/actions';
 import { formatCount, pluralCount, readableUrl } from '@/lib/format';
 import { promptHistoryHref } from '@/lib/prompts/history';
@@ -41,7 +41,9 @@ export function ContentGapWhy({ members }: Readonly<{ members: readonly GapMembe
 function GapAngle({ evidence }: Readonly<{ evidence: ContentGapEvidence }>) {
   return (
     <Stack>
-      <p className={textRole('body')}>{evidence.angle_label}</p>
+      <Text as="p" variant="body">
+        {evidence.angle_label}
+      </Text>
       <GapEvidence evidence={evidence} />
     </Stack>
   );
@@ -72,27 +74,33 @@ export function GapEvidence({ evidence }: Readonly<{ evidence: ContentGapEvidenc
         ]}
       />
       <Stack as="section" gap="tight" aria-label="Cited pages">
-        <span className={textRole('body', 'text-ink-2')}>Cited pages</span>
+        <Text variant="body" tone="ink-2">
+          Cited pages
+        </Text>
         <Stack as="ul" gap="item">
           {evidence.members.map((page) => (
             <CitedPage key={page.url} page={page} />
           ))}
         </Stack>
         {evidence.member_count > evidence.members.length ? (
-          <span className={textRole('caption')}>
+          <Text variant="caption">
             The {formatCount(evidence.members.length)} most cited of{' '}
             {pluralCount(evidence.member_count, 'page')}.
-          </span>
+          </Text>
         ) : null}
       </Stack>
       {prompts.length > 0 ? (
         <Stack as="section" gap="tight" aria-label="Prompts">
-          <span className={textRole('body', 'text-ink-2')}>Prompts</span>
+          <Text variant="body" tone="ink-2">
+            Prompts
+          </Text>
           <Stack as="ul" gap="tight">
             {prompts.map((prompt) => (
               <li key={prompt.id} className="min-w-0">
                 {prompt.text === null ? (
-                  <span className={textRole('body', 'text-ink-2')}>{DELETED_PROMPT}</span>
+                  <Text variant="body" tone="ink-2">
+                    {DELETED_PROMPT}
+                  </Text>
                 ) : (
                   <ClampText tooltip={prompt.text}>
                     <TextLink href={promptHistoryHref(prompt.id)} text="body">
@@ -120,7 +128,7 @@ function CitedPage({ page }: Readonly<{ page: ContentGapEvidence['members'][numb
     ? `${page.matched_competitor} (${page.domain})`
     : page.domain;
   return (
-    <Stack as="li" gap="tight" className="min-w-0">
+    <Stack as="li" gap="tight" box="shrink">
       {page.title ? (
         <ClampText tooltip={readableUrl(page.url)}>
           <TextLink variant="external" href={page.url} text="body">
@@ -132,7 +140,7 @@ function CitedPage({ page }: Readonly<{ page: ContentGapEvidence['members'][numb
           <UrlText url={page.url} />
         </TextLink>
       )}
-      <Inline gap="compact" className="flex-wrap">
+      <Inline gap="compact" wrap>
         {classification.success ? (
           <StatusMark
             variant="classification"
@@ -147,9 +155,9 @@ function CitedPage({ page }: Readonly<{ page: ContentGapEvidence['members'][numb
           placement="inline"
           entity="site"
         />
-        <span className={textRole('caption')}>
+        <Text variant="caption">
           {site} · {pluralCount(page.citation_count, 'citation')}
-        </span>
+        </Text>
       </Inline>
     </Stack>
   );

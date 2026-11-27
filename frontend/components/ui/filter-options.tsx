@@ -54,7 +54,7 @@ function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
   return (
     <>
       {isSearchable(filter) ? (
-        <div className="bg-raised sticky top-0 z-10 pb-1">
+        <div className="bg-raised z-raised sticky top-0 pb-1">
           <SearchField
             value={query}
             onValueChange={setQuery}
@@ -91,7 +91,7 @@ function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
           </Fragment>
         ))}
       </MenuRadioGroup>
-      {groups.length === 0 ? <p className="text-body-sm text-ink-2 px-2 py-2">No matches</p> : null}
+      {groups.length === 0 ? <p className="text-body text-ink-2 px-2 py-2">No matches</p> : null}
     </>
   );
 }
@@ -101,7 +101,7 @@ export function DefaultHint() {
     <span
       aria-hidden
       data-hint="Default"
-      className="text-ink-2 type-caption ms-auto shrink-0 ps-4 after:content-[attr(data-hint)]"
+      className="text-ink-2 text-caption after:content-data-hint ms-auto shrink-0 ps-4"
     />
   );
 }

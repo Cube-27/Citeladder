@@ -1,13 +1,10 @@
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
 
-import { printed } from '@/components/ui/absence';
 import { CHART_HEIGHT_PX, chartTicks, useChartWidth } from '@/components/ui/chart';
 import { ChartFrame } from '@/components/ui/chart-frame';
-import { AXIS_PROPS, LINE_CURSOR } from '@/components/ui/chart-tooltip';
+import { AXIS_PROPS, LINE_CURSOR, LineTooltipCard } from '@/components/ui/chart-tooltip';
 import { SeriesTable, shownWith, type TrendPoint } from '@/components/ui/series-data';
-import { POP_FACE } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
-import { textRole } from '@/components/ui/typography';
 import { formatWindowDate, pluralCount } from '@/lib/format';
 import {
   formatAxisTick,
@@ -15,7 +12,6 @@ import {
   type PerformanceChartPoint,
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
-import { cn } from '@/lib/utils';
 
 const METRIC_COLOR: Record<PerformanceMetricKey, string> = {
   clicks: 'var(--color-metric-clicks)',
@@ -158,7 +154,6 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
       role="group"
       aria-label={`${plotted.map((entry) => entry.label).join(', ')} by day`}
       className="w-full"
-      style={{ height }}
     >
       <LineChart
         width={width}
@@ -176,18 +171,7 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
           domain={[0, Math.max(1, length - 1)]}
           ticks={xTicks}
           interval={0}
-          tick={({ x, y, payload }) => (
-            <text
-              x={x}
-              y={y}
-              dy={12}
-              textAnchor={edgeAnchor(payload.value, xTicks)}
-              fill="var(--text-color-ink-2)"
-              fontSize={12}
-            >
-              {axisLabels[payload.value] ?? ''}
-            </text>
-          )}
+          tick={<DayTick edgeTicks={xTicks} dayLabels={axisLabels} />}
         />
         {plotted.map((entry, index) => {
           const placement = axisPlacement(index, plotted.length);
@@ -211,24 +195,7 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
               label={
                 placement === 'hidden'
                   ? undefined
-                  : {
-                      content: ({ viewBox }) =>
-                        viewBox && 'width' in viewBox ? (
-                          <text
-                            x={
-                              placement === 'left'
-                                ? viewBox.x
-                                : (viewBox.x ?? 0) + (viewBox.width ?? 0)
-                            }
-                            y={(viewBox.y ?? 0) - 14}
-                            textAnchor={placement === 'left' ? 'start' : 'end'}
-                            fill="var(--text-color-ink-2)"
-                            fontSize={12}
-                          >
-                            {entry.label}
-                          </text>
-                        ) : null,
-                    }
+                  : { content: <AxisCaption side={placement} caption={entry.label} /> }
               }
               tickFormatter={(value: number) => formatAxisTick(entry.key, value)}
             />
@@ -237,12 +204,7 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
         <Tooltip
           cursor={LINE_CURSOR}
           isAnimationActive={false}
-          content={({ active, payload }) => {
-            const x = payload?.[0]?.payload?.x;
-            return active && typeof x === 'number' ? (
-              <MetricTip plotted={plotted} index={x} />
-            ) : null;
-          }}
+          content={<MetricTipContent plotted={plotted} />}
         />
         {plotted.flatMap((entry) => [
           entry.comparison ? (
@@ -278,6 +240,70 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
   );
 }
 
+function DayTick({
+  x,
+  y,
+  payload,
+  edgeTicks,
+  dayLabels,
+}: Readonly<{
+  x?: number;
+  y?: number;
+  payload?: { value: number };
+  edgeTicks: readonly number[];
+  dayLabels: readonly (string | undefined)[];
+}>) {
+  if (!payload) return null;
+  return (
+    <text
+      x={x}
+      y={y}
+      dy={12}
+      textAnchor={edgeAnchor(payload.value, edgeTicks)}
+      fill="var(--text-color-ink-2)"
+      fontSize={12}
+    >
+      {dayLabels[payload.value] ?? ''}
+    </text>
+  );
+}
+
+function AxisCaption({
+  viewBox,
+  side,
+  caption,
+}: Readonly<{
+  viewBox?: { x?: number; y?: number; width?: number };
+  side: Exclude<AxisPlacement, 'hidden'>;
+  caption: string;
+}>) {
+  if (!viewBox || !('width' in viewBox)) return null;
+  return (
+    <text
+      x={side === 'left' ? viewBox.x : (viewBox.x ?? 0) + (viewBox.width ?? 0)}
+      y={(viewBox.y ?? 0) - 14}
+      textAnchor={side === 'left' ? 'start' : 'end'}
+      fill="var(--text-color-ink-2)"
+      fontSize={12}
+    >
+      {caption}
+    </text>
+  );
+}
+
+function MetricTipContent({
+  active,
+  payload,
+  plotted,
+}: Readonly<{
+  active?: boolean;
+  payload?: readonly { payload?: { x?: unknown } }[];
+  plotted: readonly ChartSeries[];
+}>) {
+  const x = payload?.[0]?.payload?.x;
+  return active && typeof x === 'number' ? <MetricTip plotted={plotted} index={x} /> : null;
+}
+
 function MetricTip({
   plotted,
   index,
@@ -303,22 +329,5 @@ function MetricTip({
         ]
       : []),
   ]);
-  return (
-    <div className={cn(POP_FACE, 'grid min-w-56 gap-3 px-4 py-3')}>
-      <p className={textRole('emphasis', 'text-ink-2')}>
-        {tooltipDate(anchor?.selected[index]?.date, index)}
-      </p>
-      {rows.map((row) => (
-        <div key={row.key} className={textRole('body', 'flex min-w-0 items-center gap-3')}>
-          <span
-            aria-hidden
-            className={cn('w-3 shrink-0 border-t-2', row.dashed && 'border-dashed')}
-            style={{ borderColor: row.color }}
-          />
-          <span className="text-ink-2 min-w-0 flex-1 truncate">{row.name}</span>
-          <span className="text-ink font-medium tabular-nums">{printed(row.value)}</span>
-        </div>
-      ))}
-    </div>
-  );
+  return <LineTooltipCard title={tooltipDate(anchor?.selected[index]?.date, index)} rows={rows} />;
 }

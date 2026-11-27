@@ -27,8 +27,10 @@ test('keeps machine-read directives and rejects every other script comment', () 
     '// @ts-expect-error the type is wrong',
     '/** @public */',
     '/** @public imported by a fixture test */',
+    '// oxlint-disable-next-line design/plain-element',
+    '// oxlint-disable-next-line jsx-a11y/no-autofocus, shadcn/no-arbitrary-values',
   ].join('\n');
-  assert.deepEqual(lines(source), [12, 13, 14, 15, 17, 19]);
+  assert.deepEqual(lines(source), [4, 12, 13, 14, 15, 17, 19, 20, 21]);
 });
 
 test('rejects a JSX comment but keeps a JSX directive', () => {

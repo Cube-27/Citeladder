@@ -19,6 +19,7 @@ import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/wor
 
 import { ROLE_OPTIONS, ROLE_SUMMARY, roleLabel } from './member-roles';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
+import { Text } from '@/components/ui/typography';
 
 const INVITE_FORM_ID = 'invite-member-form';
 
@@ -127,14 +128,14 @@ export function InviteDialog({
       {error ? <Notice kind="mutation" notice={error} /> : null}
       {issuedToken ? (
         <Notice tone="info">
-          <Stack gap="compact" className="justify-items-start">
+          <Stack gap="compact" align="start">
             <span>
               {deliveryNotice(delivery)}
               One-time link, shown once.
             </span>
-            <code className="type-caption min-w-0 justify-self-stretch truncate tabular-nums">
+            <Text as="code" variant="caption-mono" box="stretch" wrap="truncate" numeric>
               {acceptanceLink(issuedToken)}
-            </code>
+            </Text>
             <CopyButton value={acceptanceLink(issuedToken)}>Copy link</CopyButton>
           </Stack>
         </Notice>

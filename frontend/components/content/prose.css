@@ -1,8 +1,13 @@
+:root {
+  --prose-code-size: 0.875em;
+  --prose-cite-rise: -0.5em;
+}
+
 .cl-prose {
   max-width: var(--container-prose);
   color: var(--text-color-ink-2);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
   overflow-wrap: break-word;
 }
 .cl-prose > * {
@@ -12,38 +17,38 @@
   text-wrap: pretty;
 }
 .cl-prose > * + * {
-  margin-top: 20px;
+  margin-top: var(--site-space-5);
 }
 .cl-prose :is(h2, h3, h4):not([class]) {
   color: var(--text-color-ink);
   text-wrap: balance;
-  scroll-margin-top: calc(var(--nav-height) + 32px);
+  scroll-margin-top: calc(var(--nav-height) + var(--site-space-8));
 }
 .cl-prose h2:not([class]) {
-  margin-top: 56px;
+  margin-top: var(--site-space-14);
   font-size: var(--text-display-md);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-display-md--line-height);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--text-display-md--letter-spacing);
 }
 .cl-prose h3:not([class]) {
-  margin-top: 36px;
+  margin-top: var(--site-space-9);
   font-size: var(--text-heading-lg);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-heading-lg--line-height);
   letter-spacing: var(--text-heading-lg--letter-spacing);
 }
 .cl-prose h4:not([class]) {
-  margin-top: 32px;
+  margin-top: var(--site-space-8);
   font-size: var(--text-body-lg);
   line-height: var(--text-body-lg--line-height);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 .cl-prose > :is(h2, h3, h4):not([class]) + * {
-  margin-top: 12px;
+  margin-top: var(--site-space-3);
 }
 .cl-prose > :is(h2, h3):not([class]) + :is(h3, h4):not([class]) {
-  margin-top: 24px;
+  margin-top: var(--site-space-6);
 }
 .cl-prose > :first-child {
   margin-top: 0;
@@ -52,42 +57,42 @@
   color: var(--text-color-ink);
   text-decoration: underline;
   text-decoration-color: var(--color-control-line);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-  border-radius: var(--radius-xs);
+  text-decoration-thickness: var(--site-rule);
+  text-underline-offset: var(--site-underline-offset);
+  border-radius: var(--radius-mark);
 }
 .cl-prose a:hover {
   text-decoration-color: currentColor;
 }
 .cl-prose strong {
   color: var(--text-color-ink);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 .cl-prose :not(pre) > code {
-  padding: 2px 4px;
+  padding: var(--site-space-0_5) var(--site-space-1);
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-mark);
   background: var(--color-well);
   color: var(--text-color-ink);
   font-family: var(--font-mono);
-  font-size: 0.875em;
+  font-size: var(--prose-code-size);
 }
 .cl-prose :is(ul, ol):not([class]) {
-  padding-left: 24px;
+  padding-left: var(--site-space-6);
 }
 .cl-prose ol:not([class]) {
-  padding-left: 32px;
+  padding-left: var(--site-space-8);
   list-style: decimal;
 }
 .cl-prose ul:not([class]) {
   list-style: disc;
 }
 .cl-prose li:not([class]) + li {
-  margin-top: 8px;
+  margin-top: var(--site-space-2);
 }
 .cl-prose li:not([class]) > :is(ul, ol) {
-  margin-top: 8px;
+  margin-top: var(--site-space-2);
 }
 .cl-prose li:not([class])::marker {
   color: var(--text-color-ink-2);
@@ -97,23 +102,23 @@
   font-size: var(--text-data);
 }
 .cl-prose blockquote:not([class]) {
-  margin-top: 40px;
-  margin-bottom: 16px;
-  padding: 0 24px;
+  margin-top: var(--site-space-10);
+  margin-bottom: var(--site-space-4);
+  padding: 0 var(--site-space-6);
 }
 .cl-prose blockquote:not([class]) p {
   margin: 0;
   color: var(--text-color-ink);
   font-size: var(--text-title);
   line-height: var(--text-title--line-height);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 .cl-prose blockquote:not([class]) p + p {
-  margin-top: 12px;
+  margin-top: var(--site-space-3);
 }
 .cl-prose blockquote:not([class]) :is(footer, cite) {
   display: block;
-  margin-top: 12px;
+  margin-top: var(--site-space-3);
   color: var(--text-color-ink-2);
   font-family: var(--font-mono);
   font-size: var(--text-data);
@@ -122,53 +127,53 @@
 }
 .cl-prose hr:not([class]) {
   height: 0;
-  margin: 48px 0;
+  margin: var(--site-space-12) 0;
   border: 0;
-  border-top: 1px solid var(--color-rule);
+  border-top: var(--site-rule) solid var(--color-rule);
 }
 .cl-prose figure:not([class]) {
-  margin-top: 40px;
-  margin-bottom: 16px;
+  margin-top: var(--site-space-10);
+  margin-bottom: var(--site-space-4);
 }
 .cl-prose figcaption:not([class]) {
-  margin-top: 12px;
+  margin-top: var(--site-space-3);
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 .cl-prose-table {
   overflow-x: auto;
-  border: 1px solid var(--color-rule);
-  border-radius: var(--radius-lg);
+  border: var(--site-rule) solid var(--color-rule);
+  border-radius: var(--radius-card);
 }
 .cl-prose table:not([class]) {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 .cl-prose caption:not([class]) {
-  padding: 12px 16px;
+  padding: var(--site-space-3) var(--site-space-4);
   color: var(--text-color-ink);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   text-align: left;
 }
 .cl-prose th:not([class]) {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-rule);
+  padding: var(--site-space-3) var(--site-space-4);
+  border-bottom: var(--site-rule) solid var(--color-rule);
   color: var(--text-color-ink-2);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   text-align: left;
   vertical-align: top;
 }
 .cl-prose td:not([class]),
 .cl-prose tbody th:not([class]) {
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-rule);
+  padding: var(--site-space-3) var(--site-space-4);
+  border-top: var(--site-rule) solid var(--color-rule);
   background: none;
   color: var(--text-color-ink);
   font-family: inherit;
@@ -194,72 +199,72 @@
   line-height: 0;
 }
 .cl-prose > .cl-code {
-  margin-top: 24px;
+  margin-top: var(--site-space-6);
 }
 
 .cl-icite {
   position: relative;
-  top: -0.5em;
+  top: var(--prose-cite-rise);
   font-size: inherit;
   line-height: 0;
   vertical-align: baseline;
 }
 .cl-icite a,
 .cl-prose .cl-icite a {
-  padding: 0 1px;
+  padding: 0 var(--site-rule);
   color: var(--text-color-accent-text);
   font-family: var(--font-mono);
   font-size: var(--text-eyebrow);
   line-height: var(--text-eyebrow--line-height);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   text-decoration: none;
 }
 .cl-icite a:hover,
 .cl-prose .cl-icite a:hover {
   text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
+  text-decoration-thickness: var(--site-rule);
+  text-underline-offset: var(--site-underline-offset-sm);
 }
 
 .cl-prose--docs {
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 .cl-prose--docs > * + * {
-  margin-top: 20px;
+  margin-top: var(--site-space-5);
 }
 .cl-prose--docs h2:not([class]) {
-  margin-top: 48px;
+  margin-top: var(--site-space-12);
   font-size: var(--text-title);
   line-height: var(--text-title--line-height);
   letter-spacing: 0;
 }
 .cl-prose--docs h3:not([class]) {
-  margin-top: 32px;
+  margin-top: var(--site-space-8);
   font-size: var(--text-title-sm);
   line-height: var(--text-title-sm--line-height);
 }
 .cl-prose--docs h4:not([class]) {
-  margin-top: 24px;
+  margin-top: var(--site-space-6);
   font-size: var(--text-heading);
   line-height: var(--text-heading--line-height);
 }
 .cl-prose--docs > :is(h2, h3, h4):not([class]) + * {
-  margin-top: 12px;
+  margin-top: var(--site-space-3);
 }
 .cl-prose--docs > :first-child {
   margin-top: 0;
 }
 .cl-prose--docs blockquote:not([class]) {
-  margin-top: 20px;
+  margin-top: var(--site-space-5);
   margin-bottom: 0;
-  padding: 2px 0 2px 16px;
-  border-left: 2px solid var(--color-rule-strong);
+  padding: var(--site-space-0_5) 0 var(--site-space-0_5) var(--site-space-4);
+  border-left: var(--site-rule-thick) solid var(--color-rule-strong);
 }
 .cl-prose--docs blockquote:not([class]) p {
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 .cl-prose--docs > .cl-code {
-  margin-top: 20px;
+  margin-top: var(--site-space-5);
 }

@@ -70,7 +70,7 @@
 
 @media (max-width: 1279px) {
   :root[data-public-surface] {
-    --content-gutter: 24px;
+    --spacing-gutter: 24px;
   }
 }
 
@@ -80,33 +80,6 @@
   --site-radius-stage: 16px;
   --site-radius-frame: 20px;
   --site-radius-frame-inner: 14px;
-  --text-heading-lg: 1.25rem;
-  --text-heading-lg--line-height: 1.5rem;
-  --text-site-home: 3.75rem;
-  --text-site-home--line-height: 4rem;
-  --text-site-title: 3rem;
-  --text-site-title--line-height: 3.25rem;
-  --text-site-section: 2rem;
-  --text-site-section--line-height: 2.5rem;
-  --text-site-feature: 1.5rem;
-  --text-site-feature--line-height: 1.875rem;
-}
-
-@media (max-width: 767px) {
-  [data-marketing-surface] {
-    --text-site-home: 2rem;
-    --text-site-home--line-height: 2.5rem;
-    --text-site-title: 2rem;
-    --text-site-title--line-height: 2.5rem;
-    --text-site-section: 1.5rem;
-    --text-site-section--line-height: 2rem;
-    --text-site-feature: 1.25rem;
-    --text-site-feature--line-height: 1.75rem;
-    --text-body-lg: 1rem;
-    --text-body-lg--line-height: 1.625rem;
-    --text-body: 0.875rem;
-    --text-body--line-height: 1.375rem;
-  }
 }
 
 :root[data-public-surface]:not([data-theme='dark']) {
@@ -159,6 +132,16 @@
   --color-site-band-scrim: var(--ramp-stone-99-a55);
   --text-color-site-band-ink-2: var(--ramp-neutral-43_9);
   --color-site-band-line: var(--ramp-neutral-17_8-a80);
+  --color-site-hover-wash: color-mix(in oklch, var(--color-mark-ink) 5%, transparent);
+  --color-site-well-hover: color-mix(in oklch, var(--color-mark-ink) 5%, var(--color-site-well));
+  --color-site-frame-card-hover: color-mix(
+    in oklch,
+    var(--color-mark-ink) 5%,
+    var(--color-site-frame-card)
+  );
+  --color-site-form-rule: color-mix(in oklch, var(--color-mark-ink) 10%, transparent);
+  --color-site-scroll-shade: color-mix(in oklch, var(--color-mark-ink) 14%, transparent);
+  --color-site-scroll-shade-strong: color-mix(in oklch, var(--color-mark-ink) 20%, transparent);
 }
 
 .cl-screen--app {

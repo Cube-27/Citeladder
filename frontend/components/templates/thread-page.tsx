@@ -1,9 +1,11 @@
 import type { ReactNode, RefObject } from 'react';
 
+import { ThreadLayout } from '@/components/ui/page-chrome';
 import {
   ComposerBlocks,
+  DockedComposerBlocks,
+  OpeningTitleBlocks,
   ShapeBlocks,
-  SkeletonBlock,
   SkeletonFrame,
 } from '@/components/ui/skeleton-block';
 
@@ -11,13 +13,7 @@ import { PageFrame, type PageFrameSlots } from './page-frame';
 
 export function ThreadPageLoading({ label = 'Loading the chat…' }: Readonly<{ label?: string }>) {
   return (
-    <ThreadPage
-      composer={
-        <div className="shrink-0 pt-2 pb-4">
-          <ComposerBlocks />
-        </div>
-      }
-    >
+    <ThreadPage composer={<DockedComposerBlocks />}>
       <SkeletonFrame label={label} variant="thread">
         <ShapeBlocks shape={{ kind: 'thread' }} />
       </SkeletonFrame>
@@ -28,20 +24,12 @@ export function ThreadPageLoading({ label = 'Loading the chat…' }: Readonly<{ 
 export function NewChatLoading() {
   return (
     <ThreadPage>
-      <SkeletonFrame label="Loading the Agent…" variant="new-chat" className={OPENING}>
-        <span className="flex h-7 items-center justify-center">
-          <SkeletonBlock className="h-5 w-60 max-w-full" />
-        </span>
+      <SkeletonFrame label="Loading the Agent…" variant="new-chat" layout="opening">
+        <OpeningTitleBlocks />
         <ComposerBlocks />
       </SkeletonFrame>
     </ThreadPage>
   );
-}
-
-const OPENING = 'max-w-thread mx-auto my-auto flex w-full flex-col gap-[var(--page-section-gap)]';
-
-export function ThreadOpening({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className={OPENING}>{children}</div>;
 }
 
 export function ThreadPage({
@@ -59,22 +47,9 @@ export function ThreadPage({
   }>) {
   return (
     <PageFrame {...slots} head="masthead" end="thread">
-      <div className="flex h-[calc(100dvh-var(--route-chrome-height)+var(--page-pad-block))] min-h-0 flex-col gap-[var(--workspace-gap)]">
-        <section
-          ref={scrollRef}
-          aria-label={scrollLabel}
-          className="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto overscroll-contain p-1"
-        >
-          <div
-            data-page-content=""
-            data-thread=""
-            className="flex min-h-full w-full min-w-0 flex-col gap-[var(--workspace-gap)]"
-          >
-            {children}
-          </div>
-        </section>
-        {composer ? <div className="w-full min-w-0 px-1">{composer}</div> : null}
-      </div>
+      <ThreadLayout scrollRef={scrollRef} scrollLabel={scrollLabel} composer={composer}>
+        {children}
+      </ThreadLayout>
     </PageFrame>
   );
 }

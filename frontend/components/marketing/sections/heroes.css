@@ -1,9 +1,13 @@
+:root {
+  --hero-mark-bleed: 0.08em;
+}
+
 .cl-lhero {
-  padding-top: 64px;
+  padding-top: var(--site-space-16);
 }
 
 .cl-phero {
-  padding-top: 80px;
+  padding-top: var(--site-space-20);
 }
 
 .cl-phero-inner,
@@ -15,38 +19,38 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 24px;
+  gap: var(--site-space-6);
 }
 
 .cl-phero-inner .cl-crumbs {
-  margin-bottom: 16px;
+  margin-bottom: var(--site-space-4);
 }
 
 @media (min-width: 1024px) {
   .cl-lhero,
   .cl-phero {
-    padding-top: 128px;
+    padding-top: var(--site-space-32);
   }
 
   .cl-lhero-copy,
   .cl-phero:not(.cl-phero--split) .cl-phero-inner {
     display: grid;
     grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-    column-gap: 64px;
+    column-gap: var(--site-space-16);
     align-items: end;
   }
 }
 
 .cl-phero-title,
 .cl-lhero-title {
-  max-width: 1120px;
+  max-width: var(--site-measure-3xl);
   margin: 0;
   color: var(--text-color-ink);
   font-family: var(--font-display);
   font-size: var(--text-site-title);
-  font-weight: 400;
+  font-weight: var(--text-site-title--font-weight);
   line-height: var(--text-site-title--line-height);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--text-site-title--letter-spacing);
   text-wrap: balance;
 }
 
@@ -56,26 +60,26 @@
 }
 
 .cl-lhero .cl-lhero-lead {
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-lhero-title .cl-mark {
-  padding: 0 0.08em;
+  padding: 0 var(--hero-mark-bleed);
 }
 
 .cl-phero--lg .cl-phero-title {
-  max-width: 960px;
+  max-width: var(--site-measure-2xl);
 }
 
 .cl-phero-lead {
-  max-width: 62ch;
+  max-width: var(--site-measure-lead);
   margin: 0;
   text-wrap: pretty;
 }
 
 .cl-lhero-lead {
-  max-width: 62ch;
+  max-width: var(--site-measure-lead);
   margin: 0;
   text-wrap: pretty;
 }
@@ -84,26 +88,26 @@
 .cl-lhero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--site-space-3);
 }
 
 .cl-phero-meta,
 .cl-lhero-note {
   margin: 0;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-phero-media,
 .cl-lhero-frame {
-  margin-top: 64px;
+  margin-top: var(--site-space-16);
 }
 
 @media (max-width: 767px) {
   .cl-phero-media,
   .cl-lhero-frame {
-    margin-top: 48px;
+    margin-top: var(--site-space-12);
   }
 }
 
@@ -111,7 +115,7 @@
   .cl-phero--split > .cl-container {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    column-gap: 32px;
+    column-gap: var(--site-space-8);
     align-items: start;
   }
 
@@ -137,19 +141,19 @@
 @keyframes mk-rise-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(var(--site-space-2));
   }
 }
 
 @keyframes mk-focus-in {
   from {
-    transform: translateY(6px);
+    transform: translateY(var(--site-space-1_5));
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .mk-hero-in > * {
-    animation: mk-rise-in var(--motion-reveal) var(--ease-reveal) both;
+    animation: mk-rise-in var(--transition-duration-reveal) var(--ease-menu) both;
   }
 
   .mk-hero-in > :is(h1, :has(> h1)) {
@@ -157,14 +161,24 @@
   }
 
   .mk-hero-in > :nth-child(2) {
-    animation-delay: calc(var(--motion-reveal-step) * 1.5);
+    animation-delay: calc(var(--transition-duration-reveal-step) * 1.5);
   }
 
   .mk-hero-in > :nth-child(3) {
-    animation-delay: calc(var(--motion-reveal-step) * 3);
+    animation-delay: calc(var(--transition-duration-reveal-step) * 3);
   }
 
   .mk-hero-in > :nth-child(n + 4) {
-    animation-delay: calc(var(--motion-reveal-step) * 4);
+    animation-delay: calc(var(--transition-duration-reveal-step) * 4);
   }
+}
+
+.cl-connect-panel {
+  width: fit-content;
+  max-width: 100%;
+  padding: var(--spacing-card);
+  border: var(--site-rule) solid transparent;
+  border-radius: var(--radius-card);
+  background: var(--color-panel);
+  color: var(--text-color-ink);
 }

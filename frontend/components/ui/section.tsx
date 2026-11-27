@@ -11,7 +11,7 @@ import {
   SectionTitleRoleContext,
   StateHeadingLevelContext,
 } from '@/components/ui/state-heading-level';
-import { textRole } from '@/components/ui/typography';
+import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 import './section.css';
 
@@ -48,10 +48,10 @@ export function SectionHeader({
   }
   return (
     <header {...props} className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-      <div className="grid min-w-0 flex-1 basis-40 grid-cols-[minmax(0,1fr)] gap-1">{children}</div>
+      <div className="grid min-w-0 flex-1 basis-40 grid-cols-1 gap-1">{children}</div>
       <div
         data-section-actions=""
-        className="-my-2 flex min-h-[var(--control-md)] max-w-full min-w-0 flex-wrap items-center gap-2"
+        className="min-h-control-md -my-2 flex max-w-full min-w-0 flex-wrap items-center gap-2"
       >
         {actions}
       </div>
@@ -63,12 +63,28 @@ export function SectionTitle({
   children,
   className,
   level = 2,
+  truncate = false,
+  count,
   ...props
-}: Readonly<ComponentPropsWithoutRef<'h2'> & { level?: 2 | 3 }>) {
+}: Readonly<
+  ComponentPropsWithoutRef<'h2'> & { level?: 2 | 3; truncate?: boolean; count?: number }
+>) {
   const Heading = level === 2 ? 'h2' : 'h3';
   return (
-    <Heading {...props} className={textRole(useContext(SectionTitleRoleContext), className)}>
+    <Heading
+      {...props}
+      className={cn(
+        TEXT_ROLE_CLASS[useContext(SectionTitleRoleContext)],
+        cn(truncate && 'truncate', className),
+      )}
+    >
       {children}
+      {count === undefined ? null : (
+        <>
+          {' '}
+          <span className="text-ink-2">({count})</span>
+        </>
+      )}
     </Heading>
   );
 }
@@ -78,7 +94,7 @@ export function SectionDescription({
   ...props
 }: Readonly<Omit<ComponentPropsWithoutRef<'p'>, 'className'>>) {
   return (
-    <p {...props} className={textRole('body', 'text-ink-2 max-w-[72ch]')}>
+    <p {...props} className="text-body text-ink-2 max-w-copy">
       {children}
     </p>
   );
@@ -157,7 +173,7 @@ export function PanelFrame({
 export function SectionFooter({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <SectionBleed>
-      <div className="flex min-h-10 min-w-0 flex-wrap items-center justify-end gap-2 px-[var(--panel-inset)] py-1">
+      <div className="px-panel-inset flex min-h-10 min-w-0 flex-wrap items-center justify-end gap-2 py-1">
         {children}
       </div>
     </SectionBleed>
@@ -198,11 +214,7 @@ export function SectionStack({
 }>) {
   const Element = label ? 'section' : 'div';
   return (
-    <Element
-      {...props}
-      aria-label={label}
-      className="flex min-w-0 flex-col gap-[var(--page-section-gap)]"
-    >
+    <Element {...props} aria-label={label} className="gap-section flex min-w-0 flex-col">
       {children}
     </Element>
   );
@@ -216,11 +228,7 @@ export function CardGroup({
 }: Readonly<{ title: ReactNode; description?: ReactNode; id?: string; children: ReactNode }>) {
   const titleId = useId();
   return (
-    <section
-      id={id}
-      aria-labelledby={titleId}
-      className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-[var(--card-padding)]"
-    >
+    <section id={id} aria-labelledby={titleId} className="gap-card grid min-w-0 grid-cols-1">
       <SectionHeader>
         <SectionTitle id={titleId}>{title}</SectionTitle>
         {description ? <SectionDescription>{description}</SectionDescription> : null}
@@ -233,7 +241,7 @@ export function CardGroup({
 export function CardRow({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="@container min-w-0">
-      <div className="grid gap-[var(--page-section-gap)] @[640px]:auto-cols-fr @[640px]:grid-flow-col">
+      <div className="gap-section grid @[640px]:auto-cols-fr @[640px]:grid-flow-col">
         {children}
       </div>
     </div>

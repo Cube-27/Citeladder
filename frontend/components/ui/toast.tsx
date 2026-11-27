@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import * as ToastPrimitive from '@radix-ui/react-toast';
 
@@ -33,8 +33,6 @@ const TONE_ICON = {
   positive: { Icon: CheckCircle2, className: 'text-positive', word: 'Success' },
   negative: { Icon: AlertCircle, className: 'text-negative', word: 'Error' },
 } as const;
-
-type StackVars = CSSProperties & Record<`--${string}`, string | number>;
 
 function useToastHeights() {
   const [heights, setHeights] = useState<Readonly<Record<number, number>>>({});
@@ -97,12 +95,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const newestFirst = [...messages].reverse();
   const shown = newestFirst.filter((message) => message.open);
   const { offsets, listHeight } = stackLayout(shown, heights);
-  const stackVars: StackVars = {
-    '--toast-count': shown.length,
-    '--stack-height': `${listHeight}px`,
-  };
   const frontHeight = shown[0] ? heights[shown[0].id] : undefined;
-  if (frontHeight !== undefined) stackVars['--front-height'] = `${frontHeight}px`;
 
   return (
     <ToastContext value={value}>
@@ -113,11 +106,6 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
           const { Icon, className, word } = TONE_ICON[tone];
           const place = message.open ? shown.indexOf(message) : newestFirst.indexOf(message);
           const height = heights[message.id];
-          const vars: StackVars = {
-            '--toast-index': place,
-            '--toast-offset': `${offsets[place] ?? 0}px`,
-          };
-          if (height !== undefined) vars['--toast-height'] = `${height}px`;
           return (
             <ToastPrimitive.Root
               key={message.id}
@@ -138,7 +126,11 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                   setMessages((current) => current.filter((item) => item.id !== message.id));
               }}
               data-front={message.open && place === 0 ? '' : undefined}
-              style={vars}
+              style={{
+                '--toast-index': place,
+                '--toast-offset': `${offsets[place] ?? 0}px`,
+                '--toast-height': height === undefined ? undefined : `${height}px`,
+              }}
               className={cn(POP_FACE, 'toast-panel overflow-hidden')}
             >
               <div ref={measure(message.id)} className="flex items-start gap-3 py-3 ps-4 pe-3">
@@ -146,12 +138,12 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                   <Icon className="size-3.5" aria-hidden />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <ToastPrimitive.Title className="text-body-sm text-ink font-medium">
+                  <ToastPrimitive.Title className="text-label text-ink">
                     <span className="sr-only">{`${word}: `}</span>
                     {message.title}
                   </ToastPrimitive.Title>
                   {message.description ? (
-                    <ToastPrimitive.Description className="text-body-sm text-ink-2 mt-0.5">
+                    <ToastPrimitive.Description className="text-body text-ink-2 mt-0.5">
                       {message.description}
                     </ToastPrimitive.Description>
                   ) : null}
@@ -164,7 +156,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                   ) : null}
                 </div>
                 <ToastPrimitive.Close
-                  className="focus-ring press hit-area text-ink-2 rounded-control not-disabled:hover:text-ink bg-state-fill not-disabled:hover:bg-state-fill-hover grid size-6 shrink-0 place-items-center [--press:0.93]"
+                  className="focus-ring press hit-area text-ink-2 rounded-control not-disabled:hover:text-ink bg-state-fill not-disabled:hover:bg-state-fill-hover press-firm grid size-6 shrink-0 place-items-center"
                   aria-label="Dismiss notification"
                 >
                   <X className="size-3.5" aria-hidden />
@@ -174,8 +166,12 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
           );
         })}
         <ToastPrimitive.Viewport
-          style={stackVars}
-          className="toast-stack focus-ring z-toast fixed top-[calc(var(--masthead-block-size,var(--masthead-height))+8px)] right-4 w-100 max-w-[calc(100vw-2rem)]"
+          style={{
+            '--toast-count': shown.length,
+            '--stack-height': `${listHeight}px`,
+            '--front-height': frontHeight === undefined ? undefined : `${frontHeight}px`,
+          }}
+          className="toast-stack focus-ring z-toast top-toast-top max-w-viewport-fit fixed right-4 w-100"
         />
       </ToastPrimitive.Provider>
     </ToastContext>

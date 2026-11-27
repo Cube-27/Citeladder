@@ -64,12 +64,7 @@ export function ToolPanel({
               {copy === 'copied' && 'Copied'}
               {copy === 'failed' && 'Couldn’t copy'}
             </output>
-            <Button
-              variant="quiet"
-              className="cl-tool-copy"
-              disabled={!copyText}
-              onClick={() => void copyResult()}
-            >
+            <Button variant="quiet" disabled={!copyText} onClick={() => void copyResult()}>
               <Icon icon={copy === 'copied' ? Check : Copy} />
               Copy
             </Button>

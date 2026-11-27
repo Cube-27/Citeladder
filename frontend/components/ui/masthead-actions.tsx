@@ -100,7 +100,7 @@ export function MastheadOverflow({
         <MoreMenu
           id={moreId}
           label={label}
-          trigger={more === 'always' ? undefined : 'rail:hidden'}
+          hideOnRail={more !== 'always'}
           read={() => foldedEntries([foldedSlot, group], menus)}
         />
       )}
@@ -150,12 +150,12 @@ function foldOf({
 function MoreMenu({
   id,
   label,
-  trigger,
+  hideOnRail,
   read,
 }: Readonly<{
   id: string;
   label: string;
-  trigger: string | undefined;
+  hideOnRail: boolean;
   read: () => FoldedEntry[];
 }>) {
   const [entries, setEntries] = useState<readonly FoldedEntry[]>([]);
@@ -172,7 +172,7 @@ function MoreMenu({
           icon={MoreHorizontal}
           label={label}
           variant="secondary"
-          className={trigger}
+          className={hideOnRail ? 'rail:hidden' : undefined}
         />
       </MenuTrigger>
       <MenuContent align="end">
@@ -201,13 +201,13 @@ function FoldedItem({ entry }: Readonly<{ entry: FoldedEntry }>) {
     <MenuItem
       icon={icon}
       disabled={entry.disabled}
-      className="data-[disabled]:text-ink-2"
+      quietWhenDisabled
       onSelect={() => control.click()}
     >
       {entry.reason ? (
         <span className="grid min-w-0">
           <span>{entry.label}</span>
-          <span className="type-caption">{entry.reason}</span>
+          <span className="text-caption text-ink-2">{entry.reason}</span>
         </span>
       ) : (
         entry.label

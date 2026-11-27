@@ -30,6 +30,7 @@
     "lint": "vp lint",
     "format": "vp fmt --write",
     "format:check": "vp fmt --check",
+    "gen:table-positions": "node scripts/data-table-positions.mjs && vp fmt components/ui/generated/data-table-positions.css",
     "gen": "pnpm --filter @citeladder/api public-api:reference && pnpm --filter @citeladder/api mcp:reference && vp fmt apps/docs/src/data/public-api.json apps/docs/src/data/mcp-tools.json",
     "check": "vp check",
     "check:fix": "vp check --fix",
@@ -97,6 +98,7 @@
   "devDependencies": {
     "@mdn/browser-compat-data": "8.1.10",
     "@playwright/test": "^1.65.1",
+    "@shadcn/lint": "0.2.5",
     "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/jest-dom": "^8.0.0",
     "@testing-library/react": "^16.3.3",

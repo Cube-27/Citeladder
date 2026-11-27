@@ -1,22 +1,23 @@
 .cl-cookie {
-  --cl-cookie-shift: 4px;
+  --cl-cookie-shift: var(--site-space-1);
 
   position: fixed;
-  z-index: calc(var(--z-index-sticky) - 1);
+  z-index: var(--site-z-banner);
   right: 0;
   bottom: 0;
   left: 0;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--site-space-4);
   max-height: 25vh;
-  padding: 12px var(--site-gutter) max(12px, env(safe-area-inset-bottom));
-  border-top: 1px solid var(--color-rule);
+  padding: var(--site-space-3) var(--site-gutter)
+    max(var(--site-space-3), env(safe-area-inset-bottom));
+  border-top: var(--site-rule) solid var(--color-rule);
   background: var(--color-panel);
   transition:
-    opacity var(--motion-open) var(--ease-standard),
-    translate var(--motion-open) var(--ease-standard),
-    display var(--motion-open) allow-discrete;
+    opacity var(--transition-duration-open) var(--ease-standard),
+    translate var(--transition-duration-open) var(--ease-standard),
+    display var(--transition-duration-open) allow-discrete;
 }
 
 @starting-style {
@@ -31,8 +32,8 @@
   opacity: 0;
   translate: 0 var(--cl-cookie-shift);
   pointer-events: none;
-  transition-duration: var(--motion-close);
-  transition-timing-function: var(--ease-exit);
+  transition-duration: var(--transition-duration-close);
+  transition-timing-function: var(--ease-standard);
 }
 
 .cl-cookie-title {
@@ -40,7 +41,7 @@
   margin: 0;
   color: var(--text-color-ink);
   font-size: var(--text-label);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-label--line-height);
 }
 
@@ -51,31 +52,31 @@
   margin: 0;
   overflow-y: auto;
   color: var(--text-color-ink-2);
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-cookie-text a {
   border-radius: var(--radius-xs);
   color: var(--text-color-ink);
   text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
+  text-decoration-thickness: var(--site-rule);
+  text-underline-offset: var(--site-underline-offset);
 }
 
 .cl-cookie-actions {
   display: grid;
   flex: none;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--site-space-2);
 }
 
 @media (max-width: 767px) {
   .cl-cookie {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
-    padding-inline: 16px;
+    gap: var(--site-space-2);
+    padding-inline: var(--site-space-4);
   }
 
   .cl-cookie-title {

@@ -11,7 +11,6 @@ import {
   gapRanges,
   niceTicks,
 } from './area-chart-data';
-import { roleColor } from './chart-tooltip';
 import { SeriesTonesContext, seriesTones } from './step-chart-parts';
 
 const points = (container: HTMLElement, tone: string) =>
@@ -89,14 +88,6 @@ describe('AreaChart data', () => {
         events,
       ),
     ).toEqual([]);
-  });
-
-  it('reads the colour role a class names, a current fill taking its text role', () => {
-    expect(roleColor('fill-positive bg-positive', 'fill')).toBe('var(--color-positive)');
-    expect(roleColor('fill-current text-negative bg-negative', 'fill')).toBe(
-      'var(--color-negative)',
-    );
-    expect(roleColor('stroke-data-other', 'stroke')).toBe('var(--color-data-other)');
   });
 });
 

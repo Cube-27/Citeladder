@@ -34,7 +34,7 @@ const SIDEBAR_WIDTH_KEY = 'citeladder:app:sidebar-width';
 function sidebarWidth() {
   const frame = screen.getByRole('main').parentElement;
   if (!frame) throw new Error('The shell frame is missing.');
-  return frame.style.getPropertyValue('--sidebar-width');
+  return frame.style.getPropertyValue('--spacing-sidebar');
 }
 
 describe('AppShell resizable sidebar', () => {

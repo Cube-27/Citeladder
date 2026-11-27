@@ -1,4 +1,4 @@
-import { FilterBar } from '@/components/ui/filter-bar';
+import { TableToolbar } from '@/components/ui/filter-bar';
 import { SkeletonFrame, TableBlocks } from '@/components/ui/skeleton-block';
 import { Section, SectionBleed, SectionToolbar } from '@/components/ui/section';
 
@@ -12,8 +12,8 @@ export function ToolbarTableLoading({
     <SkeletonFrame label={label} variant="table" className="grid min-w-0">
       <Section>
         <SectionToolbar>
-          <FilterBar
-            view={view ? <span className="block h-[var(--control-md)]" /> : undefined}
+          <TableToolbar
+            view={view ? <span className="h-control-md block" /> : undefined}
             search={<span />}
           />
         </SectionToolbar>

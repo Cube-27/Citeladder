@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { SectionBleed } from '@/components/ui/section';
 import { ClampText } from '@/components/ui/clamp-text';
-import { textRole } from '@/components/ui/typography';
+
 import { cn } from '@/lib/utils';
 
 export function LedgerList({
@@ -37,13 +37,13 @@ export function LedgerItem({
   const text = (
     <>
       <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <ClampText phoneWrap className={textRole('body', 'flex-[1_1_15rem]')}>
+        <ClampText phoneWrap text="body" className="basis-ledger-label grow">
           {title}
         </ClampText>
         {meta === undefined ? null : <div className="flex shrink-0 items-center gap-2">{meta}</div>}
       </div>
       {caption === undefined ? null : (
-        <ClampText phoneWrap className="type-caption">
+        <ClampText phoneWrap text="caption">
           {caption}
         </ClampText>
       )}
@@ -57,7 +57,7 @@ export function LedgerItem({
       className={cn(
         'min-w-0',
         action === undefined ? 'grid gap-1' : 'flex items-center gap-4',
-        'hover:overlay-hover transition-colors duration-[var(--motion-fast)]',
+        'hover:overlay-hover transition-colors duration-fast',
       )}
     >
       {action === undefined ? (

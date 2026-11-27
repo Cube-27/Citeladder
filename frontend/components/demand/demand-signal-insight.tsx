@@ -5,7 +5,7 @@ import { numericMetric, signalDefinition } from '@/lib/demand/signals';
 import { formatCount, formatMean, formatPercent } from '@/lib/format';
 import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 export function SignalInsight({
@@ -15,9 +15,9 @@ export function SignalInsight({
   const detail = (DETAIL[signal.signal_type] ?? (() => null))(signal, policy);
   return (
     <Section aria-label="Reading">
-      <p className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2">
         {detail ?? signalDefinition(signal.signal_type, policy)}
-      </p>
+      </Text>
       <QueryRelevanceEvidence signal={signal} />
     </Section>
   );
@@ -91,31 +91,39 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
           <SectionDescription>{relevance.statement}</SectionDescription>
         ) : null}
       </SectionHeader>
-      <AppGrid as="dl" layout="thirds" className="type-caption">
+      <AppGrid as="dl" layout="thirds">
         <div>
-          <dt className="text-ink-2">Title</dt>
-          <dd className={textRole('emphasis', 'tabular-nums')}>
+          <Text as="dt" variant="caption">
+            Title
+          </Text>
+          <Text as="dd" variant="caption-strong" numeric>
             {coverageLabel(relevance.title_coverage)}
-          </dd>
+          </Text>
         </div>
         <div>
-          <dt className="text-ink-2">H1</dt>
-          <dd className={textRole('emphasis', 'tabular-nums')}>
+          <Text as="dt" variant="caption">
+            H1
+          </Text>
+          <Text as="dd" variant="caption-strong" numeric>
             {coverageLabel(relevance.h1_coverage)}
-          </dd>
+          </Text>
         </div>
         <div>
-          <dt className="text-ink-2">Page text</dt>
-          <dd className={textRole('emphasis', 'tabular-nums')}>
+          <Text as="dt" variant="caption">
+            Page text
+          </Text>
+          <Text as="dd" variant="caption-strong" numeric>
             {coverageLabel(relevance.primary_content_coverage)}
-          </dd>
+          </Text>
         </div>
       </AppGrid>
       {missing.length > 0 ? (
-        <p className="type-caption">
-          <span className={textRole('body', 'text-ink-2')}>Missing from title or H1:</span>{' '}
+        <Text as="p" variant="caption">
+          <Text variant="body" tone="ink-2">
+            Missing from title or H1:
+          </Text>{' '}
           {missing.join(', ')}
-        </p>
+        </Text>
       ) : null}
     </Section>
   );

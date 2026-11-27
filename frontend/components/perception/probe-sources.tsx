@@ -24,7 +24,7 @@ export function ExpandToggle({
   return (
     <Pressable aria-expanded={open} onClick={onToggle} className="w-auto">
       <Inline as="span">
-        <Icon icon={open ? ChevronDown : ChevronRight} className="text-ink-2" />
+        <Icon icon={open ? ChevronDown : ChevronRight} tone="ink-2" />
         {children}
       </Inline>
     </Pressable>

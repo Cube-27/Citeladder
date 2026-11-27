@@ -324,7 +324,7 @@ function ConnectionRowView({
   return (
     <ItemRow
       data-testid={`connection-row-${connection.provider}`}
-      icon={<Icon icon={SourceIcon} className="text-ink-2" />}
+      icon={<Icon icon={SourceIcon} tone="ink-2" />}
       title={label}
       caption={
         <>
