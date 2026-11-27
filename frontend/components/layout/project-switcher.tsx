@@ -1,7 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
-import { SidebarIdentButton, SidebarTextTooltip } from '@/components/ui/sidebar';
+import {
+  SidebarIdentButton,
+  SidebarMarkPlaceholder,
+  SidebarTextTooltip,
+} from '@/components/ui/sidebar';
+import { Text } from '@/components/ui/typography';
 import {
   Menu,
   MenuContent,
@@ -50,7 +55,7 @@ export function ProjectSwitcher() {
             pending={isLoading}
             lead={
               isLoading ? (
-                <span aria-hidden className="bg-well rounded-mark size-5 shrink-0" />
+                <SidebarMarkPlaceholder />
               ) : (
                 <BrandMark
                   name={label}
@@ -88,9 +93,9 @@ export function ProjectSwitcher() {
         <MenuSeparator />
         {projects.length === 0 ? (
           <MenuItem disabled>
-            <span className="text-ink-2 min-w-0 flex-1 truncate">
+            <Text variant="body" tone="ink-2" box="fill" wrap="truncate">
               No projects in {activeWorkspace?.name ?? 'this workspace'}
-            </span>
+            </Text>
           </MenuItem>
         ) : null}
         {projects.map((project) => {
@@ -128,7 +133,7 @@ export function ProjectSwitcher() {
               <span className="grid min-w-0 flex-1">
                 <span className="truncate">New project</span>
                 {remainingProjectSlots === 0 && (
-                  <span className="text-caption text-ink-2">Project limit reached</span>
+                  <Text variant="caption">Project limit reached</Text>
                 )}
               </span>
             </MenuItem>

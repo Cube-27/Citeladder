@@ -8,7 +8,7 @@ import { Notice } from '@/components/ui/notice';
 export function ActiveRunBanner({ run }: Readonly<{ run: ActiveRun }>) {
   return (
     <Notice tone="info">
-      <Inline className="flex-wrap">
+      <Inline wrap>
         <Spinner />
         <span>A run is in progress ({AUDIT_STATES[run.status].label}).</span>
         <TextLink text="emphasis" className="whitespace-nowrap" href={`/runs/${run.id}`}>

@@ -9,7 +9,6 @@ import { DataTable, type DataTableColumn, type DataTableState } from '@/componen
 import { SettingsGroup } from '@/components/ui/setting-row';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
 import { Download, ICONS } from '@/lib/icons';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { saveBlob } from '@/lib/download';
@@ -101,7 +100,7 @@ export function InvoiceHistory({
         {invoices.map((invoice) => (
           <TableRow key={invoice.invoice_id}>
             <TableCell>
-              <ClampText lines={1} className={textRole('emphasis')}>
+              <ClampText lines={1} text="emphasis">
                 {invoice.status === 'credited'
                   ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
                   : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}

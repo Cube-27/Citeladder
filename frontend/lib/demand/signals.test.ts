@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 
 import type { DemandSignal } from '@/lib/api/demand';
-import { parseAgentHandoff } from '@/lib/agent/handoff';
+import { parseAgentHandoff } from '@/lib/agent/handoff-params';
 import {
   competingPages,
   demandSignalHandoffHref,

@@ -10,8 +10,6 @@ function trailingPunctuation(token: string): string {
   return token.slice(end);
 }
 
-const LINK = 'text-ink underline decoration-control-line underline-offset-2';
-
 export function Linkify({ text }: Readonly<{ text: string }>) {
   const nodes: ReactNode[] = [];
   let cursor = 0;
@@ -26,11 +24,11 @@ export function Linkify({ text }: Readonly<{ text: string }>) {
     const href = trailing ? token.slice(0, -trailing.length) : token;
     nodes.push(
       href.startsWith('/') ? (
-        <a key={key} href={href} className={LINK}>
+        <a key={key} href={href} className="cl-inline-link">
           {href}
         </a>
       ) : (
-        <a key={key} href={href} target="_blank" rel="noreferrer" className={LINK}>
+        <a key={key} href={href} target="_blank" rel="noreferrer" className="cl-inline-link">
           {href}
         </a>
       ),

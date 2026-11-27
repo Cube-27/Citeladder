@@ -12,12 +12,11 @@ import {
   AuthLinkRow,
 } from '@/components/ui/auth-shell';
 import { Field } from '@/components/ui/field';
-import { GoogleGlyph } from '@/components/ui/google-glyph';
-import { Icon } from '@/components/ui/icon';
+import { GlyphMark } from '@/components/ui/engine-mark';
 import { Input } from '@/components/ui/input';
 import { PasswordField, type PasswordFieldProps } from '@/components/ui/password-field';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { authApi } from '@/lib/api/auth';
 import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { ApiError } from '@/lib/api/errors';
@@ -132,7 +131,7 @@ function GoogleEntry({
         aria-describedby={termsNoticeId}
         onClick={() => void start()}
       >
-        <Icon icon={GoogleGlyph} />
+        <GlyphMark glyph="google" placement="text" />
         <span>{pending ? 'Starting Google sign-in…' : 'Continue with Google'}</span>
       </AuthButton>
       {notice ? <Notice tone="negative">{notice}</Notice> : null}
@@ -186,7 +185,7 @@ export function AuthFormShell({
       after={
         <>
           {showFooter ? (
-            <p className={textRole('body', 'text-ink-2')}>
+            <Text as="p" variant="body" tone="ink-2">
               {footerPrompt}{' '}
               <TextLink asChild text="inherit">
                 {switching ? (
@@ -195,7 +194,7 @@ export function AuthFormShell({
                   <Link to={footerHref}>{footerLabel}</Link>
                 )}
               </TextLink>
-            </p>
+            </Text>
           ) : null}
           {consent.terms ? (
             <TermsNotice id={consent.noticeId} signup={consent.terms.signup} />

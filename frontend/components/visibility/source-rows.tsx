@@ -11,7 +11,6 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Absence } from '@/components/ui/absence';
-import { textRole } from '@/components/ui/typography';
 import {
   count,
   hostOf,
@@ -52,9 +51,9 @@ export function OpenSource({
 }: Readonly<{ onOpen: () => void; children: ReactNode }>) {
   return (
     <Pressable onClick={onOpen} className="block min-w-0">
-      <Inline as="span" className="justify-between">
+      <Inline as="span" justify="between">
         <span className="min-w-0">{children}</span>
-        <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
+        <Icon icon={ChevronRight} tone="ink-2" />
       </Inline>
     </Pressable>
   );
@@ -216,13 +215,13 @@ function PageStandingCell({
   const label = standingLabel(standing);
   const tone = standingTone(standing);
   return (
-    <Inline as="span" gap="item" className="whitespace-nowrap">
+    <Inline as="span" gap="item" nowrap>
       {tone ? (
         <StatusMark variant="status" value={tone}>
           {label}
         </StatusMark>
       ) : (
-        <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
+        <ClampText lines={1} text="caption">
           {label}
         </ClampText>
       )}

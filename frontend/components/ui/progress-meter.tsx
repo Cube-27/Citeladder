@@ -22,8 +22,8 @@ export function ProgressMeter({ label, value }: Readonly<{ label: string; value:
       />
       <span aria-hidden className="bg-well block h-1 overflow-hidden rounded-full">
         <span
-          className="bg-data-you block h-full rounded-full [transition:width_var(--transition-duration-slide)_var(--ease-standard)]"
-          style={{ width: `${clamped}%` }}
+          className="bg-data-you w-share transition-size duration-slide ease-standard block h-full rounded-full"
+          style={{ '--share': `${clamped}%` }}
         />
       </span>
       <span className="text-caption text-ink whitespace-nowrap tabular-nums">{shown}</span>

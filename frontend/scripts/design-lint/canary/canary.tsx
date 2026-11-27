@@ -3,7 +3,7 @@ import { Stack } from '@/components/ui/layout';
 const MIX = 'color-mix(in oklch, var(--color-accent), transparent)';
 const PANEL = 'gap-2 rounded-card';
 
-export function Canary({ tone }: { tone: string }) {
+export function Canary({ tone }: Readonly<{ tone: string }>) {
   return (
     <Stack className="gap-[13px]">
       <div className="flex min-w-0 items-center justify-between">layout only</div>
@@ -19,6 +19,11 @@ export function Canary({ tone }: { tone: string }) {
       <Stack className={tone}>dynamic</Stack>
       <Stack className="rounded-card">restyle</Stack>
       <p title={MIX}>colour</p>
+      <p className={LAYOUT[tone === 'row' ? 'row' : 'column']}>layout map</p>
+      <img src="/logo.png" alt="" />
+      <svg aria-hidden viewBox="0 0 24 24" className="size-6 shrink-0" />
     </Stack>
   );
 }
+
+const LAYOUT = { row: 'flex', column: 'grid' } as const;

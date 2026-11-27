@@ -1,4 +1,5 @@
 import { FactList } from '@/components/ui/facts';
+import { Stack } from '@/components/ui/layout';
 import type { CommercialPage } from '@/lib/marketing-content/commercial-pages';
 import { platformLabel } from '@/lib/marketing-content/nav';
 
@@ -126,13 +127,13 @@ function WorkedExample() {
           {
             label: 'Share of tracked brand appearances',
             value: (
-              <span className="grid gap-1">
+              <Stack as="span" gap="tight">
                 <span>Not calculated here</span>
                 <span>
                   Needs competitor counts and a stated counting rule. Several brands can appear in
                   one answer.
                 </span>
-              </span>
+              </Stack>
             ),
           },
         ]}

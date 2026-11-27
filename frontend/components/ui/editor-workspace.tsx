@@ -3,16 +3,11 @@ import type { ReactNode, RefObject } from 'react';
 import { cn } from '@/lib/utils';
 import { PanelFrame, SurfaceContext } from '@/components/ui/section';
 
-const FILL = 'h-[calc(100dvh-var(--route-chrome-height))] min-h-0';
-
-export const EDITOR_RAIL_TAB = 'flex min-h-0 flex-1 flex-col';
+const FILL = 'h-route-fill min-h-0';
 
 export function EditorWorkspace({ page, rail }: Readonly<{ page: ReactNode; rail: ReactNode }>) {
   return (
-    <div
-      data-editor-workspace="wide"
-      className={cn(FILL, 'grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-workspace')}
-    >
+    <div data-editor-workspace="wide" className={cn(FILL, 'grid grid-cols-editor gap-workspace')}>
       {page}
       {rail}
     </div>
@@ -79,7 +74,7 @@ export function EditorRailPanel({
         className={cn(
           'flex min-w-0 flex-col',
           padding === 'card'
-            ? 'gap-panel-inset p-panel-inset [--spacing-panel-inset:var(--spacing-card)]'
+            ? 'gap-panel-inset p-panel-inset panel-inset-card'
             : 'gap-workspace py-compact',
         )}
       >

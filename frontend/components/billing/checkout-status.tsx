@@ -9,7 +9,7 @@ export function CheckoutStatus({
   if (!checkout.notice && !checkout.testMode) return null;
   return (
     <Notice tone="info">
-      <Stack gap="compact" className="justify-items-start">
+      <Stack gap="compact" align="start">
         {checkout.testMode ? <p>Test mode: no real money is charged.</p> : null}
         {checkout.notice ? <output>{checkout.notice}</output> : null}
         <Button variant="secondary" onClick={() => void checkout.refresh()}>

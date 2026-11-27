@@ -10,23 +10,14 @@ import { chooseFilterOption, openFilterRow } from '@/test/all-filters';
 
 import { TabsRoot } from '@/components/ui/tabs';
 
-import { PromptStatusTabs, promptFilterControls } from './prompt-toolbar';
+import { PromptSearch, PromptStatusTabs, promptFilterControls } from './prompt-toolbar';
 
-describe('promptFilterControls', () => {
+describe('PromptSearch', () => {
   it('keeps search controlled and lets the reader clear it', async () => {
     const user = userEvent.setup();
     function Harness() {
       const [search, setSearch] = useState('citation');
-      return (
-        <FilterBar
-          {...promptFilterControls({
-            search,
-            onSearchChange: setSearch,
-            filters: emptyFilters,
-            onFiltersChange: () => undefined,
-          })}
-        />
-      );
+      return <PromptSearch value={search} onValueChange={setSearch} />;
     }
 
     render(<Harness />);
@@ -67,8 +58,6 @@ describe('promptFilterControls filters', () => {
       return (
         <FilterBar
           {...promptFilterControls({
-            search: '',
-            onSearchChange: () => undefined,
             filters,
             onFiltersChange: setFilters,
           })}

@@ -65,7 +65,7 @@ function ToolbarRow({ view, lead, ...row }: TableToolbarProps) {
       {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
       {lead ? <div className="flex max-w-full min-w-0 shrink-0">{lead}</div> : null}
       {view ? (
-        <div className="flex min-w-[min(100%,16rem)] flex-[1_1_0] flex-wrap items-center justify-end gap-2">
+        <div className="min-w-filter-search flex grow basis-0 flex-wrap items-center justify-end gap-2">
           <Controls {...row} afterView />
         </div>
       ) : (
@@ -87,11 +87,7 @@ function Controls({
   const windowLabel = dataWindow(chips);
   return (
     <>
-      {search ? (
-        <div className="rail:max-w-64 rail:grow rail:basis-[200px] min-w-0 basis-full">
-          {search}
-        </div>
-      ) : null}
+      {search ? <div className="rail:max-w-64 min-w-0 grow basis-50">{search}</div> : null}
       {chips.map((filter) => (
         <div key={filter.id} className="flex min-w-0 shrink-0">
           <FilterChip filter={filter} />

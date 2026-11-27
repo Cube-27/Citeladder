@@ -9,7 +9,7 @@ const LAYOUT = {
   'main-aside': 'column-wide:grid-cols-main-aside',
   'aside-main': 'column-wide:grid-cols-aside-main',
   halves: 'column-wide:grid-cols-2',
-  slips: 'grid-cols-[repeat(auto-fill,minmax(min(100%,17.5rem),1fr))]',
+  slips: 'grid-cols-cards',
 } as const;
 
 export type AppGridLayout = keyof typeof LAYOUT;

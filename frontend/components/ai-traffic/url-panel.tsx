@@ -14,7 +14,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { SectionBleed, TitledSection } from '@/components/ui/section';
 import { Tooltip } from '@/components/ui/tooltip';
 import { UrlText } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
 import { aiTrafficQueries, type TrafficFilters } from '@/lib/api/ai-traffic';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -23,6 +23,7 @@ import { aiSourceLabel } from '@/lib/ai-traffic/series';
 import { coverageLabel, legStateLabel, reasonLabel, words } from '@/lib/ai-traffic/vocabulary';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 import { FactList } from '@/components/ui/facts';
+import { Inline } from '@/components/ui/layout';
 
 type Leg = z.infer<typeof trafficLegSchema>;
 type UrlEvidenceData = z.infer<typeof aiTrafficUrlSchema>;
@@ -38,7 +39,8 @@ export function TrafficLeg({ leg, unit }: Readonly<{ leg: Leg; unit: string }>) 
     <Tooltip content={detail}>
       <Pressable
         type="button"
-        className="w-auto text-right tabular-nums"
+        numeric
+        className="w-auto text-right"
         aria-label={`${formatCount(leg.value)} ${unit}`}
       >
         {formatCount(leg.value)}
@@ -178,12 +180,12 @@ function UrlEvidence({
   ];
   return (
     <>
-      <p className={textRole('caption')}>
+      <Text as="p" variant="caption">
         {formatWindowDate(data.window_start)} – {formatWindowDate(data.window_end)} · Path-level
         identity
-      </p>
+      </Text>
       {fromRow ? (
-        <p className={textRole('caption')}>
+        <Text as="p" variant="caption">
           Sources:{' '}
           {rows.flatMap((row, index) =>
             row.link
@@ -195,7 +197,7 @@ function UrlEvidence({
                 ]
               : [],
           )}
-        </p>
+        </Text>
       ) : null}
       {fromRow ? null : (
         <FactList
@@ -211,14 +213,14 @@ function UrlEvidence({
         />
       )}
       <Observations data={data} botLabel={botLabel} />
-      <p className={textRole('caption')}>
+      <Text as="p" variant="caption">
         {data.provenance.bounded ? 'Timeline reached its display bound. ' : null}
         {data.provenance.crawl_id ? (
           <PanelLink to={website}>View Site health pages</PanelLink>
         ) : (
           'Inventory unavailable'
         )}
-      </p>
+      </Text>
     </>
   );
 }
@@ -254,10 +256,14 @@ function Observations({
       {rows.length ? (
         <SectionBleed as="ul" rows>
           {rows.map((row) => (
-            <li key={row.key} className="flex items-center justify-between gap-4">
-              <span className={textRole('body', 'min-w-0 truncate')}>{row.name}</span>
-              <span className={textRole('caption', 'shrink-0 tabular-nums')}>{row.detail}</span>
-            </li>
+            <Inline as="li" key={row.key} gap="loose" justify="between">
+              <Text variant="body" box="shrink" wrap="truncate">
+                {row.name}
+              </Text>
+              <Text variant="caption" box="fixed" numeric>
+                {row.detail}
+              </Text>
+            </Inline>
           ))}
         </SectionBleed>
       ) : (

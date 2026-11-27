@@ -1,6 +1,6 @@
 import { TableHead } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+
 import { ArrowDown } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
@@ -80,7 +80,7 @@ export function SortableTableHead({
           aria-hidden
         />
       </span>
-      {sublabel ? <span className={textRole('caption')}>{sublabel}</span> : null}
+      {sublabel ? <span className="text-caption text-ink-2">{sublabel}</span> : null}
     </button>
   );
   return (

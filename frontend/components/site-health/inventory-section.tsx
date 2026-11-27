@@ -54,9 +54,13 @@ export function InventorySection({
 
   return (
     <Section data-testid="inventory-section">
-      <SectionHeader>
-        <SectionTitle>{mode === 'discovering' ? 'Pages discovered so far' : 'Pages'}</SectionTitle>
-      </SectionHeader>
+      {mode === 'scored' && crawl ? null : (
+        <SectionHeader>
+          <SectionTitle>
+            {mode === 'discovering' ? 'Pages discovered so far' : 'Pages'}
+          </SectionTitle>
+        </SectionHeader>
+      )}
       {content}
     </Section>
   );
@@ -280,6 +284,7 @@ function ScoredInventoryState({
       <>
         <RootErrorsBlock errors={rootErrors} />
         <PagesTable
+          title="Pages"
           toolbar={toolbar}
           pages={page?.items ?? []}
           sort={sort}

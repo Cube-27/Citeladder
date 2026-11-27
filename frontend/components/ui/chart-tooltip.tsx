@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { MarkerShape, SeriesTone } from '@/components/ui/step-chart-parts';
 import { printed } from '@/components/ui/absence';
 import { POP_FACE } from '@/components/ui/slip';
-import { textRole } from '@/components/ui/typography';
+
 import type { Formatted } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -83,16 +83,49 @@ export function ChartTooltipCard({
 }: Readonly<{ title: string; note?: string; rows: readonly TooltipRow[] }>) {
   return (
     <div className={cn(POP_FACE, 'grid min-w-44 gap-2 px-3 py-2')}>
-      <p className={textRole('captionStrong', 'text-ink-2 tabular-nums')}>{title}</p>
+      <p className="text-caption-strong text-ink-2 tabular-nums">{title}</p>
       {rows.map((row) => (
-        <div key={row.name} className={textRole('caption', 'flex min-w-0 items-center gap-2')}>
+        <div key={row.name} className="text-caption text-ink-2 flex min-w-0 items-center gap-2">
           <SeriesIndicator color={row.color} shape={row.shape} />
           {row.mark}
           <span className="text-ink-2 min-w-0 flex-1 truncate">{row.name}</span>
           <span className="text-ink font-emphasis tabular-nums">{printed(row.value)}</span>
         </div>
       ))}
-      {note ? <p className={textRole('caption', 'text-warning')}>{note}</p> : null}
+      {note ? <p className="text-caption text-warning">{note}</p> : null}
+    </div>
+  );
+}
+
+export type LineTooltipRow = Readonly<{
+  key: string;
+  name: string;
+  color: string;
+  dashed: boolean;
+  value: Formatted;
+}>;
+
+export function LineTooltipCard({
+  title,
+  rows,
+}: Readonly<{ title: string; rows: readonly LineTooltipRow[] }>) {
+  return (
+    <div className={cn(POP_FACE, 'grid min-w-56 gap-3 px-4 py-3')}>
+      <p className="font-emphasis text-ink-2">{title}</p>
+      {rows.map((row) => (
+        <div key={row.key} className="text-body text-ink flex min-w-0 items-center gap-3">
+          <span
+            aria-hidden
+            className={cn(
+              'border-(--swatch) w-3 shrink-0 border-t-2',
+              row.dashed && 'border-dashed',
+            )}
+            style={{ '--swatch': row.color }}
+          />
+          <span className="text-ink-2 min-w-0 flex-1 truncate">{row.name}</span>
+          <span className="text-ink font-emphasis tabular-nums">{printed(row.value)}</span>
+        </div>
+      ))}
     </div>
   );
 }

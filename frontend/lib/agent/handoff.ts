@@ -1,14 +1,9 @@
 import type { ActionHandoff } from '@citeladder/contracts/actions';
 import type { AgentChatOrigin, AgentContextRefs } from '@citeladder/contracts/agent';
 
-import type { DatedEvidence } from '@/lib/agent/evidence';
-import { checkKindLabel, checkStateLabel, measurementLegLabel } from '@/lib/agent/vocabulary';
-import type { ActionDetail } from '@/lib/api/actions';
 import { pluralCount } from '@/lib/format';
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const PARAM = {
+export const PARAM = {
   action: 'action_id',
   opportunity: 'opportunity_id',
   demandSignal: 'demand_signal_id',
@@ -148,10 +143,6 @@ export function agentHandoff(input: HandoffInput): AgentHandoff {
   };
 }
 
-function uuidParam(params: URLSearchParams, key: string): string | undefined {
-  const value = params.get(key);
-  return value && UUID.test(value) ? value : undefined;
-}
 function originContext(input: HandoffInput): AgentContextRefs {
   const context: AgentContextRefs = {};
   if (input.issueGroup)
@@ -173,76 +164,6 @@ function originContext(input: HandoffInput): AgentContextRefs {
   if (input.objectionGroupId) context.objection_group_id = input.objectionGroupId;
   return context;
 }
-function parsedOriginContext(params: URLSearchParams): AgentContextRefs {
-  const context: AgentContextRefs = {};
-  const issueCrawl = uuidParam(params, PARAM.issueCrawl),
-    issueGroup = uuidParam(params, PARAM.issueGroup),
-    issuePage = uuidParam(params, PARAM.issuePage);
-  if (issueCrawl && issueGroup)
-    context.issue_group_reference = {
-      crawl_id: issueCrawl,
-      group_id: issueGroup,
-      ...(issuePage ? { site_url_id: issuePage } : {}),
-    };
-  const factsCrawl = uuidParam(params, PARAM.factsCrawl);
-  if (factsCrawl) context.site_facts_reference = { crawl_id: factsCrawl };
-  const output = uuidParam(params, PARAM.output),
-    revision = uuidParam(params, PARAM.revision);
-  if (output && revision)
-    context.output_revision_reference = { output_id: output, revision_id: revision };
-  const ticked = [...new Set(params.getAll(PARAM.actionUrls).filter((id) => UUID.test(id)))];
-  if (ticked.length > 0 && uuidParam(params, PARAM.action))
-    context.action_url_ids = ticked.slice(0, HANDOFF_URLS_MAX);
-  const urlActions = uuidParam(params, PARAM.urlActions);
-  if (urlActions) context.url_actions_reference = { site_url_id: urlActions };
-  const objection = uuidParam(params, PARAM.objection);
-  if (objection) context.objection_group_id = objection;
-  return context;
-}
-
-function httpUrlParam(params: URLSearchParams, key: string): string | undefined {
-  const value = params.get(key);
-  if (!value) return undefined;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:' ? value : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function catalogIdParam(params: URLSearchParams, key: string) {
-  const value = params.get(key);
-  return value && /^[a-z][a-z0-9_]{0,63}$/.test(value) ? value : undefined;
-}
-
-export function parseAgentHandoff(params: URLSearchParams): AgentHandoff {
-  const context = parsedOriginContext(params);
-  const opportunity = uuidParam(params, PARAM.opportunity);
-  if (opportunity) context.opportunity_id = opportunity;
-  const signal = uuidParam(params, PARAM.demandSignal);
-  if (signal) context.demand_signal_id = signal;
-  const siteUrl = uuidParam(params, PARAM.siteUrl);
-  if (siteUrl) context.target_site_url_id = siteUrl;
-  const targetUrl = httpUrlParam(params, PARAM.targetUrl);
-  if (targetUrl) context.target_url = targetUrl;
-  const dataset = uuidParam(params, PARAM.dataset);
-  const rows = [...new Set(params.getAll(PARAM.rows).filter((row) => UUID.test(row)))];
-  if (dataset && rows.length > 0) {
-    context.search_intelligence_reference = { dataset_id: dataset, row_ids: rows };
-  }
-  const prompt = params.get(PARAM.prompt)?.trim() || undefined;
-  const skillId = catalogIdParam(params, PARAM.skill);
-  const workflowId = catalogIdParam(params, PARAM.workflow);
-  return {
-    actionId: uuidParam(params, PARAM.action),
-    context,
-    prompt,
-    ...(skillId ? { skillId } : {}),
-    ...(workflowId ? { workflowId } : {}),
-  };
-}
-
 export type ContextChip = { key: keyof AgentContextRefs; label: string };
 
 type ChipLabels = Partial<Record<keyof AgentContextRefs, string>>;
@@ -311,89 +232,4 @@ export function withoutContext(
     delete next.target_site_url_id;
   }
   return next;
-}
-
-type Declaration = NonNullable<ActionDetail['declaration']>;
-
-type TicketAction = Pick<ActionDetail, 'target_label' | 'target_url' | 'member_measurement'> & {
-  handoff: Pick<ActionDetail['handoff'], 'message'>;
-  members: readonly Pick<ActionDetail['members'][number], 'id' | 'title' | 'remediation'>[];
-  diagnosis: Pick<ActionDetail['diagnosis'], 'donts'>;
-  declaration:
-    | (Pick<Declaration, 'declared_implemented_at' | 'deployed_by' | 'deployment_reference'> & {
-        checks: readonly Pick<Declaration['checks'][number], 'kind' | 'state'>[];
-      })
-    | null;
-};
-
-const oneLine = (text: string) => text.replaceAll(/\s+/g, ' ').trim();
-const line = (text: string) => `- ${oneLine(text)}`;
-const list = (items: readonly string[], none: string) =>
-  items.length ? items.map((item) => line(item)) : [line(none)];
-const unique = (values: readonly string[]) => [...new Set(values.filter(Boolean))];
-
-function verification(action: TicketAction, formatDate: (iso: string) => string): string[] {
-  const { declaration } = action;
-  if (declaration) {
-    const by = declaration.deployed_by ?? 'a former workspace member';
-    const reference = declaration.deployment_reference
-      ? ` (${declaration.deployment_reference})`
-      : '';
-    return [
-      `Deployed on ${formatDate(declaration.declared_implemented_at)}, recorded by ${by}${reference}.`,
-      '',
-      ...list(
-        declaration.checks.map(
-          (check) => `${checkKindLabel(check.kind)}: ${checkStateLabel(check)}`,
-        ),
-        'No automatic check applies; CiteLadder records the work but cannot verify it.',
-      ),
-    ];
-  }
-  return [
-    ...action.members.map((member) => {
-      const leg = action.member_measurement[member.id];
-      const by = leg ? measurementLegLabel(leg) : null;
-      const how = by ? 'checked by ' + by.toLowerCase() : 'no automatic check';
-      return line(`${member.title}: ${how}`);
-    }),
-    '',
-    'When it ships, record the deployment on the Action in CiteLadder: Mark implemented with the day it went live and the release, pull request or commit. Readings before that day are not counted.',
-  ];
-}
-
-export function developerTicket(
-  action: TicketAction,
-  evidence: readonly DatedEvidence[],
-  formatDate: (iso: string) => string,
-): string {
-  const findings = unique(action.members.map((member) => member.title));
-  const steps = unique(action.members.map((member) => member.remediation));
-  const donts = action.diagnosis.donts ?? [];
-  const sections: string[][] = [
-    [`# ${oneLine(action.target_label)}`, '', action.handoff.message],
-    ['## Issue', '', ...list(findings, 'No current finding targets this Action.')],
-    ['## Affected pages', '', line(action.target_url ?? action.target_label)],
-    [
-      '## Evidence',
-      '',
-      ...list(
-        evidence.map(
-          (item) =>
-            `${item.label}: ${item.basis}, ${item.at ? formatDate(item.at) : 'date not recorded'}`,
-        ),
-        'No evidence is recorded for this Action.',
-      ),
-    ],
-    [
-      '## Minimal patch',
-      '',
-      ...(steps.length
-        ? steps.map((step, index) => `${index + 1}. ${oneLine(step)}`)
-        : [line('No step is recorded; see the issue above.')]),
-      ...(donts.length ? ['', 'Avoid:', '', ...donts.map(line)] : []),
-    ],
-    ['## How it will be verified', '', ...verification(action, formatDate)],
-  ];
-  return `${sections.map((section) => section.join('\n')).join('\n\n')}\n`;
 }

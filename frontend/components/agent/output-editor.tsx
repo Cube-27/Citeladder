@@ -62,12 +62,12 @@ export function OutputEditor({
         value={body}
         rows={18}
         onChange={(event) => onChange({ ...draft, body: event.target.value })}
-        className="tabular-nums"
+        numeric
       />
       {save.isError ? (
         <Notice kind="mutation" notice={agentWriteFailure(save.error, 'save the output')} />
       ) : null}
-      <Inline className="justify-end">
+      <Inline justify="end">
         <Button type="button" variant="quiet" onClick={onDone} disabled={save.isPending}>
           <Icon icon={X} />
           Cancel

@@ -5,7 +5,7 @@ import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/noti
 import type { LoadingShape } from '@/components/ui/skeleton-block';
 import { StateBlock } from '@/components/ui/state-block';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { httpErrorStatus } from '@/lib/api/errors';
 
 export function isForbidden(error: unknown): boolean {
@@ -22,10 +22,10 @@ export function ViewFrame({
   children,
 }: Readonly<{ title: string; href: string; children: ReactNode }>) {
   return (
-    <Stack as="figure" gap="compact" aria-label={title} className="min-w-0">
+    <Stack as="figure" gap="compact" aria-label={title} box="shrink">
       {children}
-      <Inline as="figcaption" className="flex-wrap justify-between">
-        <span className={textRole('caption')}>{title}</span>
+      <Inline as="figcaption" wrap justify="between">
+        <Text variant="caption">{title}</Text>
         <TextLink href={href}>Open in app</TextLink>
       </Inline>
     </Stack>

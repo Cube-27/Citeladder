@@ -14,7 +14,7 @@ import { ClampText, UrlCutParts, useCut } from '@/components/ui/clamp-text';
 import type { ScrollRegionProps } from '@/components/ui/scroll-edges';
 import { Tag } from '@/components/ui/tag';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+import { TEXT_TONE_CLASS, type TextTone } from '@/components/ui/text-role';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import {
   type Absent,
@@ -99,8 +99,18 @@ export function TableRow({
   children,
   className,
   highlight,
+  focusable = false,
+  well = false,
+  dimmed = false,
   ...props
-}: Readonly<HTMLAttributes<HTMLTableRowElement> & { highlight?: boolean }>) {
+}: Readonly<
+  HTMLAttributes<HTMLTableRowElement> & {
+    highlight?: boolean;
+    focusable?: boolean;
+    well?: boolean;
+    dimmed?: boolean;
+  }
+>) {
   const pressable = props.onClick !== undefined;
   return (
     <tr
@@ -113,6 +123,9 @@ export function TableRow({
           '[[data-public-surface]_&]:not-aria-selected:hover:overlay-hover',
         '[[data-public-surface]_&]:aria-selected:overlay-selected',
         highlight && '[[data-public-surface]_&]:bg-accent-wash',
+        focusable && 'focus-ring',
+        well && 'bg-well hover:bg-well',
+        dimmed && 'opacity-disabled',
         className,
       )}
       data-you={highlight || undefined}
@@ -131,9 +144,10 @@ export function TableHead({
   className,
   numeric,
   desktopOnly,
+  stackOnPhone = false,
   scope = 'col',
   ...props
-}: Readonly<ThHTMLAttributes<HTMLTableCellElement> & CellOptions>) {
+}: Readonly<ThHTMLAttributes<HTMLTableCellElement> & CellOptions & { stackOnPhone?: boolean }>) {
   return (
     <th
       scope={scope}
@@ -145,6 +159,8 @@ export function TableHead({
         numeric && 'tabular-nums text-right',
         desktopOnly && desktopOnlyClasses,
         className,
+        stackOnPhone &&
+          'phone:whitespace-normal phone:[&>span]:flex-col phone:[&>span]:gap-1 phone:[&_.truncate]:whitespace-normal text-center',
       )}
     >
       {children}
@@ -176,8 +192,8 @@ function CellContent({
   return !numeric && isPlainText(children) ? <ClampText>{children}</ClampText> : children;
 }
 
-export const mutedWhenMissing = (value: number | null) =>
-  value === null ? 'text-ink-2' : undefined;
+export const mutedWhenMissing = (value: number | null): TextTone | undefined =>
+  value === null ? 'ink-2' : undefined;
 
 export function TableCell({
   children,
@@ -185,12 +201,18 @@ export function TableCell({
   numeric,
   desktopOnly,
   nested,
+  tone,
+  tight = false,
+  ground = 'table',
   ...props
 }: Readonly<
   Omit<TdHTMLAttributes<HTMLTableCellElement>, 'children'> &
     CellOptions & {
       children?: ReactNode | Absent;
       nested?: boolean | 2;
+      tone?: TextTone;
+      ground?: 'table' | 'well';
+      tight?: boolean;
     }
 >) {
   return (
@@ -198,9 +220,12 @@ export function TableCell({
       {...props}
       className={cn(
         cellClasses({ numeric, desktopOnly }),
-        nested === true && 'ps-[calc(var(--spacing-cell-x)+16px)] [--cell-indent:16px]',
-        nested === 2 && 'ps-[calc(var(--spacing-cell-x)+32px)] [--cell-indent:32px]',
+        nested === true && 'ps-cell-indent cell-indent',
+        nested === 2 && 'ps-cell-indent-2 cell-indent-2',
+        tone && TEXT_TONE_CLASS[tone],
+        tight && 'py-1',
         className,
+        ground === 'well' && 'bg-well table-ground-well',
       )}
     >
       <CellContent numeric={numeric}>{children}</CellContent>
@@ -211,7 +236,7 @@ export function TableCell({
 export function TableGroupRow({ span, children }: Readonly<{ span: number; children: ReactNode }>) {
   return (
     <TableRow>
-      <TableCell colSpan={span} className="bg-well [--table-ground:var(--color-well)]">
+      <TableCell colSpan={span} ground="well">
         {children}
       </TableCell>
     </TableRow>
@@ -231,11 +256,11 @@ export function TableCellLines({
 }>) {
   return (
     <span data-cell-lines="" className="flex min-w-0 items-baseline gap-2">
-      <ClampText rowTitle className={cn('max-w-full shrink-0', title && textRole('body'))}>
+      <ClampText rowTitle text={title ? 'body' : undefined} className="max-w-full shrink-0">
         {primary}
       </ClampText>
       {secondary ? (
-        <ClampText tooltip={secondaryTooltip} className="text-ink-2">
+        <ClampText tooltip={secondaryTooltip} tone="ink-2">
           {secondary}
         </ClampText>
       ) : null}
@@ -244,7 +269,7 @@ export function TableCellLines({
 }
 
 export function YouTag() {
-  return <Tag className="text-ink font-emphasis">You</Tag>;
+  return <Tag strong>You</Tag>;
 }
 
 export function isRowSurfaceClick(event: MouseEvent<HTMLTableRowElement>): boolean {
@@ -341,7 +366,7 @@ export function TableTime({
   const timeZone = useDisplayTimeZone();
   if (!value) return fallback;
   return (
-    <ClampText className="text-ink-2 tabular-nums">
+    <ClampText tone="ink-2" numeric>
       <time dateTime={value}>{formatDisplayTimestamp(value, timeZone)}</time>
     </ClampText>
   );

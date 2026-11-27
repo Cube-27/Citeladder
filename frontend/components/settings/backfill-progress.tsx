@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Absence } from '@/components/ui/absence';
 import { Inline } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { integrationsQueries, type IntegrationBackfillProgress } from '@/lib/api/integrations';
 import { SYNC_RUN_POLL_MS } from '@/lib/config/operational';
 import { formatShortDate } from '@/lib/format';
@@ -16,9 +16,13 @@ export function BackfillProgress({
   if (!progress || progress.state === 'not_started') return null;
 
   return (
-    <Inline className="flex-wrap">
-      <span className={textRole('body', 'text-ink-2')}>History</span>
-      <span className="text-caption text-ink-2 tabular-nums">{progressLabel(progress)}</span>
+    <Inline wrap>
+      <Text variant="body" tone="ink-2">
+        History
+      </Text>
+      <Text variant="caption" numeric>
+        {progressLabel(progress)}
+      </Text>
     </Inline>
   );
 }
@@ -31,7 +35,12 @@ export function BackfillHistory({
   const progress = progressQuery.data;
   if (progressQuery.isError) return <Absence state="unavailable" />;
   if (!progress) return <Skeleton lines={1} label="Loading history…" />;
-  if (progress.state === 'not_started') return <span className="text-ink-2">Not started</span>;
+  if (progress.state === 'not_started')
+    return (
+      <Text variant="body" tone="ink-2">
+        Not started
+      </Text>
+    );
   return <span className="truncate">{progressLabel(progress)}</span>;
 }
 

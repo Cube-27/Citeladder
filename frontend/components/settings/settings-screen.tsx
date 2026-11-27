@@ -23,7 +23,7 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
 import { SETTINGS_TABS, type SettingsTab } from '@/lib/settings/tabs';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Avatar } from '@/components/ui/avatar';
 import { Icon } from '@/components/ui/icon';
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
@@ -130,10 +130,10 @@ function ProjectDeletionControls() {
           </>
         }
       >
-        <p className={textRole('body', 'text-ink-2')}>
+        <Text as="p" variant="body" tone="ink-2">
           Deletes its prompts, topics, audits, visibility history and generated content. Cannot be
           undone.
-        </p>
+        </Text>
       </Dialog>
     </>
   );

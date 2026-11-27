@@ -6,7 +6,7 @@ import type {
   OverviewWidget,
   OverviewWidgetKey,
 } from '@citeladder/contracts/overview';
-import { PageSections } from '@/components/templates/page-frame';
+import { PageSections } from '@/components/ui/page-chrome';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Section } from '@/components/ui/section';
 import {
