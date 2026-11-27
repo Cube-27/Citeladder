@@ -944,11 +944,6 @@
   margin-top: calc(var(--spacing) * -3.5);
 }
 
-[data-public-surface]
-  :is([data-button-variant='secondary'], .marketing-soft-button):not(:is(.cl-screen, .cl-vig) *) {
-  border-color: var(--color-control-line);
-}
-
 [data-public-surface] :is([data-button-variant], .focus-ring):active {
   translate: none;
 }

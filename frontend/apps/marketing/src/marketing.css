@@ -23,11 +23,6 @@
   transition-property: transform, background-color, color, border-color, box-shadow;
 }
 
-[data-public-surface]
-  :is([data-button-variant='secondary'], .marketing-soft-button):not(:is(.cl-screen, .cl-vig) *) {
-  border-color: var(--color-button-edge);
-}
-
 [data-public-surface] .face-primary:not(:is(.cl-screen, .cl-vig) *) {
   border-color: var(--color-primary-edge);
 }
