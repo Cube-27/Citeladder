@@ -261,7 +261,7 @@ export function ItemRow({
 >) {
   return (
     <li {...props} className="@container min-w-0">
-      <div className="phone:grid-cols-list-row-phone grid-cols-list-row @list-wide:grid-cols-list-row-wide grid items-start gap-3">
+      <div className="phone:grid-cols-[20px_minmax(0,1fr)] @row-wide:grid-cols-[20px_minmax(0,1fr)_fit-content(40%)_auto] grid grid-cols-[20px_minmax(0,1fr)_fit-content(40%)] items-start gap-3">
         <span className="flex size-5 items-center justify-center self-start">{icon}</span>
         <div className="grid min-w-0 gap-0.5">
           <p className="text-label text-ink">{title}</p>
@@ -275,7 +275,7 @@ export function ItemRow({
         <div className="text-caption text-ink-2 phone:col-start-2 flex min-h-5 min-w-0 items-center gap-2">
           {status}
         </div>
-        <div className="@list-wide:col-auto @list-wide:h-5 col-start-2 -col-end-1 flex flex-wrap items-center gap-2">
+        <div className="@row-wide:col-auto @row-wide:h-5 col-start-2 -col-end-1 flex flex-wrap items-center gap-2">
           {actions}
         </div>
       </div>

@@ -70,7 +70,7 @@ const BOX = {
   'ledger-row': 'flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1',
   'list-title': 'phone:flex-wrap phone:gap-y-1 phone:py-2 flex min-w-0 flex-1 items-center gap-3',
   'cell-title': 'flex min-w-0 items-baseline gap-2',
-  'ledger-label': 'basis-ledger-label grow',
+  'ledger-label': 'basis-[15rem] grow',
 } as const;
 
 export function ClampText({

@@ -8,7 +8,7 @@ export function Passing() {
       <BrandMark name="Google" />
       Google
       <svg viewBox="0 0 24 24" aria-hidden />
-      <a href="#faq" title="z-0 opacity-0 &#123;" className="@list-wide:grid-flow-col">
+      <a href="#faq" title="z-0 opacity-0 &#123;" className="@row-wide:grid-flow-col">
         survivor zero
       </a>
       <TableCell className="whitespace-nowrap">layout</TableCell>

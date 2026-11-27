@@ -73,7 +73,7 @@ function ShotPicture({
   return (
     <div
       className={cn(
-        'absolute top-place-top right-place-right bottom-place-bottom left-place-left w-place-width',
+        'absolute top-[var(--place-top,auto)] right-[var(--place-right,auto)] bottom-[var(--place-bottom,auto)] left-[var(--place-left,auto)] w-(--place-width)',
         over && 'z-raised',
       )}
       style={{
@@ -205,7 +205,7 @@ export function AuthShowcase() {
   return (
     <aside
       ref={root}
-      className="desktop:grid bg-page rounded-card gap-page-top px-gutter h-showcase-fill sticky top-2 my-2 me-2 hidden min-h-0 content-center overflow-hidden"
+      className="desktop:grid bg-page rounded-card gap-page-top px-gutter sticky top-2 my-2 me-2 hidden h-[calc(100dvh_-_1rem)] min-h-0 content-center overflow-hidden"
       aria-label="CiteLadder features"
       aria-roledescription="carousel"
     >

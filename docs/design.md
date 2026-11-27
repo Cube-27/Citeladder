@@ -39,7 +39,8 @@ The lint enforces this and fails CI (`vp lint`; config in
 [`vp-shared-config.ts`](../frontend/vp-shared-config.ts)):
 
 - **`shadcn/*`** ([`@shadcn/lint`](https://github.com/shadcn-ui/lint)):
-  no palette colours, no arbitrary values (class constants included), no
+  no palette colours, no arbitrary values outside `components/ui` (class
+  constants included), no
   inline styles beyond a literal object of custom properties (the rule's
   default; no option is enabled), no classes the theme cannot generate, no unreadable or
   restyling `className` on a `components/ui` primitive. Each subdomain's
@@ -482,10 +483,7 @@ holds the depth rules.
 
 - **Tables.** Geometry as in Standard layouts. A page declares each
   column's kind and width role, never a pixel width; `DataTable` turns them
-  into data attributes on the table frame (`data-c<n>`), read by the static
-  position rules in `components/ui/generated/data-table-positions.css`
-  (16 positions; `pnpm gen:table-positions` rewrites it, and a test fails
-  when it is stale): `flex` columns share the spare
+  into position rules scoped to its own frame: `flex` columns share the spare
   width and cut their text, every other role hugs its content above a small
   floor, so no gap opens between columns. When the floors do not fit, `low`
   columns hide, the last first; below that the table scrolls with the first
@@ -531,8 +529,7 @@ holds the depth rules.
   paper `raised` with the field shadow, inside a surface (card, overlay, well,
   menu) the `state-fill` grey with no shadow. Each surface sets
   `--control-face`, `--control-face-hover` and `--control-face-shadow` on its
-  own element; the secondary button reads them (`bg-control-face`,
-  `shadow-control-face`), so a link styled as a button (`Button asChild`)
+  own element; the secondary button reads them, so a link styled as a button (`Button asChild`)
   matches. Fields, select triggers and filter chips keep their own face (Inputs
   below). Quiet:
   transparent, `ink`, `state-hover` fill. Primary: `primary` fill (the deep accent),

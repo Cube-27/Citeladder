@@ -7,7 +7,7 @@ const STACK_GAP = {
   card: 'gap-card',
   workspace: 'gap-workspace',
   compact: 'gap-compact',
-  group: 'gap-group',
+  group: 'gap-3',
   loose: 'gap-loose',
   choices: 'gap-x-loose gap-y-item',
   'page-top': 'gap-page-top',
@@ -114,7 +114,7 @@ export function Stack({
 const INLINE_GAP = {
   workspace: 'gap-workspace',
   compact: 'gap-compact',
-  group: 'gap-group',
+  group: 'gap-3',
   loose: 'gap-loose',
   wide: 'gap-6',
   item: 'gap-item',
@@ -201,13 +201,13 @@ export function Inline({
 
 const COLUMN_TEMPLATE = {
   'label-value': 'grid-cols-label-value phone:grid-cols-1',
-  'fields-action': 'grid-cols-fields-action',
-  'body-field': 'grid-cols-body-field',
-  choices: 'grid-cols-choices justify-start',
+  'fields-action': 'grid-cols-[1fr_1fr_auto]',
+  'body-field': 'grid-cols-[minmax(0,1fr)_96px]',
+  choices: 'grid-cols-[auto_auto] justify-start',
   'rail-panel': 'desktop:grid-cols-label-value',
   'halves-desktop': 'desktop:grid-cols-2',
   two: 'grid-cols-2',
-  record: 'column-split:grid-cols-record',
+  record: 'column-split:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
 } as const;
 
 type ColumnTemplate = keyof typeof COLUMN_TEMPLATE;

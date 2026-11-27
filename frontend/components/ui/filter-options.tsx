@@ -101,7 +101,7 @@ export function DefaultHint() {
     <span
       aria-hidden
       data-hint="Default"
-      className="text-ink-2 text-caption after:content-data-hint ms-auto shrink-0 ps-4"
+      className="text-ink-2 text-caption ms-auto shrink-0 ps-4 after:content-[attr(data-hint)]"
     />
   );
 }

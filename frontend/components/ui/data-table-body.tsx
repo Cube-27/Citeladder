@@ -40,7 +40,7 @@ export function DataTableBody({
         <tr data-table-state="">
           <TableCell
             colSpan={colSpan}
-            className="h-table-rows align-top"
+            className="h-[calc(var(--data-table-rows)_*_var(--spacing-row))] align-top"
             style={{ '--data-table-rows': pageSize ?? 0 }}
           >
             <InFrame>
@@ -63,7 +63,10 @@ export function DataTableBody({
             data-table-spacer=""
             style={{ '--data-table-rows': rest }}
           >
-            <TableCell colSpan={colSpan} className="h-table-rows" />
+            <TableCell
+              colSpan={colSpan}
+              className="h-[calc(var(--data-table-rows)_*_var(--spacing-row))]"
+            />
           </tr>
         </TableBody>
       ) : null}
@@ -99,7 +102,11 @@ function LoadingBody({
 }
 
 function InFrame({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="start-panel-inset w-table-fit sticky">{children}</div>;
+  return (
+    <div className="start-panel-inset sticky w-[calc(100cqi_-_2_*_var(--spacing-panel-inset))]">
+      {children}
+    </div>
+  );
 }
 
 const LOADING_ROWS = 5;

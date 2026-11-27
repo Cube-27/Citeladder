@@ -156,8 +156,8 @@ export function Dialog({
             SHEET_FACE,
             'dialog-panel z-modal fixed left-1/2 flex w-dialog-fit -translate-x-1/2 flex-col overflow-hidden',
             answer
-              ? 'max-w-answer top-16 h-full max-h-dialog-max'
-              : 'top-dialog-top max-h-dialog-top-max',
+              ? 'max-w-270 top-16 h-full max-h-dialog-max'
+              : 'top-[12dvh] max-h-[calc(88dvh_-_1.5rem)]',
             !answer && overlayWidth(danger || width === 'answer' ? 'narrow' : width),
           )}
         >

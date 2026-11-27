@@ -1,3 +1,9 @@
+:root {
+  --link-rule-width: 1.5px;
+  --check-draw-duration: 150ms;
+  --check-draw-delay: 15ms;
+}
+
 @utility page-start-full {
   --page-start: max(0px, calc((100cqw - var(--container-app)) / 2));
 }
@@ -90,25 +96,25 @@
   appearance: textfield;
 }
 @utility align-glyph {
-  vertical-align: var(--align-glyph);
+  vertical-align: -2px;
 }
 @utility align-glyph-sm {
-  vertical-align: var(--align-glyph-sm);
+  vertical-align: -1px;
 }
 @utility shrink-last {
   flex-shrink: 0.001;
 }
 @utility press-firm {
-  --press: var(--press-firm);
+  --press: 0.93;
 }
 @utility press-soft {
-  --press: var(--press-soft);
+  --press: 0.98;
 }
 @utility press-mark {
-  --press: var(--press-mark);
+  --press: 0.95;
 }
 @utility press-check {
-  --press: var(--press-check);
+  --press: 0.92;
 }
 @utility target-hit-fine {
   --target-hit: var(--spacing-target);

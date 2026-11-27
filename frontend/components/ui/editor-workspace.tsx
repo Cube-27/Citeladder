@@ -7,7 +7,10 @@ const FILL = 'h-route-fill min-h-0';
 
 export function EditorWorkspace({ page, rail }: Readonly<{ page: ReactNode; rail: ReactNode }>) {
   return (
-    <div data-editor-workspace="wide" className={cn(FILL, 'grid grid-cols-editor gap-workspace')}>
+    <div
+      data-editor-workspace="wide"
+      className={cn(FILL, 'grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-workspace')}
+    >
       {page}
       {rail}
     </div>

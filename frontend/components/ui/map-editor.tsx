@@ -7,7 +7,7 @@ export function MapGridHead({ lead, heads }: Readonly<{ lead: string; heads: rea
   return (
     <div
       aria-hidden
-      className="column-split:grid-cols-offering-map column-split:gap-0 border-rule column-split:grid h-table-head text-caption-strong text-ink-2 bg-table-head grid hidden items-center gap-1 border-b"
+      className="column-split:grid-cols-[minmax(144px,22%)_repeat(3,minmax(0,1fr))_36px] column-split:gap-0 border-rule column-split:grid h-table-head text-caption-strong text-ink-2 bg-table-head grid hidden items-center gap-1 border-b"
     >
       <span className="px-panel-inset">{lead}</span>
       {heads.map((head) => (
@@ -27,7 +27,7 @@ export function MapGridRow({
   return (
     <li
       {...props}
-      className="column-split:grid-cols-offering-map column-split:gap-0 border-rule column-split:p-0 grid gap-1 border-b p-2"
+      className="column-split:grid-cols-[minmax(144px,22%)_repeat(3,minmax(0,1fr))_36px] column-split:gap-0 border-rule column-split:p-0 grid gap-1 border-b p-2"
     >
       {children}
     </li>

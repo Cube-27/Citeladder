@@ -92,7 +92,8 @@ export function ChartKey({
   entries,
   eventsLabel,
 }: Readonly<{ entries: readonly KeyEntry[]; eventsLabel?: string }>) {
-  const item = 'text-caption text-ink-2 inline-flex max-w-chart-key min-w-0 items-center gap-2';
+  const item =
+    'text-caption text-ink-2 inline-flex max-w-[min(100%,20rem)] min-w-0 items-center gap-2';
   return (
     <ul aria-hidden className="flex min-w-0 flex-wrap gap-x-6 gap-y-2">
       {entries.map((entry) => (
@@ -164,7 +165,7 @@ export function ChartTipSheet({
       aria-hidden
       className={cn(
         SHEET_FACE,
-        'rounded-card pointer-events-none absolute left-tip-x top-tip-y z-float flex w-54 flex-col gap-1 p-3',
+        'rounded-card pointer-events-none absolute left-(--tip-x) top-(--tip-y) z-[20] flex w-54 flex-col gap-1 p-3',
       )}
       style={{ '--tip-x': `${chartTipLeft(x, frameWidth)}px`, '--tip-y': `${Math.round(top)}px` }}
     >

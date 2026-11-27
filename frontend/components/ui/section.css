@@ -103,11 +103,11 @@
 }
 
 [data-bleed-rows] > * {
-  padding: var(--spacing-row-block) var(--spacing-panel-inset);
+  padding: calc((var(--spacing-row) - var(--spacing-body-line)) / 2) var(--spacing-panel-inset);
 }
 
 [data-bleed-rows] > * [data-button-shape='icon'] {
-  margin-block: calc(var(--spacing-row-control-gap) - var(--spacing-row-block));
+  margin-block: calc((var(--spacing-body-line) - var(--spacing-control-md)) / 2);
 }
 
 [data-bleed] .table-frame tr > :first-child {

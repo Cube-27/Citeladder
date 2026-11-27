@@ -1,9 +1,15 @@
-import { useContext, useId, type ComponentProps, type ReactNode, type RefObject } from 'react';
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  type ComponentProps,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 
 import { BusyRung } from '@/components/ui/rung-meter';
 import {
   DataTableColumns,
-  type ColumnAttributes,
   type DataTableColumn,
   type DataTableSelection,
 } from '@/components/ui/data-table-columns';
@@ -30,7 +36,6 @@ import { StateBlock } from '@/components/ui/state-block';
 import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
 
 import './data-table.css';
-import './generated/data-table-positions.css';
 
 export type { DataTableColumn, DataTableSelection, DataTableState };
 
@@ -75,6 +80,7 @@ export function DataTable({
   const { frameRef, probe, layout, shown, shownKeys } = useFittedColumns({
     columns,
     selection: Boolean(selection),
+    scope: headingId,
   });
   const paging = pagingLayout(pager, pageSize, reserveRows);
   const scroll = useScrollFrame({ label: parts.regionLabel, start: false });
@@ -105,6 +111,7 @@ export function DataTable({
           naming={parts.naming}
           pinned={parts.pinned}
           frameRef={frameRef}
+          scope={headingId}
           layout={layout}
           probe={probe}
           foot={<DataTableFoot footer={footer} pager={paging.pager} />}
@@ -218,6 +225,7 @@ function DataTableFrame({
   naming,
   pinned,
   frameRef,
+  scope,
   layout,
   probe,
   foot,
@@ -227,18 +235,18 @@ function DataTableFrame({
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
   pinned: 1 | 2;
   frameRef: RefObject<HTMLDivElement | null>;
-  layout: Readonly<{ attributes: ColumnAttributes; share: string }>;
+  scope: string;
+  layout: string;
   probe: ReactNode;
   foot: ReactNode;
   children: ReactNode;
 }>) {
   usePinnedPadding(scroll.ref, pinned);
+  useFrameRules(layout);
   return (
     <div
       ref={frameRef}
-      data-data-table-frame=""
-      {...layout.attributes}
-      style={{ '--data-table-share': layout.share }}
+      data-data-table-frame={scope}
       data-pinned={pinned}
       className="relative isolate min-w-0"
     >
@@ -256,6 +264,17 @@ function DataTableFrame({
       {foot}
     </div>
   );
+}
+
+function useFrameRules(css: string) {
+  useLayoutEffect(() => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(css);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    return () => {
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter((item) => item !== sheet);
+    };
+  }, [css]);
 }
 
 function DataTableFoot({

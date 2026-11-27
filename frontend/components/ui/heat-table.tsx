@@ -81,10 +81,11 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
   );
 }
 
-const HEAT_FLOOR = 'min-w-heat-floor phone:min-w-heat-floor-phone';
+const HEAT_FLOOR =
+  'min-w-[calc(10rem_+_var(--grid-columns)_*_5rem)] phone:min-w-[calc(10rem_+_var(--grid-columns)_*_6rem)]';
 const RANK_CHIP =
   'rounded-mark flex h-control-md items-center justify-center gap-1 overflow-hidden px-2 whitespace-nowrap phone:h-auto phone:min-h-control-md phone:flex-wrap phone:py-1 phone:text-center';
-const RANK_FLOOR = 'phone:min-w-rank-floor';
+const RANK_FLOOR = 'phone:min-w-[calc(10rem_+_var(--grid-columns)_*_8rem)]';
 
 function GridFloor({ columns, children }: Readonly<{ columns: number; children: ReactNode }>) {
   return <SectionBleed columns={columns}>{children}</SectionBleed>;

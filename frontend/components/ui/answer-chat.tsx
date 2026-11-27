@@ -13,7 +13,7 @@ export function AnswerLayout({
   railLabel,
 }: Readonly<{ main: ReactNode; rail: ReactNode; railLabel: string }>) {
   return (
-    <div className="desktop:grid-cols-answer-aside gap-y-panel-inset grid min-w-0">
+    <div className="desktop:grid-cols-[minmax(0,1fr)_20rem] gap-y-panel-inset grid min-w-0">
       <div className="desktop:pe-panel-inset gap-panel-inset grid min-w-0 content-start">
         {main}
       </div>

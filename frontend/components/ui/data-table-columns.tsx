@@ -82,17 +82,32 @@ function gutters(columns: readonly DataTableColumn[]): boolean[] {
   });
 }
 
-export type ColumnAttributes = Record<`data-c${number}`, string>;
+const IDENTITY_MIN = '25ch';
+
+function cellRules(column: DataTableColumn, flags: Readonly<{ gutter: boolean; padEnd: boolean }>) {
+  const kind = KIND[columnKind(column)];
+  const role = COLUMN_WIDTH[widthOf(column)];
+  return [
+    `text-align: ${kind.align}`,
+    ...(role.kind === 'rest'
+      ? [`width: var(--data-table-share)`, 'max-width: 0', `min-width: ${IDENTITY_MIN}`]
+      : ['width: 1px', 'white-space: nowrap', `min-width: ${steps(role.steps)}`]),
+    flags.gutter && `padding-inline-start: calc(var(--spacing-cell-x) + ${steps(GUTTER_STEPS)})`,
+    flags.padEnd && `padding-inline-end: ${steps(EDGE_PAD_STEPS)}`,
+  ].filter(Boolean);
+}
 
 export function columnLayout({
   columns,
   hidden,
   selection,
+  scope,
 }: Readonly<{
   columns: readonly DataTableColumn[];
   hidden: readonly number[];
   selection: boolean;
-}>): Readonly<{ attributes: ColumnAttributes; share: string }> {
+  scope: string;
+}>): string {
   const offset = selection ? 2 : 1;
   const hiddenSet = new Set(hidden);
   const shown = columns.filter((_, index) => !hiddenSet.has(index));
@@ -100,22 +115,32 @@ export function columnLayout({
   const gutter = new Set(shown.filter((_, index) => shownGutters[index]));
   const last = shown.at(-1);
   const padEnd = hidden.length > 0 && last !== undefined && last !== columns.at(-1) ? last : null;
-  const attributes: ColumnAttributes = selection ? { 'data-c1': 'select' } : {};
+  const frame = `[data-data-table-frame="${scope}"]`;
+  const cell = (position: number, rows = 'tr:not([data-table-state])') =>
+    `${frame} ${rows}:not(${frame} [data-data-table-frame] tr) > :nth-child(${position})`;
+  const share = (100 / Math.max(1, shown.filter(isFlexible).length)).toFixed(3);
+  const rules = [
+    `${frame} { --data-table-share: ${share}%; }`,
+    selection
+      ? `${cell(1)} { width: ${steps(10)}; min-width: ${steps(10)}; padding-inline-end: ${steps(2)}; }`
+      : '',
+  ];
   columns.forEach((column, index) => {
-    const kind = KIND[columnKind(column)];
-    const role = COLUMN_WIDTH[widthOf(column)];
-    const tokens = [
-      kind.align,
-      role.kind === 'rest' ? 'rest' : `fixed s${role.steps}`,
-      gutter.has(column) && 'gutter',
-      kind.tabular && 'num',
-      hiddenSet.has(index) && 'hidden',
-      column === padEnd && 'pad-end',
-    ];
-    attributes[`data-c${index + offset}`] = tokens.filter(Boolean).join(' ');
+    const position = index + offset;
+    const body = cellRules(column, { gutter: gutter.has(column), padEnd: column === padEnd });
+    rules.push(`${cell(position)} { ${body.join('; ')}; }`);
+    if (!isFlexible(column))
+      rules.push(
+        `${cell(position)} > :is(.truncate, :has(.truncate)) { width: max-content; max-width: 40ch; }`,
+      );
+    if (KIND[columnKind(column)].tabular)
+      rules.push(
+        `${cell(position, 'tbody > tr:not([data-table-state])')} { font-variant-numeric: tabular-nums; }`,
+      );
+    if (hiddenSet.has(index))
+      rules.push(`${cell(position, 'tr:not(:has(> [colspan]))')} { display: none; }`);
   });
-  const share = `${(100 / Math.max(1, shown.filter(isFlexible).length)).toFixed(3)}%`;
-  return { attributes, share };
+  return rules.filter(Boolean).join('\n');
 }
 
 function steps(count: number) {
@@ -142,7 +167,7 @@ function labelFloor(column: DataTableColumn, edge: ColumnEdge): string | null {
 
 export function fitFloor(column: DataTableColumn, edge: ColumnEdge): string {
   const role = COLUMN_WIDTH[widthOf(column)];
-  const parts = [role.kind === 'steps' ? steps(role.steps) : 'var(--data-table-identity-min)'];
+  const parts = [role.kind === 'steps' ? steps(role.steps) : IDENTITY_MIN];
   if (role.kind === 'rest' && 'steps' in role) parts.push(steps(role.steps));
   if (columnKind(column) === 'date') parts.push(steps(DATE_FLOOR_STEPS));
   const label = labelFloor(column, edge);

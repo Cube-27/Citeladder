@@ -220,8 +220,8 @@ export function TableCell({
       {...props}
       className={cn(
         cellClasses({ numeric, desktopOnly }),
-        nested === true && 'ps-cell-indent cell-indent',
-        nested === 2 && 'ps-cell-indent-2 cell-indent-2',
+        nested === true && 'ps-[calc(var(--spacing-cell-x)_+_var(--spacing-indent))] cell-indent',
+        nested === 2 && 'ps-[calc(var(--spacing-cell-x)_+_var(--spacing-indent-2))] cell-indent-2',
         tone && TEXT_TONE_CLASS[tone],
         tight && 'py-1',
         className,

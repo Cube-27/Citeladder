@@ -14,12 +14,12 @@ const textareaClasses =
   'text-ink placeholder:text-ink-placeholder text-body block w-full rounded-control border disabled:cursor-not-allowed';
 
 const fieldClasses = cn(
-  'focus-input disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-disabled field-sizing-content min-h-field-rows-min max-h-field-rows-max resize-none px-3 py-2 transition-field duration-fast app:duration-fast',
+  'focus-input disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-disabled field-sizing-content min-h-[calc(var(--field-min-rows)_*_1lh_+_1rem_+_2px)] max-h-[calc(var(--field-max-rows)_*_1lh_+_1rem_+_2px)] resize-none px-3 py-2 transition-field duration-fast app:duration-fast',
   FIELD_EDGE,
 );
 
 const composerClasses =
-  'field-sizing-content min-h-composer-rows-min min-w-0 resize-none overflow-y-auto border-0 bg-transparent px-2 py-1 wrap-anywhere max-h-composer-rows-max';
+  'field-sizing-content min-h-[max(var(--spacing-control-md),calc(var(--field-min-rows)_*_1lh_+_0.5rem))] min-w-0 resize-none overflow-y-auto border-0 bg-transparent px-2 py-1 wrap-anywhere max-h-[calc(var(--field-max-rows)_*_1lh_+_0.5rem)]';
 
 const sizesItself = () => globalThis.CSS?.supports('field-sizing', 'content') ?? false;
 

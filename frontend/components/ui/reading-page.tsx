@@ -12,7 +12,7 @@ import {
 
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="gap-section pb-page-end flex min-h-dvh w-full min-w-0 flex-col">{children}</div>
+    <div className="gap-section flex min-h-dvh w-full min-w-0 flex-col pb-[33svh]">{children}</div>
   );
 }
 

@@ -97,7 +97,7 @@ export function Drawer({
           data-side={side}
           className={cn(
             SHEET_FACE,
-            'drawer-panel z-modal fixed inset-y-2 flex w-drawer-fit flex-col overflow-hidden',
+            'drawer-panel z-modal fixed inset-y-2 flex w-[calc(100vw_-_1rem)] flex-col overflow-hidden',
             side === 'left' ? 'left-2 max-w-68' : 'right-2',
             side === 'right' && DRAWER_WIDTH[width],
           )}

@@ -108,7 +108,7 @@ export function Select<T extends string>({
           collisionPadding={8}
           className={cn(
             MENU_PANEL,
-            'max-h-select-max min-w-select-trigger [[data-public-surface]_&]:min-w-select-public',
+            'max-h-[min(18.5rem,var(--radix-select-content-available-height))] min-w-(--radix-select-trigger-width) [[data-public-surface]_&]:min-w-[max(15rem,var(--radix-select-trigger-width))]',
           )}
         >
           <SelectPrimitive.ScrollUpButton className="text-ink-2 h-control-md flex items-center justify-center">

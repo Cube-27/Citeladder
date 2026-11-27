@@ -7,7 +7,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { cn } from '@/lib/utils';
 
 const GRID =
-  'grid grid-cols-work-row phone:grid-cols-work-row-phone desktop:grid-cols-work-row-wide items-center gap-3 phone:gap-2';
+  'grid grid-cols-[20px_1fr_120px] phone:grid-cols-[20px_1fr_88px] desktop:grid-cols-[20px_1fr_92px_120px_110px] items-center gap-3 phone:gap-2';
 const WIDE = 'hidden desktop:block';
 const PAD = 'px-4 phone:px-3';
 

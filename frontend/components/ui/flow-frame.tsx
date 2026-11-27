@@ -35,7 +35,7 @@ export function PageGround({
 
 const FLOW_MAIN = {
   frame: 'max-w-flow px-gutter pt-flow-gap mx-auto w-full',
-  page: 'max-w-flow px-gutter pb-flow-gap pt-flow-top controls-lg mx-auto flex w-full flex-1 flex-col',
+  page: 'max-w-flow px-gutter pb-flow-gap pt-[max(var(--spacing-flow-gap),calc(20dvh_-_var(--spacing-masthead)))] controls-lg mx-auto flex w-full flex-1 flex-col',
 } as const;
 
 export function FlowMain({

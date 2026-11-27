@@ -38,7 +38,7 @@ function textLinkClasses({
   underline,
 }: Readonly<{ tone: TextLinkTone; text: TextLinkText; underline: TextLinkUnderline }>) {
   const recipe = cn(
-    'focus-ring rounded-mark underline decoration-1 underline-offset-3 app:link-rule app:underline-offset-4 transition-underline',
+    'focus-ring rounded-mark underline decoration-1 underline-offset-3 app:link-rule app:underline-offset-4 transition-[color,text-decoration-color]',
     lineClasses(tone, underline),
   );
   return text === 'inherit' ? recipe : cn(textRoleClass(text), recipe);
@@ -186,7 +186,7 @@ export function ArrowLink({
 }: Readonly<{ href?: string; projectId?: string | null; children: ReactNode }>) {
   const content = (
     <>
-      <span className="decoration-control-line transition-underline-color underline decoration-1 underline-offset-4 [@media(hover:hover)_and_(pointer:fine)]:group-hover:decoration-current">
+      <span className="decoration-control-line underline decoration-1 underline-offset-4 transition-[text-decoration-color] [@media(hover:hover)_and_(pointer:fine)]:group-hover:decoration-current">
         {children}
       </span>
       <ArrowRight

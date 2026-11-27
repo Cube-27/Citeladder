@@ -210,7 +210,7 @@ export function SidebarNavRowContent({
         {label}
       </span>
       {count == null ? null : (
-        <span className="w-nav-count shrink-0 text-right tabular-nums">{count}</span>
+        <span className="w-[4ch] shrink-0 text-right tabular-nums">{count}</span>
       )}
     </>
   );

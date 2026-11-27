@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 type ValueText = 'figure' | 'body';
 
 const SLOT: Record<ValueText, string> = {
-  figure: 'min-h-figure-line',
+  figure: 'min-h-(--text-figure--line-height)',
   body: 'min-h-body-line',
 };
 

@@ -1,3 +1,7 @@
+:root {
+  --site-container: 1320px;
+}
+
 .cl-site {
   --site-page: var(--color-site-page);
   --site-mark: var(--color-site-mark);
@@ -20,7 +24,7 @@
 
 .cl-container {
   width: 100%;
-  max-width: calc(var(--container-site) + var(--site-space-32));
+  max-width: calc(var(--site-container) + var(--site-space-32));
   margin-inline: auto;
   padding-inline: var(--site-gutter);
 }
@@ -29,7 +33,7 @@
   padding-top: var(--site-space-32);
   background-repeat: no-repeat;
   background-position: 50% var(--site-space-16);
-  background-size: min(var(--container-site), calc(100% - 2 * var(--site-gutter)))
+  background-size: min(var(--site-container), calc(100% - 2 * var(--site-gutter)))
     var(--site-space-0_5);
 }
 
@@ -266,7 +270,7 @@
   top: 0;
   bottom: 0;
   left: 50%;
-  width: min(var(--container-site), calc(100% - 2 * var(--site-gutter)));
+  width: min(var(--site-container), calc(100% - 2 * var(--site-gutter)));
   background-image: var(--guide), var(--guide);
   background-repeat: no-repeat;
   background-position:

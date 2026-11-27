@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils';
 const LAYOUT = {
   pair: 'column-split:grid-cols-2 items-start',
   thirds: 'column-split:grid-cols-3 items-start',
-  'main-aside': 'column-wide:grid-cols-main-aside items-start',
-  'aside-main': 'column-wide:grid-cols-aside-main items-start',
+  'main-aside': 'column-wide:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-start',
+  'aside-main': 'column-wide:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start',
   halves: 'column-wide:grid-cols-2 items-start',
-  slips: 'grid-cols-cards',
+  slips: 'grid-cols-[repeat(auto-fill,minmax(min(100%,17.5rem),1fr))]',
 } as const;
 
 export type AppGridLayout = keyof typeof LAYOUT;

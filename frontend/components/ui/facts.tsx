@@ -28,7 +28,8 @@ const ROW = {
   inline: 'flex min-w-0 max-w-full items-center gap-2',
   spread: 'flex flex-wrap items-center justify-between gap-x-4 gap-y-1',
   columns: 'grid min-w-0 gap-1',
-  record: 'grid min-h-10 grid-cols-facts items-center gap-x-3 py-2 has-[[data-fact-note]]:min-h-14',
+  record:
+    'grid min-h-10 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-3 py-2 has-[[data-fact-note]]:min-h-14',
 } as const;
 
 const TERM = {

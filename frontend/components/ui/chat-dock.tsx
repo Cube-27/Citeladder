@@ -156,7 +156,7 @@ export function ComposerFrame({
                   {chips}
                 </ul>
               ) : null}
-              <div className="min-w-dock-chip flex-1">{field}</div>
+              <div className="min-w-[min(12rem,100%)] flex-1">{field}</div>
             </div>
             <div className="shrink-0">{submit}</div>
           </div>
@@ -301,7 +301,7 @@ export function SuggestionList({
       data-open={open || undefined}
       className={cn(
         MENU_PANEL,
-        'absolute inset-x-0 bottom-full mb-0.5 grid max-h-dock-menu overflow-auto overscroll-contain popup-from-bottom',
+        'absolute inset-x-0 bottom-full mb-0.5 grid max-h-[min(20rem,40dvh)] overflow-auto overscroll-contain popup-from-bottom',
       )}
     >
       {options.map((option, index) => (

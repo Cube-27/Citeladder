@@ -58,7 +58,7 @@ function ToolbarRow({ view, lead, ...row }: TableToolbarProps) {
       {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
       {lead ? <div className="flex max-w-full min-w-0 shrink-0">{lead}</div> : null}
       {view ? (
-        <div className="min-w-filter-search flex grow basis-0 flex-wrap items-center justify-end gap-2">
+        <div className="flex min-w-[min(100%,16rem)] grow basis-0 flex-wrap items-center justify-end gap-2">
           <Controls {...row} afterView />
         </div>
       ) : (

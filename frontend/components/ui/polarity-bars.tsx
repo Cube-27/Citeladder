@@ -15,7 +15,7 @@ export function RankBarList({
   return (
     <ol className="grid gap-1">
       {rows.map((row) => (
-        <li key={row.key} className="grid-cols-bar-figure grid h-8 items-center gap-3">
+        <li key={row.key} className="grid h-8 grid-cols-[minmax(0,1fr)_56px] items-center gap-3">
           <span className="min-w-0">
             <span
               className="bg-raised-2 rounded-mark flex h-7 w-(--fill) min-w-max items-center gap-2 px-2.5"
