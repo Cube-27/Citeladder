@@ -308,16 +308,6 @@ function pagingLayout(
   return hasMorePages(pager) ? { pager, pageSize } : {};
 }
 
-function joinActions(first: ReactNode, second: ReactNode): ReactNode {
-  if (!first || !second) return first || second;
-  return (
-    <>
-      {first}
-      {second}
-    </>
-  );
-}
-
 function DataTableHeader({
   title,
   headingId,
@@ -333,14 +323,25 @@ function DataTableHeader({
   actions?: ReactNode;
   toolbar?: TableToolbarProps;
 }>) {
-  const controls = { ...toolbar, actions: joinActions(toolbar?.actions, actions) };
-  const shown = hasHeadControls(controls);
+  const shown = hasHeadControls({ ...toolbar, actions: toolbar?.actions || actions });
   if (!title && !description && !shown && !toolbar?.search) return null;
   return (
     <SectionHeader
       data-data-table-header=""
       search={toolbar?.search}
-      actions={shown ? <HeadControls {...controls} /> : undefined}
+      actions={
+        shown ? (
+          <HeadControls
+            {...toolbar}
+            actions={
+              <>
+                {toolbar?.actions}
+                {actions}
+              </>
+            }
+          />
+        ) : undefined
+      }
     >
       {title ? (
         <SectionTitle id={headingId} level={level === 3 ? 3 : 2} truncate>

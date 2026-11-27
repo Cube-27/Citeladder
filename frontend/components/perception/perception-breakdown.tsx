@@ -131,6 +131,17 @@ function BreakdownView({
       return <SegmentTable segment={view} rows={rows} state={rows.length ? undefined : empty} />;
     }
     case 'source': {
+      if (narrowing.polarity === 'positive')
+        return (
+          <SourceTable
+            drivers={[]}
+            state={{
+              kind: 'empty',
+              heading: 'Not applicable to positive answers',
+              headingLevel: 3,
+            }}
+          />
+        );
       const drivers = filterDrivers(data.drivers, narrowing);
       return <SourceTable drivers={drivers} state={drivers.length ? undefined : empty} />;
     }

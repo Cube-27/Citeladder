@@ -1,6 +1,8 @@
 import { SkeletonFrame, TableBlocks } from '@/components/ui/skeleton-block';
 import { Section, SectionBleed, SectionHeader } from '@/components/ui/section';
 
+const CONTROL = <span className="h-control-md block" />;
+
 export function ToolbarTableLoading({
   label,
   columns,
@@ -10,10 +12,7 @@ export function ToolbarTableLoading({
   return (
     <SkeletonFrame label={label} variant="table" className="grid min-w-0">
       <Section>
-        <SectionHeader
-          search={<span className="h-control-md block" />}
-          actions={view ? <span className="h-control-md block" /> : undefined}
-        />
+        <SectionHeader search={CONTROL} actions={view ? CONTROL : undefined} />
         <SectionBleed data-loading-shape="table">
           <TableBlocks columns={columns} rows={rows} />
         </SectionBleed>

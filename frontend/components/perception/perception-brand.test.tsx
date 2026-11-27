@@ -190,6 +190,11 @@ describe('Perception view', () => {
     ]);
     await user.click(screen.getByRole('menuitemradio', { name: 'Source' }));
     expect(screen.getByText('reviews.example')).toBeVisible();
+    await user.click(screen.getByRole('radio', { name: 'Positive' }));
+    expect(
+      screen.getByRole('heading', { name: 'Not applicable to positive answers' }),
+    ).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'No matches' })).toBeNull();
   });
 
   it('switches breakdown shares to counts below the sample size', async () => {
