@@ -22,7 +22,7 @@ const inputWidths = {
   'grow-basis': 'min-w-0 flex-1 basis-32',
 } as const;
 
-const INPUT_FRAME = { filter: 'phone:w-full w-60' } as const;
+const INPUT_FRAME = { none: undefined, filter: 'phone:w-full w-60' } as const;
 
 const SEARCH_INPUT =
   'appearance-textfield [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden';
@@ -36,7 +36,7 @@ const INPUT_ROOM = {
 } as const;
 
 export function Input({
-  frame,
+  frame = 'none',
   search = false,
   startContent,
   endContent,
@@ -66,7 +66,7 @@ export function Input({
           FIELD_BOX,
           'placeholder:text-ink-placeholder disabled:cursor-not-allowed disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-disabled',
           inputWidths[width],
-          frame && INPUT_FRAME[frame],
+          INPUT_FRAME[frame],
           search && SEARCH_INPUT,
           INPUT_ROOM[room],
         )}
@@ -83,7 +83,7 @@ export function Input({
         FIELD_BOX,
         props.disabled && 'cursor-not-allowed opacity-disabled',
         endContentFlush && 'pe-1',
-        frame && INPUT_FRAME[frame],
+        INPUT_FRAME[frame],
       )}
     >
       {startContent ? (

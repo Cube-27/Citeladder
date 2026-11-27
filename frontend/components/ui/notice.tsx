@@ -93,6 +93,9 @@ export function Notice(props: NoticeProps) {
   }
 }
 
+const noticeAlign = (action: ReactNode, title: ReactNode) =>
+  action && title == null ? 'items-center' : 'items-start';
+
 function MessageNoticeView({
   tone = 'info',
   title,
@@ -114,7 +117,7 @@ function MessageNoticeView({
       className={cn(
         'text-body text-ink',
         'flex flex-wrap gap-2',
-        action && title == null ? 'items-center' : 'items-start',
+        noticeAlign(action, title),
         measure && 'max-w-lg',
         className,
       )}
