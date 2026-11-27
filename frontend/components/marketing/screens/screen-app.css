@@ -1,7 +1,6 @@
 :root {
   --screen-app-width: 1440px;
   --screen-app-height: 820px;
-  --screen-app-overview-height: 860px;
   --screen-app-sidebar: 224px;
   --screen-visibility-width: 1200px;
   --screen-visibility-height: 704px;
@@ -65,10 +64,6 @@
 .cl-screen--app [data-figure-strip]:not(.cl-vig *, [class*='surface-card'] *) {
   border-color: transparent;
   background: var(--color-panel);
-}
-
-.cl-screen--app-overview {
-  --screen-h: var(--screen-app-overview-height);
 }
 
 .cl-screen--app .text-page-title {
@@ -232,8 +227,7 @@
   padding-inline: var(--spacing-gutter);
 }
 
-.cl-app-actions,
-.cl-app-filters {
+.cl-app-actions {
   display: flex;
   align-items: center;
   gap: var(--site-space-2);
@@ -259,17 +253,6 @@
   max-width: var(--site-measure-xl);
   border-radius: var(--radius-card);
   background: var(--color-panel);
-}
-
-.cl-app-lede {
-  display: flex;
-  flex-direction: column;
-  gap: var(--site-space-1);
-  margin-bottom: var(--spacing-card);
-}
-
-.cl-app-lede > p {
-  margin: 0;
 }
 
 .cl-app-split {
