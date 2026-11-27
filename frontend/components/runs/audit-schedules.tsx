@@ -136,7 +136,7 @@ function ScheduleForm({
   markets: readonly ProjectMarket[];
 }>) {
   const catalog = useEngineCatalog();
-  const [promptSetId, setPromptSetId] = useState(mainPromptSet(promptSets)?.id ?? '');
+  const [promptSetId, setPromptSetId] = useState(() => mainPromptSet(promptSets)?.id ?? '');
   const [auditScope, setAuditScope] = useState<'brand' | 'commerce'>('brand');
   const [cadence, setCadence] = useState<AuditScheduleCadence>('weekly');
   const [intervalMinutes, setIntervalMinutes] = useState('60');

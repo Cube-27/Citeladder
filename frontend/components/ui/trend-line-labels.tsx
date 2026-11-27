@@ -23,7 +23,8 @@ export function LineEndLabels({
     .sort((a, b) => a.y - b.y);
   const placed = ends.reduce<typeof ends>((above, end) => {
     const floor = (above.at(-1)?.y ?? scale.padTop + 6 - END_LABEL_GAP) + END_LABEL_GAP;
-    return [...above, { ...end, y: Math.min(bottom - 4, Math.max(end.y, floor)) }];
+    above.push({ ...end, y: Math.min(bottom - 4, Math.max(end.y, floor)) });
+    return above;
   }, []);
   return (
     <g data-line-labels="">
