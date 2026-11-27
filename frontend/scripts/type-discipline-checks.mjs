@@ -114,7 +114,10 @@ const PARAMETER_HOLDERS = new Set([
 const LIBRARY_CALLBACKS = new Set(['onSuccess', 'onMutate', 'onError', 'onSettled']);
 
 const isLibraryCallback = (node, parent) =>
-  parent?.type === 'Property' && parent.value === node && LIBRARY_CALLBACKS.has(parent.key?.name);
+  parent?.type === 'Property' &&
+  parent.value === node &&
+  !parent.computed &&
+  LIBRARY_CALLBACKS.has(parent.key?.name ?? parent.key?.value);
 
 export function maxParamsCount(source, label) {
   let count = 0;

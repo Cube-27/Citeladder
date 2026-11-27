@@ -96,9 +96,10 @@ test('counts the functions oxlint max-params flags, except library-shaped callba
     'interface Shape { method(a: A, b: B, c: C, d: D): void }',
     'class K { method(a, b, c, d) {} }',
     'useMutation({ onSuccess: (data, vars, result, context) => data, onSettled(a, b, c, d, e) {} });',
+    "useMutation({ 'onError': (a, b, c, d) => a, [onSettled]: (a, b, c, d) => a });",
     'const handlers = { onPick: (a, b, c, d) => a };',
   ].join('\n');
-  assert.equal(maxParamsCount(source, 'x.ts'), 6);
+  assert.equal(maxParamsCount(source, 'x.ts'), 7);
 });
 
 test('fails a raised, new or stale baseline entry and passes a matching one', () => {
