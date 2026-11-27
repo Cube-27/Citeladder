@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { enqueueCrawlTasks } from './admission-writes.ts';
+import { enqueueCrawlTasks, type CrawlTaskSeed } from './admission-writes.ts';
 import type { Assessment } from './crawl-assessment.ts';
 import { saveState } from './crawl-assessment.ts';
 import { settleCrawlFetches } from './fetch-budget.ts';
@@ -57,7 +57,7 @@ function partialReason(discoveryPartial: boolean, analysisPartial: boolean) {
 
 async function enqueueSuccessors(db: Database, crawl: Crawl) {
   const linkVersion = `${crawl.extractor_version}:${policy.site_health.link_metrics.formula_version}`;
-  const successors = [
+  const successors: { kind: CrawlTaskSeed['kind']; key: string }[] = [
     {
       kind: 'change_intel',
       key: `change-intel:${crawl.id}:${policy.site_health.change_intel.analyzer_version}`,

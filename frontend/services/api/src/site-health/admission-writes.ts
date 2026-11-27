@@ -343,7 +343,14 @@ export async function insertSitemapEntries(trx: Database, crawl: Crawl, entries:
 }
 
 export type CrawlTaskSeed = {
-  kind: 'discover' | 'analyze' | 'site_setup' | 'architecture';
+  kind:
+    | 'discover'
+    | 'analyze'
+    | 'site_setup'
+    | 'architecture'
+    | 'finalize'
+    | 'change_intel'
+    | 'link_metrics';
   url: string;
   hash: string;
   siteUrlId?: string | null;
