@@ -1,5 +1,6 @@
 :root {
   --hero-mark-bleed: 0.08em;
+  --hero-title-measure: 1120px;
 }
 
 .cl-lhero {
@@ -43,7 +44,7 @@
 
 .cl-phero-title,
 .cl-lhero-title {
-  max-width: var(--site-measure-3xl);
+  max-width: var(--hero-title-measure);
   margin: 0;
   color: var(--text-color-ink);
   font-family: var(--font-display);

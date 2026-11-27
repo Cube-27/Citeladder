@@ -1,3 +1,7 @@
+:root {
+  --page-hl-text-measure: 480px;
+}
+
 .cl-page-hl {
   height: 100%;
   border-radius: var(--site-radius-card);
@@ -38,7 +42,7 @@
 }
 
 .cl-page-hl-text {
-  max-width: var(--site-measure-xs);
+  max-width: var(--page-hl-text-measure);
   margin: 0;
   color: var(--text-color-ink-2);
   font-size: var(--text-site-body);

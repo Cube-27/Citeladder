@@ -195,7 +195,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--site-space-2);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-mark);
   color: var(--text-color-ink);
   font-size: var(--text-heading);
   font-weight: var(--weight-medium);
@@ -231,7 +231,7 @@
 
 @media (pointer: coarse) {
   :root[data-marketing-surface] {
-    --spacing-control-coarse: 44px;
+    --spacing-control-coarse: var(--site-target);
   }
 
   .cl-arrowlink {
@@ -285,7 +285,7 @@
   position: relative;
   width: fit-content;
   padding: 0 var(--site-space-2);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-mark);
   background: var(--site-chip);
   color: var(--site-chip-ink);
 }

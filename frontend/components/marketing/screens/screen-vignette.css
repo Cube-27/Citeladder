@@ -1,5 +1,6 @@
 :root {
   --vig-panel-min: 224px;
+  --vig-plot-min: calc(var(--site-space) * 27);
 }
 
 .cl-vig {
@@ -177,7 +178,7 @@
   width: var(--site-space-24);
   height: var(--site-space-1_5);
   overflow: hidden;
-  border-radius: var(--radius-2xs);
+  border-radius: var(--radius-mark);
   background: var(--color-chart-grid);
 }
 
@@ -239,7 +240,7 @@
 .cl-vig-plot {
   display: grid;
   flex: 1;
-  grid-template-rows: minmax(var(--site-space-27), 1fr) auto;
+  grid-template-rows: minmax(var(--vig-plot-min), 1fr) auto;
   grid-template-columns: var(--site-space-10) minmax(0, 1fr);
   row-gap: var(--site-space-2);
   color: var(--text-color-ink-2);
@@ -327,7 +328,7 @@
   align-self: flex-end;
   max-width: 85%;
   padding: var(--site-space-2) var(--site-space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   background: var(--color-well);
   color: var(--text-color-ink);
 }
@@ -338,7 +339,7 @@
   align-items: center;
   gap: var(--site-space-2) var(--site-space-3);
   padding: var(--site-space-2) var(--site-space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   background: var(--color-well);
 }
 

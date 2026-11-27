@@ -1,5 +1,6 @@
 :root {
   --split-screen-width: 440px;
+  --fcard-text-measure: 520px;
 }
 
 .cl-fcard {
@@ -85,7 +86,7 @@
 }
 
 .cl-fcard-text {
-  max-width: var(--site-measure-sm);
+  max-width: var(--fcard-text-measure);
   margin: 0;
   color: var(--text-color-ink-2);
   font-size: var(--text-site-body);

@@ -120,7 +120,7 @@
 }
 
 .cl-site .cl-prose-table::-webkit-scrollbar-thumb {
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-mark);
   background: var(--color-rule-strong);
 }
 

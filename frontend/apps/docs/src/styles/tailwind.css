@@ -10,7 +10,7 @@
 @source '../../../../components/content';
 
 :root[data-public-surface] {
-  --docs-tabs-height: 44px;
+  --docs-tabs-height: var(--site-target);
   --docs-bar-height: calc(var(--nav-height) + var(--docs-tabs-height));
   --marketing-nav-offset: var(--docs-bar-height);
 }

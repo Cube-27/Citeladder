@@ -39,14 +39,17 @@
   --screen-natural: var(--screen-app-width);
   --screen-w: var(--screen-natural);
   --screen-h: var(--screen-app-height);
-  --radius-card: var(--radius-md);
   --screen-page-edge: color-mix(in oklch, var(--color-rule) 50%, transparent);
 
   display: grid;
   grid-template-columns: var(--spacing-sidebar) minmax(0, 1fr);
   gap: 0;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   background: var(--color-ground);
+}
+
+.cl-screen--app > * {
+  --radius-card: var(--radius-control);
 }
 
 .cl-screen--app th {
@@ -101,7 +104,7 @@
   width: 100%;
   height: var(--row-app);
   padding: 0 var(--site-space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
 }
 
 .cl-app-ident-text {
@@ -158,7 +161,7 @@
   gap: var(--site-space-2);
   height: var(--spacing-control-md);
   padding: 0 var(--site-space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   color: var(--text-color-ink-2);
   font-size: var(--text-body);
   font-weight: var(--text-body--font-weight);

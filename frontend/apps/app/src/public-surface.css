@@ -68,20 +68,6 @@
   --ramp-blue-91_2: #d3e3fd;
 }
 
-@media (max-width: 1279px) {
-  :root[data-public-surface] {
-    --spacing-gutter: 24px;
-  }
-}
-
-[data-marketing-surface] {
-  --site-radius-inner: 4px;
-  --site-radius-card: 12px;
-  --site-radius-stage: 16px;
-  --site-radius-frame: 20px;
-  --site-radius-frame-inner: 14px;
-}
-
 :root[data-public-surface]:not([data-theme='dark']) {
   --color-ground: var(--ramp-white);
   --color-site-page: var(--ramp-white);

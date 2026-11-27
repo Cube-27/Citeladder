@@ -107,7 +107,7 @@
   justify-content: space-between;
   gap: var(--site-space-6);
   padding: var(--site-space-6) 0;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-mark);
   color: var(--text-color-ink);
   font-size: var(--text-title-sm);
   font-weight: var(--weight-medium);
