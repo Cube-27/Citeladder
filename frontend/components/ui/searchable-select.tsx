@@ -11,6 +11,9 @@ export type SearchableSelectOption = { value: string; label: string; detail?: st
 
 type SelectOptionRenderer = (option: SearchableSelectOption) => ReactNode;
 
+const labelledBy = ({ ariaLabel, id }: ControlName) =>
+  ariaLabel === undefined && id ? fieldLabelId(id) : undefined;
+
 export function SearchableSelect({
   id,
   ariaLabel,
@@ -146,7 +149,7 @@ export function SearchableSelect({
           // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role
           role="listbox"
           aria-label={ariaLabel}
-          aria-labelledby={ariaLabel === undefined && id ? fieldLabelId(id) : undefined}
+          aria-labelledby={labelledBy({ ariaLabel, id })}
           data-open="true"
           className={cn(
             MENU_PANEL,

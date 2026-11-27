@@ -118,10 +118,11 @@ function PurchaseButton({
   return (
     <Button
       variant={quoted ? 'secondary' : 'primary'}
-      disabled={!canBuy || !workspaceId || quoted || priceUnavailable}
+      disabled={!canBuy || !workspaceId || priceUnavailable}
+      aria-disabled={quoted || undefined}
       pending={pending}
       pendingLabel="Preparing…"
-      onClick={onPurchase}
+      onClick={quoted ? undefined : onPurchase}
     >
       Review current quote
     </Button>

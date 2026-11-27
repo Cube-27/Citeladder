@@ -123,16 +123,15 @@ function spoken(value: Formatted | undefined) {
   return isAbsent(value) ? availabilityLabel(value.absent) : value;
 }
 
+function readout(tip: { title: string; rows: readonly KeyEntry[] }) {
+  const values = tip.rows.map((row) => [row.name, spoken(row.value)].join(' ').trim());
+  return `${tip.title}: ${values.join(', ')}`;
+}
+
 export function ChartReadout({
   tip,
 }: Readonly<{ tip: { title: string; rows: readonly KeyEntry[] } | null }>) {
-  return (
-    <output className="sr-only">
-      {tip
-        ? `${tip.title}: ${tip.rows.map((row) => `${row.name} ${spoken(row.value)}`.trim()).join(', ')}`
-        : ''}
-    </output>
-  );
+  return <output className="sr-only">{tip ? readout(tip) : ''}</output>;
 }
 
 export function ChartTipSheet({

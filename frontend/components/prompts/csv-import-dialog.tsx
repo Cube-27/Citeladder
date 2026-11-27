@@ -121,21 +121,19 @@ export function CsvImportDialog({
         <Notice tone="negative">{parsed.errors.join(' ')}</Notice>
       ) : null}
 
-      <CsvImportPreview
-        counts={
-          parsed?.rows.length
-            ? {
-                rows: parsed.rows.length,
-                skipped: parsed.rows.filter((row) => row.errors.length > 0).length,
-              }
-            : null
-        }
-        fileName={fileName}
-      >
+      <CsvImportPreview counts={parsedCounts(parsed)} fileName={fileName}>
         {parsed ? <ParsedRows parsed={parsed} /> : null}
       </CsvImportPreview>
     </Dialog>
   );
+}
+
+function parsedCounts(parsed: ParsedCsv | null) {
+  if (!parsed?.rows.length) return null;
+  return {
+    rows: parsed.rows.length,
+    skipped: parsed.rows.filter((row) => row.errors.length > 0).length,
+  };
 }
 
 function ParsedRows({ parsed }: Readonly<{ parsed: ParsedCsv }>) {

@@ -233,6 +233,67 @@ describe('app pricing continuation', () => {
     expect([writes, document.activeElement]).toEqual([['one-key'], pending]);
   });
 
+  it('keeps focus on the purchase button once its quote is ready', async () => {
+    const usd = (amount_minor: number) => ({ currency: 'USD', amount_minor });
+    mswServer.use(
+      http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog)),
+      http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
+      http.post('/api/v1/billing/addons', () =>
+        HttpResponse.json({
+          activation_id: '11111111-1111-4111-8111-111111111111',
+          kind: 'addon',
+          catalog_key: 'addon_seats',
+          quantity: 1,
+          status: 'pending',
+          quote: {
+            quote_id: 'q1',
+            catalog_revision: 'commercial-v9',
+            catalog_key: 'addon_seats',
+            credential_mode: 'byok',
+            country_code: 'US',
+            region: 'international',
+            base_price: usd(900),
+            subtotal_price: usd(900),
+            discount: usd(0),
+            taxable_value: usd(900),
+            tax: usd(0),
+            tax_treatment: 'EXPORT_ZERO_RATED',
+            tax_rate: '0',
+            cgst: usd(0),
+            sgst: usd(0),
+            igst: usd(0),
+            tax_policy_version: 1,
+            total_price: usd(900),
+            expires_at: '2026-08-01T12:00:00Z',
+          },
+          expires_at: '2026-08-01T12:00:00Z',
+          failure_code: null,
+        }),
+      ),
+    );
+    globalThis.sessionStorage.setItem(
+      PENDING_PRICING_INTENT_KEY,
+      JSON.stringify({
+        version: 1,
+        kind: 'addon',
+        catalog_key: 'addon_seats',
+        quantity: 1,
+        byok: true,
+        country_code: null,
+        billing_details: null,
+        idempotency_key: 'quoted-key',
+        return_path: '/pricing',
+        created_at_ms: Date.now(),
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<PricingRoute />);
+    const purchase = await screen.findByRole('button', { name: 'Review current quote' });
+    await user.click(purchase);
+    await waitFor(() => expect(purchase).toHaveAttribute('aria-disabled', 'true'));
+    expect(document.activeElement).toBe(purchase);
+  });
+
   it('reports a refused purchase once, in the server sentence', async () => {
     mswServer.use(
       http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog)),
