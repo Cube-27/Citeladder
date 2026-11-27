@@ -173,7 +173,10 @@ export function samePeriod({
   period: RunSelection;
   selection: RunSelection;
 }): boolean {
-  const selected = new Set(selection.auditIds ?? []);
+  const pooled = selection.auditIds ?? [];
+  const selected = new Set(
+    selection.auditId === null ? pooled : pooled.filter((id) => id === selection.auditId),
+  );
   const periodIds = new Set(period.auditIds ?? []);
   return selected.size === periodIds.size && [...periodIds].every((id) => selected.has(id));
 }

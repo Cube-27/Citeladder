@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { mentionSov } from '../src/visibility/metrics.ts';
-import type { TrendSource } from '../src/visibility/runs.ts';
+import { samePeriod, type TrendSource } from '../src/visibility/runs.ts';
+import type { RunSelection } from '../src/visibility/selection.ts';
 import { bucketStart, foldBucket } from '../src/visibility/trend-folding.ts';
 
 function source(metrics: Record<string, unknown>, completed: number): TrendSource {
@@ -24,6 +25,29 @@ function source(metrics: Record<string, unknown>, completed: number): TrendSourc
     promptPerformanceScore: null,
   };
 }
+
+describe('samePeriod', () => {
+  const selection = (auditId: string | null, auditIds: string[]): RunSelection => ({
+    workspaceId: 'w',
+    projectId: 'p',
+    marketId: null,
+    auditId,
+    auditIds,
+    logicalEngine: null,
+    cohort: 'core',
+    fromAt: null,
+    toAt: null,
+  });
+
+  it('matches the runs the selection loads, so a single-run pick inside a pool is not the period', () => {
+    const period = selection(null, ['b', 'a']);
+    expect(
+      [selection(null, ['a', 'b']), selection('a', ['a', 'b']), selection(null, ['a'])].map(
+        (picked) => samePeriod({ period, selection: picked }),
+      ),
+    ).toEqual([true, false, false]);
+  });
+});
 
 describe('bucketStart', () => {
   it('starts weeks on the ISO Monday, across a month and a year', () => {
