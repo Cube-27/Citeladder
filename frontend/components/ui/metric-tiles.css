@@ -12,7 +12,7 @@
   --metric-ink: var(--text-color-metric-ink);
   position: relative;
   display: grid;
-  align-content: start;
+  grid-template-rows: auto 1fr;
   gap: calc(var(--spacing) * 1);
   min-width: 0;
   padding: calc(var(--spacing) * 3) var(--spacing-panel-inset);
@@ -33,6 +33,12 @@
     position: absolute;
     inset: 0;
     cursor: pointer;
+  }
+  & [data-metric-value] {
+    display: grid;
+    align-content: end;
+    gap: calc(var(--spacing) * 1);
+    min-width: 0;
   }
   & [data-metric-help] {
     position: relative;

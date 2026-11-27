@@ -4,6 +4,7 @@ import { Absence } from '@/components/ui/absence';
 import { Delta } from '@/components/ui/delta';
 import { FIGURE_MIN_WIDTH, useStripWidth } from '@/components/ui/figure-rows';
 import { InfoHint } from '@/components/ui/info-hint';
+import { useScrollFrame } from '@/components/ui/scroll-edges';
 import { Section, SectionBleed, useOnPage } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 import { textRoleClass } from '@/components/ui/text-role';
@@ -70,28 +71,30 @@ export function FigureStrip({
 }>) {
   const { ref, width } = useStripWidth<HTMLDListElement>();
   const narrow = twoLineLabels || width / segments.length < FIGURE_MIN_WIDTH;
+  const { ref: scrollRef, region, frame } = useScrollFrame({ label });
   const content = (
     <>
       {lead ? <div data-figure-lead="">{lead}</div> : null}
-      <SectionBleed>
-        <dl // NOSONAR
-          ref={ref}
-          role={label ? 'group' : undefined}
-          aria-label={label}
-          data-testid={testId}
-          data-figure-strip=""
-          className="flex min-w-0"
-        >
-          {segments.map((segment) => (
-            <FigureCell
-              key={segment.key}
-              segment={segment}
-              subLine={subLine}
-              textValues={textValues}
-              narrow={narrow}
-            />
-          ))}
-        </dl>
+      <SectionBleed {...frame}>
+        <div ref={scrollRef} {...region} data-figure-strip="">
+          <dl // NOSONAR
+            ref={ref}
+            role={label ? 'group' : undefined}
+            aria-label={label}
+            data-testid={testId}
+            className="flex min-w-0"
+          >
+            {segments.map((segment) => (
+              <FigureCell
+                key={segment.key}
+                segment={segment}
+                subLine={subLine}
+                textValues={textValues}
+                narrow={narrow}
+              />
+            ))}
+          </dl>
+        </div>
       </SectionBleed>
     </>
   );
@@ -194,12 +197,13 @@ function pressableLayer(segment: FigureSegment) {
 function FigureValueLine({ segment, subLine, textValues }: FigurePart) {
   const delta = segment.loading || !reportsChange(segment.delta) ? null : segment.delta;
   return (
-    <dd
-      data-figure-value=""
-      className="phone:flex-wrap flex min-w-0 items-baseline gap-2 whitespace-nowrap"
-    >
+    <dd data-figure-value="" className="flex min-w-0 items-baseline gap-2 whitespace-nowrap">
       <FigureValue segment={segment} textValues={textValues} />
-      {delta ? <span className="text-caption-strong text-ink-2 shrink-0">{delta}</span> : null}
+      {delta ? (
+        <span data-figure-delta="" className="text-caption-strong text-ink-2">
+          {delta}
+        </span>
+      ) : null}
       {segment.labelHidden && !segment.loading ? (
         <span className="ms-auto shrink-0 self-center">
           <FigureHint segment={segment} subLine={subLine} />

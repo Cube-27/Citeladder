@@ -55,7 +55,7 @@ export function MetricTile({
         {toggle}
         <span data-metric-help="">{help}</span>
       </Inline>
-      {children}
+      <div data-metric-value="">{children}</div>
     </div>
   );
 }

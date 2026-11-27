@@ -668,6 +668,12 @@ label {
   align-self: end;
   min-height: var(--text-figure--line-height);
 }
+[data-figure-value] > [data-figure-delta] {
+  flex-shrink: 999;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 [data-figure-value] [data-absence] {
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
