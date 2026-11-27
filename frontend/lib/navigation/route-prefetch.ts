@@ -6,12 +6,9 @@ import { preloadRouteChunk } from '@/lib/navigation/route-chunks';
 
 export type ProjectScope = { projectId: string; workspaceId: string };
 
-type Warm<M> = (
-  modules: M,
-  client: QueryClient,
-  scope: ProjectScope,
-  search: URLSearchParams,
-) => void | Promise<void>;
+type WarmContext = Readonly<{ client: QueryClient; scope: ProjectScope; search: URLSearchParams }>;
+
+type Warm<M> = (modules: M, context: WarmContext) => void | Promise<void>;
 
 type RouteReads = Readonly<{
   load: () => Promise<unknown>;
@@ -21,7 +18,7 @@ type RouteReads = Readonly<{
 function routeReads<M>(load: () => Promise<M>, warm: Warm<M>): RouteReads {
   return {
     load,
-    prefetch: async (client, scope, search) => warm(await load(), client, scope, search),
+    prefetch: async (client, scope, search) => warm(await load(), { client, scope, search }),
   };
 }
 
@@ -38,8 +35,7 @@ const visibilitySelection = () =>
 
 const warmVisibilitySelection: Warm<Awaited<ReturnType<typeof visibilitySelection>>> = (
   [{ warmBrandRuns }, { INITIAL_VISIBILITY_PARAMS }, { visibilityQueries }, { projectQueries }],
-  client,
-  scope,
+  { client, scope },
 ) => {
   warmBrandRuns(client, scope);
   warmQuery(client, projectQueries.markets(scope));
@@ -63,7 +59,7 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
   ),
   '/aeo-readiness': routeReads(
     () => import('@/lib/api/site-health-queries'),
-    ({ siteHealthQueries }, client, scope) => {
+    ({ siteHealthQueries }, { client, scope }) => {
       warmQuery(client, siteHealthQueries.dashboard(scope));
       warmQuery(client, siteHealthQueries.aeoReadiness(scope));
     },
@@ -79,19 +75,19 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
   ),
   '/performance': routeReads(
     () => Promise.all([import('@/lib/api/performance'), import('@/lib/performance/performance')]),
-    ([{ performanceQueries }, { INITIAL_DASHBOARD_PARAMS }], client, scope) =>
+    ([{ performanceQueries }, { INITIAL_DASHBOARD_PARAMS }], { client, scope }) =>
       warmQuery(client, performanceQueries.dashboard(scope, INITIAL_DASHBOARD_PARAMS)),
   ),
   '/search-intelligence': routeReads(
     () => Promise.all([import('@/lib/api/demand'), import('@/lib/api/search-intelligence')]),
-    ([{ demandQueries }, { searchIntelligenceQueries }], client, scope, search) => {
+    ([{ demandQueries }, { searchIntelligenceQueries }], { client, scope, search }) => {
       if (opensOn(search, 'demand')) warmQuery(client, demandQueries.latest(scope));
       else warmQuery(client, searchIntelligenceQueries.readiness(scope));
     },
   ),
   '/products': routeReads(
     () => Promise.all([import('@/lib/api/commerce'), import('@/lib/products/product-filters')]),
-    ([{ commerceQueries }, { DEFAULT_PRODUCT_FILTERS, productSearch }], client, scope) => {
+    ([{ commerceQueries }, { DEFAULT_PRODUCT_FILTERS, productSearch }], { client, scope }) => {
       warmQuery(client, commerceQueries.catalog(scope));
       warmQuery(
         client,
@@ -101,28 +97,28 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
   ),
   '/products/overview': routeReads(
     () => Promise.all([import('@/lib/api/commerce'), import('@/lib/products/product-filters')]),
-    ([{ commerceQueries }, { DEFAULT_OVERVIEW_FILTERS, overviewSearch }], client, scope) => {
+    ([{ commerceQueries }, { DEFAULT_OVERVIEW_FILTERS, overviewSearch }], { client, scope }) => {
       warmQuery(client, commerceQueries.catalog(scope));
       warmQuery(client, commerceQueries.overview(scope, overviewSearch(DEFAULT_OVERVIEW_FILTERS)));
     },
   ),
   '/agent': routeReads(
     () => import('@/lib/api/actions'),
-    ({ actionsQueries }, client, scope) => warmQuery(client, actionsQueries.list(scope)),
+    ({ actionsQueries }, { client, scope }) => warmQuery(client, actionsQueries.list(scope)),
   ),
   '/actions': routeReads(
     () => import('@/lib/api/actions'),
-    ({ actionsQueries, DEFAULT_ACTION_TREE }, client, scope) =>
+    ({ actionsQueries, DEFAULT_ACTION_TREE }, { client, scope }) =>
       warmQuery(client, actionsQueries.tree(scope, DEFAULT_ACTION_TREE)),
   ),
   '/agent/skills': routeReads(
     () => import('@/lib/api/agent'),
-    ({ agentQueries }, client, { workspaceId }) =>
+    ({ agentQueries }, { client, scope: { workspaceId } }) =>
       warmQuery(client, agentQueries.skills(workspaceId)),
   ),
   '/agent/context': routeReads(
     () => import('@/lib/api/projects'),
-    ({ projectQueries }, client, scope) => {
+    ({ projectQueries }, { client, scope }) => {
       warmQuery(client, projectQueries.brandProfile(scope));
       warmQuery(client, projectQueries.brandFacts(scope));
     },
@@ -139,7 +135,7 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
   ),
   '/prompts/build': routeReads(
     () => Promise.all([import('@/lib/api/projects'), import('@/lib/api/prompts')]),
-    ([{ projectQueries }, { promptsQueries }], client, scope) => {
+    ([{ projectQueries }, { promptsQueries }], { client, scope }) => {
       warmQuery(client, projectQueries.brandProfile(scope));
       warmQuery(client, projectQueries.businessMap(scope));
       warmQuery(client, promptsQueries.sets(scope));
@@ -152,9 +148,7 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
     () => Promise.all([visibilitySelection(), import('@/lib/visibility/trends')]),
     (
       [[{ warmBrandRuns }, , { visibilityQueries }, { projectQueries }], trends],
-      client,
-      scope,
-      search,
+      { client, scope, search },
     ) => {
       warmQuery(client, projectQueries.brandFacts(scope));
       warmBrandRuns(client, scope);
@@ -170,12 +164,12 @@ const ROUTE_READS: Readonly<Partial<Record<AppRoutePath, RouteReads>>> = {
   ),
   '/runs': routeReads(
     () => import('@/lib/api/runs'),
-    ({ runsQueries, RUNS_SCREEN_PARAMS }, client, scope) =>
+    ({ runsQueries, RUNS_SCREEN_PARAMS }, { client, scope }) =>
       warmQuery(client, runsQueries.list(scope, RUNS_SCREEN_PARAMS)),
   ),
   '/ai-traffic': routeReads(
     () => Promise.all([import('@/lib/api/ai-traffic'), import('@/lib/config/crawl-logs')]),
-    ([{ aiTrafficQueries }, { TRAFFIC_RANGES }], client, scope, search) => {
+    ([{ aiTrafficQueries }, { TRAFFIC_RANGES }], { client, scope, search }) => {
       const range = TRAFFIC_RANGES[0].value;
       warmQuery(client, aiTrafficQueries.sources(scope));
       if (!opensOn(search, 'overview')) return;
@@ -202,9 +196,7 @@ function warmSettings(
     typeof import('@/lib/api/integrations'),
     typeof import('@/lib/api/mcp-connections'),
   ],
-  client: QueryClient,
-  { workspaceId }: ProjectScope,
-  search: URLSearchParams,
+  { client, scope: { workspaceId }, search }: WarmContext,
 ) {
   warmQuery(client, authQueries.security());
   warmQuery(client, providerQueries.catalog());
@@ -222,8 +214,7 @@ async function warmPrompts(
     typeof import('@/lib/api/visibility-queries'),
     typeof import('@/lib/prompts/prompt-sets'),
   ],
-  client: QueryClient,
-  scope: ProjectScope,
+  { client, scope }: WarmContext,
 ) {
   const sets = promptsQueries.sets(scope);
   warmQuery(client, sets);
@@ -238,8 +229,7 @@ async function warmOverview(
     typeof import('@/lib/api/projects'),
     typeof import('@/lib/overview/widget-queries'),
   ],
-  client: QueryClient,
-  scope: ProjectScope,
+  { client, scope }: WarmContext,
 ) {
   warmQuery(client, projectQueries.commandCenter(scope));
   const layoutQuery = projectQueries.overviewLayout(scope);
@@ -261,8 +251,7 @@ async function warmSiteHealth(
     typeof import('@/lib/site-health/use-site-health-screen'),
     typeof import('@/lib/site-health/status'),
   ],
-  client: QueryClient,
-  scope: ProjectScope,
+  { client, scope }: WarmContext,
 ) {
   const { workspaceId } = scope;
   const dashboard = siteHealthQueries.dashboard(scope);
@@ -292,8 +281,7 @@ async function warmIssues(
     typeof import('@/lib/api/site-health-latest-crawl'),
     typeof import('@/lib/site-health/issue-filters'),
   ],
-  client: QueryClient,
-  scope: ProjectScope,
+  { client, scope }: WarmContext,
 ) {
   const { workspaceId } = scope;
   const dashboard = siteHealthQueries.dashboard(scope);
