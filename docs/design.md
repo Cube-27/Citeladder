@@ -7,11 +7,15 @@ tokens, surfaces and controls on CiteLadder's corner radii, an inset content
 panel on light paper, white cards with the soft card shadow.
 
 **Scope.** Tokens live in two layers. A `--ramp-*` block holds every literal
-colour once, named by hue and lightness; nothing but a role reads a ramp step.
+colour once, named by hue and lightness; only the token files read a ramp step.
 Roles alias ramp steps, and each surface and theme re-points the same role
-names. [`globals.css`](../frontend/apps/app/src/globals.css) holds the shared
-and app tokens (the app in `:root:not([data-public-surface])` and its dark
-twin). [`public-surface.css`](../frontend/apps/app/src/public-surface.css)
+names. [`globals.css`](../frontend/apps/app/src/globals.css) only imports the
+shared and app sheets, each under the source size limit:
+[`tokens-ramps.css`](../frontend/apps/app/src/tokens-ramps.css) (ramps and
+base), [`tokens-roles.css`](../frontend/apps/app/src/tokens-roles.css) (the
+`@theme` roles), [`tokens-modes.css`](../frontend/apps/app/src/tokens-modes.css)
+(the dark twin and the app's `:root:not([data-public-surface])` re-points),
+`app-utilities.css` and `app-rules.css`. [`public-surface.css`](../frontend/apps/app/src/public-surface.css)
 holds the website and docs blocks (`[data-public-surface]`,
 `[data-marketing-surface]`, the landing-page product screens) and the ramp
 steps only they read. Only the marketing and docs entries import it, so the
@@ -72,8 +76,8 @@ themes), the app's Tailwind `@source` list and the CSS value rule
 ([`design-system-css-values.mjs`](../frontend/scripts/design-system-css-values.mjs)),
 and reports globals rules keyed on an ancestor section or dialog (a
 [composition](#composition) break) as a warning that never fails CI (AR-25).
-The CSS value rule reads every `.css` file and Astro `<style>`, `globals.css`
-rule blocks included. Outside `@theme`, `@keyframes`, `@font-face` and
+The CSS value rule reads every `.css` file and Astro `<style>`, the app
+sheets' rule blocks included. Outside `@theme`, `@keyframes`, `@font-face` and
 `@property`, a colour, type, font-family, z-index, opacity, motion, shadow,
 spacing, size, radius or border-width value holds no hex, named colour,
 colour function, `px`/`rem`/`em`/`ms`/`s` length, bare z-index, weight,
@@ -82,7 +86,7 @@ fallback. Tokens, keywords, `0`, opacity `1`, unitless multipliers,
 percentages and gradient stops pass; `forced-colors` and
 `prefers-reduced-motion: reduce` blocks are exempt. A custom property is a
 token only in a token file or a rule on `:root` itself (attribute and
-`:not()` suffixes, no descendant); anywhere else it is checked like any value. The token files (`globals.css` and `public-surface.css`) alone
+`:not()` suffixes, no descendant); anywhere else it is checked like any value. The token files (the sheets `globals.css` imports, and `public-surface.css`) alone
 read the ramps.
 
 The website (marketing and docs) composes the same primitives, and its own
@@ -96,7 +100,7 @@ token in the `:root` block at the top of that block's sheet.
 
 ## Tokens
 
-Values live in [`globals.css`](../frontend/apps/app/src/globals.css): HeroUI's
+Values live in [`tokens-ramps.css`](../frontend/apps/app/src/tokens-ramps.css) and [`tokens-roles.css`](../frontend/apps/app/src/tokens-roles.css): HeroUI's
 zinc neutrals and shadows in both themes (AR-1).
 
 | Token                    | Use                                                      |
@@ -126,7 +130,7 @@ distinct value only on the website: `rule-strong`, `chart-grid` and
 `state-pressed` (the app binds them to `control-line`, `rule` and
 `state-selected`). Status colours (`positive`, `negative`, `warning`, `info` and their
 `-wash` fills), `accent-text`, `accent-wash` and the data series keep their
-values in `globals.css`. A status colour appears only beside a glyph and a
+values in the app token sheets. A status colour appears only beside a glyph and a
 word, never as a large fill. Two exceptions (owner, 2026-11-22): a Site health
 page score, printed in `negative` below 50 and `warning` below 80, and
 Perception › Brand's sentiment donut and attribute bars (AR-19). Data: `data-you` is the accent, `data-rival-1`
@@ -166,18 +170,21 @@ and the website's 16px reading copy is `site-body`. Weights come only from
 two. `font-emphasis` and `font-plain` are the only weight utilities. Tailwind's
 default weight, leading and tracking scales are switched off.
 
-| App role        | Size / line | Weight                  |
-| --------------- | ----------- | ----------------------- |
-| body, label     | 14 / 20     | 400, label 500          |
-| caption, code   | 12 / 16     | 400                     |
-| heading         | 16 / 24     | 500                     |
-| prose           | 16 / 26     | 400                     |
-| title, page title | 20 / 28   | 400, page title 500     |
-| figure (metric) | 20 / 28     | 500, tabular            |
+| App role          | Size / line | Weight              |
+| ----------------- | ----------- | ------------------- |
+| body, label       | 14 / 20     | 400, label 500      |
+| caption, code     | 12 / 16     | 400                 |
+| heading           | 16 / 24     | 500                 |
+| prose             | 16 / 26     | 400                 |
+| title, page title | 20 / 28     | 400, page title 500 |
+| figure (metric)   | 20 / 28     | 500, tabular        |
 
 A screen names the job through `<Text variant tone>` in
-[`typography.tsx`](../frontend/components/ui/typography.tsx); a primitive uses
-the matching `text-<role>` utility; neither names a size, weight or line height. A `text-<role>`
+[`typography.tsx`](../frontend/components/ui/typography.tsx); `Text` and every
+primitive's `text` prop read the one role map in
+[`text-role.ts`](../frontend/components/ui/text-role.ts), which also gives
+captions `ink-2` by default; a primitive's CSS uses the matching `text-<role>`
+utility; neither names a size, weight or line height. A `text-<role>`
 utility sets size, line height, weight and tracking only; the face and the ink
 come from `font-*` and `text-<ink>` beside it. A face that differs by subdomain
 is a face role each ladder sets: `font-figure` is sans in the app and mono on
@@ -188,8 +195,9 @@ marketing).
 ## Spacing, size and shape
 
 - **Spacing and size:** named `--spacing-*` roles in the `@theme` of
-  `globals.css` (`gap-section`, `p-card`, `px-gutter`, `min-h-control-md`,
-  `h-row`…), one name per role, re-pointed per subdomain and breakpoint where
+  `tokens-roles.css` (`gap-section`, `p-card`, `px-gutter`, `min-h-control-md`,
+  `h-row`…; the `Stack` and `Inline` gaps are `tight`, `item`, `group` and
+  `loose`, 4 to 16), one name per role, re-pointed per subdomain and breakpoint where
   the value differs. A role that must resolve under a re-pointing ancestor
   (the sidebar width) goes in `@theme inline`. Inside a primitive, steps of
   the 4px scale are allowed; a screen never picks a step. Grid templates are
@@ -308,7 +316,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   cell is Perception › Brand's attributes table (AR-19).
 - **Table:** a `DataTable` is always a `Section` (a card on the paper, flat in
   a surface) whose rows bleed to the card's edges; no tray and no inner card.
-  Head band 36 on `table-head-ground`, 12px at 500, a 16-high `rule` tick
+  Head band 36 on `table-head`, 12px at 500, a 16-high `rule` tick
   between columns; cells padded 12 inline and 8 block, the first and last
   cell padded to the card inset so cell text lines up with the title and
   actions; rows 44, one line each, hairline dividers, `state-hover` fill; secondary text
@@ -321,7 +329,7 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   current section sits 24 beside it, at most 720 wide (Business map takes
   the rest of the column), so the header and rail never move (AR-9). A
   section stacks its groups the same way. A
-  group (`SettingsGroup`) is a `Section` card: its header (subheading, a
+  group (`SettingsGroup`) is a `Section` card: its header (label role, a
   status 8 after it, an optional one-line 12px `ink-2` caption 4 below, the
   group's one action right-aligned on the heading's line), then its body 16
   below. The body is a bleed list (`SettingRows`) of setting rows with a
@@ -361,7 +369,8 @@ holds the depth rules.
   [`flow-frame.tsx`](../frontend/components/ui/flow-frame.tsx), which boot
   screens import, and in `flow-chrome.tsx` and `record-chrome.tsx`, which
   only lazy routes import: a module a boot file imports ships whole in the
-  eager bundle. Templates compose them and hold no classes. `Stack`,
+  eager bundle. Templates compose them and hold layout classes only (the
+  `plain-element` layout set). `Stack`,
   `Inline`, the `Section` family, `Button` and its icon and action forms,
   `Pressable`, `TextLink`, `ClampText`, `Icon`, `Input`, `SearchField`,
   `Select`, `Field`, `Checkbox` and `Switch` take typed props only, with no `className`: a placement a screen
@@ -376,7 +385,7 @@ holds the depth rules.
 - **Depth.** `Section`, `PanelFrame`, `Drawer`, `Dialog` and `DraftSheet`
   provide `surface`. On the paper a `Section` is a card (`panel`, card radius
   and shadow, padded `panel-inset` 16); inside a surface it is flat (no
-  fill, padding, radius or shadow) and its title takes the subheading role. A
+  fill, padding, radius or shadow) and its title takes the label role. A
   card can never draw inside a card.
 - **Slots.** `Section` > `SectionHeader` (title, description, `actions`) >
   `SectionToolbar` (`FilterBar` or tabs) > `SectionContent` (at the inset;
@@ -389,8 +398,10 @@ holds the depth rules.
   `panel-inset` on their own edges, so row text lines up with the title.
   A bleed that is the card's first or last slot meets that edge; otherwise it
   draws one hairline on top, the only rule a card draws. It must be a direct
-  child of the section (tab wrappers in a surface pass through). Nothing else
-  uses negative margins. On the paper a bleed, strip, table or `StateBlock`
+  child of the section (tab wrappers in a surface pass through). No screen
+  uses a negative margin; inside `components/ui` only `SectionBleed`, the
+  header actions' alignment and joined controls (split button, overlapping
+  engine marks) do. On the paper a bleed, strip, table or `StateBlock`
   with no section around it wraps itself in one.
 - **Page body.** A `SectionStack` of page-level `Section`s, `AppGrid`s of them
   and self-wrapping primitives, `gap-section` apart; only headings, the
@@ -401,8 +412,8 @@ holds the depth rules.
   Overlay styling keys on `data-overlay`, never `[role=dialog]`.
 - **Never:** a card inside a card, a hand-written card face (`wellClasses` is
   only for quoted or raw material), a table, strip or list inside
-  `SectionContent`, a `FilterBar` or tabs in header `actions`, `-mx`/`-my`
-  outside `SectionBleed`.
+  `SectionContent`, a `FilterBar` or tabs in header `actions`, a negative
+  margin on a screen.
 
 ## Components
 
@@ -444,20 +455,28 @@ holds the depth rules.
   included. Your series is the accent, drawn last; a missing period is a
   gap, never a zero. Series colours come from one map by identity
   (`SERIES_STROKE`, `SERIES_FILL`); position-coloured charts map onto it.
+  Stroke weights and area opacities come from `SERIES_WEIGHT` and
+  `SERIES_FILL_OPACITY` in [`chart.tsx`](../frontend/components/ui/chart.tsx);
+  axis text reads `CHART_AXIS_TEXT`, and recharts ticks and captions
+  `CHART_TICK_TEXT` through `ChartText`.
 - **Buttons** ([`button.tsx`](../frontend/components/ui/button.tsx)). 36,
-  radius 8; 14px icons in `ink-2` on a secondary. Secondary, filter chip,
-  select trigger and field share one face per ground: on the paper `raised`
-  with the field shadow, inside a surface (card, overlay, well, menu) the
-  `state-fill` grey with no shadow. Each surface sets `--control-face`,
-  `--control-face-hover` and `--control-face-shadow` on its own element; the
-  secondary button reads them (`bg-control-face`, `shadow-control-face`), so a
-  link styled as a button (`Button asChild`) matches. Quiet:
+  radius 8; 14px icons in `ink-2` on a secondary. The secondary face: on the
+  paper `raised` with the field shadow, inside a surface (card, overlay, well,
+  menu) the `state-fill` grey with no shadow. Each surface sets
+  `--control-face`, `--control-face-hover` and `--control-face-shadow` on its
+  own element; the secondary button reads them (`bg-control-face`,
+  `shadow-control-face`), so a link styled as a button (`Button asChild`)
+  matches. Fields, select triggers and filter chips keep their own face (Inputs
+  below). Quiet:
   transparent, `ink`, `state-hover` fill. Primary: `primary` fill (the deep accent),
   white text, at most one per view. Danger: secondary with negative text; filled only to confirm in a
   dialog (`danger-confirm`). One disabled look for every variant. The
   website keeps its layered `.face`.
-- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 36, the
-  control face above with no edge at rest (`well` inside a surface); focused,
+- **Inputs** ([`input.tsx`](../frontend/components/ui/input.tsx)). 36, no
+  edge at rest: on the paper `panel` (a select trigger or filter chip
+  `raised`) with the field shadow; inside a surface `well` (`panel` inside a
+  well) with no shadow, set by the surface rule in `app-rules.css`, which also
+  keeps that fill while focused or open; focused,
   an accent edge inside the focus ring; invalid, a negative edge that stays
   when focused. Disabled controls draw at 50%. 14px leading icon. Checkbox and radio
   are `panel` with a `control-line` edge, the one edged control, and a `primary` fill when on; the switch is a `primary`

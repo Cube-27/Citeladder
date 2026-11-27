@@ -279,6 +279,6 @@ DELETE on it from that role, or, when the code row-locks it, DELETE plus the
   non-text subtrees, then comments, then unterminated subtrees. Bind extracted
   facts through the page role's primary entity and identity key.
 - Scope mutation status to the active workspace/project. Global visual rules
-  belong to `frontend/apps/app/src/globals.css`, and each rendered page has one `h1`.
+  belong to the app stylesheet `frontend/apps/app/src/globals.css` and the sheets it imports, and each rendered page has one `h1`.
 - Billing webhook conflicts follow the owning idempotent settlement contract
   rather than leaking an unhandled 500.
