@@ -6,31 +6,21 @@ import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
-type Variant = 'primary' | 'dark' | 'nav' | 'ghost' | 'soft';
+type Variant = 'primary' | 'soft';
 type VisualProps = Readonly<{ variant?: Variant; className?: string }>;
 
-const SHARED_VARIANT: Record<Variant, 'primary' | 'secondary' | 'quiet'> = {
+const SHARED_VARIANT = {
   primary: 'primary',
-  ghost: 'quiet',
-  dark: 'secondary',
-  nav: 'secondary',
   soft: 'secondary',
-};
-
-const sharedVariant = (variant: Variant) => SHARED_VARIANT[variant];
+} as const satisfies Record<Variant, 'primary' | 'secondary'>;
 
 function buttonLinkAttributes({ variant = 'primary', className }: VisualProps) {
-  const shared = sharedVariant(variant);
+  const shared = SHARED_VARIANT[variant];
   return {
     'data-marketing-cta': '',
     'data-button-variant': shared,
-    'data-button-look': variant === 'ghost' || variant === 'nav' ? undefined : 'cta',
-    className: cn(
-      buttonClasses(shared),
-      '[&_svg]:size-4 [&_svg]:shrink-0',
-      variant === 'soft' && 'marketing-soft-button',
-      className,
-    ),
+    'data-button-look': 'cta',
+    className: cn(buttonClasses(shared), '[&_svg]:size-4 [&_svg]:shrink-0', className),
   };
 }
 

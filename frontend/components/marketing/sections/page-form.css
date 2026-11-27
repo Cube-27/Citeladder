@@ -80,7 +80,7 @@
   height: var(--turnstile-height);
   padding: 0 var(--site-space-3);
   border: var(--site-rule) dashed var(--color-rule-strong);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-inner);
   color: var(--text-color-ink-2);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
@@ -108,7 +108,7 @@
 }
 
 .cl-page-form-note a {
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-mark);
   color: var(--text-color-ink-2);
   text-decoration: underline;
   text-decoration-thickness: var(--site-rule);

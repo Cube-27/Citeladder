@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Button, IconButton } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Kbd } from '@/components/ui/kbd';
+import { Inline } from '@/components/ui/layout';
+import { Text } from '@/components/ui/typography';
 import { FileText, Search } from '@/lib/icons';
 import {
   groupResults,
@@ -160,9 +162,9 @@ export function DocsSearchDialog() {
         </div>
         <div className="cl-docs-search-results min-h-0 shrink overflow-y-auto overscroll-contain">
           <div className="cl-docs-search-status-row flex items-center justify-between">
-            <output className="cl-docs-search-status">
+            <Text as="output" variant="caption">
               {searchStatus(failed, entries, query, results.length)}
-            </output>
+            </Text>
             {failed && (
               <Button
                 variant="quiet"
@@ -189,9 +191,11 @@ export function DocsSearchDialog() {
                 aria-labelledby={`docs-search-group-${groupIndex}`}
                 className="cl-docs-search-group"
               >
-                <p id={`docs-search-group-${groupIndex}`} className="cl-docs-search-group-label">
-                  {group.label}
-                </p>
+                <div className="cl-docs-search-group-label">
+                  <Text as="p" id={`docs-search-group-${groupIndex}`} variant="caption-strong">
+                    {group.label}
+                  </Text>
+                </div>
                 {group.items.map((result) => {
                   const index = results.indexOf(result);
                   return (
@@ -209,12 +213,12 @@ export function DocsSearchDialog() {
                     >
                       <Icon icon={FileText} tone="ink-2" />
                       <span className="cl-docs-search-option-text flex min-w-0 flex-1 flex-col">
-                        <span className="cl-docs-search-option-title truncate">
+                        <Text variant="label" wrap="truncate">
                           <Marked text={result.title} query={query} />
-                        </span>
-                        <span className="cl-docs-search-option-description truncate">
+                        </Text>
+                        <Text variant="body" tone="ink-2" wrap="truncate">
                           <Marked text={result.description} query={query} />
-                        </span>
+                        </Text>
                       </span>
                     </a>
                   );
@@ -224,14 +228,14 @@ export function DocsSearchDialog() {
           </div>
         </div>
         <div className="cl-docs-search-footer flex shrink-0 items-center">
-          <span className="cl-docs-search-key inline-flex items-center">
+          <Inline as="span" gap="item" inline>
             <Kbd keys={['↑', '↓']} />
             navigate
-          </span>
-          <span className="cl-docs-search-key inline-flex items-center">
+          </Inline>
+          <Inline as="span" gap="item" inline>
             <Kbd>↵</Kbd>
             select
-          </span>
+          </Inline>
         </div>
       </dialog>
     </>

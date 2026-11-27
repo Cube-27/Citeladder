@@ -133,11 +133,18 @@ Every size and line height derives from one base and one step per subdomain:
 the app's base is 14 and the website's is 16, both with a 2px step (owner,
 2026-11-26). A role's size is the base plus whole steps, and its line height is
 the size plus whole steps, so a change to the base moves every role together.
-The app ladder lives in
+The one exception is docs' `code` (13/22), half a step below `body`, and
+docs' `data` line height that follows it. The app ladder lives in
 [`app-type.css`](../frontend/apps/app/src/app-type.css), shared by the app and
 the MCP app. The website ladder lives in
 [`site-type.css`](../frontend/apps/marketing/src/site-type.css), shared by
-marketing and docs. Each entry stylesheet sets `--type-base` and `--type-step`.
+marketing and docs: its `@theme` holds the docs values and one
+`[data-marketing-surface]` block holds every marketing difference (plus the
+phone sizes kept inside drawn product screens), so no other sheet re-points a
+website role. A theme alias resolves on `:root`, so that block
+declares the line height of every size it re-points, and any alias whose source
+it changes. Each ladder file sets its own `--type-base` and `--type-step` in
+`:root`; entry stylesheets never do.
 A role name means the same job on both ladders: `body` is UI text at 14 on both,
 and the website's 16px reading copy is `site-body`. Weights come only from
 `--weight-regular` and `--weight-medium`; the app's dark theme re-points those
@@ -160,7 +167,8 @@ utility sets size, line height, weight and tracking only; the face and the ink
 come from `font-*` and `text-<ink>` beside it. A face that differs by subdomain
 is a face role each ladder sets: `font-figure` is sans in the app and mono on
 the website. `code` is a utility only in the app; the website keeps its size as
-a CSS variable for code blocks.
+the `--text-code` variable in `site-type.css` for code blocks (13 on docs, 14 on
+marketing).
 
 ## Spacing, size and shape
 
@@ -175,9 +183,12 @@ a CSS variable for code blocks.
 - **Website spacing and size:**
   [`site-space.css`](../frontend/apps/marketing/src/site-space.css) derives
   `--site-space-<n>` from the website's base (a quarter of it per step), so a
-  base change moves spacing with type. It also names the hairline
-  (`--site-rule`), the 44 target, the underline offsets, the reading measures
-  (`--site-measure-*`) and the grain.
+  base change moves spacing with type, the gutter (`--site-gutter`) and the nav
+  height (`--nav-height`) included. It also names the hairline (`--site-rule`),
+  the 44 target, the underline offsets, the shared reading measures
+  (`--site-measure-*`), the marketing block radii (`--site-radius-*`, fixed px)
+  and the grain. A step or measure only one block uses is a token at the top of
+  that block's sheet, not a shared step.
 - **Motion, layering and opacity:** `duration-<role>` (fast 120, close 160,
   open 200, press 250, slide 300, plus reveal, pulse, sweep and the stagger
   steps), `ease-<role>`, `z-<role>` (base, raised, sticky, float, overlay,
@@ -192,8 +203,9 @@ a CSS variable for code blocks.
   control and menu 8 (`rounded-control`), card 10 (`rounded-card`), overlay 14
   (`rounded-overlay`), and 4 for a part inside a frame (`rounded-inner`);
   `full` only for avatars, dots and switch tracks. On the website and docs
-  mark, control, card and overlay are 2, 6, 8 and 12. CSS reads these roles,
-  never the `xs`–`lg` scale.
+  mark, inner, control, card and overlay are 2, 4, 6, 8 and 12. CSS reads these
+  roles, never the `xs`–`lg` scale; marketing blocks add the
+  `--site-radius-*` roles above.
 
 ## Kept rules
 

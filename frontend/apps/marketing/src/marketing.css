@@ -4,11 +4,6 @@
 @import './site-type.css';
 @import './site-space.css';
 
-:root {
-  --type-base: 1rem;
-  --type-step: 0.125rem;
-}
-
 @source '../../marketing/src';
 @source '../../../components/marketing';
 @source '../../../components/analytics';
@@ -26,11 +21,6 @@
   line-height: var(--text-label--line-height);
   font-weight: var(--weight-medium);
   transition-property: transform, background-color, color, border-color, box-shadow;
-}
-
-[data-public-surface]
-  :is([data-button-variant='secondary'], .marketing-soft-button):not(:is(.cl-screen, .cl-vig) *) {
-  border-color: var(--color-button-edge);
 }
 
 [data-public-surface] .face-primary:not(:is(.cl-screen, .cl-vig) *) {

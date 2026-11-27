@@ -33,7 +33,7 @@
   grid-template-columns: var(--site-space-8) minmax(0, 1fr);
   gap: var(--site-space-3);
   padding: var(--site-space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   text-decoration: none;
   transition: background-color var(--transition-duration-fast) var(--ease-standard);
 }
@@ -55,7 +55,7 @@
   justify-content: center;
   width: var(--site-space-8);
   height: var(--site-space-8);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   background: var(--color-site-chip);
   color: var(--color-accent);
 }

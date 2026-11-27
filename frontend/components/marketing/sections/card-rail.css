@@ -3,6 +3,8 @@
   --rail-open-max: 720px;
   --rail-page-width: 1000px;
   --rail-page-zoom: 0.7;
+  --rail-page-top: calc(var(--site-space) * 25);
+  --rail-page-trim: calc(var(--site-space) * 31);
 }
 
 .cl-rail {
@@ -42,7 +44,7 @@
   height: var(--site-space-10);
   padding: 0;
   border: var(--site-rule) solid var(--color-control-line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--text-color-ink);
   cursor: pointer;
@@ -191,7 +193,7 @@
 }
 
 .cl-railcard-page {
-  top: var(--site-space-25);
+  top: var(--rail-page-top);
   bottom: var(--site-space-6);
   left: calc(var(--cl-open-w) / 2 + var(--site-space-4));
   width: var(--rail-page-width);
@@ -204,7 +206,7 @@
 }
 
 .cl-railcard-page .cl-screen {
-  height: calc((var(--cl-card-h) - var(--site-space-31)) / var(--rail-page-zoom));
+  height: calc((var(--cl-card-h) - var(--rail-page-trim)) / var(--rail-page-zoom));
   zoom: var(--rail-page-zoom);
 }
 

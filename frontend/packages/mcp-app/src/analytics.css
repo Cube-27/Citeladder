@@ -3,8 +3,6 @@
 @import '../../../apps/app/src/app-type.css';
 
 :root {
-  --type-base: 0.875rem;
-  --type-step: 0.125rem;
   --font-sans: ui-sans-serif, system-ui;
   --font-display: ui-sans-serif, system-ui;
   --font-mono: 'CiteLadder Geist Mono', ui-monospace, monospace;

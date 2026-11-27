@@ -2,6 +2,7 @@
   --ifield-row-tall: 144px;
   --ifield-row-compact: 136px;
   --ifield-tile-min: 132px;
+  --ifield-lead-measure: 44ch;
 }
 
 .cl-ifield {
@@ -20,7 +21,7 @@
 }
 
 .cl-ifield-head .cl-shead-lead {
-  max-width: var(--site-measure-note);
+  max-width: var(--ifield-lead-measure);
 }
 
 .cl-ifield-tiles {
@@ -149,7 +150,7 @@
     gap: var(--site-space-2);
     min-height: var(--site-space-12);
     padding: var(--site-space-2) var(--site-space-3);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-control);
     text-align: left;
   }
 

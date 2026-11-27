@@ -50,3 +50,8 @@
   --text-figure-xl--font-weight: var(--weight-medium);
   --text-figure-xl--letter-spacing: 0;
 }
+
+:root {
+  --type-base: 0.875rem;
+  --type-step: 0.125rem;
+}

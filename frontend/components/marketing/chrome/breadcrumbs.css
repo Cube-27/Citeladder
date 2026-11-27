@@ -35,7 +35,7 @@
 }
 
 .cl-crumbs a {
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-mark);
   color: var(--text-color-ink-2);
   text-decoration: none;
 }

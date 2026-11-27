@@ -3,6 +3,9 @@
   --tool-result-min: 420px;
   --tool-result-min-narrow: 360px;
   --tool-empty-min: 280px;
+  --tool-bar-min: calc(var(--site-space) * 13);
+  --tool-copy-min: calc(var(--site-space) * 23);
+  --tool-file-inset: calc(var(--site-space) * 2.5);
 }
 
 .cl-tool {
@@ -68,7 +71,7 @@
   display: flex;
   align-items: center;
   gap: var(--site-space-1) var(--site-space-3);
-  min-height: var(--site-space-13);
+  min-height: var(--tool-bar-min);
   padding: var(--site-space-2) var(--site-space-2) var(--site-space-2) var(--site-space-5);
   border-bottom: var(--site-rule) solid var(--color-rule);
 }
@@ -119,7 +122,7 @@
 }
 
 .cl-tool-copy-status + button {
-  min-width: var(--site-space-23);
+  min-width: var(--tool-copy-min);
 }
 
 .cl-tool-output {
@@ -193,11 +196,11 @@
 }
 
 .cl-tool input[type='file']::file-selector-button {
-  height: calc(var(--spacing-control-md) - var(--site-space-2_5));
+  height: calc(var(--spacing-control-md) - var(--tool-file-inset));
   margin-right: var(--site-space-3);
   padding: 0 var(--site-space-3);
   border: var(--site-rule) solid var(--color-control-line);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-inner);
   background-color: var(--color-panel);
   color: var(--text-color-ink);
   font-family: var(--font-sans);
@@ -252,7 +255,7 @@
   overflow-x: auto;
   margin: 0;
   padding: var(--site-space-4);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   background: var(--color-well);
   color: var(--text-color-ink-2);
   font-family: var(--font-mono);

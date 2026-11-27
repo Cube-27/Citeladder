@@ -29,10 +29,6 @@
   --text-label: var(--text-body);
   --text-label--line-height: var(--text-body--line-height);
   --text-label--font-weight: var(--weight-medium);
-  --text-kicker: var(--text-label);
-  --text-kicker--line-height: var(--text-label--line-height);
-  --text-kicker--font-weight: var(--weight-medium);
-  --text-kicker--letter-spacing: 0;
   --text-site-body: var(--type-base);
   --text-site-body--line-height: calc(var(--text-site-body) + 5 * var(--type-step));
   --text-site-body--font-weight: var(--weight-regular);
@@ -66,10 +62,6 @@
   --text-figure--line-height: calc(var(--text-figure) + 4 * var(--type-step));
   --text-figure--font-weight: var(--weight-medium);
   --text-figure--letter-spacing: -0.01em;
-  --text-display-sm: var(--text-figure);
-  --text-display-sm--line-height: var(--text-figure--line-height);
-  --text-display-sm--font-weight: var(--weight-medium);
-  --text-display-sm--letter-spacing: -0.01em;
   --text-display: calc(var(--type-base) + 6 * var(--type-step));
   --text-display--line-height: calc(var(--text-display) + 4 * var(--type-step));
   --text-display--font-weight: var(--weight-medium);
@@ -93,12 +85,30 @@
 }
 
 :root {
+  --type-base: 1rem;
+  --type-step: 0.125rem;
   --text-code: calc(var(--type-base) - 1.5 * var(--type-step));
   --text-code--line-height: calc(var(--text-code) + 4.5 * var(--type-step));
   --text-code--font-weight: var(--weight-regular);
 }
 
 [data-marketing-surface] {
+  --text-caption--line-height: var(--text-body--line-height);
+  --text-caption-strong--line-height: calc(var(--text-caption) + 2 * var(--type-step));
+  --text-eyebrow--line-height: var(--text-body--line-height);
+  --text-screen-eyebrow--line-height: var(--text-body--line-height);
+  --text-screen-label--line-height: calc(var(--text-caption) + 2 * var(--type-step));
+  --text-data: var(--text-caption);
+  --text-data--line-height: calc(var(--text-data) + 4 * var(--type-step));
+  --text-code: var(--text-body);
+  --text-code--line-height: calc(var(--text-code) + 4 * var(--type-step));
+  --text-title-sm--line-height: calc(var(--text-title-sm) + 5 * var(--type-step));
+  --text-title: calc(var(--type-base) + 2 * var(--type-step));
+  --text-title--line-height: calc(var(--text-title) + 2 * var(--type-step));
+  --text-stat: calc(var(--type-base) + 4 * var(--type-step));
+  --text-stat--line-height: calc(var(--text-stat) + 4 * var(--type-step));
+  --text-display-md: calc(var(--type-base) + 4 * var(--type-step));
+  --text-display-md--line-height: calc(var(--text-display-md) + 3 * var(--type-step));
   --text-heading-lg: calc(var(--type-base) + 2 * var(--type-step));
   --text-heading-lg--line-height: calc(var(--text-heading-lg) + 2 * var(--type-step));
   --text-site-home: calc(var(--type-base) + 22 * var(--type-step));
@@ -108,7 +118,7 @@
   --text-site-title--font-weight: var(--weight-regular);
   --text-site-title--letter-spacing: -0.01em;
   --text-site-section: calc(var(--type-base) + 8 * var(--type-step));
-  --text-site-section--line-height: calc(var(--text-site-section) + 4 * var(--type-step));
+  --text-site-section--line-height: calc(var(--text-site-section) + 2 * var(--type-step));
   --text-site-section--font-weight: var(--weight-regular);
   --text-site-section--letter-spacing: -0.01em;
   --text-site-feature: calc(var(--type-base) + 4 * var(--type-step));
@@ -116,12 +126,6 @@
 }
 
 @media (max-width: 767px) {
-  :root {
-    --text-code: calc(var(--type-base) - 1.5 * var(--type-step));
-    --text-code--line-height: calc(var(--text-code) + 4.5 * var(--type-step));
-    --text-code--font-weight: var(--weight-regular);
-  }
-
   [data-marketing-surface] {
     --text-site-home: calc(var(--type-base) + 8 * var(--type-step));
     --text-site-home--line-height: calc(var(--text-site-home) + 4 * var(--type-step));
@@ -136,14 +140,21 @@
     --text-site-body: calc(var(--type-base) - var(--type-step));
     --text-site-body--line-height: calc(var(--text-site-body) + 4 * var(--type-step));
   }
+
+  .cl-frame-screen {
+    --text-body-lg: calc(var(--type-base) + var(--type-step));
+    --text-body-lg--line-height: calc(var(--text-body-lg) + 6 * var(--type-step));
+    --text-site-body: var(--type-base);
+    --text-site-body--line-height: calc(var(--text-site-body) + 5 * var(--type-step));
+  }
 }
 
 .cl-kicker {
   color: var(--text-color-ink-2);
-  font-size: var(--text-kicker);
-  font-weight: var(--text-kicker--font-weight);
-  line-height: var(--text-kicker--line-height);
-  letter-spacing: var(--text-kicker--letter-spacing);
+  font-size: var(--text-label);
+  font-weight: var(--text-label--font-weight);
+  line-height: var(--text-label--line-height);
+  letter-spacing: 0;
 }
 
 .cl-muted {

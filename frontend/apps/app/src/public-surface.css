@@ -6,9 +6,7 @@
   --ramp-white-a60: oklch(100% 0 0 / 60%);
   --ramp-white-a70: oklch(100% 0 0 / 70%);
   --ramp-neutral-9-a50: oklch(9% 0 0 / 50%);
-  --ramp-neutral-14_5-srgb: #0a0a0a;
   --ramp-neutral-17_8-a80: oklch(17.8% 0 0 / 80%);
-  --ramp-neutral-17_76: #111111;
   --ramp-neutral-20_5: oklch(20.5% 0 0);
   --ramp-neutral-21_2: oklch(21.2% 0 0);
   --ramp-neutral-22_2: #1b1b1b;
@@ -68,20 +66,6 @@
   --ramp-blue-91_2: #d3e3fd;
 }
 
-@media (max-width: 1279px) {
-  :root[data-public-surface] {
-    --spacing-gutter: 24px;
-  }
-}
-
-[data-marketing-surface] {
-  --site-radius-inner: 4px;
-  --site-radius-card: 12px;
-  --site-radius-stage: 16px;
-  --site-radius-frame: 20px;
-  --site-radius-frame-inner: 14px;
-}
-
 :root[data-public-surface]:not([data-theme='dark']) {
   --color-ground: var(--ramp-white);
   --color-site-page: var(--ramp-white);
@@ -93,10 +77,16 @@
 
 :root[data-public-surface] {
   --shadow-xs: 0 0 0 1px var(--color-rule);
+  --color-secondary-edge: var(--color-control-line);
   --marketing-nav-offset: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
 }
 
+[data-public-surface] [data-button-variant='secondary']:not(:is(.cl-screen, .cl-vig) *) {
+  border-color: var(--color-secondary-edge);
+}
+
 :root[data-marketing-surface] {
+  --color-secondary-edge: var(--color-button-edge);
   --color-site-mark: var(--ramp-neutral-55_6);
   --color-site-chip: var(--ramp-neutral-94_6);
   --text-color-site-chip-ink: var(--ramp-neutral-26_9);
@@ -147,15 +137,15 @@
 .cl-screen--app {
   --color-ground: var(--ramp-slate-93_5-h256);
   --color-page: var(--ramp-slate-96_6);
-  --color-panel: var(--ramp-white-srgb);
-  --color-raised: var(--ramp-white-srgb);
+  --color-panel: var(--ramp-white);
+  --color-raised: var(--ramp-white);
   --color-raised-2: var(--ramp-slate-94_8);
   --screen-nav-current: var(--ramp-blue-91_2);
 }
 
 :root[data-theme='dark'] .cl-screen--app {
-  --color-ground: var(--ramp-neutral-14_5-srgb);
-  --color-page: var(--ramp-neutral-17_76);
+  --color-ground: var(--ramp-neutral-14_5);
+  --color-page: var(--ramp-neutral-17_8);
   --color-panel: var(--ramp-neutral-22_2);
   --color-raised: var(--ramp-neutral-25_6);
   --color-raised-2: var(--ramp-neutral-30_1);

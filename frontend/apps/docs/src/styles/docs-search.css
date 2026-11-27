@@ -74,25 +74,12 @@
     padding-inline: var(--site-space-2);
   }
 
-  .cl-docs-search-status {
-    color: var(--text-color-ink-2);
-    font-size: var(--text-caption);
-    line-height: var(--text-caption--line-height);
-    letter-spacing: var(--text-caption--letter-spacing);
-    font-weight: var(--text-caption--font-weight);
-  }
-
   .cl-docs-search-group {
     margin-top: var(--site-space-2);
   }
 
   .cl-docs-search-group-label {
     padding: var(--site-space-1) var(--site-space-2);
-    color: var(--text-color-ink-2);
-    font-size: var(--text-caption-strong);
-    line-height: var(--text-caption-strong--line-height);
-    letter-spacing: var(--text-caption-strong--letter-spacing);
-    font-weight: var(--text-caption-strong--font-weight);
   }
 
   .cl-docs-search-option {
@@ -111,20 +98,6 @@
     gap: var(--site-space-0_5);
   }
 
-  .cl-docs-search-option-title {
-    color: var(--text-color-ink);
-    font-size: var(--text-label);
-    line-height: var(--text-label--line-height);
-    font-weight: var(--text-label--font-weight);
-  }
-
-  .cl-docs-search-option-description {
-    color: var(--text-color-ink-2);
-    font-size: var(--text-body);
-    line-height: var(--text-body--line-height);
-    font-weight: var(--text-body--font-weight);
-  }
-
   .cl-docs-search-footer {
     gap: var(--site-space-4);
     padding: var(--site-space-2) var(--site-space-4);
@@ -135,9 +108,5 @@
     line-height: var(--text-caption--line-height);
     letter-spacing: var(--text-caption--letter-spacing);
     font-weight: var(--text-caption--font-weight);
-  }
-
-  .cl-docs-search-key {
-    gap: var(--site-space-2);
   }
 }
