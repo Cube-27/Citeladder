@@ -1,16 +1,3 @@
-:root {
-  --data-table-shrink: 1px;
-}
-
-[data-data-table-frame] {
-  --data-table-identity-min: 25ch;
-  --data-table-hug-cap: 40ch;
-  --data-table-select: calc(var(--spacing) * 10);
-  --data-table-select-gap: calc(var(--spacing) * 2);
-  --data-table-gutter: calc(var(--spacing) * 3);
-  --data-table-edge-pad: calc(var(--spacing) * 4);
-}
-
 @media (min-width: 768px) {
   [data-pinned] .table-frame tr > :nth-child(1),
   [data-pinned='2'] .table-frame tr > :nth-child(2) {

@@ -482,10 +482,7 @@ holds the depth rules.
 
 - **Tables.** Geometry as in Standard layouts. A page declares each
   column's kind and width role, never a pixel width; `DataTable` turns them
-  into data attributes on the table frame (`data-c<n>`), read by the static
-  position rules in `components/ui/generated/data-table-positions.css`
-  (16 positions; `pnpm gen:table-positions` rewrites it, and a test fails
-  when it is stale): `flex` columns share the spare
+  into position rules scoped to its own frame: `flex` columns share the spare
   width and cut their text, every other role hugs its content above a small
   floor, so no gap opens between columns. When the floors do not fit, `low`
   columns hide, the last first; below that the table scrolls with the first

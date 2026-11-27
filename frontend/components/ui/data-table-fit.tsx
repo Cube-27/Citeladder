@@ -56,7 +56,8 @@ const sameList = (a: readonly number[], b: readonly number[]) =>
 export function useFittedColumns({
   columns,
   selection,
-}: Readonly<{ columns: readonly DataTableColumn[]; selection: boolean }>) {
+  scope,
+}: Readonly<{ columns: readonly DataTableColumn[]; selection: boolean; scope: string }>) {
   const frameRef = useRef<HTMLDivElement>(null);
   const probeRef = useRef<HTMLDivElement>(null);
   const [hidden, setHidden] = useState<readonly number[]>([]);
@@ -117,7 +118,7 @@ export function useFittedColumns({
     frameRef,
     shown,
     shownKeys: new Set(shown.map((column) => column.key)),
-    layout: columnLayout({ columns, hidden, selection }),
+    layout: columnLayout({ columns, hidden, selection, scope }),
     probe: hasLow ? <FloorProbe ref={probeRef} columns={columns} selection={selection} /> : null,
   };
 }
