@@ -90,7 +90,7 @@ export function SettingRow({
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <RowName label={label} description={description} />
         {hasValue || action ? (
-          <div className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2">
+          <div className="flex min-w-0 flex-1 basis-0 flex-wrap items-center justify-end gap-2">
             {hasValue ? (
               <div className="text-body text-ink-2 min-w-0 text-end break-words">{value}</div>
             ) : null}
