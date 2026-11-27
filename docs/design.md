@@ -267,7 +267,11 @@ refreshes.
 `focus` ring, never removed (a gated `aria-disabled` control keeps it; only a
 `:disabled` one is unfocusable): a 2px accent ring 2px outside the control,
 drawn inward where a frame clips it; it holds 3:1 on every fill; all motion stops under
-`prefers-reduced-motion`.
+`prefers-reduced-motion`. A pending button stays focusable (`aria-busy`,
+`aria-disabled`) and swallows activation, so focus never drops to the page;
+a confirm's Cancel stays live while it runs. Text a tooltip alone carries
+(column hints, absence reasons) uses `reach="tap"`: it is the trigger's
+description and opens on a tap.
 
 ## Standard layouts
 

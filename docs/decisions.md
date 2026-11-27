@@ -367,7 +367,9 @@ how to add or change an entry.
   **AR-11** A PR that grows the line count needs a reason.
 - **AR-12** Sign-in and account pages keep the split screen with the showcase
   and an unboxed form; setup keeps its own layout. **AR-13** Focus is a subtle
-  accent edge and glow.
+  accent edge and glow; a field an overlay focuses on opening shows the ring
+  when a key opened the overlay and only the caret when a press did (owner,
+  2026-11-27).
 - **AR-14 No helper text** under a heading or field unless it carries what the
   label cannot (a limit, a count, an error).
 - **AR-15 Business facts** are edited in the Prompt builder and Agent context's
