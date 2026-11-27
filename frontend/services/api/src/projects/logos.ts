@@ -16,10 +16,9 @@ export function competitorLogoUrl(projectId: string, competitorId: string): stri
 
 export async function logoResponse(
   db: Database,
-  scope: ProjectScope,
-  competitorId: string | null,
-  ifNoneMatch: string | undefined,
+  request: { scope: ProjectScope; competitorId: string | null; ifNoneMatch: string | undefined },
 ): Promise<Response> {
+  const { scope, competitorId } = request;
   const owner =
     competitorId === null
       ? db
@@ -31,25 +30,28 @@ export async function logoResponse(
           .innerJoin('projects', 'projects.id', 'owner.project_id')
           .where('projects.id', '=', scope.projectId)
           .where('owner.id', '=', competitorId);
-  const asset = await owner
+  const ready = owner
     .innerJoin('brand_logo_assets as asset', 'asset.id', 'owner.logo_asset_id')
-    .select(['asset.image_data', 'asset.content_type', 'asset.sha256'])
     .where('projects.workspace_id', '=', scope.workspaceId)
     .where('asset.status', '=', READY)
-    .where('asset.image_data', 'is not', null)
-    .executeTakeFirst();
-  if (asset?.image_data == null)
-    throw notFound(competitorId === null ? 'Brand logo' : 'Competitor logo');
-  const etag = `"${asset.sha256}"`;
-  const headers = {
+    .where('asset.image_data', 'is not', null);
+  const current = await ready.select('asset.sha256').executeTakeFirst();
+  const missing = () => notFound(competitorId === null ? 'Brand logo' : 'Competitor logo');
+  if (current === undefined) throw missing();
+  const headers = (sha256: string) => ({
     'cache-control': REVALIDATE_CACHE_CONTROL,
     'content-disposition': 'inline',
     'content-security-policy': "default-src 'none'; sandbox",
-    etag,
+    etag: `"${sha256}"`,
     'x-content-type-options': 'nosniff',
-  };
-  if (ifNoneMatch === etag) return new Response(null, { status: 304, headers });
+  });
+  if (request.ifNoneMatch === `"${current.sha256}"`)
+    return new Response(null, { status: 304, headers: headers(current.sha256) });
+  const asset = await ready
+    .select(['asset.content_type', 'asset.sha256', 'asset.image_data'])
+    .executeTakeFirst();
+  if (asset?.image_data == null) throw missing();
   return new Response(new Uint8Array(asset.image_data), {
-    headers: { ...headers, 'content-type': asset.content_type },
+    headers: { ...headers(asset.sha256), 'content-type': asset.content_type },
   });
 }

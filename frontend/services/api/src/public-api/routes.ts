@@ -191,13 +191,12 @@ export const publicApiRoutes: readonly ProductRoute[] = [
           .executeTakeFirst())
       )
         throw new ApiError(400, 'Invalid cursor', { code: 'invalid_cursor' });
-      const rows = await listAudits(
-        db,
+      const rows = await listAudits(db, {
         workspaceId,
-        path.project_id,
-        query.limit + 1,
-        after ?? undefined,
-      );
+        projectId: path.project_id,
+        limit: query.limit + 1,
+        afterId: after ?? undefined,
+      });
       const items = rows.slice(0, query.limit);
       const last = items.at(-1);
       return {

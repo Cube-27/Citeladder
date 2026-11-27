@@ -10,16 +10,17 @@ import { modelProvenanceFor } from '../analysis/provenance.ts';
 import { engineSnapshots } from '../visibility/runs.ts';
 import { firstOf } from '../lists.ts';
 
+const auditTimes = () => [
+  utcTextOf(sql.ref('created_at')).as('created_text'),
+  utcTextOf(sql.ref('updated_at')).as('updated_text'),
+  utcText(sql.ref('started_at')).as('started_text'),
+  utcText(sql.ref('completed_at')).as('completed_text'),
+];
 function auditQuery(db: Database, workspaceId: string) {
   return db
     .selectFrom('audits')
     .selectAll()
-    .select([
-      utcTextOf(sql.ref('created_at')).as('created_text'),
-      utcTextOf(sql.ref('updated_at')).as('updated_text'),
-      utcText(sql.ref('started_at')).as('started_text'),
-      utcText(sql.ref('completed_at')).as('completed_text'),
-    ])
+    .select(auditTimes())
     .where('workspace_id', '=', workspaceId);
 }
 export async function authorizedAudit(db: Database, workspaceId: string, auditId: string) {
@@ -35,11 +36,32 @@ function frozenMarket(audit: { market_id: string | null; configuration: unknown 
     language_code: typeof config.language_code === 'string' ? config.language_code : '',
   };
 }
-async function auditResponses(
-  db: Database,
-  workspaceId: string,
-  audits: Awaited<ReturnType<typeof authorizedAudit>>[],
-) {
+const LISTED_COLUMNS = [
+  'id',
+  'workspace_id',
+  'project_id',
+  'parent_audit_id',
+  'status',
+  'benchmark_mode',
+  'audit_scope',
+  'repetitions',
+  'random_seed',
+  'requested_count',
+  'completed_count',
+  'failed_count',
+  'error_message',
+  'launch_id',
+  'market_id',
+] as const;
+type AuditRow = Pick<
+  Awaited<ReturnType<typeof authorizedAudit>>,
+  | (typeof LISTED_COLUMNS)[number]
+  | 'created_text'
+  | 'updated_text'
+  | 'started_text'
+  | 'completed_text'
+> & { configuration: unknown };
+async function auditResponses(db: Database, workspaceId: string, audits: AuditRow[]) {
   const routes = await engineSnapshots(
     db,
     workspaceId,
@@ -77,12 +99,24 @@ export async function readAudits(db: Database, workspaceId: string, auditIds: re
 }
 export async function listAudits(
   db: Database,
-  workspaceId: string,
-  projectId?: string,
-  limit = 50,
-  afterId?: string,
+  page: { workspaceId: string; projectId?: string; limit?: number; afterId?: string },
 ) {
-  let query = auditQuery(db, workspaceId)
+  const { workspaceId, projectId, limit = 50, afterId } = page;
+  let query = db
+    .selectFrom('audits')
+    .select([
+      ...LISTED_COLUMNS,
+      sql<unknown>`jsonb_build_object(
+        'country_code', configuration -> 'country_code',
+        'language_code', configuration -> 'language_code',
+        'not_applicable_engines', configuration -> 'not_applicable_engines',
+        'measurement_policy', jsonb_build_object(
+          'retrieval_enabled', configuration -> 'measurement_policy' -> 'retrieval_enabled'
+        )
+      )`.as('configuration'),
+      ...auditTimes(),
+    ])
+    .where('workspace_id', '=', workspaceId)
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
     .limit(limit);

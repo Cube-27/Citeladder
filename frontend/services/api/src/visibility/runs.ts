@@ -46,27 +46,23 @@ export type RunScope = {
 };
 export const marketOf = (scope: { marketId?: string | null }) => scope.marketId ?? null;
 
-export type Instant = ParsedDatetime | string;
+type Instant = ParsedDatetime | string;
 
 function instantOperand(value: Instant) {
   return typeof value === 'string' ? storedInstant(value) : timestamptz(value);
 }
 
-export async function loadMeasuredRuns(
-  db: Database,
-  scope: RunScope,
-  window: {
-    fromAt: Instant | null;
-    toAt: Instant | null;
-    newest?: number;
-    olderThan?: string;
-    newerThan?: string;
-    oldest?: number;
-    auditId?: string;
-  },
-): Promise<MeasuredRun[]> {
-  const topicId = scope.topicId ?? null;
-  const measured = (column: string) => sql.ref(`${topicId ? 'topic' : 'snapshot'}.${column}`);
+type MeasuredWindow = {
+  fromAt: Instant | null;
+  toAt: Instant | null;
+  newest?: number;
+  olderThan?: string;
+  newerThan?: string;
+  oldest?: number;
+  auditId?: string;
+};
+
+function measuredRuns(db: Database, scope: RunScope, window: MeasuredWindow) {
   let query = db
     .selectFrom('metric_snapshots as snapshot')
     .innerJoin('audits as audit', 'audit.id', 'snapshot.audit_id')
@@ -74,8 +70,44 @@ export async function loadMeasuredRuns(
       join
         .onRef('topic.audit_id', '=', 'audit.id')
         .on('topic.workspace_id', '=', scope.workspaceId)
-        .on(sql<boolean>`topic.topic_id = ${topicId}`),
+        .on(sql<boolean>`topic.topic_id = ${scope.topicId ?? null}`),
     )
+    .where('snapshot.workspace_id', '=', scope.workspaceId)
+    .where('snapshot.project_id', '=', scope.projectId)
+    .where('audit.workspace_id', '=', scope.workspaceId)
+    .where('audit.project_id', '=', scope.projectId)
+    .where('audit.market_id', 'is not distinct from', marketOf(scope))
+    .where('audit.audit_scope', '=', visibility.brand_audit_scope)
+    .where('audit.status', 'in', visibility.dashboard_audit_statuses)
+    .where('audit.completed_at', 'is not', null);
+  if (scope.topicId) query = query.where('topic.id', 'is not', null);
+  if (window.auditId !== undefined) query = query.where('audit.id', '=', window.auditId);
+  if (window.fromAt) query = query.where('audit.completed_at', '>=', instantOperand(window.fromAt));
+  if (window.toAt) query = query.where('audit.completed_at', '<=', instantOperand(window.toAt));
+  if (window.olderThan !== undefined)
+    query = query.where(
+      sql<boolean>`(audit.completed_at, audit.created_at, audit.id) < (select a.completed_at, a.created_at, a.id from audits a where a.id = ${window.olderThan} and a.workspace_id = ${scope.workspaceId})`,
+    );
+  if (window.newerThan !== undefined)
+    query = query.where(
+      sql<boolean>`(audit.completed_at, audit.created_at, audit.id) > (select a.completed_at, a.created_at, a.id from audits a where a.id = ${window.newerThan} and a.workspace_id = ${scope.workspaceId})`,
+    );
+  const direction = window.newest === undefined ? 'asc' : 'desc';
+  query = query
+    .orderBy('audit.completed_at', direction)
+    .orderBy('audit.created_at', direction)
+    .orderBy('audit.id', direction);
+  if (window.newest !== undefined) return query.limit(window.newest);
+  return window.oldest === undefined ? query : query.limit(window.oldest);
+}
+
+export async function loadMeasuredRuns(
+  db: Database,
+  scope: RunScope,
+  window: MeasuredWindow,
+): Promise<MeasuredRun[]> {
+  const measured = (column: string) => sql.ref(`${scope.topicId ? 'topic' : 'snapshot'}.${column}`);
+  const rows = await measuredRuns(db, scope, window)
     .select([
       sql<string>`${measured('id')}`.as('snapshot_id'),
       'snapshot.audit_id',
@@ -88,36 +120,8 @@ export async function loadMeasuredRuns(
       'audit.configuration',
       utcTextOf(sql.ref('audit.completed_at')).as('completed_at'),
     ])
-    .where('snapshot.workspace_id', '=', scope.workspaceId)
-    .where('snapshot.project_id', '=', scope.projectId)
-    .where('audit.workspace_id', '=', scope.workspaceId)
-    .where('audit.project_id', '=', scope.projectId)
-    .where('audit.market_id', 'is not distinct from', marketOf(scope))
-    .where('audit.audit_scope', '=', visibility.brand_audit_scope)
-    .where('audit.status', 'in', visibility.dashboard_audit_statuses)
-    .where('audit.completed_at', 'is not', null);
-  if (topicId) query = query.where('topic.id', 'is not', null);
-  if (window.auditId !== undefined) query = query.where('audit.id', '=', window.auditId);
-  if (window.fromAt) query = query.where('audit.completed_at', '>=', instantOperand(window.fromAt));
-  if (window.toAt) query = query.where('audit.completed_at', '<=', instantOperand(window.toAt));
-  if (window.olderThan !== undefined)
-    query = query.where(
-      sql<boolean>`(audit.completed_at, audit.created_at, audit.id) < (select a.completed_at, a.created_at, a.id from audits a where a.id = ${window.olderThan} and a.workspace_id = ${scope.workspaceId})`,
-    );
-  if (window.newerThan !== undefined)
-    query = query.where(
-      sql<boolean>`(audit.completed_at, audit.created_at, audit.id) > (select a.completed_at, a.created_at, a.id from audits a where a.id = ${window.newerThan} and a.workspace_id = ${scope.workspaceId})`,
-    );
-  const newestFirst = window.newest !== undefined;
-  const direction = newestFirst ? 'desc' : 'asc';
-  query = query
-    .orderBy('audit.completed_at', direction)
-    .orderBy('audit.created_at', direction)
-    .orderBy('audit.id', direction);
-  if (newestFirst) query = query.limit(window.newest!);
-  else if (window.oldest !== undefined) query = query.limit(window.oldest);
-  const rows = await query.execute();
-  if (newestFirst) rows.reverse();
+    .execute();
+  if (window.newest !== undefined) rows.reverse();
   const routes = await engineSnapshots(
     db,
     scope.workspaceId,
@@ -150,14 +154,31 @@ export async function periodTrendSelection(
     .where('workspace_id', '=', selection.workspaceId)
     .where('id', '=', pooled)
     .executeTakeFirstOrThrow();
-  const runs = await loadMeasuredRuns(
+  const runs = await measuredRuns(
     db,
     { ...selection, marketId: run.market_id },
     { fromAt: selection.fromAt, toAt: selection.toAt, newest: visibility.selection_max_runs },
-  );
+  )
+    .select('audit.id')
+    .execute();
   if (runs.length === 0) return null;
-  const auditIds = runs.map((measured) => measured.auditId);
+  const auditIds = runs.map((measured) => measured.id).reverse();
   return { ...selection, auditId: null, auditIds, fromAt: null, toAt: null };
+}
+
+export function samePeriod({
+  period,
+  selection,
+}: {
+  period: RunSelection;
+  selection: RunSelection;
+}): boolean {
+  const pooled = selection.auditIds ?? [];
+  const selected = new Set(
+    selection.auditId === null ? pooled : pooled.filter((id) => id === selection.auditId),
+  );
+  const periodIds = new Set(period.auditIds ?? []);
+  return selected.size === periodIds.size && [...periodIds].every((id) => selected.has(id));
 }
 
 export async function engineSnapshots(

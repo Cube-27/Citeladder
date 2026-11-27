@@ -148,8 +148,13 @@ describe('brand facts', () => {
 
   it('lists prompts with brand questions checked by default and saves a selection within the project', async () => {
     const setId = await promptSet(db, tenant.projectId);
-    const branded = await prompt(db, setId, 'Is Acme any good?', { branded: true });
-    const plain = await prompt(db, setId, 'Best CRM tools?');
+    const branded = await prompt(db, setId, 'Is Acme any good?', {
+      branded: true,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+    });
+    const plain = await prompt(db, setId, 'Best CRM tools?', {
+      createdAt: new Date('2026-01-01T00:00:01Z'),
+    });
     await prompt(db, setId, 'Old question?', { status: 'archived' });
     expect((await call(tenant, 'GET', '/fact-check/prompts')).status).toBe(409);
     await enroll(tenant);
@@ -646,8 +651,11 @@ describe('accuracy reads', () => {
       `/visibility/accuracy?audit_ids=${pooled}&${window}`,
     );
 
+    const range = await call(tenant, 'GET', `/visibility/accuracy?${window}`);
+
     expect(status).toBe(200);
     expect(body.source_audit_ids).toEqual([pooled]);
+    expect([range.status, range.body.source_audit_ids]).toEqual([200, [pooled, other].sort()]);
     expect(
       (body.trend as { audit_id: string; comparable: boolean }[]).map((point) => [
         point.audit_id,

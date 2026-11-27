@@ -72,7 +72,7 @@ function serveLogo(
   competitorId: string | null,
 ) {
   const scope = { workspaceId: c.get('workspace').workspaceId, projectId };
-  return logoResponse(db, scope, competitorId, c.req.header('if-none-match'));
+  return logoResponse(db, { scope, competitorId, ifNoneMatch: c.req.header('if-none-match') });
 }
 
 export const brandIdentityRoutes = [

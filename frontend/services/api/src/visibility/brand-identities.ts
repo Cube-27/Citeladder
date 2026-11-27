@@ -72,20 +72,29 @@ export async function brandIdentities(
   db: Database,
   { workspaceId, projectId }: ProjectScope,
 ): Promise<Map<string, BrandIdentity>> {
-  const project = await db
-    .selectFrom('projects')
-    .select(['id', 'website_url'])
-    .where('id', '=', projectId)
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirst();
+  const [project, brand, competitors] = await Promise.all([
+    db
+      .selectFrom('projects')
+      .select(['id', 'website_url'])
+      .where('id', '=', projectId)
+      .where('workspace_id', '=', workspaceId)
+      .executeTakeFirst(),
+    db
+      .selectFrom('brands')
+      .select(['name', 'logo_asset_id'])
+      .where('workspace_id', '=', workspaceId)
+      .where('project_id', '=', projectId)
+      .executeTakeFirst(),
+    db
+      .selectFrom('competitors')
+      .select(['id', 'name', 'aliases', 'domains', 'logo_asset_id'])
+      .where('workspace_id', '=', workspaceId)
+      .where('project_id', '=', projectId)
+      .orderBy('created_at')
+      .execute(),
+  ]);
   const found = new Map<string, BrandIdentity>();
   if (project === undefined) return found;
-  const brand = await db
-    .selectFrom('brands')
-    .select(['name', 'logo_asset_id'])
-    .where('workspace_id', '=', workspaceId)
-    .where('project_id', '=', projectId)
-    .executeTakeFirst();
   if (brand?.name) {
     const owned = project.website_url
       ? undefined
@@ -103,13 +112,6 @@ export async function brandIdentities(
       website: siteOf(project.website_url || owned?.domain),
     });
   }
-  const competitors = await db
-    .selectFrom('competitors')
-    .select(['id', 'name', 'aliases', 'domains', 'logo_asset_id'])
-    .where('workspace_id', '=', workspaceId)
-    .where('project_id', '=', projectId)
-    .orderBy('created_at')
-    .execute();
   for (const competitor of competitors) {
     const identity = {
       logo_url: competitor.logo_asset_id ? competitorLogoUrl(project.id, competitor.id) : null,

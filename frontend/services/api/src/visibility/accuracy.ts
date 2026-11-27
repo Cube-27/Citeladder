@@ -51,9 +51,10 @@ import { requireFlag } from '../entitlements/access.ts';
 import { factCheckingEnabled } from '../projects/brand-facts.ts';
 import { listMarkets } from '../projects/markets.ts';
 import { compareText } from '../text-order.ts';
-import { scopedSelection } from './dashboard.ts';
+import { windowSelection } from './dashboard.ts';
 import { perceptionRows } from './perception.ts';
-import { periodTrendSelection } from './runs.ts';
+import { runConfigurations } from './run-configurations.ts';
+import { periodTrendSelection, samePeriod } from './runs.ts';
 import {
   citationsByAnalysis,
   evidenceScope,
@@ -264,28 +265,38 @@ async function claimsOf(
 
 async function selectionAnswers(
   db: Database,
-  selection: RunSelection,
+  scoped: RunSelection,
   options: { citations: boolean },
 ) {
-  const scoped = await scopedSelection(db, selection);
-  const frozenRows = (
-    await evidenceScope(db, scoped, perceptionCohorts(scoped.cohort))
-      .select([
-        'ra.id',
-        'ra.audit_id',
-        'ra.task_id',
-        'ra.logical_engine',
-        'ra.entity_assessments',
-        'audit.configuration',
-        'audit.market_id',
-        'snapshot.text as prompt',
-        'snapshot.prompt_id',
-        utcTextOf(observedAt).as('observed_at'),
-      ])
-      .execute()
-  ).flatMap((row) => {
-    const frozen = frozenOf(row.configuration);
-    return frozen ? [{ ...row, frozen }] : [];
+  const selected = await evidenceScope(db, scoped, perceptionCohorts(scoped.cohort))
+    .select([
+      'ra.id',
+      'ra.audit_id',
+      'ra.task_id',
+      'ra.logical_engine',
+      'ra.entity_assessments',
+      'audit.market_id',
+      'snapshot.text as prompt',
+      'snapshot.prompt_id',
+      utcTextOf(observedAt).as('observed_at'),
+    ])
+    .execute();
+  const configurations = await runConfigurations(db, {
+    workspaceId: scoped.workspaceId,
+    projectId: scoped.projectId,
+    auditIds: selected.map((row) => row.audit_id),
+  });
+  const runs = new Map(
+    [...configurations].flatMap(([auditId, configuration]) => {
+      const frozen = frozenOf(configuration);
+      if (!frozen) return [];
+      const comparisonKey = frozenComparisonKey(configuration, scoped.logicalEngine) ?? auditId;
+      return [[auditId, { configuration, frozen, comparisonKey }] as const];
+    }),
+  );
+  const frozenRows = selected.flatMap((row) => {
+    const run = runs.get(row.audit_id);
+    return run ? [{ ...row, frozen: run.frozen, comparisonKey: run.comparisonKey }] : [];
   });
   const factChecked = frozenRows.length > 0;
   const rows = frozenRows.filter((row) => promptFactCheck(row.frozen.factCheck, row.prompt_id));
@@ -309,10 +320,7 @@ async function selectionAnswers(
       observedAt: wireUtc(row.observed_at),
       logicalEngine: row.logical_engine,
       prompt: row.prompt,
-      identity: JSON.stringify([
-        frozenComparisonKey(row.configuration, scoped.logicalEngine) ?? row.audit_id,
-        identityOf(row.frozen),
-      ]),
+      identity: JSON.stringify([row.comparisonKey, identityOf(row.frozen)]),
       extraction: found?.extraction ?? { kind: 'pending' },
       claims: found?.claims ?? [],
       citations: citations.get(row.id) ?? [],
@@ -324,11 +332,11 @@ async function selectionAnswers(
     auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText),
     frozenRevisionIds: rows.flatMap((row) => row.frozen.factCheck.facts.map((f) => f.revision_id)),
     marketOf: new Map(
-      rows.map((row) => {
+      [...new Map(rows.map((row) => [row.audit_id, row.market_id]))].map(([auditId, id]) => {
         const { country_code = '', language_code = '' } = readFrozenConfiguration(
-          row.configuration,
+          runs.get(auditId)?.configuration,
         );
-        return [row.audit_id, { id: row.market_id, country_code, language_code }];
+        return [auditId, { id, country_code, language_code }];
       }),
     ),
   };
@@ -353,15 +361,20 @@ export async function getAccuracy(
   selection: RunSelection,
 ): Promise<AccuracyResponse> {
   if (!(await factCheckingEnabled(db, selection.workspaceId))) return notEnabled();
-  const scoped = await scopedSelection(db, selection);
+  const scoped = await windowSelection(db, selection);
   const [{ answers, factChecked, auditIds }, period] = await Promise.all([
     selectionAnswers(db, scoped, { citations: true }),
     periodTrendSelection(db, scoped),
   ]);
   const summary = accuracySummary(answers, factChecked, settings);
-  const trend = period
-    ? accuracyTrend((await selectionAnswers(db, period, { citations: false })).answers)
-    : summary.trend;
+  const trend =
+    period === null
+      ? summary.trend
+      : accuracyTrend(
+          samePeriod({ period, selection: scoped })
+            ? answers
+            : (await selectionAnswers(db, period, { citations: false })).answers,
+        );
   return { ...summary, trend, source_audit_ids: auditIds };
 }
 
@@ -418,9 +431,11 @@ export async function getAccuracyFacts(
   selection: RunSelection,
 ): Promise<AccuracyFactList> {
   if (!(await factCheckingEnabled(db, selection.workspaceId))) return { enabled: false, facts: [] };
-  const { answers, frozenRevisionIds } = await selectionAnswers(db, selection, {
-    citations: false,
-  });
+  const { answers, frozenRevisionIds } = await selectionAnswers(
+    db,
+    await windowSelection(db, selection),
+    { citations: false },
+  );
   const cited = answers.flatMap((answer) =>
     answer.claims.flatMap((claim) => claim.facts.map((fact) => fact.revision_id)),
   );
@@ -448,7 +463,9 @@ export async function accuracyClaimRows(
   filters: ClaimFilters,
 ): Promise<Record<(typeof CLAIM_EXPORT_COLUMNS)[number], string>[]> {
   await requireFlag(db, selection.workspaceId, 'fact_checking');
-  const { answers, marketOf } = await selectionAnswers(db, selection, { citations: false });
+  const { answers, marketOf } = await selectionAnswers(db, await windowSelection(db, selection), {
+    citations: false,
+  });
   const keep = claimFilter(filters);
   const claims = answers
     .flatMap((answer) =>
@@ -499,7 +516,9 @@ export async function getAccuracyClaims(
   const after = filters.cursor ? cursorPosition(filters.cursor, fingerprint) : null;
   if (!(await factCheckingEnabled(db, selection.workspaceId)))
     return { items: [], next_cursor: null };
-  const { answers } = await selectionAnswers(db, selection, { citations: false });
+  const { answers } = await selectionAnswers(db, await windowSelection(db, selection), {
+    citations: false,
+  });
   const claims = positionedClaims(answers, claimFilter(filters)).filter(
     (claim) => after === null || claimOrder(claim, after) > 0,
   );

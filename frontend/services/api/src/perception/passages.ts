@@ -34,12 +34,23 @@ export function namesAnyEntity(assessments: readonly { state: string }[]): boole
   return assessments.some((row) => isNamed(row.state));
 }
 
-function segmenter(languageCode: string) {
+const segmenters = new Map<string, Intl.Segmenter>();
+
+function localeOf(languageCode: string): string {
   try {
-    return new Intl.Segmenter(languageCode || 'en', { granularity: 'sentence' });
+    return Intl.getCanonicalLocales(languageCode || 'en')[0] ?? 'en';
   } catch {
-    return new Intl.Segmenter('en', { granularity: 'sentence' });
+    return 'en';
   }
+}
+
+function segmenter(languageCode: string) {
+  const locale = localeOf(languageCode);
+  const cached = segmenters.get(locale);
+  if (cached) return cached;
+  const created = new Intl.Segmenter(locale, { granularity: 'sentence' });
+  segmenters.set(locale, created);
+  return created;
 }
 
 function codePointIndex(text: string): (utf16: number) => number {

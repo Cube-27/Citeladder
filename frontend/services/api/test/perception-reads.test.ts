@@ -1,7 +1,11 @@
+import { randomUUID } from 'node:crypto';
+
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { frozenComparisonKey } from '../src/analysis/comparison.ts';
 import { policy } from '../src/config.ts';
 import { perceivedAnswers, sentimentsOf } from '../src/visibility/perception.ts';
+import { runConfigurations } from '../src/visibility/run-configurations.ts';
 import {
   aspect,
   CONFIGURATION,
@@ -432,6 +436,21 @@ describe('GET /visibility/perception', () => {
     const pooled = await run(period, '2026-04-02T00:00:00Z', 'panel-1', 'positive');
     const other = await run(period, '2026-04-05T00:00:00Z', 'panel-2', 'negative');
     await run(outsider, '2026-04-03T00:00:00Z', 'panel-1', 'negative');
+    const abroad = await run(period, '2026-04-04T00:00:00Z', 'panel-1', 'negative');
+    const marketId = randomUUID();
+    await db
+      .insertInto('project_markets')
+      .values({
+        id: marketId,
+        workspace_id: period.workspaceId,
+        project_id: period.projectId,
+        label: 'United Kingdom',
+        country_code: 'GB',
+        language_code: 'en',
+        created_at: new Date(),
+      })
+      .execute();
+    await db.updateTable('audits').set({ market_id: marketId }).where('id', '=', abroad).execute();
 
     const { status, body } = await get(
       period,
@@ -453,6 +472,54 @@ describe('GET /visibility/perception', () => {
       [pooled, true],
       [other, false],
     ]);
+  });
+
+  it('keeps each run its own frozen versions and comparison key when one read spans two runs', async () => {
+    const owner = await fixtures.tenant();
+    const outsider = await fixtures.tenant();
+    const configuration = (panel: string, template: string) => ({
+      ...frozen({ panel_hash: panel }),
+      ...CONFIGURATION,
+      perception: { ...VERSIONS, template_version: template },
+    });
+    const older = configuration('panel-a', 'template-a');
+    const newer = configuration('panel-b', 'template-b');
+    const first = await fixtures.audit(owner, { configuration: older });
+    const second = await fixtures.audit(owner, { configuration: newer });
+    const foreign = await fixtures.audit(outsider, { configuration: older });
+    for (const id of [first, second])
+      await answer(owner, id, {
+        outcome: 'classified',
+        entities: [{ name: 'Acme', kind: 'brand', label: 'positive' }],
+      });
+
+    const answers = await perceivedAnswers(db, {
+      workspaceId: owner.workspaceId,
+      projectId: owner.projectId,
+      marketId: null,
+      auditId: null,
+      auditIds: [first, second],
+      logicalEngine: null,
+      cohort: 'all',
+      fromAt: null,
+      toAt: null,
+    });
+    const configurations = await runConfigurations(db, {
+      workspaceId: owner.workspaceId,
+      projectId: owner.projectId,
+      auditIds: [first, foreign],
+    });
+
+    expect(frozenComparisonKey(older, null)).not.toBe(frozenComparisonKey(newer, null));
+    expect(
+      Object.fromEntries(
+        (answers ?? []).map((row) => [row.auditId, [row.versions.template, row.comparisonKey]]),
+      ),
+    ).toEqual({
+      [first]: ['template-a', frozenComparisonKey(older, null)],
+      [second]: ['template-b', frozenComparisonKey(newer, null)],
+    });
+    expect([...configurations.keys()]).toEqual([first]);
   });
 
   it("counts every answer of each run completed in a date window, and no other run's", async () => {

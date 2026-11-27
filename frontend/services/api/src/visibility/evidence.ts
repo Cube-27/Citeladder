@@ -16,6 +16,7 @@ import {
 import { parseUuid } from '../http/uuid.ts';
 import { compareText } from '../text-order.ts';
 import { brandIdentities, markOf, type BrandIdentity } from './brand-identities.ts';
+import { runConfigurations } from './run-configurations.ts';
 import {
   authorizedSelection,
   evidenceScope,
@@ -185,7 +186,6 @@ export async function getVisibilityEvidence(
       'snapshot.prompt_id',
       'snapshot.text as prompt_text',
       utcText(sql.ref('audit.completed_at')).as('completed_at'),
-      'audit.configuration',
       'artifact.search_events as artifact_events',
     ])
     .as('matched');
@@ -204,13 +204,16 @@ export async function getVisibilityEvidence(
   const truncated = rows.length > options.limit;
   const shown = rows.slice(0, options.limit);
   const ids = shown.map((row) => row.analysis_id);
-  const [mentions, citations] = await Promise.all([
-    mentionsByAnalysis(db, {
-      workspaceId: selection.workspaceId,
-      analysisIds: ids,
-      identities: await brandIdentities(db, selection),
-    }),
+  const [mentions, citations, configurations] = await Promise.all([
+    brandIdentities(db, selection).then((identities) =>
+      mentionsByAnalysis(db, { workspaceId: selection.workspaceId, analysisIds: ids, identities }),
+    ),
     citationsByAnalysis(db, selection.workspaceId, ids),
+    runConfigurations(db, {
+      workspaceId: selection.workspaceId,
+      projectId: selection.projectId,
+      auditIds: shown.map((row) => row.audit_id),
+    }),
   ]);
   const prompts = new Map<string, string>();
   for (const option of promptChoices) prompts.set(option.identity, option.text);
@@ -242,7 +245,7 @@ export async function getVisibilityEvidence(
         retrieval_enabled: executionFrozenProvenance({
           requestSnapshot: row.request_snapshot,
           routeSnapshot: row.provider_route_snapshot,
-          auditConfiguration: row.configuration,
+          auditConfiguration: configurations.get(row.audit_id),
         }),
         search_used: Boolean(row.search_used),
         search_query_count: searchQueryCount,

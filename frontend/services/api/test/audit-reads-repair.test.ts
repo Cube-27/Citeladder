@@ -58,7 +58,12 @@ describe('persisted audit reads and immutable repair', () => {
     ]);
     expect(run).not.toHaveProperty('configuration');
     expect(run).not.toHaveProperty('funding_account_id');
-    expect(await listAudits(db, t.workspaceId, foreign.projectId)).toEqual([]);
+    expect(await listAudits(db, { workspaceId: t.workspaceId, projectId: t.projectId })).toEqual([
+      run,
+    ]);
+    expect(
+      await listAudits(db, { workspaceId: t.workspaceId, projectId: foreign.projectId }),
+    ).toEqual([]);
     await expect(readAuditMetrics(db, t.workspaceId, t.auditId)).rejects.toMatchObject({
       status: 404,
     });
