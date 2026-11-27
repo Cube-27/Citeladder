@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, Ref } from 'react';
+import type { ButtonHTMLAttributes, ReactElement, Ref } from 'react';
 
 import {
   TEXT_ROLE_CLASS,
@@ -63,8 +63,9 @@ const LOOK = {
   disclosure: cn(ROW_FACE.base, ROW_FACE.rest, pressableRowClasses, 'min-h-10'),
 } as const;
 
-export function Pressable({
+function SlotMergedPressable({
   box,
+  className: slotClass,
   type = 'button',
   tone,
   text,
@@ -72,7 +73,7 @@ export function Pressable({
   look = 'plain',
   ref,
   ...props
-}: Readonly<PressableProps>) {
+}: Readonly<PressableProps & { className?: string }>) {
   return (
     <button
       ref={ref}
@@ -84,8 +85,11 @@ export function Pressable({
         LOOK[look],
         tone && TEXT_TONE_CLASS[tone],
         box && BOX[box],
+        slotClass,
       )}
       {...props}
     />
   );
 }
+
+export const Pressable: (props: Readonly<PressableProps>) => ReactElement = SlotMergedPressable;

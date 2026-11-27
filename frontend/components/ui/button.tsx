@@ -1,6 +1,7 @@
 import {
   type ComponentPropsWithRef,
   type ComponentPropsWithoutRef,
+  type ReactElement,
   type ReactNode,
   type Ref,
 } from 'react';
@@ -80,8 +81,6 @@ const BUTTON_BOX = {
     'rail:inline-flex not-labelled:size-rail-button hidden shrink-0 self-center in-data-[nav-drawer]:hidden',
 } as const;
 
-export type ButtonBox = keyof typeof BUTTON_BOX;
-
 type ButtonFrameProps = ComponentPropsWithoutRef<'button'> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -93,7 +92,9 @@ type ButtonFrameProps = ComponentPropsWithoutRef<'button'> & {
   ref?: Ref<HTMLButtonElement>;
 };
 
-export type ButtonProps = Omit<ButtonFrameProps, 'className' | 'style'> & { box?: ButtonBox };
+export type ButtonProps = Omit<ButtonFrameProps, 'className' | 'style'> & {
+  box?: keyof typeof BUTTON_BOX;
+};
 
 const ICON_SHAPE = 'w-control-md gap-0 px-0';
 
@@ -185,14 +186,22 @@ function NativeButton({
   );
 }
 
-export function Button({ box, ...props }: Readonly<ButtonProps>) {
-  const className = box && BUTTON_BOX[box];
+type SlotClass = { className?: string };
+
+function SlotMergedButton({
+  box,
+  className: slotClass,
+  ...props
+}: Readonly<ButtonProps & SlotClass>) {
+  const className = cn(slotClass, box && BUTTON_BOX[box]) || undefined;
   return props.asChild ? (
     <SlottedButton {...props} className={className} />
   ) : (
     <NativeButton {...props} className={className} />
   );
 }
+
+export const Button: (props: Readonly<ButtonProps>) => ReactElement = SlotMergedButton;
 
 type IconButtonProps = Omit<ButtonProps, 'variant' | 'children' | 'asChild' | 'aria-label'> & {
   icon: IconGlyph;
