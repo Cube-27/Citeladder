@@ -5,6 +5,9 @@
 :root {
   --type-base: 0.875rem;
   --type-step: 0.125rem;
+  --font-sans: ui-sans-serif, system-ui;
+  --font-display: ui-sans-serif, system-ui;
+  --font-mono: 'CiteLadder Geist Mono', ui-monospace, monospace;
 }
 
 @source "./";
@@ -15,10 +18,4 @@
   src: local('Geist Mono'), local('GeistMono-Regular');
   font-weight: 400 600;
   font-style: normal;
-}
-
-:root {
-  --font-sans: ui-sans-serif, system-ui;
-  --font-display: ui-sans-serif, system-ui;
-  --font-mono: 'CiteLadder Geist Mono', ui-monospace, monospace;
 }

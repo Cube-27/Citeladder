@@ -77,9 +77,7 @@
   --art-chip-fill: color-mix(in oklch, var(--color-panel) 45%, transparent);
   --art-ring-fill: color-mix(in oklch, var(--color-panel) 55%, transparent);
   --art-bubble-line: color-mix(in oklch, var(--color-panel) 75%, transparent);
-}
 
-.cl-art {
   position: relative;
   container-type: inline-size;
   width: 100%;

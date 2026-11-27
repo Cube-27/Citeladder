@@ -1,8 +1,8 @@
+@import '../../content/prose.css';
+
 :root {
   --prose-cell-min: 144px;
 }
-
-@import '../../content/prose.css';
 
 .cl-site .cl-prose > :is(p, ul, ol, h2, h3, h4, blockquote, dl) {
   max-width: var(--site-measure-prose);

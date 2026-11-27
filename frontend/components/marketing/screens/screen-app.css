@@ -41,9 +41,7 @@
   --screen-h: var(--screen-app-height);
   --radius-card: var(--radius-md);
   --screen-page-edge: color-mix(in oklch, var(--color-rule) 50%, transparent);
-}
 
-.cl-screen--app {
   display: grid;
   grid-template-columns: var(--spacing-sidebar) minmax(0, 1fr);
   gap: 0;
