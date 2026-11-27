@@ -42,6 +42,7 @@
   --color-info: var(--ramp-blue-50_2);
   --color-info-wash: var(--ramp-blue-94_3);
   --color-data-other: var(--ramp-neutral-81_4);
+  --color-image-edge: var(--ramp-black-a10);
   --color-scrim: oklch(from var(--color-mark-ink) l c h / 32%);
   --color-chart-grid: var(--ramp-neutral-94_3);
   --color-raised: var(--color-panel);

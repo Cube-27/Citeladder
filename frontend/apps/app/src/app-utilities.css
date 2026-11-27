@@ -10,6 +10,11 @@
 @utility page-start-reading {
   --page-start: max(0px, calc((100cqw - var(--container-reading)) / 2));
 }
+@utility image-edge {
+  border-radius: inherit;
+  outline: var(--rule-width) solid var(--color-image-edge);
+  outline-offset: calc(-1 * var(--rule-width));
+}
 @utility scrollbar-stable {
   scrollbar-gutter: stable;
 }
