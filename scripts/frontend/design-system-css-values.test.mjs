@@ -27,7 +27,7 @@ test('raw colour, type, z, motion, shadow, spacing, size, border, radius, opacit
     '.o { background: var(--ramp-red-52_4); }',
     '@media (prefers-reduced-motion: no-preference) { .p { padding: 13px; } }',
     '.q { border-radius: 7px; border-top-left-radius: 3px; }',
-    '.r { opacity: .55; }',
+    '.r { opacity: 1%; }',
     ".s { font-family: Arial, 'Geist'; }",
     '.t { width: 313px; max-width: 37rem; }',
     '.u { --pad: 13px; }',
@@ -52,7 +52,7 @@ test('tokens, keywords, zero, multipliers, percentages, gradient stops and exemp
 .c { background: color-mix(in oklch, var(--color-accent) 50%, transparent); }
 .d { background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--color-rule) 6px 7px); }
 .e { clip-path: inset(-24px 0 0 0); line-height: var(--text-label--line-height); }
-.h { opacity: 1; mask-image: linear-gradient(black, transparent); font-family: var(--font-mono); width: var(--w); }
+.h { opacity: 1; opacity: 100%; mask-image: linear-gradient(black, transparent); font-family: var(--font-mono); width: var(--w); }
 .i { color: var(--tint, var(--text-color-ink)); border-radius: var(--radius-card); }
 :root[data-x]:not([data-y]) { --pad: 13px; }
 @media (forced-colors: active) { .f { border: 1px solid CanvasText; } }

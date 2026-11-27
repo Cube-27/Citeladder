@@ -75,7 +75,8 @@ const SKIPPED_AT_RULE = /^(theme|font-face|keyframes|property)$/;
 const ROOT_COMPOUND = /^:root(?:\[[^\]]*\]|:not\([^()]*\))*$/;
 const GLOBAL_KEYWORD = /^(inherit|initial|unset|revert|revert-layer)$/i;
 
-const fullOpacity = (property, number) => property === 'opacity' && Number(number.number) === 1;
+const fullOpacity = (property, number) =>
+  property === 'opacity' && Number(number.number) === (number.unit === '%' ? 100 : 1);
 
 function rawParts(value, property, { tokenFile }) {
   const found = [];
