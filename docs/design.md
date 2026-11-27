@@ -219,7 +219,7 @@ marketing).
   reveal, pulse, sweep and the stagger steps), `ease-<role>`, `z-<role>` (base, raised, sticky, float, overlay,
   modal, toast) and `opacity-<role>` (disabled 50, muted 80, dim 70, ghost, hover).
   `cn` knows every role, so a caller can still override one.
-- **Controls:** 36 high (HeroUI's medium); 44 below 900px or under a coarse pointer, and on
+- **Controls:** 36 high (HeroUI's medium), small ones 32 (`control-sm`); 44 below 900px or under a coarse pointer, and on
   sign-in, account and setup pages (the website's height, `control-lg`).
   Icons 14 in `ink-2` (Tabler, the `Icon` atom), centred on and no taller than
   the 14px text beside them; empty-state tiles and website wells draw larger.
@@ -293,8 +293,10 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   (section › page; a record adds its collection, and its name
   is the h1 above the strips), then secondary actions, at most one primary
   action, Search ⌘K and Ask agent at the right edge. The section is the nav
-  group holding the current row, Agent, or Workspace; below 900 only the
-  page shows.
+  group holding the current row, Agent, or Workspace. Below 900 the header
+  shows only the page and carries the page's actions in its one overflow
+  menu, and the page's h1 stays for screen readers, so one title shows
+  (owner, 2026-11-27).
 - **Tab strip**, 40 high: underline tabs on a `rule` baseline that runs only
   between the page paddings; the current tab is `ink` over a 2px `ink`
   underline (`tab-line`), the rest `ink-2`. The
@@ -308,18 +310,22 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   only on hover and focus. Narrow pages centre the body in their column (AR-9; 1040:
   Overview, Projects, Issues, Actions, Agent, Settings, Agent context; 720:
   Billing, Pricing, Runs; 800: Action detail, AR-22).
-- **Toolbar**, above the content it scopes: segmented control, search, filter
-  buttons, then right-aligned the muted count and one action, 8 apart. A
-  page-wide toolbar (`FilterBar`) is the strip under the tabs, with no rule,
-  and takes no search (`PageFrame` `filters` is `FilterBarProps`, which has
-  none): a search narrows one table, so it lives in that
-  table's `TableToolbar` (`DataTable toolbar`). A `DataTable` head is one row:
-  title at the start, then the view, search and filters, and its actions
-  (`actions` and `toolbar.actions` together) at the end. It wraps only when
-  the content does not fit; a card never has a row holding only an action or
-  only a search (owner, 2026-11-27). An export is `ExportAction`:
-  `scope="page"` in the page header actions, `scope="table"` in the table
-  toolbar.
+- **Toolbar placement** (owner, 2026-11-27): a control sits with the scope
+  it changes. One that scopes the page (period, page-wide filters) is in the
+  page toolbar (`FilterBar`), the strip under the tabs on the paper, with no
+  rule; it takes no search (`PageFrame` `filters` is `FilterBarProps`).
+  One that scopes one table or card is in that card's single head row
+  (`DataTable toolbar`): title at the start, then the view, search and
+  filters, and its actions (`actions` and `toolbar.actions` together) at
+  the end. A row wraps only when its content does not fit; a card never has
+  a row holding only an action or only a search. Filters are their own
+  chips while they fit; the bar measures its width and folds only the
+  overflow into Filters, with a set folded filter's value beside it, and
+  Clear joins the chips. Export is `ExportAction` (`secondary`) with the
+  scope it exports: `scope="page"` in the page header actions,
+  `scope="table"` in the table head. An action shows once, never in both
+  the header and a card or notice. A status or count line sits with the
+  block it describes.
 - **Metric strip:** a bleed slot of a card (on the paper it brings its own
   card), cells divided by hairlines, padded 12 by the card inset, 12px label
   over the value. Never one card per figure;
@@ -343,8 +349,8 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   the rest of the column), so the header and rail never move (AR-9). A
   section stacks its groups the same way. A
   group (`SettingsGroup`) is a `Section` card: its header (label role, a
-  status 8 after it, an optional one-line 12px `ink-2` caption 4 below, the
-  group's one action right-aligned on the heading's line), then its body 16
+  status 8 after it, an optional description as muted text after it on the
+  same line, the group's one action right-aligned on that line), then its body 16
   below. The body is a bleed list (`SettingRows`) of setting rows with a
   hairline between them; or, for a list of things
   (members, keys, connections, invoices, offerings), a `DataTable`. Notices
@@ -400,7 +406,10 @@ holds the depth rules.
   and shadow, padded `panel-inset` 16); inside a surface it is flat (no
   fill, padding, radius or shadow) and its title takes the label role. A
   card can never draw inside a card.
-- **Slots.** `Section` > `SectionHeader` (title, description, `actions`) >
+- **Slots.** A card's description is muted trailing text on its title row,
+  never a second row: when the row lacks room it is not shown, and one that
+  only explains the card is deleted (owner, 2026-11-27).
+  `Section` > `SectionHeader` (title, description, `actions`) >
   `SectionToolbar` (`FilterBar` or tabs) > `SectionContent` (at the inset;
   `fill` takes the card's spare height) > `SectionBleed` > `SectionFooter`,
   16 apart. The header lives inside the card (AR-24); `actions` holds buttons,
@@ -418,7 +427,10 @@ holds the depth rules.
   with no section around it wraps itself in one.
 - **Page body.** A `SectionStack` of page-level `Section`s, `AppGrid`s of them
   and self-wrapping primitives, `gap-section` apart; only headings, the
-  page toolbar and a `Notice` sit on the paper (AR-22).
+  page toolbar and a `Notice` sit on the paper (AR-22). Cards in an
+  `AppGrid` row align to their tops and keep their own height, so short
+  cards pair with short ones and a tall card takes the row; a lone last card
+  in a pair takes the whole row (owner, 2026-11-27).
 - **Overlays.** A drawer or dialog body is a surface at `spacing-modal` (24):
   its sections are flat and 24 apart, tables bleed to its edges. Fields
   inside group in one `Stack gap="workspace"`; nothing else wraps the body.
@@ -440,12 +452,16 @@ holds the depth rules.
   floor, so no gap opens between columns. When the floors do not fit, `low`
   columns hide, the last first; below that the table scrolls with the first
   column pinned. Every row is one line; secondary text follows the primary
-  inline (`TableCellLines`). Below 768px no column is sticky and cell text
-  wraps instead of truncating (`table-phone.css`). The foot band sits inside the frame.
+  inline (`TableCellLines`). Identity text is 400 like every cell (owner,
+  2026-11-27). Below 768px no column is sticky and only the identity
+  column's text wraps, a host name at its dots (`table-phone.css`). The foot band sits inside the frame.
 - **Metric strip** (`FigureStrip`). One row (AR-3): cells share it equally and
   never wrap; below 160px a cell's label takes two lines, and below 128px the
   strip scrolls sideways. Each cell draws its
-  divider on its start edge and the frame clips the outer one. The geometry
+  divider on its start edge and the frame clips the outer one. A cell's value
+  and its change share one line at the cell's foot, and the change truncates
+  first. The Search Console tiles stay 2×2 with their values at the tile foot
+  (owner, 2026-11-27). The geometry
   census fails a strip whose cells sit at different tops. A score is a printed
   figure.
 - **URLs** (`UrlText`, `UrlCutParts`). A URL is cut in the middle (AR-23): the
@@ -502,14 +518,14 @@ holds the depth rules.
   are its sliders, 5% steps, a dot legend in the full hues under it.
 - **Selects and menus.** A select or filter trigger is a secondary button's
   face (`TRIGGER_BOX`); a typed combobox is an input. Menus, listboxes and
-  tooltips are `raised` with the pop shadow, radius 8, 28-high rows on
+  tooltips are `raised` with the pop shadow, radius 8, rows one control high on
   `state-hover`; a select's list is at least its trigger's width.
 - **Tabs and segmented control** ([`tabs.tsx`](../frontend/components/ui/tabs.tsx)).
   Tabs are underline tabs padded 16 at 500, the current one `ink` over a 2px
   `ink` line, the rest `ink-2`. A panel's tabs are the slot under its header,
   their baseline across the card; never above the card or in its actions.
   Segmented control (and the sidebar's Dashboard | Agent): a `state-fill`
-  tray one control high, padded 4, with no edge, 28-high segments, the selected one a
+  tray 40 high, padded 4, with no edge, 32-high segments (`control-sm`), the selected one a
   `nav-current-fill` pill with the card shadow.
 - **Tags and status.** Tag: 20 high, radius 5, `state-selected` fill, no edge, 12px at 500 in `ink`; a
   draft is dashed; Kbd and composer chips share the face. Status

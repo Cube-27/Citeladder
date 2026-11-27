@@ -346,8 +346,10 @@ how to add or change an entry.
 - **AR-3 Metrics** sit in one strip with hairline dividers, never cards, with no
   meters, rings or bars in a cell. A strip is always one row, never wrapped into
   two (2026-11-25). A table may hold bars, all of one meter-column kind
-  (2026-11-27). **AR-4 Tables:** the first column takes the
-  spare width and the others hug their content. On a phone a wide table
+  (2026-11-27). Exception: the Search Console tiles stay 2×2 with their values
+  at the tile foot (2026-11-27, C21 b). **AR-4 Tables:** the first column takes the
+  spare width and the others hug their content; its text is 400 like every
+  cell (2026-11-27, C19). On a phone a wide table
   scrolls sideways with no sticky column, and truncated or overlapping text is
   the defect to fix first (2026-11-23).
 - **AR-5** The line language (solid observed, dashed draft, `—` absent, printed
@@ -413,7 +415,17 @@ how to add or change an entry.
   controls is equal, and a logo or mark never sets the row's height; an icon,
   mark or trailing meta beside a multi-line block centres on its first line; a
   table head holds title, search and actions on one row and wraps only when
-  they do not fit.
+  they do not fit. A control sits with the scope it changes: page-wide in the
+  page toolbar, one card's in that card's head; filters stay their own chips
+  while they fit and fold only the overflow (C5); export is `secondary` with
+  its scope; an action shows once (2026-11-27). A card subtitle sits on the
+  title row as muted trailing text when it fits and is otherwise not shown; one
+  that only explains the card is deleted (2026-11-27).
+- **AR-29 Card rows** (2026-11-27, C3): cards beside each other pair by content
+  height, a tall card takes the row, and they align to their tops rather than
+  stretching to a neighbour.
+- **AR-30 Phone header** (2026-11-27, C18): below 900 the header shows the page
+  title and the h1 stays for screen readers only.
 - **AR-28 One term, "prompts"** (technically buyer queries), not "answers",
   for what a product or brand is measured in (2026-11-27). Product detail and
   the Products list follow it; other screens still say "answers".
