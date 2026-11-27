@@ -14,7 +14,7 @@ export function HintedTableHead({
 }: Readonly<{ label: string; hint: string } & HeadOptions>) {
   return (
     <TableHead numeric={numeric} desktopOnly={desktopOnly}>
-      <Tooltip content={hint}>
+      <Tooltip content={hint} reach="tap">
         <button
           type="button"
           className="focus-ring rounded-mark min-h-control-sm inline-flex cursor-default items-center"
@@ -90,7 +90,13 @@ export function SortableTableHead({
       aria-sort={ariaSort}
       className={cn('group', className)}
     >
-      {hint ? <Tooltip content={hint}>{button}</Tooltip> : button}
+      {hint ? (
+        <Tooltip content={hint} reach="tap">
+          {button}
+        </Tooltip>
+      ) : (
+        button
+      )}
     </TableHead>
   );
 }

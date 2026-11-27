@@ -45,7 +45,7 @@ export function Absence({
   );
   if (!reason) return face;
   return (
-    <Tooltip content={reason}>
+    <Tooltip content={reason} reach="tap">
       <button
         type="button"
         className="rounded-mark hit-area inline-flex min-h-6 min-w-6 items-center justify-center align-middle"

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vite-plus/test';
 
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
@@ -19,6 +20,18 @@ describe('Absence', () => {
       return name;
     });
     expect(new Set(names).size).toBe(ABSENCE_STATES.length);
+  });
+
+  it('reaches its reason without hover: always described, and opened by a tap but not a click', async () => {
+    const user = userEvent.setup();
+    render(<Absence state="unavailable" reason="The crawl skipped this page." />);
+    const mark = screen.getByRole('button', { name: 'Unavailable' });
+    expect(mark).toHaveAccessibleDescription('The crawl skipped this page.');
+
+    await user.click(mark);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    await user.pointer({ keys: '[TouchA]', target: mark });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('The crawl skipped this page.');
   });
 
   it('draws the mark for a formatter absence and prints text that reads like one', () => {
