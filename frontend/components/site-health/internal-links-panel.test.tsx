@@ -309,15 +309,15 @@ describe('Internal links', () => {
       'data-absence',
       'not_set',
     );
-    const header = screen.getByRole('banner');
-    expect(within(header).queryByRole('button', { name: 'Analyze again' })).not.toBeInTheDocument();
-    const [band, tableBar] = screen.getAllByRole('group', { name: 'Search and filters' });
-    expect(within(band!).getByRole('button', { name: 'Analyze again' })).toBeInTheDocument();
-    expect(within(band!).queryByRole('searchbox')).not.toBeInTheDocument();
-    expect(
-      within(tableBar!).getByRole('searchbox', { name: 'Search pages and anchors' }),
-    ).toBeInTheDocument();
-    await userEvent.click(within(tableBar!).getByRole('button', { name: 'Export CSV' }));
+    const band = screen.getByRole('group', { name: 'Filters' });
+    expect(screen.getAllByRole('button', { name: 'Analyze again' })).toEqual([
+      within(band).getByRole('button', { name: 'Analyze again' }),
+    ]);
+    expect(within(band).queryByRole('searchbox')).not.toBeInTheDocument();
+    const table = screen.getByRole('table');
+    const head = table.closest('section')!.querySelector('header')!;
+    expect(within(head).getByRole('searchbox', { name: 'Search pages and anchors' })).toBeVisible();
+    await userEvent.click(within(head).getByRole('button', { name: 'Export CSV' }));
     expect(downloadCsv).toHaveBeenCalledWith(
       'internal-links',
       ['Source page', 'Destination', 'Anchor text', 'Source passage'],

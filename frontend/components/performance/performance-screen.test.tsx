@@ -681,9 +681,7 @@ describe('PerformanceScreen table interactions', () => {
     expect(await within(table).findByText('query 11')).toBeVisible();
     expect(within(table).queryByText('query 1')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
-    const rows = within(table).getAllByRole('row', { hidden: true });
-    expect(rows).toHaveLength(4);
-    expect(rows[3]?.style.getPropertyValue('--data-table-rows')).toBe('8');
+    expect(within(table).getAllByRole('row')).toHaveLength(3);
   });
 
   it('starts from the first page when the sorted metric is hidden', async () => {

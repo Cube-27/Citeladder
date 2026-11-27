@@ -1,7 +1,6 @@
 import { useId } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { FilterChoice } from '@/components/ui/filter-bar';
-import { SegmentedControl } from '@/components/ui/tabs';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { Delta } from '@/components/ui/delta';
 import { Stack } from '@/components/ui/layout';
@@ -44,13 +43,7 @@ import {
 } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import {
-  Section,
-  SectionContent,
-  SectionHeader,
-  SectionTitle,
-  SectionToolbar,
-} from '@/components/ui/section';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 export type Metric = (typeof VISIBILITY_METRICS)[number]['value'];
@@ -221,27 +214,30 @@ export function BrandTrendPanel({
   });
   return (
     <Section aria-labelledby={titleId}>
-      <SectionHeader>
+      <SectionHeader
+        actions={
+          <>
+            <FilterChoice
+              label="Metric"
+              value={metric}
+              options={VISIBILITY_METRICS}
+              onChange={onMetric}
+            />
+            <FilterChoice
+              label="Focus"
+              value={focusedBrand ?? ALL_BRANDS}
+              defaultValue={ALL_BRANDS}
+              options={[
+                { value: ALL_BRANDS, label: 'All brands' },
+                ...brands.map((row) => ({ value: row.name, label: row.name })),
+              ]}
+              onChange={(value) => onFocus(value === ALL_BRANDS ? null : value)}
+            />
+          </>
+        }
+      >
         <SectionTitle id={titleId}>Your brand over time</SectionTitle>
       </SectionHeader>
-      <SectionToolbar>
-        <SegmentedControl
-          ariaLabel="Plotted metric"
-          value={metric}
-          options={VISIBILITY_METRICS}
-          onChange={onMetric}
-        />
-        <FilterChoice
-          label="Focus"
-          value={focusedBrand ?? ALL_BRANDS}
-          defaultValue={ALL_BRANDS}
-          options={[
-            { value: ALL_BRANDS, label: 'All brands' },
-            ...brands.map((row) => ({ value: row.name, label: row.name })),
-          ]}
-          onChange={(value) => onFocus(value === ALL_BRANDS ? null : value)}
-        />
-      </SectionToolbar>
       <SectionContent>
         <TrendSection query={query} metric={metric} lines={lines} keyed lonePoint="plot" />
       </SectionContent>
@@ -319,6 +315,7 @@ function TrendChart({
           mark: <RankedBrandMark rows={points.at(-1)?.rankings} name={line.label} />,
           values: line.values.map(axis.plot),
         }))}
+        legend={false}
         events={events}
         eventLegend
         yMin={axis.yMin}

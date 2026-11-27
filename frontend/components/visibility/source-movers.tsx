@@ -1,12 +1,12 @@
-import { useId } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { z } from 'zod';
 
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { ClampText } from '@/components/ui/clamp-text';
-import { StateBlock } from '@/components/ui/state-block';
+import { SearchField } from '@/components/ui/search-field';
+import { SegmentedControl } from '@/components/ui/tabs';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Delta } from '@/components/ui/delta';
 import type { SourceFilters } from '@/components/visibility/source-rows';
@@ -89,37 +89,63 @@ function moversState(
   return undefined;
 }
 
-function MoverTable({
-  title,
-  movers,
+const DIRECTIONS = [
+  { value: 'rising', label: 'Rising' },
+  { value: 'falling', label: 'Falling' },
+] as const;
+
+type Direction = (typeof DIRECTIONS)[number]['value'];
+
+function shownMovers(
+  data: Movers | undefined,
+  { direction, needle }: Readonly<{ direction: Direction; needle: string }>,
+): Mover[] {
+  const movers = (direction === 'rising' ? data?.risers : data?.fallers) ?? [];
+  return needle ? movers.filter((mover) => mover.key.toLocaleLowerCase().includes(needle)) : movers;
+}
+
+export function TopMoversCard({
   dimension,
-  state,
-  busy,
+  query,
+  comparable,
 }: Readonly<{
-  title: string;
-  movers: Mover[];
   dimension: 'domain' | 'url';
-  state: DataTableState | undefined;
-  busy: boolean;
+  query: ReturnType<typeof useSourceMovers>;
+  comparable: boolean;
 }>) {
+  const [direction, setDirection] = useState<Direction>('rising');
+  const [search, setSearch] = useState('');
+  const needle = search.trim().toLocaleLowerCase();
+  const movers = shownMovers(query.data, { direction, needle });
+  const noRows: DataTableState = needle
+    ? { kind: 'filtered', headingLevel: 3, heading: 'No matches', onClear: () => setSearch('') }
+    : empty('No source moved this way');
   return (
     <DataTable
-      title={title}
+      title="Top movers"
       columns={MOVER_COLUMNS}
       pageSize={MOVER_ROWS}
-      rowCount={movers.length}
-      busy={{ active: busy, label: 'Updating top movers' }}
-      state={
-        state ??
-        (movers.length
-          ? undefined
-          : {
-              kind: 'empty',
-              headingLevel: 3,
-              icon: TrendingUp,
-              heading: 'No source moved this way',
-            })
-      }
+      busy={{ active: query.isFetching, label: 'Updating top movers' }}
+      toolbar={{
+        search: (
+          <SearchField
+            value={search}
+            onValueChange={setSearch}
+            onClear={() => setSearch('')}
+            placeholder="Search"
+            aria-label="Search top movers"
+          />
+        ),
+        view: (
+          <SegmentedControl
+            ariaLabel="Direction"
+            value={direction}
+            options={DIRECTIONS}
+            onChange={setDirection}
+          />
+        ),
+      }}
+      state={moversState(query, comparable) ?? (movers.length ? undefined : noRows)}
     >
       {movers.map((mover) => (
         <TableRow key={mover.key}>
@@ -135,34 +161,5 @@ function MoverTable({
         </TableRow>
       ))}
     </DataTable>
-  );
-}
-
-export function TopMoversCard({
-  dimension,
-  query,
-  comparable,
-}: Readonly<{
-  dimension: 'domain' | 'url';
-  query: ReturnType<typeof useSourceMovers>;
-  comparable: boolean;
-}>) {
-  const state = moversState(query, comparable);
-  const titleId = useId();
-  const shared = { dimension, state, busy: query.isFetching };
-  return (
-    <Section aria-labelledby={titleId}>
-      <SectionHeader>
-        <SectionTitle id={titleId}>Top movers</SectionTitle>
-      </SectionHeader>
-      {state?.kind === 'empty' ? (
-        <StateBlock {...state} />
-      ) : (
-        <>
-          <MoverTable title="Rising" movers={query.data?.risers ?? []} {...shared} />
-          <MoverTable title="Falling" movers={query.data?.fallers ?? []} {...shared} />
-        </>
-      )}
-    </Section>
   );
 }

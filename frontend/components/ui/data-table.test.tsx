@@ -9,7 +9,7 @@ import { DataTable } from './data-table';
 import { FilterBar } from './filter-bar';
 
 type DataTableProps = ComponentProps<typeof DataTable>;
-import { TableActionsCell, TableCell, TableCellLines, TableRow, TableSelectCell } from './table';
+import { TableActionsCell, TableCell, TableRow, TableSelectCell } from './table';
 
 const PROMPTS = ['Best CRM for startups', 'Cheapest CRM for agencies'];
 
@@ -112,30 +112,41 @@ describe('DataTable', () => {
     ).toBeVisible();
   });
 
-  it('draws no blank rows after a short page; a reserved view holds the rest as one blank space', () => {
-    const table = (reserveRows: boolean) => (
+  it('holds ten rows of space under a paged table and keeps its empty state inside it', () => {
+    const pager = {
+      canPrev: false,
+      canNext: false,
+      onPrev: () => undefined,
+      onNext: () => undefined,
+      range: { from: 0, to: 0, total: 0, noun: 'signals' },
+    };
+    const table = (paged: boolean) => (
       <DataTable
         label="Signals"
         columns={[{ key: 'query', label: 'Query' }]}
         pageSize={3}
-        rowCount={1}
-        reserveRows={reserveRows}
-      >
-        <TableRow>
-          <TableCell>
-            <TableCellLines title primary="crm software" secondary="/pricing" />
-          </TableCell>
-        </TableRow>
-      </DataTable>
+        pager={paged ? pager : undefined}
+        state={{
+          kind: 'error',
+          error: new Error('offline'),
+          fallback: 'The request failed.',
+          onRetry: () => undefined,
+          title: "Couldn't load signals",
+        }}
+      />
     );
+    const reserved = (root: HTMLElement) =>
+      root
+        .querySelector<HTMLElement>('[style*="--reserve-rows"]')
+        ?.style.getPropertyValue('--reserve-rows');
     const { container, rerender } = render(table(false));
-    expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(reserved(container)).toBeUndefined();
+    expect(screen.getByRole('table', { hidden: true }).closest('[hidden]')).not.toBeNull();
 
     rerender(table(true));
-    const rows = [...container.querySelectorAll<HTMLElement>('tbody tr')];
-    expect(rows.map((row) => row.dataset.tableSpacer ?? 'row')).toEqual(['row', '']);
-    expect(rows[1]?.style.getPropertyValue('--data-table-rows')).toBe('2');
-    expect(rows[1]?.textContent).toBe('');
+    expect(reserved(container)).toBe('10');
+    expect(screen.getByText("Couldn't load signals")).toBeVisible();
+    expect(screen.getByRole('table', { hidden: true }).closest('[inert]')).not.toBeNull();
   });
 
   it('draws the pager only once the rows run past one page, and never blank rows', () => {
@@ -144,7 +155,6 @@ describe('DataTable', () => {
         label="Runs"
         columns={[{ key: 'run', label: 'Run' }]}
         pageSize={10}
-        rowCount={1}
         pager={{
           canPrev: false,
           canNext: false,
@@ -174,7 +184,6 @@ describe('DataTable', () => {
         label="Inventory"
         columns={[{ key: 'url', label: 'URL' }]}
         pageSize={pageSize}
-        rowCount={3}
         pager={{
           canPrev: false,
           canNext: false,

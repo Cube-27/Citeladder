@@ -78,7 +78,6 @@ export function PromptPastAnswers({
         title="Past answers"
         columns={COLUMNS}
         pageSize={PAGE_SIZE}
-        rowCount={page?.items.length}
         state={tableState(read, page)}
         busy={{ active: read.isPlaceholderData, label: 'Loading answers…' }}
         pager={

@@ -8,7 +8,7 @@ import type { VisibilityEvidenceResponse } from '@citeladder/contracts';
 import { visibilityApi } from '@/lib/api/visibility';
 import { ActiveProjectScopeProvider } from '@/lib/project/active-project-scope';
 import { makeProject } from '@/test/fixtures/project';
-import { FiltersMenu } from '@/components/ui/filters-menu';
+import { AllFiltersMenu } from '@/components/ui/filter-bar';
 import { chooseFilterOption } from '@/test/all-filters';
 import { renderWithProviders } from '@/test/render';
 import { FanoutEvidence, useFanoutGroupFilter } from './fanout-evidence';
@@ -86,7 +86,7 @@ function Panel({
 }
 
 function PageGroupFilter() {
-  return <FiltersMenu filters={[useFanoutGroupFilter()]} />;
+  return <AllFiltersMenu filters={[useFanoutGroupFilter()]} />;
 }
 
 function EmptyPanel({ onClearFilters }: Readonly<{ onClearFilters?: () => void }>) {

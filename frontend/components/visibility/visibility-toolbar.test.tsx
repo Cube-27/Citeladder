@@ -64,11 +64,11 @@ function rowChips(): string[] {
     .getAllByRole('button')
     .filter((button) => button.getAttribute('aria-haspopup') === 'menu')
     .map((button) => button.getAttribute('aria-label') ?? '')
-    .filter((name) => !name.startsWith('Filters'));
+    .filter((name) => !name.startsWith('All filters'));
 }
 
 async function filtersMenu(): Promise<string[]> {
-  await userEvent.setup().click(screen.getByRole('button', { name: /^Filters/ }));
+  await userEvent.setup().click(screen.getByRole('button', { name: /^All filters/ }));
   return screen.getAllByRole('menuitem').map((item) => item.getAttribute('aria-label') ?? '');
 }
 
@@ -103,7 +103,7 @@ describe('useVisibilityFilterMenu', () => {
       'Prompts: Unbranded',
       'Topic: All topics',
     ]);
-    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
     unmount();
 
     const pooled = renderRow({ selectionMode: 'range', range: '30d', ...topics });
@@ -114,7 +114,7 @@ describe('useVisibilityFilterMenu', () => {
       'Topic: All topics',
       'Group by: Per run',
     ]);
-    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
     pooled.unmount();
 
     renderRow({ view: 'competitor', selectionMode: 'range', range: '30d', ...topics, ...markets });
@@ -126,7 +126,7 @@ describe('useVisibilityFilterMenu', () => {
       'Prompts: Unbranded',
       'Group by: Per run',
     ]);
-    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
   });
 
   it('draws a fifth filter left alone as its own chip rather than a one-entry Filters', () => {
@@ -145,7 +145,7 @@ describe('useVisibilityFilterMenu', () => {
       'Prompts: Unbranded',
       'Topic: Pricing',
     ]);
-    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
     unmount();
 
     const perception = renderRow({ view: 'perception', selectionMode: 'run', cohort: 'all' });
@@ -154,7 +154,7 @@ describe('useVisibilityFilterMenu', () => {
       'Engines: All engines',
       'Prompts: All prompts',
     ]);
-    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
     perception.unmount();
 
     renderRow({
@@ -172,10 +172,10 @@ describe('useVisibilityFilterMenu', () => {
       'Topic: All topics',
       'Prompts: All prompts',
     ]);
-    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
   });
 
-  it('lists the prompt and answer outcome in Filters only where answers are shown', async () => {
+  it('lists the prompt and answer outcome in All filters only where answers are shown', async () => {
     renderRow({
       view: 'query-fanout',
       selectionMode: 'run',
@@ -183,7 +183,7 @@ describe('useVisibilityFilterMenu', () => {
       promptId: 'p1',
       onChangeOutcome: vi.fn(),
     });
-    expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Remove Prompt filter' })).toBeVisible();
     expect(await filtersMenu()).toEqual(['Prompt: Best CRM?', 'Prompt outcome: All prompts']);
   });

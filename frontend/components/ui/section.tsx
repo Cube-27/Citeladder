@@ -39,28 +39,53 @@ export function Section({ children, accent = false, ...props }: Readonly<Section
 export function SectionHeader({
   children,
   actions,
+  search,
   ...props
 }: Readonly<
-  Omit<ComponentPropsWithoutRef<'header'>, 'className' | 'style'> & { actions?: ReactNode }
+  Omit<ComponentPropsWithoutRef<'header'>, 'className' | 'style'> & {
+    actions?: ReactNode;
+    search?: ReactNode;
+  }
 >) {
-  if (!actions) {
+  if (!actions && !search) {
     return (
       <header {...props} data-section-heading="" className="grid min-w-0 gap-1">
         {children}
       </header>
     );
   }
+  const heading = children ? (
+    <div data-section-heading="" className="grid max-w-full min-w-0 shrink-0 grid-cols-1 gap-1">
+      {children}
+    </div>
+  ) : null;
+  const controls = actions ? (
+    <div
+      data-section-actions=""
+      className={cn(
+        'min-h-control-md flex max-w-full min-w-[min(100%,16rem)] grow basis-0 flex-wrap items-center justify-end gap-2',
+        !search && '-my-2',
+      )}
+    >
+      {actions}
+    </div>
+  ) : null;
   return (
-    <header {...props} className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-      <div data-section-heading="" className="grid min-w-0 flex-1 basis-40 grid-cols-1 gap-1">
-        {children}
-      </div>
-      <div
-        data-section-actions=""
-        className="min-h-control-md -my-2 flex max-w-full min-w-0 flex-wrap items-center gap-2"
-      >
-        {actions}
-      </div>
+    <header
+      {...props}
+      className={
+        search ? 'grid min-w-0 gap-3' : 'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2'
+      }
+    >
+      {heading}
+      {search ? (
+        <div data-section-search-row="" className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="rail:max-w-64 phone:basis-full min-w-0 grow basis-50">{search}</div>
+          {controls}
+        </div>
+      ) : (
+        controls
+      )}
     </header>
   );
 }
@@ -104,10 +129,6 @@ export function SectionDescription({
       <span>{children}</span>
     </p>
   );
-}
-
-export function SectionToolbar({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="flex min-w-0 flex-wrap items-center gap-2">{children}</div>;
 }
 
 export function SectionContent({

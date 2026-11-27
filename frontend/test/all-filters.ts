@@ -8,10 +8,10 @@ const filterName = (label: string, value?: string) =>
 
 export async function openFilterRow(user: User, label: string, value?: string) {
   await screen.findAllByRole('button', {
-    name: (name) => name.startsWith('Filters') || name.startsWith(`${label}:`),
+    name: (name) => name.startsWith('All filters') || name.startsWith(`${label}:`),
   });
   const own = screen.queryByRole('button', { name: filterName(label, value) });
-  const all = screen.queryByRole('button', { name: /^Filters/ });
+  const all = screen.queryByRole('button', { name: /^All filters/ });
   if (own || !all) return own ?? screen.findByRole('button', { name: filterName(label, value) });
   await user.click(all);
   return screen.findByRole('menuitem', { name: filterName(label, value) });

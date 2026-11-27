@@ -8,7 +8,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
-import { SegmentedControl } from '@/components/ui/tabs';
+import { FilterChoice } from '@/components/ui/filter-bar';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
 import { Value } from '@/components/ui/value';
@@ -119,19 +119,13 @@ function RankingTable({
     <DataTable
       title="Ranking"
       actions={
-        <SegmentedControl
-          ariaLabel="Ranking shown"
-          value={ranking}
-          options={RANKINGS}
-          onChange={setRanking}
-        />
+        <FilterChoice label="Rank" value={ranking} options={RANKINGS} onChange={setRanking} />
       }
       columns={[
         { key: 'name', label: brands ? 'Brand' : 'Product', kind: 'identity' },
         ...METRIC_COLUMNS,
         ...(brands ? [SHARE_COLUMN] : []),
       ]}
-      rowCount={count}
       state={count ? undefined : empty}
     >
       {brands
@@ -186,7 +180,6 @@ function ProductList({
         },
         VISIBILITY,
       ]}
-      rowCount={rows.length}
       state={rows.length ? undefined : emptyTable(empty)}
     >
       {rows.map((row) => (
@@ -215,7 +208,6 @@ function MerchantTable({ rows }: Readonly<{ rows: Overview['merchants'] }>) {
         { key: 'answers', label: 'Answers', kind: 'number' },
         { key: 'products', label: 'Products', kind: 'number' },
       ]}
-      rowCount={rows.length}
       state={rows.length ? undefined : emptyTable('No merchant yet')}
     >
       {rows.map((row) => (
@@ -256,7 +248,6 @@ function FanoutTable({ fanout }: Readonly<{ fanout: Overview['fanout'] }>) {
         { key: 'query', label: 'Query', kind: 'identity' },
         { key: 'answers', label: 'Answers', kind: 'number' },
       ]}
-      rowCount={fanout.queries.length}
       state={fanout.queries.length ? undefined : empty}
     >
       {fanout.queries.map((row) => (

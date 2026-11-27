@@ -11,7 +11,7 @@ import {
   singleFilter,
   type FilterDefinition,
 } from '@/components/ui/all-filters';
-import { menuFieldKeys } from '@/components/ui/filter-options';
+import { menuFieldKeys } from '@/components/ui/filter-chip';
 import { Icon } from '@/components/ui/icon';
 import { ExportAction } from '@/components/ui/export-action';
 type ControlProps = Readonly<{ model: ReturnType<typeof useTrafficData> }>;

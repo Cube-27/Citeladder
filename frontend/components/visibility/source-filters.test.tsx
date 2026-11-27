@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
-import { FiltersMenu } from '@/components/ui/filters-menu';
+import { AllFiltersMenu } from '@/components/ui/filter-bar';
 
 import { sourceTableFilters } from './source-filters';
 
@@ -44,7 +44,7 @@ describe('Sources filters', () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(
-      <FiltersMenu
+      <AllFiltersMenu
         filters={sourceTableFilters({
           dimension: 'url',
           type: { value: null, options: [], onChange: vi.fn() },
@@ -53,7 +53,7 @@ describe('Sources filters', () => {
         })}
       />,
     );
-    await user.click(screen.getByRole('button', { name: 'Filters (1)' }));
+    await user.click(screen.getByRole('button', { name: 'All filters (1)' }));
     await user.keyboard('{ArrowDown}{ArrowRight}{Enter}');
     expect(onChange.mock.calls).toEqual([[null]]);
   });

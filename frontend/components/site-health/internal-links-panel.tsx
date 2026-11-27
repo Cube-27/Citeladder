@@ -239,7 +239,6 @@ function LinksTable({
         ),
       }}
       pageSize={links.length > pageSize ? pageSize : undefined}
-      rowCount={paged.length}
       state={
         links.length
           ? undefined

@@ -114,7 +114,6 @@ export function PromptTable({
       toolbar={toolbar}
       columns={promptColumns(measuredColumns, actions !== undefined)}
       pageSize={PAGE_SIZE}
-      rowCount={pagedPrompts.length}
       selection={
         selection
           ? {

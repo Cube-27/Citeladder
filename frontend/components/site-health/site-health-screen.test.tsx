@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw';
+import { openFilterRow } from '@/test/all-filters';
 import { describe, expect, it } from 'vite-plus/test';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -154,9 +155,9 @@ describe('SiteHealthScreen — Pages tab reads', () => {
     expect(reads).toEqual(['true|status|10']);
   });
 
-  it('reads the pages an issue link, a view and the depth, score and indexable filters name', async () => {
+  it('reads the pages an issue choice and the depth, score and indexable filters name', async () => {
     setSearch(
-      'tab=pages&pages_view=with_issues&pages_rule=technical.indexable&pages_indexable=no&pages_depth=2-3&pages_score=aeo_readiness:79',
+      'tab=pages&pages_view=all&pages_rule=*&pages_indexable=no&pages_depth=2-3&pages_score=aeo_readiness:79',
     );
     mockRoutes();
     const reads: string[] = [];
@@ -174,23 +175,20 @@ describe('SiteHealthScreen — Pages tab reads', () => {
 
     expect(await screen.findByText('No pages in this view')).toBeVisible();
     expect(reads).toContain(
-      'rule=technical.indexable&indexable=false&min_depth=2&max_depth=3&score_role=aeo_readiness&max_score=79&with_issues=true',
+      'with_issues=true&indexable=false&min_depth=2&max_depth=3&score_role=aeo_readiness&max_score=79',
     );
   });
 
-  it('draws the page views and page-kind filter from the address, only on Pages', async () => {
+  it('counts the page view and page-kind filter from the address in All filters, only on Pages', async () => {
     const user = userEvent.setup();
     setSearch('tab=pages&pages_view=errors&page_kind=faq');
     mockRoutes();
 
     renderScreen();
 
-    const views = await screen.findByRole('radiogroup', { name: 'Page inventory views' });
-    expect(within(views).getByRole('radio', { name: 'Errors' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    );
-    expect(screen.getByRole('button', { name: /^Page kind: / })).toHaveAttribute('data-active');
+    expect(await openFilterRow(user, 'Pages', 'Errors')).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'All filters (2)' })).toBeVisible();
 
     await user.click(screen.getByRole('tab', { name: 'Overview' }));
     const params = new URLSearchParams(window.location.search);
@@ -199,7 +197,7 @@ describe('SiteHealthScreen — Pages tab reads', () => {
       null,
       null,
     ]);
-    expect(screen.queryByRole('radiogroup', { name: 'Page inventory views' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
   });
 });
 

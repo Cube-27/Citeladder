@@ -109,7 +109,6 @@ export function KeywordRowsView({
                   direction: order.sort === sort && order.direction === 'asc' ? 'desc' : 'asc',
                 }),
             })}
-            rowCount={page.items.length}
             pageSize={KEYWORD_ROWS}
             busy={{ active: query.isFetching, label: 'Updating saved rows' }}
             state={

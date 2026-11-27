@@ -4,7 +4,7 @@ import { expect, it, vi } from 'vite-plus/test';
 import type { SearchIntelligenceDataset } from '@/lib/api/search-intelligence';
 import { SearchIntelligenceCollection } from './search-intelligence-collection';
 import { useSearchCollection } from './search-intelligence-collection-state';
-import { FiltersMenu } from '@/components/ui/filters-menu';
+import { AllFiltersMenu } from '@/components/ui/filter-bar';
 import { openFilterRow } from '@/test/all-filters';
 import { CollectionViewControl, collectionFilters } from './search-intelligence-controls';
 
@@ -42,7 +42,7 @@ function Tab({
     <>
       {open ? <button onClick={() => openComparison(open)}>Open comparison</button> : null}
       <CollectionViewControl collection={collection} />
-      <FiltersMenu filters={collectionFilters(collection)} />
+      <AllFiltersMenu filters={collectionFilters(collection)} />
       <SearchIntelligenceCollection
         collection={collection}
         datasets={datasets}
@@ -101,7 +101,7 @@ it('offers the keyword filters only while a keyword dataset is on screen', async
   await user.keyboard('{Escape}');
   await user.click(screen.getByRole('radio', { name: 'Top pages' }));
   expect(screen.getByText('Dataset pages')).toBeInTheDocument();
-  await user.click(screen.getByRole('button', { name: /^Filters/ }));
+  await user.click(screen.getByRole('button', { name: /^All filters/ }));
   expect(await screen.findByRole('menuitem', { name: /^Website/ })).toBeVisible();
   expect(screen.queryByRole('menuitem', { name: /^Min. search volume/ })).not.toBeInTheDocument();
 });

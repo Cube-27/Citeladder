@@ -221,7 +221,6 @@ export function ProductsTable({
       actions={actions}
       toolbar={toolbar}
       columns={tableColumns}
-      rowCount={rows.length}
       pageSize={pageSize}
       busy={{ active: query.isFetching && !query.isPending, label: 'Updating products' }}
       selection={{

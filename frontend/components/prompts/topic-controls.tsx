@@ -1,16 +1,16 @@
 import { useId, useState } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
-import { Pencil, Plus, Settings2, Trash2 } from '@/lib/icons';
+import { Pencil, Plus, Trash2 } from '@/lib/icons';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import type { FilterDefinition } from '@/components/ui/all-filters';
-import { DefaultHint } from '@/components/ui/filter-options';
+import { DefaultHint } from '@/components/ui/filter-chip';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { TreeItem, TreeItemForm, TreeList } from '@/components/ui/list-row';
-import { MenuItem, MenuRadioGroup, MenuRadioItem, MenuSeparator } from '@/components/ui/menu';
+import { MenuRadioGroup, MenuRadioItem } from '@/components/ui/menu';
 import { Select } from '@/components/ui/select';
 import { ControlCount } from '@/components/ui/tabs';
 import type { Topic } from '@citeladder/contracts';
@@ -41,12 +41,10 @@ export function topicFilter({
   topics,
   selectedTopicId,
   onSelect,
-  manage,
 }: Readonly<{
   topics: readonly Topic[];
   selectedTopicId: string | null;
   onSelect: (topicId: string | null) => void;
-  manage?: Readonly<{ onAdd: () => void; onManage: () => void }>;
 }>): FilterDefinition {
   const ordered = orderTopicsForRail(topics);
   const selected = ordered.find(({ topic }) => topic.id === selectedTopicId);
@@ -60,33 +58,20 @@ export function topicFilter({
     defaultLabel: 'All topics',
     reset: () => onSelect(null),
     content: (
-      <>
-        <MenuRadioGroup value={selectedTopicId ?? ALL_TOPICS}>
-          <MenuRadioItem value={ALL_TOPICS} onSelect={() => onSelect(null)}>
-            <span className="flex min-w-0 items-center">
-              All topics
-              <DefaultHint />
-            </span>
+      <MenuRadioGroup value={selectedTopicId ?? ALL_TOPICS}>
+        <MenuRadioItem value={ALL_TOPICS} onSelect={() => onSelect(null)}>
+          <span className="flex min-w-0 items-center">
+            All topics
+            <DefaultHint />
+          </span>
+        </MenuRadioItem>
+        {ordered.map(({ topic, label }) => (
+          <MenuRadioItem key={topic.id} value={topic.id} onSelect={() => onSelect(topic.id)}>
+            {label}
+            <ControlCount count={topic.active_count} />
           </MenuRadioItem>
-          {ordered.map(({ topic, label }) => (
-            <MenuRadioItem key={topic.id} value={topic.id} onSelect={() => onSelect(topic.id)}>
-              {label}
-              <ControlCount count={topic.active_count} />
-            </MenuRadioItem>
-          ))}
-        </MenuRadioGroup>
-        {manage ? (
-          <>
-            <MenuSeparator />
-            <MenuItem icon={<Icon icon={Plus} />} onSelect={manage.onAdd}>
-              Add topic
-            </MenuItem>
-            <MenuItem icon={<Icon icon={Settings2} />} onSelect={manage.onManage}>
-              Manage topics…
-            </MenuItem>
-          </>
-        ) : null}
-      </>
+        ))}
+      </MenuRadioGroup>
     ),
   };
 }

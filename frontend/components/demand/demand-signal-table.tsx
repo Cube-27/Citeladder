@@ -66,7 +66,6 @@ export function DemandSignalTable({
           ? { kind: 'filtered', heading: 'No signals match your filter', onClear: onClearFilters }
           : undefined
       }
-      rowCount={pageRows.length}
       pageSize={pageCount > 1 ? pageSize : undefined}
       pager={{
         range: { from, to, total: rows.length, noun: 'signals' },

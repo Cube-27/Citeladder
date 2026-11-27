@@ -10,10 +10,10 @@ import {
   type HeatValue,
 } from '@/components/ui/heat-table';
 import { InfoHint } from '@/components/ui/info-hint';
-import { Section, SectionHeader, SectionTitle, SectionToolbar } from '@/components/ui/section';
+import { FilterChoice } from '@/components/ui/filter-bar';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
 import { StateBlock } from '@/components/ui/state-block';
-import { SegmentedControl } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/typography';
 import { ExportAction } from '@/components/ui/export-action';
 import { downloadCsv } from '@/lib/csv/download';
@@ -138,43 +138,52 @@ export function PerformanceMatrix({
 
   return (
     <Section aria-labelledby="insights-matrix">
-      <SectionHeader>
+      <SectionHeader
+        actions={
+          <>
+            <FilterChoice
+              label="Metric"
+              value={metric}
+              options={MATRIX_METRICS}
+              onChange={setMetric}
+            />
+            {metric === 'avg_position' ? (
+              <InfoHint label="Position">{POSITION_HINT}</InfoHint>
+            ) : null}
+            <Select
+              ariaLabel="Rows"
+              value={rows}
+              options={options(columns)}
+              onValueChange={setRows}
+            />
+            <Text variant="caption">vs</Text>
+            <Select
+              ariaLabel="Columns"
+              value={columns}
+              options={options(rows)}
+              onValueChange={setColumns}
+            />
+            <Button
+              onClick={() =>
+                setUrlParams({
+                  matrix_rows: rowsCodec.serialize(columns),
+                  matrix_columns: columnsCodec.serialize(rows),
+                })
+              }
+            >
+              Switch axis
+            </Button>
+            <ExportAction
+              scope="table"
+              formats={['csv']}
+              disabled={!readings.length}
+              onExport={async () => exportCsv()}
+            />
+          </>
+        }
+      >
         <SectionTitle id="insights-matrix">Performance matrix</SectionTitle>
       </SectionHeader>
-      <SectionToolbar>
-        <SegmentedControl
-          ariaLabel="Matrix metric"
-          value={metric}
-          options={MATRIX_METRICS}
-          onChange={setMetric}
-        />
-        {metric === 'avg_position' ? <InfoHint label="Position">{POSITION_HINT}</InfoHint> : null}
-        <span className="flex-1" />
-        <Select ariaLabel="Rows" value={rows} options={options(columns)} onValueChange={setRows} />
-        <Text variant="caption">vs</Text>
-        <Select
-          ariaLabel="Columns"
-          value={columns}
-          options={options(rows)}
-          onValueChange={setColumns}
-        />
-        <Button
-          onClick={() =>
-            setUrlParams({
-              matrix_rows: rowsCodec.serialize(columns),
-              matrix_columns: columnsCodec.serialize(rows),
-            })
-          }
-        >
-          Switch axis
-        </Button>
-        <ExportAction
-          scope="table"
-          formats={['csv']}
-          disabled={!readings.length}
-          onExport={async () => exportCsv()}
-        />
-      </SectionToolbar>
       {body()}
       <HeatScale note="Up to 10 per axis" />
     </Section>

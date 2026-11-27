@@ -185,7 +185,6 @@ function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
     <DataTable
       label="Contradicted claims"
       columns={CONTRADICTED_COLUMNS}
-      rowCount={claims.length}
       state={
         claims.length
           ? undefined

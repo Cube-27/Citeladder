@@ -341,7 +341,6 @@ export function PromptLibrary() {
               .catch(failedTo(ROW_CHANGE_FAILED[status])),
         },
         add: addPrompts,
-        topics: { onAdd: openAddTopic, onManage: () => setTopicDialog('manage') },
       }
     : undefined;
 
@@ -366,7 +365,6 @@ export function PromptLibrary() {
                 topics,
                 selectedTopicId,
                 onSelect: setSelectedTopicId,
-                manage: edits?.topics,
               }),
             }),
           }}
@@ -425,7 +423,13 @@ export function PromptLibrary() {
   return (
     <TabsRoot value={statusFilter} onValueChange={setStatusFilter}>
       <ReportPage
-        actions={<PromptActions add={addPrompts} inEmptyState={!hasPrompts && !failedEmpty} />}
+        actions={
+          <PromptActions
+            add={addPrompts}
+            topics={{ onAdd: openAddTopic, onManage: () => setTopicDialog('manage') }}
+            inEmptyState={!hasPrompts && !failedEmpty}
+          />
+        }
         tabs={libraryTabs(hasPrompts, statusCounts)}
       >
         <>

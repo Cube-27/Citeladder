@@ -8,6 +8,8 @@ import { stringUrlCodec, useUrlState, type UrlCodec } from '@/lib/navigation/url
 import { issueTitle } from '@/lib/site-health/issues';
 import { isSiteLevelRule } from '@/lib/site-health/site-level-evidence';
 
+const ANY_ISSUE = '*';
+
 export const PAGES_FILTER_URL_KEYS = [
   'pages_rule',
   'pages_indexable',
@@ -96,7 +98,8 @@ export function pagesFilterParams(
   const depth = DEPTHS.find((choice) => choice.value === state.depth);
   const band = SCORE_BANDS.find((choice) => choice.value === state.score);
   return {
-    rule: state.rule || undefined,
+    rule: state.rule && state.rule !== ANY_ISSUE ? state.rule : undefined,
+    with_issues: state.rule === ANY_ISSUE || undefined,
     indexable: state.indexable === '' ? undefined : state.indexable === 'yes',
     min_depth: depth?.min_depth,
     max_depth: depth?.max_depth,
@@ -108,11 +111,9 @@ export function pagesFilterParams(
 export function usePagesFilters({
   workspaceId,
   crawlId,
-  indexableFixed,
 }: Readonly<{
   workspaceId: string;
   crawlId: string;
-  indexableFixed: boolean;
 }>): FilterDefinition[] {
   const state = usePagesFilterState();
   const { data } = useQuery(
@@ -123,7 +124,8 @@ export function usePagesFilters({
       .filter((issue) => !isSiteLevelRule(issue.rule_id))
       .map((issue) => [issue.rule_id, issueTitle(issue)]),
   );
-  if (state.rule && !rules.has(state.rule)) rules.set(state.rule, state.rule);
+  if (state.rule && state.rule !== ANY_ISSUE && !rules.has(state.rule))
+    rules.set(state.rule, state.rule);
   return [
     choiceFilter({
       id: 'rule',
@@ -135,24 +137,21 @@ export function usePagesFilters({
       groups: [
         {
           options: [
-            { value: '', label: 'All issues' },
+            { value: '', label: 'All pages' },
+            { value: ANY_ISSUE, label: 'Any issue' },
             ...[...rules].map(([value, label]) => ({ value, label })),
           ],
         },
       ],
     }),
-    ...(indexableFixed
-      ? []
-      : [
-          choiceFilter({
-            id: 'indexable',
-            label: 'Indexable',
-            value: state.indexable,
-            defaultValue: '',
-            onChange: state.setIndexable,
-            groups: [{ options: INDEXABLE }],
-          }),
-        ]),
+    choiceFilter({
+      id: 'indexable',
+      label: 'Indexable',
+      value: state.indexable,
+      defaultValue: '',
+      onChange: state.setIndexable,
+      groups: [{ options: INDEXABLE }],
+    }),
     choiceFilter({
       id: 'depth',
       label: 'Depth',

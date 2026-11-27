@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw';
+import { chooseFilterOption, openFilterRow } from '@/test/all-filters';
 import { describe, expect, it } from 'vite-plus/test';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -106,7 +107,7 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
     renderScreen();
 
     await screen.findByText(/The site returned HTTP 404 for the start URL/);
-    await user.click(screen.getByRole('radio', { name: 'Errors' }));
+    await chooseFilterOption(user, 'Pages', 'Errors');
     const block = await screen.findByTestId('root-errors-block');
     expect(within(block).getByText('http_4xx')).toBeInTheDocument();
     expect(within(block).getByText('HTTP 404')).toBeInTheDocument();
@@ -186,15 +187,13 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
 
     renderScreen();
 
-    expect(await screen.findByRole('radio', { name: 'Audited' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    );
+    expect(await openFilterRow(user, 'Pages', 'Audited')).toBeVisible();
+    await user.keyboard('{Escape}');
     await waitFor(() => expect(requestedStatuses).toContain('completed'));
 
-    await user.click(screen.getByRole('radio', { name: 'All discovered' }));
+    await chooseFilterOption(user, 'Pages', 'All discovered');
     await waitFor(() => expect(requestedStatuses).toContain(null));
-    expect(screen.getByRole('radio', { name: 'Audited' })).toHaveAttribute('aria-checked', 'false');
+    expect(await openFilterRow(user, 'Pages', 'All discovered')).toBeVisible();
   });
 
   it('opens partial results on Pages and keeps their Overview available', async () => {

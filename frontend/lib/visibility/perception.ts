@@ -198,27 +198,52 @@ export function sortCategories(categories: readonly Category[], sort: CategorySo
   });
 }
 
+export type BreakdownNarrowing = Readonly<{ query: string; polarity: Polarity | 'all' }>;
+
+function matcher(query: string) {
+  const needle = query.trim().toLocaleLowerCase();
+  return (text: string) => !needle || text.toLocaleLowerCase().includes(needle);
+}
+
 export function filterCategories(
   categories: readonly Category[],
-  { query, polarity }: Readonly<{ query: string; polarity: Polarity | 'all' }>,
+  { query, polarity }: BreakdownNarrowing,
 ): Category[] {
-  const needle = query.trim().toLocaleLowerCase();
-  const matches = (text: string) => !needle || text.toLocaleLowerCase().includes(needle);
+  const matches = matcher(query);
   return categories.flatMap((category) => {
     if (polarity !== 'all' && category[polarity] === 0) return [];
     const named = matches(category.category);
     const attributes = category.attributes.flatMap((attribute) => {
       if (polarity !== 'all' && attribute[polarity] === 0) return [];
-      if (!named && !matches(attribute.attribute)) return [];
-      const quotes =
+      const sided =
         polarity === 'all'
           ? attribute.quotes
           : attribute.quotes.filter((quote) => quote.polarity === polarity);
-      return [{ ...attribute, quotes }];
+      if (named || matches(attribute.attribute)) return [{ ...attribute, quotes: sided }];
+      const quotes = sided.filter((quote) => matches(quote.theme));
+      return quotes.length ? [{ ...attribute, quotes }] : [];
     });
     if (!named && !attributes.length) return [];
     return [{ ...category, attributes }];
   });
+}
+
+export function filterSegments<
+  T extends Readonly<{ key: string; label: string; score: Readonly<Record<Polarity, number>> }>,
+>(rows: readonly T[], { query, polarity }: BreakdownNarrowing): T[] {
+  const matches = matcher(query);
+  return rows.filter(
+    (row) =>
+      (polarity === 'all' || row.score[polarity] > 0) && (matches(row.label) || matches(row.key)),
+  );
+}
+
+export function filterDrivers<T extends Readonly<{ domain: string }>>(
+  drivers: readonly T[],
+  query: string,
+): T[] {
+  const matches = matcher(query);
+  return drivers.filter((driver) => matches(driver.domain));
 }
 
 export function sentimentTrend(

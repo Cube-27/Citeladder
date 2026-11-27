@@ -2,7 +2,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import type { VisibilityTrendPoint } from '@citeladder/contracts';
 
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { SegmentedControl } from '@/components/ui/tabs';
+import { FilterChoice } from '@/components/ui/filter-bar';
 import {
   metricCodec,
   type TrendLines,
@@ -32,8 +32,8 @@ export function CompetitorTrend({
     <Section aria-labelledby="competitor-trend">
       <SectionHeader
         actions={
-          <SegmentedControl
-            ariaLabel="Plotted metric"
+          <FilterChoice
+            label="Metric"
             value={metric}
             options={VISIBILITY_METRICS}
             onChange={setMetric}

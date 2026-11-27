@@ -1,4 +1,5 @@
 import { fireEvent, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithProviders as render } from '@/test/render';
 import { describe, expect, it } from 'vite-plus/test';
 import type {
@@ -145,7 +146,7 @@ describe('Perception view', () => {
     expect(screen.getByRole('link', { name: 'best kids pyjamas?' })).toBeVisible();
   });
 
-  it('hides empty blocks and the trend until two runs, keeping the breakdown views with data', () => {
+  it('hides empty blocks and the trend until two runs, keeping the breakdown views with data', async () => {
     const { unmount } = render(
       <PerceptionView
         data={response({
@@ -181,16 +182,22 @@ describe('Perception view', () => {
     render(<PerceptionView data={response({ trend: [point, later] })} />);
     expect(screen.getByRole('region', { name: 'Sentiment' })).toBeVisible();
     expect(screen.getByRole('region', { name: 'Net sentiment' })).toBeVisible();
-    const views = within(screen.getByRole('radiogroup', { name: 'Break perception down' }));
-    expect(views.getAllByRole('radio').map((radio) => radio.textContent)).toEqual([
-      'By attribute',
-      'By source',
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Break down by: Attribute' }));
+    expect(screen.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
+      'Attribute',
+      'Source',
     ]);
-    fireEvent.click(views.getByRole('radio', { name: 'By source' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Source' }));
     expect(screen.getByText('reviews.example')).toBeVisible();
+    await user.click(screen.getByRole('radio', { name: 'Positive' }));
+    expect(
+      screen.getByRole('heading', { name: 'Not applicable to positive answers' }),
+    ).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'No matches' })).toBeNull();
   });
 
-  it('switches breakdown shares to counts below the sample size', () => {
+  it('switches breakdown shares to counts below the sample size', async () => {
     const row = (key: string, s: PerceptionScore) => ({
       key,
       label: key,
@@ -210,7 +217,9 @@ describe('Perception view', () => {
         })}
       />,
     );
-    fireEvent.click(screen.getByRole('radio', { name: 'By topic' }));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^Break down by/u }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Topic' }));
     const payroll = screen.getByRole('row', { name: /Payroll/u });
     expect(within(payroll).getByText('60.0%')).toBeVisible();
     expect(within(payroll).queryByText('Small sample')).toBeNull();

@@ -1,27 +1,38 @@
-import { useContext, type ReactNode } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
-import { FilterChip, FilterTrigger, ValueChip } from '@/components/ui/filter-chip';
-import { useKeptFilters } from '@/components/ui/filter-fit';
-import { FiltersMenu } from '@/components/ui/filters-menu';
+import {
+  FilterChip,
+  FilterOptions,
+  FilterTrigger,
+  focusFieldOnEntry,
+  ValueChip,
+} from '@/components/ui/filter-chip';
 import { Icon } from '@/components/ui/icon';
 import {
   Menu,
   MenuContent,
+  MenuItem,
   MenuLabel,
   MenuRadioGroup,
   MenuRadioItem,
+  MenuSeparator,
+  MenuSub,
+  MenuSubContent,
+  MenuSubTrigger,
   MenuTrigger,
 } from '@/components/ui/menu';
+import { ControlCount } from '@/components/ui/tabs';
 import { PageFilterBandContext, PageTabEnd } from '@/components/templates/page-tab-end';
-import { X } from '@/lib/icons';
+import { ChevronLeft, ListFilter, X } from '@/lib/icons';
+import { MEDIA } from '@/lib/breakpoints';
 import { batchUrlWrites } from '@/lib/navigation/url-state';
+import { useMediaQuery } from '@/lib/use-media-query';
 import { cn } from '@/lib/utils';
 
 export type TableToolbarProps = Readonly<{
   view?: ReactNode;
-  lead?: ReactNode;
   search?: ReactNode;
   filters?: readonly FilterDefinition[];
   status?: ReactNode;
@@ -40,61 +51,68 @@ function dataWindow(chips: readonly FilterDefinition[]): string | undefined {
   return period ? (period.windowLabel ?? period.valueLabel) : undefined;
 }
 
-export function FilterBar(props: FilterBarProps) {
-  return <ToolbarRow {...props} />;
-}
-
-export function TableToolbar(props: TableToolbarProps) {
-  return <ToolbarRow {...props} />;
-}
-
-function ToolbarRow({ view, lead, ...row }: TableToolbarProps) {
+export function FilterBar({ view, filters = [], status, actions }: FilterBarProps) {
+  const windowLabel = dataWindow(inlineOrder(filters));
   return (
     <fieldset
       data-filter-bar=""
-      aria-label="Search and filters"
+      aria-label="Filters"
       className="min-h-control-md flex w-full min-w-0 flex-wrap items-center gap-2"
     >
-      {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
-      {lead ? <div className="flex max-w-full min-w-0 shrink-0">{lead}</div> : null}
-      {view ? (
-        <div className="flex min-w-[min(100%,16rem)] grow basis-0 flex-wrap items-center justify-end gap-2">
-          <Controls {...row} afterView />
-        </div>
-      ) : (
-        <Controls {...row} />
-      )}
+      <ViewSlot view={view} />
+      <div
+        className={cn(
+          'flex min-w-0 flex-wrap items-center gap-2',
+          view ? 'min-w-[min(100%,16rem)] grow basis-0 justify-end' : 'contents',
+        )}
+      >
+        {filters.length > 0 ? <ChipGroup filters={filters} /> : null}
+        {windowLabel || status !== undefined ? (
+          <StripMeta windowLabel={windowLabel} status={status} afterView={Boolean(view)} />
+        ) : null}
+        {actions ? (
+          <div className="phone:ms-0 phone:justify-start phone:flex-wrap ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2">
+            {actions}
+          </div>
+        ) : null}
+      </div>
     </fieldset>
   );
 }
 
-function Controls({
-  search,
-  filters = [],
-  status,
-  actions,
-  afterView = false,
-}: Omit<TableToolbarProps, 'view' | 'lead'> & { afterView?: boolean }) {
-  const windowLabel = dataWindow(inlineOrder(filters));
+export function HeadControls({ view, filters = [], status, actions }: FilterBarProps) {
   return (
     <>
-      {search ? (
-        <div className="rail:max-w-64 phone:basis-full min-w-0 grow basis-50">{search}</div>
-      ) : null}
-      {filters.length > 0 ? <ChipGroup filters={filters} /> : null}
-      {windowLabel || status !== undefined ? (
-        <StripMeta windowLabel={windowLabel} status={status} afterView={afterView} />
-      ) : null}
-      {actions ? (
-        <div className="phone:ms-0 phone:justify-start phone:flex-wrap ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2">
-          {actions}
-        </div>
-      ) : null}
+      {filters.length > 0 ? <ChipGroup filters={filters} end /> : null}
+      <ViewSlot view={view} />
+      {status === undefined ? null : <StatusLine status={status} />}
+      {actions}
     </>
   );
 }
 
-function ChipGroup({ filters }: Readonly<{ filters: readonly FilterDefinition[] }>) {
+function ViewSlot({ view }: Readonly<{ view: ReactNode }>) {
+  return view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null;
+}
+
+function StatusLine({ status }: Readonly<{ status: ReactNode }>) {
+  return (
+    <output
+      aria-live="polite"
+      className="text-caption text-ink-2 block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"
+    >
+      {status}
+    </output>
+  );
+}
+
+export const hasHeadControls = ({ view, filters, status, actions }: FilterBarProps) =>
+  Boolean(view || filters?.length || status !== undefined || actions);
+
+function ChipGroup({
+  filters,
+  end = false,
+}: Readonly<{ filters: readonly FilterDefinition[]; end?: boolean }>) {
   const grouped = filters.filter((filter) => filter.inFilters);
   const pinned = grouped.length > 1 ? grouped : [];
   const inline = [...inlineOrder(filters), ...grouped.filter((filter) => !pinned.includes(filter))];
@@ -106,16 +124,19 @@ function ChipGroup({ filters }: Readonly<{ filters: readonly FilterDefinition[] 
     <div
       ref={ref}
       data-filter-chips=""
-      className="phone:basis-full flex min-w-0 grow basis-0 flex-wrap items-center gap-2"
+      className={cn(
+        'phone:basis-full flex min-w-0 grow basis-0 flex-wrap items-center gap-2',
+        end && 'justify-end',
+      )}
     >
       {chips.map((filter) => (
         <div key={filter.id} data-filter-slot={filter.id} className="flex min-w-0 shrink-0">
-          <FilterChip filter={filter} />
+          <FilterChip filter={filter} align={end ? 'end' : 'start'} />
         </div>
       ))}
       {menu.length > 0 ? (
         <div data-filter-menu="" className="flex min-w-0 shrink-0">
-          <FiltersMenu filters={menu} />
+          <AllFiltersMenu filters={menu} align={end ? 'end' : 'start'} />
         </div>
       ) : null}
       {menu
@@ -164,20 +185,12 @@ function StripMeta({
           {status ? ' ·' : null}
         </span>
       ) : null}
-      {status === undefined ? null : (
-        <output
-          aria-live="polite"
-          className="text-caption text-ink-2 block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"
-        >
-          {status}
-        </output>
-      )}
+      {status === undefined ? null : <StatusLine status={status} />}
     </>
   );
   const hidden = 'has-[>output:empty]:not-has-[>span]:hidden';
   const row = (
     <div
-      data-strip-meta=""
       className={cn(
         afterView && 'rail:-order-1',
         'rail:grow rail:basis-0 rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap',
@@ -190,9 +203,7 @@ function StripMeta({
   if (!inBand) return row;
   return (
     <PageTabEnd fallback={row}>
-      <div data-strip-meta="" className={cn('flex min-w-0 items-center gap-1', hidden)}>
-        {content}
-      </div>
+      <div className={cn('flex min-w-0 items-center gap-1', hidden)}>{content}</div>
     </PageTabEnd>
   );
 }
@@ -203,7 +214,7 @@ export function FilterControls({
 }: Readonly<{ filters: readonly FilterDefinition[]; align?: 'start' | 'end' }>) {
   const [only, ...rest] = filters;
   if (!only) return null;
-  if (rest.length > 0) return <FiltersMenu filters={filters} align={align} />;
+  if (rest.length > 0) return <AllFiltersMenu filters={filters} align={align} />;
   return <FilterChip filter={only} align={align} />;
 }
 
@@ -229,7 +240,7 @@ export function FilterChoice<T extends string>({
           active={defaultValue !== undefined && value !== defaultValue}
         />
       </MenuTrigger>
-      <MenuContent>
+      <MenuContent align="end">
         <MenuLabel>{label}</MenuLabel>
         <MenuRadioGroup value={value}>
           {options.map((option) => (
@@ -245,4 +256,192 @@ export function FilterChoice<T extends string>({
       </MenuContent>
     </Menu>
   );
+}
+
+const ALL_FILTERS = 'All filters';
+
+export function AllFiltersMenu({
+  filters,
+  align = 'start',
+}: Readonly<{ filters: readonly FilterDefinition[]; align?: 'start' | 'end' }>) {
+  const narrow = useMediaQuery(MEDIA.narrow);
+  if (filters.length === 0) return null;
+  const active = filters.filter((filter) => !filter.isDefault).length;
+  return (
+    <Menu>
+      <MenuTrigger asChild>
+        <Button
+          variant="secondary"
+          data-active={active > 0 || undefined}
+          aria-label={active > 0 ? `${ALL_FILTERS} (${active})` : ALL_FILTERS}
+        >
+          <Icon icon={ListFilter} />
+          <span>
+            {ALL_FILTERS}
+            {active > 0 ? <ControlCount count={active} /> : null}
+          </span>
+        </Button>
+      </MenuTrigger>
+      <MenuContent align={align}>
+        {narrow ? (
+          <DrillInFilters filters={filters} />
+        ) : (
+          filters.map((filter) => (
+            <MenuSub key={filter.id}>
+              <MenuSubTrigger value={filter.valueLabel} disabled={filter.disabled}>
+                {filter.label}
+              </MenuSubTrigger>
+              <MenuSubContent onFocus={focusFieldOnEntry}>
+                <FilterOptions filter={filter} />
+              </MenuSubContent>
+            </MenuSub>
+          ))
+        )}
+      </MenuContent>
+    </Menu>
+  );
+}
+
+function DrillInFilters({ filters }: Readonly<{ filters: readonly FilterDefinition[] }>) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [returnTo, setReturnTo] = useState<string | null>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const open = filters.find((filter) => filter.id === openId);
+  useEffect(() => {
+    const root = panel.current;
+    if (!root) return;
+    const target = open
+      ? root.querySelector<HTMLElement>('input, [role="menuitemradio"]')
+      : root.querySelector<HTMLElement>(`[data-filter-id="${returnTo ?? ''}"]`);
+    target?.focus();
+  }, [open, returnTo]);
+  if (!open) {
+    return (
+      <div ref={panel} className="contents">
+        {filters.map((filter) => (
+          <MenuItem
+            key={filter.id}
+            data-filter-id={filter.id}
+            aria-label={`${filter.label}: ${filter.valueLabel}`}
+            value={filter.valueLabel}
+            disabled={filter.disabled}
+            onSelect={(event) => {
+              event.preventDefault();
+              setOpenId(filter.id);
+            }}
+          >
+            {filter.label}
+          </MenuItem>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div ref={panel} className="contents">
+      <MenuItem
+        icon={<ChevronLeft />}
+        onSelect={(event) => {
+          event.preventDefault();
+          setReturnTo(open.id);
+          setOpenId(null);
+        }}
+      >
+        {ALL_FILTERS}
+      </MenuItem>
+      <MenuSeparator />
+      <FilterOptions filter={open} />
+    </div>
+  );
+}
+
+export type FilterFit = Readonly<{
+  widths: readonly number[];
+  values: readonly number[];
+  available: number;
+  gap: number;
+  trailing: number;
+  menu: number;
+  menuAlways: boolean;
+}>;
+
+function spanOf(widths: readonly number[], gap: number): number {
+  const parts = widths.filter((width) => width > 0);
+  return parts.reduce((sum, width) => sum + width, 0) + gap * Math.max(0, parts.length - 1);
+}
+
+export function keptFilterCount({
+  widths,
+  values,
+  available,
+  gap,
+  trailing,
+  menu,
+  menuAlways,
+}: FilterFit): number {
+  if (available <= 0) return widths.length;
+  const span = (count: number) =>
+    spanOf(
+      [
+        ...widths.slice(0, count),
+        count < widths.length || menuAlways ? menu : 0,
+        ...values.slice(count),
+        trailing,
+      ],
+      gap,
+    );
+  for (let count = widths.length; count > 0; count -= 1) if (span(count) <= available) return count;
+  return 0;
+}
+
+const CHIP_GAP = 8;
+const MENU_FALLBACK = 96;
+
+function widthsOf(node: HTMLElement, selector: string): number[] {
+  return [...node.querySelectorAll<HTMLElement>(selector)].map((item) => item.offsetWidth);
+}
+
+function useKeptFilters(
+  filters: readonly Readonly<{ id: string; isDefault: boolean }>[],
+  menuAlways: boolean,
+) {
+  const ref = useRef<HTMLDivElement>(null);
+  const widths = useRef(new Map<string, number>());
+  const values = useRef(new Map<string, number>());
+  const menu = useRef(MENU_FALLBACK);
+  const measure = useRef(() => {});
+  const [kept, setKept] = useState(filters.length);
+  useLayoutEffect(() => {
+    measure.current = () => {
+      const node = ref.current;
+      if (!node) return;
+      for (const slot of node.querySelectorAll<HTMLElement>('[data-filter-slot]'))
+        widths.current.set(slot.dataset.filterSlot ?? '', slot.offsetWidth);
+      for (const chip of node.querySelectorAll<HTMLElement>('[data-filter-value]'))
+        values.current.set(chip.dataset.filterValue ?? '', chip.offsetWidth);
+      const trigger = node.querySelector<HTMLElement>('[data-filter-menu]');
+      if (trigger?.offsetWidth) menu.current = trigger.offsetWidth;
+      setKept(
+        keptFilterCount({
+          widths: filters.map((filter) => widths.current.get(filter.id) ?? 0),
+          values: filters.map((filter) =>
+            filter.isDefault ? 0 : (values.current.get(filter.id) ?? 0),
+          ),
+          available: node.clientWidth,
+          gap: CHIP_GAP,
+          trailing: spanOf(widthsOf(node, '[data-filter-trailing]'), CHIP_GAP),
+          menu: menu.current,
+          menuAlways,
+        }),
+      );
+    };
+    measure.current();
+  });
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const observer = new ResizeObserver(() => measure.current());
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  return { ref, kept: Math.min(kept, filters.length) };
 }

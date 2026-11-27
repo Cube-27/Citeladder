@@ -831,3 +831,17 @@ label {
 :root:not([data-public-surface]) :is(a, button, [role='link']):not(:hover, :focus-visible) * {
   text-decoration-color: transparent;
 }
+[data-page-strips] {
+  border-top: calc(var(--spacing) * 3) solid transparent;
+  padding-top: 0;
+  background-clip: padding-box;
+}
+[data-page-width]:has(> [data-page-strips]) > [data-masthead]::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + 1px);
+  height: calc(var(--spacing) * 3);
+  background: var(--color-page);
+  pointer-events: none;
+}

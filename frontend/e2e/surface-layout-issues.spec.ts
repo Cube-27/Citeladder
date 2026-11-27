@@ -96,7 +96,7 @@ async function stubIssues(page: Page) {
 async function layout(page: Page, table: Locator): Promise<Record<string, Box>> {
   const parts: Record<string, Locator> = {
     masthead: page.locator('[data-masthead]'),
-    filters: table.locator('[data-filter-bar]'),
+    filters: table.locator('[data-section-search-row]'),
     search: page.getByRole('searchbox', { name: 'Search issues' }),
     head: table.locator('thead'),
     firstRow: table.locator('tbody tr').nth(1),
@@ -141,7 +141,7 @@ async function openIssues(page: Page, width: number) {
     }
   };
   const openFilter = async (filter: RegExp) => {
-    await table.locator('[data-filter-bar]').getByRole('button', { name: filter }).click();
+    await table.locator('[data-section-search-row]').getByRole('button', { name: filter }).click();
   };
   const choose = async (filter: RegExp, option: string) => {
     await openFilter(filter);
@@ -224,7 +224,7 @@ test('at phone width the search takes a line and the other controls share the ne
   await page.goto(fixtureProjectPath('/issues'));
   const table = page.getByRole('region', { name: 'Issues', exact: true });
   await expect(table.locator('tbody tr').nth(1)).toContainText('technical issue 1');
-  const bar = table.locator('[data-filter-bar]');
+  const bar = table.locator('[data-section-search-row]');
   const filters = bar.getByRole('button', { name: /^Severity/ });
   await filters.click();
   await page.getByRole('menuitemradio', { name: 'High' }).click();

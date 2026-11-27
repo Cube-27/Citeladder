@@ -177,12 +177,16 @@ layout measured for rows runs in `useLayoutEffect`.
 
 ### Fit decided by measured width, never a count
 
-**Rule:** [design](design.md) ("Toolbar placement") owns where controls go.
-Whether chips, tabs or actions fit on a row is decided from the row's
-measured width (`components/ui/filter-fit.ts`), never from a fixed count.
+**Rule:** [design](design.md) ("Toolbar placement") owns where controls go;
+every card, table and graph head is `SectionHeader` with `HeadControls`,
+never a screen's own toolbar row. Whether chips fit on a row is decided from
+the row's measured width (`keptFilterCount` in
+`components/ui/filter-bar.tsx`), never from a fixed count.
 **Why:** Filters folded into one menu with room to spare across several
 design rounds; the four-icon-chip cap in `filter-bar.tsx` was the latest
-form, and its tests pinned the cap instead of the fit.
+form, and its tests pinned the cap instead of the fit. Card heads drifted the
+same way: per-screen toolbars put search, tabs and filters in a different
+order on each card until one shared head replaced them.
 **Check:** A constant capping how many controls show inline. A measured fit
 treats an unmeasured row (width 0: jsdom, hidden, first paint) as "everything
 fits", or every test folds everything; tests that need a fold set widths. A

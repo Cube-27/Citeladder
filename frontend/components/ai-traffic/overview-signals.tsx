@@ -311,7 +311,6 @@ export function RequestsByPurpose({ series }: Readonly<{ series: CrawlSummary['s
         label="Recognized requests by purpose"
         columns={PURPOSE_COLUMNS}
         pageSize={PURPOSE_PAGE_SIZE}
-        rowCount={Math.min(PURPOSE_PAGE_SIZE, to - from + 1)}
         pager={{
           range: { from, to, total: rows.length, noun: 'rows' },
           ...pageNumberControls(page, pageCount, setPage),

@@ -24,7 +24,6 @@ export function ClaimsTable({
     <DataTable
       label="All claims"
       columns={CLAIM_COLUMNS}
-      rowCount={claims.length}
       toolbar={{
         filters: [
           choiceFilter<ClaimStateView>({

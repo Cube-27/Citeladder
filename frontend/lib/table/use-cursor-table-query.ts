@@ -11,7 +11,6 @@ type CursorPageRequest = Readonly<{ cursor: string | undefined; limit: number }>
 
 type CursorTableProps = Readonly<{
   pageSize: number;
-  rowCount: number | undefined;
   state: DataTableState | undefined;
   busy: Readonly<{ active: boolean; label: string }>;
   pager: DataTablePager | undefined;
@@ -73,7 +72,6 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
   const total = totalOf?.(page);
   const table: CursorTableProps = {
     pageSize,
-    rowCount: page?.items.length,
     state,
     busy: { active: query.isFetching && !query.isPending, label: loading },
     pager:

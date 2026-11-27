@@ -14,7 +14,7 @@ import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
 import { TabRow } from '@/components/ui/tabs';
 import type { PromptStatus } from '@citeladder/contracts';
-import { ChevronDown, Pencil, Sparkles, Upload } from '@/lib/icons';
+import { ChevronDown, Pencil, Plus, Settings2, Sparkles, Upload } from '@/lib/icons';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import {
   buyerStageLabels,
@@ -154,55 +154,54 @@ export function promptFilterControls({
   topic?: FilterDefinition;
 }>): FilterBarProps {
   const patch: Patch = (part) => onFiltersChange((current) => ({ ...current, ...part }));
-  return {
-    filters: [
-      ...(topic ? [topic] : []),
-      singleChoice({
-        id: 'branded',
-        label: 'Branded',
-        icon: 'prompts',
-        labels: BRANDED_FILTER_LABEL,
-        value: filters.branded,
-        onChange: (branded) => patch({ branded }),
-      }),
-      manyFilter({
-        id: 'intent',
-        label: 'Intent',
-        allLabel: 'All intents',
-        values: filters.intents,
-        options: intentValues.map((value) => ({ value, label: intentLabels[value] })),
-        onChange: (intents) => patch({ intents }),
-      }),
-      manyFilter({
-        id: 'stage',
-        label: 'Buyer stage',
-        allLabel: 'All stages',
-        values: filters.stages,
-        options: buyerStageValues.map((value) => ({ value, label: buyerStageLabels[value] })),
-        onChange: (stages) => patch({ stages }),
-      }),
-      ...(personas.length
-        ? [
-            manyFilter({
-              id: 'persona',
-              label: 'Persona',
-              allLabel: 'All personas',
-              values: filters.personas,
-              options: personas.map((value) => ({ value, label: value })),
-              onChange: (next) => patch({ personas: next }),
-            }),
-          ]
-        : []),
-      ...(measured ? measuredFilters({ choices: measured, filters, patch }) : []),
-      singleChoice({
-        id: 'enabled',
-        label: 'Enabled',
-        labels: ENABLED_FILTER_LABEL,
-        value: filters.enabled,
-        onChange: (enabled) => patch({ enabled }),
-      }),
-    ],
-  };
+  const filterList: FilterDefinition[] = [
+    ...(topic ? [topic] : []),
+    singleChoice({
+      id: 'branded',
+      label: 'Branded',
+      icon: 'prompts',
+      labels: BRANDED_FILTER_LABEL,
+      value: filters.branded,
+      onChange: (branded) => patch({ branded }),
+    }),
+    manyFilter({
+      id: 'intent',
+      label: 'Intent',
+      allLabel: 'All intents',
+      values: filters.intents,
+      options: intentValues.map((value) => ({ value, label: intentLabels[value] })),
+      onChange: (intents) => patch({ intents }),
+    }),
+    manyFilter({
+      id: 'stage',
+      label: 'Buyer stage',
+      allLabel: 'All stages',
+      values: filters.stages,
+      options: buyerStageValues.map((value) => ({ value, label: buyerStageLabels[value] })),
+      onChange: (stages) => patch({ stages }),
+    }),
+    ...(personas.length
+      ? [
+          manyFilter({
+            id: 'persona',
+            label: 'Persona',
+            allLabel: 'All personas',
+            values: filters.personas,
+            options: personas.map((value) => ({ value, label: value })),
+            onChange: (next) => patch({ personas: next }),
+          }),
+        ]
+      : []),
+    ...(measured ? measuredFilters({ choices: measured, filters, patch }) : []),
+    singleChoice({
+      id: 'enabled',
+      label: 'Enabled',
+      labels: ENABLED_FILTER_LABEL,
+      value: filters.enabled,
+      onChange: (enabled) => patch({ enabled }),
+    }),
+  ];
+  return { filters: filterList.map((filter) => ({ ...filter, inFilters: true })) };
 }
 
 export type AddPromptsHandlers = Readonly<{
@@ -211,18 +210,44 @@ export type AddPromptsHandlers = Readonly<{
   onGenerate: () => void;
 }>;
 
+export type AddTopicsHandlers = Readonly<{ onAdd: () => void; onManage: () => void }>;
+
 export function PromptActions({
   add,
+  topics,
   inEmptyState = false,
-}: Readonly<{ add: AddPromptsHandlers; inEmptyState?: boolean }>) {
+}: Readonly<{ add: AddPromptsHandlers; topics: AddTopicsHandlers; inEmptyState?: boolean }>) {
   const canWrite = useWorkspaceCapability('write');
   return (
     <>
+      {canWrite ? <AddTopicsMenu {...topics} /> : null}
       {canWrite && !inEmptyState ? <AddPromptsMenu {...add} /> : null}
       <MastheadPrimary>
         <LaunchAuditButton />
       </MastheadPrimary>
     </>
+  );
+}
+
+function AddTopicsMenu({ onAdd, onManage }: AddTopicsHandlers) {
+  return (
+    <Menu>
+      <MenuTrigger asChild>
+        <Button variant={ACTIONS.addTopics.variant}>
+          <Icon icon={ACTIONS.addTopics.icon} />
+          {ACTIONS.addTopics.label}
+          <Icon icon={ChevronDown} muted />
+        </Button>
+      </MenuTrigger>
+      <MenuContent align="end">
+        <MenuItem icon={<Icon icon={Plus} />} onSelect={onAdd}>
+          Add topic
+        </MenuItem>
+        <MenuItem icon={<Icon icon={Settings2} />} onSelect={onManage}>
+          Manage topics
+        </MenuItem>
+      </MenuContent>
+    </Menu>
   );
 }
 
