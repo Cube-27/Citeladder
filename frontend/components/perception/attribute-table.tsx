@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import type {
   PerceptionQuote,
   PerceptionResponse,
@@ -40,7 +40,10 @@ const SIDES = [
   { value: 'positive', label: 'Positive' },
 ] as const satisfies readonly { value: Side; label: string }[];
 
-export function AttributeTable({ categories }: Readonly<{ categories: readonly Category[] }>) {
+export function AttributeTable({
+  categories,
+  lead,
+}: Readonly<{ categories: readonly Category[]; lead: ReactNode }>) {
   const [query, setQuery] = useState('');
   const [side, setSide] = useState<Side>('all');
   const [sort, setSort] = useState<CategorySort | null>(null);
@@ -73,6 +76,7 @@ export function AttributeTable({ categories }: Readonly<{ categories: readonly C
   return (
     <>
       <SectionToolbar>
+        {lead}
         <SearchField
           value={query}
           onValueChange={setQuery}

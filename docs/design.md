@@ -525,7 +525,7 @@ holds the depth rules.
   `ink` line, the rest `ink-2`. A panel's tabs are the slot under its header,
   their baseline across the card; never above the card or in its actions.
   Segmented control (and the sidebar's Dashboard | Agent): a `state-fill`
-  tray 40 high, padded 4, with no edge, 32-high segments (`control-sm`), the selected one a
+  tray padded 4 around `control-sm` segments (40 high; 52 under a coarse pointer), with no edge, the selected one a
   `nav-current-fill` pill with the card shadow.
 - **Tags and status.** Tag: 20 high, radius 5, `state-selected` fill, no edge, 12px at 500 in `ink`; a
   draft is dashed; Kbd and composer chips share the face. Status

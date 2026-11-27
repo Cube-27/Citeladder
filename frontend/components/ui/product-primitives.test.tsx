@@ -400,12 +400,11 @@ describe('TableToolbar', () => {
     expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
     unmount();
 
-    const restore = measuredRow(424);
+    const restore = measuredRow(600);
     render(row);
     restore();
-    for (const name of ['Period: All', 'Engines: All'])
-      expect(screen.getByRole('button', { name })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Market: All' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Period: All' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Engines: All' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Filters (2)' })).toBeInTheDocument();
     for (const name of ['Remove Topic filter', 'Remove Kind filter'])
       expect(screen.getByRole('button', { name })).toBeInTheDocument();

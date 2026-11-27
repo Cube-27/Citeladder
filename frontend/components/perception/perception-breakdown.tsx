@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
 
 import { AttributeTable } from '@/components/perception/attribute-table';
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { Section, SectionToolbar } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle, SectionToolbar } from '@/components/ui/section';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
@@ -50,15 +51,22 @@ export function PerceptionBreakdown({
   if (!view) return null;
   return (
     <Section aria-label="Breakdown">
-      <SectionToolbar>
-        <SegmentedControl
-          value={view}
-          onChange={setView}
-          ariaLabel="Break perception down"
-          options={views.map((value) => ({ value, label: VIEW_LABEL[value] }))}
-        />
-      </SectionToolbar>
-      <BreakdownView view={view} data={data} categories={categories} />
+      <SectionHeader>
+        <SectionTitle>Breakdown</SectionTitle>
+      </SectionHeader>
+      <BreakdownView
+        view={view}
+        data={data}
+        categories={categories}
+        switcher={
+          <SegmentedControl
+            value={view}
+            onChange={setView}
+            ariaLabel="Break perception down"
+            options={views.map((value) => ({ value, label: VIEW_LABEL[value] }))}
+          />
+        }
+      />
     </Section>
   );
 }
@@ -67,15 +75,31 @@ function BreakdownView({
   view,
   data,
   categories,
-}: Readonly<{ view: View; data: PerceptionResponse; categories: readonly Category[] }>) {
+  switcher,
+}: Readonly<{
+  view: View;
+  data: PerceptionResponse;
+  categories: readonly Category[];
+  switcher: ReactNode;
+}>) {
   switch (view) {
     case 'attribute':
-      return <AttributeTable categories={categories} />;
+      return <AttributeTable categories={categories} lead={switcher} />;
     case 'topic':
     case 'engine':
-      return <SegmentTable segment={view} rows={data[`${view}s`]} />;
+      return (
+        <>
+          <SectionToolbar>{switcher}</SectionToolbar>
+          <SegmentTable segment={view} rows={data[`${view}s`]} />
+        </>
+      );
     case 'source':
-      return <SourceTable drivers={data.drivers} />;
+      return (
+        <>
+          <SectionToolbar>{switcher}</SectionToolbar>
+          <SourceTable drivers={data.drivers} />
+        </>
+      );
     default: {
       const _exhaustive: never = view;
       return _exhaustive;
