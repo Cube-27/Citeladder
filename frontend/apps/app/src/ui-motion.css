@@ -9,18 +9,19 @@
 
 .tooltip-panel {
   --popup-from: 0 var(--tooltip-lift);
-  --popup-scale: 0.9;
+  --popup-scale: 0.96;
+  transform-origin: var(--radix-tooltip-content-transform-origin, center);
 }
 .tooltip-panel[data-side] {
   --popup-from: 0 var(--tooltip-side-lift);
 }
 :is(.menu-panel, .popover-panel)[class] {
   --popup-from: 0;
-  --popup-scale: 0.9;
+  --popup-scale: 0.96;
   transform-origin: var(--radix-popper-transform-origin, var(--popup-origin, center));
 }
 .menu-panel[role='listbox'][class] {
-  --popup-scale: 0.95;
+  --popup-scale: 0.97;
 }
 @keyframes popup-in {
   from {
@@ -37,10 +38,10 @@
   }
 }
 :is(.tooltip-panel[data-state$='open'], .menu-panel:is([data-state$='open'], [data-open])) {
-  animation: popup-in var(--transition-duration-fast) ease;
+  animation: popup-in var(--transition-duration-fast) var(--ease-standard);
 }
 :is(.menu-panel, .tooltip-panel)[data-state='closed'] {
-  animation: popup-out var(--transition-duration-fast) var(--ease-standard) both;
+  animation: popup-out var(--transition-duration-pop-exit) var(--ease-standard) both;
 }
 [data-selection-dock] {
   --popup-from: -50% var(--dock-lift);
@@ -118,16 +119,19 @@
 }
 .dialog-panel {
   --popup-from: -50% 0;
-  --popup-scale: 1.05;
+  --popup-scale: 0.98;
+}
+.dialog-panel[data-state='closed'] {
+  --popup-scale: 0.99;
 }
 .dialog-overlay[data-state='open'] {
   animation: popup-in var(--transition-duration-fast) var(--ease-standard) both;
 }
 .dialog-panel[data-state='open'] {
-  animation: popup-in var(--transition-duration-press) var(--ease-quad) both;
+  animation: popup-in var(--transition-duration-panel) var(--ease-quad) both;
 }
 :is(.dialog-overlay, .dialog-panel)[data-state='closed'] {
-  animation: popup-out var(--transition-duration-fast) var(--ease-standard) both;
+  animation: popup-out var(--transition-duration-pop-exit) var(--ease-standard) both;
 }
 
 .drawer-panel {
@@ -147,10 +151,10 @@
   }
 }
 .drawer-overlay[data-state='open'] {
-  animation: popup-in var(--transition-duration-press) var(--ease-fluid) both;
+  animation: popup-in var(--transition-duration-panel) var(--ease-fluid) both;
 }
 .drawer-panel[data-state='open'] {
-  animation: slide-in var(--transition-duration-press) var(--ease-fluid) both;
+  animation: slide-in var(--transition-duration-panel) var(--ease-fluid) both;
 }
 .drawer-overlay[data-state='closed'] {
   animation: popup-out var(--transition-duration-open) var(--ease-fluid) both;
@@ -160,7 +164,7 @@
 }
 
 .disclosure > summary > svg {
-  transition: rotate var(--transition-duration-open) var(--ease-quad);
+  transition: rotate var(--transition-duration-turn) var(--ease-standard);
 }
 .disclosure[open] > summary > svg {
   rotate: -180deg;

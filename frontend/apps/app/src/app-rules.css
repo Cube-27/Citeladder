@@ -707,7 +707,7 @@ label {
 @layer components {
   .press {
     transition:
-      scale var(--transition-duration-press) ease,
+      scale var(--transition-duration-press),
       background-color var(--transition-duration-fast),
       color var(--transition-duration-fast),
       border-color var(--transition-duration-fast),
@@ -729,7 +729,7 @@ label {
 }
 
 :is([aria-haspopup], [role='combobox']) .tabler-icon-chevron-down {
-  transition: rotate var(--transition-duration-fast) var(--ease-standard);
+  transition: rotate var(--transition-duration-turn) var(--ease-standard);
 }
 :root:not([data-public-surface])
   :is([aria-haspopup], [role='combobox'])[aria-expanded='true']
@@ -752,8 +752,8 @@ label {
   opacity: 0;
   scale: 0.7;
   transition:
-    scale var(--transition-duration-fast) linear,
-    opacity var(--transition-duration-open);
+    scale var(--transition-duration-fast) var(--ease-standard),
+    opacity var(--transition-duration-open) var(--ease-standard);
 }
 .check-box:not([data-state='unchecked'])::after {
   opacity: 1;

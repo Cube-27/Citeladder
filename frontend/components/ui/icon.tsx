@@ -20,10 +20,7 @@ export type IconSize = keyof typeof ICON_SIZE;
 const ICON_FLAGS = [
   ['muted', 'opacity-muted'],
   ['dim', 'opacity-dim'],
-  [
-    'flipOnOpen',
-    'transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none',
-  ],
+  ['flipOnOpen', 'turn group-data-[state=open]:rotate-180 motion-reduce:transition-none'],
   ['revealOnHover', 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'],
   ['turnOnOpen', 'group-open:rotate-90'],
   ['handle', 'cursor-grab'],
@@ -55,7 +52,7 @@ export function Icon({
         ICON_SIZE[size],
         'shrink-0',
         tone && ICON_TONE[tone],
-        flip !== undefined && 'transition-transform',
+        flip !== undefined && 'turn',
         flip && 'rotate-180',
         ICON_FLAGS.map(([name, classes]) => flags[name] && classes),
       )}

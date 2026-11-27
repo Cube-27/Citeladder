@@ -119,6 +119,9 @@ const DURATION_ROLES = [
   'close',
   'open',
   'press',
+  'panel',
+  'turn',
+  'pop-exit',
   'slide',
   'reveal',
   'pulse',
@@ -127,16 +130,7 @@ const DURATION_ROLES = [
   'reveal-step',
 ];
 
-const TRANSITION_ROLES = [
-  'field',
-  'underline',
-  'underline-color',
-  'tint',
-  'edge',
-  'track',
-  'fill',
-  'size',
-];
+const TRANSITION_ROLES = ['field', 'underline', 'underline-color', 'tint', 'edge', 'track', 'fill'];
 
 const twMerge = extendTailwindMerge({
   extend: {

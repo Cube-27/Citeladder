@@ -14,7 +14,7 @@ const METER_FILL = {
   negative: 'bg-negative',
 } as const satisfies Record<MeterTone, string>;
 
-const FILL_MOTION = 'block h-full transition-meter';
+const FILL_MOTION = 'block h-full fill-share transition-meter';
 
 function percentOf(value: number | null, max: number) {
   if (value === null || max <= 0) return null;
@@ -50,7 +50,7 @@ function MeterTrack({
       className="bg-well [[data-public-surface]_&]:bg-rule rounded-mark app:h-2 block h-1.5 w-full overflow-hidden"
     >
       {percent === null ? null : (
-        <span className={cn(FILL_MOTION, 'w-share', fill)} style={{ '--share': `${percent}%` }} />
+        <span className={cn(FILL_MOTION, fill)} style={{ '--share': `${percent}%` }} />
       )}
     </div>
   );
@@ -125,10 +125,7 @@ export function CellMeter({
       data-meter-tone={tone}
       className="bg-well rounded-mark block h-2 w-30 overflow-hidden"
     >
-      <span
-        className={cn(FILL_MOTION, 'w-share', METER_FILL[tone])}
-        style={{ '--share': `${percent}%` }}
-      />
+      <span className={cn(FILL_MOTION, METER_FILL[tone])} style={{ '--share': `${percent}%` }} />
     </div>
   );
 }

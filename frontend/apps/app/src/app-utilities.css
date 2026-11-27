@@ -15,6 +15,9 @@
   outline: var(--rule-width) solid var(--color-image-edge);
   outline-offset: calc(-1 * var(--rule-width));
 }
+@utility turn {
+  transition: rotate var(--transition-duration-turn) var(--ease-standard);
+}
 @utility scrollbar-stable {
   scrollbar-gutter: stable;
 }
@@ -140,9 +143,14 @@
     stroke-dashoffset: 0;
   }
 }
+@utility fill-share {
+  width: 100%;
+  transform-origin: left;
+  scale: var(--share) 1;
+}
 @utility transition-meter {
   transition:
-    width var(--transition-duration-slide) var(--ease-standard),
+    scale var(--transition-duration-slide) var(--ease-standard),
     background-color var(--transition-duration-open) var(--ease-standard);
 }
 

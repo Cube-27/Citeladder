@@ -130,7 +130,10 @@
   --transition-duration-fast: 120ms;
   --transition-duration-close: 160ms;
   --transition-duration-open: 200ms;
-  --transition-duration-press: 250ms;
+  --transition-duration-press: 150ms;
+  --transition-duration-panel: 250ms;
+  --transition-duration-turn: 200ms;
+  --transition-duration-pop-exit: 96ms;
   --transition-duration-slide: 300ms;
   --transition-duration-reveal: 700ms;
   --transition-duration-pulse: 1200ms;
@@ -145,7 +148,7 @@
   --ease-sweep: linear;
   --default-transition-duration: var(--transition-duration-fast);
   --default-transition-timing-function: var(--ease-standard);
-  --animate-live-rung: live-rung var(--transition-duration-pulse) ease-in-out infinite;
+  --animate-live-rung: live-rung var(--transition-duration-pulse) linear infinite;
 
   --opacity-disabled: 50%;
   --opacity-muted: 80%;
@@ -245,7 +248,6 @@
   --transition-property-edge: border-color, box-shadow;
   --transition-property-track: grid-template-columns;
   --transition-property-fill: background-color;
-  --transition-property-size: width;
   --content-data-size: attr(data-size);
   --content-data-hint: attr(data-hint);
   --press-firm: 0.93;
