@@ -79,7 +79,7 @@ function Controls({
   return (
     <>
       {search ? (
-        <div className="rail:max-w-64 phone:basis-full min-w-0 grow basis-50">{search}</div>
+        <div className="rail:max-w-64 phone:basis-40 min-w-0 grow basis-50">{search}</div>
       ) : null}
       {filters.length > 0 ? <ChipGroup filters={filters} /> : null}
       {windowLabel || status !== undefined ? (

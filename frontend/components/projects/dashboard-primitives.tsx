@@ -129,7 +129,7 @@ export function actionItem(action: Opportunity): ReorderItem {
     key: action.id,
     name: action.title,
     content: (
-      <Inline gap="item">
+      <Inline gap="item" wrap="phone">
         <TextLink
           text="body"
           underline="hover"

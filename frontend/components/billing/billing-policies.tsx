@@ -3,6 +3,7 @@ import { websiteHref } from '@/lib/config/app-link';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { contactSalesHref } from '@/lib/config/contact-sales';
 
+import { Inline } from '@/components/ui/layout';
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { TextLink } from '@/components/ui/text-link';
 import { Text } from '@/components/ui/typography';
@@ -60,11 +61,11 @@ export function BillingSupport({
         <SettingRow
           label="Policies"
           value={
-            <>
-              <PolicyLink path="/refund-policy">Refund Policy</PolicyLink> ·{' '}
-              <PolicyLink path="/cancellation-policy">Cancellation Policy</PolicyLink> ·{' '}
+            <Inline as="span" gap="meta" justify="end">
+              <PolicyLink path="/refund-policy">Refund Policy</PolicyLink>
+              <PolicyLink path="/cancellation-policy">Cancellation Policy</PolicyLink>
               <PolicyLink path="/terms">Terms of Service</PolicyLink>
-            </>
+            </Inline>
           }
         />
       </SettingRows>

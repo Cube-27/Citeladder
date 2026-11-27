@@ -94,7 +94,7 @@ export function TreeLine({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 export function TreeLeaf({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="phone:ms-0 ms-6 pb-2">{children}</div>;
+  return <div className="phone:ms-0 ms-8 pb-2">{children}</div>;
 }
 
 export function TreeQuiet({ children }: Readonly<{ children: ReactNode }>) {
