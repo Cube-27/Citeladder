@@ -52,6 +52,16 @@ function rootName(name) {
   return '';
 }
 
+function paramNames(param) {
+  if (param.type === 'Identifier') return [param.name];
+  if (param.type === 'AssignmentPattern') return paramNames(param.left);
+  if (param.type === 'ObjectPattern')
+    return param.properties.flatMap((property) =>
+      property.type === 'RestElement' ? paramNames(property.argument) : [],
+    );
+  return [];
+}
+
 function attributeNamed(node, name) {
   return node.attributes.find((item) => item.type === 'JSXAttribute' && item.name.name === name);
 }
@@ -86,7 +96,25 @@ const plainElement = {
     const constants = new Map();
     const imports = new Map();
     const elements = [];
+    const forwarded = new Set();
+    const forwardsProps = (item) => {
+      if (item.type !== 'JSXSpreadAttribute') return false;
+      const { argument } = item;
+      if (argument.type === 'Identifier') return forwarded.has(argument.name);
+      return (
+        argument.type === 'ObjectExpression' &&
+        argument.properties.some((property) =>
+          ['className', 'style'].includes(property.key?.name ?? property.key?.value),
+        )
+      );
+    };
+    const collectParams = (node) => {
+      for (const param of node.params) paramNames(param).forEach((name) => forwarded.add(name));
+    };
     return {
+      FunctionDeclaration: collectParams,
+      FunctionExpression: collectParams,
+      ArrowFunctionExpression: collectParams,
       ImportDeclaration(node) {
         for (const specifier of node.specifiers)
           imports.set(specifier.local.name, node.source.value);
@@ -96,13 +124,10 @@ const plainElement = {
           constants.set(node.id.name, node.init);
       },
       JSXOpeningElement(node) {
-        if (
-          /^[a-z]/.test(rootName(node.name)) &&
-          node.attributes.some((item) => item.type === 'JSXSpreadAttribute')
-        )
+        if (/^[a-z]/.test(rootName(node.name)) && node.attributes.some(forwardsProps))
           context.report({
             node,
-            message: `<${rootName(node.name)}> spreads props, so a caller can pass it any class or style. Render a primitive instead. ${GUIDE}`,
+            message: `<${rootName(node.name)}> spreads forwarded props, so a caller can pass it any class or style. Render a primitive instead. ${GUIDE}`,
           });
         const keys = roleKeys(attributeNamed(node, 'style'));
         if (keys.length)

@@ -24,7 +24,7 @@ export function Canary({ tone }: Readonly<{ tone: string }>) {
       <img src="/logo.png" alt="" />
       <svg aria-hidden viewBox="0 0 24 24" className="size-6 shrink-0" />
       <Box className="text-accent p-3">component</Box>
-      <p {...{ title: tone }}>spread</p>
+      <p {...{ className: tone }}>spread</p>
       <div style={{ '--spacing-card': '40px' }}>role style</div>
       <Button className="mt-7 w-78">ui steps</Button>
       <i className={`flex ${LAYOUT.row}`}>template</i>
