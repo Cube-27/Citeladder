@@ -116,3 +116,11 @@
 [data-bleed] .table-frame tr > :last-child:not([data-tile-cell]) {
   padding-inline-end: var(--spacing-panel-inset);
 }
+
+@media (forced-colors: active) {
+  :is([data-panel='card'], [data-panel-frame], [data-main-column], .shadow-card):not(
+    :focus-visible
+  ) {
+    outline: var(--rule-width) solid transparent;
+  }
+}

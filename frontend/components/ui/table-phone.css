@@ -1,21 +1,38 @@
 @media (max-width: 767px) {
-  [data-data-table-frame] td .truncate,
+  :is(
+      [data-data-table-frame]:not([data-pinned='2']) tr > :first-child,
+      [data-data-table-frame][data-pinned='2'] tr > :nth-child(2)
+    )
+    .truncate,
   .table-frame th[scope='row'] .truncate {
     white-space: normal;
     overflow-wrap: break-word;
     text-overflow: clip;
   }
 
-  [data-data-table-frame] td [data-cell-lines] {
+  :is(
+      [data-data-table-frame]:not([data-pinned='2']) tr > :first-child,
+      [data-data-table-frame][data-pinned='2'] tr > :nth-child(2)
+    )
+    [data-cell-lines] {
     flex-wrap: wrap;
   }
 
-  [data-data-table-frame] td [data-url-text] {
+  :is(
+      [data-data-table-frame]:not([data-pinned='2']) tr > :first-child,
+      [data-data-table-frame][data-pinned='2'] tr > :nth-child(2)
+    )
+    [data-url-text] {
     display: block;
     white-space: normal;
   }
 
-  [data-data-table-frame] td [data-url-text] > span {
+  :is(
+      [data-data-table-frame]:not([data-pinned='2']) tr > :first-child,
+      [data-data-table-frame][data-pinned='2'] tr > :nth-child(2)
+    )
+    [data-url-text]
+    > span {
     display: inline;
     overflow-wrap: break-word;
   }

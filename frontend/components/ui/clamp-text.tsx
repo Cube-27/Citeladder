@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import {
@@ -132,6 +132,24 @@ export function ClampText({
       </span>
     </Tooltip>
   );
+}
+
+export function HostText({ host }: Readonly<{ host: string }>) {
+  let offset = 0;
+  return host.split('.').map((part) => {
+    const at = offset;
+    offset += part.length + 1;
+    return (
+      <Fragment key={at}>
+        {at ? (
+          <>
+            .<wbr />
+          </>
+        ) : null}
+        {part}
+      </Fragment>
+    );
+  });
 }
 
 export function UrlCutParts({ text }: Readonly<{ text: string }>) {

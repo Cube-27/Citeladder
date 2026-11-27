@@ -1,4 +1,5 @@
 import { BrandMark } from '@/components/ui/brand-mark';
+import { HostText } from '@/components/ui/clamp-text';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
@@ -12,7 +13,10 @@ export function SourceName({
   return (
     <Inline as="span">
       <BrandMark name={name} websiteUrl={host ? `https://${host}` : null} />
-      <TableCellLines primary={name} secondary={secondary} />
+      <TableCellLines
+        primary={name === host ? <HostText host={name} /> : name}
+        secondary={secondary}
+      />
     </Inline>
   );
 }
