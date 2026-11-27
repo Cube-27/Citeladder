@@ -1,4 +1,4 @@
-import { QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { MutationObserver, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
@@ -7,7 +7,7 @@ import { prefetchRoute } from '@/lib/navigation/route-prefetch';
 import { mswServer } from '@/test/msw-server';
 import { createAppQueryClient } from './query-client';
 import { INITIAL_VISIBILITY_PARAMS } from './visibility';
-import { isMetricsPending, visibilityQueries } from './visibility-queries';
+import { isMetricsPending, visibilityMutations, visibilityQueries } from './visibility-queries';
 import { auditPage } from '@/test/fixtures/runs';
 
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
@@ -79,5 +79,36 @@ describe('the Visibility landing projection', () => {
     renderProjection();
 
     expect(await screen.findByText('Failed')).toBeVisible();
+  });
+});
+
+describe('a verdict override', () => {
+  it('refreshes the fact-checking reads and leaves the dashboard as it was', async () => {
+    const VERDICT = '22222222-2222-4222-8222-222222222222';
+    mswServer.use(
+      http.post(`/api/v1/projects/${PROJECT_ID}/claim-verdicts/${VERDICT}/overrides`, () =>
+        HttpResponse.json({
+          verdict_id: VERDICT,
+          model_verdict: 'supported',
+          verdict: 'contradicted',
+          note: null,
+          at: '2026-11-01T00:00:00Z',
+        }),
+      ),
+    );
+    const client = createAppQueryClient();
+    const accuracy = visibilityQueries.accuracy(SCOPE, { cohort: 'core' }).queryKey;
+    const facts = visibilityQueries.accuracyFacts(SCOPE, { cohort: 'core' }).queryKey;
+    const dashboard = visibilityQueries.project(SCOPE, INITIAL_VISIBILITY_PARAMS).queryKey;
+    for (const key of [accuracy, facts, dashboard]) client.setQueryData(key, null);
+
+    await new MutationObserver(client, visibilityMutations.overrideVerdict(SCOPE)).mutate({
+      verdictId: VERDICT,
+      input: { verdict: 'contradicted' },
+    });
+
+    expect(
+      [accuracy, facts, dashboard].map((key) => client.getQueryState(key)?.isInvalidated),
+    ).toEqual([true, true, false]);
   });
 });

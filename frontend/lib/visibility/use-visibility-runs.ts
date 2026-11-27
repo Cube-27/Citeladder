@@ -57,11 +57,12 @@ function useRunWindow(requestScope: RequestScope, market: string | null, window:
   return query.data === undefined ? undefined : query.data.total > 0;
 }
 
-function useRunPicker(requestScope: RequestScope, market: string | null) {
+function useRunPicker(requestScope: RequestScope, market: string | null, active: boolean) {
   const [paged, setPaged] = useState({ market, page: 1 });
   const page = paged.market === market ? paged.page : 1;
   const latestQuery = useQuery({
     ...runsQueries.list(requestScope, brandRunsParams(market)),
+    enabled: active,
     refetchInterval: (query) => pollAudits(countedStatuses(query.state.data?.status_counts)),
   });
   const pageQuery = useQuery({
@@ -89,22 +90,24 @@ export function useVisibilityRuns({
   market,
   selectedRunId,
   window,
+  active,
 }: Readonly<{
   requestScope: RequestScope;
   market: string | null;
   selectedRunId: string | null;
   window: RunWindow | null;
+  active: boolean;
 }>) {
   const { workspaceId, projectId } = requestScope;
   const timeZone = useDisplayTimeZone();
   const queryClient = useQueryClient();
-  const picker = useRunPicker(requestScope, market);
+  const picker = useRunPicker(requestScope, market, active);
   const auditsQuery = picker.latestQuery;
   const counts = auditsQuery.data?.status_counts;
   const anyActive = counts ? statusCount(counts, ACTIVE_AUDIT_STATUSES) > 0 : false;
   const activeQuery = useQuery({
     ...runsQueries.list(requestScope, ACTIVE_RUN_PARAMS),
-    enabled: anyActive,
+    enabled: active && anyActive,
     refetchInterval: (query) => pollAudits(query.state.data?.items.map((audit) => audit.status)),
   });
   const runOptions = useMemo(
@@ -120,7 +123,7 @@ export function useVisibilityRuns({
   const [selectedRun] = toRunOptions(selectedQuery.data ? [selectedQuery.data] : [], timeZone);
   const measured = counts ? statusCount(counts, DASHBOARD_STATUSES) : 0;
   const activeRun = anyActive ? activeRunOf(activeQuery.data?.items[0]) : null;
-  const rangeHasRuns = useRunWindow(requestScope, market, window);
+  const rangeHasRuns = useRunWindow(requestScope, market, active ? window : null);
   const runSignal = `${measured}:${activeRun?.id ?? 'idle'}`;
   const previousSignal = useRef<string | undefined>(undefined);
   const loaded = auditsQuery.isSuccess;

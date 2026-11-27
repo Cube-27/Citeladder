@@ -57,7 +57,7 @@ const renderRuns = () =>
     },
   });
 
-beforeAll(() => mswServer.listen({ onUnhandledRequest: 'bypass' }));
+beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterAll(() => mswServer.close());
 afterEach(() => {
   mswServer.resetHandlers();

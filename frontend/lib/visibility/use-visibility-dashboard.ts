@@ -28,6 +28,7 @@ import {
 import { logicalEngineSchema } from '@citeladder/contracts/providers';
 import {
   DEFAULT_TREND_RANGE,
+  rangeTo,
   rangeToFrom,
   type TrendGranularity,
   type TrendRange,
@@ -238,27 +239,22 @@ export function useVisibilityFilters({
 
 function resolvedSelection(
   data:
-    | {
-        audit_id?: string | null;
-        selection_mode?: string;
-        source_audit_ids?: string[];
-        from_at?: string | null;
-        to_at?: string | null;
-      }
+    | { audit_id?: string | null; selection_mode?: string; source_audit_ids?: string[] }
     | null
     | undefined,
 ) {
-  const range = data?.selection_mode === 'range';
   return {
     activeRunId: data?.audit_id ?? null,
-    selectedRunIds: range ? data.source_audit_ids : undefined,
-    selectedPeriod: range ? { from: data.from_at ?? undefined, to: data.to_at ?? undefined } : null,
+    selectedRunIds: data?.selection_mode === 'range' ? data.source_audit_ids : undefined,
   };
 }
+
+export type SelectionWindow = Readonly<{ from: string | undefined; to: string }>;
 
 export function useVisibilityQueries(
   filters: ReturnType<typeof useVisibilityFilters>,
   view: VisibilityView,
+  { active = true }: Readonly<{ active?: boolean }> = {},
 ) {
   const { workspaceId, projectId } = useProjectScope();
   const requestScope = { workspaceId, projectId };
@@ -267,6 +263,7 @@ export function useVisibilityQueries(
     () => filters.fromAt ?? rangeToFrom(filters.range),
     [filters.fromAt, filters.range],
   );
+  const window: SelectionWindow = { from, to: filters.toAt ?? rangeTo() };
   const asksWindow =
     filters.chosenSelection === null &&
     filters.selectedRunId === null &&
@@ -276,7 +273,8 @@ export function useVisibilityQueries(
       requestScope,
       market: filters.market,
       selectedRunId: filters.selectedRunId,
-      window: asksWindow ? { from, to: filters.toAt ?? undefined } : null,
+      window: asksWindow ? window : null,
+      active,
     });
   const topic = filters.topic ?? undefined;
   const { markets, marketRowsQuery } = useMarketVisibility(
@@ -292,19 +290,22 @@ export function useVisibilityQueries(
     fallback: filters.defaultSelection,
     rangeHasRuns,
   });
-  const selectedParams = selectionParams(filters, { mode: selectionMode, from, engine });
+  const selectedParams = selectionParams(filters, { mode: selectionMode, window, engine });
   const projectionOptions = visibilityQueries.project(requestScope, selectedParams);
   const visibilityQuery = useQuery({
     ...projectionOptions,
+    enabled: active,
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
   });
-  const { activeRunId, selectedRunIds, selectedPeriod } = resolvedSelection(visibilityQuery.data);
+  const { activeRunId, selectedRunIds } = resolvedSelection(visibilityQuery.data);
+  const selectionReady =
+    active && auditsQuery.isSuccess && hasRuns && (!asksWindow || rangeHasRuns !== undefined);
   const trendParams = {
     market: filters.market ?? undefined,
     engine,
     topic,
     from,
-    to: filters.toAt ?? undefined,
+    to: window.to,
     granularity: filters.granularity,
     cohort: filters.cohort,
   };
@@ -361,7 +362,8 @@ export function useVisibilityQueries(
     projectId,
     workspaceId,
     selectedRunIds,
-    selectedPeriod,
+    window,
+    selectionReady,
     visibilityQuery,
     trendQuery,
     topicsQuery,
@@ -390,7 +392,11 @@ export function useVisibilityQueries(
 
 function selectionParams(
   filters: ReturnType<typeof useVisibilityFilters>,
-  { mode, from, engine }: Readonly<{ mode: SelectionMode; from?: string; engine?: string }>,
+  {
+    mode,
+    window,
+    engine,
+  }: Readonly<{ mode: SelectionMode; window: SelectionWindow; engine?: string }>,
 ) {
   const range = mode === 'range';
   const runMode = filters.selectedRunId ? 'run' : 'latest';
@@ -402,8 +408,8 @@ function selectionParams(
     topic: filters.topic ?? undefined,
     baseline_id: filters.baselineId ?? undefined,
     selection_mode: range ? 'range' : runMode,
-    from: range ? from : undefined,
-    to: range ? (filters.toAt ?? undefined) : undefined,
+    from: range ? window.from : undefined,
+    to: range ? window.to : undefined,
     configuration_key: filters.configuration ?? undefined,
   };
 }

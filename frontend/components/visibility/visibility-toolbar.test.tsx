@@ -11,6 +11,21 @@ import { renderWithProviders as render } from '@/test/render';
 import { VisibilityActions, useVisibilityFilterMenu } from './visibility-toolbar';
 
 type MenuProps = Parameters<typeof useVisibilityFilterMenu>[0];
+type Run = MenuProps['runs']['runs'][number];
+
+const RUN: Run = { id: 'run-2', status: 'completed', label: '2 Nov 2026', completedAt: null };
+
+function picker(
+  runs: Run[],
+  runPage: Partial<MenuProps['runs']['runPage']> = {},
+): MenuProps['runs'] {
+  return {
+    runs,
+    latestRun: runs[0],
+    selectedRun: undefined,
+    runPage: { canPrev: false, canNext: false, onPrev: vi.fn(), onNext: vi.fn(), ...runPage },
+  };
+}
 
 function Row(props: MenuProps) {
   return <FilterBar filters={useVisibilityFilterMenu(props)} />;
@@ -25,7 +40,7 @@ function renderRow({
     <Row
       view={view}
       selectionMode={selectionMode}
-      runs={[]}
+      runs={picker([])}
       selectedRunId={null}
       onSelectMeasurement={vi.fn()}
       engine="all"
@@ -174,9 +189,7 @@ describe('useVisibilityFilterMenu', () => {
   });
 
   it('names the latest run at the row’s end while the measurement shows only its icon', () => {
-    const runs = [
-      { id: 'run-2', status: 'completed' as const, label: '2 Nov 2026', completedAt: null },
-    ];
+    const runs = picker([RUN]);
     const { unmount } = renderRow({ selectionMode: 'run', runs });
     expect(screen.getByText('Latest run · 2 Nov 2026')).toBeVisible();
     unmount();
@@ -191,7 +204,7 @@ describe('useVisibilityFilterMenu', () => {
     const onSelectMeasurement = vi.fn();
     renderRow({
       selectionMode: 'run',
-      runs: [{ id: 'run-2', status: 'completed', label: '2 Nov 2026', completedAt: null }],
+      runs: picker([RUN]),
       onSelectPeriod,
       onSelectMeasurement,
     });
@@ -199,6 +212,24 @@ describe('useVisibilityFilterMenu', () => {
     expect(onSelectPeriod.mock.calls).toEqual([['1y']]);
     await chooseFilterOption(user, 'Measurement', '2 Nov 2026');
     expect(onSelectMeasurement.mock.calls).toEqual([['run-2']]);
+  });
+});
+
+describe('the measurement menu', () => {
+  it('steps to older runs and stays open, with newer runs disabled on the first page', async () => {
+    const user = userEvent.setup();
+    const onNext = vi.fn();
+    renderRow({ selectionMode: 'run', runs: picker([RUN], { canNext: true, onNext }) });
+    await user.click(screen.getByRole('button', { name: /^Measurement/ }));
+    expect(screen.getByRole('menuitem', { name: 'Newer runs' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+
+    await user.click(screen.getByRole('menuitem', { name: 'Older runs' }));
+
+    expect(onNext).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('menuitem', { name: 'Older runs' })).toBeVisible();
   });
 });
 

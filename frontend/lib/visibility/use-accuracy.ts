@@ -6,36 +6,36 @@ import { visibilityApi } from '@/lib/api/visibility';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { PERCEPTION_PENDING_POLL_MS } from '@/lib/config/operational';
 import { saveBlob } from '@/lib/download';
-import type { SourceFilters } from '@/components/visibility/source-rows';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { CLAIM_STATE_VIEWS } from '@/lib/visibility/accuracy';
 import { cohortUrlCodec, FACT_CHECK_COHORT } from '@/lib/visibility/prompt-cohort';
 import {
-  periodSelectionParams,
-  selectionEnabled,
-  selectionParams,
+  windowSelectionParams,
+  windowSelectionReady,
   type SourceQueries,
+  type WindowFilters,
 } from '@/lib/visibility/use-source-analysis';
 
 const CLAIM_STATE_CODEC = stringUrlCodec(CLAIM_STATE_VIEWS, 'decided');
 
 type AccuracyInput = Readonly<{
-  filters: Pick<SourceFilters, 'engine'>;
+  filters: Omit<WindowFilters, 'cohort'>;
   queries: SourceQueries;
-  pilot: boolean;
+  open: boolean;
 }>;
 
-function useFactFilters({ engine }: AccuracyInput['filters']) {
+function useFactFilters(filters: AccuracyInput['filters']): WindowFilters {
   const { projectId } = useProjectScope();
   const codec = useMemo(() => cohortUrlCodec(projectId, FACT_CHECK_COHORT), [projectId]);
   const [cohort] = useUrlState('cohort', codec);
-  return { engine, cohort };
+  return { ...filters, cohort };
 }
 
-export function useAccuracy({ filters, queries, pilot }: AccuracyInput) {
-  const params = periodSelectionParams(useFactFilters(filters), queries);
-  const enabled = pilot && selectionEnabled(queries);
+export function useAccuracy({ filters, queries, open }: AccuracyInput) {
+  const factFilters = useFactFilters(filters);
+  const params = windowSelectionParams(factFilters, queries);
+  const enabled = open && windowSelectionReady(factFilters, queries);
   const query = useQuery({
     ...visibilityQueries.accuracy(
       { workspaceId: queries.workspaceId, projectId: queries.projectId },
@@ -62,14 +62,15 @@ export function useFactViews({
   accuracy: Pick<ReturnType<typeof useAccuracy>, 'data' | 'isPlaceholderData'>;
   open: boolean;
 }>) {
-  const params = selectionParams(useFactFilters(filters), queries);
+  const factFilters = useFactFilters(filters);
+  const params = windowSelectionParams(factFilters, queries);
   const [claimState, setClaimState] = useUrlState('claim_state', CLAIM_STATE_CODEC);
   const claimParams = { ...params, state: claimState === 'all' ? undefined : claimState };
   const enabled =
     open &&
     accuracy.data?.state === 'value' &&
     !accuracy.isPlaceholderData &&
-    selectionEnabled(queries);
+    windowSelectionReady(factFilters, queries);
   const scope = { workspaceId: queries.workspaceId, projectId: queries.projectId };
   const facts = useQuery({
     ...visibilityQueries.accuracyFacts(scope, params),
