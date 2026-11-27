@@ -1,24 +1,4 @@
 .cl-site {
-  --text-eyebrow: var(--text-caption);
-  --text-eyebrow--line-height: var(--text-body--line-height);
-  --text-screen-eyebrow--line-height: var(--text-body--line-height);
-  --text-caption--line-height: var(--text-body--line-height);
-  --text-data: var(--text-caption);
-  --text-code: var(--text-body);
-  --text-title-sm--line-height: calc(var(--text-title-sm) + 5 * var(--type-step));
-  --text-display-sm: var(--text-title);
-  --text-display-sm--line-height: var(--text-title--line-height);
-  --text-display-lg: var(--text-display-md);
-  --text-display-lg--line-height: var(--text-display-md--line-height);
-  --text-lead: var(--text-body-lg);
-  --text-lead--line-height: var(--text-body-lg--line-height);
-  --text-title: calc(var(--type-base) + 2 * var(--type-step));
-  --text-title--line-height: calc(var(--text-title) + 2 * var(--type-step));
-  --text-stat: calc(var(--type-base) + 4 * var(--type-step));
-  --text-stat--line-height: calc(var(--text-stat) + 4 * var(--type-step));
-  --text-display-md: calc(var(--type-base) + 4 * var(--type-step));
-  --text-display-md--line-height: calc(var(--text-display-md) + 3 * var(--type-step));
-
   --site-page: var(--color-site-page);
   --site-mark: var(--color-site-mark);
   --site-chip: var(--color-site-chip);
@@ -36,12 +16,6 @@
   background: var(--site-page);
   color: var(--text-color-ink);
   font-family: var(--font-sans);
-}
-
-@media (min-width: 768px) {
-  .cl-site {
-    --text-site-section--line-height: calc(var(--text-site-section) + 2 * var(--type-step));
-  }
 }
 
 .cl-container {

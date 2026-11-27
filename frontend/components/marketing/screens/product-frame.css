@@ -86,11 +86,6 @@
   }
 }
 
-.cl-frame-screen {
-  --text-eyebrow: var(--text-caption);
-  --text-data: var(--text-caption);
-}
-
 @media (max-width: 767px) {
   .cl-frame-screen {
     --text-body-lg: calc(var(--type-base) + var(--type-step));

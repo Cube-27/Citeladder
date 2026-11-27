@@ -28,7 +28,7 @@ describe('cn', () => {
       'text-figure font-figure text-ink font-emphasis',
     );
     expect(cn('font-sans', 'font-figure')).toBe('font-figure');
-    expect(cn('text-kicker text-ink-2', 'text-screen-eyebrow')).toBe(
+    expect(cn('text-label text-ink-2', 'text-screen-eyebrow')).toBe(
       'text-ink-2 text-screen-eyebrow',
     );
   });

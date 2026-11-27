@@ -4,11 +4,6 @@
 @import './site-type.css';
 @import './site-space.css';
 
-:root {
-  --type-base: 1rem;
-  --type-step: 0.125rem;
-}
-
 @source '../../marketing/src';
 @source '../../../components/marketing';
 @source '../../../components/analytics';

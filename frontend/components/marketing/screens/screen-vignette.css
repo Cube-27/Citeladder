@@ -224,8 +224,8 @@
 
 @container (max-width: 419px) {
   .cl-vig-stat-value {
-    font-size: var(--text-display-sm);
-    line-height: var(--text-display-sm--line-height);
+    font-size: var(--text-heading-lg);
+    line-height: var(--text-heading-lg--line-height);
   }
 }
 

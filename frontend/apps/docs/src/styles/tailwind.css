@@ -5,11 +5,6 @@
 @import '../../../marketing/src/site-space.css';
 @import './docs-search.css';
 
-:root {
-  --type-base: 1rem;
-  --type-step: 0.125rem;
-}
-
 @source './..';
 @source '../../../../components/ui';
 @source '../../../../components/content';
