@@ -117,7 +117,6 @@ export function PromptFormDialog({
                 render={({ field }) => (
                   <Select
                     {...props}
-                    ariaLabel="Topic"
                     value={field.value}
                     onValueChange={field.onChange}
                     options={topicOptions}
@@ -147,7 +146,6 @@ export function PromptFormDialog({
                     render={({ field }) => (
                       <Select
                         {...props}
-                        ariaLabel="Intent"
                         value={field.value}
                         onValueChange={field.onChange}
                         options={INTENT_OPTIONS}
@@ -164,7 +162,6 @@ export function PromptFormDialog({
                     render={({ field }) => (
                       <Select
                         {...props}
-                        ariaLabel="Buyer stage"
                         value={field.value}
                         onValueChange={field.onChange}
                         options={STAGE_OPTIONS}

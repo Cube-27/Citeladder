@@ -31,19 +31,21 @@ type SelectOption<T extends string> = {
 
 const SELECT_BOX = { fill: 'w-full', pager: 'w-20' } as const;
 
-export type SelectProps<T extends string> = {
+export type ControlName =
+  | { ariaLabel: string; id?: string }
+  | { ariaLabel?: undefined; id: string };
+
+export type SelectProps<T extends string> = ControlName & {
   value?: T;
   defaultValue?: T;
   onValueChange?: (value: T) => void;
   options: readonly SelectOption<T>[];
   placeholder?: string;
-  ariaLabel: string;
   disabled?: boolean;
   invalid?: boolean;
   numeric?: boolean;
   'aria-invalid'?: boolean;
   box?: keyof typeof SELECT_BOX;
-  id?: string;
   required?: boolean;
   'aria-describedby'?: string;
   'aria-labelledby'?: string;

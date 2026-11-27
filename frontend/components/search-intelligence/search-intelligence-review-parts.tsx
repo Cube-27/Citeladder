@@ -159,7 +159,6 @@ export function AdvancedOptions({
         {(field) => (
           <Select
             {...field}
-            ariaLabel="Research scope"
             value={values.researchScope}
             onValueChange={set.researchScope}
             options={[
@@ -174,7 +173,6 @@ export function AdvancedOptions({
           {(field) => (
             <Select
               {...field}
-              ariaLabel="Website"
               value={values.ownedTarget}
               onValueChange={set.ownedTarget}
               options={targets.map((target) => ({ value: target.identity, label: target.label }))}
@@ -195,7 +193,6 @@ export function AdvancedOptions({
         {(field) => (
           <Select
             {...field}
-            ariaLabel="Keyword order"
             value={values.rankingOrder}
             onValueChange={set.rankingOrder}
             options={[
@@ -228,7 +225,6 @@ export function AdvancedOptions({
         {(field) => (
           <Select
             {...field}
-            ariaLabel="Backlink grouping"
             value={values.grouping}
             onValueChange={set.grouping}
             options={[

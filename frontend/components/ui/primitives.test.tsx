@@ -235,8 +235,10 @@ describe('TrendChart', () => {
     ).toHaveFocus();
     await user.keyboard('{ArrowLeft}');
     expect(screen.getByText('1 Jun 2026', { selector: 'p' })).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent('1 Jun 2026: You 40%');
     await user.keyboard('{Escape}');
     expect(screen.queryByText('1 Jun 2026', { selector: 'p' })).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent('');
   });
 
   it('breaks the line at a missing value and at a point measured under changed conditions', () => {

@@ -116,12 +116,15 @@ export function FactsImportDialog({
       )}
       {readError ? <Notice tone="negative">{readError}</Notice> : null}
       {parsed?.errors.length ? <Notice tone="negative">{parsed.errors.join(' ')}</Notice> : null}
-      {parsed?.rows.length ? (
-        <CsvImportPreview
-          errorCount={parsed.rows.length - ready.length}
-          fileName={fileName}
-          rowCount={parsed.rows.length}
-        >
+      <CsvImportPreview
+        counts={
+          parsed?.rows.length
+            ? { rows: parsed.rows.length, skipped: parsed.rows.length - ready.length }
+            : null
+        }
+        fileName={fileName}
+      >
+        {parsed ? (
           <DataTable label="Parsed facts" columns={PREVIEW_COLUMNS}>
             {parsed.rows.map((row) => (
               <TableRow key={row.line} dimmed={row.errors.length > 0}>
@@ -136,8 +139,8 @@ export function FactsImportDialog({
               </TableRow>
             ))}
           </DataTable>
-        </CsvImportPreview>
-      ) : null}
+        ) : null}
+      </CsvImportPreview>
     </Dialog>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { ChevronLeft, ChevronRight } from '@/lib/icons';
+import { scrollBehavior } from '@/lib/accessibility/use-reduced-motion';
 import { Icon } from '@/components/ui/icon';
 
 type ScrollEdges = Readonly<{ start: boolean; end: boolean }>;
@@ -61,11 +62,7 @@ export function useScrollFrame({
   const step = (direction: 1 | -1) => {
     const node = ref.current;
     if (!node) return;
-    const reduce = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    node.scrollBy({
-      left: direction * node.clientWidth * STEP_SHARE,
-      behavior: reduce ? 'auto' : 'smooth',
-    });
+    node.scrollBy({ left: direction * node.clientWidth * STEP_SHARE, behavior: scrollBehavior() });
   };
   const frame = {
     'data-scroll-frame': '',

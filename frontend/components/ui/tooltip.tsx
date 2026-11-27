@@ -38,16 +38,19 @@ export function Tooltip({
   side = 'top',
   shortcut,
   describe = true,
+  reach = 'hover',
   shouldOpen,
-}: Readonly<{
-  children: ReactNode;
-  content: ReactNode;
-  side?: 'top' | 'right' | 'bottom' | 'left';
-  shortcut?: string;
-  describe?: boolean;
-  shouldOpen?: (trigger: HTMLElement) => boolean;
-}>) {
+}: Readonly<
+  {
+    children: ReactNode;
+    side?: 'top' | 'right' | 'bottom' | 'left';
+    shortcut?: string;
+    describe?: boolean;
+    shouldOpen?: (trigger: HTMLElement) => boolean;
+  } & ({ reach?: 'hover'; content: ReactNode } | { reach: 'tap'; content: string })
+>) {
   const [open, setOpen] = useState(false);
+  const tap = useRef({ touch: false, wasOpen: false });
   const trigger = useRef<HTMLElement | null>(null);
   const setTrigger = useCallback((node: HTMLElement | null) => {
     trigger.current = node;
@@ -69,6 +72,15 @@ export function Tooltip({
           if (!focusFromKeyboard()) event.preventDefault();
         }}
         {...(describe ? {} : { 'aria-describedby': undefined })}
+        {...(reach === 'tap' && typeof content === 'string' ? { 'aria-description': content } : {})}
+        onPointerDown={(event) => {
+          tap.current = { touch: reach === 'tap' && event.pointerType !== 'mouse', wasOpen: open };
+        }}
+        onClick={(event) => {
+          if (!tap.current.touch) return;
+          event.preventDefault();
+          onOpenChange(!tap.current.wasOpen);
+        }}
       >
         {children}
       </TooltipPrimitive.Trigger>

@@ -78,31 +78,13 @@ function DateRangeFields({
       <legend className="sr-only">{legend}</legend>
       <Inline gap="compact" wrap>
         <Field label="Start date">
-          {(props) => (
-            <DateField
-              {...props}
-              ariaLabel="Start date"
-              value={from}
-              min={min}
-              max={max}
-              onChange={onFrom}
-            />
-          )}
+          {(props) => <DateField {...props} value={from} min={min} max={max} onChange={onFrom} />}
         </Field>
         <Text variant="body" tone="ink-2">
           –
         </Text>
         <Field label="End date">
-          {(props) => (
-            <DateField
-              {...props}
-              ariaLabel="End date"
-              value={to}
-              min={min}
-              max={max}
-              onChange={onTo}
-            />
-          )}
+          {(props) => <DateField {...props} value={to} min={min} max={max} onChange={onTo} />}
         </Field>
       </Inline>
     </Stack>

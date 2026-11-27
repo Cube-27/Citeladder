@@ -83,7 +83,6 @@ function PromptSetField({
         return (
           <Select
             {...props}
-            ariaLabel="Prompt set"
             value={promptSetId ?? ''}
             onValueChange={setPromptSetId}
             options={promptSets.map((set) => ({
@@ -113,7 +112,6 @@ function BatchField({
       {(props) => (
         <Select
           {...props}
-          ariaLabel="Prompts to run"
           value={batchIndex === null ? 'all' : String(batchIndex)}
           onValueChange={(value) => setBatchIndex(value === 'all' ? null : Number(value))}
           options={[

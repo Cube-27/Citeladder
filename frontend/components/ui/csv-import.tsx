@@ -76,30 +76,33 @@ export function CsvImportFileInput({
 
 export function CsvImportPreview({
   children,
-  errorCount,
+  counts,
   fileName,
-  rowCount,
 }: Readonly<{
   children: ReactNode;
-  errorCount: number;
+  counts: Readonly<{ rows: number; skipped: number }> | null;
   fileName: string | null;
-  rowCount: number;
 }>) {
   return (
     <>
-      <div className="text-body text-ink-2 flex items-center gap-3">
-        <span>
-          Parsed <span className="text-ink">{rowCount}</span> row
-          {rowCount === 1 ? '' : 's'}
-          {fileName ? ` from ${fileName}` : ''}.
-        </span>
-        {errorCount > 0 ? (
-          <StatusMark variant="status" value="danger">
-            {errorCount} skipped
-          </StatusMark>
+      <output className="text-body text-ink-2 flex items-center gap-3 empty:sr-only">
+        {counts ? (
+          <>
+            <span>
+              Parsed <span className="text-ink">{counts.rows}</span> row
+              {counts.rows === 1 ? '' : 's'}
+              {fileName ? ` from ${fileName}` : ''}.
+            </span>
+            {counts.skipped > 0 ? ' ' : null}
+            {counts.skipped > 0 ? (
+              <StatusMark variant="status" value="danger">
+                {counts.skipped} skipped
+              </StatusMark>
+            ) : null}
+          </>
         ) : null}
-      </div>
-      {children}
+      </output>
+      {counts ? children : null}
     </>
   );
 }

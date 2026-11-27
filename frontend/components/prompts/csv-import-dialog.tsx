@@ -121,36 +121,39 @@ export function CsvImportDialog({
         <Notice tone="negative">{parsed.errors.join(' ')}</Notice>
       ) : null}
 
-      {parsed ? <ParsedRows parsed={parsed} fileName={fileName} /> : null}
+      <CsvImportPreview counts={parsedCounts(parsed)} fileName={fileName}>
+        {parsed ? <ParsedRows parsed={parsed} /> : null}
+      </CsvImportPreview>
     </Dialog>
   );
 }
 
-function ParsedRows({
-  parsed,
-  fileName,
-}: Readonly<{ parsed: ParsedCsv; fileName: string | null }>) {
-  if (parsed.rows.length === 0) return null;
-  const errorCount = parsed.rows.filter((row) => row.errors.length > 0).length;
+function parsedCounts(parsed: ParsedCsv | null) {
+  if (!parsed?.rows.length) return null;
+  return {
+    rows: parsed.rows.length,
+    skipped: parsed.rows.filter((row) => row.errors.length > 0).length,
+  };
+}
+
+function ParsedRows({ parsed }: Readonly<{ parsed: ParsedCsv }>) {
   return (
-    <CsvImportPreview errorCount={errorCount} fileName={fileName} rowCount={parsed.rows.length}>
-      <DataTable label="Parsed rows" columns={PREVIEW_COLUMNS}>
-        {parsed.rows.map((row) => {
-          const invalid = row.errors.length > 0;
-          return (
-            <TableRow key={row.line} dimmed={invalid}>
-              <TableCell numeric tone="ink-2">
-                {row.line}
-              </TableCell>
-              <TableCell>{row.input.topic || <Absence state="not_set" />}</TableCell>
-              <TableCell>{row.input.text || <Absence state="not_set" />}</TableCell>
-              <TableCell>
-                <RowStatus errors={row.errors} />
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </DataTable>
-    </CsvImportPreview>
+    <DataTable label="Parsed rows" columns={PREVIEW_COLUMNS}>
+      {parsed.rows.map((row) => {
+        const invalid = row.errors.length > 0;
+        return (
+          <TableRow key={row.line} dimmed={invalid}>
+            <TableCell numeric tone="ink-2">
+              {row.line}
+            </TableCell>
+            <TableCell>{row.input.topic || <Absence state="not_set" />}</TableCell>
+            <TableCell>{row.input.text || <Absence state="not_set" />}</TableCell>
+            <TableCell>
+              <RowStatus errors={row.errors} />
+            </TableCell>
+          </TableRow>
+        );
+      })}
+    </DataTable>
   );
 }

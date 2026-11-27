@@ -10,6 +10,7 @@ import { Stack } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
 import { type TrailStep } from '@/components/ui/rung-trail';
 import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
+import { scrollBehavior } from '@/lib/accessibility/use-reduced-motion';
 import { isPlanLimit, PLANS_HREF } from '@/lib/billing/plan-limit';
 import { discoveryActivity } from '@/lib/onboarding/discovery-activity';
 import { onboardingErrorMessage, type BrandStepValues } from '@/lib/onboarding/forms';
@@ -322,7 +323,7 @@ export function ReviewStage({
 function ReviewNotices({ failed, children }: Readonly<{ failed: boolean; children: ReactNode }>) {
   const region = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (failed) region.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+    if (failed) region.current?.scrollIntoView?.({ block: 'nearest', behavior: scrollBehavior() });
   }, [failed]);
   return (
     <Stack ref={region} gap="workspace" aria-live="polite" hideEmpty>

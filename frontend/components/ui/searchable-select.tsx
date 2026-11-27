@@ -1,6 +1,8 @@
 import { useId, useRef, useState, type ReactNode } from 'react';
 
+import { fieldLabelId } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import type { ControlName } from '@/components/ui/select';
 import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
 import { ChevronDown } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -8,6 +10,9 @@ import { cn } from '@/lib/utils';
 export type SearchableSelectOption = { value: string; label: string; detail?: string };
 
 type SelectOptionRenderer = (option: SearchableSelectOption) => ReactNode;
+
+const labelledBy = ({ ariaLabel, id }: Readonly<{ ariaLabel?: string; id?: string }>) =>
+  ariaLabel === undefined && id ? fieldLabelId(id) : undefined;
 
 export function SearchableSelect({
   id,
@@ -24,22 +29,22 @@ export function SearchableSelect({
   'aria-describedby': ariaDescribedBy,
   'aria-invalid': ariaInvalid,
   'aria-required': ariaRequired,
-}: Readonly<{
-  id?: string;
-  ariaLabel: string;
-  value: string;
-  options: readonly SearchableSelectOption[];
-  placeholder?: string;
-  disabled?: boolean;
-  onBlur?: () => void;
-  onSearchChange?: (query: string) => void;
-  onChange: (value: string) => void;
-  renderLeading?: SelectOptionRenderer;
-  renderOptionEnd?: SelectOptionRenderer;
-  'aria-describedby'?: string;
-  'aria-invalid'?: boolean;
-  'aria-required'?: boolean;
-}>) {
+}: Readonly<
+  ControlName & {
+    value: string;
+    options: readonly SearchableSelectOption[];
+    placeholder?: string;
+    disabled?: boolean;
+    onBlur?: () => void;
+    onSearchChange?: (query: string) => void;
+    onChange: (value: string) => void;
+    renderLeading?: SelectOptionRenderer;
+    renderOptionEnd?: SelectOptionRenderer;
+    'aria-describedby'?: string;
+    'aria-invalid'?: boolean;
+    'aria-required'?: boolean;
+  }
+>) {
   const listId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -144,6 +149,7 @@ export function SearchableSelect({
           // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role
           role="listbox"
           aria-label={ariaLabel}
+          aria-labelledby={labelledBy({ ariaLabel, id })}
           data-open="true"
           className={cn(
             MENU_PANEL,

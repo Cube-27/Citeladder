@@ -19,7 +19,7 @@ import { Icon } from '@/components/ui/icon';
 
 export const MENU_PANEL = cn(
   POP_FACE,
-  'menu-panel z-modal focus-ring overflow-hidden p-popup-inset',
+  'menu-panel z-modal focus-ring overflow-hidden overscroll-contain p-popup-inset',
 );
 
 export function menuItemClasses({

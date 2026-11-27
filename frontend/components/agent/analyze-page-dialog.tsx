@@ -182,7 +182,6 @@ function PageField({
         <SearchableSelect
           id={control.id}
           aria-describedby={control['aria-describedby']}
-          ariaLabel="Page"
           placeholder="Search by title or address"
           value={page?.site_url_id ?? ''}
           options={pages.map((item) => ({
@@ -239,7 +238,6 @@ function TopicField({
       {(control) => (
         <Select
           {...control}
-          ariaLabel="Topic"
           placeholder="Choose a topic"
           value={value}
           onValueChange={onPick}

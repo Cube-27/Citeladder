@@ -115,14 +115,16 @@ function PurchaseButton({
   priceUnavailable: boolean;
   onPurchase: () => void;
 }>) {
-  const label = pending ? 'Preparing…' : 'Review current quote';
   return (
     <Button
       variant={quoted ? 'secondary' : 'primary'}
-      disabled={!canBuy || !workspaceId || pending || quoted || priceUnavailable}
-      onClick={onPurchase}
+      disabled={!canBuy || !workspaceId || priceUnavailable}
+      aria-disabled={quoted || undefined}
+      pending={pending}
+      pendingLabel="Preparing…"
+      onClick={quoted ? undefined : onPurchase}
     >
-      {label}
+      Review current quote
     </Button>
   );
 }

@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { HoverActions } from '@/components/ui/actions';
 import { JumpList } from '@/components/ui/workspace';
 import { Pencil, Sparkles, X } from '@/lib/icons';
+import { scrollBehavior } from '@/lib/accessibility/use-reduced-motion';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { replaceSection, splitSections, type OutputSection } from '@/lib/agent/sections';
 import {
@@ -61,7 +62,7 @@ export function OutputCanvas({
                     onJump: () =>
                       document
                         .getElementById(sectionId(revision.id, index))
-                        ?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }),
+                        ?.scrollIntoView?.({ block: 'start', behavior: scrollBehavior() }),
                   },
                 ],
           )}

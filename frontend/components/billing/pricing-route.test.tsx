@@ -198,6 +198,111 @@ describe('app pricing continuation', () => {
     expect(writes[0]).toEqual({ workspace: workspaceId, key: 'captured-key' });
   });
 
+  it('sends one quote request however often the pending purchase is activated, keeping focus', async () => {
+    const writes: string[] = [];
+    mswServer.use(
+      http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog)),
+      http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
+      http.post('/api/v1/billing/addons', ({ request }) => {
+        writes.push(request.headers.get('Idempotency-Key') ?? '');
+        return new Promise<never>(() => {});
+      }),
+    );
+    globalThis.sessionStorage.setItem(
+      PENDING_PRICING_INTENT_KEY,
+      JSON.stringify({
+        version: 1,
+        kind: 'addon',
+        catalog_key: 'addon_seats',
+        quantity: 1,
+        byok: true,
+        country_code: null,
+        billing_details: null,
+        idempotency_key: 'one-key',
+        return_path: '/pricing',
+        created_at_ms: Date.now(),
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<PricingRoute />);
+    await user.click(await screen.findByRole('button', { name: 'Review current quote' }));
+    const pending = await screen.findByRole('button', { name: 'Preparing…' });
+    await user.click(pending);
+    await user.keyboard('{Enter}');
+    await user.keyboard(' ');
+    expect([writes, document.activeElement]).toEqual([['one-key'], pending]);
+  });
+
+  it('keeps focus on the purchase button once its quote is ready', async () => {
+    const usd = (amount_minor: number) => ({ currency: 'USD', amount_minor });
+    let posts = 0;
+    mswServer.use(
+      http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog)),
+      http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
+      http.post('/api/v1/billing/addons', () => {
+        posts += 1;
+        return HttpResponse.json({
+          activation_id: '11111111-1111-4111-8111-111111111111',
+          kind: 'addon',
+          catalog_key: 'addon_seats',
+          quantity: 1,
+          status: 'pending',
+          quote: {
+            quote_id: 'q1',
+            catalog_revision: 'commercial-v9',
+            catalog_key: 'addon_seats',
+            credential_mode: 'byok',
+            country_code: 'US',
+            region: 'international',
+            base_price: usd(900),
+            subtotal_price: usd(900),
+            discount: usd(0),
+            taxable_value: usd(900),
+            tax: usd(0),
+            tax_treatment: 'EXPORT_ZERO_RATED',
+            tax_rate: '0',
+            cgst: usd(0),
+            sgst: usd(0),
+            igst: usd(0),
+            tax_policy_version: 1,
+            total_price: usd(900),
+            expires_at: '2026-08-01T12:00:00Z',
+          },
+          expires_at: '2026-08-01T12:00:00Z',
+          failure_code: null,
+        });
+      }),
+    );
+    globalThis.sessionStorage.setItem(
+      PENDING_PRICING_INTENT_KEY,
+      JSON.stringify({
+        version: 1,
+        kind: 'addon',
+        catalog_key: 'addon_seats',
+        quantity: 1,
+        byok: true,
+        country_code: null,
+        billing_details: null,
+        idempotency_key: 'quoted-key',
+        return_path: '/pricing',
+        created_at_ms: Date.now(),
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<PricingRoute />);
+    const purchase = await screen.findByRole('button', { name: 'Review current quote' });
+    await user.click(purchase);
+    await waitFor(() =>
+      expect([purchase.getAttribute('aria-busy'), purchase.getAttribute('aria-disabled')]).toEqual([
+        null,
+        'true',
+      ]),
+    );
+    await user.click(purchase);
+    await user.keyboard('{Enter}');
+    expect([posts, document.activeElement]).toEqual([1, purchase]);
+  });
+
   it('reports a refused purchase once, in the server sentence', async () => {
     mswServer.use(
       http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog)),

@@ -3,6 +3,7 @@ import {
   useState,
   type ComponentPropsWithoutRef,
   type FormEvent,
+  type KeyboardEvent,
   type ReactNode,
 } from 'react';
 
@@ -21,27 +22,66 @@ function listRowClasses() {
   return cn(ROW_FACE.base, ROW_FACE.rest);
 }
 
+const OPTION_KEY: Record<string, (at: number, count: number) => number> = {
+  ArrowDown: (at, count) => (at + 1) % count,
+  ArrowRight: (at, count) => (at + 1) % count,
+  ArrowUp: (at, count) => (at - 1 + count) % count,
+  ArrowLeft: (at, count) => (at - 1 + count) % count,
+  Home: () => 0,
+  End: (_, count) => count - 1,
+};
+
+export function OptionGroup({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
+  return (
+    <div role="radiogroup" aria-label={label} className="gap-tight flex min-w-0 flex-col">
+      {children}
+    </div>
+  );
+}
+
+function moveAmongRadios(event: KeyboardEvent<HTMLButtonElement>) {
+  const next = OPTION_KEY[event.key];
+  const group = event.currentTarget.closest('[role="radiogroup"]');
+  if (!next || !group) return;
+  const radios = [...group.querySelectorAll<HTMLElement>('[role="radio"]:not(:disabled)')];
+  const at = radios.indexOf(event.currentTarget);
+  if (at === -1) return;
+  event.preventDefault();
+  radios[next(at, radios.length)]?.focus();
+}
+
 export function OptionRow({
   title,
   caption,
   selected,
   pending = false,
+  busy = false,
   disabled,
+  tabStop,
   onSelect,
 }: Readonly<{
   title: ReactNode;
   caption?: ReactNode;
   selected: boolean;
   pending?: boolean;
+  busy?: boolean;
   disabled?: boolean;
+  tabStop: boolean;
   onSelect: () => void;
 }>) {
   return (
     <Pressable
       type="button"
-      onClick={onSelect}
+      onClick={() => {
+        if (!busy) onSelect();
+      }}
       disabled={disabled}
-      aria-pressed={selected}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+      role="radio"
+      aria-checked={selected}
+      aria-disabled={busy || undefined}
+      tabIndex={tabStop ? 0 : -1}
+      onKeyDown={moveAmongRadios}
       look="option"
       selected={selected}
     >

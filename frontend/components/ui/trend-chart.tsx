@@ -15,7 +15,13 @@ import {
   type ChartHeight,
   type ChartTone,
 } from '@/components/ui/chart';
-import { ChartBreakNote, ChartKey, ChartTable, ChartTipSheet } from '@/components/ui/chart-frame';
+import {
+  ChartBreakNote,
+  ChartKey,
+  ChartReadout,
+  ChartTable,
+  ChartTipSheet,
+} from '@/components/ui/chart-frame';
 import type { SeriesTone } from '@/components/ui/step-chart-parts';
 import {
   breakConnectors,
@@ -104,6 +110,17 @@ export function TrendChart({
     tickWidth: (ticks) => Math.max(...ticks.map((tick) => yFormat(tick).length)),
   });
   const count = data.length;
+  const tip =
+    active === null
+      ? null
+      : {
+          title: data[active]?.label ?? '',
+          rows: lines.map((line) => ({
+            name: line.name,
+            tone: KEY_TONE[line.tone],
+            value: shown(line.values[active]),
+          })),
+        };
   const step = (key: string) => {
     const from = active ?? count - 1;
     return key === 'ArrowRight' ? Math.min(count - 1, from + 1) : Math.max(0, from - 1);
@@ -155,20 +172,17 @@ export function TrendChart({
           yFormat={yFormat}
           directLabels={directLabels && lines.length > 1}
         />
-        {active === null ? null : (
+        {active === null || !tip ? null : (
           <ChartTipSheet
-            title={data[active]?.label ?? ''}
+            title={tip.title}
             top={scale.padTop}
             x={scale.x(active)}
             frameWidth={width}
-            rows={lines.map((line) => ({
-              name: line.name,
-              tone: KEY_TONE[line.tone],
-              value: shown(line.values[active]),
-            }))}
+            rows={tip.rows}
             note={data[active]?.versionChange?.note}
           />
         )}
+        <ChartReadout tip={tip} />
       </div>
       <ChartBreakNote data={data} lines={lines} />
       <ChartTable

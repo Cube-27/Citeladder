@@ -1,7 +1,8 @@
 import * as DropdownPrimitive from '@radix-ui/react-dropdown-menu';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import { Calendar } from '@/components/ui/calendar';
+import { fieldLabelId } from '@/components/ui/field';
 import { FIELD_BOX } from '@/components/ui/input';
 import { MENU_PANEL } from '@/components/ui/menu';
 import { CalendarDays } from '@/lib/icons';
@@ -13,7 +14,6 @@ export function DateField({
   onChange,
   min,
   max,
-  ariaLabel,
   id,
   'aria-describedby': describedBy,
   'aria-invalid': ariaInvalid,
@@ -25,8 +25,7 @@ export function DateField({
   onChange: (iso: string) => void;
   min?: string;
   max?: string;
-  ariaLabel: string;
-  id?: string;
+  id: string;
   'aria-describedby'?: string;
   'aria-invalid'?: boolean;
   invalid?: boolean;
@@ -34,6 +33,8 @@ export function DateField({
   className?: string;
 }>) {
   const [open, setOpen] = useState(false);
+  const openId = useId();
+  const labelId = fieldLabelId(id);
   const isInvalid = invalid || ariaInvalid === true;
   return (
     <div
@@ -49,7 +50,6 @@ export function DateField({
         type="text"
         inputMode="numeric"
         placeholder="YYYY-MM-DD"
-        aria-label={ariaLabel}
         aria-describedby={describedBy}
         aria-invalid={isInvalid || undefined}
         disabled={disabled}
@@ -61,11 +61,14 @@ export function DateField({
         <DropdownPrimitive.Trigger asChild>
           <button
             type="button"
-            aria-label={`${ariaLabel}: open calendar`}
+            aria-labelledby={`${labelId} ${openId}`}
             disabled={disabled}
             className="focus-ring text-ink-2 enabled:hover:text-ink not-data-[state=open]:enabled:hover:overlay-hover data-[state=open]:overlay-pressed data-[state=open]:text-ink rounded-mark hit-area size-target inline-flex shrink-0 items-center justify-center transition-colors"
           >
             <Icon icon={CalendarDays} size="flush" />
+            <span id={openId} hidden>
+              open calendar
+            </span>
           </button>
         </DropdownPrimitive.Trigger>
         <DropdownPrimitive.Portal>
@@ -79,7 +82,7 @@ export function DateField({
               value={value}
               min={min}
               max={max}
-              ariaLabel={ariaLabel}
+              labelledBy={labelId}
               onSelect={(iso) => {
                 onChange(iso);
                 setOpen(false);

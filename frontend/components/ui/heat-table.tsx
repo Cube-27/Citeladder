@@ -257,7 +257,7 @@ export function AxisItemLabel({
       <ClampText>{text}</ClampText>
       {trail}
       {note ? (
-        <Tooltip content={note.tip}>
+        <Tooltip content={note.tip} reach="tap">
           <button type="button" className="text-caption text-ink-2 whitespace-nowrap">
             {note.label}
           </button>

@@ -114,13 +114,7 @@ export function InviteDialog({
           </Field>
           <Field label="Workspace role" hint={ROLE_SUMMARY[role]}>
             {(field) => (
-              <Select
-                {...field}
-                value={role}
-                onValueChange={setRole}
-                options={ROLE_OPTIONS}
-                ariaLabel="Invitation role"
-              />
+              <Select {...field} value={role} onValueChange={setRole} options={ROLE_OPTIONS} />
             )}
           </Field>
         </Stack>

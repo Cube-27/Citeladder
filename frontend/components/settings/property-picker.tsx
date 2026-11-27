@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { Absence } from '@/components/ui/absence';
 import { Dialog } from '@/components/ui/dialog';
 import { StatusMark } from '@/components/ui/status-mark';
-import { Stack } from '@/components/ui/layout';
-import { OptionRow } from '@/components/ui/list-row';
+import { OptionGroup, OptionRow } from '@/components/ui/list-row';
 import {
   integrationsMutations,
   integrationsQueries,
@@ -21,31 +20,6 @@ import { PROVIDER_META } from '@/components/settings/grant-model';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
-function PropertyOption({
-  property,
-  selected,
-  disabled,
-  pending,
-  onSelect,
-}: Readonly<{
-  property: IntegrationProperty;
-  selected: boolean;
-  disabled: boolean;
-  pending: boolean;
-  onSelect: () => void;
-}>) {
-  return (
-    <OptionRow
-      title={property.label}
-      caption={property.property_ref}
-      selected={selected}
-      pending={pending}
-      disabled={disabled}
-      onSelect={onSelect}
-    />
-  );
-}
-
 export function useActiveMapping(
   workspaceId: string,
   connectionId: string,
@@ -56,12 +30,14 @@ export function useActiveMapping(
 }
 
 function PropertyOptions({
+  label,
   properties,
   selected,
   blocked,
   selecting,
   onSelect,
 }: Readonly<{
+  label: string;
   properties: IntegrationProperty[];
   selected: string;
   blocked: boolean;
@@ -69,16 +45,28 @@ function PropertyOptions({
   onSelect: (propertyRef: string) => void;
 }>) {
   const pendingRef = selecting.isPending ? selecting.variables : undefined;
-  return ownPropertiesFirst(properties).map((property) => (
-    <PropertyOption
-      key={property.property_ref}
-      property={property}
-      selected={property.property_ref === selected}
-      disabled={blocked || property.matches_project === false}
-      pending={pendingRef === property.property_ref}
-      onSelect={() => onSelect(property.property_ref)}
-    />
-  ));
+  const ordered = ownPropertiesFirst(properties);
+  const open = (property: IntegrationProperty) => !blocked && property.matches_project !== false;
+  const stop =
+    ordered.find((property) => property.property_ref === selected && open(property)) ??
+    ordered.find(open);
+  return (
+    <OptionGroup label={label}>
+      {ordered.map((property) => (
+        <OptionRow
+          key={property.property_ref}
+          title={property.label}
+          caption={property.property_ref}
+          selected={property.property_ref === selected}
+          pending={pendingRef === property.property_ref}
+          busy={selecting.isPending}
+          disabled={!open(property)}
+          tabStop={property === stop}
+          onSelect={() => onSelect(property.property_ref)}
+        />
+      ))}
+    </OptionGroup>
+  );
 }
 
 function DiscoveryState({
@@ -183,18 +171,17 @@ export function usePropertyPicker(connection: IntegrationConnection) {
           noun={noun}
         />
         {discovery.data?.length ? (
-          <Stack gap="tight">
-            <PropertyOptions
-              properties={discovery.data ?? []}
-              selected={selected}
-              blocked={!activeProject || selectMutation.isPending}
-              selecting={{
-                isPending: selectMutation.isPending,
-                variables: selectMutation.variables?.property_ref,
-              }}
-              onSelect={selectProperty}
-            />
-          </Stack>
+          <PropertyOptions
+            label={noun}
+            properties={discovery.data ?? []}
+            selected={selected}
+            blocked={!activeProject}
+            selecting={{
+              isPending: selectMutation.isPending,
+              variables: selectMutation.variables?.property_ref,
+            }}
+            onSelect={selectProperty}
+          />
         ) : null}
         {selectMutation.isError ? (
           <Notice

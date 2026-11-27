@@ -188,6 +188,39 @@ describe('PropertyPicker', () => {
     });
   });
 
+  it('moves through the properties with arrow keys and saves one choice while it is pending', async () => {
+    const ue = userEvent.setup();
+    mockProperties();
+    const writes: unknown[] = [];
+    mswServer.use(
+      http.post(`/api/v1/integrations/${CONN}/mappings`, async ({ request }) => {
+        writes.push(((await request.json()) as { property_ref: string }).property_ref);
+        return new Promise<never>(() => {});
+      }),
+    );
+    renderPicker(connection());
+
+    await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
+    const group = await screen.findByRole('radiogroup', { name: 'Search Console property' });
+    const first = screen.getByRole('radio', { name: /Example \(domain property\)/ });
+    const second = screen.getByRole('radio', { name: /Example \(URL prefix\)/ });
+    first.focus();
+    await ue.keyboard('{ArrowDown}');
+    expect(second).toHaveFocus();
+    await ue.keyboard('{ArrowDown}');
+    expect(first).toHaveFocus();
+    await ue.keyboard('{ArrowUp}');
+    await ue.keyboard(' ');
+    await waitFor(() => expect(writes).toEqual(['https://www.example.com/']));
+    await ue.keyboard('{Enter}');
+    await ue.click(first);
+    expect([writes, document.activeElement, group.contains(first)]).toEqual([
+      ['https://www.example.com/'],
+      first,
+      true,
+    ]);
+  });
+
   it('blocks duplicate discovery while the provider request is pending', async () => {
     const ue = userEvent.setup();
     let complete!: (response: Response) => void;

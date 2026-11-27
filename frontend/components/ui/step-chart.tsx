@@ -9,7 +9,7 @@ import {
   useChartWidth,
   type ChartHeight,
 } from '@/components/ui/chart';
-import { ChartFrame, ChartKey, ChartTipSheet } from '@/components/ui/chart-frame';
+import { ChartFrame, ChartKey, ChartReadout, ChartTipSheet } from '@/components/ui/chart-frame';
 import {
   lastMeasured,
   plottedLines,
@@ -311,22 +311,30 @@ function StepChartTip({
   shown: Shown;
 }>) {
   const point = active === null ? undefined : data[active];
-  if (active === null || !point) return null;
+  const rows =
+    active === null
+      ? []
+      : lines.map((line) => ({
+          name: line.name,
+          mark: line.mark,
+          tone: line.tone,
+          shape: keyed ? line.shape : undefined,
+          value: shown(line.values[active]),
+        }));
   return (
-    <ChartTipSheet
-      title={point.label}
-      top={scale.padTop}
-      x={scale.x(active)}
-      frameWidth={width}
-      note={point.versionChange?.note}
-      rows={lines.map((line) => ({
-        name: line.name,
-        mark: line.mark,
-        tone: line.tone,
-        shape: keyed ? line.shape : undefined,
-        value: shown(line.values[active]),
-      }))}
-    />
+    <>
+      {active === null || !point ? null : (
+        <ChartTipSheet
+          title={point.label}
+          top={scale.padTop}
+          x={scale.x(active)}
+          frameWidth={width}
+          note={point.versionChange?.note}
+          rows={rows}
+        />
+      )}
+      <ChartReadout tip={point ? { title: point.label, rows } : null} />
+    </>
   );
 }
 
