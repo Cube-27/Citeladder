@@ -409,8 +409,8 @@ how to add or change an entry.
   table head holds title, search and actions on one row and wraps only when
   they do not fit.
 - **AR-28 One term, "prompts"** (technically buyer queries), not "answers",
-  for what a product or brand is measured in (2026-11-27). Product detail
-  follows it; other screens still say "answers".
+  for what a product or brand is measured in (2026-11-27). Product detail and
+  the Products list follow it; other screens still say "answers".
 
 ## Audit remediation (owner 2026-11-12)
 
