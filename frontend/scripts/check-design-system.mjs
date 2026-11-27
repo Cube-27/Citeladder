@@ -8,6 +8,7 @@ import {
   compositionReport,
   COMPOSITION_ENFORCED,
 } from './design-system-composition.mjs';
+import { astroStyleFindings, cssValueFindings } from './design-system-css-values.mjs';
 import { appSourceViolations } from './design-system-source-checks.mjs';
 
 const root = resolve(import.meta.dirname, '..');
@@ -21,7 +22,6 @@ const ignored = new Set([
   'test-results',
   'playwright-report',
 ]);
-const RAW_HEX = /(?<![\w-])#[0-9a-f]{3,8}(?![\w-])/i;
 const violations = [];
 const scriptSources = [];
 const composition = [];
@@ -36,16 +36,15 @@ function files(directory) {
 
 for (const path of files(root)) {
   const extension = extname(path);
-  if (!sourceExtensions.has(extension) || tokenOwners.includes(path)) continue;
+  if (!sourceExtensions.has(extension)) continue;
   const source = readFileSync(path, 'utf8');
   const label = relative(root, path);
-  const styled =
-    extension === '.astro'
-      ? [...source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((match) => match[1]).join()
-      : source;
-  if (RAW_HEX.test(styled))
-    violations.push(`${label}: raw colour outside ${TOKEN_FILES.join(' and ')}`);
-  if (extension === '.astro') continue;
+  if (extension === '.css') violations.push(...cssValueFindings(label, source));
+  if (extension === '.astro') {
+    violations.push(...astroStyleFindings(label, source));
+    continue;
+  }
+  if (tokenOwners.includes(path)) continue;
   if (/\.tsx?$/.test(label) && !/\.test\.tsx?$/.test(label)) scriptSources.push({ label, source });
   composition.push(...compositionFindings(label, source));
 }

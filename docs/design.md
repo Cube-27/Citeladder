@@ -58,9 +58,16 @@ every rule (`scripts/frontend/design-lint.test.mjs`).
 
 `pnpm check:policy` adds WCAG AA contrast of token pairs (every
 `--text-color-*` role on the grounds of its palette at 4.5:1, marks 3:1, both
-themes), the app's Tailwind `@source` list, no hex in CSS, scripts or Astro
-styles outside `globals.css` and `public-surface.css`, and reports breaks of the [composition rules](#composition) as a
-warning that never fails CI (AR-25).
+themes), the app's Tailwind `@source` list and the CSS value rule
+([`design-system-css-values.mjs`](../frontend/scripts/design-system-css-values.mjs)),
+and reports breaks of the [composition rules](#composition) as a warning that
+never fails CI (AR-25). The CSS value rule reads every `.css` file and Astro
+`<style>`, `globals.css` rule blocks included: outside `@theme`, custom
+property declarations, `@keyframes` and `@font-face`, a colour, type, z-index,
+motion, shadow, spacing or border-width value holds no hex, colour function,
+`px`/`rem`/`em`/`ms`/`s` length or bare z-index, weight or line-height
+number. Tokens, keywords, `0`, unitless multipliers, percentages and gradient
+stops pass; `forced-colors` and `prefers-reduced-motion` blocks are exempt.
 
 The website (marketing and docs) composes the same primitives, and its own
 blocks are `cl-*` classes whose CSS, in the side sheets the marketing and docs

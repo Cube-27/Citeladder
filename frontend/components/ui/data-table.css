@@ -12,7 +12,7 @@
   [data-pinned] .table-frame tr > :nth-child(1),
   [data-pinned='2'] .table-frame tr > :nth-child(2) {
     position: sticky;
-    z-index: 10;
+    z-index: var(--z-index-raised);
     background-color: var(--table-ground);
   }
   [data-pinned] .table-frame tr > :nth-child(1) {
@@ -23,7 +23,7 @@
   }
   [data-pinned] .table-frame thead tr > :nth-child(1),
   [data-pinned='2'] .table-frame thead tr > :nth-child(2) {
-    z-index: 20;
+    z-index: var(--z-index-sticky);
     background-color: var(--color-table-head);
   }
 }
