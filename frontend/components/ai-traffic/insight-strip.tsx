@@ -3,7 +3,7 @@ import { aiTrafficQueries } from '@/lib/api/ai-traffic';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { TextLink } from '@/components/ui/text-link';
 import { ClampText } from '@/components/ui/clamp-text';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { TrafficUrlButton } from './url-panel';
 import { patternLabel } from '@/lib/ai-traffic/vocabulary';
 import { readErrorProps } from '@/components/ui/notice';

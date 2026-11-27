@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { MarkerShape, SeriesTone } from '@/components/ui/step-chart-parts';
 import { printed } from '@/components/ui/absence';
 import { POP_FACE } from '@/components/ui/slip';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { Formatted } from '@/lib/format';
 import { cn } from '@/lib/utils';
 

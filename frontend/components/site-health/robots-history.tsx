@@ -8,7 +8,7 @@ import { FilterChip } from '@/components/ui/filter-chip';
 import { Inline } from '@/components/ui/layout';
 import { LineDiff } from '@/components/ui/line-diff';
 import { TableCell, TableRow, TableTime } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { FileText } from '@/lib/icons';
 import { diffLines } from '@/lib/agent/diff';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';

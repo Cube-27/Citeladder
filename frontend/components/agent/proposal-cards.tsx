@@ -9,7 +9,7 @@ import { ChangeProposalCard } from '@/components/agent/change-proposal-card';
 import { ActionButton } from '@/components/ui/actions';
 import { DraftSheet } from '@/components/ui/draft-sheet';
 import { SectionStack } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { AgentChatDetail, AgentMessage } from '@/lib/api/agent';
 import { actionsQueries, type ActionDetail } from '@/lib/api/actions';
 import { useWorkspaceCapability } from '@/lib/project/project-context';

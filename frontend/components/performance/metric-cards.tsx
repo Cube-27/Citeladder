@@ -1,7 +1,7 @@
 import { Absence, printed } from '@/components/ui/absence';
 import { Checkbox } from '@/components/ui/checkbox';
 import { InfoHint } from '@/components/ui/info-hint';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Spinner } from '@/components/ui/spinner';
 import type { PerformanceWindow } from '@/lib/api/performance';
 import { formatCount, formattedText } from '@/lib/format';

@@ -7,7 +7,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
 import { SectionBleed } from '@/components/ui/section';
 import { LineDiff } from '@/components/ui/line-diff';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Eye, EyeOff, GitCompare } from '@/lib/icons';
 import { diffLines } from '@/lib/agent/diff';
 import { agentWriteFailure } from '@/lib/agent/errors';

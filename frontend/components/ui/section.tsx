@@ -11,7 +11,7 @@ import {
   SectionTitleRoleContext,
   StateHeadingLevelContext,
 } from '@/components/ui/state-heading-level';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 import './section.css';
 

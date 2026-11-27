@@ -17,8 +17,7 @@ import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import type { SessionUser } from '@citeladder/contracts';
 import { isDeparting, restartAt } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/typography';
-import { Notice, NoticeFrame } from '@/components/ui/notice';
+import { Notice, NoticeFrame, NoticeHeading } from '@/components/ui/notice';
 
 export type SessionContextValue = {
   user: SessionUser;
@@ -142,9 +141,7 @@ export function SessionGuard({
               </Button>
             }
           >
-            <Text as="h1" variant="heading">
-              Your session could not be verified
-            </Text>
+            <NoticeHeading>Your session could not be verified</NoticeHeading>
             <p>{humanizeApiError(error, 'Please try again.').message}</p>
           </Notice>
         </NoticeFrame>

@@ -6,7 +6,7 @@ import { DraftSheet } from '@/components/ui/draft-sheet';
 import { FactList, type Fact } from '@/components/ui/facts';
 import { Notice } from '@/components/ui/notice';
 import { ProjectLink } from '@/components/ui/project-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { agentMutations, type AgentMessage } from '@/lib/api/agent';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';

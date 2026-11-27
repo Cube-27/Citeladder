@@ -7,7 +7,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Inline } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableHead, TableRow } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { ProjectLink } from '@/components/ui/project-link';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { agentHandoffHref } from '@/lib/agent/handoff';

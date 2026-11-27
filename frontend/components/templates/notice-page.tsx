@@ -4,7 +4,7 @@ import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Icon } from '@/components/ui/icon';
 import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { CircleAlert, Info, TriangleAlert, type IconGlyph } from '@/lib/icons';
 
 import { PageFrame } from './page-frame';

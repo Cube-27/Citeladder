@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Icon } from '@/components/ui/icon';
 import { SectionBleed } from '@/components/ui/section';
 import { Spinner } from '@/components/ui/spinner';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Check, ChevronRight, CircleHelp, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 

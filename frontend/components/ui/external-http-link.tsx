@@ -1,6 +1,6 @@
 import type { ComponentPropsWithRef } from 'react';
 
-import { toneClass, type TextTone } from '@/components/ui/typography';
+import { toneClass, type TextTone } from '@/components/ui/text-role';
 import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
 import { cn } from '@/lib/utils';
 

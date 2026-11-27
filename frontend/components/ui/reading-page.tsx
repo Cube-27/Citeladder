@@ -9,7 +9,7 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
-import { textRole, type TextRole } from '@/components/ui/typography';
+import { textRole, type TextRole } from '@/components/ui/text-role';
 
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   return (

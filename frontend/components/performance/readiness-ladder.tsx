@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { RungTrail, type RungStatus } from '@/components/ui/rung-trail';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import {
   performanceQueries,
   type ProjectReadiness,

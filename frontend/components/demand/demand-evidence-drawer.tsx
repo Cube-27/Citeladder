@@ -17,7 +17,7 @@ import {
 } from '@/lib/demand/signals';
 import { DisplayTime } from '@/components/ui/display-time';
 import { formatCount, formatPercent } from '@/lib/format';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { UrlText } from '@/components/ui/table';

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { TextLink } from '@/components/ui/text-link';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { humanizeApiError } from '@/lib/api/errors';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { isPlanLimit, PLANS_HREF } from '@/lib/billing/plan-limit';
@@ -207,6 +207,10 @@ function withReference(action: ReactNode, requestId: string | undefined): ReactN
       </Tooltip>
     </>
   );
+}
+
+export function NoticeHeading({ children }: Readonly<{ children: ReactNode }>) {
+  return <h1 className={textRole('heading')}>{children}</h1>;
 }
 
 export function NoticeFrame({ children }: Readonly<{ children: ReactNode }>) {

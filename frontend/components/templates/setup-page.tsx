@@ -8,7 +8,7 @@ import { RungTrail } from '@/components/ui/rung-trail';
 import { Section } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Check, ChevronLeft } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 

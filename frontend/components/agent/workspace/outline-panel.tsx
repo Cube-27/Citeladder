@@ -1,7 +1,7 @@
 import { JUMP_LINK } from '@/components/agent/jump-link';
 import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import { pageOutline, type OutlineHeading } from '@/lib/agent/page-workspace';
 

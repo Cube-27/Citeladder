@@ -16,7 +16,7 @@ import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/noti
 import { Skeleton } from '@/components/ui/skeleton';
 import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { ExecutionEvidence, VisibilityExecutionEvidence } from '@citeladder/contracts';
 import { Quote } from '@/lib/icons';
 import { visibilityQueries } from '@/lib/api/visibility-queries';

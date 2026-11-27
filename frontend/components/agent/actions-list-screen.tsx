@@ -17,7 +17,7 @@ import { ReportPage } from '@/components/templates/report-page';
 import { Button, IconButton } from '@/components/ui/button';
 import { Section, SectionContent } from '@/components/ui/section';
 import { SelectionDock } from '@/components/ui/selection-dock';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { X } from '@/lib/icons';
 import { listJumpSchema, type ListJump } from '@/lib/agent/action-crumbs';
 import type { ActionStatus, ActionTree } from '@/lib/api/actions';

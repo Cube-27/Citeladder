@@ -37,7 +37,7 @@ import { SinkFilterUpdates } from './gcp-pull-setup';
 import { CRAWL_LOG_SETUPS } from '@/lib/config/crawl-logs';
 import { ICONS, MoreHorizontal, PlugZap, RotateCcw, Trash2 } from '@/lib/icons';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { formatCount } from '@/lib/format';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 

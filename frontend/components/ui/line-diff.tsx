@@ -1,4 +1,4 @@
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 type DiffLine = { kind: 'same' | 'added' | 'removed'; text: string };

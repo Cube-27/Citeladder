@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, type PressableProps } from '@/components/ui/pressable';
 import { SkeletonBlock } from '@/components/ui/skeleton-block';
 import { StateDot, type StateDotTone } from '@/components/ui/state-dot';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { ChevronDown } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';

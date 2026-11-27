@@ -5,7 +5,7 @@ import { numericMetric, signalDefinition } from '@/lib/demand/signals';
 import { formatCount, formatMean, formatPercent } from '@/lib/format';
 import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 export function SignalInsight({

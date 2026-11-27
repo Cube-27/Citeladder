@@ -17,7 +17,7 @@ import { Drawer } from '@/components/ui/drawer';
 import { Icon } from '@/components/ui/icon';
 import { ICONS } from '@/lib/icons';
 import { Inline } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { contextChips, withoutContext, type AgentHandoff } from '@/lib/agent/handoff';
 import { useAgentPanel } from '@/lib/agent/panel-context';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';

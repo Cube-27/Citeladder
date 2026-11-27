@@ -12,7 +12,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { Spinner } from '@/components/ui/spinner';
 import { ClampText } from '@/components/ui/clamp-text';
 import { pressableRowClasses } from '@/components/ui/open-row-skeleton';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Check, ChevronDown } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';

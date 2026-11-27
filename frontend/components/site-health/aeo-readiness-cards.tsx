@@ -9,7 +9,7 @@ import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { formatCount } from '@/lib/format';
 import { byPageKindRows, pageKindLabel } from '@/lib/site-health/page-kinds';
 import { formatScore } from '@/lib/site-health/status';

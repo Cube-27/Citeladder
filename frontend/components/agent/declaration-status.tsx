@@ -9,7 +9,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole, type TextRole } from '@/components/ui/typography';
+import { textRole, type TextRole } from '@/components/ui/text-role';
 import {
   checkKindLabel,
   checkKindNote,

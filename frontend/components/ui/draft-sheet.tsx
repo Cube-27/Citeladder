@@ -3,7 +3,7 @@ import type { ReactNode, RefCallback } from 'react';
 import { Inline, Stack } from './layout';
 import { SurfaceContext, useOnPage } from './section';
 import { Tag as DraftTag } from './tag';
-import { textRole } from './typography';
+import { textRole } from './text-role';
 import { cn } from '@/lib/utils';
 
 export type DraftState = 'draft' | 'accepted' | 'declined';

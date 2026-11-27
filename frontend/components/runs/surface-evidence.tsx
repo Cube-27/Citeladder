@@ -1,5 +1,5 @@
 import { Tag } from '@/components/ui/tag';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';

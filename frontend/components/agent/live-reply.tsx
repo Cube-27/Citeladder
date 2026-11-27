@@ -1,7 +1,7 @@
 import { memo } from 'react';
 
 import { Disclosure } from '@/components/ui/disclosure';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { LiveTurn } from '@/lib/agent/live-turns';
 import { AGENT_STREAM_REPAINT_MS } from '@/lib/config/agent';
 import { useAdaptiveThrottle } from '@/lib/use-adaptive-throttle';

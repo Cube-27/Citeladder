@@ -3,7 +3,7 @@ import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { EvidenceLine } from '@/components/site-health/issue-evidence';
 import { Inline, Stack } from '@/components/ui/layout';
 import { UrlText } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { SiteIssue } from '@citeladder/contracts';
 import { issueTitle } from '@/lib/site-health/issues';
 import {

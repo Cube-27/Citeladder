@@ -5,7 +5,7 @@ import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ReportPage } from '@/components/templates/report-page';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Icon } from '@/components/ui/icon';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import {

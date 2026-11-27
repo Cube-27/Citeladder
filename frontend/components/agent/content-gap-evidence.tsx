@@ -7,7 +7,7 @@ import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
 import { SectionBleed } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { ActionDetail } from '@/lib/api/actions';
 import { formatCount, pluralCount, readableUrl } from '@/lib/format';
 import { promptHistoryHref } from '@/lib/prompts/history';

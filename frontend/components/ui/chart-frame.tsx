@@ -11,7 +11,7 @@ import {
 import { Section, useOnPage } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
 import { InfoHint } from '@/components/ui/info-hint';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { ABSENCE_MARK, type Formatted, isAbsent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 

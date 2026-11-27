@@ -5,7 +5,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { ClampText } from '@/components/ui/clamp-text';
 import { formatCount } from '@/lib/format';
 import type { RootError } from '@citeladder/contracts';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 
 export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
   if (errors.length === 0) return null;

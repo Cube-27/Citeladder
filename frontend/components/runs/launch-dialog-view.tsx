@@ -21,7 +21,7 @@ import {
   toggleMarket,
   type RepetitionLimits,
 } from '@/lib/runs/launch';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 

@@ -2,7 +2,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
 import { Section, SectionStack } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type {
   SearchIntelligenceDataset,
   SearchIntelligenceReadiness,

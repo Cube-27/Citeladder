@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 
 import { Pressable } from '@/components/ui/pressable';
 import { sidebarNavRowClasses } from '@/components/ui/sidebar';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Check } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 

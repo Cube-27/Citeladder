@@ -7,7 +7,7 @@ import { Stack } from '@/components/ui/layout';
 import { BarRows, ScoreGauge, scoreTone, type BarRow } from '@/components/ui/score-gauge';
 import { TitledSection } from '@/components/ui/section';
 import { StatusMark } from '@/components/ui/status-mark';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { availabilityLabel, formatCount } from '@/lib/format';
 import { severityCount } from '@/lib/site-health/issues';
 import { formatScore, statusLabel } from '@/lib/site-health/status';

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable } from '@/components/ui/pressable';
 import { SectionBleed, useOnPage } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 const GRID =

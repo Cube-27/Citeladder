@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
-import { textRole, toneClass, type TextRole, type TextTone } from '@/components/ui/typography';
+import { textRole, toneClass, type TextRole, type TextTone } from '@/components/ui/text-role';
 import { urlCut } from '@/lib/format';
 import { cn } from '@/lib/utils';
 

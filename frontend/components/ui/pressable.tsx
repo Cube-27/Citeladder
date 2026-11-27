@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, Ref } from 'react';
 
-import { textRole, toneClass, type TextRole, type TextTone } from '@/components/ui/typography';
+import { textRole, toneClass, type TextRole, type TextTone } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 export type PressableProps = ButtonHTMLAttributes<HTMLButtonElement> & {

@@ -12,7 +12,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { X } from '@/lib/icons';
 import { agentWriteFailure, isOutputConflict } from '@/lib/agent/errors';
 import { groupByPassage } from '@/lib/agent/page-workspace';

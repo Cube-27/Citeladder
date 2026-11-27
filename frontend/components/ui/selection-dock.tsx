@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { POP_FACE } from '@/components/ui/slip';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 export function SelectionDock({

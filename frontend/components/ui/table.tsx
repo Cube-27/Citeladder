@@ -14,7 +14,7 @@ import { ClampText, UrlCutParts, useCut } from '@/components/ui/clamp-text';
 import type { ScrollRegionProps } from '@/components/ui/scroll-edges';
 import { Tag } from '@/components/ui/tag';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
-import { textRole, toneClass, type TextTone } from '@/components/ui/typography';
+import { textRole, toneClass, type TextTone } from '@/components/ui/text-role';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import {
   type Absent,

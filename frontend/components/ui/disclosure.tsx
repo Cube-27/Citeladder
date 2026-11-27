@@ -1,6 +1,6 @@
 import { ChevronDown } from '@/lib/icons';
 import type { ReactNode } from 'react';
-import { textRole } from './typography';
+import { textRole } from './text-role';
 
 export function Disclosure({
   title,

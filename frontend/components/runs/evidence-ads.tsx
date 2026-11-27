@@ -3,7 +3,7 @@ import type { ExecutionAds } from '@citeladder/contracts/visibility-ads';
 import { ClampText } from '@/components/ui/clamp-text';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { landingLabel } from '@/lib/visibility/ads';
 import { AdOwnershipChip } from '@/components/visibility/ad-ownership-chip';
 

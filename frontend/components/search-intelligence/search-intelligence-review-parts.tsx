@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { formatCount, formattedText, pluralCount } from '@/lib/format';
 import { isRecord } from '@/lib/utils';

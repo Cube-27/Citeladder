@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'rea
 
 import { MastheadOverflow, MastheadPrimarySlot } from '@/components/ui/masthead-actions';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 

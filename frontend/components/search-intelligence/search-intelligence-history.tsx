@@ -4,7 +4,7 @@ import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AreaChart } from '@/components/ui/area-chart';
 import { type TrendPoint } from '@/components/ui/series-data';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import {
   searchIntelligenceQueries,
   type SearchIntelligenceDataset,

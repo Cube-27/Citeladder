@@ -1,6 +1,6 @@
 import type { IssueValue } from '@citeladder/contracts';
 import { Absence } from '@/components/ui/absence';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { formatCount } from '@/lib/format';
 import type { Evidence } from '@/lib/site-health/evidence-values';
 

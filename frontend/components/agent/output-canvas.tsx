@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { Textarea } from '@/components/ui/textarea';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import { Pencil, Sparkles, X } from '@/lib/icons';
 import { agentWriteFailure } from '@/lib/agent/errors';

@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 
 import type { IconGlyph } from '@/lib/icons';
-import { toneClass, type TextTone } from '@/components/ui/typography';
+import { toneClass, type TextTone } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 type GlyphProps = Readonly<{

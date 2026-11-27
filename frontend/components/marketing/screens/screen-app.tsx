@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Kbd } from '@/components/ui/kbd';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import {
   ChevronDown,
   ChevronsUpDown,

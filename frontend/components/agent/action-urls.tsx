@@ -5,7 +5,7 @@ import { PageOpenContext, pageHref } from '@/components/site-health/page-open-co
 import { Labelled } from '@/components/ui/reading-page';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LinkRow, LinkRows } from '@/components/ui/link-rows';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { WorkRowsMore } from '@/components/ui/work-rows';
 import { actionTarget } from '@/lib/agent/action-title';
 import { HANDOFF_URLS_MAX } from '@/lib/agent/handoff';

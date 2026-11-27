@@ -22,7 +22,7 @@ import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import { Pencil, RotateCcw } from '@/lib/icons';
 import { documentAnchor, latestOutput, outputPlacements } from '@/lib/agent/documents';

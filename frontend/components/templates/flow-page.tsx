@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import { FlowLogo } from '@/components/ui/flow-logo';
 import { Section } from '@/components/ui/section';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 

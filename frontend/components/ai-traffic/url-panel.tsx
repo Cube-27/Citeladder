@@ -14,7 +14,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { SectionBleed, TitledSection } from '@/components/ui/section';
 import { Tooltip } from '@/components/ui/tooltip';
 import { UrlText } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { DisplayTime } from '@/components/ui/display-time';
 import { aiTrafficQueries, type TrafficFilters } from '@/lib/api/ai-traffic';
 import { useProjectScope } from '@/lib/project/active-project-scope';

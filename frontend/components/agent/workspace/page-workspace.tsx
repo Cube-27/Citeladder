@@ -17,7 +17,7 @@ import {
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { UnsavedChangesGuard } from '@/components/ui/unsaved-changes-guard';
 import {
   suggestionHighlights,

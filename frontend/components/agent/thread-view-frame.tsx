@@ -5,7 +5,7 @@ import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/noti
 import type { LoadingShape } from '@/components/ui/skeleton-block';
 import { StateBlock } from '@/components/ui/state-block';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { httpErrorStatus } from '@/lib/api/errors';
 
 export function isForbidden(error: unknown): boolean {

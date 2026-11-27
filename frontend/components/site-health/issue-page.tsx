@@ -27,7 +27,7 @@ import { formatCount, formatPercent } from '@/lib/format';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pager } from '@/components/ui/pager';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import type {
   AffectedPage,

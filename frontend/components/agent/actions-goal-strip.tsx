@@ -1,7 +1,7 @@
 import { FigureStrip } from '@/components/ui/figure-strip';
 import { InfoHint } from '@/components/ui/info-hint';
 import { StatusMark } from '@/components/ui/status-mark';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { formatCount } from '@/lib/format';
 import {
   ACTION_GOAL_HINT,

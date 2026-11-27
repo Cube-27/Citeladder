@@ -14,7 +14,7 @@ import { BarRows } from '@/components/ui/score-gauge';
 import { TitledSection } from '@/components/ui/section';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { IssuesParams } from '@/lib/api/site-health';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount } from '@/lib/format';

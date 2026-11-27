@@ -4,7 +4,7 @@ import type { NewChatInput } from '@/components/agent/use-chat-turns';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Sparkles } from '@/lib/icons';
 import { actionsQueries } from '@/lib/api/actions';
 import { AGENT_BRIEFING_ACTIONS } from '@/lib/config/agent';

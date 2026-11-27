@@ -7,7 +7,7 @@ import { AXIS_PROPS, LINE_CURSOR } from '@/components/ui/chart-tooltip';
 import { SeriesTable, shownWith, type TrendPoint } from '@/components/ui/series-data';
 import { POP_FACE } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { formatWindowDate, pluralCount } from '@/lib/format';
 import {
   formatAxisTick,

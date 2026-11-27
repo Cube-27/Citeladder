@@ -4,7 +4,7 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { SearchField } from '@/components/ui/search-field';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { SearchX } from '@/lib/icons';
 import { agentHandoffHref, type HandoffInput } from '@/lib/agent/handoff';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';

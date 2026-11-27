@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { ComponentProps } from 'react';
 
-import { toneClass, type TextTone } from '@/components/ui/typography';
+import { toneClass, type TextTone } from '@/components/ui/text-role';
 import { isAppRoute } from '@/lib/navigation/app-route';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { cn } from '@/lib/utils';

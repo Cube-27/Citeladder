@@ -1,7 +1,7 @@
 import { ClampText } from '@/components/ui/clamp-text';
 import { Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { type AgentWebSource } from '@/lib/api/agent';
 import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
 

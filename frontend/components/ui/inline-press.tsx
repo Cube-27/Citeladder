@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, Ref } from 'react';
 
-import { toneClass, type TextTone } from '@/components/ui/typography';
+import { toneClass, type TextTone } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 export function InlinePress({

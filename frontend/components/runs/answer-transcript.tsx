@@ -9,7 +9,7 @@ import {
 import { BrandMark } from '@/components/ui/brand-mark';
 import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
 import { Icon } from '@/components/ui/icon';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { UserRound } from '@/lib/icons';
 import type { Highlight } from '@/lib/markdown/highlight';
 import { ContentMarkdown, type LinkChip, type PhraseChip } from '@/lib/markdown/markdown';

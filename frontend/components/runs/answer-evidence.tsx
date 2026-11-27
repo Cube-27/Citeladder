@@ -11,7 +11,7 @@ import { SurfaceEvidence } from '@/components/runs/surface-evidence';
 import { AnswerLayout } from '@/components/ui/answer-chat';
 import { Icon } from '@/components/ui/icon';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { ExecutionEvidence } from '@citeladder/contracts';
 import { CheckCircle2, XCircle } from '@/lib/icons';
 import { useProjectScope } from '@/lib/project/active-project-scope';

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { ArrowUpRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 

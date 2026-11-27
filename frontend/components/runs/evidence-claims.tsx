@@ -12,7 +12,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { Highlight } from '@/lib/markdown/highlight';
 import { TOPIC_LABELS, VERDICT_LABELS, VERDICT_TONE } from '@/lib/visibility/accuracy';
 

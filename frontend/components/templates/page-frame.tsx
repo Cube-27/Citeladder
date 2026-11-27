@@ -16,7 +16,7 @@ import {
 import { PageFilterBandContext, PageTabEndContext } from '@/components/templates/page-tab-end';
 import { StickyBand } from '@/components/ui/sticky-band';
 import { TAB_BASELINE } from '@/components/ui/tabs';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
 import { useUrlSearch } from '@/lib/navigation/url-params';
 import { routeTrail } from '@/lib/navigation/route-trail';

@@ -8,7 +8,7 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { AgentPageFetchDone } from '@/lib/api/agent';
 import { pluralCount } from '@/lib/format';
 import { severityLabel } from '@/lib/site-health/issues';

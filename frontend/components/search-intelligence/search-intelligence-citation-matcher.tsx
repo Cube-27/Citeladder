@@ -8,7 +8,7 @@ import { Inline } from '@/components/ui/layout';
 import { SectionBleed } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { useToast } from '@/components/ui/toast';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp, pluralCount } from '@/lib/format';

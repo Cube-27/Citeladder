@@ -13,7 +13,7 @@ import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { useHandoffScope } from '@/components/agent/handoff-scope';
 import { ThreadOpening, ThreadPage } from '@/components/templates/thread-page';
 import { Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import { actionTitle } from '@/lib/agent/action-title';
 import { contextChips, parseAgentHandoff, withoutContext } from '@/lib/agent/handoff';

@@ -1,5 +1,5 @@
 import type { IssueOccurrence } from '@citeladder/contracts';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { evidenceFacts, evidenceLead } from '@/lib/site-health/issue-evidence';
 
 export function IssueEvidence({ occurrence }: Readonly<{ occurrence: IssueOccurrence }>) {

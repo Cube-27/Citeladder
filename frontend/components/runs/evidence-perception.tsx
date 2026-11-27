@@ -5,7 +5,7 @@ import { RailItem, RailLine, RailList, RailSection } from '@/components/ui/answe
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { Inline, Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import type { Highlight } from '@/lib/markdown/highlight';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 

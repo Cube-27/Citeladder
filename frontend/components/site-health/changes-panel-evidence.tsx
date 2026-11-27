@@ -4,7 +4,7 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
 import { Inline } from '@/components/ui/layout';
 import { PageLink } from '@/components/site-health/page-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import {
