@@ -1,9 +1,11 @@
 import { hasAnalyticsConsent, subscribeToConsent } from '@/lib/consent/cookie-consent';
 
-type GtagWindow = Window & {
-  dataLayer?: unknown[];
-  gtag?: (...args: unknown[]) => void;
-};
+declare global {
+  interface Window {
+    dataLayer?: unknown[];
+    gtag?: (...args: unknown[]) => void;
+  }
+}
 
 const SCRIPT_ID = 'citeladder-google-analytics';
 
@@ -49,7 +51,7 @@ function gtagQueue(dataLayer: unknown[]): (...args: unknown[]) => void {
 function configureLoadedTag(script: HTMLScriptElement, measurementId: string) {
   if (script.dataset.loaded !== 'true' || script.dataset.configured || !hasAnalyticsConsent())
     return;
-  const gtag = (window as GtagWindow).gtag;
+  const gtag = window.gtag;
   gtag?.('consent', 'update', { analytics_storage: 'granted' });
   gtag?.('config', measurementId);
   script.dataset.configured = 'true';
@@ -81,40 +83,39 @@ function trackMarketingCta(event: MouseEvent) {
   const demo = anchor.dataset.demoCta !== undefined;
   if (!demo && anchor.dataset.marketingCta === undefined) return;
   const fields = marketingCtaFields(anchor, demo);
-  const gtag = (window as GtagWindow).gtag;
+  const gtag = window.gtag;
   gtag?.('event', 'marketing_cta_click', fields);
   if (demo) gtag?.('event', 'demo_contact_click', fields);
 }
 
 export function trackContactSubmitted() {
   if (!hasAnalyticsConsent()) return;
-  (window as GtagWindow).gtag?.('event', 'contact_form_submitted', { source_page: '/contact' });
+  window.gtag?.('event', 'contact_form_submitted', { source_page: '/contact' });
 }
 
 function applyConsent(measurementId: string, allowed: boolean) {
-  const withGtag = window as GtagWindow;
   Reflect.set(window, `ga-disable-${measurementId}`, !allowed);
   const existing = document.getElementById(SCRIPT_ID);
   if (!allowed) {
     clearAnalyticsCookies();
     if (!(existing instanceof HTMLScriptElement)) return;
     if (existing.dataset.loaded !== 'true') {
-      denyPendingAnalyticsDefaults(withGtag.dataLayer);
+      denyPendingAnalyticsDefaults(window.dataLayer);
     }
-    withGtag.gtag?.('consent', 'update', { analytics_storage: 'denied' });
+    window.gtag?.('consent', 'update', { analytics_storage: 'denied' });
     return;
   }
   if (existing instanceof HTMLScriptElement) {
-    withGtag.gtag?.('consent', 'update', { analytics_storage: 'granted' });
+    window.gtag?.('consent', 'update', { analytics_storage: 'granted' });
     configureLoadedTag(existing, measurementId);
     return;
   }
-  withGtag.dataLayer = withGtag.dataLayer || [];
-  withGtag.gtag = gtagQueue(withGtag.dataLayer);
-  withGtag.gtag('consent', 'default', {
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = gtagQueue(window.dataLayer);
+  window.gtag('consent', 'default', {
     analytics_storage: hasAnalyticsConsent() ? 'granted' : 'denied',
   });
-  withGtag.gtag('js', new Date());
+  window.gtag('js', new Date());
   const script = document.createElement('script');
   script.id = SCRIPT_ID;
   script.async = true;

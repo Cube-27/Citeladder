@@ -46,7 +46,7 @@ function headingSkips(evidence: Evidence): string[] {
 function cssAttribute(value: string): string {
   return value.replace(
     /["\\\n\r\f]/gu,
-    (character) => `\\${character.codePointAt(0)!.toString(16)} `,
+    (character) => `\\${(character.codePointAt(0) ?? 0).toString(16)} `,
   );
 }
 

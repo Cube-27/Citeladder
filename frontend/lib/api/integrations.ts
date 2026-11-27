@@ -182,16 +182,19 @@ export const integrationsMutations = {
     mutationOptions({
       mutationFn: (input: IntegrationPropertyMappingRequest) =>
         integrationsApi.createMapping(connectionId, input, { workspaceId }),
+      // oxlint-disable-next-line max-params
       onSuccess: (_mapping, _input, _result, { client }) => refreshImportedReads(client),
     }),
   deleteMapping: (workspaceId: string | null) =>
     mutationOptions({
       mutationFn: (mappingId: string) => integrationsApi.deleteMapping(mappingId, { workspaceId }),
+      // oxlint-disable-next-line max-params
       onSuccess: (_data, _mappingId, _result, { client }) => refreshImportedReads(client),
     }),
   disconnect: (workspaceId: string | null) =>
     mutationOptions({
       mutationFn: (connectionId: string) => integrationsApi.delete(connectionId, { workspaceId }),
+      // oxlint-disable-next-line max-params
       onSuccess: (_data, _connectionId, _result, { client }) => {
         void refreshImportedReads(client);
       },

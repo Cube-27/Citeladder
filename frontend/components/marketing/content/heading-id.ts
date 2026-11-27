@@ -5,7 +5,7 @@ export function headingId(text: string): string {
     .replace(/^-|-$/g, '');
   if (slug) return `s-${slug}`;
   let sum = 0;
-  for (const character of text) sum = (sum * 31 + character.codePointAt(0)!) % 1_000_000;
+  for (const character of text) sum = (sum * 31 + (character.codePointAt(0) ?? 0)) % 1_000_000;
   return `s-h${sum}`;
 }
 

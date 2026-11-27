@@ -19,6 +19,7 @@ COPY frontend/packages/mcp-app ./packages/mcp-app
 COPY frontend/components ./components
 COPY frontend/lib ./lib
 COPY frontend/vp-shared-config.ts ./vp-shared-config.ts
+COPY frontend/scripts/max-params-baseline.json ./scripts/max-params-baseline.json
 COPY frontend/vite.config.ts ./vite.config.ts
 COPY frontend/apps/app/src/*.css ./apps/app/src/
 RUN pnpm --filter @citeladder/mcp-app build \

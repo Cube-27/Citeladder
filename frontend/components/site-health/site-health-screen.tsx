@@ -166,11 +166,13 @@ function CrawlStatusLine({
   mutationsAllowed: boolean;
 }>) {
   const rerunAllowed = useWorkspaceCapability('run') && mutationsAllowed;
+  const entitlement = screen.entitlementQuery.data?.site_health;
+  if (!entitlement) return null;
   return (
     <StatusStrip
       crawl={crawl}
       phase={screen.phase}
-      entitlement={screen.entitlementQuery.data!.site_health}
+      entitlement={entitlement}
       cancelPending={screen.cancelMutation.isPending}
       startPending={screen.startPending}
       onRerun={rerunAllowed ? () => screen.startCrawl() : undefined}

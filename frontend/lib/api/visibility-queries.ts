@@ -203,6 +203,7 @@ export const visibilityMutations = {
     mutationOptions({
       mutationFn: (candidateId: string) =>
         visibilityApi.acceptCompetitorSuggestion(scope.projectId, candidateId, scoped(scope)),
+      // oxlint-disable-next-line max-params
       onSuccess: (_competitor, _candidateId, _result, { client }) =>
         Promise.all([
           client.invalidateQueries({ queryKey: queryKeys.visibility.project(scope.projectId) }),
@@ -213,6 +214,7 @@ export const visibilityMutations = {
     mutationOptions({
       mutationFn: (candidateId: string) =>
         visibilityApi.rejectCompetitorSuggestion(scope.projectId, candidateId, scoped(scope)),
+      // oxlint-disable-next-line max-params
       onSuccess: (_suggestion, _candidateId, _result, { client }) =>
         client.invalidateQueries({
           queryKey: queryKeys.visibility.resource(scope.projectId, 'competitor-suggestions'),
@@ -222,6 +224,7 @@ export const visibilityMutations = {
     mutationOptions({
       mutationFn: ({ verdictId, input }: { verdictId: string; input: VerdictOverrideRequest }) =>
         visibilityApi.overrideVerdict(scope.projectId, verdictId, input, scoped(scope)),
+      // oxlint-disable-next-line max-params
       onSuccess: (_override, _input, _result, { client }) =>
         Promise.all([
           refreshVisibility(client, scope.projectId),

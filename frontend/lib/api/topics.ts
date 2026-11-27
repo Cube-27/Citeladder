@@ -83,6 +83,7 @@ export const topicsMutations = {
     mutationOptions({
       mutationFn: (input: TopicCreateRequest) =>
         topicsApi.create(scope.projectId, input, scoped(scope)),
+      // oxlint-disable-next-line max-params
       onSuccess: (_topic, _input, _result, { client }) =>
         refreshPromptLibrary(client, scope.projectId),
     }),
@@ -90,12 +91,14 @@ export const topicsMutations = {
     mutationOptions({
       mutationFn: ({ topic, name }: { topic: Topic; name: string }) =>
         topicsApi.update(topic.id, { name }, scoped(scope)),
+      // oxlint-disable-next-line max-params
       onSuccess: (_topic, _input, _result, { client }) =>
         refreshPromptLibrary(client, scope.projectId),
     }),
   remove: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: (topic: Topic) => topicsApi.remove(topic.id, scoped(scope)),
+      // oxlint-disable-next-line max-params
       onSuccess: (_data, _topic, _result, { client }) =>
         refreshPromptLibrary(client, scope.projectId),
     }),
@@ -105,6 +108,7 @@ export const topicsMutations = {
     mutationOptions({
       mutationFn: (plan: TopicConfirmRequest) =>
         topicsApi.confirm(scope.projectId, plan, scoped(scope)),
+      // oxlint-disable-next-line max-params
       onSuccess: (_topics, _plan, _result, { client }) =>
         refreshPromptLibrary(client, scope.projectId),
     }),

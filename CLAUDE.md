@@ -69,7 +69,10 @@ loops unboundedly.
 - No `any`, no `as` except straight after validation; use `satisfies` to check
   a value without widening it. Prefer inferred types, and derive with
   `Pick`/`Omit`/`ReturnType`/`typeof` before declaring a new interface.
-- More than two parameters take one object argument, except on hot paths.
+- A function takes one object argument when it has more than three parameters
+  or when two of its parameters share a type. `max-params` (3) enforces the
+  count against a per-file baseline that only shrinks; library-shaped callbacks
+  keep their positional parameters; the shared-type half is a review check.
 - React effects only sync with outside systems. Derive values in render and act
   in event handlers.
 - Source code has no comments: names, types and tests carry the meaning. The

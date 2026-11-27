@@ -1,3 +1,4 @@
+import { isRecord } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 
 export type MetricSeriesPoint = { date: string; value: number | null };
@@ -15,8 +16,6 @@ function numericValue(value: unknown): number | null {
 export function metricSeriesPoints(raw: unknown): MetricSeriesPoint[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .filter((entry): entry is Record<string, unknown> => {
-      return entry !== null && typeof entry === 'object' && !Array.isArray(entry);
-    })
+    .filter(isRecord)
     .map((entry) => ({ date: scalarText(entry.date), value: numericValue(entry.value) }));
 }

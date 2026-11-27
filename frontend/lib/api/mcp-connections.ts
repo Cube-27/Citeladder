@@ -33,6 +33,7 @@ export const mcpConnectionMutations = {
   revoke: (workspaceId?: string) =>
     mutationOptions({
       mutationFn: (id: string) => mcpConnectionsApi.revoke(id, workspaceId),
+      // oxlint-disable-next-line max-params
       onSuccess: (_data, _id, _result, { client }) => {
         void client.invalidateQueries({ queryKey: queryKeys.mcpConnections.all });
       },

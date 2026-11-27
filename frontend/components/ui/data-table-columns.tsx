@@ -76,10 +76,10 @@ export function isFlexible(column: DataTableColumn): boolean {
 const alignOf = (column: DataTableColumn) => KIND[columnKind(column)].align;
 
 function gutters(columns: readonly DataTableColumn[]): boolean[] {
-  return columns.map(
-    (column, index) =>
-      index > 0 && alignOf(column) === 'start' && alignOf(columns[index - 1]!) === 'end',
-  );
+  return columns.map((column, index) => {
+    const previous = index > 0 ? columns[index - 1] : undefined;
+    return previous !== undefined && alignOf(column) === 'start' && alignOf(previous) === 'end';
+  });
 }
 
 export type ColumnAttributes = Record<`data-c${number}`, string>;

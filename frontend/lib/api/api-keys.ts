@@ -50,16 +50,19 @@ export const apiKeyMutations = {
   create: (workspaceId: string) =>
     mutationOptions({
       mutationFn: (input: ApiKeyCreate) => apiKeysApi.create(workspaceId, input),
+      // oxlint-disable-next-line max-params
       onSuccess: (_created, _input, _result, { client }) => refreshApiKeys(client),
     }),
   revoke: (workspaceId: string) =>
     mutationOptions({
       mutationFn: (keyId: string) => apiKeysApi.revoke(workspaceId, keyId),
+      // oxlint-disable-next-line max-params
       onSuccess: (_key, _keyId, _result, { client }) => refreshApiKeys(client),
     }),
   remove: (workspaceId: string) =>
     mutationOptions({
       mutationFn: (keyId: string) => apiKeysApi.remove(workspaceId, keyId),
+      // oxlint-disable-next-line max-params
       onSuccess: (_data, _keyId, _result, { client }) => refreshApiKeys(client),
     }),
 };

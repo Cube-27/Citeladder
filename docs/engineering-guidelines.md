@@ -443,7 +443,9 @@ or budget. A `NOSONAR` loop on the request pool with no shared transaction.
 
 **Rule:** The [CLAUDE.md](../CLAUDE.md#code-taste) type rules are enforced;
 when a check rejects a change, fix the code instead of growing an allow-list
-or a baseline. A `switch` on a discriminant ends with a `never` arm; a lookup
+or a baseline. A PR that removes a counted site lowers its baseline entry in
+the same PR, and a file split moves each long function out as an object
+argument, because a new file starts at 0. A `switch` on a discriminant ends with a `never` arm; a lookup
 keyed by an unparsed string is a `Map` with an explicit fallback, not a
 `switch` with a silent `default`. External shapes parse through a zod schema,
 and a type guard is a schema parse named `isX`. Shipped code never calls
@@ -456,9 +458,17 @@ property-by-property guards beside existing schemas, after 422 `as` casts
 had already needed their own sweep.
 **Check:** `check:policy` runs `frontend/scripts/type-discipline-checks.mjs`
 (`exhaustive-switch`, `index-non-null`, `keys-cast`, `value-change-cast`) and
-the per-file non-null ratchet against `frontend/scripts/non-null-baseline.json`,
-which may only fall (lower it with `--write-non-null-baseline`); `vp lint` enforces `no-console` and
-`consistent-type-assertions` with the allow-lists in `frontend/vp-shared-config.ts`.
+two shrink-only per-file ratchets over every source file: non-null assertions
+(`frontend/scripts/non-null-baseline.json`) and functions over three
+parameters (`max-params-baseline.json`). Each fails a count above its entry, an
+entry above its count (lower it with `--write-non-null-baseline` or
+`--write-max-params-baseline`, which never raise or add) and, against
+`COMPLEXITY_BASE_SHA`, a key added or raised. `vp lint` runs `max-params` (3)
+outside the baseline files, where a TanStack `onSuccess`/`onMutate`/`onError`/`onSettled`
+callback takes `oxlint-disable-next-line max-params`; it also enforces
+`no-console` and `consistent-type-assertions` with the allow-lists in
+`frontend/vp-shared-config.ts`. Review checks the other half of the parameter
+rule: two parameters of one type take an object argument.
 
 ## Replacement and debt
 

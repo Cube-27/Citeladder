@@ -7,7 +7,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
 import { metricSeriesPoints } from './metric-series.ts';
-import { record, strings } from '../db/json.ts';
+import { isRecord, record, strings } from '../db/json.ts';
 import { firstOf } from '../lists.ts';
 
 const analytics = policy.analytics;
@@ -65,15 +65,11 @@ function laxShare(value: unknown): number | null {
 
 export function aiReferralSources(raw: unknown) {
   const rows: unknown[] = Array.isArray(raw) ? raw : [];
-  return rows.filter(isObject).map((row) => ({
+  return rows.filter(isRecord).map((row) => ({
     ai_source: aiReferralSourceRowSchema.shape.ai_source.parse(row.ai_source),
     sessions: sessionCount.parse(row.sessions),
     share: laxShare(row.share),
   }));
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 export async function readAiReferrals(
@@ -131,10 +127,10 @@ export async function readAiReferrals(
       }),
     };
   }
-  if (snapshot.metrics != null && !isObject(snapshot.metrics)) {
+  if (snapshot.metrics != null && !isRecord(snapshot.metrics)) {
     throw new TypeError('stored metrics are not an object');
   }
-  const metrics = isObject(snapshot.metrics) ? snapshot.metrics : {};
+  const metrics = isRecord(snapshot.metrics) ? snapshot.metrics : {};
   return {
     snapshotId: snapshot.id,
     response: {

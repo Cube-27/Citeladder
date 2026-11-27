@@ -5,6 +5,8 @@ export type ComparisonBasis =
 
 export type ComparedAnswers = Readonly<{ matched: number; total: number }>;
 
+const BASELINE_PENDING = 'The comparison with an earlier run is still being prepared.';
+
 const DECLINED: Readonly<Record<string, string>> = {
   changed_context: 'The earlier run used different settings.',
   matched_subset: 'Only some answers match the earlier run, so this is not compared.',
@@ -15,7 +17,7 @@ const DECLINED: Readonly<Record<string, string>> = {
     'The latest or earlier run has no expected-answer count, so its coverage cannot be checked.',
   no_observations: 'The latest or earlier run recorded no answers to compare.',
   invalid_baseline: 'The earlier run does not finish before the latest one starts.',
-  baseline_pending: 'The comparison with an earlier run is still being prepared.',
+  baseline_pending: BASELINE_PENDING,
 };
 
 export function comparisonDeclinedReason(status: string, skippedRuns = 0): string | null {
@@ -46,6 +48,6 @@ export function comparisonBasis({
   if (status === 'matched_subset') return { kind: 'matched_subset', note: answersNote(answers) };
   return {
     kind: 'declined',
-    reason: comparisonDeclinedReason(status, skippedRuns) ?? DECLINED.baseline_pending!,
+    reason: comparisonDeclinedReason(status, skippedRuns) ?? BASELINE_PENDING,
   };
 }

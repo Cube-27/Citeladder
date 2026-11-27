@@ -10,6 +10,8 @@ export function qualityStatusLabel(candidate: PromptCandidate): string | null {
       return 'Quality check unavailable. Review carefully.';
     case 'not_judged':
       return 'Not quality checked';
+    default:
+      return candidate.quality_status satisfies never;
   }
 }
 

@@ -301,6 +301,8 @@ function evidenceLabel(
     case 'sources':
       if (evidence?.created_at) return `Audit of ${day(evidence.created_at)}`;
       return selection.audit_id ? 'Selected audit' : 'Latest audit';
+    default:
+      return selection.view satisfies never;
   }
 }
 
@@ -335,6 +337,8 @@ function viewContent(view: AnalyticsSelection['view'], state: AppState, controll
           controller={controller}
         />
       );
+    default:
+      return view satisfies never;
   }
 }
 
