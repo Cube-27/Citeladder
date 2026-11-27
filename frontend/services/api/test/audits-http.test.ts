@@ -56,6 +56,78 @@ async function request(
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
+async function launch(t: Awaited<ReturnType<typeof seed>>) {
+  const [auditId] = await createAudits(
+    db,
+    t.workspaceId,
+    auditInput.parse({ project_id: t.projectId, prompt_set_id: t.setId, engines: ['chatgpt'] }),
+    {},
+    runtime,
+  );
+  if (!auditId) throw new Error('launch created no audit');
+  return auditId;
+}
+async function finish(auditId: string, status: 'completed' | 'failed', completedAt: string) {
+  await db
+    .updateTable('audits')
+    .set({ status, completed_at: new Date(completedAt), requested_count: 4 })
+    .where('id', '=', auditId)
+    .execute();
+}
+describe('paged runs list', () => {
+  it('pages, filters and counts only the workspace project runs', async () => {
+    const t = await seed(),
+      foreign = await seed();
+    await finish(t.auditId, 'completed', '2026-01-01T00:00:00Z');
+    const second = await launch(t);
+    await finish(second, 'completed', '2026-02-01T00:00:00Z');
+    const third = await launch(t);
+    await finish(third, 'failed', '2026-03-01T00:00:00Z');
+    const fourth = await launch(t);
+    const page = async (query: string, workspaceId = t.workspaceId) => {
+      const response = await request(t.userId, workspaceId, `?project_id=${t.projectId}&${query}`);
+      expect(response.status).toBe(200);
+      return (await response.json()) as {
+        items: { id: string }[];
+        total: number;
+        page: number;
+        page_size: number;
+        status_counts: Record<string, number>;
+      };
+    };
+    const first = await page('page_size=2&sort=finished');
+    expect(first.items.map((audit) => audit.id)).toEqual([fourth, third]);
+    expect({ total: first.total, page: first.page, page_size: first.page_size }).toEqual({
+      total: 4,
+      page: 1,
+      page_size: 2,
+    });
+    expect(first.status_counts).toMatchObject({ completed: 2, failed: 1, queued: 1 });
+    const completed = await page(
+      'status=completed&status=partially_completed&completed_from=2026-01-15T00:00:00Z&page_size=2&page=1',
+    );
+    expect({ ids: completed.items.map((audit) => audit.id), total: completed.total }).toEqual({
+      ids: [second],
+      total: 1,
+    });
+    const older = await page('status=completed&sort=finished&descending=false&page=2&page_size=1');
+    expect(older.items.map((audit) => audit.id)).toEqual([second]);
+    expect((await page('market=default')).total).toBe(4);
+    expect(
+      (await request(t.userId, t.workspaceId, `?project_id=${t.projectId}&market=elsewhere`))
+        .status,
+    ).toBe(422);
+    expect(
+      (await request(t.userId, foreign.workspaceId, `?project_id=${foreign.projectId}`)).status,
+    ).toBe(404);
+    const foreignOwn = await request(
+      foreign.userId,
+      foreign.workspaceId,
+      `?project_id=${t.projectId}`,
+    );
+    expect(await foreignOwn.json()).toMatchObject({ items: [], total: 0 });
+  });
+});
 describe('audit HTTP family cutover', () => {
   it('permits viewer previews and reads, gates mutations, scopes foreign IDs and serves safe downloads', async () => {
     const t = await seed(),

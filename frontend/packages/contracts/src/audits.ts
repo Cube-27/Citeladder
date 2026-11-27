@@ -368,3 +368,24 @@ export type SearchSurfaceEvidence = z.infer<typeof searchSurfaceEvidenceSchema>;
 export type SurfaceEntity = z.infer<typeof surfaceEntitySchema>;
 export type AioRate = z.infer<typeof aioRateSchema>;
 export type SurfaceRates = z.infer<typeof surfaceRatesSchema>;
+
+export const auditListSortSchema = z.enum([
+  'created',
+  'finished',
+  'requested',
+  'completed',
+  'failed',
+]);
+export type AuditListSort = z.infer<typeof auditListSortSchema>;
+export type AuditScope = z.infer<typeof auditScopeSchema>;
+
+export const AUDIT_LIST_DEFAULT_MARKET = 'default';
+
+export const auditPageSchema = responseObject({
+  items: z.array(auditSchema),
+  total: z.number().int(),
+  page: z.number().int(),
+  page_size: z.number().int(),
+  status_counts: z.record(auditStatusSchema, z.number().int()),
+});
+export type AuditPage = z.infer<typeof auditPageSchema>;
