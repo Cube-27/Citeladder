@@ -132,6 +132,16 @@
   --color-site-band-scrim: var(--ramp-stone-99-a55);
   --text-color-site-band-ink-2: var(--ramp-neutral-43_9);
   --color-site-band-line: var(--ramp-neutral-17_8-a80);
+  --color-site-hover-wash: color-mix(in oklch, var(--color-mark-ink) 5%, transparent);
+  --color-site-well-hover: color-mix(in oklch, var(--color-mark-ink) 5%, var(--color-site-well));
+  --color-site-frame-card-hover: color-mix(
+    in oklch,
+    var(--color-mark-ink) 5%,
+    var(--color-site-frame-card)
+  );
+  --color-site-form-rule: color-mix(in oklch, var(--color-mark-ink) 10%, transparent);
+  --color-site-scroll-shade: color-mix(in oklch, var(--color-mark-ink) 14%, transparent);
+  --color-site-scroll-shade-strong: color-mix(in oklch, var(--color-mark-ink) 20%, transparent);
 }
 
 .cl-screen--app {

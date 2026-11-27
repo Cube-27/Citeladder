@@ -8,7 +8,7 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { Delta } from '@/components/ui/delta';
 import { Inline } from '@/components/ui/layout';
 import { AreaChart } from '@/components/ui/area-chart';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Absence, printed } from '@/components/ui/absence';
 import { UrlCutParts } from '@/components/ui/clamp-text';
 import { ValueLedger } from '@/components/ui/facts';
@@ -247,11 +247,11 @@ export function RetrievalWidget({ project }: Readonly<{ project: Project }>) {
         >
           {(data) => (
             <>
-              <p className={textRole('caption')}>
+              <Text as="p" variant="caption">
                 {data.responses
                   ? pluralCount(data.responses, 'answer')
                   : 'No engine shows what it read'}
-              </p>
+              </Text>
               <Rows
                 rows={data.items.map((item) => ({
                   key: item.url,

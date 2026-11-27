@@ -43,7 +43,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
           {group.items.map((item) => (
             <li>
               <a href={item.href} class="cl-cpage-index-link focus-ring">
-                {item.eyebrow && <span class="text-kicker text-ink-2">{item.eyebrow}</span>}
+                {item.eyebrow && <span class="cl-kicker">{item.eyebrow}</span>}
                 <span class="cl-cpage-index-name">{item.title}</span>
                 {item.body && <span class="cl-cpage-index-body">{item.body}</span>}
                 {item.meta && (
@@ -72,18 +72,18 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   .cl-cpage-index {
     display: flex;
     flex-direction: column;
-    gap: 64px;
+    gap: var(--site-space-16);
   }
   .cl-cpage-index-group {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 48px;
+    gap: var(--site-space-12);
     align-items: start;
   }
   .cl-cpage-index-head {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--site-space-3);
     max-width: var(--container-prose);
   }
   .cl-cpage-index-title {
@@ -92,8 +92,8 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     font-family: var(--font-display);
     font-size: var(--text-site-section, var(--text-display-md));
     line-height: var(--text-site-section--line-height, var(--text-display-md--line-height));
-    font-weight: 400;
-    letter-spacing: -0.01em;
+    font-weight: var(--weight-regular);
+    letter-spacing: var(--text-site-section--letter-spacing, var(--text-display-md--letter-spacing));
     text-wrap: balance;
   }
   .cl-cpage-index-desc {
@@ -103,7 +103,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     line-height: var(--text-site-body--line-height);
   }
   .cl-cpage-index-count {
-    margin: 4px 0 0;
+    margin: var(--site-space-1) 0 0;
     color: var(--text-color-ink-2);
     font-family: var(--font-mono);
     font-size: var(--text-data);
@@ -113,16 +113,16 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     min-width: 0;
     margin: 0;
     padding: 0;
-    border-top: 1px solid var(--color-rule);
+    border-top: var(--site-rule) solid var(--color-rule);
     list-style: none;
   }
   .cl-cpage-index-link {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 20px;
+    grid-template-columns: minmax(0, 1fr) var(--site-space-5);
     align-items: start;
-    gap: 8px 32px;
-    padding: 24px 0;
-    border-bottom: 1px solid var(--color-rule);
+    gap: var(--site-space-2) var(--site-space-8);
+    padding: var(--site-space-6) 0;
+    border-bottom: var(--site-rule) solid var(--color-rule);
     color: var(--text-color-ink);
     text-decoration: none;
   }
@@ -134,15 +134,15 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     color: var(--text-color-ink);
     font-size: var(--text-heading-lg);
     line-height: var(--text-heading-lg--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     letter-spacing: var(--text-heading-lg--letter-spacing);
     text-wrap: pretty;
   }
   @media (hover: hover) and (pointer: fine) {
     .cl-cpage-index-link:hover .cl-cpage-index-name {
       text-decoration: underline;
-      text-decoration-thickness: 1px;
-      text-underline-offset: 4px;
+      text-decoration-thickness: var(--site-rule);
+      text-underline-offset: var(--site-underline-offset-lg);
     }
     .cl-cpage-index-link:hover .cl-cpage-index-arrow {
       color: var(--text-color-ink);
@@ -150,7 +150,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   }
   .cl-cpage-index-body {
     display: -webkit-box;
-    max-width: 640px;
+    max-width: var(--site-measure-lg);
     overflow: hidden;
     color: var(--text-color-ink-2);
     font-size: var(--text-site-body);
@@ -159,7 +159,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     -webkit-line-clamp: 3;
   }
   .cl-cpage-index-meta {
-    margin-top: 4px;
+    margin-top: var(--site-space-1);
     color: var(--text-color-ink-2);
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
@@ -180,7 +180,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   }
   @media (min-width: 1024px) {
     .cl-cpage-index-link:has(.cl-cpage-index-meta) {
-      grid-template-columns: 320px minmax(0, 1fr) 20px;
+      grid-template-columns: var(--site-measure-3xs) minmax(0, 1fr) var(--site-space-5);
     }
     .cl-cpage-index-link:has(.cl-cpage-index-meta) > :not(.cl-cpage-index-arrow) {
       grid-column: 2;
@@ -189,7 +189,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
       grid-row: 1 / span 3;
       grid-column: 1;
       margin-top: 0;
-      padding-top: 2px;
+      padding-top: var(--site-space-0_5);
     }
     .cl-cpage-index-link:has(.cl-cpage-index-meta) > .cl-cpage-index-arrow {
       grid-column: 3;
@@ -197,13 +197,13 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   }
   @media (max-width: 1023px) {
     .cl-cpage-index {
-      gap: 48px;
+      gap: var(--site-space-12);
     }
   }
   @media (max-width: 767px) {
     .cl-cpage-index-link {
-      column-gap: 16px;
-      padding: 20px 0;
+      column-gap: var(--site-space-4);
+      padding: var(--site-space-5) 0;
     }
   }
 </style>

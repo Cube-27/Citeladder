@@ -56,7 +56,7 @@ export function RobotsGenerator({ bots }: Readonly<{ bots: ToolBot[] }>) {
   const signature = JSON.stringify([blocked, paths, sitemap, testUrl]);
   const [testedSignature, setTestedSignature] = useState('');
   return (
-    <div className="flex flex-col gap-6">
+    <div className="cl-tool-stack">
       <ToolForm
         action="Generate and test rules"
         filename="robots.txt"
@@ -75,8 +75,8 @@ export function RobotsGenerator({ bots }: Readonly<{ bots: ToolBot[] }>) {
           return text;
         }}
       >
-        <fieldset className="flex flex-col gap-1">
-          <legend className="text-body text-ink mb-2">Block selected crawlers</legend>
+        <fieldset className="cl-tool-bots">
+          <legend>Block selected crawlers</legend>
           <p className="cl-tool-group-hint">
             Unchecked crawlers follow the general path rules below. Search and training permissions
             are separate choices.
@@ -84,7 +84,6 @@ export function RobotsGenerator({ bots }: Readonly<{ bots: ToolBot[] }>) {
           {bots.map((bot) => (
             <Checkbox
               key={bot.label}
-              className="[&_button[data-state=unchecked]]:border-control-line [&_button[data-state=unchecked]:hover]:border-mark-ink-2 min-h-6 items-center py-0.5"
               label={`${bot.label} · ${bot.purpose.replaceAll('_', ' ')}`}
               checked={bot.tokens.some((token) => blocked.includes(token))}
               onCheckedChange={(checked) =>

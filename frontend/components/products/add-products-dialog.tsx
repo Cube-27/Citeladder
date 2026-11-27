@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TreeCheckOption, TreeList } from '@/components/ui/list-row';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import {
   Section,
   SectionBleed,
@@ -67,7 +67,11 @@ function FilePick({
   return (
     <Stack gap="compact">
       <CsvImportFileInput label={label} accept={accept} onSelect={(next) => onFile(next ?? null)} />
-      {file ? <p className={textRole('body', 'text-ink-2')}>Chosen: {file.name}</p> : null}
+      {file ? (
+        <Text as="p" variant="body" tone="ink-2">
+          Chosen: {file.name}
+        </Text>
+      ) : null}
       <div>
         <Button
           variant="secondary"
@@ -92,10 +96,10 @@ function CategoryReview({
   const leftOut = leftOutCategories(stage.categories, unticked);
   return (
     <>
-      <p className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2">
         {pluralCount(stage.products, 'product')} ready from {stage.source_label}
         {stage.rejected ? `; ${pluralCount(stage.rejected, 'row')} cannot be imported` : ''}.
-      </p>
+      </Text>
       {stage.categories.length ? (
         <Section>
           <SectionHeader>
@@ -119,7 +123,9 @@ function CategoryReview({
           </TreeList>
         </Section>
       ) : (
-        <p className={textRole('body', 'text-ink-2')}>The file names no categories.</p>
+        <Text as="p" variant="body" tone="ink-2">
+          The file names no categories.
+        </Text>
       )}
     </>
   );
@@ -134,15 +140,17 @@ function ImportResults({
       {repeated ? (
         <Notice tone="info">This content was imported before; these are its results.</Notice>
       ) : null}
-      <p aria-label="Import results" className={textRole('body', 'text-ink-2')}>
+      <Text as="p" variant="body" tone="ink-2" aria-label="Import results">
         {result.created} added, {result.updated} updated, {result.unchanged} unchanged,{' '}
         {result.rejected} rejected
-      </p>
+      </Text>
       {result.row_outcomes.length ? (
         <SectionBleed as="ul" rows aria-label="Rows">
           {result.row_outcomes.map((row) => (
-            <Inline as="li" key={row.row_number} gap="compact" className="min-w-0 flex-wrap">
-              <span className="text-ink-2 tabular-nums">Row {row.row_number}</span>
+            <Inline as="li" key={row.row_number} gap="compact" wrap>
+              <Text variant="body" tone="ink-2" numeric>
+                Row {row.row_number}
+              </Text>
               {row.status === 'rejected' ? (
                 <StatusMark variant="status" value="danger">
                   {STATUS_LABEL[row.status]}
@@ -150,7 +158,11 @@ function ImportResults({
               ) : (
                 <Tag>{STATUS_LABEL[row.status]}</Tag>
               )}
-              {row.detail ? <span className="text-ink-2">{row.detail}</span> : null}
+              {row.detail ? (
+                <Text variant="body" tone="ink-2">
+                  {row.detail}
+                </Text>
+              ) : null}
             </Inline>
           ))}
         </SectionBleed>
@@ -211,9 +223,9 @@ function SourceStep({
               onFile={onFile}
               sample={CATALOG_SAMPLE}
             />
-            <p className={textRole('body', 'text-ink-2')}>
+            <Text as="p" variant="body" tone="ink-2">
               Title and brand are required. A category is a path such as Footwear &gt; Running.
-            </p>
+            </Text>
           </Stack>
         </TabPanel>
       </Tabs>

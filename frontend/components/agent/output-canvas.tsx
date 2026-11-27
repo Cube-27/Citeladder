@@ -138,7 +138,7 @@ function SectionBlock({
   if (!section.text.trim()) return null;
   const name = sectionName(section);
   return (
-    <Stack as="section" gap="compact" id={id} aria-label={name} className="group scroll-mt-4">
+    <Stack as="section" gap="compact" id={id} aria-label={name} anchor>
       {mode === 'edit' ? (
         editor
       ) : (

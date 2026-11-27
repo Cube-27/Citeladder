@@ -1,5 +1,4 @@
-import { useId, useState, type CSSProperties, type ReactNode } from 'react';
-import { cssVars } from '@/lib/css-vars';
+import { useId, useState, type ReactNode } from 'react';
 
 import { IconButton } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
@@ -8,23 +7,19 @@ import { Menu } from '@/lib/icons';
 import { useSidebarCollapsed, useSidebarWidth } from '@/lib/sidebar-width';
 
 const FRAME =
-  'bg-ground text-ink grid h-dvh overflow-hidden grid-cols-1 rail:grid-cols-shell-compact shell:grid-cols-shell data-[sidebar-state=collapsed]:rail:grid-cols-shell-rail transition-[grid-template-columns] duration-open ease-resize motion-reduce:transition-none has-[[data-dragging]]:transition-none';
+  'bg-ground text-ink grid h-dvh overflow-hidden grid-cols-1 rail:grid-cols-shell-compact shell:grid-cols-shell data-[sidebar-state=collapsed]:rail:grid-cols-shell-rail transition-track duration-open ease-resize motion-reduce:transition-none has-[[data-dragging]]:transition-none';
 const SIDEBAR_COLUMN = 'rail:block z-sticky relative hidden min-h-0 min-w-0';
 const PANEL =
   '@container/main bg-page rail:ms-0 rail:rounded-card rail:ring-1 ring-rule/50 m-panel-inset relative flex min-h-0 min-w-0 flex-col overflow-y-auto overscroll-contain px-page-inline';
 const PAGE = 'flex w-full min-w-0 flex-1 flex-col';
 
-function useFrameState(): { style: CSSProperties | undefined; state: 'collapsed' | 'expanded' } {
+function useFrameState(): { width: string | undefined; state: 'collapsed' | 'expanded' } {
   const width = useSidebarWidth();
   const collapsed = useSidebarCollapsed();
-  const style =
-    width === null
-      ? undefined
-      : cssVars({
-          '--spacing-sidebar': `${width}px`,
-          '--spacing-sidebar-compact': `${width}px`,
-        });
-  return { style, state: collapsed ? 'collapsed' : 'expanded' };
+  return {
+    width: width === null ? undefined : `${width}px`,
+    state: collapsed ? 'collapsed' : 'expanded',
+  };
 }
 
 export function AppShellFrame({
@@ -32,7 +27,7 @@ export function AppShellFrame({
   children,
 }: Readonly<{ sidebar: ReactNode; children: ReactNode }>) {
   const sidebarId = useId();
-  const { style, state } = useFrameState();
+  const { width, state } = useFrameState();
   const [shownState, setShownState] = useState(state);
   const [toggled, setToggled] = useState(false);
   if (shownState !== state) {
@@ -45,7 +40,7 @@ export function AppShellFrame({
       data-sidebar-state={state}
       data-sidebar-toggled={toggled || undefined}
       className={FRAME}
-      style={style}
+      style={{ '--spacing-sidebar': width, '--spacing-sidebar-compact': width }}
     >
       <a href="#main" className="skip-link">
         Skip to main content
@@ -66,13 +61,13 @@ export function AppShellPlaceholder({
   sidebar,
   children,
 }: Readonly<{ busy: boolean; sidebar: ReactNode; children: ReactNode }>) {
-  const { style, state } = useFrameState();
+  const { width, state } = useFrameState();
   return (
     <div
       data-app-surface=""
       data-sidebar-state={state}
       className={FRAME}
-      style={style}
+      style={{ '--spacing-sidebar': width, '--spacing-sidebar-compact': width }}
       aria-busy={busy || undefined}
     >
       <div className={SIDEBAR_COLUMN} inert>

@@ -172,7 +172,7 @@ function CrawlerTable({
                     <Tag>{crawlerRootAccessLabels[bot.root_access]}</Tag>
                   </TableCell>
                   <TableCell>
-                    <Inline className="whitespace-nowrap">
+                    <Inline nowrap>
                       <Tag>{crawlerPolicyLabels[bot.policy]}</Tag>
                       <PolicySample bot={bot} />
                     </Inline>

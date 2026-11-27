@@ -15,7 +15,7 @@ import {
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { ClampText } from '@/components/ui/clamp-text';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { activeMappingFor, ownPropertiesFirst } from '@/components/integrations/data-sources';
 import { PROVIDER_META } from '@/components/settings/grant-model';
 import { Notice } from '@/components/ui/notice';
@@ -112,9 +112,9 @@ export function SelectedPropertyMark({
   const mappings = useQuery(integrationsQueries.mappings(connection.workspace_id, connection.id));
   if (mappings.isPending)
     return (
-      <span aria-hidden className={textRole('code')}>
+      <Text variant="code" aria-hidden>
         {' '}
-      </span>
+      </Text>
     );
   if (mappings.isError) return <Absence state="unavailable" label="Property unavailable" />;
   const selected = activeMappingFor(mappings.data, activeProject?.id ?? null)?.property_ref ?? '';
@@ -124,7 +124,11 @@ export function SelectedPropertyMark({
         No property selected
       </StatusMark>
     );
-  return <ClampText className={textRole('code', 'text-ink-2')}>{selected}</ClampText>;
+  return (
+    <ClampText text="code" tone="ink-2">
+      {selected}
+    </ClampText>
+  );
 }
 
 export function usePropertyPicker(connection: IntegrationConnection) {

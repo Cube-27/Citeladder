@@ -98,7 +98,7 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
       ) : null}
       {topics.problem ? <Notice tone="warning">{topics.problem}</Notice> : null}
       <Section>
-        <Inline className="flex-wrap justify-end">
+        <Inline wrap justify="end">
           <Button
             variant="secondary"
             onClick={() => topics.preview.mutate()}

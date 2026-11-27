@@ -35,7 +35,28 @@ type StackAlign = keyof typeof STACK_ALIGN;
 
 const STACK_LIST = {
   none: undefined,
+  plain: 'list-none',
   decimal: 'list-inside list-decimal',
+} as const;
+
+const BOX = {
+  auto: undefined,
+  shrink: 'min-w-0',
+  fill: 'min-w-0 flex-1',
+  fixed: 'shrink-0',
+  fit: 'w-fit max-w-full',
+  'fixed-full': 'max-w-full shrink-0',
+  line: 'h-5 phone:h-auto',
+  target: 'min-h-target',
+  end: 'ms-auto',
+  scroll: 'max-h-64 overflow-y-auto overscroll-contain',
+} as const;
+
+export type Box = keyof typeof BOX;
+
+const STACK_CONTENT = {
+  stretch: undefined,
+  start: 'content-start',
 } as const;
 
 export function Stack({
@@ -43,17 +64,28 @@ export function Stack({
   gap = 'compact',
   align = 'stretch',
   list = 'none',
+  box = 'auto',
+  content = 'stretch',
+  inset = false,
   pad,
-  className,
+  hideEmpty = false,
+  shrinkTrack = false,
+  anchor = false,
   children,
   ...props
 }: Readonly<
-  ComponentPropsWithRef<'div'> & {
+  Omit<ComponentPropsWithRef<'div'>, 'className' | 'style'> & {
     as?: ElementType;
     gap?: StackGap;
     align?: StackAlign;
     list?: keyof typeof STACK_LIST;
+    box?: Box;
+    content?: keyof typeof STACK_CONTENT;
+    inset?: boolean;
     pad?: Pad;
+    hideEmpty?: boolean;
+    shrinkTrack?: boolean;
+    anchor?: boolean;
   }
 >) {
   const Component = as ?? 'div';
@@ -65,8 +97,13 @@ export function Stack({
         STACK_GAP[gap],
         STACK_ALIGN[align],
         STACK_LIST[list],
+        BOX[box],
+        STACK_CONTENT[content],
+        inset && 'p-4',
         pad?.top && PAD_TOP[pad.top],
-        className,
+        hideEmpty && 'empty:hidden',
+        shrinkTrack && 'grid-cols-1',
+        anchor && 'group scroll-mt-4',
       )}
     >
       {children}
@@ -79,6 +116,7 @@ const INLINE_GAP = {
   compact: 'gap-compact',
   group: 'gap-3',
   loose: 'gap-4',
+  wide: 'gap-6',
   item: 'gap-2',
   tight: 'gap-1',
   none: 'gap-0',
@@ -115,16 +153,27 @@ export function Inline({
   align = 'center',
   justify = 'start',
   wrap,
-  className,
+  box = 'auto',
+  inline = false,
+  nowrap = false,
+  stackBelow,
+  showFrom,
+  hideEmpty = false,
   children,
   ...props
 }: Readonly<
-  ComponentPropsWithRef<'div'> & {
+  Omit<ComponentPropsWithRef<'div'>, 'className' | 'style'> & {
     as?: ElementType;
     gap?: InlineGap;
     align?: InlineAlign;
     justify?: InlineJustify;
-    wrap?: boolean;
+    wrap?: boolean | 'phone';
+    box?: Box;
+    inline?: boolean;
+    nowrap?: boolean;
+    stackBelow?: 'desktop';
+    showFrom?: 'desktop';
+    hideEmpty?: boolean;
   }
 >) {
   const Component = as ?? 'div';
@@ -136,9 +185,14 @@ export function Inline({
         'flex min-w-0',
         INLINE_ALIGN[align],
         INLINE_JUSTIFY[justify],
-        wraps && 'flex-wrap',
+        wraps === 'phone' ? 'phone:flex-wrap' : wraps && 'flex-wrap',
         INLINE_GAP[gap],
-        className,
+        BOX[box],
+        inline && 'inline-flex',
+        nowrap && 'whitespace-nowrap',
+        stackBelow && 'desktop:flex-row desktop:items-center flex-col items-stretch',
+        showFrom && 'desktop:flex hidden',
+        hideEmpty && 'empty:hidden',
       )}
     >
       {children}
@@ -159,6 +213,7 @@ const COLUMN_TEMPLATE = {
   'aside-main': 'column-wide:grid-cols-aside-main',
   pair: 'column-split:grid-cols-2',
   halves: 'desktop:grid-cols-2',
+  two: 'grid-cols-2',
   record: 'column-split:grid-cols-record',
   thirds: 'column-split:grid-cols-3',
 } as const;

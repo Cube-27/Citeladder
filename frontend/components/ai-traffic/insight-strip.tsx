@@ -51,7 +51,7 @@ export function InsightStrip({
       {data?.patterns.length ? (
         <SectionBleed as="ul" rows>
           {data.patterns.map((r) => (
-            <Stack as="li" key={r.pattern} gap="tight" className="min-w-0">
+            <Stack as="li" key={r.pattern} gap="tight" box="shrink">
               <ClampText phoneWrap text="body">
                 {r.copy}
               </ClampText>

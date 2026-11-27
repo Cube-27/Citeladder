@@ -210,7 +210,7 @@ export function SidebarNavRowContent({
         {label}
       </span>
       {count == null ? null : (
-        <span className="w-[4ch] shrink-0 text-right tabular-nums">{count}</span>
+        <span className="w-nav-count shrink-0 text-right tabular-nums">{count}</span>
       )}
     </>
   );
@@ -271,19 +271,11 @@ export function SidebarModeSegment({
   ...props
 }: FaceProps & Readonly<{ current: boolean; rail: boolean }>) {
   const Root = asChild ? Slot : 'span';
-  return (
-    <Root
-      {...props}
-      className={
-        rail
-          ? cn(RAIL_BUTTON, current ? cn('text-ink', CURRENT_FILL) : AT_REST)
-          : cn(
-              'focus-ring text-label text-ink rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors',
-              current ? 'text-ink bg-nav-current shadow-card' : AT_REST,
-            )
-      }
-    />
-  );
+  const shape = rail
+    ? RAIL_BUTTON
+    : 'focus-ring text-label text-ink rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors';
+  const currentFill = rail ? cn('text-ink', CURRENT_FILL) : 'text-ink bg-nav-current shadow-card';
+  return <Root {...props} className={cn(shape, current ? currentFill : AT_REST)} />;
 }
 
 export function SidebarFootList({
@@ -317,7 +309,7 @@ export function SidebarRailList({
   return (
     <nav
       aria-label={label}
-      className="min-h-0 flex-1 [scrollbar-width:none] overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:hidden"
+      className="min-h-0 flex-1 scrollbar-none overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:hidden"
     >
       <ul className="flex flex-col items-center">{children}</ul>
     </nav>

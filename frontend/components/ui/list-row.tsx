@@ -7,24 +7,18 @@ import {
 } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
-import { Icon } from '@/components/ui/icon';
-import { Pressable } from '@/components/ui/pressable';
+import { Icon, LineMark } from '@/components/ui/icon';
+import { Pressable, ROW_FACE } from '@/components/ui/pressable';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Spinner } from '@/components/ui/spinner';
 import { ClampText } from '@/components/ui/clamp-text';
-import { pressableRowClasses } from '@/components/ui/open-row-skeleton';
-import { textRole } from '@/components/ui/typography';
+
 import { Check, ChevronDown, ChevronRight, type IconGlyph } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-function listRowClasses({ selected = false }: Readonly<{ selected?: boolean }> = {}) {
-  return cn(
-    'relative rounded-control transition-[background-color,color] duration-fast ease-standard',
-    selected
-      ? 'overlay-selected text-ink'
-      : 'text-ink-2 hover:overlay-hover hover:text-ink active:overlay-pressed',
-  );
+function listRowClasses() {
+  return cn(ROW_FACE.base, ROW_FACE.rest);
 }
 
 export function OptionRow({
@@ -48,20 +42,30 @@ export function OptionRow({
       onClick={onSelect}
       disabled={disabled}
       aria-pressed={selected}
-      className={cn(
-        listRowClasses({ selected }),
-        pressableRowClasses,
-        'disabled:pointer-events-none disabled:[&_.text-body]:text-ink-2',
-      )}
+      look={selected ? 'option-selected' : 'option'}
     >
-      <span className="min-w-0 flex-1">
-        <ClampText className={textRole('body')}>{title}</ClampText>
-        {caption ? (
-          <ClampText className="text-caption text-ink-2 tabular-nums">{caption}</ClampText>
+      <span className="flex min-w-0 flex-1 items-start gap-3">
+        <span className="min-w-0 flex-1">
+          <ClampText text="body" tone={disabled ? 'ink-2' : undefined}>
+            {title}
+          </ClampText>
+          {caption ? (
+            <ClampText text="caption" numeric>
+              {caption}
+            </ClampText>
+          ) : null}
+        </span>
+        {pending ? (
+          <LineMark>
+            <Spinner tone="ink-2" />
+          </LineMark>
+        ) : null}
+        {selected && !pending ? (
+          <LineMark>
+            <Icon icon={Check} tone="ink" />
+          </LineMark>
         ) : null}
       </span>
-      {pending ? <Spinner className="text-ink-2" /> : null}
-      {selected && !pending ? <Icon icon={Check} className="text-ink" /> : null}
     </Pressable>
   );
 }
@@ -87,20 +91,15 @@ export function DisclosureRow({
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen(!open)}
-        className={cn(listRowClasses(), pressableRowClasses, 'min-h-10')}
+        look="disclosure"
       >
         <span className="phone:flex-wrap phone:gap-y-1 phone:py-2 flex min-w-0 flex-1 items-center gap-3">
-          <ClampText phoneWrap className={textRole('label', 'text-ink phone:basis-full min-w-0')}>
+          <ClampText phoneWrap text="label" className="phone:basis-full min-w-0">
             {title}
           </ClampText>
-          <span className={textRole('caption', 'text-ink-2 flex shrink-0 items-center gap-3')}>
-            {meta}
-          </span>
+          <span className="text-caption text-ink-2 flex shrink-0 items-center gap-3">{meta}</span>
         </span>
-        <Icon
-          icon={ChevronDown}
-          className={cn('text-ink-2 shrink-0 transition-transform', open && 'rotate-180')}
-        />
+        <Icon icon={ChevronDown} tone="ink-2" flip={open} />
       </Pressable>
       <div
         id={panelId}
@@ -141,7 +140,9 @@ export function TreeItem({
         listRowClasses(),
       )}
     >
-      <ClampText className="text-body text-ink flex-1">{label}</ClampText>
+      <ClampText text="body" className="flex-1">
+        {label}
+      </ClampText>
       {typeof count === 'number' ? (
         <span className="text-caption text-ink-2 shrink-0 tabular-nums">{formatCount(count)}</span>
       ) : null}
@@ -219,29 +220,21 @@ export function ItemRow({
 >) {
   return (
     <li {...props} className="@container min-w-0">
-      <div className="phone:grid-cols-[20px_minmax(0,1fr)] grid grid-cols-[20px_minmax(0,1fr)_fit-content(40%)] items-start gap-3 @[640px]:grid-cols-[20px_minmax(0,1fr)_fit-content(40%)_auto]">
+      <div className="phone:grid-cols-list-row-phone grid-cols-list-row @list-wide:grid-cols-list-row-wide grid items-start gap-3">
         <span className="flex size-5 items-center justify-center self-start">{icon}</span>
         <div className="grid min-w-0 gap-0.5">
-          <p className={textRole('label', 'text-ink')}>{title}</p>
+          <p className="text-label text-ink">{title}</p>
           <div
             data-item-caption=""
-            className={textRole(
-              'caption',
-              'text-ink-2 phone:flex-wrap flex min-w-0 items-baseline gap-1',
-            )}
+            className="text-caption text-ink-2 phone:flex-wrap flex min-w-0 items-baseline gap-1"
           >
             {caption}
           </div>
         </div>
-        <div
-          className={textRole(
-            'caption',
-            'text-ink-2 phone:col-start-2 flex min-h-5 min-w-0 items-center gap-2',
-          )}
-        >
+        <div className="text-caption text-ink-2 phone:col-start-2 flex min-h-5 min-w-0 items-center gap-2">
           {status}
         </div>
-        <div className="col-[2/-1] flex flex-wrap items-center gap-2 @[640px]:col-auto @[640px]:h-5">
+        <div className="@list-wide:col-auto @list-wide:h-5 col-start-2 -col-end-1 flex flex-wrap items-center gap-2">
           {actions}
         </div>
       </div>
@@ -266,27 +259,38 @@ export function LinkListRow({
 }>) {
   const detailId = useId();
   return (
-    <li className="hover:overlay-hover min-h-row relative flex min-w-0 items-center gap-3">
-      <Icon icon={icon} tone="ink-2" />
-      <span className="text-body text-ink flex min-w-0 flex-1 flex-col gap-0.5">
-        <ProjectLink
-          href={href}
-          aria-label={linkLabel}
-          aria-describedby={end ? `${detailId} ${detailId}-end` : detailId}
-          look="row-title"
-        >
-          {label}
-        </ProjectLink>
-        <span id={detailId} className="text-ink-2 phone:sr-only line-clamp-2 min-w-0">
-          {description}
+    <li className="hover:overlay-hover min-h-row relative flex min-w-0 items-center">
+      <span className="flex min-w-0 flex-1 items-start gap-3">
+        <LineMark>
+          <Icon icon={icon} tone="ink-2" />
+        </LineMark>
+        <span className="text-body text-ink flex min-w-0 flex-1 flex-col gap-0.5">
+          <ProjectLink
+            href={href}
+            aria-label={linkLabel}
+            aria-describedby={end ? `${detailId} ${detailId}-end` : detailId}
+            look="row-title"
+          >
+            {label}
+          </ProjectLink>
+          <span id={detailId} className="text-ink-2 phone:sr-only line-clamp-2 min-w-0">
+            {description}
+          </span>
         </span>
+        {end ? (
+          <LineMark>
+            <span
+              id={`${detailId}-end`}
+              className="text-caption text-ink-2 shrink-0 whitespace-nowrap"
+            >
+              {end}
+            </span>
+          </LineMark>
+        ) : null}
+        <LineMark>
+          <Icon icon={ChevronRight} tone="ink-2" />
+        </LineMark>
       </span>
-      {end ? (
-        <span id={`${detailId}-end`} className="text-caption text-ink-2 shrink-0 whitespace-nowrap">
-          {end}
-        </span>
-      ) : null}
-      <Icon icon={ChevronRight} tone="ink-2" />
     </li>
   );
 }

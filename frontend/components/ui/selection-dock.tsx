@@ -2,7 +2,7 @@ import { Slot } from '@radix-ui/react-slot';
 import type { ReactElement, ReactNode } from 'react';
 
 import { POP_FACE } from '@/components/ui/slip';
-import { textRole } from '@/components/ui/typography';
+
 import { cn } from '@/lib/utils';
 
 export function SelectionDock({
@@ -18,7 +18,7 @@ export function SelectionDock({
     <DockLayer>
       {summary === null ? null : (
         <DockBar label={label} slidesIn>
-          <span className={textRole('body', 'px-2 whitespace-nowrap tabular-nums')}>{summary}</span>
+          <span className="text-body text-ink px-2 whitespace-nowrap tabular-nums">{summary}</span>
           {children}
         </DockBar>
       )}
@@ -68,7 +68,7 @@ function DockBar({
       data-selection-dock={slidesIn ? '' : undefined}
       className={cn(
         POP_FACE,
-        'pointer-events-auto absolute bottom-0 left-1/2 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1 p-2',
+        'pointer-events-auto absolute bottom-0 left-1/2 flex max-w-viewport-fit -translate-x-1/2 items-center gap-1 p-2',
       )}
     >
       {children}

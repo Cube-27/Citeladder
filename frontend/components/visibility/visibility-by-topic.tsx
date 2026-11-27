@@ -13,6 +13,7 @@ import { POSITION_HINT, SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { formatCount } from '@/lib/format';
 import { formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 import { READING_LABELS } from '@/lib/visibility/matrix';
+import { Text } from '@/components/ui/typography';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'topic', label: 'Topic' },
@@ -69,10 +70,10 @@ export function VisibilityByTopic({
                 </Pressable>
               </TextLink>
               {row.renamed_from.length ? (
-                <span className="text-ink-2">
+                <Text variant="body" tone="ink-2">
                   {' · was '}
                   {row.renamed_from.map((name) => `“${name}”`).join(', ')}
-                </span>
+                </Text>
               ) : null}
             </TableCell>
             {row.kind === 'measured' ? (

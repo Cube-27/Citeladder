@@ -66,7 +66,7 @@ export function PageDrawerView({
       </DrawerNav>
       <DrawerPane>
         <SectionTitleRoleContext value="subheading">
-          <Stack gap="item" className="min-w-0 empty:hidden">
+          <Stack gap="item" box="shrink" hideEmpty>
             {actions ? (
               <Inline wrap justify="end">
                 {actions}

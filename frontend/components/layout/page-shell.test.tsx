@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vite-plus/test';
 import { ReportPage } from '@/components/templates/report-page';
 import { WorkbenchPage } from '@/components/templates/workbench-page';
 import { choiceFilter } from '@/components/ui/all-filters';
-import { FilterBar } from '@/components/ui/filter-bar';
 import { TabRow, TabsRoot } from '@/components/ui/tabs';
 import { CONTEXT_TABS } from '@/lib/agent/context-tabs';
 import { TRAFFIC_TABS } from '@/lib/ai-traffic/tabs';
@@ -220,7 +219,7 @@ describe('PageFrame', () => {
         <TabsRoot value="a" onValueChange={() => undefined}>
           <ReportPage
             tabs={<TabRow items={[{ value: 'a', label: 'A' }]} ariaLabel="Views" />}
-            filters={<FilterBar filters={[choice('Period'), choice('Engine')]} />}
+            filters={{ filters: [choice('Period'), choice('Engine')] }}
           >
             <p>Table</p>
           </ReportPage>

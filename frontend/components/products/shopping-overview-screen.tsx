@@ -2,7 +2,6 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { ReportPage } from '@/components/templates/report-page';
 import { Button } from '@/components/ui/button';
-import { FilterBar } from '@/components/ui/filter-bar';
 import { ProjectLink } from '@/components/ui/project-link';
 import { AppGrid } from '@/components/ui/app-grid';
 import { ClampText } from '@/components/ui/clamp-text';
@@ -441,14 +440,14 @@ export function ShoppingOverviewScreen() {
         )
       }
       filters={
-        neverAnswered ? undefined : (
-          <FilterBar
-            filters={[
-              windowFilter(filters.window, overviewFilters.setWindow),
-              categoryFilter(category, catalog.data, overviewFilters.setCategory),
-            ]}
-          />
-        )
+        neverAnswered
+          ? undefined
+          : {
+              filters: [
+                windowFilter(filters.window, overviewFilters.setWindow),
+                categoryFilter(category, catalog.data, overviewFilters.setCategory),
+              ],
+            }
       }
     >
       <OverviewSections query={query} windowDays={filters.window} />

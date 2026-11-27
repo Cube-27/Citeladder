@@ -9,7 +9,7 @@ import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { TabRow, TabsRoot } from '@/components/ui/tabs';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-layout';
 import { PAGES_INVENTORY_URL_KEYS } from '@/components/site-health/inventory-section';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
@@ -113,7 +113,7 @@ function SiteHealthContent({
               onIntent={prefetchTab}
             />
           }
-          filters={controls ? <FilterBar {...controls} /> : undefined}
+          filters={controls}
         >
           {blocking ? (
             <SiteHealthBlocked blocking={blocking} />

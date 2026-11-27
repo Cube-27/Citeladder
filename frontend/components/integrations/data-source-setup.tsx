@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { ClampText } from '@/components/ui/clamp-text';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { InlineFigure, textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import {
   integrationsApi,
   refreshImportedReads,
@@ -96,18 +96,23 @@ function RowFrame({
 }>) {
   return (
     <Stack as="li" gap="compact">
-      <Inline
-        gap="compact"
-        className="desktop:flex-row desktop:items-center flex-col items-stretch"
-      >
-        <Inline gap="compact" className="flex-1 items-start">
-          <Icon icon={glyph} className="text-ink-2" />
+      <Inline gap="compact" stackBelow="desktop">
+        <Inline gap="compact" align="start" box="fill">
+          <Icon icon={glyph} tone="ink-2" />
           <div className="min-w-0">
-            <div className={textRole('body', 'truncate')}>{title}</div>
-            <div className="text-caption text-ink-2">{status}</div>
+            <Text as="div" variant="body" wrap="truncate">
+              {title}
+            </Text>
+            <Text as="div" variant="caption">
+              {status}
+            </Text>
           </div>
         </Inline>
-        {action ? <Inline className="max-w-full shrink-0 flex-wrap">{action}</Inline> : null}
+        {action ? (
+          <Inline wrap box="fixed-full">
+            {action}
+          </Inline>
+        ) : null}
       </Inline>
       {children}
     </Stack>
@@ -166,7 +171,7 @@ function ConnectRow({
         canManage ? (
           <ConnectButton family={family} onConnect={() => startConnect(family)} />
         ) : (
-          <span className="text-caption text-ink-2">Ask a workspace owner or admin</span>
+          <Text variant="caption">Ask a workspace owner or admin</Text>
         )
       }
     />
@@ -212,9 +217,11 @@ function SourceRow({
         Icon={source.Icon}
         title={source.label}
         status={
-          <Inline as="span" gap="meta" className="min-w-0">
+          <Inline as="span" gap="meta">
             {step.connection.provider === 'ga4' ? (
-              <InlineFigure>{step.mapping.property_ref}</InlineFigure>
+              <Text variant="caption" numeric>
+                {step.mapping.property_ref}
+              </Text>
             ) : (
               <ClampText>{step.mapping.property_ref}</ClampText>
             )}
@@ -230,7 +237,9 @@ function SourceRow({
   if (!canManage)
     return (
       <RowFrame Icon={source.Icon} title={source.label} status={status}>
-        <p className="text-caption text-ink-2">Ask a workspace owner or admin to choose it.</p>
+        <Text as="p" variant="caption">
+          Ask a workspace owner or admin to choose it.
+        </Text>
       </RowFrame>
     );
   return (
@@ -301,7 +310,7 @@ function UnconnectedState({
         ))}
       </>
     ) : (
-      <span className="text-caption text-ink-2">Ask a workspace owner or admin to connect it.</span>
+      <Text variant="caption">Ask a workspace owner or admin to connect it.</Text>
     );
   return <StateBlock kind="empty" icon={icon} heading={heading} action={action} />;
 }

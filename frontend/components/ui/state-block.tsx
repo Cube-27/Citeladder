@@ -6,7 +6,7 @@ import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/noti
 import { Section, useOnPage } from '@/components/ui/section';
 import { ShapeBlocks, SkeletonFrame, type LoadingShape } from '@/components/ui/skeleton-block';
 import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
-import { textRole } from '@/components/ui/typography';
+
 import { CircleDashed, Inbox, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
@@ -190,7 +190,7 @@ function InlineEmptyView({ message, icon: Glyph, action, compact = false }: Inli
     <div
       data-state-block="empty"
       data-state-block-inline=""
-      className={cn(textRole('body', 'text-ink-2 flex min-w-0 items-center gap-2'))}
+      className={cn('text-body text-ink-2 flex min-w-0 items-center gap-2')}
     >
       {Glyph ? <Glyph className="size-3.5 shrink-0" aria-hidden /> : null}
       <p className={cn('min-w-0 flex-1', compact && 'truncate')}>{message}</p>
@@ -291,21 +291,17 @@ function EmptyBody({
       >
         <Glyph className="size-4" />
       </span>
-      <Heading className={textRole('subheading', 'mt-[var(--state-title-gap,16px)] text-balance')}>
-        {heading}
-      </Heading>
+      <Heading className="text-label text-ink mt-state-title text-balance">{heading}</Heading>
       {description ? (
-        <p className={textRole('body', 'text-ink-2 mt-1 max-w-[500px] text-balance')}>
-          {description}
-        </p>
+        <p className="text-body text-ink-2 max-w-state mt-1 text-balance">{description}</p>
       ) : null}
       {action ? (
-        <div className="mt-[var(--state-action-gap,16px)] flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-state-action flex flex-wrap items-center justify-center gap-2">
           {action}
         </div>
       ) : null}
       {actionNote ? (
-        <p id={actionNote.id} className={textRole('caption', 'text-ink-2 mt-2')}>
+        <p id={actionNote.id} className="text-caption text-ink-2 mt-2">
           {actionNote.text}
         </p>
       ) : null}

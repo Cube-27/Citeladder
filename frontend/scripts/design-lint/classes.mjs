@@ -3,9 +3,9 @@ const LAYOUT = [
   /^flex-(?:row|col|row-reverse|col-reverse|wrap|wrap-reverse|nowrap|1|auto|initial|none)$/,
   /^(?:grow|grow-0|shrink|shrink-0|basis-full|basis-auto|basis-0)$/,
   /^(?:items|justify|content|self|place-items|place-content|place-self|justify-items|justify-self)-[a-z-]+$/,
-  /^(?:min-w-0|min-h-0|w-full|h-full|size-full|w-auto|h-auto|w-fit|h-fit|w-max|w-min|max-w-full|max-w-none|min-w-full|min-h-full|w-screen|h-screen|h-dvh|min-h-dvh|min-h-screen|max-h-full|min-w-max|min-w-fit|max-w-max|max-w-fit)$/,
   /^overflow(?:-[xy])?-(?:auto|hidden|visible|scroll|clip)$/,
-  /^(?:truncate|text-ellipsis|text-clip|whitespace-[\w-]+|break-[\w-]+|text-wrap|text-nowrap|text-balance|text-pretty|hyphens-\w+|wrap-[\w-]+)$/,
+  /^(?:whitespace|break|wrap)-[\w-]+$/,
+  /^hyphens-\w+$/,
   /^(?:sr-only|not-sr-only|static|relative|absolute|fixed|sticky|isolate|isolation-auto)$/,
   /^(?:inset|inset-x|inset-y|top|right|bottom|left|start|end)-(?:0|auto|full|1\/2)$/,
   /^text-(?:left|center|right|start|end|justify)$/,
@@ -15,7 +15,9 @@ const LAYOUT = [
   /^grid-flow-[\w-]+$/,
   /^auto-(?:cols|rows)-\w+$/,
   /^order-[\w-]+$/,
-  /^(?:pointer-events-\w+|select-\w+|cursor-[\w-]+|touch-[\w-]+|resize[\w-]*|appearance-none|outline-none|list-none|list-inside|list-outside|list-disc|list-decimal)$/,
+  /^(?:pointer-events|select)-\w+$/,
+  /^(?:cursor|touch)-[\w-]+$/,
+  /^resize[\w-]*$/,
   /^(?:visible|invisible|collapse|backface-hidden)$/,
   /^aspect-(?:square|video|auto)$/,
   /^(?:group|peer)(?:\/[\w-]+)?$/,
@@ -35,6 +37,48 @@ const LAYOUT = [
   /^m[xytblrse]?-auto$/,
   /^forced-color-adjust-\w+$/,
 ];
+
+const LAYOUT_WORDS = new Set([
+  'min-w-0',
+  'min-h-0',
+  'w-full',
+  'h-full',
+  'size-full',
+  'w-auto',
+  'h-auto',
+  'w-fit',
+  'h-fit',
+  'w-max',
+  'w-min',
+  'max-w-full',
+  'max-w-none',
+  'min-w-full',
+  'min-h-full',
+  'w-screen',
+  'h-screen',
+  'h-dvh',
+  'min-h-dvh',
+  'min-h-screen',
+  'max-h-full',
+  'min-w-max',
+  'min-w-fit',
+  'max-w-max',
+  'max-w-fit',
+  'truncate',
+  'text-ellipsis',
+  'text-clip',
+  'text-wrap',
+  'text-nowrap',
+  'text-balance',
+  'text-pretty',
+  'appearance-none',
+  'outline-none',
+  'list-none',
+  'list-inside',
+  'list-outside',
+  'list-disc',
+  'list-decimal',
+]);
 
 const VALUE = [
   /^(?:text|bg|border|ring|ring-offset|outline|fill|stroke|decoration|divide|placeholder|caret|accent|from|via|to|shadow|inset-ring|inset-shadow|rounded)(?:-|$)/,
@@ -69,23 +113,51 @@ function utilityOf(token) {
 
 export function isValueClass(token) {
   const utility = utilityOf(token);
-  if (!utility || LAYOUT.some((pattern) => pattern.test(utility))) return false;
+  if (!utility || LAYOUT_WORDS.has(utility) || LAYOUT.some((pattern) => pattern.test(utility)))
+    return false;
   if (/[[(]/.test(utility)) return true;
   return VALUE.some((pattern) => pattern.test(utility));
 }
 
-const SURVIVOR =
-  /^(?:leading-(?:\d+(?:\.\d+)?|none|px)|text-[a-z][\w-]*\/(?:\d+(?:\.\d+)?|px)|z-[1-9]\d*|opacity-(?:[1-9]|[1-9]\d)|duration-[1-9]\d*|delay-[1-9]\d*)$/;
+const SURVIVORS = [
+  /^leading-(?:\d+(?:\.\d+)?|none|px)$/,
+  /^text-[a-z][\w-]*\/(?:\d+(?:\.\d+)?|px)$/,
+  /^z-[1-9]\d*$/,
+  /^opacity-[1-9]\d?$/,
+  /^(?:duration|delay)-[1-9]\d*$/,
+];
 
 export function isSurvivor(token) {
-  return SURVIVOR.test(utilityOf(token));
+  const utility = utilityOf(token);
+  return SURVIVORS.some((pattern) => pattern.test(utility));
 }
 
-const MONOCHROME =
-  /^(?:bg|text|border(?:-[xytrblse])?|ring|ring-offset|outline|fill|stroke|decoration|divide|placeholder|caret|accent|from|via|to|shadow|inset-ring|inset-shadow)-(?:white|black)(?:\/\S+)?$/;
+const MONOCHROME_PREFIXES = new Set([
+  'bg',
+  'text',
+  'border',
+  ...[...'xytrblse'].map((side) => `border-${side}`),
+  'ring',
+  'ring-offset',
+  'outline',
+  'fill',
+  'stroke',
+  'decoration',
+  'divide',
+  'placeholder',
+  'caret',
+  'accent',
+  'from',
+  'via',
+  'to',
+  'shadow',
+  'inset-ring',
+  'inset-shadow',
+]);
 
 export function isMonochrome(token) {
-  return MONOCHROME.test(utilityOf(token));
+  const prefix = /^([a-z-]+)-(?:white|black)(?:\/\S+)?$/.exec(utilityOf(token))?.[1];
+  return prefix !== undefined && MONOCHROME_PREFIXES.has(prefix);
 }
 
 export function isSurfaceVariant(token) {

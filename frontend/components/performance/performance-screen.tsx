@@ -22,7 +22,7 @@ import { useRangeProjection } from './use-range-projection';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { ReportPage } from '@/components/templates/report-page';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { FilterBar, FilterControls, type FilterBarProps } from '@/components/ui/filter-bar';
+import { FilterControls, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartNoAxesColumn } from '@/lib/icons';
 import { integrationsQueries } from '@/lib/api/integrations';
@@ -251,7 +251,7 @@ function performanceControls({
 
 function PerformanceLoading() {
   return (
-    <ReportPage filters={<FilterBar {...RESERVED_CONTROLS} />}>
+    <ReportPage filters={RESERVED_CONTROLS}>
       <Section aria-labelledby="performance-search-console-loading">
         <SectionHeader>
           <SectionTitle id="performance-search-console-loading">Google Search</SectionTitle>
@@ -330,9 +330,9 @@ export function PerformanceScreen() {
     <ReportPage
       actions={coverage.firstUse ? undefined : syncAction}
       filters={
-        coverage.firstUse ? undefined : (
-          <FilterBar
-            {...performanceControls({
+        coverage.firstUse
+          ? undefined
+          : performanceControls({
               selection,
               onSelectRange: setSelection,
               onOpenDialog: (tab) => {
@@ -342,9 +342,7 @@ export function PerformanceScreen() {
               onReset: resetFilters,
               windowLabel: selectedLabel,
               latestDate: data.coverage.latest_date,
-            })}
-          />
-        )
+            })
       }
     >
       <>

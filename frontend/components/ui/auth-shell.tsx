@@ -41,7 +41,7 @@ export function AuthHumanCheck({
       data-size={size}
       className={cn(
         'm-0 grid min-w-0 justify-items-center overflow-hidden border-0 p-0 *:col-start-1 *:row-start-1 *:self-center',
-        size === 'compact' ? 'h-[140px]' : 'h-[65px]',
+        size === 'compact' ? 'h-turnstile-compact' : 'h-turnstile',
       )}
     >
       <div ref={container} className="w-full" />
@@ -106,7 +106,7 @@ export function AuthRow({
         {meta ? <span className="text-ink-2 truncate">{meta}</span> : null}
       </span>
       {trailing}
-      <Icon icon={ChevronRight} className="text-ink-2" />
+      <Icon icon={ChevronRight} tone="ink-2" />
     </>
   );
   return (

@@ -94,7 +94,6 @@ function FeatureCards({ features }: Readonly<{ features: readonly Feature[] }>) 
         span: spans[index] ?? 6,
         content: (
           <FeatureCard
-            size="lg"
             wide={wide}
             text="lead"
             title={feature.title}
@@ -196,7 +195,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         lead={page.lead}
         actions={
           page.cta === 'mcp' ? (
-            <div className="bg-panel text-ink rounded-card p-card w-fit max-w-full border border-transparent">
+            <div className="cl-connect-panel">
               <ConnectStrip />
             </div>
           ) : (
@@ -213,7 +212,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
       </PageSection>
 
       <PageSection spacing="compact" label={`${label} highlights`} labelHeading>
-        <ul className={`cl-tiles cl-tiles--rows cl-cols-${columnsFor(page.highlights.length)}`}>
+        <ul className="cl-tiles cl-tiles--rows" data-tile-cols={columnsFor(page.highlights.length)}>
           {page.highlights.map((highlight) => (
             <li key={highlight.title}>
               <FeatureCard title={highlight.title} body={highlight.body} />

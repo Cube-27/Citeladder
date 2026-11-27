@@ -33,7 +33,7 @@ function LinkEnd({
   return (
     <Columns template="label-value" gap="group" align="baseline">
       <Text variant="caption">{label}</Text>
-      <Stack gap="tight" className="min-w-0">
+      <Stack gap="tight" box="shrink">
         <TextLink
           variant="external"
           text="body"
