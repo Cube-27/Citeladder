@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { PromptAnswerRef } from '@/components/prompts/prompt-evidence';
@@ -8,6 +7,7 @@ import { Icon } from '@/components/ui/icon';
 import { Delta } from '@/components/ui/delta';
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import {
   isRowSurfaceClick,
   TableActionsCell,
@@ -69,7 +69,7 @@ function emptyState(rows: number, onClearFilters?: () => void): DataTableState |
 
 export function PromptTable({
   prompts,
-  search,
+  toolbar,
   actions,
   measurements,
   setNames,
@@ -81,7 +81,7 @@ export function PromptTable({
   resetKey,
 }: Readonly<{
   prompts: Prompt[];
-  search?: ReactNode;
+  toolbar?: TableToolbarProps;
   resetKey?: string;
   onClearFilters?: () => void;
   onOpenAnswer?: (prompt: Prompt, answer: PromptAnswerRef) => void;
@@ -111,7 +111,7 @@ export function PromptTable({
   return (
     <DataTable
       label="Prompts"
-      toolbar={search ? { search } : undefined}
+      toolbar={toolbar}
       columns={promptColumns(measuredColumns, actions !== undefined)}
       pageSize={PAGE_SIZE}
       rowCount={pagedPrompts.length}

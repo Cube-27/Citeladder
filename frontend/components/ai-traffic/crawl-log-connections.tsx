@@ -18,8 +18,7 @@ import { ConfirmDialog, Dialog, type ConfirmRequest } from '@/components/ui/dial
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { DisplayTime } from '@/components/ui/display-time';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
+import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import {
   CrawlLogSetup,
   CrawlLogSetupSubmit,
@@ -37,7 +36,6 @@ import { SinkFilterUpdates } from './gcp-pull-setup';
 import { CRAWL_LOG_SETUPS } from '@/lib/config/crawl-logs';
 import { ICONS, MoreHorizontal, PlugZap, RotateCcw, Trash2 } from '@/lib/icons';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import { Text } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
@@ -284,37 +282,44 @@ function SourceDiagnostics({
       {items.map((s) => (
         <TableRow key={s.id}>
           <TableCell>
-            <div className="grid min-w-0">
-              <ClampText>{s.host}</ClampText>
-              <ClampText text="caption">
-                {setupLabel(s.setup)} · {words(s.connection)} · {words(s.state)}
-                <StallDetail source={s} />
-              </ClampText>
-            </div>
+            <TableCellLines
+              primary={s.host}
+              secondary={
+                <>
+                  {setupLabel(s.setup)} · {words(s.connection)} · {words(s.state)}
+                  <StallDetail source={s} />
+                </>
+              }
+            />
           </TableCell>
           <TableCell>
-            <div className="grid min-w-0">
-              <ClampText>{collectionPointLabel(s.collection_point)}</ClampText>
-              <ClampText text="caption">
-                Sampling: {words(s.sampling.kind)}
-                {s.sampling.kind === 'sampled' ? ' ' + s.sampling.rate : ''}
-                {s.sampling.kind === 'filtered' ? ' ' + s.sampling.description : ''}
-              </ClampText>
-            </div>
+            <TableCellLines
+              primary={collectionPointLabel(s.collection_point)}
+              secondary={
+                <>
+                  Sampling: {words(s.sampling.kind)}
+                  {s.sampling.kind === 'sampled' ? ' ' + s.sampling.rate : ''}
+                  {s.sampling.kind === 'filtered' ? ' ' + s.sampling.description : ''}
+                </>
+              }
+            />
           </TableCell>
           <TableCell>
-            <div className="grid">
-              <DisplayTime value={s.last_accepted_batch} fallback="Awaiting data" />
-              <Text variant="caption">
-                Processed <DisplayTime value={s.last_processed_at} fallback="Awaiting processing" />
-                {s.pull ? (
-                  <>
-                    {' · '}Drained{' '}
-                    <DisplayTime value={s.pull.last_drained_at} fallback="Not drained yet" />
-                  </>
-                ) : null}
-              </Text>
-            </div>
+            <TableCellLines
+              primary={<DisplayTime value={s.last_accepted_batch} fallback="Awaiting data" />}
+              secondary={
+                <>
+                  Processed{' '}
+                  <DisplayTime value={s.last_processed_at} fallback="Awaiting processing" />
+                  {s.pull ? (
+                    <>
+                      {' · '}Drained{' '}
+                      <DisplayTime value={s.pull.last_drained_at} fallback="Not drained yet" />
+                    </>
+                  ) : null}
+                </>
+              }
+            />
           </TableCell>
           <TableCell>
             {s.last_accepted_batch ? diagnosticsText(s) : <Absence state="not_measured" />}
