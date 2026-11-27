@@ -395,7 +395,6 @@ export const fmtConfig: OxfmtConfig = {
     '**/test-results/**',
     '**/.wrangler/**',
     '**/pnpm-lock.yaml',
-    '**/oxlint-suppressions.json',
     '**/services/*/src/generated/**',
     '**/packages/*/src/generated/**',
     '**/apps/app/src/globals.css',
