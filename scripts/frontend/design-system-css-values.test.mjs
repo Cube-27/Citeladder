@@ -8,7 +8,7 @@ import {
 
 const lines = (findings) => findings.map((finding) => finding.split(': ')[0]);
 
-test('raw colour, type, z, motion, shadow, spacing, border, radius, opacity and font values fail', () => {
+test('raw colour, type, z, motion, shadow, spacing, size, border, radius, opacity and font values fail', () => {
   const css = [
     '.a { color: #fff; }',
     '.b { background: oklch(50% 0.1 30); }',
@@ -29,29 +29,17 @@ test('raw colour, type, z, motion, shadow, spacing, border, radius, opacity and 
     '.q { border-radius: 7px; border-top-left-radius: 3px; }',
     '.r { opacity: .55; }',
     ".s { font-family: Arial, 'Geist'; }",
+    '.t { width: 313px; max-width: 37rem; }',
+    '.u { --pad: 13px; }',
+    '.v { mask-image: linear-gradient(#000, transparent); }',
   ].join('\n');
-  assert.deepEqual(lines(cssValueFindings('x.css', css)), [
-    'x.css:1',
-    'x.css:2',
-    'x.css:3',
-    'x.css:4',
-    'x.css:5',
-    'x.css:6',
-    'x.css:7',
-    'x.css:8',
-    'x.css:9',
-    'x.css:10',
-    'x.css:11',
-    'x.css:12',
-    'x.css:13',
-    'x.css:14',
-    'x.css:15',
-    'x.css:16',
-    'x.css:17',
-    'x.css:17',
-    'x.css:18',
-    'x.css:19',
-  ]);
+  const twice = new Set([17, 20]);
+  assert.deepEqual(
+    lines(cssValueFindings('x.css', css)),
+    Array.from({ length: 22 }, (_, index) => index + 1).flatMap((line) =>
+      Array(twice.has(line) ? 2 : 1).fill(`x.css:${line}`),
+    ),
+  );
 });
 
 test('tokens, keywords, zero, multipliers, percentages, gradient stops and exempt blocks pass', () => {
@@ -63,8 +51,8 @@ test('tokens, keywords, zero, multipliers, percentages, gradient stops and exemp
 .c { background: color-mix(in oklch, var(--color-accent) 50%, transparent); }
 .d { background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--color-rule) 6px 7px); }
 .e { clip-path: inset(-24px 0 0 0); line-height: var(--text-label--line-height); }
-.h { opacity: 1; mask-image: linear-gradient(black, transparent); font-family: var(--font-mono); }
-.i { color: var(--tint, var(--text-color-ink)); border-radius: var(--radius-card); --art-gap: 0.7em; }
+.h { opacity: 1; mask-image: linear-gradient(black, transparent); font-family: var(--font-mono); width: var(--w); }
+.i { color: var(--tint, var(--text-color-ink)); border-radius: var(--radius-card); }
 @media (forced-colors: active) { .f { border: 1px solid CanvasText; } }
 @media (prefers-reduced-motion: reduce) { .g { transition-duration: 1ms; } }
 @keyframes spin { to { transform: rotate(1turn); } }

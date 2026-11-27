@@ -1,9 +1,18 @@
+:root {
+  --tooltip-lift: -4px;
+  --tooltip-side-lift: 2px;
+  --dock-lift: 8px;
+  --toast-step: 8px;
+  --toast-enter: 10px;
+  --toast-exit: -16px;
+}
+
 .tooltip-panel {
-  --popup-from: 0 -4px;
+  --popup-from: 0 var(--tooltip-lift);
   --popup-scale: 0.9;
 }
 .tooltip-panel[data-side] {
-  --popup-from: 0 2px;
+  --popup-from: 0 var(--tooltip-side-lift);
 }
 :is(.menu-panel, .popover-panel)[class] {
   --popup-from: 0;
@@ -34,17 +43,17 @@
   animation: popup-out var(--transition-duration-fast) var(--ease-standard) both;
 }
 [data-selection-dock] {
-  --popup-from: -50% 8px;
+  --popup-from: -50% var(--dock-lift);
   animation: popup-in var(--transition-duration-open) var(--ease-standard);
 }
 
 .toast-stack {
-  height: calc(var(--front-height) + (var(--toast-count) - 1) * 8px);
+  height: calc(var(--front-height) + (var(--toast-count) - 1) * var(--toast-step));
 }
 .toast-panel {
-  --toast-y: calc(var(--toast-index) * 8px);
+  --toast-y: calc(var(--toast-index) * var(--toast-step));
   --toast-scale: calc(1 - var(--toast-index) * 0.04);
-  --popup-from: 0 calc(var(--toast-y) - 10px);
+  --popup-from: 0 calc(var(--toast-y) - var(--toast-enter));
   --popup-scale: var(--toast-scale);
   position: absolute;
   inset-inline: 0;
@@ -86,7 +95,7 @@
   }
 }
 .toast-panel[data-state='open'] {
-  --popup-from: 0 -16px;
+  --popup-from: 0 var(--toast-exit);
   animation: popup-in var(--transition-duration-open) var(--ease-fluid);
 }
 .toast-panel[data-state='closed'] {

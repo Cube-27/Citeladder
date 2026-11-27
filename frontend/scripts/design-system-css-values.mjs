@@ -54,6 +54,12 @@ const CHECKED = new Set([
   'left',
   ...sided(['border', 'outline']),
   ...sided(['border', 'outline'], '-width'),
+  ...['width', 'height', 'inline-size', 'block-size'].flatMap((size) => [
+    size,
+    `min-${size}`,
+    `max-${size}`,
+  ]),
+  'flex-basis',
   'border-radius',
   ...CORNERS.map((corner) => `border-${corner}-radius`),
   'outline-offset',
@@ -99,8 +105,8 @@ function rawParts(value, property, { tokenFile }) {
       return undefined;
     }
     if (node.type !== 'word') return undefined;
-    if (/^#[0-9a-f]{3,8}$/i.test(node.value) || NAMED_COLOURS.has(node.value.toLowerCase()))
-      found.push(node.value);
+    const named = !property.startsWith('mask') && NAMED_COLOURS.has(node.value.toLowerCase());
+    if (/^#[0-9a-f]{3,8}$/i.test(node.value) || named) found.push(node.value);
     const number = valueParser.unit(node.value);
     if (!number || Number(number.number) === 0 || fullOpacity(property, number)) return undefined;
     const rawUnit = RAW_UNIT.test(number.unit) && !inGradient;
@@ -124,12 +130,16 @@ function exempt(node) {
   return false;
 }
 
+const rootToken = (decl) =>
+  decl.parent?.type === 'rule' &&
+  decl.parent.selectors.every((selector) => selector.trim().startsWith(':root'));
+
 function declarationParts(decl, tokenFile) {
   const property = decl.prop.toLowerCase();
   const custom = property.startsWith('--');
-  if ((custom && tokenFile) || property.startsWith('mask') || exempt(decl)) return [];
+  if ((custom && tokenFile) || exempt(decl)) return [];
   const parts = rawParts(decl.value, property, { tokenFile });
-  if (CHECKED.has(property)) return parts;
+  if (CHECKED.has(property) || (custom && !rootToken(decl))) return parts;
   return parts.filter((part) => /^(?:[#a-z]|var\()/i.test(part));
 }
 

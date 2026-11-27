@@ -201,6 +201,12 @@
   --row-app: 40px;
 
   --page-header-band: 48px;
+  --scrollbar-size: 8px;
+  --table-head-height: 36px;
+  --table-head-divider: 16px;
+  --figure-cell-min: 128px;
+  --icon-tile-size: 40px;
+  --kbd-height: 24px;
 }
 
 @theme {
@@ -966,8 +972,8 @@
 }
 
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
 }
 
 *::-webkit-scrollbar-track {
@@ -1420,14 +1426,14 @@ label {
   position: absolute;
   inset-inline-start: 0;
   top: 50%;
-  width: 1px;
-  height: 16px;
+  width: var(--rule-width);
+  height: var(--table-head-divider);
   translate: 0 -50%;
   background: var(--color-rule);
   pointer-events: none;
 }
 :root:not([data-public-surface]) .table-frame thead th {
-  height: 36px;
+  height: var(--table-head-height);
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
   font-weight: var(--weight-medium);
@@ -1531,7 +1537,7 @@ label {
 }
 [data-figure-cell] {
   flex: 1 1 0;
-  min-width: 128px;
+  min-width: var(--figure-cell-min);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
@@ -1576,8 +1582,8 @@ label {
 [data-icon-tile] {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: var(--icon-tile-size);
+  height: var(--icon-tile-size);
   border-radius: var(--radius-control);
   background: var(--color-well);
 }
@@ -1684,7 +1690,7 @@ label {
   --color-raised-2: oklch(from var(--color-negative-wash) calc(l - 0.02) c h);
 }
 :root:not([data-public-surface]) kbd {
-  height: 24px;
+  height: var(--kbd-height);
   padding-inline: calc(var(--spacing) * 1.5);
   font: var(--weight-medium) var(--text-caption) / var(--text-caption--line-height) var(--font-sans);
 }

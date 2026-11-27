@@ -28,7 +28,7 @@
   inherits: false;
 }
 
-.cl-art {
+:root {
   --art-text: clamp(8px, 2.5cqi, 20px);
   --art-leading: 1.3;
   --art-gap: 0.7em;
@@ -73,11 +73,13 @@
   --art-trail: 1em;
   --art-trace-opacity: 0.6;
   --art-area-opacity: 0.55;
+}
+
+.cl-art {
   --art-ghost-fill: color-mix(in oklch, var(--color-panel) 70%, transparent);
   --art-chip-fill: color-mix(in oklch, var(--color-panel) 45%, transparent);
   --art-ring-fill: color-mix(in oklch, var(--color-panel) 55%, transparent);
   --art-bubble-line: color-mix(in oklch, var(--color-panel) 75%, transparent);
-
   position: relative;
   container-type: inline-size;
   width: 100%;
