@@ -3,7 +3,6 @@ import { aiTrafficQueries } from '@/lib/api/ai-traffic';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { TextLink } from '@/components/ui/text-link';
 import { ClampText } from '@/components/ui/clamp-text';
-import { textRole } from '@/components/ui/typography';
 import { TrafficUrlButton } from './url-panel';
 import { patternLabel } from '@/lib/ai-traffic/vocabulary';
 import { readErrorProps } from '@/components/ui/notice';
@@ -15,6 +14,7 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
+import { Inline, Stack } from '@/components/ui/layout';
 
 export function InsightStrip({
   projectId,
@@ -51,11 +51,11 @@ export function InsightStrip({
       {data?.patterns.length ? (
         <SectionBleed as="ul" rows>
           {data.patterns.map((r) => (
-            <li key={r.pattern} className="grid min-w-0 gap-1">
-              <ClampText phoneWrap className={textRole('body')}>
+            <Stack as="li" key={r.pattern} gap="tight" className="min-w-0">
+              <ClampText phoneWrap text="body">
                 {r.copy}
               </ClampText>
-              <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+              <Inline gap="meta">
                 <TextLink
                   className="inline-flex min-h-6 items-center"
                   aria-label={`Inspect pages: ${patternLabel(r.pattern)}`}
@@ -85,8 +85,8 @@ export function InsightStrip({
                     Page {index + 1}
                   </TrafficUrlButton>
                 ))}
-              </div>
-            </li>
+              </Inline>
+            </Stack>
           ))}
         </SectionBleed>
       ) : null}

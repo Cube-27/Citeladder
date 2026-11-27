@@ -37,7 +37,7 @@ import { SinkFilterUpdates } from './gcp-pull-setup';
 import { CRAWL_LOG_SETUPS } from '@/lib/config/crawl-logs';
 import { ICONS, MoreHorizontal, PlugZap, RotateCcw, Trash2 } from '@/lib/icons';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
@@ -286,7 +286,7 @@ function SourceDiagnostics({
           <TableCell>
             <div className="grid min-w-0">
               <ClampText>{s.host}</ClampText>
-              <ClampText className={textRole('caption')}>
+              <ClampText text="caption">
                 {setupLabel(s.setup)} · {words(s.connection)} · {words(s.state)}
                 <StallDetail source={s} />
               </ClampText>
@@ -295,7 +295,7 @@ function SourceDiagnostics({
           <TableCell>
             <div className="grid min-w-0">
               <ClampText>{collectionPointLabel(s.collection_point)}</ClampText>
-              <ClampText className={textRole('caption')}>
+              <ClampText text="caption">
                 Sampling: {words(s.sampling.kind)}
                 {s.sampling.kind === 'sampled' ? ' ' + s.sampling.rate : ''}
                 {s.sampling.kind === 'filtered' ? ' ' + s.sampling.description : ''}
@@ -305,7 +305,7 @@ function SourceDiagnostics({
           <TableCell>
             <div className="grid">
               <DisplayTime value={s.last_accepted_batch} fallback="Awaiting data" />
-              <span className={textRole('caption')}>
+              <Text variant="caption">
                 Processed <DisplayTime value={s.last_processed_at} fallback="Awaiting processing" />
                 {s.pull ? (
                   <>
@@ -313,7 +313,7 @@ function SourceDiagnostics({
                     <DisplayTime value={s.pull.last_drained_at} fallback="Not drained yet" />
                   </>
                 ) : null}
-              </span>
+              </Text>
             </div>
           </TableCell>
           <TableCell>

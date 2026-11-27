@@ -3,7 +3,7 @@ import type { MouseEventHandler, ReactNode } from 'react';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SectionBleed } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 

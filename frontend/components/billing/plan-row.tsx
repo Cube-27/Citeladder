@@ -20,10 +20,11 @@ import { contactSalesHref } from '@/lib/config/contact-sales';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { Inline, Stack } from '@/components/ui/layout';
 import { Section } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 
 export function PlanCard({
   name,
@@ -42,15 +43,17 @@ export function PlanCard({
 }>) {
   return (
     <Section {...props} accent={current} aria-current={current ? 'true' : undefined}>
-      <div className="grid min-w-0 flex-1 content-start gap-1">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className={textRole('label')}>{name}</span>
+      <Stack gap="tight" box="fill" content="start">
+        <Inline wrap>
+          <Text variant="label">{name}</Text>
           {current ? <Tag>Current plan</Tag> : null}
-        </div>
-        <span className={textRole('body', 'tabular-nums')}>{price}</span>
+        </Inline>
+        <Text variant="body" numeric>
+          {price}
+        </Text>
         {children}
-      </div>
-      {controls ? <div className="flex flex-wrap items-center gap-2">{controls}</div> : null}
+      </Stack>
+      {controls ? <Inline wrap>{controls}</Inline> : null}
     </Section>
   );
 }
@@ -111,9 +114,15 @@ export function PlanRow({
         )
       }
     >
-      {plan.description ? <p className={textRole('caption')}>{plan.description}</p> : null}
+      {plan.description ? (
+        <Text as="p" variant="caption">
+          {plan.description}
+        </Text>
+      ) : null}
       {!selection.ok && !plan.contact_only && selection.reason ? (
-        <p className={textRole('caption')}>{billingReasonMessage(selection.reason)}</p>
+        <Text as="p" variant="caption">
+          {billingReasonMessage(selection.reason)}
+        </Text>
       ) : null}
     </PlanCard>
   );

@@ -13,7 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Section } from '@/components/ui/section';
 import { Notice } from '@/components/ui/notice';
-import { wellClasses } from '@/components/ui/slip';
+import { CodeWell } from '@/components/ui/well';
+import { Text } from '@/components/ui/typography';
 
 type Source = z.infer<typeof crawlSourceSchema>;
 type GcpPull = z.infer<typeof crawlSourceListSchema>['gcp_pull'];
@@ -21,13 +22,7 @@ type GcpPull = z.infer<typeof crawlSourceListSchema>['gcp_pull'];
 function CodeText({ value, label }: Readonly<{ value: string; label: string }>) {
   return (
     <Stack>
-      <pre
-        className={wellClasses(
-          'text-code font-mono text-ink overflow-x-auto break-all whitespace-pre-wrap',
-        )}
-      >
-        {value}
-      </pre>
+      <CodeWell>{value}</CodeWell>
       <CopyButton value={value} className="w-fit">
         {label}
       </CopyButton>
@@ -68,9 +63,9 @@ export function GcpFields({ model }: Readonly<{ model: ReturnType<typeof useCraw
 
 export function GcpSteps() {
   return (
-    <p className="text-body text-ink-2">
+    <Text as="p" variant="body" tone="ink-2">
       Create the source first to get its setup commands. You pay Google for log routing and Pub/Sub.
-    </p>
+    </Text>
   );
 }
 
@@ -86,9 +81,9 @@ export function GcpSourceSetup({
   const outcome = verify.data;
   return (
     <Stack>
-      <p className="text-body text-ink-2">
+      <Text as="p" variant="body" tone="ink-2">
         Run these in Cloud Shell, then enable logging on each load balancer backend service.
-      </p>
+      </Text>
       <CodeText
         label="Copy commands"
         value={gcpSetupCommands({

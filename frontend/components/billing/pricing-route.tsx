@@ -12,7 +12,7 @@ import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
-import { InlineFigure } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import {
   billingDetailsError,
   billingQueries,
@@ -161,9 +161,9 @@ function PriceInfo({
       <SettingRow
         label="Price"
         value={
-          <span className="tabular-nums">
+          <Text variant="body" tone="ink-2" numeric>
             {formatMoney(price.money, catalog.currency_minor_units)}
-          </span>
+          </Text>
         }
       />
     );
@@ -245,8 +245,10 @@ function SelectedPurchase({
           label="Quantity"
           value={
             <>
-              <InlineFigure>{selection.quantity}</InlineFigure> ×{' '}
-              {selection.byok ? 'Your own keys' : 'Managed'}
+              <Text variant="body" tone="ink-2" numeric>
+                {selection.quantity}
+              </Text>{' '}
+              × {selection.byok ? 'Your own keys' : 'Managed'}
             </>
           }
         />
@@ -256,9 +258,9 @@ function SelectedPurchase({
             label="Unit price"
             value={
               <>
-                <InlineFigure>
+                <Text variant="body" tone="ink-2" numeric>
                   {formatMoney(extra.unit_price, catalog.currency_minor_units)}
-                </InlineFigure>{' '}
+                </Text>{' '}
                 per unit before tax
               </>
             }

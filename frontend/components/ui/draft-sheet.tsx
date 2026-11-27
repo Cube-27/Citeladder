@@ -3,7 +3,7 @@ import type { ReactNode, RefCallback } from 'react';
 import { Inline, Stack } from './layout';
 import { SurfaceContext, useOnPage } from './section';
 import { Tag as DraftTag } from './tag';
-import { textRole } from './typography';
+import { textRole } from './text-role';
 import { cn } from '@/lib/utils';
 
 export type DraftState = 'draft' | 'accepted' | 'declined';
@@ -34,6 +34,17 @@ function draftSheetClasses(state: DraftState, onPage: boolean) {
   return cn(
     'bg-panel shadow-card rounded-card min-w-0 p-panel-inset [--spacing-panel-inset:var(--spacing-card)]',
     state !== 'declined' && 'edge-draft',
+  );
+}
+
+export function DraftInset({
+  children,
+  ...props
+}: Readonly<{ children: ReactNode; 'data-field-proposal'?: string }>) {
+  return (
+    <div {...props} className="edge-draft rounded-control grid gap-2 p-2">
+      {children}
+    </div>
   );
 }
 

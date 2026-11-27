@@ -1,34 +1,18 @@
-import type { ComponentPropsWithoutRef } from 'react';
+import {
+  createElement,
+  type ComponentPropsWithoutRef,
+  type ComponentPropsWithRef,
+  type ReactNode,
+  type Ref,
+} from 'react';
 
 import { cn } from '@/lib/utils';
-
-const TEXT_ROLES = {
-  display: 'text-display font-display text-ink',
-  title: 'text-title font-display text-ink',
-  heading: 'text-heading text-ink',
-  subheading: 'text-label text-ink',
-  body: 'text-body text-ink',
-  label: 'text-label text-ink',
-  prose: 'text-prose text-ink',
-  caption: 'text-caption text-ink-2',
-  captionStrong: 'text-caption-strong text-ink-2',
-  figureXl: 'text-figure-xl font-figure tabular-nums text-ink',
-  figure: 'text-figure font-figure tabular-nums text-ink',
-  code: 'text-code font-mono text-ink',
-  emphasis: 'font-emphasis',
-  bodyLg: 'text-body-lg font-sans text-ink',
-  pageTitle: 'text-page-title text-ink',
-} as const;
-
-export type TextRole = keyof typeof TEXT_ROLES;
-
-export function textRole(role: TextRole, className?: string) {
-  return cn(TEXT_ROLES[role], className);
-}
+import { textRole, toneClass, type TextTone } from '@/components/ui/text-role';
 
 const ROLE_CLASSES = {
   caption: 'text-caption font-sans',
   'caption-strong': 'text-caption-strong font-sans',
+  'caption-mono': 'text-caption font-mono',
   code: 'text-code font-mono',
   body: 'text-body font-sans',
   'body-lg': 'text-body-lg font-sans',
@@ -42,27 +26,20 @@ const ROLE_CLASSES = {
   display: 'text-display font-display',
 } as const;
 
-const TONE_CLASSES = {
-  ink: 'text-ink',
-  'ink-2': 'text-ink-2',
-  'accent-text': 'text-accent-text',
-  positive: 'text-positive',
-  negative: 'text-negative',
-  warning: 'text-warning',
-  info: 'text-info',
-  placeholder: 'text-ink-placeholder',
-} as const;
-
 type TypeRole = keyof typeof ROLE_CLASSES;
-export type TextTone = keyof typeof TONE_CLASSES;
 
-export function toneClass(tone: TextTone | undefined) {
-  return tone ? TONE_CLASSES[tone] : undefined;
-}
-
-const SECONDARY_ROLES: ReadonlySet<TypeRole> = new Set(['caption', 'caption-strong']);
+const SECONDARY_ROLES: ReadonlySet<TypeRole> = new Set([
+  'caption',
+  'caption-strong',
+  'caption-mono',
+]);
 type TextTag =
   | 'span'
+  | 'b'
+  | 'output'
+  | 'legend'
+  | 'pre'
+  | 'label'
   | 'p'
   | 'div'
   | 'h1'
@@ -75,28 +52,87 @@ type TextTag =
   | 'strong'
   | 'code';
 
+const TEXT_WRAP = {
+  anywhere: 'wrap-anywhere',
+  all: 'break-all',
+  words: 'break-words',
+  balance: 'text-balance',
+  nowrap: 'whitespace-nowrap',
+  truncate: 'truncate',
+  lines: 'whitespace-pre-line',
+  pre: 'whitespace-pre-wrap',
+  'pre-anywhere': 'whitespace-pre-wrap wrap-anywhere',
+} as const;
+
+const TEXT_BOX = {
+  block: 'block',
+  fit: 'w-fit',
+  fill: 'min-w-0 flex-1',
+  shrink: 'min-w-0',
+  fixed: 'shrink-0',
+  row: 'flex min-w-0',
+  inline: 'inline',
+  prose: 'max-w-prose',
+  clip: 'min-w-0 overflow-hidden',
+  stretch: 'min-w-0 justify-self-stretch',
+  scroll: 'max-w-full overflow-x-auto',
+  indent: 'ps-6',
+  meta: 'flex h-6 items-center',
+  'fill-row': 'flex min-w-0 flex-1',
+  trail: 'min-w-0 ps-1',
+} as const;
+
+const TEXT_ALIGN = {
+  start: undefined,
+  end: 'text-end',
+  center: 'text-center',
+} as const;
+
 export function Text({
   variant,
   tone = SECONDARY_ROLES.has(variant) ? 'ink-2' : 'ink',
   as: Tag = 'span',
   numeric = false,
+  wrap,
+  box,
+  focusable = false,
+  align = 'start',
+  hideOnPhone = false,
+  hideOnDesktop = false,
   children,
   ...props
 }: Readonly<
-  Omit<ComponentPropsWithoutRef<'span'>, 'className' | 'style'> & {
+  Omit<ComponentPropsWithRef<'span'>, 'className' | 'style' | 'ref'> & {
+    ref?: Ref<HTMLElement>;
     variant: TypeRole;
     tone?: TextTone;
     as?: TextTag;
     numeric?: boolean;
+    wrap?: keyof typeof TEXT_WRAP;
+    box?: keyof typeof TEXT_BOX;
+    focusable?: boolean;
+    align?: keyof typeof TEXT_ALIGN;
+    hideOnPhone?: boolean;
+    hideOnDesktop?: boolean;
   }
 >) {
+  const className = cn(
+    ROLE_CLASSES[variant],
+    toneClass(tone),
+    numeric && 'tabular-nums',
+    wrap && TEXT_WRAP[wrap],
+    box && TEXT_BOX[box],
+    focusable && 'focus-ring',
+    TEXT_ALIGN[align],
+    hideOnPhone && 'phone:hidden',
+    hideOnDesktop && 'desktop:hidden',
+  );
+  return createElement(Tag, { ...props, className }, children);
+}
+
+export function CopyStack({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <Tag
-      {...props}
-      className={cn(ROLE_CLASSES[variant], TONE_CLASSES[tone], numeric && 'tabular-nums')}
-    >
-      {children}
-    </Tag>
+    <div className="text-body text-ink max-w-copy flex min-w-0 flex-col gap-2">{children}</div>
   );
 }
 
@@ -121,18 +157,6 @@ export function InlineFigure({
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
     <span {...props} className={cn('tabular-nums', className)}>
-      {children}
-    </span>
-  );
-}
-
-export function Metric({
-  children,
-  className,
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'span'>>) {
-  return (
-    <span {...props} className={textRole('figure', className)}>
       {children}
     </span>
   );

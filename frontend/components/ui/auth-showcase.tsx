@@ -1,7 +1,7 @@
 import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react';
 
 import { Icon } from '@/components/ui/icon';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { Pause, Play } from '@/lib/icons';
 import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
 import { cn } from '@/lib/utils';

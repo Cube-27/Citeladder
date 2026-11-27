@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 
 import { isAgentPath } from '@/lib/navigation/app-routes';
 import { ActionButton } from '@/components/ui/actions';
-import { MASTHEAD_LABELLED } from '@/components/ui/masthead';
+import { MastheadLabelled } from '@/components/ui/masthead';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useAgentPanel } from '@/lib/agent/panel-context';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -29,12 +29,9 @@ function PanelTrigger({ open }: Readonly<{ open: () => void }>) {
   if (!available) return null;
   return (
     <Tooltip content="Ask the agent about this screen" side="bottom">
-      <ActionButton
-        action="askAgent"
-        aria-haspopup="dialog"
-        onClick={open}
-        className={MASTHEAD_LABELLED}
-      />
+      <MastheadLabelled>
+        <ActionButton action="askAgent" aria-haspopup="dialog" onClick={open} />
+      </MastheadLabelled>
     </Tooltip>
   );
 }

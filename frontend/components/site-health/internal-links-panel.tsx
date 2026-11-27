@@ -26,6 +26,10 @@ import {
 } from './internal-links-panel-bands';
 import { Notice } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
+import { SearchField } from '@/components/ui/search-field';
+import { ExportAction } from '@/components/ui/export-action';
+import { downloadInternalLinksCsv } from '@/lib/site-health/internal-link-csv';
+import { Text } from '@/components/ui/typography';
 
 export function InternalLinksPanel({
   read,
@@ -135,11 +139,11 @@ function LinksResult({
   if (isRunning(analysis.state) && !analysis.recommendations.length)
     return (
       <Section>
-        <output className="text-body text-ink-2">
+        <Text as="output" variant="body" tone="ink-2">
           {summary
             ? `Checking related pages… ${formatCount(summary.candidates - summary.pending)} of ${formatCount(summary.candidates)} page pairs done.`
             : 'Checking related pages…'}
-        </output>
+        </Text>
       </Section>
     );
   return (
@@ -167,10 +171,10 @@ function LinksBody({
   return (
     <>
       {isRunning(analysis.state) && summary ? (
-        <output className="text-caption text-ink-2">
+        <Text as="output" variant="caption">
           {formatCount(summary.candidates - summary.pending)} of {formatCount(summary.candidates)}{' '}
           page pairs checked
-        </output>
+        </Text>
       ) : null}
       <LinksTable
         links={links}
@@ -208,6 +212,7 @@ function LinksTable({
   emptyReason: string;
   onSelect: (id: string) => void;
 }>) {
+  const { params, update } = useLinkParams();
   const pagination = useResizableTablePage(links.length, { urlKey: 'links_page' });
   const { pageSize } = pagination;
   const paged = links.slice(pagination.from - 1, pagination.to);
@@ -215,6 +220,24 @@ function LinksTable({
     <DataTable
       label="Internal link suggestions"
       columns={LINK_COLUMNS}
+      toolbar={{
+        search: (
+          <SearchField
+            value={params.links_q ?? ''}
+            onValueChange={(value) => update('links_q', value, 'replace')}
+            placeholder="Search pages and anchors"
+            aria-label="Search pages and anchors"
+          />
+        ),
+        actions: (
+          <ExportAction
+            scope="table"
+            formats={['csv']}
+            disabled={!links.length}
+            onExport={async () => downloadInternalLinksCsv(links)}
+          />
+        ),
+      }}
       pageSize={links.length > pageSize ? pageSize : undefined}
       rowCount={paged.length}
       state={

@@ -3,7 +3,7 @@ import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { EvidenceLine } from '@/components/site-health/issue-evidence';
 import { Inline, Stack } from '@/components/ui/layout';
 import { UrlText } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type { SiteIssue } from '@citeladder/contracts';
 import { issueTitle } from '@/lib/site-health/issues';
 import {
@@ -40,7 +40,7 @@ export function SharedOccurrences({
     <Stack as="li" gap="item">
       <Stack gap="tight">
         <EvidenceLine lead={sharedEvidenceLead(entry.ruleId)} facts={entry.facts} text="body" />
-        <span className="text-caption text-ink-2">{sharedPagesLabel(scope)}</span>
+        <Text variant="caption">{sharedPagesLabel(scope)}</Text>
         <AskAgentLink
           appearance="text"
           handoff={{
@@ -54,7 +54,7 @@ export function SharedOccurrences({
       </Stack>
       <Stack as="ul" gap="item">
         {entry.occurrences.map((occurrence) => (
-          <li key={occurrence.occurrence_id} className="flex min-h-6 min-w-0 items-center">
+          <Inline as="li" key={occurrence.occurrence_id} className="min-h-target">
             <AffectedPageLink
               crawlId={crawlId}
               siteUrlId={occurrence.site_url_id}
@@ -62,7 +62,7 @@ export function SharedOccurrences({
               url={occurrence.display_url}
               pageKind={occurrence.page_kind}
             />
-          </li>
+          </Inline>
         ))}
       </Stack>
     </Stack>
@@ -85,20 +85,19 @@ export function AffectedPageLink({
   return (
     <PageLink text="body" className="block min-w-0" crawlId={crawlId} siteUrlId={siteUrlId}>
       <Stack as="span" gap="tight" className="min-w-0">
-        <Inline as="span" className="items-baseline justify-between">
-          <span
-            className={textRole('body', 'min-w-0 truncate')}
-            title={pageDisplayTitle(title, url)}
-          >
+        <Inline as="span" align="baseline" justify="between">
+          <Text variant="body" box="shrink" wrap="truncate" title={pageDisplayTitle(title, url)}>
             {pageDisplayTitle(title, url)}
-          </span>
+          </Text>
           {pageKind ? (
-            <span className="text-caption text-ink-2 shrink-0">{pageKindLabel(pageKind)}</span>
+            <Text variant="caption" box="fixed">
+              {pageKindLabel(pageKind)}
+            </Text>
           ) : null}
         </Inline>
-        <span className="text-caption text-ink-2 flex min-w-0">
+        <Text variant="caption" box="row">
           <UrlText url={url} />
-        </span>
+        </Text>
       </Stack>
     </PageLink>
   );

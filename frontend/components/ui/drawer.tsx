@@ -11,9 +11,6 @@ import { SHEET_FACE } from '@/components/ui/slip';
 const DRAWER_PANE =
   'grid min-h-0 flex-1 grid-cols-1 content-start gap-panel-inset overflow-x-hidden overflow-y-auto overscroll-contain p-panel-inset';
 
-export const DRAWER_SPLIT =
-  'phone:grid-cols-1 phone:grid-rows-[auto_minmax(0,1fr)] grid min-h-0 flex-1 grid-cols-[11.5rem_minmax(0,1fr)]';
-
 export function DrawerNav({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="border-rule phone:border-e-0 phone:border-b py-panel-inset border-e px-3">

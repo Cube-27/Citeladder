@@ -28,6 +28,7 @@ export function Textarea({
   placement = 'field',
   rows: rowsProp,
   maxRows = 8,
+  numeric = false,
   style,
   ref,
   ...props
@@ -35,6 +36,7 @@ export function Textarea({
   ComponentPropsWithoutRef<'textarea'> & {
     placement?: 'field' | 'composer';
     maxRows?: number;
+    numeric?: boolean;
     ref?: Ref<HTMLTextAreaElement>;
   }
 >) {
@@ -66,7 +68,12 @@ export function Textarea({
       ref={setRef}
       rows={grows ? 1 : rows}
       style={growStyle}
-      className={cn(textareaClasses, grows ? composerClasses : fieldClasses, className)}
+      className={cn(
+        textareaClasses,
+        grows ? composerClasses : fieldClasses,
+        numeric && 'tabular-nums',
+        className,
+      )}
       {...props}
     />
   );

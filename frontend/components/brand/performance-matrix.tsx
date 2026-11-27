@@ -14,7 +14,8 @@ import { Section, SectionHeader, SectionTitle, SectionToolbar } from '@/componen
 import { Select } from '@/components/ui/select';
 import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
+import { ExportAction } from '@/components/ui/export-action';
 import { downloadCsv } from '@/lib/csv/download';
 import { MATRIX_DIMENSIONS, MATRIX_METRICS, POSITION_HINT } from '@/lib/config/visibility';
 import { setUrlParams, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
@@ -150,7 +151,7 @@ export function PerformanceMatrix({
         {metric === 'avg_position' ? <InfoHint label="Position">{POSITION_HINT}</InfoHint> : null}
         <span className="flex-1" />
         <Select ariaLabel="Rows" value={rows} options={options(columns)} onValueChange={setRows} />
-        <span className={textRole('caption')}>vs</span>
+        <Text variant="caption">vs</Text>
         <Select
           ariaLabel="Columns"
           value={columns}
@@ -167,9 +168,12 @@ export function PerformanceMatrix({
         >
           Switch axis
         </Button>
-        <Button onClick={exportCsv} disabled={!readings.length}>
-          Export CSV
-        </Button>
+        <ExportAction
+          scope="table"
+          formats={['csv']}
+          disabled={!readings.length}
+          onExport={async () => exportCsv()}
+        />
       </SectionToolbar>
       {body()}
       <HeatScale note="Up to 10 per axis" />

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import {
   Button,
   buttonClasses,
@@ -75,5 +77,13 @@ export function ActionButton({
     <Button {...props} variant={preset.variant} className={className}>
       {content}
     </Button>
+  );
+}
+
+export function HoverActions({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-2 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
+      {children}
+    </div>
   );
 }

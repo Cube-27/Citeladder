@@ -1,3 +1,4 @@
+import { CountPlaceholder } from '@/components/ui/skeleton-block';
 import { Tooltip } from '@/components/ui/tooltip';
 import { queueCount, useActionStatusCounts } from '@/lib/agent/use-action-status-counts';
 import { formatCount, pluralCount } from '@/lib/format';
@@ -18,7 +19,7 @@ export function OpenActionCount() {
   const open = useOpenActions();
   switch (open.kind) {
     case 'pending':
-      return <span aria-hidden className="bg-well rounded-control inline-block h-3 w-[3ch]" />;
+      return <CountPlaceholder />;
     case 'unknown':
       return null;
     case 'counted':

@@ -4,6 +4,7 @@ import { Absence } from '@/components/ui/absence';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@citeladder/contracts';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { formatCount } from '@/lib/format';
+import { Text } from '@/components/ui/typography';
 
 export type AuditMetric = {
   title: string;
@@ -144,7 +145,7 @@ function crawlMetric(context: MetricContext): AuditMetric {
     figure: counts ? (
       <>
         {`${formatCount(counts.analyzed)} of ${formatCount(counts.found)} `}
-        <span className="text-caption text-ink-2">pages audited</span>
+        <Text variant="caption">pages audited</Text>
       </>
     ) : undefined,
     sub: counts?.limit ? `Plan limit ${formatCount(counts.limit)} pages` : undefined,

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { ClampText } from '@/components/ui/clamp-text';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { SectionBleed } from '@/components/ui/section';
 import { cn } from '@/lib/utils';
 

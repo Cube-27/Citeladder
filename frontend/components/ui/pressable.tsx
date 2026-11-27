@@ -1,17 +1,28 @@
 import type { ButtonHTMLAttributes, Ref } from 'react';
 
-import { toneClass, type TextTone } from '@/components/ui/typography';
+import { textRole, toneClass, type TextRole, type TextTone } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 export type PressableProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   ref?: Ref<HTMLButtonElement>;
   tone?: TextTone;
+  text?: TextRole;
+  numeric?: boolean;
+  look?: 'plain' | 'jump';
 };
+
+const LOOK = {
+  plain: undefined,
+  jump: 'underline decoration-1 underline-offset-3 decoration-control-line hover:decoration-current',
+} as const;
 
 export function Pressable({
   className,
   type = 'button',
   tone,
+  text,
+  numeric = false,
+  look = 'plain',
   ref,
   ...props
 }: Readonly<PressableProps>) {
@@ -22,6 +33,9 @@ export function Pressable({
       className={cn(
         'focus-ring w-full rounded-control text-left transition-[background-color] duration-fast ease-standard disabled:pointer-events-none disabled:bg-well disabled:text-ink-2 disabled:border-rule',
         toneClass(tone),
+        text && textRole(text),
+        numeric && 'tabular-nums',
+        LOOK[look],
         className,
       )}
       {...props}

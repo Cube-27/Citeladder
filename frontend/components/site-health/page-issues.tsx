@@ -16,6 +16,7 @@ import { StateBlock } from '@/components/ui/state-block';
 import { ChevronDown } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { TitledSection } from '@/components/ui/section';
+import { Text } from '@/components/ui/typography';
 
 const PREVIEW_COUNT = 5;
 
@@ -93,8 +94,8 @@ function IssueBody({ issue, crawlId }: Readonly<{ issue: PageIssue; crawlId: str
       <Remediation issue={issue} />
       <IssueEvidence occurrence={issue} />
       {scores.length > 0 ? (
-        <Inline as="p" className="flex-wrap">
-          <span className="text-caption text-ink-2">Counts toward</span>
+        <Inline as="p" wrap>
+          <Text variant="caption">Counts toward</Text>
           {scores.map((score) => (
             <Tag key={score}>{score}</Tag>
           ))}
@@ -118,6 +119,8 @@ function IssueBody({ issue, crawlId }: Readonly<{ issue: PageIssue; crawlId: str
 
 function Remediation({ issue }: Readonly<{ issue: PageIssue }>) {
   return issue.remediation ? (
-    <p className="text-body text-ink whitespace-pre-line">{issue.remediation}</p>
+    <Text as="p" variant="body" wrap="lines">
+      {issue.remediation}
+    </Text>
   ) : null;
 }

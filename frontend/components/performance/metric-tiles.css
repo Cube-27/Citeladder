@@ -13,10 +13,10 @@
   position: relative;
   display: grid;
   align-content: start;
-  gap: 4px;
+  gap: calc(var(--spacing) * 1);
   min-width: 0;
-  padding: 12px var(--spacing-panel-inset);
-  border-inline-end: 1px solid var(--color-rule);
+  padding: calc(var(--spacing) * 3) var(--spacing-panel-inset);
+  border-inline-end: var(--rule-width) solid var(--color-rule);
   background: var(--color-panel);
   color: var(--text-color-ink-2);
   &[data-metric='clicks'] {
@@ -39,7 +39,7 @@
     border-inline-end: 0;
   }
   & label > :first-child {
-    margin-inline-start: -4px;
+    margin-inline-start: calc(var(--spacing) * -1);
   }
   & label::after {
     content: '';

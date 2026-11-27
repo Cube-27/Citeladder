@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import type { ChartHeight } from '@/components/ui/chart';
+import { THREAD_OPENING } from '@/components/ui/thread-opening';
 import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +13,10 @@ export function SkeletonBlock({ className }: Readonly<{ className?: string }>) {
       className={cn('skeleton-sweep bg-well rounded-mark block h-3 min-h-3', className)}
     />
   );
+}
+
+export function CountPlaceholder() {
+  return <span aria-hidden className="bg-well rounded-control w-count-mark inline-block h-3" />;
 }
 
 export const TEXT_WIDTHS = ['w-full', 'w-4/5', 'w-3/5'] as const;
@@ -219,14 +224,47 @@ export function ComposerBlocks() {
   );
 }
 
+const FRAME_LAYOUT = {
+  workspace: 'flex flex-col gap-workspace',
+  section: 'flex flex-col gap-section',
+  opening: THREAD_OPENING,
+} as const;
+
+export function OpeningTitleBlocks() {
+  return (
+    <span className="flex h-7 items-center justify-center">
+      <SkeletonBlock className="h-5 w-60 max-w-full" />
+    </span>
+  );
+}
+
+export function DockedComposerBlocks() {
+  return (
+    <div className="shrink-0 pt-2 pb-4">
+      <ComposerBlocks />
+    </div>
+  );
+}
+
 export function SkeletonFrame({
   label,
   variant,
+  layout,
   className,
   children,
-}: Readonly<{ label: string; variant: string; className?: string; children: ReactNode }>) {
+}: Readonly<{
+  label: string;
+  variant: string;
+  layout?: keyof typeof FRAME_LAYOUT;
+  className?: string;
+  children: ReactNode;
+}>) {
   return (
-    <div aria-busy="true" data-skeleton={variant} className={cn('min-w-0', className)}>
+    <div
+      aria-busy="true"
+      data-skeleton={variant}
+      className={cn('min-w-0', layout && FRAME_LAYOUT[layout], className)}
+    >
       <LiveVerb label={label} />
       {children}
     </div>

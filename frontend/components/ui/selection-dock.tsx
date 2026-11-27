@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import { Slot } from '@radix-ui/react-slot';
+import type { ReactElement, ReactNode } from 'react';
 
 import { POP_FACE } from '@/components/ui/slip';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 export function SelectionDock({
@@ -25,12 +26,23 @@ export function SelectionDock({
   );
 }
 
-export const DOCK_SLOT = {
+const DOCK_SLOT = {
   decision: 'min-w-28',
   wide: 'rail:w-44',
   primary: 'min-w-0 shrink rail:w-64',
-  primaryLabel: 'min-w-0 truncate',
 } as const;
+
+export function DockSlot({
+  size,
+  children,
+}: Readonly<{ size: keyof typeof DOCK_SLOT; children?: ReactElement }>) {
+  if (!children) return <span aria-hidden className={cn(DOCK_SLOT[size], 'shrink-0')} />;
+  return <Slot className={DOCK_SLOT[size]}>{children}</Slot>;
+}
+
+export function DockLabel({ children }: Readonly<{ children: ReactNode }>) {
+  return <span className="min-w-0 truncate">{children}</span>;
+}
 
 export function PageDock({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (

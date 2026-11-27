@@ -19,7 +19,6 @@ import {
   winRateAbsence,
 } from '@/lib/visibility/ranking';
 import { Delta } from '@/components/ui/delta';
-import { textRole } from '@/components/ui/typography';
 import { TitledSection } from '@/components/ui/section';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { TextLink } from '@/components/ui/text-link';
@@ -72,7 +71,7 @@ export function RankingRowsTable({
               <TableCell>
                 <Inline as="span">
                   <BrandMark name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
-                  <ClampText lines={1} className={textRole('emphasis')}>
+                  <ClampText lines={1} text="emphasis">
                     {row.is_brand ? (
                       row.name
                     ) : (
@@ -119,7 +118,7 @@ function VisibilityValue({ row }: Readonly<{ row: RankingRow }>) {
   if (row.mention_rate == null) return <Absence />;
   const value = percentText(row.mention_rate);
   return (
-    <Inline as="span" className="justify-end">
+    <Inline as="span" justify="end">
       <CellMeter
         label={`${row.name} visibility`}
         value={row.mention_rate}

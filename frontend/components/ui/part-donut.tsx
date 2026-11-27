@@ -10,7 +10,7 @@ import {
   seriesTone,
   type SeriesTone,
 } from '@/components/ui/step-chart-parts';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 

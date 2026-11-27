@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuTrigger } from '@/components/ui/menu';
 
-export const SPLIT_ACTION_JOIN: CSSProperties = { borderStartEndRadius: 0, borderEndEndRadius: 0 };
+import './split-button.css';
+
 const TRIGGER_JOIN: CSSProperties = {
   marginInlineStart: -1,
   borderStartStartRadius: 0,

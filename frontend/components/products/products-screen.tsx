@@ -3,16 +3,17 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { ReportPage } from '@/components/templates/report-page';
 import { Button } from '@/components/ui/button';
-import { TableToolbar } from '@/components/ui/filter-bar';
+import { ExportAction } from '@/components/ui/export-action';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuCheckboxItem, MenuContent, MenuLabel, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
 import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { TextLink } from '@/components/ui/text-link';
-import { InlineFigure } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import type { CommerceProductSource, CommerceTarget } from '@citeladder/contracts/commerce-suite';
-import { Columns3, Download, PackageOpen } from '@/lib/icons';
+import { Columns3, PackageOpen } from '@/lib/icons';
 import { commerceQueries } from '@/lib/api/commerce';
 import { promptsQueries } from '@/lib/api/prompts';
 import { downloadCsv } from '@/lib/csv/download';
@@ -61,7 +62,9 @@ function ColumnSettings({
         <Button variant="secondary">
           <Icon icon={Columns3} />
           Columns
-          <span className="text-ink-2">{shown.length}</span>
+          <Text variant="label" tone="ink-2">
+            {shown.length}
+          </Text>
         </Button>
       </MenuTrigger>
       <MenuContent>
@@ -207,22 +210,13 @@ function ProductsContent({
     <ReportPage
       actions={header.actions}
       filters={
-        <TableToolbar
+        <FilterBar
           view={
             <SegmentedControl
               ariaLabel="Products shown"
               value={filters.source}
               options={SOURCES}
               onChange={productFilters.setSource}
-            />
-          }
-          search={
-            <SearchField
-              value={filters.q}
-              onValueChange={productFilters.setQ}
-              onClear={() => productFilters.setQ('')}
-              placeholder="Search products"
-              aria-label="Search products"
             />
           }
           filters={[
@@ -237,13 +231,20 @@ function ProductsContent({
             page.data ? (
               <>
                 <span>
-                  <InlineFigure>{formatCount(page.data.total)}</InlineFigure>
+                  <Text variant="caption" numeric>
+                    {formatCount(page.data.total)}
+                  </Text>
                   {page.data.total === 1 ? ' product' : ' products'}
                 </span>
                 <span>
-                  <InlineFigure>{formatCount(page.data.executions)}</InlineFigure>
+                  <Text variant="caption" numeric>
+                    {formatCount(page.data.executions)}
+                  </Text>
                   {page.data.executions === 1 ? ' answer' : ' answers'} in the last{' '}
-                  <InlineFigure>{page.data.window_days}</InlineFigure> days
+                  <Text variant="caption" numeric>
+                    {page.data.window_days}
+                  </Text>{' '}
+                  days
                 </span>
               </>
             ) : null
@@ -277,13 +278,26 @@ function ProductsContent({
             </TextLink>
           ) : undefined
         }
+        toolbar={{
+          search: (
+            <SearchField
+              value={filters.q}
+              onValueChange={productFilters.setQ}
+              onClear={() => productFilters.setQ('')}
+              placeholder="Search products"
+              aria-label="Search products"
+            />
+          ),
+        }}
         actions={
           <>
             <ColumnSettings shown={columns.shown} onToggle={columns.toggle} />
-            <Button variant="secondary" onClick={exportRows} disabled={rows.length === 0}>
-              <Icon icon={Download} />
-              Export CSV
-            </Button>
+            <ExportAction
+              scope="table"
+              formats={['csv']}
+              disabled={rows.length === 0}
+              onExport={async () => exportRows()}
+            />
           </>
         }
         trackable={filters.source === 'all'}

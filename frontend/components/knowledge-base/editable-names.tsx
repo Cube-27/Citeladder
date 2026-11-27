@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline } from '@/components/ui/layout';
 import { SettingField, SettingRow } from '@/components/ui/setting-row';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 
 export function AddNameForm({
   title,
@@ -43,7 +43,7 @@ export function AddNameForm({
     >
       <SettingField label={field}>
         {(props) => (
-          <Inline className="flex-wrap">
+          <Inline wrap>
             <Input
               {...props}
               value={draft}
@@ -79,7 +79,7 @@ export function EditableNameRow({
   const [editing, setEditing] = useState<string | null>(null);
   const label =
     editing === null ? (
-      <span className={textRole('body')}>{name}</span>
+      <Text variant="body">{name}</Text>
     ) : (
       <Input
         aria-label={`${verb} ${name}`}
@@ -90,7 +90,7 @@ export function EditableNameRow({
   if (!mayEdit) return <SettingRow label={label} />;
   const actions =
     editing === null ? (
-      <Inline as="span" className="flex-wrap">
+      <Inline as="span" wrap>
         <Button variant="secondary" aria-label={`${verb} ${name}`} onClick={() => setEditing(name)}>
           <Icon icon={Pencil} />
           {verb}
@@ -106,7 +106,7 @@ export function EditableNameRow({
         </Button>
       </Inline>
     ) : (
-      <Inline as="span" className="flex-wrap">
+      <Inline as="span" wrap>
         <Button variant="quiet" onClick={() => setEditing(null)}>
           <Icon icon={X} />
           Cancel

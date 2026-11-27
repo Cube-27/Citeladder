@@ -142,7 +142,7 @@ export function PromptBulkBar({
         <MenuTrigger asChild disabled={held !== null}>
           <Button>
             Assign topic
-            <Icon icon={ChevronDown} className="opacity-80" />
+            <Icon icon={ChevronDown} muted />
           </Button>
         </MenuTrigger>
         <MenuContent align="end">

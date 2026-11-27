@@ -7,7 +7,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { SectionContent } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { ArrowRight } from '@/lib/icons';
 import { pluralCount } from '@/lib/format';
 import type { CommandCenter } from '@citeladder/contracts';
@@ -35,9 +35,9 @@ function nextActionEvidence(data: CommandCenter): ReactNode {
     case 'audit':
     case 'audit_running':
       return (
-        <p className={textRole('caption')}>
+        <Text as="p" variant="caption">
           {pluralCount(data.active_prompt_count, 'active prompt')} to measure
-        </p>
+        </Text>
       );
     case 'crawl':
       return captionOrNull(data.loop.analyzed.limitations[0]);
@@ -45,9 +45,9 @@ function nextActionEvidence(data: CommandCenter): ReactNode {
       return captionOrNull(data.loop.connected.limitations[0]);
     case 'monitor':
       return data.measurement ? (
-        <p className={textRole('caption')}>
+        <Text as="p" variant="caption">
           Last run <DisplayTime value={data.measurement.completed_at} />
-        </p>
+        </Text>
       ) : null;
     case 'configure_prompts':
       return null;
@@ -57,7 +57,11 @@ function nextActionEvidence(data: CommandCenter): ReactNode {
 }
 
 function captionOrNull(text: string | undefined) {
-  return text ? <p className={textRole('caption')}>{text}</p> : null;
+  return text ? (
+    <Text as="p" variant="caption">
+      {text}
+    </Text>
+  ) : null;
 }
 
 export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
@@ -67,7 +71,9 @@ export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
     <WidgetFrame id="next-action" title="Next action">
       <SectionContent>
         <Stack gap="item">
-          <p className={textRole('label')}>{step.title}</p>
+          <Text as="p" variant="label">
+            {step.title}
+          </Text>
           {nextActionEvidence(data)}
           <div>
             {step.kind === 'opportunity' && !listOnly ? (

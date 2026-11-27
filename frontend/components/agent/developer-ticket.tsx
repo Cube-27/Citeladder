@@ -7,7 +7,7 @@ import { Icon } from '@/components/ui/icon';
 import { Textarea } from '@/components/ui/textarea';
 import { ClipboardList } from '@/lib/icons';
 import { actionEvidence } from '@/lib/agent/evidence';
-import { developerTicket } from '@/lib/agent/handoff';
+import { developerTicket } from '@/lib/agent/developer-ticket';
 import type { ActionDetail } from '@/lib/api/actions';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';

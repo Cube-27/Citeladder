@@ -16,7 +16,7 @@ import { LogoMark } from '@/components/ui/logo-mark';
 import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
 import { Pressable } from '@/components/ui/pressable';
 import { Tag } from '@/components/ui/tag';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import { wellClasses } from '@/components/ui/slip';
 import { ArrowDown, FileText } from '@/lib/icons';
 import { cn } from '@/lib/utils';

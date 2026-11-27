@@ -2,7 +2,7 @@ import { Fragment, type MouseEvent, type ReactNode } from 'react';
 
 import { ChevronRight } from '@/lib/icons';
 import { ProjectLink } from '@/components/ui/project-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 
 export type Crumb = Readonly<{
   label: string;

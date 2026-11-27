@@ -6,7 +6,7 @@ import { FIGURE_MIN_WIDTH, useStripWidth } from '@/components/ui/figure-rows';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Section, SectionBleed, useOnPage } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/text-role';
 import {
   type Absent,
   availabilityLabel,

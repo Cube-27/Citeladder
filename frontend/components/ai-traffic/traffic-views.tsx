@@ -152,7 +152,8 @@ export function TrafficCrawlers(scope: CrawlTableScope) {
                 ) : (
                   <TextLink asChild text="inherit">
                     <Pressable
-                      className="w-auto tabular-nums"
+                      numeric
+                      className="w-auto"
                       onClick={() => setBotId(b.bot_id)}
                       aria-label={`View paths requested by ${b.label}`}
                     >

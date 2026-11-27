@@ -10,6 +10,7 @@ import { Tag } from '@/components/ui/tag';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { breakdownRow, SMALL_SAMPLE, type SampleShare } from '@/lib/visibility/perception';
+import { Inline } from '@/components/ui/layout';
 
 type Category = PerceptionResponse['entities'][number]['categories'][number];
 type View = 'attribute' | 'topic' | 'engine' | 'source';
@@ -109,10 +110,10 @@ function SegmentTable({
         return (
           <TableRow key={row.key}>
             <TableCell>
-              <span className="inline-flex items-center gap-2">
+              <Inline as="span" inline>
                 {segment === 'engine' ? engineLabel(row.key) : row.label}
                 {cells.small ? <Tag>{SMALL_SAMPLE}</Tag> : null}
-              </span>
+              </Inline>
             </TableCell>
             <TableCell numeric>
               {cells.classified} / {cells.mentions}
