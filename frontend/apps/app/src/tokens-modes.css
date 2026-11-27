@@ -50,7 +50,7 @@
   --text-color-ink: var(--ramp-neutral-99_1);
   --text-color-ink-2: var(--ramp-zinc-72);
   --color-accent: var(--ramp-orange-70_31-h39);
-  --text-color-ink-placeholder: var(--ramp-zinc-64_5);
+  --text-color-ink-placeholder: var(--ramp-zinc-68);
   --text-color-accent-text: var(--ramp-orange-75_3);
   --color-accent-wash: var(--ramp-orange-27);
   --color-positive: var(--ramp-green-81_4);
@@ -88,6 +88,7 @@
 
 :root:not([data-public-surface]) {
   text-wrap: pretty;
+  -webkit-tap-highlight-color: transparent;
   --color-table-head: var(--ramp-zinc-95_2);
   --table-ground: var(--color-panel);
   --color-ground: var(--ramp-zinc-95_2);
@@ -106,7 +107,7 @@
   --focus-offset: 2px;
   --text-color-ink: var(--ramp-zinc-21);
   --text-color-ink-2: var(--ramp-zinc-47);
-  --text-color-ink-placeholder: var(--ramp-zinc-52_5);
+  --text-color-ink-placeholder: var(--ramp-zinc-50);
   --text-color-on-ink: var(--color-panel);
   --color-accent: var(--ramp-orange-63_39-h38);
   --text-color-accent-text: var(--ramp-orange-53_1);

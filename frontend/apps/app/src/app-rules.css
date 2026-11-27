@@ -107,12 +107,10 @@ html:has([data-app-surface]) {
   overflow: hidden;
 }
 [data-main-column] {
+  scrollbar-gutter: stable;
   scroll-padding-top: calc(var(--sticky-header-offset) + var(--spacing-page-top));
   &:has([data-page-band='action-bar']) {
     scroll-padding-bottom: calc(var(--spacing-filter-bar) + 2 * var(--spacing-gutter));
-  }
-  &:has([data-section-rail]) {
-    scrollbar-gutter: stable;
   }
 }
 
@@ -364,10 +362,8 @@ a.focus-ring:active .text-caption.text-ink-2 {
 }
 
 :disabled:focus-visible,
-[aria-disabled='true']:focus-visible,
-[data-disabled]:focus-visible,
-.focus-ring:is(:disabled, [aria-disabled='true'], [data-disabled]):focus-visible,
-.focus-input:is(:disabled, [aria-disabled='true'], [data-disabled]):focus-visible,
+.focus-ring:disabled:focus-visible,
+.focus-input:disabled:focus-visible,
 .focus-frame:has(:disabled):not(:has(:enabled:focus-visible)) {
   outline: none;
 }
@@ -553,8 +549,13 @@ label {
 :root:not([data-public-surface]) .table-frame thead > tr {
   height: auto;
 }
-:root:not([data-public-surface]) .table-frame thead th:is([aria-sort], :has(button:hover)) {
+:root:not([data-public-surface]) .table-frame thead th[aria-sort] {
   color: var(--text-color-ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  :root:not([data-public-surface]) .table-frame thead th:has(button:hover) {
+    color: var(--text-color-ink);
+  }
 }
 :root:not([data-public-surface]) .table-frame tbody :is(td, th) {
   font-size: var(--text-body);
@@ -788,10 +789,12 @@ label {
 :root:not([data-public-surface]) .surface-well :is(.focus-input, .focus-frame) {
   background-color: var(--color-panel);
 }
-:root:not([data-public-surface])
-  :where([data-overlay], [data-panel], [data-panel-frame], .table-frame, [data-auth-form])
-  :is(.focus-input, .focus-frame):hover:not(:focus, :focus-within, :disabled, [data-disabled]) {
-  background-color: var(--color-well-hover);
+@media (hover: hover) and (pointer: fine) {
+  :root:not([data-public-surface])
+    :where([data-overlay], [data-panel], [data-panel-frame], .table-frame, [data-auth-form])
+    :is(.focus-input, .focus-frame):hover:not(:focus, :focus-within, :disabled, [data-disabled]) {
+    background-color: var(--color-well-hover);
+  }
 }
 :root:not([data-public-surface]):where(:not([data-theme='dark'])) {
   --control-face-hover: var(--color-field-hover);
