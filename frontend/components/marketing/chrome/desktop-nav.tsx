@@ -109,7 +109,6 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
     >
       <div ref={root} className="cl-navmenu">
         <List
-          className="cl-navmenu-list"
           onPointerEnter={() => {
             hovering.current = true;
           }}
@@ -133,7 +132,6 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
                 ref={(node) => {
                   if (node) triggers.current.set(drop.key, node);
                 }}
-                className="cl-navbar-link focus-ring"
                 data-current={dropCurrent(path, drop) ? '' : undefined}
                 onPointerEnter={(event) => {
                   if (event.pointerType === 'mouse') pinned.current = null;
@@ -145,7 +143,7 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
                 {drop.label}
                 <ChevronDown aria-hidden className="cl-navbar-caret size-4" />
               </Trigger>
-              <Content className="cl-navmenu-content">
+              <Content>
                 <MegaMenu drop={drop} path={path} />
               </Content>
             </Item>
@@ -173,7 +171,7 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
             '--stage-origin': `${stage.origin}px`,
           }}
         >
-          <Viewport className="cl-navmenu-viewport" />
+          <Viewport />
         </div>
       </div>
     </Root>
