@@ -220,6 +220,30 @@ describe('ProductDetailScreen', () => {
     expect(setup.getByRole('button', { name: 'Find competitors' })).toBeInTheDocument();
   });
 
+  it('marks an engine missing from a truncated run sample as outside it, and as not named only when the sample is whole', async () => {
+    const other = {
+      ...ROAD_DETAIL.answers[0]!,
+      task_id: '12121212-1212-4121-8121-121212121212',
+      prompt_text: 'trail shoes for mud',
+      engine: 'claude',
+    };
+    const twoEngines = { ...ROAD_DETAIL, answers: [...ROAD_DETAIL.answers, other] };
+    serve({
+      [ROAD]: { ...twoEngines, answer_total: 5 },
+      [RIVAL]: { ...twoEngines, answer_total: 2 },
+    });
+    const sampled = renderAt(`/products/${ROAD}`);
+    const sampledRow = await screen.findByRole('row', { name: /best running shoes for road/ });
+    expect(within(sampledRow).getByText('Not in the newest runs')).toBeInTheDocument();
+    expect(within(sampledRow).queryByText('Not named')).toBeNull();
+    sampled.unmount();
+
+    renderAt(`/products/${RIVAL}`);
+    const wholeRow = await screen.findByRole('row', { name: /best running shoes for road/ });
+    expect(within(wholeRow).getByText('Not named')).toBeInTheDocument();
+    expect(within(wholeRow).queryByText('Not in the newest runs')).toBeNull();
+  });
+
   it('shows a viewer the product and its setup without a control to change either', async () => {
     serve({ [ROAD]: ROAD_DETAIL });
     renderAt(`/products/${ROAD}`, 'viewer');

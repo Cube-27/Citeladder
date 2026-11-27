@@ -6,12 +6,12 @@ type PromptMetrics = Detail['prompts'][number];
 
 type Tally = Readonly<{ named: number; won: number; lost: number; unranked: number }>;
 
-export type EngineOutcome = Tally &
+type EngineOutcome = Tally &
   Readonly<{ engine: string; winRate: number | null; position: number | null }>;
 
 export type PromptEngineCell = Tally & Readonly<{ latest: ProductRun }>;
 
-export type PromptOutcomeRow = Readonly<{
+type PromptOutcomeRow = Readonly<{
   key: string;
   text: string;
   metrics: PromptMetrics | null;
@@ -34,7 +34,7 @@ const counted = (tally: Tally, run: ProductRun): Tally => ({
 });
 
 function engineOutcome(engine: string, runs: readonly ProductRun[]): EngineOutcome {
-  const tally = runs.reduce(counted, EMPTY);
+  const tally = runs.reduce((tally, run) => counted(tally, run), EMPTY);
   const ranks = runs.flatMap((run) => (run.rank === null ? [] : [run.rank]));
   const ordered = tally.won + tally.lost;
   return {
@@ -55,7 +55,11 @@ function engineCells(runs: readonly ProductRun[]): ReadonlyMap<string, PromptEng
   const cells = new Map<string, PromptEngineCell>();
   for (const [engine, engineRuns] of groupBy(runs, (run) => run.engine)) {
     const [latest] = engineRuns;
-    if (latest) cells.set(engine, { ...engineRuns.reduce(counted, EMPTY), latest });
+    if (latest)
+      cells.set(engine, {
+        ...engineRuns.reduce((tally, run) => counted(tally, run), EMPTY),
+        latest,
+      });
   }
   return cells;
 }

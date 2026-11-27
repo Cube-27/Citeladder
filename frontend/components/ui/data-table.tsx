@@ -352,11 +352,11 @@ function DataTableHeader({
       </SectionHeader>
     );
   return (
-    <header data-data-table-header="" className="flex min-w-0 flex-wrap items-center gap-4">
+    <div data-data-table-header="" className="flex min-w-0 flex-wrap items-center gap-4">
       {named ? <div className="grid max-w-full min-w-0 gap-1">{heading}</div> : null}
       <div className="flex max-w-full min-w-0 grow">
         <TableToolbar {...toolbar} actions={allActions} />
       </div>
-    </header>
+    </div>
   );
 }

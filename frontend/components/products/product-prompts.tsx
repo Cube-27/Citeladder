@@ -91,16 +91,23 @@ const PROMPT_COLUMNS: readonly DataTableColumn[] = [
 
 function EngineOutcome({
   cell,
+  sampled,
   engine,
   prompt,
   onOpen,
 }: Readonly<{
   cell: PromptEngineCell | undefined;
+  sampled: boolean;
   engine: string;
   prompt: string;
   onOpen: (run: ProductRun) => void;
 }>) {
-  if (!cell) return <Absence state="none" label="Not named" />;
+  if (!cell)
+    return sampled ? (
+      <Absence state="unavailable" label="Not in the newest runs" />
+    ) : (
+      <Absence state="none" label="Not named" />
+    );
   const { latest } = cell;
   const tally = `won ${formatCount(cell.won)} of ${formatCount(cell.named)} runs`;
   return (
@@ -161,6 +168,7 @@ export function ProductPrompts({ outcomes }: Readonly<{ outcomes: ProductPromptO
               <TableCell key={engine}>
                 <EngineOutcome
                   cell={row.engines.get(engine)}
+                  sampled={outcomes.runs.shown < outcomes.runs.total}
                   engine={engines.label(engine)}
                   prompt={row.text}
                   onOpen={(run) => dialog.open({ id: run.task_id, prompt_text: run.prompt_text })}

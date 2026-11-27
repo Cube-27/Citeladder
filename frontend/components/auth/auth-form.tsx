@@ -12,7 +12,7 @@ import {
   AuthLinkRow,
 } from '@/components/ui/auth-shell';
 import { Field } from '@/components/ui/field';
-import { BrandMark } from '@/components/ui/brand-mark';
+import { GlyphMark } from '@/components/ui/engine-mark';
 import { Input } from '@/components/ui/input';
 import { PasswordField, type PasswordFieldProps } from '@/components/ui/password-field';
 import { TextLink } from '@/components/ui/text-link';
@@ -131,7 +131,7 @@ function GoogleEntry({
         aria-describedby={termsNoticeId}
         onClick={() => void start()}
       >
-        <BrandMark kind="glyph" glyph="google" placement="text" />
+        <GlyphMark glyph="google" placement="text" />
         <span>{pending ? 'Starting Google sign-in…' : 'Continue with Google'}</span>
       </AuthButton>
       {notice ? <Notice tone="negative">{notice}</Notice> : null}

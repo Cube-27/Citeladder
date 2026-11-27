@@ -1,4 +1,4 @@
-export type EngineKey = 'chatgpt' | 'claude' | 'gemini' | 'google';
+import type { EngineKey } from '@/components/ui/engine-svg';
 
 const ENGINE_PATHS: Record<EngineKey, string> = {
   chatgpt:
@@ -22,13 +22,6 @@ const BRAND_FILLS: Record<EngineKey, readonly [string, ...string[]]> = {
     'fill-brand-google-red',
   ],
 };
-
-export const ENGINE_SVG = {
-  'aria-hidden': true,
-  focusable: 'false',
-  viewBox: '0 0 24 24',
-  fillRule: 'evenodd',
-} as const;
 
 export function EngineShapes({ engine, brand }: Readonly<{ engine: EngineKey; brand: boolean }>) {
   const fills = BRAND_FILLS[engine];

@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 
-import { BrandMark } from '@/components/ui/brand-mark';
-import { ENGINE_SVG, EngineShapes, type EngineKey } from '@/components/ui/engine-glyph';
+import { BrandMark, type BrandMarkPlacement } from '@/components/ui/brand-mark';
+import { EngineShapes } from '@/components/ui/engine-glyph';
+import { ENGINE_SVG, type EngineKey } from '@/components/ui/engine-svg';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { cn } from '@/lib/utils';
 
-export type { EngineKey } from '@/components/ui/engine-glyph';
+export type { EngineKey } from '@/components/ui/engine-svg';
 
 export function engineMarkKey(engine: string): EngineKey | null {
   if (engine.startsWith('chatgpt')) return 'chatgpt';
@@ -20,7 +21,18 @@ export function EngineBrandMark({
   placement = 'inline',
 }: Readonly<{ engine: string; placement?: 'inline' | 'row' }>) {
   const key = engineMarkKey(engine);
-  return key ? <BrandMark kind="glyph" glyph={key} placement={placement} /> : null;
+  return key ? <GlyphMark glyph={key} placement={placement} /> : null;
+}
+
+export function GlyphMark({
+  glyph,
+  placement = 'inline',
+}: Readonly<{ glyph: EngineKey; placement?: BrandMarkPlacement }>) {
+  return (
+    <BrandMark kind="glyph" glyph={glyph} placement={placement}>
+      <EngineShapes engine={glyph} brand />
+    </BrandMark>
+  );
 }
 
 export function engineOptionMark(engine: string): ReactNode {
@@ -73,7 +85,7 @@ export function EngineStack({ engines }: Readonly<{ engines: readonly string[] }
         <span aria-hidden className="inline-flex items-center -space-x-1">
           {marks.map((key) => (
             <span key={key} className="bg-panel ring-panel inline-flex rounded-full ring-2">
-              <BrandMark kind="glyph" glyph={key} placement="inline" />
+              <GlyphMark glyph={key} />
             </span>
           ))}
         </span>
