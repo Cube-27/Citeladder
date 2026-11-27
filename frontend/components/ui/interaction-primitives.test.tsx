@@ -13,21 +13,48 @@ import { Select } from './select';
 import { TabPanel, Tabs } from './tabs';
 
 describe('authenticated interaction primitives', () => {
-  it('makes a pending Button busy and prevents another submission', () => {
-    render(
-      <Button pending pendingLabel="Saving…">
-        Save
-      </Button>,
-    );
-    const button = screen.getByRole('button', { name: 'Saving…' });
-    expect(button).toBeDisabled();
-    expect(button).toHaveAttribute('aria-busy', 'true');
+  it('swallows clicks, keys and form submits while pending and keeps keyboard focus', async () => {
+    const user = userEvent.setup();
+    const submit = vi.fn();
+    function SaveForm() {
+      const [pending, setPending] = useState(false);
+      return (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+            setPending(true);
+          }}
+        >
+          <input aria-label="Name" />
+          <Button type="submit" pending={pending} pendingLabel="Saving">
+            Save
+          </Button>
+        </form>
+      );
+    }
+    render(<SaveForm />);
+    const save = screen.getByRole('button', { name: 'Save' });
+    save.focus();
+    await user.keyboard('{Enter}');
+    expect(save).toHaveFocus();
+    await user.keyboard('{Enter}');
+    await user.keyboard(' ');
+    await user.click(save);
+    await user.click(screen.getByRole('textbox', { name: 'Name' }));
+    await user.keyboard('{Enter}');
+    await user.tab();
+    expect([submit.mock.calls.length, document.activeElement]).toEqual([1, save]);
+    expect([save, save.getAttribute('aria-busy')]).toEqual([
+      screen.getByRole('button', { name: 'Saving' }),
+      'true',
+    ]);
   });
 
   it('keeps the original label when a pending Button has no replacement label', () => {
     render(<Button pending>Refresh</Button>);
 
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toHaveAttribute('aria-busy', 'true');
   });
 
   it('clears a controlled SearchField without replacing its owner', async () => {

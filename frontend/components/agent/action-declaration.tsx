@@ -122,7 +122,6 @@ export function useMarkImplemented({
           {(field) => (
             <DateField
               {...field}
-              ariaLabel="Go-live date"
               value={attempt.day}
               min={range.min}
               max={range.max}

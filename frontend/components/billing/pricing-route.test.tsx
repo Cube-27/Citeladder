@@ -227,7 +227,7 @@ describe('app pricing continuation', () => {
     renderWithProviders(<PricingRoute />);
     await user.click(await screen.findByRole('button', { name: 'Review current quote' }));
     const pending = await screen.findByRole('button', { name: 'Preparing…' });
-    await user.click(pending, { pointerEventsCheck: 0 });
+    await user.click(pending);
     await user.keyboard('{Enter}');
     await user.keyboard(' ');
     expect([writes, document.activeElement]).toEqual([['one-key'], pending]);

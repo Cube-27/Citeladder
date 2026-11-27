@@ -106,7 +106,6 @@ export function BrandFactDialog({
           {(props) => (
             <Select
               id={props.id}
-              ariaLabel="Topic"
               value={draft.topic}
               options={TOPIC_OPTIONS}
               onValueChange={(topic) => setDraft({ ...draft, topic })}

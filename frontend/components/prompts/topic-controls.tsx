@@ -169,7 +169,6 @@ export function AddTopicDialog({
                 id={props.id}
                 value={parentId}
                 onValueChange={setParentId}
-                ariaLabel="Add under"
                 box="fill"
                 options={[
                   { value: '', label: 'Top-level topic' },

@@ -171,7 +171,6 @@ function ExpiryFields({
           <Select
             id={props.id}
             aria-describedby={props['aria-describedby']}
-            ariaLabel="Expires"
             box="fill"
             value={choice}
             onValueChange={onChoice}
@@ -186,7 +185,6 @@ function ExpiryFields({
               id={props.id}
               aria-describedby={props['aria-describedby']}
               aria-invalid={props['aria-invalid']}
-              ariaLabel="Expiry date"
               min={today}
               value={customDay}
               onChange={onCustomDay}

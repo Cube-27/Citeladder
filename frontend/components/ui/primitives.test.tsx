@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef, useState } from 'react';
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { createRef } from 'react';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { Button } from './button';
 import { Citation } from './citation';
@@ -22,41 +22,6 @@ describe('Button', () => {
     render(<Button>Save</Button>);
     const btn = screen.getByRole('button', { name: 'Save' });
     expect(btn).toHaveAttribute('type', 'button');
-  });
-
-  it('swallows clicks, keys and form submits while pending and keeps keyboard focus', async () => {
-    const user = userEvent.setup();
-    const submit = vi.fn();
-    function SaveForm() {
-      const [pending, setPending] = useState(false);
-      return (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            submit();
-            setPending(true);
-          }}
-        >
-          <input aria-label="Name" />
-          <Button type="submit" pending={pending} pendingLabel="Saving">
-            Save
-          </Button>
-        </form>
-      );
-    }
-    render(<SaveForm />);
-    const save = screen.getByRole('button', { name: 'Save' });
-    save.focus();
-    await user.keyboard('{Enter}');
-    expect(save).toHaveFocus();
-    await user.keyboard('{Enter}');
-    await user.keyboard(' ');
-    await user.click(save, { pointerEventsCheck: 0 });
-    await user.click(screen.getByRole('textbox', { name: 'Name' }));
-    await user.keyboard('{Enter}');
-    await user.tab();
-    expect([submit.mock.calls.length, document.activeElement]).toEqual([1, save]);
-    expect(save).toHaveAttribute('aria-disabled', 'true');
   });
 });
 

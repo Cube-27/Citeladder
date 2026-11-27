@@ -59,7 +59,7 @@ describe('Mark implemented', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Mark implemented' }));
     const dialog = await screen.findByRole('dialog', { name: 'Mark implemented' });
-    const field = within(dialog).getByLabelText('Go-live date');
+    const field = within(dialog).getByRole('textbox', { name: 'When did it go live?' });
     const submit = within(dialog).getByRole('button', { name: 'Declare implemented' });
 
     await user.clear(field);

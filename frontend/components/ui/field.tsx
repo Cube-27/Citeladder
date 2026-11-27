@@ -11,6 +11,8 @@ export type ControlProps = {
   'aria-describedby'?: string;
 };
 
+export const fieldLabelId = (id: string) => `${id}-label`;
+
 export function Field({
   label,
   hint,
@@ -54,7 +56,13 @@ export function Field({
 
   if (layout === 'row')
     return (
-      <FieldRow label={label} required={required} labelFor={id} className={className}>
+      <FieldRow
+        label={label}
+        required={required}
+        labelFor={id}
+        labelId={fieldLabelId(id)}
+        className={className}
+      >
         {control}
         {foot}
       </FieldRow>
@@ -64,7 +72,11 @@ export function Field({
       data-form-field=""
       className={cn('flex min-w-0 flex-col gap-1 [[data-public-surface]_&]:gap-2', className)}
     >
-      <label htmlFor={id} className="text-label text-ink [[data-public-surface]_&]:font-plain">
+      <label
+        id={fieldLabelId(id)}
+        htmlFor={id}
+        className="text-label text-ink [[data-public-surface]_&]:font-plain"
+      >
         {name}
       </label>
       {control}

@@ -537,7 +537,10 @@ describe('Agent instruction drafts', () => {
       fireEvent.change(field, { target: { value: 'Submitted' } });
       fireEvent.click(screen.getByRole('button', { name: 'Save instructions' }));
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: 'Save instructions' })).toBeDisabled(),
+        expect(screen.getByRole('button', { name: 'Save instructions' })).toHaveAttribute(
+          'aria-busy',
+          'true',
+        ),
       );
       fireEvent.change(field, { target: { value: later } });
       release();

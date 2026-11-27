@@ -120,7 +120,6 @@ function DeclaredFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
         {({ id }) => (
           <Select
             id={id}
-            ariaLabel="Log format"
             value={format}
             onValueChange={setFormat}
             options={LOG_FORMATS.map((value) => ({ value, label: logFormatLabel(value) }))}
@@ -131,7 +130,6 @@ function DeclaredFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
         {({ id }) => (
           <Select
             id={id}
-            ariaLabel="Collection point"
             value={point}
             onValueChange={setPoint}
             options={COLLECTION_POINTS.map((value) => ({
@@ -145,7 +143,6 @@ function DeclaredFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
         {({ id }) => (
           <Select
             id={id}
-            ariaLabel="Sampling"
             value={sampling}
             onValueChange={setSampling}
             options={[
@@ -310,7 +307,6 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
         {({ id }) => (
           <Select
             id={id}
-            ariaLabel="Upload source"
             value={sourceId}
             onValueChange={setSourceId}
             options={uploadSources.map((s) => ({

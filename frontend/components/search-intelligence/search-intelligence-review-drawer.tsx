@@ -188,7 +188,6 @@ export function SearchIntelligenceReviewDrawer({
             {(field) => (
               <Select
                 {...field}
-                ariaLabel="Market"
                 value={location}
                 onValueChange={setLocation}
                 placeholder="Select market"

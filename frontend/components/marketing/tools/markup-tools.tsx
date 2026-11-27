@@ -68,7 +68,6 @@ export function StructuredDataBuilder() {
         {(props) => (
           <Select
             {...props}
-            ariaLabel="Schema type"
             value={kind}
             options={SCHEMA_KINDS.map((value) => ({ value, label: value }))}
             onValueChange={(next) => {

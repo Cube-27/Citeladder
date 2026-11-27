@@ -401,7 +401,10 @@ describe('PromptBuilderPage', () => {
     await waitFor(() => expect(runs).toBe(1));
     await user.click(screen.getByRole('button', { name: 'Leave' }));
     await user.click(screen.getByRole('button', { name: 'Return' }));
-    expect(await screen.findByRole('button', { name: /Generating/ })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: /Generating/ })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
 
     await user.click(screen.getByRole('button', { name: 'Leave' }));
     release();

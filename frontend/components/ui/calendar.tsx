@@ -63,13 +63,13 @@ export function Calendar({
   onSelect,
   min,
   max,
-  ariaLabel,
+  labelledBy,
 }: Readonly<{
   value: string;
   onSelect: (iso: string) => void;
   min?: string;
   max?: string;
-  ariaLabel: string;
+  labelledBy: string;
 }>) {
   const selected = anchor(value);
   const [month, setMonth] = useState<Date>(() =>
@@ -84,8 +84,7 @@ export function Calendar({
   }
 
   return (
-    <fieldset className="grid gap-2">
-      <legend className="sr-only">{ariaLabel}</legend>
+    <fieldset aria-labelledby={labelledBy} className="grid gap-2">
       <div className="flex items-center justify-between gap-2">
         <Pressable
           type="button"
