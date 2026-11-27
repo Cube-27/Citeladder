@@ -94,7 +94,7 @@ function openSwitch(node) {
   return !fallback || !provesExhaustive(fallback);
 }
 
-export function nonNullCount(source, label) {
+function nonNullCount(source, label) {
   let count = 0;
   walk(parseSource(source, label), (node) => {
     if (node.type === 'TSNonNullExpression') count += 1;
@@ -102,7 +102,7 @@ export function nonNullCount(source, label) {
   return count;
 }
 
-export const MAX_PARAMS = 3;
+const MAX_PARAMS = 3;
 const PARAMETER_HOLDERS = new Set([
   'FunctionDeclaration',
   'FunctionExpression',
@@ -119,7 +119,7 @@ const isLibraryCallback = (node, parent) =>
   !parent.computed &&
   LIBRARY_CALLBACKS.has(parent.key?.name ?? parent.key?.value);
 
-export function maxParamsCount(source, label) {
+function maxParamsCount(source, label) {
   let count = 0;
   const visit = (node, parent) => {
     if (!node || typeof node !== 'object') return;
@@ -158,7 +158,9 @@ export const RATCHETS = [
 ];
 
 export function baselineRatchetFailures({ counts, baseline, ratchet }) {
-  const files = [...new Set([...Object.keys(counts), ...Object.keys(baseline)])].sort();
+  const files = [...new Set([...Object.keys(counts), ...Object.keys(baseline)])].sort((a, b) =>
+    a.localeCompare(b),
+  );
   return files.flatMap((file) => {
     const count = counts[file] ?? 0;
     const allowed = baseline[file] ?? 0;

@@ -6,10 +6,10 @@ import {
   baselineDiffFailures,
   baselineRatchetFailures,
   loweredBaseline,
-  maxParamsCount,
-  nonNullCount,
   typeDisciplineFindings,
 } from '../../frontend/scripts/type-discipline-checks.mjs';
+
+const [nonNull, maxParams] = RATCHETS;
 
 const rules = (source, label = 'lib/example.ts') =>
   typeDisciplineFindings(source, label).map(({ rule, line }) => `${rule}@${line}`);
@@ -76,11 +76,9 @@ test('flags a switch on a discriminant unless its default proves exhaustiveness'
   );
 });
 
-const [nonNull, maxParams] = RATCHETS;
-
 test('counts non-null assertions', () => {
   assert.equal(
-    nonNullCount('const a = map.get(k)!;\nconst b = rows[0]!.id!;\nconst c = d ?? e;', 'x.ts'),
+    nonNull.count('const a = map.get(k)!;\nconst b = rows[0]!.id!;\nconst c = d ?? e;', 'x.ts'),
     3,
   );
 });
@@ -99,7 +97,7 @@ test('counts the functions oxlint max-params flags, except library-shaped callba
     "useMutation({ 'onError': (a, b, c, d) => a, [onSettled]: (a, b, c, d) => a });",
     'const handlers = { onPick: (a, b, c, d) => a };',
   ].join('\n');
-  assert.equal(maxParamsCount(source, 'x.ts'), 7);
+  assert.equal(maxParams.count(source, 'x.ts'), 7);
 });
 
 test('fails a raised, new or stale baseline entry and passes a matching one', () => {
