@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 export type EngineKey = 'chatgpt' | 'claude' | 'gemini' | 'google';
 
-export const ENGINE_SVG = {
+const ENGINE_SVG = {
   'aria-hidden': true,
   focusable: 'false',
   viewBox: '0 0 24 24',
