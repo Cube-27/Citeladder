@@ -4,7 +4,6 @@ import { useParams } from 'react-router-dom';
 
 import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { RecordPage } from '@/components/templates/record-page';
-import { FilterBar } from '@/components/ui/filter-bar';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Inline } from '@/components/ui/layout';
@@ -191,7 +190,7 @@ function HolderDetail({
       trail={trail}
       busy={detail.isFetching}
       actions={actions}
-      filters={<FilterBar filters={filters} />}
+      filters={{ filters: filters }}
       identity={<ProductIdentity detail={data} notices={notices} />}
     >
       <ProductKpis detail={data} />

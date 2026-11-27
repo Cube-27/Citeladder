@@ -5,7 +5,6 @@ import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { RecordPage } from '@/components/templates/record-page';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
-import { FilterBar } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -42,7 +41,7 @@ export function PromptDetailScreen() {
     enabled: Boolean(promptId),
   });
 
-  const filters = <FilterBar filters={answerFilters.definitions} />;
+  const filters = { filters: answerFilters.definitions };
   if (httpErrorStatus(query.error) === 404) return <NotFoundScreen />;
   if (query.isError)
     return (

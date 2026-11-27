@@ -4,7 +4,6 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { ReportPage } from '@/components/templates/report-page';
 import { Button } from '@/components/ui/button';
 import { ExportAction } from '@/components/ui/export-action';
-import { FilterBar } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuCheckboxItem, MenuContent, MenuLabel, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
@@ -209,48 +208,44 @@ function ProductsContent({
   return (
     <ReportPage
       actions={header.actions}
-      filters={
-        <FilterBar
-          view={
-            <SegmentedControl
-              ariaLabel="Products shown"
-              value={filters.source}
-              options={SOURCES}
-              onChange={productFilters.setSource}
-            />
-          }
-          filters={[
-            categoryFilter(filters.category, catalog.data, productFilters.setCategory),
-            ...productScopeFilters({
-              scope: productFilters,
-              engines,
-              promptSets: promptSets.data?.prompt_sets ?? [],
-            }),
-          ]}
-          status={
-            page.data ? (
-              <>
-                <span>
-                  <Text variant="caption" numeric>
-                    {formatCount(page.data.total)}
-                  </Text>
-                  {page.data.total === 1 ? ' product' : ' products'}
-                </span>
-                <span>
-                  <Text variant="caption" numeric>
-                    {formatCount(page.data.executions)}
-                  </Text>
-                  {page.data.executions === 1 ? ' answer' : ' answers'} in the last{' '}
-                  <Text variant="caption" numeric>
-                    {page.data.window_days}
-                  </Text>{' '}
-                  days
-                </span>
-              </>
-            ) : null
-          }
-        />
-      }
+      filters={{
+        view: (
+          <SegmentedControl
+            ariaLabel="Products shown"
+            value={filters.source}
+            options={SOURCES}
+            onChange={productFilters.setSource}
+          />
+        ),
+        filters: [
+          categoryFilter(filters.category, catalog.data, productFilters.setCategory),
+          ...productScopeFilters({
+            scope: productFilters,
+            engines,
+            promptSets: promptSets.data?.prompt_sets ?? [],
+          }),
+        ],
+        status: page.data ? (
+          <>
+            <span>
+              <Text variant="caption" numeric>
+                {formatCount(page.data.total)}
+              </Text>
+              {page.data.total === 1 ? ' product' : ' products'}
+            </span>
+            <span>
+              <Text variant="caption" numeric>
+                {formatCount(page.data.executions)}
+              </Text>
+              {page.data.executions === 1 ? ' answer' : ' answers'} in the last{' '}
+              <Text variant="caption" numeric>
+                {page.data.window_days}
+              </Text>{' '}
+              days
+            </span>
+          </>
+        ) : null,
+      }}
     >
       {header.stats}
       {header.notices}

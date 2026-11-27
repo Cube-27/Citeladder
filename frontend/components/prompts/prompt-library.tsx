@@ -39,7 +39,7 @@ import {
   type PromptMeasurements,
 } from './use-latest-prompt-measurements';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 
 import {
   PromptActions,
@@ -186,8 +186,11 @@ function measuredChoicesFor({
   };
 }
 
-function libraryFilterBar(hasPrompts: boolean, controls: FilterBarProps): ReactNode {
-  return hasPrompts ? <FilterBar {...controls} /> : undefined;
+function libraryFilterBar(
+  hasPrompts: boolean,
+  controls: FilterBarProps,
+): FilterBarProps | undefined {
+  return hasPrompts ? controls : undefined;
 }
 
 function libraryTabs(
@@ -407,7 +410,7 @@ export function PromptLibrary() {
             selected={STATUS_LABELS[statusFilter]}
           />
         }
-        filters={<FilterBar />}
+        filters={{}}
       >
         <StateBlock kind="loading" label="Loading prompts…" shape={{ kind: 'table', columns: 8 }} />
       </ReportPage>

@@ -6,7 +6,7 @@ import { IssuesPageLoading } from '@/components/site-health/issues-summary-loadi
 import { PageFrame } from '@/components/templates/page-frame';
 import { ReportPage } from '@/components/templates/report-page';
 import { NewChatLoading, ThreadPageLoading } from '@/components/templates/thread-page';
-import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
 import { TextLineSkeleton } from '@/components/ui/loading-parts';
 import { RailColumns } from '@/components/ui/page-chrome';
@@ -61,7 +61,7 @@ export function RouteLoadingScreen() {
           tabs={
             loading.tabs ? <RouteTabs tabs={loading.tabs} search={location.search} /> : undefined
           }
-          filters={loading.filters ? <FilterBar {...RESERVED_CONTROLS} /> : undefined}
+          filters={loading.filters ? RESERVED_CONTROLS : undefined}
         >
           {loading.rail ? (
             <RouteRail rail={loading.rail} search={location.search}>

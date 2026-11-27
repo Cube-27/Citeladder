@@ -6,6 +6,7 @@ import { PageTitleContext } from '@/components/layout/page-title-context';
 import { ShellContext } from '@/components/layout/shell-context';
 import { NavMenuButton } from '@/components/ui/app-shell';
 import type { Crumb } from '@/components/ui/breadcrumb';
+import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { LazyIsland } from '@/components/ui/lazy-island';
 import { Masthead, usePublishedHeight } from '@/components/ui/masthead';
 import {
@@ -39,7 +40,7 @@ export type PageFrameSlots = Readonly<{
   crumb?: Pick<Crumb, 'label' | 'mark'>;
   actions?: ReactNode;
   tabs?: ReactNode;
-  filters?: ReactNode;
+  filters?: FilterBarProps;
 }>;
 
 export function PageFrame({
@@ -176,7 +177,9 @@ function PageStrips({
       {tabs ? <PageTabBand endRef={onTabEnd}>{tabs}</PageTabBand> : null}
       {filters ? (
         <PageFilterBand>
-          <PageFilterBandContext value>{filters}</PageFilterBandContext>
+          <PageFilterBandContext value>
+            <FilterBar {...filters} />
+          </PageFilterBandContext>
         </PageFilterBand>
       ) : null}
     </StickyBand>
