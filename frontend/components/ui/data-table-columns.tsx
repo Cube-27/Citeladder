@@ -117,7 +117,7 @@ export function columnLayout({
   const padEnd = hidden.length > 0 && last !== undefined && last !== columns.at(-1) ? last : null;
   const frame = `[data-data-table-frame="${scope}"]`;
   const cell = (position: number, rows = 'tr:not([data-table-state])') =>
-    `${frame} ${rows} > :nth-child(${position})`;
+    `${frame} ${rows}:not(${frame} [data-data-table-frame] tr) > :nth-child(${position})`;
   const share = (100 / Math.max(1, shown.filter(isFlexible).length)).toFixed(3);
   const rules = [
     `${frame} { --data-table-share: ${share}%; }`,
