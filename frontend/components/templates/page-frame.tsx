@@ -28,14 +28,13 @@ import {
 import { StickyBand } from '@/components/ui/sticky-band';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
 import { useUrlSearch } from '@/lib/navigation/url-params';
+import { MEDIA } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/use-media-query';
 import { routeTrail } from '@/lib/navigation/route-trail';
 
 const Breadcrumb = lazy(() =>
   import('@/components/ui/breadcrumb').then(({ Breadcrumb }) => ({ default: Breadcrumb })),
 );
-
-const NARROW_QUERY = '(max-width: 899px)';
 
 export type PageFrameSlots = Readonly<{
   title?: string;
@@ -158,7 +157,7 @@ function usePageLayout({
   const resolved = useRouteTitle(title, pathname);
   const parents = trail ?? routeTrail(pathname);
   const width: PageWidth = fill ? 'fill' : routeWidth(pathname);
-  const narrow = useMediaQuery(NARROW_QUERY);
+  const narrow = useMediaQuery(MEDIA.compact);
   return {
     pathname,
     resolved,

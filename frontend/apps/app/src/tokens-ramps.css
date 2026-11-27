@@ -191,4 +191,6 @@
   --figure-cell-min: 128px;
   --icon-tile-size: 40px;
   --kbd-height: 24px;
+  --focus-width: 2px;
+  --focus-offset: 2px;
 }

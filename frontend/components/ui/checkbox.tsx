@@ -25,7 +25,10 @@ export type CheckboxProps = AccessibleCheckbox & {
 const BOX = { wide: 'desktop:col-span-2', shrink: 'min-w-0', fill: 'min-w-0 flex-1' } as const;
 
 const CHECK_BOX =
-  'check-box press press-check isolate focus-ring bg-panel border-control-edge text-on-primary data-[state=checked]:border-primary data-[state=indeterminate]:border-primary hit-area grid size-4 shrink-0 place-items-center rounded-mark border disabled:cursor-not-allowed';
+  'check-box press press-check isolate focus-ring bg-panel border-control-edge text-on-primary data-[state=checked]:border-primary data-[state=indeterminate]:border-primary hit-area grid size-check shrink-0 place-items-center rounded-mark border disabled:cursor-not-allowed';
+
+const CHECK_STROKE = 3;
+const DRAWN_LENGTH = 1;
 
 function CheckMark({ on }: Readonly<{ on: boolean }>) {
   return (
@@ -33,15 +36,15 @@ function CheckMark({ on }: Readonly<{ on: boolean }>) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={3}
+      strokeWidth={CHECK_STROKE}
       strokeLinecap="round"
       strokeLinejoin="round"
       className="size-3"
       aria-hidden
     >
       <path
-        pathLength={1}
-        strokeDasharray={1}
+        pathLength={DRAWN_LENGTH}
+        strokeDasharray={DRAWN_LENGTH}
         data-drawn={on || undefined}
         className="check-draw"
         d="M5 12l5 5l10 -10"

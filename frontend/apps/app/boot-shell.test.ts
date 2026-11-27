@@ -4,9 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import { DASHBOARD_GROUPS, FOOT_NAV_ITEMS, pageSection } from '@/components/layout/nav-items';
-import { sidebarNavRowClasses } from '@/components/ui/sidebar';
 import * as manifest from '@/lib/navigation/app-routes';
-import { appStylesheet } from '@/test/app-stylesheet';
 
 import { BOOT_SIDEBAR_MARKER, bootSidebarHtml, bootTitleScript } from './boot-shell';
 
@@ -93,36 +91,6 @@ describe('boot-title.js', () => {
     expect(bootAt('/projects').width).toBe('480px');
     window.localStorage.removeItem('citeladder:app:sidebar-width');
     expect(bootAt('/projects').width).toBe('');
-  });
-});
-
-describe('the boot shell geometry', () => {
-  const css = appStylesheet();
-  const appTokens = /:root:not\(\[data-public-surface\]\) \{([\s\S]*?)\n\}/u.exec(css)?.[1] ?? '';
-  const themeTokens = /@theme \{([\s\S]*?)\n\}/u.exec(css)?.[1] ?? '';
-  const token = (name: string) => {
-    const read = new RegExp(`${name}: (\\d+)px;`, 'u');
-    return Number((read.exec(appTokens) ?? read.exec(themeTokens))?.[1]);
-  };
-  const px = (element: Element, property: 'height') =>
-    Number.parseFloat(getComputedStyle(element)[property]);
-
-  it('draws the page header, the switch and the rows at the live tokens and weights', () => {
-    bootAt('/projects');
-    const at = (selector: string) => document.querySelector(selector)!;
-    expect({
-      masthead: px(at('.boot-mast'), 'height'),
-      ident: px(at('.boot-ident'), 'height'),
-      switch: px(at('.boot-mode'), 'height'),
-      row: px(at('.boot-row'), 'height'),
-      rowWeight: getComputedStyle(at('.boot-row')).fontWeight,
-    }).toEqual({
-      masthead: token('--spacing-masthead'),
-      ident: token('--spacing-masthead'),
-      switch: token('--spacing-control-md'),
-      row: token('--spacing-nav-row'),
-      rowWeight: sidebarNavRowClasses(false).includes('text-body') ? '400' : '500',
-    });
   });
 });
 

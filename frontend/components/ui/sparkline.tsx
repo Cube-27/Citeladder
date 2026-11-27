@@ -1,4 +1,5 @@
 import { chartFill, chartPath, chartStroke, type ChartTone } from '@/components/ui/chart';
+import { CHART_MARKER, SERIES_WEIGHT } from '@/components/ui/chart-geometry';
 import { cn } from '@/lib/utils';
 
 const WIDTH = 80;
@@ -49,12 +50,14 @@ export function Sparkline({
       <path
         d={chartPath(points)}
         fill="none"
-        strokeWidth={1.5}
+        strokeWidth={SERIES_WEIGHT.series}
         strokeLinecap="round"
         strokeLinejoin="round"
         className={chartStroke(chartTone)}
       />
-      {last ? <circle cx={last[0]} cy={last[1]} r={2.25} className={chartFill(chartTone)} /> : null}
+      {last ? (
+        <circle cx={last[0]} cy={last[1]} r={CHART_MARKER.spark} className={chartFill(chartTone)} />
+      ) : null}
     </svg>
   );
 }

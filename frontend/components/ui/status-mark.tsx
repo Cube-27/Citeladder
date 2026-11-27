@@ -5,9 +5,13 @@ import { cn } from '@/lib/utils';
 
 export type StatusTone = 'neutral' | 'positive' | 'negative' | 'warning' | 'info' | 'you';
 
+const MARK_STROKE = 1.5;
+const MARK_RADIUS = 6;
+const RING_RADIUS = 4.25;
+
 const INNER_STROKE = {
   fill: 'none',
-  strokeWidth: 1.5,
+  strokeWidth: MARK_STROKE,
   strokeLinecap: 'round',
   strokeLinejoin: 'round',
 } as const;
@@ -31,16 +35,25 @@ const TONE_FILL: Record<StatusTone, string> = {
 };
 
 const TONE_SHAPE: Record<StatusTone, ReactNode> = {
-  neutral: <circle cx={6} cy={6} r={4.25} fill="none" stroke="currentColor" strokeWidth={1.5} />,
+  neutral: (
+    <circle
+      cx={MARK_RADIUS}
+      cy={MARK_RADIUS}
+      r={RING_RADIUS}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={MARK_STROKE}
+    />
+  ),
   positive: (
     <>
-      <circle cx={6} cy={6} r={6} fill="currentColor" />
+      <circle cx={MARK_RADIUS} cy={MARK_RADIUS} r={MARK_RADIUS} fill="currentColor" />
       <path d="M3.4 6.2 5.2 8l3.4-3.8" className="stroke-panel" {...INNER_STROKE} />
     </>
   ),
   negative: (
     <>
-      <circle cx={6} cy={6} r={6} fill="currentColor" />
+      <circle cx={MARK_RADIUS} cy={MARK_RADIUS} r={MARK_RADIUS} fill="currentColor" />
       <path d="m4 4 4 4m0-4-4 4" className="stroke-panel" {...INNER_STROKE} />
     </>
   ),
@@ -57,7 +70,7 @@ const TONE_SHAPE: Record<StatusTone, ReactNode> = {
   ),
   info: (
     <>
-      <circle cx={6} cy={6} r={6} fill="currentColor" />
+      <circle cx={MARK_RADIUS} cy={MARK_RADIUS} r={MARK_RADIUS} fill="currentColor" />
       <path d="M6 5.6v3.2m0-5.5v.1" className="stroke-panel" {...INNER_STROKE} />
     </>
   ),

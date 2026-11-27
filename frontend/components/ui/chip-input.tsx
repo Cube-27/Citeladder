@@ -204,7 +204,7 @@ function AcceptTick({
       aria-label={`Accept ${label}`}
       disabled={disabled}
       onClick={onAccept}
-      className="focus-ring hit-area text-ink-2 hover:text-ink hover:overlay-hover rounded-control absolute end-1 top-1 grid size-6 place-items-center"
+      className="focus-ring hit-area text-ink-2 hover:text-ink hover:overlay-hover rounded-control size-close absolute end-1 top-1 grid place-items-center"
     >
       <Icon icon={Check} size="flush" />
     </button>

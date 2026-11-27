@@ -1,3 +1,4 @@
+import { CHART_HALO } from '@/components/ui/chart-geometry';
 import type { TrendScale } from '@/components/ui/trend-geometry';
 
 type LabelledLine = Readonly<{ name: string; values: readonly (number | null)[] }>;
@@ -36,7 +37,7 @@ export function LineEndLabels({
             textAnchor={fitsBefore ? 'end' : 'start'}
             dominantBaseline="middle"
             paintOrder="stroke"
-            strokeWidth={3}
+            strokeWidth={CHART_HALO}
             className="fill-ink-2 stroke-panel text-caption"
           >
             {line.name}

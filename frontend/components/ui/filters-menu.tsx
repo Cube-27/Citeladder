@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/menu';
 import { ControlCount } from '@/components/ui/tabs';
 import { ChevronLeft, ListFilter } from '@/lib/icons';
+import { MEDIA } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/use-media-query';
 
 function activeFilterCount(filters: readonly FilterDefinition[]): number {
@@ -27,7 +28,7 @@ export function FiltersMenu({
   filters,
   align = 'start',
 }: Readonly<{ filters: readonly FilterDefinition[]; align?: 'start' | 'end' }>) {
-  const narrow = useMediaQuery(NARROW_QUERY);
+  const narrow = useMediaQuery(MEDIA.narrow);
   if (filters.length === 0) return null;
   const active = activeFilterCount(filters);
   return (
@@ -65,8 +66,6 @@ export function FiltersMenu({
     </Menu>
   );
 }
-
-const NARROW_QUERY = '(max-width: 639px)';
 
 function DrillInFilters({ filters }: Readonly<{ filters: readonly FilterDefinition[] }>) {
   const [openId, setOpenId] = useState<string | null>(null);

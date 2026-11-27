@@ -13,13 +13,12 @@ import {
   type AgentOutput,
   type AgentRevision,
 } from '@/lib/api/agent';
+import { MEDIA } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/use-media-query';
 
 export const RAIL_TABS = ['suggestions', 'chat', 'outline', 'seo'] as const;
 export type RailTab = (typeof RAIL_TABS)[number];
 export type StackTab = 'page' | RailTab;
-
-const NARROW_QUERY = '(max-width: 1023px)';
 
 const EDIT_CONFLICT =
   'The page changed since you started editing, so your edits were not saved. Copy what you need, then discard them to see the latest version.';
@@ -120,7 +119,7 @@ export function usePageText(detail: AgentChatDetail, revision: AgentRevision, dr
 export type WorkspaceTabs = ReturnType<typeof useWorkspaceTabs>;
 
 export function useWorkspaceTabs(initial: RailTab) {
-  const narrow = useMediaQuery(NARROW_QUERY);
+  const narrow = useMediaQuery(MEDIA.stacked);
   const [onPage, setOnPage] = useState(true);
   const [railTab, setRailTab] = useState<RailTab>(initial);
   const stackTab: StackTab = onPage ? 'page' : railTab;

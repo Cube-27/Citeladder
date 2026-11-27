@@ -1,6 +1,6 @@
 @media (min-width: 900px) {
   :root:not([data-public-surface]) {
-    --spacing-panel-inset: 8px;
+    --spacing-shell-inset: 8px;
   }
 }
 @media (max-width: 899px), (pointer: coarse) {
@@ -135,7 +135,7 @@ body {
 }
 
 em {
-  font-weight: var(--weight-medium);
+  font-weight: var(--font-weight-emphasis);
 }
 
 html[data-public-surface]:not([data-marketing-surface]),
@@ -173,7 +173,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   h6 {
     margin: 0;
     font-family: var(--font-sans);
-    font-weight: var(--weight-medium);
+    font-weight: var(--heading-weight);
     letter-spacing: normal;
     line-height: var(--heading-line-height);
     color: var(--text-color-ink);
@@ -185,11 +185,11 @@ html[data-public-surface]:not([data-marketing-surface]) body {
 
   strong,
   b {
-    font-weight: var(--weight-medium);
+    font-weight: var(--font-weight-emphasis);
   }
 
   th {
-    font-weight: var(--weight-regular);
+    font-weight: var(--font-weight-plain);
   }
 
   .tabler-icon {
@@ -236,8 +236,8 @@ a.focus-ring:active .text-caption.text-ink-2 {
 
 :focus-visible,
 .focus-ring:focus-visible {
-  outline: var(--focus-width, 2px) solid var(--color-focus);
-  outline-offset: var(--focus-offset, 2px);
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
 }
 
 :where(:root:not([data-public-surface]) *) {
@@ -251,8 +251,8 @@ a.focus-ring:active .text-caption.text-ink-2 {
 }
 
 .focus-ring-inset:focus-visible {
-  outline: var(--focus-width, 2px) solid var(--color-focus);
-  outline-offset: calc(-1 * var(--focus-width, 2px));
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: calc(-1 * var(--focus-width));
 }
 :root:not([data-public-surface]):not([data-input-modality='pointer'])
   :is(.focus-ring-inset, .table-frame tr, [data-row-title] a, .palette-field):is(
@@ -527,9 +527,9 @@ label {
 }
 :root:not([data-public-surface]) .table-frame thead th {
   height: var(--table-head-height);
-  font-size: var(--text-caption);
-  line-height: var(--text-caption--line-height);
-  font-weight: var(--weight-medium);
+  font-size: var(--text-caption-strong);
+  line-height: var(--text-caption-strong--line-height);
+  font-weight: var(--text-caption-strong--font-weight);
   letter-spacing: normal;
   text-transform: none;
   color: var(--text-color-ink-2);
@@ -564,7 +564,7 @@ label {
     inset: 0;
   }
   & [data-row-title] a:focus-visible {
-    outline-offset: calc(-1 * var(--focus-width, 2px));
+    outline-offset: calc(-1 * var(--focus-width));
   }
   & :is(a, button, input, [data-truncated]):not([data-row-title], [data-row-title] a) {
     position: relative;
@@ -762,7 +762,7 @@ label {
 }
 
 .table-frame tr:focus-visible {
-  outline-offset: calc(-1 * var(--focus-width, 2px));
+  outline-offset: calc(-1 * var(--focus-width));
 }
 
 :root:not([data-public-surface])
@@ -824,7 +824,8 @@ label {
 :root:not([data-public-surface]) kbd {
   height: var(--kbd-height);
   padding-inline: calc(var(--spacing) * 1.5);
-  font: var(--weight-medium) var(--text-caption) / var(--text-caption--line-height) var(--font-sans);
+  font: var(--text-caption-strong--font-weight) var(--text-caption-strong) /
+    var(--text-caption-strong--line-height) var(--font-sans);
 }
 :root:not([data-public-surface]) :is(a, button, [role='link']):not(:hover, :focus-visible),
 :root:not([data-public-surface]) :is(a, button, [role='link']):not(:hover, :focus-visible) * {

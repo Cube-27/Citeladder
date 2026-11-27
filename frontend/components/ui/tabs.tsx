@@ -13,6 +13,7 @@ import * as TabsPrimitive from '@radix-ui/react-tabs';
 import { ScrollFrame } from '@/components/ui/scroll-edges';
 import { useOnPage } from '@/components/ui/section';
 import { sidebarNavRowClasses } from '@/components/ui/sidebar';
+import { MEDIA } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/use-media-query';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -172,7 +173,7 @@ export function TabsRoot<T extends string>({
   children: ReactNode;
 }>) {
   const inPanel = !useOnPage();
-  const railed = useMediaQuery('(min-width: 981px)') && orientation === 'vertical';
+  const railed = useMediaQuery(MEDIA.desktop) && orientation === 'vertical';
   return (
     <ActiveTabContext value={value}>
       <TabsPrimitive.Root

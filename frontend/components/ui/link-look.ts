@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 export const TAG_FACE =
-  'text-caption border border-transparent bg-state-selected text-ink-2 inline-flex min-h-5 max-w-full min-w-0 shrink-0 items-center gap-0.5 rounded-mark px-1.5 normal-nums whitespace-nowrap [[data-public-surface]_&]:min-h-tag [[data-public-surface]_&]:px-2 [[data-public-surface]_&]:text-ink app:font-emphasis app:text-ink';
+  'text-caption border border-transparent bg-state-selected text-ink-2 inline-flex min-h-tag max-w-full min-w-0 shrink-0 items-center gap-0.5 rounded-mark px-1.5 normal-nums whitespace-nowrap [[data-public-surface]_&]:px-2 [[data-public-surface]_&]:text-ink app:font-emphasis app:text-ink';
 
 export const CHIP_FACE =
   'text-caption text-ink-2 inline-flex max-w-full min-w-0 items-center gap-1 rounded-mark border px-1 align-baseline no-underline';

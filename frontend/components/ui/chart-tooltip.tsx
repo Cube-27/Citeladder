@@ -2,6 +2,12 @@ import type { ReactNode } from 'react';
 
 import type { MarkerShape, SeriesTone } from '@/components/ui/step-chart-parts';
 import { printed } from '@/components/ui/absence';
+import {
+  CHART_MARKER,
+  CHART_OUTLINE,
+  CHART_RULE_DASH,
+  CHART_TEXT_SIZE,
+} from '@/components/ui/chart-geometry';
 import { POP_FACE } from '@/components/ui/slip';
 
 import type { Formatted } from '@/lib/format';
@@ -9,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 export const seriesColor = (tone: SeriesTone) => `var(--color-data-${tone})`;
 
-const CHART_TICK_TEXT = { fill: 'var(--text-color-ink-2)', fontSize: 12 } as const;
+const CHART_TICK_TEXT = { fill: 'var(--text-color-ink-2)', fontSize: CHART_TEXT_SIZE } as const;
 
 export function ChartText({
   x,
@@ -47,16 +53,19 @@ export const AXIS_PROPS = {
 
 export const GRID_PROPS = {
   vertical: false,
-  strokeDasharray: '3 3',
+  strokeDasharray: CHART_RULE_DASH.grid,
   stroke: 'var(--color-rule)',
 } as const;
 
-export const LINE_CURSOR = { stroke: 'var(--color-control-line)', strokeDasharray: '4 4' };
+export const LINE_CURSOR = {
+  stroke: 'var(--color-control-line)',
+  strokeDasharray: CHART_RULE_DASH.cursor,
+};
 
 function SeriesIndicator({ color, shape }: Readonly<{ color: string; shape?: MarkerShape }>) {
   return (
     <svg aria-hidden viewBox="-5 -5 10 10" className="size-2 shrink-0 overflow-visible">
-      <ShapeMark x={0} y={0} r={4} shape={shape ?? 'circle'} color={color} />
+      <ShapeMark x={0} y={0} r={CHART_MARKER.key} shape={shape ?? 'circle'} color={color} />
     </svg>
   );
 }
@@ -79,7 +88,7 @@ export function ShapeMark({
   const paint = {
     fill: color,
     stroke: outline ? 'var(--color-panel)' : 'none',
-    strokeWidth: outline ? 2 : 0,
+    strokeWidth: outline ? CHART_OUTLINE : 0,
   };
   switch (shape) {
     case 'square':

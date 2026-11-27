@@ -408,9 +408,12 @@ how to add or change an entry.
 - **AR-26 Design values are role tokens.** A violation is anything that would
   let a later design change drift one page: a raw value, or a page using a
   token or primitive class directly instead of a primitive. Text roles derive
-  from one base per subdomain (app 14, website 16). A new look, even a one-off,
-  adds a role token; never a raw value. The raw-value lint fails CI from a
-  baseline that only shrinks (2026-11-26).
+  from one base per subdomain (app 14, website 16). A look a page needs adds a
+  role token, never a raw value. The raw-value lint fails CI from a baseline
+  that only shrinks (2026-11-26). Screens and pages hold no raw size or colour; a
+  shared component holds no raw colour, and a raw size only when that component
+  alone uses it. A value several components or pages share is a role, and a
+  component that can be built from a primitive composes it (2026-11-27).
 - **AR-27 Alignment** (2026-11-27): a card head's padding above and below its
   controls is equal, and a logo or mark never sets the row's height; an icon,
   mark or trailing meta beside a multi-line block centres on its first line; a

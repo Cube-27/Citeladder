@@ -1,7 +1,6 @@
 import { useState, type KeyboardEvent } from 'react';
 
 import {
-  SERIES_WEIGHT,
   CHART_AXIS_TEXT,
   CHART_DASH,
   CHART_HEIGHT_CLASS,
@@ -15,6 +14,12 @@ import {
   type ChartHeight,
   type ChartTone,
 } from '@/components/ui/chart';
+import {
+  CHART_MARKER,
+  CHART_OUTLINE,
+  CHART_RULE_DASH,
+  SERIES_WEIGHT,
+} from '@/components/ui/chart-geometry';
 import {
   ChartBreakNote,
   ChartKey,
@@ -285,7 +290,7 @@ function TrendPlot({
           x2={Math.round(scale.x(active)) + 0.5}
           y1={scale.padTop}
           y2={bottom}
-          strokeDasharray="3 3"
+          strokeDasharray={CHART_RULE_DASH['plot-cursor']}
           shapeRendering="crispEdges"
           className="stroke-control-line"
         />
@@ -307,14 +312,20 @@ function TrendPlot({
               data-trend-connector=""
               d={chartPath([from, to])}
               fill="none"
-              strokeWidth={1.5}
-              strokeDasharray="3 4"
+              strokeWidth={SERIES_WEIGHT.series}
+              strokeDasharray={CHART_RULE_DASH.connector}
               strokeLinecap="round"
               className={cn(chartStroke(line.tone), 'opacity-ghost')}
             />
           ))}
           {isolatedPoints(points).map(([x, y]) => (
-            <circle key={`${x}-${y}`} cx={x} cy={y} r={2.5} className={chartFill(line.tone)} />
+            <circle
+              key={`${x}-${y}`}
+              cx={x}
+              cy={y}
+              r={CHART_MARKER.point}
+              className={chartFill(line.tone)}
+            />
           ))}
         </g>
       ))}
@@ -336,7 +347,13 @@ function TrendPlot({
 
 function TrendDot({ x, y, tone }: Readonly<{ x: number; y: number; tone: ChartTone }>) {
   return (
-    <circle cx={x} cy={y} r={4} strokeWidth={2} className={cn('stroke-panel', chartFill(tone))} />
+    <circle
+      cx={x}
+      cy={y}
+      r={CHART_MARKER.active}
+      strokeWidth={CHART_OUTLINE}
+      className={cn('stroke-panel', chartFill(tone))}
+    />
   );
 }
 
@@ -361,10 +378,15 @@ function TrendMarkers({
               x2={scale.x(index)}
               y1={scale.padTop}
               y2={bottom}
-              strokeDasharray="4 3"
+              strokeDasharray={CHART_RULE_DASH.version}
               className="stroke-warning"
             />
-            <circle cx={scale.x(index)} cy={scale.padTop} r={3} className="fill-warning" />
+            <circle
+              cx={scale.x(index)}
+              cy={scale.padTop}
+              r={CHART_MARKER.version}
+              className="fill-warning"
+            />
           </g>
         ) : null,
       )}
@@ -375,10 +397,16 @@ function TrendMarkers({
             x2={x}
             y1={scale.padTop}
             y2={bottom}
-            strokeDasharray="2 3"
+            strokeDasharray={CHART_RULE_DASH.event}
             className="stroke-control-line"
           />
-          <rect x={x - 3} y={bottom - 3} width={6} height={6} className="fill-control-line" />
+          <rect
+            x={x - CHART_MARKER.event}
+            y={bottom - CHART_MARKER.event}
+            width={CHART_MARKER.event * 2}
+            height={CHART_MARKER.event * 2}
+            className="fill-control-line"
+          />
         </g>
       ))}
     </>

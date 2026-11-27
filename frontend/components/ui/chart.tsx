@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { SERIES_FILL, SERIES_STROKE, type SeriesTone } from '@/components/ui/step-chart-parts';
+import { SERIES_WEIGHT } from '@/components/ui/chart-geometry';
 import { percentText } from '@/lib/format';
 
 export type ChartTone = 1 | 2 | 3 | 4 | 5;
@@ -23,14 +24,6 @@ const CHART_SERIES = {
 export const chartStroke = (tone: ChartTone) => SERIES_STROKE[CHART_SERIES[tone]];
 
 export const chartFill = (tone: ChartTone) => SERIES_FILL[CHART_SERIES[tone]];
-
-export const SERIES_WEIGHT = {
-  you: 2,
-  series: 1.5,
-  'trend-you': 2.75,
-  'trend-series': 1.75,
-  faint: 1.25,
-} as const;
 
 export const seriesWeight = (you: boolean) => SERIES_WEIGHT[you ? 'you' : 'series'];
 

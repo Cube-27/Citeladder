@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 
+import { CHART_MARKER, CHART_RULE_DASH, SERIES_WEIGHT } from '@/components/ui/chart-geometry';
 import type { TrendScale } from '@/components/ui/trend-geometry';
 import { cn } from '@/lib/utils';
 
@@ -218,7 +219,7 @@ export function EventTicks({
             x2={event.x}
             y1={top}
             y2={bottom}
-            strokeDasharray="2 3"
+            strokeDasharray={CHART_RULE_DASH.event}
             className="stroke-control-line"
           />
           <path d={diamond(event.x, top - 6, 5)} className={event.fill} />
@@ -322,7 +323,7 @@ export function MarkerMark({
           y={y - 2.5}
           width={5}
           height={5}
-          strokeWidth={1.5}
+          strokeWidth={SERIES_WEIGHT.series}
           className={className}
         />
       );
@@ -330,7 +331,7 @@ export function MarkerMark({
       return (
         <path
           d={`M${x} ${y - 3.5}L${x + 3.5} ${y}L${x} ${y + 3.5}L${x - 3.5} ${y}Z`}
-          strokeWidth={1.5}
+          strokeWidth={SERIES_WEIGHT.series}
           className={className}
         />
       );
@@ -338,12 +339,20 @@ export function MarkerMark({
       return (
         <path
           d={`M${x} ${y - 3.5}L${x + 3.5} ${y + 3}L${x - 3.5} ${y + 3}Z`}
-          strokeWidth={1.5}
+          strokeWidth={SERIES_WEIGHT.series}
           className={className}
         />
       );
     case 'circle':
-      return <circle cx={x} cy={y} r={3} strokeWidth={1.5} className={className} />;
+      return (
+        <circle
+          cx={x}
+          cy={y}
+          r={CHART_MARKER.marker}
+          strokeWidth={SERIES_WEIGHT.series}
+          className={className}
+        />
+      );
     default: {
       const unknown: never = shape;
       return unknown;

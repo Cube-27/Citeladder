@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'danger-confirm';
 
-export type ButtonSize = 'md' | 'lg';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const HOVER_OVERLAY =
   'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed not-disabled:active:overlay-pressed';
@@ -29,6 +29,7 @@ const BUTTON_BASE =
   'focus-ring press text-label text-ink relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-control-coarse disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-disabled [[data-public-surface]_&]:aria-disabled:opacity-disabled';
 
 const BUTTON_SIZE: Record<ButtonSize, string> = {
+  sm: 'min-h-control-sm px-control-x',
   md: 'min-h-control-md px-control-x',
   lg: 'min-h-control-lg px-4',
 };
@@ -95,7 +96,7 @@ const SHAPE = {
   label: undefined,
   icon: ICON_SHAPE,
   floating: cn(ICON_SHAPE, 'shadow-sheet rounded-full'),
-  close: cn(ICON_SHAPE, 'size-6 min-h-6 pointer-coarse:min-h-6 press-firm'),
+  close: cn(ICON_SHAPE, 'size-close min-h-close pointer-coarse:min-h-close press-firm'),
 } as const;
 
 const LOOK = {

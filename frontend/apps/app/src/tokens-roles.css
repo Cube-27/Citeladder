@@ -104,6 +104,7 @@
   --rule-width: 1px;
   --mark-pad-inline: 0.2em;
   --heading-line-height: 1.25;
+  --heading-weight: var(--weight-medium);
   --radius-mark: 2px;
   --radius-inner: var(--radius-sm);
   --radius-control: var(--radius-md);
@@ -172,6 +173,8 @@
   --spacing-control-coarse: var(--spacing-control-md);
   --spacing-control-x: 12px;
   --spacing-tag: 24px;
+  --spacing-check: 16px;
+  --spacing-close: 24px;
   --spacing-target: 24px;
   --spacing-nav-row: 32px;
   --spacing-rail-button: 40px;
@@ -203,7 +206,8 @@
   --spacing-group: 12px;
   --spacing-loose: 16px;
   --spacing-modal: 24px;
-  --spacing-panel-inset: 0px;
+  --spacing-shell-inset: 0px;
+  --spacing-panel-inset: var(--spacing-shell-inset);
   --spacing-band: 8px;
   --spacing-flow-gap: 48px;
   --spacing-label-column: 160px;
@@ -331,8 +335,8 @@
   --spacing-select-max: min(18.5rem, var(--radix-select-content-available-height));
   --spacing-select-trigger: var(--radix-select-trigger-width);
   --spacing-select-public: max(15rem, var(--radix-select-trigger-width));
-  --spacing-state-title: var(--state-title-gap, 16px);
-  --spacing-state-action: var(--state-action-gap, 16px);
+  --spacing-state-title: var(--state-title-gap, var(--spacing-loose));
+  --spacing-state-action: var(--state-action-gap, var(--spacing-loose));
   --spacing-figure-line: var(--text-figure--line-height);
   --spacing-body-line: var(--text-body--line-height);
   --spacing-row-block: calc((var(--spacing-row) - var(--spacing-body-line)) / 2);

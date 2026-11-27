@@ -1,15 +1,16 @@
 import { useSyncExternalStore } from 'react';
 
+import { MEDIA } from '@/lib/breakpoints';
+
 const STORAGE_KEY = 'citeladder:app:sidebar-width';
 const COLLAPSED_KEY = 'citeladder:app:sidebar-collapsed';
 
 const SIDEBAR_WIDE_WIDTH = 224;
 const SIDEBAR_COMPACT_WIDTH = 200;
-const WIDE_QUERY = '(min-width: 1280px)';
 const SIDEBAR_MIN_WIDTH = SIDEBAR_COMPACT_WIDTH;
 
 export function sidebarDefaultWidth(): number {
-  return typeof window !== 'undefined' && window.matchMedia?.(WIDE_QUERY).matches
+  return typeof window !== 'undefined' && window.matchMedia?.(MEDIA.shell).matches
     ? SIDEBAR_WIDE_WIDTH
     : SIDEBAR_COMPACT_WIDTH;
 }
