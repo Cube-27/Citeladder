@@ -11,10 +11,5 @@
     "shadcn/no-unknown-classes": {
       "count": 2
     }
-  },
-  "components/ui/data-table-fit.tsx": {
-    "shadcn/no-inline-styles": {
-      "count": 3
-    }
   }
 }

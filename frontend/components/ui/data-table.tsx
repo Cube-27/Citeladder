@@ -4,6 +4,7 @@ import { useContext, useId, type ComponentProps, type ReactNode, type RefObject 
 import { BusyRung } from '@/components/ui/rung-meter';
 import {
   DataTableColumns,
+  type ColumnAttributes,
   type DataTableColumn,
   type DataTableSelection,
 } from '@/components/ui/data-table-columns';
@@ -29,6 +30,7 @@ import {
 } from '@/components/ui/state-heading-level';
 
 import './data-table.css';
+import './generated/data-table-positions.css';
 
 export type { DataTableColumn, DataTableSelection, DataTableState };
 
@@ -70,7 +72,7 @@ export function DataTable({
   const headingId = useId();
   const level = useContext(StateHeadingLevelContext);
   const parts = dataTableParts({ title, label, headingId, columns, selection });
-  const { frameRef, probe, scope, shown, shownKeys } = useFittedColumns({
+  const { frameRef, probe, layout, shown, shownKeys } = useFittedColumns({
     columns,
     selection: Boolean(selection),
   });
@@ -107,7 +109,7 @@ export function DataTable({
           naming={parts.naming}
           pinned={parts.pinned}
           frameRef={frameRef}
-          scope={scope}
+          layout={layout}
           probe={probe}
           foot={<DataTableFoot footer={footer} pager={paging.pager} />}
         >
@@ -220,7 +222,7 @@ function DataTableFrame({
   naming,
   pinned,
   frameRef,
-  scope,
+  layout,
   probe,
   foot,
   children,
@@ -229,7 +231,7 @@ function DataTableFrame({
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
   pinned: 1 | 2;
   frameRef: RefObject<HTMLDivElement | null>;
-  scope: string;
+  layout: Readonly<{ attributes: ColumnAttributes; share: string }>;
   probe: ReactNode;
   foot: ReactNode;
   children: ReactNode;
@@ -239,7 +241,8 @@ function DataTableFrame({
     <div
       ref={frameRef}
       data-data-table-frame=""
-      data-table-scope={scope}
+      {...layout.attributes}
+      style={{ '--data-table-share': layout.share }}
       data-pinned={pinned}
       className="relative isolate min-w-0"
     >

@@ -103,6 +103,7 @@ const SPACING_ROLES = [
   'place-bottom',
   'place-left',
   'place-width',
+  'floor',
 ];
 
 const DURATION_ROLES = [

@@ -498,6 +498,7 @@
   --spacing-place-bottom: var(--place-bottom, auto);
   --spacing-place-left: var(--place-left, auto);
   --spacing-place-width: var(--place-width);
+  --spacing-floor: var(--floor);
 }
 
 :root {
