@@ -341,20 +341,25 @@ how to add or change an entry.
   control sizes, focus), keeping CiteLadder's corner radii; Google Sans as the
   sans face and an inset content panel (2026-11-26). The HeroUI move changes
   layout and styling only, never behaviour (2026-11-26). **AR-2 Text:** body
-  and labels 14px, captions 12px and the page header 48px (2026-11-22).
+  and labels 14px, captions 12px and the page header 48px (2026-11-22); phone
+  fields stay 14px, accepting the iOS focus zoom (2026-11-27).
 - **AR-3 Metrics** sit in one strip with hairline dividers, never cards, with no
   meters, rings or bars in a cell. A strip is always one row, never wrapped into
-  two (2026-11-25). **AR-4 Tables:** the first column takes the
+  two (2026-11-25). A table may hold bars, all of one meter-column kind
+  (2026-11-27). **AR-4 Tables:** the first column takes the
   spare width and the others hug their content. On a phone a wide table
   scrolls sideways with no sticky column, and truncated or overlapping text is
   the defect to fix first (2026-11-23).
 - **AR-5** The line language (solid observed, dashed draft, `—` absent, printed
   `0`) and the accent meaning "you, here" stay; the accent also marks focus.
+  Exception: the heat table keeps its accent heat scale for every brand
+  (2026-11-27).
 - **AR-7** The website and docs keep their look; the app's tokens are its own.
 - **AR-8 Sidebar collapse:** the toggle sits at the end of the Integrations row
   when expanded and on its own row in the icon rail (2026-11-21).
 - **AR-9 Widths:** 1040 column for Overview, Projects, Issues, Actions, Agent,
-  Settings and Agent context; 720 for Billing and Runs. Settings
+  Settings and Agent context; 720 for Billing, Pricing and Runs; 800 for detail
+  pages (AR-22); a Settings section at most 720 (2026-11-27). Settings
   and Agent context list their sections in a sticky left rail, never a tab row,
   so their header and rail never move; only Business map's content is wider.
   Side space beats space in the middle (2026-11-20 and 2026-11-21).
@@ -387,8 +392,7 @@ how to add or change an entry.
   answer engine alone (2026-11-22).
 - **AR-22 Everything sits on a surface:** content is on a card, table or strip;
   only headings sit on the paper. The Site Health page detail and the Action
-  detail pages are narrower than AR-9's column (2026-11-24; the 800 column is
-  the implementer's pick).
+  detail pages are narrower than AR-9's column (2026-11-24).
 - **AR-23 Long URLs** are cut in the middle, keeping their start and end, on
   every screen (2026-11-25).
 - **AR-24 One composition:** every page, drawer and dialog is built from one
