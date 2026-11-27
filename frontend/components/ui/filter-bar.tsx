@@ -59,7 +59,7 @@ export function FilterBar({ view, filters = [], status, actions }: FilterBarProp
       aria-label="Filters"
       className="min-h-control-md flex w-full min-w-0 flex-wrap items-center gap-2"
     >
-      {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
+      <ViewSlot view={view} />
       <div
         className={cn(
           'flex min-w-0 flex-wrap items-center gap-2',
@@ -84,11 +84,15 @@ export function HeadControls({ view, filters = [], status, actions }: FilterBarP
   return (
     <>
       {filters.length > 0 ? <ChipGroup filters={filters} end /> : null}
-      {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
+      <ViewSlot view={view} />
       {status === undefined ? null : <StatusLine status={status} />}
       {actions}
     </>
   );
+}
+
+function ViewSlot({ view }: Readonly<{ view: ReactNode }>) {
+  return view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null;
 }
 
 function StatusLine({ status }: Readonly<{ status: ReactNode }>) {
@@ -187,7 +191,6 @@ function StripMeta({
   const hidden = 'has-[>output:empty]:not-has-[>span]:hidden';
   const row = (
     <div
-      data-strip-meta=""
       className={cn(
         afterView && 'rail:-order-1',
         'rail:grow rail:basis-0 rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap',
@@ -200,9 +203,7 @@ function StripMeta({
   if (!inBand) return row;
   return (
     <PageTabEnd fallback={row}>
-      <div data-strip-meta="" className={cn('flex min-w-0 items-center gap-1', hidden)}>
-        {content}
-      </div>
+      <div className={cn('flex min-w-0 items-center gap-1', hidden)}>{content}</div>
     </PageTabEnd>
   );
 }

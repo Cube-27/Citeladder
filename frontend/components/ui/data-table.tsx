@@ -242,7 +242,7 @@ function DataTableFrame({
       <div
         {...scroll.frame}
         style={reserve ? { '--reserve-rows': TABLE_DEFAULT_PAGE_SIZE } : undefined}
-        className="relative min-h-[calc(var(--spacing-table-head)_+_var(--reserve-rows,0)_*_var(--spacing-row))] min-w-0"
+        className="table-reserve relative min-w-0"
       >
         <Table
           {...naming}
@@ -347,9 +347,7 @@ function DataTableHeader({
           {title}
         </SectionTitle>
       ) : null}
-      {description ? (
-        <SectionDescription data-data-table-description="">{description}</SectionDescription>
-      ) : null}
+      {description ? <SectionDescription>{description}</SectionDescription> : null}
     </SectionHeader>
   );
 }
