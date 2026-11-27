@@ -817,8 +817,8 @@ label {
   --color-state-pressed: var(--color-state-fill);
 }
 :root:not([data-public-surface]) [data-button-variant='danger'] {
-  --color-raised: var(--color-negative-wash);
-  --color-raised-2: oklch(from var(--color-negative-wash) calc(l - 0.02) c h);
+  --color-raised: var(--color-danger-face);
+  --color-raised-2: var(--color-danger-face-hover);
 }
 :root:not([data-public-surface]) kbd {
   height: var(--kbd-height);

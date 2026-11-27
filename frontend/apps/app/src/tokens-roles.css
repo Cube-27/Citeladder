@@ -21,6 +21,10 @@
   --color-rule: var(--ramp-neutral-92_2);
   --color-rule-strong: var(--ramp-neutral-87);
   --color-control-line: var(--ramp-neutral-61_7);
+  --color-control-edge: var(--color-control-line);
+  --color-control-edge-hover: var(--color-rule);
+  --color-danger-face: var(--color-negative-wash);
+  --color-danger-face-hover: var(--ramp-red-92_8);
   --text-color-ink: var(--ramp-neutral-17_8);
   --text-color-ink-2: var(--ramp-neutral-43_9);
   --text-color-ink-placeholder: var(--text-color-ink-2);
@@ -104,6 +108,8 @@
   --radius-control: var(--radius-md);
   --radius-card: 8px;
   --radius-overlay: 12px;
+  --radius-tray-item: calc(var(--radius-control) - var(--spacing-tray-inset));
+  --radius-popup-item: var(--radius-mark);
 
   --shadow-*: initial;
 
@@ -198,6 +204,9 @@
   --spacing-flow-gap: 48px;
   --spacing-label-column: 160px;
   --spacing-section-rail: 192px;
+  --spacing-tray-inset: 2px;
+  --spacing-popup-inset: 4px;
+  --spacing-palette-inset: calc(var(--radius-overlay) - var(--radius-popup-item));
   --spacing-quote-grid: 768px;
   --spacing-notice-fill: 60dvh;
   --spacing-turn-estimate: 320px;

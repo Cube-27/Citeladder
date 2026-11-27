@@ -44,6 +44,9 @@ const SPACING_ROLES = [
   'workspace',
   'label-column',
   'section-rail',
+  'tray-inset',
+  'popup-inset',
+  'palette-inset',
   'quote-grid',
   'notice-fill',
   'turn-estimate',
@@ -138,7 +141,7 @@ const TRANSITION_ROLES = [
 const twMerge = extendTailwindMerge({
   extend: {
     theme: {
-      radius: ['mark', 'inner', 'control', 'card', 'overlay'],
+      radius: ['mark', 'inner', 'control', 'card', 'overlay', 'tray-item', 'popup-item'],
       spacing: SPACING_ROLES,
       container: ['bubble', 'state', 'chart-key', 'list-wide'],
       shadow: ['tab-rule'],

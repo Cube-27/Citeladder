@@ -31,7 +31,7 @@ export function Switch({
         'press focus-ring hit-area inline-flex h-5 w-10 shrink-0 items-center rounded-full disabled:cursor-not-allowed disabled:opacity-disabled',
         checked
           ? 'bg-primary not-disabled:hover:bg-primary-hover'
-          : 'bg-control-line not-disabled:hover:bg-rule',
+          : 'bg-control-edge not-disabled:hover:bg-control-edge-hover',
         besideText && 'mt-0.5 pointer-coarse:before:-inset-x-0.5 pointer-coarse:before:-inset-y-3',
       )}
     >

@@ -133,7 +133,7 @@ export function CellMeter({
   );
 }
 
-const ROW_FILL = { neutral: 'bg-control-line', accent: 'bg-data-you' } as const;
+const ROW_FILL = { neutral: 'bg-data-other', accent: 'bg-data-you' } as const;
 
 export function MeterRow({
   name,
