@@ -1,9 +1,9 @@
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
 
-import { AttributeTable } from '@/components/perception/attribute-table';
+import { useAttributeTable } from '@/components/perception/attribute-table';
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { Section, SectionToolbar } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle, SectionToolbar } from '@/components/ui/section';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
@@ -47,9 +47,13 @@ export function PerceptionBreakdown({
   const [requested, setView] = useUrlState('breakdown', VIEW_CODEC, { history: 'replace' });
   const views = shownViews(data, categories);
   const view = views.includes(requested) ? requested : views[0];
+  const attribute = useAttributeTable(categories);
   if (!view) return null;
   return (
     <Section aria-label="Breakdown">
+      <SectionHeader>
+        <SectionTitle>Breakdown</SectionTitle>
+      </SectionHeader>
       <SectionToolbar>
         <SegmentedControl
           value={view}
@@ -57,8 +61,9 @@ export function PerceptionBreakdown({
           ariaLabel="Break perception down"
           options={views.map((value) => ({ value, label: VIEW_LABEL[value] }))}
         />
+        {view === 'attribute' ? attribute.tools : null}
       </SectionToolbar>
-      <BreakdownView view={view} data={data} categories={categories} />
+      {view === 'attribute' ? attribute.table : <BreakdownView view={view} data={data} />}
     </Section>
   );
 }
@@ -66,11 +71,8 @@ export function PerceptionBreakdown({
 function BreakdownView({
   view,
   data,
-  categories,
-}: Readonly<{ view: View; data: PerceptionResponse; categories: readonly Category[] }>) {
+}: Readonly<{ view: Exclude<View, 'attribute'>; data: PerceptionResponse }>) {
   switch (view) {
-    case 'attribute':
-      return <AttributeTable categories={categories} />;
     case 'topic':
     case 'engine':
       return <SegmentTable segment={view} rows={data[`${view}s`]} />;

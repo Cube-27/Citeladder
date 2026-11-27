@@ -335,6 +335,9 @@
   --spacing-state-action: var(--state-action-gap, 16px);
   --spacing-figure-line: var(--text-figure--line-height);
   --spacing-body-line: var(--text-body--line-height);
+  --spacing-row-block: calc((var(--spacing-row) - var(--spacing-body-line)) / 2);
+  --spacing-row-control-gap: calc((var(--spacing-row) - var(--spacing-control-md)) / 2);
+  --spacing-tray: calc(var(--spacing-control-sm) + 2 * var(--spacing-tray-inset));
   --container-bubble: min(80%, var(--container-prose));
   --shadow-tab-rule: inset 0 -1px 0 var(--color-rule);
   --spacing-share: var(--share);

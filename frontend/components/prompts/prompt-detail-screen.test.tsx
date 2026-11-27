@@ -229,7 +229,8 @@ it('reads Past answers under the strip filters, keeping an unreported search apa
     { engine: 'claude', brand: 'Globex', cited: true, search: 'used', limit: 25 },
     expect.anything(),
   );
-  expect(screen.getByRole('button', { name: 'Filters (3)' })).toBeVisible();
+  for (const set of [/^Brand named: /, 'Cited: Cited', 'Search used: Yes'])
+    expect(screen.getByRole('button', { name: set })).toHaveAttribute('data-active');
   expect(screen.getByRole('button', { name: /^Engine: / })).toBeVisible();
   expect(screen.getByRole('button', { name: /^Period/ })).toBeVisible();
   expect(getPromptHistory).toHaveBeenCalledWith(

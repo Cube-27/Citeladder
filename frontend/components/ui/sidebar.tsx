@@ -258,7 +258,7 @@ export function SidebarModeTrack({
       className={
         rail
           ? 'flex flex-col items-center'
-          : 'rounded-control h-control-md bg-state-fill p-tray-inset flex w-full min-w-0 shrink-0'
+          : 'rounded-control h-tray bg-state-fill p-tray-inset flex w-full min-w-0 shrink-0'
       }
     />
   );

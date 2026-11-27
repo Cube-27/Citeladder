@@ -650,13 +650,13 @@ describe('AI Traffic state and navigation', () => {
     expect(screen.getByRole('button', { name: /^Period:/ })).toBeVisible();
     await openFilterOptions(user, 'Status code');
     const statusField = await screen.findByRole('spinbutton', { name: 'Response status' });
-    const statusRow = () => screen.getByRole('menuitem', { name: /^Status code:/ });
+    const statusRow = () => screen.getByRole('button', { name: /^Status code:/, hidden: true });
     fireEvent.change(statusField, { target: { value: '40' } });
     expect(statusRow()).toHaveAccessibleName('Status code: Any status');
     fireEvent.change(statusField, { target: { value: '404' } });
     expect(statusRow()).toHaveAccessibleName('Status code: 404');
     await user.keyboard('{Escape}');
-    expect(await screen.findByRole('button', { name: 'Filters (1)' })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: 'Status code: 404' })).toHaveAttribute(
       'data-active',
     );
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
@@ -679,9 +679,8 @@ describe('AI Traffic state and navigation', () => {
       target: { value: '/page' },
     });
     await user.keyboard('{Escape}');
-    expect(await screen.findByRole('button', { name: 'Filters (2)' })).toHaveAttribute(
-      'data-active',
-    );
+    for (const name of ['Resource class: Page', 'Folder: /page'])
+      expect(await screen.findByRole('button', { name })).toHaveAttribute('data-active');
     await user.click(screen.getByRole('button', { name: /^Requests/ }));
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
     await waitFor(() => expect(exportedPages.value?.get('folder')).toBe('/page'));

@@ -35,9 +35,9 @@ function servePages(items = [pageRow()], seen: URLSearchParams[] = []) {
 }
 
 async function findSetFilter(label: string, value: string) {
-  const remove = await screen.findByRole('button', { name: `Remove ${label} filter` });
-  expect(remove.parentElement).toHaveTextContent(value);
-  return remove;
+  const chip = await screen.findByRole('button', { name: `${label}: ${value}` });
+  expect(chip).toHaveAttribute('data-active');
+  return chip;
 }
 
 async function chooseFilter(user: User, label: string, choice: string) {
@@ -269,12 +269,12 @@ describe('IssuesCatalog', () => {
     expect(currentUrl()).not.toContain('rule=');
     expect(currentUrl()).toContain('campaign=overview');
     await findSetFilter('Severity', 'Medium');
-    expect(screen.queryByRole('button', { name: 'Remove Issue filter' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Issue: WebSite schema is missing' })).toBeNull();
 
     window.history.back();
     await waitFor(() => expect(currentUrl()).not.toContain('severity=medium'));
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Remove Severity filter' })).toBeNull(),
+      expect(screen.queryByRole('button', { name: 'Severity: Medium' })).toBeNull(),
     );
 
     window.history.forward();
@@ -296,14 +296,15 @@ describe('IssuesCatalog', () => {
     expect(currentUrl()).toContain('campaign=overview');
   });
 
-  it('clears a deep-linked issue filter from its value chip', async () => {
+  it('clears a deep-linked issue filter with Clear', async () => {
     window.history.replaceState(null, '', '/issues?rule=aeo.website_schema');
     serveIssues();
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     await screen.findByRole('button', { name: 'WebSite schema is missing' });
 
-    await user.click(await findSetFilter('Issue', 'WebSite schema is missing'));
+    await findSetFilter('Issue', 'WebSite schema is missing');
+    await user.click(screen.getByRole('button', { name: 'Clear' }));
     await waitFor(() => expect(currentUrl()).not.toContain('rule='));
   });
 

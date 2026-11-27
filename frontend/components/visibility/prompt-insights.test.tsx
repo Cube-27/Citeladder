@@ -116,7 +116,7 @@ describe('CompetitorSuggestions', () => {
     await waitFor(() => expect(stale()).toEqual([true, true]));
   });
 
-  it('holds Accept at the competitor limit and says how to make room, while Reject stays open', async () => {
+  it('drops Accept at the competitor limit and says how to make room, while Reject stays open', async () => {
     const { unmount } = renderWithProviders(
       <CompetitorSuggestions
         projectId={projectId}
@@ -129,9 +129,8 @@ describe('CompetitorSuggestions', () => {
         'Your project tracks the maximum of 5 competitors. Remove one to accept a suggestion.',
       ),
     ).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Accept Northstar as a competitor' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Accept Northstar as a competitor' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Reject Northstar as a competitor' })).toBeEnabled();
-    expect(screen.getByRole('link', { name: 'Edit competitors' })).toBeVisible();
     unmount();
 
     renderSuggestions(4);

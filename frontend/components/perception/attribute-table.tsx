@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import type {
   PerceptionQuote,
   PerceptionResponse,
@@ -7,7 +7,6 @@ import type {
 import { ExpandToggle } from '@/components/perception/probe-sources';
 import { AnswerLink } from '@/components/runs/answer-link';
 import { Absence } from '@/components/ui/absence';
-import { SectionToolbar } from '@/components/ui/section';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { useShownSpan } from '@/components/ui/data-table-fit';
 import { EngineCell } from '@/components/ui/engine-mark';
@@ -40,7 +39,10 @@ const SIDES = [
   { value: 'positive', label: 'Positive' },
 ] as const satisfies readonly { value: Side; label: string }[];
 
-export function AttributeTable({ categories }: Readonly<{ categories: readonly Category[] }>) {
+export function useAttributeTable(categories: readonly Category[]): {
+  tools: ReactNode;
+  table: ReactNode;
+} {
   const [query, setQuery] = useState('');
   const [side, setSide] = useState<Side>('all');
   const [sort, setSort] = useState<CategorySort | null>(null);
@@ -70,9 +72,9 @@ export function AttributeTable({ categories }: Readonly<{ categories: readonly C
     },
   ];
   const narrowed = Boolean(query.trim()) || side !== 'all';
-  return (
-    <>
-      <SectionToolbar>
+  return {
+    tools: (
+      <>
         <SearchField
           value={query}
           onValueChange={setQuery}
@@ -81,7 +83,9 @@ export function AttributeTable({ categories }: Readonly<{ categories: readonly C
           frame="filter"
         />
         <SegmentedControl value={side} onChange={setSide} options={SIDES} ariaLabel="Side" />
-      </SectionToolbar>
+      </>
+    ),
+    table: (
       <DataTable
         label="Attributes"
         columns={columns}
@@ -108,8 +112,8 @@ export function AttributeTable({ categories }: Readonly<{ categories: readonly C
           />
         ))}
       </DataTable>
-    </>
-  );
+    ),
+  };
 }
 
 function CategoryRow({

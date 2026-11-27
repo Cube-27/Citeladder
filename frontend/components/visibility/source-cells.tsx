@@ -1,3 +1,5 @@
+import { Fragment } from 'react';
+
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines } from '@/components/ui/table';
@@ -12,9 +14,30 @@ export function SourceName({
   return (
     <Inline as="span">
       <BrandMark name={name} websiteUrl={host ? `https://${host}` : null} />
-      <TableCellLines primary={name} secondary={secondary} />
+      <TableCellLines
+        primary={name === host ? <HostText host={name} /> : name}
+        secondary={secondary}
+      />
     </Inline>
   );
+}
+
+function HostText({ host }: Readonly<{ host: string }>) {
+  let offset = 0;
+  return host.split('.').map((part) => {
+    const at = offset;
+    offset += part.length + 1;
+    return (
+      <Fragment key={at}>
+        {at ? (
+          <>
+            .<wbr />
+          </>
+        ) : null}
+        {part}
+      </Fragment>
+    );
+  });
 }
 
 export function NumericCell({

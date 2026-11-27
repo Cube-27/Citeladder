@@ -98,7 +98,7 @@ export function BarRows({ label, rows }: Readonly<{ label: string; rows: readonl
           key={row.key}
           className="border-rule grid-cols-score-gauge grid min-h-9 items-center gap-3 border-t"
         >
-          <span className="text-body text-ink min-w-0 truncate">{row.label}</span>
+          <span className="text-body text-ink min-w-0 text-pretty">{row.label}</span>
           <span className="text-body text-ink min-w-10 text-right tabular-nums">{row.figure}</span>
           <span className="bg-well rounded-mark block h-2 overflow-hidden" aria-hidden>
             {row.share === null ? null : (

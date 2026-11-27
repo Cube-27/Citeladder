@@ -192,16 +192,16 @@ function HolderDetail({
       <ProductKpis detail={data} />
       {named ? (
         <>
-          <AppGrid layout="pair" alignTop>
+          <AppGrid layout="pair">
             <EngineOutcomes outcomes={outcomes} />
             <CompetingProducts detail={data} scope={scopeFilters} />
           </AppGrid>
           <ProductPrompts outcomes={outcomes} />
-          <AppGrid layout="pair" alignTop>
+          <AppGrid layout="pair">
             <Sources detail={data} />
             <FanOutQueries detail={data} />
           </AppGrid>
-          <AppGrid layout="pair" alignTop>
+          <AppGrid layout="pair">
             <Merchants detail={data} />
             <SeenIn detail={data} scope={scopeFilters} />
           </AppGrid>

@@ -21,7 +21,7 @@ import type { CommerceQueries } from './commerce-queries';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 const HERO_COUNT = 3;
 
@@ -88,9 +88,6 @@ export function SetupPrompts({
         }
       >
         <SectionTitle level={level}>Prompts that measure it</SectionTitle>
-        {approvedIds.length ? null : (
-          <SectionDescription>Approve a prompt to launch.</SectionDescription>
-        )}
       </SectionHeader>
       {generate.isError ? (
         <Notice

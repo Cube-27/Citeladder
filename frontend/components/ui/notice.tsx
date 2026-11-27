@@ -111,22 +111,24 @@ function MessageNoticeView({
         className,
       )}
     >
-      <span
-        aria-hidden
-        className={cn('inline-flex h-5 shrink-0 items-center', TEXT_TONE_CLASS[style.tone])}
-      >
-        <style.glyph className="size-4" />
-      </span>
-      <div className="flex min-w-0 flex-col gap-1">
-        {title != null ? (
-          <p className="font-emphasis">
-            {word}
-            {title}
-          </p>
-        ) : (
-          word
-        )}
-        {children != null ? <div>{children}</div> : null}
+      <div className="flex min-w-0 flex-1 basis-60 items-start gap-2">
+        <span
+          aria-hidden
+          className={cn('inline-flex h-5 shrink-0 items-center', TEXT_TONE_CLASS[style.tone])}
+        >
+          <style.glyph className="size-4" />
+        </span>
+        <div className="flex min-w-0 flex-col gap-1">
+          {title != null ? (
+            <p className="font-emphasis">
+              {word}
+              {title}
+            </p>
+          ) : (
+            word
+          )}
+          {children != null ? <div>{children}</div> : null}
+        </div>
       </div>
       <NoticeAction>{action}</NoticeAction>
     </Root>

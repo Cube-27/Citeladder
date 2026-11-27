@@ -131,7 +131,6 @@ export function PagesTable({
                   <ClampText box="fixed-full">
                     <PageLink
                       text="inherit"
-                      emphasis
                       underline="hover"
                       crawlId={page.crawl_id}
                       siteUrlId={page.site_url_id}

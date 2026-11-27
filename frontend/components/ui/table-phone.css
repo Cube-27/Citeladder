@@ -1,22 +1,23 @@
 @media (max-width: 767px) {
-  [data-data-table-frame] td .truncate,
+  :is([data-pinned='1'] tr > :first-child, [data-pinned='2'] tr > :nth-child(2))
+    :is(.truncate, [data-url-text], [data-url-text] > span),
   .table-frame th[scope='row'] .truncate {
     white-space: normal;
     overflow-wrap: break-word;
     text-overflow: clip;
   }
 
-  [data-data-table-frame] td [data-cell-lines] {
-    flex-wrap: wrap;
-  }
+  :is([data-pinned='1'] tr > :first-child, [data-pinned='2'] tr > :nth-child(2)) {
+    & [data-cell-lines] {
+      flex-wrap: wrap;
+    }
 
-  [data-data-table-frame] td [data-url-text] {
-    display: block;
-    white-space: normal;
-  }
+    & [data-url-text] {
+      display: block;
+    }
 
-  [data-data-table-frame] td [data-url-text] > span {
-    display: inline;
-    overflow-wrap: break-word;
+    & [data-url-text] > span {
+      display: inline;
+    }
   }
 }

@@ -93,6 +93,7 @@
     line-height: inherit;
   }
   .prose-content .prose-table-frame {
+    container-type: inline-size;
     max-width: 100%;
     margin: 0 0 calc(var(--spacing) * 4);
     border: var(--rule-width) solid var(--color-rule);
@@ -132,7 +133,7 @@
   }
   .prose-content :is(th, td) {
     min-width: var(--markdown-cell-min);
-    max-width: var(--markdown-cell-max);
+    max-width: min(var(--markdown-cell-max), 75cqi);
     overflow-wrap: normal;
     vertical-align: top;
   }

@@ -483,9 +483,7 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   await expect(gemini).toBeInViewport({ ratio: 1 });
   await gemini.click();
   await expect(page).toHaveURL(/[?&]engine=gemini/);
-  await expect(page.getByRole('button', { name: 'Engines: Gemini API' })).toHaveAttribute(
-    'data-active',
-  );
+  await expect(page.locator('[data-filter-bar]').first()).toContainText('Gemini API');
 });
 
 for (const width of [1280, 375]) {

@@ -165,7 +165,7 @@ export function ThreadLayout({
           {children}
         </div>
       </section>
-      {composer ? <div className="w-full min-w-0 px-1">{composer}</div> : null}
+      {composer ? <div className="w-full min-w-0">{composer}</div> : null}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useContext, type ReactNode } from 'react';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
 import { FilterChip, FilterTrigger, ValueChip } from '@/components/ui/filter-chip';
+import { useKeptFilters } from '@/components/ui/filter-fit';
 import { FiltersMenu } from '@/components/ui/filters-menu';
 import { Icon } from '@/components/ui/icon';
 import {
@@ -29,18 +30,9 @@ export type TableToolbarProps = Readonly<{
 
 export type FilterBarProps = Omit<TableToolbarProps, 'search'>;
 
-const ROW_ICON_CHIPS = 4;
-
-function placeFilters(filters: readonly FilterDefinition[]): Readonly<{
-  chips: readonly FilterDefinition[];
-  menu: readonly FilterDefinition[];
-}> {
-  const icons = filters
-    .filter((filter) => filter.icon && !filter.inFilters)
-    .slice(0, ROW_ICON_CHIPS);
-  const rest = filters.filter((filter) => !icons.includes(filter));
-  if (rest.length === 1) return { chips: [...icons, ...rest], menu: [] };
-  return { chips: icons, menu: rest };
+function inlineOrder(filters: readonly FilterDefinition[]): readonly FilterDefinition[] {
+  const inline = filters.filter((filter) => !filter.inFilters);
+  return [...inline.filter((filter) => filter.icon), ...inline.filter((filter) => !filter.icon)];
 }
 
 function dataWindow(chips: readonly FilterDefinition[]): string | undefined {
@@ -83,31 +75,64 @@ function Controls({
   actions,
   afterView = false,
 }: Omit<TableToolbarProps, 'view' | 'lead'> & { afterView?: boolean }) {
-  const { chips, menu } = placeFilters(filters);
-  const set = filters.filter((filter) => !filter.isDefault);
-  const windowLabel = dataWindow(chips);
+  const windowLabel = dataWindow(inlineOrder(filters));
   return (
     <>
-      {search ? <div className="rail:max-w-64 min-w-0 grow basis-50">{search}</div> : null}
+      {search ? (
+        <div className="rail:max-w-64 phone:basis-full min-w-0 grow basis-50">{search}</div>
+      ) : null}
+      {filters.length > 0 ? <ChipGroup filters={filters} /> : null}
+      {windowLabel || status !== undefined ? (
+        <StripMeta windowLabel={windowLabel} status={status} afterView={afterView} />
+      ) : null}
+      {actions ? (
+        <div className="phone:ms-0 phone:justify-start phone:flex-wrap ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2">
+          {actions}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function ChipGroup({ filters }: Readonly<{ filters: readonly FilterDefinition[] }>) {
+  const grouped = filters.filter((filter) => filter.inFilters);
+  const pinned = grouped.length > 1 ? grouped : [];
+  const inline = [...inlineOrder(filters), ...grouped.filter((filter) => !pinned.includes(filter))];
+  const { ref, kept } = useKeptFilters(inline, pinned.length > 0);
+  const chips = inline.slice(0, kept);
+  const menu = [...inline.slice(kept), ...pinned];
+  const set = filters.filter((filter) => !filter.isDefault);
+  return (
+    <div
+      ref={ref}
+      data-filter-chips=""
+      className="phone:basis-full flex min-w-0 grow basis-0 flex-wrap items-center gap-2"
+    >
       {chips.map((filter) => (
-        <div key={filter.id} className="flex min-w-0 shrink-0">
+        <div key={filter.id} data-filter-slot={filter.id} className="flex min-w-0 shrink-0">
           <FilterChip filter={filter} />
         </div>
       ))}
       {menu.length > 0 ? (
-        <div className="flex min-w-0 shrink-0">
+        <div data-filter-menu="" className="flex min-w-0 shrink-0">
           <FiltersMenu filters={menu} />
         </div>
       ) : null}
       {menu
         .filter((filter) => !filter.isDefault)
         .map((filter) => (
-          <div key={filter.id} className="flex min-w-0 shrink-0">
+          <div
+            key={filter.id}
+            {...(pinned.includes(filter)
+              ? { 'data-filter-trailing': '' }
+              : { 'data-filter-value': filter.id })}
+            className="flex min-w-0 shrink-0"
+          >
             <ValueChip filter={filter} />
           </div>
         ))}
       {set.length > 0 ? (
-        <div className="flex shrink-0">
+        <div data-filter-trailing="" className="flex shrink-0">
           <Button
             variant="quiet"
             onClick={() =>
@@ -121,15 +146,7 @@ function Controls({
           </Button>
         </div>
       ) : null}
-      {windowLabel || status !== undefined ? (
-        <StripMeta windowLabel={windowLabel} status={status} afterView={afterView} />
-      ) : null}
-      {actions ? (
-        <div className="phone:ms-0 phone:justify-start phone:flex-wrap ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2">
-          {actions}
-        </div>
-      ) : null}
-    </>
+    </div>
   );
 }
 

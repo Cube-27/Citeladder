@@ -110,9 +110,7 @@ export function DimensionsTable({
         return (
           <TableRow key={dimension.key}>
             <TableCell>
-              <ClampText lines={1} emphasis>
-                {dimension.label}
-              </ClampText>
+              <ClampText lines={1}>{dimension.label}</ClampText>
             </TableCell>
             <TableCell numeric>
               <DimensionScore dimension={dimension} />

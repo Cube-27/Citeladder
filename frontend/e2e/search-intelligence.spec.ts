@@ -7,12 +7,13 @@ const id = (value: number) => `33333333-3333-4333-8333-${String(value).padStart(
 async function chooseSaved(page: Page, label: string, option: string) {
   const name = new RegExp(`^${label}:`);
   const all = page.getByRole('button', { name: /^Filters/ });
-  await expect(all.or(page.getByRole('button', { name })).first()).toBeVisible();
-  if (await all.isVisible()) {
+  const chip = page.getByRole('button', { name });
+  await expect(all.or(chip).first()).toBeVisible();
+  if (await chip.isVisible()) {
+    await chip.click();
+  } else {
     await all.click();
     await page.getByRole('menuitem', { name }).click();
-  } else {
-    await page.getByRole('button', { name }).click();
   }
   await page.getByRole('menuitemradio', { name: option }).click();
 }
@@ -236,7 +237,15 @@ for (const viewport of [
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       viewport.width,
     );
-    await page.getByRole('button', { name: 'New analysis' }).click();
+    const start = page.getByRole('button', { name: 'New analysis' });
+    const more = page.getByRole('button', { name: 'More' });
+    await expect(start.or(more).first()).toBeVisible();
+    if (await start.isVisible()) {
+      await start.click();
+    } else {
+      await more.click();
+      await page.getByRole('menuitem', { name: 'New analysis' }).click();
+    }
     await expect(page.getByRole('combobox', { name: 'Market' })).toHaveText('Australia');
     expect(writes).toEqual([]);
   });

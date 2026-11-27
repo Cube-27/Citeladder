@@ -1,13 +1,3 @@
-@media (max-width: 899px) {
-  :root:not([data-public-surface]) {
-    --spacing-gutter: 16px;
-  }
-}
-@media (min-width: 760px) {
-  [data-main-column] {
-    --spacing-gutter: 24px;
-  }
-}
 @media (min-width: 900px) {
   :root:not([data-public-surface]) {
     --spacing-panel-inset: 8px;
@@ -587,6 +577,9 @@ label {
   --state-action-gap: 12px;
   padding: calc(var(--spacing) * 4);
 }
+:root:not([data-public-surface]) [data-state-frame]:not(:first-child) {
+  padding-block-start: 0;
+}
 
 .table-frame tbody > tr > :is(td, th) {
   box-shadow: inset 0 calc(-1 * var(--rule-width)) 0 var(--color-rule);
@@ -667,6 +660,12 @@ label {
   grid-row: 2;
   align-self: end;
   min-height: var(--text-figure--line-height);
+}
+[data-figure-value] > [data-figure-delta] {
+  flex-shrink: 999;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 [data-figure-value] [data-absence] {
   font-size: var(--text-body);

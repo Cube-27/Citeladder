@@ -27,6 +27,15 @@ import { ArrowLink, TextLink } from './text-link';
 import { TooltipProvider } from './tooltip';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
+function measuredRow(available: number) {
+  const chip = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100);
+  const row = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(available);
+  return () => {
+    chip.mockRestore();
+    row.mockRestore();
+  };
+}
+
 describe('SectionHeader actions', () => {
   it('keeps the actions in the header beside the title', () => {
     render(
@@ -360,7 +369,7 @@ describe('TableToolbar', () => {
       );
     expect(follows).toEqual([true, true, true, true]);
   });
-  it('keeps at most four icon filters in the row and the rest in Filters, a lone other one as its own chip', () => {
+  it('keeps every filter inline while they fit and folds the overflow into Filters with its set values beside it', () => {
     const filter = (id: string, value = 'all', icon?: FilterIcon) =>
       choiceFilter({
         id,
@@ -384,20 +393,21 @@ describe('TableToolbar', () => {
       filter('Market', 'all', 'market'),
       filter('Topic', 'one', 'topic'),
     ];
-    const { rerender } = render(
-      <FilterBar
-        filters={[filter('Kind', 'one'), ...icons, filter('Prompts', 'all', 'prompts')]}
-      />,
-    );
-    for (const name of ['Period: All', 'Engines: All', 'Market: All', 'Topic: One'])
+    const row = <FilterBar filters={[filter('Kind', 'one'), ...icons]} />;
+    const { unmount } = render(row);
+    for (const name of ['Period: All', 'Engines: All', 'Market: All', 'Topic: One', 'Kind: One'])
       expect(screen.getByRole('button', { name })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Prompts: All' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Remove Kind filter' })).toBeInTheDocument();
-
-    rerender(<FilterBar filters={[...icons, filter('Status')]} />);
-    expect(screen.getByRole('button', { name: 'Status: All' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
+    unmount();
+
+    const restore = measuredRow(600);
+    render(row);
+    restore();
+    expect(screen.getByRole('button', { name: 'Period: All' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Engines: All' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Filters (2)' })).toBeInTheDocument();
+    for (const name of ['Remove Topic filter', 'Remove Kind filter'])
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
   });
   it('clears every set filter at once, and a value chip resets its own', async () => {
     function Row() {
@@ -438,7 +448,9 @@ describe('TableToolbar', () => {
       );
     }
     const user = userEvent.setup();
+    const restore = measuredRow(150);
     render(<Row />);
+    restore();
     await user.click(screen.getByRole('button', { name: 'Remove Kind filter' }));
     expect(screen.getByTestId('state')).toHaveTextContent('30d null open');
     await user.click(screen.getByRole('button', { name: 'Clear' }));

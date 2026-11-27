@@ -13,6 +13,7 @@ import * as TabsPrimitive from '@radix-ui/react-tabs';
 import { ScrollFrame } from '@/components/ui/scroll-edges';
 import { useOnPage } from '@/components/ui/section';
 import { sidebarNavRowClasses } from '@/components/ui/sidebar';
+import { useMediaQuery } from '@/lib/use-media-query';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -50,7 +51,7 @@ const TAB_KIND = {
     current: 'tab-line',
   },
   segment: {
-    base: 'rounded-tray-item h-7 px-4',
+    base: 'rounded-tray-item h-control-sm px-4',
     current: 'bg-nav-current shadow-card',
   },
 } as const;
@@ -171,12 +172,13 @@ export function TabsRoot<T extends string>({
   children: ReactNode;
 }>) {
   const inPanel = !useOnPage();
+  const railed = useMediaQuery('(min-width: 981px)') && orientation === 'vertical';
   return (
     <ActiveTabContext value={value}>
       <TabsPrimitive.Root
         value={value}
         onValueChange={(next) => onValueChange(next as T)}
-        orientation={orientation}
+        orientation={railed ? 'vertical' : 'horizontal'}
         data-slot-host={inPanel && orientation !== 'vertical' ? '' : undefined}
         className={cn(TABS_LAYOUT[layout], className)}
       >
@@ -195,13 +197,18 @@ export function TabRow<T extends string>({ items, ariaLabel, onIntent }: TabRowP
 }
 
 const railRow = (current: boolean, onPage: boolean) =>
-  sidebarNavRowClasses(current, !onPage && current ? 'bg-state-fill shadow-none' : undefined);
+  sidebarNavRowClasses(
+    current,
+    cn('desktop:w-full w-auto', !onPage && current && 'bg-state-fill shadow-none'),
+  );
+
+const RAIL_LIST = 'desktop:flex-col desktop:overflow-visible flex min-w-0 gap-0.5 overflow-x-auto';
 
 export function TabRail<T extends string>({ items, ariaLabel, onIntent }: TabRowProps<T>) {
   const active = useContext(ActiveTabContext);
   const onPage = useOnPage();
   return (
-    <TabsPrimitive.List aria-label={ariaLabel} className="flex min-w-0 flex-col gap-0.5">
+    <TabsPrimitive.List aria-label={ariaLabel} className={RAIL_LIST}>
       {items.map((item) => (
         <TabsPrimitive.Trigger
           key={item.value}
@@ -227,11 +234,7 @@ export function HeldTabRail({
   const current = selected !== undefined && labels.includes(selected) ? selected : labels[0];
   const onPage = useOnPage();
   return (
-    <div
-      aria-hidden
-      data-held-tabs=""
-      className="pointer-events-none flex min-w-0 flex-col gap-0.5"
-    >
+    <div aria-hidden data-held-tabs="" className={cn('pointer-events-none', RAIL_LIST)}>
       {labels.map((label) => (
         <span
           key={label}

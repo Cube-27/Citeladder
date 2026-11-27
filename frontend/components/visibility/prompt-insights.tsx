@@ -16,7 +16,6 @@ import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/compone
 import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
 import type { ObservedCompetitor } from '@citeladder/contracts';
-import { ProjectLink } from '@/components/ui/project-link';
 import { UserPlus, X } from '@/lib/icons';
 import { brandDiscoveryQueries } from '@/lib/api/brand-discoveries';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -72,15 +71,7 @@ export function CompetitorSuggestions({
   return (
     <TitledSection title={TITLE} description={sectionDescription(tracked, limit)}>
       {canWrite && full && rows.length > 0 ? (
-        <Notice
-          tone="info"
-          standing
-          action={
-            <Button variant="secondary" asChild>
-              <ProjectLink href="/agent/context?tab=competitors">Edit competitors</ProjectLink>
-            </Button>
-          }
-        >
+        <Notice tone="info" standing>
           {`Your project tracks the maximum of ${formatCount(limit)} competitors. Remove one to accept a suggestion.`}
         </Notice>
       ) : null}
@@ -111,18 +102,20 @@ export function CompetitorSuggestions({
             <TableCell numeric>{engines(candidate)}</TableCell>
             {canWrite ? (
               <TableActionsCell>
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    acceptMutation.mutate(candidate.id, {
-                      onSuccess: () => notify(`${candidate.name} added to your competitors`),
-                    })
-                  }
-                  disabled={deciding || full}
-                  aria-label={`Accept ${candidate.name} as a competitor`}
-                >
-                  Accept
-                </Button>
+                {full ? null : (
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      acceptMutation.mutate(candidate.id, {
+                        onSuccess: () => notify(`${candidate.name} added to your competitors`),
+                      })
+                    }
+                    disabled={deciding}
+                    aria-label={`Accept ${candidate.name} as a competitor`}
+                  >
+                    Accept
+                  </Button>
+                )}
                 <Button
                   variant="quiet"
                   onClick={() =>

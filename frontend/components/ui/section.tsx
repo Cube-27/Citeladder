@@ -45,14 +45,16 @@ export function SectionHeader({
 >) {
   if (!actions) {
     return (
-      <header {...props} className="grid min-w-0 gap-1">
+      <header {...props} data-section-heading="" className="grid min-w-0 gap-1">
         {children}
       </header>
     );
   }
   return (
     <header {...props} className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-      <div className="grid min-w-0 flex-1 basis-40 grid-cols-1 gap-1">{children}</div>
+      <div data-section-heading="" className="grid min-w-0 flex-1 basis-40 grid-cols-1 gap-1">
+        {children}
+      </div>
       <div
         data-section-actions=""
         className="min-h-control-md -my-2 flex max-w-full min-w-0 flex-wrap items-center gap-2"
@@ -98,8 +100,8 @@ export function SectionDescription({
   ...props
 }: Readonly<Omit<ComponentPropsWithoutRef<'p'>, 'className' | 'style'>>) {
   return (
-    <p {...props} className="text-body text-ink-2 max-w-copy">
-      {children}
+    <p {...props} data-section-description="" className="text-body text-ink-2">
+      <span>{children}</span>
     </p>
   );
 }

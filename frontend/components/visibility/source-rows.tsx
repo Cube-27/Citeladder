@@ -1,5 +1,4 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { Icon } from '@/components/ui/icon';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
@@ -32,7 +31,6 @@ import {
   sortProps,
 } from '@/components/visibility/source-cells';
 import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
-import { ChevronRight } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { standingLabel } from '@citeladder/contracts/page-labels';
 import { pageFormatBasis } from '@/lib/visibility/vocabulary';
@@ -51,10 +49,7 @@ export function OpenSource({
 }: Readonly<{ onOpen: () => void; children: ReactNode }>) {
   return (
     <Pressable onClick={onOpen} box="block">
-      <Inline as="span" justify="between">
-        <span className="min-w-0">{children}</span>
-        <Icon icon={ChevronRight} tone="ink-2" />
-      </Inline>
+      {children}
     </Pressable>
   );
 }

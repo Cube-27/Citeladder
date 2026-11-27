@@ -39,7 +39,6 @@ import {
   type PromptMeasurements,
 } from './use-latest-prompt-measurements';
 import { ReportPage } from '@/components/templates/report-page';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
 
 import {
   PromptActions,
@@ -184,13 +183,6 @@ function measuredChoicesFor({
     brands: brandOptions(project),
     sources: sourceOptions(measurements?.values() ?? [], filters.sources),
   };
-}
-
-function libraryFilterBar(
-  hasPrompts: boolean,
-  controls: FilterBarProps,
-): FilterBarProps | undefined {
-  return hasPrompts ? controls : undefined;
 }
 
 function libraryTabs(
@@ -363,7 +355,21 @@ export function PromptLibrary() {
       <>
         <PromptTable
           prompts={visible}
-          search={<PromptSearch value={search} onValueChange={setSearch} />}
+          toolbar={{
+            search: <PromptSearch value={search} onValueChange={setSearch} />,
+            ...promptFilterControls({
+              filters,
+              onFiltersChange: setFilters,
+              personas,
+              measured: measuredChoices,
+              topic: topicFilter({
+                topics,
+                selectedTopicId,
+                onSelect: setSelectedTopicId,
+                manage: edits?.topics,
+              }),
+            }),
+          }}
           actions={edits?.rows}
           onOpenAnswer={(prompt: Prompt, answer: PromptAnswerRef) =>
             evidence.open({ ...answer, promptId: prompt.id, promptText: prompt.text })
@@ -410,7 +416,6 @@ export function PromptLibrary() {
             selected={STATUS_LABELS[statusFilter]}
           />
         }
-        filters={{}}
       >
         <StateBlock kind="loading" label="Loading prompts…" shape={{ kind: 'table', columns: 8 }} />
       </ReportPage>
@@ -422,21 +427,6 @@ export function PromptLibrary() {
       <ReportPage
         actions={<PromptActions add={addPrompts} inEmptyState={!hasPrompts && !failedEmpty} />}
         tabs={libraryTabs(hasPrompts, statusCounts)}
-        filters={libraryFilterBar(
-          hasPrompts,
-          promptFilterControls({
-            filters,
-            onFiltersChange: setFilters,
-            personas,
-            measured: measuredChoices,
-            topic: topicFilter({
-              topics,
-              selectedTopicId,
-              onSelect: setSelectedTopicId,
-              manage: edits?.topics,
-            }),
-          }),
-        )}
       >
         <>
           {error && !failedEmpty ? (
