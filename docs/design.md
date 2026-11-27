@@ -41,18 +41,24 @@ The lint enforces this and fails CI (`vp lint`; config in
   restyling `className` on a `components/ui` primitive. Each subdomain's
   theme is the `components.json` nearest the file.
 - **`design/*`** (the [local plugin](../frontend/scripts/design-lint/plugin.mjs)):
-  `plain-element` (outside `components/ui`, a plain element's `className`
-  carries layout structure only: no spacing, size, colour, type, shape, effect
-  or motion class, no `*Classes()` helper, nothing
-  unreadable), `reset-survivor` (`leading-<n>`, `text-<role>/<n>`, `z-<n>`,
-  `opacity-<n>`, `duration-<n>`, `delay-<n>`), `colour-literal` (a hex or
-  colour function in any string), `monochrome-colour` (`white`/`black`),
-  `surface-variant` (a `[[data-public-surface]_&]:` variant outside
-  `components/ui`), `raw-media` (outside `components/ui` and the website, an
-  `<img>` or a sized `<svg>`: logos and engine marks render through
-  `BrandMark`, sized from the icon roles and never taller than their line, so
-  a mark cannot set a row's height) and `astro-class` (value classes in Astro
-  markup).
+  `plain-element` (outside `components/ui`: a plain element's `className`
+  carries layout structure only, with no spacing, size, colour, type, shape,
+  effect or motion class, no `*Classes()` helper and nothing unreadable; a
+  `components/ui` element takes no margin, width or size step; any other
+  component's `className` is held to the plain-element check; a `style` key
+  sets no role property; and no element spreads forwarded props or an object
+  holding `className` or `style`), `reset-survivor` (`leading-<n>`,
+  `text-<role>/<n>`, `z-<n>`, `opacity-<n>`, `duration-<n>`, `delay-<n>`),
+  `colour-literal` (a hex or colour function in any string),
+  `monochrome-colour` (`white`/`black`), `surface-variant` (a
+  `[[data-public-surface]_&]:` variant outside `components/ui`),
+  `arbitrary-breakpoint` (a `min-[…]:`, `max-[…]:` or `@[…]:` variant; use a
+  named breakpoint or container size), `static-class` (a `className` template
+  literal with expressions: a variant is a lookup map of whole class names or
+  `cn()`), `raw-media` (outside `components/ui` and the website, an `<img>` or
+  a sized `<svg>`: logos and engine marks render through `BrandMark`, sized
+  from the icon roles and never taller than their line, so a mark cannot set a
+  row's height) and `astro-class` (value classes in Astro markup).
 
 There is no suppressions file and no baseline: a finding is fixed at its
 source, by a role token or a primitive prop. No
@@ -64,14 +70,20 @@ every rule (`scripts/frontend/design-lint.test.mjs`).
 `--text-color-*` role on the grounds of its palette at 4.5:1, marks 3:1, both
 themes), the app's Tailwind `@source` list and the CSS value rule
 ([`design-system-css-values.mjs`](../frontend/scripts/design-system-css-values.mjs)),
-and reports breaks of the [composition rules](#composition) as a warning that
-never fails CI (AR-25). The CSS value rule reads every `.css` file and Astro
-`<style>`, `globals.css` rule blocks included: outside `@theme`, custom
-property declarations, `@keyframes` and `@font-face`, a colour, type, z-index,
-motion, shadow, spacing or border-width value holds no hex, colour function,
-`px`/`rem`/`em`/`ms`/`s` length or bare z-index, weight or line-height
-number. Tokens, keywords, `0`, unitless multipliers, percentages and gradient
-stops pass; `forced-colors` and `prefers-reduced-motion` blocks are exempt.
+and reports globals rules keyed on an ancestor section or dialog (a
+[composition](#composition) break) as a warning that never fails CI (AR-25).
+The CSS value rule reads every `.css` file and Astro `<style>`, `globals.css`
+rule blocks included. Outside `@theme`, `@keyframes`, `@font-face` and
+`@property`, a colour, type, font-family, z-index, opacity, motion, shadow,
+spacing, size, radius or border-width value holds no hex, named colour,
+colour function, `px`/`rem`/`em`/`ms`/`s` length, bare z-index, weight,
+line-height or opacity number, font name, `--ramp-*` read or raw `var()`
+fallback. Tokens, keywords, `0`, opacity `1`, unitless multipliers,
+percentages and gradient stops pass; `forced-colors` and
+`prefers-reduced-motion: reduce` blocks are exempt. A custom property is a
+token only in a token file or a `:root` rule; anywhere else it is checked
+like any value. The token files (`globals.css` and `public-surface.css`) alone
+read the ramps.
 
 The website (marketing and docs) composes the same primitives, and its own
 blocks are `cl-*` classes whose CSS, in the side sheets the marketing and docs
@@ -119,6 +131,9 @@ word, never as a large fill. Two exceptions (owner, 2026-11-22): a Site health
 page score, printed in `negative` below 50 and `warning` below 80, and
 Perception › Brand's sentiment donut and attribute bars (AR-19). Data: `data-you` is the accent, `data-rival-1`
 to `-4` ink then cool hues in rank order, `data-other` the grouped rest.
+The Search Console metric tiles print white figures (`metric-ink`) on their
+clicks and CTR fills, below 4.5:1 (owner, 2026-11-25); the contrast check
+measures `metric-ink` only on the impressions fill.
 
 ## Type
 
@@ -346,9 +361,13 @@ holds the depth rules.
   [`flow-frame.tsx`](../frontend/components/ui/flow-frame.tsx), which boot
   screens import, and in `flow-chrome.tsx` and `record-chrome.tsx`, which
   only lazy routes import: a module a boot file imports ships whole in the
-  eager bundle. Templates compose them and hold no classes. `Stack` and `Inline` take
-  typed props only, with no `className`; restyling any other primitive
-  through `className` is a lint finding.
+  eager bundle. Templates compose them and hold no classes. `Stack`,
+  `Inline`, the `Section` family, `Button` and its icon and action forms,
+  `Pressable`, `TextLink`, `ClampText`, `Icon`, `Input`, `SearchField`,
+  `Select`, `Field`, `Checkbox` and `Switch` take typed props only, with no `className`: a placement a screen
+  needs (fill, fit, start, a fixed width) is a named `box` or `width` value
+  on the primitive. Restyling any other primitive through `className` is a
+  lint finding.
   No page adds padding, margin, border, fill, radius or shadow around one; no
   globals rule depends on what contains what. A primitive that needs its
   depth reads `SurfaceContext` (`useOnPage()`), never a CSS ancestor. A
