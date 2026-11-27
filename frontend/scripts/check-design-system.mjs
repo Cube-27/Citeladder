@@ -9,7 +9,7 @@ import {
 } from './design-system-composition.mjs';
 import { cssValueFindings, styleBlockFindings } from './design-system-css-values.mjs';
 import { appSourceViolations } from './design-system-source-checks.mjs';
-import { UI_SOURCE, uiValueFindings } from './design-system-ui-values.mjs';
+import { SCREEN_SOURCE, screenValueFindings } from './design-system-screen-values.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const tokenOwners = TOKEN_FILES.map((file) => join(root, ...file.split('/')));
@@ -45,7 +45,7 @@ for (const path of files(root)) {
     continue;
   }
   if (tokenOwners.includes(path)) continue;
-  if (UI_SOURCE.test(label)) violations.push(...uiValueFindings(label, source));
+  if (SCREEN_SOURCE.test(label)) violations.push(...screenValueFindings(label, source));
   if (/\.tsx?$/.test(label) && !/\.test\.tsx?$/.test(label)) scriptSources.push({ label, source });
 }
 

@@ -27,6 +27,7 @@ export const CHART_RULE_DASH = {
   'plot-cursor': '3 3',
   cursor: '4 4',
   bridge: '4 4',
+  comparison: '4 4',
   connector: '3 4',
   version: '4 3',
   event: '2 3',

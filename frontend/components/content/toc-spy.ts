@@ -1,5 +1,7 @@
 const linkId = (link: HTMLAnchorElement) => decodeURIComponent(link.hash.slice(1));
 
+const END_SLACK_PX = 4;
+
 const SCROLL_KEYS = new Set(['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' ']);
 
 function reveal(link: HTMLAnchorElement) {
@@ -98,7 +100,7 @@ export function mountTocSpy(root: Document = document): void {
       atEnd = entries.some((entry) => entry.isIntersecting) && view.scrollY > 0;
       mark();
     },
-    { rootMargin: '0px 0px 4px 0px' },
+    { rootMargin: `0px 0px ${END_SLACK_PX}px 0px` },
   ).observe(end);
 
   view.addEventListener(

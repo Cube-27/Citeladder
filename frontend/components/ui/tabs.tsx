@@ -48,11 +48,11 @@ function useRevealSelected(selected: string | null) {
 
 const TAB_KIND = {
   tab: {
-    base: 'min-h-tab self-stretch px-tab-x',
+    base: 'min-h-8 self-stretch px-4',
     current: 'tab-line',
   },
   segment: {
-    base: 'rounded-tray-item h-control-sm px-tab-x',
+    base: 'rounded-tray-item h-control-sm px-4',
     current: 'bg-nav-current shadow-card',
   },
 } as const;
@@ -81,7 +81,7 @@ const TAB_TRACK =
   'inline-flex min-h-control-md max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-control p-tray-inset scrollbar-none [&::-webkit-scrollbar]:hidden';
 
 const TAB_FACE =
-  'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-tray-item border border-transparent px-tab-face-x text-label whitespace-nowrap transition-tint duration-fast focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-disabled';
+  'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-tray-item border border-transparent px-3 text-label whitespace-nowrap transition-tint duration-fast focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-disabled';
 
 const TAB_FACE_STATE = {
   selected: 'bg-panel text-ink font-emphasis',

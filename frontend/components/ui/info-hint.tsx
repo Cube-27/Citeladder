@@ -21,7 +21,7 @@ export function InfoHint({ label, children }: Readonly<{ label: string; children
         onFocus={() => {
           if (focusFromKeyboard()) setOpen(true);
         }}
-        className="focus-ring text-ink-2 hover:text-ink size-hint -m-2 inline-flex items-center justify-center align-middle"
+        className="focus-ring text-ink-2 hover:text-ink -m-2 inline-flex size-8 items-center justify-center align-middle"
       >
         <Icon icon={Info} size="flush" />
       </PopoverPrimitive.Trigger>

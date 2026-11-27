@@ -18,17 +18,17 @@
 }
 
 [data-sidebar-scroll][data-fade-bottom] {
-  mask-image: linear-gradient(to bottom, black calc(100% - var(--fade-sidebar)), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 32px), transparent);
 }
 [data-sidebar-scroll][data-fade-top] {
-  mask-image: linear-gradient(to top, black calc(100% - var(--fade-sidebar)), transparent);
+  mask-image: linear-gradient(to top, black calc(100% - 32px), transparent);
 }
 [data-sidebar-scroll][data-fade-top][data-fade-bottom] {
   mask-image: linear-gradient(
     to bottom,
     transparent,
-    black var(--fade-sidebar),
-    black calc(100% - var(--fade-sidebar)),
+    black 32px,
+    black calc(100% - 32px),
     transparent
   );
 }
@@ -527,9 +527,9 @@ label {
 }
 :root:not([data-public-surface]) .table-frame thead th {
   height: var(--table-head-height);
-  font-size: var(--text-table-head);
-  line-height: var(--text-table-head--line-height);
-  font-weight: var(--text-table-head--font-weight);
+  font-size: var(--text-caption-strong);
+  line-height: var(--text-caption-strong--line-height);
+  font-weight: var(--text-caption-strong--font-weight);
   letter-spacing: normal;
   text-transform: none;
   color: var(--text-color-ink-2);
@@ -573,8 +573,8 @@ label {
 }
 
 :root:not([data-public-surface]) [data-state-frame] {
-  --state-title-gap: var(--spacing-item);
-  --state-action-gap: var(--spacing-group);
+  --state-title-gap: 8px;
+  --state-action-gap: 12px;
   padding: calc(var(--spacing) * 4);
 }
 :root:not([data-public-surface]) [data-state-frame]:not(:first-child) {
@@ -618,17 +618,17 @@ label {
 }
 
 [data-scroll-frame][data-scroll-end] [data-scroll-content]:not(:focus-visible) {
-  mask-image: linear-gradient(to left, transparent, black var(--fade-scroll));
+  mask-image: linear-gradient(to left, transparent, black 24px);
 }
 [data-scroll-frame][data-scroll-start] [data-scroll-content]:not(:focus-visible) {
-  mask-image: linear-gradient(to right, transparent, black var(--fade-scroll));
+  mask-image: linear-gradient(to right, transparent, black 24px);
 }
 [data-scroll-frame][data-scroll-start][data-scroll-end] [data-scroll-content]:not(:focus-visible) {
   mask-image: linear-gradient(
     to right,
     transparent,
-    black var(--fade-scroll),
-    black calc(100% - var(--fade-scroll)),
+    black 24px,
+    black calc(100% - 24px),
     transparent
   );
 }

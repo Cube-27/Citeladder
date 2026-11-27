@@ -69,7 +69,7 @@ const BUTTON_BOX = {
   'rail-hidden': 'rail:hidden',
   'rail-hidden-fixed': 'rail:hidden shrink-0',
   corner: 'absolute top-6 right-6',
-  pager: 'size-pager min-h-pager',
+  pager: 'size-8 min-h-8',
   'hide-split': 'column-split:hidden',
   'rail-toggle':
     'rail:inline-flex not-labelled:size-rail-button hidden shrink-0 self-center in-data-[nav-drawer]:hidden',

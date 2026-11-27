@@ -2,6 +2,7 @@ import type { ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
 
 import type { FilterDefinition, FilterIcon } from '@/components/ui/all-filters';
 import { focusFieldOnEntry, FilterOptions } from '@/components/ui/filter-options';
+import { IconButton } from '@/components/ui/button';
 import { TRIGGER_BOX } from '@/components/ui/input';
 import { Menu, MenuContent, MenuTrigger } from '@/components/ui/menu';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -125,14 +126,13 @@ export function ValueChip({ filter }: Readonly<{ filter: FilterDefinition }>) {
     <Tooltip content={filter.label}>
       <span className="rounded-control text-body text-ink bg-state-fill min-h-control-md pe-tray-inset inline-flex max-w-full min-w-0 shrink-0 items-center gap-1 border border-transparent ps-3">
         <span className="min-w-0 truncate">{filter.valueLabel}</span>
-        <button
-          type="button"
-          aria-label={`Remove ${filter.label} filter`}
+        <IconButton
+          icon={X}
+          label={`Remove ${filter.label} filter`}
+          shape="close"
+          tooltip={false}
           onClick={filter.reset}
-          className="focus-ring rounded-tray-item text-ink-2 hover:text-ink hover:overlay-hover size-chip-clear flex shrink-0 items-center justify-center"
-        >
-          <X className="size-3" aria-hidden />
-        </button>
+        />
       </span>
     </Tooltip>
   );

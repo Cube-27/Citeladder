@@ -27,7 +27,7 @@ export function menuItemClasses({
   className,
 }: Readonly<{ danger?: boolean; className?: string }> = {}) {
   return cn(
-    'press press-soft focus-ring text-body text-ink relative flex min-h-control-md w-full shrink-0 cursor-pointer items-center gap-2 rounded-popup-item px-menu-item-x py-menu-item-y text-left select-none',
+    'press press-soft focus-ring text-body text-ink relative flex min-h-control-md w-full shrink-0 cursor-pointer items-center gap-2 rounded-popup-item px-2 app:px-2.5 py-1 text-left select-none',
     'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-disabled',
     danger
       ? 'text-negative data-[highlighted]:bg-negative-wash hover:bg-negative-wash data-[disabled]:hover:bg-transparent app:data-[highlighted]:bg-transparent app:hover:bg-transparent app:data-[highlighted]:overlay-hover app:hover:overlay-hover [&_svg]:text-negative'

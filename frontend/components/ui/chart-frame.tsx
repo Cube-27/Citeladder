@@ -164,7 +164,7 @@ export function ChartTipSheet({
       aria-hidden
       className={cn(
         SHEET_FACE,
-        'rounded-card pointer-events-none absolute left-tip-x top-tip-y z-float flex w-chart-tip flex-col gap-1 p-chart-tip-pad',
+        'rounded-card pointer-events-none absolute left-tip-x top-tip-y z-float flex w-54 flex-col gap-1 p-3',
       )}
       style={{ '--tip-x': `${chartTipLeft(x, frameWidth)}px`, '--tip-y': `${Math.round(top)}px` }}
     >

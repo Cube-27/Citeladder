@@ -2,6 +2,7 @@ import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { CHART_HEIGHT_PX, chartTicks, useChartWidth } from '@/components/ui/chart';
 import { ChartFrame } from '@/components/ui/chart-frame';
+import { CHART_MARKER, CHART_RULE_DASH, SERIES_WEIGHT } from '@/components/ui/chart-geometry';
 import { AXIS_PROPS, ChartText, LINE_CURSOR, LineTooltipCard } from '@/components/ui/chart-tooltip';
 import { METRIC_COLOR } from '@/components/ui/metric-tiles';
 import { SeriesTable, shownWith, type TrendPoint } from '@/components/ui/series-data';
@@ -209,8 +210,8 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
               name={`${entry.label} (comparison)`}
               type="linear"
               stroke={METRIC_COLOR[entry.key]}
-              strokeWidth={1.5}
-              strokeDasharray="4 4"
+              strokeWidth={SERIES_WEIGHT.series}
+              strokeDasharray={CHART_RULE_DASH.comparison}
               dot={false}
               activeDot={false}
               isAnimationActive={false}
@@ -223,9 +224,9 @@ function MetricPlot({ plotted }: Readonly<{ plotted: readonly ChartSeries[] }>) 
             name={entry.label}
             type="linear"
             stroke={METRIC_COLOR[entry.key]}
-            strokeWidth={2}
+            strokeWidth={SERIES_WEIGHT.you}
             dot={false}
-            activeDot={{ r: 4, strokeWidth: 0, fill: METRIC_COLOR[entry.key] }}
+            activeDot={{ r: CHART_MARKER.active, strokeWidth: 0, fill: METRIC_COLOR[entry.key] }}
             isAnimationActive={false}
           />,
         ])}

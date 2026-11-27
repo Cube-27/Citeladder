@@ -31,9 +31,9 @@ motion. A raw value, or a token class put straight on an element by a page,
 lets a later design change miss that page, so the page drifts. Atomic order:
 role tokens (the colour layers above and the type ladders below), then the
 primitives in `components/ui`, which alone turn roles into classes, then
-screens, which compose primitives and pass content. A new look, even one used
-once, adds a role token (and a primitive prop if a screen needs to choose it);
-it never adds a raw value.
+screens, which compose primitives and pass content. A look a screen needs adds a
+role token (and a primitive prop if a screen needs to choose it), never a raw
+value; a size only one primitive uses stays a plain value inside it.
 
 The lint enforces this and fails CI (`vp lint`; config in
 [`vp-shared-config.ts`](../frontend/vp-shared-config.ts)):
@@ -92,16 +92,22 @@ read the ramps.
 
 The same rule reads the boot shell's `<style>` in `apps/app/index.html`, so the
 cold-load frame reads the live mode tokens (Tailwind keeps a theme variable the
-page names in `var()`) and cannot drift from the shell it stands in for. The UI
-value rule ([`design-system-ui-values.mjs`](../frontend/scripts/design-system-ui-values.mjs))
-reads every `components/ui` source: a string or template part holds no
-`px`/`rem`/`em` length, and `strokeWidth`, `strokeDasharray`, `fontSize` and
-`r` take a named constant (chart geometry lives in
-[`chart-geometry.ts`](../frontend/components/ui/chart-geometry.ts)), never a bare
-number. Tailwind scale steps (`gap-2`) are multipliers of `--spacing` and pass;
-a computed position (`${x}px`) passes. A new size role is a `--spacing-*` or
-`--container-*` token registered in `lib/utils.ts` for tailwind-merge; the two
-never share a name, because `w-<name>` resolves to the spacing role first.
+page names in `var()`) and cannot drift from the shell it stands in for.
+
+Screens and pages hold no raw size or colour; a `components/ui` primitive holds
+no raw colour, and a raw size only where that component alone uses it: a value
+two components or pages share is a role, and a component built from another
+primitive composes it instead of sizing it (AR-26). The screen value rule
+([`design-system-screen-values.mjs`](../frontend/scripts/design-system-screen-values.mjs))
+reads every app source outside `components/ui` and the website: a string or
+template part holds no non-zero `px`/`rem`/`em` length, and `strokeWidth`,
+`strokeDasharray`, `fontSize` and `r` take a named constant (chart geometry
+lives in [`chart-geometry.ts`](../frontend/components/ui/chart-geometry.ts),
+media queries in [`breakpoints.ts`](../frontend/lib/breakpoints.ts)). Tailwind
+scale steps (`gap-2`) and computed values (`${x}px`) pass. A new size role is a
+`--spacing-*` or `--container-*` token registered in `lib/utils.ts` for
+tailwind-merge; the two never share a name, because `w-<name>` resolves to the
+spacing role first.
 
 The website (marketing and docs) composes the same primitives, and its own
 blocks are `cl-*` classes whose CSS, in the side sheets the marketing and docs

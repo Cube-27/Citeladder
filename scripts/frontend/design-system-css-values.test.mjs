@@ -5,7 +5,7 @@ import {
   styleBlockFindings,
   cssValueFindings,
 } from '../../frontend/scripts/design-system-css-values.mjs';
-import { uiValueFindings } from '../../frontend/scripts/design-system-ui-values.mjs';
+import { screenValueFindings } from '../../frontend/scripts/design-system-screen-values.mjs';
 
 const lines = (findings) => findings.map((finding) => finding.split(': ')[0]);
 
@@ -79,7 +79,7 @@ test('an HTML or Astro style block is checked on its own lines', () => {
   assert.deepEqual(lines(styleBlockFindings('Box.astro', astro)), ['Box.astro:6']);
 });
 
-test('a shared component fails on a raw length or SVG geometry number and passes on roles and scale steps', () => {
+test('a screen fails on a raw length or SVG geometry number and passes on roles, zero and scale steps', () => {
   const source = [
     "const a = 'w-[13px]';",
     'const b = `top-[3rem] ${x}`;',
@@ -87,11 +87,12 @@ test('a shared component fails on a raw length or SVG geometry number and passes
     'const d = <circle r={-2} />;',
     'const e = <text fontSize={flag ? 11 : 12} />;',
     "const f = { strokeDasharray: '3 3' };",
-    "const g = 'gap-2 size-4 w-cell-meter';",
+    "const g = 'gap-2 size-4 w-chart-key';",
+    "const z = { rootMargin: '0px 0px -60% 0px' };",
     'const h = <line strokeWidth={SERIES_WEIGHT.you} r={0} />;',
     "const i = { strokeDasharray: CHART_RULE_DASH.grid, '--tip-x': `${left}px` };",
   ].join('\n');
-  assert.deepEqual(lines(uiValueFindings('ui.tsx', source)), [
+  assert.deepEqual(lines(screenValueFindings('ui.tsx', source)), [
     'ui.tsx:1',
     'ui.tsx:2',
     'ui.tsx:3',

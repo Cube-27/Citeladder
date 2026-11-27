@@ -81,7 +81,7 @@ export function Drawer({
     </DialogPrimitive.Close>
   );
   const close = hideHeader ? (
-    <span className="z-base top-drawer-close right-drawer-close absolute flex">{closeButton}</span>
+    <span className="z-base absolute top-4 right-4 flex">{closeButton}</span>
   ) : (
     closeButton
   );
@@ -98,7 +98,7 @@ export function Drawer({
           className={cn(
             SHEET_FACE,
             'drawer-panel z-modal fixed inset-y-2 flex w-drawer-fit flex-col overflow-hidden',
-            side === 'left' ? 'left-drawer-inset max-w-drawer-start' : 'right-drawer-inset',
+            side === 'left' ? 'left-2 max-w-68' : 'right-2',
             side === 'right' && DRAWER_WIDTH[width],
           )}
         >
@@ -119,7 +119,7 @@ export function Drawer({
             <SurfaceContext value="surface">{children}</SurfaceContext>
           </div>
           {footer ? (
-            <footer className="border-rule px-modal py-drawer-foot-y flex items-center justify-end gap-2 border-t">
+            <footer className="border-rule px-modal flex items-center justify-end gap-2 border-t py-3">
               {footer}
             </footer>
           ) : null}

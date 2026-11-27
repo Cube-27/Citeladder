@@ -1,10 +1,11 @@
 import { lineIndex, parseSource, walk } from './source-ast.mjs';
 
 const GEOMETRY = new Set(['strokeWidth', 'strokeDasharray', 'fontSize', 'r']);
-const RAW_LENGTH = /(?<![\w.-])(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em)\b/;
+const RAW_LENGTH = /(?<![\w.-])(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em)\b/g;
 const DIGIT = /\d/;
 
-export const UI_SOURCE = /^components\/ui\/.*(?<!\.test)\.tsx?$/;
+export const SCREEN_SOURCE =
+  /^(?:components\/(?!ui\/|marketing\/)|apps\/app\/src\/).*(?<!\.test)\.tsx?$/;
 
 function rawNumber(node) {
   if (!node) return false;
@@ -38,11 +39,11 @@ function finding(node) {
   if (node.type === 'Property' && GEOMETRY.has(keyName(node.key)) && rawNumber(node.value))
     return `${keyName(node.key)} holds a raw number`;
   const text = stringText(node);
-  const length = text === null ? null : RAW_LENGTH.exec(text);
-  return length ? `"${length[0]}" is a raw length` : null;
+  const length = text?.match(RAW_LENGTH)?.find((value) => Number.parseFloat(value) !== 0);
+  return length ? `"${length}" is a raw length` : null;
 }
 
-export function uiValueFindings(label, source) {
+export function screenValueFindings(label, source) {
   const line = lineIndex(source);
   const findings = [];
   walk(parseSource(source, label), (node) => {
