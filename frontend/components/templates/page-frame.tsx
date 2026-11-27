@@ -28,11 +28,14 @@ import {
 import { StickyBand } from '@/components/ui/sticky-band';
 import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
 import { useUrlSearch } from '@/lib/navigation/url-params';
+import { useMediaQuery } from '@/lib/use-media-query';
 import { routeTrail } from '@/lib/navigation/route-trail';
 
 const Breadcrumb = lazy(() =>
   import('@/components/ui/breadcrumb').then(({ Breadcrumb }) => ({ default: Breadcrumb })),
 );
+
+const NARROW_QUERY = '(max-width: 899px)';
 
 export type PageFrameSlots = Readonly<{
   title?: string;
@@ -67,6 +70,7 @@ export function PageFrame({
   const hasTrail = parents.length > 0;
   const width: PageWidth = fill ? 'fill' : routeWidth(pathname);
   const headed = head === 'page' || hasTrail;
+  const narrow = useMediaQuery(NARROW_QUERY);
   const [tabEnd, setTabEnd] = useState<HTMLElement | null>(null);
   return (
     <PageEmptyOfferProvider>
@@ -78,9 +82,14 @@ export function PageFrame({
             parents={parents}
             crumb={crumb}
             heading={!headed}
-            actions={head === 'masthead' ? actions : undefined}
+            actions={head === 'masthead' || narrow ? actions : undefined}
           />
-          {headed ? (
+          {headed && narrow ? (
+            <PageHeadingRow width={width} strips={Boolean(tabs || filters)}>
+              <h1 className="sr-only">{resolved}</h1>
+            </PageHeadingRow>
+          ) : null}
+          {headed && !narrow ? (
             <PageHeading
               title={resolved}
               actions={head === 'page' ? actions : undefined}

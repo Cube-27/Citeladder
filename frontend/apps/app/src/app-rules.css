@@ -587,6 +587,9 @@ label {
   --state-action-gap: 12px;
   padding: calc(var(--spacing) * 4);
 }
+:root:not([data-public-surface]) [data-state-frame]:not(:first-child) {
+  padding-block-start: 0;
+}
 
 .table-frame tbody > tr > :is(td, th) {
   box-shadow: inset 0 calc(-1 * var(--rule-width)) 0 var(--color-rule);
