@@ -85,16 +85,20 @@ export function HeadControls({ view, filters = [], status, actions }: FilterBarP
     <>
       {filters.length > 0 ? <ChipGroup filters={filters} end /> : null}
       {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
-      {status === undefined ? null : (
-        <output
-          aria-live="polite"
-          className="text-caption text-ink-2 block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"
-        >
-          {status}
-        </output>
-      )}
+      {status === undefined ? null : <StatusLine status={status} />}
       {actions}
     </>
+  );
+}
+
+function StatusLine({ status }: Readonly<{ status: ReactNode }>) {
+  return (
+    <output
+      aria-live="polite"
+      className="text-caption text-ink-2 block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"
+    >
+      {status}
+    </output>
   );
 }
 
@@ -177,14 +181,7 @@ function StripMeta({
           {status ? ' ·' : null}
         </span>
       ) : null}
-      {status === undefined ? null : (
-        <output
-          aria-live="polite"
-          className="text-caption text-ink-2 block min-w-0 shrink truncate *:not-first:ms-2 empty:hidden"
-        >
-          {status}
-        </output>
-      )}
+      {status === undefined ? null : <StatusLine status={status} />}
     </>
   );
   const hidden = 'has-[>output:empty]:not-has-[>span]:hidden';
@@ -260,11 +257,7 @@ export function FilterChoice<T extends string>({
   );
 }
 
-export const ALL_FILTERS = 'All filters';
-
-function activeFilterCount(filters: readonly FilterDefinition[]): number {
-  return filters.filter((filter) => !filter.isDefault).length;
-}
+const ALL_FILTERS = 'All filters';
 
 export function AllFiltersMenu({
   filters,
@@ -272,7 +265,7 @@ export function AllFiltersMenu({
 }: Readonly<{ filters: readonly FilterDefinition[]; align?: 'start' | 'end' }>) {
   const narrow = useMediaQuery(MEDIA.narrow);
   if (filters.length === 0) return null;
-  const active = activeFilterCount(filters);
+  const active = filters.filter((filter) => !filter.isDefault).length;
   return (
     <Menu>
       <MenuTrigger asChild>
@@ -297,7 +290,9 @@ export function AllFiltersMenu({
               <MenuSubTrigger value={filter.valueLabel} disabled={filter.disabled}>
                 {filter.label}
               </MenuSubTrigger>
-              <FilterSubmenu filter={filter} />
+              <MenuSubContent onFocus={focusFieldOnEntry}>
+                <FilterOptions filter={filter} />
+              </MenuSubContent>
             </MenuSub>
           ))
         )}
@@ -358,14 +353,6 @@ function DrillInFilters({ filters }: Readonly<{ filters: readonly FilterDefiniti
   );
 }
 
-function FilterSubmenu({ filter }: Readonly<{ filter: FilterDefinition }>) {
-  return (
-    <MenuSubContent onFocus={focusFieldOnEntry}>
-      <FilterOptions filter={filter} />
-    </MenuSubContent>
-  );
-}
-
 export type FilterFit = Readonly<{
   widths: readonly number[];
   values: readonly number[];
@@ -412,7 +399,7 @@ function widthsOf(node: HTMLElement, selector: string): number[] {
   return [...node.querySelectorAll<HTMLElement>(selector)].map((item) => item.offsetWidth);
 }
 
-export function useKeptFilters(
+function useKeptFilters(
   filters: readonly Readonly<{ id: string; isDefault: boolean }>[],
   menuAlways: boolean,
 ) {

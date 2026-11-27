@@ -6,7 +6,7 @@ const id = (value: number) => `33333333-3333-4333-8333-${String(value).padStart(
 
 async function chooseSaved(page: Page, label: string, option: string) {
   const name = new RegExp(`^${label}:`);
-  const all = page.getByRole('button', { name: /^Filters/ });
+  const all = page.getByRole('button', { name: /^All filters/ });
   const chip = page.getByRole('button', { name });
   await expect(all.or(chip).first()).toBeVisible();
   if (await chip.isVisible()) {

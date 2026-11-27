@@ -70,21 +70,22 @@ export function SectionHeader({
       {actions}
     </div>
   ) : null;
-  if (!search) {
-    return (
-      <header {...props} className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
-        {heading}
-        {controls}
-      </header>
-    );
-  }
   return (
-    <header {...props} className="grid min-w-0 gap-3">
+    <header
+      {...props}
+      className={
+        search ? 'grid min-w-0 gap-3' : 'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2'
+      }
+    >
       {heading}
-      <div data-section-search-row="" className="flex min-w-0 flex-wrap items-center gap-2">
-        <div className="rail:max-w-64 phone:basis-full min-w-0 grow basis-50">{search}</div>
-        {controls}
-      </div>
+      {search ? (
+        <div data-section-search-row="" className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="rail:max-w-64 phone:basis-full min-w-0 grow basis-50">{search}</div>
+          {controls}
+        </div>
+      ) : (
+        controls
+      )}
     </header>
   );
 }
