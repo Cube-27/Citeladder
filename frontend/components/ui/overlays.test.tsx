@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
-import { Dialog } from './dialog';
+import { ConfirmDialog, Dialog } from './dialog';
 import { CopyButton } from './copy-button';
 import { Drawer } from './drawer';
 import {
@@ -115,6 +115,51 @@ describe('Dialog', () => {
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Manage project' })).toHaveFocus();
+  });
+
+  it('keeps a pending confirm focused and Cancel live, then returns focus past a disabled opener', async () => {
+    const user = userEvent.setup();
+    const confirmed = vi.fn();
+
+    function RoleHarness() {
+      const [asking, setAsking] = useState(false);
+      const [busy, setBusy] = useState(false);
+      return (
+        <div>
+          <button type="button" disabled={busy} onClick={() => setAsking(true)}>
+            Role
+          </button>
+          <button type="button">Remove</button>
+          <ConfirmDialog
+            pending={busy}
+            onCancel={() => setAsking(false)}
+            request={
+              asking
+                ? {
+                    title: 'Change role?',
+                    body: 'Admins manage members.',
+                    confirmLabel: 'Change role',
+                    onConfirm: () => {
+                      confirmed();
+                      setBusy(true);
+                    },
+                  }
+                : null
+            }
+          />
+        </div>
+      );
+    }
+
+    render(<RoleHarness />);
+    await user.click(screen.getByRole('button', { name: 'Role' }));
+    const confirm = await screen.findByRole('button', { name: 'Change role' });
+    await user.click(confirm);
+    await user.keyboard('{Enter}');
+    expect([confirmed.mock.calls.length, document.activeElement]).toEqual([1, confirm]);
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Remove' })).toHaveFocus();
   });
 });
 

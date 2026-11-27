@@ -31,14 +31,26 @@ function leadingField(content: EventTarget | null): HTMLElement | null {
 }
 const shown = (node: HTMLElement) => node.checkVisibility?.() ?? true;
 
+const usable = (node: HTMLElement) => shown(node) && !node.matches(':disabled');
+
+function nearestControl(node: HTMLElement) {
+  for (let region = node.parentElement; region; region = region.parentElement) {
+    const control = [...region.querySelectorAll<HTMLElement>(CONTROL)].find(usable);
+    if (control) return control;
+  }
+  return null;
+}
+
 export function returnTargetFor(node: HTMLElement | null) {
-  if (!node?.isConnected || shown(node)) return node?.isConnected ? node : null;
+  if (!node?.isConnected) return null;
+  if (usable(node)) return node;
+  if (shown(node)) return nearestControl(node);
   const folder = node.closest<HTMLElement>('[data-folded-by]')?.dataset.foldedBy;
   const more = folder
     ? document.querySelector<HTMLElement>(`[data-folds="${CSS.escape(folder)}"]`)
     : null;
-  if (more && shown(more)) return more;
-  const controls = [...document.querySelectorAll<HTMLElement>('[aria-controls]')].filter(shown);
+  if (more && usable(more)) return more;
+  const controls = [...document.querySelectorAll<HTMLElement>('[aria-controls]')].filter(usable);
   for (let region = node.parentElement; region; region = region.parentElement) {
     const { id } = region;
     const control = controls.find(
@@ -234,20 +246,17 @@ export function ConfirmDialog({
     <Dialog
       open={request !== null}
       onOpenChange={(open) => {
-        if (!open && !pending) onCancel();
+        if (!open) onCancel();
       }}
       tone={request?.destructive ? 'danger' : 'default'}
       title={request?.title ?? ''}
       description={request?.body}
       footer={
         <>
-          <Button onClick={onCancel} disabled={pending}>
-            Cancel
-          </Button>
+          <Button onClick={onCancel}>Cancel</Button>
           <Button
             variant={request?.destructive ? 'danger-confirm' : 'primary'}
             onClick={request?.onConfirm}
-            disabled={pending}
             pending={pending}
           >
             {request?.confirmLabel}

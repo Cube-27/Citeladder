@@ -143,6 +143,8 @@ function NativeButton({
   type,
   ref,
   children,
+  disabled,
+  onClick,
   asChild: _asChild,
   ...props
 }: Readonly<ButtonFrameProps>) {
@@ -154,7 +156,16 @@ function NativeButton({
       data-button-variant={variant}
       data-button-look={look}
       aria-busy={pending || undefined}
-      disabled={props.disabled || pending}
+      aria-disabled={pending || props['aria-disabled']}
+      disabled={pending ? undefined : disabled}
+      onClick={(event) => {
+        if (!pending) {
+          onClick?.(event);
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+      }}
       className={buttonClasses(
         variant,
         cn(pending && 'pointer-events-none', SHAPE[shape], look && LOOK[look], className),
