@@ -85,7 +85,7 @@ export function CsvImportPreview({
 }>) {
   return (
     <>
-      <output className="text-body text-ink-2 flex items-center gap-3 empty:hidden">
+      <output className="text-body text-ink-2 flex items-center gap-3 empty:sr-only">
         {counts ? (
           <>
             <span>
