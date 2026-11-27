@@ -148,8 +148,13 @@ describe('brand facts', () => {
 
   it('lists prompts with brand questions checked by default and saves a selection within the project', async () => {
     const setId = await promptSet(db, tenant.projectId);
-    const branded = await prompt(db, setId, 'Is Acme any good?', { branded: true });
-    const plain = await prompt(db, setId, 'Best CRM tools?');
+    const branded = await prompt(db, setId, 'Is Acme any good?', {
+      branded: true,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+    });
+    const plain = await prompt(db, setId, 'Best CRM tools?', {
+      createdAt: new Date('2026-01-01T00:00:01Z'),
+    });
     await prompt(db, setId, 'Old question?', { status: 'archived' });
     expect((await call(tenant, 'GET', '/fact-check/prompts')).status).toBe(409);
     await enroll(tenant);

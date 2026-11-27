@@ -46,7 +46,7 @@ export type RunScope = {
 };
 export const marketOf = (scope: { marketId?: string | null }) => scope.marketId ?? null;
 
-export type Instant = ParsedDatetime | string;
+type Instant = ParsedDatetime | string;
 
 function instantOperand(value: Instant) {
   return typeof value === 'string' ? storedInstant(value) : timestamptz(value);

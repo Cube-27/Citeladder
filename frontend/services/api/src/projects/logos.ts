@@ -30,13 +30,12 @@ export async function logoResponse(
           .innerJoin('projects', 'projects.id', 'owner.project_id')
           .where('projects.id', '=', scope.projectId)
           .where('owner.id', '=', competitorId);
-  const asset = await owner
+  const ready = owner
     .innerJoin('brand_logo_assets as asset', 'asset.id', 'owner.logo_asset_id')
-    .select(['asset.id', 'asset.content_type', 'asset.sha256'])
     .where('projects.workspace_id', '=', scope.workspaceId)
     .where('asset.status', '=', READY)
-    .where('asset.image_data', 'is not', null)
-    .executeTakeFirst();
+    .where('asset.image_data', 'is not', null);
+  const asset = await ready.select(['asset.content_type', 'asset.sha256']).executeTakeFirst();
   const missing = () => notFound(competitorId === null ? 'Brand logo' : 'Competitor logo');
   if (asset === undefined) throw missing();
   const etag = `"${asset.sha256}"`;
@@ -48,10 +47,9 @@ export async function logoResponse(
     'x-content-type-options': 'nosniff',
   };
   if (request.ifNoneMatch === etag) return new Response(null, { status: 304, headers });
-  const bytes = await db
-    .selectFrom('brand_logo_assets')
-    .select('image_data')
-    .where('id', '=', asset.id)
+  const bytes = await ready
+    .select('asset.image_data')
+    .where('asset.sha256', '=', asset.sha256)
     .executeTakeFirst();
   if (bytes?.image_data == null) throw missing();
   return new Response(new Uint8Array(bytes.image_data), {
