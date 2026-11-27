@@ -55,7 +55,7 @@ export type HeldTabs = Readonly<{
   items: readonly Readonly<{ value: string; label: string }>[];
 }>;
 
-export type HeldRail = HeldTabs & Readonly<{ fillTab: string | null }>;
+type HeldRail = HeldTabs & Readonly<{ fillTab: string | null }>;
 
 export type AppRouteRecord = {
   path: string;

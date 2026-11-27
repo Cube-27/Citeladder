@@ -107,7 +107,9 @@ html:has([data-app-surface]) {
   overflow: hidden;
 }
 [data-main-column] {
-  scrollbar-gutter: stable;
+  @variant rail {
+    scrollbar-gutter: stable;
+  }
   scroll-padding-top: calc(var(--sticky-header-offset) + var(--spacing-page-top));
   &:has([data-page-band='action-bar']) {
     scroll-padding-bottom: calc(var(--spacing-filter-bar) + 2 * var(--spacing-gutter));
