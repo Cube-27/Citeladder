@@ -6,7 +6,7 @@ import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
-import { ApiError, onError } from '../errors.ts';
+import { ApiError, errorOf, onError } from '../errors.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { grantableScopes, loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
 import {
@@ -301,7 +301,7 @@ function registerAuthorizeRoute(app: Hono<AppEnv>, { config, db, mcp, resource }
       if (callback === null || code === null) throw error;
       const target = new URL(callback);
       target.searchParams.set('error', code);
-      target.searchParams.set('error_description', (error as Error).message);
+      target.searchParams.set('error_description', errorOf(error).message);
       if (q.get('state')) target.searchParams.set('state', q.get('state')!);
       target.searchParams.set('iss', mcp.origin);
       return c.redirect(target.href, 302);

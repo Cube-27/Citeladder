@@ -114,7 +114,7 @@
   "services/api/src/audits/schedules.ts": 1,
   "services/api/src/audits/state.ts": 2,
   "services/api/src/audits/submission-intent.ts": 1,
-  "services/api/src/audits/surface-persistence.ts": 6,
+  "services/api/src/audits/surface-persistence.ts": 5,
   "services/api/src/audits/surfaces/adapter.ts": 2,
   "services/api/src/audits/surfaces/dataforseo.ts": 10,
   "services/api/src/audits/surfaces/llm-scraper.ts": 2,

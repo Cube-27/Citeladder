@@ -94,11 +94,16 @@ async function releaseToWorker(taskId: string) {
     .execute();
 }
 async function paidSubmission(t: Awaited<ReturnType<typeof seed>>) {
-  await persistSurfaceExchange(db, t.task, t.owner, {
-    taskId: 'provider-id',
-    chargeMicrousd: 1800,
-    paid: true,
-    delaySeconds: 0,
+  await persistSurfaceExchange(db, {
+    claimed: t.task,
+    owner: t.owner,
+    exchange: {
+      kind: 'submitted',
+      taskId: 'provider-id',
+      chargeMicrousd: 1800,
+      raw: {},
+      delaySeconds: 0,
+    },
   });
   await releaseToWorker(t.task.id);
 }
@@ -118,7 +123,11 @@ describe('durable surface evidence', () => {
   it('preserves the submission charge through a pending park and an atomic terminal observation', async () => {
     const t = await seed();
     await paidSubmission(t);
-    await persistSurfaceExchange(db, t.task, 'worker', { poll: true, delaySeconds: 0 });
+    await persistSurfaceExchange(db, {
+      claimed: t.task,
+      owner: 'worker',
+      exchange: { kind: 'still_pending', delaySeconds: 0 },
+    });
     const parked = await db
       .selectFrom('audit_tasks')
       .selectAll()

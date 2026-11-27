@@ -91,13 +91,14 @@ than the item and the draft it saved.
 **Rule:** [CLAUDE.md](../CLAUDE.md#code-taste) owns it: variants are
 discriminated unions on a literal `kind`.
 **Why:** The TypeScript audit on #1136 found about 12 shipped variants written
-as optional bags. `FetchOutcome` (`services/api/src/source-pages/persistence.ts`)
-puts `outcome: 'inspected' | 'blocked' | 'failed'` beside optional `finalUrl`,
-`status` and `reason`, so nothing ties `reason` to a failure. `SurfaceExchange`
-(`audits/surface-persistence.ts`) carries `raw`, `error` and `poll` as
-independent options. `HandoffInput` (`lib/agent/handoff.ts`) has 15 optional
-fields for handoffs that each name one subject. No lint can tell a bag of
-options from a union.
+as optional bags: a page fetch whose `reason` and response fields sat optional
+beside its `outcome`, and a provider exchange whose `paid`, `uncertain`,
+`poll` and charge options could be combined in ways no caller sent. Nothing
+tied a field to the outcome that sets it, so a reader had to trace every
+caller. The opposite mistake is real too: a set of independent references that
+callers combine, such as the Agent handoff's context references, is not a
+variant, and a union there invents an exclusivity the contract lacks. No lint
+can tell a bag of options from a union.
 **Check:** A new or widened type with two or more optional fields that are
 set together, or only for one value of a status or kind field. Code that
 tests one optional field to decide whether another is present.

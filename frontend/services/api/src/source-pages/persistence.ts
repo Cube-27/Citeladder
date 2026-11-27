@@ -9,19 +9,38 @@ import type { ExtractedPage } from './extract.ts';
 import type { assessPage } from './assessment.ts';
 import { lockOwnedTask } from './task-fence.ts';
 
-export type FetchOutcome = {
-  outcome: 'inspected' | 'blocked' | 'failed';
-  requestedUrl: string;
-  finalUrl?: string;
-  status?: number;
-  type?: string;
-  charset?: string;
-  bytes?: number;
-  redirects?: string[];
-  headers?: Record<string, string>;
-  robots?: string;
-  reason?: string;
+type PageResponse = {
+  finalUrl: string;
+  status: number;
+  type: string;
+  charset: string | null;
+  bytes: number;
+  redirects: string[];
+  headers: Record<string, string> | null;
 };
+export type FetchOutcome = { requestedUrl: string } & (
+  | { outcome: 'inspected'; response: PageResponse }
+  | { outcome: 'failed'; reason: string; response: PageResponse | null }
+  | { outcome: 'blocked'; reason: 'robots_disallowed' }
+);
+function fetchFacts(fetch: FetchOutcome) {
+  switch (fetch.outcome) {
+    case 'inspected':
+      return { response: fetch.response, reason: null, robots: 'allowed' };
+    case 'failed':
+      return { response: fetch.response, reason: fetch.reason, robots: failedRobots(fetch) };
+    case 'blocked':
+      return { response: null, reason: fetch.reason, robots: 'disallowed' };
+    default: {
+      const unknownFetch: never = fetch;
+      throw new Error(`Unknown fetch outcome: ${JSON.stringify(unknownFetch)}`);
+    }
+  }
+}
+function failedRobots(fetch: { reason: string; response: PageResponse | null }) {
+  if (fetch.response) return 'allowed';
+  return fetch.reason === 'robots_unavailable' ? 'unavailable' : null;
+}
 const strength = policy.source_pages.format_method_strength;
 const rank = (method: string | null) => {
   const index = strength.indexOf(method ?? '');
@@ -40,6 +59,7 @@ type InspectionInput = {
 };
 export function recordInspection(db: Database, task: QueueTask, input: InspectionInput) {
   const { scope, pageId, lease, fetch, auditId, roster, extracted, assessment } = input;
+  const { response, reason, robots } = fetchFacts(fetch);
   return db.transaction().execute(async (trx) => {
     if (!(await lockOwnedTask(trx, task))) return null;
     const audit = await trx
@@ -85,16 +105,16 @@ export function recordInspection(db: Database, task: QueueTask, input: Inspectio
         source_page_id: pageId,
         audit_id: auditId,
         requested_url: fetch.requestedUrl,
-        final_url: fetch.finalUrl ?? '',
-        status_code: fetch.status ?? null,
-        content_type: fetch.type ?? null,
-        charset: fetch.charset ?? null,
-        body_bytes: fetch.bytes ?? 0,
-        redirect_chain: fetch.redirects?.length ? JSON.stringify(fetch.redirects) : null,
-        redacted_headers: fetch.headers ? JSON.stringify(fetch.headers) : null,
-        robots_state: fetch.robots ?? null,
+        final_url: response?.finalUrl ?? '',
+        status_code: response?.status ?? null,
+        content_type: response?.type ?? null,
+        charset: response?.charset ?? null,
+        body_bytes: response?.bytes ?? 0,
+        redirect_chain: response?.redirects.length ? JSON.stringify(response.redirects) : null,
+        redacted_headers: response?.headers ? JSON.stringify(response.headers) : null,
+        robots_state: robots,
         outcome: fetch.outcome,
-        outcome_reason: fetch.reason ?? null,
+        outcome_reason: reason,
         content_hash: extracted?.content_hash ?? null,
         page_facts: extracted ? JSON.stringify(extracted.facts) : null,
         evidence_passages: assessment ? JSON.stringify(assessment.passages) : null,
@@ -131,7 +151,7 @@ export function recordInspection(db: Database, task: QueueTask, input: Inspectio
       .updateTable('source_pages')
       .set({
         inspection_state: fetch.outcome,
-        inspection_reason: fetch.reason ?? null,
+        inspection_reason: reason,
         claim_expires_at: null,
         latest_snapshot_id: id,
         updated_at: now,

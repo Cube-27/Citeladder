@@ -482,7 +482,7 @@ describe('finalize', () => {
     return read(id);
   }
 
-  it('retries a failed attempt, then fails it at the attempt budget', async () => {
+  it('retries a failed attempt, then fails a thrown string at the attempt budget with its text', async () => {
     const retried = await runOne({ ingest_referrals: failing });
     expect(retried).toMatchObject({
       status: 'retry_wait',
@@ -497,7 +497,10 @@ describe('finalize', () => {
       .set({ attempt_count: retried.max_attempts - 1, status: 'queued', available_at: new Date(0) })
       .where('id', '=', retried.id)
       .execute();
-    await scoped([retried.id], { ingest_referrals: failing }).runOnce();
+    const refusing: Executor = async () => {
+      throw 'quota refused';
+    };
+    await scoped([retried.id], { ingest_referrals: refusing }).runOnce();
     const exhausted = await db
       .selectFrom('analytics_tasks')
       .selectAll()
@@ -506,6 +509,7 @@ describe('finalize', () => {
     expect(exhausted).toMatchObject({
       status: 'failed',
       error_code: policy.task_queue.max_attempts_error,
+      error_detail: 'quota refused',
     });
     expect(exhausted.completed_at).not.toBeNull();
   });

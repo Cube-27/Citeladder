@@ -20,6 +20,7 @@ import {
   readAdmissionState,
   upsertSiteUrls,
   type AdmissionState,
+  type CrawlTaskSeed,
 } from './admission-writes.ts';
 
 const crawlPolicy = policy.site_health.crawl;
@@ -133,7 +134,7 @@ export async function addAutomaticRoot(trx: Database, crawl: Crawl, runtime: Run
 export function analyzeSeed(
   siteUrlId: string,
   page: Pick<Candidate, 'url' | 'hash' | 'depth' | 'priority' | 'referrerId'>,
-) {
+): CrawlTaskSeed {
   return {
     kind: 'analyze',
     siteUrlId,

@@ -151,13 +151,12 @@ async function poll(
     return;
   }
   if (settled === 'still_pending')
-    await persistSurfaceExchange(
-      deps.db,
-      task,
-      deps.owner,
-      { poll: true, delaySeconds: c.poll_interval_seconds },
-      deps.now(),
-    );
+    await persistSurfaceExchange(deps.db, {
+      claimed: task,
+      owner: deps.owner,
+      exchange: { kind: 'still_pending', delaySeconds: c.poll_interval_seconds },
+      at: deps.now(),
+    });
 }
 
 async function pollFailed(
@@ -168,13 +167,16 @@ async function pollFailed(
 ) {
   const task = context.task;
   if (error.retryable)
-    await persistSurfaceExchange(
-      deps.db,
-      task,
-      deps.owner,
-      { error, poll: true, delaySeconds: searchPolicy.constants.poll_interval_seconds },
-      deps.now(),
-    );
+    await persistSurfaceExchange(deps.db, {
+      claimed: task,
+      owner: deps.owner,
+      exchange: {
+        kind: 'poll_failed',
+        error,
+        delaySeconds: searchPolicy.constants.poll_interval_seconds,
+      },
+      at: deps.now(),
+    });
   else
     await failObserved(surface, deps, task, context, {
       code: 'provider_error',
@@ -218,19 +220,18 @@ async function submit(
     return;
   }
   try {
-    await persistSurfaceExchange(
-      deps.db,
-      intent.task,
-      deps.owner,
-      {
+    await persistSurfaceExchange(deps.db, {
+      claimed: intent.task,
+      owner: deps.owner,
+      exchange: {
+        kind: 'submitted',
         taskId: submission.taskId,
         chargeMicrousd: submission.chargeMicrousd,
         raw: submission.envelope,
-        paid: true,
         delaySeconds: c.first_poll_delay_seconds,
       },
-      deps.now(),
-    );
+      at: deps.now(),
+    });
   } catch (error) {
     logger.warning('surface_submission_unsaved', {
       task_id: intent.task.id,
@@ -249,19 +250,17 @@ async function submitFailed(
   const task = context.task,
     c = searchPolicy.constants;
   if (error instanceof SubmissionUncertain) {
-    await persistSurfaceExchange(
-      deps.db,
-      task,
-      deps.owner,
-      {
+    await persistSurfaceExchange(deps.db, {
+      claimed: task,
+      owner: deps.owner,
+      exchange: {
+        kind: 'submission_uncertain',
         error,
-        paid: true,
-        uncertain: true,
-        chargeMicrousd: error.submission?.chargeMicrousd,
+        chargeMicrousd: error.submission?.chargeMicrousd ?? null,
         delaySeconds: c.poll_interval_seconds,
       },
-      deps.now(),
-    );
+      at: deps.now(),
+    });
     return;
   }
   const safe = error instanceof ProviderError ? error : new ProviderError('client_error');
@@ -320,39 +319,36 @@ async function reconcile(
       });
       return;
     }
-    await persistSurfaceExchange(
-      deps.db,
-      task,
-      deps.owner,
-      {
-        reconciliation: result.state,
-        poll: !result.match,
-        resetPoll: Boolean(result.match),
-        taskId: result.match?.id,
-        chargeMicrousd: result.match?.chargeMicrousd,
-        uncertain: !result.match,
-        delaySeconds: result.match ? c.first_poll_delay_seconds : c.poll_interval_seconds,
-      },
+    await persistSurfaceExchange(deps.db, {
+      claimed: task,
+      owner: deps.owner,
+      exchange: result.match
+        ? {
+            kind: 'reconciled',
+            reconciliation: result.state,
+            taskId: result.match.id,
+            chargeMicrousd: result.match.chargeMicrousd,
+            delaySeconds: c.first_poll_delay_seconds,
+          }
+        : {
+            kind: 'unreconciled',
+            reconciliation: result.state,
+            delaySeconds: c.poll_interval_seconds,
+          },
       at,
-    );
+    });
   } catch (error) {
     const safe =
       error instanceof ProviderError
         ? error
         : new ProviderError('reconciliation_unavailable', true);
     await pauseRefused(deps, safe, context);
-    await persistSurfaceExchange(
-      deps.db,
-      task,
-      deps.owner,
-      {
-        error: safe,
-        poll: true,
-        uncertain: true,
-        delaySeconds: c.poll_interval_seconds,
-      },
+    await persistSurfaceExchange(deps.db, {
+      claimed: task,
+      owner: deps.owner,
+      exchange: { kind: 'reconcile_failed', error: safe, delaySeconds: c.poll_interval_seconds },
       at,
-    );
+    });
     if (safe.code === 'rate_limit') throw safe;
   }
 }

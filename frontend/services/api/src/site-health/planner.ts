@@ -45,7 +45,7 @@ export async function admissionRuntime(db: Database, held: Runtime) {
 }
 
 type TaskInput = {
-  kind: string;
+  kind: CrawlTaskSeed['kind'];
   url: string;
   siteUrlId?: string;
   depth?: number;
