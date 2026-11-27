@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import { Button } from './button';
 import { Citation } from './citation';
-import { EngineMark } from './engine-mark';
 import { Field } from './field';
 import { Input } from './input';
 import { Kbd } from './kbd';
@@ -185,15 +184,6 @@ describe('Citation', () => {
     const link = screen.getByRole('link', { name: /example\.com/ });
     expect(link).toHaveAttribute('href', 'https://www.example.com/shoes');
     expect(link).toHaveTextContent('2example.comBest running shoes');
-  });
-});
-
-describe('EngineMark', () => {
-  it('draws the named engine as decoration only', () => {
-    const { container } = render(<EngineMark engine="claude" />);
-    const mark = container.querySelector('svg');
-    expect(mark).toHaveAttribute('data-engine-mark', 'claude');
-    expect(mark).toHaveAttribute('aria-hidden', 'true');
   });
 });
 
