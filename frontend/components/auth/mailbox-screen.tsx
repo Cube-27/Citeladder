@@ -101,7 +101,11 @@ export default function MailboxScreen() {
         pendingLabel="Working…"
         {...mailboxFooter(operation, incomplete, secrets.returnTo)}
         showForm={!mutation.isSuccess && !incomplete}
-        error={mutation.isError ? authErrorMessage(mutation.error) : undefined}
+        error={
+          mutation.isError
+            ? authErrorMessage(mutation.error, "Couldn't send the email. Try again.")
+            : undefined
+        }
         verification={confirmation ? undefined : verification}
       >
         {confirmation ? (

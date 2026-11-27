@@ -5,7 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { GoalStrip } from '@/components/agent/actions-goal-strip';
 import { ActionsPageContext, useActionsPageContext } from '@/components/agent/actions-page-context';
 import { groupAnchor, levelKey, StatusSection } from '@/components/agent/actions-status-tree';
-import { actionsToolbar } from '@/components/agent/actions-toolbar';
+import { actionsToolbar, CreateMenu } from '@/components/agent/actions-toolbar';
 import { useActionFilters } from '@/components/agent/use-action-filters';
 import {
   useBulkDecision,
@@ -17,8 +17,8 @@ import { ReportPage } from '@/components/templates/report-page';
 import { Button, IconButton } from '@/components/ui/button';
 import { Section, SectionContent } from '@/components/ui/section';
 import { SelectionDock } from '@/components/ui/selection-dock';
-import { Text } from '@/components/ui/typography';
-import { X } from '@/lib/icons';
+import { StateBlock } from '@/components/ui/state-block';
+import { ListChecks, X } from '@/lib/icons';
 import { listJumpSchema, type ListJump } from '@/lib/agent/action-crumbs';
 import type { ActionStatus, ActionTree } from '@/lib/api/actions';
 import { formatCount } from '@/lib/format';
@@ -63,12 +63,21 @@ export function ActionsScreen() {
     view.setGroupBy('goal');
   };
 
+  if (!view.filtered && counts && Object.values(counts).every((count) => count === 0))
+    return (
+      <ReportPage>
+        <StateBlock
+          kind="empty"
+          icon={ListChecks}
+          heading="No actions yet"
+          action={<CreateMenu />}
+        />
+      </ReportPage>
+    );
+
   return (
     <ActionsPageContext value={{ scope, view, levels, selection }}>
       <ReportPage filters={actionsToolbar({ scope, view, newCount: counts?.open })}>
-        <Text as="h2" variant="heading">
-          Close the gaps keeping you out of AI answers
-        </Text>
         <GoalStrip goals={primary.data?.goals} failed={primary.isError} onJump={jump} />
         <Section>
           <SectionContent>

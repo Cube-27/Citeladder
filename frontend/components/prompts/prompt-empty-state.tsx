@@ -15,7 +15,7 @@ export function PromptEmptyState({
     <StateBlock
       kind="empty"
       icon={MessageSquarePlus}
-      heading="Choose the questions you want to track"
+      heading="Add prompts to track"
       action={<AddPromptsMenu {...add} />}
     />
   );

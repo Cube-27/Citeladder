@@ -142,7 +142,7 @@ export function SessionGuard({
             }
           >
             <NoticeHeading>Your session could not be verified</NoticeHeading>
-            <p>{humanizeApiError(error, 'Please try again.').message}</p>
+            <p>{humanizeApiError(error, 'Try again.').message}</p>
           </Notice>
         </NoticeFrame>
       );

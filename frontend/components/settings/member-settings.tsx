@@ -30,24 +30,24 @@ type Confirmation = Omit<ConfirmRequest, 'onConfirm'>;
 
 const confirmations = {
   role: (email: string, role: AssignableWorkspaceRole): Confirmation => ({
-    title: 'Change role',
+    question: 'Change role',
     body: `${email} becomes ${roleLabel(role)}: ${ROLE_SUMMARY[role]}`,
     confirmLabel: `Make ${roleLabel(role)}`,
   }),
   transfer: (email: string, workspace: string): Confirmation => ({
-    title: 'Transfer ownership',
+    question: 'Transfer ownership',
     body: `${email} becomes the owner of ${workspace}. You become an admin and cannot take ownership back yourself.`,
     confirmLabel: `Make ${email} owner`,
     destructive: true,
   }),
   remove: (email: string, workspace: string): Confirmation => ({
-    title: 'Remove member',
+    question: 'Remove member',
     body: `${email} loses access to ${workspace} immediately, including through connected AI tools.`,
     confirmLabel: 'Remove member',
     destructive: true,
   }),
   revoke: (email: string): Confirmation => ({
-    title: 'Revoke invitation',
+    question: 'Revoke invitation',
     body: `The invitation link sent to ${email} stops working.`,
     confirmLabel: 'Revoke invitation',
     destructive: true,

@@ -216,7 +216,7 @@ function FanoutBody({
       </Text>
     ) : (
       <Text as="p" variant="caption">
-        Search queries are unavailable for this answer.
+        Query fan-outs are unavailable for this answer.
       </Text>
     );
   const { item } = read;
@@ -247,7 +247,7 @@ function FanoutBody({
     case 'unavailable':
       return (
         <Text as="p" variant="caption">
-          Search queries are unavailable for this answer.
+          Query fan-outs are unavailable for this answer.
         </Text>
       );
     default: {
@@ -263,7 +263,7 @@ export function FanoutRail({
 }: Readonly<{ evidence: ExecutionEvidence; promptId?: string }>) {
   const read = useAnswerFanout(evidence, promptId);
   return (
-    <RailSection title="Query fanouts">
+    <RailSection title="Query fan-outs">
       <FanoutBody read={read} evidence={evidence} />
     </RailSection>
   );

@@ -27,7 +27,7 @@ describe('VisibilityEmptyState', () => {
       makeSetList([makeSet([makePrompt({ status })])]),
     );
     const project = makeProject();
-    render(<VisibilityEmptyState activeRun={null} />, {
+    render(<VisibilityEmptyState activeRun={null} page="sources" />, {
       projectSelection: {
         projects: [project],
         activeProject: project,
@@ -36,7 +36,7 @@ describe('VisibilityEmptyState', () => {
       },
     });
 
-    expect(screen.getByRole('heading', { name: 'No visibility data yet' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'No source data yet' })).toBeVisible();
     await waitFor(() =>
       expect(screen.getByRole(role, { name })).not.toHaveAttribute('aria-disabled'),
     );
@@ -44,17 +44,17 @@ describe('VisibilityEmptyState', () => {
   });
 
   it('does not offer a viewer a step their role may not take', () => {
-    render(<VisibilityEmptyState activeRun={null} />, {
+    render(<VisibilityEmptyState activeRun={null} page="perception" />, {
       projectSelection: selectionAs('viewer'),
     });
 
-    expect(screen.getByRole('heading', { name: 'No visibility data yet' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'No perception data yet' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Launch run' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Add prompts' })).not.toBeInTheDocument();
   });
 
   it('links to the running run instead of inviting a duplicate', () => {
-    render(<VisibilityEmptyState activeRun={run} />);
+    render(<VisibilityEmptyState activeRun={run} page="brand" />);
 
     expect(screen.queryByRole('button', { name: /Launch/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Watch live progress' })).toHaveAttribute(

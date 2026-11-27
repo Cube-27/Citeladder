@@ -58,7 +58,7 @@ export async function bulkUpdateActionStatus(
     } else {
       throw new ApiError(422, 'Name either ids or a filter');
     }
-    if (!candidates.length) return { updated: 0, skipped: 0, truncated };
+    if (!candidates.length) return { updated: 0, moved_ids: [], skipped: 0, truncated };
     const reach = input.filter
       ? matchingActions(trx, scope, input.filter)
       : trx
@@ -73,7 +73,12 @@ export async function bulkUpdateActionStatus(
       .execute();
     const moving = locked.filter((action) => allowed(action.status, input.to));
     await recordStatus(trx, moving, input.to, userId);
-    return { updated: moving.length, skipped: candidates.length - moving.length, truncated };
+    return {
+      updated: moving.length,
+      moved_ids: moving.map((action) => action.id),
+      skipped: candidates.length - moving.length,
+      truncated,
+    };
   });
 }
 

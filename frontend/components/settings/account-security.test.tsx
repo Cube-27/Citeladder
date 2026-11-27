@@ -41,15 +41,29 @@ it('disconnects integrations only after the person confirms what it revokes', as
   ).toBeVisible();
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Sign out and disconnect' }));
-  const dialog = await screen.findByRole('dialog');
+  const dialog = await screen.findByRole('alertdialog', {
+    name: 'Disconnect integrations and sign out?',
+  });
   expect(dialog).toHaveTextContent(
     'Signs out every device, disconnects your MCP clients and revokes your API keys.',
   );
   expect(logoutAndDisconnect).not.toHaveBeenCalled();
-  await user.click(screen.getByRole('button', { name: 'Sign out and disconnect' }));
+  await user.click(within(dialog).getByRole('button', { name: 'Sign out and disconnect' }));
   await waitFor(() => expect(hardNavigate).toHaveBeenCalledWith('/login'));
   expect(logoutAndDisconnect).toHaveBeenCalledTimes(1);
   expect(logout).not.toHaveBeenCalled();
+});
+
+it('Cancel closes the sign-out confirm without signing anyone out', async () => {
+  renderWithProviders(<AccountSecurity />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Sign out all sessions' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Sign out all sessions?' });
+  await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(screen.getByRole('button', { name: 'Sign out all sessions' })).toBeVisible();
+  expect(logout).not.toHaveBeenCalled();
+  expect(hardNavigate).not.toHaveBeenCalled();
 });
 
 it('says in words under each field why a password change was not sent, and focuses the first', async () => {
@@ -92,7 +106,8 @@ it.each(['change-password', 'sign-out'] as const)(
     await user.type(screen.getByLabelText(/^New password/u, { selector: 'input' }), 'new-password');
     if (operation === 'sign-out') {
       await user.click(screen.getByRole('button', { name: 'Sign out all sessions' }));
-      await user.click(screen.getByRole('button', { name: 'Sign out everywhere' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Sign out all sessions?' });
+      await user.click(within(dialog).getByRole('button', { name: 'Sign out all sessions' }));
       await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
       expect(mailbox).not.toHaveBeenCalled();
       expect(logoutAndDisconnect).not.toHaveBeenCalled();

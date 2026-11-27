@@ -263,7 +263,7 @@ export function ContentMarkdown({
           leaving === null
             ? null
             : {
-                title: 'You’re leaving CiteLadder',
+                question: 'Leave CiteLadder',
                 body: (
                   <Stack gap="tight">
                     <p>

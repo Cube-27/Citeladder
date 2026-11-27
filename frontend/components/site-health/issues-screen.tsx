@@ -109,7 +109,7 @@ function IssuesLoadedRegion({
         <StateBlock
           kind="empty"
           icon={ICONS.issues}
-          heading="No Site health crawl yet"
+          heading="No site crawl yet"
           action={
             <Button asChild>
               <ProjectLink href="/site">Go to Site health</ProjectLink>

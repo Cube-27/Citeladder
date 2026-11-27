@@ -6,6 +6,7 @@ import { DataTable, type DataTableColumn, type DataTableState } from '@/componen
 import { readErrorProps } from '@/components/ui/notice';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { ClampText } from '@/components/ui/clamp-text';
+import { StateBlock } from '@/components/ui/state-block';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Delta } from '@/components/ui/delta';
 import type { SourceFilters } from '@/components/visibility/source-rows';
@@ -42,7 +43,7 @@ export function useSourceMovers(
   });
 }
 
-const NO_BASELINE = 'No comparable earlier period to compare this one with yet.';
+const NO_BASELINE = 'No earlier run to compare';
 const IDENTITY_UNAVAILABLE = 'The earlier period cannot be matched to this one.';
 
 const STATUS_COPY: Record<string, string> = {
@@ -60,16 +61,17 @@ const MOVER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'change', label: 'Change', width: 'figure', kind: 'number' },
 ];
 
+const empty = (heading: string): DataTableState => ({
+  kind: 'empty',
+  headingLevel: 3,
+  icon: TrendingUp,
+  heading,
+});
+
 function moversState(
   query: ReturnType<typeof useSourceMovers>,
   comparable: boolean,
 ): DataTableState | undefined {
-  const empty = (heading: string): DataTableState => ({
-    kind: 'empty',
-    headingLevel: 3,
-    icon: TrendingUp,
-    heading,
-  });
   if (!comparable) return empty(NO_BASELINE);
   if (query.isError) {
     return {
@@ -153,8 +155,14 @@ export function TopMoversCard({
       <SectionHeader>
         <SectionTitle id={titleId}>Top movers</SectionTitle>
       </SectionHeader>
-      <MoverTable title="Rising" movers={query.data?.risers ?? []} {...shared} />
-      <MoverTable title="Falling" movers={query.data?.fallers ?? []} {...shared} />
+      {state?.kind === 'empty' ? (
+        <StateBlock {...state} />
+      ) : (
+        <>
+          <MoverTable title="Rising" movers={query.data?.risers ?? []} {...shared} />
+          <MoverTable title="Falling" movers={query.data?.fallers ?? []} {...shared} />
+        </>
+      )}
     </Section>
   );
 }

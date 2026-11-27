@@ -158,7 +158,7 @@ function PageState({ queries }: Readonly<{ queries: Queries }>) {
         fallback="The request failed or timed out."
       />
     );
-  return <VisibilityEmptyState activeRun={queries.activeRun ?? null} />;
+  return <VisibilityEmptyState activeRun={queries.activeRun ?? null} page="perception" />;
 }
 
 function usePageFilters(filters: Filters, queries: Queries) {

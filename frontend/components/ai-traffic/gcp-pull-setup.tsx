@@ -61,14 +61,6 @@ export function GcpFields({ model }: Readonly<{ model: ReturnType<typeof useCraw
   );
 }
 
-export function GcpSteps() {
-  return (
-    <Text as="p" variant="body" tone="ink-2">
-      Create the source first to get its setup commands. You pay Google for log routing and Pub/Sub.
-    </Text>
-  );
-}
-
 export function GcpSourceSetup({
   source,
   gcp,

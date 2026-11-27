@@ -71,7 +71,7 @@ export function useSubscriptionCheckout() {
     try {
       state = await billingApi.activation(activationId.current, { signal, workspaceId });
     } catch {
-      setNotice('Payment status is unavailable. Please refresh again.');
+      setNotice('Payment status is unavailable. Refresh the page.');
       return;
     }
     if (state.status !== 'pending' && attempt.current) {

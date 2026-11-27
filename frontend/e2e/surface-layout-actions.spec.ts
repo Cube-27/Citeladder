@@ -351,7 +351,7 @@ for (const width of [1280, 1600])
     await expect(urls.getByRole('listitem')).toHaveCount(12);
     await check('Show more');
     await urls.getByRole('checkbox').first().click();
-    await expect(dock.getByRole('link', { name: 'Fix 1 selected with Agent' })).toBeVisible();
+    await expect(dock.getByRole('link', { name: 'Fix 1 selected with agent' })).toBeVisible();
     await check('Tick a URL');
 
     expect(shifts).toEqual([]);

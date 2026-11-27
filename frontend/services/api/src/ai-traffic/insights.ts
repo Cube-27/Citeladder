@@ -47,7 +47,9 @@ export function insightPatterns(
     if (!items.length) return;
     patterns.push({
       pattern,
-      url_hashes: items.slice(0, aiTraffic.max_pattern_pages).map((r) => r.url_hash),
+      pages: items
+        .slice(0, aiTraffic.max_pattern_pages)
+        .map((r) => ({ url_hash: r.url_hash, path: r.display_path })),
       copy,
       numbers: { ...numbers, page_count: items.length },
       coverage: { crawl: context.crawl.coverage, ga4: ga4 ? 'complete' : 'incomplete' },

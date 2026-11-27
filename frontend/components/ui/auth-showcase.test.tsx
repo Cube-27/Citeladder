@@ -39,13 +39,13 @@ describe('AuthShowcase', () => {
     render(<AuthShowcase />);
 
     expect(shownSlide()).toHaveAccessibleName('1 of 3: Connect MCP');
-    fireEvent.click(screen.getByRole('button', { name: 'Site Health' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Site health' }));
 
-    expect(shownSlide()).toHaveAccessibleName('3 of 3: Site Health');
+    expect(shownSlide()).toHaveAccessibleName('3 of 3: Site health');
     expect(shownSlide()).toHaveTextContent(
-      'Site Health crawls your site and checks indexing, structured data and AI crawler access.',
+      'Site health crawls your site and checks indexing, structured data and AI crawler access.',
     );
-    expect(screen.getByRole('button', { name: 'Site Health' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Site health' })).toHaveAttribute(
       'aria-current',
       'true',
     );
@@ -66,7 +66,7 @@ describe('AuthShowcase', () => {
 
     fireEvent.pointerLeave(carousel);
     wait(7000);
-    expect(shownSlide()).toHaveAccessibleName('3 of 3: Site Health');
+    expect(shownSlide()).toHaveAccessibleName('3 of 3: Site health');
   });
 
   it('holds while a control inside it has keyboard focus', () => {

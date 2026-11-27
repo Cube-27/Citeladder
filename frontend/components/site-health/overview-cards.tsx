@@ -138,7 +138,7 @@ export function KnownUrlsCard({ summary }: Readonly<{ summary: SiteScoreSummary 
               weighting.known_url_count > 0
                 ? row.known_url_count / weighting.known_url_count
                 : null,
-            tone: 'info',
+            tone: 'ink',
           }))}
         />
       </Stack>

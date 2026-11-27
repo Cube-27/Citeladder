@@ -57,7 +57,7 @@ function scoreRow({
     label,
     figure: score === null ? absent : printed(formatScore(score)),
     share: score === null ? null : score / 100,
-    tone: score === null ? 'info' : scoreTone(score),
+    tone: score === null ? 'ink' : scoreTone(score),
   };
 }
 
@@ -157,7 +157,7 @@ export function WebFundamentalsScoreCard({
 const SEVERITIES = [
   { key: 'high', label: 'High', tone: 'negative' },
   { key: 'medium', label: 'Medium', tone: 'warning' },
-  { key: 'low', label: 'Low', tone: 'info' },
+  { key: 'low', label: 'Low', tone: 'ink' },
 ] as const;
 
 export function SeverityCard({
@@ -172,7 +172,7 @@ export function SeverityCard({
     label,
     figure: formatCount(count),
     share: audited > 0 ? count / audited : null,
-    tone: 'negative',
+    tone: 'ink',
   });
   return (
     <TitledSection title="Issues by severity" actions={actions}>

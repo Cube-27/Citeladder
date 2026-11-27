@@ -46,8 +46,8 @@ export type ChangePasswordFormValues = z.infer<typeof changePasswordFormSchema>;
 export type LoginFormValues = z.infer<typeof loginFormSchema>;
 export type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
-export function authErrorMessage(error: unknown): string {
-  return humanizeApiError(error).message;
+export function authErrorMessage(error: unknown, fallback: string): string {
+  return humanizeApiError(error, fallback).message;
 }
 
 const EMAIL_FIELD_CODES: ReadonlySet<string> = new Set([
@@ -60,13 +60,10 @@ export function signupEmailFieldError(error: unknown): string | undefined {
   return code && EMAIL_FIELD_CODES.has(code) ? message : undefined;
 }
 
-const OAUTH_SIGNIN_FALLBACK = 'Google sign-in did not complete. Please try again.';
+const OAUTH_SIGNIN_FALLBACK = 'Google sign-in did not complete. Try again.';
 
 const OAUTH_SIGNIN_ERRORS = new Map<string, string>([
-  [
-    'oauth_signin_state_invalid',
-    'That sign-in link expired or was already used. Please try again.',
-  ],
+  ['oauth_signin_state_invalid', 'That sign-in link expired or was already used. Try again.'],
   [
     'oauth_signin_email_unverified',
     'Confirm mailbox ownership using the email link before signing in with Google.',

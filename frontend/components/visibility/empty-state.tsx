@@ -8,7 +8,29 @@ import { AUDIT_STATES } from '@/lib/runs/status';
 import type { ActiveRun } from '@/lib/visibility/dashboard';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-export function VisibilityEmptyState({ activeRun }: Readonly<{ activeRun: ActiveRun | null }>) {
+export type EmptyPage = 'brand' | 'perception' | 'competitors' | 'sources';
+
+function emptyHeading(page: EmptyPage): string {
+  switch (page) {
+    case 'brand':
+      return 'No brand data yet';
+    case 'perception':
+      return 'No perception data yet';
+    case 'competitors':
+      return 'No competitor data yet';
+    case 'sources':
+      return 'No source data yet';
+    default: {
+      const unhandled: never = page;
+      return unhandled;
+    }
+  }
+}
+
+export function VisibilityEmptyState({
+  activeRun,
+  page,
+}: Readonly<{ activeRun: ActiveRun | null; page: EmptyPage }>) {
   const canRun = useWorkspaceCapability('run');
   if (activeRun)
     return (
@@ -31,7 +53,7 @@ export function VisibilityEmptyState({ activeRun }: Readonly<{ activeRun: Active
     <StateBlock
       kind="empty"
       icon={Rocket}
-      heading="No visibility data yet"
+      heading={emptyHeading(page)}
       action={canRun ? <FirstRunAction /> : undefined}
     />
   );

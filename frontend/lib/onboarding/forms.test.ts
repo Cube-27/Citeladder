@@ -65,7 +65,7 @@ describe('onboardingErrorMessage', () => {
       onboardingErrorMessage(
         new Error('At least 3 evidence-supported topics are required, but 0 were found'),
       ),
-    ).toBe('We couldn’t finish this setup step just now. Please try again.');
+    ).toBe('We couldn’t finish this setup step just now. Try again.');
   });
 
   it('falls back for non-errors', () => {

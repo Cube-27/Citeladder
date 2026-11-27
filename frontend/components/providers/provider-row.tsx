@@ -153,7 +153,7 @@ function CredentialForm({ id, state }: Readonly<{ id: string; state: ConnectionS
         request={
           confirming
             ? {
-                title: `Remove the saved ${noun}?`,
+                question: `Remove the saved ${noun}`,
                 body: 'Runs stop using it. Past results are kept.',
                 confirmLabel: `Remove ${noun}`,
                 destructive: true,

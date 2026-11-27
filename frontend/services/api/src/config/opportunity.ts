@@ -302,7 +302,7 @@ export const opportunities = {
       rule_id: 'search_keyword_gap',
       check_kind: 'keyword_presence',
       severity: 'medium',
-      title: 'Competitors rank for a search you do not',
+      title: "Competitors rank for a keyword you don't",
     },
     content_gap_improve_page: {
       action_path: 'owned',

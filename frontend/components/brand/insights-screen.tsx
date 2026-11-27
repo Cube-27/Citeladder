@@ -38,7 +38,7 @@ export function InsightsScreen() {
     <ReportPage filters={selectionPageFilterBar(state, pageFilters)}>
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
       {state ? (
-        <SelectionPageStateBlock state={state} queries={queries} />
+        <SelectionPageStateBlock state={state} queries={queries} page="brand" />
       ) : (
         <>
           <SelectionGate query={queries.visibilityQuery}>

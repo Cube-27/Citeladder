@@ -35,8 +35,8 @@ const AUTH_SHOWCASE_SLIDES: readonly Slide[] = [
   },
   {
     id: 'site-health',
-    name: 'Site Health',
-    line: 'Site Health crawls your site and checks indexing, structured data and AI crawler access.',
+    name: 'Site health',
+    line: 'Site health crawls your site and checks indexing, structured data and AI crawler access.',
     main: { file: 'site-health-main', width: 661, height: 305 },
     accent: { file: 'site-health-accent', width: 202, height: 96 },
   },

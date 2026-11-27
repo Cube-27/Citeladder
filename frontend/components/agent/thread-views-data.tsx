@@ -30,8 +30,8 @@ export function SiteHealthView({
 }: Readonly<{ scope: Scope; view: ViewOf<'site_health_summary'> }>) {
   const query = useQuery(siteHealthQueries.dashboard(scope, view.crawl_id ?? undefined));
   return (
-    <ViewFrame title="Site Health" href={agentViewHref(view)}>
-      <ViewRead query={query} subject="Site Health" shape={{ kind: 'figures' }}>
+    <ViewFrame title="Site health" href={agentViewHref(view)}>
+      <ViewRead query={query} subject="Site health" shape={{ kind: 'figures' }}>
         {(dashboard) => <ScoreSection crawl={dashboard.crawl} dashboard={dashboard} />}
       </ViewRead>
     </ViewFrame>

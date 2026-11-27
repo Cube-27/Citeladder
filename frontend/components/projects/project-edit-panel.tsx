@@ -137,7 +137,7 @@ export function ProjectEditPanel({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title={`Edit ${project.brand_name || project.name}`}
+      title="Edit project"
       width="wide"
       footer={
         <>
@@ -234,7 +234,7 @@ export function ProjectEditPanel({
               />
             )}
           </Field>
-          <Field label="Unintended">
+          <Field label="Unintended domains">
             {(props) => (
               <Input
                 {...props}

@@ -863,11 +863,13 @@ describe('A3 persisted insight gates', () => {
         .status_403,
     ).toBe(2);
     const named = await aiTrafficInsights({ db, scope: scope(), origin: '' }, filters);
-    const shown = (r: Record<string, unknown>) => [r.pages, r.pages_omitted, 'url_hashes' in r];
+    const shown = (r: Record<string, unknown>) => [r.pages, r.pages_omitted];
     const paths = ['/without-referrals', '/without-crawl', '/guide', '/guide'];
-    expect('url_hashes' in result.patterns[0]!).toBe(true);
+    expect(result.patterns.map((r) => r.pages.map((page) => page.path))).toEqual(
+      paths.map((path) => [path]),
+    );
     expect((named.patterns as Record<string, unknown>[]).map(shown)).toEqual(
-      paths.map((path) => [[path], 0, false]),
+      paths.map((path) => [[path], 0]),
     );
     await asOwner((owner) =>
       owner

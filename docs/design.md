@@ -62,7 +62,8 @@ The lint enforces this and fails CI (`vp lint`; config in
   `cn()`), `raw-media` (outside `components/ui` and the website, an `<img>` or
   a sized `<svg>`: logos and engine marks render through `BrandMark`, sized
   from the icon roles and never taller than their line, so a mark cannot set a
-  row's height) and `astro-class` (value classes in Astro markup).
+  row's height; an engine named in a chip, cell, axis or option is
+  `EngineLabel`, its mark then its name) and `astro-class` (value classes in Astro markup).
 
 There is no suppressions file and no baseline: a finding is fixed at its
 source, by a role token or a primitive prop. No
@@ -377,7 +378,10 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   right. Immediate controls save on change; a form that needs Save puts one
   primary Save in the frame's foot, right-aligned, disabled until something
   changed. Destructive actions (cancel plan, leave workspace, delete
-  project) are danger buttons in the page's last group, never primary. Plan
+  project) are danger buttons in the page's last group, never primary. A
+  destructive or bulk step either asks first through `ConfirmDialog`, whose
+  request is a `question` the dialog ends with "?" and whose confirm button
+  names the act, or applies at once and offers Undo on its toast. Plan
   cards are the layout's only row of cards (`CardGroup` heading over a
   `CardRow` of equal `Section`s, one per line below 640), prices in tabular
   figures, the current plan a `Section accent` (a 2px accent rule along its

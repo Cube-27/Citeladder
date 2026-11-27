@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { Visibility } from '@citeladder/contracts';
 import type { MatrixAxes, MatrixDimension } from '@citeladder/contracts/visibility-matrix';
 import { BrandMark } from '@/components/ui/brand-mark';
+import { EngineBrandMark } from '@/components/ui/engine-mark';
 import { AxisItemLabel } from '@/components/ui/heat-table';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { YouTag } from '@/components/ui/table';
@@ -83,6 +84,13 @@ export function AxisLabel({
       />
     );
   }
+  if (dimension === 'engine')
+    return (
+      <AxisItemLabel
+        text={text}
+        lead={<EngineBrandMark engine={axes.engine[index]?.logical_engine ?? ''} />}
+      />
+    );
   const renamed = dimension === 'topic' ? axes.topic[index]?.renamed_from : null;
   return (
     <AxisItemLabel

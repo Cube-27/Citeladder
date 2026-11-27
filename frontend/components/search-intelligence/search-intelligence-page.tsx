@@ -3,12 +3,7 @@ import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-quer
 
 import type { ReactNode } from 'react';
 
-import {
-  DemandActions,
-  DemandPanel,
-  demandControls,
-  useDemand,
-} from '@/components/demand/demand-projection';
+import { DemandPanel, demandControls, useDemand } from '@/components/demand/demand-projection';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { ReportPage } from '@/components/templates/report-page';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
@@ -103,11 +98,7 @@ export function SearchIntelligencePage() {
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       <ReportPage
-        actions={
-          <PageActions {...research.actions}>
-            <DemandActions demand={demand} />
-          </PageActions>
-        }
+        actions={<PageActions {...research.actions} />}
         tabs={<TabRow items={SEARCH_INTELLIGENCE_TABS} ariaLabel="Keyword research views" />}
         filters={tab === 'demand' ? demandControls(demand) : research.filters}
       >
@@ -414,15 +405,12 @@ function ResearchPanels({
 function PageActions({
   hasDatasets,
   onReview,
-  children,
 }: Readonly<{
   hasDatasets: boolean;
   onReview?: (action: SearchReviewAction) => void;
-  children: ReactNode;
 }>) {
   return (
     <>
-      {children}
       {onReview && hasDatasets ? (
         <>
           <Button variant="secondary" onClick={() => onReview('refresh')}>

@@ -78,7 +78,9 @@ export function VerdictDialog({
       }
     >
       {override.isError ? (
-        <Notice tone="negative">{humanizeApiError(override.error).message}</Notice>
+        <Notice tone="negative">
+          {humanizeApiError(override.error, "Couldn't save the verdict. Try again.").message}
+        </Notice>
       ) : null}
       <Stack gap="workspace">
         <RadioGroup

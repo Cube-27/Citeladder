@@ -5,6 +5,7 @@ import { CardGroup, CardRow } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Dialog } from '@/components/ui/dialog';
+import { DisplayTime } from '@/components/ui/display-time';
 import { Text } from '@/components/ui/typography';
 import type {
   BillingCatalog,
@@ -75,11 +76,7 @@ export function PlanChanges({
     return option ? [{ plan, option }] : [];
   });
   return (
-    <CardGroup
-      id="change-plan"
-      title="Change plan"
-      description="Upgrades are prorated and start once paid. Downgrades start at renewal, with no refund."
-    >
+    <CardGroup id="change-plan" title="Change plan">
       {controls.downgradeError ? (
         <Notice
           kind="mutation"
@@ -119,7 +116,7 @@ export function PlanChanges({
         onOpenChange={(open) => {
           if (!open) setDowngradeTo(null);
         }}
-        title={downgradeTo ? `Downgrade to ${downgradeTo.plan.name}` : 'Downgrade'}
+        title={downgradeTo ? `Downgrade to ${downgradeTo.plan.name}?` : 'Downgrade?'}
         footer={
           <>
             <Button variant="quiet" onClick={() => setDowngradeTo(null)}>
@@ -139,7 +136,13 @@ export function PlanChanges({
         }
       >
         <Text as="p" variant="body" tone="ink-2">
-          {currentPlan.name} continues to the end of this period. No refund.
+          {currentPlan.name} continues until{' '}
+          <DisplayTime
+            value={subscription.current_period_end}
+            dateOnly
+            fallback="the end of this period"
+          />
+          . No refund.
         </Text>
       </Dialog>
     </CardGroup>

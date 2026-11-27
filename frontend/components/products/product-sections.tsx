@@ -159,11 +159,11 @@ const QUERY_COLUMNS: readonly DataTableColumn[] = [{ key: 'query', label: 'Query
 export function FanOutQueries({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   return (
     <DataTable
-      title="Fan-out queries"
+      title="Query fan-outs"
       columns={QUERY_COLUMNS}
       state={emptyWhen(
         detail.fan_out_queries,
-        'No search queries were captured for the prompt runs that named it.',
+        'No query fan-outs were captured for the prompt runs that named it.',
       )}
     >
       {detail.fan_out_queries.map((row) => (

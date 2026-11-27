@@ -29,7 +29,7 @@ function NavigationGuard() {
       request={
         blocker.state === 'blocked'
           ? {
-              title: 'Discard unsaved changes?',
+              question: 'Discard unsaved changes',
               body: 'Your edits are not saved. Leaving discards them.',
               confirmLabel: 'Discard and leave',
               destructive: true,

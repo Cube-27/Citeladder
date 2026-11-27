@@ -40,7 +40,7 @@ export function ProductActions({ detail }: Readonly<{ detail: CommerceProductDet
                 <ActionButton
                   action="workWithAgent"
                   href={agentHandoffHref({ actionId: action.id })}
-                  aria-label={`Work with the agent on ${action.title}`}
+                  aria-label={`Work with agent on ${action.title}`}
                 />
               }
             />

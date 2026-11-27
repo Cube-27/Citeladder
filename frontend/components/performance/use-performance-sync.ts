@@ -55,7 +55,9 @@ export function usePerformanceSync() {
     outcome,
     startedAt,
     syncing: enqueued && !settled,
-    error: mutation.isError ? humanizeApiError(mutation.error).message : null,
+    error: mutation.isError
+      ? humanizeApiError(mutation.error, "Couldn't start the sync. Try again.").message
+      : null,
   };
 }
 

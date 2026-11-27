@@ -111,7 +111,7 @@ export const actions = {
   >,
   ACTION_TRANSITIONS: {
     open: ['in_progress', 'dismissed'],
-    in_progress: ['dismissed'],
+    in_progress: ['open', 'dismissed'],
     dismissed: ['open', 'in_progress'],
     implemented: [],
   } as const satisfies Record<string, readonly ActionUserStatus[]>,

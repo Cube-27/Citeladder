@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { BrandMark, type BrandMarkPlacement } from '@/components/ui/brand-mark';
+import { Inline } from '@/components/ui/layout';
 import { EngineGlyph, EngineShapes } from '@/components/ui/engine-glyph';
 import type { EngineKey } from '@/components/ui/engine-svg';
 import { useEngineCatalog } from '@/lib/providers/engines';
@@ -48,6 +49,16 @@ export function EngineMark({
   brand?: boolean;
 }>) {
   return <EngineGlyph engine={engine} brand={brand} size={placement} flow="item" />;
+}
+
+export function EngineLabel({ engine }: Readonly<{ engine: string }>) {
+  const label = useEngineCatalog().label(engine);
+  return (
+    <Inline as="span" inline>
+      <EngineBrandMark engine={engine} />
+      {label}
+    </Inline>
+  );
 }
 
 export function EngineCell({ engine }: Readonly<{ engine: string }>) {

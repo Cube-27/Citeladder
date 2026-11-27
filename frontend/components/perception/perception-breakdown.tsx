@@ -3,12 +3,12 @@ import type { PerceptionResponse } from '@citeladder/contracts/visibility-percep
 import { useAttributeTable } from '@/components/perception/attribute-table';
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { EngineLabel } from '@/components/ui/engine-mark';
 import { Section, SectionHeader, SectionTitle, SectionToolbar } from '@/components/ui/section';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
-import { useEngineCatalog } from '@/lib/providers/engines';
 import { breakdownRow, SMALL_SAMPLE, type SampleShare } from '@/lib/visibility/perception';
 import { Inline } from '@/components/ui/layout';
 
@@ -104,7 +104,6 @@ function SegmentTable({
   segment,
   rows,
 }: Readonly<{ segment: Segment; rows: PerceptionResponse['topics'] }>) {
-  const { label: engineLabel } = useEngineCatalog();
   return (
     <DataTable label={`Perception by ${segment}`} columns={segmentColumns(segment)}>
       {rows.map((row) => {
@@ -113,7 +112,7 @@ function SegmentTable({
           <TableRow key={row.key}>
             <TableCell>
               <Inline as="span" inline>
-                {segment === 'engine' ? engineLabel(row.key) : row.label}
+                {segment === 'engine' ? <EngineLabel engine={row.key} /> : row.label}
                 {cells.small ? <Tag>{SMALL_SAMPLE}</Tag> : null}
               </Inline>
             </TableCell>

@@ -9,9 +9,7 @@ const refusal = (status: number, code: string | undefined, message: string) =>
 
 describe('billing reason copy', () => {
   it('words a read reason code and never prints an unknown one', () => {
-    expect(billingReasonMessage('checkout_unavailable')).toBe(
-      'Checkout is not available for this purchase yet.',
-    );
+    expect(billingReasonMessage('checkout_unavailable')).toBe('Checkout unavailable');
     expect(billingReasonMessage('funded_not_priced')).toBe('This purchase is unavailable.');
     expect(billingReasonMessage('__proto__')).toBe('This purchase is unavailable.');
   });

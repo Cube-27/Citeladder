@@ -257,9 +257,7 @@ function AccessEnded({
             </TextLink>
           ))}
         {leave.isError ? (
-          <Notice tone="negative">
-            Sign out failed. Your session is still active; please try again.
-          </Notice>
+          <Notice tone="negative">Sign out failed. Your session is still active. Try again.</Notice>
         ) : null}
       </NoticeScreen>
       <Dialog open={securityOpen} onOpenChange={setSecurityOpen} title="Account security">

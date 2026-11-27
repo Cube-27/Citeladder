@@ -253,7 +253,7 @@ function ConnectionStatus({
             Failed
           </StatusMark>
         }
-        text={humanizeApiError(actionError).message}
+        text={humanizeApiError(actionError, "Couldn't update the connection. Try again.").message}
       />
     );
   }
@@ -410,7 +410,11 @@ export function ConnectionRow({
             },
       );
     },
-    onError: (error) => setTestState({ ok: false, message: humanizeApiError(error).message }),
+    onError: (error) =>
+      setTestState({
+        ok: false,
+        message: humanizeApiError(error, "Couldn't test the connection. Try again.").message,
+      }),
   });
   // react-doctor-disable-next-line
   const syncMutation = useMutation(

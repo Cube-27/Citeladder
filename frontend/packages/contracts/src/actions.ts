@@ -290,6 +290,7 @@ export type ActionBulkStatusRequest = z.input<typeof actionBulkStatusRequestSche
 
 export const actionBulkStatusResultSchema = responseObject({
   updated: z.number().int(),
+  moved_ids: z.array(uuid()).max(ACTION_BULK_MAX),
   skipped: z.number().int(),
   truncated: z.boolean(),
 });

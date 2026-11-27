@@ -70,7 +70,7 @@ function VisibilityWorkspace({
         ) : null}
         <TabPanel value={filters.activeTab}>
           {state ? (
-            <SelectionPageStateBlock state={state} queries={queries} />
+            <SelectionPageStateBlock state={state} queries={queries} page="sources" />
           ) : (
             <DashboardPanel filters={filters} queries={queries} />
           )}

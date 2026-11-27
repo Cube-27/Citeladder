@@ -198,9 +198,7 @@ describe('ProviderSettings', () => {
     await user.click(await openai.findByRole('button', { name: 'Manage OpenAI' }));
     await user.click(openai.getByRole('button', { name: /test connection/i }));
 
-    expect(
-      await openai.findByText('The provider rejected the key. Check it in Settings.'),
-    ).toBeInTheDocument();
+    expect(await openai.findByText('The provider rejected the key.')).toBeInTheDocument();
   });
 
   it('shows an account pause as a pause with its end, never as a failed test', async () => {
@@ -279,7 +277,7 @@ describe('ProviderSettings', () => {
     const openai = await row('OpenAI');
     await user.click(await openai.findByRole('button', { name: 'Manage OpenAI' }));
 
-    const keyInput = openai.getByPlaceholderText(/stored/i) as HTMLInputElement;
+    const keyInput = openai.getByPlaceholderText(/replace it/i) as HTMLInputElement;
     expect(keyInput).toHaveAttribute('type', 'password');
     expect(keyInput.value).toBe('');
   });

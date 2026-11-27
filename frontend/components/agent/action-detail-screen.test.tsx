@@ -237,13 +237,13 @@ describe('An issue-group Action page', () => {
     const user = userEvent.setup();
     renderDetail();
 
-    const all = await screen.findByRole('link', { name: 'Fix all 12 with Agent' });
+    const all = await screen.findByRole('link', { name: 'Fix all 12 with agent' });
     expect(chatOf(all)).toEqual({ path: '/agent', action_id: ACTION, project: PROJECT });
     expect(await openedSeed(user)).toEqual({ actionId: ACTION, context: {} });
 
     await user.click(screen.getByRole('checkbox', { name: 'Select https://acme.test/shop/p02' }));
     await user.click(screen.getByRole('checkbox', { name: 'Select https://acme.test/shop/p05' }));
-    expect(chatOf(screen.getByRole('link', { name: 'Fix 2 selected with Agent' }))).toEqual({
+    expect(chatOf(screen.getByRole('link', { name: 'Fix 2 selected with agent' }))).toEqual({
       path: '/agent',
       action_id: ACTION,
       action_url_id: [urlId(1), urlId(4)],
@@ -448,7 +448,7 @@ describe('An Action page’s sections and hand-off', () => {
     expect(
       within(screen.getByRole('region', { name: 'What to do' })).getByText('Cover the angle.'),
     ).toBeVisible();
-    expect(chatOf(screen.getByRole('link', { name: 'Work with Agent' }))).toEqual({
+    expect(chatOf(screen.getByRole('link', { name: 'Work with agent' }))).toEqual({
       path: '/agent',
       action_id: ACTION,
       target_url: 'https://acme.test/crm-pricing',
@@ -473,7 +473,7 @@ describe('An Action page’s sections and hand-off', () => {
     });
     renderDetail();
 
-    expect(chatOf(await screen.findByRole('link', { name: 'Work with Agent' }))).toEqual({
+    expect(chatOf(await screen.findByRole('link', { name: 'Work with agent' }))).toEqual({
       path: '/agent',
       action_id: ACTION,
       opportunity_id: FINDING,

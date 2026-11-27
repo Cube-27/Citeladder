@@ -3,7 +3,8 @@ import type { ReadinessCheck, ReadinessDimension, SiteScoreSummary } from '@cite
 import { Absence, printed } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { PassFailBar, ScoreBar, scoreTone } from '@/components/ui/score-gauge';
+import { CellMeter } from '@/components/ui/meter';
+import { ScoreBar, scoreTone } from '@/components/ui/score-gauge';
 import { TitledSection } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
@@ -54,12 +55,16 @@ export function ReadableCard({
             <TableRow key={row.rule}>
               <TableCell>{row.label}</TableCell>
               <TableCell>
-                <PassFailBar passing={row.passing} failing={row.failing} />
+                <CellMeter
+                  label={`${row.label} passing`}
+                  value={row.passing}
+                  max={row.passing + row.failing}
+                  valueText={`${formatCount(row.passing)} of ${formatCount(row.passing + row.failing)} pages`}
+                  tone="ink"
+                />
               </TableCell>
               <TableCell numeric>{formatCount(row.passing)}</TableCell>
-              <TableCell numeric tone={row.failing > 0 ? 'negative' : undefined}>
-                {formatCount(row.failing)}
-              </TableCell>
+              <TableCell numeric>{formatCount(row.failing)}</TableCell>
             </TableRow>
           ))}
         </DataTable>
@@ -145,13 +150,6 @@ const KIND_COLUMNS: readonly DataTableColumn[] = [
   { key: 'aeo', label: 'AEO readiness', kind: 'number', width: 'metric' },
 ];
 
-const HEAT = {
-  positive: 'positive',
-  warning: 'warning',
-  negative: 'negative',
-  info: 'info',
-} as const;
-
 export function KindScoresTable({ summary }: Readonly<{ summary: SiteScoreSummary | null }>) {
   const rows = summary ? byPageKindRows(summary.by_page_kind) : [];
   if (rows.length === 0) return null;
@@ -167,7 +165,7 @@ export function KindScoresTable({ summary }: Readonly<{ summary: SiteScoreSummar
                 state={row.aeo_measurement_state === 'excluded' ? 'not_applicable' : 'not_measured'}
               />
             ) : (
-              <StatusMark tone={HEAT[scoreTone(row.aeo_readiness_score)]}>
+              <StatusMark tone={scoreTone(row.aeo_readiness_score)}>
                 {printed(formatScore(row.aeo_readiness_score))}
               </StatusMark>
             )}

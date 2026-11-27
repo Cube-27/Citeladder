@@ -29,7 +29,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
-import { EngineStack } from '@/components/ui/engine-mark';
+import { EngineLabel, EngineStack } from '@/components/ui/engine-mark';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { schedulePauseReason } from '@/lib/runs/status';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -216,7 +216,7 @@ function ScheduleForm({
             {catalog.order.map((engine) => (
               <Checkbox
                 key={engine}
-                label={catalog.label(engine)}
+                label={<EngineLabel engine={engine} />}
                 checked={engines.includes(engine)}
                 onCheckedChange={() =>
                   setEngines((current) =>

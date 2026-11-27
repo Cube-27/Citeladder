@@ -114,9 +114,9 @@ const LOG_FORMAT: Record<(typeof LOG_FORMATS)[number], string> = {
 export const logFormatLabel = (token: string) => label(LOG_FORMAT, token);
 
 const PATTERN = {
-  crawled_without_referrals: 'crawled without AI referrals',
+  crawled_without_referrals: 'Crawled without AI referrals',
   referrals_without_recent_crawl: 'AI referrals without recent crawls',
-  crawler_errors_on_valuable_pages: 'crawler errors on valuable pages',
-  key_event_concentration: 'key events concentrated here',
+  crawler_errors_on_valuable_pages: 'Crawler errors on valuable pages',
+  key_event_concentration: 'Key events concentrated here',
 } as const;
 export const patternLabel = (token: string) => label(PATTERN, token);

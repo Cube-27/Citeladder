@@ -39,7 +39,7 @@ export function AeoReadinessScreen() {
         <StateBlock
           kind="empty"
           icon={ICONS.aeoReadiness}
-          heading="No Site health crawl yet"
+          heading="No site crawl yet"
           action={
             <Button asChild>
               <ProjectLink href="/site">Go to Site health</ProjectLink>

@@ -177,7 +177,7 @@ describe('ContentMarkdown', () => {
     render(<ContentMarkdown markdown={`[See more](${url})`} knownHosts={['acme.com']} />);
 
     expect(fireEvent.click(screen.getByRole('link', { name: 'See more' }))).toBe(false);
-    const dialog = screen.getByRole('dialog', { name: 'You’re leaving CiteLadder' });
+    const dialog = screen.getByRole('dialog', { name: 'Leave CiteLadder?' });
     expect(dialog).toHaveTextContent(url);
     expect(open).not.toHaveBeenCalled();
 

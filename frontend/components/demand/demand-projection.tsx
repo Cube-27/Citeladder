@@ -1,13 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type UseMutationResult,
-  type UseQueryResult,
-} from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-import { Button } from '@/components/ui/button';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
@@ -15,17 +8,8 @@ import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer
 import { DemandLatentDemand } from '@/components/demand/demand-latent-demand';
 import { DemandSignalFilters } from '@/components/demand/demand-signal-filters';
 import { DemandSignalTable, SIGNAL_COLUMN_COUNT } from '@/components/demand/demand-signal-table';
-import {
-  demandMutations,
-  demandQueries,
-  refreshDemandSnapshot,
-  type demandApi,
-  type DemandSignal,
-  type DemandSnapshot,
-} from '@/lib/api/demand';
-import type { DemandRecomputeRequest } from '@citeladder/contracts/demand';
-import { RefreshCw, Search, Sparkles } from '@/lib/icons';
-import { isTransientMutationError, mutationNoticeForError } from '@/lib/api/mutation-notice';
+import { demandQueries, type DemandSignal, type DemandSnapshot } from '@/lib/api/demand';
+import { Search, Sparkles } from '@/lib/icons';
 import {
   countByTab,
   FILTER_TABS,
@@ -35,9 +19,7 @@ import {
   type RankedSignal,
 } from '@/lib/demand/signals';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
-import { Icon } from '@/components/ui/icon';
 import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -49,69 +31,12 @@ const DEMAND_TAB_CODEC = stringUrlCodec<FilterTab>(
   'all',
 );
 
-type RecomputeMutation = UseMutationResult<
-  Awaited<ReturnType<typeof demandApi.recompute>>,
-  Error,
-  DemandRecomputeRequest
->;
-
-function RecomputeAction({
-  mutation,
-  onRecompute,
-  onCheck,
-}: Readonly<{ mutation: RecomputeMutation; onRecompute: () => void; onCheck: () => void }>) {
-  if (mutation.isSuccess)
-    return (
-      <Button variant="secondary" onClick={onCheck}>
-        <Icon icon={RefreshCw} />
-        Check for new snapshot
-      </Button>
-    );
-  const retry = mutation.isError && isTransientMutationError(mutation.error);
-  return (
-    <Button
-      variant="secondary"
-      onClick={onRecompute}
-      pending={mutation.isPending}
-      pendingLabel="Queueing…"
-    >
-      <Icon icon={RefreshCw} />
-      {retry ? 'Try again' : 'Recompute signals'}
-    </Button>
-  );
-}
-
-function RecomputeStatus({ mutation }: Readonly<{ mutation: RecomputeMutation }>) {
-  if (mutation.isSuccess)
-    return (
-      <Notice tone="info">
-        {mutation.data.status === 'already_queued'
-          ? 'A recompute for this window is already queued.'
-          : 'Recompute queued.'}
-      </Notice>
-    );
-  return null;
-}
-
 function DemandEmpty({ children }: Readonly<{ children: ReactNode }>) {
   return <Section>{children}</Section>;
 }
 
-function RecomputeFailure({ mutation }: Readonly<{ mutation: RecomputeMutation }>) {
-  if (!mutation.isError) return null;
-  return (
-    <Notice
-      kind="mutation"
-      notice={mutationNoticeForError(mutation.error, {
-        action: 'queue the search demand recompute',
-      })}
-    />
-  );
-}
-
 export function useDemand() {
   const { workspaceId, projectId } = useProjectScope();
-  const queryClient = useQueryClient();
   const latest = useQuery({
     ...demandQueries.latest({ workspaceId, projectId }),
   });
@@ -120,8 +45,6 @@ export function useDemand() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSignalId, setSelectedSignalId] = useUrlState('signal', optionalStringUrlCodec);
-  const recompute = useMutation(demandMutations.recompute({ workspaceId, projectId }));
-  const canRun = useWorkspaceCapability('run');
   const snapshot = latest.data?.coverage.search === 'observed' ? latest.data : null;
   const signals = snapshot?.signals;
   const tabCounts = useMemo(
@@ -146,32 +69,12 @@ export function useDemand() {
   return {
     latest,
     snapshot,
-    recompute,
-    canRun,
-    refresh: () => refreshDemandSnapshot(queryClient, projectId),
     filter: { activeTab, setActiveTab, searchQuery, setSearchQuery, tabCounts, filteredSignals },
     selection: { selectedSignalId, setSelectedSignalId },
   };
 }
 
 type Demand = ReturnType<typeof useDemand>;
-
-export function DemandActions({ demand }: Readonly<{ demand: Demand }>) {
-  const { snapshot, recompute, canRun } = demand;
-  if (!canRun || !snapshot) return null;
-  return (
-    <RecomputeAction
-      mutation={recompute}
-      onRecompute={() =>
-        recompute.mutate({ window_start: snapshot.window_start, window_end: snapshot.window_end })
-      }
-      onCheck={() => {
-        recompute.reset();
-        void demand.refresh();
-      }}
-    />
-  );
-}
 
 export function demandControls(demand: Demand): FilterBarProps | undefined {
   const { snapshot, filter } = demand;
@@ -203,8 +106,6 @@ export function DemandPanel({ demand }: Readonly<{ demand: Demand }>) {
           pending={latest.isFetching}
         />
       ) : null}
-      <RecomputeFailure mutation={demand.recompute} />
-      <RecomputeStatus mutation={demand.recompute} />
       <SignalsFeed demand={demand} snapshot={snapshot} />
     </>
   );
@@ -286,7 +187,8 @@ function SearchConsoleSetup() {
       title="Connect Search Console"
       unconnected={{
         icon: Search,
-        heading: 'Connect Search Console to see search demand',
+        heading: 'Connect Search Console',
+        connect: 'Connect Search Console',
       }}
       whenReady={
         <DemandEmpty>

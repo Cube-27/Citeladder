@@ -63,7 +63,7 @@ export function FixUrlWithAgent({ siteUrlId }: Readonly<{ siteUrlId: string }>) 
     <Button asChild variant="secondary">
       <ProjectLink href={agentHandoffHref({ urlActionsSiteUrlId: siteUrlId, prompt: URL_ASK })}>
         <Icon icon={Sparkles} />
-        Fix this URL with Agent
+        Work with agent
       </ProjectLink>
     </Button>
   );

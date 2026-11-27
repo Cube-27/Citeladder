@@ -17,7 +17,7 @@ import { Text } from '@/components/ui/typography';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'topic', label: 'Topic' },
-  { key: 'answers', label: 'Answers', width: 'figure', kind: 'number' },
+  { key: 'answers', label: 'Prompt runs', width: 'figure', kind: 'number' },
   { key: 'visibility', label: 'Visibility', width: 'figure', kind: 'number' },
   {
     key: 'voice',

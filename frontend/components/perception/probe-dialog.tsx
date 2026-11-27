@@ -236,7 +236,7 @@ function QuoteFacts({
       ),
     },
     {
-      label: 'Questions',
+      label: 'Prompts',
       value: `${quote.questions} per engine in each market it can measure, asked ${pluralCount(quote.repetitions, 'time')}`,
     },
     { label: 'Answers', value: formatCount(answers) },

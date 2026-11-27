@@ -368,7 +368,7 @@ describe('Competitors', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Edit competitors' }));
-    expect(await screen.findByRole('dialog', { name: 'Edit Acme' })).toBeVisible();
+    expect(await screen.findByRole('dialog', { name: 'Edit project' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Remove Northstar' })).toBeEnabled();
   });
 });

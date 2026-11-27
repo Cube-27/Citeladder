@@ -82,7 +82,7 @@ describe('crawl-log token rotation', () => {
     expect(
       await within(dialog).findByText(new RegExp('/v1/crawl-logs/firehose/' + id)),
     ).toBeVisible();
-    expect(within(dialog).queryByRole('button', { name: 'Create source' })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Connect' })).not.toBeInTheDocument();
   });
 
   it('names a failed rotation and retries the rotation, not a new source', async () => {

@@ -111,7 +111,7 @@ export function useSiteHealthScreen() {
     try {
       await downloadCrawlExport({ crawlId: crawl.id, format, view, filters }, { workspaceId });
     } catch {
-      setExportError('Export failed. Please try again.');
+      setExportError('Export failed. Try again.');
     } finally {
       setExporting(false);
     }

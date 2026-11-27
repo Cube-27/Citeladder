@@ -355,7 +355,7 @@ export const APP_ROUTES = [
     nav: [
       listed('Sources', 'visibility', 'tracking'),
       {
-        label: 'Query fanouts',
+        label: 'Query fan-outs',
         icon: 'queryFanouts',
         search: 'tab=query-fanout',
         placements: ['palette:tracking'],

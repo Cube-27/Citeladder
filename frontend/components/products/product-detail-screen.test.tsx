@@ -191,7 +191,7 @@ describe('ProductDetailScreen', () => {
       'https://reviews.example/best-road',
     );
     expect(
-      screen.getByText('No search queries were captured for the prompt runs that named it.'),
+      screen.getByText('No query fan-outs were captured for the prompt runs that named it.'),
     ).toBeInTheDocument();
     expect(screen.getAllByText('Newest 1 of 3 runs')).toHaveLength(2);
     const byEngine = within(screen.getByRole('region', { name: 'By engine' }));
@@ -210,7 +210,7 @@ describe('ProductDetailScreen', () => {
     const setup = within(screen.getByRole('region', { name: 'Setup' }));
     expect(setup.getByRole('link', { name: 'Add the missing price' })).toBeInTheDocument();
     const agent = setup
-      .getAllByRole('link', { name: /^Work with the agent/ })
+      .getAllByRole('link', { name: /^Work with agent/ })
       .map((link) => new URL(link.getAttribute('href')!, 'https://app.test').searchParams);
     expect(agent.map((params) => params.get('action_id'))).toEqual([null, ACTION]);
     expect(agent[0]!.get('target_url')).toBe('https://shop.example/products/road');

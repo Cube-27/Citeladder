@@ -116,7 +116,7 @@ export function ObjectionActions({
         request={
           deleting
             ? {
-                title: `Delete "${group.name}"?`,
+                question: `Delete "${group.name}"`,
                 body: 'Its scores go with it. A later probe can raise it again.',
                 confirmLabel: 'Delete objection',
                 destructive: true,

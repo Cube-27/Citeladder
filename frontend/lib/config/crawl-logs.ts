@@ -4,46 +4,36 @@ export const CRAWL_LOG_SETUPS = [
     value: 'cloudflare_worker',
     collectionPoint: 'cdn_edge',
     label: 'Cloudflare Worker',
-    description: 'Best-effort per-request delivery. Coverage is at most partial.',
     guide: docsUrl('/ai-traffic/#cloudflare-worker'),
   },
   {
     value: 'cloudflare_logpush',
     collectionPoint: 'cdn_edge',
     label: 'Cloudflare Logpush',
-    description:
-      'Enterprise HTTP request logs. Unsampled, gap-free days can reach complete coverage.',
     guide: docsUrl('/ai-traffic/#cloudflare-logpush'),
   },
   {
     value: 'aws_firehose',
     collectionPoint: 'cdn_edge',
     label: 'Amazon CloudFront',
-    description:
-      'Standard logs through Amazon Data Firehose. Unfiltered, gap-free days can reach complete coverage.',
     guide: docsUrl('/ai-traffic/#amazon-cloudfront-firehose'),
   },
   {
     value: 'gcp_pubsub_pull',
     collectionPoint: 'cdn_edge',
     label: 'Google Cloud',
-    description:
-      'Load balancer and Cloud Run request logs through Pub/Sub, pulled by CiteLadder. Unsampled, drained days can reach complete coverage.',
     guide: docsUrl('/ai-traffic/#google-cloud-pubsub'),
   },
   {
     value: 'custom',
     collectionPoint: 'application',
     label: 'Custom webhook',
-    description: 'Batch NDJSON or JSON from your shipper. Declare collection point and sampling.',
     guide: docsUrl('/ai-traffic/#custom-webhook'),
   },
   {
     value: 'upload',
     collectionPoint: 'uploaded_file',
     label: 'Upload file',
-    description:
-      'Local pre-filtering and resumable backfill. Full-day scans are labelled client-reported.',
     guide: docsUrl('/ai-traffic/#file-upload'),
   },
 ] as const;
@@ -52,17 +42,6 @@ export const FIREHOSE_BUFFER_INTERVAL = {
   min: 60,
   recommendedMax: 300,
 } as const;
-export const FIREHOSE_FILTER_TEMPLATE = docsUrl('/templates/citeladder-firehose-filter.mjs');
-export const CLOUDFRONT_LOG_FIELDS = [
-  'timestamp(ms)',
-  'c-ip',
-  'sc-status',
-  'cs-method',
-  'cs-uri-stem',
-  'x-edge-request-id',
-  'x-host-header',
-  'cs(User-Agent)',
-] as const;
 export const GCP_PULL_SETUP = {
   topic: 'citeladder-ai-crawlers',
   sink: 'citeladder-ai-crawlers',

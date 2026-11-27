@@ -89,7 +89,7 @@ test('provider settings: an OpenAI key saves and verifies from its row', async (
   );
   await openaiRow.getByRole('button', { name: /save key/i }).click();
   await probe;
-  await expect(openaiRow.getByPlaceholder(/api key|stored/i)).toBeHidden();
+  await expect(openaiRow.getByPlaceholder(/api key|replace it/i)).toBeHidden();
 
   assertSameOriginApi(requests, baseURL!);
 });
