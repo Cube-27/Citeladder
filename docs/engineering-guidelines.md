@@ -170,6 +170,18 @@ skeleton of its settled size or a reserved height, and what follows a list
 of unknown length mounts once it answers. A reserved line holds ` `;
 layout measured for rows runs in `useLayoutEffect`.
 
+### Fit decided by measured width, never a count
+
+**Rule:** [design](design.md) ("Toolbar placement") owns where controls go.
+Whether chips, tabs or actions fit on a row is decided from the row's
+measured width (`components/ui/filter-fit.ts`), never from a fixed count.
+**Why:** Filters folded into one menu with room to spare across several
+design rounds; the four-icon-chip cap in `filter-bar.tsx` was the latest
+form, and its tests pinned the cap instead of the fit.
+**Check:** A constant capping how many controls show inline. A measured fit
+treats an unmeasured row (width 0: jsdom, hidden, first paint) as "everything
+fits", or every test folds everything; tests that need a fold set widths.
+
 ### Empty, zero and "none" only after a successful read
 
 **Rule:** A screen says "no data", "no plan", 0 or an empty list only when

@@ -9,6 +9,11 @@ export type FilterFit = Readonly<{
   menuAlways: boolean;
 }>;
 
+function spanOf(widths: readonly number[], gap: number): number {
+  const parts = widths.filter((width) => width > 0);
+  return parts.reduce((sum, width) => sum + width, 0) + gap * Math.max(0, parts.length - 1);
+}
+
 export function keptFilterCount({
   widths,
   available,
@@ -18,10 +23,8 @@ export function keptFilterCount({
   menuAlways,
 }: FilterFit): number {
   if (available <= 0) return widths.length;
-  const span = (count: number, extra: readonly number[]) => {
-    const parts = [...widths.slice(0, count), ...extra].filter((width) => width > 0);
-    return parts.reduce((sum, width) => sum + width, 0) + gap * Math.max(0, parts.length - 1);
-  };
+  const span = (count: number, extra: readonly number[]) =>
+    spanOf([...widths.slice(0, count), ...extra], gap);
   if (span(widths.length, menuAlways ? [menu, trailing] : [trailing]) <= available)
     return widths.length;
   for (let count = widths.length - 1; count > 0; count -= 1)
@@ -31,11 +34,6 @@ export function keptFilterCount({
 
 const CHIP_GAP = 8;
 const MENU_FALLBACK = 96;
-
-function measuredWidth(nodes: Iterable<HTMLElement>): number {
-  const widths = [...nodes].map((node) => node.offsetWidth).filter((width) => width > 0);
-  return widths.reduce((sum, width) => sum + width, 0) + CHIP_GAP * Math.max(0, widths.length - 1);
-}
 
 export function useKeptFilters(ids: readonly string[], menuAlways: boolean) {
   const ref = useRef<HTMLDivElement>(null);
@@ -57,7 +55,12 @@ export function useKeptFilters(ids: readonly string[], menuAlways: boolean) {
           widths: order.map((id) => widths.current.get(id) ?? 0),
           available: node.clientWidth,
           gap: CHIP_GAP,
-          trailing: measuredWidth(node.querySelectorAll<HTMLElement>('[data-filter-trailing]')),
+          trailing: spanOf(
+            [...node.querySelectorAll<HTMLElement>('[data-filter-trailing]')].map(
+              (trail) => trail.offsetWidth,
+            ),
+            CHIP_GAP,
+          ),
           menu: menu.current,
           menuAlways,
         }),
