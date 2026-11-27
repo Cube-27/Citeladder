@@ -81,8 +81,8 @@ line-height or opacity number, font name, `--ramp-*` read or raw `var()`
 fallback. Tokens, keywords, `0`, opacity `1`, unitless multipliers,
 percentages and gradient stops pass; `forced-colors` and
 `prefers-reduced-motion: reduce` blocks are exempt. A custom property is a
-token only in a token file or a `:root` rule; anywhere else it is checked
-like any value. The token files (`globals.css` and `public-surface.css`) alone
+token only in a token file or a rule on `:root` itself (attribute and
+`:not()` suffixes, no descendant); anywhere else it is checked like any value. The token files (`globals.css` and `public-surface.css`) alone
 read the ramps.
 
 The website (marketing and docs) composes the same primitives, and its own
