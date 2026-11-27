@@ -99,7 +99,7 @@ export function productCell(row: CommerceProductRow, key: ProductColumnKey): Pro
 const HOLDER_LABELS = {
   owned: 'Your product',
   approved_competitor: 'Competitor',
-  ai_observed_competitor: 'Seen in answers',
+  ai_observed_competitor: 'Seen in prompts',
 } as const satisfies Record<CommerceProductRow['kind'], string>;
 
 const holderLabel = (kind: CommerceProductRow['kind']) => HOLDER_LABELS[kind];
