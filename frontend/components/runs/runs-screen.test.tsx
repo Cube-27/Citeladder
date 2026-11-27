@@ -99,6 +99,33 @@ it('sends the sort and page to the server and returns to page one on a new sort'
   await waitFor(() => expect(last()).toMatchObject({ sort: 'failed', page: '1' }));
 });
 
+it('shows no rows from the previous status tab while the new one loads', async () => {
+  const user = userEvent.setup();
+  serveRuns([
+    audit(1, 'completed', '2026-08-04T00:00:00Z'),
+    audit(2, 'failed', '2026-08-01T00:00:00Z'),
+  ]);
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  mswServer.use(
+    http.get('/api/v1/audits', async ({ request }) => {
+      if (!new URL(request.url).searchParams.getAll('status').includes('failed')) return;
+      await held;
+    }),
+  );
+  vi.spyOn(runsApi, 'listSchedules').mockResolvedValue([]);
+  renderRuns();
+  expect(await screen.findByRole('link', { name: 'Brand audit · Aug 4, 2026' })).toBeVisible();
+
+  await user.click(screen.getByRole('tab', { name: /Failed/ }));
+  expect(screen.queryByRole('link', { name: 'Brand audit · Aug 4, 2026' })).toBeNull();
+  release();
+  expect(await screen.findByRole('link', { name: 'Brand audit · Aug 1, 2026' })).toBeVisible();
+  expect(screen.queryByRole('link', { name: 'Brand audit · Aug 4, 2026' })).toBeNull();
+});
+
 it('counts every run under exactly one status tab', async () => {
   serveRuns([
     audit(1, 'completed', '2026-08-04T00:00:00Z'),

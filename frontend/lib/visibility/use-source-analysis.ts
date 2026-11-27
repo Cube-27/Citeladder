@@ -24,7 +24,7 @@ export type SourceScope = {
   pageSize: number;
 };
 
-export function selectionParams(
+function selectionParams(
   filters: Pick<SourceFilters, 'engine' | 'cohort'>,
   queries: SourceQueries,
 ) {

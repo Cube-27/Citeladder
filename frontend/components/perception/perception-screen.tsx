@@ -49,8 +49,13 @@ export function PerceptionScreen() {
   const factViews = useFactViews({ filters, queries, accuracy, open: tab === 'fact-checking' });
   const pageFilters = usePageFilters(filters, queries);
   const ready = selectionPageState(queries) === null;
-  const accuracyData = accuracy.isPlaceholderData ? undefined : accuracy.data;
-  const brandFact = pilot ? factFigure(accuracyData, () => setTab('fact-checking')) : undefined;
+  const brandFact = pilot ? settledFactFigure(accuracy, () => setTab('fact-checking')) : undefined;
+  const view =
+    tab === 'fact-checking' ? (
+      <PerceptionFactChecking query={accuracy} views={factViews} />
+    ) : (
+      <BrandTab query={perception} factFigure={brandFact} />
+    );
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       <ReportPage
@@ -63,23 +68,20 @@ export function PerceptionScreen() {
           {probe ? (
             <PerceptionProbe view={probe} controls={probeControls} />
           ) : (
-            <SelectionTab
-              ready={ready}
-              queries={queries}
-              view={
-                tab === 'fact-checking' ? (
-                  <PerceptionFactChecking query={accuracy} views={factViews} />
-                ) : (
-                  <BrandTab query={perception} factFigure={brandFact} />
-                )
-              }
-            />
+            <SelectionTab ready={ready} queries={queries} view={view} />
           )}
         </TabPanel>
         {probeControls.dialog}
       </ReportPage>
     </TabsRoot>
   );
+}
+
+function settledFactFigure(
+  accuracy: ReturnType<typeof useAccuracy>,
+  onOpen: Parameters<typeof factFigure>[1],
+) {
+  return factFigure(accuracy.isPlaceholderData ? undefined : accuracy.data, onOpen);
 }
 
 function usePerceptionTab() {

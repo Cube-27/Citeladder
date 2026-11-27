@@ -109,6 +109,61 @@ function useEdits<T>(base: T) {
   return [edited ? edited.value : base, change, reset] as const;
 }
 
+function useReviewEdits(
+  discoveryState: BrandDiscovery | undefined,
+  maximumCompetitors: number | undefined,
+) {
+  const ready = discoveryState?.status === 'ready' ? discoveryState : null;
+  const readyDiscoveryId = ready?.id ?? null;
+  const savedDraft = useMemo(
+    () => (readyDiscoveryId ? readReviewDraft(readyDiscoveryId) : null),
+    [readyDiscoveryId],
+  );
+  const suggestedDomains = useMemo(
+    (): ReviewDomain[] =>
+      ready
+        ? (savedDraft?.domains ??
+          ready.domains.map((domain, index) => ({
+            id: `domain:${index}:${domain}`,
+            domain,
+            selected: true,
+          })))
+        : [],
+    [ready, savedDraft],
+  );
+  const suggestedCompetitors = useMemo(
+    (): ReviewCompetitor[] =>
+      ready && maximumCompetitors !== undefined
+        ? (savedDraft?.competitors ??
+          ready.competitors.map((competitor, index) => ({
+            ...competitor,
+            id: `competitor:${index}:${competitor.name}`,
+            selected: index < maximumCompetitors,
+          })))
+        : [],
+    [maximumCompetitors, ready, savedDraft],
+  );
+  const suggestedProfile = ready ? (savedDraft?.profile ?? ready.profile) : null;
+  const [domains, setDomains, resetDomains] = useEdits(suggestedDomains);
+  const [competitors, setCompetitors, resetCompetitors] = useEdits(suggestedCompetitors);
+  const [profile, setProfile, resetProfile] = useEdits<DiscoveryProfile | null>(suggestedProfile);
+  const resetReview = () => {
+    resetDomains();
+    resetCompetitors();
+    resetProfile();
+  };
+  return {
+    readyDiscoveryId,
+    domains,
+    setDomains,
+    competitors,
+    setCompetitors,
+    profile,
+    setProfile,
+    resetReview,
+  };
+}
+
 export function useOnboardingFlow(transactionKey: string) {
   const router = useNavigate();
   const queryClient = useQueryClient();
@@ -168,45 +223,16 @@ export function useOnboardingFlow(transactionKey: string) {
     router(`/onboarding?${reset.toString()}`, { replace: true, preventScrollReset: true });
   }, [activeWorkspaceId, initialDiscoveryId, orphanedCompletion, router, searchParams]);
 
-  const ready = discoveryState?.status === 'ready' ? discoveryState : null;
-  const readyDiscoveryId = ready?.id ?? null;
-  const savedDraft = useMemo(
-    () => (readyDiscoveryId ? readReviewDraft(readyDiscoveryId) : null),
-    [readyDiscoveryId],
-  );
-  const suggestedDomains = useMemo(
-    (): ReviewDomain[] =>
-      ready
-        ? (savedDraft?.domains ??
-          ready.domains.map((domain, index) => ({
-            id: `domain:${index}:${domain}`,
-            domain,
-            selected: true,
-          })))
-        : [],
-    [ready, savedDraft],
-  );
-  const suggestedCompetitors = useMemo(
-    (): ReviewCompetitor[] =>
-      ready && maximumCompetitors !== undefined
-        ? (savedDraft?.competitors ??
-          ready.competitors.map((competitor, index) => ({
-            ...competitor,
-            id: `competitor:${index}:${competitor.name}`,
-            selected: index < maximumCompetitors,
-          })))
-        : [],
-    [maximumCompetitors, ready, savedDraft],
-  );
-  const suggestedProfile = ready ? (savedDraft?.profile ?? ready.profile) : null;
-  const [domains, setDomains, resetDomains] = useEdits(suggestedDomains);
-  const [competitors, setCompetitors, resetCompetitors] = useEdits(suggestedCompetitors);
-  const [profile, setProfile, resetProfile] = useEdits<DiscoveryProfile | null>(suggestedProfile);
-  const resetReview = () => {
-    resetDomains();
-    resetCompetitors();
-    resetProfile();
-  };
+  const {
+    readyDiscoveryId,
+    domains,
+    setDomains,
+    competitors,
+    setCompetitors,
+    profile,
+    setProfile,
+    resetReview,
+  } = useReviewEdits(discoveryState, maximumCompetitors);
 
   useEffect(() => {
     if (step !== 2 || !readyDiscoveryId || profile === null || maximumCompetitors === undefined)

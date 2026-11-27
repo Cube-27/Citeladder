@@ -78,7 +78,10 @@ export function useRunsPage(statuses: readonly AuditStatus[]) {
         page_size: pageSize,
       },
     ),
-    placeholderData: (data, previous) => retainPreviousDataForScope(projectId, data, previous),
+    placeholderData: (data, previous) =>
+      String(previous?.queryKey[4].status) === String(statuses)
+        ? retainPreviousDataForScope(projectId, data, previous)
+        : undefined,
     refetchInterval: (current) => pollAudits(countedStatuses(current.state.data?.status_counts)),
   });
   const onSort = (key: SortKey) =>

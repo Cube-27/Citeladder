@@ -251,14 +251,7 @@ function resolvedSelection(
 
 export type SelectionWindow = Readonly<{ from: string | undefined; to: string }>;
 
-export function useVisibilityQueries(
-  filters: ReturnType<typeof useVisibilityFilters>,
-  view: VisibilityView,
-  { active = true }: Readonly<{ active?: boolean }> = {},
-) {
-  const { workspaceId, projectId } = useProjectScope();
-  const requestScope = { workspaceId, projectId };
-  const insights = view === 'insights';
+function useSelectionInputs(filters: ReturnType<typeof useVisibilityFilters>) {
   const from = useMemo(
     () => filters.fromAt ?? rangeToFrom(filters.range),
     [filters.fromAt, filters.range],
@@ -268,6 +261,19 @@ export function useVisibilityQueries(
     filters.chosenSelection === null &&
     filters.selectedRunId === null &&
     filters.defaultSelection === 'range';
+  const engine = filters.engine === 'all' ? undefined : filters.engine;
+  return { from, window, asksWindow, engine };
+}
+
+export function useVisibilityQueries(
+  filters: ReturnType<typeof useVisibilityFilters>,
+  view: VisibilityView,
+  { active = true }: Readonly<{ active?: boolean }> = {},
+) {
+  const { workspaceId, projectId } = useProjectScope();
+  const requestScope = { workspaceId, projectId };
+  const insights = view === 'insights';
+  const { from, window, asksWindow, engine } = useSelectionInputs(filters);
   const { queryClient, auditsQuery, runPicker, hasRuns, activeRun, rangeHasRuns } =
     useVisibilityRuns({
       requestScope,
@@ -283,7 +289,6 @@ export function useVisibilityQueries(
     insights,
   );
 
-  const engine = filters.engine === 'all' ? undefined : filters.engine;
   const selectionMode = measuredSelection({
     chosen: filters.chosenSelection,
     namedRun: filters.selectedRunId !== null,
