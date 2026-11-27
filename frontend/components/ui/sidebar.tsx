@@ -210,7 +210,7 @@ export function SidebarNavRowContent({
         {label}
       </span>
       {count == null ? null : (
-        <span className="w-[4ch] shrink-0 text-right tabular-nums">{count}</span>
+        <span className="w-nav-count shrink-0 text-right tabular-nums">{count}</span>
       )}
     </>
   );
@@ -317,7 +317,7 @@ export function SidebarRailList({
   return (
     <nav
       aria-label={label}
-      className="min-h-0 flex-1 [scrollbar-width:none] overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:hidden"
+      className="min-h-0 flex-1 scrollbar-none overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:hidden"
     >
       <ul className="flex flex-col items-center">{children}</ul>
     </nav>

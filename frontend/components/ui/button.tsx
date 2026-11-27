@@ -46,8 +46,6 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
     'face face-filled bg-negative text-on-ink border border-negative not-disabled:hover:opacity-hover',
 };
 
-export const CLOSE_BUTTON = 'size-6 min-h-6 pointer-coarse:min-h-6 [--press:0.93]';
-
 export function buttonClasses(
   variant: ButtonVariant = 'secondary',
   className?: string,
@@ -67,7 +65,8 @@ export type ButtonProps = ComponentPropsWithoutRef<'button'> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
   asChild?: boolean;
-  shape?: 'label' | 'icon';
+  shape?: keyof typeof SHAPE;
+  look?: 'launcher';
   pending?: boolean;
   pendingLabel?: ReactNode;
   ref?: Ref<HTMLButtonElement>;
@@ -75,9 +74,21 @@ export type ButtonProps = ComponentPropsWithoutRef<'button'> & {
 
 const ICON_SHAPE = 'w-control-md gap-0 px-0';
 
+const SHAPE = {
+  label: undefined,
+  icon: ICON_SHAPE,
+  floating: cn(ICON_SHAPE, 'shadow-sheet rounded-full'),
+  close: cn(ICON_SHAPE, 'size-6 min-h-6 pointer-coarse:min-h-6 press-firm'),
+} as const;
+
+const LOOK = {
+  launcher: 'text-ink-2 text-left shrink-0 justify-start',
+} as const;
+
 function SlottedButton({
   className,
   shape = 'label',
+  look,
   variant = 'secondary',
   size = 'md',
   pending = false,
@@ -95,7 +106,7 @@ function SlottedButton({
       {...props}
       data-button-variant={variant}
       aria-busy={pending || undefined}
-      className={buttonClasses(variant, cn(shape === 'icon' && ICON_SHAPE, className), size)}
+      className={buttonClasses(variant, cn(SHAPE[shape], look && LOOK[look], className), size)}
     >
       {children}
     </Slot>
@@ -105,6 +116,7 @@ function SlottedButton({
 function NativeButton({
   className,
   shape = 'label',
+  look,
   variant = 'secondary',
   size = 'md',
   pending = false,
@@ -125,7 +137,7 @@ function NativeButton({
       disabled={props.disabled || pending}
       className={buttonClasses(
         variant,
-        cn(pending && 'pointer-events-none', shape === 'icon' && ICON_SHAPE, className),
+        cn(pending && 'pointer-events-none', SHAPE[shape], look && LOOK[look], className),
         size,
       )}
     >
@@ -159,6 +171,7 @@ type IconButtonProps = Omit<ButtonProps, 'variant' | 'children' | 'asChild' | 'a
   tooltipSide?: 'top' | 'right' | 'bottom' | 'left';
   tooltip?: boolean;
   href?: string;
+  shape?: Exclude<keyof typeof SHAPE, 'label'>;
 };
 
 function IconLinkTarget({
@@ -192,11 +205,12 @@ export function IconButton({
   shortcut,
   tooltipSide = 'top',
   tooltip = true,
+  shape = 'icon',
   className,
   ...props
 }: Readonly<IconButtonProps>) {
   const control = href ? (
-    <Button {...props} variant={variant} shape="icon" className={className} asChild>
+    <Button {...props} variant={variant} shape={shape} className={className} asChild>
       <IconLinkTarget href={href} label={label}>
         <Icon icon={icon} />
       </IconLinkTarget>
@@ -205,7 +219,7 @@ export function IconButton({
     <Button
       {...props}
       variant={variant}
-      shape="icon"
+      shape={shape}
       className={className}
       aria-label={label}
       pendingLabel={<span className="sr-only">{props.pendingLabel ?? label}</span>}

@@ -1,14 +1,14 @@
 import { Absence } from '@/components/ui/absence';
 import { Spinner } from '@/components/ui/spinner';
-import { textRole } from '@/components/ui/text-role';
+import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
 import { type DataAvailabilityState, type Formatted, isAbsent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 type ValueText = 'figure' | 'body';
 
 const SLOT: Record<ValueText, string> = {
-  figure: 'min-h-[var(--text-figure--line-height)]',
-  body: 'min-h-[var(--text-body--line-height)]',
+  figure: 'min-h-figure-line',
+  body: 'min-h-body-line',
 };
 
 export type ValueProps = Readonly<{
@@ -43,7 +43,7 @@ export function Value({
     );
   return (
     <span className={slot}>
-      <span className={textRole(text, 'whitespace-nowrap tabular-nums')}>{value}</span>
+      <span className={cn(TEXT_ROLE_CLASS[text], 'whitespace-nowrap tabular-nums')}>{value}</span>
     </span>
   );
 }

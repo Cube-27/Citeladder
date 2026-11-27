@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { ClampText } from '@/components/ui/clamp-text';
-import { textRole } from '@/components/ui/text-role';
+
 import { SectionBleed } from '@/components/ui/section';
 import { cn } from '@/lib/utils';
 
@@ -28,39 +28,27 @@ const ROW = {
   inline: 'flex min-w-0 max-w-full items-center gap-2',
   spread: 'flex flex-wrap items-center justify-between gap-x-4 gap-y-1',
   columns: 'grid min-w-0 gap-1',
-  record:
-    'grid min-h-10 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-3 py-2 has-[[data-fact-note]]:min-h-14',
+  record: 'grid min-h-10 grid-cols-facts items-center gap-x-3 py-2 has-[[data-fact-note]]:min-h-14',
 } as const;
 
 const TERM = {
   ruled: 'text-body text-ink-2',
-  inline: textRole('body', 'text-ink-2 shrink-0'),
-  spread: textRole('body', 'text-ink-2'),
-  columns: textRole('body', 'text-ink-2'),
-  record: textRole('body', 'text-ink min-w-0'),
+  inline: 'text-body text-ink-2 shrink-0',
+  spread: 'text-body text-ink-2',
+  columns: 'text-body text-ink-2',
+  record: 'text-body text-ink min-w-0',
 } as const;
 
 const DETAIL = {
   ruled: 'text-body text-ink min-w-0 tabular-nums',
-  inline: textRole('body', 'text-ink-2 min-w-0'),
-  spread: textRole('body', 'text-ink tabular-nums'),
-  columns: textRole(
-    'caption',
-    'flex min-h-tag min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
-  ),
+  inline: 'text-body text-ink-2 min-w-0',
+  spread: 'text-body text-ink tabular-nums',
+  columns:
+    'text-caption text-ink-2 flex min-h-tag min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
   record: 'flex min-w-0 items-center justify-between gap-3',
 } as const;
 
 const RULED_FROM = 4;
-
-const ONE_LINE: Record<FactLayout, string | null> = {
-  ruled:
-    '[[data-public-surface]_&]:overflow-visible [[data-public-surface]_&]:whitespace-normal [[data-public-surface]_&]:[overflow-wrap:anywhere]',
-  inline: 'min-w-0 truncate',
-  spread: null,
-  columns: 'min-w-0',
-  record: null,
-};
 
 function factKey(fact: Fact, index: number) {
   if (fact.key) return fact.key;
@@ -95,8 +83,8 @@ export function FactList({
       ))}
       {total && layout === 'spread' ? (
         <div className={cn(ROW.spread, 'border-rule border-t pt-2')}>
-          <dt className={textRole('emphasis')}>{total.label}</dt>
-          <dd className={textRole('emphasis', 'tabular-nums')}>{total.value}</dd>
+          <dt className="font-emphasis">{total.label}</dt>
+          <dd className="font-emphasis tabular-nums">{total.value}</dd>
         </div>
       ) : null}
     </dl>
@@ -105,24 +93,22 @@ export function FactList({
 
 function FactValue({ fact, layout }: Readonly<{ fact: Fact; layout: FactLayout }>) {
   if (layout === 'record') return <RecordValue fact={fact} />;
-  const oneLine = ONE_LINE[layout];
-  return oneLine ? <ClampText className={oneLine}>{fact.value}</ClampText> : fact.value;
+  if (layout === 'spread') return fact.value;
+  return <ClampText wrapOnPublic={layout === 'ruled'}>{fact.value}</ClampText>;
 }
 
 function RecordValue({ fact }: Readonly<{ fact: Fact }>) {
   return (
     <>
       <span className="min-w-0">
-        <span className={textRole('body', 'text-ink block tabular-nums')}>{fact.value}</span>
+        <span className="text-body text-ink block tabular-nums">{fact.value}</span>
         {fact.note ? (
-          <span data-fact-note="" className={textRole('caption', 'block')}>
+          <span data-fact-note="" className="text-caption text-ink-2 block">
             {fact.note}
           </span>
         ) : null}
       </span>
-      {fact.end ? (
-        <span className={textRole('body', 'shrink-0 text-right')}>{fact.end}</span>
-      ) : null}
+      {fact.end ? <span className="text-body text-ink shrink-0 text-right">{fact.end}</span> : null}
     </>
   );
 }
@@ -142,8 +128,10 @@ export function ValueLedger({
     <SectionBleed as="ol" rows>
       {items.map((item) => (
         <li key={item.key} className="min-h-row flex items-center justify-between gap-2">
-          <ClampText className={textRole('body', 'flex-1')}>{item.label}</ClampText>
-          <span className={textRole('body', 'text-ink-2 shrink-0 tabular-nums')}>{item.value}</span>
+          <ClampText text="body" className="flex-1">
+            {item.label}
+          </ClampText>
+          <span className="text-body text-ink-2 shrink-0 tabular-nums">{item.value}</span>
         </li>
       ))}
       {padding.map((slot) => (

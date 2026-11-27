@@ -7,7 +7,7 @@ import {
 } from 'react';
 
 import { cn } from '@/lib/utils';
-import { textRole, toneClass, type TextTone } from '@/components/ui/text-role';
+import { TEXT_TONE_CLASS, type TextTone } from '@/components/ui/text-role';
 
 const ROLE_CLASSES = {
   caption: 'text-caption font-sans',
@@ -118,7 +118,7 @@ export function Text({
 >) {
   const className = cn(
     ROLE_CLASSES[variant],
-    toneClass(tone),
+    tone && TEXT_TONE_CLASS[tone],
     numeric && 'tabular-nums',
     wrap && TEXT_WRAP[wrap],
     box && TEXT_BOX[box],
@@ -140,10 +140,7 @@ export function CodeToken({ children }: Readonly<{ children: string }>) {
   return (
     <code
       data-code-token=""
-      className={textRole(
-        'code',
-        'bg-well min-w-0 rounded-control px-2 py-1 [overflow-wrap:anywhere]',
-      )}
+      className="text-code text-ink bg-well rounded-control min-w-0 px-2 py-1 font-mono wrap-anywhere"
     >
       {children}
     </code>

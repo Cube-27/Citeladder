@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { useContext, useId, type ComponentProps, type ReactNode, type RefObject } from 'react';
 
 import { BusyRung } from '@/components/ui/rung-meter';
@@ -19,7 +20,7 @@ import { Section, SectionBleed, SectionHeader, SectionToolbar } from '@/componen
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
-import { textRole } from '@/components/ui/text-role';
+import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
 import { StateBlock } from '@/components/ui/state-block';
 import {
   SectionTitleRoleContext,
@@ -155,7 +156,7 @@ function HeldFootprint({
     <SectionBleed>
       <div className="grid min-w-0">
         <div className="px-panel-inset col-start-1 row-start-1 min-w-0 py-3">{block}</div>
-        <div inert className="col-start-1 row-start-1 min-w-0" style={{ visibility: 'hidden' }}>
+        <div inert className="invisible col-start-1 row-start-1 min-w-0">
           {children}
         </div>
       </div>
@@ -317,7 +318,7 @@ function DataTableHeader({
   return (
     <SectionHeader data-data-table-header="" actions={actions}>
       {title ? (
-        <Heading id={headingId} className={textRole(role, 'min-w-0 truncate')}>
+        <Heading id={headingId} className={cn(TEXT_ROLE_CLASS[role], 'min-w-0 truncate')}>
           {title}
         </Heading>
       ) : null}

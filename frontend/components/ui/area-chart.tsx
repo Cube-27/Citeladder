@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { cn } from '@/lib/utils';
 
 import {
   breakBridges,
@@ -21,7 +22,12 @@ import {
   pointXs,
   type ChartRow,
 } from '@/components/ui/area-chart-data';
-import { CHART_HEIGHT_PX, useChartWidth, type ChartHeight } from '@/components/ui/chart';
+import {
+  CHART_HEIGHT_CLASS,
+  CHART_HEIGHT_PX,
+  useChartWidth,
+  type ChartHeight,
+} from '@/components/ui/chart';
 import { ChartBreakNote, ChartFrame, ChartKey } from '@/components/ui/chart-frame';
 import {
   AXIS_PROPS,
@@ -165,7 +171,7 @@ export function AreaChart({
           data={data}
           lines={lines}
           events={placed}
-          height={CHART_HEIGHT_PX[heightRole]}
+          heightRole={heightRole}
           yMin={yMin}
           yMax={yMax}
           yFormat={yFormat}
@@ -184,7 +190,7 @@ function AreaPlot({
   data,
   lines,
   events,
-  height,
+  heightRole,
   yMin,
   yMax,
   yFormat,
@@ -194,13 +200,14 @@ function AreaPlot({
   data: readonly TrendPoint[];
   lines: readonly Line[];
   events: readonly TrendEvent[];
-  height: number;
+  heightRole: ChartHeight;
   yMin?: number;
   yMax?: number;
   yFormat: (value: number) => string;
   shown: Shown;
 }>) {
   const id = useId().replaceAll(':', '');
+  const height = CHART_HEIGHT_PX[heightRole];
   const [plotRef, width] = useChartWidth<HTMLDivElement>();
   const xs = pointXs(data);
   const rows = chartRows(data, lines);
@@ -220,8 +227,7 @@ function AreaPlot({
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="group"
       aria-label={`${label}. Focus the chart and use the arrow keys to read each point.`}
-      className="w-full"
-      style={{ height }}
+      className={cn('w-full', CHART_HEIGHT_CLASS[heightRole])}
     >
       <RechartsAreaChart
         width={width}

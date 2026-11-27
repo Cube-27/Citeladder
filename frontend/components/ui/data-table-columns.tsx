@@ -2,7 +2,6 @@ import { ArrowDown, ArrowUp } from '@/lib/icons';
 import { Checkbox } from '@/components/ui/checkbox';
 import { HintedTableHead, SortableTableHead } from '@/components/ui/table-heads';
 import { TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { textRole } from '@/components/ui/text-role';
 
 const COLUMN_WIDTH = {
   flex: { kind: 'rest' },
@@ -243,7 +242,7 @@ function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
       {hidden ? <span className="sr-only">{column.label || 'Actions'}</span> : column.label}
       {column.order ? <OrderMark order={column.order} /> : null}
       {column.sublabel ? (
-        <span className={textRole('caption', 'block')}>{column.sublabel}</span>
+        <span className="text-caption text-ink-2 block">{column.sublabel}</span>
       ) : null}
     </TableHead>
   );
@@ -251,5 +250,5 @@ function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
 
 function OrderMark({ order }: Readonly<{ order: 'ascending' | 'descending' }>) {
   const Arrow = order === 'descending' ? ArrowDown : ArrowUp;
-  return <Arrow className="ms-1 inline size-3 align-[-1px]" aria-hidden />;
+  return <Arrow className="align-glyph-sm ms-1 inline size-3" aria-hidden />;
 }

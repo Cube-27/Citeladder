@@ -375,7 +375,49 @@
   --spacing-notice-fill: 60dvh;
   --spacing-turn-estimate: 320px;
   --spacing-count-mark: 3ch;
-
+  --spacing-nav-count: 4ch;
+  --spacing-rung-figure: 6ch;
+  --spacing-indent: 16px;
+  --spacing-indent-2: 32px;
+  --spacing-ledger-label: 15rem;
+  --spacing-filter-search: min(100%, 16rem);
+  --spacing-open-row-bleed: calc(100% + 24px);
+  --spacing-notice-body: calc(100% - 1.5rem);
+  --spacing-viewport-fit: calc(100vw - 2rem);
+  --spacing-drawer-fit: calc(100vw - 1rem);
+  --spacing-dialog-fit: calc(100vw - 3rem);
+  --spacing-dialog-max: calc(100dvh - 8rem);
+  --spacing-dialog-top: 12dvh;
+  --spacing-dialog-top-max: calc(88dvh - 1.5rem);
+  --spacing-showcase-fill: calc(100dvh - 1rem);
+  --spacing-menu-wide: min(28rem, calc(100vw - 16px));
+  --spacing-menu-rule-inset: 3%;
+  --spacing-dock-chip: min(12rem, 100%);
+  --spacing-dock-menu: min(20rem, 40dvh);
+  --spacing-turnstile: 65px;
+  --spacing-turnstile-compact: 140px;
+  --container-state: 500px;
+  --container-chart-key: min(100%, 20rem);
+  --container-list-wide: 640px;
+  --link-rule-width: 1.5px;
+  --transition-property-field: background-color, border-color, outline-color;
+  --transition-property-underline: color, text-decoration-color;
+  --transition-property-underline-color: text-decoration-color;
+  --transition-property-tint: background-color, color;
+  --transition-property-edge: border-color, box-shadow;
+  --transition-property-track: grid-template-columns;
+  --transition-property-fill: background-color;
+  --transition-property-size: width;
+  --content-data-size: attr(data-size);
+  --content-data-hint: attr(data-hint);
+  --press-firm: 0.93;
+  --press-soft: 0.98;
+  --press-mark: 0.95;
+  --press-check: 0.92;
+  --align-glyph: -2px;
+  --align-glyph-sm: -1px;
+  --check-draw-duration: 150ms;
+  --check-draw-delay: 15ms;
 }
 
 @theme inline {
@@ -409,6 +451,53 @@
   --grid-template-columns-shell: var(--spacing-sidebar) minmax(0, 1fr);
   --grid-template-columns-shell-compact: var(--spacing-sidebar-compact) minmax(0, 1fr);
   --grid-template-columns-shell-rail: var(--spacing-sidebar-rail) minmax(0, 1fr);
+  --grid-template-columns-meter-row: 4.5rem minmax(0, 1fr) auto;
+  --grid-template-columns-score-gauge: minmax(0, 1fr) auto minmax(0, 1.1fr);
+  --grid-template-columns-answer-aside: minmax(0, 1fr) 20rem;
+  --grid-template-columns-editor: minmax(0, 3fr) minmax(0, 2fr);
+  --grid-template-columns-cards: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
+  --grid-template-columns-facts: minmax(0, 2fr) minmax(0, 3fr);
+  --grid-template-columns-rung: 0.75rem 1rem minmax(0, 1fr) auto;
+  --grid-template-columns-reorder-row: 1.25rem minmax(0, 1fr) 1rem auto;
+  --grid-template-columns-work-row: 20px 1fr 120px;
+  --grid-template-columns-work-row-phone: 20px 1fr 88px;
+  --grid-template-columns-work-row-wide: 20px 1fr 92px 120px 110px;
+  --grid-template-columns-list-row: 20px minmax(0, 1fr) fit-content(40%);
+  --grid-template-columns-list-row-phone: 20px minmax(0, 1fr);
+  --grid-template-columns-list-row-wide: 20px minmax(0, 1fr) fit-content(40%) auto;
+  --spacing-field-rows-min: calc(var(--field-min-rows) * 1lh + 1rem + 2px);
+  --spacing-field-rows-max: calc(var(--field-max-rows) * 1lh + 1rem + 2px);
+  --spacing-composer-rows-min: max(var(--spacing-control-md), calc(var(--field-min-rows) * 1lh + 0.5rem));
+  --spacing-composer-rows-max: calc(var(--field-max-rows) * 1lh + 0.5rem);
+  --spacing-table-rows: calc(var(--data-table-rows) * var(--spacing-row));
+  --spacing-table-fit: calc(100cqi - 2 * var(--spacing-panel-inset));
+  --spacing-cell-indent: calc(var(--spacing-cell-x) + var(--spacing-indent));
+  --spacing-cell-indent-2: calc(var(--spacing-cell-x) + var(--spacing-indent-2));
+  --spacing-heat-floor: calc(10rem + var(--grid-columns) * 5rem);
+  --spacing-heat-floor-phone: calc(10rem + var(--grid-columns) * 6rem);
+  --spacing-rank-floor: calc(10rem + var(--grid-columns) * 8rem);
+  --spacing-masthead-offset: var(--masthead-block-size, var(--spacing-masthead));
+  --spacing-toast-top: calc(var(--masthead-block-size, var(--spacing-masthead)) + 8px);
+  --spacing-menu-max: min(24rem, var(--radix-dropdown-menu-content-available-height));
+  --spacing-menu-trigger: var(--radix-dropdown-menu-trigger-width);
+  --spacing-select-max: min(18.5rem, var(--radix-select-content-available-height));
+  --spacing-select-trigger: var(--radix-select-trigger-width);
+  --spacing-select-public: max(15rem, var(--radix-select-trigger-width));
+  --spacing-state-title: var(--state-title-gap, 16px);
+  --spacing-state-action: var(--state-action-gap, 16px);
+  --spacing-figure-line: var(--text-figure--line-height);
+  --spacing-body-line: var(--text-body--line-height);
+  --container-bubble: min(80%, var(--container-prose));
+  --shadow-tab-rule: inset 0 -1px 0 var(--color-rule);
+  --spacing-share: var(--share);
+  --spacing-offset: var(--offset);
+  --spacing-tip-x: var(--tip-x);
+  --spacing-tip-y: var(--tip-y);
+  --spacing-place-top: var(--place-top, auto);
+  --spacing-place-right: var(--place-right, auto);
+  --spacing-place-bottom: var(--place-bottom, auto);
+  --spacing-place-left: var(--place-left, auto);
+  --spacing-place-width: var(--place-width);
 }
 
 :root {
@@ -592,6 +681,72 @@
 }
 @utility overlay-selected {
   background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
+}
+@utility link-rule {
+  text-decoration-thickness: var(--link-rule-width);
+}
+@utility scrollbar-none {
+  scrollbar-width: none;
+}
+@utility appearance-textfield {
+  appearance: textfield;
+}
+@utility align-glyph {
+  vertical-align: var(--align-glyph);
+}
+@utility align-glyph-sm {
+  vertical-align: var(--align-glyph-sm);
+}
+@utility shrink-last {
+  flex-shrink: 0.001;
+}
+@utility press-firm {
+  --press: var(--press-firm);
+}
+@utility press-soft {
+  --press: var(--press-soft);
+}
+@utility press-mark {
+  --press: var(--press-mark);
+}
+@utility press-check {
+  --press: var(--press-check);
+}
+@utility target-hit-fine {
+  --target-hit: var(--spacing-target);
+}
+@utility panel-inset-card {
+  --spacing-panel-inset: var(--spacing-card);
+}
+@utility panel-inset-modal {
+  --spacing-panel-inset: var(--spacing-modal);
+}
+@utility popup-from-top {
+  --popup-origin: top;
+}
+@utility popup-from-bottom {
+  --popup-origin: bottom;
+}
+@utility cell-indent {
+  --cell-indent: var(--spacing-indent);
+}
+@utility cell-indent-2 {
+  --cell-indent: var(--spacing-indent-2);
+}
+@utility table-ground-well {
+  --table-ground: var(--color-well);
+}
+@utility check-draw {
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset var(--check-draw-duration) linear var(--check-draw-delay);
+  &[data-drawn] {
+    stroke-dashoffset: 0;
+  }
+}
+@utility transition-meter {
+  transition:
+    width var(--transition-duration-slide) var(--ease-standard),
+    background-color var(--transition-duration-open) var(--ease-standard);
 }
 
 [data-public-surface] {

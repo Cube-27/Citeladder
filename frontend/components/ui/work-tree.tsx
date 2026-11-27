@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, type PressableProps } from '@/components/ui/pressable';
 import { SkeletonBlock } from '@/components/ui/skeleton-block';
 import { StateDot, type StateDotTone } from '@/components/ui/state-dot';
-import { textRole } from '@/components/ui/text-role';
+
 import { ChevronDown } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -21,9 +21,7 @@ function TreeChevron({ open }: Readonly<{ open: boolean }>) {
 }
 
 function CountText({ children }: Readonly<{ children: string }>) {
-  return (
-    <span className={textRole('body', 'text-ink-2 min-w-7 shrink-0 tabular-nums')}>{children}</span>
-  );
+  return <span className="text-body text-ink-2 min-w-7 shrink-0 tabular-nums">{children}</span>;
 }
 
 type ToggleProps = Omit<PressableProps, 'children' | 'tone'> & { open: boolean };
@@ -41,11 +39,9 @@ export function TreeStatusRow({
       {...props}
       data-tree-row=""
       aria-expanded={open}
-      className={cn(
-        textRole('subheading'),
-        'hover:overlay-hover rounded-control flex h-10 items-center gap-2 px-2',
-        className,
-      )}
+      text="label"
+      look="tree-row"
+      className={className}
     >
       <TreeChevron open={open} />
       <StateDot tone={tone} />
@@ -68,11 +64,9 @@ export function TreeGroupRow({
       {...props}
       data-tree-row=""
       aria-expanded={open}
-      className={cn(
-        textRole('subheading'),
-        'hover:overlay-hover rounded-control flex h-10 scroll-mt-4 items-center gap-2 px-2',
-        className,
-      )}
+      text="label"
+      look="tree-anchor"
+      className={className}
     >
       <TreeChevron open={open} />
       <span className="min-w-0 truncate">{name}</span>
@@ -93,7 +87,7 @@ export function TreeGroupingRow({
   return (
     <div
       className={cn(
-        textRole('label'),
+        'text-label text-ink',
         'hover:overlay-hover rounded-control relative flex h-10 items-center gap-2 px-2',
         !open && 'text-ink-2',
       )}
@@ -130,9 +124,7 @@ export function TreeLeaf({ children }: Readonly<{ children: ReactNode }>) {
 
 export function TreeQuiet({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <p className={textRole('body', 'text-ink-2 ml-5 flex h-10 items-center px-2 phone:ml-2')}>
-      {children}
-    </p>
+    <p className="text-body text-ink-2 phone:ml-2 ml-5 flex h-10 items-center px-2">{children}</p>
   );
 }
 
@@ -141,7 +133,7 @@ export function TreeLoading({ label }: Readonly<{ label: string }>) {
     <div aria-busy className="phone:ml-2 ml-5 grid gap-1">
       <span className="sr-only">{label}</span>
       {[0, 1, 2].map((row) => (
-        <SkeletonBlock key={row} className="rounded-control h-10" />
+        <SkeletonBlock key={row} shape="control" height="10" />
       ))}
     </div>
   );

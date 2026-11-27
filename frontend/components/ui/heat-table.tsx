@@ -13,9 +13,8 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { SkeletonBlock, SkeletonFrame } from '@/components/ui/skeleton-block';
 import { SectionBleed } from '@/components/ui/section';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/text-role';
+
 import type { DataAvailabilityState, Formatted } from '@/lib/format';
-import { cssVars } from '@/lib/css-vars';
 import { cn } from '@/lib/utils';
 
 const heatShare = (place: number) => `${Math.round(4 + 46 * Math.min(1, Math.max(0, place)))}%`;
@@ -39,7 +38,7 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
           <TableRow>
             <TableHead className="w-40">{corner}</TableHead>
             {columns.map((column) => (
-              <TableHead key={column.key} data-tile-cell="" className={HEAT_HEAD}>
+              <TableHead key={column.key} data-tile-cell="" stackOnPhone>
                 {column.header}
               </TableHead>
             ))}
@@ -57,18 +56,18 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
                 >
                   {cell.kind === 'void' ? (
                     <div className="rounded-mark bg-hatch flex min-h-10 flex-col items-center justify-center">
-                      <i className={textRole('caption')}>
+                      <i className="text-caption text-ink-2">
                         <Absence state={cell.state} label={cell.label} />
                       </i>
                     </div>
                   ) : (
                     <div
                       className="rounded-mark bg-heat flex min-h-10 flex-col items-center justify-center"
-                      style={cssVars({ '--heat-share': heatShare(cell.tint) })}
+                      style={{ '--heat-share': heatShare(cell.tint) }}
                     >
-                      <span className={textRole('label', 'tabular-nums')}>{cell.text}</span>
+                      <span className="text-label text-ink tabular-nums">{cell.text}</span>
                       {cell.detail === null ? null : (
-                        <span className={textRole('caption', 'text-ink')}>{cell.detail}</span>
+                        <span className="text-caption text-ink">{cell.detail}</span>
                       )}
                     </div>
                   )}
@@ -82,16 +81,13 @@ export function HeatTable({ labelledBy, corner, columns, rows }: HeatTableProps)
   );
 }
 
-const HEAT_FLOOR =
-  'min-w-[calc(10rem+var(--grid-columns)*5rem)] phone:min-w-[calc(10rem+var(--grid-columns)*6rem)]';
-const HEAT_HEAD =
-  'phone:whitespace-normal phone:[&>span]:flex-col phone:[&>span]:gap-1 phone:[&_.truncate]:whitespace-normal text-center';
+const HEAT_FLOOR = 'min-w-heat-floor phone:min-w-heat-floor-phone';
 const RANK_CHIP =
   'rounded-mark flex h-control-md items-center justify-center gap-1 overflow-hidden px-2 whitespace-nowrap phone:h-auto phone:min-h-control-md phone:flex-wrap phone:py-1 phone:text-center';
-const RANK_FLOOR = 'phone:min-w-[calc(10rem+var(--grid-columns)*8rem)]';
+const RANK_FLOOR = 'phone:min-w-rank-floor';
 
 function GridFloor({ columns, children }: Readonly<{ columns: number; children: ReactNode }>) {
-  return <SectionBleed style={cssVars({ '--grid-columns': columns })}>{children}</SectionBleed>;
+  return <SectionBleed style={{ '--grid-columns': columns }}>{children}</SectionBleed>;
 }
 
 export function GridTableSkeleton({
@@ -103,11 +99,11 @@ export function GridTableSkeleton({
   const cell =
     variant === 'heat' ? (
       <td data-tile-cell="" className="p-0.5">
-        <SkeletonBlock className="rounded-mark h-10 min-h-10" />
+        <SkeletonBlock height="tile" />
       </td>
     ) : (
       <td data-tile-cell="" className="p-1">
-        <SkeletonBlock className="rounded-mark h-control-md" />
+        <SkeletonBlock height="control" />
       </td>
     );
   return (
@@ -117,11 +113,11 @@ export function GridTableSkeleton({
           <TableHeader>
             <TableRow>
               <TableHead className={variant === 'heat' ? 'w-40' : 'w-54'}>
-                <SkeletonBlock className="w-16" />
+                <SkeletonBlock width="16" />
               </TableHead>
               {Array.from({ length: columns }, (_, index) => (
                 <TableHead key={index}>
-                  <SkeletonBlock className="mx-auto w-12" />
+                  <SkeletonBlock place="center" width="12" />
                 </TableHead>
               ))}
             </TableRow>
@@ -130,7 +126,7 @@ export function GridTableSkeleton({
             {Array.from({ length: rows }, (_, row) => (
               <TableRow key={row}>
                 <TableRowHeader>
-                  <SkeletonBlock className="w-24" />
+                  <SkeletonBlock width="24" />
                 </TableRowHeader>
                 {Array.from({ length: columns }, (_, index) => (
                   <Fragment key={index}>{cell}</Fragment>
@@ -146,7 +142,7 @@ export function GridTableSkeleton({
 
 export function HeatScale({ note }: Readonly<{ note: string }>) {
   return (
-    <div className={textRole('caption', 'flex items-center gap-2')}>
+    <div className="text-caption text-ink-2 flex items-center gap-2">
       <span className="flex-1">{note}</span>
       <span>Low</span>
       <i aria-hidden className="bg-heat-scale h-1.5 w-30 rounded-full" />
@@ -207,8 +203,8 @@ export function RankTable({
                             className={cn(
                               RANK_CHIP,
                               chip.own
-                                ? textRole('captionStrong', 'bg-accent-wash text-accent-text')
-                                : textRole('caption', 'bg-well text-ink'),
+                                ? 'text-caption-strong bg-accent-wash text-accent-text'
+                                : 'text-caption bg-well text-ink',
                             )}
                           >
                             {chip.mark}
@@ -231,7 +227,7 @@ export function RankTable({
 
 export function RankLegend() {
   return (
-    <div className={textRole('caption', 'flex items-center gap-4')}>
+    <div className="text-caption text-ink-2 flex items-center gap-4">
       <span className="inline-flex items-center gap-2">
         <i aria-hidden className="rounded-mark bg-well size-2.5" />
         <span>Other brands</span>
@@ -262,7 +258,7 @@ export function AxisItemLabel({
       {trail}
       {note ? (
         <Tooltip content={note.tip}>
-          <button type="button" className={textRole('caption', 'whitespace-nowrap')}>
+          <button type="button" className="text-caption text-ink-2 whitespace-nowrap">
             {note.label}
           </button>
         </Tooltip>

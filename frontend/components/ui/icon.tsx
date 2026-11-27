@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 
 import type { IconGlyph } from '@/lib/icons';
-import { toneClass, type TextTone } from '@/components/ui/text-role';
+import { TEXT_TONE_CLASS, type TextTone } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 type GlyphProps = Readonly<{
@@ -27,6 +27,8 @@ export function Icon({
   muted = false,
   dim = false,
   flipOnOpen = false,
+  flip,
+  revealOnHover = false,
   className,
 }: Readonly<{
   icon: IconGlyph | BrandGlyph;
@@ -36,6 +38,8 @@ export function Icon({
   muted?: boolean;
   dim?: boolean;
   flipOnOpen?: boolean;
+  flip?: boolean;
+  revealOnHover?: boolean;
   className?: string;
 }>) {
   return (
@@ -44,11 +48,14 @@ export function Icon({
       className={cn(
         ICON_SIZE[size],
         'shrink-0',
-        toneClass(tone),
+        tone && TEXT_TONE_CLASS[tone],
         muted && 'opacity-muted',
         dim && 'opacity-dim',
         flipOnOpen &&
           'transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none',
+        flip !== undefined && 'transition-transform',
+        flip && 'rotate-180',
+        revealOnHover && 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100',
         className,
       )}
       aria-hidden={label ? undefined : true}

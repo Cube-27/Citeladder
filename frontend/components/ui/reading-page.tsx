@@ -9,7 +9,6 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
-import { textRole } from '@/components/ui/text-role';
 
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   return (
@@ -51,7 +50,7 @@ export function Labelled({
 }
 
 export function Prose({ children }: Readonly<{ children: ReactNode }>) {
-  return <p className={textRole('body', 'break-words')}>{children}</p>;
+  return <p className="text-body text-ink break-words">{children}</p>;
 }
 
 export type DetailFact = Readonly<{ label: string; value: ReactNode }>;
@@ -66,8 +65,8 @@ export function DetailsFacts({ facts }: Readonly<{ facts: readonly DetailFact[] 
       <SectionBleed as="dl" rows>
         {facts.map((fact) => (
           <div key={fact.label} className="flex">
-            <dt className={textRole('body', 'text-ink-2 w-30 shrink-0')}>{fact.label}</dt>
-            <dd className={textRole('body', 'flex min-w-0 flex-1 items-center gap-2')}>
+            <dt className="text-body text-ink-2 w-30 shrink-0">{fact.label}</dt>
+            <dd className="text-body text-ink flex min-w-0 flex-1 items-center gap-2">
               {fact.value}
             </dd>
           </div>
@@ -81,7 +80,7 @@ export function StepList({ items }: Readonly<{ items: readonly string[] }>) {
   return (
     <ul className="flex list-disc flex-col gap-1 ps-5">
       {items.map((item) => (
-        <li key={item} className={textRole('body', 'min-w-0 break-words')}>
+        <li key={item} className="text-body text-ink min-w-0 break-words">
           {item}
         </li>
       ))}

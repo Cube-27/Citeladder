@@ -62,7 +62,6 @@ const plainElement = {
           const found = classValues(value, constants);
           const parts = [
             ...found.strings.flatMap(splitTokens).filter(isValueClass),
-            ...found.roles.map((role) => `textRole('${role}')`),
             ...found.helpers,
             ...found.unreadable.map((name) => `{${name}}`),
           ];

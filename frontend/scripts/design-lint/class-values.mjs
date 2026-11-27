@@ -19,7 +19,7 @@ function unwrap(node) {
 }
 
 export function classValues(node, constants) {
-  const result = { strings: [], roles: [], helpers: [], unreadable: [] };
+  const result = { strings: [], helpers: [], unreadable: [] };
   const visit = (current, hops) => {
     if (!current) return;
     switch (current.type) {
@@ -50,11 +50,6 @@ export function classValues(node, constants) {
       case 'CallExpression': {
         const name = calleeName(current.callee);
         if (MERGE_FUNCTIONS.test(name)) return current.arguments.forEach((arg) => visit(arg, hops));
-        if (name === 'textRole') {
-          const [role, ...rest] = current.arguments;
-          result.roles.push(role?.type === 'Literal' ? String(role.value) : 'dynamic');
-          return rest.forEach((arg) => visit(arg, hops));
-        }
         if (/Classes$/.test(name)) return result.helpers.push(`${name}()`);
         return result.unreadable.push(`${name || 'call'}()`);
       }
