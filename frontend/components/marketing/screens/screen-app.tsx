@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { ScreenButton, ScreenTabs } from './screen-parts';
 import './screen-vignette.css';
 import './screen-app.css';
+import { Icon } from '@/components/ui/icon';
 
 type PageActions = 'launch' | 'crawl' | 'analysis';
 
@@ -109,13 +110,13 @@ type NavGroup = Readonly<{
 
 function NavRow({
   label,
-  icon: Icon,
+  icon: glyph,
   active,
 }: Readonly<{ label: string; icon: IconGlyph | null; active: boolean }>) {
   const count = OPEN_COUNTS[label];
   return (
     <span className={cn('cl-app-nav-row', active && 'is-active')}>
-      {Icon && <Icon className="size-3.5" aria-hidden />}
+      {glyph && <Icon icon={glyph} size="flush" />}
       <span className="cl-app-nav-label">{label}</span>
       {count !== undefined && <span className="cl-app-nav-count">{count}</span>}
     </span>
@@ -135,7 +136,7 @@ function ScreenSidebar({
           <span className="cl-app-ident-text">
             <Text variant="body">Acme Analytics</Text>
           </span>
-          <ChevronsUpDown className="text-ink-2 size-3.5" aria-hidden />
+          <Icon icon={ChevronsUpDown} size="flush" tone="ink-2" />
         </span>
       </div>
       <div className="cl-app-side-controls">
@@ -193,7 +194,7 @@ function ScreenMenuButton({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <ScreenButton>
       {children}
-      <ChevronDown className="text-ink-2 size-3.5" aria-hidden />
+      <Icon icon={ChevronDown} size="flush" tone="ink-2" />
     </ScreenButton>
   );
 }

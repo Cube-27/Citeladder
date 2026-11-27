@@ -17,6 +17,7 @@ import {
   Zap,
   type IconGlyph,
 } from '@/lib/icons';
+import { Icon } from '@/components/ui/icon';
 const NAV_ICONS: Readonly<Record<string, IconGlyph>> = {
   '/platform/ai-visibility': ChartColumn,
   '/platform/cited-sources': Link2,
@@ -40,7 +41,7 @@ export function hasNavIcon(href: string): boolean {
   return href in NAV_ICONS;
 }
 
-export function NavIcon({ href, className }: Readonly<{ href: string; className?: string }>) {
-  const Icon = NAV_ICONS[href];
-  return Icon ? <Icon aria-hidden className={className} /> : null;
+export function NavIcon({ href }: Readonly<{ href: string }>) {
+  const glyph = NAV_ICONS[href];
+  return glyph ? <Icon icon={glyph} size="lead" /> : null;
 }

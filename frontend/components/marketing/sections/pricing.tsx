@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 
 import { CheckList, columnsFor } from './site-parts';
 import './pricing.css';
+import { Icon } from '@/components/ui/icon';
 
 export function PricingCard({
   name,
@@ -78,7 +79,7 @@ function PlanValue({ value }: Readonly<{ value: PlanCell }>) {
   if (value === true) {
     return (
       <span className="cl-wt-yes">
-        <Check aria-hidden className="size-4" />
+        <Icon icon={Check} size="control" />
         <span className="sr-only">Included</span>
       </span>
     );
@@ -86,7 +87,7 @@ function PlanValue({ value }: Readonly<{ value: PlanCell }>) {
   if (value === false) {
     return (
       <span className="cl-wt-no">
-        <Minus aria-hidden className="size-4" />
+        <Icon icon={Minus} size="control" />
         <span className="sr-only">Not included</span>
       </span>
     );

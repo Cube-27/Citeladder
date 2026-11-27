@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Plus } from '@/lib/icons';
 import { ButtonLink } from '../primitives/button';
 import { Eyebrow } from './site-parts';
 import './card-rail.css';
+import { Icon } from '@/components/ui/icon';
 
 export function RailCard({
   href,
@@ -41,7 +42,7 @@ export function RailCard({
           data-label={label}
           data-rail-toggle
         >
-          <Plus aria-hidden className="size-5" />
+          <Icon icon={Plus} size="lead" />
         </button>
       </div>
       <div className="cl-railcard-shot">{media}</div>
@@ -76,7 +77,7 @@ export function CardRail({
             aria-label={`Previous ${label}`}
             data-card-rail-prev
           >
-            <ArrowLeft aria-hidden className="size-5" />
+            <Icon icon={ArrowLeft} size="lead" />
           </button>
           <button
             type="button"
@@ -84,7 +85,7 @@ export function CardRail({
             aria-label={`Next ${label}`}
             data-card-rail-next
           >
-            <ArrowRight aria-hidden className="size-5" />
+            <Icon icon={ArrowRight} size="lead" />
           </button>
         </div>
       </div>

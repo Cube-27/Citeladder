@@ -212,6 +212,8 @@
 }
 
 .cl-arrowlink-icon {
+  width: calc(var(--spacing) * 4);
+  height: calc(var(--spacing) * 4);
   flex-shrink: 0;
   color: var(--color-accent);
   transition: transform var(--transition-duration-fast) var(--ease-standard);

@@ -13,6 +13,7 @@ import {
 import { GITHUB_MARK_PATH } from '../primitives/github-mark';
 import { COOKIE_PREFERENCES_ATTRIBUTE } from './cookie-banner';
 import './site-footer.css';
+import { Icon } from '@/components/ui/icon';
 
 const SOCIAL_GLYPHS: Record<SocialNetwork, string> = {
   github: GITHUB_MARK_PATH,
@@ -32,7 +33,7 @@ function ColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   return (
     <a className="focus-ring" href={link.href} target="_blank" rel="noreferrer">
       {link.label}
-      <ArrowUpRight className="size-3.5" aria-hidden />
+      <Icon icon={ArrowUpRight} size="flush" />
     </a>
   );
 }

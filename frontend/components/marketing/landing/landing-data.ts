@@ -1,16 +1,13 @@
-import type { ComponentType, SVGProps } from 'react';
-
 import type { EngineKey } from '@/components/ui/engine-mark';
-import { Cloud } from '@/lib/icons';
+import { Cloud, type IconGlyph } from '@/lib/icons';
 import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
 import { countWordCapitalized, projectCount } from '@/lib/marketing-content/count-words';
-
-import { McpMark } from './mcp-mark';
 
 export type IntegrationMark =
   | { readonly kind: 'engine'; readonly engine: EngineKey }
   | { readonly kind: 'image'; readonly src: string }
-  | { readonly kind: 'icon'; readonly icon: ComponentType<SVGProps<SVGSVGElement>> };
+  | { readonly kind: 'icon'; readonly icon: IconGlyph }
+  | { readonly kind: 'mcp' };
 
 export type Integration = {
   readonly title: string;
@@ -31,7 +28,7 @@ export const INTEGRATIONS: readonly Integration[] = [
   { title: 'Google Gemini', mark: { kind: 'engine', engine: 'gemini' } },
   { title: 'Anthropic', mark: { kind: 'engine', engine: 'claude' } },
   { title: 'DataForSEO', mark: { kind: 'image', src: '/brand/integrations/dataforseo.png' } },
-  { title: 'MCP clients', mark: { kind: 'icon', icon: McpMark } },
+  { title: 'MCP clients', mark: { kind: 'mcp' } },
   { title: 'Shopify', mark: { kind: 'image', src: '/brand/integrations/shopify.png' } },
   {
     title: 'Google Merchant Center',

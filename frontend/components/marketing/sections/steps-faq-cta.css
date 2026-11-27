@@ -121,6 +121,8 @@
 }
 
 .cl-faq-icon {
+  width: calc(var(--spacing) * 5);
+  height: calc(var(--spacing) * 5);
   color: var(--site-mark);
   transition: transform var(--transition-duration-fast) var(--ease-standard);
 }

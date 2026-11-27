@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
 
 import { buttonClasses } from '@/components/ui/button';
 import { appHref } from '@/lib/config/app-link';
@@ -7,35 +7,56 @@ import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav'
 import { cn } from '@/lib/utils';
 
 type Variant = 'primary' | 'soft';
-type VisualProps = Readonly<{ variant?: Variant; className?: string }>;
+const BOX = {
+  fill: 'w-full',
+  'hide-sm': 'cl-navbar-hide-sm',
+  sheet: 'cl-btn-lg w-full',
+} as const;
+
+type VisualProps = Readonly<{ variant?: Variant; box?: keyof typeof BOX }>;
 
 const SHARED_VARIANT = {
   primary: 'primary',
   soft: 'secondary',
 } as const satisfies Record<Variant, 'primary' | 'secondary'>;
 
-function buttonLinkAttributes({ variant = 'primary', className }: VisualProps) {
+function buttonLinkAttributes({ variant = 'primary', box }: VisualProps) {
   const shared = SHARED_VARIANT[variant];
   return {
     'data-marketing-cta': '',
     'data-button-variant': shared,
     'data-button-look': 'cta',
-    className: cn(buttonClasses(shared), '[&_svg]:size-4 [&_svg]:shrink-0', className),
+    className: cn(buttonClasses(shared), '[&_svg]:size-4 [&_svg]:shrink-0', box && BOX[box]),
   };
 }
+
+type LinkProps = VisualProps &
+  Readonly<{
+    children?: ReactNode;
+    rel?: string;
+    target?: string;
+    onClick?: MouseEventHandler<HTMLAnchorElement>;
+  }>;
 
 export function ButtonLink({
   href,
   variant,
-  className,
+  box,
+  rel,
+  target,
+  onClick,
+  demo = false,
   children,
-  ...rest
-}: VisualProps & { href: string; children: ReactNode } & Omit<
-    ComponentPropsWithoutRef<'a'>,
-    'href' | 'className' | 'children'
-  >) {
+}: LinkProps & Readonly<{ href: string; demo?: boolean }>) {
   return (
-    <a href={href} {...buttonLinkAttributes({ variant, className })} {...rest}>
+    <a
+      href={href}
+      rel={rel}
+      target={target}
+      onClick={onClick}
+      data-demo-cta={demo ? '' : undefined}
+      {...buttonLinkAttributes({ variant, box })}
+    >
       {children}
     </a>
   );
@@ -43,21 +64,19 @@ export function ButtonLink({
 
 export function DemoButtonLink({
   variant = 'primary',
-  className,
+  box,
+  onClick,
   children,
-  ...rest
-}: VisualProps & { children?: ReactNode } & Omit<
-    ComponentPropsWithoutRef<'a'>,
-    'href' | 'className' | 'children' | 'target' | 'rel'
-  >) {
+}: Omit<LinkProps, 'rel' | 'target'>) {
   return (
     <ButtonLink
       href={DEMO_HREF}
-      data-demo-cta=""
+      demo
       variant={variant}
-      className={className}
-      {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
-      {...rest}
+      box={box}
+      onClick={onClick}
+      target={DEMO_EXTERNAL ? '_blank' : undefined}
+      rel={DEMO_EXTERNAL ? 'noreferrer' : undefined}
     >
       {children ?? DEMO_CTA}
     </ButtonLink>
