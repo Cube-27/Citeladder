@@ -421,6 +421,9 @@ how to add or change an entry.
   its scope; an action shows once (2026-11-27). A card subtitle sits on the
   title row as muted trailing text when it fits and is otherwise not shown; one
   that only explains the card is deleted (2026-11-27).
+- **AR-28 One term, "prompts"** (technically buyer queries), not "answers",
+  for what a product or brand is measured in (2026-11-27). Product detail and
+  the Products list follow it; other screens still say "answers".
 - **AR-29 Card rows** (2026-11-27, C3): cards beside each other pair by content
   height, a tall card takes the row, and they align to their tops rather than
   stretching to a neighbour.
@@ -435,9 +438,6 @@ how to add or change an entry.
   Claude Console's neutral grey (design.md "Tokens" holds the values); our
   orange, accent and status hues stay, and a reference grey that fails AA is
   lightened by the smallest step that passes. The website's dark is unchanged.
-- **AR-28 One term, "prompts"** (technically buyer queries), not "answers",
-  for what a product or brand is measured in (2026-11-27). Product detail and
-  the Products list follow it; other screens still say "answers".
 
 ## Audit remediation (owner 2026-11-12)
 
