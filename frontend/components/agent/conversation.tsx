@@ -23,6 +23,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { Text } from '@/components/ui/typography';
 import { JumpList } from '@/components/ui/workspace';
 import { Pencil, RotateCcw } from '@/lib/icons';
+import { scrollBehavior } from '@/lib/accessibility/use-reduced-motion';
 import { documentAnchor, latestOutput, outputPlacements } from '@/lib/agent/documents';
 import { citedActions } from '@/lib/agent/evidence';
 import { agentHandoffHref } from '@/lib/agent/handoff';
@@ -209,7 +210,7 @@ function DocumentList({ outputs }: Readonly<{ outputs: readonly AgentOutput[] }>
         onJump: () =>
           document
             .getElementById(documentAnchor(output.id))
-            ?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }),
+            ?.scrollIntoView?.({ block: 'start', behavior: scrollBehavior() }),
       }))}
     />
   );
