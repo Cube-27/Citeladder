@@ -6,7 +6,7 @@ order: 120
 updated: '2026-11-18'
 ---
 
-**Tracking → Sources** helps you move from "our visibility changed" to the pages used in the measured answers. It has five tabs: **Domains**, **URLs**, **Read, not cited**, **Query fanouts** and **Ads**. The run, engine, prompts, market and topic filters above the tabs apply to every tab.
+**Tracking → Sources** helps you move from "our visibility changed" to the pages used in the measured answers. It has five tabs: **Domains**, **URLs**, **Read, not cited**, **Query fan-outs** and **Ads**. The run, engine, prompts, market and topic filters above the tabs apply to every tab.
 
 ## Start broad, then inspect a page
 
@@ -35,7 +35,7 @@ For example, an answer can cite a general industry report and independently ment
 
 ## Read query fanouts
 
-**Query fanouts** lists the searches engines reported running while they answered, exactly as the engine returned them. For each search it shows the surface, its **Occurrences**, its **Share** of every search in the selection, its **Change** in share since the previous comparable run, and **Brands matched**, the tracked brands the search names. Switch between **Top**, **Rising** and **Falling** to see the largest searches or the ones that moved most, and group them by prompt or topic.
+**Query fan-outs** lists the searches engines reported running while they answered, exactly as the engine returned them. For each search it shows the surface, its **Occurrences**, its **Share** of every search in the selection, its **Change** in share since the previous comparable run, and **Brands matched**, the tracked brands the search names. Switch between **Top**, **Rising** and **Falling** to see the largest searches or the ones that moved most, and group them by prompt or topic.
 
 Change appears only when your selection holds one run and an earlier comparable run exists. Brands read **Not counted** for runs collected before brand matching on searches existed. The answer filters (prompt, outcome, competitor, domain or URL) narrow the searches too.
 
