@@ -166,7 +166,13 @@ export async function periodTrendSelection(
   return { ...selection, auditId: null, auditIds, fromAt: null, toAt: null };
 }
 
-export function samePeriod(period: RunSelection, selection: RunSelection): boolean {
+export function samePeriod({
+  period,
+  selection,
+}: {
+  period: RunSelection;
+  selection: RunSelection;
+}): boolean {
   const selected = new Set(selection.auditIds ?? []);
   const periodIds = new Set(period.auditIds ?? []);
   return selected.size === periodIds.size && [...periodIds].every((id) => selected.has(id));

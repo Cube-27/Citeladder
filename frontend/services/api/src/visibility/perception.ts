@@ -292,7 +292,7 @@ export async function getPerception(
     period === null
       ? summary.trend
       : perceptionTrend(
-          samePeriod(period, scoped)
+          samePeriod({ period, selection: scoped })
             ? answers
             : (await selectionAnswers(db, period, { citations: false, brandQuestions: true }))
                 .answers,

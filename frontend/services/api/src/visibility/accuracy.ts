@@ -371,7 +371,7 @@ export async function getAccuracy(
     period === null
       ? summary.trend
       : accuracyTrend(
-          samePeriod(period, scoped)
+          samePeriod({ period, selection: scoped })
             ? answers
             : (await selectionAnswers(db, period, { citations: false })).answers,
         );
