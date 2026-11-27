@@ -2,7 +2,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
 import { Section, SectionStack } from '@/components/ui/section';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import type {
   SearchIntelligenceDataset,
   SearchIntelligenceReadiness,
@@ -154,15 +154,15 @@ export function SearchSummaryEvidence({
   return (
     <Section aria-label="Metric definitions and sources">
       <Disclosure title="Metric definitions and sources">
-        <p className={textRole('caption')}>
+        <Text as="p" variant="caption">
           Organic positions exclude other result types; absolute position includes them. Estimated
           traffic and CPC (USD) are provider estimates. Difficulty is organic keyword difficulty.
           DataForSEO Rank uses a 0–100 scale for the named object. Referring domains and referring
           root domains are distinct totals.
-        </p>
-        <Stack as="ul" gap="tight" className={textRole('caption')}>
+        </Text>
+        <Stack as="ul" gap="tight">
           {datasets.map((dataset) => (
-            <li key={dataset.id}>
+            <Text as="li" key={dataset.id} variant="caption">
               {SEARCH_DATASET_LABELS[dataset.dataset_kind] ?? dataset.dataset_kind} for{' '}
               {dataset.target_hostname}, collected{' '}
               <DisplayTime
@@ -170,7 +170,7 @@ export function SearchSummaryEvidence({
                 dateOnly
                 fallback="at an unknown time"
               />
-            </li>
+            </Text>
           ))}
         </Stack>
       </Disclosure>

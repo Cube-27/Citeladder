@@ -14,7 +14,7 @@ import { BarRows } from '@/components/ui/score-gauge';
 import { TitledSection } from '@/components/ui/section';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import type { IssuesParams } from '@/lib/api/site-health';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount } from '@/lib/format';
@@ -124,9 +124,11 @@ export function KnownUrlsCard({ summary }: Readonly<{ summary: SiteScoreSummary 
   return (
     <TitledSection title="Known URLs">
       <Stack gap="item">
-        <Inline className="items-baseline">
-          <span className={textRole('figure')}>{formatCount(weighting.known_url_count)}</span>
-          <span className={textRole('caption')}>{formatCount(summary.analyzed_count)} sampled</span>
+        <Inline align="baseline">
+          <Text variant="figure" numeric>
+            {formatCount(weighting.known_url_count)}
+          </Text>
+          <Text variant="caption">{formatCount(summary.analyzed_count)} sampled</Text>
         </Inline>
         <BarRows
           label="Known URLs by page kind"

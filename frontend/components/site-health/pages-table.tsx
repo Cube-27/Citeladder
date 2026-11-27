@@ -26,12 +26,13 @@ import {
   type ChecksRun,
 } from '@/lib/site-health/status';
 import { scoreBand, type ScoreBand } from '@/lib/score-band';
+import { Text } from '@/components/ui/typography';
 
 function LinkedFromLine({ page }: Readonly<{ page: PageSummary }>) {
   const [first, ...rest] = page.linked_from;
   if (!first || !isFetchFailure(page.analysis_status)) return null;
   return (
-    <ClampText lines={1} className="text-caption text-ink-2">
+    <ClampText lines={1} text="caption">
       {rest.length
         ? `Linked from ${first.url} and ${rest.length} more`
         : `Linked from ${first.url}`}
@@ -118,7 +119,8 @@ export function PagesTable({
               event.preventDefault();
               openPage(page);
             }}
-            className="focus-ring cursor-pointer"
+            focusable
+            className="cursor-pointer"
           >
             <TableCell>
               <Stack as="span" gap="tight" className="min-w-0">
@@ -135,9 +137,9 @@ export function PagesTable({
                     </PageLink>
                   </ClampText>
                   {page.robots_excluded ? <RobotsExcludedBadge /> : null}
-                  <span className="text-ink-2 min-w-0 overflow-hidden">
+                  <Text variant="body" tone="ink-2" box="clip">
                     <UrlText url={page.display_url} origin={origin} />
-                  </span>
+                  </Text>
                 </Inline>
                 <LinkedFromLine page={page} />
               </Stack>
@@ -150,27 +152,27 @@ export function PagesTable({
             <TableCell className="whitespace-nowrap">
               <PageKindBadge pageKind={page.page_kind} />
             </TableCell>
-            <TableCell numeric className={page.issue_count === 0 ? 'text-ink-2' : undefined}>
+            <TableCell numeric tone={page.issue_count === 0 ? 'ink-2' : undefined}>
               {formatIssueCount(page.issue_count)}
             </TableCell>
-            <TableCell numeric className={mutedWhenMissing(page.web_fundamentals_score)}>
+            <TableCell numeric tone={mutedWhenMissing(page.web_fundamentals_score)}>
               <MeasurementValue
                 score={page.web_fundamentals_score}
                 checks={page.web_fundamentals_checks}
                 state={page.web_fundamentals_state}
               />
             </TableCell>
-            <TableCell numeric className={mutedWhenMissing(page.aeo_readiness_score)}>
+            <TableCell numeric tone={mutedWhenMissing(page.aeo_readiness_score)}>
               <MeasurementValue
                 score={page.aeo_readiness_score}
                 checks={page.aeo_readiness_checks}
                 state={page.aeo_measurement_state}
               />
             </TableCell>
-            <TableCell numeric className={mutedWhenMissing(page.depth_from_home)}>
+            <TableCell numeric tone={mutedWhenMissing(page.depth_from_home)}>
               <DepthValue page={page} />
             </TableCell>
-            <TableCell numeric className={mutedWhenMissing(page.inbound_count)}>
+            <TableCell numeric tone={mutedWhenMissing(page.inbound_count)}>
               {page.inbound_count ?? <Absence state="not_measured" />}
             </TableCell>
             <TableCell>
@@ -195,16 +197,14 @@ function MeasurementValue({
   state,
 }: Readonly<{ score: number | null; checks: ChecksRun | null; state: string }>) {
   if (score === null) return measurementStateValue(state, checks);
-  return (
-    <span className={SCORE_TONE[scoreBand(Math.round(score))]}>{printed(formatScore(score))}</span>
-  );
+  return <Text {...SCORE_LOOK[scoreBand(Math.round(score))]}>{printed(formatScore(score))}</Text>;
 }
 
-const SCORE_TONE = {
-  low: 'text-negative font-emphasis',
-  mid: 'text-warning font-emphasis',
-  high: undefined,
-} satisfies Record<ScoreBand, string | undefined>;
+const SCORE_LOOK = {
+  low: { variant: 'label', tone: 'negative' },
+  mid: { variant: 'label', tone: 'warning' },
+  high: { variant: 'body', tone: 'ink' },
+} as const satisfies Record<ScoreBand, Pick<ComponentProps<typeof Text>, 'variant' | 'tone'>>;
 
 function measurementStateValue(state: string, checks: ChecksRun | null) {
   const run = checksRunLabel(checks);

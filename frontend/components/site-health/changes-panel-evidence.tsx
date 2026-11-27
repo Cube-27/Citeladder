@@ -4,8 +4,8 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
 import { Inline } from '@/components/ui/layout';
 import { PageLink } from '@/components/site-health/page-link';
-import { textRole } from '@/components/ui/text-role';
-import { treeBranchClasses } from '@/components/ui/workspace';
+import { Text } from '@/components/ui/typography';
+import { TreeBranch } from '@/components/ui/workspace';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import {
   CHANGE_EVIDENCE_DEPTH_LIMIT,
@@ -27,7 +27,7 @@ function ChangeValue({ value, depth = 0 }: Readonly<{ value: unknown; depth?: nu
     if (!value.length) return <>0 items</>;
     if (depth >= CHANGE_EVIDENCE_DEPTH_LIMIT) return <>{pluralCount(value.length, 'item')}</>;
     return (
-      <ul className={treeBranchClasses()}>
+      <TreeBranch>
         {value.slice(0, CHANGE_EVIDENCE_LIMIT).map((item, index) => (
           <li
             key={index} // NOSONAR
@@ -36,11 +36,11 @@ function ChangeValue({ value, depth = 0 }: Readonly<{ value: unknown; depth?: nu
           </li>
         ))}
         {value.length > CHANGE_EVIDENCE_LIMIT ? (
-          <li className="text-ink-2">
+          <Text as="li" variant="body" tone="ink-2">
             {value.length - CHANGE_EVIDENCE_LIMIT} more items not shown
-          </li>
+          </Text>
         ) : null}
-      </ul>
+      </TreeBranch>
     );
   }
   if (typeof value === 'object') return <ChangeRecord value={value} depth={depth} />;
@@ -95,28 +95,30 @@ function ChangeRecord({ value, depth }: Readonly<{ value: object; depth: number 
   };
   fields.sort(([left], [right]) => rank(left) - rank(right));
   return (
-    <dl className={treeBranchClasses()}>
+    <TreeBranch as="dl">
       {fields.slice(0, CHANGE_EVIDENCE_LIMIT).map(([key, item]) => (
         <div key={key}>
-          <dt className="text-ink-2 inline">{boundedText(changeFieldLabel(key))}: </dt>
-          <dd className="inline [overflow-wrap:anywhere]">
+          <Text as="dt" variant="body" tone="ink-2" box="inline">
+            {boundedText(changeFieldLabel(key))}:{' '}
+          </Text>
+          <Text as="dd" variant="body" tone="ink-2" box="inline" wrap="anywhere">
             {key === 'shingles' && Array.isArray(item) ? (
               `${item.length} text fingerprints`
             ) : (
               <ChangeValue value={changeFieldValue(key, item)} depth={depth + 1} />
             )}
-          </dd>
+          </Text>
         </div>
       ))}
       {fields.length > CHANGE_EVIDENCE_LIMIT ? (
         <div>
           <dt className="sr-only">Additional evidence</dt>
-          <dd className="text-ink-2">
+          <Text as="dd" variant="body" tone="ink-2">
             {fields.length - CHANGE_EVIDENCE_LIMIT} more fields not shown
-          </dd>
+          </Text>
         </div>
       ) : null}
-    </dl>
+    </TreeBranch>
   );
 }
 
@@ -126,9 +128,9 @@ function EvidenceValue({ heading, value }: Readonly<{ heading: string; value: un
       <SectionHeader>
         <SectionTitle>{heading}</SectionTitle>
       </SectionHeader>
-      <div className={textRole('body', 'text-ink-2 [overflow-wrap:anywhere]')}>
+      <Text as="div" variant="body" tone="ink-2" wrap="anywhere">
         <ChangeValue value={value} />
-      </div>
+      </Text>
     </Section>
   );
 }
@@ -143,25 +145,25 @@ function EvidenceSources({
       <SectionHeader>
         <SectionTitle>Page evidence</SectionTitle>
       </SectionHeader>
-      <Inline className="flex-wrap">
+      <Inline wrap>
         {crawlAId && row.source_analysis_a_id ? (
           <PageLink text="body" crawlId={crawlAId} siteUrlId={row.site_url_id}>
             Previous crawl
           </PageLink>
         ) : (
-          <span className={textRole('caption')}>Previous crawl: no page evidence</span>
+          <Text variant="caption">Previous crawl: no page evidence</Text>
         )}
         {crawlBId && row.source_analysis_b_id ? (
           <PageLink text="body" crawlId={crawlBId} siteUrlId={row.site_url_id}>
             Latest crawl
           </PageLink>
         ) : (
-          <span className={textRole('caption')}>Latest crawl: no page evidence</span>
+          <Text variant="caption">Latest crawl: no page evidence</Text>
         )}
       </Inline>
       {row.implementation_event_id ? (
         <Inline>
-          <span className={textRole('caption')}>Matches a declared implementation</span>
+          <Text variant="caption">Matches a declared implementation</Text>
           <CopyButton variant="quiet" value={row.implementation_event_id}>
             Copy event ID
           </CopyButton>

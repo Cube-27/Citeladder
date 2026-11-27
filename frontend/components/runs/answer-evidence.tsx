@@ -11,11 +11,12 @@ import { SurfaceEvidence } from '@/components/runs/surface-evidence';
 import { AnswerLayout } from '@/components/ui/answer-chat';
 import { Icon } from '@/components/ui/icon';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import type { ExecutionEvidence } from '@citeladder/contracts';
 import { CheckCircle2, XCircle } from '@/lib/icons';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { answerBrands, answerLinks, answerSources } from '@/lib/runs/answer-transcript';
+import { Inline } from '@/components/ui/layout';
 
 function Outcome({
   label,
@@ -23,18 +24,17 @@ function Outcome({
   passed,
 }: Readonly<{ label: string; detail: string; passed: boolean }>) {
   return (
-    <li className="flex min-w-0 items-start gap-2">
-      <Icon
-        icon={passed ? CheckCircle2 : XCircle}
-        className={passed ? 'text-positive' : 'text-ink-2'}
-      />
+    <Inline as="li" align="start">
+      <Icon icon={passed ? CheckCircle2 : XCircle} tone={passed ? 'positive' : 'ink-2'} />
       <div className="min-w-0">
-        <p className={textRole('body')}>{label}</p>
-        <p className="text-caption text-ink-2 truncate" title={detail}>
+        <Text as="p" variant="body">
+          {label}
+        </Text>
+        <Text as="p" variant="caption" wrap="truncate" title={detail}>
           {detail}
-        </p>
+        </Text>
       </div>
-    </li>
+    </Inline>
   );
 }
 

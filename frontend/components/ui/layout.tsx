@@ -10,10 +10,17 @@ const STACK_GAP = {
   group: 'gap-3',
   loose: 'gap-4',
   choices: 'gap-x-4 gap-y-2',
+  'page-top': 'gap-page-top',
   item: 'gap-2',
   tight: 'gap-1',
   none: 'gap-0',
 } as const;
+
+const PAD_TOP = {
+  'flow-gap': 'pt-flow-gap',
+} as const;
+
+export type Pad = Readonly<{ top?: keyof typeof PAD_TOP }>;
 
 export type StackGap = keyof typeof STACK_GAP;
 
@@ -57,6 +64,7 @@ export function Stack({
   box = 'auto',
   content = 'stretch',
   inset = false,
+  pad,
   className,
   children,
   ...props
@@ -69,6 +77,7 @@ export function Stack({
     box?: Box;
     content?: keyof typeof STACK_CONTENT;
     inset?: boolean;
+    pad?: Pad;
   }
 >) {
   const Component = as ?? 'div';
@@ -83,6 +92,7 @@ export function Stack({
         BOX[box],
         STACK_CONTENT[content],
         inset && 'p-4',
+        pad?.top && PAD_TOP[pad.top],
         className,
       )}
     >
@@ -190,6 +200,7 @@ const COLUMN_TEMPLATE = {
   pair: 'column-split:grid-cols-2',
   halves: 'desktop:grid-cols-2',
   two: 'grid-cols-2',
+  record: 'column-split:grid-cols-record',
   thirds: 'column-split:grid-cols-3',
 } as const;
 

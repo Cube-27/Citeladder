@@ -9,11 +9,12 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
+import { ProjectLink } from '@/components/ui/project-link';
 import { Spinner } from '@/components/ui/spinner';
 import { ClampText } from '@/components/ui/clamp-text';
 import { pressableRowClasses } from '@/components/ui/open-row-skeleton';
 import { textRole } from '@/components/ui/text-role';
-import { Check, ChevronDown } from '@/lib/icons';
+import { Check, ChevronDown, ChevronRight, type IconGlyph } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -244,6 +245,48 @@ export function ItemRow({
           {actions}
         </div>
       </div>
+    </li>
+  );
+}
+
+export function LinkListRow({
+  icon,
+  href,
+  label,
+  linkLabel,
+  description,
+  end,
+}: Readonly<{
+  icon: IconGlyph;
+  href: string;
+  label: ReactNode;
+  linkLabel: string;
+  description: ReactNode;
+  end?: ReactNode;
+}>) {
+  const detailId = useId();
+  return (
+    <li className="hover:overlay-hover min-h-row relative flex min-w-0 items-center gap-3">
+      <Icon icon={icon} tone="ink-2" />
+      <span className="text-body text-ink flex min-w-0 flex-1 flex-col gap-0.5">
+        <ProjectLink
+          href={href}
+          aria-label={linkLabel}
+          aria-describedby={end ? `${detailId} ${detailId}-end` : detailId}
+          look="row-title"
+        >
+          {label}
+        </ProjectLink>
+        <span id={detailId} className="text-ink-2 phone:sr-only line-clamp-2 min-w-0">
+          {description}
+        </span>
+      </span>
+      {end ? (
+        <span id={`${detailId}-end`} className="text-caption text-ink-2 shrink-0 whitespace-nowrap">
+          {end}
+        </span>
+      ) : null}
+      <Icon icon={ChevronRight} tone="ink-2" />
     </li>
   );
 }

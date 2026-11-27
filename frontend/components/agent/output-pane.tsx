@@ -18,7 +18,7 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import { Download, Pencil } from '@/lib/icons';
 import { downloadOutputMarkdown, outputMarkdown } from '@/lib/agent/export';
 import { type AgentOutput, type AgentRevision } from '@/lib/api/agent';
@@ -74,15 +74,15 @@ export function OutputPane({
       >
         <UnsavedChangesGuard when={unsaved} />
         <Stack as="header" gap="tight">
-          <h2 id={headingId} className={textRole('heading', 'min-w-0')}>
+          <Text as="h2" variant="heading" box="shrink" id={headingId}>
             {revision.title}
-          </h2>
-          <Inline className="flex-wrap">
-            <span className={textRole('caption')}>Document {output.number}</span>
+          </Text>
+          <Inline wrap>
+            <Text variant="caption">Document {output.number}</Text>
             <Tag>{kindLabel(output.kind)}</Tag>
-            <span className={textRole('caption')}>Revision {revision.number}</span>
+            <Text variant="caption">Revision {revision.number}</Text>
             {output.target_label ? (
-              <ClampText className={textRole('caption', 'min-w-0 flex-1')}>
+              <ClampText text="caption" className="min-w-0 flex-1">
                 {output.target_label}
               </ClampText>
             ) : null}
@@ -143,9 +143,9 @@ export function OutputPane({
           <TabPanel value="sources">
             <Stack gap="compact">
               {revision.source_refs.length === 0 ? (
-                <p className={textRole('body', 'text-ink-2')}>
+                <Text as="p" variant="body" tone="ink-2">
                   This revision cites no CiteLadder records.
-                </p>
+                </Text>
               ) : (
                 <EvidenceChips refs={revision.source_refs} label="CiteLadder records" />
               )}
@@ -189,7 +189,7 @@ function OutputActions({
   onEdit?: () => void;
 }>) {
   return (
-    <Inline className="flex-wrap">
+    <Inline wrap>
       {onEdit ? (
         <Button variant="secondary" disabled={locked} onClick={onEdit}>
           <Icon icon={Pencil} />

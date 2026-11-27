@@ -20,6 +20,7 @@ import { PageTabEnd } from '@/components/templates/page-tab-end';
 import { Notice } from '@/components/ui/notice';
 import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
+import { Text } from '@/components/ui/typography';
 
 export function StatusStrip({
   crawl,
@@ -128,10 +129,10 @@ function DashboardNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   const narration = `Latest crawl · ${formatDisplayTimestamp(ranAt, timeZone)}`;
   return (
     <PageTabEnd fallback={<ProgressRow crawl={crawl} narration={narration} counts={[]} />}>
-      <span className="flex min-w-0 items-center gap-2">
+      <Inline as="span">
         <CrawlStatusBadge crawl={crawl} />
         <span className="min-w-0 truncate">{narration}</span>
-      </span>
+      </Inline>
     </PageTabEnd>
   );
 }
@@ -169,21 +170,23 @@ function ProgressRow({
                 <Spinner />
               </span>
             ) : null}
-            <span className="text-body text-ink min-w-0" aria-live="polite">
+            <Text variant="body" box="shrink" aria-live="polite">
               {narration}
-            </span>
+            </Text>
           </Inline>
           <Inline as="dl" gap="meta" className="empty:hidden">
             {counts.map((count) => (
               <Inline key={count.label} gap="item">
-                <dt className="text-body text-ink-2">{count.label}</dt>
-                <dd className="text-body text-ink tabular-nums">
+                <Text as="dt" variant="body" tone="ink-2">
+                  {count.label}
+                </Text>
+                <Text as="dd" variant="body" numeric>
                   {count.value === null ? (
                     <Absence state="not_measured" />
                   ) : (
                     formatCount(count.value)
                   )}
-                </dd>
+                </Text>
               </Inline>
             ))}
           </Inline>
@@ -220,10 +223,10 @@ function DiscoveryStrip({
   return (
     <ProgressRow crawl={crawl} narration={narration} counts={counts} active={!cancelPending}>
       {sampleMode ? (
-        <p className="text-body text-ink-2">
+        <Text as="p" variant="body" tone="ink-2">
           {entitlement.sample_url_limit}-page sample. Choosing pages needs a monitored-URL
           allowance.
-        </p>
+        </Text>
       ) : null}
     </ProgressRow>
   );

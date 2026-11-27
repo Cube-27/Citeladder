@@ -1,15 +1,13 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState, type FormEvent, type ReactNode } from 'react';
 
-import { JUMP_LINK } from '@/components/agent/jump-link';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Pressable } from '@/components/ui/pressable';
 import { Textarea } from '@/components/ui/textarea';
-import { textRole } from '@/components/ui/text-role';
-import { treeBranchClasses } from '@/components/ui/workspace';
+import { HoverActions } from '@/components/ui/actions';
+import { JumpList } from '@/components/ui/workspace';
 import { Pencil, Sparkles, X } from '@/lib/icons';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { replaceSection, splitSections, type OutputSection } from '@/lib/agent/sections';
@@ -51,27 +49,23 @@ export function OutputCanvas({
   return (
     <>
       {titled.length >= CONTENTS_MIN_SECTIONS ? (
-        <Stack as="nav" gap="tight" aria-label="Contents">
-          <span className={textRole('body', 'text-ink-2')}>Contents</span>
-          <Stack as="ol" gap="tight" className={treeBranchClasses()}>
-            {sections.map((section, index) =>
-              section.heading === null ? null : (
-                <li key={section.start}>
-                  <Pressable
-                    className={textRole('caption', `${JUMP_LINK} w-auto`)}
-                    onClick={() =>
+        <JumpList
+          label="Contents"
+          items={sections.flatMap((section, index) =>
+            section.heading === null
+              ? []
+              : [
+                  {
+                    key: section.start,
+                    label: section.heading,
+                    onJump: () =>
                       document
                         .getElementById(sectionId(revision.id, index))
-                        ?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
-                    }
-                  >
-                    {section.heading}
-                  </Pressable>
-                </li>
-              ),
-            )}
-          </Stack>
-        </Stack>
+                        ?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }),
+                  },
+                ],
+          )}
+        />
       ) : null}
       {sections.map((section, index) => (
         <SectionBlock
@@ -151,7 +145,7 @@ function SectionBlock({
         <ContentMarkdown markdown={section.text} density="compact" knownHosts={knownHosts} />
       )}
       {locked || mode === 'edit' ? null : (
-        <Inline className="flex-wrap transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
+        <HoverActions>
           <Button
             variant="quiet"
             disabled={!canSend}
@@ -166,7 +160,7 @@ function SectionBlock({
             <Icon icon={Pencil} />
             Edit
           </Button>
-        </Inline>
+        </HoverActions>
       )}
       {mode === 'revise' ? (
         <ReviseForm name={name} onCancel={() => onMode(null)} onSubmit={onRevise} />
@@ -185,7 +179,7 @@ function ReviseForm({
   return (
     <Inline
       as="form"
-      className="flex-wrap"
+      wrap
       onSubmit={(event: FormEvent) => {
         event.preventDefault();
         if (instruction.trim()) onSubmit(instruction);
@@ -260,7 +254,7 @@ function SectionEditor({
       {save.isError ? (
         <Notice kind="mutation" notice={agentWriteFailure(save.error, 'save the section')} />
       ) : null}
-      <Inline className="justify-end">
+      <Inline justify="end">
         <Button type="button" variant="quiet" onClick={done} disabled={save.isPending}>
           <Icon icon={X} />
           Cancel

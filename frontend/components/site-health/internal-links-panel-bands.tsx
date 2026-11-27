@@ -3,13 +3,9 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { DisplayTime } from '@/components/ui/display-time';
-import type { TableToolbarProps } from '@/components/ui/filter-bar';
-import { SearchField } from '@/components/ui/search-field';
-import { Download } from '@/lib/icons';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { internalLinksMutations, internalLinksQueries } from '@/lib/api/site-health-internal-links';
@@ -17,9 +13,9 @@ import { useSetUrlParams, useUrlParam, type UrlParamValues } from '@/lib/navigat
 import type { UrlHistory } from '@/lib/navigation/url-state';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatCount, formatDisplayTimestamp } from '@/lib/format';
-import { downloadInternalLinksCsv } from '@/lib/site-health/internal-link-csv';
 import { INTERNAL_LINK_STATES, pollInternalLinks } from '@/lib/site-health/status';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { Button } from '@/components/ui/button';
 
 type Scope = Readonly<{ projectId: string; workspaceId: string }>;
 type LinkParam = 'analysis' | 'link' | 'links_q' | 'links_status';
@@ -106,21 +102,16 @@ export function useInternalLinksBands({
 }>): Readonly<{
   read: LinksRead;
   actions: ReactNode;
-  controls: TableToolbarProps | undefined;
+  controls: FilterBarProps | undefined;
 }> {
   const read = useInternalLinks(scope, enabled);
   const { params, update } = useLinkParams();
   const timeZone = useDisplayTimeZone();
   const analysis = read.data?.analysis;
-  const links = filterLinks(
-    analysis?.recommendations ?? [],
-    params.links_q ?? '',
-    params.links_status ?? '',
-  );
   return {
     read,
     actions: analysis ? <LinksRun read={read} analysis={analysis} canAnalyze={canAnalyze} /> : null,
-    controls: linksControls({ read, params, update, links, timeZone }),
+    controls: linksControls({ read, params, update, timeZone }),
   };
 }
 
@@ -128,28 +119,18 @@ function linksControls({
   read,
   params,
   update,
-  links,
   timeZone,
 }: Readonly<{
   read: LinksRead;
   params: LinkParams;
   update: ParamChange;
-  links: InternalLink[];
   timeZone: string;
-}>): TableToolbarProps | undefined {
+}>): FilterBarProps | undefined {
   if (read.query.isPending) return RESERVED_CONTROLS;
   const data = read.data;
   const analysis = data?.analysis;
   if (!data || !analysis) return undefined;
   return {
-    search: (
-      <SearchField
-        value={params.links_q ?? ''}
-        onValueChange={(value) => update('links_q', value, 'replace')}
-        placeholder="Search pages and anchors"
-        aria-label="Search pages and anchors"
-      />
-    ),
     filters: [
       choiceFilter({
         id: 'status',
@@ -172,16 +153,6 @@ function linksControls({
       <span className="truncate" title={analysisSummary(analysis)}>
         {analysisSummary(analysis)} · <DisplayTime value={analysis.created_at} />
       </span>
-    ),
-    actions: (
-      <Button
-        variant="secondary"
-        disabled={!links.length}
-        onClick={() => downloadInternalLinksCsv(links)}
-      >
-        <Icon icon={Download} />
-        Export CSV
-      </Button>
     ),
   };
 }

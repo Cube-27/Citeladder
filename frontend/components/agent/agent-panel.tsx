@@ -17,7 +17,7 @@ import { Drawer } from '@/components/ui/drawer';
 import { Icon } from '@/components/ui/icon';
 import { ICONS } from '@/lib/icons';
 import { Inline } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import { contextChips, withoutContext, type AgentHandoff } from '@/lib/agent/handoff';
 import { useAgentPanel } from '@/lib/agent/panel-context';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
@@ -139,7 +139,9 @@ function PanelStart({
         />
       }
     >
-      <p className={textRole('heading')}>Ask about this screen</p>
+      <Text as="p" variant="heading">
+        Ask about this screen
+      </Text>
       {access.canSend ? null : <Notice tone="info">{access.message}</Notice>}
       {create.failure ? <AgentFailureNotice failure={create.failure} /> : null}
     </DockedThread>
@@ -242,7 +244,7 @@ function PanelConversation({
               </Button>
             }
           >
-            <span className={textRole('caption')}>Document {output.number}</span>
+            <Text variant="caption">Document {output.number}</Text>
           </DraftSheet>
         )}
       />

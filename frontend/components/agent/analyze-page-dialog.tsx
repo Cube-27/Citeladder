@@ -24,6 +24,7 @@ import { useDebounced } from '@/lib/use-debounced';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Spinner } from '@/components/ui/spinner';
+import { Text } from '@/components/ui/typography';
 
 type TopicChoice = Readonly<{ topic: Topic; prompts: readonly Prompt[] }>;
 
@@ -225,8 +226,10 @@ function TopicField({
         inline
         message={
           <>
-            <span className="font-emphasis">No topics with prompts</span> Add prompts to a topic on
-            the Prompts page first.
+            <Text variant="label" tone="ink-2">
+              No topics with prompts
+            </Text>{' '}
+            Add prompts to a topic on the Prompts page first.
           </>
         }
       />

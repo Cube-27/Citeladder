@@ -43,7 +43,7 @@ export function ActionsToolbar({
   return (
     <FilterBar
       lead={
-        <Inline className="flex-wrap">
+        <Inline wrap>
           <FilterChoice<StatusChoice>
             label="Status"
             value={view.status}

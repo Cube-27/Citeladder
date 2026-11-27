@@ -17,7 +17,7 @@ import { ReportPage } from '@/components/templates/report-page';
 import { Button, IconButton } from '@/components/ui/button';
 import { Section, SectionContent } from '@/components/ui/section';
 import { SelectionDock } from '@/components/ui/selection-dock';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import { X } from '@/lib/icons';
 import { listJumpSchema, type ListJump } from '@/lib/agent/action-crumbs';
 import type { ActionStatus, ActionTree } from '@/lib/api/actions';
@@ -66,7 +66,9 @@ export function ActionsScreen() {
   return (
     <ActionsPageContext value={{ scope, view, levels, selection }}>
       <ReportPage filters={<ActionsToolbar scope={scope} view={view} newCount={counts?.open} />}>
-        <h2 className={textRole('heading')}>Close the gaps keeping you out of AI answers</h2>
+        <Text as="h2" variant="heading">
+          Close the gaps keeping you out of AI answers
+        </Text>
         <GoalStrip goals={primary.data?.goals} failed={primary.isError} onJump={jump} />
         <Section>
           <SectionContent>

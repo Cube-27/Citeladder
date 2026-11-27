@@ -130,14 +130,14 @@ export function IssueUrlTable({
               <StatusMark tone="negative">Missing</StatusMark>
             )}
           </TableCell>
-          <TableCell numeric className={mutedWhenMissing(row.inbound_count)}>
+          <TableCell numeric tone={mutedWhenMissing(row.inbound_count)}>
             {row.inbound_count === null ? (
               <Absence state="not_measured" />
             ) : (
               formatCount(row.inbound_count)
             )}
           </TableCell>
-          <TableCell numeric className={mutedWhenMissing(row.depth_from_home)}>
+          <TableCell numeric tone={mutedWhenMissing(row.depth_from_home)}>
             {row.depth_from_home === null ? (
               <Absence state="not_measured" />
             ) : (

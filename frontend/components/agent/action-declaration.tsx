@@ -11,7 +11,7 @@ import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import { ListChecks } from '@/lib/icons';
 import { newIdempotencyKey } from '@/lib/agent/idempotency';
 import { contentGapCheckPreview, measurementLegLabel } from '@/lib/agent/vocabulary';
@@ -160,10 +160,10 @@ export function useMarkImplemented({
       </Stack>
       <MeasurementPreview action={action} />
       {recommendationIds ? (
-        <p className={textRole('body', 'text-ink-2')}>
+        <Text as="p" variant="body" tone="ink-2">
           Measures only these {recommendationIds.length} links and the page&apos;s other findings.
           Declared once.
-        </p>
+        </Text>
       ) : null}
       {declare.isError ? (
         <Notice
@@ -202,28 +202,32 @@ function MeasurementPreview({ action }: Readonly<{ action: Declarable }>) {
   if (action.members.length === 0) return null;
   return (
     <Stack gap="compact">
-      <p className={textRole('body', 'text-ink-2')}>What CiteLadder will check</p>
+      <Text as="p" variant="body" tone="ink-2">
+        What CiteLadder will check
+      </Text>
       <Stack as="ul" gap="compact">
         {action.members.map((member) => {
           const leg = action.member_measurement[member.id] ?? null;
           return (
             <Stack as="li" gap="tight" key={member.id}>
-              <span className={textRole('body')}>{member.title}</span>
+              <Text variant="body">{member.title}</Text>
               {leg && member.content_gap_evidence ? (
-                <span className={textRole('caption', 'break-words')}>
+                <Text variant="caption" wrap="words">
                   {contentGapCheckPreview(member.content_gap_evidence)}
-                </span>
+                </Text>
               ) : null}
-              <span className={textRole('caption')}>
+              <Text variant="caption">
                 {leg
                   ? `Measured by ${measurementLegLabel(leg)?.toLowerCase() ?? 'the next reading'}.`
                   : 'No automatic check: no reading isolates this change.'}
-              </span>
+              </Text>
             </Stack>
           );
         })}
       </Stack>
-      <p className={textRole('caption')}>An Action can be declared once.</p>
+      <Text as="p" variant="caption">
+        An Action can be declared once.
+      </Text>
     </Stack>
   );
 }
@@ -265,7 +269,11 @@ export function OutputDeclaration({
   const revision = output.latest_revision;
   if (!revision) return null;
   if (!output.action_id)
-    return <p className={textRole('caption')}>Name a page or topic to declare it implemented.</p>;
+    return (
+      <Text as="p" variant="caption">
+        Name a page or topic to declare it implemented.
+      </Text>
+    );
   if (output.named_target)
     return (
       <TargetChoice
@@ -318,10 +326,10 @@ function TargetChoice({
     choose.isPending && choose.variables?.decision === decision;
   return (
     <Stack gap="tight">
-      <p className={textRole('caption', 'break-words')}>
+      <Text as="p" variant="caption" wrap="words">
         This document names {name}, not the page of this chat&apos;s Action.
-      </p>
-      <Inline className="flex-wrap">
+      </Text>
+      <Inline wrap>
         <Button
           variant="secondary"
           disabled={disabled || pending('keep')}

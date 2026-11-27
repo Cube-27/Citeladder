@@ -2,6 +2,7 @@ import {
   createElement,
   type ComponentPropsWithoutRef,
   type ComponentPropsWithRef,
+  type ReactNode,
   type Ref,
 } from 'react';
 
@@ -55,9 +56,12 @@ const TEXT_WRAP = {
   anywhere: 'wrap-anywhere',
   all: 'break-all',
   words: 'break-words',
+  balance: 'text-balance',
   nowrap: 'whitespace-nowrap',
   truncate: 'truncate',
   lines: 'whitespace-pre-line',
+  pre: 'whitespace-pre-wrap',
+  'pre-anywhere': 'whitespace-pre-wrap wrap-anywhere',
 } as const;
 
 const TEXT_BOX = {
@@ -81,6 +85,7 @@ const TEXT_BOX = {
 const TEXT_ALIGN = {
   start: undefined,
   end: 'text-end',
+  center: 'text-center',
 } as const;
 
 export function Text({
@@ -93,6 +98,7 @@ export function Text({
   focusable = false,
   align = 'start',
   hideOnPhone = false,
+  hideOnDesktop = false,
   children,
   ...props
 }: Readonly<
@@ -107,6 +113,7 @@ export function Text({
     focusable?: boolean;
     align?: keyof typeof TEXT_ALIGN;
     hideOnPhone?: boolean;
+    hideOnDesktop?: boolean;
   }
 >) {
   const className = cn(
@@ -118,8 +125,15 @@ export function Text({
     focusable && 'focus-ring',
     TEXT_ALIGN[align],
     hideOnPhone && 'phone:hidden',
+    hideOnDesktop && 'desktop:hidden',
   );
   return createElement(Tag, { ...props, className }, children);
+}
+
+export function CopyStack({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <div className="text-body text-ink max-w-copy flex min-w-0 flex-col gap-2">{children}</div>
+  );
 }
 
 export function CodeToken({ children }: Readonly<{ children: string }>) {

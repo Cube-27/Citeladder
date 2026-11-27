@@ -11,12 +11,14 @@ import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { useCreateChat } from '@/components/agent/use-chat-turns';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { useHandoffScope } from '@/components/agent/handoff-scope';
-import { ThreadOpening, ThreadPage } from '@/components/templates/thread-page';
+import { ThreadPage } from '@/components/templates/thread-page';
+import { ThreadOpening } from '@/components/ui/thread-opening';
 import { Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import { actionTitle } from '@/lib/agent/action-title';
-import { contextChips, parseAgentHandoff, withoutContext } from '@/lib/agent/handoff';
+import { contextChips, withoutContext } from '@/lib/agent/handoff';
+import { parseAgentHandoff } from '@/lib/agent/handoff-params';
 import { approachLabel, targetKindLabel } from '@/lib/agent/vocabulary';
 import { actionsQueries, type Action } from '@/lib/api/actions';
 import { useProjectHref } from '@/lib/navigation/project-destination';
@@ -101,7 +103,9 @@ function NewChat({
   return (
     <ThreadPage>
       <ThreadOpening>
-        <h2 className={textRole('title', 'text-center')}>What can I help with?</h2>
+        <Text as="h2" variant="title" align="center">
+          What can I help with?
+        </Text>
         {unavailable ? (
           <Notice tone="negative">
             This Action is unavailable. The chat will start without it.
@@ -137,7 +141,9 @@ function NewChat({
             onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
           />
           {actionId ? null : (
-            <p className={textRole('caption')}>Type / to pick a skill or @ to mention an Action.</p>
+            <Text as="p" variant="caption">
+              Type / to pick a skill or @ to mention an Action.
+            </Text>
           )}
         </Stack>
         {actionId ? null : (

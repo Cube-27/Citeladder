@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 
 import type { IconGlyph } from '@/lib/icons';
 import { toneClass, type TextTone } from '@/components/ui/text-role';
@@ -48,4 +48,8 @@ export function Icon({
       role={label ? 'img' : undefined}
     />
   );
+}
+
+export function TitleMark({ children }: Readonly<{ children: ReactNode }>) {
+  return <span className="h-title-line flex items-center">{children}</span>;
 }

@@ -1,5 +1,5 @@
 import type { IssueOccurrence } from '@citeladder/contracts';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import { evidenceFacts, evidenceLead } from '@/lib/site-health/issue-evidence';
 
 export function IssueEvidence({ occurrence }: Readonly<{ occurrence: IssueOccurrence }>) {
@@ -17,12 +17,12 @@ export function EvidenceLine({
 }: Readonly<{ lead: string | null; facts: readonly string[]; text?: 'caption' | 'body' }>) {
   if (!lead)
     return (
-      <p className={textRole(role, '[overflow-wrap:anywhere]')}>
+      <Text as="p" variant={role} wrap="anywhere">
         <code>{facts.join(', ')}</code>
-      </p>
+      </Text>
     );
   return (
-    <div className={textRole(role, 'min-w-0 [overflow-wrap:anywhere]')}>
+    <Text as="div" variant={role} box="shrink" wrap="anywhere">
       <span>{lead}</span>
       <ul>
         {facts.map((fact) => (
@@ -31,6 +31,6 @@ export function EvidenceLine({
           </li>
         ))}
       </ul>
-    </div>
+    </Text>
   );
 }

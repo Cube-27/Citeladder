@@ -11,8 +11,8 @@ import { Absence, printed } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { FactList } from '@/components/ui/facts';
-import { Inline } from '@/components/ui/layout';
-import { DRAWER_SPLIT, DrawerNav, DrawerPane } from '@/components/ui/drawer';
+import { Inline, Stack } from '@/components/ui/layout';
+import { DrawerNav, DrawerPane } from '@/components/ui/drawer';
 import { TitledSection } from '@/components/ui/section';
 import { SectionTitleRoleContext } from '@/components/ui/state-heading-level';
 import { StatusMark } from '@/components/ui/status-mark';
@@ -60,16 +60,20 @@ export function PageDrawerView({
     ...(traffic ? [{ value: 'traffic', label: 'AI traffic' } as const] : []),
   ] as const satisfies readonly { value: Pane; label: string; count?: number }[];
   return (
-    <TabsRoot value={pane} onValueChange={setPane} orientation="vertical" className={DRAWER_SPLIT}>
+    <TabsRoot value={pane} onValueChange={setPane} orientation="vertical" layout="drawer-split">
       <DrawerNav>
         <TabRail items={items} ariaLabel="Page sections" />
       </DrawerNav>
       <DrawerPane>
         <SectionTitleRoleContext value="subheading">
-          <div className="grid min-w-0 gap-2 empty:hidden">
-            {actions ? <Inline className="flex-wrap justify-end">{actions}</Inline> : null}
+          <Stack gap="item" className="min-w-0 empty:hidden">
+            {actions ? (
+              <Inline wrap justify="end">
+                {actions}
+              </Inline>
+            ) : null}
             {children}
-          </div>
+          </Stack>
           <TabPanel value="overview">
             <Figures detail={detail} />
             <FactSection title="URL" facts={urlFacts(detail, useDisplayTimeZone())} />
@@ -210,11 +214,11 @@ function htmlFacts(detail: PageDetail): FactRow[] {
         facts.structured_data_types.length === 0 ? (
           <StatusMark tone="warning">None</StatusMark>
         ) : (
-          <span className="flex min-w-0 flex-wrap gap-1">
+          <Inline as="span" gap="tight" align="stretch" wrap>
             {facts.structured_data_types.map((type) => (
               <Tag key={type}>{type}</Tag>
             ))}
-          </span>
+          </Inline>
         ),
     },
   ];

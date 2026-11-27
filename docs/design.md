@@ -150,11 +150,12 @@ a CSS variable for code blocks.
   the value differs. A role that must resolve under a re-pointing ancestor
   (the sidebar width) goes in `@theme inline`. Inside a primitive, steps of
   the 4px scale are allowed; a screen never picks a step. Grid templates are
-  `grid-cols-<role>` roles, rendered by `Columns template`.
+  `grid-cols-<role>` roles, rendered by `Columns template`. App CSS reads
+  `var(--spacing)` multiples and `--rule-width` for border widths.
 - **Motion, layering and opacity:** `duration-<role>` (fast 120, close 160,
   open 200, press 250, slide 300, plus reveal, pulse, sweep and the stagger
   steps), `ease-<role>`, `z-<role>` (base, raised, sticky, float, overlay,
-  modal, toast) and `opacity-<role>` (disabled 50, muted 80, ghost, hover).
+  modal, toast) and `opacity-<role>` (disabled 50, muted 80, dim 70, ghost, hover).
   `cn` knows every role, so a caller can still override one.
 - **Controls:** 36 high (HeroUI's medium); 44 below 900px or under a coarse pointer, and on
   sign-in, account and setup pages (the website's height, `control-lg`).
@@ -291,10 +292,17 @@ and dialogs is one of them; [`section.test.tsx`](../frontend/components/ui/secti
 holds the depth rules.
 
 - **Pages pass content, never geometry.** A primitive exposes typed props
-  (`Stack`/`Inline` `gap`, `align`, `justify`, `wrap`; `Columns template`;
-  `tone` on `Text`, `Icon` and the link components). `Stack` and `Inline`
-  still accept `className` until the screen batches move their callers to
-  props; restyling any other primitive through `className` is a lint finding.
+  (`Stack`/`Inline` `gap`, `align`, `justify`, `wrap`; `Stack` `pad`;
+  `Columns template`; `Text` `wrap`, `box`, `align` and `tone`; `tone` on `Icon` and
+  the link components). Template chrome (page width, heading row, tab and
+  filter bands, thread and setup frames) lives in
+  [`page-chrome.tsx`](../frontend/components/ui/page-chrome.tsx) and
+  [`flow-frame.tsx`](../frontend/components/ui/flow-frame.tsx), which boot
+  screens import, and in `flow-chrome.tsx` and `record-chrome.tsx`, which
+  only lazy routes import: a module a boot file imports ships whole in the
+  eager bundle. Templates compose them and hold no classes. `Stack` and `Inline` still accept
+  `className` until the screen batches move their callers to props;
+  restyling any other primitive through `className` is a lint finding.
   No page adds padding, margin, border, fill, radius or shadow around one; no
   globals rule depends on what contains what. A primitive that needs its
   depth reads `SurfaceContext` (`useOnPage()`), never a CSS ancestor. A

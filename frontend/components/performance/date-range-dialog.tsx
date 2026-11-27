@@ -15,6 +15,7 @@ import {
   DIALOG_RANGE_OPTIONS,
   type RangeSelection,
 } from '@/lib/performance/performance';
+import { Text } from '@/components/ui/typography';
 
 function isoDay(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -88,7 +89,9 @@ function DateRangeFields({
             />
           )}
         </Field>
-        <span className="text-ink-2">–</span>
+        <Text variant="body" tone="ink-2">
+          –
+        </Text>
         <Field label="End date">
           {(props) => (
             <DateField

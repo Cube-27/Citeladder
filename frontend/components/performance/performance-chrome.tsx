@@ -92,7 +92,7 @@ export function PerformanceToolbar({
             label={moreLabel}
             labels={MORE_LABELS}
           >
-            <Icon icon={ChevronDown} className="opacity-70" />
+            <Icon icon={ChevronDown} dim />
           </SegmentedAction>
         }
       />

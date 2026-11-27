@@ -5,7 +5,7 @@ import { RailItem, RailLine, RailList, RailSection } from '@/components/ui/answe
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { Inline, Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import type { Highlight } from '@/lib/markdown/highlight';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 
@@ -61,18 +61,16 @@ export function EvidencePerception({
       <SectionBleed as="ul" rows>
         {perception.map((entity) => (
           <Stack as="li" gap="tight" key={entity.entity}>
-            <Inline as="span" className="flex-wrap">
-              <span className={textRole('emphasis')}>{entity.entity}</span>
-              {entity.is_brand ? (
-                <span className={textRole('caption', 'text-ink-2')}>You</span>
-              ) : null}
+            <Inline as="span" wrap>
+              <Text variant="label">{entity.entity}</Text>
+              {entity.is_brand ? <Text variant="caption">You</Text> : null}
               <PerceptionChip entity={entity} />
             </Inline>
             {entity.state === 'classified'
               ? entity.aspects.map((aspect) => (
-                  <span key={`${aspect.start}:${aspect.end}`} className="text-caption text-ink-2">
+                  <Text key={`${aspect.start}:${aspect.end}`} variant="caption">
                     {aspect.theme} ({aspect.polarity}): “{aspect.quote}”
-                  </span>
+                  </Text>
                 ))
               : null}
           </Stack>
@@ -104,9 +102,9 @@ export function AttributesRail({
         {labelled.map((attribute) => (
           <RailItem key={attribute.key}>
             <RailLine>
-              <span className={textRole('body', 'min-w-0 flex-1 truncate')} title={attribute.name}>
+              <Text variant="body" box="fill" wrap="truncate" title={attribute.name}>
                 {attribute.name}
-              </span>
+              </Text>
               <StatusMark variant="sentiment" value={attribute.polarity}>
                 {SENTIMENT_LABELS[attribute.polarity]}
               </StatusMark>

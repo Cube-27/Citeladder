@@ -3,17 +3,15 @@ import type { ReadinessCheck, ReadinessDimension, SiteScoreSummary } from '@cite
 import { Absence, printed } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { scoreTone, type BarTone } from '@/components/ui/score-gauge';
+import { PassFailBar, ScoreBar, scoreTone } from '@/components/ui/score-gauge';
 import { TitledSection } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/text-role';
 import { formatCount } from '@/lib/format';
 import { byPageKindRows, pageKindLabel } from '@/lib/site-health/page-kinds';
 import { formatScore } from '@/lib/site-health/status';
-import { cn } from '@/lib/utils';
 
 const READABLE_CHECKS: ReadonlyArray<{ rule: string; label: string }> = [
   { rule: 'aeo.server_rendered_content', label: 'Content in the server HTML' },
@@ -56,10 +54,10 @@ export function ReadableCard({
             <TableRow key={row.rule}>
               <TableCell>{row.label}</TableCell>
               <TableCell>
-                <SplitBar passing={row.passing} failing={row.failing} />
+                <PassFailBar passing={row.passing} failing={row.failing} />
               </TableCell>
               <TableCell numeric>{formatCount(row.passing)}</TableCell>
-              <TableCell numeric className={row.failing > 0 ? 'text-negative' : undefined}>
+              <TableCell numeric tone={row.failing > 0 ? 'negative' : undefined}>
                 {formatCount(row.failing)}
               </TableCell>
             </TableRow>
@@ -69,33 +67,6 @@ export function ReadableCard({
     </TitledSection>
   );
 }
-
-function SplitBar({ passing, failing }: Readonly<{ passing: number; failing: number }>) {
-  const total = passing + failing;
-  return (
-    <span aria-hidden className="rounded-mark flex h-2 gap-0.5 overflow-hidden">
-      {passing > 0 ? (
-        <span
-          className="bg-positive block h-full"
-          style={{ width: `${(passing / total) * 100}%` }}
-        />
-      ) : null}
-      {failing > 0 ? (
-        <span
-          className="bg-negative block h-full"
-          style={{ width: `${(failing / total) * 100}%` }}
-        />
-      ) : null}
-    </span>
-  );
-}
-
-const BAR_FILL: Record<BarTone, string> = {
-  positive: 'bg-positive',
-  warning: 'bg-warning',
-  negative: 'bg-negative',
-  info: 'bg-info',
-};
 
 const DIMENSION_COLUMNS: readonly DataTableColumn[] = [
   { key: 'dimension', label: 'Dimension', kind: 'identity' },
@@ -139,7 +110,7 @@ export function DimensionsTable({
         return (
           <TableRow key={dimension.key}>
             <TableCell>
-              <ClampText lines={1} className={textRole('emphasis')}>
+              <ClampText lines={1} text="emphasis">
                 {dimension.label}
               </ClampText>
             </TableCell>
@@ -147,14 +118,7 @@ export function DimensionsTable({
               <DimensionScore dimension={dimension} />
             </TableCell>
             <TableCell>
-              <span aria-hidden className="bg-well rounded-mark block h-2 min-w-24 overflow-hidden">
-                {dimension.score === null ? null : (
-                  <span
-                    className={cn('block h-full', BAR_FILL[scoreTone(dimension.score)])}
-                    style={{ width: `${Math.max(0, Math.min(100, dimension.score))}%` }}
-                  />
-                )}
-              </span>
+              <ScoreBar score={dimension.score} />
             </TableCell>
             <TableCell numeric>{formatCount(issues.length)}</TableCell>
             <TableCell numeric>{formatCount(dimension.failing_page_count)}</TableCell>

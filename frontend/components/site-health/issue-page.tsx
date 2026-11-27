@@ -27,7 +27,7 @@ import { formatCount, formatPercent } from '@/lib/format';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pager } from '@/components/ui/pager';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import type {
   AffectedPage,
@@ -72,10 +72,14 @@ function IssueBrief({ issue }: Readonly<{ issue: IssueHead }>) {
   return (
     <Stack gap="item">
       {issue.description ? (
-        <p className={textRole('body', 'max-w-prose')}>{issue.description}</p>
+        <Text as="p" variant="body" box="prose">
+          {issue.description}
+        </Text>
       ) : null}
       {issue.remediation ? (
-        <p className={textRole('body', 'max-w-prose whitespace-pre-line')}>{issue.remediation}</p>
+        <Text as="p" variant="body" box="prose" wrap="lines">
+          {issue.remediation}
+        </Text>
       ) : null}
     </Stack>
   );
@@ -389,13 +393,13 @@ function SiteLevelList({
       {evidence.sections.length > 0 ? (
         <SectionBleed as="ul" rows>
           {evidence.sections.map((section) => (
-            <Inline as="li" key={section.pathPrefix} className="flex-wrap justify-between">
-              <ClampText className={textRole('body', 'min-w-0 flex-1')}>
+            <Inline as="li" key={section.pathPrefix} wrap justify="between">
+              <ClampText text="body" className="flex-1">
                 {section.pathPrefix}
               </ClampText>
-              <span className="text-caption text-ink-2 tabular-nums">
+              <Text variant="caption" numeric>
                 {pageCountLabel(section.pageCount)}
-              </span>
+              </Text>
             </Inline>
           ))}
         </SectionBleed>
@@ -411,18 +415,18 @@ function SiteLevelList({
               pageKind={page.pageKind}
             />
             {page.clicksFromHome === null ? null : (
-              <span className="text-caption text-ink-2 tabular-nums">
+              <Text variant="caption" numeric>
                 {page.clicksFromHome} clicks from the homepage
-              </span>
+              </Text>
             )}
           </Stack>
         ))}
       </SectionBleed>
       {hidden > 0 ? (
         <SectionFooter>
-          <p className="text-caption text-ink-2">
+          <Text as="p" variant="caption">
             Showing {evidence.pages.length} of {evidence.total} pages.
-          </p>
+          </Text>
         </SectionFooter>
       ) : null}
     </>
@@ -450,15 +454,13 @@ function DuplicateSetList({
       <SectionBleed as="ul" rows>
         {evidence.sets.map((set) => (
           <Stack as="li" gap="tight" key={set.pages[0]?.siteUrlId ?? set.text}>
-            <ClampText className={textRole('body')}>
+            <ClampText text="body">
               {`These ${pageCountLabel(set.pageCount)} share “${set.text}”`}
             </ClampText>
-            {set.pages.length < set.pageCount ? (
-              <span className="text-caption text-ink-2">Including:</span>
-            ) : null}
+            {set.pages.length < set.pageCount ? <Text variant="caption">Including:</Text> : null}
             <Stack as="ul" gap="item">
               {set.pages.map((page) => (
-                <li key={page.siteUrlId} className="flex min-h-6 min-w-0 items-center">
+                <Inline as="li" key={page.siteUrlId} className="min-h-target">
                   <AffectedPageLink
                     crawlId={crawlId}
                     siteUrlId={page.siteUrlId}
@@ -466,7 +468,7 @@ function DuplicateSetList({
                     url={page.url}
                     pageKind={page.pageKind}
                   />
-                </li>
+                </Inline>
               ))}
             </Stack>
           </Stack>
@@ -474,9 +476,9 @@ function DuplicateSetList({
       </SectionBleed>
       {shown < evidence.total ? (
         <SectionFooter>
-          <p className="text-caption text-ink-2">
+          <Text as="p" variant="caption">
             Showing {shown} of {evidence.total} pages.
-          </p>
+          </Text>
         </SectionFooter>
       ) : null}
     </>
@@ -505,16 +507,16 @@ function LinkTargetList({
         const hidden = target.pageCount - target.pages.length;
         return (
           <Stack as="li" gap="tight" key={target.url}>
-            <ClampText className={textRole('body')}>
+            <ClampText text="body">
               {`${sitePath(target.url, origin)} → ${linkOutcomeLabel(target.outcome, origin)}`}
             </ClampText>
-            <span className="text-caption text-ink-2 tabular-nums">
+            <Text variant="caption" numeric>
               On {pageCountLabel(target.pageCount)}
               {hidden > 0 ? ', including:' : ':'}
-            </span>
+            </Text>
             <Stack as="ul" gap="item">
               {target.pages.map((page) => (
-                <li key={page.siteUrlId} className="flex min-h-6 min-w-0 items-center">
+                <Inline as="li" key={page.siteUrlId} className="min-h-target">
                   <AffectedPageLink
                     crawlId={crawlId}
                     siteUrlId={page.siteUrlId}
@@ -522,7 +524,7 @@ function LinkTargetList({
                     url={page.url}
                     pageKind={page.pageKind}
                   />
-                </li>
+                </Inline>
               ))}
             </Stack>
           </Stack>

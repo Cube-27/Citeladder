@@ -1,6 +1,6 @@
 import type { IssueValue } from '@citeladder/contracts';
 import { Absence } from '@/components/ui/absence';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 import type { Evidence } from '@/lib/site-health/evidence-values';
 
@@ -39,29 +39,31 @@ export function IssueValueLine({
   hint = null,
 }: Readonly<{ value: IssueValue; hint?: string | null }>) {
   if (value.kind === 'none') return null;
-  const line = textRole('caption', 'min-w-0 [overflow-wrap:anywhere]');
   switch (value.kind) {
     case 'unavailable':
       return (
-        <p className={line}>
+        <Text as="p" variant="caption" box="shrink" wrap="anywhere">
           Value: <Absence state="unavailable" />
-        </p>
+        </Text>
       );
     case 'title':
     case 'meta_description':
       return (
-        <p className={line}>
+        <Text as="p" variant="caption" box="shrink" wrap="anywhere">
           {LABELS[value.kind]} ({formatCount(value.length)} chars{hint ? `, ${hint}` : ''}):{' '}
           {value.text ? <q>{value.text}</q> : <Absence state="none" />}
-        </p>
+        </Text>
       );
     case 'h1_count':
     case 'word_count':
       return (
-        <p className={line}>
-          {LABELS[value.kind]}: <span className="tabular-nums">{formatCount(value.count)}</span>
+        <Text as="p" variant="caption" box="shrink" wrap="anywhere">
+          {LABELS[value.kind]}:{' '}
+          <Text variant="caption" numeric>
+            {formatCount(value.count)}
+          </Text>
           {hint ? ` (${hint})` : null}
-        </p>
+        </Text>
       );
     default: {
       const unhandled: never = value;

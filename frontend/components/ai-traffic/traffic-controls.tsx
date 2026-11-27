@@ -1,11 +1,10 @@
 import { crawlerResourceClassSchema } from '@citeladder/contracts/site-health';
-import { Download, Folder } from '@/lib/icons';
+import { Folder } from '@/lib/icons';
 import { trafficStatusCode, type useTrafficData } from '@/lib/ai-traffic/use-traffic-data';
 import { words } from '@/lib/ai-traffic/vocabulary';
 import type { TrafficFilters } from '@/lib/api/ai-traffic';
 import { TRAFFIC_RANGES, VERIFICATION_OPTIONS } from '@/lib/config/crawl-logs';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import {
   choiceFilter,
   rangeFilter,
@@ -14,18 +13,18 @@ import {
 } from '@/components/ui/all-filters';
 import { menuFieldKeys } from '@/components/ui/filter-options';
 import { Icon } from '@/components/ui/icon';
+import { ExportAction } from '@/components/ui/export-action';
 type ControlProps = Readonly<{ model: ReturnType<typeof useTrafficData> }>;
 type TrafficControlsProps = ControlProps & Readonly<{ crawlAvailable: boolean }>;
 export function TrafficExport({ model }: ControlProps) {
   return (
-    <Button
-      variant="secondary"
-      pending={model.exporting.isPending}
-      onClick={() => model.exporting.mutate()}
-    >
-      <Icon icon={Download} />
-      Export CSV
-    </Button>
+    <ExportAction
+      scope="page"
+      formats={['csv']}
+      onExport={async () => {
+        await model.exporting.mutateAsync();
+      }}
+    />
   );
 }
 

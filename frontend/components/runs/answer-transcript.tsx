@@ -9,7 +9,7 @@ import {
 import { BrandMark } from '@/components/ui/brand-mark';
 import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
 import { Icon } from '@/components/ui/icon';
-import { textRole } from '@/components/ui/text-role';
+import { Text } from '@/components/ui/typography';
 import { UserRound } from '@/lib/icons';
 import type { Highlight } from '@/lib/markdown/highlight';
 import { ContentMarkdown, type LinkChip, type PhraseChip } from '@/lib/markdown/markdown';
@@ -137,7 +137,7 @@ function EngineAvatar({ engine, label }: Readonly<{ engine: string; label: strin
       {key ? (
         <EngineMark engine={key} placement="inline" brand />
       ) : (
-        <span className={textRole('label')}>{label.slice(0, 1)}</span>
+        <Text variant="label">{label.slice(0, 1)}</Text>
       )}
     </ChatAvatar>
   );
@@ -186,7 +186,9 @@ export function AnswerTranscript({
             linkChip={sourceLinks(sources)}
           />
         ) : (
-          <p className="text-body text-ink-2">{body.text}</p>
+          <Text as="p" variant="body" tone="ink-2">
+            {body.text}
+          </Text>
         )}
       </AssistantMessage>
     </ChatThread>

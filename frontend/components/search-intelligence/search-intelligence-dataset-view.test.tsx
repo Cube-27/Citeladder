@@ -9,7 +9,7 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders, testProjectSelection } from '@/test/render';
 import { SearchIntelligenceDatasetView } from './search-intelligence-dataset-view';
 import * as csv from '@/lib/csv/download';
-import { parseAgentHandoff } from '@/lib/agent/handoff';
+import { parseAgentHandoff } from '@/lib/agent/handoff-params';
 
 const project = makeProject();
 const dataset: SearchIntelligenceDataset = {

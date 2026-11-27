@@ -76,7 +76,7 @@ export function ExecutionsTable({
                 <Inline as="span">
                   <StatusBadge execution={execution} />
                   {execution.status === 'failed' ? (
-                    <ClampText className="text-ink-2">
+                    <ClampText tone="ink-2">
                       {executionFailureReason(execution.error_code)}
                     </ClampText>
                   ) : null}
