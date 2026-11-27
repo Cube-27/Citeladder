@@ -100,7 +100,7 @@ export function InvoiceHistory({
         {invoices.map((invoice) => (
           <TableRow key={invoice.invoice_id}>
             <TableCell>
-              <ClampText lines={1} text="emphasis">
+              <ClampText lines={1} emphasis>
                 {invoice.status === 'credited'
                   ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
                   : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}

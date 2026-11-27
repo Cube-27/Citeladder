@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactElement, Ref } from 'react';
 
 import {
-  TEXT_ROLE_CLASS,
+  textRoleClass,
   TEXT_TONE_CLASS,
   type TextRole,
   type TextTone,
@@ -80,7 +80,7 @@ function SlotMergedPressable({
       type={type}
       className={cn(
         'focus-ring w-full rounded-control text-left transition-fill duration-fast ease-standard disabled:pointer-events-none disabled:bg-well disabled:text-ink-2 disabled:border-rule',
-        text && TEXT_ROLE_CLASS[text],
+        text && textRoleClass(text),
         numeric && 'tabular-nums',
         LOOK[look],
         tone && TEXT_TONE_CLASS[tone],

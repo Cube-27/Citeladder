@@ -11,7 +11,7 @@ import {
   SectionTitleRoleContext,
   StateHeadingLevelContext,
 } from '@/components/ui/state-heading-level';
-import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
+import { textRoleClass } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 import './section.css';
 
@@ -80,7 +80,7 @@ export function SectionTitle({
   return (
     <Heading
       {...props}
-      className={cn(TEXT_ROLE_CLASS[useContext(SectionTitleRoleContext)], truncate && 'truncate')}
+      className={cn(textRoleClass(useContext(SectionTitleRoleContext)), truncate && 'truncate')}
     >
       {children}
       {count === undefined ? null : (

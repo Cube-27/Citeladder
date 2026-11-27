@@ -11,7 +11,7 @@ export function ActiveRunBanner({ run }: Readonly<{ run: ActiveRun }>) {
       <Inline wrap>
         <Spinner />
         <span>A run is in progress ({AUDIT_STATES[run.status].label}).</span>
-        <TextLink text="emphasis" box="nowrap" href={`/runs/${run.id}`}>
+        <TextLink text="inherit" emphasis box="nowrap" href={`/runs/${run.id}`}>
           Watch live progress →
         </TextLink>
       </Inline>

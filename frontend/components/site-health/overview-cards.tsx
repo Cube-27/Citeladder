@@ -125,9 +125,7 @@ export function KnownUrlsCard({ summary }: Readonly<{ summary: SiteScoreSummary 
     <TitledSection title="Known URLs">
       <Stack gap="item">
         <Inline align="baseline">
-          <Text variant="figure" numeric>
-            {formatCount(weighting.known_url_count)}
-          </Text>
+          <Text variant="figure">{formatCount(weighting.known_url_count)}</Text>
           <Text variant="caption">{formatCount(summary.analyzed_count)} sampled</Text>
         </Inline>
         <BarRows

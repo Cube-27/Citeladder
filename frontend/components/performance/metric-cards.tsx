@@ -72,7 +72,7 @@ export function MetricCards({
                   </InfoHint>
                 </span>
               </Inline>
-              <Text variant="figure" numeric wrap="nowrap">
+              <Text variant="figure" wrap="nowrap">
                 {loading ? (
                   <Spinner label="Loading" />
                 ) : (

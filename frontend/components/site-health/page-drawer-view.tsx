@@ -65,7 +65,7 @@ export function PageDrawerView({
         <TabRail items={items} ariaLabel="Page sections" />
       </DrawerNav>
       <DrawerPane>
-        <SectionTitleRoleContext value="subheading">
+        <SectionTitleRoleContext value="label">
           <Stack gap="item" box="shrink" hideEmpty>
             {actions ? (
               <Inline wrap justify="end">

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'rea
 
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import {
-  TEXT_ROLE_CLASS,
+  textRoleClass,
   TEXT_TONE_CLASS,
   type TextRole,
   type TextTone,
@@ -79,6 +79,7 @@ export function ClampText({
   tooltip,
   tone,
   text,
+  emphasis = false,
   numeric = false,
   box,
   rowTitle = false,
@@ -91,6 +92,7 @@ export function ClampText({
   tooltip?: ReactNode;
   tone?: TextTone;
   text?: TextRole;
+  emphasis?: boolean;
   numeric?: boolean;
   box?: keyof typeof BOX;
   rowTitle?: boolean;
@@ -117,7 +119,8 @@ export function ClampText({
         className={cn(
           clampClasses({ lines, phoneWrap, grow }),
           cut && 'rounded-mark',
-          text && TEXT_ROLE_CLASS[text],
+          text && textRoleClass(text),
+          emphasis && 'font-emphasis',
           numeric && 'tabular-nums',
           tone && TEXT_TONE_CLASS[tone],
           box && BOX[box],

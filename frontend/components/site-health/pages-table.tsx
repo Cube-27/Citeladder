@@ -130,7 +130,8 @@ export function PagesTable({
                 <Inline as="span" wrap="phone">
                   <ClampText box="fixed-full">
                     <PageLink
-                      text="emphasis"
+                      text="inherit"
+                      emphasis
                       underline="hover"
                       crawlId={page.crawl_id}
                       siteUrlId={page.site_url_id}

@@ -21,7 +21,7 @@ import { Section, SectionBleed, SectionHeader } from '@/components/ui/section';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
-import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
+import { textRoleClass } from '@/components/ui/text-role';
 import { StateBlock } from '@/components/ui/state-block';
 import {
   SectionTitleRoleContext,
@@ -334,7 +334,7 @@ function DataTableHeader({
   const heading = named ? (
     <>
       {title ? (
-        <Heading id={headingId} className={cn(TEXT_ROLE_CLASS[role], 'min-w-0 truncate')}>
+        <Heading id={headingId} className={cn(textRoleClass(role), 'min-w-0 truncate')}>
           {title}
         </Heading>
       ) : null}

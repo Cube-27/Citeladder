@@ -177,9 +177,7 @@ export function SeverityCard({
   return (
     <TitledSection title="Issues by severity" actions={actions}>
       <Stack gap="item">
-        <Text variant="figure" numeric>
-          {formatCount(data.issue_count)}
-        </Text>
+        <Text variant="figure">{formatCount(data.issue_count)}</Text>
         <BarRows
           label="Issues by severity"
           rows={SEVERITIES.map((severity, index) => ({

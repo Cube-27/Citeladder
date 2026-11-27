@@ -142,7 +142,8 @@ function ChangeRow({
     <TableRow>
       <TableCell>
         <PageLink
-          text="emphasis"
+          text="inherit"
+          emphasis
           underline="hover"
           box="row"
           crawlId={crawlBId ?? ''}

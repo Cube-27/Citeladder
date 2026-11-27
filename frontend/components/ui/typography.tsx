@@ -7,32 +7,8 @@ import {
 } from 'react';
 
 import { cn } from '@/lib/utils';
-import { TEXT_TONE_CLASS, type TextTone } from '@/components/ui/text-role';
+import { roleTone, textRoleClass, type TextRole, type TextTone } from '@/components/ui/text-role';
 
-const ROLE_CLASSES = {
-  caption: 'text-caption font-sans',
-  'caption-strong': 'text-caption-strong font-sans',
-  'caption-mono': 'text-caption font-mono',
-  code: 'text-code font-mono',
-  body: 'text-body font-sans',
-  'body-lg': 'text-body-lg font-sans',
-  label: 'text-label font-sans',
-  heading: 'text-heading font-sans',
-  prose: 'text-prose font-sans',
-  title: 'text-title font-display',
-  'page-title': 'text-page-title font-sans',
-  figure: 'text-figure font-figure',
-  'figure-xl': 'text-figure-xl font-figure',
-  display: 'text-display font-display',
-} as const;
-
-type TypeRole = keyof typeof ROLE_CLASSES;
-
-const SECONDARY_ROLES: ReadonlySet<TypeRole> = new Set([
-  'caption',
-  'caption-strong',
-  'caption-mono',
-]);
 type TextTag =
   | 'span'
   | 'b'
@@ -66,7 +42,7 @@ const TEXT_WRAP = {
 
 const TEXT_BOX = {
   block: 'block',
-  fit: 'w-fit',
+  'fit-content': 'w-fit',
   fill: 'min-w-0 flex-1',
   shrink: 'min-w-0',
   fixed: 'shrink-0',
@@ -75,7 +51,7 @@ const TEXT_BOX = {
   prose: 'max-w-prose',
   clip: 'min-w-0 overflow-hidden',
   stretch: 'min-w-0 justify-self-stretch',
-  scroll: 'max-w-full overflow-x-auto',
+  'scroll-x': 'max-w-full overflow-x-auto',
   indent: 'ps-6',
   meta: 'flex h-6 items-center',
   'fill-row': 'flex min-w-0 flex-1',
@@ -90,7 +66,7 @@ const TEXT_ALIGN = {
 
 export function Text({
   variant,
-  tone = SECONDARY_ROLES.has(variant) ? 'ink-2' : 'ink',
+  tone = roleTone(variant),
   as: Tag = 'span',
   numeric = false,
   wrap,
@@ -104,7 +80,7 @@ export function Text({
 }: Readonly<
   Omit<ComponentPropsWithRef<'span'>, 'className' | 'style' | 'ref'> & {
     ref?: Ref<HTMLElement>;
-    variant: TypeRole;
+    variant: TextRole;
     tone?: TextTone;
     as?: TextTag;
     numeric?: boolean;
@@ -117,8 +93,7 @@ export function Text({
   }
 >) {
   const className = cn(
-    ROLE_CLASSES[variant],
-    tone && TEXT_TONE_CLASS[tone],
+    textRoleClass(variant, tone),
     numeric && 'tabular-nums',
     wrap && TEXT_WRAP[wrap],
     box && TEXT_BOX[box],
