@@ -1,7 +1,7 @@
 import { lineIndex, parseSource, walk } from './source-ast.mjs';
 
 const GEOMETRY = new Set(['strokeWidth', 'strokeDasharray', 'fontSize', 'r']);
-const RAW_LENGTH = /(?<![\w-])\d*\.?\d+(?:px|rem|em)\b/;
+const RAW_LENGTH = /(?<![\w.-])(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em)\b/;
 const DIGIT = /\d/;
 
 export const UI_SOURCE = /^components\/ui\/.*(?<!\.test)\.tsx?$/;
