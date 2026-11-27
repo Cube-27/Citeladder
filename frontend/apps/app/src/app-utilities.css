@@ -1,9 +1,3 @@
-:root {
-  --link-rule-width: 1.5px;
-  --check-draw-duration: 150ms;
-  --check-draw-delay: 15ms;
-}
-
 @utility page-start-full {
   --page-start: max(0px, calc((100cqw - var(--container-app)) / 2));
 }
@@ -87,7 +81,7 @@
   background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
 }
 @utility link-rule {
-  text-decoration-thickness: var(--link-rule-width);
+  text-decoration-thickness: 1.5px;
 }
 @utility scrollbar-none {
   scrollbar-width: none;
@@ -142,7 +136,7 @@
 }
 @utility check-draw {
   stroke-dashoffset: 1;
-  transition: stroke-dashoffset var(--check-draw-duration) linear var(--check-draw-delay);
+  transition: stroke-dashoffset 150ms linear 15ms;
 }
 @layer utilities {
   .check-draw[data-drawn] {

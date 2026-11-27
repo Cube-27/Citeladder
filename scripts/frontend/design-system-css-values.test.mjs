@@ -10,7 +10,7 @@ import { screenValueFindings } from '../../frontend/scripts/design-system-screen
 const lines = (findings) => findings.map((finding) => finding.split(': ')[0]);
 
 test('raw colour, type, z, motion, shadow, spacing, size, border, radius, opacity and font values fail', () => {
-  const css = [
+  const rules = [
     '.a { color: #fff; }',
     '.b { background: oklch(50% 0.1 30); }',
     '.c { font-size: 13px; }',
@@ -34,14 +34,25 @@ test('raw colour, type, z, motion, shadow, spacing, size, border, radius, opacit
     '.u { --pad: 13px; }',
     '.v { mask-image: linear-gradient(#000, transparent); }',
     ':root .w { --pad: 13px; }',
-  ].join('\n');
-  const twice = new Set([17, 20]);
+  ];
+  const css = [...rules, ...rules].join('\n');
+  const twice = new Set([17, 20, 40, 43]);
   assert.deepEqual(
     lines(cssValueFindings('x.css', css)),
-    Array.from({ length: 23 }, (_, index) => index + 1).flatMap((line) =>
+    Array.from({ length: 46 }, (_, index) => index + 1).flatMap((line) =>
       Array(twice.has(line) ? 2 : 1).fill(`x.css:${line}`),
     ),
   );
+});
+
+test('a raw measure used once in its sheet passes and a repeated one fails; colours never pass', () => {
+  const css = [
+    '.a { padding: 13px; z-index: 100; line-height: 1.25; }',
+    '.b { transition: opacity 150ms; animation-duration: 2s; }',
+    '.c { margin: 7px; }',
+    '.d { margin: 7px; color: #fff; }',
+  ].join('\n');
+  assert.deepEqual(lines(cssValueFindings('x.css', css)), ['x.css:3', 'x.css:4', 'x.css:4']);
 });
 
 test('tokens, keywords, zero, multipliers, percentages, gradient stops and exempt blocks pass', () => {
@@ -75,7 +86,7 @@ test('a token file may declare ramp colours and read them in rules', () => {
 
 test('an HTML or Astro style block is checked on its own lines', () => {
   const astro =
-    '---\nconst a = 1;\n---\n<div class="x" />\n<style>\n  .x { z-index: -1; }\n</style>\n';
+    '---\nconst a = 1;\n---\n<div class="x" />\n<style>\n  .x { z-index: -1; color: #fff; }\n</style>\n';
   assert.deepEqual(lines(styleBlockFindings('Box.astro', astro)), ['Box.astro:6']);
 });
 

@@ -1,5 +1,4 @@
 :root {
-  --reveal-duration: 700ms;
   --reveal-step: 80ms;
 }
 
@@ -159,7 +158,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .mk-hero-in > * {
-    animation: mk-rise-in var(--reveal-duration) var(--ease-menu) both;
+    animation: mk-rise-in 700ms var(--ease-menu) both;
   }
 
   .mk-hero-in > :is(h1, :has(> h1)) {

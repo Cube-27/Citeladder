@@ -1,10 +1,3 @@
-:root {
-  --mark-pad-inline: 0.2em;
-  --heading-line-height: 1.25;
-  --skip-link-z: 100;
-  --press-duration: 150ms;
-}
-
 @media (min-width: 900px) {
   :root:not([data-public-surface]) {
     --spacing-shell-inset: 8px;
@@ -154,7 +147,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .cl-mark {
     background: var(--color-accent-wash);
     color: var(--text-color-ink);
-    padding: 0 var(--mark-pad-inline);
+    padding: 0 0.2em;
     border-radius: var(--radius-mark);
     box-decoration-break: clone;
   }
@@ -182,7 +175,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-family: var(--font-sans);
     font-weight: var(--heading-weight);
     letter-spacing: normal;
-    line-height: var(--heading-line-height);
+    line-height: 1.25;
     color: var(--text-color-ink);
   }
 
@@ -476,7 +469,7 @@ samp {
   position: fixed;
   top: calc(var(--spacing) * 2);
   left: calc(var(--spacing) * 2);
-  z-index: var(--skip-link-z);
+  z-index: 100;
   transform: translateY(calc(-100% - 5rem));
   border-radius: var(--radius-control);
   background: var(--color-panel);
@@ -715,7 +708,7 @@ label {
 @layer components {
   .press {
     transition:
-      scale var(--press-duration),
+      scale 150ms,
       background-color var(--transition-duration-fast),
       color var(--transition-duration-fast),
       border-color var(--transition-duration-fast),
