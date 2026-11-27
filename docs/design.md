@@ -267,7 +267,11 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   page-wide toolbar (`FilterBar`) is the strip under the tabs, with no rule,
   and takes no search (`PageFrame` `filters` is `FilterBarProps`, which has
   none): a search narrows one table, so it lives in that
-  table's `TableToolbar` (`DataTable toolbar`). An export is `ExportAction`:
+  table's `TableToolbar` (`DataTable toolbar`). A `DataTable` head is one row:
+  title at the start, then the view, search and filters, and its actions
+  (`actions` and `toolbar.actions` together) at the end. It wraps only when
+  the content does not fit; a card never has a row holding only an action or
+  only a search (owner, 2026-11-27). An export is `ExportAction`:
   `scope="page"` in the page header actions, `scope="table"` in the table
   toolbar.
 - **Metric strip:** a bleed slot of a card (on the paper it brings its own

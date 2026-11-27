@@ -72,6 +72,7 @@ function pagesColumns(
 }
 
 export function PagesTable({
+  title,
   pages,
   sort = DEFAULT_PAGES_SORT,
   onSortChange,
@@ -81,6 +82,7 @@ export function PagesTable({
   pageSize,
   busy,
 }: Readonly<{
+  title?: string;
   pages: PageSummary[];
   sort?: PagesSort;
   onSortChange?: (sort: PagesSort) => void;
@@ -96,6 +98,7 @@ export function PagesTable({
   const origin = sharedOrigin(pages.map((page) => page.display_url));
   return (
     <DataTable
+      title={title}
       label="Pages"
       columns={pagesColumns(sort, onSortChange)}
       toolbar={toolbar}
