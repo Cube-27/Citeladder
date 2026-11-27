@@ -9,6 +9,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
 import { TableCell, TableRow } from '@/components/ui/table';
+import { Highlight } from '@/components/ui/highlight';
 import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
 import { urlTypeLabel } from '@citeladder/contracts/page-labels';
 import { agentHandoffHref } from '@/lib/agent/handoff';
@@ -129,7 +130,7 @@ function Quote({ text, name }: Readonly<{ text: string; name: string }>) {
   return (
     <ClampText lines={2} tooltip={text}>
       {before}
-      {match ? <mark className="cl-mark">{match}</mark> : null}
+      {match ? <Highlight>{match}</Highlight> : null}
       {after}
     </ClampText>
   );
