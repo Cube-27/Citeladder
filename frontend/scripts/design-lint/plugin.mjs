@@ -4,7 +4,9 @@ import { astroClassStrings, frontmatterOf } from './astro.mjs';
 import { classValues } from './class-values.mjs';
 import {
   colourLiteralIn,
+  isArbitraryBreakpoint,
   isMonochrome,
+  isStepClass,
   isSurfaceVariant,
   isSurvivor,
   isValueClass,
@@ -40,37 +42,158 @@ function stringRule(check) {
 const tokenRule = (test, describe) =>
   stringRule((text) => splitTokens(text).filter(test).map(describe));
 
+const UI_SOURCE = /^@\/components\/ui(?:\/|$)/;
+const ROLE_PROPERTY =
+  /^--(?:color|text|spacing|radius|shadow|font|leading|tracking|container|ease|ramp|control|opacity|z-index|type)(?:-|$)/;
+
+function rootName(name) {
+  if (name.type === 'JSXIdentifier') return name.name;
+  if (name.type === 'JSXMemberExpression') return rootName(name.object);
+  return '';
+}
+
+function paramNames(param) {
+  if (param.type === 'Identifier') return [param.name];
+  if (param.type === 'AssignmentPattern') return paramNames(param.left);
+  if (param.type === 'ObjectPattern')
+    return param.properties.flatMap((property) =>
+      property.type === 'RestElement' ? paramNames(property.argument) : [],
+    );
+  return [];
+}
+
+function attributeNamed(node, name) {
+  return node.attributes.find((item) => item.type === 'JSXAttribute' && item.name.name === name);
+}
+
+function roleKeys(style) {
+  const object = style?.value?.type === 'JSXExpressionContainer' ? style.value.expression : null;
+  if (object?.type !== 'ObjectExpression') return [];
+  return object.properties
+    .map(
+      (property) =>
+        property.type === 'Property' && property.key.type === 'Literal' && property.key.value,
+    )
+    .filter((key) => typeof key === 'string' && ROLE_PROPERTY.test(key));
+}
+
+function elementCheck(node, imports) {
+  const name = rootName(node.name);
+  if (/^[a-z]/.test(name)) return { tag: name, test: isValueClass, kind: 'plain' };
+  if (UI_SOURCE.test(imports.get(name) ?? '')) return { tag: name, test: isStepClass, kind: 'ui' };
+  return { tag: name, test: isValueClass, kind: 'component' };
+}
+
+const ADVICE = {
+  plain: 'Render a primitive (Stack, Inline, Text, Section…) or give one a role prop.',
+  component: 'Render a primitive (Icon, Stack, Text…) or give one a role prop.',
+  ui: 'Spacing between things comes from a layout gap and sizes from a primitive prop or role.',
+};
+
 const plainElement = {
   meta: { type: 'problem' },
   create(context) {
     const constants = new Map();
+    const imports = new Map();
     const elements = [];
+    const spreads = [];
+    const forwarded = new Set();
+    const stylingObject = (argument) => {
+      let object = argument.type === 'Identifier' ? constants.get(argument.name) : argument;
+      while (object?.type === 'TSAsExpression' || object?.type === 'TSSatisfiesExpression')
+        object = object.expression;
+      return (
+        object?.type === 'ObjectExpression' &&
+        object.properties.some((property) =>
+          ['className', 'style'].includes(property.key?.name ?? property.key?.value),
+        )
+      );
+    };
+    const unsafeSpread = (node) =>
+      node.attributes.some(
+        ({ type, argument }) =>
+          type === 'JSXSpreadAttribute' &&
+          (stylingObject(argument) ||
+            (/^[a-z]/.test(rootName(node.name)) &&
+              argument.type === 'Identifier' &&
+              forwarded.has(argument.name))),
+      );
+    const collectParams = (node) => {
+      for (const param of node.params) paramNames(param).forEach((name) => forwarded.add(name));
+    };
     return {
+      FunctionDeclaration: collectParams,
+      FunctionExpression: collectParams,
+      ArrowFunctionExpression: collectParams,
+      ImportDeclaration(node) {
+        for (const specifier of node.specifiers)
+          imports.set(specifier.local.name, node.source.value);
+      },
       VariableDeclarator(node) {
         if (node.id.type === 'Identifier' && node.init && !constants.has(node.id.name))
           constants.set(node.id.name, node.init);
       },
       JSXOpeningElement(node) {
-        if (node.name.type !== 'JSXIdentifier' || !/^[a-z]/.test(node.name.name)) return;
-        const attribute = node.attributes.find(
-          (item) => item.type === 'JSXAttribute' && item.name.name === 'className',
-        );
-        if (attribute?.value) elements.push({ node, tag: node.name.name, value: attribute.value });
+        spreads.push(node);
+        const keys = roleKeys(attributeNamed(node, 'style'));
+        if (keys.length)
+          context.report({
+            node,
+            message: `style re-points ${keys.join(' ')} for one call site. Add a role or a primitive prop instead. ${GUIDE}`,
+          });
+        const attribute = attributeNamed(node, 'className');
+        if (attribute?.value) elements.push({ node, value: attribute.value });
       },
       'Program:exit'() {
-        for (const { node, tag, value } of elements) {
+        for (const node of spreads.filter(unsafeSpread))
+          context.report({
+            node,
+            message: `<${rootName(node.name)}> spreads forwarded props or an object holding className or style, so a caller can pass it any class or style. Render a primitive instead. ${GUIDE}`,
+          });
+        for (const { node, value } of elements) {
+          const { tag, test, kind } = elementCheck(node, imports);
           const found = classValues(value, constants);
           const parts = [
-            ...found.strings.flatMap(splitTokens).filter(isValueClass),
-            ...found.helpers,
-            ...found.unreadable.map((name) => `{${name}}`),
+            ...found.strings.flatMap(splitTokens).filter(test),
+            ...(kind === 'ui' ? [] : found.helpers),
+            ...(kind === 'ui' ? [] : found.unreadable.map((name) => `{${name}}`)),
           ];
           if (!parts.length) continue;
           context.report({
             node,
-            message: `<${tag}> sets design values itself: ${[...new Set(parts)].slice(0, 6).join(' ')}. Render a primitive (Stack, Inline, Text, Section…) or give one a role prop. ${GUIDE}`,
+            message: `<${tag}> sets design values itself: ${[...new Set(parts)].slice(0, 6).join(' ')}. ${ADVICE[kind]} ${GUIDE}`,
           });
         }
+      },
+    };
+  },
+};
+
+const staticClass = {
+  meta: { type: 'problem' },
+  create(context) {
+    return {
+      JSXAttribute(node) {
+        if (node.name.name !== 'className' || node.value?.type !== 'JSXExpressionContainer') return;
+        const search = (current) => {
+          if (!current || typeof current.type !== 'string') return;
+          if (current.type === 'TemplateLiteral' && current.expressions.length)
+            context.report({
+              node: current,
+              message: `A class list built in a template literal hides its classes from the design checks. Join conditional classes with cn(). ${GUIDE}`,
+            });
+          for (const key of [
+            'expression',
+            'arguments',
+            'consequent',
+            'alternate',
+            'left',
+            'right',
+            'elements',
+          ])
+            [current[key]].flat().forEach(search);
+        };
+        search(node.value.expression);
       },
     };
   },
@@ -144,6 +267,12 @@ const plugin = {
         ? [`${literal} is a raw colour. Colours come from role tokens in globals.css. ${GUIDE}`]
         : [];
     }),
+    'arbitrary-breakpoint': tokenRule(
+      isArbitraryBreakpoint,
+      (token) =>
+        `${token} picks a raw breakpoint. Use a named breakpoint or container size (or add one). ${GUIDE}`,
+    ),
+    'static-class': staticClass,
     'astro-class': astroClass,
     'raw-media': rawMedia,
   },

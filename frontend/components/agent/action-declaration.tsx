@@ -419,9 +419,9 @@ const SELECT_IMPLEMENTED_LINKS = {
   icon: ListChecks,
 } as const;
 
-export function ContextualLinkDeclarationRoute({ className }: Readonly<{ className?: string }>) {
+export function ContextualLinkDeclarationRoute(slotProps: Readonly<Record<never, never>>) {
   return (
-    <Button asChild variant="secondary" className={className}>
+    <Button {...slotProps} asChild variant="secondary">
       <ProjectLink href={SELECT_IMPLEMENTED_LINKS.href}>
         <Icon icon={SELECT_IMPLEMENTED_LINKS.icon} />
         {SELECT_IMPLEMENTED_LINKS.label}

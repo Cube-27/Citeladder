@@ -190,7 +190,7 @@ function ReviseForm({
       </label>
       <Input
         id={inputId}
-        className="min-w-0 flex-1"
+        width="grow"
         value={instruction}
         placeholder="e.g. Add a pricing comparison table"
         onChange={(event) => setInstruction(event.target.value)}

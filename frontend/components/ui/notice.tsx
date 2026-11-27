@@ -39,6 +39,7 @@ type MessageNotice = Readonly<{
   children?: ReactNode;
   action?: ReactNode;
   standing?: boolean;
+  measure?: boolean;
   className?: string;
 }>;
 
@@ -92,12 +93,16 @@ export function Notice(props: NoticeProps) {
   }
 }
 
+const noticeAlign = (action: ReactNode, title: ReactNode) =>
+  action && title == null ? 'items-center' : 'items-start';
+
 function MessageNoticeView({
   tone = 'info',
   title,
   children,
   action,
   standing = false,
+  measure = false,
   className,
 }: MessageNotice) {
   if (children == null && title == null) return null;
@@ -112,7 +117,8 @@ function MessageNoticeView({
       className={cn(
         'text-body text-ink',
         'flex flex-wrap gap-2',
-        action && title == null ? 'items-center' : 'items-start',
+        noticeAlign(action, title),
+        measure && 'max-w-lg',
         className,
       )}
     >

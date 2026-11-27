@@ -44,7 +44,7 @@ export function ProjectMeta({ data }: Readonly<{ data: CommandCenter }>) {
     <Section>
       <Inline as="p" gap="meta">
         {href ? (
-          <TextLink variant="external" text="caption" tone="muted" href={href} className="min-w-0">
+          <TextLink variant="external" text="caption" tone="muted" href={href} box="shrink">
             <span className="truncate" title={shown}>
               {shown}
             </span>
@@ -133,7 +133,7 @@ export function DashboardActions({
 function FactSummary({ value }: Readonly<{ value: string }>) {
   if (!value.trim()) return <Absence state="not_set" />;
   return (
-    <ClampText lines={2} text="body" className="whitespace-normal">
+    <ClampText lines={2} text="body" box="wrap">
       {value}
     </ClampText>
   );

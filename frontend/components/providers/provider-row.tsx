@@ -125,7 +125,7 @@ function CredentialForm({ id, state }: Readonly<{ id: string; state: ConnectionS
           <Button
             type="button"
             variant="quiet"
-            className="mr-auto"
+            box="push"
             onClick={() => setConfirming(true)}
             disabled={busy}
           >

@@ -19,8 +19,8 @@ const SEVERITY_ICON: Readonly<Record<Severity, IconGlyph>> = {
 };
 
 function SeverityIcon({ severity }: Readonly<{ severity: Severity }>) {
-  const Icon = SEVERITY_ICON[severity];
-  return <Icon className="size-5" data-severity={severity} aria-hidden />;
+  const Glyph = SEVERITY_ICON[severity];
+  return <Glyph className="cl-severity-icon" data-severity={severity} aria-hidden />;
 }
 
 export function ScreenSiteHealth() {

@@ -140,6 +140,8 @@ const DESIGN_RULES = {
   'design/reset-survivor': 'error',
   'design/colour-literal': 'error',
   'design/monochrome-colour': 'error',
+  'design/arbitrary-breakpoint': 'error',
+  'design/static-class': 'error',
 } satisfies LintRules;
 const SCREEN_RULES = {
   'design/plain-element': 'error',

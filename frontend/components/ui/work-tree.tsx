@@ -31,18 +31,10 @@ export function TreeStatusRow({
   tone,
   name,
   count,
-  className,
   ...props
 }: Readonly<ToggleProps & { tone: StateDotTone; name: string; count: string }>) {
   return (
-    <Pressable
-      {...props}
-      data-tree-row=""
-      aria-expanded={open}
-      text="label"
-      look="tree-row"
-      className={className}
-    >
+    <Pressable {...props} data-tree-row="" aria-expanded={open} text="label" look="tree-row">
       <TreeChevron open={open} />
       <StateDot tone={tone} />
       {name}
@@ -56,18 +48,10 @@ export function TreeGroupRow({
   name,
   count,
   mark,
-  className,
   ...props
 }: Readonly<ToggleProps & { name: string; count: number; mark?: ReactNode }>) {
   return (
-    <Pressable
-      {...props}
-      data-tree-row=""
-      aria-expanded={open}
-      text="label"
-      look="tree-anchor"
-      className={className}
-    >
+    <Pressable {...props} data-tree-row="" aria-expanded={open} text="label" look="tree-anchor">
       <TreeChevron open={open} />
       <span className="min-w-0 truncate">{name}</span>
       <CountText>{formatCount(count)}</CountText>
@@ -81,7 +65,6 @@ export function TreeGroupingRow({
   name,
   count,
   tick,
-  className,
   ...props
 }: Readonly<ToggleProps & { name: string; count: number; tick: ReactNode }>) {
   return (
@@ -92,12 +75,7 @@ export function TreeGroupingRow({
         !open && 'text-ink-2',
       )}
     >
-      <Pressable
-        {...props}
-        data-tree-row=""
-        aria-expanded={open}
-        className={cn('absolute inset-0', className)}
-      />
+      <Pressable {...props} data-tree-row="" aria-expanded={open} box="overlay" />
       <TreeChevron open={open} />
       <span className="relative flex">{tick}</span>
       <span className="pointer-events-none min-w-0 truncate">{name}</span>

@@ -224,7 +224,7 @@ function SuggestionCard({
         {suggestion.choose_one ? <StatusMark tone="neutral">Choose one</StatusMark> : null}
       </Inline>
       {inPage ? (
-        <Pressable look="jump" className="text-start" onClick={() => onShow(suggestion.id)}>
+        <Pressable look="jump" box="start" onClick={() => onShow(suggestion.id)}>
           <span className="sr-only">Show in the page: </span>
           {text}
         </Pressable>
@@ -281,7 +281,7 @@ function CoverageGaps({
             {onAddToContext ? (
               <Button
                 variant="secondary"
-                className="justify-self-start"
+                box="start"
                 aria-label={`Add to context: ${evidence.angle_label}`}
                 onClick={() =>
                   onAddToContext({

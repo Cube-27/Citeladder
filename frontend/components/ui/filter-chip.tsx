@@ -7,6 +7,7 @@ import { Menu, MenuContent, MenuTrigger } from '@/components/ui/menu';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Bot, CalendarDays, ChevronDown, Folder, Globe, Tag, X, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import { Icon } from '@/components/ui/icon';
 
 export function FilterTrigger({
   label,
@@ -55,7 +56,7 @@ export function FilterTrigger({
             {value}
           </span>
         )}
-        <ChevronDown className="text-ink-placeholder size-3.5 shrink-0" aria-hidden />
+        <Icon icon={ChevronDown} size="flush" tone="placeholder" />
       </button>
     </Tooltip>
   );
@@ -92,7 +93,7 @@ function filterLead(filter: FilterDefinition): ReactNode {
   const marks = filter.icon === 'engines' ? engineStack(filter) : null;
   if (marks) return marks;
   const Glyph = GLYPHS[filter.icon];
-  return <Glyph className="size-3.5" aria-hidden />;
+  return <Icon icon={Glyph} size="flush" />;
 }
 
 export function FilterChip({

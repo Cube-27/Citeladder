@@ -232,6 +232,20 @@ ink.
 per-call-site render of every converted string in each entry stylesheet; any
 difference is a bug unless the plan lists it.
 
+### A closed primitive still merges the class a Slot hands it
+
+**Rule:** When a primitive drops `className` from its public props, its
+implementation still accepts the `className` a Radix `Slot` parent injects at
+runtime (`DockSlot`, `TextLink asChild`, `MastheadLabelled`) and merges it
+with its own classes. Export it through a narrower function type, as `Button`
+and `Pressable` do, so screens still cannot pass one.
+**Why:** #1281 closed `Button` and `Pressable`. `Button` then overwrote the
+dock slot widths, so the Action dock resized on every decision, and
+`Pressable` let the injected class replace its whole class list under
+`TextLink asChild`.
+**Check:** `e2e/surface-layout-actions.spec.ts` holds the dock still; render
+a `Slot` parent around any newly closed primitive before merging.
+
 ### Popup exits animate, eager CSS pays for itself
 
 **Rule:** Radix popups (menus, popovers, tooltips, dialogs) leave with a CSS

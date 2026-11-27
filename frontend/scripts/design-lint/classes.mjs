@@ -92,6 +92,13 @@ const VALUE = [
   /^z-/,
 ];
 
+const STEP = [
+  /^(?:space-[xy]|m[xytblrse]?|scroll-m[xytblrse]?)-/,
+  /^(?:inset|inset-x|inset-y|top|right|bottom|left|start|end|translate-[xy])-/,
+  /^(?:w|h|size|min-w|min-h|max-w|max-h|basis)-/,
+  /^(?:scale|rotate|skew|origin)(?:-|$)/,
+];
+
 export function splitTokens(text) {
   return text.split(/\s+/).filter(Boolean);
 }
@@ -117,6 +124,18 @@ export function isValueClass(token) {
     return false;
   if (/[[(]/.test(utility)) return true;
   return VALUE.some((pattern) => pattern.test(utility));
+}
+
+export function isStepClass(token) {
+  const utility = utilityOf(token);
+  if (!utility || LAYOUT_WORDS.has(utility) || LAYOUT.some((pattern) => pattern.test(utility)))
+    return false;
+  return STEP.some((pattern) => pattern.test(utility));
+}
+
+export function isArbitraryBreakpoint(token) {
+  const variants = token.slice(0, token.length - utilityOf(token).length);
+  return /(?:^|:)(?:@|@min-|@max-|min-|max-)\[/.test(variants);
 }
 
 const SURVIVORS = [

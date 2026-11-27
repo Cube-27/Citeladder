@@ -7,46 +7,57 @@ import { cn } from '@/lib/utils';
 const ICON_SIZE = {
   text: 'my-0.75 size-3.5',
   field: 'my-0.5 size-4',
+  flush: 'size-3.5',
+  control: 'size-4',
+  lead: 'size-5',
+  feature: 'size-9',
 } as const;
+
+const ICON_TONE = { ...TEXT_TONE_CLASS, accent: 'text-accent' } as const;
+
+export type IconSize = keyof typeof ICON_SIZE;
+
+const ICON_FLAGS = [
+  ['muted', 'opacity-muted'],
+  ['dim', 'opacity-dim'],
+  [
+    'flipOnOpen',
+    'transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none',
+  ],
+  ['revealOnHover', 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'],
+  ['turnOnOpen', 'group-open:rotate-90'],
+  ['handle', 'cursor-grab'],
+  ['appOnly', '[[data-public-surface]_&]:hidden'],
+] as const;
+
+type IconFlags = Partial<Record<(typeof ICON_FLAGS)[number][0], boolean>>;
 
 export function Icon({
   icon: Glyph,
   label,
   tone,
   size = 'text',
-  muted = false,
-  dim = false,
-  flipOnOpen = false,
   flip,
-  revealOnHover = false,
-  className,
-}: Readonly<{
-  icon: IconGlyph;
-  label?: string;
-  tone?: TextTone;
-  size?: keyof typeof ICON_SIZE;
-  muted?: boolean;
-  dim?: boolean;
-  flipOnOpen?: boolean;
-  flip?: boolean;
-  revealOnHover?: boolean;
-  className?: string;
-}>) {
+  ...flags
+}: Readonly<
+  {
+    icon: IconGlyph;
+    label?: string;
+    tone?: TextTone | 'accent';
+    size?: IconSize;
+    flip?: boolean;
+  } & IconFlags
+>) {
   return (
     <Glyph
       data-icon=""
       className={cn(
         ICON_SIZE[size],
         'shrink-0',
-        tone && TEXT_TONE_CLASS[tone],
-        muted && 'opacity-muted',
-        dim && 'opacity-dim',
-        flipOnOpen &&
-          'transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none',
+        tone && ICON_TONE[tone],
         flip !== undefined && 'transition-transform',
         flip && 'rotate-180',
-        revealOnHover && 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100',
-        className,
+        ICON_FLAGS.map(([name, classes]) => flags[name] && classes),
       )}
       aria-hidden={label ? undefined : true}
       aria-label={label}

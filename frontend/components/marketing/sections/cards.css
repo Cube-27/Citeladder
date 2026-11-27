@@ -47,6 +47,8 @@
 }
 
 .cl-related-arrow {
+  width: calc(var(--spacing) * 5);
+  height: calc(var(--spacing) * 5);
   grid-row: 1 / span 2;
   grid-column: 2;
   align-self: center;

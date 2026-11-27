@@ -200,7 +200,7 @@ function AnswerToolbar({
         />
       ))}
       {promptId ? (
-        <TextLink href={promptHistoryHref(promptId)} text="caption" className="ms-auto">
+        <TextLink href={promptHistoryHref(promptId)} text="caption" box="end">
           Prompt history
         </TextLink>
       ) : null}

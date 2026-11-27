@@ -35,7 +35,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
               data-testid="root-error-row"
             >
               <Text variant="code">{error.method}</Text>
-              <ClampText text="body" tone="ink-2" className="flex-1">
+              <ClampText text="body" tone="ink-2" box="flex">
                 {error.target}
               </ClampText>
               {error.error_code ? (

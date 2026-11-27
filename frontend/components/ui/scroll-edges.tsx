@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { ChevronLeft, ChevronRight } from '@/lib/icons';
+import { Icon } from '@/components/ui/icon';
 
 type ScrollEdges = Readonly<{ start: boolean; end: boolean }>;
 
@@ -108,7 +109,7 @@ function ScrollStep({ side, onStep }: Readonly<{ side: 'start' | 'end'; onStep: 
       onClick={onStep}
       className="text-ink-2 hover:text-ink hover:overlay-hover rounded-control min-h-control-md min-w-control-sm duration-fast grid shrink-0 place-items-center transition-colors"
     >
-      <Glyph className="size-3.5" aria-hidden />
+      <Icon icon={Glyph} size="flush" />
     </button>
   );
 }

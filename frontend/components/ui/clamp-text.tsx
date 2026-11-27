@@ -57,6 +57,22 @@ function clampClasses({
   );
 }
 
+const BOX = {
+  flex: 'flex-1',
+  fill: 'min-w-0 flex-1',
+  'fill-desktop': 'phone:hidden min-w-0 flex-1',
+  shrink: 'min-w-0',
+  'fixed-full': 'max-w-full shrink-0',
+  'phone-row': 'phone:basis-full min-w-0',
+  wrap: 'whitespace-normal',
+  measure: 'max-w-56!',
+  'fact-row': 'min-h-row flex items-center justify-between gap-2',
+  'ledger-row': 'flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1',
+  'list-title': 'phone:flex-wrap phone:gap-y-1 phone:py-2 flex min-w-0 flex-1 items-center gap-3',
+  'cell-title': 'flex min-w-0 items-baseline gap-2',
+  'ledger-label': 'basis-ledger-label grow',
+} as const;
+
 export function ClampText({
   children,
   lines = 1,
@@ -64,7 +80,7 @@ export function ClampText({
   tone,
   text,
   numeric = false,
-  className,
+  box,
   rowTitle = false,
   phoneWrap = false,
   grow = false,
@@ -76,7 +92,7 @@ export function ClampText({
   tone?: TextTone;
   text?: TextRole;
   numeric?: boolean;
-  className?: string;
+  box?: keyof typeof BOX;
   rowTitle?: boolean;
   phoneWrap?: boolean;
   grow?: boolean;
@@ -104,7 +120,7 @@ export function ClampText({
           text && TEXT_ROLE_CLASS[text],
           numeric && 'tabular-nums',
           tone && TEXT_TONE_CLASS[tone],
-          className,
+          box && BOX[box],
           wrapOnPublic &&
             '[[data-public-surface]_&]:overflow-visible [[data-public-surface]_&]:whitespace-normal [[data-public-surface]_&]:wrap-anywhere',
         )}

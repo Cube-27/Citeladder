@@ -37,7 +37,7 @@ export function LedgerItem({
   const text = (
     <>
       <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <ClampText phoneWrap text="body" className="basis-ledger-label grow">
+        <ClampText phoneWrap text="body" box="ledger-label">
           {title}
         </ClampText>
         {meta === undefined ? null : <div className="flex shrink-0 items-center gap-2">{meta}</div>}

@@ -204,7 +204,7 @@ function PageKindTable({
                     aria-expanded={open}
                     aria-controls={listId}
                     onClick={() => setOpenKind(open ? null : pageKind.page_kind)}
-                    className="w-auto"
+                    box="auto"
                   >
                     <Inline as="span">
                       <Icon icon={open ? ChevronDown : ChevronRight} tone="ink-2" />
@@ -257,12 +257,7 @@ function PageKindPages({
             {pages.map((page) => (
               <li key={page.site_url_id} className="min-w-0">
                 {crawlId ? (
-                  <PageLink
-                    text="body"
-                    className="block min-w-0"
-                    crawlId={crawlId}
-                    siteUrlId={page.site_url_id}
-                  >
+                  <PageLink text="body" box="block" crawlId={crawlId} siteUrlId={page.site_url_id}>
                     <UrlText url={page.url} />
                   </PageLink>
                 ) : (

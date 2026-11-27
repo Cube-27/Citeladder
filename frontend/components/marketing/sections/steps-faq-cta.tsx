@@ -50,7 +50,7 @@ export function FaqList({
         >
           <summary className="cl-faq-q focus-ring">
             <span>{item.question}</span>
-            <Plus aria-hidden className="cl-faq-icon size-5 shrink-0" />
+            <Plus aria-hidden className="cl-faq-icon shrink-0" />
           </summary>
           <div className="cl-faq-a">
             {typeof item.answer === 'string' ? <p>{item.answer}</p> : item.answer}

@@ -80,7 +80,7 @@ function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) 
         />
         <Stack gap="tight" box="shrink">
           <SectionTitle truncate>{title}</SectionTitle>
-          <TextLink variant="external" text="caption" href={url} className="flex min-w-0">
+          <TextLink variant="external" text="caption" href={url} box="row">
             <UrlText url={url} />
           </TextLink>
         </Stack>

@@ -147,7 +147,7 @@ function CheckRow({
         checked={item.checked}
         onCheckedChange={onToggle}
         disabled={item.disabled && !item.checked}
-        className="min-w-0 flex-1"
+        box="fill"
         label={
           <span className="flex min-w-0 items-center gap-2">
             {item.leading}
@@ -206,7 +206,7 @@ function EditRow<K extends string>({
               cancel();
             }
           }}
-          className="min-w-0 flex-1 basis-32"
+          width="grow-basis"
         />
       ))}
       <Button variant="quiet" onClick={cancel}>

@@ -91,7 +91,7 @@ export function NavMenuButton({
       aria-haspopup="dialog"
       aria-expanded={expanded}
       onClick={onOpen}
-      className="rail:hidden shrink-0"
+      box="rail-hidden-fixed"
     />
   );
 }

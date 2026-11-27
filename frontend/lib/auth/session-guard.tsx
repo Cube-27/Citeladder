@@ -129,7 +129,7 @@ export function SessionGuard({
         <NoticeFrame>
           <Notice
             tone="warning"
-            className="max-w-lg"
+            measure
             action={
               <Button
                 variant="secondary"

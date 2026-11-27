@@ -226,7 +226,7 @@ function CatalogRow({
                 event.stopPropagation();
                 open();
               }}
-              className="min-h-6 w-auto min-w-0"
+              box="target-shrink"
             >
               <ClampText>{title}</ClampText>
             </Pressable>

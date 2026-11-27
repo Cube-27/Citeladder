@@ -383,7 +383,7 @@ function SidebarCollapseToggle() {
       tooltipSide={collapsed ? 'right' : 'top'}
       aria-keyshortcuts="Meta+Backslash Control+Backslash"
       onClick={() => setSidebarCollapsed(!collapsed)}
-      className="rail:inline-flex not-labelled:size-rail-button hidden shrink-0 self-center in-data-[nav-drawer]:hidden"
+      box="rail-toggle"
     />
   );
 }

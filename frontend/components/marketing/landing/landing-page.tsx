@@ -19,9 +19,11 @@ import { ScreenAppPage } from '../screens/screen-app';
 import { SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
 
 import { HeroVideo } from './hero-video';
+import { McpMark } from './mcp-mark';
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
 import './integrations.css';
 import './landing-backdrop.css';
+import { Icon } from '@/components/ui/icon';
 
 function Hero() {
   return (
@@ -136,7 +138,7 @@ function Evidence() {
 function IntegrationLogo({ mark }: Readonly<{ mark: IntegrationMark }>) {
   switch (mark.kind) {
     case 'engine':
-      return <EngineMark engine={mark.engine} className="size-9" />;
+      return <EngineMark engine={mark.engine} placement="feature" />;
     case 'image':
       return (
         <img
@@ -149,10 +151,10 @@ function IntegrationLogo({ mark }: Readonly<{ mark: IntegrationMark }>) {
           className="cl-integration-logo-image"
         />
       );
-    case 'icon': {
-      const Icon = mark.icon;
-      return <Icon className="size-9" aria-hidden />;
-    }
+    case 'icon':
+      return <Icon icon={mark.icon} size="feature" />;
+    case 'mcp':
+      return <McpMark />;
     default: {
       const exhaustive: never = mark;
       return exhaustive;

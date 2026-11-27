@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { Pressable } from '@/components/ui/pressable';
 import { ChevronLeft, ChevronRight } from '@/lib/icons';
+import { Icon } from '@/components/ui/icon';
 
 const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] as const;
 
@@ -92,7 +93,7 @@ export function Calendar({
           onClick={() => setMonth((current) => addMonths(current, -1))}
           look="square"
         >
-          <ChevronLeft className="size-3.5" aria-hidden />
+          <Icon icon={ChevronLeft} size="flush" />
         </Pressable>
         <span aria-live="polite" className="text-body text-ink">
           {monthLabel(month)}
@@ -103,7 +104,7 @@ export function Calendar({
           onClick={() => setMonth((current) => addMonths(current, 1))}
           look="square"
         >
-          <ChevronRight className="size-3.5" aria-hidden />
+          <Icon icon={ChevronRight} size="flush" />
         </Pressable>
       </div>
       <table className="border-collapse">

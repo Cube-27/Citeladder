@@ -112,7 +112,7 @@ function SignalRow({
           primary={
             <TextLink asChild text="body" underline="hover">
               <Pressable
-                className="flex w-auto max-w-full min-w-0 text-left"
+                box="row"
                 onClick={(event) => {
                   event.stopPropagation();
                   inspect();

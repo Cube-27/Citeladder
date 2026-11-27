@@ -1,5 +1,6 @@
 import { ChevronRight } from '@/lib/icons';
 import './breadcrumbs.css';
+import { Icon } from '@/components/ui/icon';
 
 export type Crumb = Readonly<{ label: string; href?: string }>;
 
@@ -18,7 +19,7 @@ export function Breadcrumbs({ items }: Readonly<{ items: readonly Crumb[] }>) {
                   {item.label}
                 </a>
               )}
-              {!last && <ChevronRight aria-hidden className="size-3.5" />}
+              {!last && <Icon icon={ChevronRight} size="flush" />}
             </li>
           );
         })}

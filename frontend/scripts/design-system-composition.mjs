@@ -1,40 +1,12 @@
 export const COMPOSITION_ENFORCED = false;
 
-const QUOTED_WELLS = new Map([
-  ['components/ai-traffic/gcp-pull-setup.tsx', 'the Cloud Shell commands and sink filter to copy'],
-  ['components/site-health/internal-link-review.tsx', 'the anchor text quoted from the page'],
-]);
-
-const NEGATIVE_MARGIN = /(?<![\w-])-m[xytblrse]?-(?:\[[^\]\s]+\]|\([^)\s]+\)|[\d.]+|px)(?![\w-])/g;
-const LAYOUT_FACE = /\bwellClasses\b|(?<![\w-])surface-card(?![\w-])/g;
 const ANCESTOR_KEY = /\[(?:data-section\b|role=['"]?dialog\b)/;
-
-const featureCode = (label) =>
-  /^(?:apps\/app\/src|components)\/.+\.tsx$/.test(label) &&
-  !/^components\/(?:ui|marketing)\//.test(label) &&
-  !/\.(?:test|spec)\.tsx$/.test(label);
 
 function lineAt(source, index) {
   let line = 1;
   for (let at = source.indexOf('\n'); at !== -1 && at < index; at = source.indexOf('\n', at + 1))
     line += 1;
   return line;
-}
-
-export function compositionFindings(label, source) {
-  if (!featureCode(label)) return [];
-  const findings = [];
-  for (const match of source.matchAll(NEGATIVE_MARGIN))
-    findings.push(
-      `${label}:${lineAt(source, match.index)}: negative margin ${match[0]} outside components/ui`,
-    );
-  for (const match of source.matchAll(LAYOUT_FACE)) {
-    if (/^import\b/m.test(source.slice(source.lastIndexOf('\n', match.index) + 1, match.index + 1)))
-      continue;
-    if (match[0] === 'wellClasses' && QUOTED_WELLS.has(label)) continue;
-    findings.push(`${label}:${lineAt(source, match.index)}: ${match[0]} used as a layout card`);
-  }
-  return findings;
 }
 
 function splitTop(text, separator) {

@@ -87,7 +87,7 @@ const RANK_CHIP =
 const RANK_FLOOR = 'phone:min-w-rank-floor';
 
 function GridFloor({ columns, children }: Readonly<{ columns: number; children: ReactNode }>) {
-  return <SectionBleed style={{ '--grid-columns': columns }}>{children}</SectionBleed>;
+  return <SectionBleed columns={columns}>{children}</SectionBleed>;
 }
 
 export function GridTableSkeleton({

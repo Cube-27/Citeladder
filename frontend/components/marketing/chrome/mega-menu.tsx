@@ -33,15 +33,13 @@ export function MegaMenu({ drop, path }: Readonly<{ drop: NavDrop; path: string 
                       >
                         {icon && (
                           <span className="cl-mega-icon" aria-hidden="true">
-                            <NavIcon href={item.href} className="size-5" />
+                            <NavIcon href={item.href} />
                           </span>
                         )}
                         <span className="cl-mega-copy">
                           <span className="cl-mega-title">
                             {item.title}
-                            {external && (
-                              <ArrowUpRight aria-hidden className="cl-mega-ext size-3.5" />
-                            )}
+                            {external && <ArrowUpRight aria-hidden className="cl-mega-ext" />}
                             {external && <span className="sr-only">(opens in a new tab)</span>}
                           </span>
                           <span className="cl-mega-desc">{item.desc}</span>

@@ -22,7 +22,7 @@ export function AskAgentLink({
   const href = agentHandoffHref(handoff);
   if (props.appearance === 'text')
     return (
-      <TextLink text="caption" className="w-fit" href={href}>
+      <TextLink text="caption" box="fit" href={href}>
         {props.children}
       </TextLink>
     );

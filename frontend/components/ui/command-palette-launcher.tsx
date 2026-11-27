@@ -6,6 +6,7 @@ import { Kbd } from '@/components/ui/kbd';
 import { Search } from '@/lib/icons';
 import { reportClientError } from '@/lib/client-errors';
 import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
+import { Icon } from '@/components/ui/icon';
 
 function subscribeToPlatform() {
   return () => {};
@@ -20,10 +21,8 @@ type CommandPaletteLaunch = { trigger: HTMLElement };
 export const PALETTE_LAUNCHER = '[data-palette-launcher]';
 
 export function CommandPaletteTrigger({
-  className,
   onOpen,
 }: Readonly<{
-  className?: string;
   onOpen?: (trigger: HTMLElement) => void;
 }>) {
   const isMac = useSyncExternalStore(subscribeToPlatform, isMacPlatform, () => false);
@@ -44,9 +43,8 @@ export function CommandPaletteTrigger({
       aria-label="Search or jump to"
       aria-keyshortcuts="Meta+K Control+K"
       look="launcher"
-      className={className}
     >
-      <Search className="text-ink-2 size-3.5 shrink-0" aria-hidden />
+      <Icon icon={Search} size="flush" tone="ink-2" />
       <span className="min-w-0 truncate">Search</span>
       <Kbd className="shell:inline-flex hidden">{isMac ? '⌘K' : 'Ctrl K'}</Kbd>
     </Button>

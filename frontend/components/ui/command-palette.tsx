@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
 import { useRouteIntent } from '@/lib/navigation/use-route-intent';
 import { SHEET_FACE } from '@/components/ui/slip';
+import { Icon } from '@/components/ui/icon';
 
 type PaletteGroup = Readonly<{
   title: string;
@@ -224,7 +225,7 @@ export function CommandPalette({
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
           <div className="palette-field border-rule text-ink-2 min-h-control-lg flex shrink-0 items-center gap-3 border-b px-4">
-            <Search className="size-3.5 shrink-0" aria-hidden />
+            <Icon icon={Search} size="flush" />
             <input
               ref={inputRef}
               value={query}
@@ -296,7 +297,7 @@ export function CommandPalette({
                           )}
                         >
                           {Glyph ? (
-                            <Glyph className="text-ink-2 size-3.5 shrink-0" aria-hidden />
+                            <Icon icon={Glyph} size="flush" tone="ink-2" />
                           ) : (
                             <BrandMark
                               name={command.label}

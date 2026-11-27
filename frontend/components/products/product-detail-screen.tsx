@@ -192,16 +192,16 @@ function HolderDetail({
       <ProductKpis detail={data} />
       {named ? (
         <>
-          <AppGrid layout="pair" className="items-start">
+          <AppGrid layout="pair" alignTop>
             <EngineOutcomes outcomes={outcomes} />
             <CompetingProducts detail={data} scope={scopeFilters} />
           </AppGrid>
           <ProductPrompts outcomes={outcomes} />
-          <AppGrid layout="pair" className="items-start">
+          <AppGrid layout="pair" alignTop>
             <Sources detail={data} />
             <FanOutQueries detail={data} />
           </AppGrid>
-          <AppGrid layout="pair" className="items-start">
+          <AppGrid layout="pair" alignTop>
             <Merchants detail={data} />
             <SeenIn detail={data} scope={scopeFilters} />
           </AppGrid>
@@ -256,12 +256,7 @@ function ProductIdentity({
         </InfoHint>
         {product.image_url ? <ProductImage src={product.image_url} /> : null}
         {product.url ? (
-          <TextLink
-            variant="external"
-            href={product.url}
-            text="caption"
-            className="flex max-w-full min-w-0"
-          >
+          <TextLink variant="external" href={product.url} text="caption" box="row-full">
             {listingTitle ? <span className="sr-only">{listingTitle}, </span> : null}
             <UrlText url={product.url} />
           </TextLink>

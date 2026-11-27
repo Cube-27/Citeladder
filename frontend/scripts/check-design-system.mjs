@@ -4,7 +4,6 @@ import { extname, join, relative, resolve } from 'node:path';
 import { TOKEN_FILES, textContrast } from './design-system-contrast.mjs';
 import {
   ancestorRuleFindings,
-  compositionFindings,
   compositionReport,
   COMPOSITION_ENFORCED,
 } from './design-system-composition.mjs';
@@ -46,12 +45,11 @@ for (const path of files(root)) {
   }
   if (tokenOwners.includes(path)) continue;
   if (/\.tsx?$/.test(label) && !/\.test\.tsx?$/.test(label)) scriptSources.push({ label, source });
-  composition.push(...compositionFindings(label, source));
 }
 
 const appCssPath = join(root, 'apps', 'app', 'src', 'app.css');
 const appCss = readFileSync(appCssPath, 'utf8');
-violations.push(...textContrast(root).violations, ...appSourceViolations(appCss, scriptSources));
+violations.push(...textContrast(root), ...appSourceViolations(appCss, scriptSources));
 
 composition.push(
   ...tokenOwners.flatMap((owner) =>

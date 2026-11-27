@@ -287,6 +287,8 @@
 }
 
 .cl-navbar-caret {
+  width: calc(var(--spacing) * 4);
+  height: calc(var(--spacing) * 4);
   transition: transform var(--transition-duration-fast) var(--ease-standard);
 }
 

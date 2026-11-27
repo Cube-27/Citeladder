@@ -173,7 +173,7 @@ export function PromptFormDialog({
                   />
                 )}
               </Field>
-              <Field label="Persona" error={errors.persona?.message} className="desktop:col-span-2">
+              <Field label="Persona" error={errors.persona?.message} wide>
                 {(props) => (
                   <Input {...props} {...register('persona')} placeholder="Marathon runners" />
                 )}

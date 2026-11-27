@@ -295,7 +295,7 @@ function LinkTable({
                 underline="hover"
                 crawlId={crawlId}
                 siteUrlId={row.site_url_id}
-                className="flex min-w-0 items-center"
+                box="row-center"
               >
                 <UrlText url={row.url} />
               </PageLink>

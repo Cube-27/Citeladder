@@ -42,7 +42,7 @@ export function RelatedCards({
             </div>{' '}
             {item.body && <span className="cl-related-text">{item.body}</span>}
             {item.linkLabel && <span className="sr-only"> {item.linkLabel}</span>}
-            <ArrowRight aria-hidden className="cl-related-arrow size-5" />
+            <ArrowRight aria-hidden className="cl-related-arrow" />
           </a>
         </li>
       ))}
@@ -81,7 +81,7 @@ export function LogoTile({
   )
 >) {
   const label = name ?? (engine ? ENGINE_NAMES[engine] : '');
-  const mark = logo ?? (engine ? <EngineMark engine={engine} className="size-7" /> : null);
+  const mark = logo ?? (engine ? <EngineMark engine={engine} placement="card" /> : null);
   const content = (
     <>
       {mark && <span className="cl-logotile-mark">{mark}</span>}

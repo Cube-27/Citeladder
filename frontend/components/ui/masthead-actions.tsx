@@ -172,7 +172,7 @@ function MoreMenu({
           icon={MoreHorizontal}
           label={label}
           variant="secondary"
-          className={hideOnRail ? 'rail:hidden' : undefined}
+          box={hideOnRail ? 'rail-hidden' : undefined}
         />
       </MenuTrigger>
       <MenuContent align="end">

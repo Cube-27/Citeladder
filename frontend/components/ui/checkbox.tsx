@@ -14,13 +14,15 @@ export type CheckboxProps = AccessibleCheckbox & {
   checked: boolean | 'indeterminate';
   onCheckedChange: (checked: boolean | 'indeterminate') => void;
   disabled?: boolean;
-  className?: string;
+  box?: keyof typeof BOX;
   nested?: boolean;
   id?: string;
   name?: string;
   required?: boolean;
   'aria-describedby'?: string;
 };
+
+const BOX = { wide: 'desktop:col-span-2', shrink: 'min-w-0', fill: 'min-w-0 flex-1' } as const;
 
 const CHECK_BOX =
   'check-box press press-check isolate focus-ring bg-panel border-control-line text-on-primary data-[state=checked]:border-primary data-[state=indeterminate]:border-primary hit-area grid size-4 shrink-0 place-items-center rounded-mark border disabled:cursor-not-allowed';
@@ -98,7 +100,7 @@ export function Checkbox({
   label,
   description,
   disabled,
-  className,
+  box,
   nested = false,
   id,
   name,
@@ -110,7 +112,8 @@ export function Checkbox({
     throw new Error('Checkbox requires a visible label or aria-label.');
   }
 
-  const box = (
+  const className = box && BOX[box];
+  const control = (
     <Box
       checked={checked}
       onCheckedChange={onCheckedChange}
@@ -124,7 +127,7 @@ export function Checkbox({
   );
 
   if (label == null || typeof label === 'boolean') {
-    return <span className={cn(CHECK_TARGET, className)}>{box}</span>;
+    return <span className={cn(CHECK_TARGET, className)}>{control}</span>;
   }
 
   return (
@@ -136,7 +139,7 @@ export function Checkbox({
         className,
       )}
     >
-      <span className={cn(CHECK_TARGET, '-my-0.5 target-hit-fine')}>{box}</span>
+      <span className={cn(CHECK_TARGET, '-my-0.5 target-hit-fine')}>{control}</span>
       <span className="flex min-w-0 flex-col">
         <span className="text-body text-ink">{label}</span>
         {description != null ? <span className="text-body text-ink-2">{description}</span> : null}

@@ -25,12 +25,7 @@ function Branch({
 }: Readonly<{ nodes: readonly OutlineNode[]; nested: boolean; onJump: (from: number) => void }>) {
   const items = nodes.map((node) => (
     <Stack as="li" gap="tight" key={node.heading.from}>
-      <Pressable
-        look="jump"
-        text="body"
-        className="w-auto text-start"
-        onClick={() => onJump(node.heading.from)}
-      >
+      <Pressable look="jump" text="body" box="auto-start" onClick={() => onJump(node.heading.from)}>
         {node.heading.text}
       </Pressable>
       {node.children.length > 0 ? <Branch nodes={node.children} nested onJump={onJump} /> : null}

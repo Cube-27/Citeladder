@@ -128,7 +128,7 @@ export function ValueLedger({
     <SectionBleed as="ol" rows>
       {items.map((item) => (
         <li key={item.key} className="min-h-row flex items-center justify-between gap-2">
-          <ClampText text="body" className="flex-1">
+          <ClampText text="body" box="flex">
             {item.label}
           </ClampText>
           <span className="text-body text-ink-2 shrink-0 tabular-nums">{item.value}</span>

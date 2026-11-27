@@ -43,7 +43,7 @@ export function BriefingCard({
       </Stack>
       <Button
         variant="secondary"
-        className="justify-self-start"
+        box="start"
         disabled={disabled || pending || actions.isPending}
         onClick={() =>
           onStart({

@@ -46,10 +46,7 @@ export function EngineComparison({
                 primary={
                   onSelect ? (
                     <TextLink asChild text="inherit" underline="hover">
-                      <Pressable
-                        className="inline-flex min-h-6 w-auto items-center"
-                        onClick={() => onSelect(engine.logical_engine)}
-                      >
+                      <Pressable box="target" onClick={() => onSelect(engine.logical_engine)}>
                         {catalog.label(engine.logical_engine)}
                       </Pressable>
                     </TextLink>

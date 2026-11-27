@@ -7,7 +7,7 @@ import type { Turnstile } from '@/lib/turnstile/use-turnstile';
 import { cn } from '@/lib/utils';
 
 export function AuthButton(props: Readonly<Omit<ButtonProps, 'className'>>) {
-  return <Button {...props} className="w-full" />;
+  return <Button {...props} box="fill" />;
 }
 
 export function AuthDivider() {

@@ -2,11 +2,7 @@ import { lazy } from 'react';
 import { Link } from 'react-router-dom';
 
 import { LazyIsland } from '@/components/ui/lazy-island';
-import {
-  SidebarNavRowContent,
-  SidebarRowTooltip,
-  sidebarNavRowClasses,
-} from '@/components/ui/sidebar';
+import { SidebarNavRowContent, SidebarRowFace, SidebarRowTooltip } from '@/components/ui/sidebar';
 
 import type { NavItem } from './nav-items';
 
@@ -25,29 +21,30 @@ export function NavLink({
 }>) {
   return (
     <SidebarRowTooltip label={item.label}>
-      <Link
-        to={item.href}
-        onMouseEnter={() => {
-          if (!active) onIntent(item.href);
-        }}
-        onFocus={() => {
-          if (!active) onIntent(item.href);
-        }}
-        aria-current={active ? 'page' : undefined}
-        className={sidebarNavRowClasses(active)}
-      >
-        <SidebarNavRowContent
-          icon={item.icon}
-          label={item.label}
-          count={
-            item.badge === 'open-actions' ? (
-              <LazyIsland failed={null} label="open-action-count" defects="contain">
-                <OpenActionCount />
-              </LazyIsland>
-            ) : null
-          }
-        />
-      </Link>
+      <SidebarRowFace active={active} asChild>
+        <Link
+          to={item.href}
+          onMouseEnter={() => {
+            if (!active) onIntent(item.href);
+          }}
+          onFocus={() => {
+            if (!active) onIntent(item.href);
+          }}
+          aria-current={active ? 'page' : undefined}
+        >
+          <SidebarNavRowContent
+            icon={item.icon}
+            label={item.label}
+            count={
+              item.badge === 'open-actions' ? (
+                <LazyIsland failed={null} label="open-action-count" defects="contain">
+                  <OpenActionCount />
+                </LazyIsland>
+              ) : null
+            }
+          />
+        </Link>
+      </SidebarRowFace>
     </SidebarRowTooltip>
   );
 }

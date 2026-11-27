@@ -153,7 +153,7 @@ export function TrafficCrawlers(scope: CrawlTableScope) {
                   <TextLink asChild text="inherit">
                     <Pressable
                       numeric
-                      className="w-auto"
+                      box="auto"
                       onClick={() => setBotId(b.bot_id)}
                       aria-label={`View paths requested by ${b.label}`}
                     >
@@ -169,7 +169,7 @@ export function TrafficCrawlers(scope: CrawlTableScope) {
                 <ClampText>{entries(b.status_codes)}</ClampText>
               </TableCell>
               <TableCell>
-                <ClampText className="max-w-56!">
+                <ClampText box="measure">
                   {[entries(b.verification), reasonEntries(b.verification_reasons)]
                     .filter(Boolean)
                     .join(' · ')}

@@ -44,7 +44,7 @@ export function JumpList({
       <TreeBranch as="ol">
         {items.map((item) => (
           <li key={item.key}>
-            <Pressable look="jump" text="caption" className="w-auto" onClick={item.onJump}>
+            <Pressable look="jump" text="caption" box="auto" onClick={item.onJump}>
               {item.label}
             </Pressable>
           </li>

@@ -46,7 +46,7 @@
   --site-z-banner: calc(var(--z-index-sticky) - 1);
 }
 
-[data-marketing-surface] {
+:root[data-marketing-surface] {
   --site-radius-inner: 4px;
   --site-radius-card: 12px;
   --site-radius-stage: 16px;

@@ -257,7 +257,7 @@ export function ApiKeys() {
               value={API_BASE_URL}
               iconOnly
               variant="quiet"
-              className="align-middle"
+              box="middle"
               copiedLabel="Copied the API address"
             />
           </>

@@ -114,7 +114,7 @@ export function GapEvidence({ evidence }: Readonly<{ evidence: ContentGapEvidenc
         </Stack>
       ) : null}
       {continues ? (
-        <TextLink href={`/actions/${continues}`} text="body" className="justify-self-start">
+        <TextLink href={`/actions/${continues}`} text="body" box="start">
           Continues the planned page for this angle
         </TextLink>
       ) : null}
@@ -136,7 +136,7 @@ function CitedPage({ page }: Readonly<{ page: ContentGapEvidence['members'][numb
           </TextLink>
         </ClampText>
       ) : (
-        <TextLink variant="external" href={page.url} text="body" className="flex min-w-0">
+        <TextLink variant="external" href={page.url} text="body" box="row">
           <UrlText url={page.url} />
         </TextLink>
       )}

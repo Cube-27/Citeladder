@@ -115,7 +115,7 @@ export function SearchIntelligenceCompetitors({
                   {dataset ? (
                     <TextLink asChild text="body">
                       <Pressable
-                        className="min-h-6 w-auto min-w-6 text-center"
+                        box="target-square"
                         aria-label={`${datasetCount(dataset)} ${SEARCH_DATASET_LABELS[kind]}: ${competitor.label}`}
                         onClick={() => onOpen(dataset)}
                       >

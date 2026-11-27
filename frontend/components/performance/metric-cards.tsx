@@ -64,7 +64,7 @@ export function MetricCards({
                   label={label}
                   checked={plotted}
                   onCheckedChange={() => onToggle(card.key)}
-                  className="min-w-0"
+                  box="shrink"
                 />
                 <span data-metric-help="">
                   <InfoHint label={`About ${label.toLowerCase()}`}>

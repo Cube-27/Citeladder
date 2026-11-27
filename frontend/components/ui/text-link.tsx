@@ -64,13 +64,31 @@ type TextLinkTarget =
       asChild: true;
     };
 
+const BOX = {
+  shrink: 'min-w-0',
+  row: 'flex min-w-0',
+  'row-full': 'flex max-w-full min-w-0',
+  'row-fit': 'flex w-fit max-w-full min-w-0 items-center',
+  'row-glyph': 'flex min-w-0 items-center [&>svg]:shrink-0',
+  target: 'inline-flex min-h-target items-center',
+  'target-shrink': 'inline-flex min-h-target min-w-0 items-center',
+  start: 'justify-self-start',
+  end: 'ms-auto',
+  fit: 'w-fit',
+  nowrap: 'whitespace-nowrap',
+  block: 'block min-w-0',
+  'row-center': 'flex min-w-0 items-center',
+  cover: 'phone:flex-1 min-w-0 shrink before:absolute before:inset-x-0 before:inset-y-0',
+} as const;
+
 type TextLinkProps = Readonly<
-  Omit<ComponentPropsWithRef<'a'>, 'href'> &
+  Omit<ComponentPropsWithRef<'a'>, 'href' | 'className' | 'style'> &
     TextLinkTarget & {
       tone?: TextLinkTone;
       text?: TextLinkText;
       underline?: TextLinkUnderline;
       truncate?: boolean;
+      box?: keyof typeof BOX;
       children: ReactNode;
     }
 >;
@@ -114,10 +132,11 @@ export function TextLink({
   href,
   projectId,
   asChild = false,
-  className,
+  box,
   children,
   ...props
 }: TextLinkProps) {
+  const className = box && BOX[box];
   if (variant === 'external' && !asChild && !parseAbsoluteHttpUrl(href)) {
     return (
       <span

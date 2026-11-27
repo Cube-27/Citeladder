@@ -113,7 +113,7 @@ function SettingsLink() {
   );
   return (
     <Tooltip content="Settings" describe={false}>
-      <Button variant="quiet" asChild shape="icon" className="shrink-0">
+      <Button variant="quiet" asChild shape="icon" box="fixed">
         <Link to={to} aria-label="Settings">
           <Icon icon={Settings} />
         </Link>

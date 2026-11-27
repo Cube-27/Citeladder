@@ -34,14 +34,9 @@ function LinkEnd({
     <Columns template="label-value" gap="group" align="baseline">
       <Text variant="caption">{label}</Text>
       <Stack gap="tight" box="shrink">
-        <TextLink
-          variant="external"
-          text="body"
-          className="flex w-fit max-w-full min-w-0 items-center"
-          href={page.url}
-        >
+        <TextLink variant="external" text="body" box="row-fit" href={page.url}>
           {page.title ? (
-            <ClampText tooltip={page.url} className="min-w-0">
+            <ClampText tooltip={page.url} box="shrink">
               {page.title}
             </ClampText>
           ) : (

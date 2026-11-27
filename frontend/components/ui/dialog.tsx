@@ -80,7 +80,7 @@ function DialogHeader({
     <header className={cn('flex items-start gap-3 p-modal', !danger && 'pe-14')}>
       {danger ? (
         <span className="text-negative inline-flex h-7 items-center">
-          <Icon icon={AlertTriangle} className="my-0" />
+          <Icon icon={AlertTriangle} size="flush" />
         </span>
       ) : null}
       <div className="min-w-0 flex-1">
@@ -158,7 +158,7 @@ export function Dialog({
                 tooltip={false}
                 variant="secondary"
                 shape="close"
-                className="absolute top-6 right-6"
+                box="corner"
               />
             </DialogPrimitive.Close>
           )}

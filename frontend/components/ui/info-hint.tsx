@@ -5,6 +5,7 @@ import { focusFromKeyboard } from '@/components/ui/input-modality';
 import { TOOLTIP_SHEET } from '@/components/ui/tooltip';
 import { Info } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import { Icon } from '@/components/ui/icon';
 
 export function InfoHint({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   const [open, setOpen] = useState(false);
@@ -22,7 +23,7 @@ export function InfoHint({ label, children }: Readonly<{ label: string; children
         }}
         className="focus-ring text-ink-2 hover:text-ink -m-2 inline-flex size-8 items-center justify-center align-middle"
       >
-        <Info className="size-3.5" aria-hidden />
+        <Icon icon={Info} size="flush" />
       </PopoverPrimitive.Trigger>
       <span id={descriptionId} hidden>
         {children}

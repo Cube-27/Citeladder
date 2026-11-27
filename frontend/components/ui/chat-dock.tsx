@@ -62,7 +62,7 @@ export function ComposerDock({
             variant="secondary"
             onClick={onJumpToLatest}
             shape="floating"
-            className="pointer-events-auto"
+            box="float"
           />
         </div>
       ) : null}
@@ -255,7 +255,7 @@ export function PastedTextChip({
     <li className="max-w-full">
       <ChipTag label={label} onRemove={onRemove}>
         <Pressable look="chip" aria-label={`View ${label}`} onClick={() => setOpen(true)}>
-          <Icon icon={FileText} className="my-0" />
+          <Icon icon={FileText} size="flush" />
           <span className="truncate">{label}</span>
         </Pressable>
       </ChipTag>

@@ -381,6 +381,11 @@
   stroke: var(--color-chart-grid);
 }
 
+.cl-severity-icon {
+  width: calc(var(--spacing) * 5);
+  height: calc(var(--spacing) * 5);
+}
+
 [data-severity='High'] {
   color: var(--color-negative);
 }

@@ -122,7 +122,7 @@ type SeverityValue = keyof typeof severityMarks;
 
 export type StatusMarkProps = {
   children: ReactNode;
-  className?: string;
+  full?: boolean;
 } & (
   | { variant: 'status'; value: StatusValue }
   | { variant: 'severity'; value: SeverityValue }
@@ -132,7 +132,7 @@ export type StatusMarkProps = {
   | { variant: 'priority'; value: PriorityValue }
   | { variant?: undefined; value?: undefined; tone?: StatusTone }
 ) &
-  Omit<HTMLAttributes<HTMLSpanElement>, 'children'>;
+  Omit<HTMLAttributes<HTMLSpanElement>, 'children' | 'className' | 'style'>;
 
 function markOf(props: StatusMarkProps): Mark {
   switch (props.variant) {
@@ -201,7 +201,7 @@ function PriorityBars({ filled, tone }: Readonly<{ filled: 1 | 2 | 3; tone: Stat
 export function StatusMark(props: Readonly<StatusMarkProps>) {
   const {
     children,
-    className,
+    full = false,
     variant: _variant,
     value: _value,
     tone: _tone,
@@ -215,7 +215,7 @@ export function StatusMark(props: Readonly<StatusMarkProps>) {
       className={cn(
         'text-caption text-ink inline-flex h-5 shrink-0 items-center gap-1 rounded-full ps-1.5 pe-2 align-middle font-emphasis whitespace-nowrap',
         TONE_FILL[statusMark.tone],
-        className,
+        full && 'max-w-full',
       )}
     >
       <MarkGlyph {...statusMark} />

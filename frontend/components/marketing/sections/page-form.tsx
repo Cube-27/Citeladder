@@ -2,6 +2,7 @@ import type { FormEvent, ReactNode } from 'react';
 import { Lock } from '@/lib/icons';
 
 import './page-form.css';
+import { Icon } from '@/components/ui/icon';
 
 export function PageForm({
   title,
@@ -48,7 +49,7 @@ export function PageForm({
             {turnstile ?? (
               <span className="cl-page-form-turnstile-slot">
                 <span className="cl-page-form-turnstile-line">
-                  <Lock aria-hidden className="size-4" />
+                  <Icon icon={Lock} size="control" />
                   Verification check loads here
                 </span>
               </span>

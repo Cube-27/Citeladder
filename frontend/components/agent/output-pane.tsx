@@ -77,7 +77,7 @@ export function OutputPane({
             <Tag>{kindLabel(output.kind)}</Tag>
             <Text variant="caption">Revision {revision.number}</Text>
             {output.target_label ? (
-              <ClampText text="caption" className="min-w-0 flex-1">
+              <ClampText text="caption" box="fill">
                 {output.target_label}
               </ClampText>
             ) : null}
@@ -168,7 +168,7 @@ function PromptBuilderHandoff({ kind }: Readonly<{ kind: AgentOutput['kind'] }>)
   const canWrite = useWorkspaceCapability('write');
   if (kind !== 'prompt_plan' || !canWrite) return null;
   return (
-    <Button asChild variant="primary" className="justify-self-start">
+    <Button asChild variant="primary" box="start">
       <ProjectLink href={PROMPT_BUILDER_HREF}>Open Prompt builder</ProjectLink>
     </Button>
   );

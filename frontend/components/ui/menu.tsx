@@ -15,6 +15,7 @@ import {
 import { Check, ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { POP_FACE } from '@/components/ui/slip';
+import { Icon } from '@/components/ui/icon';
 
 export const MENU_PANEL = cn(
   POP_FACE,
@@ -228,7 +229,7 @@ export function MenuItem({
         <span className="text-ink-2 ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
       ) : null}
       {shortcut ? <span className="text-code text-ink-2 ms-4 font-mono">{shortcut}</span> : null}
-      {selected ? <Check className="text-accent size-3.5 shrink-0" aria-hidden /> : null}
+      {selected ? <Icon icon={Check} size="flush" tone="accent" /> : null}
     </MenuPrimitive.Item>
   );
 }
@@ -255,7 +256,7 @@ function Indicator() {
   return (
     <span data-menu-lead="" className="text-ink flex size-4 shrink-0 items-center justify-center">
       <MenuPrimitive.ItemIndicator>
-        <Check className="size-3.5" aria-hidden />
+        <Icon icon={Check} size="flush" />
       </MenuPrimitive.ItemIndicator>
     </span>
   );

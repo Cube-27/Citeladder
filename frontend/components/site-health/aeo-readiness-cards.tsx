@@ -128,7 +128,7 @@ export function DimensionsTable({
                   text="body"
                   underline="hover"
                   href={issueHref(largest.rule_id)}
-                  className="inline-flex min-h-6 min-w-0 items-center"
+                  box="target-shrink"
                 >
                   <ClampText lines={1}>{largest.title}</ClampText>
                 </TextLink>

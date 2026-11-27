@@ -16,6 +16,7 @@ import {
 import { PageFilterBandContext, PageTabEnd } from '@/components/templates/page-tab-end';
 import { X } from '@/lib/icons';
 import { batchUrlWrites } from '@/lib/navigation/url-state';
+import { cn } from '@/lib/utils';
 
 export type TableToolbarProps = Readonly<{
   view?: ReactNode;
@@ -160,7 +161,11 @@ function StripMeta({
   const row = (
     <div
       data-strip-meta=""
-      className={`${afterView ? 'rail:-order-1 ' : ''}rail:flex-[1_1_0] rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap ${hidden}`}
+      className={cn(
+        afterView && 'rail:-order-1',
+        'rail:grow rail:basis-0 rail:justify-end rail:overflow-hidden flex min-w-0 items-center gap-1 whitespace-nowrap',
+        hidden,
+      )}
     >
       {content}
     </div>
@@ -168,7 +173,7 @@ function StripMeta({
   if (!inBand) return row;
   return (
     <PageTabEnd fallback={row}>
-      <div data-strip-meta="" className={`flex min-w-0 items-center gap-1 ${hidden}`}>
+      <div data-strip-meta="" className={cn('flex min-w-0 items-center gap-1', hidden)}>
         {content}
       </div>
     </PageTabEnd>

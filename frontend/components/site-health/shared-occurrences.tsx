@@ -83,7 +83,7 @@ export function AffectedPageLink({
   pageKind: string | null;
 }>) {
   return (
-    <PageLink text="body" className="block min-w-0" crawlId={crawlId} siteUrlId={siteUrlId}>
+    <PageLink text="body" box="block" crawlId={crawlId} siteUrlId={siteUrlId}>
       <Stack as="span" gap="tight" box="shrink">
         <Inline as="span" align="baseline" justify="between">
           <Text variant="body" box="shrink" wrap="truncate" title={pageDisplayTitle(title, url)}>

@@ -48,7 +48,7 @@ export function AddNameForm({
               {...props}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              className="min-w-56 flex-1"
+              width="name"
             />
             <Button type="submit" disabled={pending || empty}>
               <Icon icon={Plus} />

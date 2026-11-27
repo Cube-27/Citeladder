@@ -109,7 +109,7 @@ export function CsvImportDialog({
 
       <Stack gap="compact">
         <CsvImportFileInput inputRef={inputRef} onSelect={(file) => void selectFile(file)} />
-        <Button variant="secondary" className="justify-self-start" onClick={downloadSample}>
+        <Button variant="secondary" box="start" onClick={downloadSample}>
           <Icon icon={Download} />
           Download sample CSV
         </Button>

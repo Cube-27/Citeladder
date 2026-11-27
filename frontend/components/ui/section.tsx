@@ -21,7 +21,9 @@ export const SurfaceContext = createContext<SurfaceDepth>('page');
 
 export const useOnPage = () => useContext(SurfaceContext) === 'page';
 
-type SectionProps = Omit<ComponentPropsWithoutRef<'section'>, 'className'> & { accent?: boolean };
+type SectionProps = Omit<ComponentPropsWithoutRef<'section'>, 'className' | 'style'> & {
+  accent?: boolean;
+};
 
 export function Section({ children, accent = false, ...props }: Readonly<SectionProps>) {
   const onPage = useOnPage();
@@ -38,7 +40,9 @@ export function SectionHeader({
   children,
   actions,
   ...props
-}: Readonly<Omit<ComponentPropsWithoutRef<'header'>, 'className'> & { actions?: ReactNode }>) {
+}: Readonly<
+  Omit<ComponentPropsWithoutRef<'header'>, 'className' | 'style'> & { actions?: ReactNode }
+>) {
   if (!actions) {
     return (
       <header {...props} className="grid min-w-0 gap-1">
@@ -61,22 +65,22 @@ export function SectionHeader({
 
 export function SectionTitle({
   children,
-  className,
   level = 2,
   truncate = false,
   count,
   ...props
 }: Readonly<
-  ComponentPropsWithoutRef<'h2'> & { level?: 2 | 3; truncate?: boolean; count?: number }
+  Omit<ComponentPropsWithoutRef<'h2'>, 'className' | 'style'> & {
+    level?: 2 | 3;
+    truncate?: boolean;
+    count?: number;
+  }
 >) {
   const Heading = level === 2 ? 'h2' : 'h3';
   return (
     <Heading
       {...props}
-      className={cn(
-        TEXT_ROLE_CLASS[useContext(SectionTitleRoleContext)],
-        cn(truncate && 'truncate', className),
-      )}
+      className={cn(TEXT_ROLE_CLASS[useContext(SectionTitleRoleContext)], truncate && 'truncate')}
     >
       {children}
       {count === undefined ? null : (
@@ -92,7 +96,7 @@ export function SectionTitle({
 export function SectionDescription({
   children,
   ...props
-}: Readonly<Omit<ComponentPropsWithoutRef<'p'>, 'className'>>) {
+}: Readonly<Omit<ComponentPropsWithoutRef<'p'>, 'className' | 'style'>>) {
   return (
     <p {...props} className="text-body text-ink-2 max-w-copy">
       {children}
@@ -109,7 +113,10 @@ export function SectionContent({
   fill = false,
   ...props
 }: Readonly<
-  Omit<ComponentPropsWithoutRef<'div'>, 'className'> & { children: ReactNode; fill?: boolean }
+  Omit<ComponentPropsWithoutRef<'div'>, 'className' | 'style'> & {
+    children: ReactNode;
+    fill?: boolean;
+  }
 >) {
   return (
     <div
@@ -126,13 +133,15 @@ export function SectionBleed({
   children,
   rows = false,
   scroll = false,
+  columns,
   as: Element = 'div',
   ...props
 }: Readonly<
-  Omit<HTMLAttributes<HTMLElement>, 'className'> & {
+  Omit<HTMLAttributes<HTMLElement>, 'className' | 'style'> & {
     children: ReactNode;
     rows?: boolean;
     scroll?: boolean;
+    columns?: number;
     as?: 'div' | 'ul' | 'ol' | 'dl' | 'form';
     noValidate?: boolean;
   }
@@ -142,6 +151,7 @@ export function SectionBleed({
       {...props}
       data-bleed=""
       data-bleed-rows={rows ? '' : undefined}
+      style={columns === undefined ? undefined : { '--grid-columns': columns }}
       className={cn(
         rows && 'divide-rule grid divide-y',
         scroll && 'max-h-64 overflow-y-auto overscroll-contain',
@@ -158,7 +168,7 @@ export function PanelFrame({
   children,
   ...props
 }: Readonly<
-  Omit<HTMLAttributes<HTMLElement>, 'className'> & {
+  Omit<HTMLAttributes<HTMLElement>, 'className' | 'style'> & {
     as?: 'div' | 'section';
     children: ReactNode;
   }
@@ -241,7 +251,7 @@ export function CardGroup({
 export function CardRow({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="@container min-w-0">
-      <div className="gap-section grid @[640px]:auto-cols-fr @[640px]:grid-flow-col">
+      <div className="gap-section @card-row:auto-cols-fr @card-row:grid-flow-col grid">
         {children}
       </div>
     </div>

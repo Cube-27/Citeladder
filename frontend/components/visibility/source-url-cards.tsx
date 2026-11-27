@@ -126,7 +126,6 @@ export function BrandsCard({
               <BrandMark name={brand.name} logoUrl={brand.logo_url} websiteUrl={brand.website} />
               <span className="min-w-0 flex-1 truncate">{brand.name}</span>
               <StatusMark
-                className="shrink-0"
                 variant="classification"
                 value={brand.kind === 'brand' ? 'owned' : 'competitor'}
               >

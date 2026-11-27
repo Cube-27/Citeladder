@@ -141,7 +141,7 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
                 onClick={(event) => onTriggerClick(drop.key, event)}
               >
                 {drop.label}
-                <ChevronDown aria-hidden className="cl-navbar-caret size-4" />
+                <ChevronDown aria-hidden className="cl-navbar-caret" />
               </Trigger>
               <Content>
                 <MegaMenu drop={drop} path={path} />

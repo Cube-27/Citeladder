@@ -4,6 +4,7 @@ import { FlowLogo } from '@/components/ui/flow-logo';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { Check } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import { Icon } from '@/components/ui/icon';
 
 export function FlowBar({ end }: Readonly<{ end?: ReactNode }>) {
   return (
@@ -105,7 +106,7 @@ export function SetupStepMark({ index, current }: Readonly<{ index: number; curr
   if (index < current) {
     return (
       <span aria-hidden className={cn(MARK, 'bg-primary text-on-primary')}>
-        <Check className="size-3.5" />
+        <Icon icon={Check} size="flush" />
       </span>
     );
   }

@@ -170,7 +170,7 @@ export function AddTopicDialog({
                 value={parentId}
                 onValueChange={setParentId}
                 ariaLabel="Add under"
-                className="w-full"
+                box="fill"
                 options={[
                   { value: '', label: 'Top-level topic' },
                   ...parents.map((topic) => ({

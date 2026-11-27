@@ -83,7 +83,7 @@ function PlanAction({
         href={href}
         rel={CHECKOUT_REL}
         variant={highlighted ? 'primary' : 'soft'}
-        className="w-full"
+        box="fill"
       >
         Choose {plan.name}
       </ButtonLink>
@@ -94,7 +94,7 @@ function PlanAction({
       <ButtonLink
         href={contactSalesHref(plan.contact_url, CONTACT_SALES_HREF)}
         variant="soft"
-        className="w-full"
+        box="fill"
       >
         Contact sales
       </ButtonLink>
@@ -172,7 +172,7 @@ function ExtraCard({
       }
       cta={
         href ? (
-          <ButtonLink href={href} rel={CHECKOUT_REL} variant="soft" className="w-full">
+          <ButtonLink href={href} rel={CHECKOUT_REL} variant="soft" box="fill">
             Choose {entry.name}
           </ButtonLink>
         ) : (
@@ -201,7 +201,7 @@ function ByokSwitch({
         }}
         label={BYOK_SWITCH_LABEL}
         describedBy={hint}
-        className="mt-0.5 pointer-coarse:before:-inset-x-0.5 pointer-coarse:before:-inset-y-3"
+        besideText
       />
       <Stack as="span" gap="tight">
         <label htmlFor={id} aria-hidden className="cl-byok-label">

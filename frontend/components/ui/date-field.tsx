@@ -6,6 +6,7 @@ import { FIELD_BOX } from '@/components/ui/input';
 import { MENU_PANEL } from '@/components/ui/menu';
 import { CalendarDays } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import { Icon } from '@/components/ui/icon';
 
 export function DateField({
   value,
@@ -64,7 +65,7 @@ export function DateField({
             disabled={disabled}
             className="focus-ring text-ink-2 enabled:hover:text-ink not-data-[state=open]:enabled:hover:overlay-hover data-[state=open]:overlay-pressed data-[state=open]:text-ink rounded-mark hit-area size-target inline-flex shrink-0 items-center justify-center transition-colors"
           >
-            <CalendarDays className="size-3.5" aria-hidden />
+            <Icon icon={CalendarDays} size="flush" />
           </button>
         </DropdownPrimitive.Trigger>
         <DropdownPrimitive.Portal>

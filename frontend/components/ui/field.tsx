@@ -18,7 +18,7 @@ export function Field({
   required,
   count,
   layout = 'stack',
-  className,
+  wide = false,
   children,
 }: Readonly<{
   label: string;
@@ -27,9 +27,10 @@ export function Field({
   required?: boolean;
   count?: { used: number; max: number };
   layout?: 'stack' | 'row';
-  className?: string;
+  wide?: boolean;
   children: (props: ControlProps) => ReactNode;
 }>) {
+  const className = wide ? 'desktop:col-span-2' : undefined;
   const id = useId();
   const messageId = `${id}-msg`;
   const message = error ?? hint;
@@ -129,7 +130,7 @@ export function FieldFoot({
   if (error) {
     note = (
       <p id={id} role="alert" className="text-caption text-negative flex items-start gap-1">
-        <Icon icon={CircleAlert} className="my-0 [[data-public-surface]_&]:hidden" />
+        <Icon icon={CircleAlert} size="flush" appOnly />
         <span>{error}</span>
       </p>
     );

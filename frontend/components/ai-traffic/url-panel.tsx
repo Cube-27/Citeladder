@@ -40,7 +40,7 @@ export function TrafficLeg({ leg, unit }: Readonly<{ leg: Leg; unit: string }>) 
       <Pressable
         type="button"
         numeric
-        className="w-auto text-right"
+        box="auto-end"
         aria-label={`${formatCount(leg.value)} ${unit}`}
       >
         {formatCount(leg.value)}
@@ -294,12 +294,7 @@ export function TrafficUrlButton({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button
-        variant="quiet"
-        onClick={() => setOpen(true)}
-        aria-label={label}
-        className="max-w-full"
-      >
+      <Button variant="quiet" onClick={() => setOpen(true)} aria-label={label} box="full">
         <Icon icon={PanelRightOpen} />
         {children}
       </Button>

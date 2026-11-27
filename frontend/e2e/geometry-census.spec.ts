@@ -378,6 +378,14 @@ async function census(
     await page.setViewportSize({ width, height: 900 });
     await nextFrame();
     await expect(page.locator('[data-state-block="loading"], [data-skeleton]')).toHaveCount(0);
+    await page.evaluate(() =>
+      Promise.all(
+        document
+          .getAnimations()
+          .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+          .map((animation) => animation.finished.catch(() => undefined)),
+      ),
+    );
     const route = `${label} @${width}`;
     const settled = await page.evaluate(measure, { route });
     await nextFrame();

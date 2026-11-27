@@ -18,7 +18,7 @@ export function SiteArrowLink({
   const content = (
     <>
       <span className="cl-arrowlink-text">{children}</span>
-      <ArrowRight aria-hidden className="cl-arrowlink-icon size-4" />
+      <ArrowRight aria-hidden className="cl-arrowlink-icon" />
     </>
   );
   if (!href)
