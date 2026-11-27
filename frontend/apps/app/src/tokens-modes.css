@@ -47,8 +47,6 @@
   --color-thumb: var(--color-mark-ink-2);
   --color-rule: var(--ramp-white-a11);
   --color-control-line: var(--ramp-white-a22);
-  --color-control-edge: var(--color-control-line);
-  --color-control-edge-hover: var(--color-rule);
   --color-danger-face-hover: var(--ramp-red-26);
   --color-page: var(--ramp-zinc-15);
   --text-color-ink: var(--ramp-neutral-99_1);
