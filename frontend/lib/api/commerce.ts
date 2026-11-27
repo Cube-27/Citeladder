@@ -434,7 +434,7 @@ export function followCatalogAnalysis(
 ) {
   const key = queryKeys.commerce.catalogReadCount(scope);
   const recorded = client.getQueryData<CatalogReadCount>(key);
-  if (recorded?.readAt !== readAt)
-    client.setQueryData<CatalogReadCount>(key, { readAt, count: analyzed });
-  else if (recorded.count !== analyzed) void refreshCatalog(client, scope.projectId);
+  const current = recorded?.readAt === readAt ? recorded : undefined;
+  if (!current) client.setQueryData<CatalogReadCount>(key, { readAt, count: analyzed });
+  else if (current.count !== analyzed) void refreshCatalog(client, scope.projectId);
 }
