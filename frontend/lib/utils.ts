@@ -235,7 +235,8 @@ export function isOneOf<T extends string | number>(
   allowed: readonly T[],
   value: unknown,
 ): value is T {
-  return allowed.some((item) => item === value);
+  const options: readonly unknown[] = allowed;
+  return options.includes(value);
 }
 
 export function emailInitials(email: string) {

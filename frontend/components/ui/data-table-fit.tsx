@@ -74,7 +74,9 @@ export function useFittedColumns({
     const update = () => {
       const style = getComputedStyle(frame);
       const width =
-        frame.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        frame.clientWidth -
+        Number.parseFloat(style.paddingLeft) -
+        Number.parseFloat(style.paddingRight);
       if (width <= 0) return;
       const [select = 0, ...floors] = [...probe.children].map(
         (child) => child.getBoundingClientRect().width,

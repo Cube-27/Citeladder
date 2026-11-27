@@ -3,7 +3,7 @@ import { Stack } from '@/components/ui/layout';
 const MIX = 'color-mix(in oklch, var(--color-accent), transparent)';
 const PANEL = 'gap-2 rounded-card';
 
-export function Canary({ tone }: { tone: string }) {
+export function Canary({ tone }: Readonly<{ tone: string }>) {
   return (
     <Stack className="gap-[13px]">
       <div className="flex min-w-0 items-center justify-between">layout only</div>

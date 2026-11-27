@@ -271,19 +271,11 @@ export function SidebarModeSegment({
   ...props
 }: FaceProps & Readonly<{ current: boolean; rail: boolean }>) {
   const Root = asChild ? Slot : 'span';
-  return (
-    <Root
-      {...props}
-      className={
-        rail
-          ? cn(RAIL_BUTTON, current ? cn('text-ink', CURRENT_FILL) : AT_REST)
-          : cn(
-              'focus-ring text-label text-ink rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors',
-              current ? 'text-ink bg-nav-current shadow-card' : AT_REST,
-            )
-      }
-    />
-  );
+  const shape = rail
+    ? RAIL_BUTTON
+    : 'focus-ring text-label text-ink rounded-mark relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors';
+  const currentFill = rail ? cn('text-ink', CURRENT_FILL) : 'text-ink bg-nav-current shadow-card';
+  return <Root {...props} className={cn(shape, current ? currentFill : AT_REST)} />;
 }
 
 export function SidebarFootList({
