@@ -98,10 +98,7 @@ function ChipGroup({ filters }: Readonly<{ filters: readonly FilterDefinition[] 
   const grouped = filters.filter((filter) => filter.inFilters);
   const pinned = grouped.length > 1 ? grouped : [];
   const inline = [...inlineOrder(filters), ...grouped.filter((filter) => !pinned.includes(filter))];
-  const { ref, kept } = useKeptFilters(
-    inline.map((filter) => filter.id),
-    pinned.length > 0,
-  );
+  const { ref, kept } = useKeptFilters(inline, pinned.length > 0);
   const chips = inline.slice(0, kept);
   const menu = [...inline.slice(kept), ...pinned];
   const set = filters.filter((filter) => !filter.isDefault);
@@ -124,7 +121,13 @@ function ChipGroup({ filters }: Readonly<{ filters: readonly FilterDefinition[] 
       {menu
         .filter((filter) => !filter.isDefault)
         .map((filter) => (
-          <div key={filter.id} data-filter-trailing="" className="flex min-w-0 shrink-0">
+          <div
+            key={filter.id}
+            {...(pinned.includes(filter)
+              ? { 'data-filter-trailing': '' }
+              : { 'data-filter-value': filter.id })}
+            className="flex min-w-0 shrink-0"
+          >
             <ValueChip filter={filter} />
           </div>
         ))}

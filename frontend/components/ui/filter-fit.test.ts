@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import { keptFilterCount } from '@/components/ui/filter-fit';
 
-const base = { gap: 8, trailing: 0, menu: 90, menuAlways: false };
+const base = { gap: 8, trailing: 0, menu: 90, menuAlways: false, values: [] };
 
 describe('keptFilterCount', () => {
   it.each([
@@ -17,6 +17,12 @@ describe('keptFilterCount', () => {
     ],
   ])('%s', (_name, input, kept) => {
     expect(keptFilterCount({ ...base, ...input })).toBe(kept);
+  });
+
+  it('charges a folded filter its value chip only while it stays folded', () => {
+    const fit = { ...base, widths: [100, 100, 100], values: [0, 0, 100], trailing: 60 };
+    expect(keptFilterCount({ ...fit, available: 384 })).toBe(3);
+    expect(keptFilterCount({ ...fit, available: 383 })).toBe(1);
   });
 
   it('reserves an always-present menu and the trailing chips before keeping a chip', () => {
