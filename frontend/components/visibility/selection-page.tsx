@@ -5,7 +5,7 @@ import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { readErrorProps } from '@/components/ui/notice';
 import { SectionStack } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
-import { VisibilityEmptyState } from '@/components/visibility/empty-state';
+import { VisibilityEmptyState, type EmptyPage } from '@/components/visibility/empty-state';
 import { useVisibilityFilterMenu } from '@/components/visibility/visibility-toolbar';
 import { topicsQueries } from '@/lib/api/topics';
 import type { VisibilityView } from '@/lib/visibility/dashboard';
@@ -36,8 +36,10 @@ export function selectionPageState(queries: Queries): SelectionPageState {
 export function SelectionPageStateBlock({
   state,
   queries,
-}: Readonly<{ state: Exclude<SelectionPageState, null>; queries: Queries }>) {
-  if (state === 'empty') return <VisibilityEmptyState activeRun={queries.activeRun ?? null} />;
+  page,
+}: Readonly<{ state: Exclude<SelectionPageState, null>; queries: Queries; page: EmptyPage }>) {
+  if (state === 'empty')
+    return <VisibilityEmptyState activeRun={queries.activeRun ?? null} page={page} />;
   if (state === 'loading')
     return (
       <SectionStack aria-busy>

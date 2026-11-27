@@ -14,7 +14,7 @@ import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { restartAt } from '@/lib/auth/account-transition';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
-import { Dialog } from '@/components/ui/dialog';
+import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { PasswordInput } from '@/components/ui/password-field';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -123,7 +123,11 @@ function usePasswordForm() {
       }),
     onSuccess: () => restartAt(client, '/login'),
     onError: (error) =>
-      fields.setError('current', { message: authErrorMessage(error) }, { shouldFocus: true }),
+      fields.setError(
+        'current',
+        { message: authErrorMessage(error, "Couldn't change the password. Try again.") },
+        { shouldFocus: true },
+      ),
   });
   const submit = fields.handleSubmit((values) => change.mutate(values));
   return { fields, change, submit };
@@ -170,14 +174,40 @@ function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Erro
   );
 }
 
+type SessionOperation = 'sign-out' | 'disconnect';
+
+function sessionRequest(operation: SessionOperation, onConfirm: () => void): ConfirmRequest {
+  switch (operation) {
+    case 'sign-out':
+      return {
+        question: 'Sign out all sessions',
+        body: 'Includes this device.',
+        confirmLabel: 'Sign out all sessions',
+        onConfirm,
+      };
+    case 'disconnect':
+      return {
+        question: 'Disconnect integrations and sign out',
+        body: 'Signs out every device, disconnects your MCP clients and revokes your API keys.',
+        confirmLabel: 'Sign out and disconnect',
+        destructive: true,
+        onConfirm,
+      };
+    default: {
+      const unhandled: never = operation;
+      return unhandled;
+    }
+  }
+}
+
 export default function AccountSecurity() {
-  const [confirm, setConfirm] = useState<'sign-out' | 'disconnect' | null>(null);
+  const [confirm, setConfirm] = useState<SessionOperation | null>(null);
   const client = useQueryClient();
   const security = useQuery(authQueries.security());
   const passwordForm = usePasswordForm();
   const current = useWatch({ control: passwordForm.fields.control, name: 'current' });
   const mutation = useMutation({
-    mutationFn: (operation: 'sign-out' | 'disconnect') =>
+    mutationFn: (operation: SessionOperation) =>
       operation === 'sign-out' ? authApi.logout() : authApi.logoutAndDisconnect(),
     onSuccess: () => restartAt(client, '/login'),
   });
@@ -261,38 +291,17 @@ export default function AccountSecurity() {
           />
         </SettingRows>
       </SettingsGroup>
-      <Dialog
-        open={confirm === 'sign-out'}
-        onOpenChange={(open) => setConfirm(open ? 'sign-out' : null)}
-        title="Sign out all sessions?"
-        footer={
-          <Button
-            variant="primary"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate('sign-out')}
-          >
-            Sign out everywhere
-          </Button>
+      <ConfirmDialog
+        request={
+          confirm
+            ? sessionRequest(confirm, () =>
+                mutation.mutate(confirm, { onError: () => setConfirm(null) }),
+              )
+            : null
         }
-      >
-        <p>Includes this device.</p>
-      </Dialog>
-      <Dialog
-        open={confirm === 'disconnect'}
-        onOpenChange={(open) => setConfirm(open ? 'disconnect' : null)}
-        title="Disconnect integrations and sign out?"
-        footer={
-          <Button
-            variant="danger"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate('disconnect')}
-          >
-            Sign out and disconnect
-          </Button>
-        }
-      >
-        <p>Signs out every device, disconnects your MCP clients and revokes your API keys.</p>
-      </Dialog>
+        pending={mutation.isPending}
+        onCancel={() => setConfirm(null)}
+      />
     </>
   );
 }

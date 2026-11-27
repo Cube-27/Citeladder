@@ -64,11 +64,11 @@ When ChatGPT answers with a product carousel, CiteLadder reads each card as a ra
 Choose a row to open the product's page: its brand, image, description and link, the same metrics as the table, and:
 
 - **Competing products:** products named in the same answers, with how often each ranked above this one;
-- **Merchants**, **Sources** (the pages those answers cited) and **Fan-out queries** (the searches those answers ran);
+- **Merchants**, **Sources** (the pages those answers cited) and **Query fan-outs** (the searches those answers ran);
 - **Prompts:** visibility, win rate and position per prompt;
 - **Answers:** each answer it appeared in, marked won, lost or unranked, opening the full answer.
 
-For your own products, the page also holds setup: the product's open Actions with **Work with the agent**, competitor discovery and review, and hero-product prompts. Discovered competitors do not enter measurement until you approve them. A category's page holds its competitors and its shopping prompts. **Back to Products** returns to the table with your filters.
+For your own products, the page also holds setup: the product's open Actions with **Work with agent**, competitor discovery and review, and hero-product prompts. Discovered competitors do not enter measurement until you approve them. A category's page holds its competitors and its shopping prompts. **Back to Products** returns to the table with your filters.
 
 ## Prepare shopping prompts
 

@@ -95,9 +95,7 @@ export function SetupPrompts({
           notice={mutationNoticeForError(generate.error, { action: 'generate the prompts' })}
         />
       ) : null}
-      {failed ? (
-        <Notice tone="negative">The buyer-prompt update failed. Please try again.</Notice>
-      ) : null}
+      {failed ? <Notice tone="negative">The buyer-prompt update failed. Try again.</Notice> : null}
       {shortfall !== null ? (
         <Notice tone="info">
           {shortfall} of {HERO_COUNT} generated prompts were usable. Generate again for more.

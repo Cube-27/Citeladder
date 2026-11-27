@@ -127,7 +127,7 @@ for (const width of [1280, 390]) {
     const narrow = width < 1024;
 
     await page.goto(fixtureProjectPath(`/actions/${ACTION}`));
-    await page.getByRole('link', { name: 'Work with Agent' }).first().click();
+    await page.getByRole('link', { name: 'Work with agent' }).first().click();
     const composer = page.getByLabel('Message the agent');
     await expect(composer).toHaveValue(MESSAGE);
     await composer.press('Enter');

@@ -277,7 +277,7 @@ function NoMovement({ measurement }: Readonly<{ measurement: CommandCenter['meas
     case 'comparable':
       return note('No movement to show');
     case 'matched_subset':
-      return note(`${basis.note}; per-engine movement needs a fully comparable run.`);
+      return note(basis.note);
     case 'declined':
       return declined(basis.reason);
     default: {

@@ -268,7 +268,7 @@ describe('URL drawer', () => {
         .getAllByRole('link')
         .map((link) => link.getAttribute('href')),
     ).toEqual([`/actions/${OPEN_ID}`, `/actions/${DISMISSED.id}`]);
-    const agent = within(drawer).getByRole('link', { name: 'Fix this URL with Agent' });
+    const agent = within(drawer).getByRole('link', { name: 'Work with agent' });
     expect(
       parseAgentHandoff(new URL(agent.getAttribute('href')!, 'http://x').searchParams).context,
     ).toMatchObject({ url_actions_reference: { site_url_id: URL_ID } });
@@ -278,7 +278,7 @@ describe('URL drawer', () => {
     renderDrawer();
     const only = await within(await opened()).findByRole('tab', { name: /^Actions/ });
     await waitFor(() => expect(only).toHaveTextContent('Actions (1)'));
-    expect(screen.queryByRole('link', { name: 'Fix this URL with Agent' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Work with agent' })).toBeNull();
   });
 
   it('renders the placeholder (not "0 ms") for an unmeasured TTFB (B6)', async () => {

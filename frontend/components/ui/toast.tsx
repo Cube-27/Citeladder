@@ -12,7 +12,7 @@ type ToastTone = 'neutral' | 'positive' | 'negative';
 
 type ToastOptions = Readonly<{
   tone?: ToastTone;
-  action?: Readonly<{ label: string; onClick: () => void }>;
+  actions?: readonly Readonly<{ label: string; onClick: () => void }>[];
 }>;
 
 type ToastMessage = ToastOptions & {
@@ -111,7 +111,9 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             <ToastPrimitive.Root
               key={message.id}
               type={tone === 'negative' ? 'foreground' : 'background'}
-              duration={tone === 'negative' || message.action ? Infinity : TOAST_DURATION_MS}
+              duration={
+                tone === 'negative' || message.actions?.length ? Infinity : TOAST_DURATION_MS
+              }
               forceMount
               open={message.open}
               onOpenChange={(open) => {
@@ -148,11 +150,13 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                       {message.description}
                     </ToastPrimitive.Description>
                   ) : null}
-                  {message.action ? (
+                  {message.actions?.length ? (
                     <div className="mt-3 flex gap-2">
-                      <ToastPrimitive.Action asChild altText={message.action.label}>
-                        <Button onClick={message.action.onClick}>{message.action.label}</Button>
-                      </ToastPrimitive.Action>
+                      {message.actions.map((action) => (
+                        <ToastPrimitive.Action key={action.label} asChild altText={action.label}>
+                          <Button onClick={action.onClick}>{action.label}</Button>
+                        </ToastPrimitive.Action>
+                      ))}
                     </div>
                   ) : null}
                 </div>

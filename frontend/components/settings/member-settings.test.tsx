@@ -57,7 +57,7 @@ describe('Workspace panel', () => {
     await user.click(await screen.findByRole('combobox', { name: `Role for ${ALEX.email}` }));
     await user.click(await screen.findByRole('option', { name: 'Admin' }));
     expect(update).not.toHaveBeenCalled();
-    const dialog = await screen.findByRole('dialog', { name: 'Change role' });
+    const dialog = await screen.findByRole('dialog', { name: 'Change role?' });
     await user.click(within(dialog).getByRole('button', { name: 'Make Admin' }));
 
     await waitFor(() =>
@@ -72,7 +72,7 @@ describe('Workspace panel', () => {
     const view = renderPanel();
 
     await user.click(await screen.findByRole('button', { name: 'Make owner' }));
-    const dialog = await screen.findByRole('alertdialog', { name: 'Transfer ownership' });
+    const dialog = await screen.findByRole('alertdialog', { name: 'Transfer ownership?' });
     expect(dialog).toHaveTextContent(`${ALEX.email} becomes the owner of ${owner.name}`);
     await user.click(within(dialog).getByRole('button', { name: `Make ${ALEX.email} owner` }));
     await waitFor(() =>
@@ -95,7 +95,7 @@ describe('Workspace panel', () => {
       await screen.findByRole('button', { name: `Remove ${ALEX.email} from this workspace` }),
     );
     await user.click(
-      within(await screen.findByRole('alertdialog', { name: 'Remove member' })).getByRole(
+      within(await screen.findByRole('alertdialog', { name: 'Remove member?' })).getByRole(
         'button',
         {
           name: 'Cancel',
@@ -106,7 +106,7 @@ describe('Workspace panel', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Revoke' }));
     await user.click(
-      within(await screen.findByRole('alertdialog', { name: 'Revoke invitation' })).getByRole(
+      within(await screen.findByRole('alertdialog', { name: 'Revoke invitation?' })).getByRole(
         'button',
         {
           name: 'Revoke invitation',
@@ -175,7 +175,7 @@ describe('Workspace panel', () => {
 
     expect(screen.queryByRole('button', { name: 'Invite' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Leave workspace' }));
-    const dialog = await screen.findByRole('alertdialog', { name: 'Leave workspace' });
+    const dialog = await screen.findByRole('alertdialog', { name: 'Leave workspace?' });
     await user.click(within(dialog).getByRole('button', { name: 'Leave workspace' }));
     await waitFor(() => expect(leave).toHaveBeenCalledWith(owner.id));
 

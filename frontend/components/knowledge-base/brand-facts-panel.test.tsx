@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-p
 import type { BrandFactList } from '@citeladder/contracts/fact-checking';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { ToastProvider } from '@/components/ui/toast';
 
 import { BrandFactsPanel } from './brand-facts-panel';
 
@@ -34,6 +35,47 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('BrandFactsPanel', () => {
+  it('retires a fact after "Retire fact?" and Undo restores it with its status and text', async () => {
+    const user = userEvent.setup({ delay: null });
+    const sent: unknown[] = [];
+    mswServer.use(
+      http.patch(`/api/v1/projects/${projectId}/brand-facts/${factId}`, async ({ request }) => {
+        sent.push(['PATCH', await request.json()]);
+        return HttpResponse.json({ ...list.facts[0], status: 'retired', revision: 3 });
+      }),
+      http.post(`/api/v1/projects/${projectId}/brand-facts`, async ({ request }) => {
+        sent.push(['POST', await request.json()]);
+        return HttpResponse.json({ ...list.facts[0], revision: 1 }, { status: 201 });
+      }),
+      http.get(`/api/v1/projects/${projectId}/brand-facts`, () => HttpResponse.json(list)),
+    );
+    renderWithProviders(
+      <ToastProvider>
+        <BrandFactsPanel workspaceId={workspaceId} projectId={projectId} list={list} mayEdit />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Retire fact' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Retire fact?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Retire fact' }));
+    await screen.findByText('Fact retired');
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+
+    await vi.waitFor(() =>
+      expect(sent).toEqual([
+        ['PATCH', { expected_revision: 2, status: 'retired' }],
+        [
+          'POST',
+          {
+            topic: 'pricing',
+            statement: 'Pro costs $59 per month.',
+            source_url: null,
+            status: 'confirmed',
+          },
+        ],
+      ]),
+    );
+  });
+
   it('keeps the edit dialog open with its changes when the save is refused', async () => {
     const user = userEvent.setup({ delay: null });
     mswServer.use(

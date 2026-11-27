@@ -4,6 +4,7 @@ import { ProviderList } from '@/components/providers/provider-list';
 import { ACTIONS } from '@/components/ui/actions';
 import { Button, IconButton } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
+import { EngineLabel } from '@/components/ui/engine-mark';
 import { Field, FieldRow } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
@@ -400,7 +401,7 @@ export function LaunchDialogView({
                             : setConnecting(engine)
                         }
                       >
-                        {catalog.label(engine)}
+                        <EngineLabel engine={engine} />
                         {connected ? null : <span className="sr-only">, not connected</span>}
                       </ChoiceChip>
                     );
@@ -419,10 +420,6 @@ export function LaunchDialogView({
         <MarketsField markets={markets} marketIds={marketIds} setMarketIds={setMarketIds} />
       </Stack>
       {estimate ? <EstimateNote estimate={estimate} /> : null}
-      <Text as="p" variant="caption">
-        Answers that mention you or a competitor are also classified for sentiment. No credits are
-        used.
-      </Text>
     </Dialog>
   );
 }

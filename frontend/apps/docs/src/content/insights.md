@@ -36,10 +36,10 @@ Each measure keeps its own empty states. Sentiment reads **Too few classified** 
 
 Markers on the trend show the days your prompt set changed, a model an engine runs on changed, or an Action went live. A marker shows when something changed, not that it moved your rates; a movement that lines up with one may come from what was measured rather than from how engines answered. A break in the line means the two runs cannot be compared directly.
 
-## Compare models, markets and topics
+## Compare engines, markets and topics
 
-- **By topic** lists answers, visibility, share of voice, position and your rank in each topic of your brand prompts. Commerce topics and runs are left out of every Brand page.
-- **By model** lists each engine's visibility, owned citation rate and answer count.
+- **By topic** lists prompt runs, visibility, share of voice, position and your rank in each topic of your brand prompts. Commerce topics and runs are left out of every Brand page.
+- **By engine** lists each engine's visibility, owned citation rate and prompt runs.
 - **Google AI Overview** and **Google AI Mode** appear when you narrow the surface to one of them: how often an answer was shown, how often it named you, and whether your site was cited.
 - **By market** puts each market's latest run side by side, with visibility, share of voice and net sentiment and the change since that market's previous comparable run. Markets are never pooled, and a market you have not run reads **Not run**, never zero.
 

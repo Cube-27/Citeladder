@@ -13,12 +13,13 @@ import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
 import { SettingsGroup } from '@/components/ui/setting-row';
+import { useToast } from '@/components/ui/toast';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
 import { shortUrlTitle } from '@/lib/format';
-import { Check, Pencil, Plus, Trash2 } from '@/lib/icons';
+import { Archive, Check, Pencil, Plus } from '@/lib/icons';
 import { TOPIC_LABELS } from '@/lib/visibility/accuracy';
 
 const COLUMNS = [
@@ -40,8 +41,27 @@ export function BrandFactsPanel({
 }: Readonly<{ workspaceId: string; projectId: string; list: BrandFactList; mayEdit: boolean }>) {
   const scope = { workspaceId, projectId };
   const change = useMutation(projectMutations.updateBrandFact(scope));
+  const restore = useMutation(projectMutations.createBrandFact(scope));
+  const toast = useToast();
   const [editing, setEditing] = useState<FactEdit | null>(null);
-  const [deleting, setDeleting] = useState<BrandFact | null>(null);
+  const [retiring, setRetiring] = useState<BrandFact | null>(null);
+  const undoRetire = (fact: BrandFact) =>
+    restore.mutate(
+      {
+        topic: fact.topic,
+        statement: fact.statement,
+        source_url: fact.source_url,
+        status: fact.status === 'confirmed' ? 'confirmed' : 'draft',
+      },
+      {
+        onError: (error) =>
+          toast.notify(
+            "Couldn't restore the fact",
+            mutationNoticeForError(error, { action: 'restore the fact' }).message,
+            { tone: 'negative' },
+          ),
+      },
+    );
   const facts = list.facts.filter((fact) => fact.status !== 'retired');
   const confirm = (fact: BrandFact) =>
     change.mutate({
@@ -60,7 +80,7 @@ export function BrandFactsPanel({
         ) : undefined
       }
     >
-      {change.isError && !deleting ? (
+      {change.isError && !retiring ? (
         <Notice
           kind="mutation"
           notice={mutationNoticeForError(change.error, { action: 'update the fact' })}
@@ -93,11 +113,11 @@ export function BrandFactsPanel({
                     onClick={() => setEditing({ kind: 'edit', fact })}
                   />
                   <IconButton
-                    icon={Trash2}
-                    label="Delete fact"
+                    icon={Archive}
+                    label="Retire fact"
                     onClick={() => {
                       change.reset();
-                      setDeleting(fact);
+                      setRetiring(fact);
                     }}
                   />
                 </TableActionsCell>
@@ -119,31 +139,38 @@ export function BrandFactsPanel({
         pending={change.isPending}
         onCancel={() => {
           change.reset();
-          setDeleting(null);
+          setRetiring(null);
         }}
         request={
-          deleting && {
-            title: 'Delete fact?',
+          retiring && {
+            question: 'Retire fact',
             body: (
               <>
                 {change.isError ? (
                   <Notice
                     kind="mutation"
-                    notice={mutationNoticeForError(change.error, { action: 'delete the fact' })}
+                    notice={mutationNoticeForError(change.error, { action: 'retire the fact' })}
                   />
                 ) : null}
-                {deleting.statement}
+                {retiring.statement}
               </>
             ),
-            confirmLabel: 'Delete',
+            confirmLabel: 'Retire fact',
             destructive: true,
             onConfirm: () =>
               change.mutate(
                 {
-                  factId: deleting.id,
-                  input: { expected_revision: deleting.revision, status: 'retired' },
+                  factId: retiring.id,
+                  input: { expected_revision: retiring.revision, status: 'retired' },
                 },
-                { onSuccess: () => setDeleting(null) },
+                {
+                  onSuccess: () => {
+                    setRetiring(null);
+                    toast.notify('Fact retired', undefined, {
+                      actions: [{ label: 'Undo', onClick: () => undoRetire(retiring) }],
+                    });
+                  },
+                },
               ),
           }
         }

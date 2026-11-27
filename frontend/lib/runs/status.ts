@@ -48,7 +48,7 @@ const FAILURE_REASONS: Record<string, string> = {
   provider_connection_missing: 'No provider key is connected for this engine. Add one in Settings.',
   credential_unavailable_for_retrieval:
     'The provider key used for this answer was removed or changed. Reconnect it in Settings.',
-  auth_failure: 'The provider rejected the key. Check it in Settings.',
+  auth_failure: 'The provider rejected the key.',
   provider_account_unavailable:
     'The provider account is paused or out of funds, so this engine was stopped for the run. Try again later.',
   connection_changed: 'The provider key changed during the run. Run it again.',

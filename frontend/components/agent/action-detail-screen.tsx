@@ -131,11 +131,11 @@ export function agentLabel(
   action: Pick<ActionDetail, 'target_kind' | 'page_count'>,
   ticked: number,
 ): string {
-  if (ticked > 0) return `Fix ${formatCount(ticked)} selected with Agent`;
-  if (action.target_kind === 'earned_page') return 'Draft email with Agent';
+  if (ticked > 0) return `Fix ${formatCount(ticked)} selected with agent`;
+  if (action.target_kind === 'earned_page') return 'Draft email with agent';
   if (action.target_kind === 'issue_family' && action.page_count)
-    return `Fix all ${formatCount(action.page_count)} with Agent`;
-  return 'Work with Agent';
+    return `Fix all ${formatCount(action.page_count)} with agent`;
+  return 'Work with agent';
 }
 
 function useIssueFamilyBrief(action: ActionDetail, workspaceId: string): IssueFamilyBrief | null {

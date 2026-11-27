@@ -99,7 +99,9 @@ export function FactsImportDialog({
       }
     >
       {importing.isError ? (
-        <Notice tone="negative">{humanizeApiError(importing.error).message}</Notice>
+        <Notice tone="negative">
+          {humanizeApiError(importing.error, "Couldn't import the facts. Try again.").message}
+        </Notice>
       ) : null}
       {outcomes ? null : (
         <Stack gap="compact">

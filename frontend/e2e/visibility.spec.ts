@@ -443,7 +443,7 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   await expect(page.getByText('Gemini API: Not applicable')).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
-  await page.getByRole('tab', { name: 'Query fanouts' }).click();
+  await page.getByRole('tab', { name: 'Query fan-outs' }).click();
   await expect(page).toHaveURL(/[?&]tab=query-fanout/);
   await expect(page.getByText('affordable family clothing Australia 2026')).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);

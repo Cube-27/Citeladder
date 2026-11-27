@@ -8,7 +8,7 @@ updated: '2026-11-22'
 
 The Agent is CiteLadder's in-app assistant. It can investigate saved project evidence, apply a skill and help you refine a plan, diagnosis, page edit or content draft.
 
-Switch from **Dashboard** to **Agent** to open its workspace. You will find **New chat**, **Skills**, **Context** and your saved chat history. [Actions](/agent/actions/) sits in the Dashboard sidebar; each Action's **Work with the agent** opens a chat here.
+Switch from **Dashboard** to **Agent** to open its workspace. You will find **New chat**, **Skills**, **Context** and your saved chat history. [Actions](/agent/actions/) sits in the Dashboard sidebar; each Action's **Work with agent** opens a chat here.
 
 ## Start with the work you need done
 

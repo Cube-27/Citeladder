@@ -20,7 +20,7 @@ export const ACTIONS = {
   launchRun: { label: 'Launch run', variant: 'primary', icon: Rocket },
   addPrompts: { label: 'Add prompts', variant: 'secondary', icon: Plus },
   askAgent: { label: 'Ask agent', variant: 'secondary', icon: ICONS.agent },
-  workWithAgent: { label: 'Work with the agent', variant: 'secondary', icon: Sparkles },
+  workWithAgent: { label: 'Work with agent', variant: 'secondary', icon: Sparkles },
   openAction: { label: 'Open Action', variant: 'secondary', icon: ICONS.opportunities },
   viewEvidence: { label: 'View evidence', variant: 'secondary' },
   markImplemented: { label: 'Mark implemented', variant: 'secondary', icon: CheckCircle2 },

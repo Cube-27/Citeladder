@@ -18,12 +18,12 @@ const BAR_FILL = {
   positive: 'bg-positive',
   warning: 'bg-warning',
   negative: 'bg-negative',
-  info: 'bg-info',
+  ink: 'bg-mark-ink',
 } as const;
 
-export type BarTone = keyof typeof BAR_FILL;
+type BarTone = keyof typeof BAR_FILL;
 
-export const scoreTone = (score: number): BarTone => BAND[scoreBand(Math.round(score))].tone;
+export const scoreTone = (score: number) => BAND[scoreBand(Math.round(score))].tone;
 
 const clampScore = (score: number) => Math.max(0, Math.min(100, Math.round(score)));
 
@@ -125,26 +125,6 @@ export function ScoreBar({ score }: Readonly<{ score: number | null }>) {
           style={{ '--fill': percent(Math.max(0, Math.min(100, score)) / 100) }}
         />
       )}
-    </span>
-  );
-}
-
-export function PassFailBar({ passing, failing }: Readonly<{ passing: number; failing: number }>) {
-  const total = passing + failing;
-  return (
-    <span aria-hidden className="rounded-mark flex h-2 gap-0.5 overflow-hidden">
-      {passing > 0 ? (
-        <span
-          className="bg-positive block h-full w-(--fill)"
-          style={{ '--fill': percent(passing / total) }}
-        />
-      ) : null}
-      {failing > 0 ? (
-        <span
-          className="bg-negative block h-full w-(--fill)"
-          style={{ '--fill': percent(failing / total) }}
-        />
-      ) : null}
     </span>
   );
 }

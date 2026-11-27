@@ -94,7 +94,7 @@ function MarkFixedButton({
           onError: () =>
             onNotice({
               tone: 'negative',
-              text: 'Could not mark this issue fixed. Please try again.',
+              text: 'Could not mark this issue fixed. Try again.',
             }),
         });
       }}
@@ -154,5 +154,5 @@ function rerunCaption(count: number | null): string {
 }
 
 function rerunErrorMessage(error: unknown): string {
-  return serverMessage(error) ?? 'Could not re-run this issue. Please try again.';
+  return serverMessage(error) ?? 'Could not re-run this issue. Try again.';
 }

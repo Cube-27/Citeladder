@@ -1,5 +1,5 @@
 {
-  "formula_version": "1",
+  "formula_version": "2",
   "refresh_delay_seconds": 60,
   "min_verified_requests": 5,
   "min_referral_sessions": 5,

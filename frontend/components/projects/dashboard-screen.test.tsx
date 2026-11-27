@@ -373,11 +373,7 @@ describe('DashboardScreen', () => {
       expect.stringContaining('/insights?metric=owned_citation_rate'),
     );
     const movement = within(screen.getByRole('region', { name: 'Movement' }));
-    expect(
-      movement.getByText(
-        '8 of 12 answers comparable; per-engine movement needs a fully comparable run.',
-      ),
-    ).toBeVisible();
+    expect(movement.getByText('8 of 12 answers comparable')).toBeVisible();
     expect(movement.queryByRole('button', { name: 'Launch run' })).not.toBeInTheDocument();
   });
   it('says a comparable run produced no change, without offering another run', () => {

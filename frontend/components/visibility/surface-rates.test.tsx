@@ -64,8 +64,8 @@ describe('AI Overview rates', () => {
     panel(rates());
 
     for (const basis of [
-      /40 of 100 searches we successfully observed/,
-      /10 of 40 searches where it was shown/,
+      /40 of 100 prompt runs observed/,
+      /10 of 40 prompt runs where it was shown/,
     ])
       expect(screen.getByRole('button', { description: basis })).toHaveAccessibleName(/^Basis of /);
   });

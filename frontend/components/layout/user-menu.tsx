@@ -82,7 +82,7 @@ function UserMenuContent({
         {logout.isPending ? 'Signing out…' : 'Sign out'}
       </MenuItem>
       {logout.isError ? (
-        <MenuAlert>Sign out failed. Your session is still active; please try again.</MenuAlert>
+        <MenuAlert>Sign out failed. Your session is still active. Try again.</MenuAlert>
       ) : null}
     </MenuContent>
   );

@@ -196,8 +196,8 @@ function revokeRequest(
 ): ConfirmRequest | null {
   if (!source) return null;
   return {
-    title: 'Revoke crawl log source',
-    body: `Stop accepting logs for ${source.host}? New batches and uploads for this host are refused.`,
+    question: 'Revoke crawl log source',
+    body: `Logs for ${source.host} stop being accepted. New batches and uploads for this host are refused.`,
     confirmLabel: 'Revoke source',
     destructive: true,
     onConfirm: () => onRevoke(source.id),

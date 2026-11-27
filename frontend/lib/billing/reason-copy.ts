@@ -2,7 +2,7 @@ import { ApiError, humanizeApiError } from '@/lib/api/errors';
 import { serverMessage } from '@/lib/api/mutation-notice';
 
 const REASON_COPY: ReadonlyMap<string, string> = new Map([
-  ['checkout_unavailable', 'Checkout is not available for this purchase yet.'],
+  ['checkout_unavailable', 'Checkout unavailable'],
   ['contact_only', 'Contact sales to buy this plan.'],
   ['trial_unavailable', 'A trial is not available for this plan.'],
 ]);

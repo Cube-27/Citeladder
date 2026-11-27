@@ -189,7 +189,7 @@ describe('AI Traffic state and navigation', () => {
     await user.click(await screen.findByRole('radio', { name: /Upload file/ }));
     expect(screen.getByText('Create an upload source first.')).toBeVisible();
     expect(screen.queryByRole('combobox', { name: 'Upload source' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Create source' }));
+    await user.click(screen.getByRole('button', { name: 'Connect' }));
     expect(await screen.findByRole('combobox', { name: 'Upload source' })).toHaveTextContent(
       'example.test',
     );
@@ -236,14 +236,11 @@ describe('AI Traffic state and navigation', () => {
     const user = await openEmptySetup();
     const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
     await user.click(within(dialog).getByRole('radio', { name: /Amazon CloudFront/ }));
-    expect(
-      within(dialog).getByText(/In us-east-1, create an Amazon Data Firehose stream/),
-    ).toBeVisible();
     expect(within(dialog).queryByRole('combobox', { name: 'Sampling' })).not.toBeInTheDocument();
     const interval = within(dialog).getByLabelText('Firehose buffer interval (seconds)');
     await user.clear(interval);
     await user.type(interval, '300');
-    await user.click(within(dialog).getByRole('button', { name: 'Create source' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Connect' }));
     expect(await within(dialog).findByText(/\/v1\/crawl-logs\/firehose\/9{8}-/)).toBeVisible();
     expect(created).toEqual({
       setup: 'aws_firehose',
@@ -313,7 +310,7 @@ describe('AI Traffic state and navigation', () => {
       within(dialog).getByLabelText('Pub/Sub subscription'),
       'projects/acme-prod/subscriptions/crawlers-sub',
     );
-    await user.click(within(dialog).getByRole('button', { name: 'Create source' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Connect' }));
     expect(
       await within(dialog).findByText(/--labels=citeladder-source=abcdefghijklmnopqrstuvwxyz/),
     ).toBeVisible();
@@ -332,7 +329,7 @@ describe('AI Traffic state and navigation', () => {
     expect(await within(dialog).findByText(/^Verified\./)).toBeVisible();
     expect(await screen.findByText(/Google Cloud · Awaiting data · Active/)).toBeVisible();
   });
-  it('disables the Google Cloud option where no reader service account is configured', async () => {
+  it('hides the Google Cloud option where no reader service account is configured', async () => {
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
         HttpResponse.json({
@@ -348,9 +345,8 @@ describe('AI Traffic state and navigation', () => {
     );
     await openEmptySetup();
     const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
-    const option = await within(dialog).findByRole('radio', { name: /Google Cloud/ });
-    expect(option).toBeDisabled();
-    expect(within(dialog).getByText('Not available in this environment.')).toBeVisible();
+    expect(await within(dialog).findByRole('radio', { name: /Amazon CloudFront/ })).toBeVisible();
+    expect(within(dialog).queryByRole('radio', { name: /Google Cloud/ })).toBeNull();
   });
   it('asks for the new sink filter after a catalog change and records the confirmation', async () => {
     const id = '99999999-9999-4999-8999-999999999999';
@@ -435,7 +431,7 @@ describe('AI Traffic state and navigation', () => {
     );
     const user = await openEmptySetup();
     const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
-    const create = within(dialog).getByRole('button', { name: 'Create source' });
+    const create = within(dialog).getByRole('button', { name: 'Connect' });
     await waitFor(() => expect(create).toBeEnabled());
     await user.click(create);
     await within(dialog).findByRole('button', { name: 'Copy token' });
@@ -446,7 +442,7 @@ describe('AI Traffic state and navigation', () => {
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
-    expect(screen.getByRole('button', { name: 'Create source' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Connect' })).toBeEnabled();
     expect(screen.queryByRole('button', { name: 'Copy token' })).not.toBeInTheDocument();
   });
   it('carries the insight project and filters into the Pages destination', async () => {
@@ -461,7 +457,7 @@ describe('AI Traffic state and navigation', () => {
             {
               pattern: 'key_event_concentration',
               copy: 'Key events co-occurred on these pages.',
-              url_hashes: [],
+              pages: [],
               numbers: { key_events: 10 },
               coverage: { ga4: 'complete' },
             },

@@ -242,7 +242,7 @@ describe('Links in a reply', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     expect(fireEvent.click(screen.getByRole('link', { name: 'more' }))).toBe(false);
-    expect(screen.getByRole('dialog', { name: 'You’re leaving CiteLadder' })).toHaveTextContent(
+    expect(screen.getByRole('dialog', { name: 'Leave CiteLadder?' })).toHaveTextContent(
       'https://evil.example/?notes=private',
     );
   });

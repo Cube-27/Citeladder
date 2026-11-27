@@ -48,7 +48,7 @@ import {
 } from '@/components/visibility/fanout-query-metrics';
 import { SegmentedControl } from '@/components/ui/tabs';
 
-const TITLE = 'Query fanouts';
+const TITLE = 'Query fan-outs';
 
 const PAGE_SIZE = 10;
 
@@ -111,7 +111,7 @@ function FanoutEmpty({
     <StateBlock
       kind="empty"
       icon={Inbox}
-      heading={isFiltered ? 'No answers match these filters' : 'No searches recorded yet'}
+      heading={isFiltered ? 'No answers match these filters' : 'No query fan-outs recorded yet'}
       action={
         isFiltered ? undefined : (
           <Button asChild>
@@ -190,7 +190,7 @@ export function FanoutEvidence({
       toolbar={{
         view: (
           <SegmentedControl
-            ariaLabel="Query fanouts view"
+            ariaLabel="Query fan-outs view"
             value={view}
             onChange={setView}
             options={FANOUT_VIEWS}
@@ -200,8 +200,8 @@ export function FanoutEvidence({
           <SearchField
             value={search ?? ''}
             onValueChange={(value) => setSearch(value || null)}
-            placeholder="Search queries…"
-            aria-label="Filter searches by text"
+            placeholder="Search query fan-outs…"
+            aria-label="Filter query fan-outs by text"
             maxLength={SEARCH_MAX_LENGTH}
           />
         ),

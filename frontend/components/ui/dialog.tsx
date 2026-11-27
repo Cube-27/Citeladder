@@ -226,7 +226,7 @@ function overlayWidth(width: 'narrow' | 'wide' | 'prose'): string {
 }
 
 export type ConfirmRequest = {
-  title: string;
+  question: string;
   body: ReactNode;
   confirmLabel: string;
   destructive?: boolean;
@@ -249,7 +249,7 @@ export function ConfirmDialog({
         if (!open) onCancel();
       }}
       tone={request?.destructive ? 'danger' : 'default'}
-      title={request?.title ?? ''}
+      title={request ? `${request.question}?` : ''}
       description={request?.body}
       footer={
         <>

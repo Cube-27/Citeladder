@@ -44,7 +44,7 @@ export function StartCrawlControl({
     .join('. ');
   const askToIgnore = () =>
     setConfirm({
-      title: 'Ignore robots.txt for this crawl?',
+      question: 'Ignore robots.txt for this crawl',
       body: (
         <>
           Also fetches pages on {siteUrl} that robots.txt disallows. Only if you are authorized to

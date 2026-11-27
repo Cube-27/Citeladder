@@ -20,6 +20,12 @@ const MAILBOX_OPERATIONS = [
 ] as const;
 type MailboxOperation = (typeof MAILBOX_OPERATIONS)[number];
 
+function mailboxFailure(confirmation: boolean): string {
+  return confirmation
+    ? "Couldn't confirm the link. Try again."
+    : "Couldn't send the email. Try again.";
+}
+
 function mailboxOperation(pathname: string): MailboxOperation {
   const path = routePath(pathname).slice(1);
   return isOneOf(MAILBOX_OPERATIONS, path) ? path : 'forgot-password';
@@ -101,7 +107,11 @@ export default function MailboxScreen() {
         pendingLabel="Working…"
         {...mailboxFooter(operation, incomplete, secrets.returnTo)}
         showForm={!mutation.isSuccess && !incomplete}
-        error={mutation.isError ? authErrorMessage(mutation.error) : undefined}
+        error={
+          mutation.isError
+            ? authErrorMessage(mutation.error, mailboxFailure(confirmation))
+            : undefined
+        }
         verification={confirmation ? undefined : verification}
       >
         {confirmation ? (

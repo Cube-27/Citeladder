@@ -6,11 +6,9 @@ import {
 } from '@/lib/ai-traffic/vocabulary';
 import type { UploadProcessing, useCrawlConnections } from '@/lib/ai-traffic/use-crawl-connections';
 import {
-  CLOUDFRONT_LOG_FIELDS,
   CRAWL_LOG_SETUPS,
   CRAWL_INGEST_ORIGIN,
   FIREHOSE_BUFFER_INTERVAL,
-  FIREHOSE_FILTER_TEMPLATE,
 } from '@/lib/config/crawl-logs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,16 +21,8 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { CopyButton } from '@/components/ui/copy-button';
 import { TextLink } from '@/components/ui/text-link';
 import { Checkbox } from '@/components/ui/checkbox';
-import { GcpFields, GcpSourceSetup, GcpSteps } from './gcp-pull-setup';
+import { GcpFields, GcpSourceSetup } from './gcp-pull-setup';
 import { Notice } from '@/components/ui/notice';
-const SETUP_STEPS: Partial<Record<(typeof CRAWL_LOG_SETUPS)[number]['value'], string>> = {
-  cloudflare_worker:
-    'Deploy the downloadable template yourself. Store the token as a Worker secret, use a fail-open route, and expect partial coverage. Every routed request uses your Workers quota.',
-  cloudflare_logpush:
-    'Select HTTP requests, the documented field list and RFC3339 timestamps. Set the Authorization header in the HTTP destination and bound batches to the documented limits. Logpush can reach complete coverage only with unsampled delivery and heartbeats.',
-  custom:
-    'Map timestamp, host, path, method, status and user_agent to the documented JSON fields. Batch at least 60 seconds apart; send empty heartbeat batches when no crawler requests occur.',
-};
 const UPLOAD_PROCESSING_COPY: Record<UploadProcessing, string> = {
   processing: 'Upload complete. Processing…',
   delayed: 'Upload complete. Processing is taking longer than usual.',
@@ -43,7 +33,6 @@ export function CrawlLogSetup({
 }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
   const { setup, setSetup, origin, setOrigin, setSampling, setFilter, setPoint, mutation } = model;
   const chosen = CRAWL_LOG_SETUPS.find((s) => s.value === setup) ?? CRAWL_LOG_SETUPS[0];
-  const steps = SETUP_STEPS[setup];
   const firehose = setup === 'aws_firehose';
   const gcp = setup === 'gcp_pubsub_pull';
   const pullUnavailable = model.sources.data?.gcp_pull.availability !== 'available';
@@ -65,34 +54,13 @@ export function CrawlLogSetup({
             next.value === 'cloudflare_worker' ? 'Best-effort recognized automated requests' : '',
           );
         }}
-        options={CRAWL_LOG_SETUPS.map((s) => {
-          const unavailable = s.value === 'gcp_pubsub_pull' && pullUnavailable;
-          return {
-            value: s.value,
-            disabled: unavailable,
-            label: (
-              <span className="grid">
-                <Text variant="body">{s.label}</Text>
-                <Text variant="caption">
-                  {unavailable ? 'Not available in this environment.' : s.description}
-                </Text>
-              </span>
-            ),
-          };
-        })}
+        options={CRAWL_LOG_SETUPS.filter(
+          (s) => s.value !== 'gcp_pubsub_pull' || !pullUnavailable,
+        ).map((s) => ({ value: s.value, label: s.label }))}
       />
-      <Stack>
-        {steps ? (
-          <Text as="p" variant="body" tone="ink-2">
-            {steps}
-          </Text>
-        ) : null}
-        {firehose ? <FirehoseSteps interval={model.bufferInterval} /> : null}
-        {gcp ? <GcpSteps /> : null}
-        <TextLink variant="external" href={chosen.guide} box="fit">
-          Setup guide: {chosen.label}
-        </TextLink>
-      </Stack>
+      <TextLink variant="external" href={chosen.guide} box="fit">
+        Setup guide: {chosen.label}
+      </TextLink>
       <Columns template="halves-desktop" gap="workspace">
         <Field label="Site origin" wide>
           {(field) => (
@@ -194,35 +162,6 @@ function FirehoseFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
     </>
   );
 }
-function FirehoseSteps({ interval }: Readonly<{ interval: string }>) {
-  return (
-    <Stack as="ol" gap="tight" list="decimal">
-      <Text as="li" variant="body" tone="ink-2">
-        In us-east-1, create an Amazon Data Firehose stream: source Direct PUT, destination HTTP
-        endpoint. Use the endpoint URL and the token (as the access key) shown after you create the
-        source. Content encoding GZIP, buffer size 1–3 MiB, buffer interval {interval || '60'}{' '}
-        seconds, retry duration 3600 seconds, S3 backup for failed data only.
-      </Text>
-      <Text as="li" variant="body" tone="ink-2">
-        On the CloudFront distribution, add standard logging to Amazon Data Firehose, choose the
-        stream and output format JSON, with these fields: {CLOUDFRONT_LOG_FIELDS.join(', ')}.
-      </Text>
-      <Text as="li" variant="body" tone="ink-2">
-        Optional: to send crawler requests only, add the{' '}
-        <TextLink variant="external" href={FIREHOSE_FILTER_TEMPLATE}>
-          CiteLadder filter Lambda
-        </TextLink>{' '}
-        as the stream&apos;s data transformation and tick the box below. Coverage then stays
-        partial.
-      </Text>
-      <Text as="li" variant="body" tone="ink-2">
-        CloudFront can take about four hours to start delivering reliably. The Firehose
-        console&apos;s test data is not CloudFront logs and shows as an unsupported-format batch;
-        test with a real page visit instead.
-      </Text>
-    </Stack>
-  );
-}
 export function CrawlLogCredential({
   model,
 }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
@@ -277,7 +216,7 @@ export function CrawlLogSetupSubmit({
       pending={mutation.isPending}
       onClick={() => issueSource({ kind: 'create' })}
     >
-      Create source
+      Connect
     </Button>
   );
 }

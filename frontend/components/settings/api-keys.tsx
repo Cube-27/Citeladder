@@ -285,7 +285,7 @@ export function ApiKeys() {
         onCancel={() => setPending(null)}
         request={
           pending && {
-            title: `${REQUEST_COPY[pending.kind].verb} ${pending.key.name}?`,
+            question: `${REQUEST_COPY[pending.kind].verb} ${pending.key.name}`,
             confirmLabel: REQUEST_COPY[pending.kind].verb,
             destructive: true,
             onConfirm: () => {

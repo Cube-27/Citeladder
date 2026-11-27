@@ -53,7 +53,7 @@ export function InsightStrip({
           {data.patterns.map((r) => (
             <Stack as="li" key={r.pattern} gap="tight" box="shrink">
               <ClampText phoneWrap text="body">
-                {r.copy}
+                {patternLabel(r.pattern)}
               </ClampText>
               <Inline gap="meta">
                 <TextLink
@@ -75,14 +75,14 @@ export function InsightStrip({
                 >
                   Inspect pages
                 </TextLink>
-                {r.url_hashes.slice(0, 3).map((hash, index) => (
+                {r.pages.slice(0, 3).map((page) => (
                   <TrafficUrlButton
-                    key={hash}
-                    urlHash={hash}
-                    label={`Inspect page ${index + 1}: ${patternLabel(r.pattern)}`}
+                    key={page.url_hash}
+                    urlHash={page.url_hash}
+                    label={`Inspect ${page.path}`}
                     filters={{ start_date: data.window_start, end_date: data.window_end }}
                   >
-                    Page {index + 1}
+                    <ClampText lines={1}>{page.path}</ClampText>
                   </TrafficUrlButton>
                 ))}
               </Inline>

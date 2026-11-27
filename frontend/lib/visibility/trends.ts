@@ -235,7 +235,7 @@ function eventText(event: VisibilityTrendEvent, engineLabel: (key: string) => st
     case 'prompt_panel':
       return panelText(event);
     case 'model_change':
-      return `${engineLabel(event.logical_engine)} model changed: ${event.from_model} → ${event.to_model}`;
+      return `${engineLabel(event.logical_engine)} model changed`;
     case 'action_live':
       return `Action live: ${event.title}`;
     default: {

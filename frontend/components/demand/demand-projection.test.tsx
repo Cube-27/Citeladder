@@ -12,7 +12,7 @@ import { makeProject } from '@/test/fixtures/project';
 import { projectScope, renderWithProviders, type TestRole } from '@/test/render';
 
 import { ReportPage } from '@/components/templates/report-page';
-import { DemandActions, DemandPanel, demandControls, useDemand } from './demand-projection';
+import { DemandPanel, demandControls, useDemand } from './demand-projection';
 
 function signalTable() {
   return screen.getByRole('table');
@@ -49,7 +49,7 @@ vi.mock('@/components/integrations/data-source-setup', () => ({
 function DemandTab() {
   const demand = useDemand();
   return (
-    <ReportPage actions={<DemandActions demand={demand} />} filters={demandControls(demand)}>
+    <ReportPage filters={demandControls(demand)}>
       <DemandPanel demand={demand} />
     </ReportPage>
   );
@@ -170,10 +170,6 @@ import { demandApi } from '@/lib/api/demand';
 
 beforeEach(() => {
   vi.spyOn(demandApi, 'getLatest').mockResolvedValue(snapshot);
-  vi.spyOn(demandApi, 'recompute').mockResolvedValue({
-    task_id: '55555555-5555-4555-8555-555555555555',
-    status: 'queued',
-  });
 });
 
 const findLatentDemand = (text: string) =>
@@ -520,36 +516,6 @@ describe('Demand tab', () => {
     expect(drawer).not.toHaveTextContent('22222222');
   });
 
-  it('reports that recompute was queued rather than implying a finished rebuild', async () => {
-    renderProjection();
-
-    expect(await findLatentDemand('350 impressions on non-branded signals')).toBeVisible();
-
-    const fetchesBeforeRecompute = vi.mocked(demandApi.getLatest).mock.calls.length;
-    fireEvent.click(screen.getByRole('button', { name: /Recompute Signals/i }));
-
-    await waitFor(() => {
-      expect(demandApi.recompute).toHaveBeenCalledWith(
-        '11111111-1111-4111-8111-111111111111',
-        {
-          window_start: '2026-07-01',
-          window_end: '2026-07-07',
-        },
-        { workspaceId: WORKSPACE_ID },
-      );
-    });
-
-    expect(await screen.findByText(/Recompute queued/i)).toBeInTheDocument();
-    expect(vi.mocked(demandApi.getLatest).mock.calls).toHaveLength(fetchesBeforeRecompute);
-  });
-
-  it('shows a viewer the signals without offering a recompute', async () => {
-    renderProjection('viewer');
-
-    expect(await findLatentDemand('350 impressions on non-branded signals')).toBeVisible();
-    expect(screen.queryByRole('button', { name: /Recompute signals/i })).toBeNull();
-  });
-
   it('shows no snapshot from the project that was just switched away from', async () => {
     const { rerender } = renderProjection();
     expect(await screen.findByText('ai marketing tools')).toBeInTheDocument();
@@ -561,15 +527,5 @@ describe('Demand tab', () => {
       expect(screen.getByRole('status')).toHaveAccessibleName('Loading search demand…');
     });
     expect(screen.queryByText('ai marketing tools')).not.toBeInTheDocument();
-  });
-
-  it('surfaces a recompute failure instead of returning silently to idle', async () => {
-    vi.mocked(demandApi.recompute).mockRejectedValueOnce(new Error('boom'));
-    renderProjection();
-
-    expect(await findLatentDemand('350 impressions on non-branded signals')).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: /Recompute Signals/i }));
-
-    expect(await screen.findByRole('button', { name: /Try again/i })).toBeInTheDocument();
   });
 });

@@ -180,7 +180,7 @@ export const aiTrafficInsightsSchema = z.object({
         'key_event_concentration',
       ]),
       copy: z.string(),
-      url_hashes: z.array(z.string()),
+      pages: z.array(z.object({ url_hash: z.string(), path: z.string() })),
       numbers: z.record(z.string(), z.number()),
       coverage: z.record(z.string(), z.string()),
     }),

@@ -22,7 +22,7 @@ describe('Action status decisions', () => {
       return [response.status, response.ok ? body.status : null];
     };
     expect(await patch('in_progress')).toEqual([200, 'in_progress']);
-    expect(await patch('open')).toEqual([422, null]);
+    expect(await patch('open')).toEqual([200, 'open']);
     expect(await patch('dismissed')).toEqual([200, 'dismissed']);
     expect(await patch('open')).toEqual([200, 'open']);
     expect(await patch('dismissed')).toEqual([200, 'dismissed']);
@@ -35,7 +35,8 @@ describe('Action status decisions', () => {
     expect(events.map((e) => `${e.previous_status}>${e.next_status}`).sort()).toEqual([
       'dismissed>in_progress',
       'dismissed>open',
-      'in_progress>dismissed',
+      'in_progress>open',
+      'open>dismissed',
       'open>dismissed',
       'open>in_progress',
     ]);
@@ -58,7 +59,9 @@ describe('Action status decisions', () => {
     const path = `/api/v1/projects/${s.project_id}/actions/status`;
     const bulk = async (body: unknown, as = s) => {
       const response = await request(as, path, 'POST', body);
-      return [response.status, response.ok ? await response.json() : null];
+      if (!response.ok) return [response.status, null];
+      const result = (await response.json()) as { moved_ids: string[] };
+      return [response.status, { ...result, moved_ids: result.moved_ids.toSorted() }];
     };
     const statuses = async (t: ActionSeed) =>
       Object.fromEntries(
@@ -75,33 +78,44 @@ describe('Action status decisions', () => {
     const named = [actionId(s), actionId(s, otherRule), actionId(foreign)];
     expect(await bulk({ ids: named, to: 'dismissed' })).toEqual([
       200,
-      { updated: 2, skipped: 1, truncated: false },
+      {
+        updated: 2,
+        moved_ids: [actionId(s), actionId(s, otherRule)].toSorted(),
+        skipped: 1,
+        truncated: false,
+      },
     ]);
     expect(await bulk({ filter: { status: 'open', grouping: 'seo' }, to: 'in_progress' })).toEqual([
       200,
-      { updated: 0, skipped: 0, truncated: false },
+      { updated: 0, moved_ids: [], skipped: 0, truncated: false },
     ]);
     expect(await bulk({ filter: { status: 'open' }, to: 'in_progress' })).toEqual([
       200,
-      { updated: 1, skipped: 0, truncated: false },
+      { updated: 1, moved_ids: [actionId(s, promptRule)], skipped: 0, truncated: false },
     ]);
-    expect(await bulk({ filter: { status: 'in_progress' }, to: 'open' })).toEqual([
+    expect(await bulk({ ids: [actionId(s, promptRule)], to: 'open' })).toEqual([
       200,
-      { updated: 0, skipped: 1, truncated: false },
+      { updated: 1, moved_ids: [actionId(s, promptRule)], skipped: 0, truncated: false },
+    ]);
+    expect(await bulk({ filter: { status: 'dismissed' }, to: 'dismissed' })).toEqual([
+      200,
+      { updated: 0, moved_ids: [], skipped: 2, truncated: false },
     ]);
     expect(await statuses(s)).toEqual({
       [actionId(s)]: 'dismissed',
       [actionId(s, otherRule)]: 'dismissed',
-      [actionId(s, promptRule)]: 'in_progress',
+      [actionId(s, promptRule)]: 'open',
     });
-    expect(await eventCount(s)).toBe(3);
+    expect(await eventCount(s)).toBe(4);
 
     const raced = await Promise.all([
       bulk({ ids: [actionId(s), actionId(s, otherRule)], to: 'open' }),
       bulk({ ids: [actionId(s, otherRule), actionId(s)], to: 'open' }),
     ]);
-    expect(raced.map(([, body]) => (body as { updated: number }).updated).sort()).toEqual([0, 2]);
-    expect(await eventCount(s)).toBe(5);
+    expect(
+      raced.map(([, body]) => (body as { updated: number; moved_ids: string[] }).updated).sort(),
+    ).toEqual([0, 2]);
+    expect(await eventCount(s)).toBe(6);
 
     expect((await bulk({ ids: [actionId(s)], filter: { status: 'open' }, to: 'open' }))[0]).toBe(
       422,

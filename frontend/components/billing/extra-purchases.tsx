@@ -40,7 +40,7 @@ function BuyButton({
   name: string;
   disabled: boolean;
   reason: string | null;
-  reasonId: string;
+  reasonId: string | null;
   onBuy: () => void;
 }>) {
   if (!reason)
@@ -50,8 +50,8 @@ function BuyButton({
       </Button>
     );
   return (
-    <Tooltip content={reason} describe={false}>
-      <Button variant="secondary" aria-disabled="true" aria-describedby={reasonId}>
+    <Tooltip content={reason} describe={reasonId === null}>
+      <Button variant="secondary" aria-disabled="true" aria-describedby={reasonId ?? undefined}>
         Buy {name}
       </Button>
     </Tooltip>
@@ -63,12 +63,14 @@ function ExtraRow({
   kind,
   catalog,
   disabled,
+  groupReason,
   onBuy,
 }: Readonly<{
   entry: Extra;
   kind: 'addon' | 'topup';
   catalog: BillingCatalog;
   disabled: boolean;
+  groupReason: string | null;
   onBuy: ExtraPurchase;
 }>) {
   const [typed, setTyped] = useState(String(entry.quantity_min));
@@ -77,6 +79,7 @@ function ExtraRow({
   const inputId = `extra-quantity-${entry.key}`;
   const reason = gateReason(entry);
   const reasonId = useId();
+  const ownReason = reason !== null && reason !== groupReason;
   return (
     <SettingRow
       label={entry.name}
@@ -112,13 +115,13 @@ function ExtraRow({
             name={entry.name}
             disabled={!purchasable || disabled}
             reason={reason}
-            reasonId={reasonId}
+            reasonId={ownReason ? reasonId : null}
             onBuy={() => onBuy(kind, entry.key, quantity)}
           />
         </>
       }
     >
-      {reason ? (
+      {ownReason ? (
         <Text as="p" id={reasonId} variant="caption" align="end">
           {reason}
         </Text>
@@ -188,10 +191,12 @@ export function ExtraPurchases({
     ...addons.map((entry) => ({ entry, kind: 'addon' as const })),
     ...topups.map((entry) => ({ entry, kind: 'topup' as const })),
   ];
+  const reasons = new Set(extras.map(({ entry }) => gateReason(entry)));
+  const groupReason = reasons.size === 1 ? ([...reasons][0] ?? null) : null;
   return (
     <>
       {extras.length > 0 ? (
-        <SettingsGroup title="Add-ons and top-ups">
+        <SettingsGroup title="Add-ons and top-ups" description={groupReason ?? undefined}>
           <SettingRows>
             {extras.map(({ entry, kind }) => (
               <ExtraRow
@@ -200,6 +205,7 @@ export function ExtraPurchases({
                 kind={kind}
                 catalog={catalog}
                 disabled={disabled}
+                groupReason={groupReason}
                 onBuy={onBuy}
               />
             ))}

@@ -15,8 +15,8 @@ import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 const DENOMINATOR_COPY: Record<string, string> = {
-  successful_observations: 'searches we successfully observed',
-  observations_with_ai_overview: 'searches where it was shown',
+  successful_observations: 'prompt runs observed',
+  observations_with_ai_overview: 'prompt runs where it was shown',
 };
 
 function denominatorCopy(rate: AioRate): string {

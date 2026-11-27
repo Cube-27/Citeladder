@@ -134,7 +134,7 @@ async function requestResponse(path: string, options: InternalRequestOptions) {
 
 function timeoutApiError(requestId: string) {
   return new ApiError(
-    'The request timed out before the API responded. Please try again.',
+    'The request timed out before the API responded. Try again.',
     0,
     '',
     requestId,

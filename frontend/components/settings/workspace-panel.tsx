@@ -72,7 +72,7 @@ export function WorkspacePanel() {
         request={
           confirmLeave
             ? {
-                title: 'Leave workspace',
+                question: 'Leave workspace',
                 body: `You lose access to ${activeWorkspace.name} and its projects immediately. An admin can invite you again.`,
                 confirmLabel: 'Leave workspace',
                 destructive: true,

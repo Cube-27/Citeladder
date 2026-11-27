@@ -33,7 +33,7 @@ export function goalCountWords(goal: ActionGoal, count: number): string {
 }
 
 export const ACTION_GOAL_HINT: Record<ActionGoal, string> = {
-  read_site: 'Site Health issues that stop AI reading or trusting your pages.',
+  read_site: 'Site health issues that stop AI reading or trusting your pages.',
   own_pages: 'Prompts you miss, pages to create or improve, search queries and internal links.',
   mentions: 'Pages AI cites for your prompts that name competitors and not you.',
   wrong_claims: 'Claims AI answers make about your brand that your own pages contradict.',

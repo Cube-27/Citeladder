@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import { inclusiveDays } from '../calendar-days.ts';
 import {
+  aiTrafficInsightsSchema,
   aiTrafficPagesSchema,
   aiTrafficUrlSchema,
   type trafficLegSchema,
@@ -276,12 +277,9 @@ async function patternScope<T extends PageOptions>(
     throw new ApiError(409, 'Insights are awaiting a persisted refresh. Try again shortly.', {
       retryable: true,
     });
-  const patterns = Array.isArray(saved?.patterns) ? saved.patterns : [];
-  const match = patterns.find(
-    (r) => typeof r === 'object' && r !== null && 'pattern' in r && r.pattern === options.pattern,
-  );
+  const patterns = aiTrafficInsightsSchema.shape.patterns.parse(saved?.patterns ?? []);
   const urlHashes =
-    match && typeof match === 'object' && 'url_hashes' in match ? strings(match.url_hashes) : [];
+    patterns.find((r) => r.pattern === options.pattern)?.pages.map((page) => page.url_hash) ?? [];
   if (!saved) return { options, urlHashes };
   return {
     options: { ...options, range: null, start_date: saved.start, end_date: saved.end },

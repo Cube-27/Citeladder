@@ -53,7 +53,7 @@ function accessLabel(entitlement: BillingEntitlement | null): string {
   if (!entitlement) return 'Unresolved';
   const active = entitlement.grants.filter((grant) => grant.revoked_at === null);
   if (entitlement.trial_grant) return 'Early access';
-  if (active.some((grant) => grant.source_kind === 'override')) return 'Operator override';
+  if (active.some((grant) => grant.source_kind === 'override')) return 'Complimentary plan';
   if (active.some((grant) => grant.source_kind === 'plan')) return 'Paid plan';
   return 'Free access';
 }
@@ -146,7 +146,7 @@ export function CancelPlan({
   )
     return null;
   return (
-    <SettingsGroup title="Cancel plan">
+    <SettingsGroup title="Cancel subscription">
       <SettingRows>
         <SettingRow
           label="Cancel at period end"
@@ -157,12 +157,12 @@ export function CancelPlan({
               disabled={cancellation.pending}
               onClick={() => cancellation.setOpen(true)}
             >
-              {cancellation.pending ? 'Scheduling cancellation…' : 'Cancel at period end'}
+              {cancellation.pending ? 'Scheduling cancellation…' : 'Cancel subscription'}
             </Button>
           }
         />
       </SettingRows>
-      <CancelDialog cancellation={cancellation} />
+      <CancelDialog cancellation={cancellation} periodEnd={subscription.current_period_end} />
     </SettingsGroup>
   );
 }
@@ -189,12 +189,24 @@ function ResumeNotice({
   );
 }
 
-function OverrideNotice({ besidePlan }: Readonly<{ besidePlan: boolean }>) {
+function OverrideNotice({ besidePlan, endsAt }: Readonly<{ besidePlan: boolean; endsAt: string }>) {
   return (
     <Notice tone="info">
-      {besidePlan ? 'The operator override expires' : 'Expires'} with its grant, with no funded AI
-      credits.
+      {besidePlan ? 'Complimentary plan ends' : 'Ends'} <DisplayTime value={endsAt} dateOnly />
     </Notice>
+  );
+}
+
+function overrideEnd(entitlement: BillingEntitlement | null): string | null {
+  const ends = (entitlement?.grants ?? []).flatMap((grant) =>
+    grant.source_kind === 'override' && grant.revoked_at === null && grant.effective_valid_until
+      ? [grant.effective_valid_until]
+      : [],
+  );
+  return ends.reduce<string | null>(
+    (earliest, end) =>
+      earliest === null || Date.parse(end) < Date.parse(earliest) ? end : earliest,
+    null,
   );
 }
 
@@ -206,12 +218,14 @@ function PlanNotices({
   const notice = subscription ? STATUS_NOTICE[subscription.status] : undefined;
   const active = (kind: string) =>
     entitlement?.grants.some((grant) => grant.source_kind === kind && grant.revoked_at === null);
-  const override = active('override');
+  const overrideEndsAt = overrideEnd(entitlement);
   return (
     <>
       {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
       {subscription ? <ScheduledChange subscription={subscription} planName={planName} /> : null}
-      {override ? <OverrideNotice besidePlan={active('plan') === true} /> : null}
+      {overrideEndsAt ? (
+        <OverrideNotice besidePlan={active('plan') === true} endsAt={overrideEndsAt} />
+      ) : null}
       {entitlement?.trial_grant ? (
         <Notice tone="info">
           Temporary access ends <DisplayTime value={entitlement.trial_grant.deadline} dateOnly />.
@@ -225,14 +239,17 @@ function PlanNotices({
   );
 }
 
-function CancelDialog({ cancellation }: Readonly<{ cancellation: BillingCancellation }>) {
+function CancelDialog({
+  cancellation,
+  periodEnd,
+}: Readonly<{ cancellation: BillingCancellation; periodEnd: string | null }>) {
   return (
     <Dialog
       open={cancellation.open}
       onOpenChange={(open) => {
         if (!cancellation.pending) cancellation.setOpen(open);
       }}
-      title="Cancel subscription"
+      title="Cancel subscription?"
       footer={
         <>
           <Button
@@ -248,7 +265,13 @@ function CancelDialog({ cancellation }: Readonly<{ cancellation: BillingCancella
             disabled={cancellation.pending}
             onClick={cancellation.confirm}
           >
-            {cancellation.pending ? 'Scheduling cancellation…' : 'Cancel at period end'}
+            {cancellation.pending ? (
+              'Scheduling cancellation…'
+            ) : (
+              <>
+                Cancel on <DisplayTime value={periodEnd} dateOnly fallback="period end" />
+              </>
+            )}
           </Button>
         </>
       }

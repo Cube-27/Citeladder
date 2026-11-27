@@ -8,6 +8,7 @@ import { actionItem, actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { ToastProvider } from '@/components/ui/toast';
 
 import { ActionsScreen } from './actions-list-screen';
 
@@ -94,13 +95,23 @@ function serve() {
       return HttpResponse.json(actionsPage(state.aeo.slice(10), { status_counts: counts() }));
     }),
     http.post(`/api/v1/projects/${PROJECT}/actions/status`, async ({ request }) => {
-      const body = (await request.json()) as { ids?: string[] };
+      const body = (await request.json()) as { ids?: string[]; filter?: unknown; to: string };
       bulks.push(body);
-      const before = state.aeo.length;
-      state.aeo = state.aeo.filter((item) => !body.ids?.includes(item.id));
-      state.accepted += before - state.aeo.length;
+      if (body.filter) {
+        const moved = bulks.length === 1 ? [id(1), id(2)] : [id(3)];
+        return HttpResponse.json({
+          updated: moved.length,
+          moved_ids: moved,
+          skipped: 0,
+          truncated: bulks.length === 1,
+        });
+      }
+      const moved = state.aeo.filter((item) => body.ids?.includes(item.id)).map(({ id }) => id);
+      state.aeo = state.aeo.filter((item) => !moved.includes(item.id));
+      state.accepted += moved.length;
       return HttpResponse.json({
-        updated: before - state.aeo.length,
+        updated: moved.length,
+        moved_ids: moved,
         skipped: 0,
         truncated: false,
       });
@@ -116,10 +127,12 @@ afterAll(() => mswServer.close());
 function renderActions(path = '/actions') {
   window.history.replaceState(null, '', path);
   return renderWithProviders(
-    <Routes>
-      <Route path="/actions" element={<ActionsScreen />} />
-      <Route path="/actions/:actionId" element={<p>Action detail</p>} />
-    </Routes>,
+    <ToastProvider>
+      <Routes>
+        <Route path="/actions" element={<ActionsScreen />} />
+        <Route path="/actions/:actionId" element={<p>Action detail</p>} />
+      </Routes>
+    </ToastProvider>,
     { initialEntries: [path], projectSelection: selection },
   );
 }
@@ -178,17 +191,53 @@ describe('Actions', () => {
     ]);
   });
 
-  it('Accept all asks for every New Action under the current filters', async () => {
+  it('draws one empty state with Create action for a project that never had an action, and the filters once one is set', async () => {
+    serve();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/actions/tree`, () =>
+        HttpResponse.json({
+          group_by: 'goal',
+          status_counts: { open: 0, in_progress: 0, done: 0, dismissed: 0 },
+          goals: ['read_site', 'own_pages', 'mentions', 'wrong_claims'].map((goal) => ({
+            goal,
+            count: 0,
+            blocking: false,
+          })),
+          groups: [],
+        }),
+      ),
+    );
+    const empty = renderActions();
+    expect(await screen.findByRole('heading', { name: 'No actions yet' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Create action' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: /^Status: / })).toBeNull();
+    empty.unmount();
+
+    renderActions('/actions?impact=high');
+    expect(await screen.findByRole('button', { name: /^Status: / })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'No actions yet' })).toBeNull();
+  });
+
+  it('accepts the counted New Actions under the filters, then accepts the rest and undoes from the toast', async () => {
     const { bulks } = serve();
     const user = userEvent.setup();
     renderActions('/actions?impact=high&source=site_health');
+    const filter = { status: 'open', priority: 'high', family: 'site_health' };
 
     await screen.findByRole('table', { name: '12 actions' });
-    await user.click(screen.getByRole('button', { name: 'Accept all' }));
+    await user.click(screen.getByRole('button', { name: 'Accept 14 actions' }));
+    await screen.findByText('2 actions moved to In progress');
+    await user.click(screen.getByRole('button', { name: 'Accept remaining' }));
+    const last = (await screen.findByText('1 action moved to In progress')).closest('li');
+    if (!last) throw new Error('The second toast has no item');
+    expect(within(last).queryByRole('button', { name: 'Accept remaining' })).toBeNull();
+    await user.click(within(last).getByRole('button', { name: 'Undo' }));
 
     await waitFor(() =>
       expect(bulks).toEqual([
-        { to: 'in_progress', filter: { status: 'open', priority: 'high', family: 'site_health' } },
+        { to: 'in_progress', filter },
+        { to: 'in_progress', filter },
+        { to: 'open', ids: [id(3)] },
       ]),
     );
   });

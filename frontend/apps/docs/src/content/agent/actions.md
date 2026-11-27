@@ -39,7 +39,7 @@ The **Evidence** chips on the page list each record behind the Action with its d
 
 Choose **Analyze a page** above the list to work on a content page that no finding has raised yet. Pick one of the articles, guides or other content pages from your latest crawl, a topic, and the topic's prompts the page should answer; only topics with prompts are listed, and all their prompts start selected. **Generate action** creates the page's Action, or reuses it if the page already has one, and opens a new chat that reads the live page first. Nothing is charged until the page has been read.
 
-**Work with the agent** on an Action for one of your content pages opens the same kind of chat.
+**Work with agent** on an Action for one of your content pages opens the same kind of chat.
 
 ## Work on the page
 
@@ -60,13 +60,13 @@ When the page is live, choose **Mark implemented** in the workspace to declare t
 | Status      | Meaning                                                                            |
 | ----------- | ---------------------------------------------------------------------------------- |
 | New         | Work CiteLadder found that nobody has accepted or declined yet                     |
-| In progress | Someone chose **Accept**, or started **Work with the agent** on a New Action       |
+| In progress | Someone chose **Accept**, or started **Work with agent** on a New Action           |
 | Done        | Someone chose **Mark implemented**; its measurement shows beside it                |
 | Declined    | Someone chose **Decline**; **Restore** puts it back in New, **Accept** in progress |
 
 A Done Action is **Measuring** until every expected check has a met reading, then **Verified**. A later conflicting observation moves verified work back to measuring; the Action stays Done.
 
-**Accept** and **Decline** work on a New Action, **Decline** on one in progress, and **Restore** or **Accept** on a declined one. An Action in progress cannot go back to New. A chat output, such as a generated draft, never changes the status: it does not mean the work has shipped. Declining is not implementation, and Done is final.
+**Accept** and **Decline** work on a New Action, **Decline** on one in progress, and **Restore** or **Accept** on a declined one. After accepting New Actions in bulk, **Undo** on the toast moves them back to New. A chat output, such as a generated draft, never changes the status: it does not mean the work has shipped. Declining is not implementation, and Done is final.
 
 ## Declare implementation
 

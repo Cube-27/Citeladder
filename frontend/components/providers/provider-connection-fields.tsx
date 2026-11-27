@@ -10,13 +10,13 @@ type ConnectionState = ReturnType<typeof useProviderConnection>;
 function ApiKeyField({ state }: Readonly<{ state: ConnectionState }>) {
   const { configured, apiKey, setApiKey } = state;
   return (
-    <Field label={configured ? 'API key (enter a new key to rotate)' : 'API key'}>
+    <Field label="API key">
       {(props) => (
         <Input
           {...props}
           type="password"
           autoComplete="off"
-          placeholder={configured ? '•••••••• stored' : 'Paste your API key'}
+          placeholder={configured ? 'Enter a new key to replace it' : 'Paste your API key'}
           value={apiKey}
           onChange={(event) => setApiKey(event.target.value)}
         />

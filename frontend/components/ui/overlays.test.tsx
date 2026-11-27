@@ -136,7 +136,7 @@ describe('Dialog', () => {
             request={
               asking
                 ? {
-                    title: 'Change role?',
+                    question: 'Change role',
                     body: 'Admins manage members.',
                     confirmLabel: 'Change role',
                     onConfirm: () => {
@@ -383,7 +383,9 @@ describe('ToastProvider', () => {
           type="button"
           onClick={() => {
             notify('Prompt saved');
-            notify('Prompt archived', undefined, { action: { label: 'Undo', onClick: vi.fn() } });
+            notify('Prompt archived', undefined, {
+              actions: [{ label: 'Undo', onClick: vi.fn() }],
+            });
           }}
         >
           Notify
@@ -460,7 +462,7 @@ describe('ToastProvider', () => {
             notify('Prompt saved');
             notify('Prompt deleted', undefined, {
               tone: 'negative',
-              action: { label: 'Undo', onClick: onUndo },
+              actions: [{ label: 'Undo', onClick: onUndo }],
             });
           }}
         >

@@ -58,12 +58,16 @@ export function usePromptCandidates({
   return {
     candidates,
     isLoading: Boolean(promptSetId && workspaceId) && query.isPending,
-    loadError: query.isError ? humanizeApiError(query.error).message : undefined,
+    loadError: query.isError
+      ? humanizeApiError(query.error, "Couldn't load the suggested prompts. Try again.").message
+      : undefined,
     retry: () => void query.refetch(),
     accept: (ids: string[]) => submit({ accept_ids: ids }),
     reject: (ids: string[]) => submit({ reject_ids: ids }),
     isReviewing: mutation.isPending,
-    error: mutation.isError ? humanizeApiError(mutation.error).message : undefined,
+    error: mutation.isError
+      ? humanizeApiError(mutation.error, "Couldn't review these prompts. Try again.").message
+      : undefined,
     notice,
     clearNotice: () => setNotice(null),
   };

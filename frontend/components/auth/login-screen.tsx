@@ -74,9 +74,13 @@ export function LoginScreen({
   };
   const failure = mutation.isError ? mutation.error : terms.error;
   const refused = mutation.error instanceof ApiError && mutation.error.status === 401;
-  const formError = failure && !refused ? authErrorMessage(failure) : oauthError;
+  const formError =
+    failure && !refused
+      ? authErrorMessage(failure, "Couldn't sign you in. Try again.")
+      : oauthError;
   const passwordError =
-    errors.password?.message ?? (refused ? authErrorMessage(mutation.error) : undefined);
+    errors.password?.message ??
+    (refused ? authErrorMessage(mutation.error, "Couldn't sign you in. Try again.") : undefined);
 
   return (
     <AuthFormShell

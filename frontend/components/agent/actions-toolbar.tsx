@@ -92,7 +92,7 @@ function GroupByMenu({ view }: Readonly<{ view: ActionsView }>) {
   );
 }
 
-function CreateMenu() {
+export function CreateMenu() {
   const [analyzing, setAnalyzing] = useState(false);
   const navigate = useNavigate();
   const projectHref = useProjectHref();
@@ -110,7 +110,7 @@ function CreateMenu() {
         <MenuContent align="end">
           <MenuItem onSelect={() => toAgent(CREATE_PROMPT)}>Create action</MenuItem>
           <MenuItem onSelect={() => setAnalyzing(true)}>Analyze a page</MenuItem>
-          <MenuItem onSelect={() => toAgent(WORK_PROMPT)}>With Agent</MenuItem>
+          <MenuItem onSelect={() => toAgent(WORK_PROMPT)}>Work with agent</MenuItem>
         </MenuContent>
       </Menu>
       {analyzing ? <AnalyzePageDialog onClose={() => setAnalyzing(false)} /> : null}
@@ -125,27 +125,37 @@ function AcceptAll({
 }: Readonly<{ scope: ProjectScope; view: ActionsView; newCount: number | undefined }>) {
   const accept = useMutation(actionsMutations.bulkStatus(scope));
   const toast = useToast();
+  const failed = (title: string) => () =>
+    toast.notify(title, 'Nothing was changed.', { tone: 'negative' });
+  const undo = (ids: readonly string[]) =>
+    accept.mutate(
+      { to: 'open', ids: [...ids] },
+      {
+        onSuccess: (result) =>
+          toast.notify(`${pluralCount(result.updated, 'action')} moved back to New`),
+        onError: failed("Couldn't undo the accept"),
+      },
+    );
   const run = () =>
     accept.mutate(
       { to: 'in_progress', filter: { status: 'open', ...view.filters } },
       {
         onSuccess: (result) =>
-          toast.notify(
-            `${pluralCount(result.updated, 'action')} moved to In progress`,
-            result.truncated
-              ? 'More match these filters: Accept all again for the rest.'
-              : undefined,
-          ),
-        onError: () =>
-          toast.notify("Couldn't accept these actions", 'Nothing was changed.', {
-            tone: 'negative',
+          toast.notify(`${pluralCount(result.updated, 'action')} moved to In progress`, undefined, {
+            actions: [
+              ...(result.moved_ids.length
+                ? [{ label: 'Undo', onClick: () => undo(result.moved_ids) }]
+                : []),
+              ...(result.truncated ? [{ label: 'Accept remaining', onClick: run }] : []),
+            ],
           }),
+        onError: failed("Couldn't accept these actions"),
       },
     );
   return (
     <Button variant="primary" onClick={run} pending={accept.isPending} disabled={!newCount}>
       <Icon icon={Check} />
-      Accept all
+      {newCount ? `Accept ${pluralCount(newCount, 'action')}` : 'Accept actions'}
     </Button>
   );
 }

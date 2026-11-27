@@ -464,12 +464,12 @@ describe('BillingScreen', () => {
     renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
 
     await userEvent.click(
-      (await screen.findAllByRole('button', { name: /Cancel at period end/ }))[0]!,
+      (await screen.findAllByRole('button', { name: 'Cancel subscription' }))[0]!,
     );
     expect(deleted).toBe(0);
 
     const dialog = await screen.findByRole('dialog');
-    await userEvent.click(within(dialog).getByRole('button', { name: /Cancel at period end/ }));
+    await userEvent.click(within(dialog).getByRole('button', { name: /^Cancel on/ }));
     await waitFor(() => expect(deleted).toBe(1));
   });
 
@@ -500,7 +500,7 @@ describe('BillingScreen', () => {
 
     renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     expect(await screen.findByText(/Resumable until/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Cancel at period end/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cancel subscription' })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Resume plan' }));
     await waitFor(() => expect(resumed).toBe(1));
   });
@@ -529,15 +529,15 @@ describe('BillingScreen', () => {
 
     renderWithProviders(<BillingScreen />, { entitlement: { usage: 'network' } });
     await userEvent.click(
-      (await screen.findAllByRole('button', { name: /Cancel at period end/ }))[0]!,
+      (await screen.findAllByRole('button', { name: 'Cancel subscription' }))[0]!,
     );
     const dialog = await screen.findByRole('dialog');
-    await userEvent.click(within(dialog).getByRole('button', { name: /Cancel at period end/ }));
+    await userEvent.click(within(dialog).getByRole('button', { name: /^Cancel on/ }));
     expect(await within(dialog).findByText('Cancellation is unavailable right now')).toBeVisible();
     expect(screen.getAllByText('Cancellation is unavailable right now')).toHaveLength(1);
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Keep plan' }));
-    await userEvent.click(screen.getByRole('button', { name: /Cancel at period end/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel subscription' }));
     expect(
       within(await screen.findByRole('dialog')).queryByText(
         'Cancellation is unavailable right now',
@@ -769,6 +769,6 @@ describe('BillingScreen', () => {
     expect(await screen.findByText('Plan changes: Owner or Admin only.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Upgrade to Growth' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Buy Extra project' })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: /Cancel at period end/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cancel subscription' })).toBeNull();
   });
 });

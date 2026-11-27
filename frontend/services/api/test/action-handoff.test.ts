@@ -133,7 +133,7 @@ describe('Action handoff message', () => {
 
   it('writes the message for the finding the handoff attaches when a planned page has a search gap too', () => {
     const search = {
-      ...member('search_keyword_gap', 'Competitors rank for a search you do not', {
+      ...member('search_keyword_gap', "Competitors rank for a keyword you don't", {
         kind: 'search_gap',
         terms: 'guide setup',
         keyword: 'Setup guide',
@@ -207,7 +207,7 @@ describe('Action handoff message', () => {
         'Write a page that answers the prompt "best crm for small teams".',
       ],
       [
-        member('search_keyword_gap', 'Competitors rank for a search you do not', {
+        member('search_keyword_gap', "Competitors rank for a keyword you don't", {
           kind: 'search_gap',
           terms: 'socks trail',
           keyword: 'Trail Socks',

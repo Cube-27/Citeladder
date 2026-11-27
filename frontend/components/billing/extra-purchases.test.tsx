@@ -96,26 +96,41 @@ describe('ExtraPurchases', () => {
   });
   const gatedCatalog = (addons: unknown[]) =>
     billingCatalogSchema.parse({ ...EMPTY_CATALOG, addons });
-  const CLOSED = 'Checkout is not available for this purchase yet.';
+  const CLOSED = 'Checkout unavailable';
 
-  it.each([
-    [
-      'every extra gated',
-      [extra('a', 'Seats', 'checkout_unavailable'), extra('b', 'Markets', 'checkout_unavailable')],
-      2,
-      [],
-    ],
-    [
-      'one extra gated',
-      [extra('a', 'Seats', 'checkout_unavailable'), extra('b', 'Markets', null)],
-      1,
-      ['b'],
-    ],
-  ])('says the reason under its own gated Buy with %s', (_case, addons, captions, buys) => {
+  it('says a reason every extra shares once for the group and nothing under each row', () => {
     const bought: string[] = [];
     render(
       <ExtraPurchases
-        catalog={gatedCatalog(addons)}
+        catalog={gatedCatalog([
+          extra('a', 'Seats', 'checkout_unavailable'),
+          extra('b', 'Markets', 'checkout_unavailable'),
+        ])}
+        planKey="tier_1"
+        entitlement={null}
+        disabled={false}
+        onBuy={(_kind, key) => bought.push(key)}
+      />,
+    );
+    const seats = screen.getByRole('button', { name: 'Buy Seats' });
+    const markets = screen.getByRole('button', { name: 'Buy Markets' });
+    expect(screen.getAllByText(CLOSED)).toHaveLength(1);
+    expect(seats.closest('[data-setting-row]')).not.toHaveTextContent(CLOSED);
+    expect(seats).toHaveAttribute('aria-disabled', 'true');
+    expect(markets).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(seats);
+    fireEvent.click(markets);
+    expect(bought).toEqual([]);
+  });
+
+  it('says the reason under the one gated Buy and keeps the others buyable', () => {
+    const bought: string[] = [];
+    render(
+      <ExtraPurchases
+        catalog={gatedCatalog([
+          extra('a', 'Seats', 'checkout_unavailable'),
+          extra('b', 'Markets', null),
+        ])}
         planKey="tier_1"
         entitlement={null}
         disabled={false}
@@ -127,12 +142,11 @@ describe('ExtraPurchases', () => {
     expect(seats).toHaveFocus();
     expect(seats).toHaveAttribute('aria-disabled', 'true');
     expect(seats).toHaveAccessibleDescription(CLOSED);
-    expect(screen.queryAllByText(CLOSED, { selector: 'p' })).toHaveLength(captions);
     expect(seats.closest('[data-setting-row]')).toHaveTextContent(CLOSED);
     const markets = screen.getByRole('button', { name: 'Buy Markets' });
-    expect(markets).toHaveAccessibleDescription(captions === 2 ? CLOSED : '');
+    expect(markets).toHaveAccessibleDescription('');
     fireEvent.click(seats);
     fireEvent.click(markets);
-    expect(bought).toEqual(buys);
+    expect(bought).toEqual(['b']);
   });
 });

@@ -16,7 +16,7 @@ import {
 export type ConnectionTestState = { status: 'ok' | 'failed'; message: string } | null;
 
 function errorMessage(error: unknown): string {
-  return humanizeApiError(error).message;
+  return humanizeApiError(error, "Couldn't check the key. Try again.").message;
 }
 
 export function useProviderConnection({

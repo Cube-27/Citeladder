@@ -138,8 +138,15 @@ function setupTitle(
 
 function ConnectButton({
   family,
+  label,
   onConnect,
-}: Readonly<{ family: GrantFamily; onConnect: () => void }>) {
+}: Readonly<{ family: GrantFamily; label?: string; onConnect: () => void }>) {
+  if (label)
+    return (
+      <Button variant="secondary" onClick={onConnect}>
+        {label}
+      </Button>
+    );
   if (family === 'google') return <ActionButton action="connectGoogle" onClick={onConnect} />;
   return (
     <Button variant="secondary" onClick={onConnect}>
@@ -287,12 +294,14 @@ function unconnectedFamilies({
 function UnconnectedState({
   heading,
   icon,
+  connect,
   families,
   canManage,
   startConnect,
 }: Readonly<{
   heading: string;
   icon?: IconGlyph;
+  connect?: string;
   families: readonly GrantFamily[];
   canManage: boolean;
   startConnect: (family: GrantFamily) => void;
@@ -301,7 +310,7 @@ function UnconnectedState({
   const action =
     canManage && lead ? (
       <>
-        <ConnectButton family={lead} onConnect={() => startConnect(lead)} />
+        <ConnectButton family={lead} label={connect} onConnect={() => startConnect(lead)} />
         {rest.slice(0, 1).map((family) => (
           <Button key={family} variant="quiet" onClick={() => startConnect(family)}>
             <Icon icon={Plug} />
@@ -326,7 +335,7 @@ export function DataSourceSetup({
   optional?: readonly IntegrationProvider[];
   title: string;
   whenReady?: ReactNode;
-  unconnected?: Readonly<{ heading: string; icon?: IconGlyph }>;
+  unconnected?: Readonly<{ heading: string; icon?: IconGlyph; connect?: string }>;
 }>) {
   const { activeProject, activeWorkspaceId } = useProjectContext();
   const canManage = useWorkspaceCapability('manage_credentials');

@@ -211,7 +211,7 @@ describe('CommandPalette', () => {
     const user = await open();
     const visits = [
       ['Fact-checking', 'Brand', '/perception?tab=fact-checking&project=p1'],
-      ['Query fanouts', 'Tracking', '/visibility?tab=query-fanout&project=p1'],
+      ['Query fan-outs', 'Tracking', '/visibility?tab=query-fanout&project=p1'],
       ['Prompt builder', 'Tracking', '/prompts/build?project=p1'],
     ] as const;
     for (const [label, group, href] of visits) {

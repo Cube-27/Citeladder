@@ -22,7 +22,7 @@ describe('deleteRequest', () => {
   it('shows nothing until a delete is pending', () => {
     renderDialog(null);
 
-    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete prompt' })).not.toBeInTheDocument();
   });
 
   it('deletes only after the confirm button is pressed', async () => {
@@ -30,7 +30,7 @@ describe('deleteRequest', () => {
     const { onConfirm, onCancel } = renderDialog({ kind: 'prompt', prompt });
     expect(onConfirm).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete prompt' }));
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(onCancel).not.toHaveBeenCalled();

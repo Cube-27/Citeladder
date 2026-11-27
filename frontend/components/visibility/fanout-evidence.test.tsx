@@ -119,7 +119,7 @@ describe('Fanout empty states', () => {
     vi.spyOn(visibilityApi, 'getFanoutSummary').mockReturnValue(new Promise(() => {}));
     const onClear = vi.fn();
     const view = renderWithProviders(<EmptyPanel />);
-    expect(screen.getByText('No searches recorded yet')).toBeVisible();
+    expect(screen.getByText('No query fan-outs recorded yet')).toBeVisible();
     expect(screen.getByRole('link', { name: 'View Runs' })).toHaveAttribute('href', '/runs');
     expect(screen.queryByRole('button', { name: /Clear filters/ })).toBeNull();
 
@@ -199,7 +199,7 @@ describe('Fanout paging', () => {
     await user.click(screen.getByRole('button', { name: 'Next page' }));
     expect(screen.getByText('11–15 of 15')).toBeVisible();
 
-    await user.type(screen.getByLabelText('Filter searches by text'), 'query');
+    await user.type(screen.getByLabelText('Filter query fan-outs by text'), 'query');
     expect(screen.getByText('1–10 of 15')).toBeVisible();
   });
 });

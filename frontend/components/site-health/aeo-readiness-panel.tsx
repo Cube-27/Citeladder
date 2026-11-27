@@ -108,6 +108,6 @@ function pageRow(key: string, label: string, count: number, of: number): BarRow 
     label,
     figure: formatCount(count),
     share: of > 0 ? count / of : null,
-    tone: key === 'affected' ? 'negative' : 'info',
+    tone: 'ink',
   };
 }

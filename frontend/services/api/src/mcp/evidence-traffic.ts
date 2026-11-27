@@ -9,7 +9,6 @@ import {
 } from '../crawl-logs/reads.ts';
 import { insightsRead } from '../ai-traffic/insights.ts';
 import { pageContext, pagesRead, urlRead } from '../ai-traffic/pages.ts';
-import { pageDataset } from '../ai-traffic/pages-data.ts';
 import { readAiReferrals } from '../analytics/ai-referrals.ts';
 import { queryEvidencePage, queryEvidenceTotals } from '../demand/reads.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
@@ -283,30 +282,17 @@ export async function aiTrafficInsights(
   args: Window,
 ): Promise<Evidence> {
   const result = await insightsRead(db, scope, crawlOptions(args));
-  const shown = result.patterns.flatMap((pattern) =>
-    pattern.url_hashes.slice(0, mcpPolicy.insight_pattern_paths),
-  );
-  const { rows } = shown.length
-    ? await pageDataset(db, scope, {
-        range: null,
-        start_date: result.window_start,
-        end_date: result.window_end,
-        url_hashes: shown,
-        dataset_limit: shown.length,
-      })
-    : { rows: [] };
-  const paths = new Map(rows.map((row) => [row.url_hash, row.display_path]));
   return {
     state: result.snapshot_id ? 'available' : 'unavailable',
     ...result,
-    patterns: result.patterns.map(({ url_hashes, ...pattern }) => {
-      const pages = url_hashes
+    patterns: result.patterns.map((pattern) => {
+      const pages = pattern.pages
         .slice(0, mcpPolicy.insight_pattern_paths)
-        .flatMap((hash) => paths.get(hash) ?? []);
+        .map((page) => page.path);
       return {
         ...pattern,
         pages,
-        pages_omitted: (pattern.numbers.page_count ?? url_hashes.length) - pages.length,
+        pages_omitted: (pattern.numbers.page_count ?? pattern.pages.length) - pages.length,
       };
     }),
   };

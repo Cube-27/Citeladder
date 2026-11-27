@@ -141,5 +141,5 @@ function registerError(
   oauthNotice: string | undefined,
 ): string | undefined {
   const error = submitError ?? termsError;
-  return error ? authErrorMessage(error) : oauthNotice;
+  return error ? authErrorMessage(error, "Couldn't create your account. Try again.") : oauthNotice;
 }

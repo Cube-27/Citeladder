@@ -144,7 +144,7 @@ function rerunPollInterval(
 }
 
 function rerunErrorMessage(error: unknown): string {
-  return serverMessage(error) ?? 'Could not re-audit this page. Please try again.';
+  return serverMessage(error) ?? 'Could not re-audit this page. Try again.';
 }
 
 type HistoryTarget = Readonly<{ workspaceId: string; crawlId: string; siteUrlId: string }>;

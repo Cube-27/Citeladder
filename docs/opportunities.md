@@ -236,16 +236,16 @@ see four statuses:
 
 | Status      | Stored `status`          | Set by                                                                         |
 | ----------- | ------------------------ | ------------------------------------------------------------------------------ |
-| New         | `open`                   | sync or Agent creation; Restore from Declined                                  |
+| New         | `open`                   | sync or Agent creation; Restore from Declined; Undo of an Accept               |
 | In progress | `in_progress`            | Accept (from New or Declined); Work with Agent on a New Action                 |
 | Done        | `implemented`            | Mark implemented (the declaration), from New or In progress                    |
 | Declined    | `dismissed`              | Decline (from New or In progress)                                              |
 
-Every other move is refused (422): In progress never returns to New, and Done is
-final. `PATCH /api/v1/actions/{action_id}` takes one decision and
+Every other move is refused (422): Done is final. `PATCH /api/v1/actions/{action_id}` takes one decision and
 `POST /api/v1/projects/{project_id}/actions/status` takes up to 100 named ids or
-the first 100 Actions a list filter matches (Accept all), in one transaction,
-skipping illegal moves and other workspaces' ids and returning the counts. Each
+the first 100 Actions a list filter matches (Accept N actions), in one transaction,
+skipping illegal moves and other workspaces' ids and returning the counts and
+the moved ids, which the toast's Undo sends back to New. Each
 change appends an [ActionStatusEvent](../frontend/services/api/src/opportunities/action-status.ts);
 a chat started on a New Action accepts it in the chat's transaction. A chat
 output never changes status. Under Done, measurement continues as a badge, not

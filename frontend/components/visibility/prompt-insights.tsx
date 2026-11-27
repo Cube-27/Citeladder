@@ -70,11 +70,6 @@ export function CompetitorSuggestions({
   const deciding = acceptMutation.isPending || rejectMutation.isPending;
   return (
     <TitledSection title={TITLE} description={sectionDescription(tracked, limit)}>
-      {canWrite && full && rows.length > 0 ? (
-        <Notice tone="info" standing>
-          {`Your project tracks the maximum of ${formatCount(limit)} competitors. Remove one to accept a suggestion.`}
-        </Notice>
-      ) : null}
       <DecisionFailure mutation={acceptMutation} action="add that competitor" />
       <DecisionFailure mutation={rejectMutation} action="reject that suggestion" />
       <DataTable label={TITLE} columns={columns(canWrite)} state={tableState(suggestionsQuery)}>
