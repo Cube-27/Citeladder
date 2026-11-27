@@ -30,42 +30,8 @@ function run(
   };
 }
 
-function detail(
-  answers: ProductRun[],
-  prompts: CommerceProductDetail['prompts'],
-): CommerceProductDetail {
-  return {
-    window_days: 30,
-    executions: 6,
-    product: {
-      holder_id: PROMPT,
-      kind: 'owned',
-      name: 'Road Runner',
-      brand: 'Acme',
-      url: 'https://shop.example/road',
-      category_ids: [],
-      visibility: null,
-      appearances: 0,
-      ordered_appearances: 0,
-      win_rate: null,
-      position: null,
-      mentioned_price: { median: null, currency: 'USD', quoted: 0, other_currency: 0 },
-      catalog_price: null,
-      merchants: [],
-      description: '',
-      image_url: null,
-      catalog: null,
-    },
-    competing: [],
-    merchants: [],
-    seen_in: [],
-    sources: [],
-    fan_out_queries: [],
-    prompts,
-    answers,
-    answer_total: 9,
-    actions: [],
-  };
+function detail(answers: ProductRun[], prompts: CommerceProductDetail['prompts']) {
+  return { prompts, answers, answer_total: 9 };
 }
 
 describe('productPromptOutcomes', () => {

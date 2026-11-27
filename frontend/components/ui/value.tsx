@@ -1,6 +1,6 @@
 import { Absence } from '@/components/ui/absence';
 import { Spinner } from '@/components/ui/spinner';
-import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
+import { textRoleClass } from '@/components/ui/text-role';
 import { type DataAvailabilityState, type Formatted, isAbsent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -43,7 +43,7 @@ export function Value({
     );
   return (
     <span className={slot}>
-      <span className={cn(TEXT_ROLE_CLASS[text], 'whitespace-nowrap tabular-nums')}>{value}</span>
+      <span className={cn(textRoleClass(text), 'whitespace-nowrap tabular-nums')}>{value}</span>
     </span>
   );
 }

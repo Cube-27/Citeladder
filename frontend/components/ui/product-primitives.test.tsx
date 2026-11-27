@@ -312,7 +312,7 @@ describe('ArrowLink', () => {
   });
 });
 
-describe('FilterBar and FilterTrigger', () => {
+describe('TableToolbar', () => {
   it('lays every row out in one order: view, search, All filters, count, action', () => {
     render(
       <TableToolbar

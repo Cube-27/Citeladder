@@ -272,8 +272,7 @@ code unchanged, with no renames of exported symbols or behaviour changes, in its
 own commit when possible. Never shrink a file by compressing code, and never
 extend the ignore list or baseline to pass.
 
-`pnpm check:policy` runs the design-system policy (no hex colours outside the
-token stylesheet, WCAG AA contrast of token pairs, the app's Tailwind `@source`
+`pnpm check:policy` runs the design-system policy (raw values in CSS, WCAG AA contrast of token pairs, the app's Tailwind `@source`
 list; the design lint rules are in `vp lint`, see
 [design values](design.md#design-values)) and the architecture guard,
 which also fails on any type-discipline finding

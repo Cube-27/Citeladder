@@ -65,7 +65,7 @@ test('tokens, keywords, zero, multipliers, percentages, gradient stops and exemp
 
 test('a token file may declare ramp colours and read them in rules', () => {
   const css = ':root { --ramp-ink: #111; }\n.a { color: var(--ramp-ink, #111); }';
-  assert.deepEqual(cssValueFindings('apps/app/src/globals.css', css), []);
+  assert.deepEqual(cssValueFindings('apps/app/src/tokens-ramps.css', css), []);
   assert.deepEqual(lines(cssValueFindings('apps/app/src/screen.css', css)), [
     'apps/app/src/screen.css:1',
     'apps/app/src/screen.css:2',

@@ -3,7 +3,7 @@ import { Slot, Slottable } from '@radix-ui/react-slot';
 import { ProjectLink } from '@/components/ui/project-link';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { HEADING_LINK_FACE } from '@/components/ui/link-look';
-import { TEXT_ROLE_CLASS, type TextRole } from '@/components/ui/text-role';
+import { textRoleClass, type TextRole } from '@/components/ui/text-role';
 import { ArrowRight, ArrowUpRight } from '@/lib/icons';
 import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
 import { cn } from '@/lib/utils';
@@ -41,7 +41,7 @@ function textLinkClasses({
     'focus-ring rounded-mark underline decoration-1 underline-offset-3 app:link-rule app:underline-offset-4 transition-underline',
     lineClasses(tone, underline),
   );
-  return text === 'inherit' ? recipe : cn(TEXT_ROLE_CLASS[text], recipe);
+  return text === 'inherit' ? recipe : cn(textRoleClass(text), recipe);
 }
 
 type TextLinkTarget =
@@ -86,6 +86,7 @@ type TextLinkProps = Readonly<
     TextLinkTarget & {
       tone?: TextLinkTone;
       text?: TextLinkText;
+      emphasis?: boolean;
       underline?: TextLinkUnderline;
       truncate?: boolean;
       box?: keyof typeof BOX;
@@ -127,6 +128,7 @@ export function TextLink({
   variant = 'internal',
   tone = 'ink',
   text = 'body',
+  emphasis = false,
   underline = 'always',
   truncate = false,
   href,
@@ -136,12 +138,12 @@ export function TextLink({
   children,
   ...props
 }: TextLinkProps) {
-  const className = box && BOX[box];
+  const className = cn(emphasis && 'font-emphasis', box && BOX[box]);
   if (variant === 'external' && !asChild && !parseAbsoluteHttpUrl(href)) {
     return (
       <span
         className={cn(
-          text === 'inherit' ? className : cn(TEXT_ROLE_CLASS[text], className),
+          text === 'inherit' ? className : cn(textRoleClass(text), className),
           'no-underline',
         )}
         title={props.title}

@@ -352,7 +352,7 @@ function SearchGroupRows({
       {group.label ? (
         <TableRow>
           <TableCell colSpan={COLUMNS.length}>
-            <ClampText text="captionStrong">{group.label}</ClampText>
+            <ClampText text="caption-strong">{group.label}</ClampText>
           </TableCell>
         </TableRow>
       ) : null}

@@ -4,5 +4,5 @@
 @import '../../components/ui/table-phone.css';
 @import '../../components/agent/conversation.css';
 @import '../../components/agent/workspace/page-workspace.css';
-@import '../../components/performance/metric-tiles.css';
+@import '../../components/ui/metric-tiles.css';
 @import '../../lib/markdown/prose.css';

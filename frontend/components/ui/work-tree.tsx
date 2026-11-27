@@ -51,7 +51,7 @@ export function TreeGroupRow({
   ...props
 }: Readonly<ToggleProps & { name: string; count: number; mark?: ReactNode }>) {
   return (
-    <Pressable {...props} data-tree-row="" aria-expanded={open} text="label" look="tree-anchor">
+    <Pressable {...props} data-tree-row="" aria-expanded={open} text="label" look="tree-row" anchor>
       <TreeChevron open={open} />
       <span className="min-w-0 truncate">{name}</span>
       <CountText>{formatCount(count)}</CountText>

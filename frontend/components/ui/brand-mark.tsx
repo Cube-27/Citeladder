@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 
-import { ENGINE_SVG, type EngineKey } from '@/components/ui/engine-svg';
+import { EngineFrame, type EngineKey } from '@/components/ui/engine-svg';
 import { brandInitials } from '@/lib/brand/initials';
 import { brandMarkSources } from '@/lib/brand/mark-sources';
 import { cn } from '@/lib/utils';
@@ -10,25 +10,21 @@ const PLACEMENT = {
     pixels: 14,
     box: 'size-3.5 rounded-mark text-caption-strong',
     image: 'size-3.5',
-    glyph: 'block size-3.5 fill-current',
   },
   inline: {
     pixels: 16,
     box: 'size-4 rounded-mark text-caption-strong',
     image: 'size-4',
-    glyph: 'block size-4 fill-current',
   },
   row: {
     pixels: 20,
     box: 'size-5 rounded-mark text-caption',
     image: 'size-5',
-    glyph: 'block size-5 fill-current',
   },
   header: {
     pixels: 24,
     box: 'bg-panel size-10 rounded-control text-heading',
     image: 'size-6',
-    glyph: 'block size-6 fill-current',
   },
 } as const;
 
@@ -59,9 +55,9 @@ export function BrandMark(
       )}
     >
       {props.kind === 'glyph' ? (
-        <svg {...ENGINE_SVG} data-engine-mark={props.glyph} className={spec.glyph}>
+        <EngineFrame engine={props.glyph} size={placement} flow="block">
           {props.children}
-        </svg>
+        </EngineFrame>
       ) : (
         <LogoImage source={props} placement={placement} />
       )}

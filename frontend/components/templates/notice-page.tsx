@@ -6,20 +6,14 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { CopyStack, Text } from '@/components/ui/typography';
-import { type TextTone } from '@/components/ui/text-role';
-import { CircleAlert, Info, TriangleAlert, type IconGlyph } from '@/lib/icons';
+import { NOTICE_TONE } from '@/components/ui/notice';
+import type { IconGlyph } from '@/lib/icons';
 
 import { PageFrame } from './page-frame';
 
 type NoticeTone = 'info' | 'warning' | 'negative' | 'loading';
 
-const TONE: Readonly<
-  Record<Exclude<NoticeTone, 'loading'>, readonly [glyph: IconGlyph, ink: TextTone, word: string]>
-> = {
-  info: [Info, 'info', 'Notice'],
-  warning: [TriangleAlert, 'warning', 'Warning'],
-  negative: [CircleAlert, 'negative', 'Error'],
-};
+const PAGE_LABEL: Partial<Record<NoticeTone, string>> = { info: 'Notice' };
 
 type NoticeContent = Readonly<{
   tone: NoticeTone;
@@ -42,13 +36,13 @@ function NoticeBlock({
 }: Omit<NoticeContent, 'heading'> & Readonly<{ heading: string | null }>) {
   if (tone === 'loading')
     return <StateBlock kind="loading" label={heading ?? undefined} shape={{ kind: 'list' }} />;
-  const [glyph, ink, word] = TONE[tone];
+  const { glyph, tone: ink, word } = NOTICE_TONE[tone];
   const mark = <Icon icon={icon ?? glyph} tone={ink} />;
   return (
     <Section data-notice-tone={tone}>
       {label === null ? null : (
         <Text as="p" variant="caption-strong">
-          {label ?? word}
+          {label ?? PAGE_LABEL[tone] ?? word}
         </Text>
       )}
       {heading ? (

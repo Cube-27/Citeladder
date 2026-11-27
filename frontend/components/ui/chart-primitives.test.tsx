@@ -1,8 +1,7 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
+
+import { appStylesheet } from '@/test/app-stylesheet';
 
 import { seriesColor } from './chart-tooltip';
 import { PartDonut } from './part-donut';
@@ -10,9 +9,8 @@ import { Sparkline } from './sparkline';
 import { type SERIES_STROKE, SeriesTonesContext, seriesTones } from './step-chart-parts';
 
 describe('seriesColor', () => {
-  it('names a variable globals.css emits for every tone, so a script-drawn series has a colour', () => {
-    const css = readFileSync(join(import.meta.dirname, '../../apps/app/src/globals.css'), 'utf8');
-    const emitted = css.replaceAll(/@theme inline \{[^}]*\}/g, '');
+  it('names a variable the app stylesheet emits for every tone, so a script-drawn series has a colour', () => {
+    const emitted = appStylesheet().replaceAll(/@theme inline \{[^}]*\}/g, '');
     const tones = ['you', 'rival-1', 'rival-2', 'rival-3', 'rival-4', 'other'] satisfies Array<
       keyof typeof SERIES_STROKE
     >;

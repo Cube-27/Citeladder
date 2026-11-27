@@ -1,6 +1,7 @@
 import { useState, type KeyboardEvent } from 'react';
 
 import {
+  SERIES_WEIGHT,
   CHART_AXIS_TEXT,
   CHART_DASH,
   CHART_HEIGHT_CLASS,
@@ -280,7 +281,7 @@ function TrendPlot({
           <path
             d={chartPath(points)}
             fill="none"
-            strokeWidth={line.tone === 1 ? 2.75 : 1.75}
+            strokeWidth={SERIES_WEIGHT[line.tone === 1 ? 'trend-you' : 'trend-series']}
             strokeDasharray={CHART_DASH[line.tone]}
             strokeLinecap="round"
             strokeLinejoin="round"

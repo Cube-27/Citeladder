@@ -1,4 +1,4 @@
-import type { EngineKey } from '@/components/ui/engine-svg';
+import { EngineFrame, type EngineKey, type GlyphSize } from '@/components/ui/engine-svg';
 
 const ENGINE_PATHS: Record<EngineKey, string> = {
   chatgpt:
@@ -30,4 +30,22 @@ export function EngineShapes({ engine, brand }: Readonly<{ engine: EngineKey; br
   return shapes.map((shape, index) => (
     <path key={shape} d={shape} className={brand ? (fills[index] ?? fills[0]) : undefined} />
   ));
+}
+
+export function EngineGlyph({
+  engine,
+  brand,
+  size,
+  flow,
+}: Readonly<{
+  engine: EngineKey;
+  brand: boolean;
+  size: GlyphSize;
+  flow: 'block' | 'item';
+}>) {
+  return (
+    <EngineFrame engine={engine} size={size} flow={flow}>
+      <EngineShapes engine={engine} brand={brand} />
+    </EngineFrame>
+  );
 }

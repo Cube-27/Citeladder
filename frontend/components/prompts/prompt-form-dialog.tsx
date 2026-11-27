@@ -138,7 +138,7 @@ export function PromptFormDialog({
           </Field>
 
           {isEdit ? (
-            <Columns template="halves" gap="workspace">
+            <Columns template="halves-desktop" gap="workspace">
               <Field label="Intent">
                 {(props) => (
                   <Controller

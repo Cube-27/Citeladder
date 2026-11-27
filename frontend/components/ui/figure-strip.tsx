@@ -6,7 +6,7 @@ import { FIGURE_MIN_WIDTH, useStripWidth } from '@/components/ui/figure-rows';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Section, SectionBleed, useOnPage } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
-import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
+import { textRoleClass } from '@/components/ui/text-role';
 import {
   type Absent,
   availabilityLabel,
@@ -225,7 +225,7 @@ function reportsChange(delta: ReactNode): boolean {
 }
 
 function FigureValue({ segment, textValues }: FigurePart) {
-  const valueText = TEXT_ROLE_CLASS[textValues ? 'heading' : 'figure'];
+  const valueText = textRoleClass(textValues ? 'heading' : 'figure');
   if (segment.loading)
     return (
       <span className="flex items-center self-center">

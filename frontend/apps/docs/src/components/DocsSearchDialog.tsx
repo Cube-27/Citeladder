@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Button, IconButton } from '@/components/ui/button';
+import { Highlight } from '@/components/ui/highlight';
 import { Icon } from '@/components/ui/icon';
 import { Kbd } from '@/components/ui/kbd';
 import { Inline } from '@/components/ui/layout';
@@ -247,13 +248,7 @@ function Marked({ text, query }: Readonly<{ text: string; query: string }>) {
   return highlight(text, query).map((segment) => {
     const start = offset;
     offset += segment.text.length;
-    return segment.match ? (
-      <mark key={start} className="cl-mark">
-        {segment.text}
-      </mark>
-    ) : (
-      segment.text
-    );
+    return segment.match ? <Highlight key={start}>{segment.text}</Highlight> : segment.text;
   });
 }
 

@@ -54,4 +54,14 @@
 :root {
   --type-base: 0.875rem;
   --type-step: 0.125rem;
+  --markdown-source-h1: var(--text-display);
+  --markdown-source-h1--line-height: var(--text-display--line-height);
+  --markdown-source-h2: var(--text-title);
+  --markdown-source-h2--line-height: var(--text-title--line-height);
+  --markdown-source-h3: var(--text-heading);
+  --markdown-source-h3--line-height: var(--text-heading--line-height);
+  --markdown-prose-h2: var(--text-heading);
+  --markdown-prose-h2--line-height: var(--text-heading--line-height);
+  --markdown-prose-h3: var(--text-label);
+  --markdown-prose-h3--line-height: var(--text-label--line-height);
 }

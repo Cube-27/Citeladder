@@ -6,6 +6,7 @@ import { EngineMark } from '@/components/ui/engine-mark';
 import { Meter } from '@/components/ui/meter';
 import { Rungs } from '@/components/ui/rungs';
 import { Sparkline } from '@/components/ui/sparkline';
+import { Highlight } from '@/components/ui/highlight';
 
 import {
   ANSWER_SOURCES,
@@ -50,9 +51,8 @@ export function ScreenAnswer() {
     >
       <div className="cl-vig-panel">
         <p>
-          <strong>Acme Analytics</strong> is{' '}
-          <mark className="cl-mark">the easiest place to start</mark>, with a free tier and session
-          replay in one plan. <Cite index={1} />
+          <strong>Acme Analytics</strong> is <Highlight>the easiest place to start</Highlight>, with
+          a free tier and session replay in one plan. <Cite index={1} />
         </p>
         <p>
           <strong>Northwind</strong> suits teams that already run a data warehouse.{' '}

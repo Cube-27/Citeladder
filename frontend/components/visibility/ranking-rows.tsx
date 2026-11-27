@@ -71,7 +71,7 @@ export function RankingRowsTable({
               <TableCell>
                 <Inline as="span">
                   <BrandMark name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
-                  <ClampText lines={1} text="emphasis">
+                  <ClampText lines={1} emphasis>
                     {row.is_brand ? (
                       row.name
                     ) : (

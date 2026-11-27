@@ -43,6 +43,11 @@ function isFrontend(path) {
 
 const API_EXTERNAL_INPUTS = [
   'frontend/apps/app/src/globals.css',
+  'frontend/apps/app/src/tokens-ramps.css',
+  'frontend/apps/app/src/tokens-roles.css',
+  'frontend/apps/app/src/tokens-modes.css',
+  'frontend/apps/app/src/app-utilities.css',
+  'frontend/apps/app/src/app-rules.css',
   'frontend/apps/docs/public/templates/',
   'frontend/apps/docs/src/content/ai-traffic.md',
   'frontend/apps/docs/src/data/mcp-tools.json',

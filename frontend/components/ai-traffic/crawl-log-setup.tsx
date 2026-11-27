@@ -93,7 +93,7 @@ export function CrawlLogSetup({
           Setup guide: {chosen.label}
         </TextLink>
       </Stack>
-      <Columns template="halves" gap="workspace">
+      <Columns template="halves-desktop" gap="workspace">
         <Field label="Site origin" wide>
           {(field) => (
             <Input {...field} value={origin} onChange={(e) => setOrigin(e.target.value)} />

@@ -20,13 +20,11 @@ COPY frontend/components ./components
 COPY frontend/lib ./lib
 COPY frontend/vp-shared-config.ts ./vp-shared-config.ts
 COPY frontend/vite.config.ts ./vite.config.ts
-COPY frontend/apps/app/src/globals.css ./apps/app/src/globals.css
-COPY frontend/apps/app/src/ui-motion.css ./apps/app/src/ui-motion.css
-COPY frontend/apps/app/src/app-type.css ./apps/app/src/app-type.css
+COPY frontend/apps/app/src/*.css ./apps/app/src/
 RUN pnpm --filter @citeladder/mcp-app build \
     && mkdir -p services/api/assets/mcp-app/v1 \
     && cp packages/mcp-app/dist/analytics.html services/api/assets/mcp-app/v1/analytics.html \
-    && cp apps/app/src/globals.css services/api/assets/design-tokens.css
+    && sed -n "s/^@import '\\.\\/\\(.*\\)';$/apps\\/app\\/src\\/\\1/p" apps/app/src/globals.css | xargs cat > services/api/assets/design-tokens.css
 RUN pnpm --filter @citeladder/api deploy --prod --ignore-scripts /runtime
 # Node strips our workspace TypeScript only outside node_modules. Keep the
 # deployed contracts package linked to a source directory, as in development.

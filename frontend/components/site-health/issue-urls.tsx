@@ -16,7 +16,7 @@ import { PageOpenContext } from '@/components/site-health/page-open-context';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount, sharedOrigin } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
-import { scoreBand, type ScoreBand } from '@/lib/score-band';
+import { scoreTone } from '@/components/ui/score-gauge';
 import { formatScore } from '@/lib/site-health/status';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
@@ -30,19 +30,9 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'aeo', label: 'AEO', kind: 'number', width: 'figure' },
 ];
 
-const SCORE_TONE = {
-  low: 'negative',
-  mid: 'warning',
-  high: 'positive',
-} as const satisfies Record<ScoreBand, string>;
-
 function Score({ score }: Readonly<{ score: number | null }>) {
   if (score === null) return <Absence state="not_measured" />;
-  return (
-    <StatusMark tone={SCORE_TONE[scoreBand(Math.round(score))]}>
-      {printed(formatScore(score))}
-    </StatusMark>
-  );
+  return <StatusMark tone={scoreTone(score)}>{printed(formatScore(score))}</StatusMark>;
 }
 
 export function IssueUrlTable({

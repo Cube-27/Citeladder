@@ -138,8 +138,17 @@ async function tokenSource(): Promise<string> {
     return await readFile(new URL('../../assets/design-tokens.css', import.meta.url), 'utf8');
   } catch (error) {
     if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
-    return readFile(new URL('../../../../apps/app/src/globals.css', import.meta.url), 'utf8');
+    return appStylesheet();
   }
+}
+
+async function appStylesheet(): Promise<string> {
+  const entry = new URL('../../../../apps/app/src/globals.css', import.meta.url);
+  const parts = [...(await readFile(entry, 'utf8')).matchAll(/^@import '(\.\/[\w-]+\.css)';$/gmu)];
+  const sheets = await Promise.all(
+    parts.map(([, part = '']) => readFile(new URL(part, entry), 'utf8')),
+  );
+  return sheets.join('\n');
 }
 
 function parsePalette(css: string): Palette {

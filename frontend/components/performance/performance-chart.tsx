@@ -2,7 +2,8 @@ import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { CHART_HEIGHT_PX, chartTicks, useChartWidth } from '@/components/ui/chart';
 import { ChartFrame } from '@/components/ui/chart-frame';
-import { AXIS_PROPS, LINE_CURSOR, LineTooltipCard } from '@/components/ui/chart-tooltip';
+import { AXIS_PROPS, ChartText, LINE_CURSOR, LineTooltipCard } from '@/components/ui/chart-tooltip';
+import { METRIC_COLOR } from '@/components/ui/metric-tiles';
 import { SeriesTable, shownWith, type TrendPoint } from '@/components/ui/series-data';
 import { StateBlock } from '@/components/ui/state-block';
 import { formatWindowDate, pluralCount } from '@/lib/format';
@@ -12,13 +13,6 @@ import {
   type PerformanceChartPoint,
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
-
-const METRIC_COLOR: Record<PerformanceMetricKey, string> = {
-  clicks: 'var(--color-metric-clicks)',
-  impressions: 'var(--color-metric-impressions)',
-  ctr: 'var(--color-metric-ctr)',
-  position: 'var(--color-metric-position)',
-};
 
 export type ChartSeries = {
   key: PerformanceMetricKey;
@@ -255,16 +249,9 @@ function DayTick({
 }>) {
   if (!payload) return null;
   return (
-    <text
-      x={x}
-      y={y}
-      dy={12}
-      textAnchor={edgeAnchor(payload.value, edgeTicks)}
-      fill="var(--text-color-ink-2)"
-      fontSize={12}
-    >
+    <ChartText x={x} y={y} dy={12} textAnchor={edgeAnchor(payload.value, edgeTicks)}>
       {dayLabels[payload.value] ?? ''}
-    </text>
+    </ChartText>
   );
 }
 
@@ -279,15 +266,13 @@ function AxisCaption({
 }>) {
   if (!viewBox || !('width' in viewBox)) return null;
   return (
-    <text
+    <ChartText
       x={side === 'left' ? viewBox.x : (viewBox.x ?? 0) + (viewBox.width ?? 0)}
       y={(viewBox.y ?? 0) - 14}
       textAnchor={side === 'left' ? 'start' : 'end'}
-      fill="var(--text-color-ink-2)"
-      fontSize={12}
     >
       {caption}
-    </text>
+    </ChartText>
   );
 }
 

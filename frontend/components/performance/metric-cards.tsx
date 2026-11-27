@@ -11,9 +11,7 @@ import {
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
 import { FigureStrip } from '@/components/ui/figure-strip';
-import { SectionBleed } from '@/components/ui/section';
-import './metric-tiles.css';
-import { Inline } from '@/components/ui/layout';
+import { MetricTile, MetricTiles } from '@/components/ui/metric-tiles';
 
 const METRIC_HELP: Record<PerformanceMetricKey, string> = {
   clicks: 'Total clicks from Google Search results',
@@ -47,50 +45,45 @@ export function MetricCards({
   'data-testid'?: string;
 }>) {
   return (
-    <SectionBleed>
-      <fieldset aria-label="Search Console metrics" data-testid={testId} className="metric-tiles">
-        {METRIC_CARDS.map((card) => {
-          const plotted = active.has(card.key);
-          const label = TILE_LABEL[card.key];
-          return (
-            <div
-              key={card.key}
-              data-metric={card.key}
-              data-on={plotted || undefined}
-              className="metric-tile"
-            >
-              <Inline justify="between">
-                <Checkbox
-                  label={label}
-                  checked={plotted}
-                  onCheckedChange={() => onToggle(card.key)}
-                  box="shrink"
-                />
-                <span data-metric-help="">
-                  <InfoHint label={`About ${label.toLowerCase()}`}>
-                    {METRIC_HELP[card.key]}
-                  </InfoHint>
-                </span>
-              </Inline>
-              <Text variant="figure" numeric wrap="nowrap">
-                {loading ? (
-                  <Spinner label="Loading" />
-                ) : (
-                  printed(formatMetric(card.key, selected.totals[card.key] ?? null))
-                )}
+    <MetricTiles label="Search Console metrics" testId={testId}>
+      {METRIC_CARDS.map((card) => {
+        const plotted = active.has(card.key);
+        const label = TILE_LABEL[card.key];
+        return (
+          <MetricTile
+            key={card.key}
+            metric={card.key}
+            on={plotted}
+            toggle={
+              <Checkbox
+                label={label}
+                checked={plotted}
+                onCheckedChange={() => onToggle(card.key)}
+                box="shrink"
+              />
+            }
+            help={
+              <InfoHint label={`About ${label.toLowerCase()}`}>{METRIC_HELP[card.key]}</InfoHint>
+            }
+          >
+            <Text variant="figure" wrap="nowrap">
+              {loading ? (
+                <Spinner label="Loading" />
+              ) : (
+                printed(formatMetric(card.key, selected.totals[card.key] ?? null))
+              )}
+            </Text>
+            {comparison ? (
+              <Text variant="caption" wrap="truncate" numeric>
+                {comparison.evidence_state === 'not_run'
+                  ? `${compareLabel} (not imported)`
+                  : `${compareLabel}: ${formattedText(formatMetric(card.key, comparison.totals[card.key] ?? null))}`}
               </Text>
-              {comparison ? (
-                <Text variant="caption" wrap="truncate" numeric>
-                  {comparison.evidence_state === 'not_run'
-                    ? `${compareLabel} (not imported)`
-                    : `${compareLabel}: ${formattedText(formatMetric(card.key, comparison.totals[card.key] ?? null))}`}
-                </Text>
-              ) : null}
-            </div>
-          );
-        })}
-      </fieldset>
-    </SectionBleed>
+            ) : null}
+          </MetricTile>
+        );
+      })}
+    </MetricTiles>
   );
 }
 

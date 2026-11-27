@@ -402,6 +402,5 @@ export const fmtConfig: OxfmtConfig = {
     '**/pnpm-lock.yaml',
     '**/services/*/src/generated/**',
     '**/packages/*/src/generated/**',
-    '**/apps/app/src/globals.css',
   ],
 };

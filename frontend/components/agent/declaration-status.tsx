@@ -85,7 +85,7 @@ export function DeclarationStatus({
         {revisionNote(declaration.output_revision_id, shownRevision)}
       </Text>
       <Deployment declaration={declaration} />
-      <Text as="h3" variant="label" ref={heading} tabIndex={-1} focusable box="fit">
+      <Text as="h3" variant="label" ref={heading} tabIndex={-1} focusable box="fit-content">
         Measurement
       </Text>
       <Measurement declaration={declaration} />

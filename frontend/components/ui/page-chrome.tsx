@@ -1,5 +1,6 @@
 import type { ReactNode, Ref, RefObject } from 'react';
 
+import { SectionStack } from '@/components/ui/section';
 import { TAB_BASELINE } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
@@ -112,11 +113,7 @@ export function PageBody({
 }
 
 export function PageSections({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div data-page-content="" className="gap-section flex min-w-0 flex-col">
-      {children}
-    </div>
-  );
+  return <SectionStack data-page-content="">{children}</SectionStack>;
 }
 
 export function RailColumns({

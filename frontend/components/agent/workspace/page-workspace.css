@@ -21,16 +21,16 @@
   padding: 0 var(--spacing-card);
 }
 .page-editor .cm-editor .page-editor-h1 {
-  font-size: var(--text-display);
-  line-height: var(--text-display--line-height);
+  font-size: var(--markdown-source-h1);
+  line-height: var(--markdown-source-h1--line-height);
 }
 .page-editor .cm-editor .page-editor-h2 {
-  font-size: var(--text-title);
-  line-height: var(--text-title--line-height);
+  font-size: var(--markdown-source-h2);
+  line-height: var(--markdown-source-h2--line-height);
 }
 .page-editor .cm-editor .page-editor-h3 {
-  font-size: var(--text-heading);
-  line-height: var(--text-heading--line-height);
+  font-size: var(--markdown-source-h3);
+  line-height: var(--markdown-source-h3--line-height);
 }
 .page-editor .cm-editor :is(.page-editor-h1, .page-editor-h2, .page-editor-h3) {
   padding-top: calc(var(--spacing) * 2);

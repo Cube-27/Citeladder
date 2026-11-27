@@ -1,0 +1,211 @@
+@import './ui-motion.css';
+
+@custom-variant rail (@media (min-width: 900px));
+@custom-variant shell (@media (min-width: 1280px));
+@custom-variant desktop (@media (min-width: 981px));
+@custom-variant phone (@media (max-width: 767px));
+@custom-variant labelled (&:where([data-sidebar-state="expanded"] *), &:where([data-nav-drawer] *));
+
+@custom-variant app (&:where(:not([data-public-surface] *)));
+@custom-variant outside-main-column (&:where(:not([data-main-column] *)));
+@custom-variant column-split {
+  @container main (min-width: 688px) {
+    @slot;
+  }
+  @media (min-width: 981px) {
+    @variant outside-main-column {
+      @slot;
+    }
+  }
+}
+@custom-variant column-wide {
+  @container main (min-width: 954px) {
+    @slot;
+  }
+  @media (min-width: 1280px) {
+    @variant outside-main-column {
+      @slot;
+    }
+  }
+}
+
+:root {
+  --ramp-white: oklch(100% 0 0);
+  --ramp-white-a4: rgb(255 255 255 / 4%);
+  --ramp-white-a5: oklch(100% 0 0 / 5%);
+  --ramp-white-a6: oklch(100% 0 0 / 6%);
+  --ramp-white-a7-srgb: rgb(255 255 255 / 7%);
+  --ramp-white-a8: oklch(100% 0 0 / 8%);
+  --ramp-white-a10: oklch(100% 0 0 / 10%);
+  --ramp-white-a10-srgb: rgb(255 255 255 / 10%);
+  --ramp-white-a11: rgb(255 255 255 / 11%);
+  --ramp-white-a16: oklch(100% 0 0 / 16%);
+  --ramp-white-a22: rgb(255 255 255 / 22%);
+  --ramp-white-a30: rgb(255 255 255 / 30%);
+  --ramp-white-srgb: #ffffff;
+  --ramp-black: oklch(0% 0 0);
+  --ramp-black-a2: rgb(0 0 0 / 2%);
+  --ramp-black-a3: rgb(0 0 0 / 3%);
+  --ramp-black-a4: rgb(0 0 0 / 4%);
+  --ramp-black-a6: oklch(0% 0 0 / 6%);
+  --ramp-black-a6-srgb: rgb(0 0 0 / 6%);
+  --ramp-black-a8: oklch(0% 0 0 / 8%);
+  --ramp-black-a8-srgb: rgb(0 0 0 / 8%);
+  --ramp-black-a10: oklch(0% 0 0 / 10%);
+  --ramp-black-a11: rgb(0 0 0 / 11%);
+  --ramp-black-a22: rgb(0 0 0 / 22%);
+  --ramp-black-a30: oklch(0% 0 0 / 30%);
+  --ramp-black-a30-srgb: rgb(0 0 0 / 30%);
+  --ramp-black-a40: oklch(0% 0 0 / 40%);
+  --ramp-black-a50: oklch(0% 0 0 / 50%);
+  --ramp-black-a50-srgb: rgb(0 0 0 / 50%);
+  --ramp-black-a60: oklch(0% 0 0 / 60%);
+  --ramp-black-a64: oklch(0% 0 0 / 64%);
+  --ramp-neutral-14_5: oklch(14.5% 0 0);
+  --ramp-neutral-17_8: oklch(17.8% 0 0);
+  --ramp-neutral-17_8-a6: oklch(17.8% 0 0 / 6%);
+  --ramp-neutral-17_8-a8: oklch(17.8% 0 0 / 8%);
+  --ramp-neutral-17_8-a14: oklch(17.8% 0 0 / 14%);
+  --ramp-neutral-19_6: oklch(19.6% 0 0);
+  --ramp-neutral-22: oklch(22% 0 0);
+  --ramp-neutral-23_5: oklch(23.5% 0 0);
+  --ramp-neutral-26_9: oklch(26.9% 0 0);
+  --ramp-neutral-28_5: oklch(28.5% 0 0);
+  --ramp-neutral-34_8: oklch(34.8% 0 0);
+  --ramp-neutral-41: oklch(41% 0 0);
+  --ramp-neutral-43_9: oklch(43.9% 0 0);
+  --ramp-neutral-56: oklch(56% 0 0);
+  --ramp-neutral-61_7: oklch(61.7% 0 0);
+  --ramp-neutral-65: oklch(65% 0 0);
+  --ramp-neutral-72_5: oklch(72.5% 0 0);
+  --ramp-neutral-81_4: oklch(81.4% 0 0);
+  --ramp-neutral-87: oklch(87% 0 0);
+  --ramp-neutral-92_2: oklch(92.2% 0 0);
+  --ramp-neutral-94_3: oklch(94.3% 0 0);
+  --ramp-neutral-96_7: oklch(96.7% 0 0);
+  --ramp-neutral-97_02: oklch(97.02% 0 0);
+  --ramp-neutral-98_6: oklch(98.6% 0.0004 286);
+  --ramp-neutral-99_1: oklch(99.11% 0 0);
+  --ramp-neutral-99_1-a15: oklch(99.11% 0 0 / 15%);
+  --ramp-zinc-12: oklch(12% 0.005 285.823);
+  --ramp-zinc-15: oklch(15% 0.005 285.823);
+  --ramp-zinc-21: oklch(21.03% 0.0059 285.89);
+  --ramp-zinc-21-a15: oklch(21.03% 0.0059 285.89 / 15%);
+  --ramp-zinc-23_5: oklch(23.5% 0.0059 285.89);
+  --ramp-zinc-25_7: oklch(25.7% 0.0037 286.14);
+  --ramp-zinc-27_4: oklch(27.4% 0.006 286.033);
+  --ramp-zinc-30_5: oklch(30.5% 0.006 286.033);
+  --ramp-zinc-39_6: oklch(39.64% 0.01 285.93);
+  --ramp-zinc-47: oklch(47% 0.0138 285.94);
+  --ramp-zinc-47-a50: oklch(47% 0.0138 285.94 / 50%);
+  --ramp-zinc-52_5: oklch(52.5% 0.0137 285.9);
+  --ramp-zinc-64_5: oklch(64.5% 0.0137 285.9);
+  --ramp-zinc-72: oklch(72% 0.015 286.067);
+  --ramp-zinc-72-a50: oklch(72% 0.015 286.067 / 50%);
+  --ramp-zinc-91_2: oklch(91.2% 0.0012 286);
+  --ramp-zinc-94: oklch(94% 0.001 286.375);
+  --ramp-zinc-95_2: oklch(95.24% 0.0013 286.37);
+  --ramp-slate-27_2: oklch(27.21% 0.0024 247.91);
+  --ramp-slate-61: oklch(61% 0.0193 264.4);
+  --ramp-stone-21_8-a6: oklch(21.8% 0.006 92 / 6%);
+  --ramp-stone-21_8-a18: oklch(21.8% 0.006 92 / 18%);
+  --ramp-stone-31_8: oklch(31.8% 0.0045 67.7);
+  --ramp-stone-87_3: oklch(87.3% 0.01 87.5);
+  --ramp-red-24_8: oklch(24.8% 0.073 14);
+  --ramp-red-28: oklch(28% 0.044 7);
+  --ramp-red-52_4: oklch(52.36% 0.2032 21.9);
+  --ramp-red-53_3: oklch(53.3% 0.191 16);
+  --ramp-red-62_6: oklch(62.6% 0.206 29);
+  --ramp-red-72_8: oklch(72.8% 0.171 13.6);
+  --ramp-red-74_8: oklch(74.8% 0.157 10.3);
+  --ramp-red-93_8: oklch(93.8% 0.032 8);
+  --ramp-red-94_8: oklch(94.8% 0.022 4);
+  --ramp-orange-26_2: oklch(26.2% 0.057 43);
+  --ramp-orange-27: oklch(27% 0.041 43);
+  --ramp-orange-40_5-h38: oklch(40.5% 0.135 37.5);
+  --ramp-orange-40_5-h39: oklch(40.5% 0.134 39.3);
+  --ramp-orange-48_5-h38: oklch(48.5% 0.158 37.5);
+  --ramp-orange-48_5-h39: oklch(48.5% 0.157 39.3);
+  --ramp-orange-52_3: oklch(52.3% 0.1667 37.5);
+  --ramp-orange-53_1: oklch(53.1% 0.168 37.6);
+  --ramp-orange-54_5-h38: oklch(54.5% 0.175 37.5);
+  --ramp-orange-54_5-h39: oklch(54.5% 0.173 39.3);
+  --ramp-orange-63_4-h38: oklch(63.4% 0.1973 37.5);
+  --ramp-orange-63_39-h38: #e8501a;
+  --ramp-orange-70_3-h39: oklch(70.3% 0.194 39.3);
+  --ramp-orange-70_31-h39: #ff6a33;
+  --ramp-orange-75_3: oklch(75.3% 0.155 41.6);
+  --ramp-orange-77: oklch(77% 0.1428 43.5);
+  --ramp-orange-94_2: oklch(94.2% 0.032 47);
+  --ramp-orange-95: oklch(95% 0.024 47);
+  --ramp-amber-27: oklch(27% 0.0354 86);
+  --ramp-amber-29_7: oklch(29.7% 0.052 81);
+  --ramp-amber-48_8: oklch(48.8% 0.1102 64.2);
+  --ramp-amber-50_8: oklch(50.8% 0.108 73.3);
+  --ramp-amber-78: oklch(78% 0.13 60);
+  --ramp-amber-81_4: oklch(81.4% 0.14 81.3);
+  --ramp-amber-82: oklch(82% 0.142 79);
+  --ramp-amber-83: oklch(83.04% 0.1698 84);
+  --ramp-amber-95_9-h85: oklch(95.9% 0.0436 85);
+  --ramp-amber-95_9-h91: oklch(95.9% 0.046 91);
+  --ramp-green-27: oklch(27% 0.035 157);
+  --ramp-green-47_1: oklch(47.1% 0.1065 154.6);
+  --ramp-green-64_8: oklch(64.8% 0.1603 148.5);
+  --ramp-green-81_4: oklch(81.4% 0.18 147.6);
+  --ramp-green-95_2: oklch(95.2% 0.022 160);
+  --ramp-teal-27_6: oklch(27.6% 0.0378 187);
+  --ramp-teal-48_7: oklch(48.7% 0.0817 189.2);
+  --ramp-teal-53_4: oklch(53.4% 0.0855 184.4);
+  --ramp-teal-54_3: oklch(54.3% 0.0889 188.8);
+  --ramp-teal-62: oklch(62% 0.11 180);
+  --ramp-teal-75: oklch(75% 0.1072 183.6);
+  --ramp-teal-78_6: oklch(78.6% 0.1143 186.6);
+  --ramp-teal-94: oklch(94% 0.0295 189);
+  --ramp-blue-26: oklch(26% 0.052 259);
+  --ramp-blue-27: oklch(27% 0.0529 266);
+  --ramp-blue-49_7: oklch(49.7% 0.184 263);
+  --ramp-blue-50_2: oklch(50.2% 0.164 258.98);
+  --ramp-blue-52_3: oklch(52.3% 0.1 244);
+  --ramp-blue-53_2: oklch(53.2% 0.1214 251.5);
+  --ramp-blue-63: oklch(63% 0.18 260);
+  --ramp-blue-68: oklch(68% 0.15 258);
+  --ramp-blue-74_2: oklch(74.2% 0.1035 243.3);
+  --ramp-blue-75_5: oklch(75.5% 0.126 259.6);
+  --ramp-blue-76_6: oklch(76.6% 0.119 265.7);
+  --ramp-blue-94_3: oklch(94.3% 0.023 258);
+  --ramp-blue-94_5: oklch(94.5% 0.022 266);
+  --ramp-violet-41: oklch(41% 0.128 289.3);
+  --ramp-violet-43_6: oklch(43.6% 0.176 291.5);
+  --ramp-violet-58: oklch(58% 0.16 295);
+  --ramp-violet-66_3: oklch(66.3% 0.169 293);
+  --ramp-brand-chatgpt: #10a37f;
+  --ramp-brand-claude: #d97757;
+  --ramp-brand-gemini: #4796e3;
+
+  color-scheme: light;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+
+  --scrollbar-thumb: color-mix(in oklch, var(--color-mark-ink-2) 35%, transparent);
+
+  --shadow-button:
+    inset 0 1px 0 var(--ramp-white-a6), 0 1px 1px var(--ramp-black-a10),
+    0 2px 6px -1px var(--ramp-black-a6);
+  --shadow-xs: 0 0 0 1px var(--ramp-neutral-17_8-a8), 0 1px 2px var(--ramp-neutral-17_8-a6);
+  --shadow-pop:
+    0 0 0 1px var(--ramp-neutral-17_8-a8), 0 2px 6px var(--ramp-neutral-17_8-a6),
+    0 16px 40px -8px var(--ramp-neutral-17_8-a14);
+  --shadow-sheet: 0 1px 2px var(--ramp-stone-21_8-a6), 0 12px 32px -8px var(--ramp-stone-21_8-a18);
+
+  --target-hit: var(--spacing-target);
+  --row-app: 40px;
+
+  --page-header-band: 48px;
+  --scrollbar-size: 8px;
+  --table-head-height: 36px;
+  --table-head-divider: 16px;
+  --figure-cell-min: 128px;
+  --icon-tile-size: 40px;
+  --kbd-height: 24px;
+}

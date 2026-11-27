@@ -1,4 +1,3 @@
-import { cn } from '@/lib/utils';
 import { useContext, useId, type ComponentProps, type ReactNode, type RefObject } from 'react';
 
 import { BusyRung } from '@/components/ui/rung-meter';
@@ -17,17 +16,18 @@ import {
 } from '@/components/ui/data-table-body';
 import { TableToolbar, type TableToolbarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
-import { Section, SectionBleed, SectionHeader } from '@/components/ui/section';
+import {
+  Section,
+  SectionBleed,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
-import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  SectionTitleRoleContext,
-  StateHeadingLevelContext,
-  type HeadingLevel,
-} from '@/components/ui/state-heading-level';
+import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
 
 import './data-table.css';
 import './generated/data-table-positions.css';
@@ -326,22 +326,18 @@ function DataTableHeader({
   actions?: ReactNode;
   toolbar?: TableToolbarProps;
 }>) {
-  const role = useContext(SectionTitleRoleContext);
   const allActions = joinActions(toolbar?.actions, actions);
   const named = Boolean(title || description);
   if (!named && !allActions && !toolbar) return null;
-  const Heading = level === 3 ? 'h3' : 'h2';
   const heading = named ? (
     <>
       {title ? (
-        <Heading id={headingId} className={cn(TEXT_ROLE_CLASS[role], 'min-w-0 truncate')}>
+        <SectionTitle id={headingId} level={level === 3 ? 3 : 2} truncate>
           {title}
-        </Heading>
+        </SectionTitle>
       ) : null}
       {description ? (
-        <p data-data-table-description="" className="text-body text-ink-2 max-w-copy">
-          {description}
-        </p>
+        <SectionDescription data-data-table-description="">{description}</SectionDescription>
       ) : null}
     </>
   ) : null;

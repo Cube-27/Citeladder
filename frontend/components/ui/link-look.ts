@@ -7,7 +7,7 @@ export const CHIP_FACE =
   'text-caption text-ink-2 inline-flex max-w-full min-w-0 items-center gap-1 rounded-mark border px-1 align-baseline no-underline';
 
 export const CITATION_FACE =
-  'text-ink inline-flex min-h-control-sm max-w-full items-center gap-1 rounded-sm ps-1 pe-3 align-middle text-body no-underline';
+  'bg-state-selected data-own:bg-accent-wash data-bare:ps-2 text-ink inline-flex min-h-control-sm max-w-full items-center gap-1 rounded-sm ps-1 pe-3 align-middle text-body no-underline';
 
 const CITATION_PRESS = 'focus-ring hover:overlay-hover';
 
@@ -24,14 +24,11 @@ export const LINK_LOOK = {
     'hover:text-ink focus-ring rounded-mark font-emphasis block min-h-6 max-w-68 min-w-6 truncate px-1 py-0.5 hover:underline',
   heading: cn(HEADING_LINK_FACE, 'group focus-ring'),
   tag: cn(TAG_FACE, 'hover:overlay-hover focus-ring align-middle no-underline'),
+  citation: cn(CITATION_FACE, CITATION_PRESS),
   'source-chip': cn(
     CHIP_FACE,
     'border-transparent bg-state-hover text-ink hover:overlay-hover no-underline',
   ),
-  citation: cn(CITATION_FACE, 'bg-state-selected', CITATION_PRESS),
-  'citation-own': cn(CITATION_FACE, 'bg-accent-wash', CITATION_PRESS),
-  'citation-bare': cn(CITATION_FACE, 'bg-state-selected ps-2', CITATION_PRESS),
-  'citation-own-bare': cn(CITATION_FACE, 'bg-accent-wash ps-2', CITATION_PRESS),
 } as const;
 
 export type LinkLook = keyof typeof LINK_LOOK;

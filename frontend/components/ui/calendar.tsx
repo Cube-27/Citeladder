@@ -141,7 +141,8 @@ export function Calendar({
                       onClick={() => onSelect(iso)}
                       text="body"
                       numeric
-                      look={isSelected ? 'day-selected' : 'day'}
+                      look="day"
+                      selected={isSelected}
                       tone={outside && !isSelected ? 'ink-2' : undefined}
                     >
                       {day.getUTCDate()}

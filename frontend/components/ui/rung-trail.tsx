@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Icon } from '@/components/ui/icon';
 import { SectionBleed } from '@/components/ui/section';
 import { Spinner } from '@/components/ui/spinner';
-import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
+import { textRoleClass } from '@/components/ui/text-role';
 import { Check, ChevronRight, CircleHelp, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
@@ -88,7 +88,7 @@ export function RungTrail({
             </span>
             <span
               className={cn(
-                TEXT_ROLE_CLASS[step.status === 'running' ? 'label' : 'body'],
+                textRoleClass(step.status === 'running' ? 'label' : 'body'),
                 step.status === 'pending' ? 'text-ink-2' : undefined,
               )}
             >
@@ -129,7 +129,7 @@ const ROW_SIZE = {
     railTop: 'top-2.5',
     bridge: '-bottom-2 h-auto',
     gap: '',
-    label: (running: boolean) => TEXT_ROLE_CLASS[running ? 'label' : 'body'],
+    label: (running: boolean) => textRoleClass(running ? 'label' : 'body'),
   },
   lg: {
     row: '',
@@ -138,7 +138,7 @@ const ROW_SIZE = {
     railTop: 'top-3',
     bridge: 'bottom-0',
     gap: 'pb-3',
-    label: (running: boolean) => TEXT_ROLE_CLASS[running ? 'heading' : 'bodyLg'],
+    label: (running: boolean) => textRoleClass(running ? 'heading' : 'body-lg'),
   },
 } as const satisfies Record<RowSize, unknown>;
 
@@ -244,7 +244,7 @@ export function SetupSteps({
             </span>
             <span
               className={cn(
-                TEXT_ROLE_CLASS[current ? 'label' : 'body'],
+                textRoleClass(current ? 'label' : 'body'),
                 cn('min-w-0 truncate', step.state === 'waiting' ? 'text-ink-2' : 'text-ink'),
               )}
             >

@@ -1,12 +1,7 @@
 import { BrandMark } from '@/components/ui/brand-mark';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
-import { CITATION_FACE, type LinkLook } from '@/components/ui/link-look';
+import { CITATION_FACE } from '@/components/ui/link-look';
 import { cn } from '@/lib/utils';
-
-function citationLook(own: boolean, bare: boolean): LinkLook {
-  if (own) return bare ? 'citation-own-bare' : 'citation-own';
-  return bare ? 'citation-bare' : 'citation';
-}
 
 export function Citation({
   domain,
@@ -52,13 +47,16 @@ export function Citation({
   );
   const bare = index === undefined;
   return href ? (
-    <ExternalHttpLink href={href} look={citationLook(own, bare)}>
+    <ExternalHttpLink
+      href={href}
+      look="citation"
+      data-own={own || undefined}
+      data-bare={bare || undefined}
+    >
       {content}
     </ExternalHttpLink>
   ) : (
-    <span
-      className={cn(CITATION_FACE, own ? 'bg-accent-wash' : 'bg-state-selected', bare && 'ps-2')}
-    >
+    <span data-own={own || undefined} data-bare={bare || undefined} className={CITATION_FACE}>
       {content}
     </span>
   );

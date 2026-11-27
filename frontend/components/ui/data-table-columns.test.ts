@@ -21,4 +21,25 @@ describe('columnLayout', () => {
     });
     expect(share).toBe('50.000%');
   });
+
+  it('encodes each column by its kind, after the selection column', () => {
+    const { attributes, share } = columnLayout({
+      columns: [
+        { key: 'page', label: 'Page', kind: 'identity' },
+        { key: 'visits', label: 'Visits', kind: 'number' },
+        { key: 'seen', label: 'Last seen', kind: 'date' },
+        { key: 'open', label: 'Open', kind: 'actions' },
+      ],
+      hidden: [],
+      selection: true,
+    });
+    expect(attributes).toEqual({
+      'data-c1': 'select',
+      'data-c2': 'start rest',
+      'data-c3': 'end fixed s16 num',
+      'data-c4': 'start fixed s24 gutter num',
+      'data-c5': 'end fixed s20',
+    });
+    expect(share).toBe('100.000%');
+  });
 });

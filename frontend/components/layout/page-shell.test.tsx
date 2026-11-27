@@ -53,7 +53,6 @@ describe('RouteLoadingScreen', () => {
     const { container } = renderAt('/agent/chats/1');
     expect(screen.getByRole('heading', { level: 1, name: 'Chat' })).toBeInTheDocument();
     expect(container.querySelector('[data-thread] [data-skeleton="thread"]')).not.toBeNull();
-    expect(container.querySelector('.shadow-pop')).not.toBeNull();
     expect(container.querySelector('[data-loading-shape]')).toBeNull();
   });
 

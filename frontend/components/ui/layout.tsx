@@ -7,12 +7,12 @@ const STACK_GAP = {
   card: 'gap-card',
   workspace: 'gap-workspace',
   compact: 'gap-compact',
-  group: 'gap-3',
-  loose: 'gap-4',
-  choices: 'gap-x-4 gap-y-2',
+  group: 'gap-group',
+  loose: 'gap-loose',
+  choices: 'gap-x-loose gap-y-item',
   'page-top': 'gap-page-top',
-  item: 'gap-2',
-  tight: 'gap-1',
+  item: 'gap-item',
+  tight: 'gap-tight',
   none: 'gap-0',
 } as const;
 
@@ -114,14 +114,13 @@ export function Stack({
 const INLINE_GAP = {
   workspace: 'gap-workspace',
   compact: 'gap-compact',
-  group: 'gap-3',
-  loose: 'gap-4',
+  group: 'gap-group',
+  loose: 'gap-loose',
   wide: 'gap-6',
-  item: 'gap-2',
-  tight: 'gap-1',
+  item: 'gap-item',
+  tight: 'gap-tight',
   none: 'gap-0',
-  meta: 'gap-x-4 gap-y-1',
-  status: 'gap-x-2 gap-y-1',
+  meta: 'gap-x-loose gap-y-tight',
 } as const;
 
 export type InlineGap = keyof typeof INLINE_GAP;
@@ -145,7 +144,7 @@ const INLINE_JUSTIFY = {
 
 type InlineJustify = keyof typeof INLINE_JUSTIFY;
 
-const WRAPPING_GAPS: ReadonlySet<InlineGap> = new Set(['meta', 'status']);
+const WRAPPING_GAPS: ReadonlySet<InlineGap> = new Set(['meta']);
 
 export function Inline({
   as,
@@ -203,19 +202,12 @@ export function Inline({
 const COLUMN_TEMPLATE = {
   'label-value': 'grid-cols-label-value phone:grid-cols-1',
   'fields-action': 'grid-cols-fields-action',
-  'lead-body-end': 'grid-cols-lead-body-end',
-  'lead-body': 'grid-cols-lead-body',
-  'body-end': 'grid-cols-body-end',
   'body-field': 'grid-cols-body-field',
   choices: 'grid-cols-choices justify-start',
   'rail-panel': 'desktop:grid-cols-label-value',
-  'main-aside': 'column-wide:grid-cols-main-aside',
-  'aside-main': 'column-wide:grid-cols-aside-main',
-  pair: 'column-split:grid-cols-2',
-  halves: 'desktop:grid-cols-2',
+  'halves-desktop': 'desktop:grid-cols-2',
   two: 'grid-cols-2',
   record: 'column-split:grid-cols-record',
-  thirds: 'column-split:grid-cols-3',
 } as const;
 
 type ColumnTemplate = keyof typeof COLUMN_TEMPLATE;

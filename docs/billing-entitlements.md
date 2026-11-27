@@ -137,8 +137,8 @@ provision one.
 Documents validate stored amounts and are set in Inter, independent of the
 web's brand faces (owner, 2026-11-03); the
 [renderer](../frontend/services/api/src/documents/pdf.ts) paints with the light
-values of the app's design tokens, read from `globals.css` (the API image
-packages a copy). The
+values of the app's design tokens, read from `globals.css` and the sheets it imports (the API image
+packages a concatenated copy). The
 Overview PDF consumes the existing
 [command-center projection](../frontend/services/api/src/projects/command-center.ts)
 and its widgets' persisted reads, including the non-causal action disclaimer.
